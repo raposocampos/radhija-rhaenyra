@@ -4,7 +4,7 @@
 //   applyLighting(preset, bounds)  // por fase: sol/lua, hemisfério, névoa, céu, env map, grading, sombra
 //   render(dt, t)
 // }
-// Formato do preset: ver LIGHTING_DEFAULT (= fim de tarde da fase 1) e docs/CONTRATO.md.
+// Formato do preset: ver LIGHTING_DEFAULT (= fim de tarde da fase 1) e docs/ARQUITETURA.md §4.3 (tipo LightingPreset).
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';

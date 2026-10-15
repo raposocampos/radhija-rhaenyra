@@ -7,6 +7,9 @@ e a Rhaenyra (maior, forte, branca). Feita em Three.js + Vite, com tudo gerado e
 
 ```bash
 npm install
+```
+
+```bash
 npm run dev
 ```
 
@@ -28,53 +31,50 @@ Depois, abra `http://127.0.0.1:5173/`.
 2. **Operação Bolinha**: crepúsculo na área de serviço. Tábua de pressão, calço, irrigador e caixote que vira ponte.
 3. **Operação Pantufa**: noite no jardim do lago. Duas pedras com lanternas e a Dona Gansa guardando a ponte.
 
-Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação).
+Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
+`?stage=<etapa>` (pula etapas do puzzle).
 
 ## Estrutura
 
 - `src/game/`: núcleo genérico (gerenciador de fases, entrada, colisão, navegação, companheira, câmera, kit de puzzle e mecânicas).
 - `src/levels/faseN/`: cada fase (`index.js` com a definição, `layout.js` com as coordenadas, `lighting.js`, `world/` com o cenário e `puzzle.js` com a lógica).
+  `src/levels/_modelo/` é um modelo de fase completo e testado, ponto de partida das fases novas.
 - `src/dogs/` e `src/characters/`: personagens procedurais.
 - `src/ui/` e `src/fx/`: interface, áudio sintetizado, partículas e feedback.
-- `docs/CONTRATO.md`: APIs e convenções entre os módulos.
+- `src/types.d.ts`: tipos das APIs públicas (checados pelo TypeScript sobre o JavaScript).
+- `test/`: testes rápidos em Node; `tools/`: partidas automatizadas no navegador e ferramentas.
 
-### Criando uma fase nova
+Documentação:
 
-1. Copie a pasta de uma fase (por exemplo, `src/levels/fase2/`) para `src/levels/fase4/`.
-2. Edite o `layout.js` (limites, colisores, grafo de navegação, objetivo final, câmera), o `lighting.js`, o `world/` e o `puzzle.js` (interface em `docs/CONTRATO.md` §5; peças prontas em `src/game/puzzleKit.js` e `src/game/mechanics/`).
-3. Registre a fase em `src/levels/index.js`.
+- [docs/ARQUITETURA.md](docs/ARQUITETURA.md): como as peças se encaixam, APIs, eventos, testes e convenções.
+- [docs/COMO-CRIAR-UMA-FASE.md](docs/COMO-CRIAR-UMA-FASE.md): passo a passo de uma fase nova.
 
 ## Testes
 
-```bash
-node tools/scripts/test-collision.mjs
-```
+| Comando | O que faz |
+|---|---|
+| `npm test` | testes em Node, em segundos: as 3 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
+| `npm run typecheck` | checagem de tipos (TypeScript sobre os comentários JSDoc) |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–3, controle e regressões), cerca de 11 minutos |
+| `npm run build` | roda `typecheck` e `npm test` antes de gerar `dist/`: nenhum build sai quebrado |
+| `npm run verify` | build + partidas no navegador |
 
-Para as partidas automatizadas, use um servidor sem recarga automática:
-
-```bash
-npx vite --config tools/scripts/vite.nohmr.config.mjs --port 5176 --strictPort --host 127.0.0.1
-```
-
-Depois, em outro terminal, cada fase e o controle:
-
-```bash
-node tools/scripts/playthrough.mjs --url http://127.0.0.1:5176/
-```
-
-```bash
-node tools/scripts/playthrough-fase2.mjs --url http://127.0.0.1:5176/
-```
-
-```bash
-node tools/scripts/playthrough-fase3.mjs --url http://127.0.0.1:5176/
-```
-
-```bash
-node tools/scripts/test-gamepad.mjs --url http://127.0.0.1:5176/
-```
+O `test:e2e` sobe sozinho um servidor Vite sem recarga automática numa porta livre (sem atrapalhar o `npm run dev`
+na 5173), roda as partidas em sequência e derruba o servidor no fim, inclusive em erro ou Ctrl+C. Ele usa o Chrome
+(ou o Edge) instalado no sistema. Para rodar só algumas partidas: `node tools/scripts/run-e2e.mjs --only fase2,controle`.
+As capturas das partidas vão para `shots/`.
 
 `tools/shot.mjs` tira capturas headless com roteiro de teclas (ver cabeçalho do arquivo).
+
+## O que fica fora do git
+
+O `.gitignore` deixa de fora:
+
+- `referencias/fotos/`: as fotos das cachorrinhas usadas como referência para a modelagem. São fotos pessoais e
+  ficam só nesta máquina, para não vazarem se o repositório for publicado (no GitHub, por exemplo). O jogo não
+  depende delas: os modelos são gerados em código.
+- `shots/`: capturas geradas pelos testes e pelas ferramentas (centenas de MB, recriadas a cada execução).
+- `node_modules/`, `dist/` e `.builds/`: dependências e saídas de build.
 
 ## Créditos e licenças
 
@@ -83,3 +83,4 @@ As cachorrinhas foram modeladas a partir de fotos das próprias Radhija e Rhaeny
 
 Dependências: [Three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT) e as fontes
 Fredoka e Nunito via [@fontsource](https://fontsource.org) (SIL Open Font License 1.1).
+Desenvolvimento: TypeScript e Playwright (Apache-2.0).

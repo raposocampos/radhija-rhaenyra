@@ -1,5 +1,5 @@
-// FASE 3 · Operação Pantufa — definição da fase (formato: docs/CONTRATO.md §4 "Definição de fase").
-// Cenário: ./world/index.js (Agente Cenário). Puzzle: ./puzzle.js (Agente Mecânica).
+// FASE 3 · Operação Pantufa — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
+// Cenário: ./world/index.js. Puzzle: ./puzzle.js.
 import layout from './layout.js';
 import lighting from './lighting.js';
 import { buildWorld } from './world/index.js';

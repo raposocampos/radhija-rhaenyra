@@ -5,7 +5,7 @@
 //   A → 'KeyE' (interagir/latir) · X → 'Bark' (latir sempre) · Y → 'KeyF' (Fica/Vem)
 //   LB/RB → 'KeyQ' (trocar) · Start → 'Escape' (pausar) · B ou RT → Shift (segurar; borda = arrancada)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
-// Ver docs/CONTRATO.md §8. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
+// Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
 const MOVE = {
   up: ['KeyW', 'ArrowUp'],

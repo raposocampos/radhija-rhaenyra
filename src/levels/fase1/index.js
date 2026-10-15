@@ -1,4 +1,4 @@
-// FASE 1 · Operação Cenoura — definição da fase (formato: docs/CONTRATO.md §4 "Definição de fase").
+// FASE 1 · Operação Cenoura — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
 import layout from './layout.js';
 import { createPuzzle } from './puzzle.js';
 import { buildEnvironment } from '../../world/environment.js';

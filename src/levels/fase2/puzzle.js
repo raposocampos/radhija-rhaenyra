@@ -1,4 +1,4 @@
-// FASE 2 · Operação Bolinha — puzzle (interface de puzzle: docs/CONTRATO.md §5).
+// FASE 2 · Operação Bolinha — puzzle (interface de puzzle: docs/ARQUITETURA.md §4.5).
 // Beats (ver cabeçalho de ./layout.js):
 //   1. Tábua de pressão (só a Rhaenyra pesa) abre o portão; Fica (F) para ela ficar lá; a Radhija passa
 //      e dá uma arrancada (Shift) no calço → o portão fica travado aberto.

@@ -1,6 +1,6 @@
-// FASE 2 · Operação Bolinha — cenário + props visuais (dono: Agente Cenário F2).
+// FASE 2 · Operação Bolinha — cenário + props visuais.
 // API: buildWorld({ engine, root, layout, params }) → { props, seeThrough: Object3D[], update(dt, t), dispose() }
-// Tudo é adicionado dentro de `root` (descartado na troca de fase). Props: docs/CONTRATO.md §6 "Fase 2".
+// Tudo é adicionado dentro de `root` (descartado na troca de fase). Props: tipo Fase2Props em src/types.d.ts.
 import * as THREE from 'three';
 import { shared, radialTexture, rng } from '../../../world/util.js';
 import { buildGround } from './ground.js';

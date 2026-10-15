@@ -1,5 +1,5 @@
-// Ponto de entrada — integração entre os módulos (dono: integrador).
-// Cada módulo segue a API descrita em docs/CONTRATO.md. As fases moram em src/levels/.
+// Ponto de entrada — integração entre os módulos.
+// Visão geral: docs/ARQUITETURA.md. As fases moram em src/levels/.
 import * as THREE from 'three';
 import { events } from './core/events.js';
 import { createEngine } from './core/engine.js';

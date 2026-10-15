@@ -1,4 +1,4 @@
-// Partículas leves (THREE.Points com shader próprio + anéis no chão). Dono: Agente Polimento.
+// Partículas leves (THREE.Points com shader próprio + anéis no chão).
 // API do contrato: createParticles(engine) → { dust, sparkle, burst, ring, update }
 // v2: splash (respingos + névoa), drops (gotas), feathers (penas), sparks (faíscas quentes),
 //     fireflies(opts|null) → efeito ambiente de vagalumes (um por vez; o cenário pode chamar).

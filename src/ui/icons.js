@@ -1,4 +1,4 @@
-// Ícones SVG inline desenhados para o jogo (sem emojis). Dono: Agente Polimento.
+// Ícones SVG inline desenhados para o jogo (sem emojis).
 // Sem gradientes com id (evita conflito/quebra de url(#id) entre cópias ocultas).
 
 const INK = '#4A3426';

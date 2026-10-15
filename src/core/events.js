@@ -1,4 +1,4 @@
-// Barramento de eventos minimalista. Ver docs/CONTRATO.md (seção "Eventos") para a lista oficial.
+// Barramento de eventos minimalista. Lista dos eventos: docs/ARQUITETURA.md §8.
 const listeners = new Map();
 
 export const events = {

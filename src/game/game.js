@@ -1,6 +1,6 @@
-// Mecânica: gerenciador de fases + estados, entrada → controle das dogs, companheira, câmera e depuração.
+// Núcleo do jogo: gerenciador de fases + estados, entrada → controle das dogs, companheira, câmera e depuração.
 // Tudo o que é específico de uma fase (layout, cenário, props, puzzle) vem da definição da fase
-// (src/levels/<fase>/index.js). API: docs/CONTRATO.md → "game/game.js".
+// (src/levels/<fase>/index.js). Ver docs/ARQUITETURA.md §3.
 import * as THREE from 'three';
 import { events } from '../core/events.js';
 import { createInput } from './input.js';

@@ -1,4 +1,4 @@
-// Visual dos objetos interativos (a Mecânica controla o estado). API exata em docs/CONTRATO.md → props.js.
+// Visual dos objetos interativos (o puzzle controla o estado). Formato: tipo Fase1Props em src/types.d.ts.
 import * as THREE from 'three';
 import { woodMat, stdMat, ironMat, brassMat, terracottaMat, rbox, canvasTexture, contactShadow, radialTexture, potProfile, soilDisc, rng, paint } from './util.js';
 import { picketGeometry } from './fence.js';

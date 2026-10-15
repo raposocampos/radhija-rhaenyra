@@ -1,4 +1,4 @@
-// FASE 1 · Operação Cenoura — puzzle (implementa a interface de puzzle: docs/CONTRATO.md §5).
+// FASE 1 · Operação Cenoura — puzzle (interface de puzzle: docs/ARQUITETURA.md §4.5).
 // Cordinha → portão, empurrar o carrinho, cenoura, porta, colecionáveis,
 // prompts (interact:prompt) e dicas contextuais (hint) sem repetição excessiva.
 import { approach } from '../../game/dogController.js';

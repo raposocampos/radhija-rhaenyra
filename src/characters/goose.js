@@ -2,7 +2,7 @@
 // SDF (união suave de primitivas) → Surface Nets → SkinnedMesh com pesos automáticos (corpo,
 // pescoço em 3 ossos, cabeça, cauda). Asas: malhas SDF próprias presas ao ombro (abrem para bater).
 // Penas sugeridas no shader (relevo de escamas de pena + penugem), bico/patas laranja.
-// API (docs/CONTRATO.md §7): createGoose() → { object, radius, update(dt, {speed, turn, action, lookAt}), triggerHonk() }
+// API (docs/ARQUITETURA.md §7, tipo GooseModel em src/types.d.ts): createGoose() → { object, radius, update(dt, {speed, turn, action, lookAt}), triggerHonk() }
 import * as THREE from 'three';
 import { compileSDF, groupsBounds, surfaceNets, fbm } from '../dogs/sdf.js';
 

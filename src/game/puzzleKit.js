@@ -1,6 +1,6 @@
 // Kit de peças reutilizáveis para puzzles de fase (dicas, prompts, colecionáveis, item carregado,
 // entrega no objetivo). Cada fase compõe o seu puzzle com isso + as mecânicas de src/game/mechanics/.
-// Ver docs/CONTRATO.md §5 (interface de puzzle).
+// Ver docs/ARQUITETURA.md §4.5 (interface de puzzle).
 
 /** Distância até um ponto medida pelo centro OU pela cabeça da dog (o que estiver mais perto). */
 export function reach(c, x, z) {

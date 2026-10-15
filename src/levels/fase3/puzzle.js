@@ -1,4 +1,4 @@
-// FASE 3 · Operação Pantufa — puzzle (interface de puzzle: docs/CONTRATO.md §5).
+// FASE 3 · Operação Pantufa — puzzle (interface de puzzle: docs/ARQUITETURA.md §4.5).
 // Beats (ver cabeçalho de ./layout.js):
 //   1. Duas pedras de pressão AO MESMO TEMPO: a pesada (só a Rhaenyra) e a leve no cantinho (só a
 //      Radhija cabe). Cada pedra acende uma lanterna; as duas → o portão de treliça abre e trava.

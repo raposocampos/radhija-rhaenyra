@@ -1,4 +1,4 @@
-// FASE 2 · Props interativos (a Mecânica controla o estado; API em docs/CONTRATO.md §6 "Fase 2").
+// FASE 2 · Props interativos (o puzzle controla o estado; formato: tipo Fase2Props em src/types.d.ts).
 // Portão de ferro com tambor da corda, tábua de pressão (pallet com molas) + corda + roldana, calço,
 // irrigador giratório com jatos legíveis, registro, caixote de feira, bolinha de tênis, caminha e ossinhos.
 import * as THREE from 'three';

@@ -1,6 +1,6 @@
-// FASE 3 · Operação Pantufa — cenário noturno (dono: Agente Cenário F3).
+// FASE 3 · Operação Pantufa — cenário noturno.
 // API: buildWorld({ engine, root, layout, params }) → { props, seeThrough: Object3D[], update(dt, t), dispose() }
-// Tudo é criado dentro de `root`. Props: docs/CONTRATO.md §6 (fase 3).
+// Tudo é criado dentro de `root`. Props: tipo Fase3Props em src/types.d.ts.
 // Luzes: lua (sombra, do preset) + PointLights quentes sem sombra: mesa, gramado sul, lanterna H,
 // lanterna L, brilho da pantufa, janela do cantinho, lago (7) + 1 SpotLight saindo da porta de vidro.
 import * as THREE from 'three';

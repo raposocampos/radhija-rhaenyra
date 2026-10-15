@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createController, placeController, steer, integrate, startDash } from '../src/game/dogController.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
+import { LEVELS } from '../src/levels/index.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -36,7 +37,7 @@ function centerline(c) {
 
 // Regressão: a arrancada da Radhija (passo grande por quadro) não pode atravessar paredes finas, nem com
 // queda de FPS (o jogo limita dt a 1/20 s). Também testa a Rhaenyra andando contra as mesmas paredes.
-for (const level of [1, 2, 3]) {
+for (const level of LEVELS.map((_, i) => i + 1)) {
   test(`fase ${level}: arrancada e passos longos nunca atravessam paredes finas`, async () => {
     const h = await createHeadlessGame({ level }); // mundo da etapa inicial (portões fechados)
     const world = h.world;

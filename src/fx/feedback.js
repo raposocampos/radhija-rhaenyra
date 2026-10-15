@@ -1,7 +1,7 @@
 // Feedback: liga eventos do jogo a som + partículas, e desenha o marcador de objetivo, o anel da dog
 // ativa, o anel tracejado da companheira esperando e ícones flutuantes (patinha, "!", "?").
 // Independente de fase: props/layout são lidos na hora (opts.props / opts.layout são getters) e as
-// posições vêm sempre dos payloads. Dono: Agente Polimento.
+// posições vêm sempre dos payloads.
 // API: createFeedback({ engine, audio, particles, dogs, game, props, layout }) → { update(dt, t), marker, dogRings }
 // Ambiente por fase (no level:loaded): áudio 'day' | 'dusk' | 'night' (def.ambience, ou pelo número da fase)
 // e vagalumes automáticos em 'dusk'/'night' (desligue com props.fireflies === false, ou chame

@@ -127,7 +127,7 @@ export function createDog(kind) {
       carry.setForced(kind);
     },
     get carryKind() { return carry.kind; },
-    /** Pelo molhado 0..1 (escuro, murcho e brilhante). A Mecânica faz o decaimento. */
+    /** Pelo molhado 0..1 (escuro, murcho e brilhante). O decaimento fica com src/game/mechanics/dogEffects.js. */
     setWet(k) {
       st.wet = clamp(k || 0, 0, 1);
       wetU.value = st.wet;

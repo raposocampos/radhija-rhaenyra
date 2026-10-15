@@ -4,7 +4,7 @@
 //  Unidades: metros. Y para cima. Plano do chão = XZ (y = 0).
 //  Norte = -Z (casa), Sul = +Z (lado da câmera), Leste = +X.
 //  Yaw: rotation.y = atan2(dir.x, dir.z)  → yaw 0 olha para +Z.
-//  NÃO mude coordenadas sem atualizar docs/CONTRATO.md.
+//  Campos usados pelo núcleo: tipo LevelLayout (src/types.d.ts), docs/ARQUITETURA.md §4.2.
 // =====================================================================
 
 export const WORLD = {

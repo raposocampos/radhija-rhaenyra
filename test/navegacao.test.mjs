@@ -1,15 +1,13 @@
 // Grafo de navegação da companheira (NAV_NODES/NAV_EDGES) de todas as fases, contra o mundo de colisão.
-// Vale para fases novas automaticamente: basta registrá-las em src/levels/index.js.
+// Vale para fases novas automaticamente: as fases vêm de src/levels/index.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCollisionWorld } from '../src/game/collision.js';
 import { createNavigator } from '../src/game/navigation.js';
-import fase1 from '../src/levels/fase1/layout.js';
-import fase2 from '../src/levels/fase2/layout.js';
-import fase3 from '../src/levels/fase3/layout.js';
+import { LEVELS } from '../src/levels/index.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
-const LAYOUTS = { fase1, fase2, fase3 };
+const LAYOUTS = Object.fromEntries(LEVELS.map((d) => [d.id, d.layout]));
 
 // Arestas que cortam a quina de um obstáculo em linha reta (a companheira contorna sozinha).
 // Fica documentado aqui para não crescer sem querer; uma aresta nova bloqueada falha o teste.
