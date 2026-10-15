@@ -2,6 +2,8 @@
 // Modelo: a velocidade é um escalar ao longo da orientação do corpo (sem deslize lateral / moonwalk).
 // O corpo gira suavemente (ganho proporcional limitado por turnSpeed); inversões > 120° fazem um pivô
 // rápido com queda de velocidade; aceleração/desaceleração vêm do layout.
+// Pulo (só quem tem cfg.jumpHeight, a Rhaenyra): arco de altura fixa e duração cfg.jumpTime, com pouco
+// controle no ar; enquanto está no ar, os colisores marcados jumpable (troncos, muretas baixas) não bloqueiam.
 
 export const TAU = Math.PI * 2;
 export const wrapAngle = (a) => {
@@ -44,6 +46,13 @@ export function createController(name, cfg) {
     prevHitIds: new Set(),
     hits: [],
     stillT: 0, // tempo parada (para a companheira sentar)
+    y: 0, // altura do pulo (m); 0 = no chão
+    jumpT: 0, // tempo restante no ar (0 = no chão)
+    jumpDur: 0,
+    jumpCd: 0,
+    jumpDx: 0,
+    jumpDz: 1,
+    landed: false, // pousou neste quadro (o jogo emite dog:land e zera)
   };
 }
 
@@ -62,10 +71,39 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.prevHitIds = new Set();
   c.hits = [];
   c.stillT = 0;
+  c.y = 0;
+  c.jumpT = 0;
+  c.jumpCd = 0;
+  c.landed = false;
 }
 
 export function canDash(c) {
-  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0;
+  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0 && !(c.jumpT > 0);
+}
+
+/** A dog pode pular agora? (só quem tem cfg.jumpHeight; no chão, fora da arrancada e sem recarga) */
+export function canJump(c) {
+  return !!c.cfg.jumpHeight && !(c.jumpT > 0) && c.jumpCd <= 0 && c.dashT <= 0;
+}
+
+/**
+ * Pula na direção (dx, dz) da entrada (com impulso mínimo cfg.jumpSpeed) ou, sem entrada, para a frente
+ * com a velocidade atual (parada = pulo no lugar).
+ */
+export function startJump(c, dx, dz) {
+  const L = Math.hypot(dx, dz);
+  if (L < 1e-4) {
+    c.jumpDx = Math.sin(c.yaw);
+    c.jumpDz = Math.cos(c.yaw);
+  } else {
+    c.jumpDx = dx / L;
+    c.jumpDz = dz / L;
+    c.v = Math.max(c.v, c.cfg.jumpSpeed ?? c.cfg.walkSpeed);
+  }
+  c.jumpT = c.jumpDur = c.cfg.jumpTime ?? 0.5;
+  c.y = 0;
+  c.landed = false;
+  c.pivoting = false;
 }
 
 /** Inicia a arrancada na direção (dx, dz) — normalmente a entrada atual ou a frente do corpo. */
@@ -95,9 +133,35 @@ export function steer(c, dt, intent) {
   const prevYaw = c.yaw;
   c.dashCd = Math.max(0, c.dashCd - dt);
   c.bumpCd = Math.max(0, c.bumpCd - dt);
+  if (c.jumpCd > 0) c.jumpCd = Math.max(0, c.jumpCd - dt);
   const turnScale = intent.turnScale ?? 1;
 
-  if (c.dashT > 0) {
+  if (c.jumpT > 0) {
+    // No ar: velocidade horizontal constante, pouco controle de direção; o corpo acompanha o pulo.
+    const has = intent.speed > 1e-3 && (intent.dx || intent.dz);
+    if (has) {
+      const cur = Math.atan2(c.jumpDx, c.jumpDz);
+      const d = wrapAngle(Math.atan2(intent.dx, intent.dz) - cur);
+      const step = Math.max(-2.6 * dt, Math.min(2.6 * dt, d));
+      c.jumpDx = Math.sin(cur + step);
+      c.jumpDz = Math.cos(cur + step);
+    }
+    const dy = wrapAngle(Math.atan2(c.jumpDx, c.jumpDz) - c.yaw);
+    const maxTurn = cfg.turnSpeed * 3 * dt;
+    c.yaw = wrapAngle(c.yaw + Math.max(-maxTurn, Math.min(maxTurn, dy)));
+    c.jumpT -= dt;
+    if (c.jumpT <= 0) {
+      c.jumpT = 0;
+      c.y = 0;
+      c.jumpCd = cfg.jumpCooldown ?? 0.15;
+      c.landed = true;
+      c.v = Math.min(c.v, cfg.walkSpeed);
+    } else {
+      const p = 1 - c.jumpT / c.jumpDur;
+      c.y = 4 * cfg.jumpHeight * p * (1 - p);
+    }
+    c.pivoting = false;
+  } else if (c.dashT > 0) {
     // Arrancada: pouco controle (gira a direção devagar), corpo acompanha a direção da rajada.
     const has = intent.speed > 1e-3 && (intent.dx || intent.dz);
     if (has) {
@@ -165,7 +229,12 @@ export function steer(c, dt, intent) {
 export function integrate(c, dt, world, opts = {}) {
   let dirX;
   let dirZ;
-  if (c.dashT > 0) {
+  const airborne = c.jumpT > 0;
+  if (airborne) {
+    dirX = c.jumpDx;
+    dirZ = c.jumpDz;
+    opts = { ...opts, airborne: true };
+  } else if (c.dashT > 0) {
     dirX = c.dashDx;
     dirZ = c.dashDz;
   } else {

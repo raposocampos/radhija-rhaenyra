@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createController, placeController, steer, integrate, startDash } from '../src/game/dogController.js';
+import { createController, placeController, steer, integrate, startDash, startJump } from '../src/game/dogController.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { LEVELS } from '../src/levels/index.js';
 
@@ -36,9 +36,10 @@ function centerline(c) {
 }
 
 // Regressão: a arrancada da Radhija (passo grande por quadro) não pode atravessar paredes finas, nem com
-// queda de FPS (o jogo limita dt a 1/20 s). Também testa a Rhaenyra andando contra as mesmas paredes.
+// queda de FPS (o jogo limita dt a 1/20 s). Também testa a Rhaenyra andando e PULANDO contra as mesmas
+// paredes (o pulo só passa por cima de colisores marcados jumpable).
 for (const level of LEVELS.map((_, i) => i + 1)) {
-  test(`fase ${level}: arrancada e passos longos nunca atravessam paredes finas`, async () => {
+  test(`fase ${level}: arrancada, pulo e passos longos nunca atravessam paredes finas`, async () => {
     const h = await createHeadlessGame({ level }); // mundo da etapa inicial (portões fechados)
     const world = h.world;
     const L = h.layout;
@@ -46,11 +47,14 @@ for (const level of LEVELS.map((_, i) => i + 1)) {
     assert.ok(walls.length > 0);
     let tries = 0;
     const bad = [];
-    for (const name of ['radhija', 'rhaenyra']) {
+    const runs = [['radhija', 'arrancada'], ['rhaenyra', 'andando'], ['rhaenyra', 'pulo']];
+    for (const [name, mode] of runs) {
       const cfg = L.DOGS[name];
       const c = createController(name, cfg);
+      if (mode === 'pulo' && !cfg.jumpHeight) continue;
       for (const wall of walls) {
         if (wall.blocks !== 'all' && wall.blocks !== c.size) continue;
+        if (mode === 'pulo' && wall.jumpable) continue;
         const { ax, az, bx, bz } = centerline(wall);
         const len = Math.hypot(bx - ax, bz - az);
         const nx = -(bz - az) / len;
@@ -64,7 +68,8 @@ for (const level of LEVELS.map((_, i) => i + 1)) {
               const dx = -nx * side;
               const dz = -nz * side;
               placeController(c, px, pz, Math.atan2(dx, dz));
-              if (cfg.dashSpeed) startDash(c, dx, dz);
+              if (mode === 'arrancada') startDash(c, dx, dz);
+              if (mode === 'pulo') startJump(c, dx, dz);
               tries++;
               for (let t = 0; t < 0.8; t += dt) {
                 const x0 = c.x;
@@ -72,7 +77,7 @@ for (const level of LEVELS.map((_, i) => i + 1)) {
                 steer(c, dt, { dx, dz, speed: cfg.walkSpeed });
                 integrate(c, dt, world);
                 if (crosses(x0, z0, c.x, c.z, ax, az, bx, bz)) {
-                  bad.push(`${name} atravessou ${wall.id} (u=${u}, lado ${side}, dt=${dt.toFixed(3)})`);
+                  bad.push(`${name} (${mode}) atravessou ${wall.id} (u=${u}, lado ${side}, dt=${dt.toFixed(3)})`);
                   break;
                 }
               }

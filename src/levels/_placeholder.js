@@ -19,8 +19,21 @@ export function buildPlaceholderWorld({ root, layout, colors = {} }) {
   root.add(ground);
   const mat = new THREE.MeshStandardMaterial({ color: colors.block || '#b39274', roughness: 0.9 });
   const water = new THREE.MeshStandardMaterial({ color: '#3d6f8f', roughness: 0.2, metalness: 0.1 });
+  const bark = new THREE.MeshStandardMaterial({ color: '#8a5a36', roughness: 0.95 });
   for (const c of layout.STATIC_COLLIDERS) {
     if (c.blocks === 'large') continue;
+    if (c.jumpable && c.shape === 'box') {
+      // obstáculo pulável: tora deitada ao longo do lado comprido
+      const rad = (c.height ?? 0.26) / 2;
+      const along = c.hx >= c.hz;
+      const geo = new THREE.CylinderGeometry(rad, rad, 2 * Math.max(c.hx, c.hz), 14);
+      if (along) geo.rotateZ(Math.PI / 2); else geo.rotateX(Math.PI / 2);
+      const log = new THREE.Mesh(geo, bark);
+      log.position.set(c.x, rad, c.z);
+      log.castShadow = log.receiveShadow = true;
+      root.add(log);
+      continue;
+    }
     const m = c.kind === 'water' ? water : mat;
     const h = c.kind === 'water' ? 0.04 : 0.6;
     let mesh;

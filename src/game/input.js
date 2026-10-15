@@ -4,6 +4,7 @@
 // lógicos do teclado, então o jogo não precisa saber de onde veio o comando:
 //   A → 'KeyE' (interagir/latir) · X → 'Bark' (latir sempre) · Y → 'KeyF' (Fica/Vem)
 //   LB/RB → 'KeyQ' (trocar) · Start → 'Escape' (pausar) · B ou RT → Shift (segurar; borda = arrancada)
+//   LT → 'Jump' (pular; no teclado, Espaço)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -29,6 +30,7 @@ const PAD_EDGE_CODES = [
   [PAD.LB, 'KeyQ'],
   [PAD.RB, 'KeyQ'],
   [PAD.START, 'Escape'],
+  [PAD.LT, 'Jump'],
 ];
 
 function connectedPads() {

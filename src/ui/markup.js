@@ -39,12 +39,13 @@ export const PAD_BTN = {
   LB: '<span class="rr-pad rr-pad--sh" aria-label="LB">LB</span>',
   RB: '<span class="rr-pad rr-pad--sh" aria-label="RB">RB</span>',
   RT: '<span class="rr-pad rr-pad--sh" aria-label="RT">RT</span>',
+  LT: '<span class="rr-pad rr-pad--sh" aria-label="LT">LT</span>',
   Start: `<span class="rr-pad rr-pad--menu" aria-label="Start">${MENU_LINES}</span>`,
   LS: '<span class="rr-pad rr-pad--stick" aria-label="Analógico esquerdo"><i></i></span>',
   DPad: '<span class="rr-pad rr-pad--dpad" aria-label="Direcional"><i></i></span>',
 };
 const KEY_TO_PAD = {
-  E: ['A'], Enter: ['A'], Q: ['LB', 'RB'], F: ['Y'], Shift: ['B'], Esc: ['Start'], X: ['X'], WASD: ['LS'],
+  E: ['A'], Enter: ['A'], Q: ['LB', 'RB'], F: ['Y'], Shift: ['B'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['LT'],
 };
 /** Tecla lógica → tecla desenhada + botão do controle equivalente. */
 /** @param {string} k @param {{ pad?: string[] }} [opts] */
@@ -61,7 +62,7 @@ export function richText(text) {
   const safe = esc(text);
   return safe.replace(/\(([^)]{1,24})\)/g, (m, inner) => {
     const t = inner.trim();
-    if (/^(E|Q|F|Shift|Esc|Enter)$/.test(t)) return glyph(t);
+    if (/^(E|Q|F|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
     if (/\b(E|Q|F|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F)\b/g, (k) => glyph(k))}</span>`;
     return m;
   });
@@ -109,6 +110,7 @@ export const CONTROLS = [
   ['Interagir · latir', 'E', ['A']],
   ['Latir', null, ['X']],
   ['Correr · empurrar (segure)', 'Shift', ['B', 'RT']],
+  ['Pular (Rhaenyra)', 'Space', ['LT']],
   ['Trocar de cachorrinha', 'Q', ['LB', 'RB']],
   ['Fica · Vem (companheira)', 'F', ['Y']],
   ['Pausar', 'Esc', ['Start']],

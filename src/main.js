@@ -10,7 +10,7 @@ import { createParticles } from './fx/particles.js';
 import { createFeedback } from './fx/feedback.js';
 import { createUI } from './ui/ui.js';
 import { updateSeeThrough } from './world/seeThrough.js';
-import { LEVELS } from './levels/index.js';
+import { LEVELS as ALL_LEVELS } from './levels/index.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -19,6 +19,13 @@ const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTime
 
 async function boot() {
   await nextPaint();
+
+  // ?level=<id> de uma fase de desenvolvimento (ex.: ?level=pulo): carregada só sob demanda, no fim da lista.
+  const levelParam = params.get('level') || '';
+  const devLevel = levelParam && !/^\d+$/.test(levelParam)
+    ? (await import('./levels/dev.js')).DEV_LEVELS.find((d) => d.id === levelParam)
+    : null;
+  const LEVELS = devLevel ? [...ALL_LEVELS, devLevel] : ALL_LEVELS;
 
   const engine = createEngine(document.getElementById('app'), { params });
   const dogs = {
@@ -39,7 +46,7 @@ async function boot() {
   const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params });
 
   // Fase inicial: ?level=2 (1-based) para testes; ?play pula a tela inicial.
-  const lv = Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
+  const lv = devLevel ? LEVELS.length - 1 : Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
   await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.

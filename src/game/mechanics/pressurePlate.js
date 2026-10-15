@@ -23,7 +23,7 @@ export function createPressurePlate({ id, x, z, r = null, hx = null, hz = null, 
     let light = null;
     for (const n of Object.keys(ctrls || {})) {
       const c = ctrls[n];
-      if (!on(c.x, c.z, c.r)) continue;
+      if (c.jumpT > 0 || !on(c.x, c.z, c.r)) continue; // no ar não pisa na placa
       if (heavy(c)) { by = by || n; } else light = n;
     }
     if (!by) for (const b of boxes) if (b && on(b.x, b.z, 0)) { by = b.id || 'crate'; break; }

@@ -39,6 +39,11 @@ export const DOGS = {
     radius: 0.22,
     walkSpeed: 2.0,
     pushSpeed: 0.85,
+    // Pulo (Espaço / LT): sobe ~0,36 m e avança ~1,3 m; só passa por cima de colisores jumpable.
+    jumpHeight: 0.36,
+    jumpTime: 0.5,
+    jumpSpeed: 2.6,
+    jumpCooldown: 0.15,
     accel: 12,
     decel: 16,
     turnSpeed: 10,

@@ -6,7 +6,7 @@ import { events } from '../core/events.js';
 import { createInput } from './input.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
-import { createController, placeController, steer, integrate, startDash, canDash } from './dogController.js';
+import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
@@ -32,6 +32,7 @@ const RUMBLE = {
   'wedge:kick': (p) => (p.locked ? [0.35, 0.3, 160] : [0.2, 0.2, 80]),
   'crate:sink': () => [0.4, 0.2, 260],
   'plate:press': () => [0.08, 0.2, 60],
+  'dog:land': () => [0.18, 0.22, 70],
 };
 
 /** Libera geometrias/texturas próprias de uma fase (materiais em cache são compartilhados). */
@@ -81,7 +82,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1 };
     lookVecs[n] = new THREE.Vector3();
   }
 
@@ -280,6 +281,11 @@ export function createGame({ engine, dogs, levels, params }) {
         startDash(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
         emit('dog:dash', { name: A.name, x: A.x, z: A.z, dirX: A.dashDx, dirZ: A.dashDz });
       }
+      // Pulo (Espaço / LT): só quem tem pulo, fora da postura de empurrar.
+      if (input.consume('Space', 'Jump') && action !== 'push' && canJump(A)) {
+        startJump(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
+        emit('dog:jump', { name: A.name, x: A.x, z: A.z, dirX: A.jumpDx, dirZ: A.jumpDz });
+      }
       if (puzzle.carrier === A.name) speed *= 0.94;
       intent = { dx, dz, speed, turnScale: action === 'push' ? 0.7 : 1 };
       const pr = puzzle.modifyIntent?.(dt, A, intent, { shift, comp: C }) || {};
@@ -287,6 +293,7 @@ export function createGame({ engine, dogs, levels, params }) {
       if (pr.action) action = pr.action;
     }
     if (A.dashT > 0) action = 'dash';
+    if (A.jumpT > 0) action = 'jump';
 
     puzzle.assist?.(A, intent, dt);
     steer(A, dt, intent);
@@ -438,6 +445,13 @@ export function createGame({ engine, dogs, levels, params }) {
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
       an.carrying = puzzle.carrier === n;
+      an.jump = c.y;
+      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
+      if (c.landed) {
+        // Pouso (ativa ou companheira, até depois de trocar de dog no ar).
+        c.landed = false;
+        if (state === 'playing' || state === 'celebrating') emit('dog:land', { name: n, x: c.x, z: c.z });
+      }
       d.update?.(dt, an);
       // Plano B dos passos: cadência pela distância se a dog nunca chamou onFootstep.
       if (!steps[n].seen && (state === 'playing' || state === 'celebrating')) {
@@ -659,6 +673,7 @@ export function createGame({ engine, dogs, levels, params }) {
         path: brains[n].path.map((w) => w.id), reachable: brains[n].reachable,
         stuck: +brains[n].stuckAccum.toFixed(2), sitting: anims[n].action === 'sit',
         visible: isVisible(c.x, c.z), stay: stay[n],
+        y: +c.y.toFixed(3), jumping: c.jumpT > 0,
       };
     };
     const p = engine.camera.position;

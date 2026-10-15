@@ -243,19 +243,37 @@ export const SOUNDS2 = {
     tone(G, o, { type: 'triangle', f: 208 * p, t: t + 0.11, a: 0.003, d: 0.12, peak: 0.12 });
     return 0.3;
   },
+  // ---------- pulo da Rhaenyra ----------
+  // Decolagem: impulso grave das patas + "fuuu" de ar subindo.
+  jump(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 120 * p, to: 70 * p, t, a: 0.004, d: 0.1, peak: 0.22 });
+    nz(G, o, { t, a: 0.004, d: 0.05, peak: 0.08, type: 'lowpass', f: 500, q: 0.7 });
+    nz(G, o, { t: t + 0.02, a: 0.06, d: 0.2, peak: 0.12, type: 'bandpass', f: 500 * p, to: 1500 * p, toT: 0.22, q: 1.4 });
+    return 0.35;
+  },
+  // Pouso: baque macio de patas na grama, com um leve chiado de poeira.
+  land(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 150 * p, to: 52 * p, t, a: 0.003, d: 0.14, peak: 0.34 });
+    nz(G, o, { t, a: 0.002, d: 0.06, peak: 0.12, type: 'lowpass', f: 650, q: 0.7 });
+    nz(G, o, { t: t + 0.015, a: 0.003, d: 0.08, peak: 0.05, type: 'bandpass', f: 2600 * p, q: 0.9 });
+    return 0.25;
+  },
 };
 export const MIN_GAP_V2 = {
+  jump: 0.12, land: 0.12,
   pickupBall: 0.3, pickupSlipper: 0.3, stay: 0.15, come: 0.15, plateDown: 0.15, plateUp: 0.15,
   gateClose: 0.4, gateLocked: 0.5, wedgeKick: 0.2, splash: 0.18, shake: 0.6, waterOff: 0.8, valve: 0.35,
   crateSink: 1.0, lanternOn: 0.2, lanternOff: 0.2, honk: 0.25, gooseAlert: 0.6, gooseCharge: 0.6,
   gooseHit: 0.3, gooseLured: 0.6, gooseReturn: 0.6, curtainIn: 0.5, curtainOut: 0.5, uiMove: 0.03, uiBack: 0.08, uiDenied: 0.2,
 };
 export const PITCH_VAR_V2 = {
+  jump: 0.06, land: 0.06,
   pickupBall: 0.04, pickupSlipper: 0.04, stay: 0.03, come: 0.03, plateDown: 0.05, plateUp: 0.05, wedgeKick: 0.06,
   splash: 0.08, shake: 0.06, valve: 0.04, honk: 0.06, gooseAlert: 0.04, gooseCharge: 0.03, gooseHit: 0.04,
   curtainIn: 0, curtainOut: 0, uiMove: 0.02, uiDenied: 0, gateLocked: 0, crateSink: 0.03, lanternOn: 0.02,
 };
 export const VERB_V2 = {
+  jump: 0.04, land: 0.04,
   pickupBall: 0.12, pickupSlipper: 0.15, stay: 0.12, come: 0.12, plateDown: 0.1, plateUp: 0.08, gateClose: 0.15,
   gateLocked: 0.2, wedgeKick: 0.1, splash: 0.2, shake: 0.08, waterOff: 0.3, valve: 0.15, crateSink: 0.3,
   lanternOn: 0.5, lanternOff: 0.35, honk: 0.18, gooseAlert: 0.18, gooseCharge: 0.15, gooseHit: 0.15, gooseLured: 0.18,

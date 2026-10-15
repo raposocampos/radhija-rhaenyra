@@ -1,7 +1,8 @@
 // Animação procedural da dog, resolvida a cada quadro: trote/passo/galope com pés plantados (IK),
 // todas as ações do jogo (sentar, empurrar, forçar, puxar a corda, comemorar, farejar, arrancada,
-// girar o registro, chacoalhar, susto), olhar, boca, orelhas com mola, cauda, piscadas, vento no pelo,
-// sombra de contato e âncora do marcador. Entrada: update(dt, { speed, turn, action, lookAt, carrying }).
+// girar o registro, chacoalhar, susto, pulo), olhar, boca, orelhas com mola, cauda, piscadas, vento no pelo,
+// sombra de contato e âncora do marcador.
+// Entrada: update(dt, { speed, turn, action, lookAt, carrying, jump (altura do pulo), airK (0..1 no ar; −1 no chão) }).
 import * as THREE from 'three';
 
 export const TAU = Math.PI * 2;
@@ -25,7 +26,7 @@ function createAnimState() {
     idle: 0,
     lean: 0,
     turnS: 0,
-    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0 },
+    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0, jump: 0 },
     shakeT: 9,
     startT: 9,
     wet: 0,
@@ -53,6 +54,8 @@ function createAnimState() {
     headAcc: new THREE.Vector3(),
     mouthOpen: 0,
     prevAction: 'none',
+    prevAir: false,
+    landT: 9, // tempo desde o último pouso (amortece o "agachadinho")
   };
 }
 
@@ -123,6 +126,15 @@ export function createDogAnimation(ctx) {
     const jolt = sstep(0, 0.07, st.startT) * Math.exp(-Math.max(0, st.startT - 0.07) * 6) * w.startled;
     const ws = w.startled;
     w.carry = damp(w.carry, A.carrying ? 1 : 0, 6);
+    // pulo: o corpo inteiro sobe no arco (inner), o resto são poses; land = agachadinho logo após o pouso
+    const jumpY = Math.max(0, A.jump || 0);
+    const inAir = (A.airK ?? -1) >= 0;
+    const airK = inAir ? A.airK : 1;
+    w.jump = damp(w.jump, inAir ? 1 : 0, inAir ? 22 : 12);
+    if (st.prevAir && !inAir) st.landT = 0;
+    st.prevAir = inAir;
+    st.landT += dt;
+    const land = st.landT < 0.5 ? Math.exp(-st.landT * 9) * sstep(0, 0.04, st.landT) : 0;
 
     // comemoração: pulinhos → giro → "play bow"
     let hopTarget = 0, bowTarget = 0, spinTarget = null, celHappy = w.celebrate;
@@ -148,7 +160,7 @@ export function createDogAnimation(ctx) {
     st.hop = action === 'celebrate' ? hopTarget : damp(st.hop, 0, 12);
     w.bow = damp(w.bow, bowTarget, 7);
     inner.rotation.y = st.spin;
-    inner.position.y = st.hop;
+    inner.position.y = st.hop + jumpY;
 
     // latido
     let barkEnv = 0;
@@ -168,7 +180,7 @@ export function createDogAnimation(ctx) {
     f = lerp(f, f * 0.72, w.push);
     f = lerp(f, 3.8, w.strain);
     const turning = sstep(0.4, 1.5, Math.abs(st.turnS)) * (1 - st.move);
-    const gaitAmp = Math.max(st.move, turning * 0.6, w.strain) * (1 - Math.max(w.tug, w.turn)) * (1 - w.sit) * (1 - w.bow) * (1 - shkEnv * 0.9) * (1 - ws * 0.7);
+    const gaitAmp = Math.max(st.move, turning * 0.6, w.strain) * (1 - Math.max(w.tug, w.turn)) * (1 - w.sit) * (1 - w.bow) * (1 - shkEnv * 0.9) * (1 - ws * 0.7) * (1 - w.jump);
     st.phase = fract(st.phase + f * dt);
     const L = v / Math.max(f, 0.5);
     const walk = 1 - sstep(0.55, 1.1, v);
@@ -195,8 +207,8 @@ export function createDogAnimation(ctx) {
     const breathe = Math.sin(t * (2.2 + 3 * st.move)) * 0.0016 * s;
     const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s;
 
-    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06;
-    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s;
+    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.5 * airK - 0.24) + land * 0.08;
+    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s;
     let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s;
     const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s;
     qE(_q, pitch, 0, st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
@@ -262,9 +274,15 @@ export function createDogAnimation(ctx) {
         T.z += w.sit * 0.012 * s + w.bow * 0.075 * s + w.tug * 0.04 * s - w.sniff * 0.005 * s;
         T.y += w.bow * 0.004 * s;
         T.x += leg.side * w.bow * 0.006 * s;
+        // no ar: dianteiras dobradas na subida, esticadas para a frente no pouso
+        T.z += w.jump * (0.015 + 0.05 * airK) * s;
+        T.y += w.jump * 0.04 * s * Math.sin(Math.PI * airK);
       } else {
         T.z += w.sit * 0.07 * s - (w.push + w.strain) * 0.025 * s + w.tug * 0.012 * s - w.turn * 0.02 * s;
         T.x += leg.side * (w.sit * 0.01 + shkEnv * 0.01 + ws * 0.006) * s;
+        // no ar: traseiras estendidas para trás na decolagem, recolhidas depois
+        T.z -= w.jump * 0.06 * (1 - airK) * s;
+        T.y += w.jump * 0.035 * s * Math.sin(Math.PI * airK);
       }
       // pulinho: patas encolhidas
       const tuck = st.hop * 0.55 + (w.dash * Math.max(0, Math.sin(sp2 - 2.4)) * 0.015 * s);
@@ -349,7 +367,7 @@ export function createDogAnimation(ctx) {
     const tu = fract(t * 0.85);
     const turnRoll = w.turn * (tu < 0.72 ? lerp(-0.42, 0.48, sstep(0, 0.72, tu)) : lerp(0.48, -0.42, sstep(0.72, 1, tu)));
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
-    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32;
+    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK);
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
     qE(_q, bodyPitchW * 0.35 + neckPitch, st.lookYaw * 0.45 + shake * 0.3 + shk(0.5) * 0.25, shk(0.5) * 0.3 + turnRoll * 0.3);
     setWorld(BI.neck, _q);
@@ -413,7 +431,7 @@ export function createDogAnimation(ctx) {
     st.wagFreq = damp(st.wagFreq, wagFreqT, 3);
     st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
     st.wagPhase += st.wagFreq * dt * TAU;
-    const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95;
+    const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3;
     st.tailRaise = damp(st.tailRaise, raiseT, 4);
     for (let k = 0; k < 4; k++) {
       const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);
@@ -455,12 +473,13 @@ export function createDogAnimation(ctx) {
     shadow.position.z = -rp.x * sn + rp.z * cs - w.sit * 0.03 * s;
     shadow.rotation.y = st.spin;
     const lift01 = clamp(st.hop / (0.1 * s), 0, 1);
-    shadow.scale.set(shadowBase.x * (1 - lift01 * 0.3), 1, shadowBase.z * (1 - w.sit * 0.25) * (1 - lift01 * 0.3));
-    shadow.material.opacity = 0.55 * (1 - lift01 * 0.5);
+    const liftJ = clamp(jumpY / 0.5, 0, 1); // sombra do pulo: fica no chão, menor e mais clara
+    shadow.scale.set(shadowBase.x * (1 - lift01 * 0.3) * (1 - liftJ * 0.4), 1, shadowBase.z * (1 - w.sit * 0.25) * (1 - lift01 * 0.3) * (1 - liftJ * 0.4));
+    shadow.material.opacity = 0.55 * (1 - lift01 * 0.5) * (1 - liftJ * 0.5);
     const hp = Wp[BI.head];
     markerAnchor.position.set(
       lerp(markerAnchor.position.x, hp.x * cs + hp.z * sn, 0.2),
-      cfg.visual.headTop + 0.14 + st.hop,
+      cfg.visual.headTop + 0.14 + st.hop + jumpY,
       lerp(markerAnchor.position.z, -hp.x * sn + hp.z * cs, 0.2),
     );
   }

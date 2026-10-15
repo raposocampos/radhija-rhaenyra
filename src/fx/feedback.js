@@ -369,6 +369,14 @@ export function createFeedback(opts) {
       particles.dust({ x: p.x, y: 0.03, z: p.z }, { count: 4, size: 0.9, alpha: 0.42, strength: 0.6 });
     } else audio.play('pushStart');
   });
+  events.on('dog:jump', ({ x, z, dirX = 0, dirZ = 0 }) => {
+    sfx('jump', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.85, alpha: 0.38, dir: { x: -dirX, z: -dirZ }, strength: 0.6 });
+  });
+  events.on('dog:land', ({ x, z }) => {
+    sfx('land', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.9, alpha: 0.4, strength: 0.55 });
+  });
   events.on('dog:bump', ({ x, z, strength = 0.7 }) => {
     sfx('bump', x, z, { strength });
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });

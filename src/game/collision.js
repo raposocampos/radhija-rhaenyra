@@ -8,6 +8,7 @@
 // blocks: 'all' (padrão) | 'large' (só bloqueia dogs de tamanho 'large')
 // blocks: 'small' também é aceito (só bloqueia a Radhija). except: { minX, maxX, minZ, maxZ } —
 // colisor ignorado quando o centro da dog está dentro (água sob uma ponte, por exemplo).
+// jumpable: true — obstáculo baixo (tronco, mureta baixa) ignorado por quem está no ar (opts.airborne).
 // Dinâmicos: registrados por cada fase via world.addDynamic(colisor) — o objeto devolvido é
 // mutável (mova x/z/ax/bz…, ligue/desligue com enabled). Ex.: portão, carrinho, caixotes, água.
 
@@ -145,7 +146,7 @@ export function createCollisionWorld(layout) {
     const rr = r + (opts.margin || 0);
     for (const list of [statics, dynamics]) {
       for (const c of list) {
-        if (!applies(c, size) || excepted(c, x, z)) continue;
+        if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
         const p = penCollider(x, z, rr, c);
         if (p && p.depth > 1e-6) out.push({ id: c.id, kind: c.kind, nx: p.nx, nz: p.nz, depth: p.depth });
@@ -166,7 +167,7 @@ export function createCollisionWorld(layout) {
       let any = false;
       for (const list of [statics, dynamics]) {
         for (const c of list) {
-          if (!applies(c, size) || excepted(c, x, z)) continue;
+          if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
           if (opts.ignore && opts.ignore.has(c.id)) continue;
           const p = penCollider(x, z, r, c);
           if (p && p.depth > 1e-6) {
@@ -217,7 +218,7 @@ export function createCollisionWorld(layout) {
     if (x < bounds.minX + r || x > bounds.maxX - r || z < bounds.minZ + r || z > bounds.maxZ - r) return true;
     for (const list of [statics, dynamics]) {
       for (const c of list) {
-        if (!applies(c, size) || excepted(c, x, z)) continue;
+        if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
         const p = penCollider(x, z, r, c);
         if (p && p.depth > 1e-4) return true;

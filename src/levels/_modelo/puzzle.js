@@ -131,7 +131,7 @@ export function createPuzzle(ctx) {
     lookTarget: (c) => (nearBall(c) ? { x: BALL.x, y: 0.08, z: BALL.z } : null),
     navFlags: () => ({ gateOpen: gate.isOpen(0.9) }),
     setPrompt: (kind) => hints.setPrompt(kind),
-    info: () => ({ gate: gate.info(), plate: plate.info(), ball: { holder: ball.holder } }),
+    info: () => ({ gate: gate.info(), plate: plate.info(), ball: { holder: ball.holder }, objective: objective(ctx.activeDog).text }),
     set onStageChange(fn) { onStageChange = fn; },
     get stage() { return S.stage; },
     get carrier() { return ball.holder; },

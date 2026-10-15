@@ -35,6 +35,10 @@ export interface ColliderBase {
   companionOnly?: boolean;
   /** Dinâmicos: liga/desliga sem remover. */
   enabled?: boolean;
+  /** Obstáculo baixo que dá para pular (tronco, mureta baixa): não bloqueia quem está no ar. */
+  jumpable?: boolean;
+  /** Altura visual (m), usada pelo cenário provisório para desenhar obstáculos puláveis. */
+  height?: number;
 }
 export interface BoxCollider extends ColliderBase { shape: 'box'; x: number; z: number; hx: number; hz: number }
 export interface CircleCollider extends ColliderBase { shape: 'circle'; x: number; z: number; r: number }
@@ -54,13 +58,13 @@ export interface CollisionWorld {
   getDynamic(id: string): Collider | null;
   setCompanionMode(on: boolean): void;
   readonly companionMode: boolean;
-  contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string> }): Contact[];
-  resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string> }): { x: number; z: number; hits: Contact[] };
+  contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string>; airborne?: boolean }): Contact[];
+  resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
   /** Move com sub-passos (nunca atravessa paredes finas). */
-  move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): { x: number; z: number; hits: Contact[] };
-  overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): boolean;
+  move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
+  overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): boolean;
   /** Linha de visão "gorda": um círculo de raio r vai de A a B em linha reta? */
-  segmentClear(ax: number, az: number, bx: number, bz: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): boolean;
+  segmentClear(ax: number, az: number, bx: number, bz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): boolean;
   clampBounds(x: number, z: number, r: number): XZ;
 }
 
@@ -83,6 +87,11 @@ export interface DogStats {
   dashCooldown?: number;
   /** Só a Rhaenyra: velocidade ao empurrar. */
   pushSpeed?: number;
+  /** Só a Rhaenyra: pulo — altura (m), duração no ar (s), impulso horizontal mínimo (m/s) e recarga (s). */
+  jumpHeight?: number;
+  jumpTime?: number;
+  jumpSpeed?: number;
+  jumpCooldown?: number;
   accel: number;
   decel: number;
   /** Giro máximo do corpo (rad/s). */
@@ -244,6 +253,16 @@ export interface DogController {
   /** Contatos do último integrate(). */
   hits: Contact[];
   stillT: number;
+  /** Altura do pulo (m); 0 = no chão. */
+  y: number;
+  /** Tempo restante no ar (s); 0 = no chão. */
+  jumpT: number;
+  jumpDur: number;
+  jumpCd: number;
+  jumpDx: number;
+  jumpDz: number;
+  /** Pousou neste quadro (o jogo emite dog:land e zera). */
+  landed: boolean;
 }
 
 /** Intenção de movimento de um quadro (steer). */
@@ -406,7 +425,7 @@ export interface Fase3Props extends LevelProps {
 
 /** Ação de animação pedida a cada quadro (anim.action). */
 export type DogAction =
-  | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled';
+  | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled' | 'jump';
 
 export interface DogAnim {
   /** Velocidade real (m/s). */
@@ -417,6 +436,10 @@ export interface DogAnim {
   /** Ponto para onde olhar (ou null). */
   lookAt?: THREE.Vector3 | XYZ | null;
   carrying?: boolean;
+  /** Altura do pulo (m). */
+  jump?: number;
+  /** Progresso do pulo 0..1 (decolagem → pouso); −1 = no chão. */
+  airK?: number;
 }
 
 /** Cachorrinha procedural (createDog em src/dogs/dog.js). */
