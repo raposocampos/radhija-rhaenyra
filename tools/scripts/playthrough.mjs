@@ -5,7 +5,7 @@
 import { chromium } from 'playwright-core';
 import { mkdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { NAV_NODES } from '../../src/level/layout.js';
+import { NAV_NODES } from '../../src/levels/fase1/layout.js';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, cur, i, arr) => {
   if (cur.startsWith('--')) acc.push([cur.slice(2), arr[i + 1]?.startsWith('--') ? true : arr[i + 1] ?? true]);

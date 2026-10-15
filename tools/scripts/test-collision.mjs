@@ -4,7 +4,7 @@ import {
   penCircleBox, penCircleCircle, penCircleSegment, gateTip, createCollisionWorld,
 } from '../../src/game/collision.js';
 import { createNavigator } from '../../src/game/navigation.js';
-import LAYOUT from '../../src/level/layout.js';
+import LAYOUT from '../../src/levels/fase1/layout.js';
 
 let pass = 0;
 let fail = 0;

@@ -1,0 +1,469 @@
+// Animação procedural da dog, resolvida a cada quadro: trote/passo/galope com pés plantados (IK),
+// todas as ações do jogo (sentar, empurrar, forçar, puxar a corda, comemorar, farejar, arrancada,
+// girar o registro, chacoalhar, susto), olhar, boca, orelhas com mola, cauda, piscadas, vento no pelo,
+// sombra de contato e âncora do marcador. Entrada: update(dt, { speed, turn, action, lookAt, carrying }).
+import * as THREE from 'three';
+
+export const TAU = Math.PI * 2;
+export const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+export const lerp = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, x) => {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+const fract = (x) => x - Math.floor(x);
+const SIT_PITCH = 0.62; // inclinação da coluna sentada (rad)
+const SIT_HIPS = 0.0; // flexão extra da garupa sentada
+
+/** Estado da animação (aleatório no começo para as duas dogs não andarem em sincronia). */
+function createAnimState() {
+  return {
+    t: Math.random() * 10,
+    speed: 0,
+    move: 0,
+    phase: Math.random(),
+    idle: 0,
+    lean: 0,
+    turnS: 0,
+    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0 },
+    shakeT: 9,
+    startT: 9,
+    wet: 0,
+    lookYaw: 0,
+    lookPitch: 0,
+    glanceT: 2,
+    glanceYaw: 0,
+    glancePitch: 0,
+    blinkT: 1.5 + Math.random() * 2,
+    blink: 0,
+    bark: -1,
+    celT: 0,
+    hop: 0,
+    spin: 0,
+    wagPhase: 0,
+    wagAmp: 0.25,
+    wagFreq: 2,
+    tailRaise: 0,
+    ears: [
+      { p: 0, pv: 0, o: 0.08, ov: 0 },
+      { p: 0, pv: 0, o: 0.08, ov: 0 },
+    ],
+    headWorld: null,
+    headVel: new THREE.Vector3(),
+    headAcc: new THREE.Vector3(),
+    mouthOpen: 0,
+    prevAction: 'none',
+  };
+}
+
+/**
+ * ctx: { object, inner, cfg (stats da dog no layout), s (escala), rig (dogRig.js), face (dogFace.js),
+ *        carry (carryPose.js), furMat, shadow, shadowBase, markerAnchor, onFootstep(i) }
+ * → { st (estado), update(dt, anim) }
+ */
+export function createDogAnimation(ctx) {
+  const { object, inner, cfg, s, rig, face, carry, furMat, shadow, shadowBase, markerAnchor, onFootstep } = ctx;
+  const { bones, BI, nB, rest, restOff, Lq, Wq, Wp, posOff, fk, setWorld, basisQuat, solve2 } = rig;
+  const LEGS = rig.legs;
+  const { eyes, lip, tongue, mouthW } = face;
+  const st = createAnimState();
+
+  // temporários
+  const v3 = () => new THREE.Vector3();
+  const q4 = () => new THREE.Quaternion();
+  const _q = q4(), _q2 = q4(), _q3 = q4(), _qi = q4();
+  const _e = new THREE.Euler();
+  const _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _m3 = new THREE.Matrix4();
+  const _v = v3(), _v2 = v3(), _v3 = v3(), _T = v3(), _K = v3(), _H = v3(), _pole = v3(), _n = v3(), _d = v3();
+  const _rootPos = v3();
+  const _X = new THREE.Vector3(1, 0, 0);
+  const qE = (out, x, y, z) => out.setFromEuler(_e.set(x, y, z, 'YXZ'));
+
+  function update(dt, anim) {
+    dt = Math.min(Math.max(dt || 0, 0), 0.05);
+    const A = anim || {};
+    carry.sync();
+    const action = A.action || 'none';
+    const speedIn = Math.max(0, A.speed || 0);
+    const turn = A.turn || 0;
+    st.t += dt;
+    const t = st.t;
+    const damp = (cur, target, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
+    const w = st.w;
+
+    // ---------------- blends
+    st.speed = damp(st.speed, speedIn, 14);
+    const v = st.speed;
+    st.move = damp(st.move, sstep(0.03, 0.3, v), 9);
+    st.turnS = damp(st.turnS, turn, 8);
+    if (action !== st.prevAction) {
+      if (action === 'celebrate') st.celT = 0;
+      if (action === 'shake') st.shakeT = 0;
+      if (action === 'startled') st.startT = 0;
+      st.prevAction = action;
+    }
+    if (v < 0.05 && action === 'none' && Math.abs(turn) < 0.4 && st.bark < 0) st.idle += dt;
+    else st.idle = 0;
+    const wantSit = action === 'sit' || (action === 'none' && st.idle > 5);
+    w.sit = damp(w.sit, wantSit ? 1 : 0, wantSit ? 3.2 : 7);
+    for (const k of ['push', 'strain', 'tug', 'celebrate', 'sniff', 'dash', 'turn']) w[k] = damp(w[k], action === k ? 1 : 0, k === 'dash' ? 10 : 6);
+    w.shake = damp(w.shake, action === 'shake' ? 1 : 0, action === 'shake' ? 14 : 8);
+    w.startled = damp(w.startled, action === 'startled' ? 1 : 0, action === 'startled' ? 22 : 5);
+    st.shakeT += dt;
+    st.startT += dt;
+    // chacoalhar: onda de torção que vai da cabeça à cauda (~0,9 s); k = atraso do segmento
+    const shakeEnvAt = (k) => {
+      const u = st.shakeT - k * 0.07;
+      return sstep(0, 0.1, u) * (1 - sstep(0.62, 0.9, u)) * w.shake;
+    };
+    const shakePh = st.shakeT * TAU * 6.2;
+    const shk = (k) => Math.sin(shakePh - k * 0.9) * shakeEnvAt(k);
+    const shkEnv = shakeEnvAt(1);
+    // susto: tranco rápido para trás que assenta numa postura baixa e encolhida
+    const jolt = sstep(0, 0.07, st.startT) * Math.exp(-Math.max(0, st.startT - 0.07) * 6) * w.startled;
+    const ws = w.startled;
+    w.carry = damp(w.carry, A.carrying ? 1 : 0, 6);
+
+    // comemoração: pulinhos → giro → "play bow"
+    let hopTarget = 0, bowTarget = 0, spinTarget = null, celHappy = w.celebrate;
+    if (action === 'celebrate') {
+      st.celT += dt;
+      const c = st.celT % 2.8;
+      if (c < 0.9) {
+        const u = (c % 0.45) / 0.45;
+        hopTarget = Math.sin(Math.PI * u) * 0.075 * s;
+      } else if (c < 1.65) {
+        const u = (c - 0.9) / 0.75;
+        spinTarget = TAU * Math.floor(st.celT / 2.8) + TAU * (u * u * (3 - 2 * u));
+        hopTarget = Math.sin(Math.PI * u) * 0.05 * s;
+      } else {
+        bowTarget = 1;
+      }
+      if (spinTarget === null) spinTarget = TAU * Math.round(st.spin / TAU);
+      st.spin = c >= 0.9 && c < 1.65 ? spinTarget : damp(st.spin, spinTarget, 10);
+    } else {
+      st.spin = damp(st.spin, TAU * Math.round(st.spin / TAU), 6);
+      if (Math.abs(st.spin - TAU * Math.round(st.spin / TAU)) < 1e-3) st.spin = 0;
+    }
+    st.hop = action === 'celebrate' ? hopTarget : damp(st.hop, 0, 12);
+    w.bow = damp(w.bow, bowTarget, 7);
+    inner.rotation.y = st.spin;
+    inner.position.y = st.hop;
+
+    // latido
+    let barkEnv = 0;
+    if (st.bark >= 0) {
+      st.bark += dt;
+      const u = st.bark / 0.38;
+      if (u >= 1) st.bark = -1;
+      else barkEnv = Math.sin(Math.PI * u) * (u < 0.5 ? 1 : 1 - (u - 0.5) * 0.6);
+    }
+
+    // ---------------- passada
+    const kS = 1 / Math.sqrt(s);
+    const vEff = Math.max(v, Math.abs(st.turnS) * 0.1 * s);
+    const fTrot = (1.8 + 1.6 * Math.min(vEff, 3)) * kS;
+    const fBound = (4.6 + 0.15 * v) * kS;
+    let f = lerp(fTrot, fBound, w.dash);
+    f = lerp(f, f * 0.72, w.push);
+    f = lerp(f, 3.8, w.strain);
+    const turning = sstep(0.4, 1.5, Math.abs(st.turnS)) * (1 - st.move);
+    const gaitAmp = Math.max(st.move, turning * 0.6, w.strain) * (1 - Math.max(w.tug, w.turn)) * (1 - w.sit) * (1 - w.bow) * (1 - shkEnv * 0.9) * (1 - ws * 0.7);
+    st.phase = fract(st.phase + f * dt);
+    const L = v / Math.max(f, 0.5);
+    const walk = 1 - sstep(0.55, 1.1, v);
+    let beta = lerp(0.62, 0.4, clamp(v / 2.4, 0, 1));
+    beta = lerp(beta, 0.3, w.dash);
+    beta = lerp(beta, 0.66, w.push);
+    beta = lerp(beta, 0.5, w.strain);
+    let stroke = beta * L * (1 - w.strain) + w.strain * 0.06 * s;
+    stroke *= 1 - w.tug;
+    const lift = (0.026 * s * Math.min(1, 0.45 + v / 1.4) * Math.max(st.move, turning) + w.strain * 0.024 * s + w.push * 0.01 * s + w.dash * 0.02 * s) * (1 - w.sit);
+    // fases de cada pata (FL, FR, HL, HR): passo (lateral), trote (diagonais), galope (bound)
+    const offWalk = [0.25, 0.75, 0.0, 0.5];
+    const offTrot = [0.0, 0.5, 0.5, 0.0];
+    const offBound = [0.0, 0.08, 0.5, 0.58];
+
+    // ---------------- corpo (raiz)
+    const sp2 = st.phase * TAU;
+    const trotK = (1 - w.dash) * gaitAmp;
+    const bob = -0.0065 * s * Math.min(1, v / 1.2) * trotK * Math.cos(2 * (sp2 - beta * Math.PI));
+    const sway = 0.003 * s * Math.sin(sp2) * trotK;
+    const boundPitch = 0.15 * Math.sin(sp2 - 0.9) * w.dash;
+    const boundY = 0.022 * s * (0.5 + 0.5 * Math.sin(sp2 - 2.4)) * w.dash;
+    st.lean = damp(st.lean, clamp(-st.turnS * v * 0.075, -0.32, 0.32), 6);
+    const breathe = Math.sin(t * (2.2 + 3 * st.move)) * 0.0016 * s;
+    const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s;
+
+    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06;
+    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s;
+    let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s;
+    const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s;
+    qE(_q, pitch, 0, st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
+    _rootPos.set(rest[0].x + rootX, rest[0].y + rootY, rest[0].z + rootZ);
+    _m.compose(_rootPos, _q, _v.set(1, 1, 1));
+    // sentar: gira em torno do peito; play bow: gira em torno do quadril
+    if (w.sit > 0.001) {
+      // pivô no ombro: as patas dianteiras continuam retas e plantadas; a garupa desce até o chão
+      const C = rest[BI.FLu];
+      _m2.makeTranslation(0, C.y - 0.004 * s * w.sit, C.z).multiply(_m3.makeRotationX(-SIT_PITCH * w.sit)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
+      _m.premultiply(_m2);
+    }
+    if (w.bow > 0.001) {
+      const Hh = rest[BI.hips];
+      _m2.makeTranslation(Hh.x, Hh.y + 0.01 * s * w.bow, Hh.z).multiply(_m3.makeRotationX(0.42 * w.bow)).multiply(_m3.makeTranslation(-Hh.x, -Hh.y, -Hh.z));
+      _m.premultiply(_m2);
+    }
+    _m.decompose(_rootPos, Lq[0], _v);
+    Wq[0].copy(Lq[0]);
+    Wp[0].copy(_rootPos);
+    bones[0].position.copy(_rootPos);
+
+    // coluna: curva na direção da curva, flexão no galope, rebolado na comemoração
+    const spineYaw = clamp(st.turnS * 0.07, -0.25, 0.25);
+    const wiggle = w.bow * Math.sin(t * 14) * 0.18;
+    const flex = w.dash * Math.sin(sp2 - 0.4) * 0.12;
+    qE(Lq[BI.chest], -flex, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
+    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
+    posOff[BI.chest].set(0, 0, w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
+    posOff[BI.hips].set(0, 0, -w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
+    fk(BI.hips);
+    fk(BI.chest);
+
+    // ---------------- pernas (IK)
+    for (let li = 0; li < 4; li++) {
+      const leg = LEGS[li];
+      const off = lerp(lerp(offTrot[li], offWalk[li], walk * (1 - w.dash)), offBound[li], w.dash);
+      const p = fract(st.phase + off);
+      let fz = 0, fy = 0, curl = 0, swingU = 0;
+      const swing = p >= beta;
+      if (!swing) {
+        fz = stroke * (0.5 - p / beta);
+      } else {
+        const u = (p - beta) / (1 - beta);
+        const e = u * u * (3 - 2 * u);
+        fz = stroke * (-0.5 + e);
+        fy = lift * Math.sin(Math.PI * u);
+        curl = Math.sin(Math.PI * u);
+        swingU = u;
+      }
+      fz *= gaitAmp;
+      fy *= gaitAmp;
+      curl *= gaitAmp;
+      // pisada
+      if (leg.swing && !swing && v > 0.2 && gaitAmp > 0.3) onFootstep(li);
+      leg.swing = swing;
+      void swingU;
+
+      const T = _T.copy(leg.foot0);
+      T.z += fz;
+      T.y += fy;
+      if (leg.front) {
+        T.z += w.sit * 0.012 * s + w.bow * 0.075 * s + w.tug * 0.04 * s - w.sniff * 0.005 * s;
+        T.y += w.bow * 0.004 * s;
+        T.x += leg.side * w.bow * 0.006 * s;
+      } else {
+        T.z += w.sit * 0.07 * s - (w.push + w.strain) * 0.025 * s + w.tug * 0.012 * s - w.turn * 0.02 * s;
+        T.x += leg.side * (w.sit * 0.01 + shkEnv * 0.01 + ws * 0.006) * s;
+      }
+      // pulinho: patas encolhidas
+      const tuck = st.hop * 0.55 + (w.dash * Math.max(0, Math.sin(sp2 - 2.4)) * 0.015 * s);
+      T.y += tuck;
+      // planta do pé nunca abaixo do chão (com o corpo levantado o pé acompanha)
+      const parent = leg.front ? BI.chest : BI.hips;
+      fk(leg.iu);
+      const Pp = Wp[leg.iu];
+      // polo: cotovelo para trás, joelho para frente (girando com o tronco)
+      _pole.set(0, leg.front ? -0.15 : 0.15, leg.front ? -1 : 1).applyQuaternion(Wq[parent]);
+      if (!leg.front && w.sit > 0.001) {
+        // SENTADA (anatomia de cão): jarrete no chão logo atrás do quadril, metatarso deitado
+        // apontando para a frente, pata plantada à frente do jarrete; soldra para a FRENTE, ao lado
+        // da barriga (polo no referencial da dog, não da garupa inclinada).
+        const ks = sstep(0, 1, w.sit);
+        _v.set(Pp.x + leg.side * 0.012 * s, leg.foot0.y - 0.004 * s, Pp.z - 0.016 * s + leg.c * 0.97);
+        T.lerp(_v, ks);
+        _v.set(leg.side * 0.34, 0.5, 1).normalize();
+        _pole.lerp(_v, ks).normalize();
+      }
+
+      if (leg.front) {
+        solve2(Pp, T, leg.a, leg.b, _pole, _K);
+        _n.crossVectors(_v.subVectors(_K, Pp), _v2.subVectors(T, _K)).normalize();
+        basisQuat(_q, _v3.subVectors(_K, Pp), _n, leg.Bu);
+        setWorld(leg.iu, _q);
+        basisQuat(_q2, _v3.subVectors(T, _K), _n, leg.Bl);
+        setWorld(leg.il, _q2);
+        qE(_q3, curl * 0.9 - w.bow * 0.0, 0, 0);
+        setWorld(leg.ip, _q3);
+      } else {
+        // metatarso: vertical em pé, deitado para a frente sentado, flexiona no balanço
+        const ang = curl * 0.45 - sstep(0, 1, w.sit) * 1.38;
+        _v.copy(leg.m0).applyAxisAngle(_X, ang);
+        _H.copy(T).sub(_v); // jarrete = pata - metatarso
+        const Mdir = _d.copy(_v); // cópia temporária
+        const mdx = Mdir.x, mdy = Mdir.y, mdz = Mdir.z;
+        solve2(Pp, _H, leg.a, leg.b, _pole, _K);
+        _n.crossVectors(_v.subVectors(_K, Pp), _v2.subVectors(_H, _K)).normalize();
+        basisQuat(_q, _v3.subVectors(_K, Pp), _n, leg.Bu);
+        setWorld(leg.iu, _q);
+        basisQuat(_q2, _v3.subVectors(_H, _K), _n, leg.Bl);
+        setWorld(leg.il, _q2);
+        _n.crossVectors(_v.subVectors(_K, Pp), _v2.subVectors(_H, _K)).normalize();
+        basisQuat(_q3, _v3.set(mdx, mdy, mdz), _n, leg.Bm);
+        setWorld(leg.im, _q3);
+        qE(_qi, curl * 0.7, 0, 0);
+        setWorld(leg.ip, _qi);
+      }
+    }
+
+    // ---------------- olhar
+    let tYaw = 0, tPitch = 0;
+    if (A.lookAt) {
+      const ox = object.position.x, oz = object.position.z, yaw = object.rotation.y;
+      const dx = A.lookAt.x - ox, dz = A.lookAt.z - oz;
+      const c = Math.cos(yaw), sn = Math.sin(yaw);
+      const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
+      const hp = Wp[BI.head];
+      tYaw = clamp(Math.atan2(lx - hp.x, lz - hp.z), -1.15, 1.15);
+      const hd = Math.hypot(lx - hp.x, lz - hp.z);
+      tPitch = clamp(-Math.atan2((A.lookAt.y ?? 0.3) - (object.position.y + hp.y), Math.max(hd, 0.2)), -0.5, 0.55);
+    } else {
+      st.glanceT -= dt;
+      if (st.glanceT <= 0) {
+        st.glanceT = 1.8 + Math.random() * 3.5;
+        const calm = 1 - st.move;
+        st.glanceYaw = (Math.random() * 2 - 1) * 0.65 * calm;
+        st.glancePitch = (Math.random() * 0.35 - 0.2) * calm;
+      }
+      tYaw = st.glanceYaw * (1 - st.move) + st.turnS * 0.12;
+      tPitch = st.glancePitch * (1 - st.move);
+    }
+    const actionsBusy = Math.max(w.push, w.strain, w.tug, w.sniff, w.bow, w.turn, shkEnv);
+    tYaw *= 1 - actionsBusy * 0.8;
+    st.lookYaw = damp(st.lookYaw, tYaw, 5);
+    st.lookPitch = damp(st.lookPitch, tPitch, 5);
+
+    // ---------------- pescoço e cabeça (cabeça estabilizada)
+    const shake = w.tug * Math.sin(t * 15) * 0.32;
+    // registro: torce a cabeça (rolagem) em catraca — gira devagar, volta rápido
+    const tu = fract(t * 0.85);
+    const turnRoll = w.turn * (tu < 0.72 ? lerp(-0.42, 0.48, sstep(0, 0.72, tu)) : lerp(0.48, -0.42, sstep(0.72, 1, tu)));
+    const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
+    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32;
+    const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
+    qE(_q, bodyPitchW * 0.35 + neckPitch, st.lookYaw * 0.45 + shake * 0.3 + shk(0.5) * 0.25, shk(0.5) * 0.3 + turnRoll * 0.3);
+    setWorld(BI.neck, _q);
+    const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12;
+    const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04;
+    qE(_q, headPitch, st.lookYaw + shake + shk(0) * 0.35, headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
+    setWorld(BI.head, _q);
+    fk(BI.jaw);
+
+    // ---------------- boca (latido, comemoração, carregando)
+    const pant = (celHappy * 0.6 + st.move * sstep(1.2, 2.4, v) * 0.5) * (1 - w.carry);
+    const openT = Math.max(barkEnv, pant * (0.55 + 0.45 * Math.sin(t * 9)) * (1 - ws), w.carry * carry.open, w.turn * 0.4);
+    st.mouthOpen = damp(st.mouthOpen, openT, 20);
+    const mo = st.mouthOpen;
+    lip.scale.set(mouthW, 0.0022 * s + mo * 0.011 * s, 0.009 * s + mo * 0.004 * s);
+    lip.position.set(0, -mo * 0.006 * s, 0);
+    tongue.visible = mo > 0.15;
+    tongue.scale.set(mouthW * 0.6, 0.004 * s, 0.012 * s);
+    tongue.position.set(0, -mo * 0.011 * s, 0.002 * s);
+
+    // ---------------- orelhas (mola amortecida guiada pela aceleração da cabeça)
+    {
+      const hp = Wp[BI.head];
+      _v.copy(hp).applyQuaternion(inner.quaternion).add(inner.position);
+      _v.applyQuaternion(object.quaternion).add(object.position);
+      if (!st.headWorld) st.headWorld = _v.clone();
+      const idt = 1 / Math.max(dt, 1e-3);
+      _v2.subVectors(_v, st.headWorld).multiplyScalar(idt);
+      st.headWorld.copy(_v);
+      _v3.subVectors(_v2, st.headVel).multiplyScalar(idt);
+      st.headVel.lerp(_v2, 0.5);
+      st.headAcc.lerp(_v3, 0.3);
+      if (st.headAcc.length() > 60) st.headAcc.setLength(60);
+      // aceleração no referencial da cabeça
+      _q.copy(object.quaternion).multiply(inner.quaternion).multiply(Wq[BI.head]).invert();
+      const aL = _v3.copy(st.headAcc).applyQuaternion(_q);
+      const pitchT = w.dash * 1.15 + Math.min(v, 2.5) * 0.08 + w.push * 0.2 + w.strain * 0.3 + barkEnv * 0.2 + ws * 1.05;
+      const outT = 0.06 + w.dash * 0.35 + celHappy * 0.12 + barkEnv * 0.25 - w.sit * 0.03 - ws * 0.12 + shkEnv * (0.45 + 0.4 * Math.sin(shakePh - 0.4));
+      const sub = dt > 0.02 ? 2 : 1;
+      const h = dt / sub;
+      for (let ei = 0; ei < 2; ei++) {
+        const E = st.ears[ei];
+        const se = ei === 0 ? 1 : -1;
+        for (let k = 0; k < sub; k++) {
+          const ap = 160 * (pitchT - E.p) - 9 * E.pv + aL.z * 0.12;
+          const ao = 140 * (outT - E.o) - 8 * E.ov - aL.y * 0.1 - se * aL.x * 0.1;
+          E.pv += ap * h; E.p += E.pv * h;
+          E.ov += ao * h; E.o += E.ov * h;
+        }
+        E.p = clamp(E.p, -0.5, 1.5);
+        E.o = clamp(E.o, -0.12, 1.1);
+        qE(Lq[BI[ei === 0 ? 'earL0' : 'earR0']], E.p * 0.8, 0, se * E.o);
+        qE(Lq[BI[ei === 0 ? 'earL1' : 'earR1']], E.p * 0.35 + E.pv * 0.012, 0, se * (E.o * 0.35 + E.ov * 0.01));
+      }
+    }
+
+    // ---------------- cauda
+    const happy = Math.max(celHappy, w.carry * 0.7, barkEnv);
+    const wagFreqT = lerp(lerp(2.0, 3.2, st.move), 7, happy) * (1 - w.sit * 0.5) * (1 - actionsBusy * 0.5);
+    const wagAmpT = lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) + w.bow * 0.2;
+    st.wagFreq = damp(st.wagFreq, wagFreqT, 3);
+    st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
+    st.wagPhase += st.wagFreq * dt * TAU;
+    const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95;
+    st.tailRaise = damp(st.tailRaise, raiseT, 4);
+    for (let k = 0; k < 4; k++) {
+      const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);
+      qE(Lq[BI.tail0 + k], k === 0 ? -st.tailRaise * 0.8 : -st.tailRaise * 0.12 + w.dash * 0.1, wag, k === 0 ? 0 : wag * 0.2);
+    }
+
+    // ---------------- piscadas
+    st.blinkT -= dt;
+    if (st.blinkT <= 0) {
+      st.blink = 0.0001;
+      st.blinkT = 1.8 + Math.random() * 3.8;
+      if (Math.random() < 0.18) st.blinkT = 0.28; // piscada dupla
+    }
+    let lid = 0;
+    if (st.blink > 0) {
+      st.blink += dt;
+      const u = st.blink / 0.16;
+      if (u >= 1) st.blink = 0;
+      else lid = Math.sin(Math.PI * u);
+    }
+    const squint = celHappy * 0.25 + w.strain * 0.3;
+    const wide = 1 + ws * 0.22;
+    const lidK = lid * (1 - ws);
+    for (const e of eyes) e.scale.set(wide, wide * Math.max(0.08, 1 - Math.max(lidK, squint * (1 - ws))), wide);
+
+    // ---------------- aplica nos ossos
+    for (let i = 0; i < nB; i++) {
+      bones[i].quaternion.copy(Lq[i]);
+      if (i > 0) bones[i].position.copy(restOff[i]).add(posOff[i]);
+    }
+
+    // pelo: vento nas pontas durante a arrancada
+    furMat.userData.uniforms.uWind.value.set(shk(1.5) * 0.9, 0.12 * w.dash, -0.9 * w.dash - v * 0.04);
+
+    // sombra de contato e marcador
+    const rp = Wp[0];
+    const cs = Math.cos(st.spin), sn = Math.sin(st.spin);
+    shadow.position.x = rp.x * cs + rp.z * sn;
+    shadow.position.z = -rp.x * sn + rp.z * cs - w.sit * 0.03 * s;
+    shadow.rotation.y = st.spin;
+    const lift01 = clamp(st.hop / (0.1 * s), 0, 1);
+    shadow.scale.set(shadowBase.x * (1 - lift01 * 0.3), 1, shadowBase.z * (1 - w.sit * 0.25) * (1 - lift01 * 0.3));
+    shadow.material.opacity = 0.55 * (1 - lift01 * 0.5);
+    const hp = Wp[BI.head];
+    markerAnchor.position.set(
+      lerp(markerAnchor.position.x, hp.x * cs + hp.z * sn, 0.2),
+      cfg.visual.headTop + 0.14 + st.hop,
+      lerp(markerAnchor.position.z, -hp.x * sn + hp.z * cs, 0.2),
+    );
+  }
+
+  return { st, update };
+}

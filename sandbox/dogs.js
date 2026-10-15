@@ -34,7 +34,7 @@ function testSlipper(len = 0.24) {
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }
-import { SUN, CAMERA } from '../src/level/layout.js';
+import { SUN, CAMERA } from '../src/levels/fase1/layout.js';
 
 const q = new URLSearchParams(location.search);
 const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);

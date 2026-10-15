@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { createEngine } from '../src/core/engine.js';
 import { buildEnvironment } from '../src/world/environment.js';
 import { createProps } from '../src/world/props.js';
-import LAYOUT from '../src/level/layout.js';
+import LAYOUT from '../src/levels/fase1/layout.js';
 
 const params = new URLSearchParams(location.search);
 const num = (k, d) => (params.has(k) ? Number(params.get(k)) : d);
