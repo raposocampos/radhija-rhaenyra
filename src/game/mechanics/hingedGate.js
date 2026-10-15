@@ -33,6 +33,7 @@ export function createHingedGate({ id = 'gate', cfg, world, prop = null, thickne
   }
 
   /** Abre/fecha em direção a `target` (0..1). ctrls: dogs que o portão não pode prender ao fechar. */
+  /** @param {number} dt @param {{ ctrls?: Record<string, import('../../types').DogController> }} [ctx] */
   function update(dt, { ctrls } = {}) {
     const target = S.locked ? 1 : S.target;
     if (S.p === target) {

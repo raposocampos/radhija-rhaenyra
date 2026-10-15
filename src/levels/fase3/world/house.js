@@ -280,14 +280,14 @@ export function buildHouse(layout) {
 
   // ------------------------------------------------ janelas acesas
   const windows = [];
-  for (const [wd, seed, cool] of [[winA, 2, false], [winA2, 6, false]]) {
+  for (const [wd, seed, cool] of /** @type {[{ x: number, y: number, w: number, h: number }, number, boolean][]} */ ([[winA, 2, false], [winA2, 6, false]])) {
     const w = makeWindow({ w: wd.w, h: wd.h, seed, cool });
     w.group.position.set(wd.x, wd.y, Z);
     group.add(w.group);
     windows.push(w);
   }
   // salão: janelões com caixilhos (um quente, um azulado de TV)
-  for (const [x, seed, cool] of [[0.4, 11, false], [2.9, 12, false], [5.9, 13, true]]) {
+  for (const [x, seed, cool] of /** @type {[number, number, boolean][]} */ ([[0.4, 11, false], [2.9, 12, false], [5.9, 13, true]])) {
     const w = makeWindow({ w: 1.3, h: 1.25, seed, cool, intensity: cool ? 0.9 : 1.3, box: !cool });
     w.group.position.set(x, 1.55, Z + 0.09);
     group.add(w.group);
@@ -367,10 +367,10 @@ export function buildHouse(layout) {
     const matMesh = new THREE.Mesh(rbox(0.9, 0.016, 0.56, 0.008), new THREE.MeshStandardMaterial({ map: matTex, roughness: 1 }));
     matMesh.position.set(D.x, 0.034, Z + 0.5);
     deck.add(matMesh);
-    deck.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
+    deck.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
     group.add(deck);
   }
 
-  group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+  group.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
   return { group, interiorMats, lampShadeMat, glowFrame, sconces, windows };
 }

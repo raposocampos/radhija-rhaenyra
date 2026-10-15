@@ -16,6 +16,10 @@ import { contactShadowTexture } from './contactShadow.js';
 
 export { createPlushCarrot } from './plushCarrot.js';
 
+/**
+ * @param {import('../types').DogName} kind
+ * @returns {import('../types').DogModel}
+ */
 export function createDog(kind) {
   const cfg = DOGS[kind];
   const G = buildDogGeometry(kind);

@@ -1,25 +1,28 @@
 {
-  "name": "operacao-cenoura",
+  "name": "radhija-rhaenyra",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173 --strictPort --host 127.0.0.1",
     "build": "vite build",
-    "prebuild": "npm test",
+    "prebuild": "npm run typecheck && npm test",
     "preview": "vite preview --port 4173 --host 127.0.0.1",
     "test": "node --test \"test/**/*.test.mjs\"",
     "test:e2e": "node tools/scripts/run-e2e.mjs",
+    "typecheck": "tsc -p jsconfig.json",
     "verify": "npm run build && npm run test:e2e",
     "shot": "node tools/shot.mjs"
   },
   "dependencies": {
-    "three": "0.170.0",
     "@fontsource/fredoka": "5.1.0",
-    "@fontsource/nunito": "5.1.0"
+    "@fontsource/nunito": "5.1.0",
+    "three": "0.170.0"
   },
   "devDependencies": {
-    "vite": "6.3.5",
-    "playwright-core": "1.49.0"
+    "@types/three": "0.170.0",
+    "playwright-core": "1.49.0",
+    "typescript": "7.0.2",
+    "vite": "6.3.5"
   }
 }

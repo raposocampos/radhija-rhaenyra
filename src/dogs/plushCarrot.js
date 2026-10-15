@@ -14,6 +14,6 @@ export function createPlushCarrot(len = 0.28) {
   );
   leaf.position.x = -len * 0.43;
   g.add(body, leaf);
-  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }

@@ -1,0 +1,468 @@
+// Tipos das APIs públicas do jogo (usados por JSDoc nos arquivos .js; checados com `npm run typecheck`).
+// Documentação em prosa: docs/ARQUITETURA.md. Para usar num arquivo .js:
+//   /** @import { LevelDef, PuzzleContext, Puzzle } from '../../types' */
+import type * as THREE from 'three';
+
+// =====================================================================================================
+// Básico
+// =====================================================================================================
+
+/** Nome de uma cachorrinha. */
+export type DogName = 'radhija' | 'rhaenyra';
+/** Porte: 'small' (Radhija, passa por aberturas) ou 'large' (Rhaenyra, pesa e empurra). */
+export type DogSize = 'small' | 'large';
+/** Ponto no chão (plano XZ, metros). Norte = -Z, Leste = +X. */
+export interface XZ { x: number; z: number }
+/** Ponto 3D simples (ex.: alvo do marcador do objetivo; y = altura). */
+export interface XYZ { x: number; y: number; z: number }
+export type Vec3Tuple = [number, number, number];
+/** Item principal de uma fase (ícone na UI, pose de boca da dog). */
+export type ItemKind = 'carrot' | 'ball' | 'slipper';
+
+// =====================================================================================================
+// Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
+// =====================================================================================================
+
+export interface ColliderBase {
+  id?: string;
+  /** 'static' (padrão), 'water', 'gate', 'cart', 'wedge'… (informativo; aparece nos contatos). */
+  kind?: string;
+  /** Quem é bloqueado: 'all' (padrão), 'large' (só a Rhaenyra) ou 'small' (só a Radhija). */
+  blocks?: 'all' | DogSize;
+  /** Colisor ignorado quando o CENTRO da dog está dentro deste retângulo (ex.: água sob a ponte). */
+  except?: { minX: number; maxX: number; minZ: number; maxZ: number };
+  /** Só a IA da companheira desvia (ex.: o disco do irrigador ligado). */
+  companionOnly?: boolean;
+  /** Dinâmicos: liga/desliga sem remover. */
+  enabled?: boolean;
+}
+export interface BoxCollider extends ColliderBase { shape: 'box'; x: number; z: number; hx: number; hz: number }
+export interface CircleCollider extends ColliderBase { shape: 'circle'; x: number; z: number; r: number }
+/** Segmento com meia-espessura t (cápsula): cercas, portões, mureta fina. */
+export interface SegmentCollider extends ColliderBase { shape: 'segment'; ax: number; az: number; bx: number; bz: number; t?: number }
+export type Collider = BoxCollider | CircleCollider | SegmentCollider;
+
+export interface Contact { id: string; kind: string; nx: number; nz: number; depth: number }
+
+export interface CollisionWorld {
+  statics: Collider[];
+  dynamics: Collider[];
+  bounds: Bounds;
+  /** Registra um colisor dinâmico e devolve o PRÓPRIO objeto (mova x/z/ax…, ligue com enabled). */
+  addDynamic<T extends Collider>(c: T): T & { enabled: boolean; blocks: 'all' | DogSize; kind: string };
+  removeDynamic(c: Collider): void;
+  getDynamic(id: string): Collider | null;
+  setCompanionMode(on: boolean): void;
+  readonly companionMode: boolean;
+  contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string> }): Contact[];
+  resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string> }): { x: number; z: number; hits: Contact[] };
+  /** Move com sub-passos (nunca atravessa paredes finas). */
+  move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): { x: number; z: number; hits: Contact[] };
+  overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): boolean;
+  /** Linha de visão "gorda": um círculo de raio r vai de A a B em linha reta? */
+  segmentClear(ax: number, az: number, bx: number, bz: number, r: number, size: DogSize, opts?: { ignore?: Set<string> }): boolean;
+  clampBounds(x: number, z: number, r: number): XZ;
+}
+
+// =====================================================================================================
+// Layout (src/levels/faseN/layout.js) — coordenadas e regras de uma fase
+// =====================================================================================================
+
+export interface Bounds { minX: number; maxX: number; minZ: number; maxZ: number }
+
+/** Estatísticas e posição inicial de uma dog (layout.DOGS[nome]). */
+export interface DogStats {
+  displayName: string;
+  size: DogSize;
+  /** Raio do círculo de colisão (m). */
+  radius: number;
+  walkSpeed: number;
+  /** Só a Radhija: velocidade, duração e recarga da arrancada. */
+  dashSpeed?: number;
+  dashTime?: number;
+  dashCooldown?: number;
+  /** Só a Rhaenyra: velocidade ao empurrar. */
+  pushSpeed?: number;
+  accel: number;
+  decel: number;
+  /** Giro máximo do corpo (rad/s). */
+  turnSpeed: number;
+  start: XZ & { yaw: number };
+  /** Guia visual (não é colisão). */
+  visual: { length: number; headTop: number; shoulder: number };
+}
+
+/** Aresta do grafo de navegação: [nóA, nóB, { requires }]. `requires`: 'small' | 'large' | flag do puzzle. */
+export type NavEdge = [string, string] | [string, string, { requires?: string }];
+
+export interface Collectible { id: string; x: number; z: number; hint?: string }
+
+export interface Goal {
+  x: number;
+  z: number;
+  /** Raio da zona de entrega. */
+  r: number;
+  /** Onde cada dog comemora. */
+  celebrate: Record<DogName, XZ>;
+  /** Pontos fora de quadro de onde uma dog distante reaparece andando para a comemoração. */
+  entryPoints?: XZ[];
+}
+
+export interface CameraConfig {
+  fov?: number;
+  /** Deslocamento da câmera de seguimento em relação à dog ativa. Define também a base WASD. */
+  offset: Vec3Tuple;
+  lookHeight?: number;
+  /** Limites do ponto de foco (não mostrar o vazio além do cenário). */
+  limits?: Bounds;
+  /** Plano cinematográfico da tela inicial. */
+  title?: {
+    center: XZ; radius?: number; radiusAmp?: number; angle?: number; angleAmp?: number;
+    height?: number; heightAmp?: number; look: XYZ; lookSway?: number; fov?: number;
+  };
+  celebrate: { pos: Vec3Tuple; look: Vec3Tuple };
+  victoryOffset?: { pos: Vec3Tuple; look: Vec3Tuple };
+}
+
+/**
+ * Campos do layout que o NÚCLEO usa. Cada fase acrescenta os seus (portões, placas, itens…), por isso
+ * o índice livre no fim.
+ */
+export interface LevelLayout {
+  WORLD: { bounds: Bounds; [k: string]: any };
+  DOGS: Record<DogName, DogStats>;
+  STATIC_COLLIDERS: Collider[];
+  NAV_NODES: Record<string, XZ>;
+  NAV_EDGES: NavEdge[];
+  COLLECTIBLES: Collectible[];
+  COLLECTIBLE_PICKUP_R?: number;
+  GOAL: Goal;
+  CAMERA: CameraConfig;
+  [k: string]: any;
+}
+
+// =====================================================================================================
+// Iluminação (formato de LIGHTING_DEFAULT em src/core/engine.js; a fase passa só o que muda)
+// =====================================================================================================
+
+/** Cores em string hex = sRGB; arrays [r,g,b] = linear. */
+export interface LightingPreset {
+  sun?: { dir?: Vec3Tuple | number[]; color?: string; intensity?: number; castShadow?: boolean; shadowBias?: number; shadowNormalBias?: number };
+  hemi?: { sky?: string; ground?: string; intensity?: number };
+  fog?: { color?: string; near?: number; far?: number };
+  exposure?: number;
+  sky?: {
+    zenith?: string; mid?: string; horizon?: string; ground?: string; sun?: string;
+    stars?: number; clouds?: number; glow?: number; disk?: number; cloudTint?: number[];
+  };
+  env?: { intensity?: number; ground?: string };
+  grade?: { warm?: number[]; sat?: number; lift?: number[]; vignette?: number };
+  bloom?: { strength?: number; radius?: number; threshold?: number };
+}
+
+// =====================================================================================================
+// Definição de fase (src/levels/faseN/index.js)
+// =====================================================================================================
+
+export interface LevelTexts { celebrate?: string; victoryTitle?: string; victorySub?: string }
+
+/** Motor gráfico (src/core/engine.js), do ponto de vista das fases. */
+export interface Engine {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer | { compile?(scene: THREE.Object3D, camera: THREE.Camera): unknown; [k: string]: any };
+  applyLighting(preset: LightingPreset, bounds?: Bounds): void;
+  [k: string]: any;
+}
+
+export interface LevelBuildArgs {
+  engine: Engine;
+  /** Group descartado ao trocar de fase: tudo o que é da fase mora aqui dentro. */
+  root: THREE.Group;
+  layout: LevelLayout;
+  params: URLSearchParams;
+}
+
+export interface LevelBuild<P = LevelProps> {
+  /** Props visuais que o puzzle anima (portão, item, placas…). Ver Fase1Props/Fase2Props/Fase3Props. */
+  props: P;
+  /** Objetos que podem ficar entre a câmera e as dogs (recebem o "ver através" pontilhado). */
+  seeThrough?: (THREE.Object3D | null | undefined)[];
+  /** Cenário estático (informativo, para depuração e capturas). */
+  env?: any;
+  update?(dt: number, t: number): void;
+  dispose?(): void;
+}
+
+export interface LevelDef {
+  /** Identificador estável (chave do progresso salvo). */
+  id: string;
+  /** Número exibido ("Fase 2"); padrão = posição + 1. */
+  number?: number;
+  name: string;
+  subtitle?: string;
+  /** Texto do cartão de abertura. */
+  intro?: string;
+  item: ItemKind;
+  /** Som ambiente. */
+  ambience?: 'day' | 'dusk' | 'night';
+  texts?: LevelTexts;
+  layout: LevelLayout;
+  lighting: LightingPreset;
+  build(args: LevelBuildArgs): LevelBuild;
+  createPuzzle(ctx: PuzzleContext): Puzzle;
+}
+
+// =====================================================================================================
+// Controle de movimento (src/game/dogController.js) — usado pela jogadora e pela IA
+// =====================================================================================================
+
+export interface DogController {
+  name: DogName;
+  cfg: DogStats;
+  size: DogSize;
+  /** Raio de colisão. */
+  r: number;
+  x: number;
+  z: number;
+  /** rotation.y = atan2(dir.x, dir.z); yaw 0 olha para +Z. */
+  yaw: number;
+  /** Velocidade escalar ao longo da orientação. */
+  v: number;
+  vx: number;
+  vz: number;
+  yawRate: number;
+  animSpeed: number;
+  pivoting: boolean;
+  dashT: number;
+  dashCd: number;
+  dashDx: number;
+  dashDz: number;
+  blockedFrames: number;
+  bumpCd: number;
+  prevHitIds: Set<string>;
+  /** Contatos do último integrate(). */
+  hits: Contact[];
+  stillT: number;
+}
+
+/** Intenção de movimento de um quadro (steer). */
+export interface MoveIntent {
+  dx: number;
+  dz: number;
+  speed: number;
+  /** Encarar um ponto em vez da direção do movimento. */
+  faceX?: number;
+  faceZ?: number;
+  turnScale?: number;
+  [k: string]: any;
+}
+
+// =====================================================================================================
+// Puzzle (src/levels/faseN/puzzle.js) — interface entre o núcleo e a lógica da fase
+// =====================================================================================================
+
+/** O que o núcleo entrega para createPuzzle(ctx). */
+export interface PuzzleContext {
+  layout: LevelLayout;
+  /** Os props devolvidos pelo build() da fase. */
+  props: any;
+  world: CollisionWorld;
+  nav: any;
+  /** Modelos das dogs (sobrevivem entre fases). */
+  dogs: Record<DogName, DogModel>;
+  /** Controladores de movimento (posição, velocidade, raio…). */
+  ctrls: Record<DogName, DogController>;
+  emit(name: string, payload?: object): void;
+  /** Planos de foco curtos (focusShot). */
+  cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number }): void; [k: string]: any };
+  root: THREE.Group;
+  /** Teletransporta uma dog (e reinicia a IA dela). */
+  place(name: DogName, x: number, z: number, yaw?: number): void;
+  params: URLSearchParams;
+  engine: Engine;
+  readonly activeDog: DogName;
+  isStaying(name: DogName): boolean;
+  setStay(name: DogName, on: boolean): void;
+  brains: Record<DogName, any>;
+}
+
+export interface Objective {
+  text: string | null;
+  /** Onde fica o marcador (y = altura); null = sem marcador. */
+  target: XYZ | null;
+  stage: string;
+}
+
+/** Trava a entrada da dog (ex.: puxando a corda, girando o registro). */
+export interface InputLock { action: string; faceX: number; faceZ: number }
+
+/** O que createPuzzle(ctx) devolve. Campos com ? são opcionais. */
+export interface Puzzle {
+  /** Etapas em ordem (a última costuma ser 'done'). */
+  stages: string[];
+  readonly stage: string;
+  /** Quem carrega o item da fase (ou null). */
+  readonly carrier: DogName | null;
+  readonly collected: number;
+  readonly total: number;
+  /** Chamado pelo núcleo quando a etapa muda (para reemitir o objetivo). */
+  onStageChange: (stage: string) => void;
+  objective(activeName: DogName): Objective;
+  /** Por quadro em 'playing'. Devolva 'delivered' quando o item chegou ao objetivo (qualquer outra coisa: segue). */
+  update(dt: number, ctx: { active: DogController; comp: DogController; ctrls: Record<DogName, DogController>; stay: Record<DogName, boolean> }): string | null | void;
+  /** Por quadro em 'playing' e 'celebrating' (animações). */
+  updateAlways?(dt: number): void;
+  /** E / A: devolva true se tratou (senão a dog late). */
+  interact(active: DogController): boolean;
+  lockFor(name: DogName): InputLock | null;
+  /** Para onde a dog ativa olha. */
+  lookTarget(ctrl: DogController): XYZ | null;
+  /** Ajusta a intenção da dog ativa (empurrar, forçar…). */
+  modifyIntent?(dt: number, ctrl: DogController, intent: MoveIntent, opts: { shift: boolean; comp: DogController }): { intent?: MoveIntent; action?: string } | null | undefined;
+  /** "Funis" de movimento (ajuda a entrar em passagens). */
+  assist?(ctrl: DogController, intent: MoveIntent, dt: number): void;
+  /** Flags que liberam arestas do grafo de navegação ({ requires: 'gateOpen' }…). */
+  navFlags(): Record<string, boolean>;
+  setPrompt?(kind: string | null): void;
+  reset(): void;
+  /** Pula para uma etapa (testes, ?stage=). Devolve a dog que fica ativa, ou null se não suportar. */
+  jumpToStage?(stage: string, opts?: { who?: DogName }): DogName | null;
+  /** Fim da fase: encerra ações em andamento (ex.: soltar a corda). */
+  endActions?(): void;
+  /** Campos extras para game.debug.info(). */
+  info?(): object;
+  dispose?(): void;
+  /** Latido da dog ativa (ex.: atrair a gansa). */
+  onBark?(ctrl: DogController): void;
+  [k: string]: any;
+}
+
+// =====================================================================================================
+// Props visuais (devolvidos por build() como `props`; o puzzle anima por eles, sempre com ?.)
+// =====================================================================================================
+
+export interface PropBase { object: THREE.Object3D }
+export interface HighlightProp { setHighlight(on: boolean): void }
+/** Item carregável: Object3D centrado e posição de origem (reset volta para lá). */
+export interface ItemProp extends PropBase, HighlightProp { home: THREE.Vector3 }
+export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void }
+export interface GateProp extends PropBase { setOpen(t: number): void }
+export interface PressProp extends PropBase { setPress(t: number): void }
+
+/** Props comuns a todas as fases. */
+export interface LevelProps {
+  collectibles?: CollectibleProp[];
+  update?(dt: number, t: number): void;
+  reset?(): void;
+  [k: string]: any;
+}
+
+/** Fase 1 (src/world/props.js). */
+export interface Fase1Props extends LevelProps {
+  gate: GateProp;
+  rope: PropBase & { setTug(t: number): void };
+  cart: PropBase & { setX(x: number): void };
+  carrot: ItemProp;
+  door: HighlightProp;
+  collectibles: CollectibleProp[];
+}
+
+/** Fase 2 (src/levels/fase2/world/). */
+export interface Fase2Props extends LevelProps {
+  /** Pivô na dobradiça, folha ao longo de -Z local; yaw = GATE.openYaw * t. */
+  gate: GateProp;
+  /** 0..1: tábua afunda nas molas, a corda estica e a roldana gira. */
+  plank: PressProp;
+  /** t: 0 em WEDGE.x/z → 1 travado em WEDGE.lockedAt; bump(): quica (portão fechado). */
+  wedge: PropBase & { setState(t: number): void; bump(): void };
+  /** a: ângulo do 1º jato; k 0..1 liga/desliga. */
+  sprinkler: PropBase & { setAngle(a: number): void; setOn(k: number): void };
+  valve: PropBase & { setTurn(t: number): void };
+  /** sink 0..1: caindo no canal até virar ponte. */
+  crate: PropBase & { setPos(x: number, z: number): void; setSink(t: number): void };
+  ball: ItemProp;
+  bed: HighlightProp;
+  collectibles: CollectibleProp[];
+}
+
+/** Fase 3 (src/levels/fase3/world/). */
+export interface Fase3Props extends LevelProps {
+  gate: GateProp;
+  plateH: PressProp;
+  plateL: PressProp;
+  /** 0..1 brilho. */
+  lanternH: { setOn(k: number): void };
+  lanternL: { setOn(k: number): void };
+  slipper: ItemProp;
+  /** Porta de vidro mais quente quando a pantufa está a caminho. */
+  door: HighlightProp;
+  collectibles: CollectibleProp[];
+}
+
+// =====================================================================================================
+// Personagens
+// =====================================================================================================
+
+/** Ação de animação pedida a cada quadro (anim.action). */
+export type DogAction =
+  | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled';
+
+export interface DogAnim {
+  /** Velocidade real (m/s). */
+  speed?: number;
+  /** Velocidade de giro (rad/s). */
+  turn?: number;
+  action?: DogAction | string;
+  /** Ponto para onde olhar (ou null). */
+  lookAt?: THREE.Vector3 | XYZ | null;
+  carrying?: boolean;
+}
+
+/** Cachorrinha procedural (createDog em src/dogs/dog.js). */
+export interface DogModel {
+  kind: DogName;
+  object: THREE.Group;
+  /** Pendure o item carregado aqui (posição zerada). */
+  mouthSocket: THREE.Object3D;
+  /** Âncora do marcador sobre a cabeça. */
+  markerAnchor: THREE.Object3D;
+  /** Chamado a cada pisada (índice da pata 0..3). */
+  onFootstep: ((foot: number) => void) | null;
+  update(dt: number, anim?: DogAnim): void;
+  triggerBark(): void;
+  /** Força a pose de boca ('carrot' | 'ball' | 'slipper') ou null para detectar pelo item. */
+  setCarryPose(kind: ItemKind | null): void;
+  readonly carryKind: ItemKind;
+  /** Pelo molhado 0..1. */
+  setWet(k: number): void;
+  stats?: any;
+  bones?: THREE.Bone[];
+  skeleton?: THREE.Skeleton;
+  meshes?: { body: THREE.SkinnedMesh; ears: THREE.SkinnedMesh; fur: THREE.SkinnedMesh };
+}
+
+/** Dona Gansa (createGoose em src/characters/goose.js). */
+export interface GooseModel {
+  object: THREE.Group;
+  radius: number;
+  update(dt: number, anim: { speed?: number; turn?: number; action?: 'idle' | 'walk' | 'alert' | 'honk' | 'charge' | 'curious' | 'flap' | string; lookAt?: THREE.Vector3 | XYZ | null }): void;
+  triggerHonk(): void;
+  [k: string]: any;
+}
+
+// =====================================================================================================
+// Ganchos globais de teste/depuração
+// =====================================================================================================
+
+declare global {
+  interface Window {
+    /** Ganchos de teste e depuração montados por src/main.js (usados por tools/ e pelas partidas automatizadas). */
+    __game?: any;
+    /** Tempos de montagem do cenário (depuração). */
+    __f2Timings?: any;
+    __f3Timings?: any;
+    __envTimings?: any;
+    webkitAudioContext?: typeof AudioContext;
+  }
+}

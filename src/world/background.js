@@ -105,7 +105,7 @@ export function makeTree({ height = 5, crown = 1.6, seed = 1, lean = 0 } = {}) {
   const cg = foliageCluster(blobs, { detail: 3, amp: 0.3, freq: 1.6 / crown * 2.4, seed, dark: '#243d17', mid: '#45692a', light: '#8fa64e' });
   const crownMesh = new THREE.Mesh(cg, crownMat());
   g.add(crownMesh);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
 
@@ -125,7 +125,7 @@ export function buildBackground(engine, layout) {
     const m = makeBuilding(b);
     m.position.set(b.x, 0, b.z);
     m.rotation.y = b.ry;
-    m.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    m.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
     group.add(m);
   }
 

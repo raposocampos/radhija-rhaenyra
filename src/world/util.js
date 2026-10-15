@@ -217,6 +217,7 @@ export function mat(key, factory) {
   if (!_mats.has(key)) _mats.set(key, factory());
   return _mats.get(key);
 }
+/** @param {string} color @param {{ vertical?: boolean, rough?: number, key?: string }} [opts] */
 export function woodMat(color, { vertical = false, rough = 0.78, key } = {}) {
   return mat(key || `wood-${color}-${vertical}`, () => new THREE.MeshStandardMaterial({
     color, map: vertical ? woodTextureV() : woodTexture(), roughness: rough,
@@ -297,6 +298,7 @@ export function foliageCluster(blobs, {
   const geos = [];
   const v = new THREE.Vector3(), d = new THREE.Vector3();
   for (const best of blobs) {
+    /** @type {THREE.BufferGeometry} */
     let g = new THREE.IcosahedronGeometry(1, detail);
     g.deleteAttribute('normal'); g.deleteAttribute('uv');
     g = mergeVertices(g, 1e-5);
@@ -387,7 +389,7 @@ export function soilDisc(r, seed = 1) {
 }
 
 export function shadowAll(obj, cast = true, receive = true) {
-  obj.traverse((o) => {
+  obj.traverse((/** @type {THREE.Mesh} */ o) => {
     if (o.isMesh && !o.userData.noShadow) { o.castShadow = cast; o.receiveShadow = receive; }
   });
   return obj;
@@ -395,6 +397,10 @@ export function shadowAll(obj, cast = true, receive = true) {
 
 // "Pele" de folhas: folhinhas instanciadas sobre a superfície de uma folhagem (dá textura de folhas às bolhas).
 let _leafGeo = null;
+/**
+ * @param {THREE.BufferGeometry} foliageGeo
+ * @param {{ count?: number, size?: number, seed?: number, material?: THREE.Material, minNormalY?: number, tint?: number }} [opts]
+ */
 export function leafSkin(foliageGeo, { count = 1000, size = 0.07, seed = 1, material, minNormalY = -0.3, tint = 1.0 } = {}) {
   if (!_leafGeo) {
     const s = new THREE.Shape();

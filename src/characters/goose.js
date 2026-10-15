@@ -409,7 +409,7 @@ export function createGoose() {
   object.add(shadow);
 
   const genMs = performance.now() - t0;
-  const tris = bodyGeo.index.count / 3 + wings.reduce((a, w) => a + w.pivot.children[0].geometry.index.count / 3, 0)
+  const tris = bodyGeo.index.count / 3 + wings.reduce((a, w) => a + /** @type {THREE.Mesh} */ (w.pivot.children[0]).geometry.index.count / 3, 0)
     + (beakU.geometry.index.count / 3) * 2 + (fGeo.index ? fGeo.index.count / 3 : fGeo.attributes.position.count / 3) * 2 + 2000;
 
   // ---------------------------------------------------------------------------- animação
@@ -581,7 +581,7 @@ export function createGoose() {
       lg.leg.scale.set(1, clamp((len - 0.006) / LEG_L, 0.7, 1.25), 1);
       lg.foot.position.copy(foot);
       lg.foot.rotation.set(curl * 0.7, -lg.side * 0.12, 0, 'YXZ');
-      if (lg.swing && !swing && v > 0.15) lg.onStep?.();
+      if (lg.swing && !swing && v > 0.15) /** @type {any} */ (lg).onStep?.();
       lg.swing = swing;
     }
 

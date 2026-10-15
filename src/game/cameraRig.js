@@ -18,6 +18,10 @@ function damp3(cur, target, vel, smoothTime, dt) {
   }
 }
 
+/**
+ * @param {import('three').PerspectiveCamera} camera
+ * @param {import('../types').LevelLayout} layout
+ */
 export function createCameraRig(camera, layout) {
   // Tudo o que depende da fase vem de layout.CAMERA (ver configure). Valores padrão = fase 1.
   const offset = new THREE.Vector3();
@@ -30,6 +34,7 @@ export function createCameraRig(camera, layout) {
   const victoryOffset = { pos: new THREE.Vector3(1.1, 0.25, 0.7), look: new THREE.Vector3(1.22, 0.14, 0) };
 
   /** Reconfigura a câmera para o layout de uma fase (chamado a cada carregamento de fase). */
+  /** @param {import('../types').LevelLayout} L */
   function configure(L) {
     const C = L.CAMERA;
     offset.set(...C.offset);

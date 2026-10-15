@@ -208,7 +208,7 @@ export function buildHouse(engine, layout) {
   group.add(lampLight);
 
   // ------------------------------------------------ janelas
-  for (const [wdw, seed] of [[win1, 2], [win2, 3]]) {
+  for (const [wdw, seed] of /** @type {[{ x: number, y: number, w: number, h: number }, number][]} */ ([[win1, 2], [win2, 3]])) {
     const wg = makeWindow({ w: wdw.w, h: wdw.h, seed });
     wg.position.set(wdw.x, wdw.y, Z);
     group.add(wg);

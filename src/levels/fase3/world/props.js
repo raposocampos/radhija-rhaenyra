@@ -170,7 +170,7 @@ function makeLantern(kind) {
   halo.scale.set(0.9, 0.9, 1);
   halo.position.y = 0.12;
   g.add(halo);
-  g.traverse((o) => { if (o.isMesh && o !== glass && o !== flame) { o.castShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh && o !== glass && o !== flame) { o.castShadow = true; } });
   return { group: g, glassMat, flame, flameMat, plaqueMat, halo };
 }
 
@@ -309,7 +309,7 @@ function makeSlipper() {
   }
   const fur = new THREE.Mesh(mergeGeometries(tufts), plush);
   g.add(fur);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { group: g, plush };
 }
 
@@ -429,7 +429,7 @@ function makeGate(G, H) {
   latch.position.set(0.035, 0.62, z1 + 0.06);
   latch.rotation.y = Math.PI / 2;
   pivot.add(latch);
-  pivot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  pivot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return pivot;
 }
 
@@ -442,12 +442,13 @@ function makePost(x, z, h) {
   const cap = new THREE.Mesh(rbox(0.18, 0.04, 0.18, 0.012), woodMat('#76553a', { key: 'f3-gatepost-cap', rough: 0.8 }));
   cap.position.y = h + 0.02;
   g.add(post, cap);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
 
 // ------------------------------------------------------------------ ossinhos dourados (iguais aos da fase 1)
 function boneGeometry() {
+  /** @type {THREE.BufferGeometry[]} */
   const parts = [new THREE.CapsuleGeometry(0.021, 0.1, 4, 10).rotateZ(Math.PI / 2)];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.03, 12, 10).translate(sx * 0.068, 0, sz * 0.022));
   const geos = parts.map((g) => { const n = g.index ? g.toNonIndexed() : g; n.deleteAttribute('uv'); return n; });
@@ -650,7 +651,7 @@ export function createProps(layout, field, refs) {
     for (const k of ['H', 'L']) lanterns[k]._update(dt, t);
     const gH = plateH._update(dt, t), gL = plateL._update(dt, t);
     // fio: percorre quando a pedra afunda (ou a lanterna já está acesa)
-    for (const [k, g] of [['H', gH], ['L', gL]]) {
+    for (const [k, g] of /** @type {[string, number][]} */ ([['H', gH], ['L', gL]])) {
       const w = wires[k];
       const target = Math.max(g > 0.5 ? 1 : 0, lanterns[k].k > 0.5 ? 1 : 0);
       w.p = target > w.p ? Math.min(1, w.p + dt * 1.25) : Math.max(0, w.p - dt * 2.0);

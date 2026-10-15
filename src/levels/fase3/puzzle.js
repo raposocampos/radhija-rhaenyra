@@ -44,6 +44,12 @@ export const TEXT = {
   prompt: { slipper: 'Pegar a pantufa' },
 };
 
+/** @import { PuzzleContext, Puzzle } from '../../types' */
+
+/**
+ * @param {PuzzleContext} ctx
+ * @returns {Puzzle}
+ */
 export function createPuzzle(ctx) {
   const { layout, props = {}, world, dogs, emit, cam, root, place } = ctx;
   const { GATE, LANTERNS, PLATE_H, PLATE_L, NOOK, SLIPPER, GOOSE, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, HEDGE_AB, LURE_SPOT } = layout;
@@ -67,6 +73,7 @@ export function createPuzzle(ctx) {
     objKey: '',
     luredShot: false,
   };
+  /** @type {(stage: string) => void} */
   let onStageChange = () => {};
 
   function setStage(st, { silent = false } = {}) {
@@ -141,7 +148,7 @@ export function createPuzzle(ctx) {
     S.lantL = lanternStep('L', S.lantL, litL, dt);
     if (h.light && ctrls[h.light] === active) hints.cond('lightH', 3.4, 10);
     // A companheira saiu da pedra seguindo a líder → ensinar o Fica.
-    for (const [k, plate] of [['H', plateH], ['L', plateL]]) {
+    for (const [k, plate] of /** @type {[string, typeof plateH][]} */ ([['H', plateH], ['L', plateL]])) {
       const was = S.prevBy[k];
       if (was && !plate.pressed && was !== active.name && !ctx.isStaying?.(was) && !locked) hints.now('stayPlate', 4.0, 8);
       S.prevBy[k] = plate.pressed ? plate.by : null;
@@ -293,6 +300,7 @@ export function createPuzzle(ctx) {
     });
   }
 
+  /** @param {string} st @param {{ who?: import('../../types').DogName }} [opts] */
   function jumpToStage(st, { who } = {}) {
     if (!STAGES.includes(st)) return null;
     reset();

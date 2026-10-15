@@ -24,7 +24,9 @@ export const WORLD = {
   houseWallZ: -4.8, // fachada térrea do prédio
 };
 
+/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
 const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
+/** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.6, z: -3.4, yaw: 2.4 }),
   rhaenyra: withStart('rhaenyra', { x: -5.4, z: -3.5, yaw: 2.7 }),
@@ -101,6 +103,7 @@ export const GOOSE = {
 export const LURE_SPOT = { x: 2.8, z: 3.5 };
 export const WAIT_SPOT = { x: -1.2, z: 2.0 };
 
+/** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
   { id: 'osso-mesa', x: -5.8, z: -0.5, hint: 'perto da mesa do jardim' },
   { id: 'osso-ilha', x: 3.55, z: -1.0, hint: 'na ilha da gansa' },
@@ -109,6 +112,7 @@ export const COLLECTIBLES = [
 export const COLLECTIBLE_PICKUP_R = 0.42;
 
 // Objetivo final: levar a pantufa até a porta de vidro.
+/** @type {import('../../types').Goal} */
 export const GOAL = {
   x: -5.0, z: -3.95, r: 0.9,
   celebrate: { radhija: { x: -4.6, z: -3.6 }, rhaenyra: { x: -5.4, z: -3.6 } },
@@ -120,6 +124,7 @@ export const GOAL = {
 //  (centro da dog dentro dele) — usado para a ponte sobre a água.
 // ---------------------------------------------------------------------
 const nookHedge = 0.125;
+/** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   { id: 'fachada', shape: 'box', x: 0, z: -5.3, hx: 9, hz: 0.5 },
   { id: 'limite-oeste', shape: 'box', x: -7.1, z: 0, hx: 0.5, hz: 6 },
@@ -127,7 +132,7 @@ export const STATIC_COLLIDERS = [
   { id: 'limite-sul', shape: 'box', x: 0, z: 4.9, hx: 9, hz: 0.5 },
 
   // Cerca-viva A|B
-  ...HEDGE_AB.segments.map((s, i) => ({ id: `cerca-viva-${i}`, shape: 'box', x: HEDGE_AB.x, z: (s.zMin + s.zMax) / 2, hx: HEDGE_AB.hx, hz: (s.zMax - s.zMin) / 2 })),
+  ...HEDGE_AB.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `cerca-viva-${i}`, shape: 'box', x: HEDGE_AB.x, z: (s.zMin + s.zMax) / 2, hx: HEDGE_AB.hx, hz: (s.zMax - s.zMin) / 2 })),
 
   // Cantinho da pedra leve
   { id: 'cantinho-oeste', shape: 'box', x: NOOK.minX - nookHedge, z: (NOOK.minZ + NOOK.maxZ) / 2 + nookHedge / 2, hx: nookHedge, hz: (NOOK.maxZ - NOOK.minZ) / 2 + nookHedge },
@@ -139,7 +144,7 @@ export const STATIC_COLLIDERS = [
   { id: 'mesa-jardim', shape: 'circle', x: -4.6, z: -0.6, r: 0.75 },
 
   // Lago (anel de água) + guarda-corpos da ponte + ninho
-  ...POND.ring.map((c, i) => ({
+  ...POND.ring.map((c, i) => /** @type {import('../../types').CircleCollider} */ ({
     id: `lago-${i}`, shape: 'circle', x: c.x, z: c.z, r: c.r, kind: 'water',
     // os círculos que a ponte cruza (135°, 180°, 225°) ignoram a dog sobre a ponte
     ...(i >= 3 && i <= 5 ? { except: BRIDGE.exceptRect } : {}),
@@ -183,6 +188,7 @@ export const NAV_NODES = {
   Br_E: { x: 2.55, z: -0.6 },
   I_nest: { x: 3.1, z: -0.45 },
 };
+/** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
   ['A_door', 'A_mid'],
   ['A_door', 'A_nookOut'],
@@ -211,6 +217,7 @@ export const NAV_EDGES = [
 // Noite: lua alta a nordeste (luz fria e suave) + luzes práticas quentes (lanternas, cordões, porta).
 export const SUN = { direction: [0.42, 0.72, -0.55], color: '#a9bfff', intensity: 1.0 };
 
+/** @type {import('../../types').CameraConfig} */
 export const CAMERA = {
   fov: 38,
   offset: [1.4, 4.3, 4.7],

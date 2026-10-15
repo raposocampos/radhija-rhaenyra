@@ -41,6 +41,10 @@ function disposeTree(obj) {
   });
 }
 
+/**
+ * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
+ *           levels: import('../types').LevelDef[], params?: URLSearchParams }} opts
+ */
 export function createGame({ engine, dogs, levels, params }) {
   params = params || new URLSearchParams(location.search);
 
@@ -61,7 +65,9 @@ export function createGame({ engine, dogs, levels, params }) {
 
   // ---------- estado da fase atual (recriado em loadLevel) ----------
   let levelIndex = -1;
+  /** @type {import('../types').LevelDef} */
   let def = null; // definição da fase
+  /** @type {import('../types').LevelLayout} */
   let L = null; // layout da fase
   let root = null; // Group com tudo o que é da fase
   let built = null; // { env, props, update, seeThrough }
@@ -80,6 +86,7 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   let state = 'loading';
+  /** @type {import('../types').DogName} */
   let activeDog = initialDog;
   const stay = { radhija: false, rhaenyra: false }; // comando Fica/Vem (só vale para a companheira)
   let playTime = 0;
@@ -601,7 +608,7 @@ export function createGame({ engine, dogs, levels, params }) {
     if (levelIndex < levels.length - 1) loadLevel(levelIndex + 1, { mode: 'intro' });
     else loadLevel(0, { mode: 'title' });
   });
-  events.on('ui:selectLevel', ({ index } = {}) => {
+  events.on('ui:selectLevel', (/** @type {{ index?: number }} */ { index } = {}) => {
     if (state === 'loading' || !Number.isFinite(index)) return;
     loadLevel(index, { mode: 'intro' });
   });
@@ -632,7 +639,7 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     if (state === 'playing') updatePlaying(dt);
     else if (state === 'celebrating') updateCelebrating(dt);
-    else updateIdle(dt, t);
+    else updateIdle(dt);
     if (state === 'playing' || state === 'celebrating') puzzle.updateAlways?.(dt);
     applyDogs(dt);
     built?.update?.(dt, t);

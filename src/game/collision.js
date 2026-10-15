@@ -110,6 +110,10 @@ export function gateTip(FENCE, t) {
  * Mundo de colisão a partir do layout da fase (STATIC_COLLIDERS + WORLD.bounds).
  * Todas as consultas recebem (x, z, r, size) — size 'small'|'large'.
  */
+/**
+ * @param {import('../types').LevelLayout} layout
+ * @returns {import('../types').CollisionWorld}
+ */
 export function createCollisionWorld(layout) {
   const { STATIC_COLLIDERS, WORLD } = layout;
   const bounds = WORLD.bounds;

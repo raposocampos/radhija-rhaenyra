@@ -94,6 +94,12 @@ function makeDynamicTube(nPts, radial) {
   return { geometry: g, update };
 }
 
+/**
+ * Props da fase 1 (portão, cordinha, carrinho, cenoura, porta, colecionáveis).
+ * @param {{ scene: import('three').Object3D, userData?: any }} engine
+ * @param {import('../types').LevelLayout} layout
+ * @returns {import('../types').Fase1Props}
+ */
 export function createProps(engine, layout) {
   const { scene } = engine;
   const { FENCE, ROPE, CART, CARROT, COLLECTIBLES } = layout;
@@ -149,7 +155,7 @@ export function createProps(engine, layout) {
   thumb.position.set(0.01, 0.0, -0.2);
   latch.add(latchBar, latchPin, thumb);
   gatePivot.add(latch);
-  gatePivot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  gatePivot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   scene.add(gatePivot);
   // gancho (keeper) no poste do trinco
   const keeper = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 6, 12, Math.PI), ironMat());
@@ -337,7 +343,7 @@ export function createProps(engine, layout) {
       cartRoot.add(potG);
     }
   }
-  cartRoot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  cartRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   cartRoot.add(contactShadow(hx + 0.08, hz + 0.08, 0.5));
   scene.add(cartRoot);
   const cart = {
@@ -403,7 +409,7 @@ export function createProps(engine, layout) {
     }
     carrotRoot.userData.orange = orange;
   }
-  carrotRoot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  carrotRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const carrotHome = new THREE.Vector3(CARROT.x, 0.057, CARROT.z);
   const carrotHomeRotY = 0.35;
   carrotRoot.position.copy(carrotHome);

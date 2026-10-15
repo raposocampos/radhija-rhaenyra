@@ -67,6 +67,10 @@ const merge = (base, over) => {
 };
 const setColor = (c, v) => (Array.isArray(v) ? c.setRGB(v[0], v[1], v[2]) : c.set(v));
 
+/**
+ * @param {HTMLElement} container
+ * @param {{ params?: URLSearchParams }} [opts]
+ */
 export function createEngine(container, { params } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
   const pr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -181,7 +185,7 @@ export function createEngine(container, { params } = {}) {
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
     lighting = L;
-    SUN_DIR.set(...L.sun.dir).normalize();
+    SUN_DIR.set(.../** @type {[number, number, number]} */ (L.sun.dir)).normalize();
     sun.color.set(L.sun.color);
     sun.intensity = L.sun.intensity;
     sun.castShadow = L.sun.castShadow !== false;
@@ -190,10 +194,11 @@ export function createEngine(container, { params } = {}) {
     hemi.color.set(L.hemi.sky);
     hemi.groundColor.set(L.hemi.ground);
     hemi.intensity = L.hemi.intensity;
-    scene.fog.color.set(L.fog.color);
-    scene.fog.near = L.fog.near;
-    scene.fog.far = L.fog.far;
-    scene.background.set(L.fog.color);
+    const fog = /** @type {THREE.Fog} */ (scene.fog);
+    fog.color.set(L.fog.color);
+    fog.near = L.fog.near;
+    fog.far = L.fog.far;
+    /** @type {THREE.Color} */ (scene.background).set(L.fog.color);
     renderer.toneMappingExposure = L.exposure;
     copySkyUniforms(sky.material.uniforms, L.sky);
     const G = grade.uniforms;

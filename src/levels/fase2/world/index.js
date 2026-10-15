@@ -42,6 +42,10 @@ function buildFireflies(root, layout) {
   };
 }
 
+/**
+ * @param {import('../../../types').LevelBuildArgs} args
+ * @returns {import('../../../types').LevelBuild<import('../../../types').Fase2Props>}
+ */
 export function buildWorld({ engine, root, layout, params }) {
   const timings = {};
   const T = (name, fn) => { const t0 = performance.now(); const v = fn(); timings[name] = Math.round(performance.now() - t0); return v; };

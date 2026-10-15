@@ -54,13 +54,13 @@ async function boot() {
     elapsed += dt;
     game.update(dt, elapsed);
     if (camFix?.length === 3) {
-      engine.camera.position.set(...camFix);
-      engine.camera.lookAt(...lookFix);
+      engine.camera.position.set(.../** @type {[number, number, number]} */ (camFix));
+      engine.camera.lookAt(.../** @type {[number, number, number]} */ (lookFix));
     }
     updateSeeThrough(dogs, game.activeDog || 'radhija');
     feedback.update(dt, elapsed);
-    particles.update(dt, elapsed);
-    ui.update(dt, elapsed);
+    particles.update(dt);
+    ui.update(dt);
     engine.render(dt, elapsed);
     requestAnimationFrame(frame);
   }

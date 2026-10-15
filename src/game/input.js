@@ -106,6 +106,7 @@ export function rumblePad(pad, strong = 0.3, weak = 0.3, ms = 120) {
  * Entrada do jogo. opts.onDevice(type) é chamado quando o último dispositivo usado muda
  * ('keyboard' | 'gamepad') — o jogo emite `input:device {type}`.
  */
+/** @param {{ onDevice?: (type: 'keyboard' | 'gamepad') => void }} [opts] */
 export function createInput({ onDevice } = {}) {
   const down = new Set();
   const pressed = new Set();

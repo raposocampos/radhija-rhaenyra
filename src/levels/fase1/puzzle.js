@@ -35,6 +35,12 @@ function easeOutBack(x) {
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 }
 
+/** @import { PuzzleContext, Puzzle } from '../../types' */
+
+/**
+ * @param {PuzzleContext} ctx
+ * @returns {Puzzle}
+ */
 export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scene, place }) {
   const { FENCE, ROPE, CART, CARROT, DOOR, DOGS, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
 
@@ -80,6 +86,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     lockDog: null,
   };
 
+  /** @type {(stage: string) => void} */
   let onStageChange = () => {};
 
   function setStage(st, { silent = false } = {}) {
@@ -459,6 +466,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   }
 
   /** Pula para uma etapa com as dogs posicionadas de forma coerente (?stage=). → dog ativa sugerida */
+  /** @param {string} st @param {{ who?: import('../../types').DogName }} [opts] */
   function jumpToStage(st, { who } = {}) {
     if (!STAGES.includes(st)) return null;
     reset();

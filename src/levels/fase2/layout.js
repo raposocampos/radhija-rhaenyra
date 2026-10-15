@@ -21,7 +21,9 @@ export const WORLD = {
   houseWallZ: -4.8, // parede dos fundos da casa / muro do condomínio (face voltada ao pátio)
 };
 
+/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
 const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
+/** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.4, z: -3.25, yaw: 2.3 }),
   rhaenyra: withStart('rhaenyra', { x: -5.1, z: -3.4, yaw: 2.6 }),
@@ -81,6 +83,7 @@ export const BRICKS = { x: 3.0, z: -1.0, hx: 0.3, hz: 0.26 };
 // A bolinha de tênis (item da fase), na faixa leste, diante de um canteiro.
 export const BALL = { x: 5.85, z: -3.15, pickupR: 0.55 };
 
+/** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
   { id: 'osso-samambaia', x: -5.9, z: 1.2, hint: 'perto do vaso de samambaia' },
   { id: 'osso-irrigador', x: 0.9, z: -0.6, hint: 'no gramado do irrigador' },
@@ -89,6 +92,7 @@ export const COLLECTIBLES = [
 export const COLLECTIBLE_PICKUP_R = 0.42;
 
 // Objetivo final: levar a bolinha até a caminha.
+/** @type {import('../../types').Goal} */
 export const GOAL = {
   x: -5.2, z: -3.55, r: 0.95,
   celebrate: { radhija: { x: -4.8, z: -3.2 }, rhaenyra: { x: -5.6, z: -3.2 } },
@@ -100,6 +104,7 @@ export const GOAL = {
 //  Dinâmicos (portão, caixote, vão do canal) ficam com o puzzle.
 // ---------------------------------------------------------------------
 const wt = WALL_AB.thickness / 2;
+/** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   { id: 'casa', shape: 'box', x: 0, z: -5.3, hx: 9, hz: 0.5 },
   { id: 'limite-oeste', shape: 'box', x: -7.0, z: 0, hx: 0.5, hz: 6 },
@@ -107,7 +112,7 @@ export const STATIC_COLLIDERS = [
   { id: 'limite-sul', shape: 'box', x: 0, z: 4.9, hx: 9, hz: 0.5 },
 
   // Zona A
-  ...WALL_AB.segments.map((s, i) => ({ id: `mureta-${i}`, shape: 'box', x: WALL_AB.x, z: (s.zMin + s.zMax) / 2, hx: wt, hz: (s.zMax - s.zMin) / 2 })),
+  ...WALL_AB.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `mureta-${i}`, shape: 'box', x: WALL_AB.x, z: (s.zMin + s.zMax) / 2, hx: wt, hz: (s.zMax - s.zMin) / 2 })),
   { id: 'tanque', shape: 'box', x: -3.3, z: -4.45, hx: 0.45, hz: 0.35 },
   { id: 'cesto-roupa', shape: 'circle', x: -2.85, z: -3.55, r: 0.26 },
   { id: 'poste-varal-oeste', shape: 'circle', x: -6.15, z: -4.35, r: 0.08 },
@@ -161,6 +166,7 @@ export const NAV_NODES = {
   E_ball: { x: 5.8, z: -2.4 },
   E_south: { x: 5.9, z: 3.2 },
 };
+/** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
   ['A_bed', 'A_mid'],
   ['A_mid', 'A_gate'],
@@ -185,6 +191,7 @@ export const NAV_EDGES = [
 // Crepúsculo: o sol acabou de se pôr a oés-noroeste (luz baixa, quente e fraca) + céu azul profundo.
 export const SUN = { direction: [-0.86, 0.16, -0.32], color: '#ff9f72', intensity: 1.7 };
 
+/** @type {import('../../types').CameraConfig} */
 export const CAMERA = {
   fov: 38,
   offset: [1.4, 4.3, 4.7],

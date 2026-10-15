@@ -23,7 +23,9 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
   headBone.add(mouthSocket);
   const socketBase = mouthSocket.position.clone();
   const HS = s * P.hs;
-  let carryForced = null, carryChild = null, carryKind = 'carrot', carryOpen = 0.35;
+  let carryForced = null, carryChild = null, carryOpen = 0.35;
+  /** @type {import('../types').ItemKind} */
+  let carryKind = 'carrot';
   const _bb = new THREE.Box3(), _bb2 = new THREE.Box3(), _mInv = new THREE.Matrix4(), _mRel = new THREE.Matrix4();
   const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 

@@ -32,10 +32,10 @@ export function buildBackground(layout) {
     const m = makeBuilding(b);
     m.position.set(b.x, 0, b.z);
     m.rotation.y = b.ry;
-    m.traverse((o) => {
+    m.traverse((/** @type {THREE.Mesh} */ o) => {
       if (!o.isMesh) return;
       o.castShadow = false; o.receiveShadow = false;
-      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const mats = /** @type {THREE.MeshStandardMaterial[]} */ (Array.isArray(o.material) ? o.material : [o.material]);
       for (const mm of mats) if (mm.emissiveMap) mm.emissiveIntensity = 1.8;
     });
     group.add(m);
@@ -52,7 +52,7 @@ export function buildBackground(layout) {
   for (const t of tdefs) {
     const tr = makeTree(t);
     tr.position.set(t.x, 0, t.z);
-    tr.traverse((o) => { if (o.isMesh) { o.castShadow = false; } });
+    tr.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = false; } });
     group.add(tr);
   }
   // lua decorativa (no plano da tela inicial, acima das árvores a oeste)

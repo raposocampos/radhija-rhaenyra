@@ -117,7 +117,7 @@ export function buildGarden(engine, layout) {
       [lavender({ seed: 25, height: 0.5, spread: 0.16 }), -0.05, -4.63],
       [geranium({ seed: 26, radius: 0.16, height: 0.2, flower: '#f25c7a' }), 0.35, -4.58],
     ];
-    for (const [geo, x, z] of plants) {
+    for (const [geo, x, z] of /** @type {[THREE.BufferGeometry, number, number][]} */ (plants)) {
       const m = new THREE.Mesh(geo, plantMat());
       m.position.set(x, 0.14, z);
       g.add(m);
@@ -338,7 +338,7 @@ export function buildGarden(engine, layout) {
       [smallFlowers({ seed: 82, radius: 0.08, height: 0.1, color: '#f6a3c0' }), -0.05, 0.85, 0.08],
       [succulent({ r: 0.06, seed: 83, color: '#a7c08a' }), 0.5, 0.8, 0.07],
     ];
-    for (const [geo, x, z, pr] of tops) {
+    for (const [geo, x, z, pr] of /** @type {[THREE.BufferGeometry, number, number, number][]} */ (tops)) {
       const pg = pot({ r: pr, h: pr * 1.3, material: terraLight, seed: 9, foot: 0.7 });
       pg.position.set(x, H, z);
       const pl = new THREE.Mesh(geo, plantMat());
@@ -391,7 +391,7 @@ export function buildGarden(engine, layout) {
       ['vaso-canto-2', 0.19, 0.26, () => geranium({ seed: 92, radius: 0.2, height: 0.18 }), 0.23],
       ['vaso-canto-3', 0.17, 0.32, () => geranium({ seed: 93, radius: 0.17, height: 0.24, flower: '#ff8a6b' }), 0.29],
     ];
-    for (const [id, pr, ph, plant, py] of defs) {
+    for (const [id, pr, ph, plant, py] of /** @type {[string, number, number, () => THREE.BufferGeometry, number][]} */ (defs)) {
       const c = C(id);
       const g = new THREE.Group();
       g.position.set(c.x, 0, c.z);
@@ -520,7 +520,7 @@ export function buildGarden(engine, layout) {
 
   shadowAll(group, true, true);
   // água/folhas finas não projetam
-  group.traverse((o) => { if (o.isInstancedMesh) o.castShadow = false; });
+  group.traverse((/** @type {THREE.InstancedMesh} */ o) => { if (o.isInstancedMesh) o.castShadow = false; });
   group.add(shadows);
   scene.add(group);
 

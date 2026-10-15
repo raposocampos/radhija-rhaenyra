@@ -176,6 +176,7 @@ function buildWater(layout, field) {
 
 // ------------------------------------------------------------------ pedras da margem
 function rockGeometry(seed, rx, ry, rz) {
+  /** @type {THREE.BufferGeometry} */
   let g = new THREE.IcosahedronGeometry(1, 2);
   g.deleteAttribute('uv'); g.deleteAttribute('normal');
   g = mergeVertices(g);
@@ -509,6 +510,6 @@ export function buildBridge(layout, field) {
       g.add(bal);
     }
   }
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { group: g, railCurves, railTopY };
 }

@@ -199,7 +199,7 @@ export function buildProps({ root, layout, engine }) {
     drum.add(shaft);
   }
   gatePivot.add(drum);
-  gatePivot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  gatePivot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   root.add(gatePivot);
   const gate = {
     object: gatePivot,
@@ -283,7 +283,7 @@ export function buildProps({ root, layout, engine }) {
   }
   deck.position.y = deckRest;
   plankRoot.add(deck);
-  plankRoot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  plankRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   root.add(plankRoot);
   root.add(contactShadow(pw / 2 + 0.12, pd / 2 + 0.12, 0.4).translateX(PLANK.x).translateZ(PLANK.z));
 
@@ -322,7 +322,7 @@ export function buildProps({ root, layout, engine }) {
   const lowPulley = makePulley(0.04);
   lowPulley.position.set(-0.07, 0.11, 0);
   post.add(topPulley, bracket, lowPulley);
-  post.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  post.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   root.add(post);
   // a roldana gira no plano da corda que vem da tábua (oeste) — gira o poste para encarar a tábua
   post.rotation.y = Math.atan2(-(PLANK.z - PU.z), PLANK.x - PU.x) + Math.PI;
@@ -352,7 +352,7 @@ export function buildProps({ root, layout, engine }) {
     const hc = new THREE.Vector3(GATE.hinge.x, drumY, GATE.hinge.z);
     const dir = new THREE.Vector3(over.x - hc.x, 0, over.z - hc.z).normalize();
     const tan = new THREE.Vector3(hc.x + dir.z * drumR, drumY, hc.z - dir.x * drumR);
-    const segs = [[ring, low, 0.03 * (1 - k)], [lowTop, up, 0], [over, tan, 0.09 * (1 - k) + 0.006]];
+    const segs = /** @type {[THREE.Vector3, THREE.Vector3, number][]} */ ([[ring, low, 0.03 * (1 - k)], [lowTop, up, 0], [over, tan, 0.09 * (1 - k) + 0.006]]);
     const counts = [22, 18, 50];
     let i = 0;
     segs.forEach(([a, b, sag], si) => {
@@ -400,7 +400,7 @@ export function buildProps({ root, layout, engine }) {
     knob.rotation.y = Math.PI / 2;
     wedgeRoot.add(knob);
   }
-  wedgeRoot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  wedgeRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const wedgeShadow = contactShadow(0.2, 0.12, 0.45);
   root.add(wedgeRoot, wedgeShadow);
   const wA = new THREE.Vector2(WEDGE.x, WEDGE.z), wB = new THREE.Vector2(WEDGE.lockedAt.x, WEDGE.lockedAt.z);
@@ -492,7 +492,7 @@ export function buildProps({ root, layout, engine }) {
     plate.position.set(0, VALVE.y + 0.32, -0.115);
     valveRoot.add(plate);
   }
-  valveRoot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  valveRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   root.add(valveRoot);
   {
     // mangueira verde serpenteando pelo gramado até o irrigador
@@ -523,7 +523,7 @@ export function buildProps({ root, layout, engine }) {
   // ================================================================== update / reset
   function update(dt, t) {
     updateRope(t);
-    spr.update(dt, t);
+    spr.update(dt);
     for (const f of updaters) f(dt, t);
     for (const c of collectibles) c._update(dt, t);
   }
@@ -578,7 +578,7 @@ function buildSprinkler(root, S) {
     head.add(arm);
   }
   grp.add(head);
-  grp.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  grp.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   grp.add(contactShadow(0.12, 0.12, 0.5));
 
   // ---------------- jatos: gotas (Points) seguindo arcos balísticos, leque do pé do irrigador até a borda
@@ -883,7 +883,7 @@ function buildCrate(root, layout, updaters) {
       body.add(s);
     }
   }
-  body.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  body.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const shadow = contactShadow(hs + 0.1, hs + 0.1, 0.5);
   g.add(shadow);
   g.position.set(C.start.x, 0, C.start.z);
@@ -1163,7 +1163,7 @@ function buildBed(root, BED, starTex, updaters) {
   toy.position.set(-0.08, 0.14, 0.04);
   toy.rotation.y = 0.6;
   g.add(toy);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   g.add(contactShadow(ax + 0.14, az + 0.14, 0.55));
   // destaque: brilho quente pulsante + halo no chão + estrelinhas
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radialTexture(), color: '#ffbf6a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -1198,6 +1198,7 @@ function buildBed(root, BED, starTex, updaters) {
 // ==================================================================== ossinhos dourados
 function buildBones(root, list, starTex) {
   const boneMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, metalness: 0.2, emissive: '#ffb347', emissiveIntensity: 0 });
+  /** @type {THREE.BufferGeometry[]} */
   const parts = [new THREE.CapsuleGeometry(0.021, 0.1, 4, 10).rotateZ(Math.PI / 2)];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.03, 12, 10).translate(sx * 0.068, 0, sz * 0.022));
   const boneGeo = mergeGeometries(parts.map((p) => { const q = p.index ? p.toNonIndexed() : p; q.deleteAttribute('uv'); return q; }));

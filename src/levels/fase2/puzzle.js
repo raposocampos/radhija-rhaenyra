@@ -55,6 +55,12 @@ export const TEXT = {
 
 const smoother = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (x * 6 - 15) + 10));
 
+/** @import { PuzzleContext, Puzzle } from '../../types' */
+
+/**
+ * @param {PuzzleContext} ctx
+ * @returns {Puzzle}
+ */
 export function createPuzzle(ctx) {
   const { layout, props = {}, world, dogs, emit, cam, root, place } = ctx;
   const { GATE, PLANK, WEDGE, SPRINKLER, VALVE, CHANNEL, CRATE, BALL, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_AB } = layout;
@@ -96,6 +102,7 @@ export function createPuzzle(ctx) {
     objKey: '',
     plankBy: null,
   };
+  /** @type {(stage: string) => void} */
   let onStageChange = () => {};
 
   function setStage(st, { silent = false } = {}) {
@@ -428,6 +435,7 @@ export function createPuzzle(ctx) {
     makeBridge({ silent: true });
   }
 
+  /** @param {string} st @param {{ who?: import('../../types').DogName }} [opts] */
   function jumpToStage(st, { who } = {}) {
     if (!STAGES.includes(st)) return null;
     reset();

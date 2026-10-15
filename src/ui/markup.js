@@ -47,6 +47,7 @@ const KEY_TO_PAD = {
   E: ['A'], Enter: ['A'], Q: ['LB', 'RB'], F: ['Y'], Shift: ['B'], Esc: ['Start'], X: ['X'], WASD: ['LS'],
 };
 /** Tecla lógica → tecla desenhada + botão do controle equivalente. */
+/** @param {string} k @param {{ pad?: string[] }} [opts] */
 export function glyph(k, { pad } = {}) {
   const l = k === 'WASD' ? 'WASD' : keyLabel(k);
   const kb = l === 'WASD' ? `<span class="rr-keys">${['W', 'A', 'S', 'D'].map(kbd).join('')}</span>` : kbd(l);
@@ -102,6 +103,7 @@ export function pawPattern(color) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
+/** @type {[label: string, key: string | null, pads: string[]][]} */
 export const CONTROLS = [
   ['Mover', 'WASD', ['LS', 'DPad']],
   ['Interagir · latir', 'E', ['A']],

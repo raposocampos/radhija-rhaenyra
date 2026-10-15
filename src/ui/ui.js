@@ -1,6 +1,6 @@
 // Interface (DOM em #ui): tela inicial + seleção de fases, transição entre fases, cartão de abertura,
 // HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad).
-// API: createUI({ audio, layout, levels, params }) → { update(dt, t), state, progress, device, ... }
+// API: createUI({ audio, layout, levels, params }) → { update(dt), state, progress, device, ... }
 // Ouve: game:state, game:reset, level:loading, level:loaded, objective, dog:switch, companion:stay,
 //       interact:prompt, hint, collectible:pickup, victory, input:device.
 // Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu.
@@ -20,7 +20,11 @@ import { createHud, retrigger } from './hud.js';
 import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
 
+/**
+ * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams }} [opts]
+ */
 export function createUI({ audio, layout, levels, params } = {}) {
+  /** @type {Partial<import('../types').LevelDef>[]} */
   const LV = levels?.length ? levels : [{ id: 'fase1', number: 1, name: 'Operação Cenoura', item: 'carrot', layout, texts: {} }];
   const host = document.getElementById('ui');
   host.innerHTML = '';
@@ -128,7 +132,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
     if (s === 'paused') syncVolume();
     if (s === 'victory') { renderVictory(); victoryAt = performance.now(); }
     if (s !== 'playing') hud.setPrompt(null);
-    if (document.activeElement && root.contains(document.activeElement)) document.activeElement.blur();
+    if (document.activeElement && root.contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
     refreshLayers();
   }
 
@@ -321,16 +325,16 @@ export function createUI({ audio, layout, levels, params } = {}) {
   }
 
   root.addEventListener('mousedown', (e) => {
-    if (e.target.closest('button')) e.preventDefault(); // botão não rouba o foco do teclado
+    if (/** @type {Element} */ (e.target).closest('button')) e.preventDefault(); // botão não rouba o foco do teclado
   });
   root.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-action]');
+    const b = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('[data-action]'));
     if (!b) return;
     b.blur();
     runAction(b);
   });
   root.addEventListener('pointerover', (e) => {
-    const b = e.target.closest('[data-nav]');
+    const b = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('[data-nav]'));
     if (!b || b === focus.el) return;
     if (b.tagName === 'BUTTON') audio?.play?.('uiHover');
     if (focus.focusables().includes(b)) setFocus(b, { silent: true });
@@ -396,7 +400,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
   events.on('interact:prompt', (p) => hud.setPrompt(p));
   events.on('hint', ({ text, duration }) => hud.showHint(text, duration));
   events.on('collectible:pickup', ({ count: n, total }) => hud.setCount(n ?? hud.count + 1, total ?? cur.total));
-  events.on('input:device', ({ type } = {}) => setDevice(type));
+  events.on('input:device', (/** @type {{ type?: string }} */ { type } = {}) => setDevice(type));
   events.on('victory', (d = {}) => {
     victoryData = { ...d };
     victoryRec = recordVictory(d);

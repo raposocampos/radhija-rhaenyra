@@ -17,6 +17,7 @@ export function createPressurePlate({ id, x, z, r = null, hx = null, hz = null, 
   /**
    * ctx: { ctrls, boxes?: [{ id, x, z }] } → { pressed, by, light (nome da dog leve demais em cima) }
    */
+  /** @param {number} dt @param {{ ctrls?: Record<string, import('../../types').DogController>, boxes?: { id?: string, x: number, z: number }[] }} [ctx] */
   function update(dt, { ctrls, boxes = [] } = {}) {
     let by = null;
     let light = null;

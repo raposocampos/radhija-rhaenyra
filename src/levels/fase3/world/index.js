@@ -13,6 +13,10 @@ import { createProps } from './props.js';
 import { buildStringLights, buildFireflies } from './lights.js';
 import { buildBackground } from './background.js';
 
+/**
+ * @param {import('../../../types').LevelBuildArgs} args
+ * @returns {import('../../../types').LevelBuild<import('../../../types').Fase3Props>}
+ */
 export function buildWorld({ engine, root, layout }) {
   const timings = {};
   const T = (name, fn) => { const t0 = performance.now(); const r = fn(); timings[name] = Math.round(performance.now() - t0); return r; };

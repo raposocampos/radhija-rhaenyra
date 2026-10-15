@@ -5,6 +5,9 @@ import { buildEnvironment } from '../../world/environment.js';
 import { createProps } from '../../world/props.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
+/** @import { LevelDef } from '../../types' */
+
+/** @type {LevelDef} */
 export default {
   id: 'fase1',
   number: 1,

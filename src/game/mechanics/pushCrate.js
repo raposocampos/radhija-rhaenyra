@@ -128,6 +128,7 @@ export function createPushCrate({ id = 'crate', cfg, world, emit, prop = null, o
   }
 
   /** Dinâmica do caixote (depois do modifyIntent). comp: companheira (não pode ser esmagada). */
+  /** @param {number} dt @param {{ comp?: import('../../types').DogController, pushSpeed?: number }} [ctx] */
   function update(dt, { comp, pushSpeed } = {}) {
     if (!S.enabled) return;
     const target = S.dir ? S.dir * (pushSpeed ?? cfg.pushSpeed) : 0;

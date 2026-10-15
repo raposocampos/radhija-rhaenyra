@@ -5,6 +5,9 @@ import lighting from './lighting.js';
 import { buildWorld } from './world/index.js';
 import { createPuzzle } from './puzzle.js';
 
+/** @import { LevelDef } from '../../types' */
+
+/** @type {LevelDef} */
 export default {
   id: 'fase3',
   number: 3,

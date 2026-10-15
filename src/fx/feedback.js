@@ -208,6 +208,7 @@ export function createFeedback(opts) {
   }
   let iconCursor = 0;
   /** kind: 'paw' | 'alert' | 'curious'; at: {x,y,z} fixo ou follow: nome da dog. */
+  /** @param {string} kind @param {{ at?: { x: number, y: number, z: number }, follow?: string, life?: number, size?: number }} [opts] */
   function popIcon(kind, { at, follow, life = 1.3, size = 0.24 } = {}) {
     let ic = icons.find((c) => c.follow && c.follow === follow && c.age < c.life) || null;
     if (!ic) {

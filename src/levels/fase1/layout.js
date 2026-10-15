@@ -16,6 +16,7 @@ export const WORLD = {
   fenceThickness: 0.14,
 };
 
+/** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: {
     displayName: 'Radhija',
@@ -94,6 +95,7 @@ export const CART = {
 export const CARROT = { x: 4.4, z: -4.0, pickupR: 0.55 };
 
 // Três colecionáveis opcionais: petiscos em formato de osso.
+/** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
   { id: 'osso-banco', x: -4.7, z: 1.7, hint: 'perto do banco' },
   { id: 'osso-bebedouro', x: 3.0, z: 0.15, hint: 'perto do bebedouro de pássaros' },
@@ -111,6 +113,7 @@ export const COLLECTIBLE_PICKUP_R = 0.42;
 const fx = FENCE.x;
 const ft = WORLD.fenceThickness / 2;
 
+/** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   // Limites (paredes externas grossas)
   { id: 'casa', shape: 'box', x: 0, z: -5.3, hx: 9, hz: 0.5 },
@@ -119,7 +122,7 @@ export const STATIC_COLLIDERS = [
   { id: 'limite-sul', shape: 'box', x: 0, z: 5.0, hx: 9, hz: 0.5 },
 
   // Cerca divisória
-  ...FENCE.segments.map((s, i) => ({
+  ...FENCE.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({
     id: `cerca-${i}`,
     shape: 'box',
     x: fx,
@@ -193,6 +196,7 @@ export const NAV_NODES = {
   E_south: { x: 3.6, z: 2.9 },
 };
 
+/** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
   ['W_door', 'W_center'],
   ['W_center', 'W_gapApproach'],
@@ -218,6 +222,7 @@ export const SUN = { direction: [-0.62, 0.42, 0.38], color: '#ffc58a', intensity
 
 // Câmera da fase: seguimento (offset relativo ao alvo), limites do foco, plano da tela inicial
 // e plano da comemoração no objetivo final.
+/** @type {import('../../types').CameraConfig} */
 export const CAMERA = {
   fov: 38,
   offset: [1.4, 4.3, 4.7],
@@ -229,6 +234,7 @@ export const CAMERA = {
 };
 
 // Objetivo final (entrega do item → comemoração). Genérico para todas as fases.
+/** @type {import('../../types').Goal} */
 export const GOAL = {
   x: DOOR.zone.x,
   z: DOOR.zone.z,

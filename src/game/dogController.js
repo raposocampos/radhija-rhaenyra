@@ -15,6 +15,11 @@ const PIVOT_ANGLE = (120 * Math.PI) / 180;
 const TURN_GAIN = 12; // rad/s por rad de erro (suaviza o fim do giro)
 const BUMP_SPEED = 2.2; // m/s contra a normal para contar como "batida"
 
+/**
+ * @param {import('../types').DogName} name
+ * @param {import('../types').DogStats} cfg
+ * @returns {import('../types').DogController}
+ */
 export function createController(name, cfg) {
   return {
     name,

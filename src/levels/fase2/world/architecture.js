@@ -239,7 +239,7 @@ export function buildArchitecture({ root, layout }) {
   }
 
   // ---------------------------------------------------------------- janelas
-  for (const [wd, seed, kind] of [[winTank, 6, 'basculante'], [winKitchen, 3, 'cozinha'], [winWest, 9, 'basculante']]) {
+  for (const [wd, seed, kind] of /** @type {[{ x: number, y: number, w: number, h: number }, number, string][]} */ ([[winTank, 6, 'basculante'], [winKitchen, 3, 'cozinha'], [winWest, 9, 'basculante']])) {
     const wg = makeWindow({ w: wd.w, h: wd.h, seed, grille: kind });
     wg.position.set(wd.x, wd.y, Z);
     g.add(wg);
@@ -247,7 +247,7 @@ export function buildArchitecture({ root, layout }) {
   // vasinhos no peitoril da cozinha
   {
     const terra = stdMat('#b8613f', { roughness: 0.85, map: speckleTexture() });
-    for (const [dx, col] of [[-0.42, '#f25c7a'], [0.0, '#ffd04a'], [0.4, '#ffffff']]) {
+    for (const [dx, col] of /** @type {[number, string][]} */ ([[-0.42, '#f25c7a'], [0.0, '#ffd04a'], [0.4, '#ffffff']])) {
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.06, 0.12, 12), terra);
       pot.position.set(winKitchen.x + dx, winKitchen.y - winKitchen.h / 2 + 0.06, Z + 0.06);
       const pl = new THREE.Mesh(smallFlowers({ seed: 40 + dx * 10, radius: 0.09, height: 0.1, color: col }), plantMat());
@@ -366,7 +366,7 @@ export function buildArchitecture({ root, layout }) {
       c2.position.set(W.x, pilH + 0.085, zc);
       mur.add(p, c, c2);
     }
-    mur.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    mur.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(mur);
     seeThrough.push(mur);
     // lanterna sobre o pilar da dobradiça (ilumina tábua + portão)
@@ -679,10 +679,10 @@ function buildBackdrop(g, layout) {
     const m = makeBuilding(b);
     m.position.set(b.x, 0, b.z);
     m.rotation.y = b.ry;
-    m.traverse((o) => {
+    m.traverse((/** @type {THREE.Mesh} */ o) => {
       if (!o.isMesh) return;
       o.castShadow = false; o.receiveShadow = false;
-      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const mats = /** @type {THREE.MeshStandardMaterial[]} */ (Array.isArray(o.material) ? o.material : [o.material]);
       for (const mm of mats) if (mm.emissiveMap) mm.emissiveIntensity = 1.6;
     });
     bg.add(m);
@@ -700,7 +700,7 @@ function buildBackdrop(g, layout) {
   for (const t of tdefs) {
     const tr = makeTree(t);
     tr.position.set(t.x, 0, t.z);
-    tr.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+    tr.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.castShadow = false; });
     bg.add(tr);
   }
   // arbustos escuros atrás dos muros (as copas aparecem por cima)

@@ -146,7 +146,7 @@ export function buildDressing({ root, layout }) {
     const drop = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), new THREE.MeshStandardMaterial({ color: '#d8f0ff', roughness: 0.05, transparent: true, opacity: 0.85 }));
     t.add(drop);
     t.userData.drop = { drop, x: w * 0.22, top: 1.04, z: tap.position.z + 0.14, bottom: top - 0.08 };
-    t.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    t.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(t);
     shadows.add(contactShadow(c.hx + 0.1, c.hz + 0.1, 0.5).translateX(c.x).translateZ(c.z));
     g.userData.tank = t;
@@ -195,7 +195,7 @@ export function buildDressing({ root, layout }) {
     }
     drape.position.set(0.05, 0.3, c.r + 0.02);
     b.add(drape);
-    b.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    b.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(b);
     shadows.add(contactShadow(c.r + 0.1, c.r + 0.1, 0.5).translateX(c.x).translateZ(c.z));
   }
@@ -317,7 +317,7 @@ export function buildDressing({ root, layout }) {
     const fern = new THREE.Mesh(merge(parts), plantMat());
     fern.castShadow = true;
     f.add(fern);
-    f.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    f.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(f);
     shadows.add(contactShadow(0.42, 0.42, 0.45).translateX(c.x).translateZ(c.z));
   }
@@ -359,7 +359,7 @@ export function buildDressing({ root, layout }) {
     loose.position.set(c.hx - 0.02, 0.06, c.hz - 0.02);
     loose.rotation.set(0, 0.6, 1.1);
     bg.add(loose);
-    bg.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    bg.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(bg);
     shadows.add(contactShadow(c.hx + 0.12, c.hz + 0.12, 0.5).translateX(c.x).translateZ(c.z));
   }
@@ -383,7 +383,7 @@ export function buildDressing({ root, layout }) {
       [lavender({ seed: 55, height: 0.55, spread: 0.15 }), x0 + 0.7, c.z - 0.45],
     ];
     for (const [geo, x, z] of plants) { const m = new THREE.Mesh(geo, plantMat()); m.position.set(x, 0.12, z); m.castShadow = true; cb.add(m); }
-    cb.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
+    cb.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.receiveShadow = true; });
     g.add(cb);
   }
 
@@ -391,7 +391,7 @@ export function buildDressing({ root, layout }) {
   {
     // vasos junto à parede norte da zona C (z < -4.0)
     const potM = terracottaMat('#c46a43');
-    for (const [x, rr, kind] of [[2.25, 0.16, 'g'], [3.55, 0.14, 'f'], [5.85, 0.0, null]]) {
+    for (const [x, rr, kind] of /** @type {[number, number, string | null][]} */ ([[2.25, 0.16, 'g'], [3.55, 0.14, 'f'], [5.85, 0.0, null]])) {
       if (!kind) continue;
       const pg = new THREE.Group();
       pg.position.set(x, 0, -4.6);
@@ -402,7 +402,7 @@ export function buildDressing({ root, layout }) {
       const pl = new THREE.Mesh(kind === 'g' ? geranium({ seed: 61, radius: rr, height: 0.2 }) : smallFlowers({ seed: 62, radius: rr, height: 0.16, color: '#ffd04a' }), plantMat());
       pl.position.y = rr * 1.35;
       pg.add(pl);
-      pg.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      pg.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       g.add(pg);
       shadows.add(contactShadow(rr + 0.08, rr + 0.08, 0.5).translateX(x).translateZ(-4.6));
     }
@@ -418,7 +418,7 @@ export function buildDressing({ root, layout }) {
     broom.position.set(-3.75 - 0.15, 0, Z + 0.1);
     broom.rotation.set(-0.1, 0, 0.12);
     broom.position.x = -6.4;
-    broom.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    broom.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.castShadow = true; });
     g.add(broom);
     // balde azul ao lado da porta
     const bucket = new THREE.Group();
@@ -432,7 +432,7 @@ export function buildDressing({ root, layout }) {
     handle.position.y = 0.14;
     bucket.add(handle);
     bucket.position.set(-5.05, 0.14, -4.55);
-    bucket.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    bucket.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(bucket);
     shadows.add(contactShadow(0.2, 0.2, 0.5).translateX(-5.05).translateZ(-4.55));
     // tufos de capim alto no canto sudoeste e na faixa leste (fora dos corredores)

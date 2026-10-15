@@ -127,7 +127,7 @@ export function buildFence(engine, layout) {
     group.add(post, cap, ball);
   }
 
-  group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  group.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   scene.add(group);
   return { group };
 }

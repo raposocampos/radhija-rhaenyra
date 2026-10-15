@@ -3,6 +3,10 @@
 import * as THREE from 'three';
 import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../game/puzzleKit.js';
 
+/**
+ * Cenário provisório: chão + blocos nos colisores do layout (para testar uma fase antes do cenário).
+ * @param {{ root: import('three').Object3D, layout: import('../types').LevelLayout, colors?: { ground?: string, block?: string } }} args
+ */
 export function buildPlaceholderWorld({ root, layout, colors = {} }) {
   const B = layout.WORLD.bounds;
   const ground = new THREE.Mesh(
@@ -47,6 +51,7 @@ export function createPlaceholderPuzzle({ layout, props, dogs, emit, root }) {
   const cols = createCollectibles({ list: layout.COLLECTIBLES, props, emit, pickupR: layout.COLLECTIBLE_PICKUP_R });
   const item = createCarryItem({ obj: props.item?.object, dogs, scene: root, carrier: it.carrier || 'any' });
   let stage = 'start';
+  /** @type {(stage: string) => void} */
   let onStageChange = () => {};
   const setStage = (s) => {
     if (s !== stage) {

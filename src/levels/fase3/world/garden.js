@@ -29,6 +29,11 @@ function pot({ r, h, material, seed = 1, foot = 0.72, belly = 1.0 }) {
  * Faixa de cerca-viva ao longo de um segmento: muitos tufos arredondados de tamanhos variados,
  * espalhados no volume (copa irregular no topo, laterais "estufadas"), como as sebes da fase 1.
  */
+/**
+ * @param {object[]} list
+ * @param {{ ax: number, az: number, bx: number, bz: number, height: number, half: number, r: () => number,
+ *           taper?: (x: number, z: number, h: number) => number, spacing?: number }} opts
+ */
 function hedgeBlobs(list, { ax, az, bx, bz, height, half, r, taper, spacing = 0.1 }) {
   const len = Math.hypot(bx - ax, bz - az);
   const ux = (bx - ax) / len, uz = (bz - az) / len;
@@ -196,7 +201,7 @@ export function buildGarden(layout) {
     light.position.set(c.x + 0.05, 0.98, c.z - 0.05);
     group.add(light);
     lights.table = { light, flame, glassMat, base: 1.6 };
-    table.traverse((o) => { if (o.isMesh && o !== glass) { o.castShadow = true; o.receiveShadow = true; } });
+    table.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh && o !== glass) { o.castShadow = true; o.receiveShadow = true; } });
     table.add(contactShadow(0.75, 0.75, 0.5));
   }
   group.add(table);
@@ -232,7 +237,7 @@ export function buildGarden(layout) {
       const pl = new THREE.Mesh(plant(), f3PlantMat());
       pl.position.y = py;
       g.add(pl);
-      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       group.add(g);
     }
   }
@@ -265,7 +270,7 @@ export function buildGarden(layout) {
       arm.position.set(sx + Math.sign(sx) * 0.02, 0.62, 0.02);
       bench.add(side, back, arm);
     }
-    bench.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    bench.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     bench.add(contactShadow(0.75, 0.3, 0.5));
     group.add(bench);
   }
@@ -285,7 +290,7 @@ export function buildGarden(layout) {
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.03, 12), iron);
       cap.position.y = 0.455;
       g.add(post, glass, cap);
-      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.castShadow = true; });
       group.add(g);
       bollards.push({ group: g, glowMat, x, z: B.maxZ + 0.12 });
     }
@@ -305,7 +310,7 @@ export function buildGarden(layout) {
       leg.position.set(sx, 0.19, 0);
       benchS.add(leg);
     }
-    benchS.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    benchS.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     group.add(benchS);
   }
 
@@ -327,7 +332,7 @@ export function buildGarden(layout) {
     const finial = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), iron);
     finial.position.y = 2.92;
     g.add(pole, base, glass, cap, finial);
-    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) o.castShadow = true; });
     group.add(g);
     posts.push({ group: g, glowMat, top: new THREE.Vector3(x, 2.66, z) });
   }
