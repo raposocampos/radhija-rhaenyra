@@ -38,7 +38,10 @@ O layout é a fonte única de coordenadas da fase. Convenções: metros, Y para 
 1. **`WORLD.bounds`**: o retângulo andável.
 2. **`DOGS`**: reaproveite as estatísticas da fase 1 e mude só a posição inicial (`withStart`).
 3. **`STATIC_COLLIDERS`**: paredes, móveis, vasos. Formatos `box`, `circle` e `segment`; `blocks: 'large'` cria uma
-   abertura onde só a Radhija passa; `except` desliga o colisor numa área (ponte sobre água).
+   abertura onde só a Radhija passa; `except` desliga o colisor numa área (ponte sobre água); `jumpable: true` cria um
+   obstáculo baixo que só a Rhaenyra passa, pulando (com `height` para o cenário provisório desenhar a tora).
+   A companheira não pula: ligue os dois lados de um obstáculo pulável com uma aresta `{ requires: 'jump' }`
+   (flag que nunca liga) para ela esperar do lado de cá, como na Arena do Pulo (`src/levels/_pulo/`).
 4. **Os elementos do puzzle**: portões (`hinge`, `latchPost`, `length`, `openYaw`), placas (`x`, `z`, `r`,
    `requires`), o item (`x`, `z`, `pickupR`). Coloque aqui tudo o que tiver coordenada.
 5. **`NAV_NODES` e `NAV_EDGES`**: o caminho da companheira. Um nó em cada "sala" e de cada lado de cada passagem;
@@ -112,7 +115,8 @@ um item de tipo novo precisa de ícone em `src/ui/icons.js` (`itemIcon`) e de po
 ## 7. Teste a lógica
 
 1. **No navegador**: `npm run dev` e abra `http://127.0.0.1:5173/?level=4&play`. Use `&debug` para ver colisores e o
-   grafo, `&stage=gateOpen` para pular etapas e `&dog=rhaenyra` para começar com a Rhaenyra.
+   grafo, `&stage=gateOpen` para pular etapas e `&dog=rhaenyra` para começar com a Rhaenyra. Enquanto a fase não
+   estiver registrada, acrescente-a a `DEV_LEVELS` em `src/levels/dev.js` e abra com `?level=<id>&play`.
 2. **No Node, em segundos**: copie `test/modelo-fase.test.mjs` para `test/fase4.test.mjs` e troque as rotas. O jogo
    headless joga a fase de verdade com teclas simuladas:
 

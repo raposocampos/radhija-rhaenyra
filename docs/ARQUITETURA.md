@@ -7,7 +7,8 @@ Os tipos de todas as APIs citadas aqui estão em [`src/types.d.ts`](../src/types
 ## 1. Visão geral
 
 Aventura 3D curta em fases, em Three.js r170 + Vite, JavaScript puro com ES modules. O jogador controla uma de
-duas cachorrinhas (a Radhija, pequena e rápida; a Rhaenyra, grande e forte) e troca entre elas; a outra vira
+duas cachorrinhas (a Radhija, pequena e rápida, que dá arrancadas; a Rhaenyra, grande e forte, que empurra e pula)
+e troca entre elas; a outra vira
 companheira e segue sozinha (ou espera, com o comando **Fica**). Cada fase é um puzzle cooperativo que termina
 levando um item até um objetivo.
 
@@ -32,7 +33,7 @@ src/game/                  NÚCLEO genérico
   collision.js             colisão 2D (círculo da dog × caixas, círculos, segmentos), sem Three
   navigation.js            grafo de navegação da companheira (Dijkstra + linha de visão)
   companion.js             IA da companheira (seguir, esperar, ir até um ponto)
-  dogController.js         movimento de uma dog (aceleração, giro, arrancada, colisão)
+  dogController.js         movimento de uma dog (aceleração, giro, arrancada, pulo, colisão)
   cameraRig.js             câmera de seguimento, planos de foco, tela inicial e comemoração
   puzzleKit.js             peças para puzzles: dicas, prompts, colecionáveis, item carregado, entrega
   mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa…)
@@ -46,6 +47,8 @@ src/levels/                as fases
   faseN/world/             cenário e props visuais (a fase 1 usa src/world/)
   _placeholder.js          cenário provisório em blocos, para testar uma fase antes da arte
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
+  _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
+  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…)
 src/dogs/                  as cachorrinhas (ver §7)
 src/characters/goose.js    a Dona Gansa
@@ -182,7 +185,9 @@ meia-espessura `t`). Opções:
 - `blocks`: `'all'` (padrão), `'large'` (só a Rhaenyra: aberturas onde só a Radhija passa) ou `'small'`;
 - `except {minX, maxX, minZ, maxZ}`: ignorado quando o centro da dog está dentro (água sob uma ponte);
 - `companionOnly`: só a IA da companheira desvia (o disco do irrigador ligado);
-- `kind`: informativo (`'water'`, `'gate'`…), aparece nos contatos.
+- `kind`: informativo (`'water'`, `'gate'`…), aparece nos contatos;
+- `jumpable`: obstáculo baixo (tronco, mureta baixa) que não bloqueia quem está no ar, ou seja, a Rhaenyra pulando.
+  Sem essa marca, nada é pulável: as paredes, cercas e portões das fases continuam bloqueando no ar.
 
 Colisores dinâmicos são registrados pelo puzzle com `world.addDynamic({...})`, que devolve o próprio objeto: mova
 `x/z/ax…` e ligue/desligue com `enabled`. O movimento usa sub-passos de no máximo 0,45 × raio, então nem a arrancada
@@ -202,6 +207,7 @@ estão livres, que as arestas não atravessam colisores e que o grafo é conexo 
 | Interagir / latir | E | A (✕) |
 | Latir | — | X (□) |
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | B (○) ou RT |
+| Pular (Rhaenyra) | Espaço | LT |
 | Trocar de cachorrinha | Q | LB / RB |
 | Fica / Vem (companheira) | F | Y (△) |
 | Pausar | Esc | Start / Options |
@@ -211,6 +217,12 @@ estão livres, que as arestas não atravessam colisores e que o grafo é conexo 
 o comando. Ao voltar de um menu para o jogo, os botões segurados ficam travados até serem soltos (`latchPad`):
 o A que confirma "Começar" não vira latido. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
 
+**Pulo** (`dogController.js`): só quem tem `jumpHeight` nas estatísticas (a Rhaenyra). Arco de altura fixa
+(`jumpHeight`, ~0,36 m) e duração `jumpTime` (~0,5 s), com impulso horizontal mínimo `jumpSpeed` na direção da
+entrada (parada, pula no lugar) e pouco controle no ar. No ar, ela ignora colisores `jumpable` e não pisa em placas de
+pressão; não pula na postura de empurrar. A companheira não pula: arestas do grafo que cruzam obstáculos puláveis
+exigem uma flag que nunca liga, e ela espera do lado de cá. Eventos: `dog:jump` e `dog:land`.
+
 **Fica / Vem**: F alterna a companheira entre seguir e ficar sentada onde está. Quem vira ativa perde o "Fica";
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.
 
@@ -218,13 +230,14 @@ depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar 
 
 **Dogs** (`createDog(nome)` em `src/dogs/dog.js`, tipo `DogModel`): `object`, `mouthSocket` (pendure o item aqui,
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,
-`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying }`; ações: `none`, `sit`, `push`,
-`strain`, `tug`, `celebrate`, `sniff`, `dash`, `turn`, `shake`, `startled`. A pose de boca é detectada pelo nome
+`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
+`airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
+`dash`, `turn`, `shake`, `startled`, `jump`. A pose de boca é detectada pelo nome
 (ou `userData.carryKind`) do objeto no `mouthSocket` ou pela forma dele.
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
 `dogRig.js` monta o esqueleto e a IK das pernas; `dogFace.js`, o rosto; `carryPose.js`, o item na boca;
-`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações, como um pulo).
+`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá).
 
 **Dona Gansa** (`createGoose()` em `src/characters/goose.js`, tipo `GooseModel`): modelo e animação; o comportamento
 está em `src/game/mechanics/gooseNpc.js`.
@@ -238,7 +251,8 @@ Barramento em `src/core/events.js`. Quem emite e quem ouve:
   `victory {timeSec, collected, total, level, levelId, hasNext, texts}`.
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
-- **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`, `companion:stay`.
+- **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
+  `companion:stay`.
 - **Itens**: `item:pickup`, `item:revealed`, `collectible:pickup {count, total}`, `celebrate:start`.
 - **Mecânicas** (sempre com `x, z`): `plate:press`/`plate:release`, `gate:open`/`gate:close`/`gate:locked`, `wedge:kick`,
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
@@ -269,7 +283,7 @@ O ambiente por fase vem de `def.ambience`.
 |---|---|---|
 | `npm test` | testes em Node (`test/*.test.mjs`): as 3 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~5 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–3, controle e regressões; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~11 min |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–3, controle, regressões e pulo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~11 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~12 min |
 
@@ -278,14 +292,15 @@ props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devo
 `hold([dx, dz], ['ShiftLeft'])`, `run(segundos, { until })`, `teleport`, `info()` e `log(evento)`. É a forma mais
 rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 
-**Partidas no navegador** (`tools/scripts/playthrough*.mjs`, `test-gamepad.mjs`, `test-regressoes.mjs`): usam
+**Partidas no navegador** (`tools/scripts/playthrough*.mjs`, `test-gamepad.mjs`, `test-regressoes.mjs`, `test-pulo.mjs`): usam
 `tools/scripts/lib/harness.mjs` (Chrome do sistema, teclas reais, leitura do estado por `window.__game`).
 Capturas vão para `shots/` (fora do git).
 
 **Outras ferramentas**: `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
 `tools/scripts/sim-sprinkler.mjs` (equilíbrio do irrigador), `sandbox/*.html` (dogs, gansa, cenário e efeitos isolados).
 
-**Parâmetros de URL**: `?level=2` (fase inicial), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?stage=<etapa>`
+**Parâmetros de URL**: `?level=2` (fase inicial), `?level=pulo` (fase de desenvolvimento pelo id, ver
+`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?stage=<etapa>`
 (se o puzzle suportar), `?debug` (colisores e grafo), `?cam=x,y,z&look=x,y,z` (câmera fixa), `?nopost`
 (sem pós-processamento).
 

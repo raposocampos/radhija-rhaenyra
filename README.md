@@ -21,6 +21,7 @@ Depois, abra `http://127.0.0.1:5173/`.
 | Interagir / latir | E | A |
 | Latir | — | X |
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | B ou RT |
+| Pular (Rhaenyra) | Espaço | LT |
 | Trocar de cachorrinha | Q | LB / RB |
 | Fica / Vem (companheira) | F | Y |
 | Pausar | Esc | Start |
@@ -33,6 +34,9 @@ Depois, abra `http://127.0.0.1:5173/`.
 
 Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).
+
+**Arena do Pulo** (protótipo do pulo da Rhaenyra, fora do menu): `http://127.0.0.1:5173/?level=pulo&play`.
+Troncos dá para pular; muretas altas, não.
 
 ## Estrutura
 
@@ -55,7 +59,7 @@ Documentação:
 |---|---|
 | `npm test` | testes em Node, em segundos: as 3 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
 | `npm run typecheck` | checagem de tipos (TypeScript sobre os comentários JSDoc) |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–3, controle e regressões), cerca de 11 minutos |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–3, controle, regressões e pulo), cerca de 12 minutos |
 | `npm run build` | roda `typecheck` e `npm test` antes de gerar `dist/`: nenhum build sai quebrado |
 | `npm run verify` | build + partidas no navegador |
 
