@@ -1,5 +1,5 @@
 // Pulo da Rhaenyra no navegador (Arena do Pulo, ?level=pulo): teclas reais, renderização real.
-// A lógica completa está em test/pulo.test.mjs; aqui, a integração com a página (Espaço, LT, animação, eventos).
+// A lógica completa está em test/pulo.test.mjs; aqui, a integração com a página (Espaço, ✕, animação, eventos).
 //   node tools/scripts/test-pulo.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -40,18 +40,18 @@ try {
   check(i.dogs.rhaenyra.x > fence.x + fence.hx && !i.dogs.rhaenyra.jumping && i.dogs.rhaenyra.y === 0, 'pousou do outro lado', `x=${i.dogs.rhaenyra.x}`);
   check((await logOf('dog:jump')).length === 1 && (await logOf('dog:land')).length === 1, 'dog:jump e dog:land uma vez cada');
 
-  // LT do controle.
+  // ✕ do controle.
   await ev(() => {
     const pad = { id: 'Controle falso', index: 0, connected: true, mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
     window.__fakePads = [pad];
   });
   await sleep(200);
   await clearLog();
-  await ev(() => { const p = window.__fakePads[0]; p.buttons[6] = { pressed: true, value: 1 }; p.timestamp = performance.now(); });
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[0] = { pressed: true, value: 1 }; p.timestamp = performance.now(); });
   await sleep(150);
-  await ev(() => { const p = window.__fakePads[0]; p.buttons[6] = { pressed: false, value: 0 }; p.timestamp = performance.now(); });
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[0] = { pressed: false, value: 0 }; p.timestamp = performance.now(); });
   await sleep(700);
-  check((await logOf('dog:jump')).length === 1, 'LT pula');
+  check((await logOf('dog:jump')).length === 1, '✕ pula');
   await ev(() => { window.__fakePads = []; });
 
   // A Radhija não pula.

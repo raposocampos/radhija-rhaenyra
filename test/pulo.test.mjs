@@ -1,4 +1,4 @@
-// Pulo da Rhaenyra: física (dogController), colisão com obstáculos puláveis, entrada (Espaço / LT),
+// Pulo da Rhaenyra: física (dogController), colisão com obstáculos puláveis, entrada (Espaço / ✕),
 // eventos e a Arena do Pulo (src/levels/_pulo/, fase de desenvolvimento).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -109,9 +109,9 @@ test('pulo: parado é no lugar; pousar em cima do tronco devolve para um lugar l
   }
 });
 
-test('pulo: LT do controle pula; LT segurado no menu não pula ao voltar', async () => {
+test('pulo: ✕ do controle pula; ✕ segurado no menu não pula ao voltar', async () => {
   const h = await arena();
-  const lt = (on) => h.setPad(h.pad({ down: on ? [PAD.LT] : [] }));
+  const lt = (on) => h.setPad(h.pad({ down: on ? [PAD.A] : [] }));
   lt(false);
   h.run(0.2);
   h.clearLog();
@@ -119,14 +119,14 @@ test('pulo: LT do controle pula; LT segurado no menu não pula ao voltar', async
   h.run(0.1);
   lt(false);
   h.run(0.8);
-  assert.equal(h.log('dog:jump').length, 1, 'LT pula');
-  // pausa → LT segurado → retoma: não pula
+  assert.equal(h.log('dog:jump').length, 1, '✕ pula');
+  // pausa → ✕ segurado → retoma: não pula
   h.tap('Escape');
   assert.equal(h.info().state, 'paused');
   lt(true);
   h.events.emit('ui:resume', {});
   h.run(0.5);
-  assert.equal(h.log('dog:jump').length, 1, 'LT do menu travado até soltar');
+  assert.equal(h.log('dog:jump').length, 1, '✕ do menu travado até soltar');
   h.setPad(null);
 });
 

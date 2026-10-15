@@ -1,6 +1,6 @@
 // Regressões no navegador (UI, modelos e câmera reais). A lógica das mesmas regressões roda em Node em
 // test/regressoes.test.mjs; aqui ficam as partes que dependem da tela:
-//   - A do controle que confirma "Começar" na tela inicial (UI de verdade) não vira latido;
+//   - ✕ do controle que confirma "Começar" na tela inicial (UI de verdade) não vira pulo nem latido;
 //   - o calço VISUAL da fase 2 trava embaixo da folha aberta do portão (prop 3D, não só o colisor);
 //   - a dog atrasada chega ao lugar da comemoração andando, com a câmera de verdade.
 // (Item na boca ao trocar de fase e A da pausa: tools/scripts/test-gamepad.mjs. Arrancada contra a
@@ -12,7 +12,8 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
 const { check, sleep, info, ev, shot, logOf, clearLog, walkPath, load, waitFor, page } = H;
-const PAD_A = 0;
+const PAD_A = 0; // ✕
+const PAD_B = 1; // ○
 
 const connectPad = () => ev(() => {
   const pad = {
@@ -26,25 +27,25 @@ const btn = (i, on) => ev(([ii, o]) => { const p = window.__fakePads[0]; p.butto
 
 try {
   // ------------------------------------------------------------------ A do menu (tela inicial)
-  console.log('\n== A que confirma "Começar" na tela inicial ==');
+  console.log('\n== ✕ que confirma "Começar" na tela inicial ==');
   await load('');
   await connectPad();
   await sleep(400);
   let i = await info();
   check(i.state === 'title', 'tela inicial', i.state);
   await clearLog();
-  await btn(PAD_A, true); // segura o A: a UI confirma "Começar"
+  await btn(PAD_A, true); // segura o ✕: a UI confirma "Começar"
   await sleep(2200);
   i = await info();
-  check(i.state === 'playing', 'A na tela inicial começa a partida', i.state);
-  check((await logOf('dog:bark')).length === 0, 'A segurado do menu não vira latido no jogo');
+  check(i.state === 'playing', '✕ na tela inicial começa a partida', i.state);
+  check((await logOf('dog:bark')).length === 0 && (await logOf('dog:jump')).length === 0, '✕ segurado do menu não vira pulo nem latido no jogo');
   await btn(PAD_A, false);
   await sleep(200);
-  await btn(PAD_A, true);
+  await btn(PAD_B, true);
   await sleep(150);
-  await btn(PAD_A, false);
+  await btn(PAD_B, false);
   await sleep(200);
-  check((await logOf('dog:bark')).length === 1, 'soltou e apertou de novo: agora late');
+  check((await logOf('dog:bark')).length === 1, '○ no jogo (sem nada perto) late');
   await ev(() => { window.__fakePads = []; });
 
   // ------------------------------------------------------------------ Calço visual sob a folha

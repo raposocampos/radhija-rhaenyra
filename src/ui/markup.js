@@ -31,21 +31,24 @@ export const kbd = (k) => {
   return `<kbd class="rr-key${l.length > 2 ? ' is-wide' : ''}">${esc(l)}</kbd>`;
 };
 const MENU_LINES = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 3.5h7M2.5 6h7M2.5 8.5h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+// Cada botão é desenhado nos dois estilos; o CSS mostra o do controle conectado (.rr[data-pad="ps"|"xbox"]).
+const face = (cls, xb, ps, label) => `<span class="rr-pad rr-pad--${cls}" aria-label="${label}"><b class="pg-xb">${xb}</b>${ps}</span>`;
+const shoulder = (xb, ps) => `<span class="rr-pad rr-pad--sh" aria-label="${ps} / ${xb}"><b class="pg-xb">${xb}</b><b class="pg-ps">${ps}</b></span>`;
 export const PAD_BTN = {
-  A: '<span class="rr-pad rr-pad--a" aria-label="A">A</span>',
-  B: '<span class="rr-pad rr-pad--b" aria-label="B">B</span>',
-  X: '<span class="rr-pad rr-pad--x" aria-label="X">X</span>',
-  Y: '<span class="rr-pad rr-pad--y" aria-label="Y">Y</span>',
-  LB: '<span class="rr-pad rr-pad--sh" aria-label="LB">LB</span>',
-  RB: '<span class="rr-pad rr-pad--sh" aria-label="RB">RB</span>',
-  RT: '<span class="rr-pad rr-pad--sh" aria-label="RT">RT</span>',
-  LT: '<span class="rr-pad rr-pad--sh" aria-label="LT">LT</span>',
+  A: face('a', 'A', '<svg class="pg-ps" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.2 3.2l5.6 5.6M8.8 3.2l-5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>', 'Xis / A'),
+  B: face('b', 'B', '<svg class="pg-ps" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>', 'Bolinha / B'),
+  X: face('x', 'X', '<svg class="pg-ps" viewBox="0 0 12 12" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx=".6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>', 'Quadrado / X'),
+  Y: face('y', 'Y', '<svg class="pg-ps" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2.6l3.5 6H2.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>', 'Triângulo / Y'),
+  LB: shoulder('LB', 'L1'),
+  RB: shoulder('RB', 'R1'),
+  RT: shoulder('RT', 'R2'),
+  LT: shoulder('LT', 'L2'),
   Start: `<span class="rr-pad rr-pad--menu" aria-label="Start">${MENU_LINES}</span>`,
   LS: '<span class="rr-pad rr-pad--stick" aria-label="Analógico esquerdo"><i></i></span>',
   DPad: '<span class="rr-pad rr-pad--dpad" aria-label="Direcional"><i></i></span>',
 };
 const KEY_TO_PAD = {
-  E: ['A'], Enter: ['A'], Q: ['LB', 'RB'], F: ['Y'], Shift: ['B'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['LT'],
+  E: ['B'], Enter: ['A'], Q: ['LB'], F: ['Y'], Shift: ['RB'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['A'], R: ['LT'],
 };
 /** Tecla lógica → tecla desenhada + botão do controle equivalente. */
 /** @param {string} k @param {{ pad?: string[] }} [opts] */
@@ -107,11 +110,12 @@ export function pawPattern(color) {
 /** @type {[label: string, key: string | null, pads: string[]][]} */
 export const CONTROLS = [
   ['Mover', 'WASD', ['LS', 'DPad']],
-  ['Interagir · latir', 'E', ['A']],
+  ['Interagir · latir', 'E', ['B']],
   ['Latir', null, ['X']],
-  ['Correr · empurrar (segure)', 'Shift', ['B', 'RT']],
-  ['Pular (Rhaenyra)', 'Space', ['LT']],
-  ['Trocar de cachorrinha', 'Q', ['LB', 'RB']],
+  ['Pular (Rhaenyra)', 'Space', ['A']],
+  ['Superbafo (Radhija): segure e solte', 'R', ['LT']],
+  ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT']],
+  ['Trocar de cachorrinha', 'Q', ['LB']],
   ['Fica · Vem (companheira)', 'F', ['Y']],
   ['Pausar', 'Esc', ['Start']],
 ];

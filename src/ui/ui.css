@@ -622,6 +622,18 @@
   background: linear-gradient(#6A5D53, #3F352E);
 }
 .rr-pad--menu { background: radial-gradient(circle at 36% 30%, #75675C, #3F352E); }
+/* Estilo PlayStation: botões escuros com os símbolos coloridos; L1/R1/L2/R2 nos gatilhos. */
+.rr-pad .pg-ps { display: none; }
+.rr[data-pad="ps"] .rr-pad .pg-xb { display: none; }
+.rr[data-pad="ps"] .rr-pad .pg-ps { display: block; }
+.rr-pad svg.pg-ps { width: 1.35em; height: 1.35em; }
+.rr[data-pad="ps"] .rr-pad--a, .rr[data-pad="ps"] .rr-pad--b, .rr[data-pad="ps"] .rr-pad--x, .rr[data-pad="ps"] .rr-pad--y {
+  background: radial-gradient(circle at 36% 30%, #6A5D53, #2E2621);
+}
+.rr[data-pad="ps"] .rr-pad--a { color: #8FB6FF; }
+.rr[data-pad="ps"] .rr-pad--b { color: #FF8E8E; }
+.rr[data-pad="ps"] .rr-pad--x { color: #F3A6DA; }
+.rr[data-pad="ps"] .rr-pad--y { color: #6FE0BE; text-shadow: none; }
 .rr-pad--menu svg { width: 1.05em; height: 1.05em; }
 .rr-pad--stick { background: radial-gradient(circle at 50% 50%, #3F352E 0 56%, #6A5D53 58% 100%); }
 .rr-pad--stick i { width: 46%; height: 46%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #8C7E72, #54483F); box-shadow: 0 1px 0 rgba(255, 255, 255, .2); }

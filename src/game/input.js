@@ -2,9 +2,11 @@
 // Estado contínuo (isDown / shift / axis) + toques de borda (consume) por quadro.
 // O controle é lido por polling (poll() no começo do quadro) e traduzido para os MESMOS códigos
 // lógicos do teclado, então o jogo não precisa saber de onde veio o comando:
-//   A → 'KeyE' (interagir/latir) · X → 'Bark' (latir sempre) · Y → 'KeyF' (Fica/Vem)
-//   LB/RB → 'KeyQ' (trocar) · Start → 'Escape' (pausar) · B ou RT → Shift (segurar; borda = arrancada)
-//   LT → 'Jump' (pular; no teclado, Espaço)
+// Mapeamento por posição (PlayStation / Xbox):
+//   ✕/A → 'Jump' (pular; teclado Espaço) · ○/B → 'KeyE' (interagir/latir) · □/X → 'Bark' (latir sempre)
+//   △/Y → 'KeyF' (Fica/Vem) · L1/LB → 'KeyQ' (trocar) · Options/Start → 'Escape' (pausar)
+//   R1/RB ou R2/RT → Shift (segurar = empurrar; borda = arrancada)
+//   L2/LT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -22,15 +24,14 @@ const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Spa
 export const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, LS: 10, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16 };
 export const PAD_DEADZONE = 0.18;
 
-/** Botões → código lógico (borda). B/RT viram Shift (tratados à parte). */
+/** Botões → código lógico (borda). R1/R2 viram Shift e L2 o bafo (tratados à parte). */
 const PAD_EDGE_CODES = [
-  [PAD.A, 'KeyE'],
+  [PAD.A, 'Jump'],
+  [PAD.B, 'KeyE'],
   [PAD.X, 'Bark'],
   [PAD.Y, 'KeyF'],
   [PAD.LB, 'KeyQ'],
-  [PAD.RB, 'KeyQ'],
   [PAD.START, 'Escape'],
-  [PAD.LT, 'Jump'],
 ];
 
 function connectedPads() {
@@ -68,7 +69,7 @@ export function shapeStick(rx, ry, dead = PAD_DEADZONE) {
  */
 export function readGamepad() {
   const pads = connectedPads();
-  const out = { connected: pads.length > 0, pad: null, down: new Array(17).fill(false), rt: 0, stick: { x: 0, y: 0, m: 0 }, dpad: { x: 0, y: 0 }, count: pads.length };
+  const out = { connected: pads.length > 0, pad: null, down: new Array(17).fill(false), rt: 0, lt: 0, stick: { x: 0, y: 0, m: 0 }, dpad: { x: 0, y: 0 }, count: pads.length };
   let bestM = 0;
   let bestTs = -Infinity;
   for (const p of pads) {
@@ -78,6 +79,7 @@ export function readGamepad() {
       if (d) { out.down[i] = true; active = true; }
     }
     out.rt = Math.max(out.rt, btnValue(p, PAD.RT));
+    out.lt = Math.max(out.lt, btnValue(p, PAD.LT));
     const s = shapeStick(p.axes?.[0] || 0, p.axes?.[1] || 0);
     if (s.m > bestM) { bestM = s.m; out.stick = s; }
     if (s.m > 0) active = true;
@@ -137,7 +139,9 @@ export function createInput({ onDevice } = {}) {
     stick: { x: 0, y: 0, m: 0 },
     dpad: { x: 0, y: 0 },
     shiftHeld: false,
+    bafo: false,
     rtHeld: false,
+    ltHeld: false,
     connected: false,
     last: null, // controle com atividade mais recente (vibração)
   };
@@ -162,6 +166,7 @@ export function createInput({ onDevice } = {}) {
       pad.stick = { x: 0, y: 0, m: 0 };
       pad.dpad = { x: 0, y: 0 };
       pad.shiftHeld = false;
+      pad.bafo = false;
       pad.connected = false;
       pad.last = null;
       if (device === 'gamepad') setDevice('keyboard');
@@ -179,6 +184,7 @@ export function createInput({ onDevice } = {}) {
         pad.stick = { x: 0, y: 0, m: 0 };
         pad.dpad = { x: 0, y: 0 };
         pad.shiftHeld = false;
+        pad.bafo = false;
       }
       return;
     }
@@ -188,6 +194,8 @@ export function createInput({ onDevice } = {}) {
     // RT com histerese (gatilho analógico)
     pad.rtHeld = pad.rtHeld ? g.rt > 0.35 : g.rt > 0.55;
     pad.cur[PAD.RT] = pad.rtHeld;
+    pad.ltHeld = pad.ltHeld ? g.lt > 0.35 : g.lt > 0.55;
+    pad.cur[PAD.LT] = pad.ltHeld;
     for (const i of [...pad.latched]) if (!pad.cur[i]) pad.latched.delete(i);
     const isDown = (i) => pad.cur[i] && !pad.latched.has(i);
     const edge = (i) => isDown(i) && !pad.prev[i];
@@ -195,7 +203,8 @@ export function createInput({ onDevice } = {}) {
     for (const [i, code] of PAD_EDGE_CODES) {
       if (edge(i)) { pressed.add(code); activity = true; }
     }
-    const shiftNow = isDown(PAD.B) || isDown(PAD.RT);
+    const shiftNow = isDown(PAD.RB) || isDown(PAD.RT);
+    pad.bafo = isDown(PAD.LT);
     if (shiftNow && !pad.shiftHeld) { pressed.add(PAD_SHIFT); activity = true; }
     pad.shiftHeld = shiftNow;
     pad.stick = g.stick;
@@ -226,6 +235,8 @@ export function createInput({ onDevice } = {}) {
       return hit;
     },
     shift: () => any(SHIFT) || pad.shiftHeld,
+    /** Superbafo: segurando (teclado R ou L2/LT). */
+    bafo: () => down.has('KeyR') || pad.bafo,
     consumeShift() {
       let hit = false;
       for (const c of SHIFT) if (pressed.delete(c)) hit = true;
@@ -250,6 +261,8 @@ export function createInput({ onDevice } = {}) {
       const g = readGamepad();
       for (let i = 0; i < 17; i++) if (pad.cur[i] || g.down[i]) pad.latched.add(i);
       if (g.rt > 0.35) pad.latched.add(PAD.RT);
+      if (g.lt > 0.35) pad.latched.add(PAD.LT);
+      pad.bafo = false;
       for (const [, code] of PAD_EDGE_CODES) if (code !== 'Escape') pressed.delete(code);
       pad.shiftHeld = false;
       pressed.delete(PAD_SHIFT);

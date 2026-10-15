@@ -58,27 +58,29 @@ test('regressão: item na boca não passa para outra fase escolhida no meio da p
 // A do menu virando latido: o A que confirma "Começar"/"Continuar" na UI não pode chegar ao jogo como
 // interagir/latir (nem o B como arrancada). A UI pode ver o botão no mesmo quadro, antes do jogo.
 // ---------------------------------------------------------------------------------------------------
-test('regressão: A que confirma o menu não vira latido (tela inicial e pausa)', async () => {
-  const h = await createHeadlessGame({ level: 1, mode: 'title' });
+test('regressão: botão que confirma/volta no menu não vaza para o jogo (tela inicial e pausa)', async () => {
+  // Com a Rhaenyra ativa, ✕ (A) no jogo é pulo; ○ (B) é interagir (late sem nada perto).
+  const h = await createHeadlessGame({ level: 1, mode: 'title', query: 'dog=rhaenyra' });
   h.setPad(h.pad());
   h.run(0.2);
   assert.equal(h.info().state, 'title');
-  // A desce e a UI confirma "Começar" antes de o jogo ler o controle neste quadro.
+  // ✕ desce e a UI confirma "Começar" antes de o jogo ler o controle neste quadro.
   h.setPad(h.pad({ down: [PAD.A] }));
   h.events.emit('ui:play', {});
   h.run(1.0);
   assert.equal(h.info().state, 'playing');
-  assert.equal(h.log('dog:bark').length, 0, 'A segurado do menu não latiu');
-  // Soltou e apertou de novo: agora sim é latido (o teste enxerga latidos).
+  assert.equal(h.log('dog:jump').length, 0, '✕ segurado do menu não pulou');
+  assert.equal(h.log('dog:bark').length, 0, '✕ segurado do menu não latiu');
+  // Soltou e apertou de novo: agora sim é pulo (o teste enxerga pulos).
   h.setPad(h.pad());
   h.run(0.1);
   h.setPad(h.pad({ down: [PAD.A] }));
   h.run(0.1);
   h.setPad(h.pad());
-  h.run(0.1);
-  assert.equal(h.log('dog:bark').length, 1, 'A no jogo late');
+  h.run(0.6);
+  assert.equal(h.log('dog:jump').length, 1, '✕ no jogo pula');
 
-  // Pausa (Start) → A confirma "Continuar" → nada de latido; B (voltar) não vira arrancada.
+  // Pausa (Options) → ✕ confirma "Continuar" → nada de pulo; ○ (voltar) não vira latido; R1 não vira empurrar.
   h.clearLog();
   h.setPad(h.pad({ down: [PAD.START] }));
   h.run(0.1);
@@ -89,15 +91,17 @@ test('regressão: A que confirma o menu não vira latido (tela inicial e pausa)'
   h.events.emit('ui:resume', {});
   h.run(0.5);
   assert.equal(h.info().state, 'playing');
-  assert.equal(h.log('dog:bark').length, 0, 'A do "Continuar" não latiu');
-  h.setPad(h.pad());
-  h.run(0.1);
-  h.tap('Escape');
-  assert.equal(h.info().state, 'paused');
-  h.setPad(h.pad({ down: [PAD.B] }));
-  h.events.emit('ui:resume', {});
-  h.run(0.5);
-  assert.equal(h.log('dog:dash').length, 0, 'B do menu não virou arrancada');
+  assert.equal(h.log('dog:jump').length, 0, '✕ do "Continuar" não pulou');
+  for (const [btn, what, bad] of [[PAD.B, '○ (voltar)', (s) => h.log('dog:bark').length > 0], [PAD.RB, 'R1', (s) => s.dogs.rhaenyra.action === 'push']]) {
+    h.setPad(h.pad());
+    h.run(0.1);
+    h.tap('Escape');
+    assert.equal(h.info().state, 'paused');
+    h.setPad(h.pad({ down: [btn] }));
+    h.events.emit('ui:resume', {});
+    h.run(0.5);
+    assert.ok(!bad(h.info()), `${what} segurado do menu não vazou para o jogo`);
+  }
   h.setPad(null);
 });
 

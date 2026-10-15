@@ -31,6 +31,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
   const root = document.createElement('div');
   root.className = 'rr';
   root.dataset.device = 'keyboard';
+  root.dataset.pad = 'ps'; // desenho dos botões: 'ps' (padrão) ou 'xbox', conforme o controle conectado
   root.innerHTML = template();
   host.appendChild(root);
 
@@ -380,7 +381,12 @@ export function createUI({ audio, layout, levels, params } = {}) {
   });
 
   // ---------- controle (polling no update) ----------
-  const menuPad = createMenuPad({ focus, audio, getLayer: menuLayer, getUiState: () => uiState, activate: activateFocused, setDevice });
+  // Botões desenhados como os do controle conectado: Xbox (XInput) ou PlayStation (padrão).
+  const setPadStyle = (id) => {
+    const style = /xbox|xinput|045e/i.test(id) ? 'xbox' : 'ps';
+    if (root.dataset.pad !== style) root.dataset.pad = style;
+  };
+  const menuPad = createMenuPad({ focus, audio, getLayer: menuLayer, getUiState: () => uiState, activate: activateFocused, setDevice, setPadStyle });
 
   // ---------- eventos do jogo ----------
   events.on('game:state', ({ state }) => setState(state));

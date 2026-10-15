@@ -75,17 +75,18 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
 
 /**
  * Controle nos menus (polling a cada quadro, chamado pelo update da UI).
- * opts: { focus (createMenuFocus), audio, getLayer(), getUiState(), activate(), setDevice(type) }
+ * opts: { focus (createMenuFocus), audio, getLayer(), getUiState(), activate(), setDevice(type), setPadStyle?(id) }
  * → { poll(dt), frameState } (frameState: estado do jogo no fim do quadro anterior, para o Start não
  *    pausar e retomar no mesmo toque)
  */
-export function createMenuPad({ focus, audio, getLayer, getUiState, activate, setDevice }) {
+export function createMenuPad({ focus, audio, getLayer, getUiState, activate, setDevice, setPadStyle }) {
   const pad = { prev: {}, hold: { up: 0, down: 0, left: 0, right: 0 }, frameState: null };
   function poll(dt) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : null;
     let gp = null;
     if (pads) for (const p of pads) if (p && p.connected !== false) { gp = p; break; }
     if (!gp) { pad.prev = {}; return; }
+    setPadStyle?.(gp.id || '');
     const b = (i) => { const x = gp.buttons?.[i]; return !!x && (x.pressed || x.value > 0.5); };
     const ax = gp.axes?.[0] || 0;
     const ay = gp.axes?.[1] || 0;

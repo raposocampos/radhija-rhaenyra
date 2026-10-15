@@ -1,5 +1,6 @@
 // Controle (Gamepad API) por simulação: um navigator.getGamepads falso (window.__fakePads) com
-// mapeamento "standard". Testa analógico proporcional + zona morta, D-pad, A/X/Y/LB/RB/B/RT/Start,
+// mapeamento "standard" (posições PlayStation: ✕=A, ○=B, □=X, △=Y, L1=LB, R1=RB, L2=LT, R2=RT).
+// Testa analógico proporcional + zona morta, D-pad, ✕/○/□/△/L1/R1/R2/Options,
 // vibração, input:device, trava ao voltar do menu, desconexão e pollMenuPad().
 //   node tools/scripts/test-gamepad.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
@@ -63,31 +64,35 @@ try {
   i = await info();
   check(Math.hypot(i.dogs.radhija.x - x0.x, i.dogs.radhija.z - x0.z) > 0.6, 'D-pad move a dog');
 
-  // A (interagir/latir) e X (latir sempre)
+  // ○ (interagir/latir) e □ (latir sempre)
   await clearLog();
-  await tap(B.A);
+  await tap(B.B);
   await sleep(400);
   await tap(B.X);
   i = await info();
-  check((await logOf('dog:bark')).length === 2, 'A (sem nada perto) e X latem', `${(await logOf('dog:bark')).length} latidos`);
+  check((await logOf('dog:bark')).length === 2, '○ (sem nada perto) e □ latem', `${(await logOf('dog:bark')).length} latidos`);
 
-  // Y = Fica/Vem
+  // △ = Fica/Vem
   await tap(B.Y);
   i = await info();
-  check(i.stay.rhaenyra && (await logOf('companion:stay')).at(-1)?.stay === true, 'Y: Fica (companion:stay true)');
+  check(i.stay.rhaenyra && (await logOf('companion:stay')).at(-1)?.stay === true, '△: Fica (companion:stay true)');
   await tap(B.Y);
   i = await info();
-  check(!i.stay.rhaenyra && (await logOf('companion:stay')).at(-1)?.stay === false, 'Y de novo: Vem (stay false)');
+  check(!i.stay.rhaenyra && (await logOf('companion:stay')).at(-1)?.stay === false, '△ de novo: Vem (stay false)');
 
-  // LB / RB = trocar
+  // L1 = trocar (ida e volta); com a Rhaenyra, ✕ pula
   await tap(B.LB);
   i = await info();
-  check(i.activeDog === 'rhaenyra', 'LB troca para a Rhaenyra');
-  await tap(B.RB);
+  check(i.activeDog === 'rhaenyra', 'L1 troca para a Rhaenyra');
+  await clearLog();
+  await tap(B.A);
+  await sleep(600);
+  check((await logOf('dog:jump')).length === 1, '✕ com a Rhaenyra pula');
+  await tap(B.LB);
   i = await info();
-  check(i.activeDog === 'radhija', 'RB troca de volta para a Radhija');
+  check(i.activeDog === 'radhija', 'L1 troca de volta para a Radhija');
 
-  // RT e B = arrancada (borda) — e vibração
+  // R2 e R1 = arrancada (borda) — e vibração
   await clearLog();
   await open();
   await axes(0, 1);
@@ -98,30 +103,30 @@ try {
   await open();
   await axes(0, 1);
   await sleep(700); // arrancada 0,3 s + resfriamento 0,8 s
-  await tap(B.B);
+  await tap(B.RB);
   await axes(0, 0);
   await sleep(300);
-  check((await logOf('dog:dash')).length === 2, 'RT e B: arrancada (borda, não repete segurando)', `${(await logOf('dog:dash')).length}`);
+  check((await logOf('dog:dash')).length === 2, 'R2 e R1: arrancada (borda, não repete segurando)', `${(await logOf('dog:dash')).length}`);
   const rum = await ev(() => window.__rumbles);
   check(rum.length >= 2 && rum.every((r) => r.type === 'dual-rumble' && r.duration <= 300 && r.strongMagnitude <= 0.6), 'vibração dual-rumble curta e suave na arrancada', JSON.stringify(rum[0] || {}));
 
-  // Segurar B com a Rhaenyra = empurrar (postura)
+  // Segurar R1 com a Rhaenyra = empurrar (postura)
   await tap(B.LB);
-  await btn(B.B, true);
+  await btn(B.RB, true);
   await axes(0, -1);
   await sleep(500);
   i = await info();
-  check(i.dogs.rhaenyra.action === 'push', 'segurar B com a Rhaenyra: postura de empurrar', i.dogs.rhaenyra.action);
-  await btn(B.B, false);
+  check(i.dogs.rhaenyra.action === 'push', 'segurar R1 com a Rhaenyra: postura de empurrar', i.dogs.rhaenyra.action);
+  await btn(B.RB, false);
   await axes(0, 0);
-  await tap(B.RB);
+  await tap(B.LB);
 
-  // Start = pausar; no menu A/B/D-pad não vazam para o jogo
+  // Options = pausar; no menu ✕/○/D-pad não vazam para o jogo
   await clearLog();
   await tap(B.START);
   await sleep(150);
   i = await info();
-  check(i.state === 'paused', 'Start pausa', i.state);
+  check(i.state === 'paused', 'Options pausa', i.state);
   const p0 = i.dogs.radhija;
   await axes(0, -1);
   await btn(B.X, true);
@@ -135,8 +140,8 @@ try {
   await tap(B.START);
   await sleep(200);
   i = await info();
-  check(i.state === 'playing' && (await logOf('dog:bark')).length === 0, 'Start retoma (X segurado no menu não vira latido)', i.state);
-  // A no menu (Continuar) segurado: retoma e NÃO late no primeiro quadro de jogo
+  check(i.state === 'playing' && (await logOf('dog:bark')).length === 0, 'Options retoma (□ segurado no menu não vira latido)', i.state);
+  // ✕ no menu (Continuar) segurado: retoma e NÃO pula/late no primeiro quadro de jogo
   await tap(B.START);
   await sleep(200);
   await btn(B.A, true);
@@ -145,8 +150,8 @@ try {
   const barkA = (await logOf('dog:bark')).length;
   await btn(B.A, false);
   await sleep(250);
-  check(i.state === 'playing' && barkA === 0 && (await logOf('dog:bark')).length === 0, 'A no menu retoma e fica travado até soltar (sem latido)', `${i.state}, latidos=${barkA}`);
-  // B no menu (voltar) segurado: retoma e não vira arrancada
+  check(i.state === 'playing' && barkA === 0 && (await logOf('dog:bark')).length === 0 && (await logOf('dog:jump')).length === 0, '✕ no menu retoma e fica travado até soltar (sem pulo nem latido)', `${i.state}, latidos=${barkA}`);
+  // ○ no menu (voltar) segurado: retoma e não vira interação/latido
   await tap(B.START);
   await sleep(200);
   await btn(B.B, true);
@@ -154,7 +159,7 @@ try {
   await axes(0, 1);
   await sleep(500);
   i = await info();
-  check(i.state === 'playing' && (await logOf('dog:dash')).length === 0, 'B no menu (voltar) retoma e não vaza como arrancada', i.state);
+  check(i.state === 'playing' && (await logOf('dog:bark')).length === 0, '○ no menu (voltar) retoma e não vaza como latido', i.state);
   await btn(B.B, false);
   await axes(0, 0);
   await sleep(200);
@@ -201,7 +206,7 @@ try {
     set(0, false);
     return { first: out[0], reps, confirm: a.confirm, confirmHeld: a2.confirm };
   });
-  check(menu.first && menu.reps >= 3 && menu.reps <= 6 && menu.confirm && !menu.confirmHeld, 'pollMenuPad(): borda + repetição ao segurar + confirmar (A)', JSON.stringify(menu));
+  check(menu.first && menu.reps >= 3 && menu.reps <= 6 && menu.confirm && !menu.confirmHeld, 'pollMenuPad(): borda + repetição ao segurar + confirmar (✕)', JSON.stringify(menu));
 
   // Troca de fase com item na boca: a fase nova começa com as bocas vazias
   console.log('== Troca de fase com item na boca ==');
