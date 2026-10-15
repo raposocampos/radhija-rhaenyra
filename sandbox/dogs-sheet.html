@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Folha de capturas — Personagens</title>
+    <style>
+      html, body { margin: 0; background: #222; }
+      #g { display: grid; gap: 2px; }
+      figure { margin: 0; position: relative; }
+      img { width: 100%; display: block; }
+      figcaption { position: absolute; left: 6px; top: 4px; color: #fff; font: bold 14px monospace; text-shadow: 0 0 3px #000; }
+    </style>
+  </head>
+  <body>
+    <div id="g"></div>
+    <script>
+      // ?imgs=a,b,c (nomes em shots/personagens, sem .png) &cols=2 &crop=x0,y0,x1,y1 (fração)
+      const q = new URLSearchParams(location.search);
+      const names = (q.get('imgs') || '').split(',').filter(Boolean);
+      const cols = Number(q.get('cols') || 2);
+      const g = document.getElementById('g');
+      g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      const crop = q.get('crop')?.split(',').map(Number);
+      let left = names.length;
+      for (const n of names) {
+        const f = document.createElement('figure');
+        const im = new Image();
+        im.onload = im.onerror = () => { if (--left === 0) window.__ready = true; };
+        im.src = `/shots/personagens/${n}.png?${Date.now()}`;
+        if (crop) {
+          f.style.overflow = 'hidden';
+          f.style.aspectRatio = `${(crop[2] - crop[0]) * 16} / ${(crop[3] - crop[1]) * 9}`;
+          im.style.width = `${100 / (crop[2] - crop[0])}%`;
+          im.style.marginLeft = `${(-crop[0] / (crop[2] - crop[0])) * 100}%`;
+          im.style.marginTop = `${(-crop[1] / (crop[2] - crop[0])) * 100 * (9 / 16)}%`;
+        }
+        const c = document.createElement('figcaption');
+        c.textContent = n;
+        f.append(im, c);
+        g.append(f);
+      }
+    </script>
+  </body>
+</html>

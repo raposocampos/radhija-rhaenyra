@@ -1,0 +1,3 @@
+[{"type":"eval","js":"({ env: window.__envTimings, dogs: Object.fromEntries(Object.entries(window.__game.dogs).map(([k,d]) => [k, d.stats])) })"},
+ {"type":"fps","ms":3000},
+ {"type":"shot","out":"shots/qa/01-titulo-1080.png"}]

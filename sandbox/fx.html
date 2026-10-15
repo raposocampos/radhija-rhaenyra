@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Sandbox de sons — Operação Cenoura</title>
+    <style>
+      body { margin: 0; min-height: 100vh; background: #2a2118; color: #FFF6E6; font: 15px/1.4 system-ui, sans-serif; display: grid; place-items: start center; }
+      main { width: min(760px, 92vw); padding: 32px 0; }
+      h1 { font-weight: 600; margin: 0 0 6px; }
+      p { opacity: .75; margin: 0 0 18px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+      button { padding: 12px 10px; border-radius: 14px; border: 0; background: #FFF6E6; color: #4A3426; font-weight: 700; cursor: pointer; }
+      button:hover { background: #F8A55E; color: #fff; }
+      label { display: flex; gap: 10px; align-items: center; margin: 18px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sons sintetizados</h1>
+      <p>Clique em qualquer botão (o primeiro clique destrava o áudio e liga o ambiente: vento, passarinhos e sino de vento raro).</p>
+      <label>Volume <input id="vol" type="range" min="0" max="100" value="70" /></label>
+      <label><input id="muffle" type="checkbox" /> Abafar (pausa)</label>
+      <div class="grid" id="grid"></div>
+    </main>
+    <script type="module" src="./fx.js"></script>
+  </body>
+</html>

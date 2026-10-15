@@ -1,0 +1,10 @@
+[
+  {"type":"shot","out":"shots/f3/40-start.png"},
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', -3.05, -2.3); 1"},
+  {"type":"wait","ms":2200},
+  {"type":"shot","out":"shots/f3/41-nook.png"},
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', -3.1, 2.6); window.__game.game.debug.teleport('rhaenyra', -3.6, 3.2); 1"},
+  {"type":"wait","ms":2400},
+  {"type":"shot","out":"shots/f3/42-gate-off.png"},
+  {"type":"fps","ms":3000}
+]

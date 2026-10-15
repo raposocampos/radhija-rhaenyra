@@ -1,0 +1,5 @@
+[
+  {"type":"eval","js":"(async () => { const a = window.__game.audio; a.unlock(); await new Promise(r => setTimeout(r, 400)); const res = []; for (const n of a.names) { try { a.play(n, { speed: 2.2, count: 2, total: 3, name: 'radhija', strength: 0.8 }); res.push(n); } catch (e) { res.push(n + ':ERRO ' + e.message); } await new Promise(r => setTimeout(r, 60)); } for (let i = 0; i < 20; i++) { a.play('cartRoll', { speed: 0.85 }); await new Promise(r => setTimeout(r, 16)); } a.setMuffled(true); a.play('pause'); a.setMuffled(false); a.setVolume(0.5); const v = a.getVolume(); a.setVolume(0.7); return { state: a.context.state, tocados: res.length, res: res.join(','), v }; })()"},
+  {"type":"wait","ms":1500},
+  {"type":"eval","js":"(async () => { const a = window.__game.audio; const out = []; for (const n of a.names.filter(n => n !== 'cartRoll')) { out.push(await a.analyze(n, { speed: 2.2, count: 2, total: 3, name: 'radhija', strength: 0.8, double: false })); } return out.map(o => `${o.name} pico=${o.peak} rms=${o.rms} dur=${o.activeSec}`); })()"}
+]

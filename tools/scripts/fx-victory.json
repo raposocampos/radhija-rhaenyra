@@ -1,0 +1,13 @@
+[
+  {"type":"wait","ms":500},
+  {"type":"eval","js":"(() => { const g = window.__game; g.audio.unlock(); g.events.emit('collectible:pickup', {id:'x', x:-3, z:-3, count:3, total:3}); const a = g.game.activeDog; g.game.debug.teleport(a, -3.6, -3.7); return [g.game.stage, a]; })()"},
+  {"type":"wait","ms":900},
+  {"type":"eval","js":"({ state: window.__game.game.state, ui: window.__game.ui.state })"},
+  {"type":"shot","out":"shots/fx/19-comemoracao-real.png"},
+  {"type":"wait","ms":3200},
+  {"type":"eval","js":"({ state: window.__game.game.state, ui: window.__game.ui.state, txt: document.querySelector('.rr-victory__msg').textContent, t: document.querySelector('.rr-v-time').textContent })"},
+  {"type":"shot","out":"shots/fx/20-vitoria-real.png"},
+  {"type":"press","key":"Enter"},
+  {"type":"wait","ms":800},
+  {"type":"eval","js":"({ state: window.__game.game.state, ui: window.__game.ui.state, treats: document.querySelector('.rr-treats__count').textContent })"}
+]

@@ -1,0 +1,6 @@
+[
+  {"type":"wait","ms":600},
+  {"type":"eval","js":"(() => { const e = window.__game.events; e.emit('objective', {text:'Puxe a cordinha do portão (E)', target:{x:1.45,z:1.0}, stage:'east'}); e.emit('interact:prompt', {text:'Puxar a cordinha', key:'E'}); e.emit('hint', {text:'Trancado… o trinco fica do outro lado da cerca.', duration: 8}); e.emit('collectible:pickup', {id:'osso-banco', x:-4.7, z:1.7, count:1, total:3}); return window.__ui_state = window.__game.ui.state; })()"},
+  {"type":"wait","ms":900},
+  {"type":"shot","out":"shots/fx/02-hud.png"}
+]

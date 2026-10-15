@@ -1,0 +1,15 @@
+[
+  {"type":"wait","ms":500},
+  {"type":"eval","js":"(() => { const g = window.__game; const e = g.events; const r = g.dogs.radhija.object.position; window.__p = {x:r.x, z:r.z}; e.emit('objective', {text:'Leve a Radhija pela abertura na cerca', target:{x:r.x+1.9, z:r.z+0.9}, stage:'start'}); return [r.x, r.z]; })()"},
+  {"type":"wait","ms":1200},
+  {"type":"shot","out":"shots/fx/03-marcador.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; const e = g.events; const r0 = g.dogs.radhija.object.position; const p = {x:r0.x, z:r0.z}; e.emit('collectible:pickup', {id:'osso-banco', x:p.x-0.9, z:p.z+0.9, count:2, total:3}); e.emit('carrot:revealed', {x:p.x+1.0, z:p.z+0.2}); g.particles.dust({x:p.x-1.6, y:0.03, z:p.z+0.3}, {count:8}); return g.particles.count(); })()"},
+  {"type":"wait","ms":280},
+  {"type":"shot","out":"shots/fx/04-particulas.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; const e = g.events; const r0 = g.dogs.radhija.object.position; const p = {x:r0.x, z:r0.z}; e.emit('celebrate:start', {x:p.x-0.3, z:p.z-0.1}); return g.particles.count(); })()"},
+  {"type":"wait","ms":500},
+  {"type":"shot","out":"shots/fx/05-comemoracao.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; const e = g.events; const r0 = g.dogs.radhija.object.position; const p = {x:r0.x, z:r0.z}; e.emit('gate:open', {x:p.x+1.2, z:p.z+1.0}); g.particles.ring({x:p.x+1.2,y:0,z:p.z+1.0},{radius:1.2}); g.particles.sparkle({x:p.x+1.2,y:0.5,z:p.z+1.0},{count:16}); g.particles.burst({x:p.x-1.2,y:0.4,z:p.z+0.8},{kind:'stars'}); return g.particles.count(); })()"},
+  {"type":"wait","ms":300},
+  {"type":"shot","out":"shots/fx/06-portao-estrelas.png"}
+]

@@ -1,0 +1,8 @@
+[{"type":"wait","ms":800},
+ {"type":"down","key":"KeyD"},{"type":"wait","ms":350},{"type":"shot","out":"shots/qa/feel-01.png"},
+ {"type":"wait","ms":250},{"type":"shot","out":"shots/qa/feel-02.png"},
+ {"type":"up","key":"KeyD"},{"type":"down","key":"KeyS"},{"type":"wait","ms":120},{"type":"shot","out":"shots/qa/feel-03-curva.png"},
+ {"type":"wait","ms":250},{"type":"press","key":"ShiftLeft"},{"type":"wait","ms":90},{"type":"shot","out":"shots/qa/feel-04-arrancada.png"},
+ {"type":"wait","ms":200},{"type":"shot","out":"shots/qa/feel-05-arrancada.png"},
+ {"type":"up","key":"KeyS"},{"type":"wait","ms":700},{"type":"shot","out":"shots/qa/feel-06-parada.png"},
+ {"type":"eval","js":"window.__game.game.debug.info().dogs"}]

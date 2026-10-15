@@ -1,0 +1,189 @@
+// Ícones SVG inline desenhados para o jogo (sem emojis). Dono: Agente Polimento.
+// Sem gradientes com id (evita conflito/quebra de url(#id) entre cópias ocultas).
+
+const INK = '#4A3426';
+
+export function carrotIcon({ leaves = true } = {}) {
+  return `<svg class="ico ico-carrot" viewBox="0 0 64 64" aria-hidden="true">
+  ${leaves ? `<g stroke="${INK}" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M44.5 19.5 C 41 11, 43 4.5, 48.5 2.5 C 51.5 8.5, 50.5 15, 46.5 20.5 Z" fill="#94BC7C"/>
+    <path d="M45 20 C 50 12, 56 9.5, 61.5 10.5 C 59 16.5, 53.5 20, 47 21.5 Z" fill="#7FA36B"/>
+    <path d="M45.5 21 C 52.5 19.5, 58.5 21.5, 61.5 26 C 55.5 28.5, 50 27, 46 23.5 Z" fill="#6B9158"/>
+  </g>` : ''}
+  <path d="M47.5 18 C 52.5 22.5, 51.5 29, 46 34 L 15.5 58.5 C 11 62, 4.5 57, 7.8 52.3 L 31.5 22.5 C 36.5 16.5, 43 13.5, 47.5 18 Z"
+        fill="#F08A3C" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M44.5 19.5 C 47.5 22, 47 26, 43.5 29.5 L 16 52" fill="none" stroke="#FFC08A" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+  <g stroke="#C4581A" stroke-width="2.2" stroke-linecap="round" opacity=".75">
+    <path d="M33.5 28.5 l4.5 3.6"/><path d="M26 37.5 l4.8 3.6"/><path d="M19 46.5 l4 3"/>
+  </g>
+</svg>`;
+}
+
+export function boneIcon() {
+  const shapes = `<circle cx="15" cy="25.5" r="7.2"/><circle cx="15" cy="38.5" r="7.2"/>
+    <circle cx="49" cy="25.5" r="7.2"/><circle cx="49" cy="38.5" r="7.2"/>
+    <rect x="14" y="26" width="36" height="12" rx="4"/>`;
+  return `<svg class="ico ico-bone" viewBox="0 0 64 64" aria-hidden="true">
+  <g transform="rotate(-24 32 32)">
+    <g fill="${INK}" stroke="${INK}" stroke-width="5" stroke-linejoin="round">${shapes}</g>
+    <g fill="#FFF1D9">${shapes}</g>
+    <path d="M18 23.5 a4.5 4.5 0 0 1 4.5 -2.5 M22 30 h22" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".9"/>
+    <path d="M17 41 a5 5 0 0 0 6 0.5 M24 36.5 h21" stroke="#E7C9A0" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>`;
+}
+
+const DOG_COLORS = {
+  radhija: { fur: '#F2D3A0', ear: '#D9A35A', tuft: '#E7B977', muzzle: '#FAE8C8', patch: null },
+  rhaenyra: { fur: '#FBF6EC', ear: '#EFE2CB', tuft: '#F3EADB', muzzle: '#FFFDF8', patch: '#E6C89E' },
+};
+
+export function dogIcon(kind = 'radhija') {
+  const c = DOG_COLORS[kind] || DOG_COLORS.radhija;
+  return `<svg class="ico ico-dog" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="${INK}" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M17 20 C 8.5 21.5, 5 33, 6.5 43 C 7.5 50, 12.5 54, 17 50.5 C 20.5 47, 21.5 37.5, 22 28 Z" fill="${c.ear}"/>
+    <path d="M47 20 C 55.5 21.5, 59 33, 57.5 43 C 56.5 50, 51.5 54, 47 50.5 C 43.5 47, 42.5 37.5, 42 28 Z" fill="${c.ear}"/>
+    <path d="M14.5 32 C 13.5 22, 19 14.5, 25 13 C 27 9, 37 9, 39 13 C 45 14.5, 50.5 22, 49.5 32 C 49.5 44, 42 51.5, 32 51.5 C 22 51.5, 14.5 44, 14.5 32 Z" fill="${c.fur}"/>
+    <ellipse cx="32" cy="40.5" rx="9.8" ry="7.4" fill="${c.muzzle}"/>
+  </g>
+  <path d="M24.5 14.5 C 27 9.5, 37 9.5, 39.5 14.5 C 36.5 12.8, 34.2 13.4, 32 15.6 C 29.8 13.4, 27.5 12.8, 24.5 14.5 Z" fill="${c.tuft}"/>
+  <path d="M8.5 40 c 1 3.5, 3 6, 5.5 7 M55.5 40 c -1 3.5, -3 6, -5.5 7" stroke="${INK}" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".35"/>
+  ${c.patch ? `<ellipse cx="23.6" cy="36.4" rx="2.3" ry="3.3" fill="${c.patch}"/><ellipse cx="40.4" cy="36.4" rx="2.3" ry="3.3" fill="${c.patch}"/>` : ''}
+  <ellipse cx="19.8" cy="39.5" rx="3" ry="1.8" fill="#F4A08A" opacity=".5"/>
+  <ellipse cx="44.2" cy="39.5" rx="3" ry="1.8" fill="#F4A08A" opacity=".5"/>
+  <circle cx="24.6" cy="31" r="3.5" fill="#2A1C14"/><circle cx="39.4" cy="31" r="3.5" fill="#2A1C14"/>
+  <circle cx="25.8" cy="29.7" r="1.2" fill="#fff"/><circle cx="40.6" cy="29.7" r="1.2" fill="#fff"/>
+  <path d="M28.4 36.4 C 28.4 34.6, 35.6 34.6, 35.6 36.4 C 35.6 38.5, 33.5 40, 32 40 C 30.5 40, 28.4 38.5, 28.4 36.4 Z" fill="#2A1C14"/>
+  <path d="M30.2 35.7 c 0.8 -0.4, 2 -0.4, 2.6 0" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".55" fill="none"/>
+  <path d="M32 40 v1.8 M32 41.8 c -1.4 1.6, -3.4 1.6, -4.5 0.4 M32 41.8 c 1.4 1.6, 3.4 1.6, 4.5 0.4" stroke="${INK}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+</svg>`;
+}
+
+export function pawIcon() {
+  return `<svg class="ico ico-paw" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor">
+  <path d="M12 11.2c-3 0-5.6 3.2-5.6 5.6 0 1.8 1.4 2.6 2.8 2.6 1.2 0 1.8-.6 2.8-.6s1.6.6 2.8.6c1.4 0 2.8-.8 2.8-2.6 0-2.4-2.6-5.6-5.6-5.6z"/>
+  <ellipse cx="5.6" cy="10.2" rx="1.9" ry="2.4" transform="rotate(-18 5.6 10.2)"/>
+  <ellipse cx="9.4" cy="6.4" rx="1.9" ry="2.5" transform="rotate(-6 9.4 6.4)"/>
+  <ellipse cx="14.6" cy="6.4" rx="1.9" ry="2.5" transform="rotate(6 14.6 6.4)"/>
+  <ellipse cx="18.4" cy="10.2" rx="1.9" ry="2.4" transform="rotate(18 18.4 10.2)"/>
+</g></svg>`;
+}
+
+export function clockIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+  <circle cx="12" cy="13" r="8"/><path d="M12 9v4.2l2.8 1.8"/><path d="M9.5 2.8h5"/></svg>`;
+}
+
+export function speakerIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" fill-opacity=".18"/>
+  <path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/></svg>`;
+}
+
+export function sparkIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor"
+  d="M12 2.5c.5 4.6 2.6 6.9 7.2 7.5-4.6.6-6.7 2.9-7.2 7.5-.5-4.6-2.6-6.9-7.2-7.5 4.6-.6 6.7-2.9 7.2-7.5z"/>
+  <circle cx="18.5" cy="18.5" r="1.8" fill="currentColor" opacity=".7"/></svg>`;
+}
+
+export function playIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.6c0-1 1.1-1.6 1.9-1.1l9 6.1c.8.5.8 1.7 0 2.2l-9 6.1c-.8.5-1.9-.1-1.9-1.1z"/></svg>`;
+}
+
+export function restartIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5"/><path d="M4.5 4.5v4h4"/></svg>`;
+}
+
+// ---------------------------------------------------------------------------
+//  v2: itens das fases, fluxo de fases e controle
+// ---------------------------------------------------------------------------
+export function ballIcon() {
+  return `<svg class="ico ico-ball" viewBox="0 0 64 64" aria-hidden="true">
+  <circle cx="32" cy="33" r="22" fill="#D4E84B" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M20 16.5 C 30 24, 30 42, 20 50" fill="none" stroke="#FFFBEA" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M44 16.5 C 34 24, 34 42, 44 50" fill="none" stroke="#FFFBEA" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M17 26 a17 17 0 0 1 9 -9" fill="none" stroke="#F4FBC6" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  <path d="M40 52.5 a22 22 0 0 0 13 -11" fill="none" stroke="#AFC232" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+</svg>`;
+}
+
+export function slipperIcon() {
+  return `<svg class="ico ico-slipper" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="${INK}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M6 44 C 6 38, 12 36, 20 36 L 50 35 C 57 35, 60 39, 59 44 C 58 49, 54 51, 48 51 L 14 51 C 9 51, 6 48.5, 6 44 Z" fill="#E9D6BE"/>
+    <path d="M8 41 C 10 30, 22 23, 34 24 C 44 25, 48 31, 47 38 L 10 42 Z" fill="#F4A7BC"/>
+  </g>
+  <path d="M13 37 C 17 31, 25 27.5, 33 28" fill="none" stroke="#FCD2DD" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="30" cy="22.5" r="6.4" fill="#FFF8F2" stroke="${INK}" stroke-width="2.2"/>
+  <circle cx="28.4" cy="21" r="2" fill="#FFFFFF"/>
+  <path d="M14 46.5 H 52" stroke="#CDB599" stroke-width="2" stroke-linecap="round" stroke-dasharray="2.5 3.5"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper'). */
+export function itemIcon(item) {
+  if (item === 'ball') return ballIcon();
+  if (item === 'slipper') return slipperIcon();
+  return carrotIcon();
+}
+
+export function lockIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+  <path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5"/></g>
+  <rect x="4.8" y="10.2" width="14.4" height="10.3" rx="3" fill="currentColor"/>
+  <circle cx="12" cy="15" r="1.6" fill="#FFF6E6"/><path d="M12 15.5v2" stroke="#FFF6E6" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+}
+
+export function checkIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+export function trophyIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 4.5h10v4.5a5 5 0 0 1-10 0z" fill="currentColor" fill-opacity=".2"/><path d="M7 6.5H4.5a3 3 0 0 0 3 4"/><path d="M17 6.5h2.5a3 3 0 0 1-3 4"/>
+  <path d="M12 14v3.5"/><path d="M8.5 20h7"/></g></svg>`;
+}
+
+export function heartIcon() {
+  return `<svg class="ico ico-heart" viewBox="0 0 24 24" aria-hidden="true"><path fill="#F37C8A" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"
+  d="M12 20.2c-.3 0-7.8-4.6-8.6-9.6C2.8 7 5 4.6 7.7 4.6c1.8 0 3.3 1 4.3 2.6 1-1.6 2.5-2.6 4.3-2.6 2.7 0 4.9 2.4 4.3 6-.8 5-8.3 9.6-8.6 9.6z"/>
+  <path d="M7 7.6c-1 .3-1.7 1.2-1.8 2.3" fill="none" stroke="#FFD0D6" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+}
+
+export function homeIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.3 9.5v9.3a1 1 0 0 0 1 1h3.4v-5.2h2.6v5.2h3.4a1 1 0 0 0 1-1V9.5"/></svg>`;
+}
+
+export function nextIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M5 12h12.5"/><path d="M12.5 6.5L18 12l-5.5 5.5"/></svg>`;
+}
+
+/** Duas patinhas em diagonal (seguindo). */
+export function followIcon() {
+  const paw = (x, y, r) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(.5)" fill="currentColor">
+    <path d="M0 2.5c-3 0-5.6 3.2-5.6 5.6 0 1.8 1.4 2.6 2.8 2.6 1.2 0 1.8-.6 2.8-.6s1.6.6 2.8.6c1.4 0 2.8-.8 2.8-2.6C5.6 5.7 3 2.5 0 2.5z"/>
+    <ellipse cx="-6.4" cy="1.5" rx="1.9" ry="2.4"/><ellipse cx="-2.6" cy="-2.3" rx="1.9" ry="2.5"/><ellipse cx="2.6" cy="-2.3" rx="1.9" ry="2.5"/><ellipse cx="6.4" cy="1.5" rx="1.9" ry="2.4"/></g>`;
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${paw(7, 15, -25)}${paw(16.5, 6.5, 20)}</svg>`;
+}
+
+/** Alfinete de mapa (esperando aqui). */
+export function stayIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.8a6.6 6.6 0 0 0-6.6 6.6c0 4.7 5.4 10.6 6 11.2a.8.8 0 0 0 1.2 0c.6-.6 6-6.5 6-11.2A6.6 6.6 0 0 0 12 2.8z"/>
+  <circle cx="12" cy="9.4" r="2.6" fill="#FFF6E6"/></svg>`;
+}
+
+export function keyboardIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+  <rect x="2.5" y="6.5" width="19" height="11" rx="2.4"/><path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M6.5 14h11"/></svg>`;
+}
+
+export function gamepadIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"
+  d="M7.2 7h9.6a4.6 4.6 0 0 1 4.5 3.7l.9 4.7a2.6 2.6 0 0 1-4.6 2.1L15.9 15H8.1l-1.7 2.5a2.6 2.6 0 0 1-4.6-2.1l.9-4.7A4.6 4.6 0 0 1 7.2 7z"/>
+  <path d="M7.5 9.8v3.4M5.8 11.5h3.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+  <circle cx="16" cy="10.4" r="1.1" fill="currentColor"/><circle cx="18" cy="12.4" r="1.1" fill="currentColor"/></svg>`;
+}

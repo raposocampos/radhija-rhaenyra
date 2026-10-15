@@ -1,0 +1,7 @@
+[
+  {"type":"eval","js":"JSON.stringify(window.__game.game.debug.info())"},
+  {"type":"shot","out":"shots/game/01-inicio.png"},
+  {"type":"hold","key":"KeyD","ms":1200},
+  {"type":"eval","js":"JSON.stringify(window.__game.game.debug.info().dogs)"},
+  {"type":"shot","out":"shots/game/02-andou.png"}
+]

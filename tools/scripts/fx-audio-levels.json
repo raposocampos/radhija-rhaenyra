@@ -1,0 +1,3 @@
+[
+  {"type":"eval","js":"(async () => { const a = window.__game.audio; const out = []; for (const n of ['latch','bark-radhija','bark-rhaenyra','gateCreak','collect','reveal','victory']) { out.push(await a.analyze(n, { count: 2, total: 3, double: false })); } return out.map(o => `${o.name} pico=${o.peak} rms=${o.rms}`); })()"}
+]

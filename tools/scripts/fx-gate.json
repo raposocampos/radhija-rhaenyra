@@ -1,0 +1,12 @@
+[
+  {"type":"wait","ms":500},
+  {"type":"eval","js":"(() => { const g = window.__game; g.audio.unlock(); g.game.debug.teleport('radhija', 1.5, 0.75); return g.game.stage; })()"},
+  {"type":"wait","ms":700},
+  {"type":"shot","out":"shots/fx/16-prompt-cordinha.png"},
+  {"type":"press","key":"KeyE"},
+  {"type":"wait","ms":900},
+  {"type":"shot","out":"shots/fx/17-portao-abrindo.png"},
+  {"type":"wait","ms":1200},
+  {"type":"eval","js":"({ stage: window.__game.game.stage })"},
+  {"type":"shot","out":"shots/fx/18-depois-portao.png"}
+]

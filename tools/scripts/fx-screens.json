@@ -1,0 +1,15 @@
+[
+  {"type":"wait","ms":400},
+  {"type":"eval","js":"(() => { const g = window.__game; window.__force = (s) => { Object.defineProperty(g.game, 'state', { get: () => s, configurable: true }); g.events.emit('game:state', { state: s, prev: 'playing' }); }; g.events.emit('objective', {text:'Empurre o carrinho com a Rhaenyra (segure Shift)', target:null, stage:'gateOpen'}); g.events.emit('dog:switch', {name:'rhaenyra', displayName:'Rhaenyra'}); window.__force('paused'); return g.ui.state; })()"},
+  {"type":"wait","ms":700},
+  {"type":"shot","out":"shots/fx/07-pausa.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; window.__force('playing'); return g.ui.state; })()"},
+  {"type":"wait","ms":700},
+  {"type":"shot","out":"shots/fx/08-hud-rhaenyra.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; g.events.emit('collectible:pickup', {id:'a', x:0, z:0, count:2, total:3}); window.__force('celebrating'); g.events.emit('celebrate:start', {x:-3.6, z:-3.95}); return g.ui.state; })()"},
+  {"type":"wait","ms":800},
+  {"type":"shot","out":"shots/fx/09-comemorando.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; g.events.emit('victory', {timeSec: 154.2, collected: 2, total: 3}); window.__force('victory'); return g.ui.state; })()"},
+  {"type":"wait","ms":1400},
+  {"type":"shot","out":"shots/fx/10-vitoria.png"}
+]

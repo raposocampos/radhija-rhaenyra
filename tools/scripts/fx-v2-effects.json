@@ -1,0 +1,18 @@
+[
+  {"type":"eval","js":"(() => { const g = window.__game; g.audio.unlock(); g.events.emit('level:loading', { index: 1, count: 3, id: 'fase2', number: 2, name: 'Operação Bolinha', subtitle: 'Crepúsculo na área de serviço', initial: false }); return g.ui.curtain; })()"},
+  {"type":"wait","ms":900},
+  {"type":"shot","out":"shots/fx/v2-21-cortina.png"},
+  {"type":"eval","js":"(() => { const g = window.__game; g.events.emit('level:loaded', { index: 0, count: 3, id: 'fase1', number: 1, name: 'Operação Cenoura', subtitle: 'Fim de tarde no jardim', item: 'carrot', texts: g.levels[0].texts, total: 3, hasNext: true }); return g.ui.curtain; })()"},
+  {"type":"wait","ms":1500},
+  {"type":"eval","js":"(() => { const g = window.__game, d = g.dogs, a = g.game.activeDog, p = d[a].object.position, o = d[a === 'radhija' ? 'rhaenyra' : 'radhija'].object.position; g.events.emit('sprinkler:hit', { name: a, x: p.x, z: p.z }); g.events.emit('goose:hit', { name: 'x', x: p.x + 1.2, z: p.z + 0.3 }); g.events.emit('lantern:on', { id: 'H', x: p.x - 1.3, z: p.z + 0.2, y: 0.9 }); g.events.emit('goose:lured', { x: p.x + 1.8, z: p.z - 0.6 }); g.events.emit('companion:stay', { name: a === 'radhija' ? 'rhaenyra' : 'radhija', stay: true, x: o.x, z: o.z }); return [p.x, p.z]; })()"},
+  {"type":"wait","ms":380},
+  {"type":"shot","out":"shots/fx/v2-22-efeitos-a.png"},
+  {"type":"wait","ms":500},
+  {"type":"shot","out":"shots/fx/v2-23-efeitos-chacoalhar.png"},
+  {"type":"eval","js":"(() => { const g = window.__game, p = g.dogs[g.game.activeDog].object.position; g.events.emit('crate:sink', { x: p.x + 1.4, z: p.z + 1.0 }); g.particles.fireflies({ x: p.x, z: p.z + 1, radius: 2.5, count: 20, y0: 0.3, y1: 1.2 }); return true; })()"},
+  {"type":"wait","ms":520},
+  {"type":"shot","out":"shots/fx/v2-24-efeitos-caixote.png"},
+  {"type":"wait","ms":2600},
+  {"type":"shot","out":"shots/fx/v2-25-vagalumes.png"},
+  {"type":"eval","js":"window.__game.particles.count()"}
+]

@@ -1,0 +1,5 @@
+[
+  {"type":"click","selector":"#grid button:nth-child(5)"},
+  {"type":"wait","ms":300},
+  {"type":"eval","js":"window.__audio.context.state"}
+]

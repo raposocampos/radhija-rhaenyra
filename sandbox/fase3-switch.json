@@ -1,0 +1,8 @@
+[
+  {"type":"eval","js":"window.__game.game.loadLevel(0, {mode:'play'}); 1"},
+  {"type":"wait","ms":4000},
+  {"type":"eval","js":"window.__game.game.loadLevel(2, {mode:'play'}); 1"},
+  {"type":"wait","ms":5000},
+  {"type":"shot","out":"shots/f3/31-reload.png"},
+  {"type":"eval","js":"JSON.stringify(window.__f3Timings)"}
+]

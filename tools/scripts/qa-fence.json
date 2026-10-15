@@ -1,0 +1,8 @@
+[{"type":"eval","js":"window.__game.game.debug.teleport('radhija', 0.2, -3.0)"},{"type":"wait","ms":80},
+ {"type":"down","key":"KeyD"},{"type":"down","key":"KeyS"},{"type":"wait","ms":120},{"type":"press","key":"ShiftLeft"},
+ {"type":"eval","js":"(() => { window.__trk = []; const p = window.__game.dogs.radhija.object.position; const id = setInterval(() => window.__trk.push([+p.x.toFixed(2), +p.z.toFixed(2)]), 40); setTimeout(() => clearInterval(id), 500); return 1; })()"},
+ {"type":"wait","ms":450},{"type":"up","key":"KeyS"},{"type":"up","key":"KeyD"},{"type":"wait","ms":100},
+ {"type":"eval","js":"window.__trk"},
+ {"type":"eval","js":"window.__game.game.debug.teleport('radhija', 0.2, -4.0)"},{"type":"wait","ms":80},
+ {"type":"down","key":"KeyD"},{"type":"wait","ms":120},{"type":"press","key":"ShiftLeft"},{"type":"wait","ms":600},{"type":"up","key":"KeyD"},
+ {"type":"eval","js":"(() => { const p = window.__game.dogs.radhija.object.position; return [p.x, p.z]; })()"}]

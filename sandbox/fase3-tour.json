@@ -1,0 +1,21 @@
+[
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', -3.0, 3.0); 1"},
+  {"type":"wait","ms":1800},
+  {"type":"shot","out":"shots/f3/10-gate-off.png"},
+  {"type":"eval","js":"const p=window.__game.props; p.plateH.setPress(1); p.plateL.setPress(1); p.lanternH.setOn(1); p.lanternL.setOn(1); 1"},
+  {"type":"wait","ms":2600},
+  {"type":"shot","out":"shots/f3/11-gate-on.png"},
+  {"type":"eval","js":"window.__game.props.gate.setOpen(1); window.__game.game.debug.teleport('radhija', -4.6, 2.3); 1"},
+  {"type":"wait","ms":1800},
+  {"type":"shot","out":"shots/f3/12-plateH-on.png"},
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', -2.95, -3.35); 1"},
+  {"type":"wait","ms":1800},
+  {"type":"shot","out":"shots/f3/13-nook-on.png"},
+  {"type":"eval","js":"const p=window.__game.props; p.plateH.setPress(0); p.plateL.setPress(0); p.lanternH.setOn(0); p.lanternL.setOn(0); p.door.setHighlight(true); window.__game.game.debug.teleport('radhija', -4.4, -2.6); 1"},
+  {"type":"wait","ms":2200},
+  {"type":"shot","out":"shots/f3/14-door-hl.png"},
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', 2.6, 3.4); 1"},
+  {"type":"wait","ms":1800},
+  {"type":"shot","out":"shots/f3/15-south.png"},
+  {"type":"fps","ms":3000}
+]

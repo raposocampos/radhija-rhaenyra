@@ -1,0 +1,21 @@
+{
+  "name": "operacao-cenoura",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173 --strictPort --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --host 127.0.0.1",
+    "shot": "node tools/shot.mjs"
+  },
+  "dependencies": {
+    "three": "0.170.0",
+    "@fontsource/fredoka": "5.1.0",
+    "@fontsource/nunito": "5.1.0"
+  },
+  "devDependencies": {
+    "vite": "6.3.5",
+    "playwright-core": "1.49.0"
+  }
+}

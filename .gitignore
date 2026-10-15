@@ -1,0 +1,17 @@
+# Dependências e saídas de build
+node_modules/
+dist/
+.builds/
+
+# Capturas geradas pelos testes e por tools/shot.mjs (centenas de MB)
+shots/
+
+# Fotos pessoais das cachorrinhas usadas como referência de modelagem.
+# Ficam só na máquina local para não vazarem se o repositório for publicado.
+referencias/fotos/
+
+# Diversos
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini

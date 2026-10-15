@@ -1,0 +1,8 @@
+[
+  {"type":"eval","js":"window.__game.game.debug.teleport('radhija', -3.1, 2.7); window.__game.game.debug.teleport('rhaenyra', -3.6, 3.3); 1"},
+  {"type":"wait","ms":2500},
+  {"type":"shot","out":"shots/f3/21-gate-off.png"},
+  {"type":"eval","js":"const p=window.__game.props; p.lanternH.setOn(1); p.lanternL.setOn(1); p.plateH.setPress(1); p.plateL.setPress(1); 1"},
+  {"type":"wait","ms":2500},
+  {"type":"shot","out":"shots/f3/22-gate-on.png"}
+]

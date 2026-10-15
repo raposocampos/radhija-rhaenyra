@@ -1,0 +1,1 @@
+[{"type":"wait","ms":1500},{"type":"fps","ms":4000},{"type":"eval","js":"(() => { const r = window.__game.engine.renderer.info; return { calls: r.render.calls, tris: r.render.triangles }; })()"}]

@@ -1,0 +1,7 @@
+[
+  {"type":"wait","ms":1500},
+  {"type":"shot","out":"shots/game/00-titulo-a.png"},
+  {"type":"wait","ms":4000},
+  {"type":"shot","out":"shots/game/00-titulo-b.png"},
+  {"type":"eval","js":"JSON.stringify(window.__game.game.debug.info().camera)"}
+]
