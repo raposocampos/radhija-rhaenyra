@@ -5,9 +5,10 @@ import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } 
 
 /**
  * Cenário provisório: chão + blocos nos colisores do layout (para testar uma fase antes do cenário).
- * @param {{ root: import('three').Object3D, layout: import('../types').LevelLayout, colors?: { ground?: string, block?: string } }} args
+ * skip: ids de colisores que a fase desenha por conta própria.
+ * @param {{ root: import('three').Object3D, layout: import('../types').LevelLayout, colors?: { ground?: string, block?: string }, skip?: Set<string> }} args
  */
-export function buildPlaceholderWorld({ root, layout, colors = {} }) {
+export function buildPlaceholderWorld({ root, layout, colors = {}, skip = new Set() }) {
   const B = layout.WORLD.bounds;
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(B.maxX - B.minX + 16, B.maxZ - B.minZ + 16),
@@ -21,7 +22,7 @@ export function buildPlaceholderWorld({ root, layout, colors = {} }) {
   const water = new THREE.MeshStandardMaterial({ color: '#3d6f8f', roughness: 0.2, metalness: 0.1 });
   const bark = new THREE.MeshStandardMaterial({ color: '#8a5a36', roughness: 0.95 });
   for (const c of layout.STATIC_COLLIDERS) {
-    if (c.blocks === 'large') continue;
+    if (c.blocks === 'large' || skip.has(c.id)) continue;
     if (c.jumpable && c.shape === 'box') {
       // obstáculo pulável: tora deitada ao longo do lado comprido
       const rad = (c.height ?? 0.26) / 2;
@@ -35,7 +36,7 @@ export function buildPlaceholderWorld({ root, layout, colors = {} }) {
       continue;
     }
     const m = c.kind === 'water' ? water : mat;
-    const h = c.kind === 'water' ? 0.04 : 0.6;
+    const h = c.kind === 'water' ? 0.04 : (c.height ?? 0.6);
     let mesh;
     if (c.shape === 'box') mesh = new THREE.Mesh(new THREE.BoxGeometry(c.hx * 2, h, c.hz * 2), m);
     else if (c.shape === 'circle') mesh = new THREE.Mesh(new THREE.CylinderGeometry(c.r, c.r, h, 20), m);
@@ -44,12 +45,15 @@ export function buildPlaceholderWorld({ root, layout, colors = {} }) {
     mesh.castShadow = mesh.receiveShadow = true;
     root.add(mesh);
   }
+  // item padrão (bolinha) em layout.BALL / layout.SLIPPER, se houver
   const item = new THREE.Group();
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshStandardMaterial({ color: '#d8f04a' }));
-  item.add(ball);
   const it = layout.BALL || layout.SLIPPER;
-  item.position.set(it.x, 0.07, it.z);
-  root.add(item);
+  if (it) {
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshStandardMaterial({ color: '#d8f04a' }));
+    item.add(ball);
+    item.position.set(it.x, 0.07, it.z);
+    root.add(item);
+  }
   return {
     props: { item: { object: item, setHighlight() {} }, collectibles: [], reset() {} },
     seeThrough: [],

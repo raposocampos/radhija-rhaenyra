@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { createController, placeController, steer, integrate, startDash, startJump } from '../src/game/dogController.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { LEVELS } from '../src/levels/index.js';
+import { DEV_LEVELS } from '../src/levels/dev.js';
+
+const ALL = [...LEVELS, ...DEV_LEVELS];
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -38,9 +41,9 @@ function centerline(c) {
 // Regressão: a arrancada da Radhija (passo grande por quadro) não pode atravessar paredes finas, nem com
 // queda de FPS (o jogo limita dt a 1/20 s). Também testa a Rhaenyra andando e PULANDO contra as mesmas
 // paredes (o pulo só passa por cima de colisores marcados jumpable).
-for (const level of LEVELS.map((_, i) => i + 1)) {
-  test(`fase ${level}: arrancada, pulo e passos longos nunca atravessam paredes finas`, async () => {
-    const h = await createHeadlessGame({ level }); // mundo da etapa inicial (portões fechados)
+for (const [idx, def] of ALL.entries()) {
+  test(`${def.id}: arrancada, pulo e passos longos nunca atravessam paredes finas`, async () => {
+    const h = await createHeadlessGame({ level: idx + 1, levels: ALL }); // mundo da etapa inicial (portões fechados)
     const world = h.world;
     const L = h.layout;
     const walls = [...world.statics, ...world.dynamics].filter((c) => c.enabled !== false && !c.except && !c.companionOnly && centerline(c));
