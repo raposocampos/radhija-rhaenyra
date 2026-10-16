@@ -1,5 +1,5 @@
-// Ossinhos dourados (petiscos escondidos) das fases 2 em diante: visual e animação de coleta num módulo só;
-// cada fase só ajusta o brilho. buildTreats(root, COLLECTIBLES, opts) → { list: CollectibleProp[], update(dt, t) }.
+// Ossinhos dourados (petiscos escondidos) de todas as fases: visual e animação de coleta num módulo só;
+// cada fase só ajusta brilho e material. buildTreats(root, COLLECTIBLES, opts) → { list: CollectibleProp[], update(dt, t) }.
 import * as THREE from 'three';
 import { rng, canvasTexture, radialTexture, contactShadow } from './util.js';
 import { boneGeometry } from './toys.js';
@@ -18,15 +18,16 @@ export function starTexture() {
 /**
  * @param {THREE.Object3D} root
  * @param {import('../types').Collectible[]} list
- * @param {{ glow?: number, glowPulse?: [number, number], shine?: [number, number], metalness?: number, y?: number,
- *   starTex?: THREE.Texture }} [opts] glow: brilho próprio (0 = nenhum); glowPulse: [base, amplitude] da pulsação do
- *   brilho parado; shine: [base, lampejo] do emissivo do osso; y: altura do chão.
+ * @param {{ glow?: number, glowPulse?: [number, number], shine?: [number, number], roughness?: number, metalness?: number,
+ *   y?: number, starTex?: THREE.Texture }} [opts] glow: brilho próprio (0 = nenhum); glowPulse: [base, amplitude] da
+ *   pulsação do brilho parado; shine: [base, lampejo] do emissivo do osso; y: altura do chão.
  */
 export function buildTreats(root, list, {
-  glow = 0.22, glowPulse = [glow * 0.8, glow * 0.35], shine = [0.15, 0.5], metalness = 0.2, y = 0, starTex = starTexture(),
+  glow = 0.22, glowPulse = [glow * 0.8, glow * 0.35], shine = [0.15, 0.5], roughness = 0.5, metalness = 0.2, y = 0,
+  starTex = starTexture(),
 } = {}) {
   const geo = boneGeometry();
-  const baseMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, metalness, emissive: '#ffb347', emissiveIntensity: 0 });
+  const baseMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness, metalness, emissive: '#ffb347', emissiveIntensity: 0 });
   const y0 = y + 0.021;
   const items = list.map((c, i) => {
     const grp = new THREE.Group();

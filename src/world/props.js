@@ -1,8 +1,9 @@
 // Visual dos objetos interativos (o puzzle controla o estado). Formato: tipo Fase1Props em src/types.d.ts.
 import * as THREE from 'three';
-import { woodMat, stdMat, ironMat, brassMat, terracottaMat, rbox, canvasTexture, contactShadow, radialTexture, potProfile, soilDisc, rng, paint } from './util.js';
+import { woodMat, stdMat, ironMat, brassMat, terracottaMat, rbox, canvasTexture, contactShadow, radialTexture, potProfile, soilDisc, paint } from './util.js';
 import { picketGeometry } from './fence.js';
 import { plantMat, smallFlowers, succulent } from './plants.js';
+import { buildTreats, starTexture } from './treats.js';
 
 // ------------------------------------------------------------------ texturas
 function braidTexture() {
@@ -29,15 +30,6 @@ function ballTexture() {
     for (let i = 0; i < 4; i++) { g.save(); g.translate(i * 32 + 8, 0); g.transform(1, 0, 0.5, 1, 0, 0); g.fillRect(0, 0, 14, h); g.restore(); }
     g.fillStyle = '#f3e7d3'; g.fillRect(0, h * 0.46, w, h * 0.08);
   });
-}
-function starTexture() {
-  return canvasTexture(64, 64, (g, w, h) => {
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.2, 'rgba(255,240,200,0.7)'); grd.addColorStop(1, 'rgba(255,220,150,0)');
-    g.fillStyle = grd; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(255,250,235,0.95)';
-    g.beginPath(); g.moveTo(32, 2); g.lineTo(35, 29); g.lineTo(62, 32); g.lineTo(35, 35); g.lineTo(32, 62); g.lineTo(29, 35); g.lineTo(2, 32); g.lineTo(29, 29); g.closePath(); g.fill();
-  }, { srgb: false, repeat: false });
 }
 
 // ------------------------------------------------------------------ tubo atualizável (corda)
@@ -437,85 +429,7 @@ export function createProps(engine, layout) {
   };
 
   // ================================================================== OSSINHOS (colecionáveis)
-  const boneMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.55, emissive: '#ffb347', emissiveIntensity: 0 });
-  const boneGeo = (() => {
-    const parts = [];
-    const shaft = new THREE.CapsuleGeometry(0.021, 0.1, 4, 10).rotateZ(Math.PI / 2);
-    parts.push(shaft);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const s = new THREE.SphereGeometry(0.03, 12, 10);
-      s.translate(sx * 0.068, 0, sz * 0.022);
-      parts.push(s);
-    }
-    const merged = mergeBones(parts);
-    merged.scale(1, 0.62, 1);
-    return merged;
-  })();
-  const collectibles = COLLECTIBLES.map((c, i) => {
-    const root = new THREE.Group();
-    root.name = `osso-${c.id}`;
-    const r = rng(i + 3);
-    const mesh = new THREE.Mesh(boneGeo, i === 0 ? boneMat : boneMat.clone());
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    root.add(mesh);
-    const baseRot = r() * Math.PI;
-    root.position.set(c.x, 0.021, c.z);
-    root.rotation.set(0, baseRot, 0.06);
-    scene.add(root);
-    const sh = contactShadow(0.11, 0.06, 0.45);
-    sh.position.set(c.x, 0.006, c.z);
-    sh.rotation.y = baseRot;
-    scene.add(sh);
-    const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: '#fff1c2', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-    star.scale.setScalar(0.12);
-    star.position.set(c.x + 0.03, 0.07, c.z);
-    scene.add(star);
-    const st = { anim: -1, collected: false, phase: r() * 10 };
-    return {
-      id: c.id,
-      object: root,
-      collect() {
-        if (st.collected) return;
-        st.collected = true; st.anim = 0;
-      },
-      reset() {
-        st.collected = false; st.anim = -1;
-        root.visible = true; sh.visible = true;
-        root.position.set(c.x, 0.021, c.z);
-        root.rotation.set(0, baseRot, 0.06);
-        root.scale.setScalar(1);
-        sh.scale.set(0.22, 1, 0.12);
-        sh.material.opacity = 0.45;
-      },
-      _update(dt, t) {
-        if (st.anim >= 0) {
-          st.anim += dt;
-          const k = Math.min(1, st.anim / 0.55);
-          root.position.y = 0.021 + Math.sin(k * Math.PI) * 0.28;
-          root.rotation.y = baseRot + k * Math.PI * 3;
-          const s = k < 0.35 ? 1 + k * 0.6 : Math.max(0, 1.21 * (1 - (k - 0.35) / 0.65));
-          root.scale.setScalar(s);
-          sh.material.opacity = 0.45 * (1 - k);
-          star.material.opacity = Math.sin(k * Math.PI) * 0.9;
-          star.position.set(root.position.x, root.position.y + 0.05, root.position.z);
-          if (k >= 1) { root.visible = false; sh.visible = false; st.anim = -1; star.material.opacity = 0; }
-          return;
-        }
-        if (st.collected) return;
-        // brilho ocasional discreto (a cada ~4 s)
-        const cyc = ((t + st.phase) % 4.2) / 4.2;
-        const f = cyc < 0.12 ? Math.sin((cyc / 0.12) * Math.PI) : 0;
-        star.material.opacity = f * 0.85;
-        star.material.rotation = t * 0.8;
-        star.scale.setScalar(0.07 + f * 0.07);
-        mesh.material.emissiveIntensity = 0.08 + f * 0.5;
-        root.position.y = 0.021 + Math.max(0, Math.sin(t * 2 + st.phase)) * 0.004;
-      },
-      _shadow: sh,
-    };
-  });
-  for (const c of collectibles) c.reset();
+  const treats = buildTreats(scene, COLLECTIBLES, { glow: 0, shine: [0.08, 0.5], roughness: 0.55, metalness: 0, starTex });
 
   // ================================================================== PORTA
   let doorHL = 0, doorHLTarget = 0;
@@ -555,7 +469,7 @@ export function createProps(engine, layout) {
       cs.s.position.set(carrotRoot.position.x + Math.cos(a) * 0.17, carrotRoot.position.y + 0.06 + cyc * 0.16, carrotRoot.position.z + Math.sin(a) * 0.12);
       cs.s.scale.setScalar(0.05 + f * 0.05);
     });
-    for (const c of collectibles) c._update(dt, t);
+    treats.update(dt, t);
     updateDoor(dt, t);
   }
 
@@ -568,27 +482,9 @@ export function createProps(engine, layout) {
     carrotRoot.rotation.set(0, carrotHomeRotY, 0);
     carrotRoot.scale.setScalar(1);
     carrot.setHighlight(false);
-    for (const c of collectibles) c.reset();
+    for (const c of treats.list) c.reset();
     door.setHighlight(false);
   }
 
-  return { gate, rope, cart, carrot, collectibles, door, update, reset };
-}
-
-function mergeBones(parts) {
-  // funde geometrias simples (mesmos atributos)
-  const geos = parts.map((g) => (g.index ? g.toNonIndexed() : g));
-  let count = 0;
-  for (const g of geos) count += g.attributes.position.count;
-  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3);
-  let o = 0;
-  for (const g of geos) {
-    pos.set(g.attributes.position.array, o * 3);
-    nor.set(g.attributes.normal.array, o * 3);
-    o += g.attributes.position.count;
-  }
-  const out = new THREE.BufferGeometry();
-  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  return out;
+  return { gate, rope, cart, carrot, collectibles: treats.list, door, update, reset };
 }
