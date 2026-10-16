@@ -64,7 +64,7 @@ function makeWindow({ w, h, seed, shutters = '#86a58a' }) {
   }
   // peitoril de pedra
   const sill = new THREE.Mesh(rbox(w + 0.2, 0.06, 0.2, 0.02), stdMat('#d9cbb5', { roughness: 0.85 }));
-  sill.position.set(0, -h / 2 - 0.03, 0.02);
+  sill.position.set(0, -h / 2 - 0.028, 0.02); // topo 2 mm acima do fundo do vão (sem z-fighting)
   grp.add(sill);
   // venezianas
   if (shutters) {

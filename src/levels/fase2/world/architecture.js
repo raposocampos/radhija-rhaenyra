@@ -64,7 +64,7 @@ function makeWindow({ w, h, seed, frame = '#f0e6d4', grille = 'basculante' }) {
     grp.add(m);
   }
   const sill = new THREE.Mesh(rbox(w + 0.16, 0.05, 0.18, 0.015), stdMat('#cfc2ab', { roughness: 0.85 }));
-  sill.position.set(0, -h / 2 - 0.025, 0.02);
+  sill.position.set(0, -h / 2 - 0.023, 0.02); // topo 2 mm acima do fundo do vão (sem z-fighting)
   grp.add(sill);
   return grp;
 }
@@ -139,9 +139,9 @@ export function buildArchitecture({ root, layout }) {
     barMat.map.repeat.set(1, 1);
     for (const [a, b] of [[hx0, dL - 0.1], [dR + 0.1, hx1]]) {
       const len = b - a;
-      const m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.9, 0.02), barMat.clone());
+      const m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.896, 0.02), barMat.clone());
       m.material.map = barMat.map.clone(); m.material.map.repeat.set(len / 0.8, 1.1); m.material.map.needsUpdate = true;
-      m.position.set((a + b) / 2, 0.45, Z + 0.01);
+      m.position.set((a + b) / 2, 0.448, Z + 0.01);
       m.receiveShadow = true;
       g.add(m);
     }
@@ -317,7 +317,7 @@ export function buildArchitecture({ root, layout }) {
   {
     const wMat = plasterMat('#b9ab96');
     const west = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.1, 12), wMat);
-    west.position.set(B.minX - 0.2, 1.05, 0.3);
+    west.position.set(B.minX - 0.204, 1.05, 0.3);
     g.add(west);
     const wcap = new THREE.Mesh(rbox(0.4, 0.08, 12, 0.02), stdMat('#a8a090', { roughness: 0.85 }));
     wcap.position.set(B.minX - 0.2, 2.14, 0.3);
@@ -350,15 +350,15 @@ export function buildArchitecture({ root, layout }) {
       body.position.set(W.x, (W.height - capH) / 2, zc);
       const cap = new THREE.Mesh(rbox(W.thickness + 0.08, capH, len + 0.04, 0.015), capMat);
       cap.position.set(W.x, W.height - capH / 2, zc);
-      const foot = new THREE.Mesh(rbox(W.thickness + 0.03, 0.14, len, 0.01), footMat);
+      const foot = new THREE.Mesh(rbox(W.thickness + 0.03, 0.14, len - 0.004, 0.01), footMat);
       foot.position.set(W.x, 0.07, zc);
       mur.add(body, cap, foot);
     }
     // pilares do portão
     const pilH = 1.06;
     for (const [z, sgn] of [[GT.hinge.z, 1], [GT.latchPost.z, -1]]) {
-      const zc = z + sgn * 0.13;
-      const p = new THREE.Mesh(rbox(0.28, pilH, 0.26, 0.02), plaster);
+      const zc = z + sgn * 0.128;
+      const p = new THREE.Mesh(rbox(0.284, pilH, 0.264, 0.02), plaster);
       p.position.set(W.x, pilH / 2, zc);
       const c = new THREE.Mesh(rbox(0.34, 0.06, 0.32, 0.015), capMat);
       c.position.set(W.x, pilH + 0.03, zc);
@@ -538,7 +538,7 @@ function buildChannel(g, layout, animated) {
     const endZ = a === z0 ? b : a;
     const sgn = a === z0 ? -1 : 1;
     const stripe = new THREE.Mesh(rbox(curbW + 0.004, curbH + 0.004, 0.12, 0.02), stdMat('#f2c230', { roughness: 0.55 }));
-    stripe.position.set(CH.xMin + curbW / 2, curbH / 2 - 0.004, endZ + sgn * 0.06);
+    stripe.position.set(CH.xMin + curbW / 2, curbH / 2 - 0.004, endZ + sgn * 0.058);
     cg.add(stripe);
   }
   // no vão: chanfro inclinado (rampa) + chevrons amarelos/pretos no chão, apontando para o canal

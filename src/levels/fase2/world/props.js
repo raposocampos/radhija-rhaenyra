@@ -186,7 +186,7 @@ export function buildProps({ root, layout, engine }) {
     // marcas brancas (para ler a rotação)
     for (let i = 0; i < 4; i++) {
       const mk = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.014, drumR * 0.9), stdMat('#f3ead8', { roughness: 0.5 }));
-      mk.position.y = 0.037;
+      mk.position.y = 0.034;
       mk.rotation.y = (i / 4) * Math.PI;
       drum.add(mk);
     }
@@ -318,7 +318,7 @@ export function buildProps({ root, layout, engine }) {
   const topPulley = makePulley(0.095);
   topPulley.position.set(-0.02, PU.y, 0);
   const bracket = new THREE.Mesh(rbox(0.04, 0.16, 0.06, 0.008), ironMat());
-  bracket.position.set(0.0, PU.y + 0.04, 0);
+  bracket.position.set(0.0, PU.y + 0.036, 0);
   const lowPulley = makePulley(0.04);
   lowPulley.position.set(-0.07, 0.11, 0);
   post.add(topPulley, bracket, lowPulley);
@@ -818,13 +818,13 @@ function buildCrate(root, layout, updaters) {
     face.rotation.y = (f * Math.PI) / 2;
     for (let i = 0; i < nS; i++) {
       const s = new THREE.Mesh(rbox(hs * 2 - 0.02, sh, 0.022, 0.006), slat);
-      s.position.set(0, 0.03 + sh / 2 + i * (sh + gap), hs - 0.011);
+      s.position.set(0, 0.03 + sh / 2 + i * (sh + gap), hs - 0.013); // 2 mm para dentro das cantoneiras
       s.rotation.z = (r() - 0.5) * 0.012;
       face.add(s);
     }
     // alça recortada (ripa de cima com furo escuro)
-    const hole = new THREE.Mesh(rbox(0.14, 0.035, 0.024, 0.012), stdMat('#2a1d12'));
-    hole.position.set(0, 0.03 + sh / 2 + (nS - 1) * (sh + gap), hs - 0.009);
+    const hole = new THREE.Mesh(rbox(0.14, 0.035, 0.029, 0.012), stdMat('#2a1d12'));
+    hole.position.set(0, 0.03 + sh / 2 + (nS - 1) * (sh + gap), hs - 0.0125);
     face.add(hole);
     body.add(face);
   }

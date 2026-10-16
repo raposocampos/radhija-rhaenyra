@@ -27,7 +27,7 @@ export function movingBox(w, h, d, label = '', seed = 1, { onTop = false } = {})
   const tape = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.004, d + 0.004), tapeMat);
   tape.position.y = h + 0.002;
   const tapeF = new THREE.Mesh(new THREE.BoxGeometry(0.06, h * 0.3, 0.004), tapeMat);
-  tapeF.position.set(0, h * 0.85, d / 2 + 0.002);
+  tapeF.position.set(0, h * 0.85 - 0.004, d / 2 + 0.002);
   g.add(body, tape, tapeF);
   if (label) {
     const tex = canvasTexture(256, 96, (c, cw, ch) => {
@@ -46,7 +46,7 @@ export function movingBox(w, h, d, label = '', seed = 1, { onTop = false } = {})
     const lab = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(w * 0.85, 0.42), Math.min(w * 0.85, 0.42) * 0.375), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9 }));
     if (onTop) {
       lab.rotation.x = -Math.PI / 2;
-      lab.position.set(0, h + 0.004, d * 0.18);
+      lab.position.set(0, h + 0.007, d * 0.18); // 3 mm acima da fita da tampa
     } else lab.position.set(0, h * 0.45, d / 2 + 0.003);
     g.add(lab);
   }
@@ -180,15 +180,16 @@ function buildLivingRoom(root, layout) {
   const r = rng(5);
   for (let i = 0; i < 9; i++) {
     const bh = 0.16 + r() * 0.08;
-    const book = new THREE.Mesh(rbox(0.16, bh, 0.045, 0.005), stdMat(['#3f6f78', '#e86a52', '#f2c14e', '#7f9c8a', '#8a5a7a'][i % 5], { roughness: 0.8 }));
-    book.position.set(0.02, 0.5 + bh / 2, 0.45 + i * 0.05);
+    const bd = 0.15;
+    const book = new THREE.Mesh(rbox(bd, bh, 0.045, 0.005), stdMat(['#3f6f78', '#e86a52', '#f2c14e', '#7f9c8a', '#8a5a7a'][i % 5], { roughness: 0.8 }));
+    book.position.set(0.02 + (i % 3) * 0.006, 0.5 + bh / 2, 0.45 + i * 0.05); // vizinhos 6 mm à parte (frente e fundo)
     book.rotation.x = i === 8 ? 0.3 : 0;
     st.add(book);
   }
   const plant = new THREE.Mesh(boxwood(0.12, 81), plantMat());
   plant.position.set(0.02, 0.62, -0.72);
   st.add(plant);
-  st.position.set(-6.15, 0, -0.9);
+  st.position.set(-6.146, 0, -0.9);
   grp.add(st);
 
   // ---- abajur de pé (canto noroeste)
@@ -452,7 +453,7 @@ function buildKitchen(root, layout) {
   const sink = new THREE.Mesh(rbox(0.55, 0.02, 0.4, 0.01), stdMat('#c6cbcf', { metalness: 0.9, roughness: 0.25 }));
   sink.position.set(3.6, K.height + 0.001, cz);
   const basin = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.012, 0.32), stdMat('#7d848a', { metalness: 0.9, roughness: 0.3 }));
-  basin.position.set(3.6, K.height + 0.006, cz);
+  basin.position.set(3.6, K.height + 0.012, cz);
   const tapMat = stdMat('#d9dde0', { metalness: 1, roughness: 0.15 });
   const tapPts = [new THREE.Vector3(3.6, K.height, cz - 0.22), new THREE.Vector3(3.6, K.height + 0.28, cz - 0.22), new THREE.Vector3(3.6, K.height + 0.32, cz - 0.12), new THREE.Vector3(3.6, K.height + 0.22, cz - 0.04)];
   const tap = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tapPts), 16, 0.014, 8), tapMat);
@@ -463,7 +464,7 @@ function buildKitchen(root, layout) {
   grp.add(ck);
   for (const [dx, dz] of [[-0.13, -0.1], [0.13, -0.1], [-0.13, 0.1], [0.13, 0.1]]) {
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.065, 24).rotateX(-Math.PI / 2), stdMat('#6a6e74'));
-    ring.position.set(2.55 + dx, K.height + 0.013, cz + dz);
+    ring.position.set(2.55 + dx, K.height + 0.016, cz + dz);
     grp.add(ring);
   }
   const kettle = new THREE.Group();
@@ -527,7 +528,7 @@ function buildKitchen(root, layout) {
   const mr = rng(7);
   for (let i = 0; i < 6; i++) {
     const m = new THREE.Mesh(i % 2 ? new THREE.CircleGeometry(0.035, 12) : new THREE.PlaneGeometry(0.08, 0.1), stdMat(['#e86a52', '#3f6f78', '#f2c14e', '#7f9c8a', '#ffffff', '#d94a5a'][i], { roughness: 0.6 }));
-    m.position.set(F.x - 0.12 + mr() * 0.3, F.height * 0.72 + mr() * 0.35, F.z + F.hz + 0.004);
+    m.position.set(F.x - 0.12 + mr() * 0.3, F.height * 0.72 + mr() * 0.35, F.z + F.hz + 0.004 + i * 0.002);
     m.rotation.z = (mr() - 0.5) * 0.4;
     grp.add(m);
   }

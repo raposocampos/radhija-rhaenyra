@@ -276,17 +276,18 @@ function buildWalls(layout, updaters) {
   grp.add(lower);
 
   // ---- laterais (cortadas) e sul (só o rodapé do corte)
-  cutWall(grp, -6.5, -0.2, 0.2, 7.6, C, salaMat);
-  cutWall(grp, 6.5, -0.2, 0.2, 7.6, C, kitMat);
-  cutWall(grp, 0, 3.5, 13.2, 0.2, 0.22, stdMat('#efe6d6', { roughness: 0.8 }));
+  cutWall(grp, -6.5, -0.202, 0.2, 7.596, C, salaMat);
+  cutWall(grp, 6.5, -0.202, 0.2, 7.596, C, kitMat);
+  cutWall(grp, 0, 3.5, 13.208, 0.2, 0.22, stdMat('#efe6d6', { roughness: 0.8 }));
   // ---- divisórias (cortadas), com batentes nas passagens
   const jambMat = stdMat('#f4efe6', { roughness: 0.5 });
   const part = (x, gap, wm) => {
     cutWall(grp, x, (-3.8 + gap.z0) / 2, WALLS.t, gap.z0 + 3.8, C, wm);
     cutWall(grp, x, (gap.z1 + 3.4) / 2, WALLS.t, 3.4 - gap.z1, C, wm);
     for (const z of [gap.z0, gap.z1]) {
-      const j = new THREE.Mesh(rbox(WALLS.t + 0.06, C, 0.06, 0.01), jambMat);
-      j.position.set(x, C / 2, z + (z === gap.z0 ? -0.03 : 0.03));
+      const jh = C - 0.006;
+      const j = new THREE.Mesh(rbox(WALLS.t + 0.06, jh, 0.06, 0.01), jambMat);
+      j.position.set(x, jh / 2, z + (z === gap.z0 ? -0.026 : 0.026));
       grp.add(j);
     }
   };
