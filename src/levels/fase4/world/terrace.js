@@ -90,15 +90,6 @@ function doormatTexture() {
   }, { repeat: false });
 }
 
-/** Lona listrada (guarda-sol, almofadas). */
-export function stripeTexture(a = '#f2efe6', b = '#e2674e', n = 8) {
-  return canvasTexture(256, 64, (g, w, h) => {
-    for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? b : a; g.fillRect((i * w) / n, 0, w / n + 1, h); }
-    g.fillStyle = 'rgba(0,0,0,0.05)';
-    for (let y = 0; y < h; y += 3) g.fillRect(0, y, w, 1);
-  });
-}
-
 // ------------------------------------------------------------------ piso
 function buildFloor(layout) {
   const grp = new THREE.Group();

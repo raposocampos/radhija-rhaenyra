@@ -98,6 +98,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let celebrateT = 0;
   let victoryT = 0;
   let barkCd = 0;
+  let jumpHintCd = 0; // dica "só a Rhaenyra pula"
   let loadingPromise = null;
   const cel = { radhija: {}, rhaenyra: {} };
   // Superbafo (só quem tem cfg.bafoSpeed, a Radhija): segurar mira, soltar sopra.
@@ -305,6 +306,7 @@ export function createGame({ engine, dogs, levels, params }) {
   function updatePlaying(dt) {
     playTime += dt;
     barkCd = Math.max(0, barkCd - dt);
+    jumpHintCd = Math.max(0, jumpHintCd - dt);
     if (input.consume('KeyQ') && !puzzle.lockFor(activeDog)) switchDog();
     const A = ctrls[activeDog];
     const compName = other(activeDog);
@@ -340,10 +342,14 @@ export function createGame({ engine, dogs, levels, params }) {
         startDash(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
         emit('dog:dash', { name: A.name, x: A.x, z: A.z, dirX: A.dashDx, dirZ: A.dashDz });
       }
-      // Pulo (Espaço / LT): só quem tem pulo, fora da postura de empurrar.
-      if (input.consume('Space', 'Jump') && action !== 'push' && canJump(A)) {
+      // Pulo (Espaço / ✕): só quem tem pulo, fora da postura de empurrar. Quem não pula ganha a dica.
+      const jumpPressed = input.consume('Space', 'Jump');
+      if (jumpPressed && action !== 'push' && canJump(A)) {
         startJump(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
         emit('dog:jump', { name: A.name, x: A.x, z: A.z, dirX: A.jumpDx, dirZ: A.jumpDz });
+      } else if (jumpPressed && !A.cfg.jumpHeight && jumpHintCd <= 0) {
+        jumpHintCd = 6;
+        emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 2.6 });
       }
       if (puzzle.carrier === A.name) speed *= 0.94;
       intent = { dx, dz, speed, turnScale: action === 'push' ? 0.7 : 1 };

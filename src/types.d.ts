@@ -477,6 +477,20 @@ export interface Fase4Props extends LevelProps {
   goal: PropBase & HighlightProp;
   collectibles: CollectibleProp[];
 }
+/** Fase 5 (src/levels/fase5/world/). */
+export interface Fase5Props extends LevelProps {
+  /** Portãozinho de bebê: pivô na dobradiça (folha ao longo de -Z local). */
+  petGate: GateProp;
+  /** Alavanca da trava: setTurn(0..1). */
+  latch: PropBase & { setTurn(k: number): void };
+  /** Caixa de almofadas: setCollapse(0..1) = desmontando. */
+  pillowBox: PropBase & { setPos(x: number, z: number): void; setCollapse(k: number): void };
+  /** Ursinho: setCarried(on) deita (na boca) ou senta (no cenário). */
+  bear: ItemProp & { setCarried(on: boolean): void };
+  /** Caminha das dogs (brilha com o ursinho a caminho). */
+  bed: PropBase & HighlightProp;
+  collectibles: CollectibleProp[];
+}
 export interface PigeonPose { x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean }
 
 // =====================================================================================================

@@ -5,13 +5,12 @@
 // Decoração com colisão: mesa com guarda-sol, espreguiçadeiras, limoeiro, banco, vasos, pombal, antena.
 import * as THREE from 'three';
 import {
-  rng, rbox, stdMat, woodMat, plasterMat, ironMat, contactShadow, shadowAll, mergeGeometries, rippleNormalTexture, canvasTexture,
+  rng, rbox, stdMat, woodMat, plasterMat, ironMat, contactShadow, shadowAll, rippleNormalTexture, canvasTexture, stripeTexture,
 } from '../../../world/util.js';
 import { plantMat, geranium, boxwood } from '../../../world/plants.js';
 import { createPigeon } from '../../../world/pigeon.js';
 import { createRubberDuck } from '../../../world/toys.js';
 import { buildTreats } from '../../../world/treats.js';
-import { stripeTexture } from './terrace.js';
 
 const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
@@ -521,7 +520,7 @@ function buildBasin(root, layout, updaters) {
   g.add(sh);
   root.add(g);
 
-  const duck = createRubberDuck(0.2);
+  const duck = createRubberDuck(0.17);
   duck.position.set(DUCK.x, 0.15, DUCK.z);
   duck.rotation.y = -2.4;
   root.add(duck);

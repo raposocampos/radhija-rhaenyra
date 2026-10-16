@@ -396,6 +396,14 @@ export function createFeedback(opts) {
   events.on('pigeon:land', ({ x, z }) => sfx('pigeonCoo', x, z));
   events.on('pigeon:shrug', ({ x, z }) => sfx('pigeonShrug', x, z));
   events.on('fan:aligned', ({ x, z }) => sfx('latch', x, z));
+  // fase 5: trava do portãozinho e caixa de almofadas desmontando
+  events.on('latch:start', ({ x, z }) => sfx('babyLatch', x, z));
+  events.on('box:collapse', ({ x, z }) => {
+    audio.stop?.('crateDrag');
+    sfx('boxScuff', x, z);
+    particles.dust({ x, y: 0.1, z }, { count: 8, size: 1.0, alpha: 0.4, strength: 0.8, spread: 0.4 });
+    particles.burst({ x: x - 0.3, y: 0.3, z }, { kind: 'stars', count: 6, size: 0.7, speed: 0.6 });
+  });
   events.on('dog:bump', ({ x, z, strength = 0.7 }) => {
     sfx('bump', x, z, { strength });
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });
