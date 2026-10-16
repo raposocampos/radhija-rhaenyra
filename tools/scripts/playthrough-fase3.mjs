@@ -7,7 +7,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, press, load, waitFor, page } = H;
+const { check, sleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, press, load, waitFor, record, page } = H;
 
 const inWater = () => ev(() => {
   const g = window.__game.game;
@@ -90,13 +90,16 @@ async function fullRun() {
   i = await info();
   check(!i.stay.rhaenyra, 'Vem (F): a Rhaenyra volta a seguir');
   await clearLog();
+  // o knockback (startled) dura frações de segundo: grava a animação quadro a quadro
+  const recHit = await record((g) => g.debug.info().dogs.radhija.action);
   await walkTo(-0.9, 0.6, { timeout: 6000, stopIf: (s) => s.goose.state === 'alert' || s.goose.state === 'charge' });
   await walkTo(0.0, -0.4, { timeout: 4000, stopIf: (s) => s.fx.radhija.busy });
   i = await waitFor((s) => s.fx.radhija.busy, { timeout: 4000, step: 30 });
   check((await logOf('goose:alert')).length >= 1 && (await logOf('goose:charge')).length >= 1, 'gansa: goose:alert + goose:charge');
   check((await logOf('goose:hit')).some((h) => h.name === 'radhija'), 'gansa acerta a Radhija (goose:hit)');
   i = await waitFor((s) => s.dogs.radhija.action === 'startled', { timeout: 1500, step: 20 });
-  check(i.dogs.radhija.action === 'startled', 'knockback com action startled', i.dogs.radhija.action);
+  const hitActions = await recHit.stop();
+  check(hitActions.includes('startled'), 'knockback com action startled', i.dogs.radhija.action);
   await shot('f3-05-gansa-investida.png');
   await sleep(700);
   const w1 = await inWater();

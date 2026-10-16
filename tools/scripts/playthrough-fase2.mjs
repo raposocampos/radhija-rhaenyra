@@ -7,7 +7,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, page } = H;
+const { check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, record, page } = H;
 
 const SPR = { x: -0.4, z: -1.5, r: 2.2 };
 const TAU = Math.PI * 2;
@@ -279,17 +279,21 @@ async function sideTests() {
   await clearLog();
   i = await info();
   check(i.stage === 'gateLocked' && i.stay.rhaenyra, '?stage=gateLocked (Rhaenyra fica na tábua)', `${i.stage} stay=${i.stay.rhaenyra}`);
+  // a reação dura frações de segundo: grava a animação quadro a quadro em vez de ler num instante
+  const recWet = await record((g) => { const i = g.debug.info(); return { busy: i.fx.radhija.busy, action: i.dogs.radhija.action, t: i.simSec }; });
   await walkTo(-1.1, -0.2, { timeout: 6000, stopIf: (s) => s.fx.radhija.busy });
   i = await waitFor((s) => s.fx.radhija.busy, { timeout: 6000, step: 30 });
   check(i.fx.radhija.busy, 'Radhija molhada pelo jato');
-  await sleep(200);
-  i = await info();
-  check(i.dogs.radhija.action === 'startled' || i.dogs.radhija.action === 'shake', 'reação ao jato (startled → shake)', i.dogs.radhija.action);
-  await sleep(600);
+  await gsleep(800);
+  const wetFrames = await recWet.stop();
+  const hitAt = wetFrames.findIndex((f) => f.busy);
+  const after = hitAt < 0 ? [] : wetFrames.slice(hitAt).filter((f) => f.t - wetFrames[hitAt].t < 1.0).map((f) => f.action);
+  const seq = [...new Set(after)].join(' → ');
+  check(after.some((a) => a === 'startled' || a === 'shake'), 'reação ao jato (startled → shake)', seq);
   i = await info();
   const dOut = Math.hypot(i.dogs.radhija.x - SPR.x, i.dogs.radhija.z - SPR.z);
   check(dOut > SPR.r, 'empurrada para fora do disco', `d=${dOut.toFixed(2)}`);
-  check(i.dogs.radhija.action === 'shake', 'chacoalha (action shake)', i.dogs.radhija.action);
+  check(after.includes('shake'), 'chacoalha (action shake)', seq);
   check(i.fx.radhija.wet > 0.9, 'molhada (wet ≈ 1)', i.fx.radhija.wet);
   const okPos = await ev(() => { const g = window.__game.game; const c = g.debug.ctrls.radhija; return !g.debug.world.overlaps(c.x, c.z, c.r * 0.95, c.size); });
   check(okPos, 'posição válida depois do empurrão');

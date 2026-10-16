@@ -45,7 +45,11 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   const pace = { sim: 0, real: 0, last: null, n: 0, lat: 0, maxLat: 0 };
   const info = async () => {
     const t = Date.now();
-    const i = await page.evaluate(() => window.__game.game.debug.info());
+    const i = await page.evaluate(() => {
+      const r = window.__game.game.debug.info();
+      if (window.__walkGuard) r.walkTripped = window.__walkGuard.tripped; // ver walkTo
+      return r;
+    });
     const now = Date.now();
     pace.n++;
     pace.lat += now - t;
@@ -109,10 +113,48 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   /** Anda com a dog ativa até (x, z) segurando as teclas reais. */
   async function walkTo(x, z, { tol = 0.22, timeout = 15000, extra = [], stopIf = null } = {}) {
     const dl = deadline(timeout);
+    // Trava dentro da página: com WASD segurado longe do alvo, solta as teclas NO QUADRO em que a dog entra na zona de
+    // aproximação (0,6 m) ou passa a se afastar do alvo. Sob carga, a leitura seguinte (e o keyup) pode levar segundos
+    // e a dog corria metros além do ponto.
+    await page.evaluate(({ x: tx, z: tz }) => {
+      const g = window.__game.game;
+      const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
+      const dist = () => { const c = g.debug.ctrls[g.activeDog]; return Math.hypot(tx - c.x, tz - c.z); };
+      const w = { tripped: false, armed: false, min: Infinity, down: new Set() };
+      w.onDown = (e) => {
+        if (!MOVE.includes(e.code)) return;
+        w.down.add(e.code);
+        const d = dist();
+        if (d >= 0.6) { w.armed = true; w.tripped = false; w.min = d; }
+      };
+      w.onUp = (e) => { w.down.delete(e.code); };
+      addEventListener('keydown', w.onDown);
+      addEventListener('keyup', w.onUp);
+      window.__walkGuard = w;
+      const loop = () => {
+        if (window.__walkGuard !== w) {
+          removeEventListener('keydown', w.onDown);
+          removeEventListener('keyup', w.onUp);
+          return;
+        }
+        if (w.armed && w.down.size) {
+          const d = dist();
+          w.min = Math.min(w.min, d);
+          if (d < 0.6 || d > w.min + 0.25) {
+            for (const code of [...w.down]) window.dispatchEvent(new KeyboardEvent('keyup', { code, key: code }));
+            w.armed = false;
+            w.tripped = true;
+          }
+        }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }, { x, z });
     for (const k of extra) await page.keyboard.down(k);
     let last = null;
     for (;;) {
       const i = await info();
+      if (i.walkTripped) await setKeys(new Set()); // a trava soltou na página: solta as teclas reais também
       if (dl.over(i)) break;
       const d = i.dogs[i.activeDog];
       last = d;
@@ -139,6 +181,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     }
     await setKeys(new Set());
     for (const k of extra) await page.keyboard.up(k);
+    await page.evaluate(() => { window.__walkGuard = null; });
     await sleep(120);
     const i = await info();
     return i.dogs[i.activeDog] || last;

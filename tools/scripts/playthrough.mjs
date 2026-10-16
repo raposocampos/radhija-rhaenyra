@@ -61,7 +61,9 @@ async function fullRun() {
   check(tug.length === 1 && go.length === 1, 'eventos rope:tug e gate:open emitidos uma vez');
 
   // 3) Companheira volta a seguir pelo portão
-  i = await waitFor((s) => s.dogs.rhaenyra.x > 1.05, { timeout: 5000 });
+  // a líder se afasta da cerca (x = 1,0): parada a 0,5 m dela, a companheira podia estacionar dentro do vão
+  await walkTo(2.4, 0.9);
+  i = await waitFor((s) => s.dogs.rhaenyra.x > 1.05, { timeout: 6000 });
   check(i.dogs.rhaenyra.x > 1.05, 'Rhaenyra passou pelo portão e voltou a seguir', `x=${i.dogs.rhaenyra.x} modo=${i.dogs.rhaenyra.mode}`);
   await shot('15-rhaenyra-seguindo.png');
 
