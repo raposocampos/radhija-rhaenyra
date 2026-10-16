@@ -240,12 +240,12 @@ export function buildGarden(engine, layout) {
         const a = new THREE.Mesh(rbox(0.045, 0.15, D - 0.04, 0.015), plank);
         a.position.set(s * (W / 2 - 0.0225), y, 0);
         const b = new THREE.Mesh(rbox(W - 0.04, 0.15, 0.045, 0.015), plank);
-        b.position.set(0, y, s * (D / 2 - 0.0225));
+        b.position.set(0, y, s * (D / 2 - 0.0225) + (s < 0 ? 0.003 : 0));
         h.add(a, b);
       }
     }
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const p = new THREE.Mesh(rbox(0.08, H + 0.06, 0.08, 0.02), postM);
+      const p = new THREE.Mesh(rbox(0.084, H + 0.06, 0.084, 0.02), postM); // 2 mm além das tábuas
       p.position.set(sx * (W / 2 - 0.04), (H + 0.06) / 2, sz * (D / 2 - 0.04));
       h.add(p);
     }
@@ -416,7 +416,7 @@ export function buildGarden(engine, layout) {
       w.position.set(wx + 0.14, hh / 2, (z0 + z1) / 2);
       const cap = new THREE.Mesh(rbox(0.36, 0.07, z1 - z0 + 0.04, 0.025), capM);
       cap.position.set(wx + 0.14, hh + 0.035, (z0 + z1) / 2);
-      const sk = new THREE.Mesh(rbox(0.04, 0.22, z1 - z0, 0.01), stdMat('#a48f7c', { roughness: 0.9 }));
+      const sk = new THREE.Mesh(rbox(0.04, 0.22, z1 - z0 - 0.004, 0.01), stdMat('#a48f7c', { roughness: 0.9 }));
       sk.position.set(wx + 0.01, 0.11, (z0 + z1) / 2);
       group.add(w, cap, sk);
       occluders.push(w);

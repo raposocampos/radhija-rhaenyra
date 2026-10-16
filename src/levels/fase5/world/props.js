@@ -266,7 +266,7 @@ function buildPlaypen(root, layout) {
       grp.add(rail);
     }
     const n = 10;
-    for (let i = 0; i <= n; i++) {
+    for (let i = 0; i < n; i++) {
       const k = i / n;
       const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, P.height - 0.06, 6), stdMat(cols[(i + si) % 4], { roughness: 0.6 }));
       bar.position.set(ax + (bx - ax) * k, P.height / 2, az + (bz - az) * k);

@@ -97,7 +97,7 @@ function makeWindow({ w, h, seed, cool = false, intensity = 1.4, box = true }) {
     grp.add(m);
   }
   const sill = new THREE.Mesh(rbox(w + 0.18, 0.05, 0.18, 0.02), stdMat('#cfc3ae', { roughness: 0.85 }));
-  sill.position.set(0, -h / 2 - 0.025, 0.03);
+  sill.position.set(0, -h / 2 - 0.023, 0.03); // topo 2 mm acima do fundo do vão (sem z-fighting)
   grp.add(sill);
   if (box) {
     // jardineira (acima da altura das dogs)
@@ -111,7 +111,7 @@ function makeWindow({ w, h, seed, cool = false, intensity = 1.4, box = true }) {
       const geo = i % 3 === 1 ? lavender({ seed: seed * 10 + i, height: 0.26, spread: 0.08, stems: 16 })
         : geranium({ seed: seed * 10 + i, radius: 0.1, height: 0.1, flower: r() < 0.5 ? '#ff6a7a' : '#ffffff' });
       const pl = new THREE.Mesh(geo, mat('f3-house-plant', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide })));
-      pl.position.set(x, -h / 2 - 0.07, 0.12);
+      pl.position.set(x, -h / 2 - 0.085, 0.12); // base enterrada na jardineira (nenhuma face no plano do topo dela nem do peitoril)
       grp.add(pl);
     }
   }

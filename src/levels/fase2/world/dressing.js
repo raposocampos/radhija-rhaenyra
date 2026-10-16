@@ -169,7 +169,7 @@ export function buildDressing({ root, layout }) {
     });
     weave.repeat.set(4, 2);
     const wm = new THREE.MeshStandardMaterial({ map: weave, bumpMap: weave, bumpScale: 2, roughness: 0.9, side: THREE.DoubleSide });
-    const prof = [new THREE.Vector2(0.0, 0.0), new THREE.Vector2(c.r * 0.8, 0.0), new THREE.Vector2(c.r * 0.88, 0.05), new THREE.Vector2(c.r * 0.96, 0.32), new THREE.Vector2(c.r, 0.4)];
+    const prof = [new THREE.Vector2(0.0, 0.003), new THREE.Vector2(c.r * 0.8, 0.003), new THREE.Vector2(c.r * 0.88, 0.05), new THREE.Vector2(c.r * 0.96, 0.32), new THREE.Vector2(c.r, 0.4)];
     b.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 28), wm));
     const rim = new THREE.Mesh(new THREE.TorusGeometry(c.r, 0.018, 8, 28), new THREE.MeshStandardMaterial({ map: weave, roughness: 0.9, color: '#d9b07a' }));
     rim.rotation.x = Math.PI / 2;
@@ -278,6 +278,7 @@ export function buildDressing({ root, layout }) {
     f.position.set(c.x, 0, c.z);
     const potM = terracottaMat('#c46a43');
     const pot = new THREE.Mesh(new THREE.LatheGeometry(potProfile(0.25, 0.4, { foot: 0.68, belly: 1.0 }), 24), potM);
+    pot.position.y = 0.002;
     f.add(pot);
     const soil = new THREE.Mesh(soilDisc(0.22, 3), stdMat('#3a2a1e', { roughness: 1 }));
     soil.position.y = 0.36;

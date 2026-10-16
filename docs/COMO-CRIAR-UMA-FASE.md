@@ -182,13 +182,16 @@ return {
 - Cenário interno: a fase 5 mostra o corte de maquete (sem teto, parede do fundo inteira e as outras cortadas a meia
   altura com a faixa escura no topo). Com a câmera padrão, uma parede de fundo de 2,7 m esconde o céu.
 - Nada de assets baixados: geometria, texturas e sons em código.
+- Nunca deixe duas peças com faces no mesmo plano (a terra na altura exata da borda do vaso, uma tábua rente ao
+  pilarete, um batente rente à ponta da parede): a superfície fica "tremendo" na tela. Afaste 2–4 mm ou faça uma peça
+  terminar dentro da outra. O `test/cenario.test.mjs` confere isso em todas as fases e diz onde está o problema.
 - Crie `lighting.js` a partir de um preset existente (ARQUITETURA.md §4.3). No máximo cerca de 6 PointLights sem sombra.
 - Para olhar o cenário parado: `?level=6&play&cam=x,y,z&look=x,y,z` e `node tools/shot.mjs --url "…" --out shots/f6.png`.
 
 ## 9. Lista final
 
 - [ ] `npm run typecheck` sem erros.
-- [ ] `npm test` verde (inclui navegação e colisão da fase nova, e o `test/fase6.test.mjs`).
+- [ ] `npm test` verde (inclui navegação, colisão e cenário sem z-fighting da fase nova, e o `test/fase6.test.mjs`).
 - [ ] Jogada inteira no teclado e no controle, sem becos sem saída; todos os textos em português.
 - [ ] `npm run test:e2e` verde (as fases antigas continuam passando).
 - [ ] `npm run build` sem erros.

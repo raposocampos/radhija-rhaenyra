@@ -114,7 +114,7 @@ function buildFloor(layout) {
 
   // deck de madeira das espreguiçadeiras (zona A, sudoeste)
   const deck = new THREE.Group();
-  const dk = { x0: -6.4, x1: -3.2, z0: 1.55, z1: 3.8 };
+  const dk = { x0: -6.39, x1: -3.2, z0: 1.55, z1: 3.79 };
   const boardMat = woodMat('#a77b52', { key: 'f4-deck', rough: 0.82 });
   const n = Math.round((dk.z1 - dk.z0) / 0.15);
   const r = rng(5);
@@ -197,22 +197,26 @@ function buildPlanters(layout) {
     const nBoxes = Math.max(1, Math.round(len / 1.35));
     for (let i = 0; i < nBoxes; i++) {
       const a = z0 + (i * len) / nBoxes, b = z0 + ((i + 1) * len) / nBoxes;
-      const m = new THREE.Mesh(rbox(P.half * 2, P.height, b - a - 0.03, 0.035), boxMat);
-      m.position.set(P.x, P.height / 2, (a + b) / 2);
+      // a caixa de alvenaria para 4 cm abaixo da borda: a terra fica por cima dela (sem faces no mesmo
+      // plano, que davam z-fighting: listras "tremendo" na terra) e o aro cobre a junta
+      const bodyH = P.height - 0.04;
+      const m = new THREE.Mesh(rbox(P.half * 2, bodyH, b - a - 0.03, 0.035), boxMat);
+      m.position.set(P.x, bodyH / 2, (a + b) / 2);
       // aro de cima (a terra aparece no meio)
       const L = b - a + 0.01, W = P.half * 2 + 0.05, t = 0.06;
       for (const sx of [-1, 1]) {
-        const c = new THREE.Mesh(rbox(t, 0.05, L, 0.015), capMat);
-        c.position.set(P.x + sx * (W / 2 - t / 2), P.height + 0.005, (a + b) / 2);
+        const c = new THREE.Mesh(rbox(t, 0.09, L, 0.015), capMat);
+        c.position.set(P.x + sx * (W / 2 - t / 2), P.height - 0.015, (a + b) / 2);
         grp.add(c);
       }
       for (const sz of [-1, 1]) {
-        const c = new THREE.Mesh(rbox(W - 2 * t + 0.01, 0.05, t, 0.015), capMat);
-        c.position.set(P.x, P.height + 0.005, (a + b) / 2 + sz * (L / 2 - t / 2));
+        const c = new THREE.Mesh(rbox(W - 2 * t + 0.01, 0.09, t, 0.015), capMat);
+        c.position.set(P.x, P.height - 0.015, (a + b) / 2 + sz * (L / 2 - t / 2));
         grp.add(c);
       }
-      const s = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * t + 0.01, 0.02, L - 2 * t + 0.01), soilMat);
-      s.position.set(P.x, P.height - 0.01, (a + b) / 2);
+      const soilTop = bodyH + 0.005;
+      const s = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * t + 0.008, 0.02, L - 2 * t + 0.008), soilMat);
+      s.position.set(P.x, soilTop - 0.01, (a + b) / 2);
       grp.add(m, s);
       // plantas ao longo da caixa
       for (let z = a + 0.12; z < b - 0.08; z += 0.13 + r() * 0.06) {
@@ -221,7 +225,7 @@ function buildPlanters(layout) {
           const k = r();
           const x = P.x + side * (0.06 + r() * 0.06);
           const zz = z + (r() - 0.5) * 0.06;
-          const y = P.height - 0.02;
+          const y = soilTop - 0.012; // a base da planta afunda na terra (longe do topo da caixa e da terra)
           if (k < 0.4) plants.lav.push([x, y, zz, r()]);
           else if (k < 0.66) plants.ger.push([x, y, zz, r()]);
           else if (k < 0.74) plants.box.push([x, y, zz, r()]);

@@ -335,11 +335,19 @@ embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vag
 
 | Comando | O que faz | Tempo |
 |---|---|---|
-| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~6 s |
+| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting, irrigador, dogs e regressões | ~30 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
 | `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–5, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~14 min |
+
+**Cenário sem z-fighting** (`test/cenario.test.mjs`): monta o cenário DE VERDADE de cada fase no Node
+(`test/helpers/worldBuild.mjs`, com os dublês de canvas do headless) e procura faces de peças diferentes no mesmo
+plano que se sobrepõem (`test/helpers/coplanar.mjs`): a placa de vídeo alterna entre as duas e a superfície fica
+listrada ou "tremendo" (foi o caso da terra das floreiras da fase 4, no plano da tampa da caixa). O relatório diz as
+duas peças (caminho de nomes, cor, centro e tamanho), o plano e onde. Para corrigir, afaste uma das faces 2–4 mm ou faça
+uma peça terminar dentro da outra. Ficam de fora faces viradas para baixo ou para o norte (a câmera nunca as vê),
+materiais iguais, decalques (`polygonOffset`, transparente sem `depthWrite`) e o que está fora da área de jogo.
 
 **Jogo headless** (`test/helpers/headless.mjs`): roda o `game.js` de verdade no Node, com dublês de motor, dogs e
 props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devolve `walkTo(x, z)`, `tap('KeyE')`,

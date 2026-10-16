@@ -414,7 +414,7 @@ function makeGate(G, H) {
   // dobradiças e trinco
   for (const y of [0.18, H - 0.18]) {
     const strap = new THREE.Mesh(rbox(0.008, 0.04, 0.22, 0.004), ironMat());
-    strap.position.set(0.032, y, -0.1);
+    strap.position.set(0.036, y, -0.1); // 4 mm à frente do poste
     pivot.add(strap);
   }
   const latch = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 14), ironMat());

@@ -283,11 +283,17 @@ function buildDuct(root, layout) {
   // boca (para o oeste, dentro do corredor)
   const inBox = new THREE.Mesh(rbox(0.26, 0.42, 0.48, 0.02), metal);
   inBox.position.set(D.inlet.x + 0.1, 0.23, D.inlet.z);
-  const inHole = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.3).rotateY(-Math.PI / 2), dark);
-  inHole.position.set(D.inlet.x - 0.031, 0.22, D.inlet.z);
-  const inLip = new THREE.Mesh(rbox(0.03, 0.36, 0.46, 0.01), seam);
-  inLip.position.set(D.inlet.x - 0.03, 0.22, D.inlet.z);
-  grp.add(inBox, inHole, inLip);
+  const inHole = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.3).rotateY(-Math.PI / 2), dark);
+  inHole.position.set(D.inlet.x - 0.038, 0.22, D.inlet.z); // 8 mm à frente da chapa (sem z-fighting)
+  grp.add(inBox, inHole);
+  // moldura da boca (4 barras em volta do buraco)
+  for (const [h, d, y, z] of /** @type {[number, number, number, number][]} */ ([
+    [0.03, 0.46, 0.22 + 0.165, 0], [0.03, 0.46, 0.22 - 0.165, 0], [0.3, 0.03, 0.22, 0.205], [0.3, 0.03, 0.22, -0.205],
+  ])) {
+    const bar = new THREE.Mesh(rbox(0.03, h, d, 0.008), seam);
+    bar.position.set(D.inlet.x - 0.045, y, D.inlet.z + z);
+    grp.add(bar);
+  }
   // tubo: sobe, cruza a mureta, desce
   const pts = [
     new THREE.Vector3(D.inlet.x + 0.12, 0.42, D.inlet.z),
@@ -312,7 +318,7 @@ function buildDuct(root, layout) {
   const outBox = new THREE.Mesh(rbox(0.26, 0.32, 0.38, 0.02), metal);
   outBox.position.set(D.outlet.x, 0.5, D.outlet.z);
   const outHole = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.2).rotateY(Math.PI / 2), dark);
-  outHole.position.set(D.outlet.x + 0.131, 0.5, D.outlet.z);
+  outHole.position.set(D.outlet.x + 0.136, 0.5, D.outlet.z); // 6 mm à frente da chapa
   const hood = new THREE.Mesh(rbox(0.18, 0.03, 0.42, 0.01), seam);
   hood.position.set(D.outlet.x + 0.16, 0.66, D.outlet.z);
   hood.rotation.z = -0.35;
@@ -342,8 +348,8 @@ function buildWallGate(root, layout) {
   // pilares do portão
   const pillarMat = plasterMat('#d9c2a0');
   for (const z of [-WALL.gapZ, WALL.gapZ]) {
-    const p = new THREE.Mesh(rbox(0.28, WALL.height + 0.18, 0.2, 0.02), pillarMat);
-    p.position.set(WALL.x, (WALL.height + 0.18) / 2, z + Math.sign(z) * 0.1);
+    const p = new THREE.Mesh(rbox(0.28, WALL.height + 0.18, 0.204, 0.02), pillarMat);
+    p.position.set(WALL.x, (WALL.height + 0.18) / 2, z + Math.sign(z) * 0.098);
     const pc = new THREE.Mesh(rbox(0.34, 0.06, 0.26, 0.015), cap);
     pc.position.set(WALL.x, WALL.height + 0.21, z + Math.sign(z) * 0.1);
     grp.add(p, pc);
