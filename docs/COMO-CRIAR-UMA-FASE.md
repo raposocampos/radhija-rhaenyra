@@ -14,8 +14,9 @@ Antes do código, escreva em poucas linhas:
 
 - **O item e o objetivo**: o que as dogs vão buscar e para onde levam (por exemplo, "a bolinha até a caminha").
 - **Os beats**, em ordem: cada um deve exigir as duas cachorrinhas de um jeito diferente. As ferramentas que o
-  jogador já conhece: a Radhija passa por aberturas e dá arrancada; a Rhaenyra pesa (placas), empurra (caixotes)
-  e carrega coisas pesadas; o **Fica** segura uma dog num lugar; o latido atrai a gansa.
+  jogador já conhece: a Radhija passa por aberturas, dá arrancada e solta o **superbafo** (cheiro que o vento e os
+  dutos levam até um alvo); a Rhaenyra pesa (placas), empurra (caixotes, ventiladores), pula obstáculos baixos e
+  carrega coisas pesadas; o **Fica** segura uma dog num lugar; o latido atrai a gansa.
 - **As etapas** (`stages`): normalmente uma por beat, terminando em `'carrying'` e `'done'`.
 - **Sem becos sem saída**: em qualquer momento deve dar para desfazer o erro (o portão reabre, o caixote não
   trava num canto, a dog molhada é empurrada para um lugar válido).
@@ -94,6 +95,11 @@ Regras que evitam dor de cabeça:
   já trata os eventos existentes (lista em ARQUITETURA.md §8). Um evento novo precisa de tratamento lá.
 - Exponha `S: hints.S` no objeto devolvido: o `info().prompt` usado pelos testes lê o prompt atual daí.
 - Use `cam.focusShot(x, z)` uma vez quando algo importante acontece longe da câmera (o portão abrindo).
+
+**Cheiro**: o puzzle recebe `ctx.scent` e registra vento (`addWind`), dutos (`addDuct`) e narizes (`addNose`), que
+reagem quando uma nuvem do superbafo chega (ARQUITETURA.md §5.1). A Arena do Bafo (`src/levels/_bafo/`) é o exemplo
+completo: ventilador num trilho (um `createPushCrate` com `minX = maxX`) que move o vento, duto ativo só com o
+ventilador no encaixe e um pombo que foge para uma placa.
 
 Para uma mecânica que pode servir a outras fases, escreva-a em `src/game/mechanics/` (genérica, configurada pelo
 layout) e exporte em `mechanics/index.js`.

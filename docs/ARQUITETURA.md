@@ -7,8 +7,8 @@ Os tipos de todas as APIs citadas aqui estão em [`src/types.d.ts`](../src/types
 ## 1. Visão geral
 
 Aventura 3D curta em fases, em Three.js r170 + Vite, JavaScript puro com ES modules. O jogador controla uma de
-duas cachorrinhas (a Radhija, pequena e rápida, que dá arrancadas; a Rhaenyra, grande e forte, que empurra e pula)
-e troca entre elas; a outra vira
+duas cachorrinhas (a Radhija, pequena e rápida, que dá arrancadas e solta o superbafo; a Rhaenyra, grande e forte,
+que empurra e pula) e troca entre elas; a outra vira
 companheira e segue sozinha (ou espera, com o comando **Fica**). Cada fase é um puzzle cooperativo que termina
 levando um item até um objetivo.
 
@@ -48,6 +48,7 @@ src/levels/                as fases
   _placeholder.js          cenário provisório em blocos, para testar uma fase antes da arte
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
+  _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
   dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…)
 src/dogs/                  as cachorrinhas (ver §7)
@@ -199,29 +200,57 @@ senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cad
 alcançável mais próximo da líder e senta. Os testes de navegação conferem, para toda fase registrada, que os nós
 estão livres, que as arestas não atravessam colisores e que o grafo é conexo com todas as flags ligadas.
 
+### 5.1 Cheiro (superbafo)
+
+`src/game/mechanics/scent.js` cria, por fase, o campo de cheiro que o núcleo entrega ao puzzle como `ctx.scent`
+(desenho em `src/fx/scentView.js`). Regras, todas determinísticas:
+
+- **Nuvem**: nasce com um empurrão, desacelera e se espalha devagar (o raio cresce) até sumir (~5 s). Não atravessa
+  paredes: colide como um círculo pequeno e passa onde a Radhija passa.
+- **Vento** (`scent.addWind({ x, z, dirX, dirZ, length, halfWidth, strength })`): faixa a partir de uma origem; dentro
+  dela a nuvem é levada pela corrente e fica compacta. O objeto devolvido é mutável: mova a origem junto com o
+  ventilador ou desligue com `enabled`.
+- **Duto** (`scent.addDuct({ inlet: {x, z, r}, outlet: {x, z, dirX, dirZ}, travel, active() })`): com `active()`
+  verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois.
+- **Nariz** (`scent.addNose({ id, x, z, r, onSmell(nuvem) })`): alvo que reage uma vez por nuvem. É aqui que entram
+  os tipos de alvo: animais que fogem (o pombo da Arena do Bafo), mecanismos que espirram, plantas que recolhem.
+- **Prévia**: `scent.preview(tiro)` roda a mesma simulação sem efeitos; é o que a mira desenha.
+
+Eventos: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`. Fases que não registram vento,
+duto nem nariz (as fases 1–3) têm nuvens que só se espalham e somem.
+
 ## 6. Entrada
 
-| Ação | Teclado | Controle (padrão Xbox/PlayStation) |
-|---|---|---|
-| Mover | WASD / setas | analógico esquerdo (velocidade proporcional) / D-pad |
-| Interagir / latir | E | A (✕) |
-| Latir | — | X (□) |
-| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | B (○) ou RT |
-| Pular (Rhaenyra) | Espaço | LT |
-| Trocar de cachorrinha | Q | LB / RB |
-| Fica / Vem (companheira) | F | Y (△) |
-| Pausar | Esc | Start / Options |
-| Menus | setas, Tab, Enter, Esc | D-pad/analógico, A confirma, B volta |
+| Ação | Teclado | Controle (PlayStation · Xbox, por posição) | Código lógico |
+|---|---|---|---|
+| Mover | WASD / setas | analógico esquerdo (velocidade proporcional) / D-pad | `axis()` |
+| Pular (Rhaenyra) | Espaço | ✕ · A | `Jump` |
+| Interagir / latir | E | ○ · B | `KeyE` |
+| Latir | — | □ · X | `Bark` |
+| Fica / Vem (companheira) | F | △ · Y | `KeyF` |
+| Superbafo (Radhija): segurar mira, soltar sopra | R | L2 · LT | `bafo()` |
+| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | `shift()` |
+| Trocar de cachorrinha | Q | L1 · LB | `KeyQ` |
+| Pausar | Esc | Options · Start | `Escape` |
+| Menus | setas, Tab, Enter, Esc | D-pad/analógico, ✕ confirma, ○ volta | |
+
+A UI desenha os botões nos dois estilos (`PAD_BTN` em `src/ui/markup.js`) e mostra o do controle conectado:
+Xbox se o id do controle tiver "xbox"/"xinput", PlayStation nos demais casos (padrão).
 
 `src/game/input.js` traduz o controle para os mesmos códigos lógicos do teclado, então o jogo não sabe de onde veio
 o comando. Ao voltar de um menu para o jogo, os botões segurados ficam travados até serem soltos (`latchPad`):
-o A que confirma "Começar" não vira latido. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
+o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira latido e o L2 não vira bafo. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
 
 **Pulo** (`dogController.js`): só quem tem `jumpHeight` nas estatísticas (a Rhaenyra). Arco de altura fixa
-(`jumpHeight`, ~0,36 m) e duração `jumpTime` (~0,5 s), com impulso horizontal mínimo `jumpSpeed` na direção da
+(`jumpHeight`, ~0,5 m) e duração `jumpTime` (~0,42 s), com impulso horizontal mínimo `jumpSpeed` na direção da
 entrada (parada, pula no lugar) e pouco controle no ar. No ar, ela ignora colisores `jumpable` e não pisa em placas de
 pressão; não pula na postura de empurrar. A companheira não pula: arestas do grafo que cruzam obstáculos puláveis
 exigem uma flag que nunca liga, e ela espera do lado de cá. Eventos: `dog:jump` e `dog:land`.
+
+**Superbafo** (`game.js` + `src/game/mechanics/scent.js`): só quem tem `bafoSpeed` nas estatísticas (a Radhija).
+Segurando R/L2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
+soltando, "HÁÁÁ!": nasce uma nuvem na frente dela (`dog:bafo`). Depois ela fica toda orgulhosa; a Rhaenyra perto
+de uma nuvem vira a cara (`dog:yuck`). Mirar é cancelado ao pausar ou trocar de dog. Ver §5.1.
 
 **Fica / Vem**: F alterna a companheira entre seguir e ficar sentada onde está. Quem vira ativa perde o "Fica";
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.
@@ -232,7 +261,7 @@ depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar 
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,
 `carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
 `airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
-`dash`, `turn`, `shake`, `startled`, `jump`. A pose de boca é detectada pelo nome
+`dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`. A pose de boca é detectada pelo nome
 (ou `userData.carryKind`) do objeto no `mouthSocket` ou pela forma dele.
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
@@ -252,7 +281,9 @@ Barramento em `src/core/events.js`. Quem emite e quem ouve:
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
-  `companion:stay`.
+  `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`.
+- **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; Arena do Bafo: `fan:aligned`,
+  `pigeon:flee`, `pigeon:land`.
 - **Itens**: `item:pickup`, `item:revealed`, `collectible:pickup {count, total}`, `celebrate:start`.
 - **Mecânicas** (sempre com `x, z`): `plate:press`/`plate:release`, `gate:open`/`gate:close`/`gate:locked`, `wedge:kick`,
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
@@ -283,7 +314,7 @@ O ambiente por fase vem de `def.ambience`.
 |---|---|---|
 | `npm test` | testes em Node (`test/*.test.mjs`): as 3 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~5 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–3, controle, regressões e pulo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~11 min |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–3, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~11 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~12 min |
 
@@ -292,7 +323,7 @@ props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devo
 `hold([dx, dz], ['ShiftLeft'])`, `run(segundos, { until })`, `teleport`, `info()` e `log(evento)`. É a forma mais
 rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 
-**Partidas no navegador** (`tools/scripts/playthrough*.mjs`, `test-gamepad.mjs`, `test-regressoes.mjs`, `test-pulo.mjs`): usam
+**Partidas no navegador** (`tools/scripts/playthrough*.mjs`, `test-gamepad.mjs`, `test-regressoes.mjs`, `test-pulo.mjs`, `test-bafo.mjs`): usam
 `tools/scripts/lib/harness.mjs` (Chrome do sistema, teclas reais, leitura do estado por `window.__game`).
 Capturas vão para `shots/` (fora do git).
 
