@@ -11,7 +11,7 @@ import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, info, ev, shot, logOf, clearLog, walkPath, load, waitFor, page } = H;
+const { check, sleep, info, ev, shot, logOf, clearLog, walkPath, load, waitFor, record, page } = H;
 const PAD_A = 0; // ✕
 const PAD_B = 1; // ○
 
@@ -84,19 +84,24 @@ try {
   i = await info();
   check(i.state === 'celebrating', 'entregou a cenoura → comemoração', i.state);
   const spot = await ev(() => window.__game.layout.GOAL.celebrate.radhija);
+  // Quadro a quadro na página: lendo por info() (uma ida e volta por amostra), uma máquina carregada deixa passar
+  // vários quadros entre duas leituras e a caminhada normal parecia um "salto" de 0,9 m.
+  const rec = await record((g) => {
+    const d = g.debug.info().dogs.radhija;
+    return { state: g.state, x: d.x, z: d.z, action: d.action, visible: d.visible };
+  });
+  const near = (d) => Math.hypot(d.x - spot.x, d.z - spot.z) < 0.6 && (d.action === 'celebrate' || d.action === 'sit');
+  i = await waitFor((s) => near(s.dogs.radhija), { timeout: 14000, step: 100 });
+  const frames = await rec.stop();
   const wrong = [];
-  let prev = i.dogs.radhija;
   let arrived = null;
-  const t0 = Date.now();
-  while (Date.now() - t0 < 14000 && !arrived) {
-    await sleep(40);
-    i = await info();
-    const d = i.dogs.radhija;
-    const dist = Math.hypot(d.x - spot.x, d.z - spot.z);
-    if ((d.action === 'celebrate' || d.action === 'sit') && dist > 0.8) wrong.push(`${i.state}: ${d.action} a ${dist.toFixed(2)} m`);
-    if (Math.hypot(d.x - prev.x, d.z - prev.z) > 0.9 && (prev.visible || d.visible)) wrong.push('reapareceu à vista');
-    if (dist < 0.6 && (d.action === 'celebrate' || d.action === 'sit')) arrived = i.state;
-    prev = d;
+  let prev = frames[0];
+  for (const f of frames) {
+    const dist = Math.hypot(f.x - spot.x, f.z - spot.z);
+    if ((f.action === 'celebrate' || f.action === 'sit') && dist > 0.8) wrong.push(`${f.state}: ${f.action} a ${dist.toFixed(2)} m`);
+    if (Math.hypot(f.x - prev.x, f.z - prev.z) > 0.9 && (prev.visible || f.visible)) wrong.push('reapareceu à vista');
+    if (!arrived && near(f)) arrived = f.state;
+    prev = f;
   }
   check(wrong.length === 0, 'não comemora longe do lugar nem aparece do nada na tela', wrong.slice(0, 3).join(' | '));
   check(!!arrived, 'a Radhija chega ao lugar e comemora/senta', arrived || 'não chegou');

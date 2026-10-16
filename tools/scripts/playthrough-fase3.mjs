@@ -77,7 +77,10 @@ async function fullRun() {
   check(i.gate.locked && i.stage === 'gateOpen', 'as duas pedras juntas → portão abre e trava (gateOpen)', JSON.stringify(i.gate));
   check((await logOf('gate:open')).length === 1 && (await logOf('gate:locked')).length === 1, 'gate:open + gate:locked');
   check((await logOf('item:revealed')).some((p) => p.item === 'slipper'), 'item:revealed {item:slipper}');
-  check(i.camera.shot, 'plano de foco do portão com as lanternas');
+  // o plano dura ~2 s e começa no meio do caminho: confere o registro (camera:shot) em vez do instante
+  const go = (await logOf('gate:open'))[0];
+  const camShots = await logOf('camera:shot');
+  check(!!go && camShots.some((c) => Math.hypot(c.x - (go.x - 0.2), c.z - go.z) < 0.3), 'plano de foco do portão com as lanternas', JSON.stringify(camShots));
   await sleep(500);
   await shot('f3-04-portao-aberto-lanternas.png');
 

@@ -7,7 +7,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, page } = H;
+const { check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, page } = H;
 
 const SPR = { x: -0.4, z: -1.5, r: 2.2 };
 const TAU = Math.PI * 2;
@@ -123,18 +123,19 @@ async function fullRun() {
   i = await info();
   check(i.objective.startsWith('Trave o portão'), 'objetivo: trave o portão com a arrancada', i.objective);
   await walkTo(-0.95, 2.35, { tol: 0.06 });
+  let nShots = (await logOf('camera:shot')).length;
   await page.keyboard.down('KeyA');
-  await sleep(60);
+  await gsleep(60);
   await page.keyboard.press('ShiftLeft');
-  await sleep(500);
+  await gsleep(500);
   await page.keyboard.up('KeyA');
-  await sleep(400);
+  await gsleep(400);
   i = await info();
   const wk = await logOf('wedge:kick');
   check(i.wedge.locked && wk.some((w) => w.locked), 'arrancada no calço com o portão aberto → travado (wedge:kick locked)', JSON.stringify(i.wedge));
   check((await logOf('gate:locked')).length === 1, 'gate:locked emitido');
   check(i.stage === 'gateLocked', 'etapa gateLocked', i.stage);
-  check(i.camera.shot, 'plano de foco do calço/portão');
+  check((await logOf('camera:shot')).length > nShots, 'plano de foco do calço/portão');
   await shot('f2-06-calco-travado.png');
 
   // 6) Vem (F): a Rhaenyra sai da tábua e o portão continua aberto
@@ -158,6 +159,7 @@ async function fullRun() {
   await sleep(200);
   i = await info();
   check(i.prompt === 'Fechar o registro', 'prompt "Fechar o registro"', i.prompt);
+  nShots = (await logOf('camera:shot')).length;
   await press('KeyE', 300);
   i = await info();
   check(i.dogs.radhija.action === 'turn', 'Radhija gira o registro (action turn)', i.dogs.radhija.action);
@@ -167,7 +169,7 @@ async function fullRun() {
   i = await info();
   check(!i.sprinkler.running && i.stage === 'sprinklersOff', 'registro fechado → irrigador desligado (sprinklersOff)', JSON.stringify(i.sprinkler));
   check((await logOf('valve:turn')).length === 1 && (await logOf('sprinkler:off')).length === 1, 'valve:turn e sprinkler:off');
-  check(i.camera.shot, 'plano de foco do irrigador desligando');
+  check((await logOf('camera:shot')).length > nShots, 'plano de foco do irrigador desligando');
   await sleep(600);
   await shot('f2-09-irrigador-desligado.png');
 
@@ -186,11 +188,10 @@ async function fullRun() {
   check((await logOf('hint')).some((h) => h.text === 'Segure Shift para empurrar'), 'dica "Segure Shift para empurrar"');
   await page.keyboard.down('ShiftLeft');
   await page.keyboard.down('KeyD');
-  await sleep(700);
-  i = await info();
+  i = await gsleep(700);
   check(i.crate.pushing && i.dogs.rhaenyra.action === 'push', 'empurrando o caixote (push)', JSON.stringify(i.crate));
   await shot('f2-10-empurrando-caixote.png');
-  await sleep(1700);
+  await gsleep(1700);
   await page.keyboard.up('KeyD');
   await page.keyboard.up('ShiftLeft');
   i = await info();
