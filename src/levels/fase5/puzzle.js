@@ -74,7 +74,7 @@ export function createPuzzle(ctx) {
       cam?.focusShot(WALL_HK.x, BOX_PILLOWS.start.z, { hold: 1.0 });
     }
     S.boxClear = true;
-    setStage('boxClear');
+    refreshStage();
   }
 
   // ---------- trava do portãozinho (lado do corredor) ----------
@@ -95,7 +95,7 @@ export function createPuzzle(ctx) {
       hints.now('gateOpen', 3.2, 4);
       cam?.focusShot(gateMid.x, gateMid.z, { hold: 0.9 });
     }
-    setStage('gateOpen');
+    refreshStage();
   }
 
   /** @type {(stage: string) => void} */
@@ -105,6 +105,15 @@ export function createPuzzle(ctx) {
     S.stage = st;
     S.objKey = '';
     onStageChange(st);
+  }
+  /**
+   * A etapa vem do estado, não da ordem em que as coisas aconteceram: a primeira condição que falta.
+   * A Rhaenyra pode pular o portãozinho e desmontar a caixa antes de abrir a trava; aí a fase continua
+   * em 'start' (falta abrir a trava para a Radhija) e vai direto para 'boxClear' quando ela abrir.
+   */
+  function refreshStage() {
+    if (S.stage === 'carrying' || S.stage === 'done') return;
+    setStage(!gate.locked ? 'start' : !S.boxClear ? 'gateOpen' : 'boxClear');
   }
 
   const inHall = (c) => c.x > WALL_SH.x && c.x < WALL_HK.x;
@@ -166,12 +175,13 @@ export function createPuzzle(ctx) {
     }
 
     // dicas de contato
-    if (S.stage === 'start' && active.hits?.some((h) => h.id === 'portaozinho')) {
+    if (!gate.locked && active.hits?.some((h) => h.id === 'portaozinho')) {
       hints.cond(active.size === 'large' ? 'gateJump' : 'gateRad', 3.4, 9);
     }
     if (active.size === 'large' && active.hits?.some((h) => h.id === 'mesa-toalha')) hints.cond('tableBig', 3.4, 10);
 
-    const prompt = latch.near(active) && S.stage === 'start' ? 'latch' : nearBear(active) ? 'bear' : null;
+    // a trava vale enquanto o portãozinho estiver fechado, em qualquer etapa
+    const prompt = !gate.locked && latch.near(active) ? 'latch' : nearBear(active) ? 'bear' : null;
     hints.setPrompt(prompt);
     cols.update(active);
 
@@ -190,10 +200,10 @@ export function createPuzzle(ctx) {
   }
 
   function interact(c) {
-    if (S.stage === 'start' && latch.near(c)) { latch.start(c); return true; }
+    if (!gate.locked && latch.near(c)) { latch.start(c); return true; }
     if (nearBear(c)) { pickup(c.name); return true; }
     // do lado da sala, a trava não alcança
-    if (S.stage === 'start' && c.x < WALL_SH.x && Math.hypot(c.x - gateMid.x, c.z - gateMid.z) < 1.0) {
+    if (!gate.locked && c.x < WALL_SH.x && Math.hypot(c.x - gateMid.x, c.z - gateMid.z) < 1.0) {
       hints.now('latchSide', 3.2, 4);
       return true;
     }
@@ -243,7 +253,7 @@ export function createPuzzle(ctx) {
     lockFor: (name) => latch.lockFor(name),
     lookTarget: (c) => {
       if (nearBear(c)) return { x: BEAR.x, y: 0.1, z: BEAR.z };
-      if (S.stage === 'start' && latch.near(c)) return { x: PET_GATE.latchPost.x, y: 0.4, z: PET_GATE.latchPost.z };
+      if (!gate.locked && latch.near(c)) return { x: PET_GATE.latchPost.x, y: 0.4, z: PET_GATE.latchPost.z };
       return null;
     },
     navFlags: () => ({ petGate: gate.isOpen(0.9), boxClear: S.boxClear }),

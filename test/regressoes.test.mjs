@@ -58,6 +58,65 @@ test('regressão: item na boca não passa para outra fase escolhida no meio da p
 // Som ambiente errado ao abrir direto numa fase nova: o feedback lia o ambiente de window.__game, que ainda
 // não existe na carga inicial, e caía no número da fase (só conhecia 1–3). Agora o ambiente vem no evento.
 // ---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+// Fase 5 sem saída: a Rhaenyra pulava o portãozinho SEM abrir a trava, pulava a barricada e desmontava a
+// caixa de almofadas; a fase ia direto para a etapa do ursinho e a trava (que só valia na primeira etapa)
+// sumia: a Radhija ficava presa na sala. Agora a etapa vem do estado e a trava vale enquanto o portão
+// estiver fechado.
+// ---------------------------------------------------------------------------------------------------
+test('regressão: fase 5 — desmontar a caixa antes de abrir a trava não some com a trava', async () => {
+  const def = LEVELS.find((d) => d.id === 'fase5');
+  const L = def.layout;
+  const B = L.BOX_PILLOWS;
+  const h = await createHeadlessGame({ level: LEVELS.indexOf(def) + 1, query: 'dog=rhaenyra' });
+  const jumpFrom = (x, z, dx, dz) => {
+    h.walkTo(x, z, { tol: 0.08 });
+    h.hold([dx, dz]);
+    h.run(0.12);
+    h.tap('Space');
+    h.run(0.55);
+    h.hold(null);
+    h.run(0.2);
+  };
+  // pula o portãozinho e segue direto, sem abrir a trava
+  jumpFrom(L.WALL_SH.x - 0.62, 0.4, 1, 0);
+  assert.ok(h.ctrls.rhaenyra.x > L.WALL_SH.x, 'pulou o portãozinho');
+  jumpFrom(B.start.x - B.half - 0.36, B.start.z, 1, 0);
+  assert.ok(h.ctrls.rhaenyra.x > B.start.x + B.half, 'pulou para a cozinha');
+  h.walkTo(B.start.x + B.half + 0.3, B.start.z, { tol: 0.08 });
+  h.hold([-1, 0], ['ShiftLeft']);
+  assert.ok(h.run(5, { until: (s) => s.box.collapsed }), 'a caixa desmontou');
+  h.hold(null);
+  h.run(0.6);
+  let i = h.info();
+  assert.ok(!i.gate.locked, 'o portãozinho continua fechado');
+  assert.equal(i.stage, 'start', 'a etapa espera a trava (falta abrir para a Radhija)');
+  assert.equal(i.objective, 'Abra a trava do portãozinho para a Radhija (E)');
+  assert.deepEqual(h.puzzle.navFlags(), { petGate: false, boxClear: true });
+
+  // a trava continua lá
+  h.walkPath([[N(L).H_box.x, N(L).H_box.z], [L.LATCH.x + 0.32, L.LATCH.z + 0.1, { tol: 0.1 }]]);
+  h.hold([-1, -0.2]);
+  h.run(0.15);
+  h.hold(null);
+  assert.equal(h.info().prompt, 'Abrir a trava', 'o prompt da trava aparece');
+  h.tap('KeyE');
+  assert.ok(h.run(2, { until: (s) => s.gate.locked }), 'a trava abre o portãozinho');
+  i = h.info();
+  assert.equal(i.stage, 'boxClear', 'com a caixa já desmontada, vai direto para a etapa do ursinho');
+
+  // e a fase termina: a Radhija atravessa, pega o ursinho e volta para a caminha
+  h.tap('KeyQ');
+  const n = N(L);
+  h.walkPath([[n.S_gate.x, n.S_gate.z], [n.H_gate.x, n.H_gate.z], [n.H_box.x, n.H_box.z], [n.K_door.x, n.K_door.z], [n.K_mid.x, n.K_mid.z], [L.BEAR.x, n.K_table.z], [L.BEAR.x, L.BEAR.z + 0.32, { tol: 0.1 }]]);
+  assert.equal(h.info().prompt, 'Pegar o ursinho');
+  h.tap('KeyE');
+  assert.equal(h.info().carrier, 'radhija');
+  h.walkPath([[L.BEAR.x, n.K_table.z], [n.K_mid.x, n.K_mid.z], [n.K_door.x, n.K_door.z], [n.H_box.x, n.H_box.z], [n.H_gate.x, n.H_gate.z], [n.S_gate.x, n.S_gate.z], [n.S_bed.x, n.S_bed.z], [L.GOAL.x, L.GOAL.z]]);
+  assert.ok(h.run(6, { until: (s) => s.state === 'victory' }), 'vitória');
+});
+const N = (L) => L.NAV_NODES;
+
 test('regressão: level:loaded traz o ambiente da fase (também na carga inicial)', async () => {
   for (const [i, def] of LEVELS.entries()) {
     const h = await createHeadlessGame({ level: i + 1 });
