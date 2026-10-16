@@ -197,7 +197,7 @@ export interface LevelBuildArgs {
 }
 
 export interface LevelBuild<P = LevelProps> {
-  /** Props visuais que o puzzle anima (portão, item, placas…). Ver Fase1Props/Fase2Props/Fase3Props. */
+  /** Props visuais que o puzzle anima (portão, item, placas…). Ver Fase1Props…Fase5Props. */
   props: P;
   /** Objetos que podem ficar entre a câmera e as dogs (recebem o "ver através" pontilhado). */
   seeThrough?: (THREE.Object3D | null | undefined)[];
@@ -460,6 +460,25 @@ export interface Fase3Props extends LevelProps {
   collectibles: CollectibleProp[];
 }
 
+/** Fase 4 (src/levels/fase4/world/). */
+export interface Fase4Props extends LevelProps {
+  /** Ventilador no trilho: setAligned(on) acende a luz verde do encaixe. */
+  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void };
+  gate: GateProp;
+  /** Placa no poleiro B (o pombo pousa). */
+  plate: PressProp;
+  /** Pombo do portão / pombo da passagem: pose dos pés; flying bate as asas; asleep cochila. */
+  pigeon: PropBase & { setPose(p: PigeonPose): void };
+  napPigeon: PropBase & { setPose(p: PigeonPose): void; peek(): void };
+  duck: ItemProp;
+  /** Bacia d'água: setRipple(k) agita a água (ao pegar o patinho). */
+  basin: PropBase & { setRipple(k: number): void };
+  /** Capacho da casa da escada (brilha com o patinho a caminho). */
+  goal: PropBase & HighlightProp;
+  collectibles: CollectibleProp[];
+}
+export interface PigeonPose { x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean }
+
 // =====================================================================================================
 // Personagens
 // =====================================================================================================
@@ -527,6 +546,8 @@ declare global {
     /** Tempos de montagem do cenário (depuração). */
     __f2Timings?: any;
     __f3Timings?: any;
+    __f4Timings?: any;
+    __f5Timings?: any;
     __envTimings?: any;
     webkitAudioContext?: typeof AudioContext;
   }

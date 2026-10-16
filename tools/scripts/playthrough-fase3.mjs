@@ -160,7 +160,7 @@ async function fullRun() {
   i = await waitFor((s) => s.state === 'victory', { timeout: 5000 });
   check(i.state === 'victory', 'vitória da fase 3');
   const vic = await logOf('victory');
-  check(vic.length === 1 && vic[0].levelId === 'fase3' && vic[0].hasNext === false, 'evento victory (fase3, última)', JSON.stringify(vic[0] || {}));
+  check(vic.length === 1 && vic[0].levelId === 'fase3' && vic[0].hasNext === true, 'evento victory (fase3, com a fase 4 depois)', JSON.stringify(vic[0] || {}));
   await sleep(1500);
   await shot('f3-09-vitoria.png');
 

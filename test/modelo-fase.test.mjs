@@ -9,7 +9,7 @@ import modelo from '../src/levels/_modelo/index.js';
 const levels = [...LEVELS, modelo];
 
 test('modelo: Rhaenyra na placa com Fica, Radhija busca a bolinha e volta', async () => {
-  const h = await createHeadlessGame({ level: 4, levels });
+  const h = await createHeadlessGame({ level: levels.length, levels });
   assert.equal(h.info().levelId, 'modelo');
 
   // Rhaenyra vai para a placa; troca para a Radhija e pede o Fica.
@@ -33,7 +33,7 @@ test('modelo: Rhaenyra na placa com Fica, Radhija busca a bolinha e volta', asyn
 
 test('modelo: ?stage= pula para cada etapa', async () => {
   for (const s of ['gateOpen', 'carrying']) {
-    const h = await createHeadlessGame({ level: 4, levels, query: `stage=${s}` });
+    const h = await createHeadlessGame({ level: levels.length, levels, query: `stage=${s}` });
     assert.equal(h.info().stage, s);
   }
 });

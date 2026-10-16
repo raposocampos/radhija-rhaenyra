@@ -106,7 +106,7 @@ test('fase 3: partida completa (duas pedras → portão → latido distrai a gan
   assert.ok(h.run(5, { until: (s) => s.state === 'victory' }));
   const vic = h.log('victory');
   assert.equal(vic[0].levelId, 'fase3');
-  assert.equal(vic[0].hasNext, false);
+  assert.equal(vic[0].hasNext, true); // depois dela vem a fase 4
 
   h.events.emit('ui:restart', {});
   h.run(0.3);
