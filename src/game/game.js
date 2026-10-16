@@ -11,6 +11,8 @@ import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
 import { applySeeThroughTo } from '../world/seeThrough.js';
+import { createScentField } from './mechanics/scent.js';
+import { createScentView } from '../fx/scentView.js';
 
 const NAMES = ['radhija', 'rhaenyra'];
 const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
@@ -33,6 +35,7 @@ const RUMBLE = {
   'crate:sink': () => [0.4, 0.2, 260],
   'plate:press': () => [0.08, 0.2, 60],
   'dog:land': () => [0.18, 0.22, 70],
+  'dog:bafo': () => [0.12, 0.4, 260],
 };
 
 /** Libera geometrias/texturas próprias de uma fase (materiais em cache são compartilhados). */
@@ -77,6 +80,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let puzzle = null;
   let dbg = null;
   let cam = null;
+  let scent = null; // cheiro do superbafo (recriado por fase)
   let ctrls = null;
   const brains = { radhija: createBrain(), rhaenyra: createBrain() };
   const anims = {};
@@ -96,6 +100,9 @@ export function createGame({ engine, dogs, levels, params }) {
   let barkCd = 0;
   let loadingPromise = null;
   const cel = { radhija: {}, rhaenyra: {} };
+  // Superbafo (só quem tem cfg.bafoSpeed, a Radhija): segurar mira, soltar sopra.
+  const bafo = { held: false, aiming: false, cd: 0, blowT: 0, proudT: 0, hintCd: 0 };
+  const yuck = { radhija: { t: 0, cd: 0 }, rhaenyra: { t: 0, cd: 0 } }; // "eca!" perto de uma nuvem
 
   // ---------- passos ----------
   const steps = { radhija: { seen: false, acc: 0 }, rhaenyra: { seen: false, acc: 0 } };
@@ -154,6 +161,57 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     if (s === 'title' || s === 'intro') cam.setMode('title', { dur: prev === 'loading' ? 0.01 : 1.2 });
     if (s !== 'playing') puzzle?.setPrompt?.(null);
+    if (s !== 'playing') cancelBafo();
+  }
+
+  function cancelBafo() {
+    bafo.aiming = false;
+    bafo.blowT = 0;
+    bafo.proudT = 0;
+    scent?.hidePreview();
+  }
+
+  /** Boca da dog (onde nasce a nuvem do bafo). */
+  const mouthOf = (c) => ({ x: c.x + Math.sin(c.yaw) * 0.36, z: c.z + Math.cos(c.yaw) * 0.36 });
+  const bafoShot = (c) => {
+    const m = mouthOf(c);
+    return { x: m.x, z: m.z, dirX: Math.sin(c.yaw), dirZ: Math.cos(c.yaw), speed: c.cfg.bafoSpeed, life: c.cfg.bafoLife ?? 5 };
+  };
+
+  function blow(c) {
+    bafo.aiming = false;
+    scent.hidePreview();
+    const shot = bafoShot(c);
+    scent.spawn(shot);
+    emit('dog:bafo', { name: c.name, x: shot.x, z: shot.z, dirX: shot.dirX, dirZ: shot.dirZ });
+    bafo.cd = c.cfg.bafoCooldown ?? 0.8;
+    bafo.blowT = 0.45;
+    bafo.proudT = 1.9;
+  }
+
+  /** Rhaenyra perto de uma nuvem: vira a cara e abana o focinho ("eca!"); só enquanto não está andando. */
+  function reactToScent(n, dt) {
+    const c = ctrls[n];
+    const Y = yuck[n];
+    Y.cd = Math.max(0, Y.cd - dt);
+    const cloud = n === 'rhaenyra' ? scent.near(c.x, c.z, 0.45) : null;
+    if (cloud) {
+      if (Y.t <= 0 && Y.cd <= 0) {
+        Y.cd = 2.5;
+        emit('dog:yuck', { name: n, x: c.x, z: c.z });
+      }
+      Y.t = 1.0;
+      Y.fromX = cloud.x;
+      Y.fromZ = cloud.z;
+    }
+    if (Y.t <= 0) return;
+    Y.t -= dt;
+    if (c.animSpeed > 0.4 || (anims[n].action && anims[n].action !== 'none' && anims[n].action !== 'sit')) return;
+    anims[n].action = 'yuck';
+    const ax = c.x - Y.fromX;
+    const az = c.z - Y.fromZ;
+    const L = Math.hypot(ax, az) || 1;
+    setLook(n, { x: c.x + (ax / L) * 1.5, y: 0.45, z: c.z + (az / L) * 1.5 });
   }
 
   function setStay(name, on, { silent = false } = {}) {
@@ -166,6 +224,7 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   function switchDog() {
+    cancelBafo();
     activeDog = other(activeDog);
     setStay(activeDog, false); // quem vira ativa perde o "fica"
     const comp = other(activeDog);
@@ -292,6 +351,37 @@ export function createGame({ engine, dogs, levels, params }) {
       if (pr.intent) intent = pr.intent;
       if (pr.action) action = pr.action;
     }
+    // Superbafo (R / L2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
+    const bafoHeld = input.bafo();
+    bafo.cd = Math.max(0, bafo.cd - dt);
+    bafo.hintCd = Math.max(0, bafo.hintCd - dt);
+    if (A.cfg.bafoSpeed && !lock) {
+      if (bafoHeld && !bafo.held && !bafo.aiming && bafo.cd <= 0 && !(A.jumpT > 0) && A.dashT <= 0) {
+        bafo.aiming = true;
+        bafo.proudT = 0;
+        emit('bafo:aim', { name: A.name, x: A.x, z: A.z });
+      }
+      if (bafo.aiming) {
+        const fx = Lm > 1e-4 ? dx : Math.sin(A.yaw);
+        const fz = Lm > 1e-4 ? dz : Math.cos(A.yaw);
+        intent = { dx: 0, dz: 0, speed: 0, faceX: A.x + fx, faceZ: A.z + fz };
+        action = 'bafoAim';
+        scent.showPreview(scent.preview(bafoShot(A)));
+        if (!bafoHeld) blow(A);
+      }
+    } else if (bafoHeld && !bafo.held && !A.cfg.bafoSpeed && bafo.hintCd <= 0) {
+      bafo.hintCd = 6;
+      emit('hint', { text: 'Só a Radhija tem o superbafo! (Q)', duration: 2.6 });
+    }
+    bafo.held = bafoHeld;
+    if (bafo.blowT > 0) {
+      bafo.blowT -= dt;
+      intent = { dx: 0, dz: 0, speed: 0 };
+      action = 'bafo';
+    } else if (bafo.proudT > 0) {
+      bafo.proudT -= dt;
+      if (action === 'none' && A.animSpeed < 0.3 && Lm < 1e-4) action = 'proud';
+    }
     if (A.dashT > 0) action = 'dash';
     if (A.jumpT > 0) action = 'jump';
 
@@ -333,6 +423,7 @@ export function createGame({ engine, dogs, levels, params }) {
     if (input.consume('Bark') && !lock) bark(A);
     const ev = puzzle.update(dt, { active: A, comp: C, ctrls, stay });
     setLook(activeDog, puzzle.lookTarget(A));
+    for (const n of NAMES) reactToScent(n, dt);
     if (ev === 'delivered') startCelebration();
   }
 
@@ -493,6 +584,8 @@ export function createGame({ engine, dogs, levels, params }) {
   function reset() {
     for (const n of NAMES) setStay(n, false, { silent: true });
     puzzle.reset();
+    scent.reset();
+    cancelBafo();
     activeDog = initialDog;
     placeStart();
     playTime = 0;
@@ -558,12 +651,14 @@ export function createGame({ engine, dogs, levels, params }) {
 
       world = createCollisionWorld(L);
       nav = createNavigator(L, world);
+      scent = createScentField({ world, emit, view: createScentView(root) });
+      cancelBafo();
       if (!cam) cam = createCameraRig(engine.camera, L);
       else cam.configure(L);
       if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
       for (const n of NAMES) setStay(n, false, { silent: true });
       puzzle = def.createPuzzle({
-        layout: L, props: built.props, world, nav, dogs, ctrls, emit, cam, root, place, params, engine,
+        layout: L, props: built.props, world, nav, scent, dogs, ctrls, emit, cam, root, place, params, engine,
         get activeDog() { return activeDog; },
         isStaying: (n) => stay[n],
         setStay: (n, on) => setStay(n, on),
@@ -654,7 +749,10 @@ export function createGame({ engine, dogs, levels, params }) {
     if (state === 'playing') updatePlaying(dt);
     else if (state === 'celebrating') updateCelebrating(dt);
     else updateIdle(dt);
-    if (state === 'playing' || state === 'celebrating') puzzle.updateAlways?.(dt);
+    if (state === 'playing' || state === 'celebrating') {
+      puzzle.updateAlways?.(dt);
+      scent.update(dt);
+    }
     applyDogs(dt);
     built?.update?.(dt, t);
     const a = ctrls[activeDog];
@@ -684,6 +782,7 @@ export function createGame({ engine, dogs, levels, params }) {
       carrier: puzzle.carrier, collected: puzzle.collected, total: puzzle.total,
       timeSec: +playTime.toFixed(2), prompt: puzzle.S?.prompt ?? null,
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
+      bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent.info(),
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam.mode, shot: cam.shotActive },
     };
   }
@@ -719,6 +818,7 @@ export function createGame({ engine, dogs, levels, params }) {
       clearLog: () => { log.length = 0; },
       get world() { return world; },
       get nav() { return nav; },
+      get scent() { return scent; },
       get ctrls() { return ctrls; },
       get puzzle() { return puzzle; },
       brains,

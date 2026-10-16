@@ -26,6 +26,10 @@ export const DOGS = {
     dashSpeed: 6.0,
     dashTime: 0.3,
     dashCooldown: 0.8,
+    // Superbafo (R / L2): nuvem soprada a ~2,6 m/s que dura ~5 s (ver src/game/mechanics/scent.js).
+    bafoSpeed: 2.6,
+    bafoLife: 5,
+    bafoCooldown: 0.8,
     accel: 16,
     decel: 20,
     turnSpeed: 13, // rad/s máx. de giro do corpo

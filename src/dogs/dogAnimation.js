@@ -1,6 +1,7 @@
 // Animação procedural da dog, resolvida a cada quadro: trote/passo/galope com pés plantados (IK),
 // todas as ações do jogo (sentar, empurrar, forçar, puxar a corda, comemorar, farejar, arrancada,
-// girar o registro, chacoalhar, susto, pulo), olhar, boca, orelhas com mola, cauda, piscadas, vento no pelo,
+// girar o registro, chacoalhar, susto, pulo, superbafo: mirar/soprar/orgulhosa, "eca!"), olhar, boca, orelhas
+// com mola, cauda, piscadas, vento no pelo,
 // sombra de contato e âncora do marcador.
 // Entrada: update(dt, { speed, turn, action, lookAt, carrying, jump (altura do pulo), airK (0..1 no ar; −1 no chão) }).
 import * as THREE from 'three';
@@ -26,7 +27,7 @@ function createAnimState() {
     idle: 0,
     lean: 0,
     turnS: 0,
-    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0, jump: 0 },
+    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0, jump: 0, aim: 0, blow: 0, proud: 0, yuck: 0 },
     shakeT: 9,
     startT: 9,
     wet: 0,
@@ -135,6 +136,11 @@ export function createDogAnimation(ctx) {
     st.prevAir = inAir;
     st.landT += dt;
     const land = st.landT < 0.5 ? Math.exp(-st.landT * 9) * sstep(0, 0.04, st.landT) : 0;
+    // superbafo: aim = enche o peito mirando; blow = "HÁÁÁ!"; proud = toda orgulhosa; yuck = vira a cara
+    w.aim = damp(w.aim, action === 'bafoAim' ? 1 : 0, 9);
+    w.blow = damp(w.blow, action === 'bafo' ? 1 : 0, 20);
+    w.proud = damp(w.proud, action === 'proud' ? 1 : 0, 5);
+    w.yuck = damp(w.yuck, action === 'yuck' ? 1 : 0, 7);
 
     // comemoração: pulinhos → giro → "play bow"
     let hopTarget = 0, bowTarget = 0, spinTarget = null, celHappy = w.celebrate;
@@ -180,7 +186,7 @@ export function createDogAnimation(ctx) {
     f = lerp(f, f * 0.72, w.push);
     f = lerp(f, 3.8, w.strain);
     const turning = sstep(0.4, 1.5, Math.abs(st.turnS)) * (1 - st.move);
-    const gaitAmp = Math.max(st.move, turning * 0.6, w.strain) * (1 - Math.max(w.tug, w.turn)) * (1 - w.sit) * (1 - w.bow) * (1 - shkEnv * 0.9) * (1 - ws * 0.7) * (1 - w.jump);
+    const gaitAmp = Math.max(st.move, turning * 0.6, w.strain) * (1 - Math.max(w.tug, w.turn)) * (1 - w.sit) * (1 - w.bow) * (1 - shkEnv * 0.9) * (1 - ws * 0.7) * (1 - w.jump) * (1 - Math.max(w.aim, w.blow));
     st.phase = fract(st.phase + f * dt);
     const L = v / Math.max(f, 0.5);
     const walk = 1 - sstep(0.55, 1.1, v);
@@ -205,11 +211,11 @@ export function createDogAnimation(ctx) {
     const boundY = 0.022 * s * (0.5 + 0.5 * Math.sin(sp2 - 2.4)) * w.dash;
     st.lean = damp(st.lean, clamp(-st.turnS * v * 0.075, -0.32, 0.32), 6);
     const breathe = Math.sin(t * (2.2 + 3 * st.move)) * 0.0016 * s;
-    const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s;
+    const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s + w.aim * Math.sin(t * 41) * 0.0012 * s;
 
-    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.5 * airK - 0.24) + land * 0.08;
-    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s;
-    let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s;
+    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.5 * airK - 0.24) + land * 0.08 - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06;
+    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s;
+    let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s - w.aim * 0.012 * s + w.blow * 0.015 * s - w.yuck * 0.02 * s;
     const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s;
     qE(_q, pitch, 0, st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
     _rootPos.set(rest[0].x + rootX, rest[0].y + rootY, rest[0].z + rootZ);
@@ -362,24 +368,24 @@ export function createDogAnimation(ctx) {
     st.lookPitch = damp(st.lookPitch, tPitch, 5);
 
     // ---------------- pescoço e cabeça (cabeça estabilizada)
-    const shake = w.tug * Math.sin(t * 15) * 0.32;
+    const shake = w.tug * Math.sin(t * 15) * 0.32 + w.yuck * Math.sin(t * 13) * 0.22;
     // registro: torce a cabeça (rolagem) em catraca — gira devagar, volta rápido
     const tu = fract(t * 0.85);
     const turnRoll = w.turn * (tu < 0.72 ? lerp(-0.42, 0.48, sstep(0, 0.72, tu)) : lerp(0.48, -0.42, sstep(0.72, 1, tu)));
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
-    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK);
+    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05;
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
     qE(_q, bodyPitchW * 0.35 + neckPitch, st.lookYaw * 0.45 + shake * 0.3 + shk(0.5) * 0.25, shk(0.5) * 0.3 + turnRoll * 0.3);
     setWorld(BI.neck, _q);
-    const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12;
-    const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04;
+    const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12;
+    const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 + w.proud * 0.12;
     qE(_q, headPitch, st.lookYaw + shake + shk(0) * 0.35, headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
     setWorld(BI.head, _q);
     fk(BI.jaw);
 
     // ---------------- boca (latido, comemoração, carregando)
     const pant = (celHappy * 0.6 + st.move * sstep(1.2, 2.4, v) * 0.5) * (1 - w.carry);
-    const openT = Math.max(barkEnv, pant * (0.55 + 0.45 * Math.sin(t * 9)) * (1 - ws), w.carry * carry.open, w.turn * 0.4);
+    const openT = Math.max(barkEnv, pant * (0.55 + 0.45 * Math.sin(t * 9)) * (1 - ws), w.carry * carry.open, w.turn * 0.4, w.blow, w.proud * 0.35);
     st.mouthOpen = damp(st.mouthOpen, openT, 20);
     const mo = st.mouthOpen;
     lip.scale.set(mouthW, 0.0022 * s + mo * 0.011 * s, 0.009 * s + mo * 0.004 * s);
@@ -404,8 +410,8 @@ export function createDogAnimation(ctx) {
       // aceleração no referencial da cabeça
       _q.copy(object.quaternion).multiply(inner.quaternion).multiply(Wq[BI.head]).invert();
       const aL = _v3.copy(st.headAcc).applyQuaternion(_q);
-      const pitchT = w.dash * 1.15 + Math.min(v, 2.5) * 0.08 + w.push * 0.2 + w.strain * 0.3 + barkEnv * 0.2 + ws * 1.05;
-      const outT = 0.06 + w.dash * 0.35 + celHappy * 0.12 + barkEnv * 0.25 - w.sit * 0.03 - ws * 0.12 + shkEnv * (0.45 + 0.4 * Math.sin(shakePh - 0.4));
+      const pitchT = w.dash * 1.15 + Math.min(v, 2.5) * 0.08 + w.push * 0.2 + w.strain * 0.3 + barkEnv * 0.2 + ws * 1.05 + w.blow * 0.9 + w.yuck * 0.7;
+      const outT = 0.06 + w.dash * 0.35 + celHappy * 0.12 + barkEnv * 0.25 - w.sit * 0.03 - ws * 0.12 + shkEnv * (0.45 + 0.4 * Math.sin(shakePh - 0.4)) + w.aim * 0.2 - w.yuck * 0.05;
       const sub = dt > 0.02 ? 2 : 1;
       const h = dt / sub;
       for (let ei = 0; ei < 2; ei++) {
@@ -425,13 +431,13 @@ export function createDogAnimation(ctx) {
     }
 
     // ---------------- cauda
-    const happy = Math.max(celHappy, w.carry * 0.7, barkEnv);
+    const happy = Math.max(celHappy, w.carry * 0.7, barkEnv, w.proud * 0.9);
     const wagFreqT = lerp(lerp(2.0, 3.2, st.move), 7, happy) * (1 - w.sit * 0.5) * (1 - actionsBusy * 0.5);
     const wagAmpT = lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) + w.bow * 0.2;
     st.wagFreq = damp(st.wagFreq, wagFreqT, 3);
     st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
     st.wagPhase += st.wagFreq * dt * TAU;
-    const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3;
+    const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3 + w.proud * 0.35 + w.aim * 0.15 - w.yuck * 0.2;
     st.tailRaise = damp(st.tailRaise, raiseT, 4);
     for (let k = 0; k < 4; k++) {
       const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);
@@ -452,7 +458,7 @@ export function createDogAnimation(ctx) {
       if (u >= 1) st.blink = 0;
       else lid = Math.sin(Math.PI * u);
     }
-    const squint = celHappy * 0.25 + w.strain * 0.3;
+    const squint = celHappy * 0.25 + w.strain * 0.3 + w.proud * 0.45 + w.yuck * 0.55 + w.blow * 0.4;
     const wide = 1 + ws * 0.22;
     const lidK = lid * (1 - ws);
     for (const e of eyes) e.scale.set(wide, wide * Math.max(0.08, 1 - Math.max(lidK, squint * (1 - ws))), wide);

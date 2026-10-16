@@ -87,6 +87,10 @@ export interface DogStats {
   dashCooldown?: number;
   /** Só a Rhaenyra: velocidade ao empurrar. */
   pushSpeed?: number;
+  /** Só a Radhija: superbafo — velocidade inicial da nuvem (m/s), duração da nuvem (s) e recarga (s). */
+  bafoSpeed?: number;
+  bafoLife?: number;
+  bafoCooldown?: number;
   /** Só a Rhaenyra: pulo — altura (m), duração no ar (s), impulso horizontal mínimo (m/s) e recarga (s). */
   jumpHeight?: number;
   jumpTime?: number;
@@ -278,6 +282,41 @@ export interface MoveIntent {
 }
 
 // =====================================================================================================
+// Cheiro (src/game/mechanics/scent.js) — nuvens do superbafo, vento, dutos e narizes
+// =====================================================================================================
+
+export interface ScentCloud { id: number; x: number; z: number; vx: number; vz: number; r: number; age: number; life: number; state: 'free' | 'duct' }
+/** Faixa de vento a partir de (x, z) na direção (dirX, dirZ). Mova/desligue mexendo no próprio objeto. */
+export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; enabled?: boolean }
+export interface ScentDuct {
+  id?: string;
+  inlet: { x: number; z: number; r: number };
+  outlet: { x: number; z: number; dirX: number; dirZ: number; speed?: number };
+  /** Segundos dentro do duto. */
+  travel?: number;
+  /** O duto só engole nuvens quando ativo (ex.: ventilador alinhado). */
+  active?: () => boolean;
+}
+export interface ScentNose { id: string; x: number; z: number; r?: number; enabled?: boolean; onSmell?(cloud: ScentCloud, nose: ScentNose): void }
+export interface ScentShot { x: number; z: number; dirX?: number; dirZ?: number; speed?: number; life?: number }
+export interface ScentField {
+  spawn(shot: ScentShot): ScentCloud;
+  update(dt: number): void;
+  preview(shot: ScentShot, opts?: { secs?: number; dt?: number }): { points: XZ[]; exits: XZ[]; inDuct: boolean };
+  near(x: number, z: number, margin?: number): ScentCloud | null;
+  windAt(x: number, z: number): XZ;
+  addWind<T extends ScentWind>(w: T): T & Required<Pick<ScentWind, 'length' | 'halfWidth' | 'strength' | 'enabled'>>;
+  addDuct(d: ScentDuct): ScentDuct;
+  addNose(n: ScentNose): ScentNose;
+  reset(): void;
+  showPreview(p: { points: XZ[]; exits: XZ[] }): void;
+  hidePreview(): void;
+  readonly clouds: ScentCloud[];
+  info(): object;
+  [k: string]: any;
+}
+
+// =====================================================================================================
 // Puzzle (src/levels/faseN/puzzle.js) — interface entre o núcleo e a lógica da fase
 // =====================================================================================================
 
@@ -288,6 +327,8 @@ export interface PuzzleContext {
   props: any;
   world: CollisionWorld;
   nav: any;
+  /** Cheiro do superbafo: addWind / addDuct / addNose, nuvens (src/game/mechanics/scent.js). */
+  scent: ScentField;
   /** Modelos das dogs (sobrevivem entre fases). */
   dogs: Record<DogName, DogModel>;
   /** Controladores de movimento (posição, velocidade, raio…). */
@@ -425,7 +466,8 @@ export interface Fase3Props extends LevelProps {
 
 /** Ação de animação pedida a cada quadro (anim.action). */
 export type DogAction =
-  | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled' | 'jump';
+  | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled' | 'jump'
+  | 'bafoAim' | 'bafo' | 'proud' | 'yuck';
 
 export interface DogAnim {
   /** Velocidade real (m/s). */

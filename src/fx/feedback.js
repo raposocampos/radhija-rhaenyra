@@ -377,6 +377,17 @@ export function createFeedback(opts) {
     sfx('land', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.9, alpha: 0.4, strength: 0.55 });
   });
+  // superbafo: mira, sopro (poeira verde), nuvem saindo de duto e a Rhaenyra fazendo "eca"
+  events.on('bafo:aim', ({ x, z }) => sfx('bafoAim', x, z));
+  events.on('dog:bafo', ({ x, z, dirX = 0, dirZ = 0 }) => {
+    sfx('bafo', x, z);
+    particles.dust({ x, y: 0.25, z }, { count: 7, size: 1.1, alpha: 0.5, color: '#A8E07A', dir: { x: dirX, z: dirZ }, strength: 1.1 });
+  });
+  events.on('scent:exit', ({ x, z }) => {
+    sfx('scentPuff', x, z);
+    particles.dust({ x, y: 0.3, z }, { count: 5, size: 1.0, alpha: 0.45, color: '#A8E07A', strength: 0.7 });
+  });
+  events.on('dog:yuck', ({ x, z }) => sfx('yuck', x, z));
   events.on('dog:bump', ({ x, z, strength = 0.7 }) => {
     sfx('bump', x, z, { strength });
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });
