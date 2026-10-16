@@ -1,5 +1,6 @@
 // MODELO DE FASE (não registrado no jogo) — DEFINIÇÃO. Ver docs/COMO-CRIAR-UMA-FASE.md.
-// Usa o cenário provisório em blocos (_placeholder.js); troque por um world/ de verdade.
+// Usa o cenário provisório em blocos (_placeholder.js); troque por um world/ de verdade, carregado sob demanda
+// com `load` (docs/COMO-CRIAR-UMA-FASE.md §8).
 import layout from './layout.js';
 import { createPuzzle } from './puzzle.js';
 import { buildPlaceholderWorld } from '../_placeholder.js';

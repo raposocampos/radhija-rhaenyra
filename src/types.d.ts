@@ -222,7 +222,14 @@ export interface LevelDef {
   texts?: LevelTexts;
   layout: LevelLayout;
   lighting: LightingPreset;
-  build(args: LevelBuildArgs): LevelBuild;
+  /** Monta o cenário e os props dentro de `root`. Numa fase com cenário pesado, vem de `load()`. */
+  build?(args: LevelBuildArgs): LevelBuild;
+  /**
+   * Campos pesados da definição (o cenário: `{ build }`), trazidos sob demanda por import dinâmico, fora do
+   * pacote inicial do jogo. O núcleo chama ao carregar a fase (junto com a cortina) e usa o que vier no lugar
+   * dos campos da definição. Metadados, layout e puzzle ficam estáticos: a UI e os testes em Node usam sem o cenário.
+   */
+  load?(): Promise<Partial<LevelDef>>;
   createPuzzle(ctx: PuzzleContext): Puzzle;
 }
 

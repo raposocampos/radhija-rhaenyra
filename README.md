@@ -54,7 +54,7 @@ Protótipos fora do menu (fases de desenvolvimento):
 ## Estrutura
 
 - `src/game/`: núcleo genérico (gerenciador de fases, entrada, colisão, navegação, companheira, câmera, kit de puzzle e mecânicas).
-- `src/levels/faseN/`: cada fase (`index.js` com a definição, `layout.js` com as coordenadas, `lighting.js`, `world/` com o cenário e `puzzle.js` com a lógica).
+- `src/levels/faseN/`: cada fase (`index.js` com a definição, `layout.js` com as coordenadas, `lighting.js`, `world/` com o cenário, carregado sob demanda, e `puzzle.js` com a lógica).
   `src/levels/_modelo/` é um modelo de fase completo e testado, ponto de partida das fases novas.
 - `src/dogs/` e `src/characters/`: personagens procedurais.
 - `src/ui/` e `src/fx/`: interface, áudio sintetizado, partículas e feedback.

@@ -9,6 +9,13 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        // O cenário de cada fase vem sob demanda (LevelDef.load): o chunk leva o nome da fase (fase2-world-….js).
+        chunkFileNames(chunk) {
+          const fase = chunk.facadeModuleId?.match(/levels[\\/]([^\\/]+)[\\/]world/)?.[1];
+          return `assets/${fase ? `${fase}-world` : '[name]'}-[hash].js`;
+        },
+      },
     },
   },
 });
