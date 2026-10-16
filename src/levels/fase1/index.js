@@ -1,8 +1,7 @@
 // FASE 1 · Operação Cenoura — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
+// Cenário: ./world.js (sob demanda). Puzzle: ./puzzle.js.
 import layout from './layout.js';
 import { createPuzzle } from './puzzle.js';
-import { buildEnvironment } from '../../world/environment.js';
-import { createProps } from '../../world/props.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
 /** @import { LevelDef } from '../../types' */
@@ -23,24 +22,7 @@ export default {
   },
   layout,
   lighting: LIGHTING_DEFAULT,
-
-  /** Monta o cenário e os props dentro de `root` (Group descartado ao trocar de fase). */
-  build({ engine, root }) {
-    // Os construtores da fase 1 fazem engine.scene.add(...): aponta a "cena" deles para o root.
-    const eng = Object.create(engine);
-    eng.scene = root;
-    const env = buildEnvironment(eng, layout);
-    const props = createProps(eng, layout);
-    return {
-      env,
-      props,
-      seeThrough: [env.fence?.group, props.gate?.object],
-      update(dt, t) {
-        env.update(dt, t);
-        props.update(dt, t);
-      },
-    };
-  },
-
+  // Cenário fora do pacote inicial: baixado só quando a fase carrega.
+  load: async () => ({ build: (await import('./world.js')).buildWorld }),
   createPuzzle,
 };

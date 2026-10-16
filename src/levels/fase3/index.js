@@ -1,8 +1,7 @@
 // FASE 3 · Operação Pantufa — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
-// Cenário: ./world/index.js. Puzzle: ./puzzle.js.
+// Cenário: ./world/index.js (sob demanda). Puzzle: ./puzzle.js.
 import layout from './layout.js';
 import lighting from './lighting.js';
-import { buildWorld } from './world/index.js';
 import { createPuzzle } from './puzzle.js';
 
 /** @import { LevelDef } from '../../types' */
@@ -23,6 +22,6 @@ export default {
   },
   layout,
   lighting,
-  build: buildWorld,
+  load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
   createPuzzle,
 };
