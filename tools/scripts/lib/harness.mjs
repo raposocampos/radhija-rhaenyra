@@ -41,10 +41,15 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   const sleep = (ms) => page.waitForTimeout(ms);
   // Razão tempo de jogo / relógio entre leituras seguidas (diagnóstico: < 1 = abaixo de 20 fps, máquina carregada).
-  const pace = { sim: 0, real: 0, last: null };
+  // Também a latência de cada leitura (ida e volta): alta = o próprio teste está sem CPU e as teclas chegam atrasadas.
+  const pace = { sim: 0, real: 0, last: null, n: 0, lat: 0, maxLat: 0 };
   const info = async () => {
+    const t = Date.now();
     const i = await page.evaluate(() => window.__game.game.debug.info());
     const now = Date.now();
+    pace.n++;
+    pace.lat += now - t;
+    pace.maxLat = Math.max(pace.maxLat, now - t);
     if (pace.last && typeof i.simSec === 'number' && i.simSec >= pace.last.sim && now - pace.last.real < 2000) {
       pace.sim += i.simSec - pace.last.sim;
       pace.real += (now - pace.last.real) / 1000;
@@ -117,9 +122,20 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       const dz = z - d.z;
       const dist = Math.hypot(dx, dz);
       if (dist < tol) break;
+      if (dist < 0.6) {
+        // perto: toque curto que a própria página solta ao chegar (ou ao passar do alvo), sem depender da latência
+        await setKeys(new Set());
+        await holdUntil(keysFor(dx, dz), (s, a) => {
+          const p = s.dogs[s.activeDog];
+          const ex = a.x - p.x;
+          const ez = a.z - p.z;
+          return Math.hypot(ex, ez) < a.tol * 0.6 || ex * a.dx + ez * a.dz <= 0;
+        }, { timeout: 60, arg: { x, z, tol, dx, dz } });
+        await sleep(25);
+        continue;
+      }
       await setKeys(new Set(keysFor(dx, dz)));
-      await sleep(dist < 0.6 ? 25 : 45);
-      if (dist < 0.6) { await setKeys(new Set()); await sleep(25); }
+      await sleep(45);
     }
     await setKeys(new Set());
     for (const k of extra) await page.keyboard.up(k);
@@ -138,6 +154,43 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     for (const k of keys) await page.keyboard.down(k);
     await gsleep(ms);
     for (const k of [...keys].reverse()) await page.keyboard.up(k);
+  }
+  /** Segura as teclas (reais) até `pred(info(), arg)` virar verdade, conferida QUADRO A QUADRO dentro da página, que
+   *  solta as teclas no mesmo quadro (keyup na janela, como o do teclado). Sob carga, o keyup do Playwright chega
+   *  centenas de ms depois e o caixote/dog passava do ponto. `pred` é serializada (só pode usar `arg`).
+   *  Prazo em tempo de jogo (`timeout` ms). Devolve o info() do fim. */
+  async function holdUntil(keys, pred, { timeout = 8000, arg = null } = {}) {
+    await page.evaluate(({ src, keys: ks, arg: a, ms }) => {
+      const fn = new Function(`return (${src})`)();
+      const g = window.__game.game;
+      const h = { done: false, ok: false, t0: null };
+      window.__hold = h;
+      // o prazo e a condição só contam depois que os keydown reais chegaram à página
+      const seen = new Set();
+      const onDown = (e) => { if (ks.includes(e.code)) seen.add(e.code); };
+      addEventListener('keydown', onDown);
+      const loop = () => {
+        const i = g.debug.info();
+        if (seen.size === ks.length) {
+          if (h.t0 === null) h.t0 = i.simSec;
+          let ok = false;
+          try { ok = !!fn(i, a); } catch {}
+          if (ok || (i.simSec - h.t0) * 1000 >= ms) {
+            for (const code of [...ks].reverse()) window.dispatchEvent(new KeyboardEvent('keyup', { code, key: code }));
+            removeEventListener('keydown', onDown);
+            h.ok = ok;
+            h.done = true;
+            return;
+          }
+        }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }, { src: pred.toString(), keys, arg, ms: timeout });
+    for (const k of keys) await page.keyboard.down(k);
+    await page.waitForFunction(() => window.__hold.done, null, { polling: 30, timeout: Math.max(5000, timeout * 8) }).catch(() => {});
+    for (const k of [...keys].reverse()) await page.keyboard.up(k);
+    return info();
   }
   async function press(key, after = 120) {
     await page.keyboard.press(key);
@@ -190,7 +243,10 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function close() {
     await browser.close();
-    if (pace.real > 0) console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps)`);
+    if (pace.real > 0) {
+      console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps); `
+        + `leitura do estado: ${Math.round(pace.lat / pace.n)} ms em média, ${pace.maxLat} ms no pior caso`);
+    }
     console.log(`\n${pass} ok, ${fail} falha(s)`);
     if (failures.length) console.log(`falhas: ${failures.join(' | ')}`);
     if (errors.length) { console.log(`ERROS DE CONSOLE (${errors.length}):`); for (const e of errors.slice(0, 20)) console.log(e); } else console.log('sem erros de console');
@@ -198,7 +254,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
 
   return {
-    browser, page, errors, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, record, close, keysFor, readBasis,
+    browser, page, errors, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, record, close, keysFor, readBasis,
     get pass() { return pass; },
     get fail() { return fail; },
   };

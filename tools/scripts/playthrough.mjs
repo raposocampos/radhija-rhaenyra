@@ -134,13 +134,12 @@ async function fullRun() {
   check((await logOf('celebrate:start')).length === 1, 'celebrate:start emitido');
   await sleep(400);
   await shot('21a-comemoracao-inicio.png');
-  await sleep(1100);
-  i = await info();
+  // a comemoração dura ~3 s de jogo (sob carga, a captura acima pode levar quase tudo isso): espera as duas juntas
+  i = await waitFor((s) => s.dogs.radhija.action === 'celebrate' && s.dogs.rhaenyra.action === 'celebrate', { timeout: 2500, step: 40 });
   check(i.dogs.radhija.action === 'celebrate' && i.dogs.rhaenyra.action === 'celebrate', 'as duas comemoram na porta',
     `${i.dogs.radhija.action}/${i.dogs.rhaenyra.action} R=(${i.dogs.radhija.x},${i.dogs.radhija.z}) H=(${i.dogs.rhaenyra.x},${i.dogs.rhaenyra.z})`);
   await shot('21-comemoracao.png');
-  await sleep(1500);
-  i = await info();
+  i = await waitFor((s) => s.state === 'victory', { timeout: 3500 });
   check(i.state === 'victory', 'estado victory após ~3 s');
   await sleep(1800);
   const vic = await logOf('victory');
@@ -232,18 +231,21 @@ async function sideTests() {
   for (const z of [-4.2, -3.0, -1.5, -0.5, 0.5, 1.0, 1.6, 2.1, 3.0, 4.0]) {
     await ev((zz) => window.__game.game.debug.teleport('radhija', 0.2, zz), z);
     await sleep(60);
+    // trajetória quadro a quadro: sob carga as teclas ficam seguradas mais tempo e a dog pode passar pela abertura
+    // e seguir adiante; o que importa é ONDE ela cruzou a linha da cerca, não onde terminou
+    const rec = await record((g) => ({ x: g.debug.ctrls.radhija.x, z: g.debug.ctrls.radhija.z }));
     await page.keyboard.down('KeyD');
     await page.keyboard.down('KeyS'); // diagonal S+D ≈ +X com leve +Z
-    await sleep(120);
+    await gsleep(120);
     await page.keyboard.press('ShiftLeft'); // arrancada contra a cerca
-    await sleep(450);
+    await gsleep(450);
     await page.keyboard.up('KeyS');
     await page.keyboard.up('KeyD');
-    i = await info();
+    const across = (await rec.stop()).find((f) => f.x > 0.95);
     // Deslizar pela face da cerca até a abertura (z ≈ -2.1) e passar por ela é legítimo.
-    const viaGap = Math.abs(i.dogs.radhija.z + 2.1) < 0.45;
-    if (i.dogs.radhija.x > 0.95 && !viaGap) { crossed++; console.log(`    atravessou em z=${z}: x=${i.dogs.radhija.x} z=${i.dogs.radhija.z}`); }
-    else if (i.dogs.radhija.x > 0.95) console.log(`    (z=${z}: deslizou pela cerca e passou pela abertura — ok)`);
+    const viaGap = across && Math.abs(across.z + 2.1) < 0.45;
+    if (across && !viaGap) { crossed++; console.log(`    atravessou em z=${z}: x=${across.x.toFixed(3)} z=${across.z.toFixed(3)}`); }
+    else if (across) console.log(`    (z=${z}: deslizou pela cerca e passou pela abertura — ok)`);
   }
   check(crossed === 0, 'arrancada contra a cerca/portão fechado em 10 pontos: nunca atravessa');
   const bumps = await logOf('dog:bump');

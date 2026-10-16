@@ -7,7 +7,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, page } = H;
+const { check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, page } = H;
 
 const SPR = { x: -0.4, z: -1.5, r: 2.2 };
 const TAU = Math.PI * 2;
@@ -198,21 +198,13 @@ async function fullRun() {
   check(i.crate.x > 3.95, 'caixote foi para o leste (eixo X)', `x=${i.crate.x}`);
   // empurra para o sul até o vão
   await walkPath([[3.4, -4.1], [i.crate.x, -3.25 - 0.38 - 0.24, { tol: 0.06 }]]);
-  await page.keyboard.down('ShiftLeft');
-  await page.keyboard.down('KeyS');
-  await waitFor((s) => s.crate.z > 1.32, { timeout: 9000, step: 40 });
-  await page.keyboard.up('KeyS');
-  await page.keyboard.up('ShiftLeft');
+  await holdUntil(['ShiftLeft', 'KeyS'], (s) => s.crate.z > 1.32, { timeout: 9000 });
   await sleep(300);
   i = await info();
   check(Math.abs(i.crate.z - 1.4) < 0.3, 'caixote empurrado para o sul até o vão (eixo Z)', `z=${i.crate.z}`);
   // empurra para o leste no vão → cai e vira ponte
   await walkPath([[i.crate.x - 0.75, i.crate.z - 0.7], [i.crate.x - 0.62, i.crate.z, { tol: 0.06 }]]);
-  await page.keyboard.down('ShiftLeft');
-  await page.keyboard.down('KeyD');
-  await waitFor((s) => s.crate.enabled === false, { timeout: 4000, step: 40 });
-  await page.keyboard.up('KeyD');
-  await page.keyboard.up('ShiftLeft');
+  await holdUntil(['ShiftLeft', 'KeyD'], (s) => s.crate.enabled === false, { timeout: 4000 });
   await sleep(300);
   await shot('f2-11-caixote-caindo.png');
   await sleep(900);
@@ -323,11 +315,8 @@ async function sideTests() {
   i = await info();
   check(i.stage === 'sprinklersOff' && i.activeDog === 'rhaenyra', '?stage=sprinklersOff com a Rhaenyra', `${i.stage}/${i.activeDog}`);
   const push = async (key, until, timeout = 8000) => {
-    await page.keyboard.down('ShiftLeft');
-    await page.keyboard.down(key);
-    const r = await waitFor(until, { timeout, step: 40 });
-    await page.keyboard.up(key);
-    await page.keyboard.up('ShiftLeft');
+    // solta no quadro em que a condição vale (sob carga, o keyup do teste chega tarde e o caixote passava do ponto)
+    const r = await holdUntil(['ShiftLeft', key], until, { timeout });
     await sleep(250);
     return r;
   };
