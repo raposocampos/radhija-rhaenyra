@@ -377,6 +377,15 @@ rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 controle) e teletransportam entre os trechos, porque os testes headless já cobrem os caminhos.
 Capturas vão para `shots/` (fora do git).
 
+*Robustas à carga*: com a máquina ocupada (outra sessão tirando capturas, por exemplo) o Chrome cai abaixo de 20 fps,
+o quadro limita `dt` a 1/20 s e o jogo passa a andar MAIS DEVAGAR que o relógio. Por isso as partidas não medem nada
+em tempo de relógio: `waitFor(pred, { timeout })`, `walkTo` e `hold(teclas, ms)` contam o prazo em tempo de JOGO
+(`info().simSec`, com teto de 8× em tempo real), `gsleep(ms)` espera tempo de jogo, e o que é curto ou rápido demais
+para uma leitura por `info()` (uma ida e volta por amostra) se confere por registro: os planos de câmera no log
+(`camera:shot`) e a velocidade/posição quadro a quadro com `record(game => amostra)`, que roda dentro da página a cada
+`requestAnimationFrame`. Para conferir: rodar uma suíte com uma segunda instância do e2e em paralelo
+(`node tools/scripts/run-e2e.mjs --only fase1`, cada uma sobe o próprio Vite).
+
 **Outras ferramentas**: `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
 `tools/scripts/sim-sprinkler.mjs` (equilíbrio do irrigador), `sandbox/*.html` (dogs, gansa, cenário e efeitos isolados).
 
@@ -387,7 +396,9 @@ Capturas vão para `shots/` (fora do git).
 
 **Ganchos de depuração**: `window.__game` = `{ engine, dogs, game, audio, particles, feedback, ui, events, levels,
 THREE, env, props, layout }`; `game.debug` = `{ teleport(nome, x, z), setStage, info(), events(nome), log, world,
-nav, ctrls, puzzle, cam }`.
+nav, ctrls, puzzle, cam }`. Só para testes: `info().simSec` é o tempo simulado desde o carregamento (soma dos `dt` de
+todos os quadros, em qualquer estado; o `timeSec` só corre jogando), e cada `cam.focusShot` (plano de foco, ~2 s) entra
+no log de depuração como `camera:shot {x, z}` (não passa pelo barramento de eventos).
 
 ## 11. Tipos
 

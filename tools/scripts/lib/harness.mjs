@@ -40,7 +40,18 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     return cond;
   }
   const sleep = (ms) => page.waitForTimeout(ms);
-  const info = () => page.evaluate(() => window.__game.game.debug.info());
+  // Razão tempo de jogo / relógio entre leituras seguidas (diagnóstico: < 1 = abaixo de 20 fps, máquina carregada).
+  const pace = { sim: 0, real: 0, last: null };
+  const info = async () => {
+    const i = await page.evaluate(() => window.__game.game.debug.info());
+    const now = Date.now();
+    if (pace.last && typeof i.simSec === 'number' && i.simSec >= pace.last.sim && now - pace.last.real < 2000) {
+      pace.sim += i.simSec - pace.last.sim;
+      pace.real += (now - pace.last.real) / 1000;
+    }
+    pace.last = { sim: i.simSec, real: now };
+    return i;
+  };
   const ev = (js, arg) => page.evaluate(js, arg);
   const shot = async (name) => {
     await page.screenshot({ path: resolve(OUT, name) });
@@ -72,13 +83,32 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     const s = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
     return [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyS', 'KeyD'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyW', 'KeyA']][s];
   }
+  /** Prazo em tempo de JOGO: vence quando passaram `ms` no relógio E `ms` simulados (debug.info().simSec). Sem carga
+   *  as duas coisas andam juntas; sob carga (menos de 20 fps) o jogo anda mais devagar e o prazo espera por ele.
+   *  Teto de segurança: `slow`× o prazo em tempo real (a página travada não segura o teste para sempre). */
+  function deadline(ms, { slow = 8 } = {}) {
+    const t0 = Date.now();
+    let s0 = null;
+    return {
+      t0,
+      over(i) {
+        const real = Date.now() - t0;
+        if (real >= ms * slow) return true;
+        const sim = i?.simSec;
+        if (typeof sim !== 'number') return real >= ms;
+        if (s0 === null || sim < s0) s0 = sim; // primeira leitura (ou página recarregada)
+        return real >= ms && (sim - s0) * 1000 >= ms;
+      },
+    };
+  }
   /** Anda com a dog ativa até (x, z) segurando as teclas reais. */
   async function walkTo(x, z, { tol = 0.22, timeout = 15000, extra = [], stopIf = null } = {}) {
-    const t0 = Date.now();
+    const dl = deadline(timeout);
     for (const k of extra) await page.keyboard.down(k);
     let last = null;
-    while (Date.now() - t0 < timeout) {
+    for (;;) {
       const i = await info();
+      if (dl.over(i)) break;
       const d = i.dogs[i.activeDog];
       last = d;
       if (i.state !== 'playing') break;
@@ -103,9 +133,10 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     for (const [x, z, o] of points) d = await walkTo(x, z, { ...opts, ...(o || {}) });
     return d;
   }
+  /** Segura as teclas por `ms` de tempo de JOGO (sob carga, o jogo anda mais devagar que o relógio). */
   async function hold(keys, ms) {
     for (const k of keys) await page.keyboard.down(k);
-    await sleep(ms);
+    await gsleep(ms);
     for (const k of [...keys].reverse()) await page.keyboard.up(k);
   }
   async function press(key, after = 120) {
@@ -119,18 +150,47 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     await readBasis();
     await sleep(1500);
   }
+  /** Espera `pred(info())` virar verdade; o prazo conta em tempo de JOGO (ver `deadline`). Devolve o último info(). */
   async function waitFor(pred, { timeout = 10000, step = 80 } = {}) {
-    const t0 = Date.now();
+    const dl = deadline(timeout);
     let i = await info();
-    while (Date.now() - t0 < timeout) {
-      if (pred(i)) return i;
+    while (!pred(i) && !dl.over(i)) {
       await sleep(step);
       i = await info();
     }
     return i;
   }
+  /** Espera `ms` de tempo de JOGO (o quadro limita dt a 1/20 s: abaixo de 20 fps o jogo anda mais devagar que o relógio). */
+  async function gsleep(ms) {
+    const dl = deadline(ms);
+    for (;;) {
+      const i = await info();
+      if (dl.over(i)) return i;
+      await sleep(Math.min(40, Math.max(10, ms - (Date.now() - dl.t0))));
+    }
+  }
+  /** Gravação quadro a quadro na página: `sample(game)` roda em todo requestAnimationFrame (depois do quadro do jogo).
+   *  `sample` é serializada (não pode usar variáveis de fora). `stop()` devolve a lista. Para eventos curtos ou
+   *  saltos de posição, que a leitura por info() (uma ida e volta por amostra) perde quando a máquina está carregada. */
+  async function record(sample) {
+    await page.evaluate((src) => {
+      const fn = new Function(`return (${src})`)();
+      const rec = { on: true, frames: [] };
+      window.__rec = rec;
+      const loop = () => {
+        if (!rec.on) return;
+        try { rec.frames.push(fn(window.__game.game)); } catch (e) { rec.frames.push({ error: String(e) }); }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }, sample.toString());
+    return {
+      stop: () => page.evaluate(() => { window.__rec.on = false; return window.__rec.frames; }),
+    };
+  }
   async function close() {
     await browser.close();
+    if (pace.real > 0) console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps)`);
     console.log(`\n${pass} ok, ${fail} falha(s)`);
     if (failures.length) console.log(`falhas: ${failures.join(' | ')}`);
     if (errors.length) { console.log(`ERROS DE CONSOLE (${errors.length}):`); for (const e of errors.slice(0, 20)) console.log(e); } else console.log('sem erros de console');
@@ -138,7 +198,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
 
   return {
-    browser, page, errors, check, sleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, close, keysFor, readBasis,
+    browser, page, errors, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, press, load, waitFor, record, close, keysFor, readBasis,
     get pass() { return pass; },
     get fail() { return fail; },
   };

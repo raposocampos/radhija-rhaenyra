@@ -95,6 +95,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let activeDog = initialDog;
   const stay = { radhija: false, rhaenyra: false }; // comando Fica/Vem (só vale para a companheira)
   let playTime = 0;
+  let simTime = 0; // segundos simulados desde o início (todo quadro com dt > 0; só para testes: debug.info().simSec)
   let celebrateT = 0;
   let victoryT = 0;
   let barkCd = 0;
@@ -664,8 +665,16 @@ export function createGame({ engine, dogs, levels, params }) {
       nav = createNavigator(L, world);
       scent = createScentField({ world, emit, view: createScentView(root) });
       cancelBafo();
-      if (!cam) cam = createCameraRig(engine.camera, L);
-      else cam.configure(L);
+      if (!cam) {
+        cam = createCameraRig(engine.camera, L);
+        // Planos de foco duram ~2 s: os testes conferem no log de depuração (não passa pelo barramento).
+        const focusShot = cam.focusShot;
+        cam.focusShot = (x, z, opts) => {
+          log.push({ t: Math.round(performance.now()), name: 'camera:shot', payload: { x: +x.toFixed(2), z: +z.toFixed(2) } });
+          if (log.length > 500) log.shift();
+          focusShot(x, z, opts);
+        };
+      } else cam.configure(L);
       if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
       for (const n of NAMES) setStay(n, false, { silent: true });
       puzzle = def.createPuzzle({
@@ -745,6 +754,7 @@ export function createGame({ engine, dogs, levels, params }) {
       input.endFrame();
       return;
     }
+    simTime += dt;
     if (state === 'loading') {
       input.endFrame();
       return;
@@ -791,7 +801,7 @@ export function createGame({ engine, dogs, levels, params }) {
       dogs: { radhija: dogInfo('radhija'), rhaenyra: dogInfo('rhaenyra') },
       ...(puzzle.info?.() || {}),
       carrier: puzzle.carrier, collected: puzzle.collected, total: puzzle.total,
-      timeSec: +playTime.toFixed(2), prompt: puzzle.S?.prompt ?? null,
+      timeSec: +playTime.toFixed(2), simSec: +simTime.toFixed(3), prompt: puzzle.S?.prompt ?? null,
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
       bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent.info(),
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam.mode, shot: cam.shotActive },
