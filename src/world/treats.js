@@ -1,6 +1,5 @@
-// Ossinhos dourados (petiscos escondidos) das fases 4 em diante: mesmo visual e animação de coleta das
-// fases 2 e 3 (que têm cópias próprias), num módulo só. buildTreats(root, COLLECTIBLES, opts) →
-// { list: CollectibleProp[], update(dt, t) }.
+// Ossinhos dourados (petiscos escondidos) das fases 2 em diante: visual e animação de coleta num módulo só;
+// cada fase só ajusta o brilho. buildTreats(root, COLLECTIBLES, opts) → { list: CollectibleProp[], update(dt, t) }.
 import * as THREE from 'three';
 import { rng, canvasTexture, radialTexture, contactShadow } from './util.js';
 import { boneGeometry } from './toys.js';
@@ -19,11 +18,15 @@ export function starTexture() {
 /**
  * @param {THREE.Object3D} root
  * @param {import('../types').Collectible[]} list
- * @param {{ glow?: number, y?: number, starTex?: THREE.Texture }} [opts] glow: brilho próprio (0 = nenhum); y: altura do chão.
+ * @param {{ glow?: number, glowPulse?: [number, number], shine?: [number, number], metalness?: number, y?: number,
+ *   starTex?: THREE.Texture }} [opts] glow: brilho próprio (0 = nenhum); glowPulse: [base, amplitude] da pulsação do
+ *   brilho parado; shine: [base, lampejo] do emissivo do osso; y: altura do chão.
  */
-export function buildTreats(root, list, { glow = 0.22, y = 0, starTex = starTexture() } = {}) {
+export function buildTreats(root, list, {
+  glow = 0.22, glowPulse = [glow * 0.8, glow * 0.35], shine = [0.15, 0.5], metalness = 0.2, y = 0, starTex = starTexture(),
+} = {}) {
   const geo = boneGeometry();
-  const baseMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, metalness: 0.2, emissive: '#ffb347', emissiveIntensity: 0 });
+  const baseMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, metalness, emissive: '#ffb347', emissiveIntensity: 0 });
   const y0 = y + 0.021;
   const items = list.map((c, i) => {
     const grp = new THREE.Group();
@@ -90,8 +93,8 @@ export function buildTreats(root, list, { glow = 0.22, y = 0, starTex = starText
         star.material.rotation = t * 0.8;
         star.scale.setScalar(0.07 + f * 0.07);
         star.position.set(c.x + 0.03, y + 0.07, c.z);
-        mat.emissiveIntensity = 0.15 + f * 0.5;
-        if (glow > 0) halo.material.opacity = glow * (0.8 + 0.35 * Math.sin(t * 2 + st.phase));
+        mat.emissiveIntensity = shine[0] + f * shine[1];
+        if (glow > 0) halo.material.opacity = glowPulse[0] + glowPulse[1] * Math.sin(t * 2 + st.phase);
         grp.position.y = y0 + Math.max(0, Math.sin(t * 2 + st.phase)) * 0.004;
       },
     };

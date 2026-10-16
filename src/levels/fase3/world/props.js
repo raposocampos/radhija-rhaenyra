@@ -6,6 +6,7 @@ import {
   woodMat, stdMat, ironMat, brassMat, rbox, canvasTexture, contactShadow, radialTexture, rng, paint, vnoise2, vnoise3,
   mergeGeometries, mergeVertices, speckleTexture, mat,
 } from '../../../world/util.js';
+import { buildTreats, starTexture } from '../../../world/treats.js';
 
 // ------------------------------------------------------------------ ícones (lua / estrela) e texturas
 function drawIcon(g, kind, cx, cy, s) {
@@ -67,15 +68,6 @@ function plaqueTexture(kind) {
     g.fillStyle = '#fff';
     drawIcon(g, kind, w / 2, h / 2, w * 0.36);
   }, { repeat: false, srgb: false });
-}
-function starTexture() {
-  return canvasTexture(64, 64, (g) => {
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.2, 'rgba(255,240,200,0.7)'); grd.addColorStop(1, 'rgba(255,220,150,0)');
-    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-    g.fillStyle = 'rgba(255,250,235,0.95)';
-    g.beginPath(); g.moveTo(32, 2); g.lineTo(35, 29); g.lineTo(62, 32); g.lineTo(35, 35); g.lineTo(32, 62); g.lineTo(29, 35); g.lineTo(2, 32); g.lineTo(29, 29); g.closePath(); g.fill();
-  }, { srgb: false, repeat: false });
 }
 
 const ease = (cur, target, dt, rate) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -446,17 +438,6 @@ function makePost(x, z, h) {
   return g;
 }
 
-// ------------------------------------------------------------------ ossinhos dourados (iguais aos da fase 1)
-function boneGeometry() {
-  /** @type {THREE.BufferGeometry[]} */
-  const parts = [new THREE.CapsuleGeometry(0.021, 0.1, 4, 10).rotateZ(Math.PI / 2)];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.03, 12, 10).translate(sx * 0.068, 0, sz * 0.022));
-  const geos = parts.map((g) => { const n = g.index ? g.toNonIndexed() : g; n.deleteAttribute('uv'); return n; });
-  const merged = mergeGeometries(geos);
-  merged.scale(1, 0.62, 1);
-  return merged;
-}
-
 export function createProps(layout, field, refs) {
   const root = new THREE.Group();
   root.name = 'props-fase3';
@@ -568,73 +549,7 @@ export function createProps(layout, field, refs) {
   };
 
   // ================================================================== ossinhos
-  const boneGeo = boneGeometry();
-  const boneMatBase = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, emissive: '#ffb347', emissiveIntensity: 0.15 });
-  const collectibles = COLLECTIBLES.map((c, i) => {
-    const croot = new THREE.Group();
-    croot.name = `osso-${c.id}`;
-    const r = rng(i + 3);
-    const mesh = new THREE.Mesh(boneGeo, i === 0 ? boneMatBase : boneMatBase.clone());
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    croot.add(mesh);
-    const baseRot = r() * Math.PI;
-    const y0 = 0.021;
-    root.add(croot);
-    const sh = contactShadow(0.11, 0.06, 0.45);
-    sh.position.set(c.x, 0.006, c.z);
-    sh.rotation.y = baseRot;
-    root.add(sh);
-    const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: '#fff1c2', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-    star.scale.setScalar(0.12);
-    star.position.set(c.x + 0.03, 0.07, c.z);
-    root.add(star);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture(), color: '#ffc46a', transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
-    halo.scale.setScalar(0.32);
-    halo.position.set(c.x, 0.05, c.z);
-    root.add(halo);
-    const st = { anim: -1, collected: false, phase: r() * 10 };
-    const item = {
-      id: c.id, object: croot,
-      collect() { if (st.collected) return; st.collected = true; st.anim = 0; },
-      reset() {
-        st.collected = false; st.anim = -1;
-        croot.visible = true; sh.visible = true; halo.visible = true;
-        croot.position.set(c.x, y0, c.z);
-        croot.rotation.set(0, baseRot, 0.06);
-        croot.scale.setScalar(1);
-        sh.scale.set(0.22, 1, 0.12);
-        sh.material.opacity = 0.45;
-        star.material.opacity = 0;
-      },
-      _update(dt, t) {
-        if (st.anim >= 0) {
-          st.anim += dt;
-          const k = Math.min(1, st.anim / 0.55);
-          croot.position.y = y0 + Math.sin(k * Math.PI) * 0.28;
-          croot.rotation.y = baseRot + k * Math.PI * 3;
-          const s = k < 0.35 ? 1 + k * 0.6 : Math.max(0, 1.21 * (1 - (k - 0.35) / 0.65));
-          croot.scale.setScalar(s);
-          sh.material.opacity = 0.45 * (1 - k);
-          halo.material.opacity = 0.18 * (1 - k);
-          star.material.opacity = Math.sin(k * Math.PI) * 0.9;
-          star.position.set(croot.position.x, croot.position.y + 0.05, croot.position.z);
-          if (k >= 1) { croot.visible = false; sh.visible = false; halo.visible = false; st.anim = -1; star.material.opacity = 0; }
-          return;
-        }
-        if (st.collected) return;
-        const cyc = ((t + st.phase) % 4.2) / 4.2;
-        const f = cyc < 0.12 ? Math.sin((cyc / 0.12) * Math.PI) : 0;
-        star.material.opacity = f * 0.85;
-        star.material.rotation = t * 0.8;
-        star.scale.setScalar(0.07 + f * 0.07);
-        mesh.material.emissiveIntensity = 0.22 + f * 0.6;
-        halo.material.opacity = 0.14 + 0.06 * Math.sin(t * 2 + st.phase);
-        croot.position.y = y0 + Math.max(0, Math.sin(t * 2 + st.phase)) * 0.004;
-      },
-    };
-    item.reset();
-    return item;
-  });
+  const treats = buildTreats(root, COLLECTIBLES, { glow: 0.18, glowPulse: [0.14, 0.06], shine: [0.22, 0.6], metalness: 0, starTex });
 
   // ================================================================== porta de vidro (destaque)
   let doorHL = 0, doorHLTarget = 0;
@@ -680,7 +595,7 @@ export function createProps(layout, field, refs) {
       cs.s.position.set(tmpV.x + Math.cos(a) * 0.19, tmpV.y + 0.07 + cyc * 0.18, tmpV.z + Math.sin(a) * 0.13);
       cs.s.scale.setScalar(0.05 + f * 0.05);
     });
-    for (const c of collectibles) c._update(dt, t);
+    treats.update(dt, t);
     // porta: sala mais quente e luz do vão mais forte quando é o objetivo
     doorHL = ease(doorHL, doorHLTarget, dt, 3);
     const dp = doorHL * (0.8 + 0.2 * Math.sin(t * 3));
@@ -700,7 +615,7 @@ export function createProps(layout, field, refs) {
     sl.group.rotation.set(0, slipperRotY, 0);
     sl.group.scale.setScalar(1);
     slipper.setHighlight(false);
-    for (const c of collectibles) c.reset();
+    for (const c of treats.list) c.reset();
     door.setHighlight(false);
   }
 
@@ -713,7 +628,7 @@ export function createProps(layout, field, refs) {
     slipper,
     item: slipper, // alias para o puzzle provisório
     door,
-    collectibles,
+    collectibles: treats.list,
     update, reset,
   };
   return { root, props, lightsForWater, lanterns };

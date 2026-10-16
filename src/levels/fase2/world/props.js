@@ -3,9 +3,10 @@
 // irrigador giratório com jatos legíveis, registro, caixote de feira, bolinha de tênis, caminha e ossinhos.
 import * as THREE from 'three';
 import {
-  shared, rng, rbox, canvasTexture, woodTexture, woodTextureV, radialTexture, contactShadow, mergeGeometries,
+  shared, rng, rbox, canvasTexture, woodTexture, woodTextureV, radialTexture, contactShadow,
   stdMat, woodMat, ironMat, brassMat, vnoise3,
 } from '../../../world/util.js';
+import { buildTreats, starTexture } from '../../../world/treats.js';
 
 const TAU = Math.PI * 2;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -69,15 +70,6 @@ function ropeTexture() {
     }
     c.putImageData(img, 0, 0);
   });
-}
-function starTexture() {
-  return canvasTexture(64, 64, (g, w, h) => {
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.2, 'rgba(255,240,200,0.7)'); grd.addColorStop(1, 'rgba(255,220,150,0)');
-    g.fillStyle = grd; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(255,250,235,0.95)';
-    g.beginPath(); g.moveTo(32, 2); g.lineTo(35, 29); g.lineTo(62, 32); g.lineTo(35, 35); g.lineTo(32, 62); g.lineTo(29, 35); g.lineTo(2, 32); g.lineTo(29, 29); g.closePath(); g.fill();
-  }, { srgb: false, repeat: false });
 }
 /** Mola helicoidal (tubo) de altura 1 (escala Y comprime). */
 function springGeometry(r = 0.04, turns = 5, wire = 0.008) {
@@ -518,14 +510,15 @@ export function buildProps({ root, layout, engine }) {
   const bed = buildBed(root, DOG_BED, starTex, updaters);
 
   // ================================================================== OSSINHOS (iguais aos da fase 1)
-  const collectibles = buildBones(root, COLLECTIBLES, starTex);
+  // brilho próprio sutil (crepúsculo: o ossinho precisa aparecer)
+  const treats = buildTreats(root, COLLECTIBLES, { glow: 0.25, glowPulse: [0.2, 0.08], starTex });
 
   // ================================================================== update / reset
   function update(dt, t) {
     updateRope(t);
     spr.update(dt);
     for (const f of updaters) f(dt, t);
-    for (const c of collectibles) c._update(dt, t);
+    treats.update(dt, t);
   }
   function reset() {
     gate.setOpen(0);
@@ -538,10 +531,10 @@ export function buildProps({ root, layout, engine }) {
     crate._reset();
     ball._reset();
     bed.setHighlight(false);
-    for (const c of collectibles) c.reset();
+    for (const c of treats.list) c.reset();
   }
   return {
-    gate, plank, wedge, sprinkler: spr.sprinkler, valve, crate, ball, bed, collectibles,
+    gate, plank, wedge, sprinkler: spr.sprinkler, valve, crate, ball, bed, collectibles: treats.list,
     item: ball, // compatível com o puzzle provisório (_placeholder.js)
     update, reset,
   };
@@ -1193,79 +1186,4 @@ function buildBed(root, BED, starTex, updaters) {
     });
   });
   return { object: g, setHighlight(on) { hlT = on ? 1 : 0; } };
-}
-
-// ==================================================================== ossinhos dourados
-function buildBones(root, list, starTex) {
-  const boneMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness: 0.5, metalness: 0.2, emissive: '#ffb347', emissiveIntensity: 0 });
-  /** @type {THREE.BufferGeometry[]} */
-  const parts = [new THREE.CapsuleGeometry(0.021, 0.1, 4, 10).rotateZ(Math.PI / 2)];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.03, 12, 10).translate(sx * 0.068, 0, sz * 0.022));
-  const boneGeo = mergeGeometries(parts.map((p) => { const q = p.index ? p.toNonIndexed() : p; q.deleteAttribute('uv'); return q; }));
-  boneGeo.scale(1, 0.62, 1);
-  return list.map((c, i) => {
-    const grp = new THREE.Group();
-    grp.name = `osso-${c.id}`;
-    const r = rng(i + 3);
-    const mesh = new THREE.Mesh(boneGeo, boneMat.clone());
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    grp.add(mesh);
-    const baseRot = r() * Math.PI;
-    root.add(grp);
-    const sh = contactShadow(0.11, 0.06, 0.45);
-    sh.position.set(c.x, 0.006, c.z);
-    sh.rotation.y = baseRot;
-    root.add(sh);
-    const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: '#fff1c2', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-    star.scale.setScalar(0.12);
-    root.add(star);
-    // brilho próprio sutil (crepúsculo: o ossinho precisa aparecer)
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture(), color: '#ffc46a', transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending }));
-    glow.scale.setScalar(0.32);
-    root.add(glow);
-    const st = { anim: -1, collected: false, phase: r() * 10 };
-    const o = {
-      id: c.id,
-      object: grp,
-      collect() { if (st.collected) return; st.collected = true; st.anim = 0; },
-      reset() {
-        st.collected = false; st.anim = -1;
-        grp.visible = true; sh.visible = true; glow.visible = true;
-        grp.position.set(c.x, 0.021, c.z);
-        grp.rotation.set(0, baseRot, 0.06);
-        grp.scale.setScalar(1);
-        sh.scale.set(0.22, 1, 0.12);
-        sh.material.opacity = 0.45;
-        glow.position.set(c.x, 0.05, c.z);
-      },
-      _update(dt, t) {
-        if (st.anim >= 0) {
-          st.anim += dt;
-          const k = Math.min(1, st.anim / 0.55);
-          grp.position.y = 0.021 + Math.sin(k * Math.PI) * 0.28;
-          grp.rotation.y = baseRot + k * Math.PI * 3;
-          const s = k < 0.35 ? 1 + k * 0.6 : Math.max(0, 1.21 * (1 - (k - 0.35) / 0.65));
-          grp.scale.setScalar(s);
-          sh.material.opacity = 0.45 * (1 - k);
-          glow.material.opacity = 0.25 * (1 - k);
-          star.material.opacity = Math.sin(k * Math.PI) * 0.9;
-          star.position.set(grp.position.x, grp.position.y + 0.05, grp.position.z);
-          if (k >= 1) { grp.visible = false; sh.visible = false; glow.visible = false; st.anim = -1; star.material.opacity = 0; }
-          return;
-        }
-        if (st.collected) return;
-        const cyc = ((t + st.phase) % 4.2) / 4.2;
-        const f = cyc < 0.12 ? Math.sin((cyc / 0.12) * Math.PI) : 0;
-        star.material.opacity = f * 0.85;
-        star.material.rotation = t * 0.8;
-        star.scale.setScalar(0.07 + f * 0.07);
-        star.position.set(c.x + 0.03, 0.07, c.z);
-        mesh.material.emissiveIntensity = 0.15 + f * 0.5;
-        glow.material.opacity = 0.2 + 0.08 * Math.sin(t * 2 + st.phase);
-        grp.position.y = 0.021 + Math.max(0, Math.sin(t * 2 + st.phase)) * 0.004;
-      },
-    };
-    o.reset();
-    return o;
-  });
 }
