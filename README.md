@@ -70,7 +70,7 @@ Documentação:
 
 | Comando | O que faz |
 |---|---|
-| `npm test` | testes em Node, em segundos: as 5 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
+| `npm test` | testes em Node, cerca de 30 s: as 5 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting (faces no mesmo plano "tremendo"), equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
 | `npm run typecheck` | checagem de tipos (TypeScript sobre os comentários JSDoc) |
 | `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–5, controle, regressões, pulo e bafo), cerca de 15 minutos |
 | `npm run build` | roda `typecheck` e `npm test` antes de gerar `dist/`: nenhum build sai quebrado |
