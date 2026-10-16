@@ -2,100 +2,19 @@
 // lê a posição pelo debug.info() e segura WASD (8 direções relativas à câmera) até chegar a cada ponto.
 //   node tools/scripts/playthrough.mjs [--url http://127.0.0.1:5173/] [--only full|tests]
 // Capturas em shots/game/. Imprime ok/FALHOU por verificação e sai com código 1 se algo falhar.
-import { chromium } from 'playwright-core';
-import { mkdirSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { NAV_NODES } from '../../src/levels/fase1/layout.js';
+import { createHarness, parseArgs } from './lib/harness.mjs';
 
-const args = Object.fromEntries(process.argv.slice(2).reduce((acc, cur, i, arr) => {
-  if (cur.startsWith('--')) acc.push([cur.slice(2), arr[i + 1]?.startsWith('--') ? true : arr[i + 1] ?? true]);
-  return acc;
-}, []));
+const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
-const OUT = resolve('shots/game');
-mkdirSync(OUT, { recursive: true });
+const H = await createHarness({ base: BASE, outDir: 'shots/game' });
+const { page, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, hold, waitFor, record } = H;
 
-const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find((p) => existsSync(p));
-const browser = await chromium.launch({
-  executablePath: CHROME, headless: true,
-  args: ['--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
-});
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(`[console.error] ${m.text()}`); });
-page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
-
-let pass = 0;
-let fail = 0;
-const results = [];
-function check(cond, msg, extra = '') {
-  if (cond) pass++; else fail++;
-  const line = `${cond ? '  ok    ' : '  FALHOU'} ${msg}${extra ? `  (${extra})` : ''}`;
-  results.push(line);
-  console.log(line);
-  return cond;
-}
-const sleep = (ms) => page.waitForTimeout(ms);
-const info = () => page.evaluate(() => window.__game.game.debug.info());
-const ev = (js, arg) => page.evaluate(js, arg);
-const shot = async (name) => { await page.screenshot({ path: resolve(OUT, name) }); console.log(`  captura: shots/game/${name}`); };
-const logOf = (name) => page.evaluate((n) => window.__game.game.debug.events(n).map((e) => e.payload), name);
-const clearLog = () => page.evaluate(() => window.__game.game.debug.clearLog());
-
-// Base da câmera (CAMERA.offset = [1.4, 4.3, 4.7])
-const L = Math.hypot(1.4, 4.7);
-const F = [-1.4 / L, -4.7 / L];
-const R = [4.7 / L, -1.4 / L];
-const held = new Set();
-async function setKeys(want) {
-  for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) {
-    if (want.has(k) && !held.has(k)) { await page.keyboard.down(k); held.add(k); }
-    if (!want.has(k) && held.has(k)) { await page.keyboard.up(k); held.delete(k); }
-  }
-}
-function keysFor(dx, dz) {
-  const fwd = dx * F[0] + dz * F[1];
-  const rgt = dx * R[0] + dz * R[1];
-  const a = Math.atan2(rgt, fwd); // 0 = frente(W), +90° = direita(D)
-  const s = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
-  return [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyS', 'KeyD'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyW', 'KeyA']][s];
-}
-/** Anda com a dog ativa até (x, z) segurando as teclas reais. */
-async function walkTo(x, z, { tol = 0.22, timeout = 15000, extra = [] } = {}) {
-  const t0 = Date.now();
-  for (const k of extra) await page.keyboard.down(k);
-  let last = null;
-  while (Date.now() - t0 < timeout) {
-    const i = await info();
-    const d = i.dogs[i.activeDog];
-    last = d;
-    if (i.state !== 'playing') break;
-    const dx = x - d.x;
-    const dz = z - d.z;
-    const dist = Math.hypot(dx, dz);
-    if (dist < tol) break;
-    await setKeys(new Set(keysFor(dx, dz)));
-    await sleep(dist < 0.6 ? 25 : 50);
-    if (dist < 0.6) { await setKeys(new Set()); await sleep(30); }
-  }
-  await setKeys(new Set());
-  for (const k of extra) await page.keyboard.up(k);
-  await sleep(120);
-  const i = await info();
-  return i.dogs[i.activeDog] || last;
-}
-async function hold(keys, ms) {
-  for (const k of keys) await page.keyboard.down(k);
-  await sleep(ms);
-  for (const k of [...keys].reverse()) await page.keyboard.up(k);
-}
+/** Carrega a página e espera os primeiros quadros (compilação de shaders) e a transição da câmera. */
 async function load(query) {
-  await page.goto(`${BASE}${query}`, { waitUntil: 'load', timeout: 60000 });
-  await page.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 30000 });
-  // espera os primeiros quadros (compilação de shaders) e a transição da câmera
-  await page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 60000 });
-  await sleep(1800);
+  await H.load(query);
+  await sleep(300);
 }
 
 // =====================================================================
@@ -117,34 +36,32 @@ async function fullRun() {
 
   // 2) Cordinha: Rhaenyra (companheira) deve esperar do outro lado da cerca
   d = await walkTo(1.5, 0.9);
-  await sleep(1600);
-  i = await info();
+  // a companheira vem andando atrás: espera ela chegar ao nó do portão (o prazo conta em tempo de jogo)
+  const nearGate = (r) => Math.hypot(r.x - NAV_NODES.W_gate.x, r.z - NAV_NODES.W_gate.z) < 0.6;
+  i = await waitFor((s) => s.dogs.rhaenyra.mode === 'wait' && nearGate(s.dogs.rhaenyra), { timeout: 6000 });
   check(i.prompt === 'Puxar a cordinha', 'prompt da cordinha aparece', i.prompt);
   const rh = i.dogs.rhaenyra;
   check(rh.x < 1.0 && rh.mode === 'wait', 'Rhaenyra espera do lado oeste (sem caminho)', `x=${rh.x} z=${rh.z} modo=${rh.mode}`);
-  check(Math.hypot(rh.x - NAV_NODES.W_gate.x, rh.z - NAV_NODES.W_gate.z) < 0.6, 'Rhaenyra espera junto ao portão (nó mais próximo da líder)', `(${rh.x}, ${rh.z})`);
-  await sleep(1200);
-  i = await info();
+  check(nearGate(rh), 'Rhaenyra espera junto ao portão (nó mais próximo da líder)', `(${rh.x}, ${rh.z})`);
+  i = await waitFor((s) => s.dogs.rhaenyra.sitting, { timeout: 3000 });
   check(i.dogs.rhaenyra.sitting, 'Rhaenyra senta enquanto espera', i.dogs.rhaenyra.action);
   await shot('13-rhaenyra-esperando-portao.png');
   await page.keyboard.press('KeyE');
-  await sleep(250);
-  i = await info();
+  i = await waitFor((s) => s.dogs.radhija.action === 'tug', { timeout: 1000, step: 30 });
   check(i.dogs.radhija.action === 'tug', 'Radhija puxa a cordinha (action tug)', i.dogs.radhija.action);
   await sleep(700);
   await shot('14-plano-portao-abrindo.png');
-  i = await info();
-  check(i.camera.shot, 'plano de foco do portão ativo');
-  await sleep(1300);
-  i = await info();
+  i = await waitFor((s) => s.stage === 'gateOpen' && s.gate.open, { timeout: 2500 });
   check(i.stage === 'gateOpen' && i.gate.open, 'portão aberto → etapa gateOpen', `t=${i.gate.t}`);
+  // o plano dura ~2 s: confere o registro em vez do instante
+  const shots = await logOf('camera:shot');
+  check(shots.length === 1 && Math.hypot(shots[0].x - 1.35, shots[0].z - 1.75) < 0.5, 'plano de foco do portão ativo', JSON.stringify(shots));
   const tug = await logOf('rope:tug');
   const go = await logOf('gate:open');
   check(tug.length === 1 && go.length === 1, 'eventos rope:tug e gate:open emitidos uma vez');
 
   // 3) Companheira volta a seguir pelo portão
-  await sleep(3500);
-  i = await info();
+  i = await waitFor((s) => s.dogs.rhaenyra.x > 1.05, { timeout: 5000 });
   check(i.dogs.rhaenyra.x > 1.05, 'Rhaenyra passou pelo portão e voltou a seguir', `x=${i.dogs.rhaenyra.x} modo=${i.dogs.rhaenyra.mode}`);
   await shot('15-rhaenyra-seguindo.png');
 
@@ -282,21 +199,24 @@ async function sideTests() {
   check((await logOf('dog:bark')).length === 1, 'E sem nada perto → dog:bark');
 
   // --- Movimento: aceleração, parada, pivô, sem deslize lateral
-  await hold(['KeyS'], 700);
-  i = await info();
-  const v1 = i.dogs.radhija.speed;
-  check(v1 > 2.0, 'acelera até ~2.4 m/s', `${v1}`);
+  // segura S até a velocidade de corrida; o tempo (de jogo) que levou é o que se confere
+  const t0 = (await info()).simSec;
   await page.keyboard.down('KeyS');
-  await sleep(300);
+  i = await waitFor((s) => s.dogs.radhija.speed > 2.0, { timeout: 1500, step: 30 });
+  const v1 = i.dogs.radhija.speed;
+  const tAcc = i.simSec - t0;
+  check(v1 > 2.0 && tAcc < 1.0, 'acelera até ~2.4 m/s', `${v1} em ${tAcc.toFixed(2)} s de jogo`);
+  // inversão: grava a velocidade quadro a quadro (uma leitura a 90 ms perde o pivô quando a máquina está carregada)
+  const rec = await record((g) => ({ v: g.debug.ctrls.radhija.v, piv: g.debug.ctrls.radhija.pivoting }));
   await page.keyboard.up('KeyS');
   await page.keyboard.down('KeyW');
-  await sleep(90);
-  i = await info();
-  const pivotSpeed = i.dogs.radhija.v;
-  await sleep(400);
+  await gsleep(500);
   await page.keyboard.up('KeyW');
-  check(pivotSpeed < 1.2, 'inversão brusca: pivô com queda de velocidade', `v=${pivotSpeed}`);
-  await sleep(250);
+  const frames = await rec.stop();
+  const piv = frames.filter((f) => f.piv);
+  const pivotSpeed = piv.length ? Math.min(...piv.map((f) => f.v)) : null;
+  check(piv.length > 0 && pivotSpeed < 1.2, 'inversão brusca: pivô com queda de velocidade', `v=${pivotSpeed?.toFixed(3)} (${piv.length} quadros de pivô)`);
+  await gsleep(250);
   i = await info();
   check(i.dogs.radhija.speed < 0.3, 'desacelera e para rápido ao soltar', `${i.dogs.radhija.speed}`);
 
@@ -413,12 +333,8 @@ try {
   if (ONLY === 'all' || ONLY === 'full') await fullRun();
   if (ONLY === 'all' || ONLY === 'tests') await sideTests();
 } catch (e) {
-  fail++;
-  console.log(`  FALHOU  exceção: ${e.message}`);
+  check(false, `exceção: ${e.message}`);
   try { await shot('99-erro.png'); } catch {}
-} finally {
-  await browser.close();
-  console.log(`\n${pass} ok, ${fail} falha(s)`);
-  if (errors.length) { console.log(`ERROS DE CONSOLE (${errors.length}):`); for (const e of errors.slice(0, 20)) console.log(e); } else console.log('sem erros de console');
-  process.exit(fail ? 1 : 0);
 }
+const fails = await H.close();
+process.exit(fails ? 1 : 0);
