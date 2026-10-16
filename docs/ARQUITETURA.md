@@ -377,14 +377,18 @@ rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 controle) e teletransportam entre os trechos, porque os testes headless já cobrem os caminhos.
 Capturas vão para `shots/` (fora do git).
 
-*Robustas à carga*: com a máquina ocupada (outra sessão tirando capturas, por exemplo) o Chrome cai abaixo de 20 fps,
-o quadro limita `dt` a 1/20 s e o jogo passa a andar MAIS DEVAGAR que o relógio. Por isso as partidas não medem nada
-em tempo de relógio: `waitFor(pred, { timeout })`, `walkTo` e `hold(teclas, ms)` contam o prazo em tempo de JOGO
-(`info().simSec`, com teto de 8× em tempo real), `gsleep(ms)` espera tempo de jogo, e o que é curto ou rápido demais
-para uma leitura por `info()` (uma ida e volta por amostra) se confere por registro: os planos de câmera no log
-(`camera:shot`) e a velocidade/posição quadro a quadro com `record(game => amostra)`, que roda dentro da página a cada
-`requestAnimationFrame`. Para conferir: rodar uma suíte com uma segunda instância do e2e em paralelo
-(`node tools/scripts/run-e2e.mjs --only fase1`, cada uma sobe o próprio Vite).
+*Robustas à carga*: com a máquina ocupada (outra sessão tirando capturas, por exemplo) há dois efeitos. (1) O Chrome
+cai abaixo de 20 fps, o quadro limita `dt` a 1/20 s e o jogo anda MAIS DEVAGAR que o relógio: `waitFor(pred,
+{ timeout })`, `walkTo` e `gsleep(ms)` contam o prazo em tempo de JOGO (`info().simSec`, com teto de 8× em tempo real).
+(2) O próprio processo de teste fica sem CPU e cada ida e volta ao navegador (ler o estado, apertar ou soltar uma
+tecla) pode levar segundos: o que se mede num instante ou se solta "na hora certa" sai errado. Por isso: `holdUntil(teclas,
+pred)` aperta as teclas reais e a PÁGINA as solta no quadro em que `pred(info())` vale (ou depois de `timeout` ms de
+jogo); `hold(teclas, ms)` é um `holdUntil` só com o prazo; `walkTo` instala na página uma trava que solta WASD ao
+entrar a 0,6 m do alvo ou ao começar a se afastar dele, e faz a aproximação final com `holdUntil`; eventos curtos se
+conferem por registro, não pelo instante: planos de câmera no log (`camera:shot`) e animações, velocidade e trajetória
+quadro a quadro com `record(game => amostra)`, que roda na página a cada `requestAnimationFrame`. No fim de cada
+suíte sai o diagnóstico `ritmo do jogo` (jogo/relógio) e a latência das leituras do estado. Para conferir: rodar uma
+suíte com carga artificial ou uma segunda instância do e2e em paralelo (cada uma sobe o próprio Vite).
 
 **Outras ferramentas**: `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
 `tools/scripts/sim-sprinkler.mjs` (equilíbrio do irrigador), `sandbox/*.html` (dogs, gansa, cenário e efeitos isolados).
