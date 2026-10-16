@@ -192,17 +192,16 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     for (const [x, z, o] of points) d = await walkTo(x, z, { ...opts, ...(o || {}) });
     return d;
   }
-  /** Segura as teclas por `ms` de tempo de JOGO (sob carga, o jogo anda mais devagar que o relógio). */
+  /** Segura as teclas por `ms` de tempo de JOGO, soltas pela própria página (ver holdUntil): sob carga, nem o relógio
+   *  nem o keyup do teste servem de medida (a dog deslizava além da ponta da cerca-viva no cantinho da fase 3). */
   async function hold(keys, ms) {
-    for (const k of keys) await page.keyboard.down(k);
-    await gsleep(ms);
-    for (const k of [...keys].reverse()) await page.keyboard.up(k);
+    await holdUntil(keys, () => false, { timeout: ms });
   }
   /** Segura as teclas (reais) até `pred(info(), arg)` virar verdade, conferida QUADRO A QUADRO dentro da página, que
    *  solta as teclas no mesmo quadro (keyup na janela, como o do teclado). Sob carga, o keyup do Playwright chega
    *  centenas de ms depois e o caixote/dog passava do ponto. `pred` é serializada (só pode usar `arg`).
    *  Prazo em tempo de jogo (`timeout` ms). Devolve o info() do fim. */
-  async function holdUntil(keys, pred, { timeout = 8000, arg = null } = {}) {
+  async function holdUntil(keys, pred, { timeout = 8000, arg = null, during = null } = {}) {
     await page.evaluate(({ src, keys: ks, arg: a, ms }) => {
       const fn = new Function(`return (${src})`)();
       const g = window.__game.game;
@@ -231,6 +230,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       requestAnimationFrame(loop);
     }, { src: pred.toString(), keys, arg, ms: timeout });
     for (const k of keys) await page.keyboard.down(k);
+    if (during) await during(); // ex.: um toque de Shift (arrancada) com as teclas seguradas
     await page.waitForFunction(() => window.__hold.done, null, { polling: 30, timeout: Math.max(5000, timeout * 8) }).catch(() => {});
     for (const k of [...keys].reverse()) await page.keyboard.up(k);
     return info();

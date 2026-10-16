@@ -123,7 +123,10 @@ async function fullRun() {
   i = await info();
   check(i.objective.startsWith('Trave o portão'), 'objetivo: trave o portão com a arrancada', i.objective);
   await walkTo(-0.95, 2.35, { tol: 0.06 });
-  let nShots = (await logOf('camera:shot')).length;
+  // marca de tempo (o log de depuração guarda só 500 entradas: contar planos antes/depois não serve)
+  const now = () => ev(() => performance.now());
+  const shotsSince = (t) => ev((t0) => window.__game.game.debug.events('camera:shot').filter((e) => e.t >= t0).length, t);
+  let mark = await now();
   await page.keyboard.down('KeyA');
   await gsleep(60);
   await page.keyboard.press('ShiftLeft');
@@ -135,7 +138,7 @@ async function fullRun() {
   check(i.wedge.locked && wk.some((w) => w.locked), 'arrancada no calço com o portão aberto → travado (wedge:kick locked)', JSON.stringify(i.wedge));
   check((await logOf('gate:locked')).length === 1, 'gate:locked emitido');
   check(i.stage === 'gateLocked', 'etapa gateLocked', i.stage);
-  check((await logOf('camera:shot')).length > nShots, 'plano de foco do calço/portão');
+  check((await shotsSince(mark)) > 0, 'plano de foco do calço/portão');
   await shot('f2-06-calco-travado.png');
 
   // 6) Vem (F): a Rhaenyra sai da tábua e o portão continua aberto
@@ -159,7 +162,7 @@ async function fullRun() {
   await sleep(200);
   i = await info();
   check(i.prompt === 'Fechar o registro', 'prompt "Fechar o registro"', i.prompt);
-  nShots = (await logOf('camera:shot')).length;
+  mark = await now();
   await press('KeyE', 300);
   i = await info();
   check(i.dogs.radhija.action === 'turn', 'Radhija gira o registro (action turn)', i.dogs.radhija.action);
@@ -169,7 +172,7 @@ async function fullRun() {
   i = await info();
   check(!i.sprinkler.running && i.stage === 'sprinklersOff', 'registro fechado → irrigador desligado (sprinklersOff)', JSON.stringify(i.sprinkler));
   check((await logOf('valve:turn')).length === 1 && (await logOf('sprinkler:off')).length === 1, 'valve:turn e sprinkler:off');
-  check((await logOf('camera:shot')).length > nShots, 'plano de foco do irrigador desligando');
+  check((await shotsSince(mark)) > 0, 'plano de foco do irrigador desligando');
   await sleep(600);
   await shot('f2-09-irrigador-desligado.png');
 
@@ -280,27 +283,33 @@ async function sideTests() {
   i = await info();
   check(i.stage === 'gateLocked' && i.stay.rhaenyra, '?stage=gateLocked (Rhaenyra fica na tábua)', `${i.stage} stay=${i.stay.rhaenyra}`);
   // a reação dura frações de segundo: grava a animação quadro a quadro em vez de ler num instante
-  const recWet = await record((g) => { const i = g.debug.info(); return { busy: i.fx.radhija.busy, action: i.dogs.radhija.action, t: i.simSec }; });
+  const recWet = await record((g) => {
+    const i = g.debug.info();
+    return { busy: i.fx.radhija.busy, wet: i.fx.radhija.wet, action: i.dogs.radhija.action, t: i.simSec };
+  });
   await walkTo(-1.1, -0.2, { timeout: 6000, stopIf: (s) => s.fx.radhija.busy });
-  i = await waitFor((s) => s.fx.radhija.busy, { timeout: 6000, step: 30 });
-  check(i.fx.radhija.busy, 'Radhija molhada pelo jato');
-  await gsleep(800);
+  // espera o acerto aparecer na gravação (com leituras lentas, a janela "ocupada" pode acabar entre duas leituras)
+  await page.waitForFunction(() => window.__rec.frames.some((f) => f.busy), null, { polling: 50, timeout: 60000 }).catch(() => {});
+  await gsleep(1000);
   const wetFrames = await recWet.stop();
   const hitAt = wetFrames.findIndex((f) => f.busy);
-  const after = hitAt < 0 ? [] : wetFrames.slice(hitAt).filter((f) => f.t - wetFrames[hitAt].t < 1.0).map((f) => f.action);
+  check(hitAt >= 0, 'Radhija molhada pelo jato');
+  const win = hitAt < 0 ? [] : wetFrames.slice(hitAt).filter((f) => f.t - wetFrames[hitAt].t < 1.0);
+  const after = win.map((f) => f.action);
   const seq = [...new Set(after)].join(' → ');
   check(after.some((a) => a === 'startled' || a === 'shake'), 'reação ao jato (startled → shake)', seq);
   i = await info();
   const dOut = Math.hypot(i.dogs.radhija.x - SPR.x, i.dogs.radhija.z - SPR.z);
   check(dOut > SPR.r, 'empurrada para fora do disco', `d=${dOut.toFixed(2)}`);
   check(after.includes('shake'), 'chacoalha (action shake)', seq);
-  check(i.fx.radhija.wet > 0.9, 'molhada (wet ≈ 1)', i.fx.radhija.wet);
+  const wetMax = Math.max(0, ...win.map((f) => f.wet));
+  check(wetMax > 0.9, 'molhada (wet ≈ 1)', wetMax);
   const okPos = await ev(() => { const g = window.__game.game; const c = g.debug.ctrls.radhija; return !g.debug.world.overlaps(c.x, c.z, c.r * 0.95, c.size); });
   check(okPos, 'posição válida depois do empurrão');
   check((await logOf('sprinkler:hit')).some((h) => h.name === 'radhija'), 'sprinkler:hit {name}');
   check((await logOf('hint')).some((h) => h.text.startsWith('Molhou!')), 'dica "Molhou!…"');
   await shot('f2-21-molhada-chacoalhando.png');
-  await sleep(6500);
+  await gsleep(6500);
   i = await info();
   check(i.fx.radhija.wet < 0.35, 'molhado decai com o tempo', i.fx.radhija.wet);
 

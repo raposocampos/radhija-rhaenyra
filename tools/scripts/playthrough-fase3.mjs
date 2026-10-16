@@ -185,7 +185,7 @@ async function sideTests() {
   await walkPath([[-3.1, -1.6], [-3.04, -2.45, { tol: 0.1 }]]);
   await H.hold(['KeyW'], 900);
   let i = await info();
-  check(i.dogs.rhaenyra.z > -2.975 + 0.1, 'Rhaenyra não entra no cantinho', `z=${i.dogs.rhaenyra.z}`);
+  check(i.dogs.rhaenyra.z > -2.975 + 0.1, 'Rhaenyra não entra no cantinho', `(${i.dogs.rhaenyra.x}, ${i.dogs.rhaenyra.z})`);
   check((await logOf('hint')).some((h) => h.text.startsWith('A Rhaenyra não cabe no cantinho')), 'dica do cantinho');
   await shot('f3-20-rhaenyra-cantinho.png');
 

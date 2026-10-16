@@ -9,7 +9,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const ONLY = args.only || 'all';
 const H = await createHarness({ base: BASE, outDir: 'shots/game' });
-const { page, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, hold, waitFor, record } = H;
+const { page, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, hold, holdUntil, press, waitFor, record } = H;
 
 /** Carrega a página e espera os primeiros quadros (compilação de shaders) e a transição da câmera. */
 async function load(query) {
@@ -259,12 +259,9 @@ async function sideTests() {
   // --- Arrancada pela abertura (ela cabe) e contra o carrinho
   await ev(() => window.__game.game.debug.teleport('radhija', 0.0, -2.1));
   await sleep(1300);
-  await page.keyboard.down('KeyD');
-  await sleep(60);
-  await page.keyboard.press('ShiftLeft');
-  await sleep(500);
-  await page.keyboard.up('KeyD');
-  i = await info();
+  // solta assim que cruzar: segurando D por tempo de relógio, sob carga ela corria até o carrinho e a dica
+  // "Pesado demais" saía aqui (e ficava em recarga no trecho seguinte)
+  i = await holdUntil(['KeyD'], (s) => s.dogs.radhija.x > 1.4, { timeout: 1500, during: () => press('ShiftLeft', 60) });
   check(i.dogs.radhija.x > 1.1, 'arrancada atravessa a abertura (Radhija cabe)', `x=${i.dogs.radhija.x}`);
   await ev(() => window.__game.game.debug.teleport('radhija', 3.2, -2.25));
   await sleep(1300);
