@@ -1,13 +1,17 @@
-import { mtof, rnd, pick, env, gn, flt, osc, tone, fm } from './synth.js';
+import { mtof, rnd, pick, env, gn, flt, osc, tone, fm, nz, drips } from './synth.js';
 
 // ---------------------------------------------------------------------------
 //  Ambiente por fase: 'day' (passarinhos), 'dusk' (grilos começando + vento),
-//  'night' (grilos, sapinhos e sino de vento). Troca suave com setAmbience(kind).
+//  'night' (grilos, sapinhos e sino de vento), 'city' (manhã no terraço: passarinhos + trânsito
+//  lá embaixo) e 'rain' (dentro de casa num dia de chuva: chuva na janela, relógio e trovão longe).
+//  Troca suave com setAmbience(kind).
 // ---------------------------------------------------------------------------
 export const AMBIENCE = {
   day: { wind: 0.05, birds: [2600, 7800], crickets: 0, bed: 0, frogs: 0, chime: [26000, 52000], chimeP: 0.45 },
   dusk: { wind: 0.068, birds: [8000, 17000], crickets: 0.4, bed: 0.006, frogs: 0, chime: [20000, 38000], chimeP: 0.4 },
   night: { wind: 0.036, birds: null, crickets: 1, bed: 0.016, frogs: 1, chime: [9000, 19000], chimeP: 0.85 },
+  city: { wind: 0.07, birds: [3200, 9000], crickets: 0, bed: 0, frogs: 0, chime: [30000, 60000], chimeP: 0.25, traffic: 1 },
+  rain: { wind: 0.012, birds: null, crickets: 0, bed: 0, frogs: 0, chime: [60000, 90000], chimeP: 0, rain: 1, clock: 1 },
 };
 
 export function startAmbient(G, isAlive) {
@@ -50,6 +54,30 @@ export function startAmbient(G, isAlive) {
   bed.connect(bbp); bbp.connect(bam); bam.connect(phrase); phrase.connect(bedG); bedG.connect(G.amb);
   bed.start(now);
 
+  // chuva (chiado agudo + "tamborilar" médio com AM lenta) e trânsito distante (ronco grave),
+  // ambos do mesmo ruído rosa; ficam mudos fora de 'rain' / 'city'
+  const bedSrc = ctx.createBufferSource();
+  bedSrc.buffer = G.pink;
+  bedSrc.loop = true;
+  const rainHp = flt(G, 'highpass', 900, 0.5);
+  const rainLp = flt(G, 'lowpass', 6500, 0.5);
+  const rainG = gn(G, (cfg().rain || 0) * 0.07);
+  const patBp = flt(G, 'bandpass', 1800, 0.9);
+  const patAm = gn(G, 0.6);
+  const patL = osc(G, 'sine', 0.13, now, now + 1e6);
+  const patLg = gn(G, 0.35);
+  patL.connect(patLg); patLg.connect(patAm.gain);
+  const patG = gn(G, (cfg().rain || 0) * 0.05);
+  bedSrc.connect(rainHp); rainHp.connect(rainLp); rainLp.connect(rainG); rainG.connect(G.amb);
+  bedSrc.connect(patBp); patBp.connect(patAm); patAm.connect(patG); patG.connect(G.amb);
+  const trafLp = flt(G, 'lowpass', 240, 0.6);
+  const trafG = gn(G, (cfg().traffic || 0) * 0.06);
+  const trafL = osc(G, 'sine', 0.05, now, now + 1e6);
+  const trafLg = gn(G, 0.02);
+  trafL.connect(trafLg); trafLg.connect(trafG.gain);
+  bedSrc.connect(trafLp); trafLp.connect(trafG); trafG.connect(G.amb);
+  bedSrc.start(now);
+
   G.setAmbience = (kind) => {
     G.ambience = AMBIENCE[kind] ? kind : 'day';
     const c = cfg();
@@ -57,6 +85,9 @@ export function startAmbient(G, isAlive) {
     wg.gain.setTargetAtTime(c.wind, t, 1.2);
     l1g.gain.setTargetAtTime(c.wind * 0.56, t, 1.2);
     bedG.gain.setTargetAtTime(c.bed * 8, t, 1.5);
+    rainG.gain.setTargetAtTime((c.rain || 0) * 0.07, t, 1.5);
+    patG.gain.setTargetAtTime((c.rain || 0) * 0.05, t, 1.5);
+    trafG.gain.setTargetAtTime((c.traffic || 0) * 0.06, t, 1.5);
   };
 
   const birdOut = gn(G, 1);
@@ -206,6 +237,41 @@ export function startAmbient(G, isAlive) {
     if (running() && c.frogs > 0 && Math.random() < 0.6 * c.frogs) frog();
     setTimeout(frogLoop, rnd(2200, 6500));
   };
+  // gotas batendo no vidro, relógio da sala e trovão bem longe (só em 'rain')
+  const dropLoop = () => {
+    if (!isAlive()) return;
+    const c = cfg();
+    if (running() && c.rain > 0) {
+      const v = voice(0.5, 0.9, 0.2);
+      drips(G, v.g, ctx.currentTime + 0.02, 1 + ((Math.random() * 3) | 0), 0.5, 0.012 * c.rain, 2600, 5200);
+      v.free(1500);
+    }
+    setTimeout(dropLoop, rnd(250, 900));
+  };
+  let tick = 0;
+  const clockLoop = () => {
+    if (!isAlive()) return;
+    const c = cfg();
+    if (running() && c.clock > 0) {
+      const t = ctx.currentTime + 0.02;
+      tone(G, G.amb, { type: 'triangle', f: tick++ % 2 ? 2100 : 2500, t, a: 0.001, d: 0.025, peak: 0.012 * c.clock });
+    }
+    setTimeout(clockLoop, 1000);
+  };
+  const thunderLoop = () => {
+    if (!isAlive()) return;
+    const c = cfg();
+    if (running() && c.rain > 0 && Math.random() < 0.7) {
+      const t = ctx.currentTime + 0.05;
+      const d = rnd(2.2, 3.4);
+      nz(G, G.amb, { t, a: 0.3, hold: 0.3, d, peak: 0.1 * c.rain, type: 'lowpass', f: 150, to: 60, toT: d, q: 0.6, buf: G.pink });
+      nz(G, G.amb, { t: t + rnd(0.1, 0.4), a: 0.06, d: 0.7, peak: 0.045 * c.rain, type: 'lowpass', f: 300, q: 0.7, buf: G.pink });
+    }
+    setTimeout(thunderLoop, rnd(20000, 42000));
+  };
+  setTimeout(dropLoop, 1200);
+  setTimeout(clockLoop, 1500);
+  setTimeout(thunderLoop, rnd(9000, 16000));
   setTimeout(birdLoop, 1800);
   setTimeout(chimeLoop, rnd(8000, 16000));
   setTimeout(cricketLoop, 900);

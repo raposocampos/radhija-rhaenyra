@@ -1,6 +1,6 @@
 // Áudio 100% sintetizado em WebAudio (sem arquivos).
 // API: createAudio() → { unlock(), setVolume(v), getVolume(), play(name, opts) }
-// Extras: stop(name), setMuffled(on), setAmbience('day'|'dusk'|'night'), names, analyze(name, opts).
+// Extras: stop(name), setMuffled(on), setAmbience('day'|'dusk'|'night'|'city'|'rain'), names, analyze(name, opts).
 // Loops por velocidade: play('cartRoll', {speed}) e play('crateDrag', {speed}) — chame a cada quadro; somem sozinhos.
 // As partes moram em ./audio/: graph.js (mixagem), synth.js (primitivas), soundsV1.js/soundsV2.js (sons),
 // sounds.js (biblioteca), ambience.js (ambiente por fase) e loops.js (carrinho/caixote).
@@ -64,7 +64,7 @@ export function createAudio() {
     if (muffled) { roll?.stop(); drag?.stop(); }
   }
 
-  /** Ambiente sonoro da fase: 'day' | 'dusk' | 'night'. Pode ser chamado antes do unlock. */
+  /** Ambiente sonoro da fase: 'day' | 'dusk' | 'night' | 'city' | 'rain'. Pode ser chamado antes do unlock. */
   function setAmbience(kind) {
     ambience = kind || 'day';
     if (G) G.setAmbience?.(ambience);

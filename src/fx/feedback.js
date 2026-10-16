@@ -3,7 +3,7 @@
 // Independente de fase: props/layout são lidos na hora (opts.props / opts.layout são getters) e as
 // posições vêm sempre dos payloads.
 // API: createFeedback({ engine, audio, particles, dogs, game, props, layout }) → { update(dt, t), marker, dogRings }
-// Ambiente por fase (no level:loaded): áudio 'day' | 'dusk' | 'night' (def.ambience, ou pelo número da fase)
+// Ambiente por fase (no level:loaded): áudio 'day' | 'dusk' | 'night' | 'city' | 'rain' (def.ambience, ou pelo número da fase)
 // e vagalumes automáticos em 'dusk'/'night' (desligue com props.fireflies === false, ou chame
 // particles.fireflies({...}) depois do build para trocar a área).
 import * as THREE from 'three';
@@ -285,9 +285,9 @@ export function createFeedback(opts) {
     if (time - lastPickupFx < 0.2) return;
     lastPickupFx = time;
     glowItem = null;
-    const snd = item === 'ball' ? 'pickupBall' : item === 'slipper' ? 'pickupSlipper' : 'pickupCarrot';
+    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear' }[item] || 'pickupCarrot';
     sfx(snd, x, z);
-    const col = item === 'ball' ? '#E6F27A' : item === 'slipper' ? '#F9B8C9' : '#FFB46E';
+    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A' }[item] || '#FFB46E';
     particles.burst({ x, y: 0.35, z }, { kind: 'stars', count: 10, size: 0.85, speed: 0.8 });
     particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.6, color: col, opacity: 0.55, width: 0.09 });
   }
@@ -322,7 +322,7 @@ export function createFeedback(opts) {
     audio.setAmbience?.(kind);
     // vagalumes automáticos ao entardecer/noite (o cenário pode trocar ou desligar)
     const B = L().WORLD?.bounds;
-    if (P().fireflies === false || !B || kind === 'day') particles.fireflies?.(null);
+    if (P().fireflies === false || !B || (kind !== 'dusk' && kind !== 'night')) particles.fireflies?.(null);
     else {
       particles.fireflies?.({
         x: (B.minX + B.maxX) / 2, z: (B.minZ + B.maxZ) / 2,

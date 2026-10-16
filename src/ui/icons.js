@@ -122,10 +122,43 @@ export function slipperIcon() {
 </svg>`;
 }
 
-/** Ícone do item da fase ('carrot' | 'ball' | 'slipper'). */
+export function duckIcon() {
+  return `<svg class="ico ico-duck" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="${INK}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M8 34 C 6 27, 10 24, 13 27 C 16 30, 20 31, 26 31 L 40 31 C 52 31, 58 38, 56 46 C 54 53, 46 56, 34 56 L 24 56 C 14 56, 9 50, 8 42 Z" fill="#FFD23C"/>
+    <circle cx="40" cy="22" r="11" fill="#FFD23C"/>
+    <path d="M49 21.5 C 55 19.5, 60 21, 61 24 C 58 27.5, 53 27.5, 49 26.5 Z" fill="#FF8A2A"/>
+  </g>
+  <path d="M15 40 C 20 46, 30 47.5, 39 44" fill="none" stroke="#F4B21E" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 18 a9 9 0 0 1 8 -5" fill="none" stroke="#FFF2B0" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="43" cy="20" r="2.6" fill="#2A1C14"/><circle cx="43.9" cy="19.1" r="0.9" fill="#fff"/>
+  <path d="M10 60 C 20 57.5, 44 57.5, 56 60" stroke="#8FC8E8" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+</svg>`;
+}
+
+export function bearIcon() {
+  return `<svg class="ico ico-bear" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="${INK}" stroke-width="2.4" stroke-linejoin="round">
+    <circle cx="17" cy="15" r="7" fill="#C08D5E"/><circle cx="47" cy="15" r="7" fill="#C08D5E"/>
+    <ellipse cx="32" cy="48" rx="15" ry="13" fill="#C08D5E"/>
+    <circle cx="32" cy="27" r="15" fill="#C08D5E"/>
+    <ellipse cx="32" cy="33" rx="7.5" ry="5.6" fill="#EFD5AE"/>
+  </g>
+  <circle cx="17" cy="15" r="3" fill="#EFD5AE"/><circle cx="47" cy="15" r="3" fill="#EFD5AE"/>
+  <ellipse cx="32" cy="50" rx="8" ry="7" fill="#EFD5AE"/>
+  <circle cx="26" cy="25" r="2.5" fill="#2A1C14"/><circle cx="38" cy="25" r="2.5" fill="#2A1C14"/>
+  <circle cx="26.8" cy="24.2" r="0.8" fill="#fff"/><circle cx="38.8" cy="24.2" r="0.8" fill="#fff"/>
+  <path d="M29.5 31 C 29.5 29.5, 34.5 29.5, 34.5 31 C 34.5 32.5, 33 33.4, 32 33.4 C 31 33.4, 29.5 32.5, 29.5 31 Z" fill="#2A1C14"/>
+  <path d="M24 41.5 L 32 44 L 40 41.5 L 40 46 L 32 43.6 L 24 46 Z" fill="#E0566C" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear'). */
 export function itemIcon(item) {
   if (item === 'ball') return ballIcon();
   if (item === 'slipper') return slipperIcon();
+  if (item === 'duck') return duckIcon();
+  if (item === 'bear') return bearIcon();
   return carrotIcon();
 }
 

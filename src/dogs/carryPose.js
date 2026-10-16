@@ -1,5 +1,5 @@
-// Item na boca: o `mouthSocket` (filho do osso da cabeça) onde o jogo pendura a cenoura, a bolinha ou a
-// pantufa. A pose da boca se ajusta ao tipo do item: detectado pelo nome/userData.carryKind do objeto
+// Item na boca: o `mouthSocket` (filho do osso da cabeça) onde o jogo pendura a cenoura, a bolinha, a
+// pantufa, o patinho ou o ursinho. A pose da boca se ajusta ao tipo do item: detectado pelo nome/userData.carryKind do objeto
 // (ou pela forma da caixa envolvente) ou forçado com setForced(kind). Cenoura = pose da v1 (atravessada).
 import * as THREE from 'three';
 
@@ -10,6 +10,10 @@ export const CARRY = {
   ball: { open: 1.0, pos: [0, -0.036, 0.016], rot: [0, 0, 0] },
   // pantufa: mordida por uma ponta, atravessada e caída para o lado
   slipper: { open: 0.6, pos: [0.045, -0.02, 0.014], rot: [0.12, 0.18, -0.32] },
+  // patinho de borracha: boca aberta como na bolinha, um pouco mais à frente (o bico aparece de lado)
+  duck: { open: 0.85, pos: [0, -0.03, 0.022], rot: [0, 0, 0] },
+  // ursinho: mordido pela barriga, atravessado e pendendo para o lado (como a pantufa)
+  bear: { open: 0.7, pos: [0.03, -0.035, 0.016], rot: [0.1, 0.12, -0.42] },
 };
 
 /**
@@ -50,6 +54,8 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
     if (/ball|bola/.test(tag)) return 'ball';
     if (/slipper|pantufa|chinelo/.test(tag)) return 'slipper';
     if (/carrot|cenoura/.test(tag)) return 'carrot';
+    if (/duck|patinho/.test(tag)) return 'duck';
+    if (/bear|ursinho/.test(tag)) return 'bear';
     const b = localBox(o);
     if (b.isEmpty()) return 'carrot';
     const d = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].sort((a, c) => a - c);
@@ -67,7 +73,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
       const b = localBox(o);
       if (!b.isEmpty()) {
         const dx = b.max.x - b.min.x, dy = b.max.y - b.min.y, dz = b.max.z - b.min.z;
-        if (kind === 'slipper') {
+        if (kind === 'slipper' || kind === 'bear') {
           if (dz >= dx && dz >= dy) mouthSocket.rotateY(Math.PI / 2);
           else if (dy >= dx && dy >= dz) mouthSocket.rotateZ(Math.PI / 2);
         }
@@ -87,7 +93,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         applyCarryPose(carryForced || (ch ? detectKind(ch) : 'carrot'), ch);
       }
     },
-    /** Força a pose: 'carrot' | 'ball' | 'slipper' | null (automático). */
+    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | null (automático). */
     setForced(kind) {
       carryForced = kind || null;
       carryChild = undefined; // reaplica no próximo sync

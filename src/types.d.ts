@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -218,7 +218,7 @@ export interface LevelDef {
   intro?: string;
   item: ItemKind;
   /** Som ambiente. */
-  ambience?: 'day' | 'dusk' | 'night';
+  ambience?: 'day' | 'dusk' | 'night' | 'city' | 'rain';
   texts?: LevelTexts;
   layout: LevelLayout;
   lighting: LightingPreset;
@@ -496,7 +496,7 @@ export interface DogModel {
   onFootstep: ((foot: number) => void) | null;
   update(dt: number, anim?: DogAnim): void;
   triggerBark(): void;
-  /** Força a pose de boca ('carrot' | 'ball' | 'slipper') ou null para detectar pelo item. */
+  /** Força a pose de boca ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear') ou null para detectar pelo item. */
   setCarryPose(kind: ItemKind | null): void;
   readonly carryKind: ItemKind;
   /** Pelo molhado 0..1. */
