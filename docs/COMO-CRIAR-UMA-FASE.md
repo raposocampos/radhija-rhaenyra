@@ -173,6 +173,17 @@ return {
 };
 ```
 
+No `index.js`, o cenário entra **sob demanda**, sem `import` estático de `world/` (assim ele fica num chunk à parte e
+quem abre o jogo não baixa a fase 6 antes de jogá-la; ARQUITETURA.md §4.1):
+
+```js
+// tire `build: …` e o import do _placeholder.js, e ponha:
+load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
+```
+
+O `npm test` confere isso (`test/carregamento.test.mjs`). Depois de `npm run build`, o chunk aparece como
+`dist/assets/fase6-world-….js`.
+
 - Cada prop que o puzzle usa precisa existir com o mesmo nome e os métodos esperados; escreva o formato em
   `src/types.d.ts` (como `Fase2Props`) para o TypeScript conferir.
 - `reset()` de cada prop volta tudo ao início, inclusive o item à posição `home`.
@@ -191,5 +202,5 @@ return {
 - [ ] `npm test` verde (inclui navegação e colisão da fase nova, e o `test/fase6.test.mjs`).
 - [ ] Jogada inteira no teclado e no controle, sem becos sem saída; todos os textos em português.
 - [ ] `npm run test:e2e` verde (as fases antigas continuam passando).
-- [ ] `npm run build` sem erros.
+- [ ] `npm run build` sem erros, com o cenário no seu próprio chunk (`fase6-world-….js`).
 - [ ] README atualizado (lista de fases).

@@ -40,11 +40,11 @@ src/game/                  NÚCLEO genérico
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
 src/levels/                as fases
   index.js                 registro das fases, em ordem
-  faseN/index.js           definição (nome, textos, item, layout, iluminação, build, createPuzzle)
+  faseN/index.js           definição (nome, textos, item, layout, iluminação, load do cenário, createPuzzle)
   faseN/layout.js          coordenadas e regras: limites, colisores, grafo, objetivo, câmera
   faseN/lighting.js        preset de iluminação (a fase 1 usa o padrão do motor)
   faseN/puzzle.js          a lógica da fase
-  faseN/world/             cenário e props visuais (a fase 1 usa src/world/)
+  faseN/world/             cenário e props visuais, carregados sob demanda (a fase 1: fase1/world.js, que usa src/world/)
   _placeholder.js          cenário provisório em blocos, para testar uma fase antes da arte
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
@@ -71,12 +71,20 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 
 **Carregar uma fase** (`game.loadLevel(i, { mode })`):
 
-1. Emite `level:loading` (a UI cobre a tela com a cortina) e espera a cortina fechar.
-2. Reseta o puzzle da fase anterior e esvazia as bocas das dogs (o item da fase velha não pode vir junto).
-3. Descarta tudo da fase anterior: tudo mora num `root` (Group) que sai da cena.
-4. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
-5. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
-6. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
+1. Chama `def.load()` (se houver), que começa a baixar o cenário da fase (§4.1).
+2. Emite `level:loading` (a UI cobre a tela com a cortina) e espera a cortina fechar e o `load()` terminar; o que ele
+   trouxe (o `build`) entra no lugar dos campos da definição. Até aqui a fase anterior continua inteira.
+3. Reseta o puzzle da fase anterior e esvazia as bocas das dogs (o item da fase velha não pode vir junto).
+4. Descarta tudo da fase anterior: tudo mora num `root` (Group) que sai da cena.
+5. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
+6. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
+7. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
+
+**Pacote inicial**: o `main` do build leva o motor, o núcleo, as dogs, a UI, os efeitos e, de cada fase, só a
+definição, o layout, a iluminação e o puzzle (o menu e os testes em Node usam isso). O cenário de cada fase vira um
+chunk próprio (`dist/assets/faseN-world-….js`, nome dado em `vite.config.js`), baixado só quando a fase carrega: a
+tela inicial baixa o da fase 1, `?level=5` só o da fase 5. As fases de desenvolvimento ficam no chunk `dev`.
+`test/carregamento.test.mjs` falha se algum `world/` voltar a ser importado estaticamente.
 
 **Estados do jogo**: `loading`, `title` (tela inicial sobre a fase), `intro` (cartão da fase), `playing`, `paused`,
 `celebrating` (as duas comemoram no objetivo, ~3 s) e `victory` (painel de vitória). A UI espelha o estado.
@@ -99,12 +107,21 @@ export default {
   texts: { celebrate, victoryTitle, victorySub },
   layout,                       // layout.js
   lighting,                     // lighting.js
-  build({ engine, root, layout, params }) → { props, seeThrough, update(dt, t), dispose?() },
-  createPuzzle(ctx) → puzzle,
+  // cenário sob demanda: import dinâmico de world/, cujo buildWorld é o build (§4.4)
+  load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
+  createPuzzle,                 // puzzle.js: createPuzzle(ctx) → puzzle
 };
 ```
 
 O `id` é a chave do progresso salvo no navegador: não mude o `id` de uma fase publicada.
+
+**Cenário sob demanda** (`load`): o cenário procedural é a parte pesada de uma fase e só serve quando ela é montada.
+Por isso a definição não importa `world/` estaticamente: `load()` faz o `import()` e devolve `{ build }`, e o núcleo
+usa o que vier no lugar dos campos da definição (§3). Assim o Vite põe cada cenário num chunk à parte e o jogo abre
+sem baixar as outras fases. Metadados, `layout`, `lighting` e `createPuzzle` ficam estáticos, porque a UI (cartões
+do menu, total de petiscos) e os testes em Node os usam sem montar cenário; o jogo headless troca o `build` por
+dublês e descarta o `load`. Uma fase com cenário provisório e leve (o modelo e as arenas, com `_placeholder.js`)
+pode passar `build` direto, sem `load`.
 
 Fases registradas (`src/levels/index.js`):
 
@@ -142,7 +159,7 @@ Cores em string hex são sRGB; arrays `[r, g, b]` são lineares. Luzes extras (l
 
 ### 4.4 Cenário e props (`build`, tipo `LevelBuild`)
 
-`build` monta tudo dentro de `root` e devolve:
+`build` (o `buildWorld` de `world/index.js`, trazido pelo `load` da §4.1) monta tudo dentro de `root` e devolve:
 
 - `props`: objetos que o puzzle anima (portão, item, placas…). O formato de cada fase está em `src/types.d.ts`
   (`Fase1Props` a `Fase5Props`). O puzzle sempre usa `?.` ao chamar um prop
@@ -335,14 +352,14 @@ embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vag
 
 | Comando | O que faz | Tempo |
 |---|---|---|
-| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~6 s |
+| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, cenário fora do pacote inicial, irrigador, dogs e regressões | ~8 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
 | `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–5, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~14 min |
 
 **Jogo headless** (`test/helpers/headless.mjs`): roda o `game.js` de verdade no Node, com dublês de motor, dogs e
-props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devolve `walkTo(x, z)`, `tap('KeyE')`,
+props (o cenário nem é importado: o `load` das fases é descartado), e teclado/controle simulados. `createHeadlessGame({ level, query })` devolve `walkTo(x, z)`, `tap('KeyE')`,
 `hold([dx, dz], ['ShiftLeft'])`, `run(segundos, { until })`, `teleport`, `info()` e `log(evento)`. É a forma mais
 rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 
