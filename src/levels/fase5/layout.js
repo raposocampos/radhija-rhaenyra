@@ -154,7 +154,7 @@ export const NAV_EDGES = [
 /** @type {import('../../types').Goal} */
 export const GOAL = {
   x: DOG_BED.x, z: DOG_BED.z, r: 0.85,
-  celebrate: { radhija: { x: -4.85, z: 2.05 }, rhaenyra: { x: -5.6, z: 2.0 } },
+  celebrate: { radhija: { x: -4.98, z: 2.32 }, rhaenyra: { x: -5.5, z: 2.48 } }, // as duas dentro da caminha
   entryPoints: [{ x: -3.9, z: 0.4 }, { x: -5.8, z: -0.4 }, { x: -2.6, z: 0.5 }],
 };
 
@@ -168,7 +168,7 @@ export const CAMERA = {
   lookHeight: 0.3,
   limits: { minX: -4.3, maxX: 4.6, minZ: -2.5, maxZ: 2.3 },
   title: { center: { x: -4.6, z: 1.4 }, radius: 5.0, angle: 0.5, height: 2.0, look: { x: -5.1, y: 0.6, z: 2.0 } },
-  celebrate: { pos: [GOAL.x + 0.6, 1.25, GOAL.z + 2.4], look: [GOAL.x, 0.3, GOAL.z - 0.1] },
+  celebrate: { pos: [GOAL.x + 0.75, 1.3, GOAL.z + 2.1], look: [GOAL.x + 0.05, 0.28, GOAL.z - 0.05] },
   victoryOffset: { pos: [1.1, 0.25, 0.7], look: [1.22, 0.14, 0] },
 };
 
