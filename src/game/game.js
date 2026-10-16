@@ -625,12 +625,16 @@ export function createGame({ engine, dogs, levels, params }) {
     if (loadingPromise) return loadingPromise;
     index = Math.max(0, Math.min(levels.length - 1, index | 0));
     loadingPromise = (async () => {
-      const nextDef = levels[index];
+      const baseDef = levels[index];
+      // Partes pesadas da fase (o cenário) vêm sob demanda: o download corre enquanto a cortina fecha.
+      const lazy = baseDef.load?.();
       const prevState = state;
       state = 'loading';
       emit('game:state', { state: 'loading', prev: prevState, level: index });
-      emit('level:loading', { index, count: levels.length, id: nextDef.id, number: nextDef.number ?? index + 1, name: nextDef.name, subtitle: nextDef.subtitle, initial });
+      emit('level:loading', { index, count: levels.length, id: baseDef.id, number: baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial });
       if (!initial) await sleep(FADE_MS);
+      /** @type {import('../types').LevelDef} */
+      const nextDef = { ...baseDef, ...(await lazy) };
       await nextPaint();
 
       // Devolve o item carregado à fase velha e esvazia as bocas (as dogs sobrevivem entre fases).

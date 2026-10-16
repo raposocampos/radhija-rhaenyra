@@ -102,10 +102,14 @@ export function stubProps(root) {
   });
 }
 
-/** Troca o `build` de cada fase por um que só cria dublês (sem cenário, sem canvas). */
+/**
+ * Troca o `build` de cada fase por um que só cria dublês (sem cenário, sem canvas) e tira o `load`
+ * (o import dinâmico do cenário): os módulos de world/ nem chegam a ser carregados.
+ */
 export function headlessLevels(levels) {
   return levels.map((def) => ({
     ...def,
+    load: undefined,
     build({ root }) {
       return { props: stubProps(root), seeThrough: [], update() {} };
     },
