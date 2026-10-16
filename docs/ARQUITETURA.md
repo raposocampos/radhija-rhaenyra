@@ -50,7 +50,8 @@ src/levels/                as fases
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
   dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
-src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…)
+src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
+                           compartilhadas: toys.js (patinho, ursinho), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)
 src/characters/goose.js    a Dona Gansa
 src/ui/                    interface em DOM (ver §9)
@@ -93,8 +94,8 @@ move a companheira (IA, ou "Fica"); trata E/latido (`interact`, `onBark`); chama
 export default {
   id: 'fase2', number: 2, name: 'Operação Bolinha', subtitle: 'Crepúsculo na área de serviço',
   intro: 'texto do cartão de abertura',
-  item: 'ball',                 // 'carrot' | 'ball' | 'slipper': ícone na UI e pose de boca
-  ambience: 'dusk',             // 'day' | 'dusk' | 'night': som ambiente
+  item: 'ball',                 // 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear': ícone na UI e pose de boca
+  ambience: 'dusk',             // 'day' | 'dusk' | 'night' | 'city' | 'rain': som ambiente (§9)
   texts: { celebrate, victoryTitle, victorySub },
   layout,                       // layout.js
   lighting,                     // lighting.js
@@ -104,6 +105,16 @@ export default {
 ```
 
 O `id` é a chave do progresso salvo no navegador: não mude o `id` de uma fase publicada.
+
+Fases registradas (`src/levels/index.js`):
+
+| Fase | Cenário · ambiente | Item | Mecânicas |
+|---|---|---|---|
+| 1 Operação Cenoura | jardim, fim de tarde (`src/world/`) · `day` | cenoura | portão com corda (puxar), carrinho, vão da cerca só para a Radhija |
+| 2 Operação Bolinha | área de serviço, crepúsculo · `dusk` | bolinha | tábua de pressão + Fica, calço com arrancada, irrigador, caixote que vira ponte |
+| 3 Operação Pantufa | jardim do lago, noite · `night` | pantufa | duas pedras de pressão com lanternas, cantinho estreito, Dona Gansa atraída por latido |
+| 4 Operação Patinho | terraço do prédio, manhã · `city` | patinho | superbafo: pombo na passagem (nariz), ventilador no trilho (caixote + vento), corredor estreito, duto, pombo do portão com placa |
+| 5 Operação Ursinho | dentro de casa em corte de maquete, chuva · `rain` | ursinho | pulo: portãozinho pulável com a trava do outro lado, barricada (caixa fixa + caixote que desmonta), mesa onde só a Radhija cabe, cercadinho |
 
 ### 4.2 Layout (`layout.js`, tipo `LevelLayout`)
 
@@ -115,7 +126,7 @@ Campos que o núcleo usa (cada fase acrescenta os seus, como portões e placas):
 | Campo | Para quê |
 |---|---|
 | `WORLD.bounds` | retângulo andável (os centros das dogs ficam em `[min + r, max − r]`) |
-| `DOGS.{radhija,rhaenyra}` | estatísticas (raio, velocidades, arrancada…) e `start {x, z, yaw}`; as fases 2 e 3 reaproveitam as da fase 1 com `withStart` |
+| `DOGS.{radhija,rhaenyra}` | estatísticas (raio, velocidades, arrancada, pulo, superbafo…) e `start {x, z, yaw}`; as fases 2 a 5 reaproveitam as da fase 1 com `withStart` |
 | `STATIC_COLLIDERS` | colisores fixos (§5) |
 | `NAV_NODES`, `NAV_EDGES` | grafo da companheira (§5) |
 | `COLLECTIBLES`, `COLLECTIBLE_PICKUP_R` | petiscos opcionais (contam na vitória) |
@@ -134,10 +145,17 @@ Cores em string hex são sRGB; arrays `[r, g, b]` são lineares. Luzes extras (l
 `build` monta tudo dentro de `root` e devolve:
 
 - `props`: objetos que o puzzle anima (portão, item, placas…). O formato de cada fase está em `src/types.d.ts`
-  (`Fase1Props`, `Fase2Props`, `Fase3Props`). O puzzle sempre usa `?.` ao chamar um prop
+  (`Fase1Props` a `Fase5Props`). O puzzle sempre usa `?.` ao chamar um prop
   (`props.gate?.setOpen?.(t)`), então a lógica roda mesmo sem o cenário (é assim que os testes em Node funcionam).
   Todo prop com estado precisa de `reset()` que volte ao início, inclusive o item à posição `home`.
-- `seeThrough`: objetos que podem ficar entre a câmera e as dogs (cerca, sebe, portão) e recebem o recorte pontilhado.
+- `seeThrough`: objetos que podem ficar entre a câmera e as dogs (cerca, sebe, portão, a toalha da mesa) e recebem o
+  recorte pontilhado.
+
+Peças de cenário compartilhadas (fases 4 em diante): `createRubberDuck` e `createTeddyBear` em `src/world/toys.js`
+(itens carregáveis: eixo longo em X; o nome e `userData.carryKind` dizem a pose da boca; o ursinho tem `sit()`/`lie()`),
+`buildTreats(root, COLLECTIBLES)` em `src/world/treats.js` (ossinhos com a animação de coleta), `createPigeon()` em
+`src/world/pigeon.js` (pombo com `setPose({ x, y, z, yaw, flying, asleep })` e `peek()`) e `stripeTexture()` em
+`src/world/util.js` (lona listrada).
 - `update(dt, t)`: animações do cenário (água, vagalumes, luzes).
 
 ### 4.5 Puzzle (`puzzle.js`, tipos `PuzzleContext` e `Puzzle`)
@@ -213,11 +231,11 @@ estão livres, que as arestas não atravessam colisores e que o grafo é conexo 
 - **Duto** (`scent.addDuct({ inlet: {x, z, r}, outlet: {x, z, dirX, dirZ}, travel, active() })`): com `active()`
   verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois.
 - **Nariz** (`scent.addNose({ id, x, z, r, onSmell(nuvem) })`): alvo que reage uma vez por nuvem. É aqui que entram
-  os tipos de alvo: animais que fogem (o pombo da Arena do Bafo), mecanismos que espirram, plantas que recolhem.
+  os tipos de alvo: animais que fogem (os pombos da fase 4 e da Arena do Bafo), mecanismos que espirram, plantas que recolhem.
 - **Prévia**: `scent.preview(tiro)` roda a mesma simulação sem efeitos; é o que a mira desenha.
 
 Eventos: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`. Fases que não registram vento,
-duto nem nariz (as fases 1–3) têm nuvens que só se espalham e somem.
+duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 
 ## 6. Entrada
 
@@ -245,7 +263,9 @@ o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira
 (`jumpHeight`, ~0,5 m) e duração `jumpTime` (~0,42 s), com impulso horizontal mínimo `jumpSpeed` na direção da
 entrada (parada, pula no lugar) e pouco controle no ar. No ar, ela ignora colisores `jumpable` e não pisa em placas de
 pressão; não pula na postura de empurrar. A companheira não pula: arestas do grafo que cruzam obstáculos puláveis
-exigem uma flag que nunca liga, e ela espera do lado de cá. Eventos: `dog:jump` e `dog:land`.
+exigem uma flag que nunca liga, e ela espera do lado de cá. Colisores dinâmicos também podem ser puláveis: a fase 5
+marca o portãozinho e a caixa de almofadas com `col.jumpable = true`. Quem não pula (a Radhija) ganha a dica
+"Só a Rhaenyra pula! (Q)". Eventos: `dog:jump` e `dog:land`.
 
 **Superbafo** (`game.js` + `src/game/mechanics/scent.js`): só quem tem `bafoSpeed` nas estatísticas (a Radhija).
 Segurando R/L2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
@@ -282,13 +302,14 @@ Barramento em `src/core/events.js`. Quem emite e quem ouve:
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`.
-- **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; Arena do Bafo: `fan:aligned`,
-  `pigeon:flee`, `pigeon:land`.
+- **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
+  `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
+  (o pombo ignorou o latido).
 - **Itens**: `item:pickup`, `item:revealed`, `collectible:pickup {count, total}`, `celebrate:start`.
 - **Mecânicas** (sempre com `x, z`): `plate:press`/`plate:release`, `gate:open`/`gate:close`/`gate:locked`, `wedge:kick`,
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
   `goose:alert`/`goose:honk`/`goose:charge`/`goose:hit`/`goose:lured`/`goose:return`; fase 1: `rope:tug`, `cart:move`,
-  `carrot:revealed`, `carrot:pickup`.
+  `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando).
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.
@@ -302,8 +323,10 @@ o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e con
 liberada quando a anterior foi concluída). Estilos em `ui.css`, ícones SVG em `icons.js`.
 
 **Áudio** (`src/fx/audio.js` + `src/fx/audio/`): tudo sintetizado em WebAudio. `createAudio().play(nome, opts)`;
-sons novos entram em `soundsV1.js`/`soundsV2.js` (ou num arquivo novo) e na biblioteca `sounds.js`.
-O ambiente por fase vem de `def.ambience`.
+sons novos entram em `soundsV1.js`, `soundsV2.js`, `soundsBafo.js` ou `soundsV3.js` (ou num arquivo novo) e na
+biblioteca `sounds.js`. O ambiente por fase vem de `def.ambience` (`src/fx/audio/ambience.js`): `day` (passarinhos),
+`dusk` (grilos começando e vento), `night` (grilos, sapinhos e sino de vento), `city` (passarinhos e o trânsito lá
+embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vagalumes automáticos só em `dusk` e `night`.
 
 **Partículas** (`src/fx/particles.js`) e **feedback** (`src/fx/feedback.js`): poeira, gotas, estrelas, confete,
 ícones sobre as cabeças, marcador do objetivo, vibração.
@@ -312,11 +335,11 @@ O ambiente por fase vem de `def.ambience`.
 
 | Comando | O que faz | Tempo |
 |---|---|---|
-| `npm test` | testes em Node (`test/*.test.mjs`): as 3 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~5 s |
+| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, irrigador, dogs e regressões | ~6 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–3, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~11 min |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–5, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
-| `npm run verify` | build + e2e | ~12 min |
+| `npm run verify` | build + e2e | ~14 min |
 
 **Jogo headless** (`test/helpers/headless.mjs`): roda o `game.js` de verdade no Node, com dublês de motor, dogs e
 props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devolve `walkTo(x, z)`, `tap('KeyE')`,
@@ -324,7 +347,9 @@ props, e teclado/controle simulados. `createHeadlessGame({ level, query })` devo
 rápida de testar a lógica de um puzzle ou de uma mecânica nova.
 
 **Partidas no navegador** (`tools/scripts/playthrough*.mjs`, `test-gamepad.mjs`, `test-regressoes.mjs`, `test-pulo.mjs`, `test-bafo.mjs`): usam
-`tools/scripts/lib/harness.mjs` (Chrome do sistema, teclas reais, leitura do estado por `window.__game`).
+`tools/scripts/lib/harness.mjs` (Chrome do sistema, teclas reais, leitura do estado por `window.__game`). As das fases
+1–3 andam o caminho inteiro com WASD; as das fases 4 e 5 usam teclas reais nas ações (R, Espaço, E, Shift, Q e o ✕ do
+controle) e teletransportam entre os trechos, porque os testes headless já cobrem os caminhos.
 Capturas vão para `shots/` (fora do git).
 
 **Outras ferramentas**: `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),

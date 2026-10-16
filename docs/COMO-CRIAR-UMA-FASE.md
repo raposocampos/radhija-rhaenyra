@@ -6,6 +6,8 @@ segura o portão aberto na placa; a Radhija busca a bolinha"), com cenário prov
 jogo, mas é testado pelo `npm test` (`test/modelo-fase.test.mjs`), então está sempre funcionando.
 
 Para entender as peças em detalhe, consulte [ARQUITETURA.md](ARQUITETURA.md) (§4 Fases, §5 Colisão e navegação).
+Fases prontas que servem de referência: a **fase 4** (`src/levels/fase4/`, terraço) para puzzles de superbafo e a
+**fase 5** (`src/levels/fase5/`, dentro de casa) para puzzles de pulo e para cenários internos em corte de maquete.
 Os formatos exatos estão em [`src/types.d.ts`](../src/types.d.ts) e o editor avisa quando algo não bate.
 
 ## 1. Desenhe o puzzle no papel
@@ -19,15 +21,17 @@ Antes do código, escreva em poucas linhas:
   carrega coisas pesadas; o **Fica** segura uma dog num lugar; o latido atrai a gansa.
 - **As etapas** (`stages`): normalmente uma por beat, terminando em `'carrying'` e `'done'`.
 - **Sem becos sem saída**: em qualquer momento deve dar para desfazer o erro (o portão reabre, o caixote não
-  trava num canto, a dog molhada é empurrada para um lugar válido).
+  trava num canto, a dog molhada é empurrada para um lugar válido). Com caixotes, prefira limites que façam sentido
+  na tela a deixar empurrar para onde ele empaca: a caixa de almofadas da fase 5 só anda para o corredor ("encalha na
+  soleira" do outro lado) e desmonta ao chegar lá, então nunca fica presa na porta.
 
 ## 2. Copie o modelo
 
 ```bash
-cp -r src/levels/_modelo src/levels/fase4
+cp -r src/levels/_modelo src/levels/fase6
 ```
 
-Na cópia, troque `id: 'modelo'` por `id: 'fase4'` em `index.js` (o `id` é a chave do progresso salvo; não mude
+Na cópia, troque `id: 'modelo'` por `id: 'fase6'` em `index.js` (o `id` é a chave do progresso salvo; não mude
 depois de publicar) e ajuste `number`, `name`, `subtitle`, `intro`, `item`, `ambience` e os `texts`. Todos os textos
 visíveis em português do Brasil.
 
@@ -42,12 +46,14 @@ O layout é a fonte única de coordenadas da fase. Convenções: metros, Y para 
    abertura onde só a Radhija passa; `except` desliga o colisor numa área (ponte sobre água); `jumpable: true` cria um
    obstáculo baixo que só a Rhaenyra passa, pulando (com `height` para o cenário provisório desenhar a tora).
    A companheira não pula: ligue os dois lados de um obstáculo pulável com uma aresta `{ requires: 'jump' }`
-   (flag que nunca liga) para ela esperar do lado de cá, como na Arena do Pulo (`src/levels/_pulo/`).
+   (flag que nunca liga) para ela esperar do lado de cá, como na Arena do Pulo (`src/levels/_pulo/`), ou com a flag
+   da etapa que abre a passagem para ela, como no portãozinho da fase 5 (`petGate`).
 4. **Os elementos do puzzle**: portões (`hinge`, `latchPost`, `length`, `openYaw`), placas (`x`, `z`, `r`,
    `requires`), o item (`x`, `z`, `pickupR`). Coloque aqui tudo o que tiver coordenada.
 5. **`NAV_NODES` e `NAV_EDGES`**: o caminho da companheira. Um nó em cada "sala" e de cada lado de cada passagem;
    arestas que dependem do puzzle levam `{ requires: 'nomeDaFlag' }` (a flag vem de `puzzle.navFlags()`), e as que só
-   uma dog atravessa levam `{ requires: 'small' }` ou `'large'`.
+   uma dog atravessa levam `{ requires: 'small' }` ou `'large'`. Todo nó precisa estar livre para as duas dogs
+   (o teste confere): não ponha um nó dentro de uma área `blocks: 'large'` (debaixo da mesa da fase 5, por exemplo).
 6. **`GOAL`**: centro e raio da entrega, lugar da comemoração de cada dog e `entryPoints` (pontos fora do quadro da
    câmera de onde uma dog distante reaparece para comemorar).
 7. **`CAMERA`**: comece com o `offset` da fase 1 (`[1.4, 4.3, 4.7]`); ajuste `limits` para a câmera não mostrar o vazio
@@ -99,7 +105,8 @@ Regras que evitam dor de cabeça:
 **Cheiro**: o puzzle recebe `ctx.scent` e registra vento (`addWind`), dutos (`addDuct`) e narizes (`addNose`), que
 reagem quando uma nuvem do superbafo chega (ARQUITETURA.md §5.1). A Arena do Bafo (`src/levels/_bafo/`) é o exemplo
 completo: ventilador num trilho (um `createPushCrate` com `minX = maxX`) que move o vento, duto ativo só com o
-ventilador no encaixe e um pombo que foge para uma placa.
+ventilador no encaixe e um pombo que foge para uma placa. A fase 4 usa a mesma cadeia e acrescenta um nariz sem
+vento (o pombo cochilando na passagem: um sopro direto resolve) e uma reação ao latido (`onBark`) que só dá a dica.
 
 Para uma mecânica que pode servir a outras fases, escreva-a em `src/game/mechanics/` (genérica, configurada pelo
 layout) e exporte em `mechanics/index.js`.
@@ -109,25 +116,31 @@ layout) e exporte em `mechanics/index.js`.
 Em `src/levels/index.js`:
 
 ```js
-import fase4 from './fase4/index.js';
-export const LEVELS = [fase1, fase2, fase3, fase4];
+import fase6 from './fase6/index.js';
+export const LEVELS = [fase1, fase2, fase3, fase4, fase5, fase6];
 ```
 
-A tela inicial ganha o cartão da fase (liberado quando a fase 3 for concluída), a vitória da fase 3 passa a oferecer
-"Próxima fase" e o som ambiente vem de `ambience`. O ícone do item vem de `item` (`'carrot'`, `'ball'` ou `'slipper'`);
-um item de tipo novo precisa de ícone em `src/ui/icons.js` (`itemIcon`) e de pose de boca em `src/dogs/carryPose.js`
-(`CARRY`).
+A tela inicial ganha o cartão da fase (liberado quando a fase 5 for concluída), a vitória da fase 5 passa a oferecer
+"Próxima fase" (atualize o `hasNext` esperado em `test/fase5.test.mjs` e `tools/scripts/playthrough-fase5.mjs`) e o som
+ambiente vem de `ambience` (`'day'`, `'dusk'`, `'night'`, `'city'` ou `'rain'`). O ícone do item vem de `item`
+(`'carrot'`, `'ball'`, `'slipper'`, `'duck'` ou `'bear'`). Um item de tipo novo precisa de:
+
+- tipo em `ItemKind` (`src/types.d.ts`) e nome em `createCarryItem` (`src/game/puzzleKit.js`);
+- ícone em `src/ui/icons.js` (`itemIcon`) e artigo + nome em `ITEM_NOUN` (`src/ui/markup.js`);
+- pose de boca em `src/dogs/carryPose.js` (`CARRY` e o nome em `detectKind`);
+- som e cor de pegar em `pickupFx` (`src/fx/feedback.js`);
+- o modelo: veja `src/world/toys.js` (eixo mais longo em X, `name` e `userData.carryKind` com o tipo).
 
 ## 7. Teste a lógica
 
-1. **No navegador**: `npm run dev` e abra `http://127.0.0.1:5173/?level=4&play`. Use `&debug` para ver colisores e o
+1. **No navegador**: `npm run dev` e abra `http://127.0.0.1:5173/?level=6&play`. Use `&debug` para ver colisores e o
    grafo, `&stage=gateOpen` para pular etapas e `&dog=rhaenyra` para começar com a Rhaenyra. Enquanto a fase não
    estiver registrada, acrescente-a a `DEV_LEVELS` em `src/levels/dev.js` e abra com `?level=<id>&play`.
-2. **No Node, em segundos**: copie `test/modelo-fase.test.mjs` para `test/fase4.test.mjs` e troque as rotas. O jogo
+2. **No Node, em segundos**: copie `test/modelo-fase.test.mjs` (ou `test/fase5.test.mjs`) para `test/fase6.test.mjs` e troque as rotas. O jogo
    headless joga a fase de verdade com teclas simuladas:
 
    ```js
-   const h = await createHeadlessGame({ level: 4 });
+   const h = await createHeadlessGame({ level: 6 });
    h.tap('KeyQ');                                   // troca para a Rhaenyra
    h.walkPath([[-1.6, 0.2], [-1.6, 2.6]]);          // anda até a placa
    h.run(1.0);                                      // deixa o portão abrir
@@ -141,13 +154,16 @@ um item de tipo novo precisa de ícone em `src/ui/icons.js` (`itemIcon`) e de po
    ```
 
    Cubra a partida completa e cada caso de borda que o puzzle prevê (a dog errada na placa, sair sem o Fica…).
-3. **Partida no navegador (opcional)**: copie `tools/scripts/playthrough-fase3.mjs` para a fase nova e acrescente-a à
-   lista `SUITES` em `tools/scripts/run-e2e.mjs`.
+   Para pular: `h.hold([1, 0]); h.tap('Space')`; para o superbafo: `h.keyDown('KeyR'); h.run(0.4); h.keyUp('KeyR')`.
+   Confira que o teste pega o erro: quebre de propósito uma linha do puzzle (por exemplo, tire o `jumpable` do
+   portãozinho) e veja o teste falhar antes de devolvê-la.
+3. **Partida no navegador (opcional)**: copie `tools/scripts/playthrough-fase5.mjs` (teclas reais nas ações,
+   teletransporte entre os trechos) para a fase nova e acrescente-a à lista `SUITES` em `tools/scripts/run-e2e.mjs`.
 
 ## 8. Cenário e luz de verdade
 
 Troque o `build` provisório por um `world/index.js` com `buildWorld({ engine, root, layout, params })`, como nas
-fases 2 e 3. Ele monta tudo dentro de `root` e devolve:
+fases 2 a 5. Ele monta tudo dentro de `root` e devolve:
 
 ```js
 return {
@@ -160,15 +176,19 @@ return {
 - Cada prop que o puzzle usa precisa existir com o mesmo nome e os métodos esperados; escreva o formato em
   `src/types.d.ts` (como `Fase2Props`) para o TypeScript conferir.
 - `reset()` de cada prop volta tudo ao início, inclusive o item à posição `home`.
-- Reaproveite `src/world/util.js` (materiais, texturas em canvas, sombras de contato, folhagem) e `src/world/plants.js`.
+- Reaproveite `src/world/util.js` (materiais, texturas em canvas, sombras de contato, folhagem, lona listrada),
+  `src/world/plants.js`, `src/world/treats.js` (os ossinhos prontos: `buildTreats(root, COLLECTIBLES)`),
+  `src/world/toys.js` e `src/world/pigeon.js`.
+- Cenário interno: a fase 5 mostra o corte de maquete (sem teto, parede do fundo inteira e as outras cortadas a meia
+  altura com a faixa escura no topo). Com a câmera padrão, uma parede de fundo de 2,7 m esconde o céu.
 - Nada de assets baixados: geometria, texturas e sons em código.
 - Crie `lighting.js` a partir de um preset existente (ARQUITETURA.md §4.3). No máximo cerca de 6 PointLights sem sombra.
-- Para olhar o cenário parado: `?level=4&play&cam=x,y,z&look=x,y,z` e `node tools/shot.mjs --url "…" --out shots/f4.png`.
+- Para olhar o cenário parado: `?level=6&play&cam=x,y,z&look=x,y,z` e `node tools/shot.mjs --url "…" --out shots/f6.png`.
 
 ## 9. Lista final
 
 - [ ] `npm run typecheck` sem erros.
-- [ ] `npm test` verde (inclui navegação e colisão da fase nova, e o `test/fase4.test.mjs`).
+- [ ] `npm test` verde (inclui navegação e colisão da fase nova, e o `test/fase6.test.mjs`).
 - [ ] Jogada inteira no teclado e no controle, sem becos sem saída; todos os textos em português.
 - [ ] `npm run test:e2e` verde (as fases antigas continuam passando).
 - [ ] `npm run build` sem erros.

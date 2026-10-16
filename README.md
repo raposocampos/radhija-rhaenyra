@@ -34,6 +34,12 @@ A tela desenha os botões no estilo PlayStation; se o controle conectado for de 
 1. **Operação Cenoura**: fim de tarde no jardim. Cerca com abertura, cordinha do portão e carrinho.
 2. **Operação Bolinha**: crepúsculo na área de serviço. Tábua de pressão, calço, irrigador e caixote que vira ponte.
 3. **Operação Pantufa**: noite no jardim do lago. Duas pedras com lanternas e a Dona Gansa guardando a ponte.
+4. **Operação Patinho**: manhã no terraço do prédio, a fase do superbafo da Radhija. Um pombo cochila na única
+   passagem (latido não adianta, bafo sim); depois a Rhaenyra encaixa o ventilador no trilho, a Radhija passa por
+   baixo dos canos dos aparelhos e sopra no vento, o duto leva o cheiro até o pombo do portão e ele voa para a placa.
+5. **Operação Ursinho**: tarde de chuva dentro de casa, a fase do pulo da Rhaenyra. Ela pula o portãozinho de bebê
+   e abre a trava para a irmã, pula a barricada de caixas da mudança e empurra de dentro a caixa de almofadas (que
+   desmonta); o ursinho está debaixo da mesa, atrás da toalha comprida, onde só a Radhija cabe.
 
 Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).
@@ -41,7 +47,7 @@ Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial
 Protótipos fora do menu (fases de desenvolvimento):
 
 - **Arena do Pulo**: `http://127.0.0.1:5173/?level=pulo&play`. Troncos dá para pular; muretas altas, não.
-- **Arena do Bafo**: `http://127.0.0.1:5173/?level=bafo&play`. O primeiro puzzle do superbafo da Radhija: a Rhaenyra
+- **Arena do Bafo**: `http://127.0.0.1:5173/?level=bafo&play`. O protótipo do puzzle do superbafo que virou a fase 4: a Rhaenyra
   encaixa o ventilador, a Radhija sopra no corredor, o vento leva o cheiro pelo duto, o pombo foge para o poleiro da
   placa e o portão abre.
 
@@ -64,9 +70,9 @@ Documentação:
 
 | Comando | O que faz |
 |---|---|
-| `npm test` | testes em Node, em segundos: as 3 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
+| `npm test` | testes em Node, em segundos: as 5 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
 | `npm run typecheck` | checagem de tipos (TypeScript sobre os comentários JSDoc) |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–3, controle, regressões, pulo e bafo), cerca de 13 minutos |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–5, controle, regressões, pulo e bafo), cerca de 15 minutos |
 | `npm run build` | roda `typecheck` e `npm test` antes de gerar `dist/`: nenhum build sai quebrado |
 | `npm run verify` | build + partidas no navegador |
 
