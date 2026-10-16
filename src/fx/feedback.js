@@ -317,8 +317,8 @@ export function createFeedback(opts) {
   });
   events.on('level:loaded', (info = {}) => {
     stay.radhija = stay.rhaenyra = false;
-    const def = window.__game?.game?.levelDef;
-    const kind = def?.ambience || AMBIENCE_BY_NUMBER[info.number] || 'day';
+    // o ambiente vem no próprio evento (na carga inicial window.__game ainda não existe)
+    const kind = info.ambience || window.__game?.game?.levelDef?.ambience || AMBIENCE_BY_NUMBER[info.number] || 'day';
     audio.setAmbience?.(kind);
     // vagalumes automáticos ao entardecer/noite (o cenário pode trocar ou desligar)
     const B = L().WORLD?.bounds;

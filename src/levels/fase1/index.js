@@ -15,7 +15,7 @@ export default {
   subtitle: 'Fim de tarde no jardim',
   intro: 'A cenoura de brinquedo foi parar do outro lado da cerca. Tragam ela de volta para casa!',
   item: 'carrot', // ícone do item da fase na UI
-  ambience: 'day', // som ambiente: 'day' | 'dusk' | 'night'
+  ambience: 'day', // som ambiente: 'day' | 'dusk' | 'night' | 'city' | 'rain'
   texts: {
     celebrate: 'Eba! A cenoura chegou em casa!',
     victoryTitle: 'Operação Cenoura concluída!',

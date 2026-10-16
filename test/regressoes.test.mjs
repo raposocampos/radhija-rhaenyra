@@ -55,6 +55,19 @@ test('regressão: item na boca não passa para outra fase escolhida no meio da p
 });
 
 // ---------------------------------------------------------------------------------------------------
+// Som ambiente errado ao abrir direto numa fase nova: o feedback lia o ambiente de window.__game, que ainda
+// não existe na carga inicial, e caía no número da fase (só conhecia 1–3). Agora o ambiente vem no evento.
+// ---------------------------------------------------------------------------------------------------
+test('regressão: level:loaded traz o ambiente da fase (também na carga inicial)', async () => {
+  for (const [i, def] of LEVELS.entries()) {
+    const h = await createHeadlessGame({ level: i + 1 });
+    const ev = h.log('level:loaded');
+    assert.equal(ev.length, 1, `${def.id}: um level:loaded na carga inicial`);
+    assert.equal(ev[0].ambience, def.ambience, `${def.id}: ambiente no evento`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------------
 // A do menu virando latido: o A que confirma "Começar"/"Continuar" na UI não pode chegar ao jogo como
 // interagir/latir (nem o B como arrancada). A UI pode ver o botão no mesmo quadro, antes do jogo.
 // ---------------------------------------------------------------------------------------------------

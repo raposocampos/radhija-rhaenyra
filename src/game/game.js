@@ -135,6 +135,7 @@ export function createGame({ engine, dogs, levels, params }) {
       subtitle: def.subtitle,
       intro: def.intro,
       item: def.item,
+      ambience: def.ambience,
       texts: def.texts || {},
       total: puzzle?.total ?? 0,
       hasNext: levelIndex < levels.length - 1,
