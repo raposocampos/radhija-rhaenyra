@@ -5,33 +5,43 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## Proposta da fase 6 em paralelo
+## Proposta da fase 6 reformulada (2026-10-17, Codex)
 
-Em 2026-10-17, Codex preparou [PROPOSTA-FASE6.md](PROPOSTA-FASE6.md) após o
-usuário escolher uma proposta combinando pulo e superbafo. Branch
-`codex/proposta-fase6`, worktree `proposta-fase6`, base
-`b1b026e29abb7cc80fff6a13224e967d78415151` (PR #4 já integrado, confirmado no
-GitHub). Esta frente altera somente a proposta e este bloco de retomada; o
-coordenador mantém a consolidação das demais frentes no plano.
+O usuário pediu outro cenário e um puzzle mais criativo com pulo e superbafo,
+sem repetir o pombo. [PROPOSTA-FASE6.md](PROPOSTA-FASE6.md) agora propõe
+**Expresso do Superbafo**: oficina de brinquedos; Rhaenyra pousa num pedal largo
+para trocar o trilho; Radhija faz uma locomotiva de nariz mecânico espirrar e
+recuar, trazendo uma bolinha-planeta. A rota errada dá uma volta e retorna sem
+perder o item. Não exige sincronização, salto preciso ou plataforma elevada.
+Cenário, nome e objeto novos continuam propostos, não aprovados pelo usuário.
 
-Cenário e objeto sugeridos: quintal de piquenique e ursinho, ainda sem aprovação.
-O documento define três etapas, trajetos, ações fora de ordem, reset, contratos,
-APIs existentes e critérios de teste. Não há fase implementada nem alteração
-no catálogo. Leitura do código e revisão do diff são as validações locais;
-tipos, testes e build ficam no CI do próprio commit documental, sem E2E adicional.
-Entrega: [PR #9](https://github.com/raposocampos/radhija-rhaenyra/pull/9).
-O commit `d574f837d8939e27c9175a6d77666f7c3a395147` introduziu a proposta e é
-a referência do conteúdo; a revisão pediu explicitar estes identificadores
-na retomada. Conferir o head atual, seus checks e a prévia no PR, inclusive
-para o commit que atualiza este registro. Resultados da base ou de um head
-anterior não aprovam a entrega atual. Links e resultados atuais ficam na
-descrição do PR, sem commits adicionais só para registrar o próprio CI.
+Branch `codex/proposta-fase6`, worktree `proposta-fase6`, PR
+[#9](https://github.com/raposocampos/radhija-rhaenyra/pull/9). Base atualizada
+por merge normal para `597c8f2b77b7765b0b911f3e25629c74c8e4eecd` (PR #12
+integrado); merge `a22af58` preservou os registros atuais do main e a proposta.
+Esta frente altera apenas a proposta e este bloco. O coordenador consolida
+PLANO, resultados de publicação, PR e CI; não reusar checks do head anterior.
 
-Próximo passo: revisar a proposta com o usuário; depois, decidir o protótipo em
-branch isolada. Integrar ao catálogo depende de EST-03/04; cenário final deve
-seguir EST-05/06. Nenhuma autorização de merge/publicação foi usada nesta frente.
-Os registros abaixo preservam o histórico anterior; para as frentes simultâneas,
-conferir o checklist do coordenador e os respectivos PRs.
+Inspeção do código confirmou pulo no lugar, `landed` disponível em
+`puzzle.update`, sensor de cheiro XZ sem oclusão, kit de itens e contratos.
+Pedal por impacto, trem/rotas e props são implementações NOVAS locais da fase,
+não funcionalidades já prontas. O documento define estados, ações fora de
+ordem, rearme sem nuvem antiga, reset, prevenção de atalhos, colisão/companheira,
+câmera e aceitação. Tipo `ball` reaproveita boca/UI; arte de planeta ainda nova.
+A proposta de quintal/ursinho/pombo foi substituída e fica apenas no histórico
+(`d574f83`); nenhum gameplay, catálogo, dependência ou workflow foi alterado.
+
+Validação desta revisão: leitura de fontes, revisão do diff e `git diff --check`.
+Sem testes/build locais ou E2E adicional para documentação. Conferir CI/prévia
+do head final no GitHub, incluindo o commit deste registro; os resultados finais
+ficam no PR, sem commit só para registrar seu próprio CI. Nada publicado em
+produção por esta frente. Próximo passo: coordenador revisar e atualizar PR #9,
+apresentar a escolha ao usuário e então preparar protótipo isolado em blocos.
+EST-03/04/05/06 integradas permitem protótipo paralelo a EST-07/08, com coordenação
+das edições compartilhadas; conclusão depende de gameplay validado, arte e
+aprovação, sem prazo garantido. Os registros das outras frentes abaixo são
+preservados da base; conferir o checklist e os respectivos PRs para atualizações.
+
 ## EST-06 — contratos em validação (2026-10-17, Codex)
 
 Execução autorizada após aprovação/publicação do PR #11. Base `ca8c6f2`.
