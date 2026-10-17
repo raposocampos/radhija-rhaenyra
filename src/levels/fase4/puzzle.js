@@ -85,7 +85,7 @@ export function createPuzzle(ctx) {
       y: (T.y - 0) * e + Math.sin(Math.PI * k) * 0.7,
       z: NAP_PIGEON.z + (T.z - NAP_PIGEON.z) * e,
       yaw: Math.atan2(T.x - NAP_PIGEON.x, T.z - NAP_PIGEON.z),
-      flying: k < 1, asleep: false,
+      flying: k < 1, flightProgress: k, asleep: false,
     });
     if (k >= 1) napLanded();
   }
@@ -173,7 +173,7 @@ export function createPuzzle(ctx) {
       y: PERCH_A.y + 0.02 + Math.sin(Math.PI * k) * 0.9,
       z: PERCH_A.z + (PERCH_B.z - PERCH_A.z) * e,
       yaw: Math.atan2(PERCH_B.x - PERCH_A.x, PERCH_B.z - PERCH_A.z),
-      flying: k < 1,
+      flying: k < 1, flightProgress: k,
     });
     if (k >= 1) landOnPlate();
   }

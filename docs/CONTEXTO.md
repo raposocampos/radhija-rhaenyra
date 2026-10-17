@@ -7,10 +7,27 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**Modelagem dos pombos concluída no PR #3; produção ainda não autorizada.**
+**PR #3 em revisão de animação; produção ainda não autorizada.**
 Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
 Objetivo: silhuetas orgânicas e reconhecíveis, preservando o estilo fofo,
-as animações, a jogabilidade e o desempenho.
+o visual aceito, a jogabilidade e o desempenho, melhorando principalmente o voo.
+
+- Feedback de 2026-10-17: usuário gostou do visual em `7427dda`, mas pediu
+  melhorar as animações, sobretudo o voo. Isso não é aprovação de produção.
+- Retomada: PR #3 aberto em `7427dda1d358381580df351b698904ae84636095`, base
+  `3e826e4`, worktree limpo. CI `39005891992`, prévia `39005917305` e E2E
+  `39005889263` passaram (116 testes + 17 verificações). Resultados anteriores.
+- Revisão implementada: asas abrem com morph targets e flexionam na recuperação;
+  decolagem/pouso graduais, pés recolhem/estendem, cauda e corpo acompanham a
+  batida; giro suavizado pelo caminho curto. `puzzle.js` envia `flightProgress`
+  para preparar o pouso sem mudar trajetos, duração, eventos ou regras.
+- Novos testes em `test/pigeon.test.mjs`: envergadura/batida, pouso, direção e
+  sono/espiada após voo. Revisão visual inclui vídeo determinístico comparado
+  ao visual aceito (`7427dda`), gerado por FFmpeg no GitHub.
+- Validação desta revisão ainda pendente: enviar commit no mesmo PR, rodar
+  CI/E2E fase4, inspecionar vídeo/sequência e entregar a nova prévia. Nenhum
+  teste/build/partida automatizada local. Conferir head atual e base antes de
+  integrar; aguardar aprovação explícita da nova versão pelo usuário.
 
 - Retomada conferida: PR #2 integrado no main `3e826e48f9eac644681b718470f9d75f6e207de5`.
   [CI 39004801467](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004801467)
@@ -34,9 +51,8 @@ as animações, a jogabilidade e o desempenho.
 - Custo medido: 25 → 13 meshes e 3.020 → 4.740 triângulos por pombo;
   na cena de estudo, 29 → 17 chamadas de desenho em três quartos. Não é um
   benchmark de FPS em aparelhos reais. Nenhum teste ou build foi rodado no PC.
-- Este registro acompanha o ajuste das legendas da comparação e capturas
-  adicionais dos pombos do portão/pombal. O código do jogo não mudou desde
-  `85d91bd`. O commit contendo este registro terá novo CI/prévia e E2E;
+- A primeira revisão visual foi entregue em `7427dda`, incluindo capturas do
+  portão e pombal. A revisão atual de animação exige novos CI/prévia/E2E;
   conferir seus resultados pelo head atual do PR, sem assumir aprovação antecipada.
 - Próximo passo: concluir a conferência do head final e entregar a prévia
   indicada no check `publicar-site`/descrição do PR para aprovação humana.

@@ -18,8 +18,8 @@ window.reviewPigeons = async (states = false) => {
   const views = states ? [
     { name: 'Cochilando', eye: [0.6, 0.36, 0.65], asleep: true },
     { name: 'Espiando após latido', eye: [0.6, 0.36, 0.65], asleep: true, peek: true },
-    { name: 'Voo · asas elevadas', eye: [0.55, 0.4, 0.65], flying: true, flap: Math.PI / 2 },
-    { name: 'Voo · asas baixas', eye: [0.55, 0.4, 0.65], flying: true, flap: Math.PI * 1.5 },
+    { name: 'Voo · batida A', eye: [0.55, 0.4, 0.65], flying: true, flightTime: 1.1 },
+    { name: 'Voo · batida B', eye: [0.55, 0.4, 0.65], flying: true, flightTime: 1.2 },
   ] : [
     { name: 'Três quartos', eye: [0.6, 0.36, 0.65] },
     { name: 'Perfil', eye: [1, 0.23, 0] },
@@ -44,7 +44,7 @@ window.reviewPigeons = async (states = false) => {
     scene.add(floor);
     const pigeon = factory({ seed: 3, tint: '#9198a8' });
     pigeon.setPose({ asleep: !!view.asleep, flying: !!view.flying, y: view.flying ? 0.065 : 0 });
-    if (view.flying) pigeon.update(view.flap / 30, 2);
+    if (view.flying) for (let i = 1; i <= Math.round(view.flightTime * 60); i++) pigeon.update(1 / 60, i / 60);
     else for (let i = 1; i <= 120; i++) pigeon.update(1 / 60, i / 60);
     if (view.peek) {
       pigeon.peek();

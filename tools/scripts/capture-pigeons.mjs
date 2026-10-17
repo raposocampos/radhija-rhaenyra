@@ -11,8 +11,12 @@ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const head = git('rev-parse', 'HEAD');
 const base = git('merge-base', 'HEAD', 'origin/main');
 const baselinePath = 'src/world/.pigeon-baseline.js';
+// Versão cujo visual o usuário aprovou, antes de pedir a revisão do voo.
+const motionBase = '7427dda1d358381580df351b698904ae84636095';
+const motionBaselinePath = 'src/world/.pigeon-motion-baseline.js';
 // wx evita sobrescrever qualquer arquivo que não pertença a esta execução.
 writeFileSync(baselinePath, git('show', `${base}:src/world/pigeon.js`), { flag: 'wx' });
+writeFileSync(motionBaselinePath, git('show', `${motionBase}:src/world/pigeon.js`), { flag: 'wx' });
 mkdirSync('shots/pombos', { recursive: true });
 let server, browser;
 const errors = [];
@@ -34,6 +38,19 @@ try {
   const old = stats.find((s) => s.label === 'Antes');
   const next = stats.find((s) => s.label === 'Depois');
   if (next.meshes > old.meshes || next.triangles > old.triangles * 2) throw new Error('Orçamento geométrico excedido.');
+
+  await page.setViewportSize({ width: 1280, height: 672 });
+  await page.waitForFunction(() => !!window.startPigeonMotionReview);
+  await page.evaluate(() => window.startPigeonMotionReview());
+  mkdirSync('shots/pombos/voo', { recursive: true });
+  for (let frame = 0; frame < 120; frame++) {
+    await page.evaluate((f) => window.pigeonMotionFrame(f), frame);
+    await page.screenshot({ path: `shots/pombos/voo/frame-${String(frame).padStart(3, '0')}.png` });
+  }
+  execFileSync('ffmpeg', ['-y', '-framerate', '30', '-i', 'shots/pombos/voo/frame-%03d.png',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'shots/pombos/07-voo-antes-depois.mp4'], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', 'shots/pombos/07-voo-antes-depois.mp4',
+    '-vf', 'fps=3,scale=640:-1,tile=3x4', '-frames:v', '1', 'shots/pombos/08-sequencia-voo.png'], { stdio: 'pipe' });
 
   // Cena real: congela apenas depois do boot; desenha com sombras e pós-processamento normais.
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -76,11 +93,12 @@ try {
     g.engine.render(0, 2);
   });
   await page.screenshot({ path: 'shots/pombos/06-pombal.png' });
-  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, head, stats, errors }, null, 2));
+  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, motionBase, head, stats, errors }, null, 2));
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
 } finally {
   await browser?.close();
   await server?.close();
   unlinkSync(baselinePath);
+  unlinkSync(motionBaselinePath);
 }

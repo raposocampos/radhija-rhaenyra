@@ -34,8 +34,29 @@ traseiro. Sem novas texturas externas, shaders especiais ou dependências.
 `src/world/pigeon.js` continua sendo a única fábrica dos quatro pombos de
 `src/levels/fase4/world/props.js`: passagem, portão e dois no pombal. API,
 posições, escalas, sementes e tons de cada instância são preservados. Sono,
-espiada, balanço da cabeça, voo e sprites de sono usam o mesmo controlador.
+espiada, balanço da cabeça e sprites de sono continuam disponíveis.
 Não há alterações de colisão, regras, controles ou progressão.
+
+### Revisão do voo após o feedback do usuário
+
+O visual em repouso de `7427dda` foi bem recebido; o usuário pediu melhorar
+as animações, sobretudo o voo. A animação anterior girava asas ainda fechadas,
+ocultava os pés e mudava a inclinação/direção instantaneamente.
+
+Agora as mesmas malhas têm duas formas de voo interpoladas na GPU: asa aberta
+na batida de força e punho flexionado na recuperação. A descida dura 42% do
+ciclo, a recuperação 58%; são escolhas de estilização para leitura no jogo,
+não medições biológicas. A decolagem recebe mais energia e a transição para
+repouso recolhe as asas gradualmente. Corpo, cabeça, cauda e pés acompanham o
+ciclo; direção usa a volta mais curta e interpolação, inclusive no pouso.
+O puzzle informa apenas `flightProgress` para antecipar a frenagem e estender
+os pés: posições, duração, eventos, colisões e gatilhos permanecem iguais.
+
+Referência de movimento: [Berg e Biewener, 2010 — Wing and body kinematics of
+takeoff and landing flight in the pigeon](https://journals.biologists.com/jeb/article/213/10/1651/9685/Wing-and-body-kinematics-of-takeoff-and-landing).
+O estudo distingue decolagem, voo intermediário e pouso, com maior esforço
+inicial e mudança da orientação de corpo/cauda na chegada. A implementação é
+uma interpretação estilizada, não uma simulação aerodinâmica.
 
 Barras pintadas nos vértices substituem peças sobrepostas. Penas da cauda e
 partes dos pés são unidas por material para conter draw calls. A geometria é
@@ -60,6 +81,9 @@ o workflow gera o artefato `capturas-fase4`, pasta `pombos/`:
   com resolução normal, sombras e pós-processamento do jogo.
 - `05-pombo-do-portao.png` e `06-pombal.png`: demais instâncias, tons e escalas.
 - `metrics.json`: SHAs da base e do head, contagens e erros do navegador.
+- `07-voo-antes-depois.mp4` e `08-sequencia-voo.png`: decolagem, batidas e pouso
+  em tempo simulado fixo; comparação da animação do visual aceito (`7427dda`)
+  com a revisão atual. O vídeo é codificado com FFmpeg apenas no runner.
 
 O script compara o head com o ancestral comum de `origin/main`, usando os
 mesmos tempos, semente, câmera e luz. Requer histórico completo no checkout.
