@@ -33,6 +33,13 @@ medição com genéricos. Emissão de eventos de carregamento tipada por nome
 literal; listeners, nomes dinâmicos, layouts e navegação continuam fronteiras
 abertas, documentadas. Gameplay e ownership de EST-05 preservados.
 
+Primeiro CI `39073795596`, head `7842015`, detectou três produtores reais que
+ainda aceitavam métodos inexistentes: literais JS intermediários tinham índice
+aberto implícito. Corrigidos nos produtores em `d61914c`, com anotações de
+retorno/variável verificadas, sem casts nem remoção das provas negativas.
+As interfaces dos puzzles estão fechadas; não afirmar tipagem exaustiva de
+todas as funções internas. Revisão independente sem bloqueios; CI novo pendente.
+
 Neste checkpoint, sem CI próprio aprovado ou aprovação para produção de
 EST-06. Documentação de arquitetura/guia atualizada; nenhum trabalho sem commit
 planejado após enviar esta atualização. Próximo passo: abrir PR sobre `ca8c6f2`,
