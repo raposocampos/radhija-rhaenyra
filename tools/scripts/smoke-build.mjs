@@ -1,5 +1,6 @@
-// Verificação curta do artefato que será publicado, sem Vite nem fontes disponíveis.
-// node tools/scripts/smoke-build.mjs (depois do build; executar no GitHub).
+// Verificação do build gerado nesta execução E2E, sem Vite nem fontes disponíveis.
+// Não é o artefato binário produzido pelo CI da prévia.
+// node tools/scripts/smoke-build.mjs (depois do build; workflow E2E manual no GitHub).
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
