@@ -19,8 +19,13 @@ O documento define três etapas, trajetos, ações fora de ordem, reset, contrat
 APIs existentes e critérios de teste. Não há fase implementada nem alteração
 no catálogo. Leitura do código e revisão do diff são as validações locais;
 tipos, testes e build ficam no CI do próprio commit documental, sem E2E adicional.
-Conferir SHA, checks e prévia no PR da branch; resultados da base não aprovam
-esta entrega. Links e resultados atuais ficam na descrição do PR.
+Entrega: [PR #9](https://github.com/raposocampos/radhija-rhaenyra/pull/9).
+O commit `d574f837d8939e27c9175a6d77666f7c3a395147` introduziu a proposta e é
+a referência do conteúdo; a revisão pediu explicitar estes identificadores
+na retomada. Conferir o head atual, seus checks e a prévia no PR, inclusive
+para o commit que atualiza este registro. Resultados da base ou de um head
+anterior não aprovam a entrega atual. Links e resultados atuais ficam na
+descrição do PR, sem commits adicionais só para registrar o próprio CI.
 
 Próximo passo: revisar a proposta com o usuário; depois, decidir o protótipo em
 branch isolada. Integrar ao catálogo depende de EST-03/04; cenário final deve
