@@ -339,6 +339,15 @@ necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 ### EST-08 Desempenho e expansão
 
+Implementação em andamento em `codex/desempenho-expansao`, base `fae8acd`
+(PR #14 integrado/publicado). Instrumento/workflow próprios somente leitura,
+sem mudança de runtime: duas referências sequenciais, render normal, cinco
+fases, dados brutos/estatística, heap fora da janela, prova negativa de render
+vazio e guia atualizado. CI/medições ainda pendentes neste checkpoint.
+Depois de medir, registrar referência compacta e limites exploratórios duráveis
+no repositório, com SHA/run de origem; validar o commit final e entregar prévia.
+Não marcar concluída somente pela existência do instrumento. Detalhes no CONTEXTO.
+
 - Definir cenário, qualidade gráfica e ambiente de referência para medir
   carregamento, tempo por quadro e memória; estabelecer limites após medir.
 - Documentar o protocolo de nova fase: protótipo, mecânica, ações fora de

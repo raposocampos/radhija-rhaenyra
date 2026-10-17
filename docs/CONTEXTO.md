@@ -5,6 +5,39 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## EST-08 — instrumento implementado, aguardando nuvem (2026-10-17, Codex)
+
+Branch `codex/desempenho-expansao`, worktree `desempenho-expansao`, base
+`fae8acd` do PR #14 integrado. Coordenador confirmou publicação: CI main
+`39079619941` (183 testes/tipos/build), deploy `39079647854`, deployment
+`7147332851` e HTTP/version de produção conferidos. Não repetir merge/deploy.
+Fase 6 segue separadamente no PR #15, protótipo Expresso aprovado para
+implementação e obrigado a preservar a direção artística; sem aprovação de publicação.
+
+Escopo EST-08: `measure-performance.mjs`, probe/estatística próprios, comparação,
+provas negativas e workflow `desempenho.yml` somente leitura. Nenhum runtime,
+E2E existente ou medidor de recursos alterado. Duas referências sequenciais
+no mesmo runner/build/SHA, cinco fases publicadas, render completo e simulação
+normal. Um ciclo de aquecimento, três medidos; heap/GC fora da janela temporal.
+Carga e submissão de render com UI liberada são métricas separadas; submissão
+não prova apresentação física da GPU. Dados brutos, percentis e dispersão no artefato.
+Prova negativa real recusa render vazio; seis testes da infraestrutura cobrem
+estatística, qualidade, identidade A/B e comparação com referência fixa.
+
+Guia atualizado: nuvem, registro DEV antes do catálogo, factories estritas,
+contratos reais, ações inválidas, pausa/reset, progresso/hasNext, runner E2E
+e workflow, direção artística e aprovação. Protocolo em `DESEMPENHO.md`.
+Próximos passos do coordenador: revisar commit, abrir PR draft e acompanhar
+CI/prévia e workflow de desempenho disparado pelo PR. Não houve teste/build
+local; só leitura/revisão e `git diff --check`. Resultados de nuvem ainda pendentes.
+
+Após medir, revisar `baseline-candidate.json`, adotar referência compacta em
+`docs/performance-baseline.json` e resumo durável `DESEMPENHO-REFERENCIA.md`,
+identificando SHA/run de origem; não recalibrar limites a cada mudança.
+O commit final precisa de validação própria. Referências de ambiente/protocolo
+incompatível não são comparadas. Limites exploratórios não são gate preventivo.
+EST-08 permanece em andamento até dados reais, revisão e entrega da prévia.
+
 ## EST-07A — configuração publicada (2026-10-17, Codex)
 
 [PR #13](https://github.com/raposocampos/radhija-rhaenyra/pull/13), head aprovado
