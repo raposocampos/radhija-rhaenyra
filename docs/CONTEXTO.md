@@ -5,38 +5,40 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## Fase 6 — protótipo autorizado (2026-10-17, Codex)
+## Fase 6 — protótipo combinado, validação pendente (2026-10-17, Codex)
 
-Após ver a imagem conceitual, o usuário escolheu prototipar **Expresso do
-Superbafo**: pulo seleciona o trilho e superbafo faz o trem trazer a bolinha.
-Requisito explícito adicional: manter a mesma direção artística existente.
-Usar maquete procedural, materiais, iluminação, escala e câmera coerentes
-com as fases atuais; personagens preservadas. A imagem é referência do puzzle,
-sem substituir a linguagem visual do jogo. Não autoriza integrar/publicar.
+Usuário escolheu **Expresso do Superbafo** e exigiu preservar a direção artística
+existente: maquete procedural, materiais/iluminação/escala/câmera coerentes e
+personagens intactas. A imagem conceitual é referência do puzzle. Aprovar o
+protótipo não autoriza integrar/publicar a versão jogável sem testar sua prévia.
 
-Base publicada `4552e60` (PR #13). Coordenador em `codex/prototipo-expresso`,
-worktree `prototipo-expresso`: E2E/runner/workflow, documentação, integração,
-PR/prévia e CI. Duas frentes com worktrees exclusivos:
-- `codex/expresso-cenario`, worktree `expresso-cenario`: `src/levels/fase6/`,
-  contrato `Fase6Props` em tipos e registro somente em `DEV_LEVELS`.
-- `codex/expresso-testes`, worktree `expresso-testes`: fábrica explícita de
-  props/headless, testes de integração/contrato e provas negativas de tipos.
-Combinar interface/estados/coordenadas antes dos testes; cada executor mantém
-seu checkpoint e entrega commit ao coordenador. Nenhum teste/build local.
+Coordenador em `codex/prototipo-expresso`, worktree `prototipo-expresso`, sobre
+`fae8acd` (PR #14 aprovado e integrado). Implementação do executor `071ec4b`,
+testes `aef928c` e fábrica headless estrita `637662d` combinados; executores em
+worktrees exclusivos `expresso-cenario` e `expresso-testes`, agora sem edições.
+Revisor independente identificou a fábrica ausente nas suítes comuns; corrigida.
+Nenhum outro bloqueio por leitura; resultados automáticos ainda pendentes.
 
-Objetivo desta entrega: prévia jogável do puzzle com cenário simples coerente
-com a arte atual; duas rotas, pouso real, bafo frontal, tentativas recuperáveis,
-pausa/reset, retirada/entrega e recursos corretos. Regras detalhadas em
-PROPOSTA-FASE6.md. Sem inclusão no catálogo principal ou mudanças no núcleo.
-Catálogo, progressão definitiva e acabamento final ficam para a segunda entrega.
+Apenas `DEV_LEVELS`, acesso `?level=fase6&play`; campanha/menu/progresso principal
+preservados. Oficina, ferrovia cercada e passeio externo; Rhaenyra pousa no pedal,
+Radhija sopra frontalmente no nariz, trem espirra e traz bolinha-planeta à bandeja.
+Rota circular retorna sem perda; rota fica congelada durante a viagem. Oito
+estados, consumo/snapshot/poda de nuvens, pausa/reset/descarte e petiscos opcionais.
+17 testes da fase e oito provas negativas de tipos escritos, além das suítes
+comuns. E2E `expresso` usa comandos reais e habilita smoke/recursos das seis fases;
+`todas` inclui a nova partida. O medidor mantém a qualidade completa nas capturas.
 
-Estado deste checkpoint: implementação delegada, sem código de fase integrado.
-Próximo passo: reunir/revisar commits, validar tipos/testes/build/E2E e capturas
-na nuvem, apresentar prévia com head/base exatos. Não declarar jogável antes da
-validação. PR #14 continua separado: head `cf33d69`, base `4552e60`, CI
-`39078268404` passou 183 testes/tipos/build; E2E `39078277583` em execução.
-Conferir resultado final pelo GitHub. Se #14 for integrado, atualizar/revalidar
-esta branch antes de pedir aprovação para publicação.
+Limites desta entrega: espirro visual sem som exclusivo e curvas do trem por
+segmentos (vagão gira imediatamente). Acabamento, catálogo/progressão definitivos
+ficam para a entrega seguinte após revisar o protótipo. Proposta em
+PROPOSTA-FASE6.md. Somente inspeção/diff-check locais; tipos/testes/build/E2E e
+revisão das capturas serão feitos a partir do GitHub. Próximo passo: enviar PR,
+executar `expresso` e depois `todas` no head final, conferir prévia/recursos/arte.
+Resultados finais no PR, sem commit apenas para atualizar status do próprio CI.
+
+EST-08 iniciou em paralelo no worktree/branch `desempenho-expansao` /
+`codex/desempenho-expansao`, base `fae8acd`: instrumento/workflow próprios e guia
+para novas fases. Não editar seus arquivos; coordenador revisará commit e medições.
 
 ## EST-07A — configuração publicada (2026-10-17, Codex)
 
@@ -59,34 +61,25 @@ concluído após liberar somente o deployment `7147072605` com essa aprovação.
 Produção HTTP 200/version.json confirmou `4552e60` e o run do main.
 Publicado; não repetir merge/deploy do #13.
 
-## EST-07B — atualização da base em validação (2026-10-17, Codex)
+## EST-07B — eventos publicados (2026-10-17, Codex)
 
-[PR #14](https://github.com/raposocampos/radhija-rhaenyra/pull/14), branch
-`codex/eventos-nucleo`, worktree `eventos-nucleo`. Coordenador é o único editor;
-revisor trabalha somente em leitura no seu próprio worktree.
-Implementação `40e83ce`: emissão, tabela de vibração, histórico e diagnóstico
-da câmera extraídos para `gameEvents.js`. Estado, carregamento, reset e descarte
-continuam no núcleo. Cálculo de vibração adiado até conferir input/estado após
-os listeners. Sete testes runtime e três provas negativas preservam a API.
+[PR #14](https://github.com/raposocampos/radhija-rhaenyra/pull/14): emissão,
+vibração, histórico e diagnóstico da câmera extraídos para `gameEvents.js`,
+sete testes runtime e três provas negativas. Estado/carregamento/reset/descarte
+preservados no núcleo. Usuário aprovou head `cf33d69977aff41d96f40d984d3431a2a1648f44`,
+base `4552e60`; CI `39078268404` aprovou 183 testes/tipos/build; prévia conferida.
+E2E completo `39078277583`: 313 verificações de gameplay, quatro de infraestrutura,
+19 de smoke, 28 de recuperação; 25 amostras de recursos estáveis, globais
+preservados, erros/warnings vazios e capturas revisadas.
 
-No head anterior `3a3d02e`, base `597c8f2`: CI `39076449277` passou 180 testes,
-tipos/build; prévia conferida. E2E completo `39076448099` passou 313 verificações
-de gameplay, quatro de infraestrutura, 19 de smoke e 28 de recuperação;
-25 amostras de recursos estáveis e capturas revisadas. Esses resultados validam
-somente a base anterior, não substituem a validação da combinação atual.
-
-Atualização por merge de `4552e60`, sem reescrever histórico. Conflitos apenas
-em CONTEXTO/PLANO, reconciliados com as entregas reais; arquitetura combina
-configuração e eventos. Código de cada frente preservado. Neste checkpoint,
-o commit dessa atualização ainda precisa de CI/prévia e E2E `todas` próprios.
-Nenhum teste/build local. Conferir resultados pelo SHA que contém este registro;
-resultados finais ficam no PR, sem commit apenas para status do próprio CI.
-Próximo passo: concluir a validação, apresentar nova prévia e aguardar aprovação
-própria para integrar/publicar #14. A aprovação de #13 não inclui #14.
+Squash `fae8acdce2fc7ae15c8feaec33a695a974fc94e0`, árvore idêntica à aprovada.
+CI main `39079619941` passou. Deploy `39079647854`, deployment `7147332851`,
+concluído após liberação com essa aprovação. Produção HTTP 200/version.json
+confirmou `fae8acd` e o run do main. Publicado; não repetir merge/deploy.
 
 ## Etapas restantes e fase 6 (2026-10-17, Codex)
 
-Faltam concluir EST-07B e executar EST-08 para encerrar esta estabilização.
+EST-07B foi aprovado/integrado. Resta EST-08 para encerrar a estabilização.
 EST-08 foi delimitada a um PR após #14: medir carregamento, cadência com render
 normal e heap JS; duas referências comparáveis no mesmo SHA, qualidade completa,
 ambiente/amostras/dispersão registrados e limites definidos após medir. Reutilizar
@@ -280,11 +273,11 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Configuração comum publicada; eventos atualizados para a nova base.**
-Produção em `4552e60`, PR #13 aprovado/publicado, após os PRs #8, #7, #10,
-#11 e #12. O PR #14 precisa validar a combinação atual e receber aprovação
-própria. Depois resta EST-08, com escopo delimitado no checkpoint inicial.
-O PR #9 propõe Expresso do Superbafo; não há nova fase implementada/aprovada.
+**PR #14 publicado; protótipo Expresso combinado para validação.**
+Produção confirmada em `fae8acd`, CI `39079619941` e deploy `39079647854`
+aprovados, HTTP/version.json conferidos. Não repetir merge/deploy.
+Protótipo autorizado em `codex/prototipo-expresso`; nunca publicar sem aprovação
+da prévia específica. EST-08 em implementação separada, única etapa restante.
 Testes continuam no GitHub; conferir estado atual pelos SHAs e execuções.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
@@ -517,11 +510,9 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 a #8 e #10 a #13 integrados e publicados. Produção atual
-   confirmada em `4552e60`, deploy `39077894749`; não repetir merge/deploy.
-   Validar o PR #14 sobre essa base e apresentar a nova prévia para aprovação;
-   depois executar EST-08. PR #9 contém apenas a proposta Expresso do Superbafo.
-   Não reutilizar aprovação de versões anteriores.
-   Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
+3. PRs #1 a #8 e #10 a #14 integrados/publicados. Evidências #14 no bloco
+   acima. Validar protótipo Expresso e EST-08 em branches separados; cada versão
+   precisa de aprovação própria. PR #9 conserva a proposta original, incorporada
+   ao protótipo. Respeitar áreas reservadas; não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
