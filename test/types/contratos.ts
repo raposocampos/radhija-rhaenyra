@@ -1,5 +1,5 @@
 // Somente checagem estática: incluído no typecheck do CI, sem emissão nem execução.
-// @ts-expect-error também reprova se uma fronteira voltar a any e deixar de detectar o erro.
+// Cada diretiva de erro esperado também reprova se a fronteira voltar a any e aceitar o erro.
 import type * as THREE from 'three';
 import type {
   BafoProps, Fase1Props, Fase2Props, Fase3Props, Fase4Props, Fase5Props,
