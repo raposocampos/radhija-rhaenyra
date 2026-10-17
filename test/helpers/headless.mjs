@@ -1,12 +1,13 @@
 // Roda o jogo DE VERDADE (src/game/game.js + puzzles + mecânicas) no Node, sem navegador nem GPU.
 // O que é visual vira dublê: engine (cena e câmera do Three, sem renderer), dogs (Object3D com
-// mouthSocket) e props das fases (Proxy que aceita qualquer método). Teclado e controle são simulados
+// mouthSocket) e props explícitos das fases (métodos desconhecidos reprovam). Teclado e controle são simulados
 // com eventos no `globalThis` e `navigator.getGamepads`. Cada quadro é `game.update(dt)` com dt fixo,
 // então os testes são determinísticos e rodam em milissegundos.
 //
 //   const h = await createHeadlessGame({ level: 1, mode: 'play' });
 //   h.tap('KeyQ'); h.run(1.5); await h.walkTo(1.7, -2.05); h.info().stage;
 import * as THREE from 'three';
+import { stubProps } from './props.mjs';
 
 // ---------------------------------------------------------------------------------------------
 // Dublês do navegador (instalados uma vez por processo)
@@ -74,36 +75,6 @@ export function stubDog(name) {
 }
 
 /**
- * Props da fase como dublês: `props.qualquerCoisa` é um objeto com `object` (Group dentro do root),
- * `home` e qualquer método no-op. `collectibles` é uma lista vazia (o puzzle usa as posições do layout).
- */
-export function stubProps(root) {
-  const made = new Map();
-  const make = (name) => {
-    const object = new THREE.Group();
-    object.name = `prop:${name}`;
-    root.add(object);
-    const base = { object, home: object.position.clone(), calls: [] };
-    if (name === 'plate') base.surfaceY = undefined;
-    return new Proxy(base, {
-      get(t, k) {
-        if (k in t) return t[k];
-        if (typeof k === 'symbol' || k === 'then') return undefined;
-        return (...a) => { t.calls.push([k, ...a]); };
-      },
-    });
-  };
-  return new Proxy({ collectibles: [] }, {
-    get(t, k) {
-      if (k in t) return t[k];
-      if (typeof k === 'symbol' || k === 'then' || k === 'reset' || k === 'update') return undefined;
-      if (!made.has(k)) made.set(k, make(k));
-      return made.get(k);
-    },
-  });
-}
-
-/**
  * Troca o `build` de cada fase por um que só cria dublês (sem cenário, sem canvas) e tira o `load`
  * (o import dinâmico do cenário): os módulos de world/ nem chegam a ser carregados.
  */
@@ -112,7 +83,7 @@ export function headlessLevels(levels) {
     ...def,
     load: undefined,
     build({ root }) {
-      return { props: stubProps(root), seeThrough: [], update() {} };
+      return { props: stubProps(def.id, root, def.layout), seeThrough: [], update() {} };
     },
   }));
 }
