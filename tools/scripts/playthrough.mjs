@@ -186,10 +186,11 @@ async function sideTests() {
   i = await info();
   check(i.state === 'playing', 'Esc retoma');
   await page.keyboard.press('Escape');
-  await sleep(100);
+  // Aguarda a pausa ser processada antes de emitir a retomada (um quadro lento
+  // pode deixar o Escape na fila e pausar de novo depois do ui:resume).
+  await waitFor((s) => s.state === 'paused', { timeout: 2000 });
   await ev(() => window.__game.events.emit('ui:resume', {}));
-  await sleep(100);
-  i = await info();
+  i = await waitFor((s) => s.state === 'playing', { timeout: 2000 });
   check(i.state === 'playing', 'ui:resume retoma');
   const st = (await logOf('game:state')).map((s) => `${s.prev}→${s.state}`).join(', ');
   check(st.includes('playing→paused') && st.includes('paused→playing'), 'game:state {state, prev}', st);
