@@ -533,11 +533,13 @@ export function buildProps({ root, layout, engine }) {
     bed.setHighlight(false);
     for (const c of treats.list) c.reset();
   }
-  return {
+  /** @satisfies {import('../../../types').Fase2Props} */
+  const props = {
     gate, plank, wedge, sprinkler: spr.sprinkler, valve, crate, ball, bed, collectibles: treats.list,
     item: ball, // compatível com o puzzle provisório (_placeholder.js)
     update, reset,
   };
+  return props;
 }
 
 // ==================================================================== irrigador

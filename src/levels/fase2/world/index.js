@@ -48,6 +48,7 @@ function buildFireflies(root, layout) {
  */
 export function buildWorld({ engine, root, layout, params }) {
   const timings = {};
+  /** @template T @param {string} name @param {() => T} fn @returns {T} */
   const T = (name, fn) => { const t0 = performance.now(); const v = fn(); timings[name] = Math.round(performance.now() - t0); return v; };
   const ground = T('ground', () => buildGround({ root, layout }));
   const arch = T('architecture', () => buildArchitecture({ root, layout }));

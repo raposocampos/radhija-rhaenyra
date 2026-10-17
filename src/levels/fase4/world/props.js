@@ -793,6 +793,7 @@ export function buildProps({ root, layout, house }) {
 
   const goalMat = house.doormatMat;
   const goalSt = { on: false, k: 0 };
+  /** @satisfies {import('../../../types').Fase4Props} */
   const props = {
     fan,
     gate: { object: wallGate.pivot, setOpen(t) { wallGate.pivot.rotation.y = layout.GATE.openYaw * THREE.MathUtils.clamp(t, 0, 1); } },

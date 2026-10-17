@@ -18,14 +18,14 @@ export const TEXT = {
   prompt: { ball: 'Pegar a bolinha' },
 };
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, PlaceholderProps } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<PlaceholderProps>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, dogs, emit, root, place } = ctx;
+  const { layout, props, world, dogs, emit, root, place } = ctx;
   const { BALL, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
   const jumpable = new Set(world.statics.filter((c) => c.jumpable).map((c) => c.id));
 

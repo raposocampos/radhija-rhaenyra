@@ -5,9 +5,9 @@ import { createPuzzle } from './puzzle.js';
 import { buildBafoWorld } from './world.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
-/** @import { LevelDef } from '../../types' */
+/** @import { LevelDef, BafoProps } from '../../types' */
 
-/** @type {LevelDef} */
+/** @type {LevelDef<BafoProps>} */
 export default {
   id: 'bafo',
   number: 0,

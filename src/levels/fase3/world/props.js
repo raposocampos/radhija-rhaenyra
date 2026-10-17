@@ -619,6 +619,7 @@ export function createProps(layout, field, refs) {
     door.setHighlight(false);
   }
 
+  /** @satisfies {import('../../../types').Fase3Props} */
   const props = {
     gate,
     plateH: { object: plateH.object, setPress: (t) => plateH.setPress(t) },

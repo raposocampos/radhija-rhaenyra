@@ -6,9 +6,9 @@ import { createPuzzle } from './puzzle.js';
 import { buildPlaceholderWorld } from '../_placeholder.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
-/** @import { LevelDef } from '../../types' */
+/** @import { LevelDef, PlaceholderProps } from '../../types' */
 
-/** @type {LevelDef} */
+/** @type {LevelDef<PlaceholderProps>} */
 export default {
   id: 'modelo',
   number: 4,

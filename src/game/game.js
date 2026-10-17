@@ -49,13 +49,15 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- eventos (com registro para testes) ----------
   const log = [];
   let input = null;
-  const emit = (name, payload = {}) => {
+  const emitEvent = (name, payload = {}) => {
     log.push({ t: Math.round(performance.now()), name, payload });
     if (log.length > 500) log.shift();
     events.emit(name, payload);
     const r = RUMBLE[name];
     if (r && input && (state === 'playing' || state === 'celebrating')) input.rumble(...r(payload));
   };
+  /** @type {import('../types').GameEmit} */
+  const emit = emitEvent;
 
   input = createInput({ onDevice: (type) => emit('input:device', { type }) });
   const dogParam = params.get('dog');
@@ -69,6 +71,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let L = null; // layout da fase
   let root = null; // Group com tudo o que é da fase
   let resources = null; // escopo criado antes de build, inclusive para montagem parcial
+  /** @type {import('../types').LevelBuild} */
   let built = null; // { env, props, update, seeThrough }
   let world = null;
   let nav = null;
@@ -85,6 +88,7 @@ export function createGame({ engine, dogs, levels, params }) {
     lookVecs[n] = new THREE.Vector3();
   }
 
+  /** @type {import('../types').GameState} */
   let state = 'loading';
   /** @type {import('../types').DogName} */
   let activeDog = initialDog;
@@ -122,6 +126,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const navCtx = () => ({ nav, world, isVisible, flags: puzzle.navFlags?.() || {} });
 
   // ---------- info pública da fase ----------
+  /** @returns {import('../types').LevelInfo} */
   function levelInfo() {
     return {
       index: levelIndex,
@@ -147,6 +152,7 @@ export function createGame({ engine, dogs, levels, params }) {
     emit('dog:switch', { name: activeDog, displayName: L.DOGS[activeDog].displayName });
   }
 
+  /** @param {import('../types').GameState} s */
   function setState(s, { force = false } = {}) {
     if (s === state && !force) return;
     const prev = state;

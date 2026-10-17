@@ -375,6 +375,7 @@ export function buildProps({ root, layout, furniture }) {
   addLight(new THREE.Vector3(3.6, 1.7, -3.1), '#a9bde0', 1.0, 4.0);
 
   const bedSt = { on: false, k: 0 };
+  /** @satisfies {import('../../../types').Fase5Props} */
   const props = {
     petGate: gate.gate,
     latch: gate.latch,

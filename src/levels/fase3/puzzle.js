@@ -44,14 +44,14 @@ export const TEXT = {
   prompt: { slipper: 'Pegar a pantufa' },
 };
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase3Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase3Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, dogs, emit, cam, root, place } = ctx;
+  const { layout, props, world, dogs, emit, cam, root, place } = ctx;
   const { GATE, LANTERNS, PLATE_H, PLATE_L, NOOK, SLIPPER, GOOSE, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, HEDGE_AB, LURE_SPOT } = layout;
   const gateMid = { x: GATE.hinge.x, z: (GATE.hinge.z + GATE.latchPost.z) / 2 };
 

@@ -4,9 +4,9 @@ import layout from './layout.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';
 
-/** @import { LevelDef } from '../../types' */
+/** @import { LevelDef, Fase2Props } from '../../types' */
 
-/** @type {LevelDef} */
+/** @type {LevelDef<Fase2Props>} */
 export default {
   id: 'fase2',
   number: 2,
