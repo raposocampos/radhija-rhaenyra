@@ -5,6 +5,35 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## EST-04 — progresso validado (2026-10-17, Codex)
+
+Em implementação no branch `codex/progresso-validado`, worktree isolado
+`progresso-validado`, base `b1b026e29abb7cc80fff6a13224e967d78415151`.
+O PR #4 já foi integrado; o histórico abaixo será reconciliado pelo coordenador.
+
+- Escopo: `src/ui/progress.js`, `test/progress.test.mjs` e este bloco.
+  UI/menu, carregamento e plano compartilhado não foram alterados.
+- Formato e chave v1 mantidos, sem migração necessária. Validação rejeita
+  arrays/estruturas incompatíveis e normaliza os campos inválidos de cada
+  fase sem apagar suas marcas válidas. Contagens exigem inteiros seguros
+  não negativos; tempos exigem números finitos não negativos, sem coerção.
+  Petiscos anteriores são preservados; total conhecido nunca fica abaixo
+  da coleta. IDs de fases desconhecidas e chaves como `__proto__` permanecem
+  propriedades próprias, sem modificar o protótipo do mapa.
+- Política de versão: qualquer versão declarada diferente de 1 fica intacta
+  no storage. A partida usa uma cópia v1 vazia em memória; vitórias e reset
+  não sobrescrevem esse formato desconhecido. A gravação relê a versão para
+  detectar alteração por outra aba e retorna booleano; vitória retorna `saved`.
+- Falha de leitura impede gravação sobre conteúdo desconhecido; quota/falha
+  de escrita preserva o save anterior e não interrompe a partida. JSON
+  corrompido pode ser substituído por um novo save válido ao concluir fase.
+- Regressões cobrem saves v1, fases desconhecidas, arrays, strings, números
+  inválidos, recordes, releitura entre abas, versões futuras, falhas de
+  storage e isolamento das prévias. Ainda não executadas neste marco.
+- Próximo passo: commit/PR, CI e prévia; E2E `fase1` no GitHub para conferir
+  vitória e integração normal da UI. Nenhum teste/build local. Conferir o
+  novo SHA nos resultados e obter aprovação da versão antes de integrar.
+
 ## Onde paramos
 
 **Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
