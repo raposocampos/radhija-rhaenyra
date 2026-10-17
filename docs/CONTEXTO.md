@@ -7,7 +7,7 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**Em andamento: melhoria visual dos pombos; produção ainda não autorizada.**
+**Modelagem dos pombos concluída no PR #3; produção ainda não autorizada.**
 Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
 Objetivo: silhuetas orgânicas e reconhecíveis, preservando o estilo fofo,
 as animações, a jogabilidade e o desempenho.
@@ -24,11 +24,24 @@ as animações, a jogabilidade e o desempenho.
 - Ferramenta de comparação em `tools/pigeon-review.html` e
   `tools/scripts/*pigeons*` / `tools/scripts/pigeon-review-scene.mjs`.
   E2E fase4 passa a gerar capturas comparativas e métricas no GitHub.
-- Validação local apenas por leitura/diff. Tipos, testes, build, E2E e capturas
-  ainda pendentes na nuvem. Não interpretar implementação como validação.
-- Próximo passo: abrir PR, acompanhar CI e prévia, rodar E2E fase4, inspecionar
-  capturas, registrar evidências e apresentar a versão para aprovação humana.
-  Não integrar, não ativar auto-merge e não liberar produção antes disso.
+- [PR #3](https://github.com/raposocampos/radhija-rhaenyra/pull/3), primeiro head
+  `85d91bd859e39c0bc93cdd31cf3dc9efd3b1ac75`: tipos, 116 testes e build passaram
+  no [CI 39005534435](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005534435).
+  A prévia passou na [publicação 39005553543](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005553543).
+  [E2E 39005533740](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005533740):
+  17 verificações aprovadas, sem erros de console; capturas antes/depois de
+  silhuetas, sono, espiada e voo inspecionadas, além do cochilo no cenário real.
+- Custo medido: 25 → 13 meshes e 3.020 → 4.740 triângulos por pombo;
+  na cena de estudo, 29 → 17 chamadas de desenho em três quartos. Não é um
+  benchmark de FPS em aparelhos reais. Nenhum teste ou build foi rodado no PC.
+- Este registro acompanha o ajuste das legendas da comparação e capturas
+  adicionais dos pombos do portão/pombal. O código do jogo não mudou desde
+  `85d91bd`. O commit contendo este registro terá novo CI/prévia e E2E;
+  conferir seus resultados pelo head atual do PR, sem assumir aprovação antecipada.
+- Próximo passo: concluir a conferência do head final e entregar a prévia
+  indicada no check `publicar-site`/descrição do PR para aprovação humana.
+  Aguardar aprovação explícita dessa versão antes de integrar e publicar.
+  Não ativar auto-merge nem liberar ambiente de produção enquanto aguarda.
 
 ## O que foi feito
 
@@ -113,8 +126,9 @@ as animações, a jogabilidade e o desempenho.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PR #1 concluído e publicado; não repetir seu merge/deploy. O registro da
-   entrega também segue por PR documental, conforme pedido explícito do usuário.
+3. PRs #1 e #2 concluídos e publicados; não repetir seus merges/deploys.
+   PR #3 é a entrega dos pombos e depende da aprovação humana da versão validada.
+   Conferir head/base/CI/prévia/E2E atuais antes de qualquer integração.
    Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

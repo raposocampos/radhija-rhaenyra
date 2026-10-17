@@ -43,6 +43,12 @@ criada uma vez por pombo; o update não reconstrói malhas. O relatório de revi
 mede meshes, triângulos e chamadas de desenho antes/depois. Contagens não são
 uma medição de FPS em aparelhos reais.
 
+Na revisão de `85d91bd` (E2E `39005533740`), cada pombo passou de 25 para
+13 meshes e de 3.020 para 4.740 triângulos. Na cena isolada em três quartos,
+as chamadas de desenho passaram de 29 para 17 (incluindo chão e sprites).
+O aumento de triângulos compra curvatura, enquanto a união das peças reduz
+o custo de submissão. Não foi medido FPS em hardware do usuário.
+
 ## Como validar na nuvem
 
 Executar **E2E manual**, suíte `fase4`, no branch do PR. Além da partida normal,
@@ -52,6 +58,7 @@ o workflow gera o artefato `capturas-fase4`, pasta `pombos/`:
 - `02-animacoes.png`: sono, espiada e dois extremos da batida de asas.
 - `03-fase4.png` e `04-cochilo-no-cenario.png`: fase real e detalhe no cenário,
   com resolução normal, sombras e pós-processamento do jogo.
+- `05-pombo-do-portao.png` e `06-pombal.png`: demais instâncias, tons e escalas.
 - `metrics.json`: SHAs da base e do head, contagens e erros do navegador.
 
 O script compara o head com o ancestral comum de `origin/main`, usando os

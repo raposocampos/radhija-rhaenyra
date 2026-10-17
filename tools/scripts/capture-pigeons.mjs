@@ -58,6 +58,24 @@ try {
     g.engine.render(0, 2);
   });
   await page.screenshot({ path: 'shots/pombos/04-cochilo-no-cenario.png' });
+  await page.evaluate(() => {
+    const g = window.__game, p = g.props.pigeon.object.position;
+    g.engine.camera.position.set(p.x + 0.8, p.y + 0.5, p.z + 0.85);
+    g.engine.camera.lookAt(p.x, p.y + 0.16, p.z);
+    g.engine.render(0, 2);
+  });
+  await page.screenshot({ path: 'shots/pombos/05-pombo-do-portao.png' });
+  await page.evaluate(() => {
+    const g = window.__game;
+    const birds = g.engine.scene.getObjectsByProperty('name', 'pombo');
+    if (birds.length !== 4) throw new Error('A revisão precisa dos quatro pombos da fase.');
+    const coop = birds.filter((p) => p !== g.props.pigeon.object && p !== g.props.napPigeon.object);
+    const center = coop[0].position.clone().add(coop[1].position).multiplyScalar(0.5);
+    g.engine.camera.position.copy(center).add(new g.THREE.Vector3(0.5, 0.8, 1.8));
+    g.engine.camera.lookAt(center.x, center.y + 0.16, center.z);
+    g.engine.render(0, 2);
+  });
+  await page.screenshot({ path: 'shots/pombos/06-pombal.png' });
   writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, head, stats, errors }, null, 2));
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
