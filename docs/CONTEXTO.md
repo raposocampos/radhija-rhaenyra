@@ -5,6 +5,29 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## Proposta da fase 6 em paralelo
+
+Em 2026-10-17, Codex preparou [PROPOSTA-FASE6.md](PROPOSTA-FASE6.md) após o
+usuário escolher uma proposta combinando pulo e superbafo. Branch
+`codex/proposta-fase6`, worktree `proposta-fase6`, base
+`b1b026e29abb7cc80fff6a13224e967d78415151` (PR #4 já integrado, confirmado no
+GitHub). Esta frente altera somente a proposta e este bloco de retomada; o
+coordenador mantém a consolidação das demais frentes no plano.
+
+Cenário e objeto sugeridos: quintal de piquenique e ursinho, ainda sem aprovação.
+O documento define três etapas, trajetos, ações fora de ordem, reset, contratos,
+APIs existentes e critérios de teste. Não há fase implementada nem alteração
+no catálogo. Leitura do código e revisão do diff são as validações locais;
+tipos, testes e build ficam no CI do próprio commit documental, sem E2E adicional.
+Conferir SHA, checks e prévia no PR da branch; resultados da base não aprovam
+esta entrega. Links e resultados atuais ficam na descrição do PR.
+
+Próximo passo: revisar a proposta com o usuário; depois, decidir o protótipo em
+branch isolada. Integrar ao catálogo depende de EST-03/04; cenário final deve
+seguir EST-05/06. Nenhuma autorização de merge/publicação foi usada nesta frente.
+Os registros abaixo preservam o histórico anterior; para as frentes simultâneas,
+conferir o checklist do coordenador e os respectivos PRs.
+
 ## Onde paramos
 
 **Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
