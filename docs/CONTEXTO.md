@@ -13,11 +13,13 @@ botão largo de cima vencia a do vizinho da mesma linha. A correção prioriza
 candidatos alinhados antes de comparar distâncias; mantém a escolha diagonal
 como alternativa quando não há um candidato alinhado.
 
-Implementação no branch `codex/navegacao-lateral-pausa`, com 16 novas
-verificações na suíte E2E `controle`: D-pad, analógico, setas do teclado,
-navegação vertical e ajuste de volume sem perder foco. No momento deste
-registro, CI/E2E e publicação ainda precisam ser confirmados no GitHub.
-Conferir o commit atual e as execuções ao retomar.
+Implementação `b3023aa` aprovada no CI e no E2E `controle`: 46 verificações
+aprovadas, sem erros de console, incluindo 16 novas para D-pad, analógico,
+setas do teclado, navegação vertical e ajuste de volume sem perder foco.
+Integrada ao `main` após essas validações. Esta atualização final muda apenas
+o resumo; o código e os testes são os mesmos que passaram no E2E. Ao retomar,
+conferir o CI/deploy do commit atual para confirmar a publicação. Não há
+ajuste de código pendente conhecido nesta tarefa.
 
 - Jogo: https://raposocampos.github.io/radhija-rhaenyra/
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
@@ -56,6 +58,11 @@ Conferir o commit atual e as execuções ao retomar.
 
 ## Validações já realizadas
 
+- Navegação do menu, commit `b3023aa`: CI aprovado na
+  [execução 38999914786](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999914786)
+  e E2E `controle` aprovado na
+  [execução 38999915196](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999915196).
+  As 46 verificações passaram no GitHub; nenhum teste ou build local foi rodado.
 - Correção da dica, commit `f925a94`: CI aprovado na
   [execução 38999413489](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999413489)
   e E2E `controle` aprovado na
@@ -102,8 +109,8 @@ Conferir o commit atual e as execuções ao retomar.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. Concluir a validação e publicação da navegação do menu, caso ainda não
-   estejam concluídas no GitHub. Não há autorização para instalar ai-memory
-   neste projeto.
+3. A navegação do menu já está integrada e validada; conferir a publicação do
+   commit atual e seguir o próximo pedido. Não há autorização para instalar
+   ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
