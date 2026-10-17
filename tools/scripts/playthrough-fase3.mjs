@@ -118,6 +118,11 @@ async function fullRun() {
   check(i.stay.rhaenyra, 'Rhaenyra fica esperando perto da ponte', `(${i.dogs.rhaenyra.x}, ${i.dogs.rhaenyra.z})`);
   await walkPath([[0.8, 3.5], [2.3, 3.5, { tol: 0.15 }]]);
   await clearLog();
+  const gooseTiming = await record((g) => {
+    const s = g.debug.info();
+    return { time: s.timeSec, state: s.goose.state };
+  });
+  const curiousTime = await ev(() => window.__game.layout.GOOSE.curiousTime);
   await press('KeyE', 150);
   const tBark = Date.now();
   i = await info();
@@ -152,7 +157,14 @@ async function fullRun() {
   i = await waitFor((s) => s.goose.state === 'return' || s.goose.state === 'patrol', { timeout: 20000 });
   const tBack = i.timeSec - gBark;
   check(i.goose.state === 'return' || i.goose.state === 'patrol', 'gansa volta depois de curiosa (goose:return)', `${tBack.toFixed(1)} s de jogo`);
-  check(tBack >= 12, 'janela folgada: a gansa só volta ≥ 12 s (de jogo) depois do latido', `${tBack.toFixed(1)} s`);
+  // O caminho até o latido varia com a posição da patrulha. A garantia da mecânica
+  // é curiousTime parada, e não 12 s fixos somando um trajeto variável.
+  const gooseFrames = await gooseTiming.stop();
+  const curiousAt = gooseFrames.find((f) => f.state === 'curious')?.time;
+  const returnedAt = gooseFrames.find((f) => f.state === 'return' && f.time > curiousAt)?.time;
+  const curiousElapsed = returnedAt - curiousAt;
+  // Amostragem por quadro, dt limitado a 0,05 s; timeSec arredonda a centésimos.
+  check(curiousElapsed >= curiousTime - 0.06, 'gansa respeita todo o tempo de curiosidade configurado', `${curiousElapsed.toFixed(2)} s / ${curiousTime} s`);
   check((await logOf('goose:return')).length >= 1, 'goose:return emitido');
 
   // 9) Leva a pantufa até a porta de vidro
