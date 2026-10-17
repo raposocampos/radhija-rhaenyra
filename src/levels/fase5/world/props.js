@@ -12,6 +12,7 @@ const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 // ================================================================== portãozinho + trava
+/** @returns {{ gate: import('../../../types').Fase5Props['petGate'], latch: import('../../../types').Fase5Props['latch'] }} */
 function buildPetGate(root, layout) {
   const { PET_GATE: G } = layout;
   const white = stdMat('#f7f4ee', { roughness: 0.45 });

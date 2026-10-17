@@ -193,6 +193,7 @@ export function buildProps({ root, layout, engine }) {
   gatePivot.add(drum);
   gatePivot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   root.add(gatePivot);
+  /** @type {import('../../../types').GateProp & { t: number }} */
   const gate = {
     object: gatePivot,
     t: 0,
