@@ -5,111 +5,128 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-02 — atualização pontual do Vite
-
-2026-10-17, Codex. Branch `codex/atualizar-vite`, worktree isolado
-`atualizar-vite`. Objetivo autorizado: corrigir a dependência vulnerável sem
-alterar o jogo. [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5)
-em atualização sobre a base `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`,
-conferida no Git/GitHub após a integração aprovada do PR #6. Incorporado o
-main por merge normal, preservando o histórico publicado da branch.
-
-- Implementado: Vite exato `6.3.5` → `6.4.4` em `package.json` e no lockfile.
-  Nenhuma outra dependência, script, workflow ou configuração própria mudou.
-  O merge da base incorpora a infraestrutura E2E já entregue no PR #6.
-  O servidor de desenvolvimento continua restrito a `127.0.0.1`; produção
-  serve somente arquivos estáticos.
-- Versão escolhida pelo [aviso oficial GHSA-rq7h-c2jc-7f22](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22):
-  até `6.4.3` ainda é afetada; `6.4.4` corrige o acesso indevido a arquivos
-  fora de `server.fs.allow`. Inclui também as correções anteriores de Windows,
-  WebSocket e caminhos do servidor de desenvolvimento.
-- Verificação leve: `npm audit --package-lock-only --ignore-scripts --json`
-  passou de uma dependência sinalizada (alta) para zero vulnerabilidades.
-  O lockfile foi atualizado com `--package-lock-only --ignore-scripts`;
-  nenhum teste, build ou partida foi executado no PC. Não foi executada uma
-  prova de exploração: a evidência de correção é a versão corrigida do
-  fornecedor e a consulta do lockfile, não uma alegação de PoC local.
-- O head anterior `4f03e389335051dd2633f28feac4c6bd67c49084` passou no
-  CI 39051377056 (123 testes/build), prévia 39051408164 e E2E 39051384592
-  (299 verificações, sem erros de console). Esses resultados não validam
-  antecipadamente o novo merge nem a infraestrutura acrescentada na base.
-- Pendente: enviar este merge e conferir tipos, testes rápidos, build,
-  prévia e E2E `todas` no novo SHA. O E2E deve incluir as nove partidas e
-  o job `infra-build`, com prova negativa e smoke de seu próprio build.
-  Conferir logs e `version.json`; não confundir esse build com o artefato
-  binário produzido pelo CI para a prévia.
-- Próximo passo: acompanhar essas execuções e apresentar PR, prévia e SHA
-  ao usuário. Aguardar aprovação explícita dessa versão antes de integrar;
-  não ativar auto-merge nem liberar produção. O coordenador reconcilia este
-  bloco com o checklist geral da rodada de estabilidade. A correção do botão
-  Jogar (EST-09) permanece fora desta entrega e será tratada depois.
-
 ## Onde paramos
 
-### EST-01 — E2E confiável (2026-10-17, Codex)
+**Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
+autorizou executar o plano com este chat coordenando até dois executores,
+worktrees separados e testes no GitHub. A aprovação de produção continua
+vinculada a cada versão apresentada, conforme `AGENTS.md`.
 
-O usuário aprovou a prévia de `6ebacd999da6bd36249cd76ef3e90a319752b666`;
-o [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6) foi integrado
-por squash em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. A publicação desse
-commit no main é acompanhada pelo coordenador; conferir seu deploy e
-`version.json` antes de declarar produção atualizada. Não repetir o merge.
+Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
+O coordenador usa branch `codex/avaliacao-evolucao`, worktree
+`avaliacao-evolucao`, para preservar a avaliação, o checklist e as instruções
+de coordenação. Alterações desta entrega: `AGENTS.md`, este contexto e o plano;
+o código do jogo não muda nesta branch. Commit/PR e checks devem ser conferidos
+no GitHub antes de retomar; não considerar a validação da base como validação
+desta entrega documental.
 
-- Harness soma erros de console/exceções às falhas; runner também reprova
-  resumo ausente ou inconsistente, preservando o diagnóstico completo.
-- Prova negativa no E2E manual usa Chromium e processos reais: página saudável aprova;
-  console.error, exceção e asserção injetados reprovam com diagnóstico específico.
-- Smoke serve somente `dist` em subcaminho de prévia, abre todas as fases na
-  mesma aba e confere imports sob demanda, estado inicial e recursos carregados.
-- [Revisão do PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6#discussion_r4303596789)
-  apontou conflito com a separação do E2E exigida em `AGENTS.md`. Chromium,
-  prova negativa e smoke foram movidos de `ci.yml` para um job de `e2e.yml`,
-  executado somente com `suite=todas`, em paralelo às nove partidas existentes.
-- O job E2E gera seu próprio build do head selecionado; o smoke não verifica
-  o mesmo artefato binário publicado pelo CI da prévia. CI obrigatório mantém
-  tipos/testes Node/build; workflows seguem somente leitura e publicador intacto.
-- A versão aprovada `6ebacd9` passou no CI 39052841286 (126 testes/build),
-  prévia 39052874365 e E2E 39052837420 (299 verificações, quatro provas de
-  infraestrutura e 19 verificações do smoke). Esses resultados são desse
-  head; a atualização do Vite precisa de novas execuções no PR #5.
-- Próximo passo desta rodada: revalidar o PR #5 sobre a base integrada e
-  apresentar a nova prévia para aprovação. Nenhum teste/build local.
+- EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
+  `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
+  head `6ebacd999da6bd36249cd76ef3e90a319752b666`.
+  Harness e runner agora reprovam erros do navegador, falhas e resumo ausente;
+  as provas com Chromium confirmam a propagação até o processo final. O smoke
+  serve somente `dist`, abre as cinco fases e confere imports e recursos.
+  [CI 39052841286](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052841286)
+  aprovado: tipos, 126 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-6/39052841286-1/)
+  publicada, com head/base conferidos em `version.json`.
+  [E2E completo 39052837420](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052837420)
+  aprovado no mesmo head: nove suítes, 299 verificações de gameplay, quatro
+  provas de propagação de erro e 19 verificações do build estático, sem erros
+  de console. Capturas da fase 4 concluídas, com `errors: []` no log.
+  A [revisão de fluxo](https://github.com/raposocampos/radhija-rhaenyra/pull/6#discussion_r4303596789)
+  foi atendida e a conversa resolvida: navegador fica no `E2E manual`, na opção
+  `todas`; o CI obrigatório mantém tipos/testes rápidos/build. O smoke testa
+  um build próprio da execução E2E, distinto do artefato da prévia. O usuário
+  aprovou essa versão no chat; integrada por squash em
+  `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`.
+  [CI do main 39053762821](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053762821)
+  aprovado. [Deploy 39053794991](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053794991)
+  concluído com sucesso após liberação com essa aprovação. Produção respondeu
+  HTTP 200 e `version.json` confirmou `9fcce75` e CI `39053762821`.
+- EST-02: executor Codex em `codex/atualizar-vite`, worktree
+  `atualizar-vite`; Vite 6.4.4 implementado no [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
+  head aprovado `3f9540248b33b78b1cc43aa834352901ef3ec457`, após merge normal da
+  base `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`, sem force push. Nenhuma
+  dependência transitiva mudou; auditoria do lockfile continua sem avisos.
+  A versão segue o [aviso oficial GHSA-rq7h-c2jc-7f22](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22):
+  `6.4.4` corrige o acesso indevido fora de `server.fs.allow`, ainda presente
+  até `6.4.3`. A evidência é a versão corrigida e a auditoria do lockfile;
+  não foi executada prova de exploração. A atualização usou apenas
+  `--package-lock-only --ignore-scripts`, sem testes/build locais. O servidor
+  de desenvolvimento continua em `127.0.0.1` e produção serve arquivos estáticos.
+  O head anterior `4f03e38` passou CI `39051377056` e E2E `39051384592`
+  (123 testes rápidos e 299 verificações de gameplay), mas esses resultados
+  não validam a nova combinação. No head atual, [CI 39053902153](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053902153)
+  aprovou tipos, 126 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39053902153-1/)
+  publicada, HTTP 200 e head/base conferidos em `version.json`.
+  [E2E completo 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
+  aprovado no mesmo head: 299 verificações nas nove partidas, quatro provas
+  de infraestrutura e 19 verificações do smoke, sem erros de console. Capturas
+  da fase 4 concluídas, com `errors: []`. O usuário aprovou explicitamente
+  integrar e publicar o PR #5 no chat. Integrado por squash em
+  `18629a0e3877cc6c56201f5a12b3048feb1514e9`, com árvore idêntica ao head aprovado,
+  confirmada por revisão independente. [CI do main 39056035625](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056035625)
+  aprovado: tipos, 126 testes rápidos e build Vite 6.4.4.
+  [Deploy 39056064315](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056064315)
+  concluído com sucesso usando essa aprovação. Produção HTTP 200 e
+  `version.json` confirmou `18629a0` e execução `39056035625`.
+- EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
+  preserva o plano e consolida os resultados. Conferir os checks do head
+  documental atual; não reutilizar a prévia de um commit anterior.
+- Ordem de integração: #6 e #5 integrados; resta #4. O coordenador incorporou
+  a base `18629a0` no PR #4 e reconciliou os registros dos dois executores,
+  preservando suas decisões e evidências. A entrega de #4 continua documental;
+  conferir CI/prévia do novo head e aguardar aprovação própria antes de integrar.
+- Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
+  reservadas aos executores nem integrar/publicar sem aprovação da versão.
+  Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
+  isso não representa correções nem testes novos já implementados.
+- EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
+  ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
+  corrigir depois; registrar e reproduzir em tarefa própria, identificando
+  o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
+  dos PRs #6 e #5 não inclui uma correção desse bug.
 
-**Histórico do PR #3: entrega já integrada e publicada em `baa8af0`.**
-O registro abaixo descreve a fase anterior de revisão; não repetir merge/deploy.
-Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
-Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
-pombo → placa → portão legíveis.
+## Evidências da avaliação anterior
 
-- Usuário aceitou o visual de `7427dda`, pediu melhorar o voo e depois relatou
-  pernas separadas do corpo em `a9b0906` e câmera que não acompanha o segundo
-  pombo. Esses retornos não autorizam publicação em produção.
-- Última versão entregue: `a9b090606d5e646d8a8ed4cf70c8be1bf5c36947`.
-  [CI 39007017743](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007017743),
-  [prévia 39007043021](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007043021)
-  e [E2E 39007014701](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007014701)
-  passaram: tipos, 120 testes, build, 17 verificações da fase 4 e capturas/vídeo.
-  Isso valida a versão anterior, não as novas correções.
-- Correção atual: pernas presas ao grupo do corpo, pivô no quadril dentro do
-  tronco e contato dos pés resolvido no pouso/sono. Teste geométrico verifica
-  as raízes das duas pernas dentro da malha durante voo, curva e pouso.
-- Câmera: alvo vivo com altura, antecipação de 0,3 s antes de voar e um único
-  plano contínuo para trajeto, placa e portão. Retorna suavemente à dog.
-  Placa maior com molas, compressão, mudança de cor e pulso na corda; pombo
-  acompanha a superfície da placa. Eventos, controles e colisões preservados.
-- Capturas na nuvem comparam as pernas com `a9b0906` e acrescentam vídeo da
-  câmera real do mecanismo, validação de enquadramento e captura vertical.
-  Testes de câmera cobrem seguimento 3D, troca de foco e retorno à dog.
-- Validação das correções pendente: enviar o novo commit no PR #3, acompanhar
-  CI/prévia e E2E fase4, inspecionar capturas e entregar SHA/link ao usuário.
-  Nenhum teste, build ou partida automatizada foi executado localmente.
-- Base conferida: `main` em `3e826e48f9eac644681b718470f9d75f6e207de5`, PR #2
-  integrado. CI `39004801467` e deploy `39004826940` passaram. PR #1 integrado.
-- Pesquisa e decisões visuais em `docs/POMBOS.md`. Fotografias consultadas não
-  incorporadas. Fábrica compartilhada pelos quatro pombos; 25 → 13 meshes e
-  3.020 → 4.740 triângulos por pombo na revisão anterior. Não é benchmark de FPS.
-- Próximo passo: conferir resultados do head atual, inclusive o commit deste
-  documento, apresentar a nova prévia e aguardar aprovação explícita dessa
-  versão. Não ativar auto-merge, integrar ou liberar produção enquanto aguarda.
+- Base examinada: `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
+  O registro anterior estava desatualizado: o [PR #3](https://github.com/raposocampos/radhija-rhaenyra/pull/3)
+  foi integrado. [CI 39009757588](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39009757588)
+  aprovou tipos, 123 testes e build; [deploy 39009786059](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39009786059)
+  terminou com sucesso. `version.json` de produção confirmou esse SHA e CI.
+  Não repetir merge/deploy. Decisões dos pombos permanecem em `docs/POMBOS.md`.
+- Conferidas por API as proteções do main, checks obrigatórios e revisão do
+  ambiente de produção. Nenhuma proteção ou configuração alterada.
+- [E2E completo 39048060825](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39048060825)
+  executado no GitHub, suíte `todas`, no SHA acima: **sucesso nas nove suítes,
+  299 verificações aprovadas e nenhum erro de console nos logs**. Contagens:
+  bafo 12, fase4 17, regressões 9, pulo 8, controle 46, fase5 18, fase2 77,
+  fase1 61 e fase3 51. Essa execução da avaliação foi concluída; não valida
+  os novos commits da estabilização.
+- Prioridades propostas na avaliação da base `baa8af0`:
+  1. Erros inesperados de console/pageerror eram apenas registrados pelo E2E;
+     faltava um teste mínimo do build estático. **Concluído em EST-01, PR #6:**
+     erros agora reprovam e há um smoke do build próprio do E2E. As partidas
+     de gameplay continuam usando o servidor de desenvolvimento.
+  2. Recuperar estado e oferecer ação útil quando loadLevel rejeitar. Avaliar
+     também abas antigas após deploy: os arquivos anteriores são removidos,
+     e imports de fases sob demanda podem apontar para chunks inexistentes.
+  3. Definir descarte de materiais/texturas exclusivos e propriedade dos
+     recursos compartilhados; medir memória após alternar fases repetidamente.
+     O descarte incompleto foi inspecionado, mas crescimento de memória não
+     foi medido nesta avaliação.
+  4. Fortalecer tipos entre puzzle/cenário e dublês de props: o uso de any e
+     Proxy permissivo pode esconder incompatibilidades. Validar contratos reais.
+  5. Validar/migrar o progresso salvo antes de ampliar conteúdo; extrair
+     configurações comuns das dogs da fase1 e dividir o núcleo gradualmente.
+- Consulta leve `npm audit --package-lock-only --ignore-scripts --json`:
+  Vite 6.3.5 é a única dependência sinalizada, severidade agregada alta; o
+  relatório indica 6.4.4 como correção sem troca de major. Os avisos consultados
+  referem-se ao servidor de desenvolvimento; produção usa arquivos estáticos.
+  Nenhuma dependência foi instalada ou atualizada.
+- Nenhum teste, build ou partida foi executado no PC durante a avaliação.
+  Inspeção local do diff e `git diff --check` sem problemas. A implementação
+  de EST-01 e EST-02 agora está autorizada e usa validações próprias na nuvem.
 
 ## O que foi feito
 
@@ -194,10 +211,11 @@ pombo → placa → portão legíveis.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2 e #3 concluídos; PR #6 integrado após aprovação. Não repetir
-   merges. O coordenador acompanha o deploy de `9fcce75`; o PR #5 deve ser
-   revalidado sobre essa base e receber nova aprovação antes de integração.
-   Conferir head/base/CI/prévia/E2E atuais antes de qualquer entrega.
-   Não há autorização para instalar ai-memory neste projeto.
+3. PRs #1, #2, #3, #6 e #5 integrados e publicados. Produção de #5 confirmada
+   em `18629a0`, deploy `39056064315`; não repetir merge/deploy nem pedir
+   novamente a aprovação já usada para essa versão. PR #4 está reconciliado
+   com essa base: conferir seus checks/prévia e obter aprovação para integrar
+   a documentação. Preservar o checklist; EST-03/EST-04 apenas preparados e
+   EST-09 adiado conforme o usuário. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
