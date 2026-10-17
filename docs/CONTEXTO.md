@@ -29,10 +29,15 @@ o código do jogo e esses testes não mudaram depois disso. A revisão automáti
 apontou que o primeiro workflow permitia scripts do PR em um job com escrita.
 Isso foi corrigido separando CI de `deploy.yml`: publicação por workflow_run
 confiável do main, artefato tratado apenas como dados e ambiente preview que
-recusa refs de PR. A correção de infraestrutura ainda precisa do CI e da
-publicação inicial via branch bloqueado `delivery-bootstrap` (ver ENTREGA.md).
-Conferir o status atual no PR; não atribuir as validações anteriores ao workflow
-corrigido. Cada novo CI gera outra URL de prévia.
+recusa refs de PR. A correção `23317d3` passou no
+[CI 39002342245](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002342245)
+e no [publicador confiável 39002383441](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002383441),
+executado pelo branch bloqueado `delivery-bootstrap` (`51955c8`). O status
+obrigatório `publicar-site` foi aprovado e a conversa de revisão foi resolvida.
+Conferidos HTTP 200, identidade da prévia e HTML da produção preservado.
+Esta atualização final é apenas documental; conferir CI e link atuais no PR,
+pois cada novo CI gera outra URL de prévia. Não criar outro commit apenas para
+atualizar o status desta atualização.
 
 Configurações já aplicadas no servidor: main exige PR atualizado, checks
 `testes-e-build` e `publicar-site`, incluindo admins; ambiente `github-pages`
@@ -43,8 +48,10 @@ e, durante a primeira instalação, delivery-bootstrap bloqueado.
 É um branch órfão só de estáticos: nunca integrar ao main.
 
 PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
-Próximo passo: conferir CI e publicação confiável deste PR, entregar a prévia mais recente e
-aguardar aprovação. Depois seguir `docs/ENTREGA.md`. Não afirmar que a nova
+Próximo passo: conferir os checks da última atualização documental e entregar
+o link atual do status `publicar-site`; aguardar aprovação humana. Depois seguir
+`docs/ENTREGA.md` e remover a exceção delivery-bootstrap do ambiente preview
+(policy ID `63342097`) após o merge aprovado. Não afirmar que a nova
 política já está integrada ao main: os arquivos aguardam aprovação no PR,
 embora as proteções no servidor já estejam ativas.
 
