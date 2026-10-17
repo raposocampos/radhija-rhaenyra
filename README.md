@@ -80,6 +80,8 @@ Não é preciso gerar ou enviar a pasta `dist/`, nem rodar os testes no PC antes
 As partidas completas ficam separadas: abra [Actions → E2E manual](https://github.com/raposocampos/radhija-rhaenyra/actions/workflows/e2e.yml),
 clique em **Run workflow**, escolha o branch e confirme. Elas rodam em máquinas Linux do GitHub,
 com uma suíte por máquina. As capturas ficam nos artefatos da execução por 7 dias.
+Como essas máquinas não têm GPU, o navegador dos testes usa resolução 3D reduzida, sem sombras
+nem bloom. A lógica e os controles continuam reais; a qualidade visual do jogo publicado não muda.
 
 Os comandos abaixo continuam disponíveis para quem quiser rodar testes **localmente**:
 

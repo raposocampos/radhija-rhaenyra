@@ -23,6 +23,25 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     window.__fakePads = window.__fakePads || [];
     Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value() { return window.__fakePads; } });
   });
+  if (process.env.CI) {
+    // SwiftShader não tem GPU: reduz só o custo visual dos testes, antes do primeiro quadro.
+    // A lógica, a entrada, as animações e o WebGL continuam reais; o jogo publicado não muda.
+    await page.addInitScript(() => {
+      Object.defineProperty(window, '__game', {
+        configurable: true,
+        set(value) {
+          const { renderer, composer, bloom } = value.engine;
+          renderer.setPixelRatio(0.25);
+          composer.setPixelRatio(0.25);
+          renderer.shadowMap.enabled = false;
+          bloom.enabled = false;
+          Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
+        },
+      });
+    });
+    console.log('[e2e] CI sem GPU: resolução 3D reduzida, sombras e bloom desativados apenas nesta página de teste.');
+    page.setDefaultTimeout(120000);
+  }
   if (initScript) await page.addInitScript(initScript);
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`[console.error] ${m.text()}`); });
