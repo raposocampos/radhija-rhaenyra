@@ -2,6 +2,7 @@
 // mapa de cor procedural (grama, margem úmida, caminho de cascalho, pedras de pisar), tufos de grama
 // instanciados com vento e florzinhas claras que pegam o luar.
 import * as THREE from 'three';
+import { ownResource } from '../../../core/resources.js';
 import { shared, rng, fbm2, vnoise2, smoothstep, lerp, mergeGeometries, mergeVertices, paint, speckleTexture, mat } from '../../../world/util.js';
 
 const R = { x0: -15, x1: 15, z0: -12, z1: 11 };
@@ -63,9 +64,10 @@ function axisCoords(a0, a1, f0, f1, fine, coarse) {
   return out;
 }
 
-export function buildGround(layout, field) {
+export function buildGround(layout, field, root = null) {
   const group = new THREE.Group();
   group.name = 'chao';
+  root?.add(group);
   const B = layout.WORLD.bounds;
   const stones = steppingStones();
   const solid = layout.STATIC_COLLIDERS.filter((c) => !c.id.startsWith('limite') && c.id !== 'fachada' && c.kind !== 'water' && c.blocks !== 'large');
@@ -122,6 +124,7 @@ export function buildGround(layout, field) {
     }
   }
   const mapTex = new THREE.DataTexture(data, MW, MH, THREE.RGBAFormat);
+  ownResource(root || group, mapTex);
   mapTex.colorSpace = THREE.SRGBColorSpace;
   mapTex.magFilter = THREE.LinearFilter;
   mapTex.minFilter = THREE.LinearMipmapLinearFilter;

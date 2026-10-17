@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { shareResource } from '../core/resources.js';
 
 export { mergeGeometries, mergeVertices, RoundedBoxGeometry };
 
@@ -137,14 +138,14 @@ export function woodTexture() {
       g.fillStyle = grd; g.fillRect(x - 14, y - 14, 28, 28);
     }
   });
-  return _tex.wood;
+  return shareResource(_tex.wood);
 }
 export function woodTextureV() {
   if (_tex.woodV) return _tex.woodV;
   const t = woodTexture().clone();
   t.center.set(0.5, 0.5); t.rotation = Math.PI / 2; t.needsUpdate = true;
   _tex.woodV = t;
-  return t;
+  return shareResource(t);
 }
 export function plasterTexture() {
   if (_tex.plaster) return _tex.plaster;
@@ -156,7 +157,7 @@ export function plasterTexture() {
       g.fillRect(r() * w, r() * h, 1 + r() * 1.5, 1 + r() * 1.5);
     }
   });
-  return _tex.plaster;
+  return shareResource(_tex.plaster);
 }
 export function speckleTexture() {
   if (_tex.speckle) return _tex.speckle;
@@ -168,7 +169,7 @@ export function speckleTexture() {
       g.fillRect(r() * w, r() * h, 1, 1);
     }
   });
-  return _tex.speckle;
+  return shareResource(_tex.speckle);
 }
 // Gradiente radial suave (sombra de contato / halo).
 export function radialTexture() {
@@ -180,7 +181,7 @@ export function radialTexture() {
     grd.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   }, { srgb: false, repeat: false });
-  return _tex.radial;
+  return shareResource(_tex.radial);
 }
 // Normal map de ondulações (água).
 export function rippleNormalTexture() {
@@ -208,7 +209,7 @@ export function rippleNormalTexture() {
     }
     g.putImageData(img, 0, 0);
   }, { srgb: false });
-  return _tex.ripple;
+  return shareResource(_tex.ripple);
 }
 
 /** Lona listrada (guarda-sol, almofadas). */
@@ -223,7 +224,7 @@ export function stripeTexture(a = '#f2efe6', b = '#e2674e', n = 8) {
 // ---------------------------------------------------------------- materiais
 const _mats = new Map();
 export function mat(key, factory) {
-  if (!_mats.has(key)) _mats.set(key, factory());
+  if (!_mats.has(key)) _mats.set(key, shareResource(factory()));
   return _mats.get(key);
 }
 /** @param {string} color @param {{ vertical?: boolean, rough?: number, key?: string }} [opts] */
@@ -416,7 +417,7 @@ export function leafSkin(foliageGeo, { count = 1000, size = 0.07, seed = 1, mate
     s.moveTo(0, -0.5);
     s.quadraticCurveTo(0.42, -0.15, 0, 0.5);
     s.quadraticCurveTo(-0.42, -0.15, 0, -0.5);
-    _leafGeo = new THREE.ShapeGeometry(s, 3);
+    _leafGeo = shareResource(new THREE.ShapeGeometry(s, 3));
     _leafGeo.deleteAttribute('uv');
     paint(_leafGeo, '#ffffff');
   }

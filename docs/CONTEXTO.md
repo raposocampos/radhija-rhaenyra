@@ -5,14 +5,47 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-03 — recuperação de carregamento (2026-10-17, Codex)
+## EST-05 — recursos gráficos em validação (2026-10-17, Codex)
+
+Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base publicada
+`9be3075`. Execução autorizada após aprovação/publicação de #10; a nova versão
+exige aprovação própria. O executor é o único editor de CONTEXTO/PLANO nesta
+etapa. Medição e workflow são preparados em `codex/medicao-recursos` e serão
+combinados no mesmo PR; revisão independente é somente leitura.
+
+- Escopo por fase criado antes de `build`, com coleta da árvore atual e extras
+  declarados: geometrias, materiais, texturas, instâncias e debug. Caches são
+  preservados por identidade, inclusive texturas emprestadas a materiais locais
+  e geometria global de Sprite. Texturas de chão capturadas por closures são
+  registradas ao nascer, inclusive se a montagem falhar antes do retorno.
+- Reset devolve itens carregados antes da coleta; a limpeza continua se um hook
+  falhar. Scent tem `dispose` separado de `reset`, liberando também esfera fora
+  da árvore após expiração. Seu grupo sai antes do scope pai, evitando dupla
+  liberação. Referências descartadas são anuladas; `debug.info()` tolera erro
+  antes da primeira montagem e depois de limpeza parcial.
+- Linhas de debug reutilizam atributos e liberam o buffer anterior antes de
+  crescer. Onze testes novos usam objetos Three reais; as regressões de
+  carregamento também conferem diagnóstico após falha. Protocolo de ownership
+  em [ARQUITETURA.md](ARQUITETURA.md#31-propriedade-e-descarte-de-recursos).
+- Medição: duas passagens de aquecimento e três medidas por fase, ciclos pelas
+  cinco fases, render completo em Chromium/SwiftShader, DPR 1, cheiro/preview e
+  debug. Comparar contagens GPU por fase após aquecimento, sem exigir zero de
+  caches. Não mede MB, VRAM ou FPS; observação dos globais cobre geometrias e
+  materiais iniciais, complementada pelos testes de ownership.
+- Neste checkpoint: implementação e revisão por leitura, sem testes/build
+  locais. Prova negativa `39064044388` no instrumento sobre a base sem correção
+  ainda pendente; nenhum resultado antigo valida esta versão. Próximo passo:
+  combinar a medição, enviar PR e aguardar CI/prévia e E2E `todas` do head final,
+  incluindo estabilização e inspeção visual. Resultados finais ficam no PR,
+  sem commit apenas para status. EST-06–08 seguem pendentes; PR #9 é proposta.
+
+## EST-03 — recuperação publicada (2026-10-17, Codex)
 
 Implementado no [PR #10](https://github.com/raposocampos/radhija-rhaenyra/pull/10),
 branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
-Após a aprovação e publicação do PR #7, o usuário autorizou atualizar e validar
-#10. Esta retomada incorpora por merge normal a base `2ee7e07`, preservando
-o progresso e a correção do menu já publicados, sem código novo de recuperação.
-Não autoriza integrar/publicar #10.
+Após atualizar sobre `2ee7e07`, o usuário aprovou o head `019723f`. Integrado
+por squash em `9be3075ec05a4903218822f047be5405c51d108c` e publicado; não repetir
+integração/deploy de #10.
 
 - `loadLevel` observa rejeições desde o início e resolve um resultado booleano.
   Em falha, entra em `load-error` e emite `level:error`. Comandos normais ficam
@@ -29,19 +62,17 @@ Não autoriza integrar/publicar #10.
 - Arquivos: núcleo/entrada, UI/cortina/markup, bloco CSS de erro ao fim do
   arquivo, helper headless, testes novos, workflow E2E e documentação pertinente.
   Não altera o bloco de foco do menu, progress.js, CI obrigatório ou publicação.
-- Última versão validada: `afe32da`, base `d38574a`. CI `39060701722` aprovou
-  tipos, 134 testes e build; publicação `39060738685` passou com prévia HTTP 200
-  e identidade conferida. E2E `39060697698` aprovou 313 verificações de gameplay,
+- Versão aprovada: `019723f`, base `2ee7e07`. CI `39062287562` aprovou
+  tipos, 153 testes e build; publicação `39062324764` passou com prévia HTTP 200
+  e identidade conferida. E2E `39062283263` aprovou 313 verificações de gameplay,
   quatro de infraestrutura, 19 de smoke e 28 de recuperação; capturas da fase 4
   com `errors: []`. Capturas de recuperação revisadas visualmente, sem bloqueios.
-  Esses resultados não validam a combinação com o progresso do PR #7.
-- Neste marco: conflito apenas documental reconciliado; CONTEXTO e PLANO sob
-  edição exclusiva deste executor por delegação do coordenador. Preservados os
-  19 testes de progresso e os oito de recuperação. Nenhum teste/tipo/build local.
-  CI, prévia e E2E `todas` do novo head ainda pendentes. Próximo passo: enviar
-  a atualização, obter revisão independente e acompanhar checks na nuvem;
-  resultados finais ficam no PR, sem commit só de status. Depois apresentar
-  a nova prévia para aprovação própria de #10.
+  Preservados os 19 testes de progresso e os oito de recuperação.
+- [CI main 39063414327](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39063414327)
+  aprovou tipos, 153 testes e build; [deploy 39063438736](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39063438736)
+  passou após liberação do deployment `7144785613` com aprovação do chat.
+  Produção HTTP 200/version.json confirmou `9be3075` e a execução do main.
+  Nenhum teste/tipo/build local; resultados anteriores pertencem ao histórico.
 
 ## EST-04 — progresso publicado (2026-10-17, Codex)
 
@@ -83,12 +114,12 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Menu e progresso publicados; carregamento em revalidação.** Em 2026-10-17,
-o usuário aprovou #8 e, depois, #7. EST-09 foi publicado em `d38574a` e EST-04
-em `2ee7e07`, base atual de produção. O executor EST-03 incorpora essa base
-em #10 e reconcilia os registros por delegação do coordenador. A proposta
+**Menu, progresso e carregamento publicados; recursos gráficos em validação.**
+Em 2026-10-17, o usuário aprovou #8, #7 e #10, publicados respectivamente em
+`d38574a`, `2ee7e07` e `9be3075`, base atual de produção. EST-05 avança em
+worktrees próprios, com implementação, medição e revisão delimitadas. A proposta
 da fase 6 está no PR #9, sem tema/objeto aprovado ou nova fase implementada.
-Testes continuam no GitHub; #10 exige aprovação própria da nova versão.
+Testes continuam no GitHub; a nova entrega EST-05 exige aprovação própria.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
 O coordenador usa branch `codex/menu-jogar-visivel`, worktree

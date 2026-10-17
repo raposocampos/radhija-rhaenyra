@@ -1,6 +1,7 @@
 // FASE 2 · Chão da área de serviço: ladrilho hidráulico (zona A), gramado com mancha molhada do
 // irrigador (zona B), cimento queimado com juntas (zona C), canal recortado, tufos de grama com vento.
 import * as THREE from 'three';
+import { ownResource } from '../../../core/resources.js';
 import { shared, rng, fbm2, vnoise2, smoothstep } from '../../../world/util.js';
 
 const R = { x0: -18, x1: 20, z0: -16, z1: 14 };
@@ -99,6 +100,7 @@ export function buildGround({ root, layout }) {
     }
   }
   const mapTex = new THREE.DataTexture(data, MW, MH, THREE.RGBAFormat);
+  ownResource(root, mapTex);
   mapTex.colorSpace = THREE.NoColorSpace;
   mapTex.magFilter = THREE.LinearFilter;
   mapTex.minFilter = THREE.LinearMipmapLinearFilter;

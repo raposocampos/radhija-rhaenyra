@@ -3,6 +3,7 @@
 // (src/levels/<fase>/index.js). Ver docs/ARQUITETURA.md §3.
 import * as THREE from 'three';
 import { events } from '../core/events.js';
+import { createResourceScope } from '../core/resources.js';
 import { createInput } from './input.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
@@ -38,13 +39,6 @@ const RUMBLE = {
   'dog:bafo': () => [0.12, 0.4, 260],
 };
 
-/** Libera geometrias/texturas próprias de uma fase (materiais em cache são compartilhados). */
-function disposeTree(obj) {
-  obj.traverse((o) => {
-    if (o.geometry && !o.geometry.userData?.shared) o.geometry.dispose?.();
-  });
-}
-
 /**
  * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
  *           levels: import('../types').LevelDef[], params?: URLSearchParams }} opts
@@ -74,6 +68,7 @@ export function createGame({ engine, dogs, levels, params }) {
   /** @type {import('../types').LevelLayout} */
   let L = null; // layout da fase
   let root = null; // Group com tudo o que é da fase
+  let resources = null; // escopo criado antes de build, inclusive para montagem parcial
   let built = null; // { env, props, update, seeThrough }
   let world = null;
   let nav = null;
@@ -567,12 +562,33 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   /** Remove qualquer item preso no mouthSocket das duas dogs (troca de fase). */
-  function emptyMouths() {
+  function emptyMouths(destination = null) {
     for (const n of NAMES) {
       const sock = dogs[n]?.mouthSocket;
       if (!sock) continue;
-      for (const ch of [...sock.children]) sock.remove(ch);
+      for (const ch of [...sock.children]) {
+        // Se reset falhou, o item ainda pertence à fase e precisa ser liberado.
+        if (destination) destination.add(ch);
+        else sock.remove(ch);
+      }
     }
+  }
+
+  /** Encerra a montagem atual. Hooks limpam estado; o scope libera recursos
+   * da árvore e extras declarados. Uma falha não impede a limpeza restante.
+   */
+  function disposeLevel({ resetPuzzle = true } = {}) {
+    const errors = [];
+    const attempt = (fn) => { try { fn(); } catch (error) { errors.push(error); } };
+    if (resetPuzzle) attempt(() => puzzle?.reset?.());
+    attempt(() => emptyMouths(root));
+    attempt(() => puzzle?.dispose?.());
+    attempt(() => scent?.dispose());
+    attempt(() => built?.dispose?.());
+    attempt(() => resources?.dispose(dbg?.group));
+    // Nenhum getter/closure do núcleo deve manter a montagem descartada viva.
+    root = built = puzzle = scent = world = nav = dbg = resources = null;
+    if (errors.length) throw new AggregateError(errors, 'Falha ao encerrar a fase');
   }
 
   // ---------- reset / etapas ----------
@@ -651,17 +667,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
         // Devolve o item carregado à fase velha e esvazia as bocas (as dogs sobrevivem entre fases).
         previousUntouched = false;
-        puzzle?.reset?.();
-        emptyMouths();
-        // Descarta a fase anterior
-        if (root) {
-          engine.scene.remove(root);
-          disposeTree(root);
-          built?.dispose?.();
-          dbg?.group && engine.scene.remove(dbg.group);
-        }
-        puzzle?.dispose?.();
-        emptyMouths();
+        disposeLevel();
 
         levelIndex = index;
         def = nextDef;
@@ -669,6 +675,7 @@ export function createGame({ engine, dogs, levels, params }) {
         engine.applyLighting(def.lighting, L.WORLD.bounds);
         root = new THREE.Group();
         root.name = `fase:${def.id}`;
+        resources = createResourceScope(root);
         engine.scene.add(root);
         built = def.build({ engine, root, layout: L, params });
         applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
@@ -724,6 +731,12 @@ export function createGame({ engine, dogs, levels, params }) {
         return true;
       } catch (error) {
         const canReturn = hadLevel && previousUntouched;
+        if (!previousUntouched) {
+          // Depois do ponto irreversível só há recarga, mas a montagem parcial
+          // também deve ser liberada. Não repetir o reset que pode ter falhado.
+          try { disposeLevel({ resetPuzzle: false }); }
+          catch (cleanupError) { console.warn('[game] falha na limpeza da fase', cleanupError); }
+        }
         loadFailure = { prevState, canReturn };
         // Não chamar setState aqui: o puzzle/cenário pode estar incompleto.
         state = 'load-error';
@@ -819,10 +832,11 @@ export function createGame({ engine, dogs, levels, params }) {
 
   function info() {
     const dogInfo = (n) => {
-      const c = ctrls[n];
+      const c = ctrls?.[n];
+      if (!c) return null;
       return {
         x: +c.x.toFixed(3), z: +c.z.toFixed(3), yaw: +c.yaw.toFixed(3), v: +c.v.toFixed(3),
-        speed: +c.animSpeed.toFixed(3), action: anims[n].action, carrying: puzzle.carrier === n,
+        speed: +c.animSpeed.toFixed(3), action: anims[n].action, carrying: puzzle?.carrier === n,
         dashing: c.dashT > 0, mode: n === activeDog ? 'active' : brains[n].mode,
         path: brains[n].path.map((w) => w.id), reachable: brains[n].reachable,
         stuck: +brains[n].stuckAccum.toFixed(2), sitting: anims[n].action === 'sit',
@@ -832,14 +846,14 @@ export function createGame({ engine, dogs, levels, params }) {
     };
     const p = engine.camera.position;
     return {
-      state, stage: puzzle.stage, activeDog, level: levelIndex, levelId: def?.id,
+      state, stage: puzzle?.stage ?? null, activeDog, level: levelIndex, levelId: def?.id,
       dogs: { radhija: dogInfo('radhija'), rhaenyra: dogInfo('rhaenyra') },
-      ...(puzzle.info?.() || {}),
-      carrier: puzzle.carrier, collected: puzzle.collected, total: puzzle.total,
-      timeSec: +playTime.toFixed(2), simSec: +simTime.toFixed(3), prompt: puzzle.S?.prompt ?? null,
+      ...(puzzle?.info?.() || {}),
+      carrier: puzzle?.carrier ?? null, collected: puzzle?.collected ?? null, total: puzzle?.total ?? null,
+      timeSec: +playTime.toFixed(2), simSec: +simTime.toFixed(3), prompt: puzzle?.S?.prompt ?? null,
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
-      bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent.info(),
-      camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam.mode, shot: cam.shotActive },
+      bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent?.info() ?? null,
+      camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam?.mode ?? null, shot: cam?.shotActive ?? false },
     };
   }
 

@@ -316,6 +316,8 @@ export interface ScentField {
   addDuct(d: ScentDuct): ScentDuct;
   addNose(n: ScentNose): ScentNose;
   reset(): void;
+  /** Encerra a fase: libera a vista e remove ventos, dutos, narizes e callbacks. */
+  dispose(): void;
   showPreview(p: { points: XZ[]; exits: XZ[] }): void;
   hidePreview(): void;
   readonly clouds: ScentCloud[];

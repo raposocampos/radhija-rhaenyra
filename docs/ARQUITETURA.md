@@ -75,7 +75,7 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 2. Emite `level:loading` (a UI cobre a tela com a cortina) e espera a cortina fechar e o `load()` terminar; o que ele
    trouxe (o `build`) entra no lugar dos campos da definição. Até aqui a fase anterior continua inteira.
 3. Reseta o puzzle da fase anterior e esvazia as bocas das dogs (o item da fase velha não pode vir junto).
-4. Descarta tudo da fase anterior: tudo mora num `root` (Group) que sai da cena.
+4. Descarta os recursos exclusivos da fase anterior e do debug (§3.1), preservando caches globais.
 5. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
 6. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
 7. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
@@ -86,13 +86,49 @@ chunk próprio (`dist/assets/faseN-world-….js`, nome dado em `vite.config.js`)
 tela inicial baixa o da fase 1, `?level=5` só o da fase 5. As fases de desenvolvimento ficam no chunk `dev`.
 `test/carregamento.test.mjs` falha se algum `world/` voltar a ser importado estaticamente.
 
-**Estados do jogo**: `loading`, `title` (tela inicial sobre a fase), `intro` (cartão da fase), `playing`, `paused`,
+**Estados do jogo**: `loading`, `load-error` (recarga ou retorno à fase intacta), `title` (tela inicial sobre a fase), `intro` (cartão da fase), `playing`, `paused`,
 `celebrating` (as duas comemoram no objetivo, ~3 s) e `victory` (painel de vitória). A UI espelha o estado.
 
 **Um quadro em `playing`** (`game.js → updatePlaying`): lê a entrada relativa à câmera; trava a entrada se o
 puzzle pedir (`lockFor`); deixa o puzzle ajustar a intenção (`modifyIntent`, ex.: empurrar); move a dog ativa;
 move a companheira (IA, ou "Fica"); trata E/latido (`interact`, `onBark`); chama `puzzle.update`, que devolve
 `'delivered'` quando o item chegou ao objetivo, o que inicia a comemoração.
+
+### 3.1 Propriedade e descarte de recursos
+
+`src/core/resources.js` cria o escopo da fase **antes** de `build()`. Na saída,
+coleta a árvore atual (incluindo objetos acrescentados pelo puzzle) e libera
+geometrias, materiais, texturas e recursos próprios de instâncias/skeletons.
+O debug é uma raiz auxiliar. Recursos são deduplicados por identidade; o
+escopo é idempotente e continua a limpeza se algum `dispose` falhar.
+
+- Objetos exclusivos devem ficar sob o `root` da fase assim que são criados.
+  Para recursos fora da árvore, como texturas capturadas por `onBeforeCompile`,
+  use `ownResource(root, recurso)` imediatamente após criá-los. Assim uma
+  exceção antes do retorno de `build()` ainda permite limpar a montagem parcial.
+- Caches que vivem com a aplicação usam `shareResource(recurso)`. Materiais
+  compartilhados também protegem suas texturas; um material exclusivo pode
+  emprestá-las. A marca usa identidade e não passa para clones. Texturas em
+  propriedades de material/uniforms e arrays são coletadas; dependências
+  escondidas em closures precisam de registro explícito.
+- `puzzle.reset()` devolve os itens da boca ao cenário antes da coleta. Hooks
+  `puzzle.dispose`/`built.dispose` limpam estado e assinaturas; não devem liberar
+  novamente recursos da árvore nem removê-los sem registrá-los como extras.
+  Dogs, renderer, pós-processamento e geometria global de `Sprite` sobrevivem
+  às trocas e não pertencem ao escopo da fase.
+- `ScentField.reset()` limpa nuvens, mantendo ventos/dutos/narizes para reiniciar
+  o puzzle. `dispose()` encerra também o visual e as referências. O subescopo
+  visual remove seu grupo antes do escopo pai, sem dupla liberação; a esfera
+  compartilhada entre nuvens da mesma fase é registrada mesmo fora da árvore.
+- Atributos dinâmicos do debug reutilizam capacidade. Ao crescer, a geometria
+  é liberada enquanto ainda contém o atributo anterior, antes de substituí-lo.
+  Só remover objetos da cena ou trocar atributos não libera seus buffers GPU.
+
+Os testes Node verificam ownership com objetos Three reais. A medição no E2E
+manual compara contagens por fase após aquecimento, com render completo em
+Chromium/SwiftShader; não é medição de MB, VRAM ou FPS. Caches legítimos podem
+continuar alocados. Falha antes do descarte permite retorno; depois dele, a
+montagem parcial é limpa e somente a recarga pode retomar a partida.
 
 ## 4. Fases
 

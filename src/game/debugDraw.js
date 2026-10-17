@@ -52,8 +52,20 @@ function makeLines(color) {
   return lines;
 }
 function setPts(lines, pts) {
-  lines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  lines.geometry.computeBoundingSphere();
+  const geometry = lines.geometry;
+  let position = geometry.getAttribute('position');
+  if (position.array.length < pts.length) {
+    // O Three libera somente os atributos atuais no dispose. Liberar antes
+    // de substituir evita perder o buffer antigo; crescer é pouco frequente.
+    geometry.dispose();
+    const capacity = 2 ** Math.ceil(Math.log2(Math.max(2, pts.length / 3)));
+    position = new THREE.Float32BufferAttribute(new Float32Array(capacity * 3), 3);
+    geometry.setAttribute('position', position);
+  }
+  position.array.set(pts);
+  position.needsUpdate = true;
+  geometry.setDrawRange(0, pts.length / 3);
+  // Linhas têm frustumCulled=false; drawRange ignora a capacidade não usada.
 }
 
 export function createDebugDraw(scene, layout, world, nav) {
