@@ -4,9 +4,9 @@ import layout from './layout.js';
 import { createPuzzle } from './puzzle.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
-/** @import { LevelDef } from '../../types' */
+/** @import { LevelDef, Fase1Props } from '../../types' */
 
-/** @type {LevelDef} */
+/** @type {LevelDef<Fase1Props>} */
 export default {
   id: 'fase1',
   number: 1,

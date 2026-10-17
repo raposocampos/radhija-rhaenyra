@@ -49,9 +49,16 @@ export function createCurtain({ $, audio, levelMeta, itemOf, onCover, onChange }
       curtain.phase = 'off';
     }, 950));
   }
+  function dismiss() {
+    clearCurtainTimers();
+    curtain.phase = 'off';
+    curtain.loaded = false;
+    curtainEl.classList.remove('is-on', 'is-covering', 'is-revealing');
+    onChange();
+  }
 
   return {
-    cover, loaded, reveal,
+    cover, loaded, reveal, dismiss,
     /** 'off' | 'cover' | 'reveal' */
     get phase() { return curtain.phase; },
   };

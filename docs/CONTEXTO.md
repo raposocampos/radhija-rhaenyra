@@ -32,21 +32,202 @@ branch isolada. Integrar ao catálogo depende de EST-03/04; cenário final deve
 seguir EST-05/06. Nenhuma autorização de merge/publicação foi usada nesta frente.
 Os registros abaixo preservam o histórico anterior; para as frentes simultâneas,
 conferir o checklist do coordenador e os respectivos PRs.
+## EST-06 — contratos em validação (2026-10-17, Codex)
+
+Execução autorizada após aprovação/publicação do PR #11. Base `ca8c6f2`.
+Coordenador em `codex/contratos-fases`, worktree `contratos-fases`, responsável
+por integração, documentação, PR e CI. Dois executores em worktrees próprios:
+
+- `codex/tipos-fases`, worktree `tipos-fases`: `src/types.d.ts`, definições,
+  puzzles e retornos dos cenários, fronteira dinâmica do núcleo, eventos de
+  carregamento, `jsconfig.json` e fixture `test/types/`. Ligar `LevelDef<P>`,
+  `LevelBuild<P>` e `PuzzleContext<P>` às props reais de cada fase; fechar o
+  índice permissivo e declarar `plate.surfaceY` da fase 4.
+- `codex/contratos-testes`, worktree `contratos-testes`: helpers e testes
+  runtime. Substituir a fabricação automática de props/métodos por fábricas
+  explícitas; manter ausências reais de props opcionais em `_modelo`/`_pulo`.
+  Testar cenário real da fase 4 (altura da placa, pressão/reset e pombo), itens
+  carregáveis, portões e reset, preservando carregamento/descarte.
+- Combinar a interface antes de integrar. `jsconfig.json` hoje exclui os
+  helpers `.mjs`: a fixture direcionada precisa realmente checar as factories
+  e reprovar contratos inválidos, não apenas acrescentar JSDoc sem cobertura.
+  Tipagem completa de layouts, navegação e IA fica fora desta entrega.
+
+Implementações combinadas: tipos `89370fc` → `e7d366d`, testes `7a449c3` →
+`37c1bbc`. Nove testes runtime novos e fixture de tipos com exemplos inválidos;
+factories reais e dublês entram na checagem, preservando retorno dos helpers de
+medição com genéricos. Emissão de eventos de carregamento tipada por nome
+literal; listeners, nomes dinâmicos, layouts e navegação continuam fronteiras
+abertas, documentadas. Gameplay e ownership de EST-05 preservados.
+
+Primeiro CI `39073795596`, head `7842015`, detectou três produtores reais que
+ainda aceitavam métodos inexistentes: literais JS intermediários tinham índice
+aberto implícito. Corrigidos nos produtores em `d61914c`, com anotações de
+retorno/variável verificadas, sem casts nem remoção das provas negativas.
+As interfaces dos puzzles estão fechadas; não afirmar tipagem exaustiva de
+todas as funções internas. Revisão independente sem bloqueios; CI novo pendente.
+
+Neste checkpoint, sem CI próprio aprovado ou aprovação para produção de
+EST-06. Documentação de arquitetura/guia atualizada; nenhum trabalho sem commit
+planejado após enviar esta atualização. Próximo passo: abrir PR sobre `ca8c6f2`,
+acompanhar tipos/testes/build, corrigir causas se necessário e rodar E2E `todas`
+no GitHub. Revisar o diff combinado e a prévia, apresentar o head final e aguardar
+aprovação. Conferir Git/GitHub por SHA, inclusive o commit deste checkpoint;
+resultados finais ficam no PR, sem novo commit apenas para status. Nenhum
+teste/build local. Coordenador é o único editor dos registros compartilhados.
+
+## EST-05 — recursos gráficos publicados (2026-10-17, Codex)
+
+Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base publicada
+`9be3075`. Medição e workflow de `codex/medicao-recursos` combinados no
+[PR #11](https://github.com/raposocampos/radhija-rhaenyra/pull/11). Usuário
+aprovou o head `c69a9f0`; integrado por squash em
+`ca8c6f2941b06dd545394c29ff236b632537720f`, com árvores idênticas. Publicado;
+não repetir integração/deploy de #11.
+
+- Escopo por fase criado antes de `build`, com coleta da árvore atual e extras
+  declarados: geometrias, materiais, texturas, instâncias e debug. Caches são
+  preservados por identidade, inclusive texturas emprestadas a materiais locais
+  e geometria global de Sprite. Texturas de chão capturadas por closures são
+  registradas ao nascer, inclusive se a montagem falhar antes do retorno.
+- Reset devolve itens carregados antes da coleta; a limpeza continua se um hook
+  falhar. Scent tem `dispose` separado de `reset`, liberando também esfera fora
+  da árvore após expiração. Seu grupo sai antes do scope pai, evitando dupla
+  liberação. Referências descartadas são anuladas; `debug.info()` tolera erro
+  antes da primeira montagem e depois de limpeza parcial.
+- Linhas de debug reutilizam atributos e liberam o buffer anterior antes de
+  crescer. Onze testes novos usam objetos Three reais; as regressões de
+  carregamento também conferem diagnóstico após falha. Protocolo de ownership
+  em [ARQUITETURA.md](ARQUITETURA.md#31-propriedade-e-descarte-de-recursos).
+- Medição: duas passagens de aquecimento e três medidas por fase, ciclos pelas
+  cinco fases, render completo em Chromium/SwiftShader, DPR 1, cheiro/preview e
+  debug. Comparar contagens GPU por fase após aquecimento, sem exigir zero de
+  caches. Não mede MB, VRAM ou FPS; observação dos globais cobre geometrias e
+  materiais iniciais, complementada pelos testes de ownership.
+- Prova negativa `39064044388`, instrumento `98c96a2` sobre a base sem correção:
+  25 amostras, sem erros/warnings de navegador; reprovou pelo crescimento de
+  60 geometrias e 147 texturas por ciclo e descarte de geometria global.
+- E2E `todas` `39071375058`, head `3a37f58`, passou 313 verificações de gameplay,
+  quatro de infraestrutura, 19 de smoke e 28 de recuperação. A medição aprovou
+  25 amostras, 15 após aquecimento, contagens estáveis nas cinco fases, globais
+  preservados e erros/warnings vazios. Capturas da recuperação conferidas.
+- O último ajuste mudou somente captura e contexto (`display:none` temporário
+  nos overlays); código do jogo idêntico ao E2E completo. No head aprovado
+  `c69a9f0`, CI `39072371165` passou 164 testes/tipos/build, prévia `39072399080`
+  conferida HTTP/version e E2E `recursos` `39072373671` aprovado. Cinco PNGs
+  revisados, sem overlays ou corrupção aparente. Platôs geometria/textura/programa:
+  F1 521/45/242, F2 546/62/269, F3 706/59/254, F4 822/70/244, F5 519/58/235.
+- CI main `39073156852` aprovou 164 testes/tipos/build. Deploy `39073191543`
+  passou após liberar somente o deployment `7146356056`, usando a aprovação
+  do chat. Produção HTTP 200/version.json confirmou `ca8c6f2` e o run do main.
+  Nenhum teste/build local; próxima entrega EST-06 exige aprovação própria.
+
+## EST-03 — recuperação publicada (2026-10-17, Codex)
+
+Implementado no [PR #10](https://github.com/raposocampos/radhija-rhaenyra/pull/10),
+branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
+Após atualizar sobre `2ee7e07`, o usuário aprovou o head `019723f`. Integrado
+por squash em `9be3075ec05a4903218822f047be5405c51d108c` e publicado; não repetir
+integração/deploy de #10.
+
+- `loadLevel` observa rejeições desde o início e resolve um resultado booleano.
+  Em falha, entra em `load-error` e emite `level:error`. Comandos normais ficam
+  bloqueados; simulação, efeitos e render não usam objetos parciais.
+- A UI fecha a cortina, informa o problema e oferece recarga por mouse/teclado.
+  `ui:cancelLoad` permite retornar à fase anterior apenas quando nenhum objeto
+  dela foi alterado. Depois de reset/descarte/montagem parcial, só recarga.
+  O fallback de boot funciona mesmo antes de engine/UI/`__game` existirem.
+- Oito testes Node cobrem rejeição imediata, exceção síncrona, concorrência,
+  chamador da UI e falhas em build/puzzle/reset/descarte/compile. O teste de
+  navegador no E2E manual também cobre ações acessíveis e aba antiga após
+  remoção de chunks, com recarga e save preservado. O manifest e a cópia de
+  arquivos com nomes novos pertencem ao build próprio do E2E, não à prévia.
+- Arquivos: núcleo/entrada, UI/cortina/markup, bloco CSS de erro ao fim do
+  arquivo, helper headless, testes novos, workflow E2E e documentação pertinente.
+  Não altera o bloco de foco do menu, progress.js, CI obrigatório ou publicação.
+- Versão aprovada: `019723f`, base `2ee7e07`. CI `39062287562` aprovou
+  tipos, 153 testes e build; publicação `39062324764` passou com prévia HTTP 200
+  e identidade conferida. E2E `39062283263` aprovou 313 verificações de gameplay,
+  quatro de infraestrutura, 19 de smoke e 28 de recuperação; capturas da fase 4
+  com `errors: []`. Capturas de recuperação revisadas visualmente, sem bloqueios.
+  Preservados os 19 testes de progresso e os oito de recuperação.
+- [CI main 39063414327](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39063414327)
+  aprovou tipos, 153 testes e build; [deploy 39063438736](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39063438736)
+  passou após liberação do deployment `7144785613` com aprovação do chat.
+  Produção HTTP 200/version.json confirmou `9be3075` e a execução do main.
+  Nenhum teste/tipo/build local; resultados anteriores pertencem ao histórico.
+
+## EST-04 — progresso publicado (2026-10-17, Codex)
+
+Implementado no [PR #7](https://github.com/raposocampos/radhija-rhaenyra/pull/7),
+branch `codex/progresso-validado`, worktree isolado `progresso-validado`.
+Após revalidação sobre `d38574a`, o usuário aprovou o head
+`a39a3422dc1aa06847ef67a92f4948ce23d7d8c9`. Integrado por squash em
+`2ee7e078d25140a82ccf4ee31aa4d7abcea5ac7c`, com árvores idênticas ao head
+aprovado e ao merge sintético; produção confirmada.
+
+- Escopo próprio: `src/ui/progress.js`, `test/progress.test.mjs`, contexto e
+  plano. Código de progresso e seus 19 testes preservados nesta atualização
+  de #10; CSS e teste de controle vêm integralmente do #8 já publicado.
+- Formato e chave v1 mantidos, sem migração necessária. Validação rejeita
+  arrays/estruturas incompatíveis e normaliza os campos inválidos de cada
+  fase sem apagar suas marcas válidas. Contagens exigem inteiros seguros
+  não negativos; tempos exigem números finitos não negativos, sem coerção.
+  Petiscos anteriores são preservados; total conhecido nunca fica abaixo
+  da coleta. IDs de fases desconhecidas e chaves como `__proto__` permanecem
+  propriedades próprias, sem modificar o protótipo do mapa.
+- Política de versão: qualquer versão declarada diferente de 1 fica intacta
+  no storage. A partida usa uma cópia v1 vazia em memória; vitórias e reset
+  não sobrescrevem esse formato desconhecido. A gravação relê a versão para
+  detectar alteração por outra aba e retorna booleano; vitória retorna `saved`.
+- Falha de leitura impede gravação sobre conteúdo desconhecido; quota/falha
+  de escrita preserva o save anterior e não interrompe a partida. JSON
+  corrompido pode ser substituído por um novo save válido ao concluir fase.
+- Regressões cobrem saves v1, fases desconhecidas, arrays, strings, números
+  inválidos, recordes, releitura entre abas, versões futuras, falhas de
+  storage e isolamento das prévias. No head aprovado, CI `39060731088`
+  passou tipos, 145 testes e build; E2E fase1 `39060727463` passou 61 e
+  controle `39060729617` passou 60 verificações, sem falhas/erros de console.
+  Prévia `39060761036` conferida por HTTP/version e revisão sem bloqueios.
+- [CI main 39061928859](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39061928859)
+  aprovou tipos, 145 testes e build Vite 6.4.4. [Deploy 39061964438](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39061964438)
+  concluído após liberação do deployment `7144556034` com a aprovação do chat.
+  Produção HTTP 200 e `version.json` confirmou head/commit `2ee7e07`, base nula,
+  run `39061928859`, tentativa 1. Não repetir integração/publicação de #7.
 
 ## Onde paramos
 
-**Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
-autorizou executar o plano com este chat coordenando até dois executores,
-worktrees separados e testes no GitHub. A aprovação de produção continua
-vinculada a cada versão apresentada, conforme `AGENTS.md`.
+**Menu, progresso, carregamento e recursos gráficos publicados; contratos em validação.**
+Em 2026-10-17, o usuário aprovou #8, #7, #10 e #11, publicados respectivamente
+em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`, base atual de produção.
+EST-06 avança em worktrees próprios, com escopos delimitados acima. A proposta
+da fase 6 está no PR #9, sem tema/objeto aprovado ou nova fase implementada.
+Testes continuam no GitHub; a nova entrega EST-06 exige aprovação própria.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
-O coordenador usa branch `codex/avaliacao-evolucao`, worktree
-`avaliacao-evolucao`, para preservar a avaliação, o checklist e as instruções
-de coordenação. Alterações desta entrega: `AGENTS.md`, este contexto e o plano;
-o código do jogo não muda nesta branch. Commit/PR e checks devem ser conferidos
-no GitHub antes de retomar; não considerar a validação da base como validação
-desta entrega documental.
+O coordenador usa branch `codex/menu-jogar-visivel`, worktree
+`menu-jogar-visivel`; essa entrega partiu de `b1b026e29abb7cc80fff6a13224e967d78415151`.
+EST-09: conflito entre a animação de entrada `rr-rise` e a de foco
+`rr-focus-pulse` reiniciava a entrada com opacidade zero ao sair do botão.
+Reprodução em `7a05466de2f3d605139ef2b8f7336b0925a8824b`,
+[E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
+56 verificações passaram e quatro falharam pelo motivo esperado, opacidade
+zero ao descer por teclado/D-pad/analógico e ao retornar ao mouse.
+Correção: excluir Jogar apenas da animação de pulso do foco; entrada, halo e
+anel de seleção permanecem. Revisão independente sem bloqueios. O teste
+amostra estilos dentro do navegador, para não perder a falha entre leituras.
+No head aprovado `8494143bbe918bb804c05bb115ff1e7770aaef7c`,
+[CI 39058279947](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058279947)
+passou tipos, 126 testes e build; [E2E controle 39058279323](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058279323)
+passou 60 verificações, sem erros de console, com opacidade mínima 1 nos
+sete cenários. O usuário aprovou essa prévia. Squash
+`d38574a54d1203a3f7d71dd26541167d93819db3` tem árvore idêntica ao head
+aprovado e ao merge sintético `196f108`, conferidos independentemente.
+[CI main 39060437829](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060437829)
+aprovou tipos, 126 testes e build Vite 6.4.4; [deploy 39060461084](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060461084)
+concluiu após liberação do deployment `7144319080` com a aprovação do chat.
+Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
+`39060437829`, tentativa 1. Nenhum teste/build local; não repetir publicação.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
@@ -99,21 +280,35 @@ desta entrega documental.
   concluído com sucesso usando essa aprovação. Produção HTTP 200 e
   `version.json` confirmou `18629a0` e execução `39056035625`.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
-  preserva o plano e consolida os resultados. Conferir os checks do head
-  documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração: #6 e #5 integrados; resta #4. O coordenador incorporou
-  a base `18629a0` no PR #4 e reconciliou os registros dos dois executores,
-  preservando suas decisões e evidências. A entrega de #4 continua documental;
-  conferir CI/prévia do novo head e aguardar aprovação própria antes de integrar.
-- Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
-  reservadas aos executores nem integrar/publicar sem aprovação da versão.
-  Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
-  isso não representa correções nem testes novos já implementados.
-- EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
-  ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
-  corrigir depois; registrar e reproduzir em tarefa própria, identificando
-  o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
-  dos PRs #6 e #5 não inclui uma correção desse bug.
+  aprovado pelo usuário no head `2fcbca3` e integrado por squash em
+  `b1b026e29abb7cc80fff6a13224e967d78415151`.
+  [CI main 39057715283](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057715283)
+  e [deploy 39057744110](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057744110)
+  concluídos com sucesso. Produção HTTP 200 e `version.json` conferido no
+  squash e CI acima. Primeira etapa (#6, #5, #4) integrada e publicada.
+- EST-03: [PR #10](https://github.com/raposocampos/radhija-rhaenyra/pull/10), executor
+  em `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`,
+  incorporando `2ee7e07` para revalidação, conforme checkpoint acima. Dono do núcleo,
+  inicialização, UI de erro, cortina, testes de carregamento e acréscimo
+  isolado ao E2E manual. Não alterar regras de foco nem teste de controle.
+- EST-04: [PR #7](https://github.com/raposocampos/radhija-rhaenyra/pull/7), executor
+  em `codex/progresso-validado`, worktree `progresso-validado`, já publicado
+  em `2ee7e07`. `src/ui/progress.js` e testes próprios são herdados sem alterações
+  por #10. Preservar saves v1 válidos; versões não suportadas não podem ser
+  sobrescritas silenciosamente. Sem mudanças no menu ou núcleo.
+- EST-09: publicado no #8; coordenador dono do bloco de foco em `src/ui/ui.css`
+  e regressões em `test-gamepad.mjs`. Nesta rodada, o executor EST-03 é o único
+  editor do plano compartilhado por delegação. O CSS de erro de EST-03 é um bloco
+  próprio, sem editar essas regras. Retomadas dos executores são registradas
+  no contexto de suas branches e reconciliadas na integração.
+- Ordem desta rodada: EST-09 e EST-04 publicados; segue EST-03, com aprovação
+  própria. #10 incorpora a base `2ee7e07` e passa por nova validação completa.
+  EST-05 depende de EST-03; EST-06/07/08 continuam pendentes. A próxima fase pode
+  ser desenhada/prototipada isoladamente. O usuário autorizou preparar uma
+  proposta combinando pulo e superbafo, já documentada no
+  [PR #9](https://github.com/raposocampos/radhija-rhaenyra/pull/9), head `62b9b6c`,
+  branch `codex/proposta-fase6`, worktree `proposta-fase6`, sem código novo nem
+  mudança no catálogo. Tema/objeto sugeridos ainda precisam de aprovação.
 
 ## Evidências da avaliação anterior
 
@@ -239,11 +434,10 @@ desta entrega documental.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3, #6 e #5 integrados e publicados. Produção de #5 confirmada
-   em `18629a0`, deploy `39056064315`; não repetir merge/deploy nem pedir
-   novamente a aprovação já usada para essa versão. PR #4 está reconciliado
-   com essa base: conferir seus checks/prévia e obter aprovação para integrar
-   a documentação. Preservar o checklist; EST-03/EST-04 apenas preparados e
-   EST-09 adiado conforme o usuário. Não instalar ai-memory.
+3. PRs #1, #2, #3, #6, #5, #4, #8 e #7 integrados e publicados. Produção de #7
+   confirmada em `2ee7e07`, deploy `39061964438`; não repetir merge/deploy.
+   Conferir CI/prévia e E2E `todas` do novo head de #10 sobre essa base;
+   não reutilizar resultados nem aprovação das versões anteriores.
+   Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

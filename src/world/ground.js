@@ -1,6 +1,7 @@
 // Chão do jardim: mapa de cor procedural (várias escalas + umidade junto aos objetos + trilha gasta),
 // caminho de pedras, tufos de grama instanciados com vento e florzinhas rasteiras.
 import * as THREE from 'three';
+import { ownResource } from '../core/resources.js';
 import {
   shared, rng, fbm2, vnoise2, smoothstep, lerp, mergeGeometries, mergeVertices, paint, speckleTexture,
 } from './util.js';
@@ -112,6 +113,7 @@ export function buildGround(engine, layout) {
     }
   }
   const mapTex = new THREE.DataTexture(data, MW, MH, THREE.RGBAFormat);
+  ownResource(engine.scene, mapTex);
   mapTex.colorSpace = THREE.SRGBColorSpace;
   mapTex.magFilter = THREE.LinearFilter;
   mapTex.minFilter = THREE.LinearMipmapLinearFilter;

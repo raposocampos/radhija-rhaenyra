@@ -1,6 +1,7 @@
 // Desenho do cheiro (src/game/mechanics/scent.js): nuvens verdes cartunescas feitas de bolhas que
 // balançam e somem no fim da vida, e a prévia da mira do superbafo (pontinhos no chão + saídas de duto).
 import * as THREE from 'three';
+import { createResourceScope, ownResource } from '../core/resources.js';
 
 const PUFFS = [
   [0, 0.55, 0, 1.0], [0.55, 0.42, 0.15, 0.72], [-0.5, 0.45, -0.1, 0.78], [0.15, 0.85, -0.35, 0.62],
@@ -8,14 +9,17 @@ const PUFFS = [
 ];
 const MAX_DOTS = 40;
 
-/** Cria o desenho dentro de `root` (o Group da fase). → { sync(clouds, dt), showPreview(p), hidePreview(), clear() } */
+/** Cria o desenho da fase. clear() reinicia nuvens; dispose() encerra a vista. */
 export function createScentView(root) {
   const group = new THREE.Group();
   group.name = 'cheiro';
   root.add(group);
-  const sphere = new THREE.SphereGeometry(1, 14, 10);
+  const resources = createResourceScope(group);
+  // A esfera sobrevive entre nuvens, inclusive quando nenhuma está na árvore.
+  const sphere = ownResource(group, new THREE.SphereGeometry(1, 14, 10));
   const views = new Map();
   let time = 0;
+  let disposed = false;
 
   function make() {
     const mat = new THREE.MeshStandardMaterial({
@@ -34,6 +38,7 @@ export function createScentView(root) {
   }
 
   function sync(clouds, dt) {
+    if (disposed) return;
     time += dt;
     const alive = new Set();
     for (const c of clouds) {
@@ -85,6 +90,7 @@ export function createScentView(root) {
 
   /** p = scent.preview(...): pontinhos espaçados ao longo do caminho; anéis nas saídas de duto e no fim. */
   function showPreview(p) {
+    if (disposed) return;
     const pts = p.points;
     let n = 0;
     let acc = 0;
@@ -109,10 +115,18 @@ export function createScentView(root) {
   function hidePreview() { preview.visible = false; }
 
   function clear() {
+    if (disposed) return;
     for (const v of views.values()) { group.remove(v.g); v.mat.dispose(); }
     views.clear();
     hidePreview();
   }
 
-  return { sync, showPreview, hidePreview, clear, group };
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    views.clear();
+    resources.dispose();
+  }
+
+  return { sync, showPreview, hidePreview, clear, dispose, group };
 }

@@ -3,6 +3,7 @@
 //   const { root, built } = await buildLevelWorld(def);
 import * as THREE from 'three';
 import { installBrowserStubs } from './headless.mjs';
+import { createResourceScope } from '../../src/core/resources.js';
 
 /** Motor mínimo: o que os construtores de cenário usam (cena, câmera, renderer para tamanho, userData). */
 function stubEngine() {
@@ -17,8 +18,8 @@ function stubEngine() {
 }
 
 /**
- * @param {import('../../src/types').LevelDef & { load?: () => Promise<{ build: Function }> }} def
- * @returns {Promise<{ root: THREE.Group, built: any }>}
+ * @template {import('../../src/types').LevelProps} P
+ * @param {import('../../src/types').LevelDef<P>} def
  */
 export async function buildLevelWorld(def) {
   installBrowserStubs();
@@ -27,12 +28,21 @@ export async function buildLevelWorld(def) {
   if (typeof build !== 'function') throw new Error(`${def.id}: sem build`);
   const root = new THREE.Group();
   root.name = `fase:${def.id}`;
+  const resources = createResourceScope(root);
   const engine = stubEngine();
   engine.scene.add(root);
-  const built = build({ engine, root, layout: def.layout, params: new URLSearchParams() });
-  // estado inicial dos props, como no jogo
-  built?.props?.reset?.();
-  built?.update?.(0, 0);
-  root.updateMatrixWorld(true);
-  return { root, built };
+  try {
+    const built = build({ engine, root, layout: def.layout, params: new URLSearchParams() });
+    // estado inicial dos props, como no jogo
+    built.props.reset?.();
+    built.update?.(0, 0);
+    root.updateMatrixWorld(true);
+    return {
+      root, built,
+      dispose() { try { built.dispose?.(); } finally { resources.dispose(); } },
+    };
+  } catch (error) {
+    resources.dispose();
+    throw error;
+  }
 }

@@ -196,7 +196,7 @@ export interface LevelBuildArgs {
   params: URLSearchParams;
 }
 
-export interface LevelBuild<P = LevelProps> {
+export interface LevelBuild<P extends LevelProps = LevelProps> {
   /** Props visuais que o puzzle anima (portão, item, placas…). Ver Fase1Props…Fase5Props. */
   props: P;
   /** Objetos que podem ficar entre a câmera e as dogs (recebem o "ver através" pontilhado). */
@@ -207,7 +207,12 @@ export interface LevelBuild<P = LevelProps> {
   dispose?(): void;
 }
 
-export interface LevelDef {
+/** Resultado do import sob demanda. Não substitui metadados nem o puzzle da definição. */
+export interface LevelModule<P extends LevelProps = LevelProps> {
+  build(args: LevelBuildArgs): LevelBuild<P>;
+}
+
+export interface LevelDef<P extends LevelProps = LevelProps> {
   /** Identificador estável (chave do progresso salvo). */
   id: string;
   /** Número exibido ("Fase 2"); padrão = posição + 1. */
@@ -223,15 +228,53 @@ export interface LevelDef {
   layout: LevelLayout;
   lighting: LightingPreset;
   /** Monta o cenário e os props dentro de `root`. Numa fase com cenário pesado, vem de `load()`. */
-  build?(args: LevelBuildArgs): LevelBuild;
+  build?(args: LevelBuildArgs): LevelBuild<P>;
   /**
    * Campos pesados da definição (o cenário: `{ build }`), trazidos sob demanda por import dinâmico, fora do
    * pacote inicial do jogo. O núcleo chama ao carregar a fase (junto com a cortina) e usa o que vier no lugar
    * dos campos da definição. Metadados, layout e puzzle ficam estáticos: a UI e os testes em Node usam sem o cenário.
    */
-  load?(): Promise<Partial<LevelDef>>;
-  createPuzzle(ctx: PuzzleContext): Puzzle;
+  load?(): Promise<LevelModule<P>>;
+  createPuzzle(ctx: PuzzleContext<P>): Puzzle;
 }
+
+// Eventos da fronteira de carregamento. Eventos específicos de mecânicas continuam abertos;
+// este mapa não pretende ser um catálogo completo do barramento.
+export type GameState = 'loading' | 'load-error' | 'title' | 'intro' | 'playing' | 'paused' | 'celebrating' | 'victory';
+export interface LevelLoadingInfo {
+  index: number;
+  count: number;
+  id: string;
+  number: number;
+  name: string;
+  subtitle?: string;
+  initial: boolean;
+}
+export interface LevelInfo extends Omit<LevelLoadingInfo, 'initial'> {
+  intro?: string;
+  item: ItemKind;
+  ambience?: LevelDef['ambience'];
+  texts: LevelTexts;
+  total: number;
+  hasNext: boolean;
+}
+export interface LevelErrorInfo {
+  index: number;
+  id?: string;
+  name?: string;
+  initial: boolean;
+  canReturn: boolean;
+  message: string;
+}
+export interface LifecycleEvents {
+  'game:state': { state: GameState; prev: GameState; level: number };
+  'level:loading': LevelLoadingInfo;
+  'level:loaded': LevelInfo;
+  'level:error': LevelErrorInfo;
+}
+export type EventArgs<K extends string> = K extends keyof LifecycleEvents
+  ? [payload: LifecycleEvents[K]] : [payload?: object];
+export type GameEmit = <K extends string>(name: K, ...args: EventArgs<K>) => void;
 
 // =====================================================================================================
 // Controle de movimento (src/game/dogController.js) — usado pela jogadora e pela IA
@@ -316,6 +359,8 @@ export interface ScentField {
   addDuct(d: ScentDuct): ScentDuct;
   addNose(n: ScentNose): ScentNose;
   reset(): void;
+  /** Encerra a fase: libera a vista e remove ventos, dutos, narizes e callbacks. */
+  dispose(): void;
   showPreview(p: { points: XZ[]; exits: XZ[] }): void;
   hidePreview(): void;
   readonly clouds: ScentCloud[];
@@ -328,10 +373,10 @@ export interface ScentField {
 // =====================================================================================================
 
 /** O que o núcleo entrega para createPuzzle(ctx). */
-export interface PuzzleContext {
+export interface PuzzleContext<P extends LevelProps = LevelProps> {
   layout: LevelLayout;
   /** Os props devolvidos pelo build() da fase. */
-  props: any;
+  props: P;
   world: CollisionWorld;
   nav: any;
   /** Cheiro do superbafo: addWind / addDuct / addNose, nuvens (src/game/mechanics/scent.js). */
@@ -340,7 +385,7 @@ export interface PuzzleContext {
   dogs: Record<DogName, DogModel>;
   /** Controladores de movimento (posição, velocidade, raio…). */
   ctrls: Record<DogName, DogController>;
-  emit(name: string, payload?: object): void;
+  emit: GameEmit;
   /** Planos de foco curtos (focusShot). */
   cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number; y?: number; target?: { x: number; y: number; z: number } }): void; [k: string]: any };
   root: THREE.Group;
@@ -422,7 +467,26 @@ export interface LevelProps {
   collectibles?: CollectibleProp[];
   update?(dt: number, t: number): void;
   reset?(): void;
-  [k: string]: any;
+  /** Permite ao cenário desativar os vagalumes automáticos do feedback. */
+  fireflies?: boolean;
+}
+
+/** Cenário em blocos de _modelo/_pulo: só o item é obrigatório; decoração pode estar ausente. */
+export interface PlaceholderProps extends LevelProps {
+  item: PropBase & HighlightProp;
+  ball?: PropBase & HighlightProp;
+  gate?: GateProp;
+  plate?: PressProp;
+}
+
+/** Arena de desenvolvimento do bafo (não confundir a placa simples com a da fase 4). */
+export interface BafoProps extends LevelProps {
+  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void };
+  gate: GateProp;
+  plate: PressProp;
+  pigeon: PropBase & { setPose(p: PigeonPose): void };
+  carrot: ItemProp;
+  collectibles: CollectibleProp[];
 }
 
 /** Fase 1 (src/world/props.js). */
@@ -449,6 +513,8 @@ export interface Fase2Props extends LevelProps {
   /** sink 0..1: caindo no canal até virar ponte. */
   crate: PropBase & { setPos(x: number, z: number): void; setSink(t: number): void };
   ball: ItemProp;
+  /** Alias mantido pelo cenário para o puzzle provisório. */
+  item?: ItemProp;
   bed: HighlightProp;
   collectibles: CollectibleProp[];
 }
@@ -459,9 +525,11 @@ export interface Fase3Props extends LevelProps {
   plateH: PressProp;
   plateL: PressProp;
   /** 0..1 brilho. */
-  lanternH: { setOn(k: number): void };
-  lanternL: { setOn(k: number): void };
+  lanternH: PropBase & { setOn(k: number): void };
+  lanternL: PropBase & { setOn(k: number): void };
   slipper: ItemProp;
+  /** Alias mantido pelo cenário para o puzzle provisório. */
+  item?: ItemProp;
   /** Porta de vidro mais quente quando a pantufa está a caminho. */
   door: HighlightProp;
   collectibles: CollectibleProp[];
@@ -473,7 +541,7 @@ export interface Fase4Props extends LevelProps {
   fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void };
   gate: GateProp;
   /** Placa no poleiro B (o pombo pousa). */
-  plate: PressProp;
+  plate: PressProp & { readonly surfaceY: number };
   /** Pombo do portão / pombo da passagem: pose dos pés; flying bate as asas; asleep cochila. */
   pigeon: PropBase & { setPose(p: PigeonPose): void };
   napPigeon: PropBase & { setPose(p: PigeonPose): void; peek(): void };
@@ -498,7 +566,11 @@ export interface Fase5Props extends LevelProps {
   bed: PropBase & HighlightProp;
   collectibles: CollectibleProp[];
 }
-export interface PigeonPose { x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean }
+export interface PigeonPose {
+  x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean;
+  /** Progresso 0..1 para desacelerar o pouso; null volta à animação livre. */
+  flightProgress?: number | null;
+}
 
 // =====================================================================================================
 // Personagens

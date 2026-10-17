@@ -1,9 +1,9 @@
 // Interface (DOM em #ui): tela inicial + seleção de fases, transição entre fases, cartão de abertura,
 // HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad).
 // API: createUI({ audio, layout, levels, params }) → { update(dt), state, progress, device, ... }
-// Ouve: game:state, game:reset, level:loading, level:loaded, objective, dog:switch, companion:stay,
+// Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
 //       interact:prompt, hint, collectible:pickup, victory, input:device.
-// Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu.
+// Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
 // Partes: markup.js (template e HTML gerado), hud.js, curtain.js (transição), menuNav.js (foco e
 // controle nos menus), progress.js (progresso salvo), icons.js e ui.css.
 import '@fontsource/fredoka/500.css';
@@ -43,6 +43,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
     celebrate: $('.rr-celebrate'),
     pause: $('.rr-pause'),
     victory: $('.rr-victory'),
+    loadError: $('.rr-load-error'),
   };
   const range = $('.rr-range');
   const rangeOut = $('.rr-volume output');
@@ -93,6 +94,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
   });
   const blocking = () => curtain.phase === 'cover';
   function menuLayer() {
+    if (uiState === 'load-error') return L.loadError;
     if (blocking()) return null;
     if (uiState === 'title') return L.title;
     if (uiState === 'intro') return L.intro;
@@ -117,6 +119,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
     show('pause', s === 'paused' && !b);
     show('celebrate', s === 'celebrating');
     show('victory', s === 'victory');
+    show('loadError', s === 'load-error');
     const layer = menuLayer();
     if (layer && (!focus.el || !layer.contains(focus.el))) setFocus(defaultFocus(), { silent: true });
     if (!layer) setFocus(null, { silent: true });
@@ -289,6 +292,11 @@ export function createUI({ audio, layout, levels, params } = {}) {
   function runAction(b) {
     const a = b.dataset.action;
     if (!a) return;
+    if (uiState === 'load-error') {
+      if (a === 'reload') location.reload();
+      else if (a === 'cancel-load') events.emit('ui:cancelLoad', {});
+      return;
+    }
     if (a === 'play') { startGame(); return; }
     audio?.unlock?.();
     if (a === 'select') {
@@ -366,11 +374,13 @@ export function createUI({ audio, layout, levels, params } = {}) {
       if (e.target === range) return;
       e.preventDefault();
       focus.moveFocus(...DIRS[e.code]);
+      if (uiState === 'load-error') focus.el?.focus();
       return;
     }
     if (e.code === 'Tab') {
       e.preventDefault();
       focus.cycleFocus(e.shiftKey ? -1 : 1);
+      if (uiState === 'load-error') focus.el?.focus();
       return;
     }
     if (e.repeat) return;
@@ -399,6 +409,19 @@ export function createUI({ audio, layout, levels, params } = {}) {
     resetRun();
     hud.clearObjective();
     curtain.loaded();
+  });
+  events.on('level:error', ({ message, canReturn }) => {
+    $('#rr-load-error-message').textContent = message;
+    const back = /** @type {HTMLButtonElement} */ ($('[data-action="cancel-load"]'));
+    back.hidden = !canReturn;
+    back.disabled = !canReturn;
+    curtain.dismiss();
+    document.getElementById('loading')?.remove();
+    setState('load-error');
+    const reload = /** @type {HTMLButtonElement} */ ($('[data-action="reload"]'));
+    setFocus(reload, { silent: true });
+    focus.showNav(true);
+    reload.focus();
   });
   events.on('objective', ({ text }) => hud.setObjective(text));
   events.on('dog:switch', ({ name }) => hud.setDog(name));

@@ -1,14 +1,14 @@
 // Barramento de eventos minimalista. Lista dos eventos: docs/ARQUITETURA.md §8.
 const listeners = new Map();
 
-export const events = {
+const bus = {
   on(name, fn) {
     if (!listeners.has(name)) listeners.set(name, new Set());
     listeners.get(name).add(fn);
-    return () => events.off(name, fn);
+    return () => bus.off(name, fn);
   },
   once(name, fn) {
-    const off = events.on(name, (p) => {
+    const off = bus.on(name, (p) => {
       off();
       fn(p);
     });
@@ -29,3 +29,7 @@ export const events = {
     }
   },
 };
+
+// A emissão conhece os payloads de carregamento. Os listeners e os eventos de
+// mecânicas ainda usam a fronteira aberta existente; não muda o dispatch em runtime.
+export const events = /** @type {Omit<typeof bus, 'emit'> & { emit: import('../types').GameEmit }} */ (bus);

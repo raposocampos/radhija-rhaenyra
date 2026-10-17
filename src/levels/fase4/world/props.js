@@ -393,6 +393,7 @@ function buildWallGate(root, layout) {
 const brass = () => stdMat('#c99a45', { metalness: 0.9, roughness: 0.35 });
 
 // ================================================================== poleiros, placa e corda
+/** @returns {import('../../../types').Fase4Props['plate'] & { readonly pressed: boolean }} */
 function buildPerches(root, layout, updaters) {
   const { PERCH_A, PERCH_B, GATE, WALL } = layout;
   const wood = woodMat('#8a6240', { key: 'f4-perch', rough: 0.8 });
@@ -793,6 +794,7 @@ export function buildProps({ root, layout, house }) {
 
   const goalMat = house.doormatMat;
   const goalSt = { on: false, k: 0 };
+  /** @satisfies {import('../../../types').Fase4Props} */
   const props = {
     fan,
     gate: { object: wallGate.pivot, setOpen(t) { wallGate.pivot.rotation.y = layout.GATE.openYaw * THREE.MathUtils.clamp(t, 0, 1); } },

@@ -30,14 +30,14 @@ export const TEXT = {
   prompt: { carrot: 'Pegar a cenoura' },
 };
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, BafoProps } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<BafoProps>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, scent, dogs, emit, cam, root, place } = ctx;
+  const { layout, props, world, scent, dogs, emit, cam, root, place } = ctx;
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, CARROT, GOAL, GATE, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
   const gateMid = { x: GATE.hinge.x, z: (GATE.hinge.z + GATE.latchPost.z) / 2 };
 

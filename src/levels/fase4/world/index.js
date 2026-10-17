@@ -12,6 +12,7 @@ import { buildProps } from './props.js';
  */
 export function buildWorld({ root, layout }) {
   const timings = {};
+  /** @template T @param {string} name @param {() => T} fn @returns {T} */
   const T = (name, fn) => { const t0 = performance.now(); const v = fn(); timings[name] = Math.round(performance.now() - t0); return v; };
   const terrace = T('terrace', () => buildTerrace(layout));
   root.add(terrace.group);

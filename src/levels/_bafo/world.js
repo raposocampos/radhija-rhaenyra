@@ -8,7 +8,10 @@ import { createPlushCarrot } from '../../dogs/plushCarrot.js';
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...o });
 const shadowAll = (g) => g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-/** @param {import('../../types').LevelBuildArgs} args */
+/**
+ * @param {import('../../types').LevelBuildArgs} args
+ * @returns {import('../../types').LevelBuild<import('../../types').BafoProps>}
+ */
 export function buildBafoWorld({ root, layout }) {
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, GATE, CARROT, COLLECTIBLES } = layout;
   const base = buildPlaceholderWorld({ root, layout, skip: new Set(['grade', 'poleiro-a', 'poleiro-b']) });
@@ -207,6 +210,7 @@ export function buildBafoWorld({ root, layout }) {
     return { id: c.id, object: bone, collect() { bone.visible = false; }, reset() { bone.visible = true; } };
   });
 
+  /** @satisfies {import('../../types').BafoProps} */
   const props = {
     fan: {
       object: fan,
@@ -235,6 +239,6 @@ export function buildBafoWorld({ root, layout }) {
   return {
     props,
     seeThrough: [gatePivot, duct, grate],
-    update(dt, t) { base.update?.(); props.update(dt, t); },
+    update(dt, t) { base.update?.(dt, t); props.update(dt, t); },
   };
 }

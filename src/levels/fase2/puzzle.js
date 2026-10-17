@@ -55,14 +55,14 @@ export const TEXT = {
 
 const smoother = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (x * 6 - 15) + 10));
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase2Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase2Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, dogs, emit, cam, root, place } = ctx;
+  const { layout, props, world, dogs, emit, cam, root, place } = ctx;
   const { GATE, PLANK, WEDGE, SPRINKLER, VALVE, CHANNEL, CRATE, BALL, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_AB } = layout;
   const gateMid = { x: GATE.hinge.x, z: (GATE.hinge.z + GATE.latchPost.z) / 2 };
 

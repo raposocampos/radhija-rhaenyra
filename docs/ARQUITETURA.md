@@ -75,7 +75,7 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 2. Emite `level:loading` (a UI cobre a tela com a cortina) e espera a cortina fechar e o `load()` terminar; o que ele
    trouxe (o `build`) entra no lugar dos campos da definição. Até aqui a fase anterior continua inteira.
 3. Reseta o puzzle da fase anterior e esvazia as bocas das dogs (o item da fase velha não pode vir junto).
-4. Descarta tudo da fase anterior: tudo mora num `root` (Group) que sai da cena.
+4. Descarta os recursos exclusivos da fase anterior e do debug (§3.1), preservando caches globais.
 5. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
 6. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
 7. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
@@ -86,7 +86,7 @@ chunk próprio (`dist/assets/faseN-world-….js`, nome dado em `vite.config.js`)
 tela inicial baixa o da fase 1, `?level=5` só o da fase 5. As fases de desenvolvimento ficam no chunk `dev`.
 `test/carregamento.test.mjs` falha se algum `world/` voltar a ser importado estaticamente.
 
-**Estados do jogo**: `loading`, `title` (tela inicial sobre a fase), `intro` (cartão da fase), `playing`, `paused`,
+**Estados do jogo**: `loading`, `load-error` (recarga ou retorno à fase intacta), `title` (tela inicial sobre a fase), `intro` (cartão da fase), `playing`, `paused`,
 `celebrating` (as duas comemoram no objetivo, ~3 s) e `victory` (painel de vitória). A UI espelha o estado.
 
 **Um quadro em `playing`** (`game.js → updatePlaying`): lê a entrada relativa à câmera; trava a entrada se o
@@ -94,11 +94,48 @@ puzzle pedir (`lockFor`); deixa o puzzle ajustar a intenção (`modifyIntent`, e
 move a companheira (IA, ou "Fica"); trata E/latido (`interact`, `onBark`); chama `puzzle.update`, que devolve
 `'delivered'` quando o item chegou ao objetivo, o que inicia a comemoração.
 
+### 3.1 Propriedade e descarte de recursos
+
+`src/core/resources.js` cria o escopo da fase **antes** de `build()`. Na saída,
+coleta a árvore atual (incluindo objetos acrescentados pelo puzzle) e libera
+geometrias, materiais, texturas e recursos próprios de instâncias/skeletons.
+O debug é uma raiz auxiliar. Recursos são deduplicados por identidade; o
+escopo é idempotente e continua a limpeza se algum `dispose` falhar.
+
+- Objetos exclusivos devem ficar sob o `root` da fase assim que são criados.
+  Para recursos fora da árvore, como texturas capturadas por `onBeforeCompile`,
+  use `ownResource(root, recurso)` imediatamente após criá-los. Assim uma
+  exceção antes do retorno de `build()` ainda permite limpar a montagem parcial.
+- Caches que vivem com a aplicação usam `shareResource(recurso)`. Materiais
+  compartilhados também protegem suas texturas; um material exclusivo pode
+  emprestá-las. A marca usa identidade e não passa para clones. Texturas em
+  propriedades de material/uniforms e arrays são coletadas; dependências
+  escondidas em closures precisam de registro explícito.
+- `puzzle.reset()` devolve os itens da boca ao cenário antes da coleta. Hooks
+  `puzzle.dispose`/`built.dispose` limpam estado e assinaturas; não devem liberar
+  novamente recursos da árvore nem removê-los sem registrá-los como extras.
+  Dogs, renderer, pós-processamento e geometria global de `Sprite` sobrevivem
+  às trocas e não pertencem ao escopo da fase.
+- `ScentField.reset()` limpa nuvens, mantendo ventos/dutos/narizes para reiniciar
+  o puzzle. `dispose()` encerra também o visual e as referências. O subescopo
+  visual remove seu grupo antes do escopo pai, sem dupla liberação; a esfera
+  compartilhada entre nuvens da mesma fase é registrada mesmo fora da árvore.
+- Atributos dinâmicos do debug reutilizam capacidade. Ao crescer, a geometria
+  é liberada enquanto ainda contém o atributo anterior, antes de substituí-lo.
+  Só remover objetos da cena ou trocar atributos não libera seus buffers GPU.
+
+Os testes Node verificam ownership com objetos Three reais. A medição no E2E
+manual compara contagens por fase após aquecimento, com render completo em
+Chromium/SwiftShader; não é medição de MB, VRAM ou FPS. Caches legítimos podem
+continuar alocados. Falha antes do descarte permite retorno; depois dele, a
+montagem parcial é limpa e somente a recarga pode retomar a partida.
+
 ## 4. Fases
 
-### 4.1 Definição (`src/levels/faseN/index.js`, tipo `LevelDef`)
+### 4.1 Definição (`src/levels/faseN/index.js`, tipo `LevelDef<P>`)
 
 ```js
+/** @type {import('../../types').LevelDef<import('../../types').Fase2Props>} */
 export default {
   id: 'fase2', number: 2, name: 'Operação Bolinha', subtitle: 'Crepúsculo na área de serviço',
   intro: 'texto do cartão de abertura',
@@ -162,9 +199,11 @@ Cores em string hex são sRGB; arrays `[r, g, b]` são lineares. Luzes extras (l
 `build` (o `buildWorld` de `world/index.js`, trazido pelo `load` da §4.1) monta tudo dentro de `root` e devolve:
 
 - `props`: objetos que o puzzle anima (portão, item, placas…). O formato de cada fase está em `src/types.d.ts`
-  (`Fase1Props` a `Fase5Props`). O puzzle sempre usa `?.` ao chamar um prop
-  (`props.gate?.setOpen?.(t)`), então a lógica roda mesmo sem o cenário (é assim que os testes em Node funcionam).
-  Todo prop com estado precisa de `reset()` que volte ao início, inclusive o item à posição `home`.
+  (`Fase1Props` a `Fase5Props`) e liga `LevelDef<P>`, `LevelBuild<P>` e `PuzzleContext<P>`.
+  Props visuais realmente opcionais são declarados com `?`, como placa/portão no placeholder.
+  O uso de `?.` no puzzle não substitui o contrato: os dublês precisam oferecer os métodos declarados,
+  sem fabricar membros desconhecidos. O reset do conjunto de props deve restaurar seu estado;
+  o item carregável volta à origem pelo ciclo de reset do puzzle.
 - `seeThrough`: objetos que podem ficar entre a câmera e as dogs (cerca, sebe, portão, a toalha da mesa) e recebem o
   recorte pontilhado.
 
@@ -312,8 +351,9 @@ está em `src/game/mechanics/gooseNpc.js`.
 
 Barramento em `src/core/events.js`. Quem emite e quem ouve:
 
-- **UI → jogo**: `ui:play`, `ui:pause`, `ui:resume`, `ui:restart`, `ui:nextLevel`, `ui:selectLevel {index}`, `ui:menu`.
+- **UI → jogo**: `ui:play`, `ui:pause`, `ui:resume`, `ui:restart`, `ui:nextLevel`, `ui:selectLevel {index}`, `ui:menu`, `ui:cancelLoad`.
 - **Fase e estado**: `game:state {state, prev, level}`, `game:reset`, `level:loading {...}`, `level:loaded {...}`,
+  `level:error {index, id?, name?, initial, canReturn, message}` (retorno só antes de alterar a fase anterior),
   `victory {timeSec, collected, total, level, levelId, hasNext, texts}`.
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
@@ -330,6 +370,12 @@ Barramento em `src/core/events.js`. Quem emite e quem ouve:
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.
+
+Os eventos declarados em `LifecycleEvents` têm payload verificado quando emitidos
+com nome literal. Eventos específicos ainda não modelados e nomes recebidos
+como `string` continuam abertos; isso não constitui validação de dados em runtime.
+Ao ampliar o mapa, inclua uma prova negativa na fixture de tipos para impedir
+que um payload inválido seja aceito por uma assinatura genérica permissiva.
 
 ## 9. Interface, áudio e efeitos
 
@@ -410,10 +456,10 @@ no log de depuração como `camera:shot {x, z}` (não passa pelo barramento de e
 arquivo, inclusive nos novos. Os tipos das APIs públicas estão em `src/types.d.ts` e entram nos `.js` por JSDoc:
 
 ```js
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase2Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase2Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) { … }
@@ -421,6 +467,20 @@ export function createPuzzle(ctx) { … }
 
 A checagem é tolerante (`strict: false`): ela pega nomes errados, campos que não existem e formatos trocados nas
 APIs, sem exigir tipo em tudo. O editor (VS Code) usa o mesmo `jsconfig.json`.
+
+Para cada fase, use o mesmo tipo de props na definição (`LevelDef<P>`), no retorno
+do cenário (`LevelBuild<P>`) e no contexto do puzzle (`PuzzleContext<P>`). O `load`
+só traz o `build` correspondente. O catálogo reúne fases de formatos diferentes;
+essa fronteira dinâmica não deve virar um cast de props dentro de cada puzzle.
+
+Os testes de contratos combinam objetos reais do cenário com fábricas explícitas
+de dublês em `test/helpers/props.mjs`. A fixture `test/types/contratos.ts` entra
+explicitamente na checagem: casos inválidos com `@ts-expect-error` devem continuar
+reprovando; se um contrato voltar a aceitar tudo, o TypeScript acusa a diretiva
+sem erro correspondente. Os testes runtime conferem também comportamento, como
+a altura da placa da fase 4 e sua relação com o pombo, que uma anotação não prova.
+Essas verificações rodam no CI, junto de tipos/testes/build; partidas ficam no E2E
+manual. Layouts, navegação e IA ainda têm fronteiras abertas para trabalho futuro.
 
 ## 12. Convenções
 
