@@ -17,15 +17,13 @@
 //      troca → Rhaenyra atravessa, pega a pantufa e volta.
 //   Pantufa → porta de vidro (GOAL).
 // =====================================================================
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = {
   bounds: { minX: -6.6, maxX: 6.6, minZ: -4.8, maxZ: 4.4 },
   houseWallZ: -4.8, // fachada térrea do prédio
 };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.6, z: -3.4, yaw: 2.4 }),

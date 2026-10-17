@@ -41,7 +41,10 @@ O layout é a fonte única de coordenadas da fase. Convenções: metros, Y para 
 **Norte = −Z** (a câmera fica ao sul, olhando para o norte), Leste = +X.
 
 1. **`WORLD.bounds`**: o retângulo andável.
-2. **`DOGS`**: reaproveite as estatísticas da fase 1 e mude só a posição inicial (`withStart`).
+2. **`DOGS`**: importe `withStart` de `../../dogs/config.js` e defina só as posições iniciais no layout.
+   A função copia os atributos comuns e os objetos `visual`/`start`, sem compartilhar mutações entre
+   fases. Não importe estatísticas de outra fase nem altere habilidades por layout: os controladores
+   conservam a configuração da primeira fase carregada durante toda a sessão.
 3. **`STATIC_COLLIDERS`**: paredes, móveis, vasos. Formatos `box`, `circle` e `segment`; `blocks: 'large'` cria uma
    abertura onde só a Radhija passa; `except` desliga o colisor numa área (ponte sobre água); `jumpable: true` cria um
    obstáculo baixo que só a Rhaenyra passa, pulando (com `height` para o cenário provisório desenhar a tora).

@@ -7,6 +7,8 @@
 //  Campos usados pelo núcleo: tipo LevelLayout (src/types.d.ts), docs/ARQUITETURA.md §4.2.
 // =====================================================================
 
+import { withStart } from '../../dogs/config.js';
+
 export const WORLD = {
   // Retângulo andável (paredes/limites). Centros das dogs ficam em [min + r, max - r].
   bounds: { minX: -6.0, maxX: 6.8, minZ: -4.8, maxZ: 4.5 },
@@ -18,42 +20,8 @@ export const WORLD = {
 
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
-  radhija: {
-    displayName: 'Radhija',
-    size: 'small',
-    radius: 0.17, // colisão (círculo no plano XZ)
-    walkSpeed: 2.4,
-    dashSpeed: 6.0,
-    dashTime: 0.3,
-    dashCooldown: 0.8,
-    // Superbafo (R / L2): nuvem soprada a ~2,6 m/s que dura ~5 s (ver src/game/mechanics/scent.js).
-    bafoSpeed: 2.6,
-    bafoLife: 5,
-    bafoCooldown: 0.8,
-    accel: 16,
-    decel: 20,
-    turnSpeed: 13, // rad/s máx. de giro do corpo
-    start: { x: -3.25, z: -3.75, yaw: 0.6 },
-    // Guia visual (não é colisão): comprimento focinho→garupa e altura do topo da cabeça
-    visual: { length: 0.6, headTop: 0.48, shoulder: 0.3 },
-  },
-  rhaenyra: {
-    displayName: 'Rhaenyra',
-    size: 'large',
-    radius: 0.22,
-    walkSpeed: 2.0,
-    pushSpeed: 0.85,
-    // Pulo (Espaço / ✕): sobe ~0,5 m em 0,42 s e avança ~1,3 m; só passa por cima de colisores jumpable.
-    jumpHeight: 0.5,
-    jumpTime: 0.42,
-    jumpSpeed: 3.0,
-    jumpCooldown: 0.15,
-    accel: 12,
-    decel: 16,
-    turnSpeed: 10,
-    start: { x: -3.95, z: -3.85, yaw: 0.9 },
-    visual: { length: 0.72, headTop: 0.56, shoulder: 0.34 },
-  },
+  radhija: withStart('radhija', { x: -3.25, z: -3.75, yaw: 0.6 }),
+  rhaenyra: withStart('rhaenyra', { x: -3.95, z: -3.85, yaw: 0.9 }),
 };
 
 // Porta da casa (na fachada z = -4.8) e zona de retorno/vitória.
