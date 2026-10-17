@@ -72,6 +72,12 @@ Documentação:
 
 ## Testes
 
+O fluxo padrão dos agentes está em [AGENTS.md](AGENTS.md). O Codex lê esse
+arquivo e o [CLAUDE.md](CLAUDE.md) o importa para o Claude: pedidos de mudanças
+incluem enviar o código, acompanhar o CI no GitHub e atualizar o mesmo link
+após sucesso, sem precisar de uma ação manual do usuário no GitHub.
+Testes pesados não devem ser executados no PC sem pedido explícito.
+
 Os testes automáticos rodam nos servidores do GitHub. Envie o código com `git push`: o workflow
 **CI e publicação** instala as dependências, checa os tipos, executa os testes rápidos e gera a build.
 Quando tudo passa no `main`, publica o jogo no link acima. Se falhar, a versão anterior continua no ar.
