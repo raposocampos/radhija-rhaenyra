@@ -320,10 +320,13 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps); `
         + `leitura do estado: ${Math.round(pace.lat / pace.n)} ms em média, ${pace.maxLat} ms no pior caso`);
     }
-    console.log(`\n${pass} ok, ${fail} falha(s)`);
+    // Erros do navegador são falhas mesmo quando todas as asserções da partida passaram.
+    // Mantém o contrato numérico de close(), usado pelos processos das nove suítes.
+    const totalFailures = fail + errors.length;
+    console.log(`\n${pass} ok, ${totalFailures} falha(s)`);
     if (failures.length) console.log(`falhas: ${failures.join(' | ')}`);
     if (errors.length) { console.log(`ERROS DE CONSOLE (${errors.length}):`); for (const e of errors.slice(0, 20)) console.log(e); } else console.log('sem erros de console');
-    return fail;
+    return totalFailures;
   }
 
   return {
