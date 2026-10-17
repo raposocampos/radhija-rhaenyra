@@ -7,60 +7,49 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-Implementando PRs com CI obrigatório, prévia jogável e aprovação humana antes
-da publicação. **A autorização antiga de publicar automaticamente foi
-substituída pelo usuário. Não integrar este PR nem aprovar produção sem ele
-testar a prévia e aprovar explicitamente.**
+**PR #1 aprovado pelo usuário, integrado e publicado em produção.** O usuário
+confirmou no chat que testou a prévia e aprovou a publicação no link principal.
+Não há aprovação de produção pendente para esta entrega.
 
-Branch: `codex/prs-ci-previas`, base de produção `f457844`. As alterações neste
-branch atualizam CI, instruções, documentação e template de PR; adicionam
-montagem do site com prévias, quatro testes de regressão e separação dos saves
-e volume por PR. Ao retomar, localizar o PR desse branch e conferir os checks
-do head atual. Nenhum teste ou build foi executado no PC.
+- PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
+- Head aprovado: `e219af7662f5db22196a7aace79deeca63fd861e`.
+- Merge squash no main: `e85b927954f38430b26b5680324a88614bc2e416`.
+  A árvore integrada foi comparada à aprovada: nenhum arquivo diferente.
+- [CI do main 39002906594](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002906594):
+  tipos, 116 testes e build aprovados.
+- [Publicação 39002937318](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002937318):
+  disparada automaticamente por workflow_run, aguardou a aprovação do ambiente
+  github-pages, foi liberada com a autorização do chat e terminou com sucesso.
+- Produção: https://raposocampos.github.io/radhija-rhaenyra/.
+  HTML, JavaScript e CSS HTTP 200; version.json confirmou o commit e85b927 e
+  o CI 39002906594. A prévia aprovada também permanece acessível.
+- E2E controle: 46 verificações, zero falhas e nenhum erro de console na
+  [execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192),
+  em d53b8d4. Código do jogo e testes não mudaram depois desse commit.
 
-A implementação `d53b8d4` passou nos 116 testes, tipos, build e publicação de
-prévia na [execução 39001850255](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001850255).
-O HTML e os assets da produção foram preservados (diff do estado estático vazio
-fora de previews/.nojekyll; HTML público com o mesmo SHA-256). Prévia e assets
-responderam HTTP 200, e `version.json` confirmou head/base/execução esperados.
-O E2E `controle` passou com 46 verificações e nenhum erro de console na
-[execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192);
-o código do jogo e esses testes não mudaram depois disso. A revisão automática
-apontou que o primeiro workflow permitia scripts do PR em um job com escrita.
-Isso foi corrigido separando CI de `deploy.yml`: publicação por workflow_run
-confiável do main, artefato tratado apenas como dados e ambiente preview que
-recusa refs de PR. A correção `23317d3` passou no
-[CI 39002342245](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002342245)
-e no [publicador confiável 39002383441](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002383441),
-executado pelo branch bloqueado `delivery-bootstrap` (`51955c8`). O status
-obrigatório `publicar-site` foi aprovado e a conversa de revisão foi resolvida.
-Conferidos HTTP 200, identidade da prévia e HTML da produção preservado.
-Esta atualização final é apenas documental; conferir CI e link atuais no PR,
-pois cada novo CI gera outra URL de prévia. Não criar outro commit apenas para
-atualizar o status desta atualização.
+O fluxo de AGENTS.md/CLAUDE.md está no main: PR, CI, prévia, aprovação humana
+explícita e publicação no mesmo link. Nenhum teste ou build foi executado no PC.
+Main exige PR atualizado e checks testes-e-build/publicar-site, inclusive para
+admins. Produção exige revisão no ambiente github-pages e só permite main.
 
-Configurações já aplicadas no servidor: main exige PR atualizado, checks
-`testes-e-build` e `publicar-site`, incluindo admins; ambiente `github-pages`
-exige aprovação de `raposocampos` e branch main. Ambiente `preview` permite main
-e, durante a primeira instalação, delivery-bootstrap bloqueado.
-`pages-state` foi inicializado com os arquivos da produção
-`f457844` (artefato da execução `39000135800`); o HTML coincide com o site atual.
-É um branch órfão só de estáticos: nunca integrar ao main.
+A exceção delivery-bootstrap (policy 63342097) foi removida do ambiente preview,
+que agora aceita somente main. O branch bootstrap permanece bloqueado como
+registro: não integrá-lo nem reutilizá-lo. O publicador confiável do main já
+assumiu o fluxo. pages-state continua sendo um branch órfão só de estáticos.
+A brecha apontada na revisão foi corrigida antes da aprovação: CI de PR só tem
+leitura; publicação usa código do main e trata o artefato somente como dados.
 
-PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
-Próximo passo: conferir os checks da última atualização documental e entregar
-o link atual do status `publicar-site`; aguardar aprovação humana. Depois seguir
-`docs/ENTREGA.md` e remover a exceção delivery-bootstrap do ambiente preview
-(policy ID `63342097`) após o merge aprovado. Não afirmar que a nova
-política já está integrada ao main: os arquivos aguardam aprovação no PR,
-embora as proteções no servidor já estejam ativas.
-
-- Jogo: https://raposocampos.github.io/radhija-rhaenyra/
-- Repositório: https://github.com/raposocampos/radhija-rhaenyra
-- Branch de entrega: `codex/prs-ci-previas` → PR → aprovação → `main`.
-- Base desta atualização: `f457844` (dica e navegação corrigidas e publicadas).
-- No início desta tarefa, a árvore estava limpa e `main` sincronizado com
-  `origin/main`. Conferir novamente ao retomar; isso é um registro histórico.
+O usuário solicitou salvar este registro pós-publicação por PR para encerrar a
+pendência local antes de continuar com o Claude. Esta entrega é somente de
+documentação; o código do jogo permanece igual ao aprovado no PR #1.
+Registro: [PR #2](https://github.com/raposocampos/radhija-rhaenyra/pull/2), branch
+`codex/contexto-publicacao`, commit inicial `43cd9baaf39088d503decc016e5657ce29e0d77f`.
+Esse commit passou no [CI 39004558716](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004558716)
+e na [publicação da prévia 39004583094](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004583094).
+Ao retomar, conferir o head atual, o merge e os checks no PR #2; as validações
+citadas não aprovam antecipadamente commits posteriores. Não criar novos commits
+apenas para atualizar o status do próprio registro. A autorização desta entrega
+documental não dispensa prévia e aprovação para futuras mudanças no jogo.
 
 ## O que foi feito
 
@@ -145,8 +134,8 @@ embora as proteções no servidor já estejam ativas.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. A navegação do menu já está integrada e validada. O trabalho atual é o PR de
-   CI e prévias, aguardando validação e aprovação conforme o topo deste resumo.
+3. PR #1 concluído e publicado; não repetir seu merge/deploy. O registro da
+   entrega também segue por PR documental, conforme pedido explícito do usuário.
    Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
