@@ -5,7 +5,7 @@
 //   dogModel.js (geometria) · furMaterial.js (pelo) · dogRig.js (esqueleto, FK/IK) · dogFace.js (rosto)
 //   carryPose.js (item na boca) · dogAnimation.js (pose a cada quadro) · contactShadow.js (sombra)
 import * as THREE from 'three';
-import { DOGS } from '../levels/fase1/layout.js';
+import { DOG_CONFIG } from './config.js';
 import { buildDogGeometry } from './dogModel.js';
 import { createFurMaterial } from './furMaterial.js';
 import { createDogRig } from './dogRig.js';
@@ -21,7 +21,7 @@ export { createPlushCarrot } from './plushCarrot.js';
  * @returns {import('../types').DogModel}
  */
 export function createDog(kind) {
-  const cfg = DOGS[kind];
+  const cfg = DOG_CONFIG[kind];
   const G = buildDogGeometry(kind);
   const { P, design } = G;
   const s = P.s;

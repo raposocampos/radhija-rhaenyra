@@ -6,12 +6,10 @@
 //   4. O POMBO não aguenta o cheiro e voa para o POLEIRO B, que tem uma placa: o PORTÃO abre e trava.
 //   5. A cenoura está do outro lado; levem-na para casa.
 // Metros, Y para cima, Norte = -Z, câmera ao sul (mesmas convenções das fases).
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = { bounds: { minX: -5.5, maxX: 5.5, minZ: -4, maxZ: 4 } };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -3.6, z: -1.6, yaw: 1.2 }),
