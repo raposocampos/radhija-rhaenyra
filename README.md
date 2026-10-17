@@ -1,0 +1,1 @@
+Publicador confiável temporário para testar o PR #1 antes de integrar o workflow ao main. Branch bloqueado; não integrar ao main. Remover sua autorização no ambiente preview após a instalação. Consulte docs/ENTREGA.md no branch de implementação.
