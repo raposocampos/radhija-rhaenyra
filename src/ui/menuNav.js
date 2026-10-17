@@ -40,6 +40,7 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
     const cx = r0.left + r0.width / 2;
     const cy = r0.top + r0.height / 2;
     let best = null;
+    let bestAligned = false;
     let bestScore = Infinity;
     for (const el of list) {
       if (el === nav.el) continue;
@@ -54,7 +55,15 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
         : Math.max(0, Math.max(r.left, r0.left) - Math.min(r.right, r0.right));
       const center = dx ? Math.abs(vy) : Math.abs(vx);
       const score = along + ortho * 3 + center * 0.05;
-      if (score < bestScore) { bestScore = score; best = el; }
+      // Um vizinho na mesma faixa tem prioridade sobre qualquer diagonal.
+      // O centro de um botão largo na linha de cima pode estar mais perto,
+      // mas não deve capturar esquerda/direita entre os botões lado a lado.
+      const aligned = ortho === 0;
+      if ((aligned && !bestAligned) || (aligned === bestAligned && score < bestScore)) {
+        bestAligned = aligned;
+        bestScore = score;
+        best = el;
+      }
     }
     if (best) setFocus(best);
   }

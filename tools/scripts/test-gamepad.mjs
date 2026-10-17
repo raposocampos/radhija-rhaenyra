@@ -149,6 +149,48 @@ try {
   await sleep(150);
   i = await info();
   check(i.state === 'paused', 'Options pausa', i.state);
+
+  // Navegação espacial real: o botão largo Continuar não pode capturar as
+  // direções laterais entre Reiniciar fase e Menu inicial, na linha de baixo.
+  const focused = () => ev(() => {
+    const el = document.querySelector('.rr-pause .is-focus');
+    return el?.getAttribute('data-action') || (el?.hasAttribute('data-slider') ? 'volume' : null);
+  });
+  const checkFocus = async (target, label) => {
+    const actual = await focused();
+    check(actual === target, label, actual);
+  };
+  await tap(B.DOWN);
+  await checkFocus('restart', 'D-pad baixo: Continuar → Reiniciar fase');
+  await tap(B.RIGHT);
+  await checkFocus('menu', 'D-pad direita: Reiniciar fase → Menu inicial');
+  await tap(B.LEFT);
+  await checkFocus('restart', 'D-pad esquerda: Menu inicial → Reiniciar fase');
+  await tap(B.DOWN);
+  await checkFocus('volume', 'D-pad baixo: Reiniciar fase → Volume');
+  const volumeBefore = Number(await page.locator('.rr-range').inputValue());
+  await tap(B.RIGHT);
+  const volumeAfter = Number(await page.locator('.rr-range').inputValue());
+  check(await focused() === 'volume' && volumeAfter === Math.min(100, volumeBefore + 5), 'D-pad direita no volume ajusta o valor e mantém o foco');
+  await tap(B.LEFT);
+  check(await focused() === 'volume' && Number(await page.locator('.rr-range').inputValue()) === Math.max(0, volumeAfter - 5), 'D-pad esquerda no volume ajusta o valor e mantém o foco');
+  await tap(B.UP);
+  await checkFocus('restart', 'D-pad cima: Volume → Reiniciar fase');
+  await tap(B.UP);
+  await checkFocus('resume', 'D-pad cima: Reiniciar fase → Continuar');
+
+  for (const [x, y, target] of [[0, 1, 'restart'], [1, 0, 'menu'], [-1, 0, 'restart'], [0, -1, 'resume']]) {
+    await axes(x, y);
+    await sleep(110);
+    await axes(0, 0);
+    await sleep(110);
+    await checkFocus(target, `analógico (${x}, ${y}): foco em ${target}`);
+  }
+  for (const [key, target] of [['ArrowDown', 'restart'], ['ArrowRight', 'menu'], ['ArrowLeft', 'restart'], ['ArrowUp', 'resume']]) {
+    await page.keyboard.press(key);
+    await checkFocus(target, `teclado ${key}: foco em ${target}`);
+  }
+
   const p0 = i.dogs.radhija;
   await axes(0, -1);
   await btn(B.X, true);

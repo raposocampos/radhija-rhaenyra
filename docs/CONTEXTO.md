@@ -7,23 +7,22 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-O usuário pediu corrigir a dica de empurrar da Rhaenyra: com controle, ela
-mostrava "Shift". A causa estava em `src/ui/markup.js`: `richText` só convertia
-teclas entre parênteses. A correção reconhece também Shift no texto corrido,
-usando o mesmo desenho adaptável da UI (R1 no PlayStation, RB no Xbox, Shift
-no teclado), inclusive quando o dispositivo muda com a dica já na tela.
+O usuário relatou que esquerda/direita entre "Reiniciar fase" e "Menu inicial"
+levava o foco a "Continuar". Em `src/ui/menuNav.js`, a distância ao centro do
+botão largo de cima vencia a do vizinho da mesma linha. A correção prioriza
+candidatos alinhados antes de comparar distâncias; mantém a escolha diagonal
+como alternativa quando não há um candidato alinhado.
 
-Implementação `f925a94` aprovada no CI e na suíte E2E `controle` (30 verificações,
-incluindo três novas para a mesma dica nos três modos, sem erros de console).
-Integrada ao `main` após essas validações. Esta atualização final muda apenas
-o resumo; o código do jogo e os testes são os mesmos que passaram no E2E.
-Ao retomar, conferir o CI/deploy do commit atual no GitHub para confirmar a
-publicação. Não há ajuste de código pendente conhecido nesta tarefa.
+Implementação no branch `codex/navegacao-lateral-pausa`, com 16 novas
+verificações na suíte E2E `controle`: D-pad, analógico, setas do teclado,
+navegação vertical e ajuste de volume sem perder foco. No momento deste
+registro, CI/E2E e publicação ainda precisam ser confirmados no GitHub.
+Conferir o commit atual e as execuções ao retomar.
 
 - Jogo: https://raposocampos.github.io/radhija-rhaenyra/
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
 - Branch de entrega: `main`.
-- Base desta atualização: `383dbe4` (passagem de contexto entre agentes).
+- Base desta atualização: `8fe992f` (dica de empurrar corrigida e publicada).
 - No início desta tarefa, a árvore estava limpa e `main` sincronizado com
   `origin/main`. Conferir novamente ao retomar; isso é um registro histórico.
 
@@ -51,6 +50,9 @@ publicação. Não há ajuste de código pendente conhecido nesta tarefa.
    qualidade visual da versão publicada.
 6. **Instruções dos agentes:** `AGENTS.md` define o fluxo; `CLAUDE.md` o importa.
    Ambos agora direcionam o agente a este documento de contexto.
+7. **Dica de empurrar:** `richText` em `src/ui/markup.js` reconhece Shift também
+   fora de parênteses. A UI mostra R1 no PlayStation, RB no Xbox e Shift no
+   teclado, acompanhando a troca de dispositivo com a dica já na tela.
 
 ## Validações já realizadas
 
@@ -59,6 +61,9 @@ publicação. Não há ajuste de código pendente conhecido nesta tarefa.
   e E2E `controle` aprovado na
   [execução 38999413926](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999413926).
   Todos os testes desta tarefa rodaram no GitHub, sem build ou partidas locais.
+  Publicada em `8fe992f`, com
+  [CI/deploy 38999578176](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999578176)
+  aprovado e site respondendo HTTP 200.
 - CI e deploy de `7c874dc`: aprovados na
   [execução 38997538477](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38997538477).
   O site respondeu HTTP 200 após essa publicação.
@@ -97,8 +102,8 @@ publicação. Não há ajuste de código pendente conhecido nesta tarefa.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. A correção da dica já está integrada e validada; conferir a publicação do
-   commit atual e seguir o próximo pedido. Não há autorização para instalar
-   ai-memory neste projeto.
+3. Concluir a validação e publicação da navegação do menu, caso ainda não
+   estejam concluídas no GitHub. Não há autorização para instalar ai-memory
+   neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
