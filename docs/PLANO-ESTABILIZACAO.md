@@ -35,8 +35,11 @@ produção conferidos. A aprovação desses PRs não inclui as próximas correç
 EST-09 também foi aprovado e publicado pelo PR #8, squash
 `d38574a54d1203a3f7d71dd26541167d93819db3`; CI `39060437829` e deploy
 `39060461084` aprovados, produção HTTP 200 e `version.json` conferido.
-Essa é a base da revalidação dos PRs #7 e #10. Nesta rodada, o coordenador
-delegou a reconciliação deste plano exclusivamente ao executor de EST-04.
+Depois, EST-04 foi aprovado e publicado pelo PR #7, squash
+`2ee7e078d25140a82ccf4ee31aa4d7abcea5ac7c`; CI `39061928859` e deploy
+`39061964438` aprovados, produção HTTP 200 e `version.json` conferido.
+Essa é a base atual da revalidação do PR #10. Nesta rodada, o coordenador
+delegou a reconciliação deste plano exclusivamente ao executor de EST-03.
 
 ## Boas práticas a preservar
 
@@ -65,8 +68,8 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 aprovado, integrado e publicado |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
 | [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
-| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 implementado; revalidação sobre d38574a |
-| [ ] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 implementado; revalidação sobre d38574a |
+| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 implementado; revalidação sobre 2ee7e07 |
+| [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
@@ -77,13 +80,14 @@ Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-Na segunda rodada, EST-09 já foi publicado; seguem EST-04 e EST-03.
-PRs #7 e #10 são revalidados em paralelo na base `d38574a`; após eventual
-aprovação/merge de #7, atualizar e revalidar #10 novamente. Cada versão
+Na segunda rodada, EST-09 e EST-04 já foram publicados; segue EST-03.
+PR #10 incorpora por merge normal a base `2ee7e07` e passa por novos
+CI/prévia e E2E `todas` antes de pedir aprovação. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
-principal. Ainda não há tema/objeto aprovado para a fase 6.
+principal. A proposta já está no PR #9; ainda não há tema/objeto aprovado
+nem código de fase 6 implementado.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -199,10 +203,11 @@ de aba antiga confirma o 404 específico e novas URLs após recarga, preservando
 o save; erros não identificados continuam reprovando o harness.
 
 Branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
-No head anterior `6da8d31`, base `b1b026e`: CI `39058785550` tentativa 2
-aprovou 134 testes, tipos e build; E2E `39058783617` aprovou 299 verificações
-de gameplay, quatro de infraestrutura, 19 do smoke e 28 de recuperação.
-Capturas da fase 4 sem erros. PR #10 está incorporando a base `d38574a` e
+No head anterior `afe32da`, base `d38574a`: CI `39060701722` aprovou 134
+testes, tipos e build; E2E `39060697698` aprovou 313 verificações de gameplay,
+quatro de infraestrutura, 19 do smoke e 28 de recuperação. Capturas da fase 4
+sem erros; capturas de recuperação revisadas visualmente, sem bloqueios.
+Prévia `39060738685` publicada e conferida. PR #10 incorpora a base `2ee7e07` e
 precisa de novos CI/prévia/E2E completos; os resultados anteriores não validam
 o novo merge. Sem integração ou aprovação de produção dessa tarefa.
 
@@ -232,13 +237,17 @@ inclusive propriedades como `__proto__`. Versões declaradas diferentes de 1
 ficam intactas no storage; a partida usa uma cópia v1 vazia em memória.
 Falha de leitura bloqueia escrita; falha de quota não interrompe a partida.
 
-Branch `codex/progresso-validado`, worktree `progresso-validado`. Head anterior
-`8f974e1`, base `b1b026e`: CI `39058245437` aprovou 145 testes, tipos e build;
-E2E fase1 `39058252168` passou 61 verificações sem erros de console. Merge
-normal de `d38574a` preparado, mantendo o código e os testes de progresso.
-Próximo passo: push e novos CI/prévia, E2E `fase1` e `controle` no mesmo head
-final, depois apresentar para aprovação. Novas execuções pendentes neste marco;
-não atribuir os resultados antigos à combinação atual. Nenhum teste/build local.
+Branch `codex/progresso-validado`, worktree `progresso-validado`. Head aprovado
+`a39a342`, base `d38574a`: CI `39060731088` aprovou 145 testes, tipos e build;
+E2E fase1 `39060727463` passou 61 e controle `39060729617` passou 60 verificações,
+sem erros de console. Prévia `39060761036` conferida, revisão sem bloqueios.
+Após aprovação no chat, integrado por squash em
+`2ee7e078d25140a82ccf4ee31aa4d7abcea5ac7c`, com árvores idênticas ao head
+aprovado e ao merge sintético. CI main `39061928859` aprovou 145 testes,
+tipos e build Vite 6.4.4; deploy `39061964438` concluído após liberação do
+deployment `7144556034` com essa aprovação. Produção HTTP 200/version.json
+confirmou head/commit `2ee7e07`, run `39061928859`, tentativa 1. Publicado;
+não repetir integração/deploy. Nenhum teste/build local.
 
 ### EST-05 Recursos gráficos
 
@@ -311,7 +320,8 @@ head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação
   e testes próprios. A prévia do PR isola o save; `DEV_LEVELS` sozinho não.
 - O usuário autorizou preparar a proposta combinando pulo e superbafo.
   Responsável: agente de planejamento, `codex/proposta-fase6`, worktree
-  `proposta-fase6`. Documento e contexto próprios; nenhum código de fase.
+  `proposta-fase6`. Proposta no [PR #9](https://github.com/raposocampos/radhija-rhaenyra/pull/9),
+  head `62b9b6c`. Documento e contexto próprios; nenhum código de fase.
   Escolher/aprovar tema e objeto antes de implementar conteúdo.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.

@@ -101,6 +101,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let barkCd = 0;
   let jumpHintCd = 0; // dica "só a Rhaenyra pula"
   let loadingPromise = null;
+  let loadFailure = null;
   const cel = { radhija: {}, rhaenyra: {} };
   // Superbafo (só quem tem cfg.bafoSpeed, a Radhija): segurar mira, soltar sopra.
   const bafo = { held: false, aiming: false, cd: 0, blowT: 0, proudT: 0, hintCd: 0 };
@@ -620,104 +621,138 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- carregamento de fase ----------
   /**
    * Carrega a fase `index`. mode: 'title' (tela inicial sobre a fase), 'intro' (cartão da fase) ou 'play'.
-   * A UI cobre a tela no 'level:loading' e revela no 'level:loaded'.
+   * A UI cobre a tela no 'level:loading', revela no 'level:loaded' e recupera no 'level:error'.
+   * Resolve true ao concluir ou false em falha; chamadas da UI não deixam rejeições soltas.
    */
   async function loadLevel(index, { mode = 'intro', initial = false } = {}) {
     if (loadingPromise) return loadingPromise;
+    // Após uma montagem parcial só a recarga da página é segura. Para uma
+    // falha anterior ao descarte, a UI primeiro retorna à fase intacta.
+    if (state === 'load-error') return false;
     index = Math.max(0, Math.min(levels.length - 1, index | 0));
     loadingPromise = (async () => {
       const baseDef = levels[index];
-      // Partes pesadas da fase (o cenário) vêm sob demanda: o download corre enquanto a cortina fecha.
-      const lazy = baseDef.load?.();
       const prevState = state;
-      state = 'loading';
-      emit('game:state', { state: 'loading', prev: prevState, level: index });
-      emit('level:loading', { index, count: levels.length, id: baseDef.id, number: baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial });
-      if (!initial) await sleep(FADE_MS);
-      /** @type {import('../types').LevelDef} */
-      const nextDef = { ...baseDef, ...(await lazy) };
-      await nextPaint();
+      const hadLevel = !!root && !!puzzle;
+      let previousUntouched = true;
+      try {
+        state = 'loading';
+        emit('game:state', { state: 'loading', prev: prevState, level: index });
+        emit('level:loading', { index, count: levels.length, id: baseDef.id, number: baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial });
+        // Promise.all observa a rejeição imediatamente, inclusive antes dos 420 ms
+        // da cortina. Promise.resolve().then também captura um load() síncrono.
+        const [lazy] = await Promise.all([
+          Promise.resolve().then(() => baseDef.load?.()),
+          initial ? Promise.resolve() : sleep(FADE_MS),
+        ]);
+        /** @type {import('../types').LevelDef} */
+        const nextDef = { ...baseDef, ...lazy };
+        await nextPaint();
 
-      // Devolve o item carregado à fase velha e esvazia as bocas (as dogs sobrevivem entre fases).
-      try { puzzle?.reset?.(); } catch (err) { console.warn('[game] reset da fase anterior falhou', err); }
-      emptyMouths();
-      // Descarta a fase anterior
-      if (root) {
-        engine.scene.remove(root);
-        disposeTree(root);
-        built?.dispose?.();
-        dbg?.group && engine.scene.remove(dbg.group);
-      }
-      puzzle?.dispose?.();
-      emptyMouths();
+        // Devolve o item carregado à fase velha e esvazia as bocas (as dogs sobrevivem entre fases).
+        previousUntouched = false;
+        puzzle?.reset?.();
+        emptyMouths();
+        // Descarta a fase anterior
+        if (root) {
+          engine.scene.remove(root);
+          disposeTree(root);
+          built?.dispose?.();
+          dbg?.group && engine.scene.remove(dbg.group);
+        }
+        puzzle?.dispose?.();
+        emptyMouths();
 
-      levelIndex = index;
-      def = nextDef;
-      L = def.layout;
-      engine.applyLighting(def.lighting, L.WORLD.bounds);
-      root = new THREE.Group();
-      root.name = `fase:${def.id}`;
-      engine.scene.add(root);
-      built = def.build({ engine, root, layout: L, params });
-      applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
+        levelIndex = index;
+        def = nextDef;
+        L = def.layout;
+        engine.applyLighting(def.lighting, L.WORLD.bounds);
+        root = new THREE.Group();
+        root.name = `fase:${def.id}`;
+        engine.scene.add(root);
+        built = def.build({ engine, root, layout: L, params });
+        applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
 
-      world = createCollisionWorld(L);
-      nav = createNavigator(L, world);
-      scent = createScentField({ world, emit, view: createScentView(root) });
-      cancelBafo();
-      if (!cam) {
-        cam = createCameraRig(engine.camera, L);
-        // Planos de foco duram ~2 s: os testes conferem no log de depuração (não passa pelo barramento).
-        const focusShot = cam.focusShot;
-        cam.focusShot = (x, z, opts) => {
-          log.push({ t: Math.round(performance.now()), name: 'camera:shot', payload: { x: +x.toFixed(2), z: +z.toFixed(2) } });
-          if (log.length > 500) log.shift();
-          focusShot(x, z, opts);
+        world = createCollisionWorld(L);
+        nav = createNavigator(L, world);
+        scent = createScentField({ world, emit, view: createScentView(root) });
+        cancelBafo();
+        if (!cam) {
+          cam = createCameraRig(engine.camera, L);
+          // Planos de foco duram ~2 s: os testes conferem no log de depuração (não passa pelo barramento).
+          const focusShot = cam.focusShot;
+          cam.focusShot = (x, z, opts) => {
+            log.push({ t: Math.round(performance.now()), name: 'camera:shot', payload: { x: +x.toFixed(2), z: +z.toFixed(2) } });
+            if (log.length > 500) log.shift();
+            focusShot(x, z, opts);
+          };
+        } else cam.configure(L);
+        if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
+        for (const n of NAMES) setStay(n, false, { silent: true });
+        puzzle = def.createPuzzle({
+          layout: L, props: built.props, world, nav, scent, dogs, ctrls, emit, cam, root, place, params, engine,
+          get activeDog() { return activeDog; },
+          isStaying: (n) => stay[n],
+          setStay: (n, on) => setStay(n, on),
+          brains,
+        });
+        puzzle.onStageChange = () => {
+          if (state === 'playing') emitObjective();
         };
-      } else cam.configure(L);
-      if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
-      for (const n of NAMES) setStay(n, false, { silent: true });
-      puzzle = def.createPuzzle({
-        layout: L, props: built.props, world, nav, scent, dogs, ctrls, emit, cam, root, place, params, engine,
-        get activeDog() { return activeDog; },
-        isStaying: (n) => stay[n],
-        setStay: (n, on) => setStay(n, on),
-        brains,
-      });
-      puzzle.onStageChange = () => {
-        if (state === 'playing') emitObjective();
-      };
-      dbg = params.has('debug') ? createDebugDraw(engine.scene, L, world, nav) : null;
+        dbg = params.has('debug') ? createDebugDraw(engine.scene, L, world, nav) : null;
 
-      // Estado inicial da fase
-      puzzle.reset();
-      activeDog = initialDog;
-      placeStart();
-      playTime = 0;
-      celebrateT = 0;
-      victoryT = 0;
-      const stageParam = initial ? params.get('stage') : null;
-      if (stageParam && stageParam !== 'start') setStage(stageParam);
-      const a = ctrls[activeDog];
-      cam.snapFollow(a.x, a.z);
-      applyDogs(0.016);
-      engine.renderer.compile?.(engine.scene, engine.camera);
+        // Estado inicial da fase
+        puzzle.reset();
+        activeDog = initialDog;
+        placeStart();
+        playTime = 0;
+        celebrateT = 0;
+        victoryT = 0;
+        const stageParam = initial ? params.get('stage') : null;
+        if (stageParam && stageParam !== 'start') setStage(stageParam);
+        const a = ctrls[activeDog];
+        cam.snapFollow(a.x, a.z);
+        applyDogs(0.016);
+        engine.renderer.compile?.(engine.scene, engine.camera);
 
-      const target = mode === 'play' ? 'playing' : mode === 'title' ? 'title' : 'intro';
-      state = 'loading';
-      setState(target === 'playing' ? 'intro' : target, { force: true });
-      if (target === 'title' || target === 'intro') cam.setMode('title', { instant: true });
-      emit('level:loaded', levelInfo());
-      if (target === 'playing') setState('playing');
+        const target = mode === 'play' ? 'playing' : mode === 'title' ? 'title' : 'intro';
+        state = 'loading';
+        setState(target === 'playing' ? 'intro' : target, { force: true });
+        if (target === 'title' || target === 'intro') cam.setMode('title', { instant: true });
+        emit('level:loaded', levelInfo());
+        if (target === 'playing') setState('playing');
+        return true;
+      } catch (error) {
+        const canReturn = hadLevel && previousUntouched;
+        loadFailure = { prevState, canReturn };
+        // Não chamar setState aqui: o puzzle/cenário pode estar incompleto.
+        state = 'load-error';
+        emit('game:state', { state, prev: 'loading', level: levelIndex });
+        emit('level:error', {
+          index, id: baseDef?.id, name: baseDef?.name, initial, canReturn,
+          message: canReturn
+            ? 'Não foi possível abrir esta fase. Você pode voltar à fase atual ou recarregar o jogo.'
+            : 'Não foi possível preparar a fase. Recarregue o jogo para tentar novamente.',
+        });
+        console.warn('[game] falha no carregamento da fase', baseDef?.id, error);
+        return false;
+      }
     })();
     try {
-      await loadingPromise;
+      return await loadingPromise;
     } finally {
       loadingPromise = null;
     }
   }
 
   // ---------- eventos da UI ----------
+  function cancelLoad() {
+    if (state !== 'load-error' || !loadFailure?.canReturn) return;
+    const previous = loadFailure.prevState;
+    loadFailure = null;
+    setState(previous, { force: true });
+  }
+  events.on('ui:cancelLoad', cancelLoad);
   events.on('ui:play', () => {
     if (state === 'title' || state === 'intro') setState('playing');
   });
@@ -728,21 +763,21 @@ export function createGame({ engine, dogs, levels, params }) {
     if (state === 'paused') setState('playing');
   });
   events.on('ui:restart', () => {
-    if (state === 'loading') return;
+    if (state === 'loading' || state === 'load-error') return;
     reset();
     setState('playing', { force: true });
   });
   events.on('ui:nextLevel', () => {
-    if (state === 'loading') return;
+    if (state === 'loading' || state === 'load-error') return;
     if (levelIndex < levels.length - 1) loadLevel(levelIndex + 1, { mode: 'intro' });
     else loadLevel(0, { mode: 'title' });
   });
   events.on('ui:selectLevel', (/** @type {{ index?: number }} */ { index } = {}) => {
-    if (state === 'loading' || !Number.isFinite(index)) return;
+    if (state === 'loading' || state === 'load-error' || !Number.isFinite(index)) return;
     loadLevel(index, { mode: 'intro' });
   });
   events.on('ui:menu', () => {
-    if (state === 'loading') return;
+    if (state === 'loading' || state === 'load-error') return;
     reset();
     setState('title');
   });
@@ -750,7 +785,7 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- quadro ----------
   function update(dt, t) {
     input.poll();
-    if (!(dt > 0) || !puzzle) {
+    if (!(dt > 0) || !puzzle || state === 'load-error') {
       input.endFrame();
       return;
     }
@@ -823,6 +858,7 @@ export function createGame({ engine, dogs, levels, params }) {
     update,
     reset,
     loadLevel,
+    cancelLoad,
     debug: {
       teleport(name, x, z) {
         const c = ctrls[name];

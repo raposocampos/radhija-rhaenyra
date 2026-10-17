@@ -60,6 +60,12 @@ async function boot() {
     const dt = Math.min(clock.getDelta(), 1 / 20);
     elapsed += dt;
     game.update(dt, elapsed);
+    if (game.state === 'loading' || game.state === 'load-error') {
+      // A UI segue acessível, mas nenhum efeito ou desenho usa uma fase parcial.
+      ui.update(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (camFix?.length === 3) {
       engine.camera.position.set(.../** @type {[number, number, number]} */ (camFix));
       engine.camera.lookAt(.../** @type {[number, number, number]} */ (lookFix));
@@ -93,5 +99,16 @@ async function boot() {
 boot().catch((err) => {
   console.error(err);
   const loading = document.getElementById('loading');
-  if (loading) loading.querySelector('.box').lastElementChild.textContent = 'Ops! Algo deu errado ao carregar o jardim.';
+  if (!loading) return;
+  // Também funciona se engine/UI/__game nem chegaram a ser criados.
+  const box = loading.querySelector('.box');
+  box.setAttribute('role', 'alert');
+  box.lastElementChild.textContent = 'Não foi possível iniciar o jogo. Recarregue a página para tentar novamente.';
+  const reload = document.createElement('button');
+  reload.type = 'button';
+  reload.className = 'rr-boot-reload';
+  reload.textContent = 'Recarregar jogo';
+  reload.addEventListener('click', () => location.reload());
+  box.appendChild(reload);
+  reload.focus();
 });
