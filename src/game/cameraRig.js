@@ -110,8 +110,11 @@ export function createCameraRig(camera, layout) {
       if (s.t < s.inT) w = smoother(s.t / s.inT);
       else if (s.t < s.inT + s.hold) w = 1;
       else w = 1 - smoother((s.t - s.inT - s.hold) / s.outT);
-      shotLook.set(s.point.x, lookHeight + 0.1, s.point.z);
+      const point = s.target || s.point;
+      shotLook.set(point.x, point.y, point.z);
       shotPos.copy(offset).multiplyScalar(s.scale).add(shotLook);
+      // Entrar de onde a câmera está, inclusive ao substituir outro plano.
+      if (s.t < s.inT) { outPos.copy(s.fromPos); outLook.copy(s.fromLook); }
       outPos.lerp(shotPos, w);
       outLook.lerp(shotLook, w);
       f = baseFov - 2 * w;
@@ -142,8 +145,10 @@ export function createCameraRig(camera, layout) {
     apply();
   }
 
-  function focusShot(x, z, { hold = 1.2, inT = 0.55, outT = 0.7, scale = 0.8 } = {}) {
-    shot = { point: new THREE.Vector3(x, 0, z), t: 0, inT, hold, outT, scale };
+  function focusShot(x, z, { hold = 1.2, inT = 0.55, outT = 0.7, scale = 0.8,
+    y = lookHeight + 0.1, target = null } = {}) {
+    shot = { point: new THREE.Vector3(x, y, z), target, t: 0, inT, hold, outT, scale,
+      fromPos: pos.clone(), fromLook: look.clone() };
   }
 
   function onSwitch() {

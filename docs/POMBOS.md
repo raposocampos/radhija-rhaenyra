@@ -49,8 +49,23 @@ ciclo, a recuperação 58%; são escolhas de estilização para leitura no jogo,
 não medições biológicas. A decolagem recebe mais energia e a transição para
 repouso recolhe as asas gradualmente. Corpo, cabeça, cauda e pés acompanham o
 ciclo; direção usa a volta mais curta e interpolação, inclusive no pouso.
-O puzzle informa apenas `flightProgress` para antecipar a frenagem e estender
-os pés: posições, duração, eventos, colisões e gatilhos permanecem iguais.
+O puzzle informa `flightProgress` para antecipar a frenagem e estender os pés.
+Na correção seguinte, o segundo voo ganha 0,3 s de antecipação para a câmera
+chegar ao pombo antes da decolagem. O pouso acompanha a altura da placa móvel;
+eventos, colisões e gatilhos permanecem iguais.
+
+### Correção das pernas e leitura do mecanismo
+
+O feedback sobre `a9b0906` mostrou que os pés estavam em outro grupo e se
+separavam do corpo ao inclinar/frear. As pernas agora pertencem ao corpo e
+giram em quadris dentro do tronco; no chão, a altura do corpo é resolvida pelo
+apoio, com flexão no impacto e no sono. Um teste geométrico verifica as duas
+raízes dentro da malha em cada quadro de voo, curva, frenagem e pouso.
+
+O plano da câmera usa alvo 3D atualizado durante o voo e depois revela a
+placa e o portão juntos, sem reiniciar o foco no pouso. A placa tem base
+contrastante, molas, compressão visível e uma ligação dourada até a trava.
+Um pulso percorre essa ligação ao ativar; a dica explica a relação causal.
 
 Referência de movimento: [Berg e Biewener, 2010 — Wing and body kinematics of
 takeoff and landing flight in the pigeon](https://journals.biologists.com/jeb/article/213/10/1651/9685/Wing-and-body-kinematics-of-takeoff-and-landing).
@@ -82,8 +97,12 @@ o workflow gera o artefato `capturas-fase4`, pasta `pombos/`:
 - `05-pombo-do-portao.png` e `06-pombal.png`: demais instâncias, tons e escalas.
 - `metrics.json`: SHAs da base e do head, contagens e erros do navegador.
 - `07-voo-antes-depois.mp4` e `08-sequencia-voo.png`: decolagem, batidas e pouso
-  em tempo simulado fixo; comparação da animação do visual aceito (`7427dda`)
+  em tempo simulado fixo; comparação com a prévia das pernas soltas (`a9b0906`)
   com a revisão atual. O vídeo é codificado com FFmpeg apenas no runner.
+- `09-camera-mecanismo.mp4` e `10-sequencia-mecanismo.png`: segundo voo,
+  placa e abertura do portão com a câmera real do jogo; enquadramento validado
+  pela projeção do pombo, placa e portão, eventos registrados em `metrics.json`.
+- `11-mecanismo-vertical.png`: enquadramento após o pouso em tela vertical.
 
 O script compara o head com o ancestral comum de `origin/main`, usando os
 mesmos tempos, semente, câmera e luz. Requer histórico completo no checkout.

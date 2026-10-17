@@ -11,8 +11,8 @@ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const head = git('rev-parse', 'HEAD');
 const base = git('merge-base', 'HEAD', 'origin/main');
 const baselinePath = 'src/world/.pigeon-baseline.js';
-// Versão cujo visual o usuário aprovou, antes de pedir a revisão do voo.
-const motionBase = '7427dda1d358381580df351b698904ae84636095';
+// Última prévia: reproduz as pernas soltas relatadas pelo usuário.
+const motionBase = 'a9b090606d5e646d8a8ed4cf70c8be1bf5c36947';
 const motionBaselinePath = 'src/world/.pigeon-motion-baseline.js';
 // wx evita sobrescrever qualquer arquivo que não pertença a esta execução.
 writeFileSync(baselinePath, git('show', `${base}:src/world/pigeon.js`), { flag: 'wx' });
@@ -93,7 +93,58 @@ try {
     g.engine.render(0, 2);
   });
   await page.screenshot({ path: 'shots/pombos/06-pombal.png' });
-  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, motionBase, head, stats, errors }, null, 2));
+  // Plano real do mecanismo: usa a reação de cheiro e a câmera do jogo, sem
+  // posicionar a câmera manualmente. O E2E separado percorre a cadeia com teclas.
+  const setupMechanism = async () => page.evaluate(() => {
+    const g = window.__game, d = g.game.debug;
+    d.setStage('passOpen');
+    d.puzzle.mech.fan.setPos(g.layout.FAN.start.x, g.layout.FAN.alignZ);
+    d.teleport('radhija', 1.1, g.layout.CORRIDOR.z);
+    for (let i = 0; i < 240; i++) g.game.update(1 / 60, 4 + i / 60);
+    d.cam.snapFollow(1.1, g.layout.CORRIDOR.z);
+    d.clearLog();
+    d.puzzle.mech.nose.onSmell();
+  });
+  await setupMechanism();
+  mkdirSync('shots/pombos/mecanismo', { recursive: true });
+  const framing = [];
+  for (let frame = 0; frame < 150; frame++) {
+    const sample = await page.evaluate((f) => {
+      const g = window.__game;
+      for (let i = 0; i < 2; i++) g.game.update(1 / 60, 8 + (f * 2 + i) / 60);
+      g.engine.render(0, 8 + f / 30);
+      const project = (x, y, z) => new g.THREE.Vector3(x, y, z).project(g.engine.camera).toArray();
+      const p = g.props.pigeon.object.position, b = g.layout.PERCH_B, gate = g.layout.GATE;
+      return { frame: f, pigeon: project(p.x, p.y + 0.16, p.z), plate: project(b.x, b.y + 0.12, b.z),
+        gate: project(gate.hinge.x, 0.65, (gate.hinge.z + gate.latchPost.z) / 2),
+        stage: g.game.debug.puzzle.stage, shot: g.game.debug.cam.shotActive };
+    }, frame);
+    framing.push(sample);
+    if (frame >= 9 && frame <= 100 && (Math.abs(sample.pigeon[0]) > 0.9 || Math.abs(sample.pigeon[1]) > 0.85)) {
+      throw new Error(`Pombo fora da área legível no quadro ${frame}: ${sample.pigeon}`);
+    }
+    if (frame >= 65 && frame <= 95 && [sample.plate, sample.gate].some((p) => Math.abs(p[0]) > 0.9 || Math.abs(p[1]) > 0.85)) {
+      throw new Error(`Mecanismo fora do enquadramento no quadro ${frame}`);
+    }
+    await page.screenshot({ path: `shots/pombos/mecanismo/frame-${String(frame).padStart(3, '0')}.png` });
+  }
+  const events = await page.evaluate(() => window.__game.game.debug.events().map((e) => e.name));
+  for (const event of ['pigeon:land', 'plate:press', 'gate:open']) {
+    if (!events.includes(event)) throw new Error(`Evento ausente na captura: ${event}`);
+  }
+  execFileSync('ffmpeg', ['-y', '-framerate', '30', '-i', 'shots/pombos/mecanismo/frame-%03d.png',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'shots/pombos/09-camera-mecanismo.mp4'], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', 'shots/pombos/09-camera-mecanismo.mp4',
+    '-vf', 'fps=2,scale=640:-1,tile=2x5', '-frames:v', '1', 'shots/pombos/10-sequencia-mecanismo.png'], { stdio: 'pipe' });
+  await page.setViewportSize({ width: 720, height: 1280 });
+  await setupMechanism();
+  await page.evaluate(() => {
+    const g = window.__game;
+    for (let i = 0; i < 150; i++) g.game.update(1 / 60, 8 + i / 60);
+    g.engine.render(0, 10.5);
+  });
+  await page.screenshot({ path: 'shots/pombos/11-mecanismo-vertical.png' });
+  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, motionBase, head, stats, framing, events, errors }, null, 2));
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
 } finally {

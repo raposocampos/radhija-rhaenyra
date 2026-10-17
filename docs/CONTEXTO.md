@@ -7,63 +7,41 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**PR #3 em revisão de animação; produção ainda não autorizada.**
+**PR #3 em correção de pernas/câmera; produção não autorizada.**
 Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
-Objetivo: silhuetas orgânicas e reconhecíveis, preservando o estilo fofo,
-o visual aceito, a jogabilidade e o desempenho, melhorando principalmente o voo.
+Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
+pombo → placa → portão legíveis.
 
-- Feedback de 2026-10-17: usuário gostou do visual em `7427dda`, mas pediu
-  melhorar as animações, sobretudo o voo. Isso não é aprovação de produção.
-- Retomada: PR #3 aberto em `7427dda1d358381580df351b698904ae84636095`, base
-  `3e826e4`, worktree limpo. CI `39005891992`, prévia `39005917305` e E2E
-  `39005889263` passaram (116 testes + 17 verificações). Resultados anteriores.
-- Revisão implementada: asas abrem com morph targets e flexionam na recuperação;
-  decolagem/pouso graduais, pés recolhem/estendem, cauda e corpo acompanham a
-  batida; giro suavizado pelo caminho curto. `puzzle.js` envia `flightProgress`
-  para preparar o pouso sem mudar trajetos, duração, eventos ou regras.
-- Novos testes em `test/pigeon.test.mjs`: envergadura/batida, pouso, direção e
-  sono/espiada após voo. Revisão visual inclui vídeo determinístico comparado
-  ao visual aceito (`7427dda`), gerado por FFmpeg no GitHub.
-- Primeiro commit de animação `79ef1bb`: [CI 39006672959](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39006672959)
-  passou com tipos, 120 testes e build. Na [execução 39006670232](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39006670232),
-  as 17 verificações da partida passaram, mas a etapa visual falhou por FFmpeg
-  ausente no runner. Corrigida a instalação na suíte fase4. A versão seguinte
-  também mantém os pés apoiados durante o recolhimento das asas no pouso,
-  coberto pelo teste. Requer nova execução completa no SHA entregue.
-- Validação desta revisão ainda pendente: enviar commit no mesmo PR, rodar
-  CI/E2E fase4, inspecionar vídeo/sequência e entregar a nova prévia. Nenhum
-  teste/build/partida automatizada local. Conferir head atual e base antes de
-  integrar; aguardar aprovação explícita da nova versão pelo usuário.
-
-- Retomada conferida: PR #2 integrado no main `3e826e48f9eac644681b718470f9d75f6e207de5`.
-  [CI 39004801467](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004801467)
-  e [publicação 39004826940](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004826940)
-  concluídos com sucesso. PR #1 também está integrado; não repetir esses merges.
-- Pesquisa de Cornell/Macaulay Library e RSPB documentada em `docs/POMBOS.md`.
-  As fotografias foram consultadas, não incorporadas ao repositório.
-- Implementado em `src/world/pigeon.js`: corpo em gota, pescoço contínuo,
-  cabeça e olhos laterais, asas com duas barras, cauda em penas e pés suaves.
-  Os quatro pombos compartilham a fábrica. Lógica da fase não foi alterada.
-- Ferramenta de comparação em `tools/pigeon-review.html` e
-  `tools/scripts/*pigeons*` / `tools/scripts/pigeon-review-scene.mjs`.
-  E2E fase4 passa a gerar capturas comparativas e métricas no GitHub.
-- [PR #3](https://github.com/raposocampos/radhija-rhaenyra/pull/3), primeiro head
-  `85d91bd859e39c0bc93cdd31cf3dc9efd3b1ac75`: tipos, 116 testes e build passaram
-  no [CI 39005534435](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005534435).
-  A prévia passou na [publicação 39005553543](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005553543).
-  [E2E 39005533740](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39005533740):
-  17 verificações aprovadas, sem erros de console; capturas antes/depois de
-  silhuetas, sono, espiada e voo inspecionadas, além do cochilo no cenário real.
-- Custo medido: 25 → 13 meshes e 3.020 → 4.740 triângulos por pombo;
-  na cena de estudo, 29 → 17 chamadas de desenho em três quartos. Não é um
-  benchmark de FPS em aparelhos reais. Nenhum teste ou build foi rodado no PC.
-- A primeira revisão visual foi entregue em `7427dda`, incluindo capturas do
-  portão e pombal. A revisão atual de animação exige novos CI/prévia/E2E;
-  conferir seus resultados pelo head atual do PR, sem assumir aprovação antecipada.
-- Próximo passo: concluir a conferência do head final e entregar a prévia
-  indicada no check `publicar-site`/descrição do PR para aprovação humana.
-  Aguardar aprovação explícita dessa versão antes de integrar e publicar.
-  Não ativar auto-merge nem liberar ambiente de produção enquanto aguarda.
+- Usuário aceitou o visual de `7427dda`, pediu melhorar o voo e depois relatou
+  pernas separadas do corpo em `a9b0906` e câmera que não acompanha o segundo
+  pombo. Esses retornos não autorizam publicação em produção.
+- Última versão entregue: `a9b090606d5e646d8a8ed4cf70c8be1bf5c36947`.
+  [CI 39007017743](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007017743),
+  [prévia 39007043021](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007043021)
+  e [E2E 39007014701](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007014701)
+  passaram: tipos, 120 testes, build, 17 verificações da fase 4 e capturas/vídeo.
+  Isso valida a versão anterior, não as novas correções.
+- Correção atual: pernas presas ao grupo do corpo, pivô no quadril dentro do
+  tronco e contato dos pés resolvido no pouso/sono. Teste geométrico verifica
+  as raízes das duas pernas dentro da malha durante voo, curva e pouso.
+- Câmera: alvo vivo com altura, antecipação de 0,3 s antes de voar e um único
+  plano contínuo para trajeto, placa e portão. Retorna suavemente à dog.
+  Placa maior com molas, compressão, mudança de cor e pulso na corda; pombo
+  acompanha a superfície da placa. Eventos, controles e colisões preservados.
+- Capturas na nuvem comparam as pernas com `a9b0906` e acrescentam vídeo da
+  câmera real do mecanismo, validação de enquadramento e captura vertical.
+  Testes de câmera cobrem seguimento 3D, troca de foco e retorno à dog.
+- Validação das correções pendente: enviar o novo commit no PR #3, acompanhar
+  CI/prévia e E2E fase4, inspecionar capturas e entregar SHA/link ao usuário.
+  Nenhum teste, build ou partida automatizada foi executado localmente.
+- Base conferida: `main` em `3e826e48f9eac644681b718470f9d75f6e207de5`, PR #2
+  integrado. CI `39004801467` e deploy `39004826940` passaram. PR #1 integrado.
+- Pesquisa e decisões visuais em `docs/POMBOS.md`. Fotografias consultadas não
+  incorporadas. Fábrica compartilhada pelos quatro pombos; 25 → 13 meshes e
+  3.020 → 4.740 triângulos por pombo na revisão anterior. Não é benchmark de FPS.
+- Próximo passo: conferir resultados do head atual, inclusive o commit deste
+  documento, apresentar a nova prévia e aguardar aprovação explícita dessa
+  versão. Não ativar auto-merge, integrar ou liberar produção enquanto aguarda.
 
 ## O que foi feito
 

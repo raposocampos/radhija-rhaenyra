@@ -9,6 +9,16 @@ const tick = (p, seconds, fps = 60) => {
   for (let i = 1; i <= Math.round(seconds * fps); i++) p.update(1 / fps, i / fps);
 };
 const wing = (p) => p.object.getObjectByName('asa-direita');
+function feetHeight(p) {
+  p.object.updateMatrixWorld(true);
+  const mesh = p.object.getObjectByName('pes').children[0], v = new THREE.Vector3();
+  let y = Infinity;
+  for (let i = 0; i < mesh.geometry.attributes.position.count; i++) {
+    mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld);
+    y = Math.min(y, v.y);
+  }
+  return y;
+}
 function extent(p) {
   p.object.updateMatrixWorld(true);
   const w = wing(p), v = new THREE.Vector3();
@@ -41,16 +51,39 @@ test('pouso recolhe asas gradualmente e devolve os pés ao apoio', () => {
   const p = createPigeon();
   p.setPose({ flying: true }); tick(p, 0.6);
   const feet = p.object.getObjectByName('pes');
-  const tucked = feet.position.y;
+  const tucked = feetHeight(p);
   p.setPose({ flightProgress: 0.98 }); tick(p, 0.1);
-  assert.ok(feet.position.y < tucked * 0.1, 'pés antecipam o contato');
+  assert.ok(feetHeight(p) < tucked, 'pés antecipam o contato');
   p.setPose({ flying: false }); p.update(1 / 60, 1);
-  assert.equal(feet.position.y, 0, 'pés permanecem apoiados enquanto as asas recolhem');
+  assert.ok(Math.abs(feetHeight(p)) < 0.005, 'pés permanecem apoiados enquanto as asas recolhem');
   assert.ok(wing(p).morphTargetInfluences.reduce((a, b) => a + b) > 0.5, 'sem estalo no primeiro quadro');
   tick(p, 1);
   assert.ok(wing(p).morphTargetInfluences.reduce((a, b) => a + b) < 0.001);
-  assert.ok(Math.abs(feet.position.y) < 0.001);
+  assert.ok(Math.abs(feetHeight(p)) < 0.005);
   assert.ok(Math.abs(feet.scale.y - 1) < 0.001);
+});
+
+test('raízes das pernas permanecem dentro do tronco ao decolar, virar, frear e pousar', () => {
+  const p = createPigeon();
+  const feet = p.object.getObjectByName('pes').children[0];
+  const torso = p.object.getObjectByName('tronco');
+  torso.material.side = THREE.DoubleSide;
+  feet.geometry.computeBoundingBox();
+  const legTop = feet.geometry.boundingBox.max.y;
+  const ray = new THREE.Raycaster(), up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 180; i++) {
+    p.setPose({ flying: i < 120, flightProgress: Math.min(i / 120, 1), yaw: i < 60 ? 0 : 1.3 });
+    p.update(1 / 60, i / 60);
+    p.object.updateMatrixWorld(true);
+    for (const x of [-0.03, 0.03]) {
+      ray.set(new THREE.Vector3(x, legTop - 0.001, 0).applyMatrix4(feet.matrixWorld), up);
+      const hit = ray.intersectObject(torso, false)[0];
+      assert.ok(hit, `perna sem contato no quadro ${i}`);
+      const normal = hit.face.normal.clone().transformDirection(torso.matrixWorld);
+      assert.ok(normal.dot(up) > 0, `raiz da perna fora do corpo no quadro ${i}`);
+    }
+    if (i >= 120) assert.ok(Math.abs(feetHeight(p)) < 0.005, 'contato com o chão no pouso');
+  }
 });
 
 test('direção atravessa ±pi pelo caminho curto e sem salto ao pousar', () => {

@@ -46,7 +46,7 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   const r = rng(seed);
   const root = new THREE.Group();
   root.name = 'pombo';
-  const body = new THREE.Group(); // tudo menos os pés (inclina ao dormir/voar)
+  const body = new THREE.Group(); // quadris e pernas acompanham a inclinação do tronco
   root.add(body);
   const grey = new THREE.MeshStandardMaterial({ color: tint, roughness: 0.75 });
   const featherMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
@@ -68,6 +68,7 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   }
   torsoGeo.computeVertexNormals();
   const torso = new THREE.Mesh(torsoGeo, grey);
+  torso.name = 'tronco';
   torso.position.set(0, 0.119, 0.012);
   const headPivot = new THREE.Group();
   headPivot.position.set(0, 0.175, 0.1);
@@ -176,10 +177,14 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   // pés
   const feet = new THREE.Group();
   feet.name = 'pes';
+  const hipY = 0.0785;
+  feet.position.set(0, hipY, 0.01);
+  const hip = new THREE.Vector3();
   const footParts = [];
   for (const sx of [-1, 1]) {
-    footParts.push(new THREE.CylinderGeometry(0.005, 0.006, 0.045, 6)
-      .translate(sx * 0.03, 0.031, 0.01));
+    // A raiz entra no volume do peito; o recolhimento gira no quadril, não no chão.
+    footParts.push(new THREE.CylinderGeometry(0.005, 0.006, 0.07, 6)
+      .translate(sx * 0.03, 0.0435, 0.01));
     for (const a of [-0.5, 0, 0.5]) {
       footParts.push(new THREE.CapsuleGeometry(0.003, 0.028, 2, 5)
         .rotateX(Math.PI / 2).rotateY(a)
@@ -188,8 +193,8 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
     footParts.push(new THREE.CapsuleGeometry(0.003, 0.016, 2, 5)
       .rotateX(Math.PI / 2).translate(sx * 0.03, 0.004, -0.003));
   }
-  feet.add(new THREE.Mesh(join(footParts), feetMat));
-  root.add(feet);
+  feet.add(new THREE.Mesh(join(footParts).translate(0, -hipY, -0.01), feetMat));
+  body.add(feet);
   root.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
   // "zzz" de quem cochila
@@ -252,13 +257,21 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
         w.wing.morphTargetInfluences[1] = air * recover;
       }
       const tuck = pose.flying ? air * (1 - brake) : 0;
-      feet.position.y = 0.055 * tuck;
-      feet.rotation.x = -0.65 * tuck;
-      feet.scale.y = 1 - 0.4 * tuck;
       const settle = Math.sin((st.landingT / 0.24) * Math.PI);
       body.position.y = -0.04 * k + air * (0.012 + 0.006 * Math.cos(st.flap * Math.PI * 2)) - 0.012 * settle;
       body.rotation.x += ((pose.flying ? air * (0.18 - 0.6 * brake) : 0) - body.rotation.x) * (1 - Math.exp(-dt * 14));
       body.rotation.z += (THREE.MathUtils.clamp(-turn * 0.18, -0.16, 0.16) * air - body.rotation.z) * (1 - Math.exp(-dt * 10));
+      if (pose.flying) {
+        feet.rotation.set(-0.95 * tuck - body.rotation.x * brake, 0, -body.rotation.z * brake);
+        feet.scale.y = 1 - 0.25 * tuck;
+      } else {
+        // Pés verticais no apoio, quadris sempre presos ao corpo. As pernas flexionam
+        // no impacto/sono e a altura do corpo é resolvida a partir do contato.
+        feet.quaternion.copy(body.quaternion).invert();
+        feet.scale.y = 1 - 0.35 * settle - 0.6 * k;
+        hip.copy(feet.position).applyQuaternion(body.quaternion);
+        body.position.y = hipY * feet.scale.y - hip.y;
+      }
       tail.rotation.x += (0.28 + air * (0.15 + 0.45 * brake) - tail.rotation.x) * (1 - Math.exp(-dt * 12));
       tail.scale.x = 1 + air * (0.18 + 0.3 * brake);
       // A cabeça permanece estável no ar; o balanço volta gradualmente ao pousar.

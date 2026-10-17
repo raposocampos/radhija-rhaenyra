@@ -6,6 +6,7 @@ import { createPushCrate, createHingedGate } from '../../game/mechanics/index.js
 
 export const STAGES = ['start', 'passOpen', 'gateOpen', 'carrying', 'done'];
 const FLY_TIME = 1.3; // s do voo do pombo entre os poleiros
+const FLIGHT_LEAD = 0.3; // câmera chega ao poleiro antes da decolagem
 
 export const TEXT = {
   objective: {
@@ -29,8 +30,8 @@ export const TEXT = {
     narrow: 'A Rhaenyra não passa por baixo dos canos… a Radhija sim! (Q)',
     noWind: 'Sem vento, o cheiro não vai longe…',
     duct: 'O vento levou o cheiro pelo duto!',
-    flee: 'Que cheirinho! O pombo voou para o outro poleiro…',
-    opened: '…e pousou na placa: o portão abriu!',
+    flee: 'Olhe o poleiro amarelo: o pombo vai acionar a placa!',
+    opened: 'O peso do pombo baixou a placa e puxou a trava do portão!',
     gateBark: 'O pombo do portão está alto demais. Talvez o duto ajude…',
   },
   prompt: { duck: 'Pegar o patinho' },
@@ -46,6 +47,9 @@ export function createPuzzle(ctx) {
   const { layout, props = {}, world, scent, dogs, emit, cam, root, place } = ctx;
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, DUCK, GOAL, GATE, NAP_PIGEON, PLANTERS, PASS, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
   const gateMid = { x: GATE.hinge.x, z: (GATE.hinge.z + GATE.latchPost.z) / 2 };
+  const flightTarget = { x: PERCH_A.x, y: PERCH_A.y + 0.18, z: PERCH_A.z };
+  let revealT = 0;
+  let revealY = PERCH_B.y + 0.18;
 
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
@@ -104,11 +108,14 @@ export function createPuzzle(ctx) {
     onSmell: () => {
       if (S.pigeon !== 'A') return;
       S.pigeon = 'flying';
-      S.flyT = 0;
+      S.flyT = -FLIGHT_LEAD / FLY_TIME;
       nose.enabled = false;
       emit('pigeon:flee', { x: PERCH_A.x, z: PERCH_A.z, id: 'portao' });
       hints.now('flee', 3.4, 4);
-      cam?.focusShot((PERCH_A.x + PERCH_B.x) / 2, (PERCH_A.z + PERCH_B.z) / 2, { hold: 1.6 });
+      Object.assign(flightTarget, { x: PERCH_A.x, y: PERCH_A.y + 0.18, z: PERCH_A.z });
+      cam?.focusShot(PERCH_A.x, PERCH_A.z, {
+        target: flightTarget, inT: FLIGHT_LEAD, hold: FLY_TIME + 1.8, outT: 0.85, scale: 0.78,
+      });
     },
   });
 
@@ -164,22 +171,36 @@ export function createPuzzle(ctx) {
 
   // ---------- pombo do portão ----------
   function updatePigeon(dt) {
+    if (S.pigeon === 'B') {
+      // O mesmo plano revela placa, corda e portão sem voltar à dog entre os dois.
+      revealT = Math.min(1, revealT + dt / 0.8);
+      const r = revealT * revealT * (3 - 2 * revealT);
+      flightTarget.x = PERCH_B.x + (gateMid.x + 0.3 - PERCH_B.x) * r * 0.5;
+      flightTarget.y = revealY + (0.85 - revealY) * r;
+      flightTarget.z = PERCH_B.z + (gateMid.z - PERCH_B.z) * r * 0.5;
+      return;
+    }
     if (S.pigeon !== 'flying') return;
     S.flyT = Math.min(1, S.flyT + dt / FLY_TIME);
-    const k = S.flyT;
+    const k = Math.max(0, S.flyT);
     const e = k * k * (3 - 2 * k);
-    props.pigeon?.setPose?.({
+    const endY = props.plate?.surfaceY ?? PERCH_B.y + 0.13;
+    const flight = {
       x: PERCH_A.x + (PERCH_B.x - PERCH_A.x) * e,
-      y: PERCH_A.y + 0.02 + Math.sin(Math.PI * k) * 0.9,
+      y: (PERCH_A.y + 0.02) * (1 - e) + endY * e + Math.sin(Math.PI * k) * 0.9,
       z: PERCH_A.z + (PERCH_B.z - PERCH_A.z) * e,
       yaw: Math.atan2(PERCH_B.x - PERCH_A.x, PERCH_B.z - PERCH_A.z),
-      flying: k < 1, flightProgress: k,
-    });
+      flying: k > 0 && k < 1, flightProgress: k,
+    };
+    props.pigeon?.setPose?.(flight);
+    Object.assign(flightTarget, { x: flight.x, y: flight.y + 0.16, z: flight.z });
     if (k >= 1) landOnPlate();
   }
   function landOnPlate({ silent = false } = {}) {
     S.pigeon = 'B';
-    props.pigeon?.setPose?.({ x: PERCH_B.x, y: PERCH_B.y + 0.02, z: PERCH_B.z, yaw: -Math.PI / 2, flying: false });
+    revealT = 0;
+    revealY = flightTarget.y;
+    props.pigeon?.setPose?.({ x: PERCH_B.x, y: props.plate?.surfaceY ?? PERCH_B.y + 0.07, z: PERCH_B.z, yaw: -Math.PI / 2, flying: false });
     props.plate?.setPress?.(1);
     gate.setTarget(1);
     gate.lock();
@@ -190,7 +211,6 @@ export function createPuzzle(ctx) {
       emit('gate:locked', { x: gateMid.x + 0.5, z: gateMid.z });
       emit('item:revealed', { item: 'duck', x: DUCK.x, z: DUCK.z });
       hints.now('opened', 3.4, 4);
-      cam?.focusShot(gateMid.x + 0.3, gateMid.z, { hold: 1.2 });
     }
     setStage('gateOpen');
   }

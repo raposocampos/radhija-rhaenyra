@@ -342,7 +342,7 @@ export interface PuzzleContext {
   ctrls: Record<DogName, DogController>;
   emit(name: string, payload?: object): void;
   /** Planos de foco curtos (focusShot). */
-  cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number }): void; [k: string]: any };
+  cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number; y?: number; target?: { x: number; y: number; z: number } }): void; [k: string]: any };
   root: THREE.Group;
   /** Teletransporta uma dog (e reinicia a IA dela). */
   place(name: DogName, x: number, z: number, yaw?: number): void;
