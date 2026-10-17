@@ -9,10 +9,11 @@ import { buildGraph } from './audio/graph.js';
 import { SOUNDS, MIN_GAP, PITCH_VAR, VERB, UI_SOUNDS, LOW_PRIORITY, SOUND_NAMES } from './audio/sounds.js';
 import { startAmbient } from './audio/ambience.js';
 import { createRoll } from './audio/loops.js';
+import { storageKey } from '../game/storageKey.js';
 
 export { SOUND_NAMES };
 
-const VOL_KEY = 'operacao-cenoura:volume';
+const VOL_KEY = storageKey('operacao-cenoura:volume');
 
 // ---------------------------------------------------------------------------
 //  API

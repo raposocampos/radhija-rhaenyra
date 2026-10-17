@@ -27,32 +27,41 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
 - Neste projeto, a passagem de contexto é por Markdown. Não instalar ai-memory:
   o usuário reservou essa experiência para outro projeto.
 
-## Entregar a mudança publicada
+## Entregar por PR, prévia e aprovação
 
-- Um pedido de implementação inclui alterar o código, fazer commit, enviar ao
-  GitHub, acompanhar os testes e publicar a mudança no mesmo endereço:
-  https://raposocampos.github.io/radhija-rhaenyra/
+- **Esta regra substitui a autorização anterior de publicação automática.**
+  Um pedido de implementação autoriza alterar, fazer commit, enviar um branch,
+  abrir/atualizar um PR e publicar uma prévia. **Não autoriza integrar ao `main`
+  nem atualizar produção antes de o usuário testar e aprovar essa versão.**
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
-- Não pedir nova confirmação apenas para commit, push ou publicação de uma
-  mudança solicitada. Perguntas, análises e pedidos explicitamente limitados a
-  trabalho local não autorizam mudanças ou publicação por si só.
-- Antes de editar e enviar, conferir branch, estado do Git e atualizações remotas.
-  Preservar trabalho alheio; não usar force push nem descartar alterações para
-  facilitar a publicação. Não incluir mudanças não relacionadas no commit.
-- A publicação acontece a partir de `main`. Se estiver em outro branch ou
-  worktree, integrar somente o trabalho solicitado ao `main`, respeitando
-  proteções do repositório e sem sobrescrever trabalho de outras sessões.
-- Acompanhar o workflow **CI e publicação** (`.github/workflows/ci.yml`) para o
-  commit enviado. Ele instala dependências, checa tipos, roda os testes rápidos,
-  gera a build e publica no GitHub Pages somente após sucesso.
-- Se o CI falhar, inspecionar os logs, corrigir a causa e enviar a correção.
-  Não desativar testes ou contornar o CI para publicar. A versão anterior
-  permanece no ar enquanto o workflow não conseguir publicar a nova.
-- Só declarar a mudança publicada depois de confirmar sucesso do deploy do
-  commit correspondente e verificar que o endereço do jogo responde. Informar
-  o link do jogo e o resultado da validação. Se houver um bloqueio real de
-  autenticação, permissão ou infraestrutura, explicar o que falta sem alegar
-  conclusão e sem pedir tokens no chat.
+  Produção: https://raposocampos.github.io/radhija-rhaenyra/
+- Ler também `docs/ENTREGA.md`, com configuração, comandos e recuperação.
+  Antes de editar, conferir Git, worktrees e atualizações remotas. Criar um
+  branch por tarefa (`codex/...` ou `claude/...`). Quando houver agentes
+  simultâneos, usar worktrees separados; nunca compartilhar a mesma pasta de
+  trabalho nem trocar o branch de uma sessão alheia.
+- Preservar trabalho alheio; não usar force push, descartar alterações, fazer
+  push direto ao `main`, usar `--admin` ou relaxar proteções para entregar.
+  Não misturar tarefas não relacionadas. Integrar PRs um de cada vez.
+- Abrir um PR para `main` e acompanhar **CI e prévias**. Os checks obrigatórios
+  são `testes-e-build` e `publicar-site`: tipos, testes rápidos, build e prévia
+  precisam passar. Conferir os resultados do commit atual e a base atualizada.
+  Se falhar, corrigir a causa; não desativar verificações.
+- Entregar ao usuário o link da prévia, o PR, o commit validado, os resultados
+  e o que testar. Aguardar aprovação explícita para publicação. A aprovação pode
+  ser dada no chat: o agente faz as ações no GitHub sem exigir cliques do usuário.
+  Não aprovar o ambiente, ativar auto-merge nem integrar enquanto aguarda.
+- A aprovação vale para a versão apresentada. Novos commits, correções ou
+  atualização da base exigem CI/prévia novos e nova aprovação. Antes de integrar,
+  conferir novamente head/base/checks; usar merge squash com SHA esperado.
+- Depois da aprovação, integrar o PR, acompanhar o CI do `main` e liberar o
+  deployment pendente do ambiente `github-pages` correspondente à versão
+  aprovada. Essa liberação usa a aprovação já dada; não pedir confirmação em
+  duplicidade. Nunca liberar outra execução por engano.
+- Só declarar publicada em produção após sucesso do deploy e conferência de
+  `version.json` e do link principal. Uma prévia publicada não é produção.
+  Se houver bloqueio real, explicar o que falta sem alegar conclusão nem pedir
+  tokens no chat. Fotos e dados privados também não podem ir para prévias.
 
 ## Testes e build na nuvem
 
@@ -74,7 +83,7 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
   Não rodar E2E a cada edição de documentação.
 - Para mudanças que precisem de E2E antes da publicação, enviar primeiro um
   branch de trabalho, rodar o workflow nele e aguardar sucesso antes de
-  integrar ao `main`. O workflow de publicação não aguarda o E2E manual
+  pedir aprovação para integrar ao `main`. O workflow não aguarda o E2E manual
   automaticamente.
 - Conferir que os resultados correspondem ao código entregue. Não apresentar
   uma execução de um commit anterior como validação da versão atual.

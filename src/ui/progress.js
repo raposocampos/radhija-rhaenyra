@@ -1,6 +1,7 @@
 // Progresso salvo no navegador (localStorage, sempre com try/catch: sem storage o jogo segue sem salvar).
 // Formato: { v: 1, levels: { [id da fase]: { done, best (s), treats, total, clears } } }.
-export const PROG_KEY = 'rr-progress-v1';
+import { storageKey } from '../game/storageKey.js';
+export const PROG_KEY = storageKey('rr-progress-v1');
 
 export function loadProgress() {
   try {
