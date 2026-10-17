@@ -41,7 +41,9 @@ Depois, EST-04 foi aprovado e publicado pelo PR #7, squash
 Depois, EST-03 foi aprovado e publicado pelo PR #10, squash
 `9be3075ec05a4903218822f047be5405c51d108c`; CI `39063414327` e deploy
 `39063438736` aprovados, produção HTTP 200/version.json conferida. Essa é a
-base de EST-05; o coordenador delegou este plano ao executor de recursos.
+base de EST-05. Depois, PR #11 aprovado e publicado por squash `ca8c6f2`;
+CI main `39073156852`, deploy `39073191543` e versão pública conferidos.
+Essa é a base de EST-06, com coordenação em `codex/contratos-fases`.
 
 ## Boas práticas a preservar
 
@@ -72,8 +74,8 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
 | [x] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 aprovado, integrado e publicado em 9be3075 |
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
-| [ ] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | Implementado; validação na nuvem pendente |
-| [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
+| [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
+| [ ] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | Em execução; worktrees e escopos no CONTEXTO |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
@@ -82,8 +84,8 @@ Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-Na segunda rodada, EST-09, EST-04 e EST-03 foram publicados. Agora EST-05
-combina descarte e medição em um PR sobre `9be3075`, com novos
+EST-09, EST-04, EST-03 e EST-05 foram publicados. Agora EST-06 combina
+contratos e testes em um PR sobre `ca8c6f2`, com novos
 CI/prévia e E2E `todas` antes de pedir aprovação. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
@@ -265,15 +267,20 @@ Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base `9be3075`.
 Implementação: escopo por fase, caches por identidade, extras declarados,
 descarte de cheiro e debug, limpeza após falhas e onze testes com Three real.
 Regras para novas fases em `ARQUITETURA.md` §3.1. Instrumento separado em
-`codex/medicao-recursos` será combinado no mesmo PR: duas passagens de
+`codex/medicao-recursos` combinado no mesmo PR: duas passagens de
 aquecimento e três medidas comparáveis por fase, render completo com
 Chromium/SwiftShader e DPR 1. Medir geometrias/texturas/programas e raízes;
 não interpretar como MB, VRAM ou FPS. Testes de ownership complementam a
 observação limitada de geometrias/materiais globais do navegador.
 Prova negativa `39064044388` confirmou crescimento de 60 geometrias e 147
-texturas por ciclo após aquecimento, sem erros de navegador. PR #11 aberto;
-validação do head final ainda pendente neste checkpoint. Nenhum teste/build
-local; sem aprovação para produção.
+texturas por ciclo após aquecimento, sem erros de navegador. No head aprovado
+`c69a9f0`, CI `39072371165` passou 164 testes/tipos/build, prévia `39072399080`
+conferida e E2E recursos `39072373671` aprovou contagens estáveis nas cinco
+fases, com PNGs revisados. E2E completo `39071375058` passou no head `3a37f58`;
+o ajuste posterior limitou-se às capturas/documentação, com código do jogo
+idêntico. PR #11 integrado por squash `ca8c6f2` após aprovação do chat;
+CI main `39073156852` e deploy `39073191543` aprovados, produção conferida.
+Nenhum teste/build local. Detalhes de retomada no CONTEXTO.
 
 ### EST-06 Contratos
 

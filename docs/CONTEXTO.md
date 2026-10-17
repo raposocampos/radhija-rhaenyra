@@ -5,14 +5,41 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-05 — recursos gráficos em validação (2026-10-17, Codex)
+## EST-06 — contratos em execução (2026-10-17, Codex)
+
+Execução autorizada após aprovação/publicação do PR #11. Base `ca8c6f2`.
+Coordenador em `codex/contratos-fases`, worktree `contratos-fases`, responsável
+por integração, documentação, PR e CI. Dois executores em worktrees próprios:
+
+- `codex/tipos-fases`, worktree `tipos-fases`: `src/types.d.ts`, definições,
+  puzzles e retornos dos cenários, fronteira dinâmica do núcleo, eventos de
+  carregamento, `jsconfig.json` e fixture `test/types/`. Ligar `LevelDef<P>`,
+  `LevelBuild<P>` e `PuzzleContext<P>` às props reais de cada fase; fechar o
+  índice permissivo e declarar `plate.surfaceY` da fase 4.
+- `codex/contratos-testes`, worktree `contratos-testes`: helpers e testes
+  runtime. Substituir a fabricação automática de props/métodos por fábricas
+  explícitas; manter ausências reais de props opcionais em `_modelo`/`_pulo`.
+  Testar cenário real da fase 4 (altura da placa, pressão/reset e pombo), itens
+  carregáveis, portões e reset, preservando carregamento/descarte.
+- Combinar a interface antes de integrar. `jsconfig.json` hoje exclui os
+  helpers `.mjs`: a fixture direcionada precisa realmente checar as factories
+  e reprovar contratos inválidos, não apenas acrescentar JSDoc sem cobertura.
+  Tipagem completa de layouts, navegação e IA fica fora desta entrega.
+
+Neste checkpoint, implementações em andamento; sem CI próprio aprovado ou
+aprovação para produção de EST-06. Próximo passo: combinar commits, revisar,
+rodar tipos/testes/build e E2E `todas` no GitHub, conferir a prévia e apresentar
+o head final ao usuário. Nenhum teste/build local. O coordenador é o único
+editor dos registros compartilhados; revisões adicionais são somente leitura.
+
+## EST-05 — recursos gráficos publicados (2026-10-17, Codex)
 
 Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base publicada
-`9be3075`. Execução autorizada após aprovação/publicação de #10; a nova versão
-exige aprovação própria. O executor é o único editor de CONTEXTO/PLANO nesta
-etapa. Medição e workflow de `codex/medicao-recursos` já estão combinados no
-mesmo PR; revisão independente é somente leitura. Após a pausa por limite,
-o coordenador retomou como único editor deste worktree.
+`9be3075`. Medição e workflow de `codex/medicao-recursos` combinados no
+[PR #11](https://github.com/raposocampos/radhija-rhaenyra/pull/11). Usuário
+aprovou o head `c69a9f0`; integrado por squash em
+`ca8c6f2941b06dd545394c29ff236b632537720f`, com árvores idênticas. Publicado;
+não repetir integração/deploy de #11.
 
 - Escopo por fase criado antes de `build`, com coleta da árvore atual e extras
   declarados: geometrias, materiais, texturas, instâncias e debug. Caches são
@@ -36,28 +63,20 @@ o coordenador retomou como único editor deste worktree.
 - Prova negativa `39064044388`, instrumento `98c96a2` sobre a base sem correção:
   25 amostras, sem erros/warnings de navegador; reprovou pelo crescimento de
   60 geometrias e 147 texturas por ciclo e descarte de geometria global.
-- Neste checkpoint: [PR #11](https://github.com/raposocampos/radhija-rhaenyra/pull/11)
-  aberto, revisão sem bloqueios e nenhum teste/build local. No head `3a37f58`,
-  CI `39064629305` passou 164 testes/tipos/build; prévia `39064663149` conferida
-  HTTP/version. E2E `todas` `39071375058` passou 313 verificações de gameplay,
+- E2E `todas` `39071375058`, head `3a37f58`, passou 313 verificações de gameplay,
   quatro de infraestrutura, 19 de smoke e 28 de recuperação. A medição aprovou
   25 amostras, 15 após aquecimento, contagens estáveis nas cinco fases, globais
   preservados e erros/warnings vazios. Capturas da recuperação conferidas.
-- A inspeção dos PNGs revelou que `visibility:hidden` no container não escondia
-  os filhos com `visibility:visible`. Este ajuste usa `display:none` somente
-  durante a captura. Código do jogo, workflow e critérios de contagem não mudam.
-  Próximo passo: enviar, conferir CI/prévia e rodar a suíte afetada `recursos`
-  no novo head, inspecionando as cinco imagens. O E2E completo acima pertence
-  a `3a37f58`; não apresentá-lo como execução do commit posterior. Resultados
-  finais ficam no PR, sem commit apenas para status. Aguardar aprovação do
-  usuário antes de integrar. EST-06–08 seguem pendentes; PR #9 é proposta.
-
-Preparação EST-06, somente diagnóstico: `LevelDef` perde o genérico de props,
-`PuzzleContext.props` é `any`; `Fase4Props.plate` não declara `surfaceY` usado
-pelo puzzle real. O Proxy headless fabrica props/métodos e pode ocultar esse
-tipo de divergência; testes de mundo real atuais cobrem sobreposição. Próxima
-entrega deve ligar os contratos, usar dublês explícitos e testar objetos reais,
-preservando o ownership de EST-05, sem reescrita ampla do núcleo.
+- O último ajuste mudou somente captura e contexto (`display:none` temporário
+  nos overlays); código do jogo idêntico ao E2E completo. No head aprovado
+  `c69a9f0`, CI `39072371165` passou 164 testes/tipos/build, prévia `39072399080`
+  conferida HTTP/version e E2E `recursos` `39072373671` aprovado. Cinco PNGs
+  revisados, sem overlays ou corrupção aparente. Platôs geometria/textura/programa:
+  F1 521/45/242, F2 546/62/269, F3 706/59/254, F4 822/70/244, F5 519/58/235.
+- CI main `39073156852` aprovou 164 testes/tipos/build. Deploy `39073191543`
+  passou após liberar somente o deployment `7146356056`, usando a aprovação
+  do chat. Produção HTTP 200/version.json confirmou `ca8c6f2` e o run do main.
+  Nenhum teste/build local; próxima entrega EST-06 exige aprovação própria.
 
 ## EST-03 — recuperação publicada (2026-10-17, Codex)
 
@@ -134,12 +153,12 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Menu, progresso e carregamento publicados; recursos gráficos em validação.**
-Em 2026-10-17, o usuário aprovou #8, #7 e #10, publicados respectivamente em
-`d38574a`, `2ee7e07` e `9be3075`, base atual de produção. EST-05 avança em
-worktrees próprios, com implementação, medição e revisão delimitadas. A proposta
+**Menu, progresso, carregamento e recursos gráficos publicados; contratos em execução.**
+Em 2026-10-17, o usuário aprovou #8, #7, #10 e #11, publicados respectivamente
+em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`, base atual de produção.
+EST-06 avança em worktrees próprios, com escopos delimitados acima. A proposta
 da fase 6 está no PR #9, sem tema/objeto aprovado ou nova fase implementada.
-Testes continuam no GitHub; a nova entrega EST-05 exige aprovação própria.
+Testes continuam no GitHub; a nova entrega EST-06 exige aprovação própria.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
 O coordenador usa branch `codex/menu-jogar-visivel`, worktree
