@@ -5,7 +5,72 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-06 — contratos em validação (2026-10-17, Codex)
+## EST-07B — eventos em validação (2026-10-17, Codex)
+
+Implementação `40e83ce` em `codex/eventos-nucleo`, worktree `eventos-nucleo`,
+base publicada `597c8f2`. Executor entregou código/testes e liberou a worktree;
+coordenador assumiu documentação, envio e validação. Extraídos emissão, tabela
+de vibração, histórico e diagnóstico da câmera para `gameEvents.js`.
+O cálculo da vibração é adiado até o núcleo conferir input/estado depois dos
+listeners, preservando ordem e acesso tardio durante a inicialização.
+
+Sete testes novos cobrem registro/dispatch/vibração, identidade/limite/limpeza
+do histórico, câmera sem dispatch e integração com jogo/pausa/comemoração.
+Três provas negativas mantêm `GameEmit` na API extraída. Revisão independente
+sem bloqueios; `git diff --check` aprovado. Não foram executados testes/tipos/
+build locais. Nenhuma configuração de personagens ou nova fase neste branch.
+
+Próximo passo: abrir PR separado, acompanhar CI/prévia e E2E `todas` no head
+que contém este checkpoint. Validar controles, vibração, câmera, recuperação
+e recursos. EST-07A está no PR #13 (`0571ccf`), ainda sem aprovação; integrar
+um PR por vez. Depois que #13 entrar, atualizar esta base e repetir a validação
+antes de pedir aprovação da nova versão. Resultados finais ficam no PR, sem
+novo commit apenas para status do próprio CI. Não liberar produção antecipadamente.
+
+## EST-07 — organização das frentes (2026-10-17, Codex)
+
+Autorizada após aprovação do PR #12. Base publicada `597c8f2`.
+Coordenador em `codex/estabilizacao-nucleo`, worktree `estabilizacao-nucleo`,
+responsável por documentação, integração, PRs, CI e publicação aprovada.
+Duas entregas pequenas, com comportamento preservado:
+
+- EST-07A, `codex/config-personagens`, worktree `config-personagens`:
+  extrair atributos globais para `src/dogs/config.js`; posições continuam nos
+  oito layouts. O modelo visual deixa de importar a fase 1. Testar isolamento
+  das configurações e preservação das habilidades/valores existentes.
+- EST-07B, `codex/eventos-nucleo`, worktree `eventos-nucleo`:
+  extrair emissão, vibração e histórico de diagnóstico para `gameEvents.js`.
+  Preservar ordem registrar → emitir → vibrar, limite de 500 registros,
+  identidade do histórico e `camera:shot` apenas diagnóstico. Estado,
+  carregamento, reset e descarte permanecem no núcleo.
+- Cada executor altera somente seu código/testes; coordenador reconcilia
+  documentos. Entregas em PRs separados, integração de uma por vez e nova
+  validação/aprovação se a base mudar. Nenhum teste/build local.
+
+EST-07A implementada: `5bee73a` do executor integrado como `b7c8523` na branch
+do coordenador. `DOG_CONFIG` protegido e sem `start`, `withStart` copia posição
+e guia visual; oito layouts e modelo visual independentes da fase 1. Três
+testes novos cobrem isolamento, posições e habilidades dos controladores.
+Revisão do diff sem bloqueios; arquitetura/guia atualizados. Nenhuma mudança
+de mecânica, dependência, workflow ou produção nesta entrega.
+
+EST-07A foi enviada no PR #13 e aguarda a conclusão da validação da versão;
+EST-07B está implementada conforme o checkpoint acima. Conferir tipos,
+testes/build/prévias e E2E no GitHub, depois apresentar versões para aprovação.
+Conferir resultados pelo SHA, inclusive o commit que contém este registro.
+Faltam EST-07 e EST-08 para encerrar esta rodada de estabilização; a divisão
+gradual do núcleo não significa reescrever todo o jogo nesta rodada.
+
+Fase 6: usuário pediu outro cenário e puzzle mais criativo, sem repetir o
+pombo (2026-10-17). A proposta anterior de piquenique/ursinho não foi aprovada.
+Frente `codex/proposta-fase6`, worktree `proposta-fase6`, reformula o PR #9,
+sem implementar gameplay. Pulo e superbafo devem resolver partes conectadas
+de uma cooperação nova. Tema/objeto continuam pendentes da nova apresentação.
+As dependências técnicas EST-03/04/05/06 já foram entregues; um protótipo
+poderá avançar em paralelo após a escolha do desenho. Não prometer data de
+conclusão antes de validar a mecânica e o percurso.
+
+## EST-06 — contratos publicados (2026-10-17, Codex)
 
 Execução autorizada após aprovação/publicação do PR #11. Base `ca8c6f2`.
 Coordenador em `codex/contratos-fases`, worktree `contratos-fases`, responsável
@@ -38,16 +103,23 @@ ainda aceitavam métodos inexistentes: literais JS intermediários tinham índic
 aberto implícito. Corrigidos nos produtores em `d61914c`, com anotações de
 retorno/variável verificadas, sem casts nem remoção das provas negativas.
 As interfaces dos puzzles estão fechadas; não afirmar tipagem exaustiva de
-todas as funções internas. Revisão independente sem bloqueios; CI novo pendente.
+todas as funções internas. Revisão independente sem bloqueios.
 
-Neste checkpoint, sem CI próprio aprovado ou aprovação para produção de
-EST-06. Documentação de arquitetura/guia atualizada; nenhum trabalho sem commit
-planejado após enviar esta atualização. Próximo passo: abrir PR sobre `ca8c6f2`,
-acompanhar tipos/testes/build, corrigir causas se necessário e rodar E2E `todas`
-no GitHub. Revisar o diff combinado e a prévia, apresentar o head final e aguardar
-aprovação. Conferir Git/GitHub por SHA, inclusive o commit deste checkpoint;
-resultados finais ficam no PR, sem novo commit apenas para status. Nenhum
-teste/build local. Coordenador é o único editor dos registros compartilhados.
+[PR #12](https://github.com/raposocampos/radhija-rhaenyra/pull/12), head aprovado
+`4086c1995cc14ec200af0e7228f59d8f83061bdf`, base `ca8c6f2`:
+CI `39073923073` passou 173 testes, tipos (19 provas negativas) e build;
+prévia `39073952808` conferida por HTTP/version.json. E2E `39073972653`
+passou no mesmo head: 313 verificações de gameplay, quatro de infraestrutura,
+19 de smoke e 28 de recuperação. Recursos estáveis nas cinco fases, 25 amostras,
+globais preservados e erros/warnings vazios. Capturas de cenários, recuperação
+e amostras comparativas da fase 4 revisadas sem regressão aparente.
+
+Usuário aprovou a versão; integrada por squash em
+`597c8f2b77b7765b0b911f3e25629c74c8e4eecd`, árvore idêntica ao head aprovado.
+CI main `39075921425` aprovou 173 testes/tipos/build. Deploy `39075957502`
+concluído após liberar somente o deployment `7146778253` com a aprovação
+do chat. Produção HTTP 200/version.json confirmou `597c8f2` e o run do main.
+Publicado; não repetir integração/deploy de #12. Próximo trabalho é EST-07.
 
 ## EST-05 — recursos gráficos publicados (2026-10-17, Codex)
 
@@ -172,10 +244,11 @@ aprovado e ao merge sintético; produção confirmada.
 
 **Menu, progresso, carregamento e recursos gráficos publicados; contratos em validação.**
 Em 2026-10-17, o usuário aprovou #8, #7, #10 e #11, publicados respectivamente
-em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`, base atual de produção.
-EST-06 avança em worktrees próprios, com escopos delimitados acima. A proposta
-da fase 6 está no PR #9, sem tema/objeto aprovado ou nova fase implementada.
-Testes continuam no GitHub; a nova entrega EST-06 exige aprovação própria.
+em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`. PR #12 também publicado em
+`597c8f2`, base atual de produção. EST-07 avança em worktrees próprios, com
+escopos delimitados acima. O PR #9 redesenha a proposta da fase 6 após o pedido
+de outro cenário, sem repetir o pombo; não há nova fase implementada.
+Testes continuam no GitHub; cada entrega da EST-07 exige aprovação própria.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
 O coordenador usa branch `codex/menu-jogar-visivel`, worktree
@@ -407,10 +480,10 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3, #6, #5, #4, #8 e #7 integrados e publicados. Produção de #7
-   confirmada em `2ee7e07`, deploy `39061964438`; não repetir merge/deploy.
-   Conferir CI/prévia e E2E `todas` do novo head de #10 sobre essa base;
-   não reutilizar resultados nem aprovação das versões anteriores.
+3. PRs #1 a #8, #10, #11 e #12 integrados e publicados. Produção atual
+   confirmada em `597c8f2`, deploy `39075957502`; não repetir merge/deploy.
+   EST-07 está em execução conforme o checkpoint inicial; PR #9 redesenha
+   apenas a proposta de fase. Não reutilizar aprovação de versões anteriores.
    Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

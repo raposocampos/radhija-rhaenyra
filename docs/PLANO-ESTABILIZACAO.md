@@ -43,7 +43,9 @@ Depois, EST-03 foi aprovado e publicado pelo PR #10, squash
 `39063438736` aprovados, produção HTTP 200/version.json conferida. Essa é a
 base de EST-05. Depois, PR #11 aprovado e publicado por squash `ca8c6f2`;
 CI main `39073156852`, deploy `39073191543` e versão pública conferidos.
-Essa é a base de EST-06, com coordenação em `codex/contratos-fases`.
+EST-06 também foi aprovado e publicado pelo PR #12, squash `597c8f2`;
+CI main `39075921425`, deploy `39075957502` e versão pública conferidos.
+Essa é a base de EST-07, com coordenação em `codex/estabilizacao-nucleo`.
 
 ## Boas práticas a preservar
 
@@ -75,8 +77,8 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 aprovado, integrado e publicado em 9be3075 |
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
-| [ ] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | Implementado e combinado; validação na nuvem pendente |
-| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
+| [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
+| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | Configuração no PR #13; eventos implementados; validar cada versão e integrar em sequência |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
@@ -84,9 +86,9 @@ Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-EST-09, EST-04, EST-03 e EST-05 foram publicados. Agora EST-06 combina
-contratos e testes em um PR sobre `ca8c6f2`, com novos
-CI/prévia e E2E `todas` antes de pedir aprovação. Cada versão
+EST-00 a EST-06 e EST-09 foram publicados. Faltam duas etapas: EST-07 e
+EST-08. EST-07 separa configuração e eventos em entregas menores sobre
+`597c8f2`, com CI/prévia e E2E antes de pedir aprovação. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
@@ -296,8 +298,11 @@ ao puzzle, factories reais preservam seus tipos e dublês não fabricam membros.
 Nove testes runtime cobrem objetos reais e opcionais dos protótipos; a fixture
 `test/types/contratos.ts` prova rejeição de props/payloads incompatíveis.
 Eventos de carregamento com nome literal são tipados; listeners, nomes
-dinâmicos, layouts/navegação e IA permanecem limites explícitos. Neste marco,
-CI/prévia e E2E completo ainda pendentes. Detalhes e próxima ação no CONTEXTO.
+dinâmicos, layouts/navegação e IA permanecem limites explícitos. Head aprovado
+`4086c19`: CI `39073923073` passou 173 testes/tipos/build e 19 provas negativas;
+prévia `39073952808` conferida, E2E completo `39073972653` aprovado no mesmo
+head. PR #12 integrado por squash `597c8f2`, árvore idêntica. CI main
+`39075921425` e deploy `39075957502` aprovados, produção conferida.
 
 ### EST-07 Núcleo
 
@@ -306,6 +311,23 @@ CI/prévia e E2E completo ainda pendentes. Detalhes e próxima ação no CONTEXT
 - Separar responsabilidades do núcleo em PRs pequenos, com comportamento
   preservado e testes das fronteiras alteradas. Evitar misturar refatoração
   com nova mecânica.
+
+Escopo desta rodada em duas entregas, sem reescrever todo o núcleo:
+
+- EST-07A: `codex/config-personagens`, atributos em `src/dogs/config.js`,
+  posições nos layouts e modelo visual sem dependência da fase 1. Commit
+  `5bee73a` integrado como `b7c8523` no coordenador; três testes de contrato,
+  isolamento e posições. Validação na nuvem pendente neste checkpoint.
+- EST-07B: `codex/eventos-nucleo`, emissão/vibração/histórico em `gameEvents.js`,
+  preservando ordem, limite e diagnóstico. Estado, carregamento, reset e
+  descarte continuam em `game.js`. Implementação `40e83ce`, sete testes runtime
+  e três provas negativas de tipos; revisão independente sem bloqueios.
+  CI/prévia e E2E próprio ainda pendentes neste checkpoint.
+
+Coordenador em `codex/estabilizacao-nucleo` revisa e entrega PRs separados.
+Verificar identidade de configurações e histórico, ordem e efeitos da emissão;
+tipos/testes/build e E2E na nuvem. Demais extrações futuras dependem de uma
+necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 ### EST-08 Desempenho e expansão
 
@@ -355,7 +377,9 @@ head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação
   Responsável: agente de planejamento, `codex/proposta-fase6`, worktree
   `proposta-fase6`. Proposta no [PR #9](https://github.com/raposocampos/radhija-rhaenyra/pull/9),
   head `62b9b6c`. Documento e contexto próprios; nenhum código de fase.
-  Escolher/aprovar tema e objeto antes de implementar conteúdo.
+  O usuário pediu outro cenário e puzzle mais criativo, sem repetir o pombo
+  (2026-10-17). O PR #9 está sendo reformulado; piquenique/ursinho não foram
+  aprovados. Escolher o novo desenho antes de implementar conteúdo.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
 - Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.

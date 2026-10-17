@@ -29,6 +29,7 @@ src/core/engine.js         renderer, céu, névoa, luz e pós-processamento; app
 src/core/events.js         barramento de eventos (on/off/once/emit)
 src/game/                  NÚCLEO genérico
   game.js                  estados, carregamento de fases, entrada → dogs, companheira, comemoração, depuração
+  gameEvents.js            emissão, padrões de vibração e histórico de diagnóstico por instância
   input.js                 teclado + controle traduzidos para códigos lógicos (KeyE, KeyQ, Shift…)
   collision.js             colisão 2D (círculo da dog × caixas, círculos, segmentos), sem Three
   navigation.js            grafo de navegação da companheira (Dijkstra + linha de visão)
@@ -349,7 +350,16 @@ está em `src/game/mechanics/gooseNpc.js`.
 
 ## 8. Eventos
 
-Barramento em `src/core/events.js`. Quem emite e quem ouve:
+Barramento em `src/core/events.js`. O emissor do jogo vem de `createGameEvents`
+em `src/game/gameEvents.js`, com dispatch, relógio e callback de vibração
+injetados. A ordem é registrar → emitir no barramento → decidir/calcular a
+vibração. O núcleo verifica input e estado depois dos listeners; o módulo
+extraído não acessa DOM, cena, puzzle ou carregamento. O histórico conserva
+os últimos 500 registros, é limpo no mesmo array e mantém referências dos
+payloads. Consultas devolvem uma lista independente. `camera:shot` apenas
+registra coordenadas arredondadas, sem emitir no barramento nem vibrar.
+
+Quem emite e quem ouve:
 
 - **UI → jogo**: `ui:play`, `ui:pause`, `ui:resume`, `ui:restart`, `ui:nextLevel`, `ui:selectLevel {index}`, `ui:menu`, `ui:cancelLoad`.
 - **Fase e estado**: `game:state {state, prev, level}`, `game:reset`, `level:loading {...}`, `level:loaded {...}`,
