@@ -124,6 +124,14 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
 - Publicação falhou: consultar logs, deployment e `version.json`; o branch
   `pages-state` é salvo antes do deploy e pode conter uma versão aprovada que
   ainda não chegou ao site. Não concluir que push equivale a publicação.
+- No PR #10, `39058810643` informou sucesso no deploy-pages, mas a URL ficou
+  404 apesar de artefato/caminho/identidade corretos; a causa permanece
+  indeterminada. Repetir só o job criou dois artefatos `github-pages`, e o
+  publicador recusou a duplicidade. A recuperação foi reexecutar o CI
+  `39058785550` no mesmo head/base (tentativa 2), gerando novo workflow de
+  publicação `39059294611` e URL, ambos conferidos com sucesso. Nesse caso,
+  não insistir no rerun do publicador nem apagar artefatos para contornar a
+  checagem; confirmar head/base, gerar execução nova e conferir HTTP/version.
 - Não reenviar uma execução antiga do main para fazer rollback: o workflow
   rejeita versões que não sejam o head atual. Reverter via novo PR, com CI,
   prévia e aprovação. Para incidente urgente, pedir orientação explícita.

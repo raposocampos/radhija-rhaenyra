@@ -7,11 +7,11 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## EST-03 — recuperação de carregamento (2026-10-17, Codex)
 
-Implementação em andamento na branch `codex/recuperacao-carregamento`,
-worktree `recuperacao-carregamento`, a partir de `b1b026e` (PR #4 já integrado).
-Autorizada pelo usuário e coordenada em paralelo com EST-09/EST-04; não inclui
-aprovação de integração nem publicação. O registro histórico abaixo antecede
-esta etapa; o coordenador reconciliará status e ordem de integração no plano.
+Implementado no [PR #10](https://github.com/raposocampos/radhija-rhaenyra/pull/10),
+branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
+Após a aprovação e publicação do PR #8, o usuário autorizou atualizar e validar
+#7 e #10. Esta retomada incorpora por merge normal a base `d38574a`, sem force
+push nem código novo de recuperação. Não autoriza integrar/publicar #10.
 
 - `loadLevel` observa rejeições desde o início e resolve um resultado booleano.
   Em falha, entra em `load-error` e emite `level:error`. Comandos normais ficam
@@ -28,25 +28,51 @@ esta etapa; o coordenador reconciliará status e ordem de integração no plano.
 - Arquivos: núcleo/entrada, UI/cortina/markup, bloco CSS de erro ao fim do
   arquivo, helper headless, testes novos, workflow E2E e documentação pertinente.
   Não altera o bloco de foco do menu, progress.js, CI obrigatório ou publicação.
-- Validação neste marco: inspeção local e `git diff --check`; nenhum teste,
-  tipo ou build local. CI, prévia e E2E completo do novo head ainda pendentes.
-  Próximo passo: enviar PR, revisar o diff e acompanhar essas execuções na
-  nuvem; registrar resultados na descrição do PR sem commit só de status.
+- Versão anterior `6da8d31`, sobre `b1b026e`: CI `39058785550` tentativa 2
+  aprovou tipos, 134 testes e build; publicação `39059294611` passou com prévia
+  HTTP 200 e identidade conferida. E2E `39058783617` aprovou 299 verificações
+  de gameplay, 4 de infraestrutura, 19 de smoke e 28 de recuperação; capturas
+  da fase 4 com `errors: []`. Incidente de publicação e recuperação constam
+  no PR e em `ENTREGA.md`. Esses resultados não validam a nova combinação.
+- Neste marco: merge sem conflitos, contexto reconciliado e diff revisado;
+  nenhum teste/tipo/build local. CI, prévia e E2E `todas` do novo head ainda
+  pendentes. Próximo passo: enviar a atualização e acompanhar esses checks
+  na nuvem; resultados finais ficam na descrição do PR, sem commit só de status.
+  Quando #7 for integrado, #10 precisará incorporar essa base e revalidar
+  novamente antes de pedir aprovação. O plano permanece herdado de `d38574a`;
+  sua consolidação atual está no PR #7 e será incorporada nessa próxima atualização.
 
 ## Onde paramos
 
-**Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
-autorizou executar o plano com este chat coordenando até dois executores,
-worktrees separados e testes no GitHub. A aprovação de produção continua
-vinculada a cada versão apresentada, conforme `AGENTS.md`.
+**Segunda rodada da estabilização em execução.** Em 2026-10-17, o usuário
+aprovou integrar o PR #4 e continuar com agentes em tarefas isoladas. Depois,
+aprovou o PR #8 (EST-09, menu), já integrado e publicado. Dois executores
+atualizam/revalidam os PRs #10 (EST-03, carregamento) e #7 (EST-04, progresso)
+sobre essa base, ainda sem aprovação para integração. Planejamento da próxima fase foi revisado
+em paralelo, sem tema aprovado nem nova fase implementada. Testes continuam
+no GitHub e a aprovação de produção vale para cada versão apresentada.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
-O coordenador usa branch `codex/avaliacao-evolucao`, worktree
-`avaliacao-evolucao`, para preservar a avaliação, o checklist e as instruções
-de coordenação. Alterações desta entrega: `AGENTS.md`, este contexto e o plano;
-o código do jogo não muda nesta branch. Commit/PR e checks devem ser conferidos
-no GitHub antes de retomar; não considerar a validação da base como validação
-desta entrega documental.
+O coordenador usa branch `codex/menu-jogar-visivel`, worktree
+`menu-jogar-visivel`; essa entrega partiu de `b1b026e29abb7cc80fff6a13224e967d78415151`.
+EST-09: conflito entre a animação de entrada `rr-rise` e a de foco
+`rr-focus-pulse` reiniciava a entrada com opacidade zero ao sair do botão.
+Reprodução em `7a05466de2f3d605139ef2b8f7336b0925a8824b`,
+[E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
+56 verificações passaram e quatro falharam pelo motivo esperado, opacidade
+zero ao descer por teclado/D-pad/analógico e ao retornar ao mouse.
+Correção: excluir Jogar apenas da animação de pulso do foco; entrada, halo e
+anel de seleção permanecem. Revisão independente sem bloqueios. O teste
+amostra estilos dentro do navegador, para não perder a falha entre leituras.
+O head corrigido `8494143` passou CI `39058279947` (126 testes/tipos/build),
+prévia `39058313791` e E2E controle `39058279323` (60 verificações, sem falhas
+ou erros de console). O usuário aprovou essa versão; o PR #8 foi integrado
+por squash em `d38574a54d1203a3f7d71dd26541167d93819db3`, com árvore idêntica
+ao head aprovado e ao merge sintético. [CI main 39060437829](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060437829)
+aprovou tipos, 126 testes e build Vite 6.4.4. [Deploy 39060461084](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060461084)
+concluído após liberação do deployment `7144319080` usando essa aprovação.
+Produção HTTP 200; `version.json` confirmou commit/head `d38574a`, CI acima e
+tentativa 1. Nenhum teste/build local. Não repetir integração ou publicação.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
@@ -99,21 +125,32 @@ desta entrega documental.
   concluído com sucesso usando essa aprovação. Produção HTTP 200 e
   `version.json` confirmou `18629a0` e execução `39056035625`.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
-  preserva o plano e consolida os resultados. Conferir os checks do head
-  documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração: #6 e #5 integrados; resta #4. O coordenador incorporou
-  a base `18629a0` no PR #4 e reconciliou os registros dos dois executores,
-  preservando suas decisões e evidências. A entrega de #4 continua documental;
-  conferir CI/prévia do novo head e aguardar aprovação própria antes de integrar.
-- Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
-  reservadas aos executores nem integrar/publicar sem aprovação da versão.
-  Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
-  isso não representa correções nem testes novos já implementados.
-- EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
-  ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
-  corrigir depois; registrar e reproduzir em tarefa própria, identificando
-  o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
-  dos PRs #6 e #5 não inclui uma correção desse bug.
+  aprovado pelo usuário no head `2fcbca3` e integrado por squash em
+  `b1b026e29abb7cc80fff6a13224e967d78415151`.
+  [CI main 39057715283](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057715283)
+  e [deploy 39057744110](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057744110)
+  concluídos com sucesso. Produção HTTP 200 e `version.json` conferido no
+  squash e CI acima. Primeira etapa (#6, #5, #4) integrada e publicada.
+- EST-03: executor em `codex/recuperacao-carregamento`, worktree
+  `recuperacao-carregamento`, incorporando a base `d38574a` no PR #10. Dono do núcleo,
+  inicialização, UI de erro, cortina, testes de carregamento e acréscimo
+  isolado ao E2E manual. Não alterar regras de foco nem teste de controle.
+- EST-04: executor em `codex/progresso-validado`, worktree
+  `progresso-validado`, atualizando o PR #7 para a base `d38574a`. Dono de `src/ui/progress.js` e testes
+  próprios. Preservar saves v1 válidos; versões não suportadas não podem ser
+  sobrescritas silenciosamente. Sem mudanças no menu ou núcleo.
+- EST-09: coordenador dono do bloco de foco em `src/ui/ui.css`, regressões
+  em `test-gamepad.mjs` e checklist. O CSS de erro de EST-03 permanece em bloco
+  próprio, sem editar essas regras. Retomadas dos executores são registradas
+  no contexto de suas branches e reconciliadas na integração.
+- Ordem desta rodada: EST-09 publicado; EST-04 e EST-03 em revalidação,
+  cada nova versão exige aprovação própria. Após integrar #7, atualizar e
+  revalidar #10 novamente. EST-05
+  depende de EST-03; EST-06/07/08 continuam planejados. A próxima fase pode
+  ser desenhada/prototipada isoladamente. O usuário autorizou preparar uma
+  proposta combinando pulo e superbafo; ela será documentada por um terceiro
+  agente em `codex/proposta-fase6`, worktree `proposta-fase6`, sem código novo
+  nem mudança no catálogo. Tema/objeto sugeridos ainda precisam de aprovação.
 
 ## Evidências da avaliação anterior
 
@@ -239,11 +276,9 @@ desta entrega documental.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3, #6 e #5 integrados e publicados. Produção de #5 confirmada
-   em `18629a0`, deploy `39056064315`; não repetir merge/deploy nem pedir
-   novamente a aprovação já usada para essa versão. PR #4 está reconciliado
-   com essa base: conferir seus checks/prévia e obter aprovação para integrar
-   a documentação. Preservar o checklist; EST-03/EST-04 apenas preparados e
-   EST-09 adiado conforme o usuário. Não instalar ai-memory.
+3. PRs #1, #2, #3, #6, #5, #4 e #8 integrados e publicados. Produção de #8
+   confirmada em `d38574a`, deploy `39060461084`; não repetir merge/deploy.
+   Retomar a revalidação dos PRs #7/#10 acima e conferir os executores EST-03/04
+   antes de editar áreas compartilhadas. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

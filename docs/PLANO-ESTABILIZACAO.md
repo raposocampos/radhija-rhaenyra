@@ -14,8 +14,9 @@ A [avaliação registrada](CONTEXTO.md) confirmou 123 testes rápidos e
 299 verificações E2E nessa base. Novos commits precisam de validação própria.
 
 Um coordenador mantém prioridades, reconcilia registros e revisa entregas.
-Até dois executores trabalham em escopos delimitados, cada um com branch e
-worktree próprios. O coordenador acompanha CI e prévias, apresenta as versões
+Dois executores implementam escopos delimitados, cada um com branch e
+worktree próprios; uma revisão sem edição pode avançar em paralelo. O
+coordenador também implementa uma tarefa isolada, acompanha CI e prévias, apresenta as versões
 ao usuário e integra um PR por vez, somente após aprovação.
 
 As tarefas podem ser desenvolvidas em paralelo; uma alteração na base exige
@@ -27,8 +28,9 @@ Ordem de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e PR #4
 (documentação consolidada). O #6 foi aprovado no chat, integrado e publicado
 em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. O #5 foi aprovado após revalidação
 e integrado/publicado em `18629a0e3877cc6c56201f5a12b3048feb1514e9`, nova base do PR #4.
-O plano está preservado no branch remoto de #4; sua integração aguarda os
-checks da atualização documental e aprovação própria.
+O #4 foi aprovado, integrado e publicado em `b1b026e29abb7cc80fff6a13224e967d78415151`,
+base da segunda rodada. CI `39057715283`, deploy `39057744110` e versão de
+produção conferidos. A aprovação desses PRs não inclui as próximas correções.
 
 ## Boas práticas a preservar
 
@@ -54,20 +56,26 @@ validados. O estado de publicação é registrado separadamente.
 
 | Critérios atendidos | ID | Entrega | Responsável | Dependência | Situação neste marco |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 em validação |
+| [x] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 aprovado, integrado e publicado |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
 | [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
-| [ ] | EST-03 | Recuperação de falhas no carregamento | A atribuir | EST-01 e EST-02 integrados | Planejado |
-| [ ] | EST-04 | Validação e migração do progresso | A atribuir | EST-01 integrado | Planejado |
+| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | Em execução, branch codex/recuperacao-carregamento |
+| [ ] | EST-04 | Validação e migração do progresso | Executor progresso | EST-01 integrado | Em execução, branch codex/progresso-validado |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
-| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | A atribuir | Após a primeira etapa, conforme pedido do usuário | Planejado |
+| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | Corrigido, aguardando CI/prévia/E2E na branch codex/menu-jogar-visivel |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
+
+Na segunda rodada, integrar primeiro EST-09, depois EST-04 e EST-03,
+revalidando a base a cada entrega. Áreas reservadas e checkpoints em
+`CONTEXTO.md`; cada executor registra sua entrega na própria branch.
+Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
+principal. Ainda não há tema/objeto aprovado para a fase 6.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -166,14 +174,14 @@ commit `18629a0` e execução `39056035625`.
 - Verificar a estratégia para arquivos antigos e atualização da página,
   preservando progresso e o fluxo confiável de publicação.
 
-Preparação somente por leitura: `loadLevel` em `src/game/game.js` inicia a
+Diagnóstico de partida: `loadLevel` em `src/game/game.js` inicia a
 importação antes de esperar 420 ms da cortina e só depois aguarda sua promessa.
 Capturar a rejeição desde o início. Separar recuperação antes do descarte da
 fase antiga do erro após montagem parcial; não tentar restaurar recursos já
 descartados. Ligar a ação de recuperação a `ui.js`, `curtain.js` e ao erro de
 `boot()` em `main.js`, incluindo os chamadores assíncronos da seleção de fase.
 
-Cenários propostos, ainda sem implementação: rejeição antes dos 420 ms; erro
+Cenários atribuídos ao executor, em implementação: rejeição antes dos 420 ms; erro
 no primeiro carregamento; exceção em `build`/`createPuzzle`/`reset`/descarte;
 falha seguida de repetição de comandos sem duplicar montagem ou `level:loaded`;
 aba antiga com chunk ausente recuperada por recarga. O helper
@@ -189,7 +197,7 @@ controladas para essas regressões. Manter a coleta estrita de erros nos E2E.
 - Testar os casos de recuperação e manter isolamento entre prévias e produção.
 
 Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
-`src/ui/progress.js`. Cenários propostos, ainda sem implementação:
+`src/ui/progress.js`. Cenários atribuídos ao executor, em implementação:
 
 - `levels` como array, registro de fase inválido e contadores como strings;
   concluir uma fase deve produzir números válidos, sem concatenar `clears`.
@@ -244,7 +252,33 @@ será identificada na reprodução.
 - Manter o botão visível ou uma transição intencional e consistente, sem
   prejudicar seleção, foco, teclado ou controle.
 - Acrescentar regressão útil à suíte de controle e entregar prévia própria.
-  Nenhuma correção desta tarefa foi incluída nos PRs atuais.
+  Nenhuma correção desta tarefa foi incluída nos PRs #4, #5 ou #6.
+
+Responsável: coordenador, `codex/menu-jogar-visivel`, worktree
+`menu-jogar-visivel`, base `b1b026e`. Escopo: foco em `ui.css`, regressão no
+E2E de controle e documentação. Diagnóstico: animação de foco substitui a
+entrada do botão; ao perder foco, a entrada pode reiniciar invisível.
+Reprodução negativa em `7a05466`, [E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
+56 verificações aprovadas, quatro falhas de opacidade zero, sem falhas nas
+46 verificações anteriores. Excluir apenas Jogar do pulso de foco corrige a
+substituição da animação. Revisão independente sem bloqueios; validar o head
+corrigido com CI, prévia e E2E `controle` antes de apresentar para aprovação.
+
+### Preparação da próxima fase (proposta)
+
+- Usar `_modelo` e registro em `DEV_LEVELS` para protótipo isolado, com pasta
+  e testes próprios. A prévia do PR isola o save; `DEV_LEVELS` sozinho não.
+- O usuário autorizou preparar a proposta combinando pulo e superbafo.
+  Responsável: agente de planejamento, `codex/proposta-fase6`, worktree
+  `proposta-fase6`. Documento e contexto próprios; nenhum código de fase.
+  Escolher/aprovar tema e objeto antes de implementar conteúdo.
+- Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
+  sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
+- Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.
+- Ao registrar a fase, atualizar `hasNext` da fase 5 nos testes e incluir
+  E2E no runner e nas opções/matriz do workflow. O smoke descobre o catálogo.
+- Em EST-08, corrigir o guia de criação de fases: orientar testes na nuvem
+  e documentar a atualização do workflow, hoje omitida.
 
 ## Evidências e retomada
 
