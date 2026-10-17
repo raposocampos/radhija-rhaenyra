@@ -167,8 +167,11 @@ test('fase 6: pouso real aciona uma vez; outro pulo alterna e pouso fora não ac
   assert.equal(info(h).routeChanges, 1);
   assert.equal(h.log('dog:land').length, 1);
   assert.equal(h.ctrls.rhaenyra.landed, false, 'núcleo consumiu landed depois do puzzle');
+  const hintsAfterLanding = h.log('hint').length;
   h.run(2);
   assert.equal(info(h).routeChanges, 1, 'ficar sobre o pedal não repete o impacto');
+  assert.equal(h.log('hint').slice(hintsAfterLanding).some((hint) => hint.text === h.puzzle.TEXT.hint.jump), false,
+    'trilho correto não pede outro pulo que desfaria a escolha');
   jumpPedal(h);
   assert.equal(info(h).route, 'loop');
   assert.equal(info(h).routeChanges, 2);

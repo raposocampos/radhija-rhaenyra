@@ -17,7 +17,13 @@ Coordenador em `codex/prototipo-expresso`, worktree `prototipo-expresso`, sobre
 testes `aef928c` e fábrica headless estrita `637662d` combinados; executores em
 worktrees exclusivos `expresso-cenario` e `expresso-testes`, agora sem edições.
 Revisor independente identificou a fábrica ausente nas suítes comuns; corrigida.
-Nenhum outro bloqueio por leitura; resultados automáticos ainda pendentes.
+Primeiro CI `39079850415`: tipos e 205/206 testes passaram; detector visual
+achou nove faces coplanares na ferrovia/molas. Geometria corrigida em `2aac58f`;
+CI `39079922180` passou 206 testes/tipos/build. Partida Expresso no head anterior
+`8758911` passou 20/20, sem erros (job `117534395824`); infra/recursos daquele
+run `39079849755` falharam no mesmo prebuild, não são aprovados. Dica automática
+não volta a pedir pulo após escolher a estrela; regressão adicionada antes do
+E2E completo. Revalidar este commit final, sem reaproveitar validações antigas.
 
 Apenas `DEV_LEVELS`, acesso `?level=fase6&play`; campanha/menu/progresso principal
 preservados. Oficina, ferrovia cercada e passeio externo; Rhaenyra pousa no pedal,
@@ -32,8 +38,8 @@ Limites desta entrega: espirro visual sem som exclusivo e curvas do trem por
 segmentos (vagão gira imediatamente). Acabamento, catálogo/progressão definitivos
 ficam para a entrega seguinte após revisar o protótipo. Proposta em
 PROPOSTA-FASE6.md. Somente inspeção/diff-check locais; tipos/testes/build/E2E e
-revisão das capturas serão feitos a partir do GitHub. Próximo passo: enviar PR,
-executar `expresso` e depois `todas` no head final, conferir prévia/recursos/arte.
+revisão das capturas serão feitos a partir do GitHub. PR #15 aberto; próximo passo: validar head atual,
+executar `todas` no head final, conferir prévia/recursos/arte.
 Resultados finais no PR, sem commit apenas para atualizar status do próprio CI.
 
 EST-08 iniciou em paralelo no worktree/branch `desempenho-expansao` /

@@ -161,7 +161,7 @@ export function createPuzzle(ctx) {
     S.pedalT = Math.max(0, S.pedalT - dt);
     const standing = Object.values(ctrls).some((c) => !(c.jumpT > 0) && onPedal(c));
     props.pedal.setPress(S.pedalT > 0 ? Math.sin((S.pedalT / PEDAL.pulseTime) * Math.PI / 2) : standing ? 0.12 : 0);
-    if (S.stage === 'waiting' && standing && !(rh.jumpT > 0) && S.pedalT === 0) hints.cond('jump');
+    if (S.stage === 'waiting' && S.route === 'loop' && standing && !(rh.jumpT > 0) && S.pedalT === 0) hints.cond('jump');
     if (S.stage === 'sneezing') {
       S.timer += dt;
       props.nose.setSneeze(Math.sin(Math.min(1, S.timer / TRAIN.sneezeTime) * Math.PI));
