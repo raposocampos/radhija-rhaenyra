@@ -17,6 +17,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  infra-build:
+    name: Infraestrutura e smoke do build
+    if: inputs.suite == 'todas'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Gerar build de produção desta execução E2E
+        run: npm run build
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Provar que erros do navegador reprovam o E2E
+        run: node --test tools/scripts/test-e2e-infra.mjs
+      - name: Verificar build e fases sob demanda em subcaminho de prévia
+        run: node tools/scripts/smoke-build.mjs
   partidas:
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04

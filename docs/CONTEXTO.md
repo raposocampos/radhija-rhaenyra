@@ -9,12 +9,14 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 2026-10-17, Codex. Branch `codex/atualizar-vite`, worktree isolado
 `atualizar-vite`. Objetivo autorizado: corrigir a dependência vulnerável sem
-alterar o jogo. Base conferida no Git/GitHub: `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
-O PR #3 já foi integrado e publicado; o bloco anterior abaixo é histórico e
-não indica uma aprovação ou publicação pendente daquele PR.
+alterar o jogo. [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5)
+em atualização sobre a base `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`,
+conferida no Git/GitHub após a integração aprovada do PR #6. Incorporado o
+main por merge normal, preservando o histórico publicado da branch.
 
 - Implementado: Vite exato `6.3.5` → `6.4.4` em `package.json` e no lockfile.
-  Nenhuma outra dependência, script, workflow ou configuração foi alterada.
+  Nenhuma outra dependência, script, workflow ou configuração própria mudou.
+  O merge da base incorpora a infraestrutura E2E já entregue no PR #6.
   O servidor de desenvolvimento continua restrito a `127.0.0.1`; produção
   serve somente arquivos estáticos.
 - Versão escolhida pelo [aviso oficial GHSA-rq7h-c2jc-7f22](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22):
@@ -27,17 +29,53 @@ não indica uma aprovação ou publicação pendente daquele PR.
   nenhum teste, build ou partida foi executado no PC. Não foi executada uma
   prova de exploração: a evidência de correção é a versão corrigida do
   fornecedor e a consulta do lockfile, não uma alegação de PoC local.
-- Pendente: commit/PR, tipos, testes rápidos, build, prévia e E2E `todas`
-  no GitHub para o novo SHA. Resultados anteriores da base não validam esta
-  mudança. Conferir também os erros de console nos logs das nove suítes.
+- O head anterior `4f03e389335051dd2633f28feac4c6bd67c49084` passou no
+  CI 39051377056 (123 testes/build), prévia 39051408164 e E2E 39051384592
+  (299 verificações, sem erros de console). Esses resultados não validam
+  antecipadamente o novo merge nem a infraestrutura acrescentada na base.
+- Pendente: enviar este merge e conferir tipos, testes rápidos, build,
+  prévia e E2E `todas` no novo SHA. O E2E deve incluir as nove partidas e
+  o job `infra-build`, com prova negativa e smoke de seu próprio build.
+  Conferir logs e `version.json`; não confundir esse build com o artefato
+  binário produzido pelo CI para a prévia.
 - Próximo passo: acompanhar essas execuções e apresentar PR, prévia e SHA
   ao usuário. Aguardar aprovação explícita dessa versão antes de integrar;
   não ativar auto-merge nem liberar produção. O coordenador reconcilia este
-  bloco com o checklist geral da rodada de estabilidade.
+  bloco com o checklist geral da rodada de estabilidade. A correção do botão
+  Jogar (EST-09) permanece fora desta entrega e será tratada depois.
 
 ## Onde paramos
 
-**PR #3 em correção de pernas/câmera; produção não autorizada.**
+### EST-01 — E2E confiável (2026-10-17, Codex)
+
+O usuário aprovou a prévia de `6ebacd999da6bd36249cd76ef3e90a319752b666`;
+o [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6) foi integrado
+por squash em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. A publicação desse
+commit no main é acompanhada pelo coordenador; conferir seu deploy e
+`version.json` antes de declarar produção atualizada. Não repetir o merge.
+
+- Harness soma erros de console/exceções às falhas; runner também reprova
+  resumo ausente ou inconsistente, preservando o diagnóstico completo.
+- Prova negativa no E2E manual usa Chromium e processos reais: página saudável aprova;
+  console.error, exceção e asserção injetados reprovam com diagnóstico específico.
+- Smoke serve somente `dist` em subcaminho de prévia, abre todas as fases na
+  mesma aba e confere imports sob demanda, estado inicial e recursos carregados.
+- [Revisão do PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6#discussion_r4303596789)
+  apontou conflito com a separação do E2E exigida em `AGENTS.md`. Chromium,
+  prova negativa e smoke foram movidos de `ci.yml` para um job de `e2e.yml`,
+  executado somente com `suite=todas`, em paralelo às nove partidas existentes.
+- O job E2E gera seu próprio build do head selecionado; o smoke não verifica
+  o mesmo artefato binário publicado pelo CI da prévia. CI obrigatório mantém
+  tipos/testes Node/build; workflows seguem somente leitura e publicador intacto.
+- A versão aprovada `6ebacd9` passou no CI 39052841286 (126 testes/build),
+  prévia 39052874365 e E2E 39052837420 (299 verificações, quatro provas de
+  infraestrutura e 19 verificações do smoke). Esses resultados são desse
+  head; a atualização do Vite precisa de novas execuções no PR #5.
+- Próximo passo desta rodada: revalidar o PR #5 sobre a base integrada e
+  apresentar a nova prévia para aprovação. Nenhum teste/build local.
+
+**Histórico do PR #3: entrega já integrada e publicada em `baa8af0`.**
+O registro abaixo descreve a fase anterior de revisão; não repetir merge/deploy.
 Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
 Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
 pombo → placa → portão legíveis.
@@ -156,9 +194,10 @@ pombo → placa → portão legíveis.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 e #2 concluídos e publicados; não repetir seus merges/deploys.
-   PR #3 é a entrega dos pombos e depende da aprovação humana da versão validada.
-   Conferir head/base/CI/prévia/E2E atuais antes de qualquer integração.
+3. PRs #1, #2 e #3 concluídos; PR #6 integrado após aprovação. Não repetir
+   merges. O coordenador acompanha o deploy de `9fcce75`; o PR #5 deve ser
+   revalidado sobre essa base e receber nova aprovação antes de integração.
+   Conferir head/base/CI/prévia/E2E atuais antes de qualquer entrega.
    Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

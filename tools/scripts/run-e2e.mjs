@@ -9,6 +9,7 @@ import { createServer } from 'node:net';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from './lib/harness.mjs';
+import { runSuites } from './lib/suite-runner.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const SUITES = [
@@ -89,22 +90,6 @@ async function startServer(port) {
   throw new Error(`o Vite não respondeu em ${url} em 60 s:\n${out}`);
 }
 
-/** Roda um script de partida e devolve { code, summary } (repassa a saída ao vivo). */
-function runSuite(s, url) {
-  return new Promise((res) => {
-    const child = spawn(process.execPath, [resolve(ROOT, s.script), '--url', url], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
-    let tail = '';
-    child.stdout.on('data', (d) => {
-      process.stdout.write(d);
-      tail = (tail + d).slice(-4000);
-    });
-    child.on('close', (code) => {
-      const m = [...tail.matchAll(/(\d+) ok, (\d+) falha\(s\)/g)].at(-1);
-      res({ code: code ?? 1, ok: m ? +m[1] : null, fail: m ? +m[2] : null, consoleErrors: /ERROS DE CONSOLE/.test(tail) });
-    });
-  });
-}
-
 let exitCode = 0;
 try {
   let url = typeof args.url === 'string' ? args.url : null;
@@ -114,19 +99,7 @@ try {
     url = await startServer(port);
   }
   console.log(`[e2e] servidor: ${url}`);
-  const results = [];
-  for (const s of suites) {
-    console.log(`\n[e2e] ===== ${s.id} (${s.script}) =====`);
-    const t0 = Date.now();
-    const r = await runSuite(s, url);
-    results.push({ ...s, ...r, sec: Math.round((Date.now() - t0) / 1000) });
-    if (r.code !== 0) exitCode = 1;
-  }
-  console.log('\n[e2e] resumo');
-  for (const r of results) {
-    const counts = r.ok === null ? 'sem contagem' : `${r.ok}/${r.ok + r.fail}`;
-    console.log(`  ${r.code === 0 ? 'ok    ' : 'FALHOU'} ${r.id.padEnd(11)} ${counts.padEnd(8)} ${String(r.sec).padStart(4)} s${r.consoleErrors ? '  (com erros de console)' : ''}`);
-  }
+  exitCode = await runSuites(suites, url, ROOT);
 } catch (err) {
   console.error(`[e2e] erro: ${err.message}`);
   exitCode = 1;
