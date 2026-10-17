@@ -23,7 +23,16 @@ CI `39079922180` passou 206 testes/tipos/build. Partida Expresso no head anterio
 `8758911` passou 20/20, sem erros (job `117534395824`); infra/recursos daquele
 run `39079849755` falharam no mesmo prebuild, não são aprovados. Dica automática
 não volta a pedir pulo após escolher a estrela; regressão adicionada antes do
-E2E completo. Revalidar este commit final, sem reaproveitar validações antigas.
+E2E completo `39080061925` passou no head `95bb78d`: 333 verificações de
+gameplay, quatro de infraestrutura, 23 de smoke, 28 de recuperação; 30 amostras
+de recursos/18 medidas/30 comparações estáveis, sem erros/warnings/descarte global.
+Arte procedural revisada com capturas das seis fases, coerente com a linguagem
+existente. CI `39080064637` aprovou 206 testes/tipos/build e prévia conferida.
+Revisão visual detectou dica de bafo ainda exibindo R com controle: formatação
+compartilhada agora reconhece R (mapeamento L2/LT já existia), E2E verifica glyph
+visível. Captura adicional sem linhas de debug acompanha a revisão artística,
+sem modificar as amostras medidas. Revalidar este commit final, sem reaproveitar
+validações antigas.
 
 Apenas `DEV_LEVELS`, acesso `?level=fase6&play`; campanha/menu/progresso principal
 preservados. Oficina, ferrovia cercada e passeio externo; Rhaenyra pousa no pedal,

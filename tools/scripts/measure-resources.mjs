@@ -189,6 +189,32 @@ try {
         // todo o overlay só nesta captura, sem tocar no canvas ou no render.
         style: '#ui, #loading { display: none !important; }',
       });
+      if (cycle === WARMUP + MEASURED && sample.level === DEV_LEVEL) {
+        // Imagem adicional para revisão artística. A amostra acima continua
+        // incluindo debug; só ocultamos suas linhas após terminar a medição.
+        const debugVisible = await page.evaluate(() => {
+          const { engine } = window.__game;
+          const debug = engine.scene.getObjectByName('debug-draw');
+          const previous = debug.visible;
+          debug.visible = false;
+          window.__resourceMeasurement.originals.render(1 / 60, 1);
+          engine.renderer.getContext().finish();
+          return previous;
+        });
+        try {
+          await page.locator('canvas').first().screenshot({
+            path: resolve(OUT, `${sample.level}-cenario.png`), timeout: 60000,
+            style: '#ui, #loading { display: none !important; }',
+          });
+        } finally {
+          await page.evaluate((previous) => {
+            const { engine } = window.__game;
+            engine.scene.getObjectByName('debug-draw').visible = previous;
+            window.__resourceMeasurement.originals.render(1 / 60, 1);
+            engine.renderer.getContext().finish();
+          }, debugVisible);
+        }
+      }
     }
   }
   for (const level of levels) {
