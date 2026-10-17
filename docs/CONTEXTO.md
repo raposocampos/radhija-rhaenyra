@@ -5,7 +5,7 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-06 — contratos em execução (2026-10-17, Codex)
+## EST-06 — contratos em validação (2026-10-17, Codex)
 
 Execução autorizada após aprovação/publicação do PR #11. Base `ca8c6f2`.
 Coordenador em `codex/contratos-fases`, worktree `contratos-fases`, responsável
@@ -26,11 +26,21 @@ por integração, documentação, PR e CI. Dois executores em worktrees próprio
   e reprovar contratos inválidos, não apenas acrescentar JSDoc sem cobertura.
   Tipagem completa de layouts, navegação e IA fica fora desta entrega.
 
-Neste checkpoint, implementações em andamento; sem CI próprio aprovado ou
-aprovação para produção de EST-06. Próximo passo: combinar commits, revisar,
-rodar tipos/testes/build e E2E `todas` no GitHub, conferir a prévia e apresentar
-o head final ao usuário. Nenhum teste/build local. O coordenador é o único
-editor dos registros compartilhados; revisões adicionais são somente leitura.
+Implementações combinadas: tipos `89370fc` → `e7d366d`, testes `7a449c3` →
+`37c1bbc`. Nove testes runtime novos e fixture de tipos com exemplos inválidos;
+factories reais e dublês entram na checagem, preservando retorno dos helpers de
+medição com genéricos. Emissão de eventos de carregamento tipada por nome
+literal; listeners, nomes dinâmicos, layouts e navegação continuam fronteiras
+abertas, documentadas. Gameplay e ownership de EST-05 preservados.
+
+Neste checkpoint, sem CI próprio aprovado ou aprovação para produção de
+EST-06. Documentação de arquitetura/guia atualizada; nenhum trabalho sem commit
+planejado após enviar esta atualização. Próximo passo: abrir PR sobre `ca8c6f2`,
+acompanhar tipos/testes/build, corrigir causas se necessário e rodar E2E `todas`
+no GitHub. Revisar o diff combinado e a prévia, apresentar o head final e aguardar
+aprovação. Conferir Git/GitHub por SHA, inclusive o commit deste checkpoint;
+resultados finais ficam no PR, sem novo commit apenas para status. Nenhum
+teste/build local. Coordenador é o único editor dos registros compartilhados.
 
 ## EST-05 — recursos gráficos publicados (2026-10-17, Codex)
 
@@ -153,7 +163,7 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Menu, progresso, carregamento e recursos gráficos publicados; contratos em execução.**
+**Menu, progresso, carregamento e recursos gráficos publicados; contratos em validação.**
 Em 2026-10-17, o usuário aprovou #8, #7, #10 e #11, publicados respectivamente
 em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`, base atual de produção.
 EST-06 avança em worktrees próprios, com escopos delimitados acima. A proposta

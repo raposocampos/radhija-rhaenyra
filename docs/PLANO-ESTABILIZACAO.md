@@ -75,7 +75,7 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 aprovado, integrado e publicado em 9be3075 |
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
-| [ ] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | Em execução; worktrees e escopos no CONTEXTO |
+| [ ] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | Implementado e combinado; validação na nuvem pendente |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
@@ -289,6 +289,15 @@ Nenhum teste/build local. Detalhes de retomada no CONTEXTO.
 - Validar contratos de objetos reais e impedir que dublês aceitem qualquer
   método silenciosamente. Cobrir incompatibilidades concretas.
 - Manter tipos, testes rápidos e E2E aprovados sem uma reescrita geral do jogo.
+
+Implementado em `codex/contratos-fases` sobre `ca8c6f2`, combinando frentes
+`codex/tipos-fases` e `codex/contratos-testes`. `LevelDef<P>` liga import/build
+ao puzzle, factories reais preservam seus tipos e dublês não fabricam membros.
+Nove testes runtime cobrem objetos reais e opcionais dos protótipos; a fixture
+`test/types/contratos.ts` prova rejeição de props/payloads incompatíveis.
+Eventos de carregamento com nome literal são tipados; listeners, nomes
+dinâmicos, layouts/navegação e IA permanecem limites explícitos. Neste marco,
+CI/prévia e E2E completo ainda pendentes. Detalhes e próxima ação no CONTEXTO.
 
 ### EST-07 Núcleo
 

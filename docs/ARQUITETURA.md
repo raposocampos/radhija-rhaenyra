@@ -132,9 +132,10 @@ montagem parcial é limpa e somente a recarga pode retomar a partida.
 
 ## 4. Fases
 
-### 4.1 Definição (`src/levels/faseN/index.js`, tipo `LevelDef`)
+### 4.1 Definição (`src/levels/faseN/index.js`, tipo `LevelDef<P>`)
 
 ```js
+/** @type {import('../../types').LevelDef<import('../../types').Fase2Props>} */
 export default {
   id: 'fase2', number: 2, name: 'Operação Bolinha', subtitle: 'Crepúsculo na área de serviço',
   intro: 'texto do cartão de abertura',
@@ -198,9 +199,11 @@ Cores em string hex são sRGB; arrays `[r, g, b]` são lineares. Luzes extras (l
 `build` (o `buildWorld` de `world/index.js`, trazido pelo `load` da §4.1) monta tudo dentro de `root` e devolve:
 
 - `props`: objetos que o puzzle anima (portão, item, placas…). O formato de cada fase está em `src/types.d.ts`
-  (`Fase1Props` a `Fase5Props`). O puzzle sempre usa `?.` ao chamar um prop
-  (`props.gate?.setOpen?.(t)`), então a lógica roda mesmo sem o cenário (é assim que os testes em Node funcionam).
-  Todo prop com estado precisa de `reset()` que volte ao início, inclusive o item à posição `home`.
+  (`Fase1Props` a `Fase5Props`) e liga `LevelDef<P>`, `LevelBuild<P>` e `PuzzleContext<P>`.
+  Props visuais realmente opcionais são declarados com `?`, como placa/portão no placeholder.
+  O uso de `?.` no puzzle não substitui o contrato: os dublês precisam oferecer os métodos declarados,
+  sem fabricar membros desconhecidos. O reset do conjunto de props deve restaurar seu estado;
+  o item carregável volta à origem pelo ciclo de reset do puzzle.
 - `seeThrough`: objetos que podem ficar entre a câmera e as dogs (cerca, sebe, portão, a toalha da mesa) e recebem o
   recorte pontilhado.
 
@@ -348,8 +351,9 @@ está em `src/game/mechanics/gooseNpc.js`.
 
 Barramento em `src/core/events.js`. Quem emite e quem ouve:
 
-- **UI → jogo**: `ui:play`, `ui:pause`, `ui:resume`, `ui:restart`, `ui:nextLevel`, `ui:selectLevel {index}`, `ui:menu`.
+- **UI → jogo**: `ui:play`, `ui:pause`, `ui:resume`, `ui:restart`, `ui:nextLevel`, `ui:selectLevel {index}`, `ui:menu`, `ui:cancelLoad`.
 - **Fase e estado**: `game:state {state, prev, level}`, `game:reset`, `level:loading {...}`, `level:loaded {...}`,
+  `level:error {index, id?, name?, initial, canReturn, message}` (retorno só antes de alterar a fase anterior),
   `victory {timeSec, collected, total, level, levelId, hasNext, texts}`.
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
@@ -366,6 +370,12 @@ Barramento em `src/core/events.js`. Quem emite e quem ouve:
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.
+
+Os eventos declarados em `LifecycleEvents` têm payload verificado quando emitidos
+com nome literal. Eventos específicos ainda não modelados e nomes recebidos
+como `string` continuam abertos; isso não constitui validação de dados em runtime.
+Ao ampliar o mapa, inclua uma prova negativa na fixture de tipos para impedir
+que um payload inválido seja aceito por uma assinatura genérica permissiva.
 
 ## 9. Interface, áudio e efeitos
 
@@ -446,10 +456,10 @@ no log de depuração como `camera:shot {x, z}` (não passa pelo barramento de e
 arquivo, inclusive nos novos. Os tipos das APIs públicas estão em `src/types.d.ts` e entram nos `.js` por JSDoc:
 
 ```js
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase2Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase2Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) { … }
@@ -457,6 +467,20 @@ export function createPuzzle(ctx) { … }
 
 A checagem é tolerante (`strict: false`): ela pega nomes errados, campos que não existem e formatos trocados nas
 APIs, sem exigir tipo em tudo. O editor (VS Code) usa o mesmo `jsconfig.json`.
+
+Para cada fase, use o mesmo tipo de props na definição (`LevelDef<P>`), no retorno
+do cenário (`LevelBuild<P>`) e no contexto do puzzle (`PuzzleContext<P>`). O `load`
+só traz o `build` correspondente. O catálogo reúne fases de formatos diferentes;
+essa fronteira dinâmica não deve virar um cast de props dentro de cada puzzle.
+
+Os testes de contratos combinam objetos reais do cenário com fábricas explícitas
+de dublês em `test/helpers/props.mjs`. A fixture `test/types/contratos.ts` entra
+explicitamente na checagem: casos inválidos com `@ts-expect-error` devem continuar
+reprovando; se um contrato voltar a aceitar tudo, o TypeScript acusa a diretiva
+sem erro correspondente. Os testes runtime conferem também comportamento, como
+a altura da placa da fase 4 e sua relação com o pombo, que uma anotação não prova.
+Essas verificações rodam no CI, junto de tipos/testes/build; partidas ficam no E2E
+manual. Layouts, navegação e IA ainda têm fronteiras abertas para trabalho futuro.
 
 ## 12. Convenções
 

@@ -82,7 +82,7 @@ export function createPuzzle(ctx) {
   const hints = createHints(emit, TEXT);
   const plate = createPressurePlate({ id: 'plate', ..., requires: 'large', emit, prop: props.plate });
   const gate = createHingedGate({ id: 'gate', cfg: GATE, world, prop: props.gate });
-  const ball = createCarryItem({ obj: props.ball?.object, dogs, scene: root, name: 'ball' });
+  const ball = createCarryItem({ obj: props.ball?.object || props.item?.object, dogs, scene: root, name: 'ball' });
   // 2. estado (S.stage) e setStage(), que avisa o núcleo (onStageChange) para atualizar o objetivo
   // 3. objective(nomeAtiva) → { text, target, stage }: o texto do HUD e onde fica o marcador
   // 4. update(dt, { active, ctrls }): avança as mecânicas e as etapas; devolve 'delivered' no fim
@@ -94,7 +94,9 @@ export function createPuzzle(ctx) {
 
 Regras que evitam dor de cabeça:
 
-- Chame os props sempre com `?.` (`props.gate?.setOpen?.(t)`): a lógica precisa rodar sem o cenário (testes em Node).
+- Declare os props realmente opcionais com `?` e acesse-os com `?.` (`props.gate?.setOpen?.(t)`).
+  O placeholder entrega `item`, sem fabricar portão/placa/`ball`; o dublê deve preservar essas ausências.
+  Métodos inexistentes devem ser detectados pelos contratos, não criados automaticamente pelo teste.
 - Mostre o próximo passo no `objective` e use `hints.cond`/`hints.now` para dicas quando o jogador erra (ex.: "Leve
   demais! Precisa de alguém mais pesado…"). Dicas condicionais não se repetem enquanto a condição durar.
 - Emita eventos para o que deve ter som/partícula (`emit('gate:open', { x, z })`); o feedback (`src/fx/feedback.js`)
@@ -185,7 +187,10 @@ O `npm test` confere isso (`test/carregamento.test.mjs`). Depois de `npm run bui
 `dist/assets/fase6-world-….js`.
 
 - Cada prop que o puzzle usa precisa existir com o mesmo nome e os métodos esperados; escreva o formato em
-  `src/types.d.ts` (como `Fase2Props`) para o TypeScript conferir.
+  `src/types.d.ts` (como `Fase2Props`). Use esse tipo em `LevelDef<Fase6Props>`,
+  `LevelBuild<Fase6Props>` e `PuzzleContext<Fase6Props>` para ligar definição, cenário e puzzle.
+  Acrescente uma fábrica explícita de props para os testes headless e cubra os contratos importantes
+  também com objetos reais do cenário; confira a fixture de tipos em `test/types/contratos.ts`.
 - `reset()` de cada prop volta tudo ao início, inclusive o item à posição `home`.
 - Reaproveite `src/world/util.js` (materiais, texturas em canvas, sombras de contato, folhagem, lona listrada),
   `src/world/plants.js`, `src/world/treats.js` (os ossinhos prontos: `buildTreats(root, COLLECTIBLES)`),
