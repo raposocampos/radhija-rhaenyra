@@ -181,7 +181,9 @@ try {
       await save();
       if (cycle === WARMUP + MEASURED) await page.locator('canvas').first().screenshot({
         path: resolve(OUT, `${sample.level}.png`), timeout: 60000,
-        style: '#ui, #loading { visibility: hidden !important; }',
+        // visibility é sobrescrita pelos filhos ativos da UI; display remove
+        // todo o overlay só nesta captura, sem tocar no canvas ou no render.
+        style: '#ui, #loading { display: none !important; }',
       });
     }
   }

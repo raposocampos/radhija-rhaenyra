@@ -10,8 +10,9 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base publicada
 `9be3075`. Execução autorizada após aprovação/publicação de #10; a nova versão
 exige aprovação própria. O executor é o único editor de CONTEXTO/PLANO nesta
-etapa. Medição e workflow são preparados em `codex/medicao-recursos` e serão
-combinados no mesmo PR; revisão independente é somente leitura.
+etapa. Medição e workflow de `codex/medicao-recursos` já estão combinados no
+mesmo PR; revisão independente é somente leitura. Após a pausa por limite,
+o coordenador retomou como único editor deste worktree.
 
 - Escopo por fase criado antes de `build`, com coleta da árvore atual e extras
   declarados: geometrias, materiais, texturas, instâncias e debug. Caches são
@@ -35,16 +36,21 @@ combinados no mesmo PR; revisão independente é somente leitura.
 - Prova negativa `39064044388`, instrumento `98c96a2` sobre a base sem correção:
   25 amostras, sem erros/warnings de navegador; reprovou pelo crescimento de
   60 geometrias e 147 texturas por ciclo e descarte de geometria global.
-  A captura foi ajustada para ocultar overlays somente durante o PNG, sem
-  mudar render, contagens ou critérios.
 - Neste checkpoint: [PR #11](https://github.com/raposocampos/radhija-rhaenyra/pull/11)
-  aberto, revisão sem bloqueios e nenhum teste/build local. CI `39064448928`
-  do head anterior `3b61c38` passou 164 testes/tipos/build; prévia `39064473238`
-  conferida HTTP/version e E2E `39064454175` em andamento. Esses resultados
-  não validam o head com o ajuste de captura. Próximo passo:
-  enviar a atualização e aguardar CI/prévia e E2E `todas` do head final,
-  incluindo estabilização e inspeção visual. Resultados finais ficam no PR,
-  sem commit apenas para status. EST-06–08 seguem pendentes; PR #9 é proposta.
+  aberto, revisão sem bloqueios e nenhum teste/build local. No head `3a37f58`,
+  CI `39064629305` passou 164 testes/tipos/build; prévia `39064663149` conferida
+  HTTP/version. E2E `todas` `39071375058` passou 313 verificações de gameplay,
+  quatro de infraestrutura, 19 de smoke e 28 de recuperação. A medição aprovou
+  25 amostras, 15 após aquecimento, contagens estáveis nas cinco fases, globais
+  preservados e erros/warnings vazios. Capturas da recuperação conferidas.
+- A inspeção dos PNGs revelou que `visibility:hidden` no container não escondia
+  os filhos com `visibility:visible`. Este ajuste usa `display:none` somente
+  durante a captura. Código do jogo, workflow e critérios de contagem não mudam.
+  Próximo passo: enviar, conferir CI/prévia e rodar a suíte afetada `recursos`
+  no novo head, inspecionando as cinco imagens. O E2E completo acima pertence
+  a `3a37f58`; não apresentá-lo como execução do commit posterior. Resultados
+  finais ficam no PR, sem commit apenas para status. Aguardar aprovação do
+  usuário antes de integrar. EST-06–08 seguem pendentes; PR #9 é proposta.
 
 Preparação EST-06, somente diagnóstico: `LevelDef` perde o genérico de props,
 `PuzzleContext.props` é `any`; `Fase4Props.plate` não declara `surfaceY` usado
