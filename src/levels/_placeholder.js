@@ -7,6 +7,7 @@ import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } 
  * Cenário provisório: chão + blocos nos colisores do layout (para testar uma fase antes do cenário).
  * skip: ids de colisores que a fase desenha por conta própria.
  * @param {{ root: import('three').Object3D, layout: import('../types').LevelLayout, colors?: { ground?: string, block?: string }, skip?: Set<string> }} args
+ * @returns {import('../types').LevelBuild<import('../types').PlaceholderProps>}
  */
 export function buildPlaceholderWorld({ root, layout, colors = {}, skip = new Set() }) {
   const B = layout.WORLD.bounds;
@@ -61,7 +62,10 @@ export function buildPlaceholderWorld({ root, layout, colors = {}, skip = new Se
   };
 }
 
-/** Puzzle mínimo: pegar o item e levar ao objetivo. */
+/** Puzzle mínimo: pegar o item e levar ao objetivo.
+ * @param {import('../types').PuzzleContext<import('../types').PlaceholderProps>} ctx
+ * @returns {import('../types').Puzzle}
+ */
 export function createPlaceholderPuzzle({ layout, props, dogs, emit, root }) {
   const it = layout.BALL || layout.SLIPPER;
   const hints = createHints(emit, { hint: { wip: 'Fase em construção: pegue o item e leve ao objetivo.' }, prompt: { item: 'Pegar' } });

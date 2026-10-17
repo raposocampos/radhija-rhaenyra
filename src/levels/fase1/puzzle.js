@@ -35,10 +35,10 @@ function easeOutBack(x) {
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 }
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase1Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase1Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scene, place }) {

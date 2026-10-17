@@ -19,6 +19,7 @@ import { buildBackground } from './background.js';
  */
 export function buildWorld({ engine, root, layout }) {
   const timings = {};
+  /** @template T @param {string} name @param {() => T} fn @returns {T} */
   const T = (name, fn) => { const t0 = performance.now(); const r = fn(); timings[name] = Math.round(performance.now() - t0); return r; };
   const field = pondField(layout);
   const ground = T('ground', () => buildGround(layout, field, root));

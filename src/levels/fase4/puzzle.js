@@ -37,14 +37,14 @@ export const TEXT = {
   prompt: { duck: 'Pegar o patinho' },
 };
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase4Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase4Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, scent, dogs, emit, cam, root, place } = ctx;
+  const { layout, props, world, scent, dogs, emit, cam, root, place } = ctx;
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, DUCK, GOAL, GATE, NAP_PIGEON, PLANTERS, PASS, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
   const gateMid = { x: GATE.hinge.x, z: (GATE.hinge.z + GATE.latchPost.z) / 2 };
   const flightTarget = { x: PERCH_A.x, y: PERCH_A.y + 0.18, z: PERCH_A.z };

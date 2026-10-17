@@ -36,14 +36,14 @@ export const TEXT = {
   prompt: { latch: 'Abrir a trava', bear: 'Pegar o ursinho' },
 };
 
-/** @import { PuzzleContext, Puzzle } from '../../types' */
+/** @import { PuzzleContext, Puzzle, Fase5Props } from '../../types' */
 
 /**
- * @param {PuzzleContext} ctx
+ * @param {PuzzleContext<Fase5Props>} ctx
  * @returns {Puzzle}
  */
 export function createPuzzle(ctx) {
-  const { layout, props = {}, world, dogs, emit, cam, root, place } = ctx;
+  const { layout, props, world, dogs, emit, cam, root, place } = ctx;
   const { PET_GATE, LATCH, BOX_PILLOWS, WALL_SH, WALL_HK, TABLE, BEAR, GOAL, NAV_NODES: N, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
   const gateMid = { x: PET_GATE.hinge.x, z: (PET_GATE.hinge.z + PET_GATE.latchPost.z) / 2 };
 

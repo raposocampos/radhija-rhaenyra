@@ -12,6 +12,7 @@ const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 // ================================================================== portãozinho + trava
+/** @returns {{ gate: import('../../../types').Fase5Props['petGate'], latch: import('../../../types').Fase5Props['latch'] }} */
 function buildPetGate(root, layout) {
   const { PET_GATE: G } = layout;
   const white = stdMat('#f7f4ee', { roughness: 0.45 });
@@ -375,6 +376,7 @@ export function buildProps({ root, layout, furniture }) {
   addLight(new THREE.Vector3(3.6, 1.7, -3.1), '#a9bde0', 1.0, 4.0);
 
   const bedSt = { on: false, k: 0 };
+  /** @satisfies {import('../../../types').Fase5Props} */
   const props = {
     petGate: gate.gate,
     latch: gate.latch,

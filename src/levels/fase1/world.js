@@ -6,6 +6,7 @@ import { createProps } from '../../world/props.js';
 /**
  * Monta o cenário e os props dentro de `root` (Group descartado ao trocar de fase).
  * @param {import('../../types').LevelBuildArgs} args
+ * @returns {import('../../types').LevelBuild<import('../../types').Fase1Props>}
  */
 export function buildWorld({ engine, root, layout }) {
   // Os construtores da fase 1 fazem engine.scene.add(...): aponta a "cena" deles para o root.
