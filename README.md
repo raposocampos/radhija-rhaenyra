@@ -78,7 +78,7 @@ Quando tudo passa no `main`, publica o jogo no link acima. Se falhar, a versão 
 Não é preciso gerar ou enviar a pasta `dist/`, nem rodar os testes no PC antes de cada envio.
 
 As partidas completas ficam separadas: abra [Actions → E2E manual](https://github.com/raposocampos/radhija-rhaenyra/actions/workflows/e2e.yml),
-clique em **Run workflow**, escolha o branch e confirme. Elas rodam em máquinas Linux do GitHub,
+clique em **Run workflow**, escolha o branch e a suíte (`todas` para a bateria completa) e confirme. Elas rodam em máquinas Linux do GitHub,
 com uma suíte por máquina. As capturas ficam nos artefatos da execução por 7 dias.
 Como essas máquinas não têm GPU, o navegador dos testes usa resolução 3D reduzida, sem sombras
 nem bloom, desenha a cada 30 quadros e força um desenho antes de cada captura. A simulação e os

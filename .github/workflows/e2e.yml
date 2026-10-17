@@ -2,12 +2,18 @@ name: E2E manual
 
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Partida a verificar
+        type: choice
+        default: todas
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo]
 
 permissions:
   contents: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ inputs.suite }}
   cancel-in-progress: true
 
 jobs:
@@ -18,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo]
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:

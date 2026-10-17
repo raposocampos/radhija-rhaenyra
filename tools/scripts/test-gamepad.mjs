@@ -87,7 +87,8 @@ try {
   await clearLog();
   await tap(B.A);
   await sleep(600);
-  check((await logOf('dog:jump')).length === 1, '✕ com a Rhaenyra pula');
+  const jumps = await logOf('dog:jump');
+  check(jumps.length === 1, '✕ com a Rhaenyra pula', JSON.stringify(jumps));
   await tap(B.LB);
   i = await info();
   check(i.activeDog === 'radhija', 'L1 troca de volta para a Radhija');

@@ -130,7 +130,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       t0,
       over(i) {
         const real = Date.now() - t0;
-        if (real >= ms * slow) return true;
+        // Até uma espera de 110 ms precisa tolerar a compilação/desenho de um quadro
+        // pesado por software; não solte o botão antes de a página conseguir lê-lo.
+        if (real >= Math.max(10000, ms * slow)) return true;
         const sim = i?.simSec;
         if (typeof sim !== 'number') return real >= ms;
         if (s0 === null || sim < s0) s0 = sim; // primeira leitura (ou página recarregada)

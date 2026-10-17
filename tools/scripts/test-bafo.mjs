@@ -53,7 +53,8 @@ try {
   await page.keyboard.press('KeyQ');
   await sleep(300);
   await clearLog();
-  await page.keyboard.press('KeyR');
+  // R é um comando de segurar, lido no quadro; down/up no mesmo instante pode sumir.
+  await H.hold(['KeyR'], 150);
   await sleep(300);
   check((await logOf('dog:bafo')).length === 0 && (await logOf('hint')).some((h) => h.text.startsWith('Só a Radhija tem o superbafo')), 'a Rhaenyra não sopra (dica)');
 
