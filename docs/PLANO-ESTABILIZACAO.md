@@ -25,10 +25,10 @@ quando alteram a mesma área. Revisões sem alterações podem ocorrer em parale
 
 Ordem de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e PR #4
 (documentação consolidada). O #6 foi aprovado no chat, integrado e publicado
-em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. Essa é a nova base de #5 e #4.
-O Vite foi revalidado com o E2E manual reforçado e aguarda nova aprovação.
-O plano já está no
-branch remoto do PR #4 e pode orientar os executores antes de ser integrado.
+em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. O #5 foi aprovado após revalidação
+e integrado/publicado em `18629a0e3877cc6c56201f5a12b3048feb1514e9`, nova base do PR #4.
+O plano está preservado no branch remoto de #4; sua integração aguarda os
+checks da atualização documental e aprovação própria.
 
 ## Boas práticas a preservar
 
@@ -56,7 +56,7 @@ validados. O estado de publicação é registrado separadamente.
 | --- | --- | --- | --- | --- | --- |
 | [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 em validação |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
-| [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Nova base 9fcce75 | PR #5 revalidado; aguardando aprovação |
+| [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
 | [ ] | EST-03 | Recuperação de falhas no carregamento | A atribuir | EST-01 e EST-02 integrados | Planejado |
 | [ ] | EST-04 | Validação e migração do progresso | A atribuir | EST-01 integrado | Planejado |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
@@ -136,7 +136,7 @@ Branch: `codex/atualizar-vite`. Worktree: `atualizar-vite`.
 Escopo: `package.json`, `package-lock.json` e registro próprio no contexto.
 
 Entrega: [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
-head atual `3f9540248b33b78b1cc43aa834352901ef3ec457`, base `9fcce75`.
+head aprovado `3f9540248b33b78b1cc43aa834352901ef3ec457`, base `9fcce75`.
 Vite 6.4.4, sem alterações de dependências transitivas; auditoria do lockfile
 sem vulnerabilidades conhecidas reportadas na consulta. O head anterior
 `4f03e38` passou CI `39051377056` e E2E `39051384592` na base inicial; esses
@@ -148,8 +148,14 @@ conferida por HTTP e `version.json`, com head/base corretos.
 [E2E 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
 aprovado no mesmo head: 299 verificações nas nove partidas, quatro provas da
 infraestrutura e 19 verificações do smoke, sem erros de console. Capturas da
-fase 4 concluídas, com `errors: []`. Apresentar a versão para nova aprovação.
-Produção do Vite não aprovada.
+fase 4 concluídas, com `errors: []`. Versão aprovada explicitamente no chat e
+integrada por squash em `18629a0e3877cc6c56201f5a12b3048feb1514e9`; a árvore
+integrada foi comparada com o head aprovado e é idêntica.
+[CI do main 39056035625](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056035625)
+aprovado: tipos, 126 testes rápidos e build Vite 6.4.4.
+[Deploy 39056064315](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056064315)
+concluído com sucesso. Produção HTTP 200 e `version.json` confirmado com
+commit `18629a0` e execução `39056035625`.
 
 ### EST-03 Carregamento
 

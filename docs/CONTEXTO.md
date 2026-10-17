@@ -45,9 +45,15 @@ desta entrega documental.
   HTTP 200 e `version.json` confirmou `9fcce75` e CI `39053762821`.
 - EST-02: executor Codex em `codex/atualizar-vite`, worktree
   `atualizar-vite`; Vite 6.4.4 implementado no [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
-  head atual `3f9540248b33b78b1cc43aa834352901ef3ec457`, após merge normal da
+  head aprovado `3f9540248b33b78b1cc43aa834352901ef3ec457`, após merge normal da
   base `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`, sem force push. Nenhuma
   dependência transitiva mudou; auditoria do lockfile continua sem avisos.
+  A versão segue o [aviso oficial GHSA-rq7h-c2jc-7f22](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22):
+  `6.4.4` corrige o acesso indevido fora de `server.fs.allow`, ainda presente
+  até `6.4.3`. A evidência é a versão corrigida e a auditoria do lockfile;
+  não foi executada prova de exploração. A atualização usou apenas
+  `--package-lock-only --ignore-scripts`, sem testes/build locais. O servidor
+  de desenvolvimento continua em `127.0.0.1` e produção serve arquivos estáticos.
   O head anterior `4f03e38` passou CI `39051377056` e E2E `39051384592`
   (123 testes rápidos e 299 verificações de gameplay), mas esses resultados
   não validam a nova combinação. No head atual, [CI 39053902153](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053902153)
@@ -56,15 +62,21 @@ desta entrega documental.
   [E2E completo 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
   aprovado no mesmo head: 299 verificações nas nove partidas, quatro provas
   de infraestrutura e 19 verificações do smoke, sem erros de console. Capturas
-  da fase 4 concluídas, com `errors: []`. O worktree do executor está limpo;
-  a versão está pronta para nova aprovação. Não reaproveitar a aprovação de #6.
+  da fase 4 concluídas, com `errors: []`. O usuário aprovou explicitamente
+  integrar e publicar o PR #5 no chat. Integrado por squash em
+  `18629a0e3877cc6c56201f5a12b3048feb1514e9`, com árvore idêntica ao head aprovado,
+  confirmada por revisão independente. [CI do main 39056035625](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056035625)
+  aprovado: tipos, 126 testes rápidos e build Vite 6.4.4.
+  [Deploy 39056064315](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39056064315)
+  concluído com sucesso usando essa aprovação. Produção HTTP 200 e
+  `version.json` confirmou `18629a0` e execução `39056035625`.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
   preserva o plano e consolida os resultados. Conferir os checks do head
   documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração: #6 integrado; depois #5 e #4. O Vite passou pelo E2E
-  manual reforçado; apresentar a nova prévia e aguardar aprovação dessa versão.
-  O coordenador incorporou a base `9fcce75` no PR #4 e reconciliou
-  o registro E2E; após integrar #5, deverá atualizar esta documentação novamente.
+- Ordem de integração: #6 e #5 integrados; resta #4. O coordenador incorporou
+  a base `18629a0` no PR #4 e reconciliou os registros dos dois executores,
+  preservando suas decisões e evidências. A entrega de #4 continua documental;
+  conferir CI/prévia do novo head e aguardar aprovação própria antes de integrar.
 - Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
   reservadas aos executores nem integrar/publicar sem aprovação da versão.
   Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
@@ -73,7 +85,7 @@ desta entrega documental.
   ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
   corrigir depois; registrar e reproduzir em tarefa própria, identificando
   o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
-  posterior do PR #6 não inclui uma correção desse bug.
+  dos PRs #6 e #5 não inclui uma correção desse bug.
 
 ## Evidências da avaliação anterior
 
@@ -199,11 +211,11 @@ desta entrega documental.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3 e #6 integrados. Produção de #6 confirmada em `9fcce75`,
-   deploy `39053794991`; não repetir sua aprovação nem integrar outro PR com ela.
-   PR #5 revalidado: apresentar a prévia do head `3f95402` e aguardar aprovação;
-   aprovação anterior não vale para base alterada. Conferir os checks de #4,
-   reconciliando-o novamente após integrar #5. Preservar o checklist e manter
+3. PRs #1, #2, #3, #6 e #5 integrados e publicados. Produção de #5 confirmada
+   em `18629a0`, deploy `39056064315`; não repetir merge/deploy nem pedir
+   novamente a aprovação já usada para essa versão. PR #4 está reconciliado
+   com essa base: conferir seus checks/prévia e obter aprovação para integrar
+   a documentação. Preservar o checklist; EST-03/EST-04 apenas preparados e
    EST-09 adiado conforme o usuário. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
