@@ -120,6 +120,27 @@ try {
   check(i.dogs.rhaenyra.action === 'push', 'segurar R1 com a Rhaenyra: postura de empurrar', i.dogs.rhaenyra.action);
   await btn(B.RB, false);
   await axes(0, 0);
+
+  // A mesma dica deve acompanhar o dispositivo, mesmo sem parênteses na tecla.
+  // Passa pelo evento real do HUD; não injeta HTML nem muda o dispositivo na UI.
+  await ev(() => window.__game.events.emit('hint', { text: 'Segure Shift para empurrar', duration: 60 }));
+  const hintText = () => page.locator('.rr-hint__text').innerText();
+  let hint = await hintText();
+  check(/R1/.test(hint) && !/Shift|RB/.test(hint), 'dica de empurrar no PlayStation mostra R1, sem Shift', hint);
+
+  await ev(() => { window.__fakePads[0].id = 'Xbox 360 Controller (XInput STANDARD GAMEPAD)'; });
+  await page.waitForFunction(() => document.querySelector('.rr').dataset.pad === 'xbox');
+  hint = await hintText();
+  check(/RB/.test(hint) && !/Shift|R1/.test(hint), 'a mesma dica no Xbox mostra RB, sem Shift', hint);
+
+  await page.keyboard.press('ShiftLeft');
+  await page.waitForFunction(() => document.querySelector('.rr').dataset.device === 'keyboard');
+  hint = await hintText();
+  check(/Shift/.test(hint) && !/R1|RB/.test(hint), 'a mesma dica volta a Shift ao usar o teclado', hint);
+  await ev(() => {
+    window.__fakePads[0].id = 'Controle falso (STANDARD GAMEPAD)';
+    window.__game.events.emit('hint', { text: '' });
+  });
   await tap(B.LB);
 
   // Options = pausar; no menu ✕/○/D-pad não vazam para o jogo

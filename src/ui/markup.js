@@ -60,10 +60,12 @@ export function glyph(k, { pad } = {}) {
   return `<span class="rr-g"><span class="k-kb">${kb}</span><span class="k-pad">${pads.map((p) => PAD_BTN[p] || '').join('')}</span></span>`;
 }
 
-// Troca "(E)", "(Q)", "(F)", "(segure Shift)" por teclas/botões desenhados.
+// Troca "(E)", "(Q)", "(F)", "(segure Shift)" e Shift no texto corrido por
+// teclas/botões desenhados. Letras soltas como "E" continuam sendo texto normal.
 export function richText(text) {
   const safe = esc(text);
-  return safe.replace(/\(([^)]{1,24})\)/g, (m, inner) => {
+  return safe.replace(/\(([^)]{1,24})\)|\bShift\b/g, (m, inner) => {
+    if (inner === undefined) return glyph('Shift');
     const t = inner.trim();
     if (/^(E|Q|F|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
     if (/\b(E|Q|F|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F)\b/g, (k) => glyph(k))}</span>`;

@@ -7,15 +7,22 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-O jogo está publicado e o fluxo de CI/CD está funcionando. A tarefa mais recente
-foi criar esta passagem de contexto em Markdown e instruir os dois agentes a
-lê-la e mantê-la atualizada. Esta entrega altera apenas documentação.
-Não há uma mudança de jogabilidade solicitada em andamento.
+O usuário pediu corrigir a dica de empurrar da Rhaenyra: com controle, ela
+mostrava "Shift". A causa estava em `src/ui/markup.js`: `richText` só convertia
+teclas entre parênteses. A correção reconhece também Shift no texto corrido,
+usando o mesmo desenho adaptável da UI (R1 no PlayStation, RB no Xbox, Shift
+no teclado), inclusive quando o dispositivo muda com a dica já na tela.
+
+Implementação concluída no branch `codex/dica-empurrar-controle`, com três
+verificações de regressão na suíte E2E `controle` para a mesma dica nos três
+modos. No momento deste registro, falta confirmar CI e E2E no GitHub e integrar
+ao `main` para publicar. Conferir as execuções do commit no GitHub ao retomar;
+não presumir que ainda estejam pendentes apenas por este resumo.
 
 - Jogo: https://raposocampos.github.io/radhija-rhaenyra/
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
 - Branch de entrega: `main`.
-- Base desta atualização: `7c874dc` (instruções compartilhadas dos agentes).
+- Base desta atualização: `383dbe4` (passagem de contexto entre agentes).
 - No início desta tarefa, a árvore estava limpa e `main` sincronizado com
   `origin/main`. Conferir novamente ao retomar; isso é um registro histórico.
 
@@ -84,7 +91,8 @@ Não há uma mudança de jogabilidade solicitada em andamento.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. Continuar a partir do próximo pedido do usuário. Não há tarefa pendente de
-   gameplay nem autorização para instalar ai-memory neste projeto.
+3. Conferir se a correção da dica de empurrar já foi integrada e publicada;
+   se ainda não, concluir as validações e a entrega antes de outra tarefa.
+   Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
