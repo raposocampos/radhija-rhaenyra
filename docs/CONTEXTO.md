@@ -21,11 +21,45 @@ no GitHub antes de retomar; não considerar a validação da base como validaç�
 desta entrega documental.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
-  `estabilidade-e2e`; E2E rigoroso e teste mínimo do build, em execução.
+  `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
+  head `6ebacd999da6bd36249cd76ef3e90a319752b666`.
+  [CI 39052841286](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052841286)
+  aprovado: tipos, 126 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-6/39052841286-1/)
+  publicada, com head/base conferidos em `version.json`.
+  [E2E completo 39052837420](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052837420)
+  aprovado no mesmo head: nove suítes, 299 verificações de gameplay, quatro
+  provas de propagação de erro e 19 verificações do build estático, sem erros
+  de console. Capturas da fase 4 concluídas, com `errors: []` no log.
+  A [revisão de fluxo](https://github.com/raposocampos/radhija-rhaenyra/pull/6#discussion_r4303596789)
+  foi atendida e a conversa resolvida: navegador fica no `E2E manual`, na opção
+  `todas`; o CI obrigatório mantém tipos/testes rápidos/build. O smoke testa
+  um build próprio da execução E2E, distinto do artefato da prévia. O worktree
+  do executor está limpo; a versão aguarda aprovação para integração.
 - EST-02: executor Codex em `codex/atualizar-vite`, worktree
-  `atualizar-vite`; atualização pontual do Vite, em execução.
+  `atualizar-vite`; Vite 6.4.4 implementado no [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
+  head `4f03e389335051dd2633f28feac4c6bd67c49084`. Nenhuma dependência transitiva
+  mudou; auditoria do lockfile passou de uma dependência sinalizada para zero.
+  [CI 39051377056](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051377056)
+  aprovado: tipos, 123 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39051377056-1/)
+  publicada, com head/base conferidos em `version.json`.
+  [E2E completo 39051384592](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051384592)
+  aprovado: nove suítes, 299 verificações, sem erros de console, com capturas
+  da fase 4 concluídas. O worktree do executor está limpo.
+- EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
+  preserva o plano e consolida os resultados. Conferir os checks do head
+  documental atual; não reutilizar a prévia de um commit anterior.
+- Ordem de integração proposta: #6, #5, #4. Após aprovação e integração de
+  #6, atualizar #5 para que o Vite também passe pelo E2E manual reforçado; apresentar
+  nova prévia e pedir aprovação dessa versão. Reconciliar a documentação por
+  último, preservando os registros dos executores. Não houve integração,
+  auto-merge nem liberação de produção nesta etapa.
 - Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
   reservadas aos executores nem integrar/publicar sem aprovação da versão.
+- EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
+  ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
+  corrigir depois; registrar e reproduzir em tarefa própria, identificando
+  o commit testado. Não foi corrigido nem reproduzido nesta etapa. O usuário
+  autorizou seguir com o PR; não houve aprovação explícita de produção.
 
 ## Evidências da avaliação anterior
 
@@ -153,7 +187,9 @@ desta entrega documental.
 3. PRs #1, #2 e #3 integrados; produção conferida em `baa8af0` nesta avaliação.
    Não repetir seus merges/deploys. Conferir os PRs das branches de
    estabilização, preservar trabalho em andamento e atualizar o checklist
-   nos marcos. A próxima entrega é a documentação e a primeira etapa do plano;
-   aguardar aprovação das versões antes de integrar. Não instalar ai-memory.
+   nos marcos. EST-01 e EST-02 validados na base inicial; conferir os checks
+   da consolidação documental e apresentar primeiro o PR #6. Aguardar aprovação
+   dessa versão antes de integrar. Depois atualizar
+   e revalidar #5 e reconciliar #4. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

@@ -23,22 +23,45 @@ atualizar as branches restantes, revalidar e apresentar as novas versões.
 Carregamento, descarte de recursos e divisão do núcleo avançam em sequência
 quando alteram a mesma área. Revisões sem alterações podem ocorrer em paralelo.
 
+Ordem proposta de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e
+PR #4 (documentação consolidada). Assim, a atualização do Vite também será
+testada com o E2E manual reforçado após atualizar a base. O plano já está preservado
+no branch remoto do PR #4 e pode orientar os executores antes de ser integrado.
+
+## Boas práticas a preservar
+
+- Fases com definição, layout, puzzle e cenário separados, reunidas no
+  [registro de fases](../src/levels/index.js). Novas fases devem seguir o
+  [guia existente](COMO-CRIAR-UMA-FASE.md), evitando condições específicas no núcleo.
+- [Mecânicas compartilhadas](../src/game/mechanics/index.js) para comportamentos
+  reutilizáveis. Corrigir a mecânica comum reduz divergências entre fases.
+- [Entrada centralizada](../src/game/input.js) traduz teclado e controle para
+  comandos lógicos comuns. Preservar esse contrato ao acrescentar ações.
+- Tipos verificados em JavaScript, testes rápidos e partidas E2E já existentes.
+  Ampliar a cobertura nas fronteiras alteradas; as lacunas abaixo não exigem
+  reescrever o jogo nem trocar toda a tecnologia.
+- Versões exatas e lockfile versionado, CI com leitura e publicação confiável
+  separada, prévias identificadas por commit e aprovação humana para produção.
+- Documentação de arquitetura e criação de fases já presente. Manter decisões,
+  checklist e retomada junto do código para não depender do histórico dos chats.
+
 ## Checklist e ordem
 
 A caixa marcada indica que os critérios de aceitação foram atendidos e
 validados. O estado de publicação é registrado separadamente.
 
-| Aceito | ID | Entrega | Responsável | Dependência | Situação neste marco |
+| Critérios atendidos | ID | Entrega | Responsável | Dependência | Situação neste marco |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | Documentação em preparação |
-| [ ] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | Em execução |
-| [ ] | EST-02 | Atualização pontual do Vite | Executor dependências | Base inicial | Em execução |
+| [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 em validação |
+| [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 validado; aguardando aprovação |
+| [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base inicial | PR #5 validado nesta base; revalidar após #6 |
 | [ ] | EST-03 | Recuperação de falhas no carregamento | A atribuir | EST-01 e EST-02 integrados | Planejado |
 | [ ] | EST-04 | Validação e migração do progresso | A atribuir | EST-01 integrado | Planejado |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
+| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | A atribuir | Após a primeira etapa, conforme pedido do usuário | Planejado |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
@@ -60,6 +83,9 @@ nos marcos, sem criar commits apenas para registrar o CI do próprio documento.
 
 Branch: `codex/avaliacao-evolucao`. Worktree: `avaliacao-evolucao`.
 Escopo: `AGENTS.md`, `docs/CONTEXTO.md`, este plano.
+Entrega: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4).
+Conferir CI e prévia pelo head atual; o registro dos resultados desta rodada
+modifica a documentação e exige seus próprios checks.
 
 ### EST-01 E2E e build
 
@@ -69,6 +95,9 @@ Escopo: `AGENTS.md`, `docs/CONTEXTO.md`, este plano.
   ignorar erros.
 - Um smoke testa o build estático em subcaminho semelhante à prévia, incluindo
   a abertura das cinco fases e o carregamento dos módulos sob demanda.
+- Prova de erro e smoke de navegador ficam em um job do `E2E manual`, na
+  seleção `todas`, conforme a separação exigida por `AGENTS.md`. O smoke testa
+  o build gerado nessa execução; não é o mesmo artefato binário da prévia.
 - CI e todas as suítes E2E aprovam o commit entregue, com logs conferidos.
 - Preservar os nomes dos checks, permissões de leitura do CI e publicação
   confiável definida no main.
@@ -76,6 +105,18 @@ Escopo: `AGENTS.md`, `docs/CONTEXTO.md`, este plano.
 Branch: `codex/estabilidade-e2e`. Worktree: `estabilidade-e2e`.
 Escopo: harness, runner, testes, smoke, workflows de CI/E2E e documentação da
 tarefa. `package.json`, lockfile, gameplay e publicador ficam fora desta frente.
+
+Entrega: [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
+head `6ebacd999da6bd36249cd76ef3e90a319752b666`, base inicial acima.
+[CI 39052841286](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052841286)
+aprovado: 126 testes rápidos, tipos e build.
+[Prévia validada](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-6/39052841286-1/).
+[E2E 39052837420](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052837420)
+aprovado: 299 verificações de gameplay nas nove suítes, quatro provas da
+infraestrutura e 19 verificações do build, sem erros de console. Capturas da
+fase 4 concluídas, com `errors: []` no log. A revisão foi atendida: os testes
+de navegador estão no workflow manual e a conversa foi resolvida.
+Publicação em produção não aprovada.
 
 ### EST-02 Vite
 
@@ -87,6 +128,18 @@ tarefa. `package.json`, lockfile, gameplay e publicador ficam fora desta frente.
 
 Branch: `codex/atualizar-vite`. Worktree: `atualizar-vite`.
 Escopo: `package.json`, `package-lock.json` e registro próprio no contexto.
+
+Entrega: [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
+head `4f03e389335051dd2633f28feac4c6bd67c49084`, base inicial acima.
+Vite 6.4.4, sem alterações de dependências transitivas; auditoria do lockfile
+sem vulnerabilidades conhecidas reportadas na consulta.
+[CI 39051377056](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051377056)
+aprovado: tipos, 123 testes rápidos e build.
+[Prévia validada](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39051377056-1/).
+[E2E 39051384592](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051384592)
+aprovado: 299 verificações nas nove suítes, sem erros de console. Depois de
+integrar #6, atualizar a base,
+revalidar e apresentar nova prévia para aprovação. Produção não aprovada.
 
 ### EST-03 Carregamento
 
@@ -137,6 +190,18 @@ Escopo: `package.json`, `package-lock.json` e registro próprio no contexto.
 - Documentar o protocolo de nova fase: protótipo, mecânica, ações fora de
   ordem, pausa, reinício, troca de personagem, itens e revisão da prévia.
 - Manter medições de desempenho separadas do E2E com renderização reduzida.
+
+### EST-09 Botão Jogar no menu
+
+Relato de 2026-10-17: ao apertar para baixo para escolher uma fase no menu
+inicial, o botão "Jogar" desaparece por alguns segundos. O usuário pediu para
+corrigir depois desta rodada; a versão exata será identificada na reprodução.
+
+- Reproduzir na nuvem a navegação para baixo e identificar a causa do sumiço.
+- Manter o botão visível ou uma transição intencional e consistente, sem
+  prejudicar seleção, foco, teclado ou controle.
+- Acrescentar regressão útil à suíte de controle e entregar prévia própria.
+  Nenhuma correção desta tarefa foi incluída nos PRs atuais.
 
 ## Evidências e retomada
 
