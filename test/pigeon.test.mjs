@@ -45,6 +45,7 @@ test('pouso recolhe asas gradualmente e devolve os pés ao apoio', () => {
   p.setPose({ flightProgress: 0.98 }); tick(p, 0.1);
   assert.ok(feet.position.y < tucked * 0.1, 'pés antecipam o contato');
   p.setPose({ flying: false }); p.update(1 / 60, 1);
+  assert.equal(feet.position.y, 0, 'pés permanecem apoiados enquanto as asas recolhem');
   assert.ok(wing(p).morphTargetInfluences.reduce((a, b) => a + b) > 0.5, 'sem estalo no primeiro quadro');
   tick(p, 1);
   assert.ok(wing(p).morphTargetInfluences.reduce((a, b) => a + b) < 0.001);

@@ -24,6 +24,12 @@ o visual aceito, a jogabilidade e o desempenho, melhorando principalmente o voo.
 - Novos testes em `test/pigeon.test.mjs`: envergadura/batida, pouso, direção e
   sono/espiada após voo. Revisão visual inclui vídeo determinístico comparado
   ao visual aceito (`7427dda`), gerado por FFmpeg no GitHub.
+- Primeiro commit de animação `79ef1bb`: [CI 39006672959](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39006672959)
+  passou com tipos, 120 testes e build. Na [execução 39006670232](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39006670232),
+  as 17 verificações da partida passaram, mas a etapa visual falhou por FFmpeg
+  ausente no runner. Corrigida a instalação na suíte fase4. A versão seguinte
+  também mantém os pés apoiados durante o recolhimento das asas no pouso,
+  coberto pelo teste. Requer nova execução completa no SHA entregue.
 - Validação desta revisão ainda pendente: enviar commit no mesmo PR, rodar
   CI/E2E fase4, inspecionar vídeo/sequência e entregar a nova prévia. Nenhum
   teste/build/partida automatizada local. Conferir head atual e base antes de

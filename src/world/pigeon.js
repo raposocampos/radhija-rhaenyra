@@ -251,13 +251,13 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
         w.wing.morphTargetInfluences[0] = air * (1 - recover);
         w.wing.morphTargetInfluences[1] = air * recover;
       }
-      const tuck = air * (1 - brake);
+      const tuck = pose.flying ? air * (1 - brake) : 0;
       feet.position.y = 0.055 * tuck;
       feet.rotation.x = -0.65 * tuck;
       feet.scale.y = 1 - 0.4 * tuck;
       const settle = Math.sin((st.landingT / 0.24) * Math.PI);
       body.position.y = -0.04 * k + air * (0.012 + 0.006 * Math.cos(st.flap * Math.PI * 2)) - 0.012 * settle;
-      body.rotation.x += (air * (0.18 - 0.6 * brake) - body.rotation.x) * (1 - Math.exp(-dt * 14));
+      body.rotation.x += ((pose.flying ? air * (0.18 - 0.6 * brake) : 0) - body.rotation.x) * (1 - Math.exp(-dt * 14));
       body.rotation.z += (THREE.MathUtils.clamp(-turn * 0.18, -0.16, 0.16) * air - body.rotation.z) * (1 - Math.exp(-dt * 10));
       tail.rotation.x += (0.28 + air * (0.15 + 0.45 * brake) - tail.rotation.x) * (1 - Math.exp(-dt * 12));
       tail.scale.x = 1 + air * (0.18 + 0.3 * brake);
