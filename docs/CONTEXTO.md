@@ -7,49 +7,41 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**PR #1 aprovado pelo usuário, integrado e publicado em produção.** O usuário
-confirmou no chat que testou a prévia e aprovou a publicação no link principal.
-Não há aprovação de produção pendente para esta entrega.
+**PR #3 em correção de pernas/câmera; produção não autorizada.**
+Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
+Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
+pombo → placa → portão legíveis.
 
-- PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
-- Head aprovado: `e219af7662f5db22196a7aace79deeca63fd861e`.
-- Merge squash no main: `e85b927954f38430b26b5680324a88614bc2e416`.
-  A árvore integrada foi comparada à aprovada: nenhum arquivo diferente.
-- [CI do main 39002906594](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002906594):
-  tipos, 116 testes e build aprovados.
-- [Publicação 39002937318](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002937318):
-  disparada automaticamente por workflow_run, aguardou a aprovação do ambiente
-  github-pages, foi liberada com a autorização do chat e terminou com sucesso.
-- Produção: https://raposocampos.github.io/radhija-rhaenyra/.
-  HTML, JavaScript e CSS HTTP 200; version.json confirmou o commit e85b927 e
-  o CI 39002906594. A prévia aprovada também permanece acessível.
-- E2E controle: 46 verificações, zero falhas e nenhum erro de console na
-  [execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192),
-  em d53b8d4. Código do jogo e testes não mudaram depois desse commit.
-
-O fluxo de AGENTS.md/CLAUDE.md está no main: PR, CI, prévia, aprovação humana
-explícita e publicação no mesmo link. Nenhum teste ou build foi executado no PC.
-Main exige PR atualizado e checks testes-e-build/publicar-site, inclusive para
-admins. Produção exige revisão no ambiente github-pages e só permite main.
-
-A exceção delivery-bootstrap (policy 63342097) foi removida do ambiente preview,
-que agora aceita somente main. O branch bootstrap permanece bloqueado como
-registro: não integrá-lo nem reutilizá-lo. O publicador confiável do main já
-assumiu o fluxo. pages-state continua sendo um branch órfão só de estáticos.
-A brecha apontada na revisão foi corrigida antes da aprovação: CI de PR só tem
-leitura; publicação usa código do main e trata o artefato somente como dados.
-
-O usuário solicitou salvar este registro pós-publicação por PR para encerrar a
-pendência local antes de continuar com o Claude. Esta entrega é somente de
-documentação; o código do jogo permanece igual ao aprovado no PR #1.
-Registro: [PR #2](https://github.com/raposocampos/radhija-rhaenyra/pull/2), branch
-`codex/contexto-publicacao`, commit inicial `43cd9baaf39088d503decc016e5657ce29e0d77f`.
-Esse commit passou no [CI 39004558716](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004558716)
-e na [publicação da prévia 39004583094](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004583094).
-Ao retomar, conferir o head atual, o merge e os checks no PR #2; as validações
-citadas não aprovam antecipadamente commits posteriores. Não criar novos commits
-apenas para atualizar o status do próprio registro. A autorização desta entrega
-documental não dispensa prévia e aprovação para futuras mudanças no jogo.
+- Usuário aceitou o visual de `7427dda`, pediu melhorar o voo e depois relatou
+  pernas separadas do corpo em `a9b0906` e câmera que não acompanha o segundo
+  pombo. Esses retornos não autorizam publicação em produção.
+- Última versão entregue: `a9b090606d5e646d8a8ed4cf70c8be1bf5c36947`.
+  [CI 39007017743](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007017743),
+  [prévia 39007043021](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007043021)
+  e [E2E 39007014701](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007014701)
+  passaram: tipos, 120 testes, build, 17 verificações da fase 4 e capturas/vídeo.
+  Isso valida a versão anterior, não as novas correções.
+- Correção atual: pernas presas ao grupo do corpo, pivô no quadril dentro do
+  tronco e contato dos pés resolvido no pouso/sono. Teste geométrico verifica
+  as raízes das duas pernas dentro da malha durante voo, curva e pouso.
+- Câmera: alvo vivo com altura, antecipação de 0,3 s antes de voar e um único
+  plano contínuo para trajeto, placa e portão. Retorna suavemente à dog.
+  Placa maior com molas, compressão, mudança de cor e pulso na corda; pombo
+  acompanha a superfície da placa. Eventos, controles e colisões preservados.
+- Capturas na nuvem comparam as pernas com `a9b0906` e acrescentam vídeo da
+  câmera real do mecanismo, validação de enquadramento e captura vertical.
+  Testes de câmera cobrem seguimento 3D, troca de foco e retorno à dog.
+- Validação das correções pendente: enviar o novo commit no PR #3, acompanhar
+  CI/prévia e E2E fase4, inspecionar capturas e entregar SHA/link ao usuário.
+  Nenhum teste, build ou partida automatizada foi executado localmente.
+- Base conferida: `main` em `3e826e48f9eac644681b718470f9d75f6e207de5`, PR #2
+  integrado. CI `39004801467` e deploy `39004826940` passaram. PR #1 integrado.
+- Pesquisa e decisões visuais em `docs/POMBOS.md`. Fotografias consultadas não
+  incorporadas. Fábrica compartilhada pelos quatro pombos; 25 → 13 meshes e
+  3.020 → 4.740 triângulos por pombo na revisão anterior. Não é benchmark de FPS.
+- Próximo passo: conferir resultados do head atual, inclusive o commit deste
+  documento, apresentar a nova prévia e aguardar aprovação explícita dessa
+  versão. Não ativar auto-merge, integrar ou liberar produção enquanto aguarda.
 
 ## O que foi feito
 
@@ -134,8 +126,9 @@ documental não dispensa prévia e aprovação para futuras mudanças no jogo.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PR #1 concluído e publicado; não repetir seu merge/deploy. O registro da
-   entrega também segue por PR documental, conforme pedido explícito do usuário.
+3. PRs #1 e #2 concluídos e publicados; não repetir seus merges/deploys.
+   PR #3 é a entrega dos pombos e depende da aprovação humana da versão validada.
+   Conferir head/base/CI/prévia/E2E atuais antes de qualquer integração.
    Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

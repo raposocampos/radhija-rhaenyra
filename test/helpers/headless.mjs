@@ -84,6 +84,7 @@ export function stubProps(root) {
     object.name = `prop:${name}`;
     root.add(object);
     const base = { object, home: object.position.clone(), calls: [] };
+    if (name === 'plate') base.surfaceY = undefined;
     return new Proxy(base, {
       get(t, k) {
         if (k in t) return t[k];

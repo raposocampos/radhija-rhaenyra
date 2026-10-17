@@ -393,7 +393,7 @@ function buildWallGate(root, layout) {
 const brass = () => stdMat('#c99a45', { metalness: 0.9, roughness: 0.35 });
 
 // ================================================================== poleiros, placa e corda
-function buildPerches(root, layout) {
+function buildPerches(root, layout, updaters) {
   const { PERCH_A, PERCH_B, GATE, WALL } = layout;
   const wood = woodMat('#8a6240', { key: 'f4-perch', rough: 0.8 });
   const make = (p) => {
@@ -415,24 +415,73 @@ function buildPerches(root, layout) {
   };
   make(PERCH_A);
   const b = make(PERCH_B);
-  // placa amarela com molinha
-  const plateMat = new THREE.MeshStandardMaterial({ color: '#f2c14e', roughness: 0.5, emissive: '#7a4b00', emissiveIntensity: 0.15 });
-  const plate = new THREE.Mesh(rbox(0.28, 0.025, 0.2, 0.008), plateMat);
-  plate.position.y = PERCH_B.y + 0.035;
+  // Placa saliente, molas expostas e base escura tornam o botão legível de cima.
+  const plateMat = new THREE.MeshStandardMaterial({ color: '#ffcf45', roughness: 0.45, emissive: '#d49312', emissiveIntensity: 0.2 });
+  const plate = new THREE.Mesh(rbox(0.46, 0.025, 0.34, 0.008), plateMat);
+  plate.name = 'placa-poleiro';
+  plate.position.y = PERCH_B.y + 0.12;
+  const socket = new THREE.Mesh(rbox(0.5, 0.025, 0.38, 0.012), ironMat());
+  socket.position.y = PERCH_B.y + 0.025;
+  const springs = new THREE.Group();
+  springs.position.y = PERCH_B.y + 0.04;
+  const springMat = stdMat('#d8dde0', { metalness: 0.7, roughness: 0.35 });
+  for (const x of [-0.15, 0.15]) {
+    const points = Array.from({ length: 49 }, (_, i) => {
+      const a = i / 48 * TAU * 3;
+      return new THREE.Vector3(x + Math.cos(a) * 0.025, i / 48 * 0.065, Math.sin(a) * 0.025);
+    });
+    springs.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 48, 0.005, 5), springMat));
+  }
+  b.add(socket, springs);
   b.add(plate);
   // corda: placa → topo da mureta → trava do portão
-  const cordMat = stdMat('#d9c8a5', { roughness: 0.95 });
+  const cordMat = stdMat('#e5b638', { roughness: 0.65 });
   const ctrl = [
-    new THREE.Vector3(PERCH_B.x - 0.12, PERCH_B.y + 0.03, PERCH_B.z),
+    new THREE.Vector3(PERCH_B.x - 0.22, PERCH_B.y + 0.055, PERCH_B.z),
     new THREE.Vector3((PERCH_B.x + WALL.x) / 2, PERCH_B.y - 0.18, PERCH_B.z * 0.7),
     new THREE.Vector3(WALL.x + 0.14, WALL.height + 0.06, -1.6),
     new THREE.Vector3(WALL.x + 0.12, WALL.height + 0.05, GATE.latchPost.z - 0.25),
     new THREE.Vector3(WALL.x + 0.06, 0.66, GATE.latchPost.z - 0.05),
   ];
-  const cord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ctrl), 48, 0.008, 5), cordMat);
+  const cordPath = new THREE.CatmullRomCurve3(ctrl);
+  const cord = new THREE.Mesh(new THREE.TubeGeometry(cordPath, 48, 0.014, 6), cordMat);
   cord.castShadow = true;
   root.add(cord);
-  return { plate, plateMat };
+  // O pulso percorre a ligação física quando a placa é pressionada.
+  const signal = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshBasicMaterial({ color: '#fff4b0' }));
+  signal.visible = false;
+  root.add(signal);
+  const latchLight = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 8), plateMat);
+  latchLight.position.copy(ctrl[ctrl.length - 1]);
+  root.add(latchLight);
+  let target = 0, press = 0, signalT = 1;
+  const idleColor = new THREE.Color('#ffcf45'), pressedColor = new THREE.Color('#83d59a');
+  updaters.push((dt, t) => {
+    press = ease(press, target, dt, 18);
+    plate.position.y = PERCH_B.y + 0.12 - 0.065 * press;
+    springs.scale.y = 1 - 0.9 * press;
+    plateMat.color.copy(idleColor).lerp(pressedColor, press);
+    plateMat.emissive.set(press > 0.5 ? '#318c4f' : '#d49312');
+    plateMat.emissiveIntensity = target ? 0.45 : 0.2 + 0.1 * Math.sin(t * 2.8);
+    signalT = Math.min(1, signalT + dt / 0.65);
+    signal.visible = signalT < 1;
+    if (signal.visible) signal.position.copy(cordPath.getPoint(signalT));
+  });
+  return {
+    object: plate,
+    get pressed() { return target > 0; },
+    get surfaceY() { return plate.position.y + 0.0125; },
+    setPress(t) {
+      if (t > target) signalT = 0;
+      target = THREE.MathUtils.clamp(t, 0, 1);
+      if (!target) {
+        press = 0; signalT = 1; signal.visible = false;
+        plate.position.y = PERCH_B.y + 0.12;
+        springs.scale.y = 1;
+        plateMat.color.copy(idleColor);
+      }
+    },
+  };
 }
 
 // ================================================================== pombal
@@ -723,7 +772,7 @@ export function buildProps({ root, layout, house }) {
   const corridor = buildCorridor(root, layout, updaters);
   const duct = buildDuct(root, layout);
   const wallGate = buildWallGate(root, layout);
-  const perches = buildPerches(root, layout);
+  const perches = buildPerches(root, layout, updaters);
   const coop = buildCoop(root, layout);
   const basin = buildBasin(root, layout, updaters);
   const decor = buildDecor(root, layout);
@@ -747,7 +796,7 @@ export function buildProps({ root, layout, house }) {
   const props = {
     fan,
     gate: { object: wallGate.pivot, setOpen(t) { wallGate.pivot.rotation.y = layout.GATE.openYaw * THREE.MathUtils.clamp(t, 0, 1); } },
-    plate: { object: perches.plate, setPress(t) { perches.plate.position.y = PERCH_B.y + 0.035 - 0.018 * t; perches.plateMat.emissiveIntensity = 0.15 + 0.5 * t; } },
+    plate: perches,
     pigeon: { object: gatePigeon.object, setPose(p) { gatePigeon.setPose(p); } },
     napPigeon: { object: napPigeon.object, setPose(p) { napPigeon.setPose(p); }, peek() { napPigeon.peek(); } },
     duck: basin.duck,
@@ -757,6 +806,7 @@ export function buildProps({ root, layout, house }) {
     fireflies: false,
     update(dt, t) {
       for (const f of updaters) f(dt, t);
+      if (perches.pressed) gatePigeon.setPose({ y: perches.surfaceY });
       for (const p of pigeons) p.update(dt, t);
       treats.update(dt, t);
       goalSt.k = ease(goalSt.k, goalSt.on ? 1 : 0, dt, 4);
