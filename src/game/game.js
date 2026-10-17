@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { events } from '../core/events.js';
 import { createResourceScope } from '../core/resources.js';
 import { createInput } from './input.js';
+import { createGameEvents } from './gameEvents.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
 import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump } from './dogController.js';
@@ -25,20 +26,6 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 const FOLLOW_HOLD = 0.6; // s que a nova companheira espera (olhando) antes de seguir, após uma troca
 const STAY_SOFT_PEN = 0.1; // penetração máxima da líder numa companheira em "Fica" (obstáculo macio)
 
-// Vibração do controle por evento: [forte, fraca, ms] (curta e suave), calculada a partir do payload.
-const RUMBLE = {
-  'dog:bump': (p) => [0.18 + 0.3 * (p.strength || 0.3), 0.35, 90],
-  'dog:dash': () => [0.05, 0.28, 70],
-  'gate:open': () => [0.22, 0.18, 240],
-  'sprinkler:hit': () => [0.15, 0.45, 200],
-  'goose:hit': () => [0.5, 0.35, 220],
-  'wedge:kick': (p) => (p.locked ? [0.35, 0.3, 160] : [0.2, 0.2, 80]),
-  'crate:sink': () => [0.4, 0.2, 260],
-  'plate:press': () => [0.08, 0.2, 60],
-  'dog:land': () => [0.18, 0.22, 70],
-  'dog:bafo': () => [0.12, 0.4, 260],
-};
-
 /**
  * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
  *           levels: import('../types').LevelDef[], params?: URLSearchParams }} opts
@@ -47,17 +34,15 @@ export function createGame({ engine, dogs, levels, params }) {
   params = params || new URLSearchParams(location.search);
 
   // ---------- eventos (com registro para testes) ----------
-  const log = [];
   let input = null;
-  const emitEvent = (name, payload = {}) => {
-    log.push({ t: Math.round(performance.now()), name, payload });
-    if (log.length > 500) log.shift();
-    events.emit(name, payload);
-    const r = RUMBLE[name];
-    if (r && input && (state === 'playing' || state === 'celebrating')) input.rumble(...r(payload));
-  };
-  /** @type {import('../types').GameEmit} */
-  const emit = emitEvent;
+  const gameEvents = createGameEvents({
+    dispatch: (name, ...args) => events.emit(name, ...args),
+    now: () => performance.now(),
+    rumble: (pattern) => {
+      if (input && (state === 'playing' || state === 'celebrating')) input.rumble(...pattern());
+    },
+  });
+  const { emit } = gameEvents;
 
   input = createInput({ onDevice: (type) => emit('input:device', { type }) });
   const dogParam = params.get('dog');
@@ -695,8 +680,7 @@ export function createGame({ engine, dogs, levels, params }) {
           // Planos de foco duram ~2 s: os testes conferem no log de depuração (não passa pelo barramento).
           const focusShot = cam.focusShot;
           cam.focusShot = (x, z, opts) => {
-            log.push({ t: Math.round(performance.now()), name: 'camera:shot', payload: { x: +x.toFixed(2), z: +z.toFixed(2) } });
-            if (log.length > 500) log.shift();
+            gameEvents.recordCameraShot(x, z);
             focusShot(x, z, opts);
           };
         } else cam.configure(L);
@@ -890,9 +874,9 @@ export function createGame({ engine, dogs, levels, params }) {
       },
       setStage,
       info,
-      log,
-      events: (name) => log.filter((e) => !name || e.name === name),
-      clearLog: () => { log.length = 0; },
+      log: gameEvents.log,
+      events: gameEvents.events,
+      clearLog: gameEvents.clearLog,
       get world() { return world; },
       get nav() { return nav; },
       get scent() { return scent; },
