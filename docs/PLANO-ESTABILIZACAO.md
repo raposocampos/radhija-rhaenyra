@@ -78,7 +78,7 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
-| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | Duas entregas em execução, PRs separados |
+| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | Configuração implementada, CI pendente; eventos em execução; PRs separados |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
@@ -315,7 +315,9 @@ head. PR #12 integrado por squash `597c8f2`, árvore idêntica. CI main
 Escopo desta rodada em duas entregas, sem reescrever todo o núcleo:
 
 - EST-07A: `codex/config-personagens`, atributos em `src/dogs/config.js`,
-  posições nos layouts e modelo visual sem dependência da fase 1.
+  posições nos layouts e modelo visual sem dependência da fase 1. Commit
+  `5bee73a` integrado como `b7c8523` no coordenador; três testes de contrato,
+  isolamento e posições. Validação na nuvem pendente neste checkpoint.
 - EST-07B: `codex/eventos-nucleo`, emissão/vibração/histórico em `gameEvents.js`,
   preservando ordem, limite e diagnóstico. Estado, carregamento, reset e
   descarte continuam em `game.js`.

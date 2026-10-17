@@ -25,8 +25,16 @@ Duas entregas pequenas, com comportamento preservado:
   documentos. Entregas em PRs separados, integração de uma por vez e nova
   validação/aprovação se a base mudar. Nenhum teste/build local.
 
-Neste checkpoint as implementações estão em andamento e não têm CI próprio.
-Próximo passo: revisar os commits dos executores, abrir PRs, conferir tipos,
+EST-07A implementada: `5bee73a` do executor integrado como `b7c8523` na branch
+do coordenador. `DOG_CONFIG` protegido e sem `start`, `withStart` copia posição
+e guia visual; oito layouts e modelo visual independentes da fase 1. Três
+testes novos cobrem isolamento, posições e habilidades dos controladores.
+Revisão do diff sem bloqueios; arquitetura/guia atualizados. Nenhuma mudança
+de mecânica, dependência, workflow ou produção nesta entrega.
+
+Neste checkpoint EST-07A aguarda CI próprio; EST-07B está em implementação.
+Próximo passo: abrir o PR de configuração, revisar o commit de eventos e abrir
+seu PR separado; conferir tipos,
 testes/build/prévias e E2E no GitHub, depois apresentar versões para aprovação.
 Conferir resultados pelo SHA, inclusive o commit que contém este registro.
 Faltam EST-07 e EST-08 para encerrar esta rodada de estabilização; a divisão
