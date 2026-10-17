@@ -5,14 +5,54 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## EST-04 — progresso validado (2026-10-17, Codex)
+
+Implementado no [PR #7](https://github.com/raposocampos/radhija-rhaenyra/pull/7),
+branch `codex/progresso-validado`, worktree isolado `progresso-validado`.
+Após a publicação aprovada de #8, incorporada por merge normal a base
+`d38574a54d1203a3f7d71dd26541167d93819db3`, sem rebase ou force push.
+Objetivo deste marco: revalidar o progresso junto da correção do menu.
+
+- Escopo próprio: `src/ui/progress.js`, `test/progress.test.mjs`, este contexto
+  e reconciliação do plano, delegada pelo coordenador nesta rodada. Código
+  de progresso e seus 19 testes permanecem iguais ao head anterior; CSS e
+  teste de controle vêm integralmente do #8 já publicado.
+- Formato e chave v1 mantidos, sem migração necessária. Validação rejeita
+  arrays/estruturas incompatíveis e normaliza os campos inválidos de cada
+  fase sem apagar suas marcas válidas. Contagens exigem inteiros seguros
+  não negativos; tempos exigem números finitos não negativos, sem coerção.
+  Petiscos anteriores são preservados; total conhecido nunca fica abaixo
+  da coleta. IDs de fases desconhecidas e chaves como `__proto__` permanecem
+  propriedades próprias, sem modificar o protótipo do mapa.
+- Política de versão: qualquer versão declarada diferente de 1 fica intacta
+  no storage. A partida usa uma cópia v1 vazia em memória; vitórias e reset
+  não sobrescrevem esse formato desconhecido. A gravação relê a versão para
+  detectar alteração por outra aba e retorna booleano; vitória retorna `saved`.
+- Falha de leitura impede gravação sobre conteúdo desconhecido; quota/falha
+  de escrita preserva o save anterior e não interrompe a partida. JSON
+  corrompido pode ser substituído por um novo save válido ao concluir fase.
+- Regressões cobrem saves v1, fases desconhecidas, arrays, strings, números
+  inválidos, recordes, releitura entre abas, versões futuras, falhas de
+  storage e isolamento das prévias. No head anterior `8f974e1`, base
+  `b1b026e`, [CI 39058245437](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058245437)
+  aprovou tipos, 145 testes e build; [E2E fase1 39058252168](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058252168)
+  passou 61 verificações, sem erros de console. Essas evidências não validam
+  o novo merge. Revisão independente da implementação sem bloqueios.
+- Próximo passo: enviar o merge e acompanhar CI/prévia e E2E `fase1` e
+  `controle` no GitHub no mesmo head final. Neste checkpoint, as novas
+  execuções ainda não foram iniciadas; conferir os resultados pelo SHA e
+  atualizar o PR, sem commit apenas de status. Nenhum teste/build local.
+  Apresentar a nova versão e aguardar sua aprovação antes de integrar #7.
+
 ## Onde paramos
 
-**Segunda rodada da estabilização em execução.** Em 2026-10-17, o usuário
-aprovou integrar o PR #4 e continuar com agentes em tarefas isoladas. O
-coordenador corrige EST-09 (menu); dois executores implementam EST-03
-(carregamento) e EST-04 (progresso). Planejamento da próxima fase foi revisado
-em paralelo, sem tema aprovado nem nova fase implementada. Testes continuam
-no GitHub e a aprovação de produção vale para cada versão apresentada.
+**Menu publicado; progresso e carregamento em revalidação.** Em 2026-10-17,
+o usuário aprovou a versão `8494143` do PR #8 e pediu atualizar/validar os
+PRs #7 e #10 em seguida. EST-09 foi integrado e publicado em `d38574a`.
+Dois executores incorporam essa base em EST-04 (progresso) e EST-03
+(carregamento), cada um em seu worktree. Planejamento da próxima fase foi
+revisado em paralelo, sem tema aprovado nem nova fase implementada. Testes
+continuam no GitHub; #7 e #10 exigem aprovação própria da nova versão.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
 O coordenador usa branch `codex/menu-jogar-visivel`, worktree
@@ -26,10 +66,18 @@ zero ao descer por teclado/D-pad/analógico e ao retornar ao mouse.
 Correção: excluir Jogar apenas da animação de pulso do foco; entrada, halo e
 anel de seleção permanecem. Revisão independente sem bloqueios. O teste
 amostra estilos dentro do navegador, para não perder a falha entre leituras.
-Nenhum teste/build local. Este checkpoint inclui CSS, regressões e contexto;
-CI/prévia e E2E `controle` da versão corrigida ainda precisam ser conferidos
-pelo head atual no PR. Sem processo local em andamento. Próximo passo:
-validar essa versão e apresentar sua prévia para aprovação própria.
+No head aprovado `8494143bbe918bb804c05bb115ff1e7770aaef7c`,
+[CI 39058279947](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058279947)
+passou tipos, 126 testes e build; [E2E controle 39058279323](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39058279323)
+passou 60 verificações, sem erros de console, com opacidade mínima 1 nos
+sete cenários. O usuário aprovou essa prévia. Squash
+`d38574a54d1203a3f7d71dd26541167d93819db3` tem árvore idêntica ao head
+aprovado e ao merge sintético `196f108`, conferidos independentemente.
+[CI main 39060437829](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060437829)
+aprovou tipos, 126 testes e build Vite 6.4.4; [deploy 39060461084](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39060461084)
+concluiu após liberação do deployment `7144319080` com a aprovação do chat.
+Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
+`39060437829`, tentativa 1. Nenhum teste/build local; não repetir publicação.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
@@ -88,21 +136,29 @@ validar essa versão e apresentar sua prévia para aprovação própria.
   e [deploy 39057744110](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057744110)
   concluídos com sucesso. Produção HTTP 200 e `version.json` conferido no
   squash e CI acima. Primeira etapa (#6, #5, #4) integrada e publicada.
-- EST-03: executor em `codex/recuperacao-carregamento`, worktree
-  `recuperacao-carregamento`, mesma base `b1b026e`. Dono do núcleo,
+- EST-03: [PR #10](https://github.com/raposocampos/radhija-rhaenyra/pull/10), executor
+  em `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`,
+  incorporando `d38574a` para revalidação. Head anterior `6da8d31`, base
+  `b1b026e`: CI `39058785550` tentativa 2 aprovou 134 testes; E2E completo
+  `39058783617` aprovou 299 verificações de gameplay, quatro de infraestrutura,
+  19 do smoke e 28 de recuperação, sem erros inesperados. Não atribuir esses
+  resultados ao novo merge. Dono do núcleo,
   inicialização, UI de erro, cortina, testes de carregamento e acréscimo
   isolado ao E2E manual. Não alterar regras de foco nem teste de controle.
-- EST-04: executor em `codex/progresso-validado`, worktree
-  `progresso-validado`, mesma base. Dono de `src/ui/progress.js` e testes
+- EST-04: [PR #7](https://github.com/raposocampos/radhija-rhaenyra/pull/7), executor
+  em `codex/progresso-validado`, worktree `progresso-validado`, revalidando
+  a base `d38574a` conforme checkpoint acima. Dono de `src/ui/progress.js` e testes
   próprios. Preservar saves v1 válidos; versões não suportadas não podem ser
   sobrescritas silenciosamente. Sem mudanças no menu ou núcleo.
-- EST-09: coordenador dono do bloco de foco em `src/ui/ui.css`, regressões
-  em `test-gamepad.mjs` e checklist. O CSS de erro de EST-03 será um bloco
+- EST-09: publicado no #8; coordenador dono do bloco de foco em `src/ui/ui.css`
+  e regressões em `test-gamepad.mjs`. Nesta rodada, o executor EST-04 é o único
+  editor do plano compartilhado por delegação. O CSS de erro de EST-03 será um bloco
   próprio, sem editar essas regras. Retomadas dos executores são registradas
   no contexto de suas branches e reconciliadas na integração.
-- Ordem desta rodada: EST-09, EST-04 e EST-03; cada versão exige aprovação
-  própria. Após cada merge, atualizar/revalidar branches restantes. EST-05
-  depende de EST-03; EST-06/07/08 continuam planejados. A próxima fase pode
+- Ordem desta rodada: EST-09 já publicado; seguem EST-04 e EST-03, cada versão
+  com aprovação própria. #7 e #10 são revalidados em paralelo sobre `d38574a`;
+  após eventual aprovação/merge de #7, atualizar/revalidar #10 novamente.
+  EST-05 depende de EST-03; EST-06/07/08 continuam pendentes. A próxima fase pode
   ser desenhada/prototipada isoladamente. O usuário autorizou preparar uma
   proposta combinando pulo e superbafo; ela será documentada por um terceiro
   agente em `codex/proposta-fase6`, worktree `proposta-fase6`, sem código novo
@@ -232,9 +288,10 @@ validar essa versão e apresentar sua prévia para aprovação própria.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3, #6, #5 e #4 integrados e publicados. Produção de #4
-   confirmada em `b1b026e`, deploy `39057744110`; não repetir merge/deploy.
-   Retomar EST-09 no checkpoint acima e conferir os executores EST-03/04
-   antes de editar áreas compartilhadas. Não instalar ai-memory.
+3. PRs #1, #2, #3, #6, #5, #4 e #8 integrados e publicados. Produção de #8
+   confirmada em `d38574a`, deploy `39060461084`; não repetir merge/deploy.
+   Conferir CI/prévia e E2E dos novos heads de #7 e #10, em revalidação sobre
+   essa base; não reutilizar resultados nem aprovação das versões anteriores.
+   Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

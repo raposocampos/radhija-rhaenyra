@@ -32,6 +32,12 @@ O #4 foi aprovado, integrado e publicado em `b1b026e29abb7cc80fff6a13224e967d784
 base da segunda rodada. CI `39057715283`, deploy `39057744110` e versão de
 produção conferidos. A aprovação desses PRs não inclui as próximas correções.
 
+EST-09 também foi aprovado e publicado pelo PR #8, squash
+`d38574a54d1203a3f7d71dd26541167d93819db3`; CI `39060437829` e deploy
+`39060461084` aprovados, produção HTTP 200 e `version.json` conferido.
+Essa é a base da revalidação dos PRs #7 e #10. Nesta rodada, o coordenador
+delegou a reconciliação deste plano exclusivamente ao executor de EST-04.
+
 ## Boas práticas a preservar
 
 - Fases com definição, layout, puzzle e cenário separados, reunidas no
@@ -59,20 +65,22 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 aprovado, integrado e publicado |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
 | [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
-| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | Em execução, branch codex/recuperacao-carregamento |
-| [ ] | EST-04 | Validação e migração do progresso | Executor progresso | EST-01 integrado | Em execução, branch codex/progresso-validado |
+| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 implementado; revalidação sobre d38574a |
+| [ ] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 implementado; revalidação sobre d38574a |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
-| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | Corrigido, aguardando CI/prévia/E2E na branch codex/menu-jogar-visivel |
+| [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-Na segunda rodada, integrar primeiro EST-09, depois EST-04 e EST-03,
-revalidando a base a cada entrega. Áreas reservadas e checkpoints em
+Na segunda rodada, EST-09 já foi publicado; seguem EST-04 e EST-03.
+PRs #7 e #10 são revalidados em paralelo na base `d38574a`; após eventual
+aprovação/merge de #7, atualizar e revalidar #10 novamente. Cada versão
+apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
 principal. Ainda não há tema/objeto aprovado para a fase 6.
@@ -94,8 +102,9 @@ nos marcos, sem criar commits apenas para registrar o CI do próprio documento.
 Branch: `codex/avaliacao-evolucao`. Worktree: `avaliacao-evolucao`.
 Escopo: `AGENTS.md`, `docs/CONTEXTO.md`, este plano.
 Entrega: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4).
-Conferir CI e prévia pelo head atual; o registro dos resultados desta rodada
-modifica a documentação e exige seus próprios checks.
+Integrado e publicado em `b1b026e` após aprovação do head `2fcbca3`.
+CI `39057715283` e deploy `39057744110` aprovados; versão pública conferida.
+Atualizações posteriores do plano acompanham os checks da própria entrega.
 
 ### EST-01 E2E e build
 
@@ -174,19 +183,28 @@ commit `18629a0` e execução `39056035625`.
 - Verificar a estratégia para arquivos antigos e atualização da página,
   preservando progresso e o fluxo confiável de publicação.
 
-Diagnóstico de partida: `loadLevel` em `src/game/game.js` inicia a
-importação antes de esperar 420 ms da cortina e só depois aguarda sua promessa.
+Diagnóstico na base anterior: `loadLevel` em `src/game/game.js` iniciava a
+importação antes de esperar 420 ms da cortina e só depois aguardava sua promessa.
 Capturar a rejeição desde o início. Separar recuperação antes do descarte da
 fase antiga do erro após montagem parcial; não tentar restaurar recursos já
 descartados. Ligar a ação de recuperação a `ui.js`, `curtain.js` e ao erro de
 `boot()` em `main.js`, incluindo os chamadores assíncronos da seleção de fase.
 
-Cenários atribuídos ao executor, em implementação: rejeição antes dos 420 ms; erro
+Cenários implementados no PR #10: rejeição antes dos 420 ms; erro
 no primeiro carregamento; exceção em `build`/`createPuzzle`/`reset`/descarte;
 falha seguida de repetição de comandos sem duplicar montagem ou `level:loaded`;
 aba antiga com chunk ausente recuperada por recarga. O helper
-`headlessLevels()` substitui carregamento/montagem e precisará permitir falhas
-controladas para essas regressões. Manter a coleta estrita de erros nos E2E.
+`headlessLevels()` permite falhas controladas para essas regressões. A prova
+de aba antiga confirma o 404 específico e novas URLs após recarga, preservando
+o save; erros não identificados continuam reprovando o harness.
+
+Branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
+No head anterior `6da8d31`, base `b1b026e`: CI `39058785550` tentativa 2
+aprovou 134 testes, tipos e build; E2E `39058783617` aprovou 299 verificações
+de gameplay, quatro de infraestrutura, 19 do smoke e 28 de recuperação.
+Capturas da fase 4 sem erros. PR #10 está incorporando a base `d38574a` e
+precisa de novos CI/prévia/E2E completos; os resultados anteriores não validam
+o novo merge. Sem integração ou aprovação de produção dessa tarefa.
 
 ### EST-04 Progresso
 
@@ -196,8 +214,8 @@ controladas para essas regressões. Manter a coleta estrita de erros nos E2E.
   ao adicionar uma fase. Introduzir migração apenas quando o formato exigir.
 - Testar os casos de recuperação e manter isolamento entre prévias e produção.
 
-Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
-`src/ui/progress.js`. Cenários atribuídos ao executor, em implementação:
+Implementado no PR #7: `loadProgress`, `saveProgress` e `recordLevelClear` em
+`src/ui/progress.js`, com 19 regressões específicas:
 
 - `levels` como array, registro de fase inválido e contadores como strings;
   concluir uma fase deve produzir números válidos, sem concatenar `clears`.
@@ -207,6 +225,20 @@ Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
   dados que o jogo atual não sabe interpretar.
 - JSON corrompido, leitura/escrita de storage indisponível e save válido da
   versão atual, incluindo releitura ao concluir fase e adição de uma fase nova.
+
+Chave e formato v1 mantidos, sem migração necessária. Campos inválidos são
+normalizados sem apagar marcas válidas; IDs desconhecidos são preservados,
+inclusive propriedades como `__proto__`. Versões declaradas diferentes de 1
+ficam intactas no storage; a partida usa uma cópia v1 vazia em memória.
+Falha de leitura bloqueia escrita; falha de quota não interrompe a partida.
+
+Branch `codex/progresso-validado`, worktree `progresso-validado`. Head anterior
+`8f974e1`, base `b1b026e`: CI `39058245437` aprovou 145 testes, tipos e build;
+E2E fase1 `39058252168` passou 61 verificações sem erros de console. Merge
+normal de `d38574a` preparado, mantendo o código e os testes de progresso.
+Próximo passo: push e novos CI/prévia, E2E `fase1` e `controle` no mesmo head
+final, depois apresentar para aprovação. Novas execuções pendentes neste marco;
+não atribuir os resultados antigos à combinação atual. Nenhum teste/build local.
 
 ### EST-05 Recursos gráficos
 
@@ -244,9 +276,8 @@ Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
 ### EST-09 Botão Jogar no menu
 
 Relato de 2026-10-17: ao apertar para baixo para escolher uma fase no menu
-inicial, o botão "Jogar" desaparece por alguns segundos. O usuário pediu para
-adiar a correção; ela está prevista após a primeira etapa. A versão exata
-será identificada na reprodução.
+inicial, o botão "Jogar" desaparecia por alguns segundos. A correção foi
+autorizada após a primeira etapa e entregue no PR #8.
 
 - Reproduzir na nuvem a navegação para baixo e identificar a causa do sumiço.
 - Manter o botão visível ou uma transição intencional e consistente, sem
@@ -261,8 +292,18 @@ entrada do botão; ao perder foco, a entrada pode reiniciar invisível.
 Reprodução negativa em `7a05466`, [E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
 56 verificações aprovadas, quatro falhas de opacidade zero, sem falhas nas
 46 verificações anteriores. Excluir apenas Jogar do pulso de foco corrige a
-substituição da animação. Revisão independente sem bloqueios; validar o head
-corrigido com CI, prévia e E2E `controle` antes de apresentar para aprovação.
+substituição da animação. Revisão independente sem bloqueios.
+
+Head aprovado pelo usuário: `8494143bbe918bb804c05bb115ff1e7770aaef7c`.
+CI `39058279947`: tipos, 126 testes e build aprovados. E2E controle
+`39058279323`: 60 verificações, zero falhas/erros de console; sete cenários
+mantiveram opacidade mínima 1. Prévia publicada e versão conferida.
+Squash `d38574a54d1203a3f7d71dd26541167d93819db3` tem árvore idêntica ao
+head aprovado e merge sintético `196f108`, verificada independentemente.
+CI main `39060437829` aprovou tipos, 126 testes e build Vite 6.4.4;
+deploy `39060461084` concluiu após liberação do deployment `7144319080`
+com a aprovação do chat. Produção HTTP 200 e `version.json` confirmou
+head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação.
 
 ### Preparação da próxima fase (proposta)
 
