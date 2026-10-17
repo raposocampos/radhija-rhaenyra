@@ -7,41 +7,65 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**PR #3 em correção de pernas/câmera; produção não autorizada.**
-Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
-Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
-pombo → placa → portão legíveis.
+**Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
+autorizou executar o plano com este chat coordenando até dois executores,
+worktrees separados e testes no GitHub. A aprovação de produção continua
+vinculada a cada versão apresentada, conforme `AGENTS.md`.
 
-- Usuário aceitou o visual de `7427dda`, pediu melhorar o voo e depois relatou
-  pernas separadas do corpo em `a9b0906` e câmera que não acompanha o segundo
-  pombo. Esses retornos não autorizam publicação em produção.
-- Última versão entregue: `a9b090606d5e646d8a8ed4cf70c8be1bf5c36947`.
-  [CI 39007017743](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007017743),
-  [prévia 39007043021](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007043021)
-  e [E2E 39007014701](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39007014701)
-  passaram: tipos, 120 testes, build, 17 verificações da fase 4 e capturas/vídeo.
-  Isso valida a versão anterior, não as novas correções.
-- Correção atual: pernas presas ao grupo do corpo, pivô no quadril dentro do
-  tronco e contato dos pés resolvido no pouso/sono. Teste geométrico verifica
-  as raízes das duas pernas dentro da malha durante voo, curva e pouso.
-- Câmera: alvo vivo com altura, antecipação de 0,3 s antes de voar e um único
-  plano contínuo para trajeto, placa e portão. Retorna suavemente à dog.
-  Placa maior com molas, compressão, mudança de cor e pulso na corda; pombo
-  acompanha a superfície da placa. Eventos, controles e colisões preservados.
-- Capturas na nuvem comparam as pernas com `a9b0906` e acrescentam vídeo da
-  câmera real do mecanismo, validação de enquadramento e captura vertical.
-  Testes de câmera cobrem seguimento 3D, troca de foco e retorno à dog.
-- Validação das correções pendente: enviar o novo commit no PR #3, acompanhar
-  CI/prévia e E2E fase4, inspecionar capturas e entregar SHA/link ao usuário.
-  Nenhum teste, build ou partida automatizada foi executado localmente.
-- Base conferida: `main` em `3e826e48f9eac644681b718470f9d75f6e207de5`, PR #2
-  integrado. CI `39004801467` e deploy `39004826940` passaram. PR #1 integrado.
-- Pesquisa e decisões visuais em `docs/POMBOS.md`. Fotografias consultadas não
-  incorporadas. Fábrica compartilhada pelos quatro pombos; 25 → 13 meshes e
-  3.020 → 4.740 triângulos por pombo na revisão anterior. Não é benchmark de FPS.
-- Próximo passo: conferir resultados do head atual, inclusive o commit deste
-  documento, apresentar a nova prévia e aguardar aprovação explícita dessa
-  versão. Não ativar auto-merge, integrar ou liberar produção enquanto aguarda.
+Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
+O coordenador usa branch `codex/avaliacao-evolucao`, worktree
+`avaliacao-evolucao`, para preservar a avaliação, o checklist e as instruções
+de coordenação. Alterações desta entrega: `AGENTS.md`, este contexto e o plano;
+o código do jogo não muda nesta branch. Commit/PR e checks devem ser conferidos
+no GitHub antes de retomar; não considerar a validação da base como validação
+desta entrega documental.
+
+- EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
+  `estabilidade-e2e`; E2E rigoroso e teste mínimo do build, em execução.
+- EST-02: executor Codex em `codex/atualizar-vite`, worktree
+  `atualizar-vite`; atualização pontual do Vite, em execução.
+- Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
+  reservadas aos executores nem integrar/publicar sem aprovação da versão.
+
+## Evidências da avaliação anterior
+
+- Base examinada: `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
+  O registro anterior estava desatualizado: o [PR #3](https://github.com/raposocampos/radhija-rhaenyra/pull/3)
+  foi integrado. [CI 39009757588](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39009757588)
+  aprovou tipos, 123 testes e build; [deploy 39009786059](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39009786059)
+  terminou com sucesso. `version.json` de produção confirmou esse SHA e CI.
+  Não repetir merge/deploy. Decisões dos pombos permanecem em `docs/POMBOS.md`.
+- Conferidas por API as proteções do main, checks obrigatórios e revisão do
+  ambiente de produção. Nenhuma proteção ou configuração alterada.
+- [E2E completo 39048060825](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39048060825)
+  executado no GitHub, suíte `todas`, no SHA acima: **sucesso nas nove suítes,
+  299 verificações aprovadas e nenhum erro de console nos logs**. Contagens:
+  bafo 12, fase4 17, regressões 9, pulo 8, controle 46, fase5 18, fase2 77,
+  fase1 61 e fase3 51. Essa execução da avaliação foi concluída; não valida
+  os novos commits da estabilização.
+- Prioridades propostas pela revisão estática, ainda não implementadas:
+  1. Fazer erros inesperados de console/pageerror reprovarem o E2E; hoje são
+     apenas registrados. Acrescentar teste mínimo do build publicado, pois as
+     partidas atuais usam o servidor de desenvolvimento.
+  2. Recuperar estado e oferecer ação útil quando loadLevel rejeitar. Avaliar
+     também abas antigas após deploy: os arquivos anteriores são removidos,
+     e imports de fases sob demanda podem apontar para chunks inexistentes.
+  3. Definir descarte de materiais/texturas exclusivos e propriedade dos
+     recursos compartilhados; medir memória após alternar fases repetidamente.
+     O descarte incompleto foi inspecionado, mas crescimento de memória não
+     foi medido nesta avaliação.
+  4. Fortalecer tipos entre puzzle/cenário e dublês de props: o uso de any e
+     Proxy permissivo pode esconder incompatibilidades. Validar contratos reais.
+  5. Validar/migrar o progresso salvo antes de ampliar conteúdo; extrair
+     configurações comuns das dogs da fase1 e dividir o núcleo gradualmente.
+- Consulta leve `npm audit --package-lock-only --ignore-scripts --json`:
+  Vite 6.3.5 é a única dependência sinalizada, severidade agregada alta; o
+  relatório indica 6.4.4 como correção sem troca de major. Os avisos consultados
+  referem-se ao servidor de desenvolvimento; produção usa arquivos estáticos.
+  Nenhuma dependência foi instalada ou atualizada.
+- Nenhum teste, build ou partida foi executado no PC durante a avaliação.
+  Inspeção local do diff e `git diff --check` sem problemas. A implementação
+  de EST-01 e EST-02 agora está autorizada e usa validações próprias na nuvem.
 
 ## O que foi feito
 
@@ -126,9 +150,10 @@ pombo → placa → portão legíveis.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 e #2 concluídos e publicados; não repetir seus merges/deploys.
-   PR #3 é a entrega dos pombos e depende da aprovação humana da versão validada.
-   Conferir head/base/CI/prévia/E2E atuais antes de qualquer integração.
-   Não há autorização para instalar ai-memory neste projeto.
+3. PRs #1, #2 e #3 integrados; produção conferida em `baa8af0` nesta avaliação.
+   Não repetir seus merges/deploys. Conferir os PRs das branches de
+   estabilização, preservar trabalho em andamento e atualizar o checklist
+   nos marcos. A próxima entrega é a documentação e a primeira etapa do plano;
+   aguardar aprovação das versões antes de integrar. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

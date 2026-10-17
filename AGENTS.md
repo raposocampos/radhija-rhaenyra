@@ -26,6 +26,14 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
   público. Preservar decisões úteis e referências às entregas anteriores.
 - Neste projeto, a passagem de contexto é por Markdown. Não instalar ai-memory:
   o usuário reservou essa experiência para outro projeto.
+- Para a rodada de estabilização, consultar também
+  `docs/PLANO-ESTABILIZACAO.md`. O coordenador mantém o checklist e reconcilia
+  os registros das tarefas; cada executor registra seu ponto de retomada no
+  `docs/CONTEXTO.md` da própria branch. Git e GitHub confirmam o estado atual.
+- Ao delegar trabalho, informar objetivo, arquivos sob responsabilidade,
+  dependências e critérios de aceitação. Evitar edições simultâneas na mesma
+  área; uma revisão sem alterações pode avançar em paralelo. Um resumo de
+  entrega deve identificar commit, PR, validações, pendências e próximo passo.
 
 ## Entregar por PR, prévia e aprovação
 
