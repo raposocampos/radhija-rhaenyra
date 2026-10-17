@@ -1,8 +1,9 @@
 // Utilitários das partidas automatizadas (Playwright + Chrome do sistema) com TECLAS REAIS.
 // Malha fechada: lê a posição por debug.info() e segura WASD (8 direções relativas à câmera).
 import { chromium } from 'playwright-core';
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { browserOptions } from './browser.mjs';
 
 export function parseArgs(argv = process.argv.slice(2)) {
   return Object.fromEntries(argv.reduce((acc, cur, i, arr) => {
@@ -14,11 +15,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
 export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 } }) {
   const OUT = resolve(outDir);
   mkdirSync(OUT, { recursive: true });
-  const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find((p) => existsSync(p));
-  const browser = await chromium.launch({
-    executablePath: CHROME, headless: true,
-    args: ['--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
-  });
+  const browser = await chromium.launch(browserOptions());
   const page = await browser.newPage({ viewport });
   // Isola os testes de controles REAIS conectados ao Windows (o Chrome headless enxerga XInput):
   // navigator.getGamepads devolve só o controle falso do teste (window.__fakePads), se houver.

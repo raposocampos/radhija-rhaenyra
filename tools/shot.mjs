@@ -19,8 +19,9 @@
 // Opções: --w 1280 --h 720 --wait <ms antes do roteiro/captura> --eval "<js antes da captura>"
 // Imprime erros de console/página no final (saída "ERROS:").
 import { chromium } from 'playwright-core';
-import { mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { browserOptions } from './scripts/lib/browser.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, cur, i, arr) => {
@@ -32,18 +33,8 @@ const args = Object.fromEntries(
 const url = args.url || 'http://127.0.0.1:5173/?play';
 const width = Number(args.w || 1280);
 const height = Number(args.h || 720);
-const CHROME_PATHS = [
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-];
-const executablePath = CHROME_PATHS.find((p) => existsSync(p));
-
 const errors = [];
-const browser = await chromium.launch({
-  executablePath,
-  headless: true,
-  args: ['--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
-});
+const browser = await chromium.launch(browserOptions());
 const page = await browser.newPage({ viewport: { width, height } });
 page.on('console', (m) => {
   if (m.type() === 'error' || m.type() === 'warning') errors.push(`[console.${m.type()}] ${m.text()}`);

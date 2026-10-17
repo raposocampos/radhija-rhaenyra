@@ -10,6 +10,17 @@ shots/
 # Ficam só na máquina local para não vazarem se o repositório for publicado.
 referencias/fotos/
 
+# Configurações locais e credenciais (nunca publicar)
+.claude/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+
 # Diversos
 *.log
 .DS_Store

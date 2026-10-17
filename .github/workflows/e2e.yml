@@ -1,0 +1,42 @@
+name: E2E manual
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  partidas:
+    name: Partida — ${{ matrix.suite }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo]
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Jogar e verificar
+        run: npm run test:e2e -- --only "${{ matrix.suite }}"
+      - name: Guardar capturas para diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-${{ matrix.suite }}
+          path: shots/
+          if-no-files-found: ignore
+          retention-days: 7

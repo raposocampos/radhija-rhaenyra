@@ -5,6 +5,10 @@ e a Rhaenyra (maior, forte, branca). Feita em Three.js + Vite, com tudo gerado e
 
 ## Como jogar
 
+**[Jogar no navegador](https://raposocampos.github.io/radhija-rhaenyra/)** — sem instalar nada.
+
+Para desenvolver localmente:
+
 ```bash
 npm install
 ```
@@ -68,6 +72,17 @@ Documentação:
 
 ## Testes
 
+Os testes automáticos rodam nos servidores do GitHub. Envie o código com `git push`: o workflow
+**CI e publicação** instala as dependências, checa os tipos, executa os testes rápidos e gera a build.
+Quando tudo passa no `main`, publica o jogo no link acima. Se falhar, a versão anterior continua no ar.
+Não é preciso gerar ou enviar a pasta `dist/`, nem rodar os testes no PC antes de cada envio.
+
+As partidas completas ficam separadas: abra [Actions → E2E manual](https://github.com/raposocampos/radhija-rhaenyra/actions/workflows/e2e.yml),
+clique em **Run workflow**, escolha o branch e confirme. Elas rodam em máquinas Linux do GitHub,
+com uma suíte por máquina. As capturas ficam nos artefatos da execução por 7 dias.
+
+Os comandos abaixo continuam disponíveis para quem quiser rodar testes **localmente**:
+
 | Comando | O que faz |
 |---|---|
 | `npm test` | testes em Node, cerca de 30 s: as 5 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting (faces no mesmo plano "tremendo"), equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
@@ -78,7 +93,9 @@ Documentação:
 
 O `test:e2e` sobe sozinho um servidor Vite sem recarga automática numa porta livre (sem atrapalhar o `npm run dev`
 na 5173), roda as partidas em sequência e derruba o servidor no fim, inclusive em erro ou Ctrl+C. Ele usa o Chrome
-(ou o Edge) instalado no sistema. Para rodar só algumas partidas: `node tools/scripts/run-e2e.mjs --only fase2,controle`.
+(ou o Edge) instalado no sistema. No GitHub, usa o Chromium instalado pela versão fixada do Playwright.
+Também é possível escolher um executável com a variável `CHROME_PATH`.
+Para rodar só algumas partidas: `node tools/scripts/run-e2e.mjs --only fase2,controle`.
 As capturas das partidas vão para `shots/`.
 
 `tools/shot.mjs` tira capturas headless com roteiro de teclas (ver cabeçalho do arquivo).
@@ -92,6 +109,9 @@ O `.gitignore` deixa de fora:
   depende delas: os modelos são gerados em código.
 - `shots/`: capturas geradas pelos testes e pelas ferramentas (centenas de MB, recriadas a cada execução).
 - `node_modules/`, `dist/` e `.builds/`: dependências e saídas de build.
+- `.env`, `.env.*` (exceto `.env.example`), chaves privadas e `.claude/`: configurações locais e credenciais.
+
+Os commits publicados usam o usuário do GitHub e seu endereço `noreply`, sem nome ou e-mail pessoal.
 
 ## Créditos e licenças
 
