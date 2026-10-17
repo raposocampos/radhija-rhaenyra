@@ -19,8 +19,8 @@ GitHub Actions. As partidas E2E continuam no workflow manual separado.
 - Não exigimos um segundo usuário aprovador do PR: o GitHub não permite aprovar
   o próprio PR, e este projeto tem um responsável. A decisão humana é registrada
   no chat e aplicada no ambiente de produção, separadamente dos checks.
-- `preview`: aceita `refs/pull/*/merge`, sem aprovação manual. O workflow só
-  publica PRs do mesmo repositório. Forks recebem testes; para uma prévia,
+- `preview`: aceita apenas `main`, sem aprovação manual. O workflow confiável
+  publica artefatos de PRs do mesmo repositório. Forks recebem testes; para uma prévia,
   revisar o código e trazê-lo para um branch interno. Nunca usar
   `pull_request_target` para executar código de um fork com escrita.
 
@@ -32,9 +32,17 @@ compartilhada e `CLAUDE.md` a importa.
 ## Como as prévias funcionam
 
 Produção continua em https://raposocampos.github.io/radhija-rhaenyra/.
-Prévia: `.../previews/pr-N/EXECUCAO-TENTATIVA/`. O caminho é gerado no CI,
-aparece no deployment do PR e no resumo do job `publicar-site`. O agente
+Prévia: `.../previews/pr-N/EXECUCAO-TENTATIVA/`. O caminho identifica a execução
+do CI e aparece no status obrigatório `publicar-site` do PR e no resumo da publicação. O agente
 também o coloca na descrição do PR e entrega ao usuário no chat.
+
+O CI (`ci.yml`) só lê o repositório, testa e envia `game-build`. A publicação
+(`deploy.yml`, **Publicar versão validada**) é disparada por `workflow_run`,
+usando o workflow e os scripts do main, nunca os scripts do PR. Antes e depois
+da fila, confere CI, origem, PR aberto e head/base; também verifica a identidade
+do artefato. O job com escrita apenas copia estáticos. Um PR não pode usar o
+ambiente preview diretamente, pois ele recusa a referência do PR. Isso impede
+que uma alteração no workflow do PR contorne a aprovação de produção.
 
 O Pages hospeda um site: o branch órfão `pages-state` guarda apenas os arquivos
 estáticos em `site/`. O job serializa leitura, atualização e publicação para
@@ -100,6 +108,24 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
   produção `f457844` (execução `39000135800`), sem build local. Se o estado for
   perdido, recuperar os arquivos de uma publicação aprovada antes de publicar
   outra prévia; o script recusa um estado sem produção inicial.
+
+## Primeira instalação (PR #1)
+
+`workflow_run` só fica ativo depois de o YAML entrar no main. Para testar esta
+primeira instalação antes da aprovação, foi reservado o branch órfão
+`delivery-bootstrap`, com uma cópia revisada do publicador e dos dois scripts.
+Ele é bloqueado contra alterações por proteção de branch. Temporariamente,
+somente esse branch e main podem usar o ambiente preview. O workflow tem o
+caminho `e2e.yml` apenas para permitir despacho pela identificação já existente
+no GitHub; nessa referência ele executa o publicador, não partidas. Isso não
+altera o E2E normal no main nem nos branches de trabalho.
+
+Para a instalação inicial, despachar `e2e.yml` na referência bloqueada
+`delivery-bootstrap` com `run_id` do CI aprovado. O publicador valida que o
+artefato veio de `ci.yml`, e o ambiente de produção continua aceitando só main.
+**Depois de integrar o PR #1 aprovado, remover a exceção delivery-bootstrap do
+ambiente preview.** O branch bloqueado pode permanecer como registro; nunca
+integrá-lo ao main. Daí em diante, `deploy.yml` do main faz tudo automaticamente.
 
 Referências: [workflows do Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages),
 [fila de publicação](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).

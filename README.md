@@ -83,7 +83,9 @@ principal. Não é necessário operar o GitHub. Testes e build ficam na nuvem.
 Os testes automáticos rodam nos servidores do GitHub. Envie um branch e abra um PR:
 **CI e prévias** instala dependências, checa tipos, executa testes e gera a build.
 `main` exige PR atualizado e os checks `testes-e-build` e `publicar-site` aprovados.
-Cada PR interno recebe uma prévia pública; o link aparece no deployment e no resumo do CI.
+O workflow separado **Publicar versão validada** usa código confiável do main
+para publicar o artefato testado. Cada PR interno recebe uma prévia pública;
+o link aparece no check `publicar-site` e no resumo do workflow de publicação.
 Após aprovação e merge, a publicação principal ainda passa pelo ambiente protegido `github-pages`.
 Uma falha de build não substitui a versão que está no ar.
 Não é preciso gerar ou enviar a pasta `dist/`, nem rodar os testes no PC antes de cada envio.

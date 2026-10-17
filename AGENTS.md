@@ -43,10 +43,14 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
 - Preservar trabalho alheio; não usar force push, descartar alterações, fazer
   push direto ao `main`, usar `--admin` ou relaxar proteções para entregar.
   Não misturar tarefas não relacionadas. Integrar PRs um de cada vez.
-- Abrir um PR para `main` e acompanhar **CI e prévias**. Os checks obrigatórios
+- Abrir um PR para `main` e acompanhar **CI e prévias** e, depois,
+  **Publicar versão validada**. Os checks obrigatórios
   são `testes-e-build` e `publicar-site`: tipos, testes rápidos, build e prévia
   precisam passar. Conferir os resultados do commit atual e a base atualizada.
   Se falhar, corrigir a causa; não desativar verificações.
+- O CI de PR só tem leitura. Publicação usa workflow confiável do `main`
+  (`workflow_run`) e trata o artefato do PR como dados; nunca executar scripts
+  do PR em jobs com escrita. O ambiente de prévia também recusa branches de PR.
 - Entregar ao usuário o link da prévia, o PR, o commit validado, os resultados
   e o que testar. Aguardar aprovação explícita para publicação. A aprovação pode
   ser dada no chat: o agente faz as ações no GitHub sem exigir cliques do usuário.
