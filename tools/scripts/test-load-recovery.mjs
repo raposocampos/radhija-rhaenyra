@@ -65,7 +65,7 @@ async function nextVersion() {
 try {
   const manifest = JSON.parse(await readFile(join(DIST, '.vite/manifest.json'), 'utf8'));
   const firstWorld = manifest['src/levels/fase1/world.js']?.file;
-  const secondWorld = manifest['src/levels/fase2/world.js']?.file;
+  const secondWorld = manifest['src/levels/fase2/world/index.js']?.file;
   assert.ok(firstWorld && secondWorld, 'manifest identifica os chunks reais das duas fases');
   const versionB = await nextVersion();
   await new Promise((done, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', done); });
