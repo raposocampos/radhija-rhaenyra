@@ -38,8 +38,10 @@ EST-09 também foi aprovado e publicado pelo PR #8, squash
 Depois, EST-04 foi aprovado e publicado pelo PR #7, squash
 `2ee7e078d25140a82ccf4ee31aa4d7abcea5ac7c`; CI `39061928859` e deploy
 `39061964438` aprovados, produção HTTP 200 e `version.json` conferido.
-Essa é a base atual da revalidação do PR #10. Nesta rodada, o coordenador
-delegou a reconciliação deste plano exclusivamente ao executor de EST-03.
+Depois, EST-03 foi aprovado e publicado pelo PR #10, squash
+`9be3075ec05a4903218822f047be5405c51d108c`; CI `39063414327` e deploy
+`39063438736` aprovados, produção HTTP 200/version.json conferida. Essa é a
+base de EST-05; o coordenador delegou este plano ao executor de recursos.
 
 ## Boas práticas a preservar
 
@@ -68,9 +70,9 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 aprovado, integrado e publicado |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
 | [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base 9fcce75 | PR #5 aprovado, integrado e publicado |
-| [ ] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 implementado; revalidação sobre 2ee7e07 |
+| [x] | EST-03 | Recuperação de falhas no carregamento | Executor carregamento | EST-01 e EST-02 integrados | PR #10 aprovado, integrado e publicado em 9be3075 |
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
-| [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
+| [ ] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | Implementado; validação na nuvem pendente |
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
@@ -80,8 +82,8 @@ Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-Na segunda rodada, EST-09 e EST-04 já foram publicados; segue EST-03.
-PR #10 incorpora por merge normal a base `2ee7e07` e passa por novos
+Na segunda rodada, EST-09, EST-04 e EST-03 foram publicados. Agora EST-05
+combina descarte e medição em um PR sobre `9be3075`, com novos
 CI/prévia e E2E `todas` antes de pedir aprovação. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
@@ -203,13 +205,14 @@ de aba antiga confirma o 404 específico e novas URLs após recarga, preservando
 o save; erros não identificados continuam reprovando o harness.
 
 Branch `codex/recuperacao-carregamento`, worktree `recuperacao-carregamento`.
-No head anterior `afe32da`, base `d38574a`: CI `39060701722` aprovou 134
-testes, tipos e build; E2E `39060697698` aprovou 313 verificações de gameplay,
+No head aprovado `019723f`, base `2ee7e07`: CI `39062287562` aprovou 153
+testes, tipos e build; E2E `39062283263` aprovou 313 verificações de gameplay,
 quatro de infraestrutura, 19 do smoke e 28 de recuperação. Capturas da fase 4
 sem erros; capturas de recuperação revisadas visualmente, sem bloqueios.
-Prévia `39060738685` publicada e conferida. PR #10 incorpora a base `2ee7e07` e
-precisa de novos CI/prévia/E2E completos; os resultados anteriores não validam
-o novo merge. Sem integração ou aprovação de produção dessa tarefa.
+Prévia `39062324764` publicada e conferida. Integrado após aprovação em
+`9be3075`; CI main `39063414327` aprovou 153 testes/tipos/build e deploy
+`39063438736` passou. Produção HTTP 200/version.json conferida. Não repetir
+integração/publicação de #10; a aprovação não cobre versões futuras.
 
 ### EST-04 Progresso
 
@@ -257,6 +260,20 @@ não repetir integração/deploy. Nenhum teste/build local.
 - Medir alternâncias repetidas entre fases na nuvem e verificar estabilização
   após aquecimento. Registrar contagens e condições; caches legítimos não
   precisam chegar a zero. Conferir a prévia visualmente.
+
+Branch `codex/recursos-graficos`, worktree `recursos-graficos`, base `9be3075`.
+Implementação: escopo por fase, caches por identidade, extras declarados,
+descarte de cheiro e debug, limpeza após falhas e onze testes com Three real.
+Regras para novas fases em `ARQUITETURA.md` §3.1. Instrumento separado em
+`codex/medicao-recursos` será combinado no mesmo PR: duas passagens de
+aquecimento e três medidas comparáveis por fase, render completo com
+Chromium/SwiftShader e DPR 1. Medir geometrias/texturas/programas e raízes;
+não interpretar como MB, VRAM ou FPS. Testes de ownership complementam a
+observação limitada de geometrias/materiais globais do navegador.
+Prova negativa `39064044388` confirmou crescimento de 60 geometrias e 147
+texturas por ciclo após aquecimento, sem erros de navegador. PR #11 aberto;
+validação do head final ainda pendente neste checkpoint. Nenhum teste/build
+local; sem aprovação para produção.
 
 ### EST-06 Contratos
 

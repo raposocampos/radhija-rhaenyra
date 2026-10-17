@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, rng } from './util.js';
+import { shareResource } from '../core/resources.js';
 
 // Cor na própria malha: barras e penas não acrescentam draw calls nem texturas.
 /** @param {THREE.BufferGeometry} geo @param {(x: number, y: number, z: number) => THREE.Color} colorAt */
@@ -38,7 +39,7 @@ function zzzTexture() {
     g.fillStyle = '#fff8ec';
     g.fillText('z', w / 2, h / 2 + 2);
   }, { repeat: false });
-  return _zzz;
+  return shareResource(_zzz);
 }
 
 /** @param {{ seed?: number, tint?: string, scale?: number }} [opts] */

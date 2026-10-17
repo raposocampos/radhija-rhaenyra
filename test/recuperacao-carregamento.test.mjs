@@ -51,6 +51,8 @@ test('carregamento: exceção síncrona na primeira carga tem ação de recarga,
   assert.equal(h.game.state, 'load-error');
   assert.equal(h.log('level:error')[0].initial, true);
   assert.equal(h.log('level:error')[0].canReturn, false);
+  assert.equal(h.info().state, 'load-error', 'diagnóstico funciona antes da primeira montagem');
+  assert.deepEqual(h.info().dogs, { radhija: null, rhaenyra: null });
   assert.doesNotThrow(() => h.run(0.5));
   h.game.cancelLoad();
   assert.equal(h.game.state, 'load-error');
@@ -75,6 +77,11 @@ for (const point of ['build', 'createPuzzle', 'reset', 'dispose', 'compile']) {
     assert.equal(h.game.state, 'load-error');
     assert.equal(h.log('level:error')[0].canReturn, false);
     assert.equal(h.log('level:loaded').length, 0);
+    const snapshot = h.info();
+    assert.equal(snapshot.state, 'load-error', 'diagnóstico continua disponível após descarte');
+    assert.equal(snapshot.stage, null);
+    assert.equal(snapshot.scent, null);
+    assert.equal(snapshot.carrier, null);
     assert.doesNotThrow(() => h.run(1), 'nenhum update usa referências parciais');
     h.game.cancelLoad();
     assert.equal(h.game.state, 'load-error');

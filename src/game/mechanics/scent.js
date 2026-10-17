@@ -15,7 +15,7 @@ const WIND_R = 0.38; // no vento a nuvem fica compacta
 const COLLIDE_R = 0.12;
 
 /**
- * opts: { world (colisão; opcional), emit(nome, dados), view (desenho; opcional: { sync(clouds, dt), showPreview(p), hidePreview(), clear() }) }
+ * opts: { world (colisão; opcional), emit(nome, dados), view (desenho; opcional) }
  * @param {{ world?: import('../../types').CollisionWorld | null, emit?: (name: string, payload?: object) => void, view?: any }} [opts]
  * @returns {import('../../types').ScentField}
  */
@@ -201,8 +201,15 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     view?.clear?.();
   }
 
+  // Diferente de reset(): encerra a fase e solta callbacks/colisão antigos.
+  function dispose() {
+    clouds.length = winds.length = ducts.length = noses.length = 0;
+    try { view?.dispose?.(); }
+    finally { view = null; world = null; emit = () => {}; }
+  }
+
   return {
-    spawn, update, preview, near, windAt, addWind, addDuct, addNose, reset,
+    spawn, update, preview, near, windAt, addWind, addDuct, addNose, reset, dispose,
     showPreview: (p) => view?.showPreview?.(p),
     hidePreview: () => view?.hidePreview?.(),
     get clouds() { return clouds; },

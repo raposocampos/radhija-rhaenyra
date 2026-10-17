@@ -5,6 +5,7 @@
 // API (docs/ARQUITETURA.md §7, tipo GooseModel em src/types.d.ts): createGoose() → { object, radius, update(dt, {speed, turn, action, lookAt}), triggerHonk() }
 import * as THREE from 'three';
 import { compileSDF, groupsBounds, surfaceNets, fbm } from '../dogs/sdf.js';
+import { shareResource } from '../core/resources.js';
 
 const TAU = Math.PI * 2;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -166,7 +167,7 @@ function contactShadowTexture() {
   g.fillRect(0, 0, 128, 128);
   shadowTex = new THREE.CanvasTexture(c);
   shadowTex.colorSpace = THREE.SRGBColorSpace;
-  return shadowTex;
+  return shareResource(shadowTex);
 }
 
 // ---------------------------------------------------------------------------- malhas
@@ -295,6 +296,7 @@ export function createGoose() {
     return c.map((v) => v * (1 + n));
   }, 'body'));
   const bodyMat = featherMaterial({ scallop: 0.0, scale: 1 });
+  shareResource(bodyGeo);
   const body = new THREE.SkinnedMesh(bodyGeo, bodyMat);
   body.bind(skeleton);
   body.frustumCulled = false;
@@ -325,7 +327,7 @@ export function createGoose() {
       geo.deleteAttribute('skinWeight');
       geo.translate(-SHOULDER[0] * side, -SHOULDER[1], -SHOULDER[2]);
     }
-    const m = new THREE.Mesh(geo, wingMat);
+    const m = new THREE.Mesh(shareResource(geo), wingMat);
     m.castShadow = m.receiveShadow = true;
     pivot.add(m);
     return { pivot, side };
