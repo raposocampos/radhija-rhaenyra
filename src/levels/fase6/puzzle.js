@@ -10,7 +10,7 @@ export const TEXT = {
     pedal: 'Pule no pedal com a Rhaenyra para apontar o trilho para a estrela (Espaço)',
     switchJump: 'Troque para a Rhaenyra (Q): o pedal precisa de um pulão!',
     blow: 'Faça a locomotiva espirrar com o superbafo da Radhija (segure R e solte)',
-    switchBlow: 'O trilho está pronto! Troque para a Radhija e solte o superbafo (Q)',
+    switchBlow: 'O trilho está pronto! Troque para a Radhija (Q) e use o superbafo (segure R e solte)',
     moving: 'Atchim! Veja por onde o vagão leva a bolinha',
     airing: 'Espere o cheirinho sair da janela para soprar de novo',
     pickup: 'Pegue a bolinha-planeta na bandeja (E)',
