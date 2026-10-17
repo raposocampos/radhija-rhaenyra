@@ -16,8 +16,18 @@ Branch: `codex/prs-ci-previas`, base de produção `f457844`. As alterações ne
 branch atualizam CI, instruções, documentação e template de PR; adicionam
 montagem do site com prévias, quatro testes de regressão e separação dos saves
 e volume por PR. Ao retomar, localizar o PR desse branch e conferir os checks
-do head atual. A validação inicial ainda será executada no GitHub; nenhum teste
-ou build foi executado no PC.
+do head atual. Nenhum teste ou build foi executado no PC.
+
+A implementação `d53b8d4` passou nos 116 testes, tipos, build e publicação de
+prévia na [execução 39001850255](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001850255).
+O HTML e os assets da produção foram preservados (diff do estado estático vazio
+fora de previews/.nojekyll; HTML público com o mesmo SHA-256). Prévia e assets
+responderam HTTP 200, e `version.json` confirmou head/base/execução esperados.
+O E2E `controle` foi disparado no mesmo código na
+[execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192);
+estava em andamento nesta atualização documental. Conferir o resultado real.
+Esta atualização muda apenas o resumo; conferir também o CI do seu commit.
+Cada novo CI gera outra URL, então usar o deployment mais recente do PR.
 
 Configurações já aplicadas no servidor: main exige PR atualizado, checks
 `testes-e-build` e `publicar-site`, incluindo admins; ambiente `github-pages`
@@ -26,7 +36,8 @@ exige aprovação de `raposocampos` e branch main. Ambiente `preview` permite
 `f457844` (artefato da execução `39000135800`); o HTML coincide com o site atual.
 É um branch órfão só de estáticos: nunca integrar ao main.
 
-Próximo passo: conferir CI e prévia deste PR, entregar o link ao usuário e
+PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
+Próximo passo: conferir CI e E2E deste PR, entregar a prévia mais recente e
 aguardar aprovação. Depois seguir `docs/ENTREGA.md`. Não afirmar que a nova
 política já está integrada ao main: os arquivos aguardam aprovação no PR,
 embora as proteções no servidor já estejam ativas.
