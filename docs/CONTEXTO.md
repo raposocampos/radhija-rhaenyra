@@ -5,6 +5,36 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## EST-02 — atualização pontual do Vite
+
+2026-10-17, Codex. Branch `codex/atualizar-vite`, worktree isolado
+`atualizar-vite`. Objetivo autorizado: corrigir a dependência vulnerável sem
+alterar o jogo. Base conferida no Git/GitHub: `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
+O PR #3 já foi integrado e publicado; o bloco anterior abaixo é histórico e
+não indica uma aprovação ou publicação pendente daquele PR.
+
+- Implementado: Vite exato `6.3.5` → `6.4.4` em `package.json` e no lockfile.
+  Nenhuma outra dependência, script, workflow ou configuração foi alterada.
+  O servidor de desenvolvimento continua restrito a `127.0.0.1`; produção
+  serve somente arquivos estáticos.
+- Versão escolhida pelo [aviso oficial GHSA-rq7h-c2jc-7f22](https://github.com/vitejs/vite/security/advisories/GHSA-rq7h-c2jc-7f22):
+  até `6.4.3` ainda é afetada; `6.4.4` corrige o acesso indevido a arquivos
+  fora de `server.fs.allow`. Inclui também as correções anteriores de Windows,
+  WebSocket e caminhos do servidor de desenvolvimento.
+- Verificação leve: `npm audit --package-lock-only --ignore-scripts --json`
+  passou de uma dependência sinalizada (alta) para zero vulnerabilidades.
+  O lockfile foi atualizado com `--package-lock-only --ignore-scripts`;
+  nenhum teste, build ou partida foi executado no PC. Não foi executada uma
+  prova de exploração: a evidência de correção é a versão corrigida do
+  fornecedor e a consulta do lockfile, não uma alegação de PoC local.
+- Pendente: commit/PR, tipos, testes rápidos, build, prévia e E2E `todas`
+  no GitHub para o novo SHA. Resultados anteriores da base não validam esta
+  mudança. Conferir também os erros de console nos logs das nove suítes.
+- Próximo passo: acompanhar essas execuções e apresentar PR, prévia e SHA
+  ao usuário. Aguardar aprovação explícita dessa versão antes de integrar;
+  não ativar auto-merge nem liberar produção. O coordenador reconcilia este
+  bloco com o checklist geral da rodada de estabilidade.
+
 ## Onde paramos
 
 **PR #3 em correção de pernas/câmera; produção não autorizada.**
