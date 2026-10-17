@@ -53,6 +53,15 @@ sob demanda e recursos carregados. A prova negativa injeta erros numa página
 mínima para verificar que `console.error` e exceções não capturadas reprovam o
 processo E2E. Selecionar uma partida individual não roda esse job adicional.
 
+O mesmo job gera o manifest do build e executa `test-load-recovery.mjs`:
+falhas controladas de import, montagem e boot verificam a tela de recuperação.
+Uma cópia temporária do build recebe nomes novos de chunks, simulando a remoção
+dos arquivos usados por uma aba antiga. O teste exige o 404 do chunk esperado,
+recarrega a página e confere os imports novos e a preservação do save. Só os
+diagnósticos das injeções identificadas são consumidos nessa prova; outros
+erros continuam reprovando o harness. Não é um deploy real nem outro build
+de gameplay; testa a troca dos nomes de arquivos com a mesma lógica compilada.
+
 O smoke valida o build produzido nessa execução manual e o SHA registrado nela;
 não é o mesmo artefato binário produzido pelo CI para a prévia. Conferir CI,
 E2E, head/base e `version.json` antes de apresentar uma versão para aprovação.

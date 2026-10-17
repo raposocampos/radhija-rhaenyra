@@ -132,9 +132,10 @@ function stubEngine() {
 /**
  * Cria um jogo headless já carregado.
  * opts: { level (1-based, padrão 1), mode 'play'|'intro'|'title', query (ex.: 'dog=rhaenyra&stage=east'),
- *         levels (definições; padrão: src/levels/index.js) }
+ *         levels (definições; padrão: src/levels/index.js),
+ *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga) }
  */
-export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null } = {}) {
+export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null } = {}) {
   installBrowserStubs();
   const [{ createGame }, { events }, LV] = await Promise.all([
     import('../../src/game/game.js'),
@@ -147,6 +148,7 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
   const params = new URLSearchParams(query);
   const game = createGame({ engine, dogs, levels: defs, params });
+  configure?.({ game, levels: defs, engine, dogs });
   await game.loadLevel(level - 1, { mode, initial: true });
 
   const DT = 1 / 60;

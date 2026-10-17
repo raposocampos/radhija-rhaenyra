@@ -5,6 +5,34 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## EST-03 — recuperação de carregamento (2026-10-17, Codex)
+
+Implementação em andamento na branch `codex/recuperacao-carregamento`,
+worktree `recuperacao-carregamento`, a partir de `b1b026e` (PR #4 já integrado).
+Autorizada pelo usuário e coordenada em paralelo com EST-09/EST-04; não inclui
+aprovação de integração nem publicação. O registro histórico abaixo antecede
+esta etapa; o coordenador reconciliará status e ordem de integração no plano.
+
+- `loadLevel` observa rejeições desde o início e resolve um resultado booleano.
+  Em falha, entra em `load-error` e emite `level:error`. Comandos normais ficam
+  bloqueados; simulação, efeitos e render não usam objetos parciais.
+- A UI fecha a cortina, informa o problema e oferece recarga por mouse/teclado.
+  `ui:cancelLoad` permite retornar à fase anterior apenas quando nenhum objeto
+  dela foi alterado. Depois de reset/descarte/montagem parcial, só recarga.
+  O fallback de boot funciona mesmo antes de engine/UI/`__game` existirem.
+- Oito testes Node cobrem rejeição imediata, exceção síncrona, concorrência,
+  chamador da UI e falhas em build/puzzle/reset/descarte/compile. O teste de
+  navegador no E2E manual também cobre ações acessíveis e aba antiga após
+  remoção de chunks, com recarga e save preservado. O manifest e a cópia de
+  arquivos com nomes novos pertencem ao build próprio do E2E, não à prévia.
+- Arquivos: núcleo/entrada, UI/cortina/markup, bloco CSS de erro ao fim do
+  arquivo, helper headless, testes novos, workflow E2E e documentação pertinente.
+  Não altera o bloco de foco do menu, progress.js, CI obrigatório ou publicação.
+- Validação neste marco: inspeção local e `git diff --check`; nenhum teste,
+  tipo ou build local. CI, prévia e E2E completo do novo head ainda pendentes.
+  Próximo passo: enviar PR, revisar o diff e acompanhar essas execuções na
+  nuvem; registrar resultados na descrição do PR sem commit só de status.
+
 ## Onde paramos
 
 **Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário

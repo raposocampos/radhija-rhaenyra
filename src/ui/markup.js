@@ -252,6 +252,17 @@ export function template() {
     </div>
   </section>
 
+  <section class="rr-layer rr-load-error" role="alertdialog" aria-modal="true" aria-labelledby="rr-load-error-title" aria-describedby="rr-load-error-message">
+    <div class="rr-load-error__card">
+      <h2 id="rr-load-error-title">Não foi possível carregar a fase</h2>
+      <p id="rr-load-error-message"></p>
+      <div class="rr-load-error__actions">
+        <button class="rr-btn rr-btn--primary" data-action="reload" data-nav data-default>Recarregar jogo</button>
+        <button class="rr-btn rr-btn--soft" data-action="cancel-load" data-nav hidden>Voltar à fase atual</button>
+      </div>
+    </div>
+  </section>
+
   <section class="rr-curtain" aria-live="polite">
     <div class="rr-curtain__pattern"></div>
     <div class="rr-curtain__box">
