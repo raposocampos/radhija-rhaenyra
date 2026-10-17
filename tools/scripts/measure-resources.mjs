@@ -11,6 +11,8 @@ import { browserOptions } from './lib/browser.mjs';
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const OUT = fileURLToPath(new URL('../../shots/resources/', import.meta.url));
 const MOUNT = '/previews/pr-resources/1-1/';
+const DEV_LEVEL = process.env.MEASURE_DEV_LEVEL || '';
+if (DEV_LEVEL && !/^[a-z][a-z0-9_-]*$/i.test(DEV_LEVEL)) throw new Error('MEASURE_DEV_LEVEL inválido');
 const WARMUP = 2;
 const MEASURED = 3;
 const VIEWPORT = { width: 1280, height: 720 };
@@ -19,6 +21,7 @@ const report = {
   commit: process.env.GITHUB_SHA || null, run: process.env.GITHUB_RUN_ID || null,
   attempt: process.env.GITHUB_RUN_ATTEMPT || null, node: process.version,
   conditions: {
+    devLevel: DEV_LEVEL || null,
     viewport: VIEWPORT, deviceScaleFactor: 1, warmupCycles: WARMUP, measuredCycles: MEASURED,
     mode: 'title', debug: true, scent: 'render one cloud and preview, expire cloud, render again before leaving phase',
     simulation: '60 fixed steps of 1/60 s, then two full renders; automatic updates/render paused in test page',
@@ -103,13 +106,14 @@ try {
       },
     });
   });
-  await page.goto(`${base}?debug`, { waitUntil: 'load', timeout: 120000 });
+  await page.goto(`${base}?debug${DEV_LEVEL ? `&level=${encodeURIComponent(DEV_LEVEL)}` : ''}`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.state === 'title', null, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
   // As capturas do cenário ocultam overlays só durante screenshot (abaixo).
   const levels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
   report.levels = levels;
   if (!levels.length) throw new Error('empty level catalog');
+  if (DEV_LEVEL && !levels.includes(DEV_LEVEL)) throw new Error(`missing development level: ${DEV_LEVEL}`);
   for (let cycle = 1; cycle <= WARMUP + MEASURED; cycle++) {
     for (let index = 0; index < levels.length; index++) {
       const sample = await page.evaluate(async ({ index, cycle, warmup }) => {

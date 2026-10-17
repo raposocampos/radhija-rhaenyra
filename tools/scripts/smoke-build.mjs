@@ -9,6 +9,8 @@ import { createHarness } from './lib/harness.mjs';
 
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const MOUNT = '/previews/pr-smoke/1-1/';
+const DEV_LEVEL = process.env.SMOKE_DEV_LEVEL || '';
+if (DEV_LEVEL && !/^[a-z][a-z0-9_-]*$/i.test(DEV_LEVEL)) throw new Error('SMOKE_DEV_LEVEL inválido');
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2',
@@ -58,14 +60,15 @@ try {
     if (response.status() >= 400) failedRequests.push(`${response.status()} ${response.url()}`);
   });
 
-  await page.goto(`${base}?play`, { waitUntil: 'load', timeout: 120000 });
+  await page.goto(`${base}?play${DEV_LEVEL ? `&level=${encodeURIComponent(DEV_LEVEL)}` : ''}`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.__game?.game?.debug?.info().timeSec > 0.3, null, { timeout: 120000 });
   const levels = await page.evaluate(() => window.__game.levels.map((level) => ({ id: level.id, lazy: typeof level.load === 'function' })));
   check(levels.length > 0, 'registro de fases presente no build');
+  if (DEV_LEVEL) check((await H.info()).levelId === DEV_LEVEL && levels.some((level) => level.id === DEV_LEVEL), `${DEV_LEVEL}: protótipo incluído pelo id no build`);
   check(scripts.size >= 2, 'entrada e cenário inicial carregados como arquivos JavaScript');
   for (const [index, level] of levels.entries()) {
     const before = new Set(scripts);
-    if (index > 0) {
+    if (index > 0 || DEV_LEVEL) {
       // Usa o carregador compilado real, preservando o contexto da mesma aba.
       await page.evaluate(async (next) => { await window.__game.game.loadLevel(next, { mode: 'play' }); }, index);
       await page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3, null, { timeout: 120000 });
@@ -73,7 +76,7 @@ try {
     const state = await H.info();
     check(state.levelId === level.id && state.state === 'playing', `${level.id}: cena e puzzle inicializados`, state.state);
     check(Number.isFinite(state.dogs.radhija.x) && Number.isFinite(state.dogs.rhaenyra.x), `${level.id}: personagens com estado válido`);
-    if (index > 0 && level.lazy) {
+    if ((index > 0 || DEV_LEVEL) && level.lazy && level.id !== DEV_LEVEL) {
       check([...scripts].some((url) => !before.has(url)), `${level.id}: import sob demanda buscou um novo chunk compilado`);
     }
   }
