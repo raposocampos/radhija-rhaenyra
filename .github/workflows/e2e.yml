@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, recursos]
 
 permissions:
   contents: read
@@ -51,7 +51,38 @@ jobs:
           path: shots/load-recovery/
           if-no-files-found: ignore
           retention-days: 7
+  recursos:
+    name: Recursos gráficos após trocas de fase
+    if: inputs.suite == 'todas' || inputs.suite == 'recursos'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Gerar build de produção desta medição
+        run: npm run build
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Medir recursos com qualidade gráfica completa
+        run: node tools/scripts/measure-resources.mjs
+      - name: Guardar medições e capturas mesmo em falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recursos-graficos
+          path: shots/resources/
+          if-no-files-found: error
+          retention-days: 7
   partidas:
+    if: inputs.suite != 'recursos'
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
