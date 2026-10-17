@@ -28,6 +28,55 @@ async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn
 
 try {
   console.log('\n== Controle (gamepad simulado) ==');
+  // O foco não pode reiniciar a entrada do botão Jogar e fazê-lo desaparecer.
+  // Amostra no navegador, inclusive na troca de classes: uma leitura tardia
+  // pelo protocolo pode perder o intervalo invisível em runners sem GPU.
+  await load('');
+  const watchPlay = () => ev(() => {
+    const root = document.querySelector('.rr');
+    const play = root.querySelector('[data-action="play"]');
+    const watch = { minOpacity: 1, visible: true, samples: 0, running: true };
+    const sample = () => {
+      const css = getComputedStyle(play);
+      watch.minOpacity = Math.min(watch.minOpacity, Number(css.opacity));
+      watch.visible &&= css.visibility === 'visible' && css.display !== 'none';
+      watch.samples++;
+    };
+    const observer = new MutationObserver(sample);
+    observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['class', 'data-device'] });
+    const frame = () => { if (watch.running) { sample(); requestAnimationFrame(frame); } };
+    sample();
+    requestAnimationFrame(frame);
+    window.__stopPlayWatch = () => {
+      watch.running = false;
+      observer.disconnect();
+      sample();
+      return { minOpacity: watch.minOpacity, visible: watch.visible, samples: watch.samples,
+        action: document.querySelector('.rr-title .is-focus')?.dataset.action,
+        state: window.__game.game.state };
+    };
+  });
+  const checkPlay = async (move, expectedAction, label) => {
+    await watchPlay();
+    await move();
+    await sleep(1100);
+    const result = await ev(() => window.__stopPlayWatch());
+    check(result.action === expectedAction && result.state === 'title', `${label}: navega sem iniciar a fase`, result);
+    check(result.samples > 1 && result.visible && result.minOpacity >= 0.99, `${label}: Jogar continua visível durante toda a navegação`, result);
+  };
+  await page.keyboard.press('ArrowUp'); // ativa o realce com Jogar selecionado
+  await sleep(200);
+  await checkPlay(() => page.keyboard.press('ArrowDown'), 'select', 'teclado baixo');
+  await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'teclado cima');
+  await connect();
+  await tap(B.UP); // ativa o dispositivo com Jogar selecionado
+  await checkPlay(() => tap(B.DOWN), 'select', 'D-pad baixo');
+  await checkPlay(() => tap(B.UP), 'play', 'D-pad cima');
+  await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'select', 'analógico baixo');
+  await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'retorno ao teclado');
+  await checkPlay(() => page.mouse.move(2, 2), 'play', 'retorno ao mouse');
+  await shot('gp-00-menu-jogar-visivel.png');
+
   await load('?play');
   await clearLog();
   await connect();
