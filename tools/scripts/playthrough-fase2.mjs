@@ -189,10 +189,18 @@ async function fullRun() {
   await walkPath([[2.3, -2.8], [2.33, -3.25, { tol: 0.07 }]]);
   await hold(['KeyD'], 500);
   check((await logOf('hint')).some((h) => h.text === 'Segure Shift para empurrar'), 'dica "Segure Shift para empurrar"');
+  // Sem Shift, D desliza pela face para o norte (entrada relativa à câmera).
+  // Volta ao centro antes de empurrar para não depender do FPS/tempo da dica.
+  i = await info();
+  await walkTo(i.crate.x - 0.65, i.crate.z, { tol: 0.04 });
+  const pushingFrames = await record((g) => {
+    const s = g.debug.info();
+    return s.crate.pushing && s.dogs.rhaenyra.action === 'push';
+  });
   await page.keyboard.down('ShiftLeft');
   await page.keyboard.down('KeyD');
   i = await gsleep(700);
-  check(i.crate.pushing && i.dogs.rhaenyra.action === 'push', 'empurrando o caixote (push)', JSON.stringify(i.crate));
+  check((await pushingFrames.stop()).some(Boolean), 'empurrando o caixote (push)', JSON.stringify({ crate: i.crate, dog: i.dogs.rhaenyra }));
   await shot('f2-10-empurrando-caixote.png');
   await gsleep(1700);
   await page.keyboard.up('KeyD');
