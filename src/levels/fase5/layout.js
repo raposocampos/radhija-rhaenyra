@@ -14,12 +14,10 @@
 //   3. O URSINHO está debaixo da mesa da cozinha, atrás da toalha comprida: só a Radhija cabe.
 //      Levem-no para a caminha na sala (GOAL).
 // =====================================================================
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = { bounds: { minX: -6.4, maxX: 6.4, minZ: -3.8, maxZ: 3.4 } };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.5, z: 1.15, yaw: 1.7 }),

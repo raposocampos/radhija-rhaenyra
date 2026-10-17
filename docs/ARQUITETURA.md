@@ -53,6 +53,7 @@ src/levels/                as fases
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
                            compartilhadas: toys.js (patinho, ursinho), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)
+  config.js                atributos globais das personagens; withStart cria a configuração de cada layout
 src/characters/goose.js    a Dona Gansa
 src/ui/                    interface em DOM (ver §9)
 src/fx/                    áudio sintetizado, partículas e feedback (ver §9)
@@ -180,7 +181,7 @@ Campos que o núcleo usa (cada fase acrescenta os seus, como portões e placas):
 | Campo | Para quê |
 |---|---|
 | `WORLD.bounds` | retângulo andável (os centros das dogs ficam em `[min + r, max − r]`) |
-| `DOGS.{radhija,rhaenyra}` | estatísticas (raio, velocidades, arrancada, pulo, superbafo…) e `start {x, z, yaw}`; as fases 2 a 5 reaproveitam as da fase 1 com `withStart` |
+| `DOGS.{radhija,rhaenyra}` | atributos globais de `src/dogs/config.js` (raio, velocidades, arrancada, pulo, superbafo…) e `start {x, z, yaw}` local; `withStart` cria cópias independentes para cada layout |
 | `STATIC_COLLIDERS` | colisores fixos (§5) |
 | `NAV_NODES`, `NAV_EDGES` | grafo da companheira (§5) |
 | `COLLECTIBLES`, `COLLECTIBLE_PICKUP_R` | petiscos opcionais (contam na vitória) |
@@ -332,6 +333,13 @@ de uma nuvem vira a cara (`dog:yuck`). Mirar é cancelado ao pausar ou trocar de
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.
 
 ## 7. Personagens
+
+**Configuração** (`src/dogs/config.js`): `DOG_CONFIG` contém os atributos comuns, sem coordenadas,
+e é protegido contra mutações, incluindo `visual`. `withStart(nome, start)` cria uma configuração
+independente, copiando também `visual` e a posição recebida. Os layouts mantêm seus próprios pontos
+de entrada; o modelo visual lê a configuração comum, sem importar uma fase. Os controladores são
+criados uma vez e conservam a configuração da primeira fase carregada: variar atributos por fase
+não faz parte deste contrato; só a posição é reaplicada ao trocar ou reiniciar.
 
 **Dogs** (`createDog(nome)` em `src/dogs/dog.js`, tipo `DogModel`): `object`, `mouthSocket` (pendure o item aqui,
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,

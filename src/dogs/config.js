@@ -1,0 +1,59 @@
+// Atributos comuns das personagens. As posições iniciais pertencem aos layouts.
+// Os controladores mantêm estes atributos ao trocar de fase; withStart não cria
+// variantes de habilidades por cenário.
+
+/**
+ * @typedef {Readonly<Omit<import('../types').DogStats, 'start' | 'visual'>> & {
+ *   readonly visual: Readonly<import('../types').DogStats['visual']>
+ * }} DogConfig
+ */
+
+/** @type {Readonly<Record<import('../types').DogName, DogConfig>>} */
+export const DOG_CONFIG = Object.freeze({
+  radhija: Object.freeze({
+    displayName: 'Radhija',
+    size: 'small',
+    radius: 0.17, // colisão (círculo no plano XZ)
+    walkSpeed: 2.4,
+    dashSpeed: 6.0,
+    dashTime: 0.3,
+    dashCooldown: 0.8,
+    // Superbafo (R / L2): nuvem soprada a ~2,6 m/s que dura ~5 s (ver src/game/mechanics/scent.js).
+    bafoSpeed: 2.6,
+    bafoLife: 5,
+    bafoCooldown: 0.8,
+    accel: 16,
+    decel: 20,
+    turnSpeed: 13, // rad/s máx. de giro do corpo
+    // Guia visual (não é colisão): comprimento focinho→garupa e altura do topo da cabeça
+    visual: Object.freeze({ length: 0.6, headTop: 0.48, shoulder: 0.3 }),
+  }),
+  rhaenyra: Object.freeze({
+    displayName: 'Rhaenyra',
+    size: 'large',
+    radius: 0.22,
+    walkSpeed: 2.0,
+    pushSpeed: 0.85,
+    // Pulo (Espaço / ✕): sobe ~0,5 m em 0,42 s e avança ~1,3 m; só passa por cima de colisores jumpable.
+    jumpHeight: 0.5,
+    jumpTime: 0.42,
+    jumpSpeed: 3.0,
+    jumpCooldown: 0.15,
+    accel: 12,
+    decel: 16,
+    turnSpeed: 10,
+    visual: Object.freeze({ length: 0.72, headTop: 0.56, shoulder: 0.34 }),
+  }),
+});
+
+/**
+ * Cria a configuração de um layout sem compartilhar objetos mutáveis com
+ * outro layout, com a definição comum ou com a posição recebida.
+ * @param {import('../types').DogName} name
+ * @param {import('../types').DogStats['start']} start
+ * @returns {import('../types').DogStats}
+ */
+export function withStart(name, start) {
+  const cfg = DOG_CONFIG[name];
+  return { ...cfg, visual: { ...cfg.visual }, start: { ...start } };
+}

@@ -2,12 +2,10 @@
 // src/levels/_modelo/ e siga docs/COMO-CRIAR-UMA-FASE.md. Testado por test/modelo-fase.test.mjs.
 // Metros, Y para cima, Norte = -Z, câmera ao sul. Mureta norte-sul em x = 0 com um portão;
 // a placa (só a Rhaenyra pesa) abre o portão; a bolinha está do lado leste; o objetivo, a oeste.
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = { bounds: { minX: -5, maxX: 5, minZ: -4, maxZ: 4 } };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -3.0, z: -2.4, yaw: 0.6 }),

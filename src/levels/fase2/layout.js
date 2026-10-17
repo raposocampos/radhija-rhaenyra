@@ -14,15 +14,13 @@
 //      (CHANNEL.slot) e empurrar para leste → cai no canal e vira PONTE.
 //   Bolinha na faixa leste → levar até a CAMINHA (GOAL).
 // =====================================================================
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = {
   bounds: { minX: -6.5, maxX: 6.6, minZ: -4.8, maxZ: 4.4 },
   houseWallZ: -4.8, // parede dos fundos da casa / muro do condomínio (face voltada ao pátio)
 };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.4, z: -3.25, yaw: 2.3 }),

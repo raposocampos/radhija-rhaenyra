@@ -14,12 +14,10 @@
 //      voa para o POLEIRO B, que tem a placa: o PORTÃO abre e trava.
 //   3. O PATINHO está na bacia d'água dos pombos. Levem-no até o capacho da casa da escada (GOAL).
 // =====================================================================
-import { DOGS as BASE_DOGS } from '../fase1/layout.js';
+import { withStart } from '../../dogs/config.js';
 
 export const WORLD = { bounds: { minX: -6.4, maxX: 6.4, minZ: -4.2, maxZ: 3.8 } };
 
-/** @type {(name: import('../../types').DogName, start: { x: number, z: number, yaw: number }) => import('../../types').DogStats} */
-const withStart = (name, start) => ({ ...BASE_DOGS[name], start });
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
   radhija: withStart('radhija', { x: -4.4, z: -1.7, yaw: 1.4 }),
