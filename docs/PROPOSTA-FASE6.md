@@ -118,8 +118,8 @@ jogador siga a sequência narrativa.
 | Trocar de dog durante o salto | O pouso real da Rhaenyra continua contando; observar ambas as controllers. |
 | Pular durante o percurso ou espirro | Pedal dá retorno visual de ocupado, sem enfileirar uma mudança invisível. |
 | Soprar durante o movimento | Não criar outro percurso, espirro ou entrega; nuvens continuam seu ciclo normal. |
-| Trem voltar enquanto ainda há bafo no nariz | Aguardar a área ficar livre antes de rearmar; exigir novo sopro para nova viagem. |
-| Sopro lateral, por trás ou através da borda | Não acionar o nariz; orientar para a janela frontal. |
+| Trem voltar enquanto ainda há bafo no nariz | Aguardar a área ficar livre e, ao rearmar, guardar os IDs de todas as nuvens ainda existentes; nenhuma delas pode iniciar nova viagem, mesmo chegando depois. |
+| Sopro lateral, por trás ou através da borda | Rejeitar definitivamente essa nuvem para este nariz; orientar para a janela frontal e pedir um novo sopro. |
 | Tentar pegar a bolinha no vagão ou durante a canaleta | Interação recusada até `ready`, mesmo se a distância calculada permitir. |
 | Pegar/trocar personagem depois da chegada | Bolinha fica com a portadora; ambas podem entregar pelo passeio. |
 | Pular/soprar depois da retirada | Não reiniciar trem nem duplicar bolinha ou eventos de sucesso. |
@@ -133,7 +133,12 @@ estados coerentes para depuração, sem efeitos ou callbacks duplicados.
 
 Registrar o nariz uma vez por instância. `scent.reset()` limpa nuvens, mas
 preserva os registros; `dispose()` de EST-05 encerra os callbacks. O estado de
-rearme e qualquer conjunto de IDs de nuvens devem ser limpos no reinício.
+rearme e o conjunto de IDs bloqueados devem ser limpos no reinício e descarte.
+Ao rearmar, substituir esse conjunto por um snapshot dos IDs de **todas** as
+nuvens presentes em `scent.clouds`, inclusive longe do nariz. `onSmell` ignora
+esses IDs: apenas uma nuvem criada depois do rearme pode iniciar nova viagem.
+Podar IDs que já não existem no campo de cheiro a cada atualização; não acumular
+o histórico de viagens. Área frontal vazia sozinha não prova um sopro novo.
 
 ## Limitações verificadas e implementação necessária
 
@@ -145,7 +150,7 @@ distingue suporte já existente da lógica que o protótipo ainda precisa criar.
 | Pulo no lugar | `startJump` de `dogController.js` já mantém a velocidade atual sem entrada: parada permite pulo no lugar. `jumpT` e `landed` existem. Não há chão elevado ou plataforma móvel. |
 | Pedal de impacto | **Novo componente local da fase.** `createPressurePlate` detecta peso contínuo e ignora quem está no ar; sozinho não prova um pulo. Observar o pouso real de Rhaenyra e a posição final, uma vez por salto. |
 | Momento de leitura do pouso | Hoje `puzzle.update` roda depois de integrar as duas dogs e antes de `applyDogs` consumir `landed`. Usar esse contrato com teste de regressão real; não inferir aterrissagem apenas de uma animação visual ou do evento enviado posteriormente. |
-| Superbafo | Mira, lançamento, nuvem, recarga e `ctx.scent.addNose({ onSmell })` já existem. Criar a condição frontal do nariz, habilitação por estado e rearme após esvaziar a área. |
+| Superbafo | Mira, lançamento, nuvem, recarga e `ctx.scent.addNose({ onSmell })` já existem. Criar condição frontal, habilitação por estado e rearme com snapshot dos IDs existentes. Cada nariz só recebe uma chamada por nuvem; rejeitar o contato consome essa tentativa. |
 | Trilhos e trem | **Novos props e lógica local.** Duas rotas XZ fixas no layout, movimento determinístico por `dt`, rotação visual e entrega pela canaleta. Não há trem ou mecanismo de trilhos compartilhado pronto. |
 | Item e objetivos | `createCarryItem`, `createHints`, `createCollectibles`, `deliveredAt` e `buildTreats` existem. A bola da fase 2 é um construtor interno, não um export reutilizável; modelar a bolinha local sem importar o cenário todo. |
 | Câmera e efeitos | O puzzle já pode solicitar tomadas por `cam`. Desenhar animação do nariz, pedal e trem; reutilizar eventos existentes apenas quando tiverem o mesmo significado, criando eventos específicos da fase se necessários. |
@@ -170,6 +175,11 @@ sua pose na boca. Testar também parent/posição/rotação depois de reset.
 O cheiro usa XZ. A nuvem colide com paredes como um círculo pequeno, mas o
 teste de `addNose` usa distância e **não faz oclusão**. Altura do nariz, vidro
 decorativo ou uma parede entre nuvem e alvo não bastam para rejeitar um sopro.
+Além disso, `scent.update` marca `c.smelled.add(n.id)` **antes** de chamar
+`onSmell`. A escolha desta proposta é manter essa API: um primeiro contato
+inválido encerra a tentativa daquela nuvem, ainda que ela depois entre pela
+frente. Mostrar “Mire pela janela do nariz e solte outro superbafo”. Não esperar
+uma segunda chamada nem remover a marca do campo de cheiro para tentar de novo.
 
 - Colocar o nariz numa janela frontal aberta, acessível por um recuo amplo.
   Usar contato + centro da nuvem dentro do setor frontal definido no layout
@@ -213,6 +223,10 @@ Sem limite de tempo, sincronização entre dogs ou penalidade por experimentar.
   rota circular recuperável e rota de entrega, sem duas dogs agindo ao mesmo tempo.
 - [ ] Garantir idempotência durante movimento, rearme sem nuvem antiga e retirada
   só após a chegada; sem duplicar item/evento ou mudar rota no meio do percurso.
+- [ ] Provar que contato lateral rejeitado não ganha outra chance ao entrar pela
+  frente. Provar também que nuvem antiga fora do alcance no instante do rearme
+  continua ignorada ao chegar depois; só um sopro criado após o rearme aciona.
+  Conferir poda dos IDs expirados e limpeza completa desse conjunto no reset.
 - [ ] Cobrir pausa, reinício e troca de fase em cada estado, inclusive bolinha
   na boca, sem callbacks tardios nem recursos exclusivos retidos.
 - [ ] Testar câmera, dicas, controles e passagem da companheira com ambas ativas;

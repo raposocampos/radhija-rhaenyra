@@ -30,6 +30,11 @@ ordem, rearme sem nuvem antiga, reset, prevenção de atalhos, colisão/companhe
 câmera e aceitação. Tipo `ball` reaproveita boca/UI; arte de planeta ainda nova.
 A proposta de quintal/ursinho/pombo foi substituída e fica apenas no histórico
 (`d574f83`); nenhum gameplay, catálogo, dependência ou workflow foi alterado.
+Revisão estática esclareceu duas regras do cheiro: contato lateral consome a
+única chamada por nuvem e exige outro sopro; rearme guarda IDs de todas as nuvens
+existentes, mesmo distantes, e ignora essas nuvens até expirarem. Podar IDs
+expirados e limpar no reset/descarte; ambas as regras têm critérios de regressão
+na proposta, ainda sem implementação ou resultado de teste de gameplay.
 
 Validação desta revisão: leitura de fontes, revisão do diff e `git diff --check`.
 Sem testes/build locais ou E2E adicional para documentação. Conferir CI/prévia
