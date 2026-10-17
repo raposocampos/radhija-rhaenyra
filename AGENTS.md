@@ -4,6 +4,29 @@ Estas instruções valem para Codex/GPT, Claude e outros agentes que trabalhem n
 repositório. O fluxo abaixo foi autorizado pelo responsável pelo projeto e é o
 padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
 
+## Retomar e registrar o trabalho
+
+- Antes de implementar, ler `docs/CONTEXTO.md` para saber o que o agente
+  anterior entregou, onde parou e quais pendências existem. Conferir essas
+  informações contra o Git e o GitHub: o documento é um resumo, não substitui
+  o estado real dos arquivos ou os resultados do CI.
+- Atualizar `docs/CONTEXTO.md` ao concluir uma tarefa e em marcos importantes
+  de trabalhos longos, para permitir troca de agente mesmo se a sessão acabar
+  antes da conclusão. Antes de uma troca planejada, salvar um ponto de retomada.
+- Registrar data, agente, objetivo, alterações relevantes, validações com
+  referência ao commit ou execução, pendências e próximo passo concreto.
+  Distinguir trabalho concluído, em andamento e apenas proposto.
+- Se houver trabalho incompleto, registrar branch/worktree, arquivos alterados,
+  mudanças ainda sem commit e processos ou execuções em andamento. Não marcar
+  como aprovado um CI ainda pendente. O próximo agente deve conferir o resultado
+  no GitHub pelo commit, inclusive o commit que contém a própria atualização
+  do documento; não criar commits só para atualizar o status desse último CI.
+- Manter o resumo conciso e atual, sem copiar conversas, tokens, caminhos
+  pessoais ou outros dados privados: este arquivo faz parte de um repositório
+  público. Preservar decisões úteis e referências às entregas anteriores.
+- Neste projeto, a passagem de contexto é por Markdown. Não instalar ai-memory:
+  o usuário reservou essa experiência para outro projeto.
+
 ## Entregar a mudança publicada
 
 - Um pedido de implementação inclui alterar o código, fazer commit, enviar ao

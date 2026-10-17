@@ -67,6 +67,7 @@ Protótipos fora do menu (fases de desenvolvimento):
 
 Documentação:
 
+- [docs/CONTEXTO.md](docs/CONTEXTO.md): andamento e ponto de retomada compartilhado entre Codex e Claude.
 - [docs/ARQUITETURA.md](docs/ARQUITETURA.md): como as peças se encaixam, APIs, eventos, testes e convenções.
 - [docs/COMO-CRIAR-UMA-FASE.md](docs/COMO-CRIAR-UMA-FASE.md): passo a passo de uma fase nova.
 
