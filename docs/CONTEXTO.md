@@ -5,49 +5,74 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-07 — configuração e eventos em execução (2026-10-17, Codex)
+## EST-07A — configuração publicada (2026-10-17, Codex)
 
-Autorizada após aprovação do PR #12. Base publicada `597c8f2`.
-Coordenador em `codex/estabilizacao-nucleo`, worktree `estabilizacao-nucleo`,
-responsável por documentação, integração, PRs, CI e publicação aprovada.
-Duas entregas pequenas, com comportamento preservado:
+[PR #13](https://github.com/raposocampos/radhija-rhaenyra/pull/13), head aprovado
+`0571ccfbe041986c546fe1de6bedb7b093f70624`, base `597c8f2`.
+Configuração global em `src/dogs/config.js`, sem posições; `withStart` cria
+cópias independentes para os oito layouts. Modelo visual independente da fase 1.
+Valores, posições e habilidades preservados, com três testes novos.
 
-- EST-07A, `codex/config-personagens`, worktree `config-personagens`:
-  extrair atributos globais para `src/dogs/config.js`; posições continuam nos
-  oito layouts. O modelo visual deixa de importar a fase 1. Testar isolamento
-  das configurações e preservação das habilidades/valores existentes.
-- EST-07B, `codex/eventos-nucleo`, worktree `eventos-nucleo`:
-  extrair emissão, vibração e histórico de diagnóstico para `gameEvents.js`.
-  Preservar ordem registrar → emitir → vibrar, limite de 500 registros,
-  identidade do histórico e `camera:shot` apenas diagnóstico. Estado,
-  carregamento, reset e descarte permanecem no núcleo.
-- Cada executor altera somente seu código/testes; coordenador reconcilia
-  documentos. Entregas em PRs separados, integração de uma por vez e nova
-  validação/aprovação se a base mudar. Nenhum teste/build local.
+CI `39076340307`: 176 testes, tipos e build aprovados; prévia conferida.
+E2E completo `39076338931` passou no mesmo head: 313 verificações de gameplay,
+quatro de infraestrutura, 19 de smoke e 28 de recuperação. Recursos estáveis
+nas cinco fases, 25 amostras, globais preservados e nenhum erro/warning.
+Capturas de cenários e recuperação revisadas sem regressão aparente.
 
-EST-07A implementada: `5bee73a` do executor integrado como `b7c8523` na branch
-do coordenador. `DOG_CONFIG` protegido e sem `start`, `withStart` copia posição
-e guia visual; oito layouts e modelo visual independentes da fase 1. Três
-testes novos cobrem isolamento, posições e habilidades dos controladores.
-Revisão do diff sem bloqueios; arquitetura/guia atualizados. Nenhuma mudança
-de mecânica, dependência, workflow ou produção nesta entrega.
+Usuário aprovou no chat. Integrado por squash em
+`4552e602de7b55b3372ac8d8309ce20884ab6cb0`, árvore idêntica à aprovada.
+CI main `39077869869` aprovou 176 testes/tipos/build; deploy `39077894749`
+concluído após liberar somente o deployment `7147072605` com essa aprovação.
+Produção HTTP 200/version.json confirmou `4552e60` e o run do main.
+Publicado; não repetir merge/deploy do #13.
 
-Neste checkpoint EST-07A aguarda CI próprio; EST-07B está em implementação.
-Próximo passo: abrir o PR de configuração, revisar o commit de eventos e abrir
-seu PR separado; conferir tipos,
-testes/build/prévias e E2E no GitHub, depois apresentar versões para aprovação.
-Conferir resultados pelo SHA, inclusive o commit que contém este registro.
-Faltam EST-07 e EST-08 para encerrar esta rodada de estabilização; a divisão
-gradual do núcleo não significa reescrever todo o jogo nesta rodada.
+## EST-07B — atualização da base em validação (2026-10-17, Codex)
 
-Fase 6: usuário pediu outro cenário e puzzle mais criativo, sem repetir o
-pombo (2026-10-17). A proposta anterior de piquenique/ursinho não foi aprovada.
-Frente `codex/proposta-fase6`, worktree `proposta-fase6`, reformula o PR #9,
-sem implementar gameplay. Pulo e superbafo devem resolver partes conectadas
-de uma cooperação nova. Tema/objeto continuam pendentes da nova apresentação.
-As dependências técnicas EST-03/04/05/06 já foram entregues; um protótipo
-poderá avançar em paralelo após a escolha do desenho. Não prometer data de
-conclusão antes de validar a mecânica e o percurso.
+[PR #14](https://github.com/raposocampos/radhija-rhaenyra/pull/14), branch
+`codex/eventos-nucleo`, worktree `eventos-nucleo`. Coordenador é o único editor;
+revisor trabalha somente em leitura no seu próprio worktree.
+Implementação `40e83ce`: emissão, tabela de vibração, histórico e diagnóstico
+da câmera extraídos para `gameEvents.js`. Estado, carregamento, reset e descarte
+continuam no núcleo. Cálculo de vibração adiado até conferir input/estado após
+os listeners. Sete testes runtime e três provas negativas preservam a API.
+
+No head anterior `3a3d02e`, base `597c8f2`: CI `39076449277` passou 180 testes,
+tipos/build; prévia conferida. E2E completo `39076448099` passou 313 verificações
+de gameplay, quatro de infraestrutura, 19 de smoke e 28 de recuperação;
+25 amostras de recursos estáveis e capturas revisadas. Esses resultados validam
+somente a base anterior, não substituem a validação da combinação atual.
+
+Atualização por merge de `4552e60`, sem reescrever histórico. Conflitos apenas
+em CONTEXTO/PLANO, reconciliados com as entregas reais; arquitetura combina
+configuração e eventos. Código de cada frente preservado. Neste checkpoint,
+o commit dessa atualização ainda precisa de CI/prévia e E2E `todas` próprios.
+Nenhum teste/build local. Conferir resultados pelo SHA que contém este registro;
+resultados finais ficam no PR, sem commit apenas para status do próprio CI.
+Próximo passo: concluir a validação, apresentar nova prévia e aguardar aprovação
+própria para integrar/publicar #14. A aprovação de #13 não inclui #14.
+
+## Etapas restantes e fase 6 (2026-10-17, Codex)
+
+Faltam concluir EST-07B e executar EST-08 para encerrar esta estabilização.
+EST-08 foi delimitada a um PR após #14: medir carregamento, cadência com render
+normal e heap JS; duas referências comparáveis no mesmo SHA, qualidade completa,
+ambiente/amostras/dispersão registrados e limites definidos após medir. Reutilizar
+identidade/servidor/qualidade do medidor de recursos, que já descobre LEVELS;
+seus dois renders controlados por visita não medem FPS. SwiftShader não representa
+GPU física. Atualizar guia: testes na nuvem, suíte no runner e workflow,
+contratos/reset/pausa/save/hasNext, protótipo isolado e aprovação da prévia.
+Concluir com relatório das cinco fases, provas negativas e CI/medição do head final.
+Sem novas extrações ou otimizações preventivas para ampliar essa etapa.
+
+Fase 6: após o usuário rejeitar a repetição do pombo, o PR #9 foi reformulado
+como **Expresso do Superbafo**, head `aa48121`, base `597c8f2`; CI `39076630494`
+e prévia passaram. Oficina de brinquedos e bolinha-planeta: Rhaenyra pula no
+pedal para escolher o trilho; Radhija provoca um espirro do trem com superbafo
+para trazer o objeto. Proposta e imagem conceitual apresentadas; tema/puzzle
+ainda não aprovados e nenhum gameplay implementado. Branch `codex/proposta-fase6`,
+worktree `proposta-fase6`. Não reutilizar a prévia antiga para aprovação após
+atualizar sua base. Protótipo pode avançar em paralelo após a escolha do desenho;
+as dependências técnicas EST-03/04/05/06 já foram entregues.
 
 ## EST-06 — contratos publicados (2026-10-17, Codex)
 
@@ -221,17 +246,16 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Menu, progresso, carregamento e recursos gráficos publicados; contratos em validação.**
-Em 2026-10-17, o usuário aprovou #8, #7, #10 e #11, publicados respectivamente
-em `d38574a`, `2ee7e07`, `9be3075` e `ca8c6f2`. PR #12 também publicado em
-`597c8f2`, base atual de produção. EST-07 avança em worktrees próprios, com
-escopos delimitados acima. O PR #9 redesenha a proposta da fase 6 após o pedido
-de outro cenário, sem repetir o pombo; não há nova fase implementada.
-Testes continuam no GitHub; cada entrega da EST-07 exige aprovação própria.
+**Configuração comum publicada; eventos atualizados para a nova base.**
+Produção em `4552e60`, PR #13 aprovado/publicado, após os PRs #8, #7, #10,
+#11 e #12. O PR #14 precisa validar a combinação atual e receber aprovação
+própria. Depois resta EST-08, com escopo delimitado no checkpoint inicial.
+O PR #9 propõe Expresso do Superbafo; não há nova fase implementada/aprovada.
+Testes continuam no GitHub; conferir estado atual pelos SHAs e execuções.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
-O coordenador usa branch `codex/menu-jogar-visivel`, worktree
-`menu-jogar-visivel`; essa entrega partiu de `b1b026e29abb7cc80fff6a13224e967d78415151`.
+Histórico da correção do menu: branch `codex/menu-jogar-visivel`, worktree
+`menu-jogar-visivel`; entrega a partir de `b1b026e29abb7cc80fff6a13224e967d78415151`.
 EST-09: conflito entre a animação de entrada `rr-rise` e a de foco
 `rr-focus-pulse` reiniciava a entrada com opacidade zero ao sair do botão.
 Reprodução em `7a05466de2f3d605139ef2b8f7336b0925a8824b`,
@@ -459,10 +483,11 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 a #8, #10, #11 e #12 integrados e publicados. Produção atual
-   confirmada em `597c8f2`, deploy `39075957502`; não repetir merge/deploy.
-   EST-07 está em execução conforme o checkpoint inicial; PR #9 redesenha
-   apenas a proposta de fase. Não reutilizar aprovação de versões anteriores.
+3. PRs #1 a #8 e #10 a #13 integrados e publicados. Produção atual
+   confirmada em `4552e60`, deploy `39077894749`; não repetir merge/deploy.
+   Validar o PR #14 sobre essa base e apresentar a nova prévia para aprovação;
+   depois executar EST-08. PR #9 contém apenas a proposta Expresso do Superbafo.
+   Não reutilizar aprovação de versões anteriores.
    Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
