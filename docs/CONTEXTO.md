@@ -23,6 +23,9 @@ desta entrega documental.
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
   head `6ebacd999da6bd36249cd76ef3e90a319752b666`.
+  Harness e runner agora reprovam erros do navegador, falhas e resumo ausente;
+  as provas com Chromium confirmam a propagação até o processo final. O smoke
+  serve somente `dist`, abre as cinco fases e confere imports e recursos.
   [CI 39052841286](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39052841286)
   aprovado: tipos, 126 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-6/39052841286-1/)
   publicada, com head/base conferidos em `version.json`.
@@ -33,33 +36,37 @@ desta entrega documental.
   A [revisão de fluxo](https://github.com/raposocampos/radhija-rhaenyra/pull/6#discussion_r4303596789)
   foi atendida e a conversa resolvida: navegador fica no `E2E manual`, na opção
   `todas`; o CI obrigatório mantém tipos/testes rápidos/build. O smoke testa
-  um build próprio da execução E2E, distinto do artefato da prévia. O worktree
-  do executor está limpo; a versão aguarda aprovação para integração.
+  um build próprio da execução E2E, distinto do artefato da prévia. O usuário
+  aprovou essa versão no chat; integrada por squash em
+  `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`.
+  [CI do main 39053762821](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053762821)
+  aprovado. [Deploy 39053794991](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053794991)
+  concluído com sucesso após liberação com essa aprovação. Produção respondeu
+  HTTP 200 e `version.json` confirmou `9fcce75` e CI `39053762821`.
 - EST-02: executor Codex em `codex/atualizar-vite`, worktree
   `atualizar-vite`; Vite 6.4.4 implementado no [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
-  head `4f03e389335051dd2633f28feac4c6bd67c49084`. Nenhuma dependência transitiva
-  mudou; auditoria do lockfile passou de uma dependência sinalizada para zero.
-  [CI 39051377056](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051377056)
-  aprovado: tipos, 123 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39051377056-1/)
-  publicada, com head/base conferidos em `version.json`.
-  [E2E completo 39051384592](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051384592)
-  aprovado: nove suítes, 299 verificações, sem erros de console, com capturas
-  da fase 4 concluídas. O worktree do executor está limpo.
+  head atual `3f9540248b33b78b1cc43aa834352901ef3ec457`, após merge normal da
+  base `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`, sem force push. Nenhuma
+  dependência transitiva mudou; auditoria do lockfile continua sem avisos.
+  O head anterior `4f03e38` passou CI `39051377056` e E2E `39051384592`
+  (123 testes rápidos e 299 verificações de gameplay), mas esses resultados
+  não validam a nova combinação. [E2E completo 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
+  em andamento, incluindo as novas provas e smoke. Conferir CI e prévia pelo
+  novo head. O worktree do executor está limpo; não reaproveitar a aprovação de #6.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
   preserva o plano e consolida os resultados. Conferir os checks do head
   documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração proposta: #6, #5, #4. Após aprovação e integração de
-  #6, atualizar #5 para que o Vite também passe pelo E2E manual reforçado; apresentar
-  nova prévia e pedir aprovação dessa versão. Reconciliar a documentação por
-  último, preservando os registros dos executores. Não houve integração,
-  auto-merge nem liberação de produção nesta etapa.
+- Ordem de integração: #6 integrado; depois #5 e #4. Atualizar #5 para que o
+  Vite passe pelo E2E manual reforçado, apresentar nova prévia e pedir aprovação
+  dessa versão. O coordenador incorporou a base `9fcce75` no PR #4 e reconciliou
+  o registro E2E; após integrar #5, deverá atualizar esta documentação novamente.
 - Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
   reservadas aos executores nem integrar/publicar sem aprovação da versão.
 - EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
   ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
   corrigir depois; registrar e reproduzir em tarefa própria, identificando
-  o commit testado. Não foi corrigido nem reproduzido nesta etapa. O usuário
-  autorizou seguir com o PR; não houve aprovação explícita de produção.
+  o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
+  posterior do PR #6 não inclui uma correção desse bug.
 
 ## Evidências da avaliação anterior
 
@@ -184,12 +191,11 @@ desta entrega documental.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2 e #3 integrados; produção conferida em `baa8af0` nesta avaliação.
-   Não repetir seus merges/deploys. Conferir os PRs das branches de
-   estabilização, preservar trabalho em andamento e atualizar o checklist
-   nos marcos. EST-01 e EST-02 validados na base inicial; conferir os checks
-   da consolidação documental e apresentar primeiro o PR #6. Aguardar aprovação
-   dessa versão antes de integrar. Depois atualizar
-   e revalidar #5 e reconciliar #4. Não instalar ai-memory.
+3. PRs #1, #2, #3 e #6 integrados. Produção de #6 confirmada em `9fcce75`,
+   deploy `39053794991`; não repetir sua aprovação nem integrar outro PR com ela.
+   Concluir a revalidação de #5 na base `9fcce75` e apresentar a nova prévia;
+   aprovação anterior não vale para base alterada. Conferir os checks de #4,
+   reconciliando-o novamente após integrar #5. Preservar o checklist e manter
+   EST-09 adiado conforme o usuário. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

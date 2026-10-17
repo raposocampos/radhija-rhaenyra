@@ -23,10 +23,11 @@ atualizar as branches restantes, revalidar e apresentar as novas versões.
 Carregamento, descarte de recursos e divisão do núcleo avançam em sequência
 quando alteram a mesma área. Revisões sem alterações podem ocorrer em paralelo.
 
-Ordem proposta de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e
-PR #4 (documentação consolidada). Assim, a atualização do Vite também será
-testada com o E2E manual reforçado após atualizar a base. O plano já está preservado
-no branch remoto do PR #4 e pode orientar os executores antes de ser integrado.
+Ordem de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e PR #4
+(documentação consolidada). O #6 foi aprovado no chat, integrado e publicado
+em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. Essa é a nova base de #5 e #4.
+O Vite está sendo revalidado com o E2E manual reforçado. O plano já está no
+branch remoto do PR #4 e pode orientar os executores antes de ser integrado.
 
 ## Boas práticas a preservar
 
@@ -53,8 +54,8 @@ validados. O estado de publicação é registrado separadamente.
 | Critérios atendidos | ID | Entrega | Responsável | Dependência | Situação neste marco |
 | --- | --- | --- | --- | --- | --- |
 | [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 em validação |
-| [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 validado; aguardando aprovação |
-| [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Base inicial | PR #5 validado nesta base; revalidar após #6 |
+| [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
+| [ ] | EST-02 | Atualização pontual do Vite | Executor dependências | Nova base 9fcce75 | PR #5 em revalidação após #6 |
 | [ ] | EST-03 | Recuperação de falhas no carregamento | A atribuir | EST-01 e EST-02 integrados | Planejado |
 | [ ] | EST-04 | Validação e migração do progresso | A atribuir | EST-01 integrado | Planejado |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
@@ -116,7 +117,11 @@ aprovado: 299 verificações de gameplay nas nove suítes, quatro provas da
 infraestrutura e 19 verificações do build, sem erros de console. Capturas da
 fase 4 concluídas, com `errors: []` no log. A revisão foi atendida: os testes
 de navegador estão no workflow manual e a conversa foi resolvida.
-Publicação em produção não aprovada.
+Aprovado pelo usuário no chat e integrado por squash em
+`9fcce7505e75d3080d9c2529c76ea97b7fa72a90`.
+[CI do main 39053762821](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053762821)
+e [deploy 39053794991](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053794991)
+aprovados. Produção HTTP 200 e `version.json` conferido nesse SHA.
 
 ### EST-02 Vite
 
@@ -130,16 +135,15 @@ Branch: `codex/atualizar-vite`. Worktree: `atualizar-vite`.
 Escopo: `package.json`, `package-lock.json` e registro próprio no contexto.
 
 Entrega: [PR #5](https://github.com/raposocampos/radhija-rhaenyra/pull/5),
-head `4f03e389335051dd2633f28feac4c6bd67c49084`, base inicial acima.
+head atual `3f9540248b33b78b1cc43aa834352901ef3ec457`, base `9fcce75`.
 Vite 6.4.4, sem alterações de dependências transitivas; auditoria do lockfile
-sem vulnerabilidades conhecidas reportadas na consulta.
-[CI 39051377056](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051377056)
-aprovado: tipos, 123 testes rápidos e build.
-[Prévia validada](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39051377056-1/).
-[E2E 39051384592](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39051384592)
-aprovado: 299 verificações nas nove suítes, sem erros de console. Depois de
-integrar #6, atualizar a base,
-revalidar e apresentar nova prévia para aprovação. Produção não aprovada.
+sem vulnerabilidades conhecidas reportadas na consulta. O head anterior
+`4f03e38` passou CI `39051377056` e E2E `39051384592` na base inicial; esses
+resultados não validam a combinação atual.
+[E2E 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
+em andamento no novo head, com nove partidas e job adicional de infraestrutura.
+Conferir CI/prévia atuais e apresentar a versão pronta para nova aprovação.
+Produção do Vite não aprovada.
 
 ### EST-03 Carregamento
 

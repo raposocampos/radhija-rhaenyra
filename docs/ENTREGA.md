@@ -36,13 +36,27 @@ Prévia: `.../previews/pr-N/EXECUCAO-TENTATIVA/`. O caminho identifica a execuç
 do CI e aparece no status obrigatório `publicar-site` do PR e no resumo da publicação. O agente
 também o coloca na descrição do PR e entrega ao usuário no chat.
 
-O CI (`ci.yml`) só lê o repositório, testa e envia `game-build`. A publicação
-(`deploy.yml`, **Publicar versão validada**) é disparada por `workflow_run`,
+O CI (`ci.yml`) só lê o repositório, roda tipos/testes rápidos/build e envia
+`game-build`; não executa navegador. A publicação (`deploy.yml`,
+**Publicar versão validada**) é disparada por `workflow_run`,
 usando o workflow e os scripts do main, nunca os scripts do PR. Antes e depois
 da fila, confere CI, origem, PR aberto e head/base; também verifica a identidade
 do artefato. O job com escrita apenas copia estáticos. Um PR não pode usar o
 ambiente preview diretamente, pois ele recusa a referência do PR. Isso impede
 que uma alteração no workflow do PR contorne a aprovação de produção.
+
+O workflow separado **E2E manual** (`e2e.yml`), com seleção `todas`, executa as
+nove suítes de partidas e um job independente de infraestrutura. Esse job,
+também somente leitura, gera seu próprio build de produção e serve `dist` em
+subcaminho semelhante à prévia. O smoke abre todas as fases e confere imports
+sob demanda e recursos carregados. A prova negativa injeta erros numa página
+mínima para verificar que `console.error` e exceções não capturadas reprovam o
+processo E2E. Selecionar uma partida individual não roda esse job adicional.
+
+O smoke valida o build produzido nessa execução manual e o SHA registrado nela;
+não é o mesmo artefato binário produzido pelo CI para a prévia. Conferir CI,
+E2E, head/base e `version.json` antes de apresentar uma versão para aprovação.
+O CI obrigatório não aguarda o E2E manual automaticamente.
 
 O Pages hospeda um site: o branch órfão `pages-state` guarda apenas os arquivos
 estáticos em `site/`. O job serializa leitura, atualização e publicação para
