@@ -23,6 +23,7 @@ const report = {
     mode: 'title', debug: true, scent: 'render one cloud and preview, expire cloud, render again before leaving phase',
     simulation: '60 fixed steps of 1/60 s, then two full renders; automatic updates/render paused in test page',
     camera: 'same bounds-based overview per phase', quality: 'normal engine shadows and postprocessing',
+    screenshots: 'scenario canvas with UI/loading hidden only during capture; not a UI visual test',
     criterion: 'each count must plateau exactly for the same phase across all three measured visits; no zero baseline',
     limits: 'counts of geometries/textures/programs, not GPU bytes, FPS, JavaScript heap, buffer attributes or exhaustive gameplay coverage',
   },
@@ -105,7 +106,7 @@ try {
   await page.goto(`${base}?debug`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.state === 'title', null, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
-  // Captura só o canvas; overlays de UI não participam da medição gráfica.
+  // As capturas do cenário ocultam overlays só durante screenshot (abaixo).
   const levels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
   report.levels = levels;
   if (!levels.length) throw new Error('empty level catalog');
@@ -178,7 +179,10 @@ try {
       check(sample.draws.every((d) => d.calls > 20 && d.triangles > 1000), `${label}: scene was not actually rendered`);
       console.log(`[resources] ${label}: geometry=${sample.geometries} texture=${sample.textures} programs=${sample.programs} roots=${sample.rootCount} calls=${sample.draws[1].calls}`);
       await save();
-      if (cycle === WARMUP + MEASURED) await page.locator('canvas').first().screenshot({ path: resolve(OUT, `${sample.level}.png`), timeout: 60000 });
+      if (cycle === WARMUP + MEASURED) await page.locator('canvas').first().screenshot({
+        path: resolve(OUT, `${sample.level}.png`), timeout: 60000,
+        style: '#ui, #loading { visibility: hidden !important; }',
+      });
     }
   }
   for (const level of levels) {

@@ -32,12 +32,26 @@ combinados no mesmo PR; revisão independente é somente leitura.
   debug. Comparar contagens GPU por fase após aquecimento, sem exigir zero de
   caches. Não mede MB, VRAM ou FPS; observação dos globais cobre geometrias e
   materiais iniciais, complementada pelos testes de ownership.
-- Neste checkpoint: implementação e revisão por leitura, sem testes/build
-  locais. Prova negativa `39064044388` no instrumento sobre a base sem correção
-  ainda pendente; nenhum resultado antigo valida esta versão. Próximo passo:
-  combinar a medição, enviar PR e aguardar CI/prévia e E2E `todas` do head final,
+- Prova negativa `39064044388`, instrumento `98c96a2` sobre a base sem correção:
+  25 amostras, sem erros/warnings de navegador; reprovou pelo crescimento de
+  60 geometrias e 147 texturas por ciclo e descarte de geometria global.
+  A captura foi ajustada para ocultar overlays somente durante o PNG, sem
+  mudar render, contagens ou critérios.
+- Neste checkpoint: [PR #11](https://github.com/raposocampos/radhija-rhaenyra/pull/11)
+  aberto, revisão sem bloqueios e nenhum teste/build local. CI `39064448928`
+  do head anterior `3b61c38` passou 164 testes/tipos/build; prévia `39064473238`
+  conferida HTTP/version e E2E `39064454175` em andamento. Esses resultados
+  não validam o head com o ajuste de captura. Próximo passo:
+  enviar a atualização e aguardar CI/prévia e E2E `todas` do head final,
   incluindo estabilização e inspeção visual. Resultados finais ficam no PR,
   sem commit apenas para status. EST-06–08 seguem pendentes; PR #9 é proposta.
+
+Preparação EST-06, somente diagnóstico: `LevelDef` perde o genérico de props,
+`PuzzleContext.props` é `any`; `Fase4Props.plate` não declara `surfaceY` usado
+pelo puzzle real. O Proxy headless fabrica props/métodos e pode ocultar esse
+tipo de divergência; testes de mundo real atuais cobrem sobreposição. Próxima
+entrega deve ligar os contratos, usar dublês explícitos e testar objetos reais,
+preservando o ownership de EST-05, sem reescrita ampla do núcleo.
 
 ## EST-03 — recuperação publicada (2026-10-17, Codex)
 

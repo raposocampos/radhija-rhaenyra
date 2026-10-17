@@ -270,8 +270,10 @@ aquecimento e três medidas comparáveis por fase, render completo com
 Chromium/SwiftShader e DPR 1. Medir geometrias/texturas/programas e raízes;
 não interpretar como MB, VRAM ou FPS. Testes de ownership complementam a
 observação limitada de geometrias/materiais globais do navegador.
-Prova negativa na base sem correção e validação do head final ainda pendentes
-neste checkpoint. Nenhum teste/build local; sem aprovação para produção.
+Prova negativa `39064044388` confirmou crescimento de 60 geometrias e 147
+texturas por ciclo após aquecimento, sem erros de navegador. PR #11 aberto;
+validação do head final ainda pendente neste checkpoint. Nenhum teste/build
+local; sem aprovação para produção.
 
 ### EST-06 Contratos
 
