@@ -13,11 +13,12 @@ teclas entre parênteses. A correção reconhece também Shift no texto corrido,
 usando o mesmo desenho adaptável da UI (R1 no PlayStation, RB no Xbox, Shift
 no teclado), inclusive quando o dispositivo muda com a dica já na tela.
 
-Implementação concluída no branch `codex/dica-empurrar-controle`, com três
-verificações de regressão na suíte E2E `controle` para a mesma dica nos três
-modos. No momento deste registro, falta confirmar CI e E2E no GitHub e integrar
-ao `main` para publicar. Conferir as execuções do commit no GitHub ao retomar;
-não presumir que ainda estejam pendentes apenas por este resumo.
+Implementação `f925a94` aprovada no CI e na suíte E2E `controle` (30 verificações,
+incluindo três novas para a mesma dica nos três modos, sem erros de console).
+Integrada ao `main` após essas validações. Esta atualização final muda apenas
+o resumo; o código do jogo e os testes são os mesmos que passaram no E2E.
+Ao retomar, conferir o CI/deploy do commit atual no GitHub para confirmar a
+publicação. Não há ajuste de código pendente conhecido nesta tarefa.
 
 - Jogo: https://raposocampos.github.io/radhija-rhaenyra/
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
@@ -53,6 +54,11 @@ não presumir que ainda estejam pendentes apenas por este resumo.
 
 ## Validações já realizadas
 
+- Correção da dica, commit `f925a94`: CI aprovado na
+  [execução 38999413489](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999413489)
+  e E2E `controle` aprovado na
+  [execução 38999413926](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38999413926).
+  Todos os testes desta tarefa rodaram no GitHub, sem build ou partidas locais.
 - CI e deploy de `7c874dc`: aprovados na
   [execução 38997538477](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/38997538477).
   O site respondeu HTTP 200 após essa publicação.
@@ -91,8 +97,8 @@ não presumir que ainda estejam pendentes apenas por este resumo.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. Conferir se a correção da dica de empurrar já foi integrada e publicada;
-   se ainda não, concluir as validações e a entrega antes de outra tarefa.
-   Não há autorização para instalar ai-memory neste projeto.
+3. A correção da dica já está integrada e validada; conferir a publicação do
+   commit atual e seguir o próximo pedido. Não há autorização para instalar
+   ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
