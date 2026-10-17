@@ -7,18 +7,24 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**Estabilização iniciada após a avaliação geral.** Em 2026-10-17, o usuário
-autorizou executar o plano com este chat coordenando até dois executores,
-worktrees separados e testes no GitHub. A aprovação de produção continua
-vinculada a cada versão apresentada, conforme `AGENTS.md`.
+**Segunda rodada da estabilização em execução.** Em 2026-10-17, o usuário
+aprovou integrar o PR #4 e continuar com agentes em tarefas isoladas. O
+coordenador corrige EST-09 (menu); dois executores implementam EST-03
+(carregamento) e EST-04 (progresso). Planejamento da próxima fase foi revisado
+em paralelo, sem tema aprovado nem nova fase implementada. Testes continuam
+no GitHub e a aprovação de produção vale para cada versão apresentada.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
-O coordenador usa branch `codex/avaliacao-evolucao`, worktree
-`avaliacao-evolucao`, para preservar a avaliação, o checklist e as instruções
-de coordenação. Alterações desta entrega: `AGENTS.md`, este contexto e o plano;
-o código do jogo não muda nesta branch. Commit/PR e checks devem ser conferidos
-no GitHub antes de retomar; não considerar a validação da base como validação
-desta entrega documental.
+O coordenador usa branch `codex/menu-jogar-visivel`, worktree
+`menu-jogar-visivel`, base `b1b026e29abb7cc80fff6a13224e967d78415151`.
+EST-09: conflito entre a animação de entrada `rr-rise` e a de foco
+`rr-focus-pulse` pode reiniciar a entrada com opacidade zero ao sair do botão.
+Primeiro checkpoint acrescenta regressão em `tools/scripts/test-gamepad.mjs`;
+a reprodução negativa será executada no GitHub antes da correção CSS.
+Nenhum teste/build local. Conferir head e execuções no PR; teste novo ainda
+não executado neste checkpoint. Documentação e teste são as alterações da
+branch, sem processo local em andamento. Próximo passo: reproduzir na nuvem,
+corrigir e validar CI/prévia/E2E `controle` da versão final.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
@@ -71,21 +77,28 @@ desta entrega documental.
   concluído com sucesso usando essa aprovação. Produção HTTP 200 e
   `version.json` confirmou `18629a0` e execução `39056035625`.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
-  preserva o plano e consolida os resultados. Conferir os checks do head
-  documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração: #6 e #5 integrados; resta #4. O coordenador incorporou
-  a base `18629a0` no PR #4 e reconciliou os registros dos dois executores,
-  preservando suas decisões e evidências. A entrega de #4 continua documental;
-  conferir CI/prévia do novo head e aguardar aprovação própria antes de integrar.
-- Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
-  reservadas aos executores nem integrar/publicar sem aprovação da versão.
-  Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
-  isso não representa correções nem testes novos já implementados.
-- EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
-  ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
-  corrigir depois; registrar e reproduzir em tarefa própria, identificando
-  o commit testado. Não foi corrigido nem reproduzido nesta etapa. A aprovação
-  dos PRs #6 e #5 não inclui uma correção desse bug.
+  aprovado pelo usuário no head `2fcbca3` e integrado por squash em
+  `b1b026e29abb7cc80fff6a13224e967d78415151`.
+  [CI main 39057715283](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057715283)
+  e [deploy 39057744110](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057744110)
+  concluídos com sucesso. Produção HTTP 200 e `version.json` conferido no
+  squash e CI acima. Primeira etapa (#6, #5, #4) integrada e publicada.
+- EST-03: executor em `codex/recuperacao-carregamento`, worktree
+  `recuperacao-carregamento`, mesma base `b1b026e`. Dono do núcleo,
+  inicialização, UI de erro, cortina, testes de carregamento e acréscimo
+  isolado ao E2E manual. Não alterar regras de foco nem teste de controle.
+- EST-04: executor em `codex/progresso-validado`, worktree
+  `progresso-validado`, mesma base. Dono de `src/ui/progress.js` e testes
+  próprios. Preservar saves v1 válidos; versões não suportadas não podem ser
+  sobrescritas silenciosamente. Sem mudanças no menu ou núcleo.
+- EST-09: coordenador dono do bloco de foco em `src/ui/ui.css`, regressões
+  em `test-gamepad.mjs` e checklist. O CSS de erro de EST-03 será um bloco
+  próprio, sem editar essas regras. Retomadas dos executores são registradas
+  no contexto de suas branches e reconciliadas na integração.
+- Ordem desta rodada: EST-09, EST-04 e EST-03; cada versão exige aprovação
+  própria. Após cada merge, atualizar/revalidar branches restantes. EST-05
+  depende de EST-03; EST-06/07/08 continuam planejados. A próxima fase pode
+  ser desenhada/prototipada isoladamente, mas tema e objeto estão em aberto.
 
 ## Evidências da avaliação anterior
 
@@ -211,11 +224,9 @@ desta entrega documental.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1, #2, #3, #6 e #5 integrados e publicados. Produção de #5 confirmada
-   em `18629a0`, deploy `39056064315`; não repetir merge/deploy nem pedir
-   novamente a aprovação já usada para essa versão. PR #4 está reconciliado
-   com essa base: conferir seus checks/prévia e obter aprovação para integrar
-   a documentação. Preservar o checklist; EST-03/EST-04 apenas preparados e
-   EST-09 adiado conforme o usuário. Não instalar ai-memory.
+3. PRs #1, #2, #3, #6, #5 e #4 integrados e publicados. Produção de #4
+   confirmada em `b1b026e`, deploy `39057744110`; não repetir merge/deploy.
+   Retomar EST-09 no checkpoint acima e conferir os executores EST-03/04
+   antes de editar áreas compartilhadas. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
