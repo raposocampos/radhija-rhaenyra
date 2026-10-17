@@ -37,7 +37,13 @@ do CI e aparece no status obrigatório `publicar-site` do PR e no resumo da publ
 também o coloca na descrição do PR e entrega ao usuário no chat.
 
 O CI (`ci.yml`) só lê o repositório, testa e envia `game-build`. A publicação
-(`deploy.yml`, **Publicar versão validada**) é disparada por `workflow_run`,
+recebe o artefato somente depois de um smoke do `dist` em subcaminho de prévia:
+o navegador inicia o jogo e troca por todas as fases, exercitando os imports
+compilados sob demanda. O CI também injeta erros numa página mínima para provar
+que `console.error` e exceções não capturadas reprovam o processo E2E. Esses
+testes curtos não substituem as partidas completas do workflow manual.
+
+A publicação (`deploy.yml`, **Publicar versão validada**) é disparada por `workflow_run`,
 usando o workflow e os scripts do main, nunca os scripts do PR. Antes e depois
 da fila, confere CI, origem, PR aberto e head/base; também verifica a identidade
 do artefato. O job com escrita apenas copia estáticos. Um PR não pode usar o

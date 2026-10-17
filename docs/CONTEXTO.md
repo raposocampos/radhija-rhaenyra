@@ -7,6 +7,25 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
+### EST-01 — E2E confiável (2026-10-17, Codex)
+
+Em implementação no branch `codex/estabilidade-e2e`, worktree isolado
+`estabilidade-e2e`, a partir de `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
+O PR #3 já foi integrado; o registro abaixo é histórico e será reconciliado
+pelo coordenador da estabilização. A avaliação base confirmou CI 39009757588
+e E2E 39048060825 (299 verificações); isso não valida as alterações desta frente.
+
+- Harness soma erros de console/exceções às falhas; runner também reprova
+  resumo ausente ou inconsistente, preservando o diagnóstico completo.
+- Prova negativa no CI usa Chromium e processos reais: página saudável aprova;
+  console.error, exceção e asserção injetados reprovam com diagnóstico específico.
+- Smoke serve somente `dist` em subcaminho de prévia, abre todas as fases na
+  mesma aba e confere imports sob demanda, estado inicial e recursos carregados.
+- CI continua com leitura somente e checks existentes; publicação confiável
+  e código do jogo não foram alterados. Nenhum teste/build local executado.
+- Próximo passo: enviar commit/PR e validar CI, prévia e E2E `todas` no GitHub.
+  Neste registro ainda não há validação dos novos arquivos nem aprovação humana.
+
 **PR #3 em correção de pernas/câmera; produção não autorizada.**
 Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
 Objetivo: manter os pombos arredondados aceitos e tornar o voo e o mecanismo
