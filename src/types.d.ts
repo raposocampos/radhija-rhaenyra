@@ -566,6 +566,19 @@ export interface Fase5Props extends LevelProps {
   bed: PropBase & HighlightProp;
   collectibles: CollectibleProp[];
 }
+/** Expresso do Superbafo (protótipo em DEV_LEVELS). */
+export type Fase6Route = 'loop' | 'delivery';
+export interface Fase6TrainPose { x: number; z: number; yaw: number }
+export interface Fase6Props extends LevelProps {
+  pedal: PressProp;
+  junction: PropBase & { setRoute(route: Fase6Route): void };
+  train: PropBase & { setPose(pose: Fase6TrainPose): void };
+  nose: PropBase & { setSneeze(t: number): void };
+  ball: ItemProp;
+  goal: PropBase & HighlightProp;
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
 export interface PigeonPose {
   x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean;
   /** Progresso 0..1 para desacelerar o pouso; null volta à animação livre. */
