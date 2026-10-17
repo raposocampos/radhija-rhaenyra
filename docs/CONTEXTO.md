@@ -50,18 +50,25 @@ desta entrega documental.
   dependência transitiva mudou; auditoria do lockfile continua sem avisos.
   O head anterior `4f03e38` passou CI `39051377056` e E2E `39051384592`
   (123 testes rápidos e 299 verificações de gameplay), mas esses resultados
-  não validam a nova combinação. [E2E completo 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
-  em andamento, incluindo as novas provas e smoke. Conferir CI e prévia pelo
-  novo head. O worktree do executor está limpo; não reaproveitar a aprovação de #6.
+  não validam a nova combinação. No head atual, [CI 39053902153](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053902153)
+  aprovou tipos, 126 testes rápidos e build. [Prévia](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39053902153-1/)
+  publicada, HTTP 200 e head/base conferidos em `version.json`.
+  [E2E completo 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
+  aprovado no mesmo head: 299 verificações nas nove partidas, quatro provas
+  de infraestrutura e 19 verificações do smoke, sem erros de console. Capturas
+  da fase 4 concluídas, com `errors: []`. O worktree do executor está limpo;
+  a versão está pronta para nova aprovação. Não reaproveitar a aprovação de #6.
 - EST-00: [PR #4](https://github.com/raposocampos/radhija-rhaenyra/pull/4)
   preserva o plano e consolida os resultados. Conferir os checks do head
   documental atual; não reutilizar a prévia de um commit anterior.
-- Ordem de integração: #6 integrado; depois #5 e #4. Atualizar #5 para que o
-  Vite passe pelo E2E manual reforçado, apresentar nova prévia e pedir aprovação
-  dessa versão. O coordenador incorporou a base `9fcce75` no PR #4 e reconciliou
+- Ordem de integração: #6 integrado; depois #5 e #4. O Vite passou pelo E2E
+  manual reforçado; apresentar a nova prévia e aguardar aprovação dessa versão.
+  O coordenador incorporou a base `9fcce75` no PR #4 e reconciliou
   o registro E2E; após integrar #5, deverá atualizar esta documentação novamente.
 - Demais etapas: planejadas, sem implementação iniciada. Não editar as áreas
   reservadas aos executores nem integrar/publicar sem aprovação da versão.
+  Uma leitura preparatória de EST-03/EST-04 detalhou cenários futuros no plano;
+  isso não representa correções nem testes novos já implementados.
 - EST-09: usuário relatou que o botão "Jogar" desaparece por alguns segundos
   ao apertar para baixo para escolher uma fase no menu inicial. Pediu para
   corrigir depois; registrar e reproduzir em tarefa própria, identificando
@@ -84,10 +91,11 @@ desta entrega documental.
   bafo 12, fase4 17, regressões 9, pulo 8, controle 46, fase5 18, fase2 77,
   fase1 61 e fase3 51. Essa execução da avaliação foi concluída; não valida
   os novos commits da estabilização.
-- Prioridades propostas pela revisão estática, ainda não implementadas:
-  1. Fazer erros inesperados de console/pageerror reprovarem o E2E; hoje são
-     apenas registrados. Acrescentar teste mínimo do build publicado, pois as
-     partidas atuais usam o servidor de desenvolvimento.
+- Prioridades propostas na avaliação da base `baa8af0`:
+  1. Erros inesperados de console/pageerror eram apenas registrados pelo E2E;
+     faltava um teste mínimo do build estático. **Concluído em EST-01, PR #6:**
+     erros agora reprovam e há um smoke do build próprio do E2E. As partidas
+     de gameplay continuam usando o servidor de desenvolvimento.
   2. Recuperar estado e oferecer ação útil quando loadLevel rejeitar. Avaliar
      também abas antigas após deploy: os arquivos anteriores são removidos,
      e imports de fases sob demanda podem apontar para chunks inexistentes.
@@ -193,7 +201,7 @@ desta entrega documental.
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
 3. PRs #1, #2, #3 e #6 integrados. Produção de #6 confirmada em `9fcce75`,
    deploy `39053794991`; não repetir sua aprovação nem integrar outro PR com ela.
-   Concluir a revalidação de #5 na base `9fcce75` e apresentar a nova prévia;
+   PR #5 revalidado: apresentar a prévia do head `3f95402` e aguardar aprovação;
    aprovação anterior não vale para base alterada. Conferir os checks de #4,
    reconciliando-o novamente após integrar #5. Preservar o checklist e manter
    EST-09 adiado conforme o usuário. Não instalar ai-memory.

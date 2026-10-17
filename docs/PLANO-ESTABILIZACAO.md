@@ -26,7 +26,8 @@ quando alteram a mesma área. Revisões sem alterações podem ocorrer em parale
 Ordem de integração da primeira etapa: PR #6 (E2E), PR #5 (Vite) e PR #4
 (documentação consolidada). O #6 foi aprovado no chat, integrado e publicado
 em `9fcce7505e75d3080d9c2529c76ea97b7fa72a90`. Essa é a nova base de #5 e #4.
-O Vite está sendo revalidado com o E2E manual reforçado. O plano já está no
+O Vite foi revalidado com o E2E manual reforçado e aguarda nova aprovação.
+O plano já está no
 branch remoto do PR #4 e pode orientar os executores antes de ser integrado.
 
 ## Boas práticas a preservar
@@ -55,7 +56,7 @@ validados. O estado de publicação é registrado separadamente.
 | --- | --- | --- | --- | --- | --- |
 | [ ] | EST-00 | Avaliação preservada e plano de execução | Coordenador | Nenhuma | PR #4 em validação |
 | [x] | EST-01 | E2E rigoroso e smoke do build | Executor E2E | Base inicial | PR #6 aprovado, integrado e publicado |
-| [ ] | EST-02 | Atualização pontual do Vite | Executor dependências | Nova base 9fcce75 | PR #5 em revalidação após #6 |
+| [x] | EST-02 | Atualização pontual do Vite | Executor dependências | Nova base 9fcce75 | PR #5 revalidado; aguardando aprovação |
 | [ ] | EST-03 | Recuperação de falhas no carregamento | A atribuir | EST-01 e EST-02 integrados | Planejado |
 | [ ] | EST-04 | Validação e migração do progresso | A atribuir | EST-01 integrado | Planejado |
 | [ ] | EST-05 | Ciclo de vida dos recursos gráficos | A atribuir | EST-03 integrado | Planejado |
@@ -140,9 +141,14 @@ Vite 6.4.4, sem alterações de dependências transitivas; auditoria do lockfile
 sem vulnerabilidades conhecidas reportadas na consulta. O head anterior
 `4f03e38` passou CI `39051377056` e E2E `39051384592` na base inicial; esses
 resultados não validam a combinação atual.
+[CI 39053902153](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053902153)
+aprovado no head atual: tipos, 126 testes rápidos e build.
+[Prévia atual](https://raposocampos.github.io/radhija-rhaenyra/previews/pr-5/39053902153-1/)
+conferida por HTTP e `version.json`, com head/base corretos.
 [E2E 39053897305](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39053897305)
-em andamento no novo head, com nove partidas e job adicional de infraestrutura.
-Conferir CI/prévia atuais e apresentar a versão pronta para nova aprovação.
+aprovado no mesmo head: 299 verificações nas nove partidas, quatro provas da
+infraestrutura e 19 verificações do smoke, sem erros de console. Capturas da
+fase 4 concluídas, com `errors: []`. Apresentar a versão para nova aprovação.
 Produção do Vite não aprovada.
 
 ### EST-03 Carregamento
@@ -154,6 +160,20 @@ Produção do Vite não aprovada.
 - Verificar a estratégia para arquivos antigos e atualização da página,
   preservando progresso e o fluxo confiável de publicação.
 
+Preparação somente por leitura: `loadLevel` em `src/game/game.js` inicia a
+importação antes de esperar 420 ms da cortina e só depois aguarda sua promessa.
+Capturar a rejeição desde o início. Separar recuperação antes do descarte da
+fase antiga do erro após montagem parcial; não tentar restaurar recursos já
+descartados. Ligar a ação de recuperação a `ui.js`, `curtain.js` e ao erro de
+`boot()` em `main.js`, incluindo os chamadores assíncronos da seleção de fase.
+
+Cenários propostos, ainda sem implementação: rejeição antes dos 420 ms; erro
+no primeiro carregamento; exceção em `build`/`createPuzzle`/`reset`/descarte;
+falha seguida de repetição de comandos sem duplicar montagem ou `level:loaded`;
+aba antiga com chunk ausente recuperada por recarga. O helper
+`headlessLevels()` substitui carregamento/montagem e precisará permitir falhas
+controladas para essas regressões. Manter a coleta estrita de erros nos E2E.
+
 ### EST-04 Progresso
 
 - Validar versão e formato do save, incluindo registros das fases; tratar
@@ -161,6 +181,18 @@ Produção do Vite não aprovada.
 - Manter compatibilidade com saves válidos existentes e preservar progresso
   ao adicionar uma fase. Introduzir migração apenas quando o formato exigir.
 - Testar os casos de recuperação e manter isolamento entre prévias e produção.
+
+Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
+`src/ui/progress.js`. Cenários propostos, ainda sem implementação:
+
+- `levels` como array, registro de fase inválido e contadores como strings;
+  concluir uma fase deve produzir números válidos, sem concatenar `clears`.
+- Tempo negativo ou não finito e contagens inválidas; definir normalização
+  preservando os campos válidos do progresso existente.
+- Versão desconhecida: definir tratamento sem sobrescrever silenciosamente
+  dados que o jogo atual não sabe interpretar.
+- JSON corrompido, leitura/escrita de storage indisponível e save válido da
+  versão atual, incluindo releitura ao concluir fase e adição de uma fase nova.
 
 ### EST-05 Recursos gráficos
 
@@ -199,7 +231,8 @@ Produção do Vite não aprovada.
 
 Relato de 2026-10-17: ao apertar para baixo para escolher uma fase no menu
 inicial, o botão "Jogar" desaparece por alguns segundos. O usuário pediu para
-corrigir depois desta rodada; a versão exata será identificada na reprodução.
+adiar a correção; ela está prevista após a primeira etapa. A versão exata
+será identificada na reprodução.
 
 - Reproduzir na nuvem a navegação para baixo e identificar a causa do sumiço.
 - Manter o botão visível ou uma transição intencional e consistente, sem
