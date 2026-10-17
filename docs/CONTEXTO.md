@@ -41,8 +41,13 @@ leitura; publicação usa código do main e trata o artefato somente como dados.
 
 O usuário solicitou salvar este registro pós-publicação por PR para encerrar a
 pendência local antes de continuar com o Claude. Esta entrega é somente de
-documentação; o código do jogo permanece igual ao aprovado no PR #1. Conferir
-o merge e os checks deste PR documental no GitHub, sem criar novos commits
+documentação; o código do jogo permanece igual ao aprovado no PR #1.
+Registro: [PR #2](https://github.com/raposocampos/radhija-rhaenyra/pull/2), branch
+`codex/contexto-publicacao`, commit inicial `43cd9baaf39088d503decc016e5657ce29e0d77f`.
+Esse commit passou no [CI 39004558716](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004558716)
+e na [publicação da prévia 39004583094](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004583094).
+Ao retomar, conferir o head atual, o merge e os checks no PR #2; as validações
+citadas não aprovam antecipadamente commits posteriores. Não criar novos commits
 apenas para atualizar o status do próprio registro. A autorização desta entrega
 documental não dispensa prévia e aprovação para futuras mudanças no jogo.
 
