@@ -18,13 +18,18 @@ Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
 O coordenador usa branch `codex/menu-jogar-visivel`, worktree
 `menu-jogar-visivel`, base `b1b026e29abb7cc80fff6a13224e967d78415151`.
 EST-09: conflito entre a animação de entrada `rr-rise` e a de foco
-`rr-focus-pulse` pode reiniciar a entrada com opacidade zero ao sair do botão.
-Primeiro checkpoint acrescenta regressão em `tools/scripts/test-gamepad.mjs`;
-a reprodução negativa será executada no GitHub antes da correção CSS.
-Nenhum teste/build local. Conferir head e execuções no PR; teste novo ainda
-não executado neste checkpoint. Documentação e teste são as alterações da
-branch, sem processo local em andamento. Próximo passo: reproduzir na nuvem,
-corrigir e validar CI/prévia/E2E `controle` da versão final.
+`rr-focus-pulse` reiniciava a entrada com opacidade zero ao sair do botão.
+Reprodução em `7a05466de2f3d605139ef2b8f7336b0925a8824b`,
+[E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
+56 verificações passaram e quatro falharam pelo motivo esperado, opacidade
+zero ao descer por teclado/D-pad/analógico e ao retornar ao mouse.
+Correção: excluir Jogar apenas da animação de pulso do foco; entrada, halo e
+anel de seleção permanecem. Revisão independente sem bloqueios. O teste
+amostra estilos dentro do navegador, para não perder a falha entre leituras.
+Nenhum teste/build local. Este checkpoint inclui CSS, regressões e contexto;
+CI/prévia e E2E `controle` da versão corrigida ainda precisam ser conferidos
+pelo head atual no PR. Sem processo local em andamento. Próximo passo:
+validar essa versão e apresentar sua prévia para aprovação própria.
 
 - EST-01: executor Codex em `codex/estabilidade-e2e`, worktree
   `estabilidade-e2e`; implementado no [PR #6](https://github.com/raposocampos/radhija-rhaenyra/pull/6),
@@ -98,7 +103,10 @@ corrigir e validar CI/prévia/E2E `controle` da versão final.
 - Ordem desta rodada: EST-09, EST-04 e EST-03; cada versão exige aprovação
   própria. Após cada merge, atualizar/revalidar branches restantes. EST-05
   depende de EST-03; EST-06/07/08 continuam planejados. A próxima fase pode
-  ser desenhada/prototipada isoladamente, mas tema e objeto estão em aberto.
+  ser desenhada/prototipada isoladamente. O usuário autorizou preparar uma
+  proposta combinando pulo e superbafo; ela será documentada por um terceiro
+  agente em `codex/proposta-fase6`, worktree `proposta-fase6`, sem código novo
+  nem mudança no catálogo. Tema/objeto sugeridos ainda precisam de aprovação.
 
 ## Evidências da avaliação anterior
 

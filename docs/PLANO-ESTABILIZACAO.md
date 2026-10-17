@@ -65,7 +65,7 @@ validados. O estado de publicação é registrado separadamente.
 | [ ] | EST-06 | Contratos entre puzzle e cenário | A atribuir | EST-05 integrado para edições no núcleo | Planejado |
 | [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | A atribuir | EST-03, EST-05 e EST-06 integrados | Planejado |
 | [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
-| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | Em execução, branch codex/menu-jogar-visivel |
+| [ ] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | Corrigido, aguardando CI/prévia/E2E na branch codex/menu-jogar-visivel |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
@@ -174,14 +174,14 @@ commit `18629a0` e execução `39056035625`.
 - Verificar a estratégia para arquivos antigos e atualização da página,
   preservando progresso e o fluxo confiável de publicação.
 
-Preparação somente por leitura: `loadLevel` em `src/game/game.js` inicia a
+Diagnóstico de partida: `loadLevel` em `src/game/game.js` inicia a
 importação antes de esperar 420 ms da cortina e só depois aguarda sua promessa.
 Capturar a rejeição desde o início. Separar recuperação antes do descarte da
 fase antiga do erro após montagem parcial; não tentar restaurar recursos já
 descartados. Ligar a ação de recuperação a `ui.js`, `curtain.js` e ao erro de
 `boot()` em `main.js`, incluindo os chamadores assíncronos da seleção de fase.
 
-Cenários propostos, ainda sem implementação: rejeição antes dos 420 ms; erro
+Cenários atribuídos ao executor, em implementação: rejeição antes dos 420 ms; erro
 no primeiro carregamento; exceção em `build`/`createPuzzle`/`reset`/descarte;
 falha seguida de repetição de comandos sem duplicar montagem ou `level:loaded`;
 aba antiga com chunk ausente recuperada por recarga. O helper
@@ -197,7 +197,7 @@ controladas para essas regressões. Manter a coleta estrita de erros nos E2E.
 - Testar os casos de recuperação e manter isolamento entre prévias e produção.
 
 Ponto de partida: `loadProgress`, `saveProgress` e `recordLevelClear` em
-`src/ui/progress.js`. Cenários propostos, ainda sem implementação:
+`src/ui/progress.js`. Cenários atribuídos ao executor, em implementação:
 
 - `levels` como array, registro de fase inválido e contadores como strings;
   concluir uma fase deve produzir números válidos, sem concatenar `clears`.
@@ -258,14 +258,20 @@ Responsável: coordenador, `codex/menu-jogar-visivel`, worktree
 `menu-jogar-visivel`, base `b1b026e`. Escopo: foco em `ui.css`, regressão no
 E2E de controle e documentação. Diagnóstico: animação de foco substitui a
 entrada do botão; ao perder foco, a entrada pode reiniciar invisível.
-Reprodução e correção ainda aguardam validação na nuvem neste checkpoint.
+Reprodução negativa em `7a05466`, [E2E 39057998118](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39057998118):
+56 verificações aprovadas, quatro falhas de opacidade zero, sem falhas nas
+46 verificações anteriores. Excluir apenas Jogar do pulso de foco corrige a
+substituição da animação. Revisão independente sem bloqueios; validar o head
+corrigido com CI, prévia e E2E `controle` antes de apresentar para aprovação.
 
 ### Preparação da próxima fase (proposta)
 
 - Usar `_modelo` e registro em `DEV_LEVELS` para protótipo isolado, com pasta
   e testes próprios. A prévia do PR isola o save; `DEV_LEVELS` sozinho não.
-- Escolher tema e objeto antes de implementar conteúdo. Combinar pulo e
-  superbafo já existentes é uma opção, ainda sem aprovação.
+- O usuário autorizou preparar a proposta combinando pulo e superbafo.
+  Responsável: agente de planejamento, `codex/proposta-fase6`, worktree
+  `proposta-fase6`. Documento e contexto próprios; nenhum código de fase.
+  Escolher/aprovar tema e objeto antes de implementar conteúdo.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
 - Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.
