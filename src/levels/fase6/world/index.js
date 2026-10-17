@@ -77,13 +77,16 @@ export function buildWorld({ root }) {
   }
   // Grandes tábuas e borda contínua deixam explícita a área reservada ao trem.
   box(root, paleWood, [RAIL_YARD.hx * 2, RAIL_YARD.height, RAIL_YARD.hz * 2], [RAIL_YARD.x, RAIL_YARD.height / 2, RAIL_YARD.z]);
+  // As tábuas apoiam sobre a base: não duplicar suas faces externas.
+  const fenceHeight = 0.7 - RAIL_YARD.height;
+  const fenceY = RAIL_YARD.height + fenceHeight / 2;
   for (const x of [-RAIL_YARD.hx + 0.035, RAIL_YARD.hx - 0.035]) {
-    box(root, wood, [0.07, 0.7, 3.3], [x, 0.35, RAIL_YARD.z]);
+    box(root, wood, [0.07, fenceHeight, 3.3], [x, fenceY, RAIL_YARD.z]);
     box(root, teal, [0.085, 0.055, 3.31], [x, 0.735, RAIL_YARD.z]);
   }
-  box(root, wood, [5.11, 0.7, 0.07], [0, 0.35, -2.665]);
+  box(root, wood, [5.11, fenceHeight, 0.07], [0, fenceY, -2.665]);
   // A janela tem grades estreitas: nariz fica próximo, dogs não entram.
-  for (const [x, w] of [[-1.68, 1.8], [1.1, 0.64], [2.4, 0.36]]) box(root, wood, [w, 0.7, 0.07], [x, 0.35, 0.565]);
+  for (const [x, w] of [[-1.68, 1.8], [1.1, 0.64], [2.4, 0.36]]) box(root, wood, [w, fenceHeight, 0.07], [x, fenceY, 0.565]);
   // A descarga tem uma abertura visível acima da canaleta, sem atravessar a tábua.
   box(root, teal, [0.72, 0.09, 0.085], [TRAY.x, 0.735, 0.565]);
   box(root, teal, [1.48, 0.06, 0.085], [0, 0.73, 0.565]);
@@ -117,7 +120,7 @@ export function buildWorld({ root }) {
   const pedalObject = new THREE.Group(); pedalObject.name = 'pedal-de-pulo'; pedalObject.position.set(PEDAL.x, 0, PEDAL.z); root.add(pedalObject);
   mesh(pedalObject, new THREE.CylinderGeometry(PEDAL.r + 0.05, PEDAL.r + 0.06, 0.045, 32), iron, 0, 0.0225, 0);
   const pedalTop = mesh(pedalObject, new THREE.CylinderGeometry(PEDAL.r, PEDAL.r, 0.035, 32), mustard, 0, 0.075, 0);
-  for (const x of [-0.65, 0.65]) for (const y of [0.038, 0.048, 0.058]) {
+  for (const x of [-0.65, 0.65]) for (const y of [0.053, 0.063, 0.073]) {
     const coil = mesh(pedalObject, new THREE.TorusGeometry(0.055, 0.007, 6, 16), brass, x, y, 0);
     coil.rotation.x = Math.PI / 2;
   }
