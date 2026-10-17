@@ -3,7 +3,27 @@
 // setPose({ x, y, z, yaw, flying, asleep }): posição dos pés; flying bate as asas; asleep encolhe a
 // cabeça, fecha os olhos e solta "zzz".
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, rng } from './util.js';
+
+// Cor na própria malha: barras e penas não acrescentam draw calls nem texturas.
+/** @param {THREE.BufferGeometry} geo @param {(x: number, y: number, z: number) => THREE.Color} colorAt */
+function paint(geo, colorAt) {
+  const p = geo.getAttribute('position');
+  const colors = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    colorAt(p.getX(i), p.getY(i), p.getZ(i)).toArray(colors, i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geo;
+}
+
+/** Une partes estáticas do mesmo material e libera as malhas intermediárias. */
+function join(parts) {
+  const geo = mergeGeometries(parts);
+  for (const part of parts) part.dispose();
+  return geo;
+}
 
 let _zzz = null;
 function zzzTexture() {
@@ -29,45 +49,67 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   const body = new THREE.Group(); // tudo menos os pés (inclina ao dormir/voar)
   root.add(body);
   const grey = new THREE.MeshStandardMaterial({ color: tint, roughness: 0.75 });
-  const dark = new THREE.MeshStandardMaterial({ color: new THREE.Color(tint).multiplyScalar(0.62), roughness: 0.8 });
-  const bars = new THREE.MeshStandardMaterial({ color: '#33363f', roughness: 0.8 });
-  const neckMat = new THREE.MeshStandardMaterial({ color: '#4f8f7a', roughness: 0.3, metalness: 0.45, emissive: '#3a2a55', emissiveIntensity: 0.15 });
+  const featherMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
+  const neckMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.22 });
   const beakMat = new THREE.MeshStandardMaterial({ color: '#3a3335', roughness: 0.5 });
   const cereMat = new THREE.MeshStandardMaterial({ color: '#efe9e2', roughness: 0.7 });
   const eyeMat = new THREE.MeshStandardMaterial({ color: '#e8822e', roughness: 0.25, emissive: '#5a2a00', emissiveIntensity: 0.2 });
   const pupilMat = new THREE.MeshStandardMaterial({ color: '#120a06', roughness: 0.2 });
   const feetMat = new THREE.MeshStandardMaterial({ color: '#d98a8f', roughness: 0.6 });
 
-  const torsoGeo = new THREE.SphereGeometry(1, 20, 14);
-  torsoGeo.scale(0.085, 0.08, 0.13);
+  // Corpo em gota: peito cheio e dorso que afina até a cauda, sem peças sobrepostas no peito.
+  const torsoGeo = new THREE.SphereGeometry(1, 20, 16);
+  const tp = torsoGeo.getAttribute('position');
+  for (let i = 0; i < tp.count; i++) {
+    const z = tp.getZ(i);
+    const fullness = 0.88 + 0.12 * z;
+    tp.setXYZ(i, tp.getX(i) * 0.092 * fullness,
+      tp.getY(i) * 0.086 * fullness + z * 0.016, z * 0.137);
+  }
+  torsoGeo.computeVertexNormals();
   const torso = new THREE.Mesh(torsoGeo, grey);
-  torso.position.set(0, 0.11, 0);
-  // pescoço furta-cor: faixa achatada entre o peito e a cabeça (não uma bola)
-  const chestGeo = new THREE.SphereGeometry(1, 16, 12);
-  chestGeo.scale(0.062, 0.05, 0.045);
-  const chest = new THREE.Mesh(chestGeo, neckMat);
-  chest.position.set(0, 0.168, 0.088);
-  const breastGeo = new THREE.SphereGeometry(1, 16, 12);
-  breastGeo.scale(0.072, 0.066, 0.06);
-  const breast = new THREE.Mesh(breastGeo, grey);
-  breast.position.set(0, 0.13, 0.08);
+  torso.position.set(0, 0.119, 0.012);
   const headPivot = new THREE.Group();
   headPivot.position.set(0, 0.175, 0.1);
-  const headMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(tint).multiplyScalar(0.8), roughness: 0.75 });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), headMat);
+  const headColor = new THREE.Color(tint).multiplyScalar(0.72);
+  const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.7 });
+  // Pescoço cônico arredondado acompanha a cabeça ao cochilar e ao espiar.
+  const neckGeo = new THREE.SphereGeometry(1, 16, 14);
+  const np = neckGeo.getAttribute('position');
+  for (let i = 0; i < np.count; i++) {
+    const y = np.getY(i);
+    const taper = 1 - y * 0.24;
+    np.setXYZ(i, np.getX(i) * 0.047 * taper, y * 0.068 - 0.008,
+      np.getZ(i) * 0.044 * taper + y * 0.015 + 0.006);
+  }
+  neckGeo.computeVertexNormals();
+  const green = new THREE.Color('#427b70');
+  const violet = new THREE.Color('#706080');
+  const bodyColor = new THREE.Color(tint);
+  paint(neckGeo, (x, y) => {
+    const c = violet.clone().lerp(green, THREE.MathUtils.smoothstep(y, -0.038, 0.018));
+    c.lerp(bodyColor, 1 - THREE.MathUtils.smoothstep(y, -0.065, -0.035));
+    return c.lerp(headColor, THREE.MathUtils.smoothstep(y, 0.012, 0.05));
+  });
+  const neck = new THREE.Mesh(neckGeo, neckMat);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), headMat);
+  head.scale.set(0.045, 0.047, 0.049);
   head.position.set(0, 0.045, 0.03);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.04, 8).rotateX(Math.PI / 2), beakMat);
-  beak.position.set(0, 0.032, 0.083);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.010, 0.036, 12).rotateX(Math.PI / 2), beakMat);
+  beak.scale.y = 0.65;
+  beak.position.set(0, 0.029, 0.089);
   const cere = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), cereMat);
   cere.scale.set(1, 0.6, 1.1);
-  cere.position.set(0, 0.043, 0.066);
-  headPivot.add(head, beak, cere);
+  cere.position.set(0, 0.037, 0.076);
+  headPivot.add(neck, head, beak, cere);
   const eyes = [-1, 1].map((sx) => {
     const e = new THREE.Group();
-    e.position.set(sx * 0.03, 0.05, 0.05);
+    e.position.set(sx * 0.040, 0.054, 0.048);
     const iris = new THREE.Mesh(new THREE.SphereGeometry(0.0105, 10, 8), eyeMat);
     const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), pupilMat);
-    pupil.position.set(sx * 0.006, 0, 0.005);
+    iris.scale.set(0.38, 0.9, 1);
+    pupil.scale.x = 0.4;
+    pupil.position.set(sx * 0.0035, 0, 0.0015);
     e.add(iris, pupil);
     headPivot.add(e);
     return e;
@@ -75,42 +117,58 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   const wings = [-1, 1].map((sx) => {
     const pivot = new THREE.Group();
     pivot.position.set(sx * 0.068, 0.135, 0.02);
-    const wGeo = new THREE.SphereGeometry(1, 14, 10);
-    wGeo.scale(0.02, 0.055, 0.115);
-    const w = new THREE.Mesh(wGeo, grey);
-    w.position.set(sx * 0.012, -0.015, -0.035);
-    // faixa escura atravessada na asa (fina, rente à pena)
-    const barGeo = new THREE.TorusGeometry(0.05, 0.006, 4, 12, Math.PI);
-    const bar = new THREE.Mesh(barGeo, bars);
-    bar.rotation.set(0, Math.PI / 2, Math.PI / 2);
-    bar.scale.set(1.1, 0.42, 1);
-    bar.position.set(sx * 0.03, -0.015, -0.07);
-    pivot.add(bar);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 8).rotateX(-Math.PI / 2), dark);
-    tip.scale.set(0.5, 1, 1);
-    tip.position.set(sx * 0.02, -0.02, -0.15);
-    pivot.add(w, tip);
+    // Uma asa contínua em folha, larga no ombro e estreita nas penas primárias.
+    const wGeo = new THREE.SphereGeometry(1, 12, 28);
+    const wp = wGeo.getAttribute('position');
+    const wingColor = bodyColor.clone().lerp(new THREE.Color('#c5cad2'), 0.2);
+    const barColor = new THREE.Color('#39404c');
+    paint(wGeo, (x, y) => {
+      const band = Math.max(
+        1 - THREE.MathUtils.smoothstep(Math.abs(y + 0.12), 0.065, 0.13),
+        1 - THREE.MathUtils.smoothstep(Math.abs(y + 0.49), 0.065, 0.13));
+      return wingColor.clone().lerp(barColor, Math.max(band, 0.7 * (1 - THREE.MathUtils.smoothstep(y, -0.9, -0.65))));
+    });
+    for (let i = 0; i < wp.count; i++) {
+      const y = wp.getY(i);
+      const taper = 0.78 + 0.22 * y;
+      wp.setXYZ(i, wp.getX(i) * 0.025 * taper + sx * 0.013,
+        -wp.getZ(i) * 0.058 * taper - 0.012, y * 0.137 - 0.042);
+    }
+    wGeo.computeVertexNormals();
+    pivot.add(new THREE.Mesh(wGeo, featherMat));
     body.add(pivot);
     return { pivot, sx };
   });
-  const tailGeo = new THREE.BoxGeometry(0.09, 0.014, 0.11);
-  const tail = new THREE.Mesh(tailGeo, dark);
-  tail.position.set(0, 0.095, -0.17);
+  // Leque de penas com extremidades macias, integrado em uma única malha.
+  const tailParts = [];
+  for (let i = -2; i <= 2; i++) {
+    const feather = new THREE.SphereGeometry(1, 8, 10).rotateX(Math.PI / 2);
+    feather.scale(0.014, 0.006, 0.066 - Math.abs(i) * 0.003);
+    feather.rotateY(i * -0.075);
+    feather.translate(i * 0.016, 0, Math.abs(i) * 0.004);
+    paint(feather, (x, y, z) => bodyColor.clone().multiplyScalar(
+      0.63 - 0.28 * (1 - THREE.MathUtils.smoothstep(z, -0.048, -0.034))));
+    tailParts.push(feather);
+  }
+  const tail = new THREE.Mesh(join(tailParts), featherMat);
+  tail.position.set(0, 0.096, -0.16);
   tail.rotation.x = 0.28;
-  body.add(torso, breast, chest, headPivot, tail);
+  body.add(torso, headPivot, tail);
   // pés
   const feet = new THREE.Group();
+  const footParts = [];
   for (const sx of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), feetMat);
-    leg.position.set(sx * 0.03, 0.03, 0.01);
-    feet.add(leg);
+    footParts.push(new THREE.CylinderGeometry(0.005, 0.006, 0.045, 6)
+      .translate(sx * 0.03, 0.031, 0.01));
     for (const a of [-0.5, 0, 0.5]) {
-      const toe = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.035, 5).rotateX(Math.PI / 2), feetMat);
-      toe.position.set(sx * 0.03 + Math.sin(a) * 0.012, 0.004, 0.025 + Math.cos(a) * 0.006);
-      toe.rotation.y = a;
-      feet.add(toe);
+      footParts.push(new THREE.CapsuleGeometry(0.003, 0.028, 2, 5)
+        .rotateX(Math.PI / 2).rotateY(a)
+        .translate(sx * 0.03 + Math.sin(a) * 0.014, 0.004, 0.026));
     }
+    footParts.push(new THREE.CapsuleGeometry(0.003, 0.016, 2, 5)
+      .rotateX(Math.PI / 2).translate(sx * 0.03, 0.004, -0.003));
   }
+  feet.add(new THREE.Mesh(join(footParts), feetMat));
   root.add(feet);
   root.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 

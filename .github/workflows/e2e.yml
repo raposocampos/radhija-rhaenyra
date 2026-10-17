@@ -29,6 +29,9 @@ jobs:
       CI: 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -38,6 +41,9 @@ jobs:
         run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Jogar e verificar
         run: npm run test:e2e -- --only "${{ matrix.suite }}"
+      - name: Comparar pombos com a base (qualidade visual completa)
+        if: matrix.suite == 'fase4'
+        run: node tools/scripts/capture-pigeons.mjs
       - name: Guardar capturas para diagnóstico
         if: always()
         uses: actions/upload-artifact@v4

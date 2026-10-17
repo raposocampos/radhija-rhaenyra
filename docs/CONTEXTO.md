@@ -7,49 +7,28 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-**PR #1 aprovado pelo usuário, integrado e publicado em produção.** O usuário
-confirmou no chat que testou a prévia e aprovou a publicação no link principal.
-Não há aprovação de produção pendente para esta entrega.
+**Em andamento: melhoria visual dos pombos; produção ainda não autorizada.**
+Branch `codex/pombos-organicos`, worktree isolado `pombos-organicos`.
+Objetivo: silhuetas orgânicas e reconhecíveis, preservando o estilo fofo,
+as animações, a jogabilidade e o desempenho.
 
-- PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
-- Head aprovado: `e219af7662f5db22196a7aace79deeca63fd861e`.
-- Merge squash no main: `e85b927954f38430b26b5680324a88614bc2e416`.
-  A árvore integrada foi comparada à aprovada: nenhum arquivo diferente.
-- [CI do main 39002906594](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002906594):
-  tipos, 116 testes e build aprovados.
-- [Publicação 39002937318](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002937318):
-  disparada automaticamente por workflow_run, aguardou a aprovação do ambiente
-  github-pages, foi liberada com a autorização do chat e terminou com sucesso.
-- Produção: https://raposocampos.github.io/radhija-rhaenyra/.
-  HTML, JavaScript e CSS HTTP 200; version.json confirmou o commit e85b927 e
-  o CI 39002906594. A prévia aprovada também permanece acessível.
-- E2E controle: 46 verificações, zero falhas e nenhum erro de console na
-  [execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192),
-  em d53b8d4. Código do jogo e testes não mudaram depois desse commit.
-
-O fluxo de AGENTS.md/CLAUDE.md está no main: PR, CI, prévia, aprovação humana
-explícita e publicação no mesmo link. Nenhum teste ou build foi executado no PC.
-Main exige PR atualizado e checks testes-e-build/publicar-site, inclusive para
-admins. Produção exige revisão no ambiente github-pages e só permite main.
-
-A exceção delivery-bootstrap (policy 63342097) foi removida do ambiente preview,
-que agora aceita somente main. O branch bootstrap permanece bloqueado como
-registro: não integrá-lo nem reutilizá-lo. O publicador confiável do main já
-assumiu o fluxo. pages-state continua sendo um branch órfão só de estáticos.
-A brecha apontada na revisão foi corrigida antes da aprovação: CI de PR só tem
-leitura; publicação usa código do main e trata o artefato somente como dados.
-
-O usuário solicitou salvar este registro pós-publicação por PR para encerrar a
-pendência local antes de continuar com o Claude. Esta entrega é somente de
-documentação; o código do jogo permanece igual ao aprovado no PR #1.
-Registro: [PR #2](https://github.com/raposocampos/radhija-rhaenyra/pull/2), branch
-`codex/contexto-publicacao`, commit inicial `43cd9baaf39088d503decc016e5657ce29e0d77f`.
-Esse commit passou no [CI 39004558716](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004558716)
-e na [publicação da prévia 39004583094](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004583094).
-Ao retomar, conferir o head atual, o merge e os checks no PR #2; as validações
-citadas não aprovam antecipadamente commits posteriores. Não criar novos commits
-apenas para atualizar o status do próprio registro. A autorização desta entrega
-documental não dispensa prévia e aprovação para futuras mudanças no jogo.
+- Retomada conferida: PR #2 integrado no main `3e826e48f9eac644681b718470f9d75f6e207de5`.
+  [CI 39004801467](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004801467)
+  e [publicação 39004826940](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39004826940)
+  concluídos com sucesso. PR #1 também está integrado; não repetir esses merges.
+- Pesquisa de Cornell/Macaulay Library e RSPB documentada em `docs/POMBOS.md`.
+  As fotografias foram consultadas, não incorporadas ao repositório.
+- Implementado em `src/world/pigeon.js`: corpo em gota, pescoço contínuo,
+  cabeça e olhos laterais, asas com duas barras, cauda em penas e pés suaves.
+  Os quatro pombos compartilham a fábrica. Lógica da fase não foi alterada.
+- Ferramenta de comparação em `tools/pigeon-review.html` e
+  `tools/scripts/*pigeons*` / `tools/scripts/pigeon-review-scene.mjs`.
+  E2E fase4 passa a gerar capturas comparativas e métricas no GitHub.
+- Validação local apenas por leitura/diff. Tipos, testes, build, E2E e capturas
+  ainda pendentes na nuvem. Não interpretar implementação como validação.
+- Próximo passo: abrir PR, acompanhar CI e prévia, rodar E2E fase4, inspecionar
+  capturas, registrar evidências e apresentar a versão para aprovação humana.
+  Não integrar, não ativar auto-merge e não liberar produção antes disso.
 
 ## O que foi feito
 
