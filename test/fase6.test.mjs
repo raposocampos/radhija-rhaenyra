@@ -120,6 +120,21 @@ test('fase 6: protótipo fica no catálogo de desenvolvimento, com props reais c
   assert.deepEqual(h.props.collectibles.map((c) => c.id).sort(), L.COLLECTIBLES.map((c) => c.id).sort());
 });
 
+test('fase 6: fábrica headless explícita suporta suítes comuns sem fabricar métodos', async () => {
+  const h = await createHeadlessGame({ levels: [fase6] });
+  assert.equal(h.game.state, 'playing');
+  assert.equal(h.puzzle.stage, 'waiting');
+  assert.throws(() => h.props.portao?.setOpen?.(1), /Prop não declarado: fase6.portao/);
+  assert.throws(() => h.props.train.setPos?.(1, 2), /Prop não declarado: fase6.train.setPos/);
+  assert.throws(() => h.props.pedal.setOpen?.(1), /Prop não declarado: fase6.pedal.setOpen/);
+  const pose = { x: 1.8, z: -0.3, yaw: Math.PI };
+  h.props.train.setPose(pose);
+  assert.deepEqual(h.props.train.object.position.toArray(), [pose.x, 0, pose.z]);
+  h.game.reset();
+  assert.deepEqual(h.props.train.object.position.toArray(), [L.TRAIN.start.x, 0, L.TRAIN.start.z]);
+  assert.deepEqual(h.props.ball.object.position.toArray(), [L.BALL.x, L.BALL.y, L.BALL.z]);
+});
+
 test('fase 6: andar, permanecer, latir, interagir e arrancar no pedal não trocam a rota', async (t) => {
   const h = await prototype(t, 'dog=rhaenyra');
   select(h, 'rhaenyra');
