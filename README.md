@@ -68,6 +68,7 @@ Protótipos fora do menu (fases de desenvolvimento):
 Documentação:
 
 - [docs/CONTEXTO.md](docs/CONTEXTO.md): andamento e ponto de retomada compartilhado entre Codex e Claude.
+- [docs/ENTREGA.md](docs/ENTREGA.md): PRs, CI obrigatório, prévias e aprovação de produção.
 - [docs/ARQUITETURA.md](docs/ARQUITETURA.md): como as peças se encaixam, APIs, eventos, testes e convenções.
 - [docs/COMO-CRIAR-UMA-FASE.md](docs/COMO-CRIAR-UMA-FASE.md): passo a passo de uma fase nova.
 
@@ -75,13 +76,18 @@ Documentação:
 
 O fluxo padrão dos agentes está em [AGENTS.md](AGENTS.md). O Codex lê esse
 arquivo e o [CLAUDE.md](CLAUDE.md) o importa para o Claude: pedidos de mudanças
-incluem enviar o código, acompanhar o CI no GitHub e atualizar o mesmo link
-após sucesso, sem precisar de uma ação manual do usuário no GitHub.
-Testes pesados não devem ser executados no PC sem pedido explícito.
+incluem abrir um PR, acompanhar o CI no GitHub e entregar um link de prévia.
+O usuário testa e aprova no chat; só então o agente integra e atualiza o link
+principal. Não é necessário operar o GitHub. Testes e build ficam na nuvem.
 
-Os testes automáticos rodam nos servidores do GitHub. Envie o código com `git push`: o workflow
-**CI e publicação** instala as dependências, checa os tipos, executa os testes rápidos e gera a build.
-Quando tudo passa no `main`, publica o jogo no link acima. Se falhar, a versão anterior continua no ar.
+Os testes automáticos rodam nos servidores do GitHub. Envie um branch e abra um PR:
+**CI e prévias** instala dependências, checa tipos, executa testes e gera a build.
+`main` exige PR atualizado e os checks `testes-e-build` e `publicar-site` aprovados.
+O workflow separado **Publicar versão validada** usa código confiável do main
+para publicar o artefato testado. Cada PR interno recebe uma prévia pública;
+o link aparece no check `publicar-site` e no resumo do workflow de publicação.
+Após aprovação e merge, a publicação principal ainda passa pelo ambiente protegido `github-pages`.
+Uma falha de build não substitui a versão que está no ar.
 Não é preciso gerar ou enviar a pasta `dist/`, nem rodar os testes no PC antes de cada envio.
 
 As partidas completas ficam separadas: abra [Actions → E2E manual](https://github.com/raposocampos/radhija-rhaenyra/actions/workflows/e2e.yml),

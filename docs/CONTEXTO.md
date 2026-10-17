@@ -7,24 +7,58 @@ privacidade. Este documento registra o andamento compartilhado com o Claude.
 
 ## Onde paramos
 
-O usuário relatou que esquerda/direita entre "Reiniciar fase" e "Menu inicial"
-levava o foco a "Continuar". Em `src/ui/menuNav.js`, a distância ao centro do
-botão largo de cima vencia a do vizinho da mesma linha. A correção prioriza
-candidatos alinhados antes de comparar distâncias; mantém a escolha diagonal
-como alternativa quando não há um candidato alinhado.
+Implementando PRs com CI obrigatório, prévia jogável e aprovação humana antes
+da publicação. **A autorização antiga de publicar automaticamente foi
+substituída pelo usuário. Não integrar este PR nem aprovar produção sem ele
+testar a prévia e aprovar explicitamente.**
 
-Implementação `b3023aa` aprovada no CI e no E2E `controle`: 46 verificações
-aprovadas, sem erros de console, incluindo 16 novas para D-pad, analógico,
-setas do teclado, navegação vertical e ajuste de volume sem perder foco.
-Integrada ao `main` após essas validações. Esta atualização final muda apenas
-o resumo; o código e os testes são os mesmos que passaram no E2E. Ao retomar,
-conferir o CI/deploy do commit atual para confirmar a publicação. Não há
-ajuste de código pendente conhecido nesta tarefa.
+Branch: `codex/prs-ci-previas`, base de produção `f457844`. As alterações neste
+branch atualizam CI, instruções, documentação e template de PR; adicionam
+montagem do site com prévias, quatro testes de regressão e separação dos saves
+e volume por PR. Ao retomar, localizar o PR desse branch e conferir os checks
+do head atual. Nenhum teste ou build foi executado no PC.
+
+A implementação `d53b8d4` passou nos 116 testes, tipos, build e publicação de
+prévia na [execução 39001850255](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001850255).
+O HTML e os assets da produção foram preservados (diff do estado estático vazio
+fora de previews/.nojekyll; HTML público com o mesmo SHA-256). Prévia e assets
+responderam HTTP 200, e `version.json` confirmou head/base/execução esperados.
+O E2E `controle` passou com 46 verificações e nenhum erro de console na
+[execução 39001905192](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39001905192);
+o código do jogo e esses testes não mudaram depois disso. A revisão automática
+apontou que o primeiro workflow permitia scripts do PR em um job com escrita.
+Isso foi corrigido separando CI de `deploy.yml`: publicação por workflow_run
+confiável do main, artefato tratado apenas como dados e ambiente preview que
+recusa refs de PR. A correção `23317d3` passou no
+[CI 39002342245](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002342245)
+e no [publicador confiável 39002383441](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/39002383441),
+executado pelo branch bloqueado `delivery-bootstrap` (`51955c8`). O status
+obrigatório `publicar-site` foi aprovado e a conversa de revisão foi resolvida.
+Conferidos HTTP 200, identidade da prévia e HTML da produção preservado.
+Esta atualização final é apenas documental; conferir CI e link atuais no PR,
+pois cada novo CI gera outra URL de prévia. Não criar outro commit apenas para
+atualizar o status desta atualização.
+
+Configurações já aplicadas no servidor: main exige PR atualizado, checks
+`testes-e-build` e `publicar-site`, incluindo admins; ambiente `github-pages`
+exige aprovação de `raposocampos` e branch main. Ambiente `preview` permite main
+e, durante a primeira instalação, delivery-bootstrap bloqueado.
+`pages-state` foi inicializado com os arquivos da produção
+`f457844` (artefato da execução `39000135800`); o HTML coincide com o site atual.
+É um branch órfão só de estáticos: nunca integrar ao main.
+
+PR: https://github.com/raposocampos/radhija-rhaenyra/pull/1.
+Próximo passo: conferir os checks da última atualização documental e entregar
+o link atual do status `publicar-site`; aguardar aprovação humana. Depois seguir
+`docs/ENTREGA.md` e remover a exceção delivery-bootstrap do ambiente preview
+(policy ID `63342097`) após o merge aprovado. Não afirmar que a nova
+política já está integrada ao main: os arquivos aguardam aprovação no PR,
+embora as proteções no servidor já estejam ativas.
 
 - Jogo: https://raposocampos.github.io/radhija-rhaenyra/
 - Repositório: https://github.com/raposocampos/radhija-rhaenyra
-- Branch de entrega: `main`.
-- Base desta atualização: `8fe992f` (dica de empurrar corrigida e publicada).
+- Branch de entrega: `codex/prs-ci-previas` → PR → aprovação → `main`.
+- Base desta atualização: `f457844` (dica e navegação corrigidas e publicadas).
 - No início desta tarefa, a árvore estava limpa e `main` sincronizado com
   `origin/main`. Conferir novamente ao retomar; isso é um registro histórico.
 
@@ -39,8 +73,9 @@ ajuste de código pendente conhecido nesta tarefa.
 2. **Privacidade:** fotos de `referencias/fotos/`, configurações locais,
    credenciais e saídas de build/testes permanecem fora do Git. Isso não dispensa
    revisar novas alterações antes de publicar.
-3. **CI e publicação:** `.github/workflows/ci.yml` roda tipos, testes rápidos
-   e build no GitHub. Após sucesso no `main`, publica no GitHub Pages.
+3. **CI e publicação inicial:** `.github/workflows/ci.yml` roda tipos, testes rápidos
+   e build no GitHub. O fluxo antigo publicava automaticamente após sucesso no main;
+   esta tarefa substitui isso por PR, prévia e aprovação para produção.
    `vite.config.js` usa `base: './'` para os caminhos do site funcionarem.
 4. **E2E na nuvem:** `.github/workflows/e2e.yml` permite escolher `todas` ou uma
    suíte. Cada suíte roda numa máquina Linux do GitHub. O Chromium é instalado
@@ -92,16 +127,17 @@ ajuste de código pendente conhecido nesta tarefa.
 
 ## Decisões do usuário
 
-- Pedir uma implementação inclui enviar, acompanhar os testes no GitHub e
-  atualizar o mesmo link, sem nova confirmação só para publicar.
+- Pedir uma implementação inclui enviar um branch, abrir PR, acompanhar CI e
+  entregar uma prévia. **Aguardar aprovação explícita para integrar e publicar
+  no mesmo link principal.** O agente pode concluir as ações no GitHub usando
+  essa aprovação dada no chat, sem exigir que o usuário opere o GitHub.
 - Testes e build devem rodar na nuvem. Testes pesados no PC só por pedido
   explícito. E2E é separado e acionado quando necessário.
 - A passagem entre Codex e Claude será por este Markdown. **ai-memory foi
   pesquisado, mas não instalado; ficou para outro projeto.**
-- Foi discutido usar branches e worktrees separados para trabalho simultâneo,
-  com integração uma por vez. Também foi sugerido um único agente responsável
-  pela integração, mas essa atribuição ainda não foi definida pelo usuário.
-  Este documento não é um bloqueio automático de edição entre agentes.
+- Usar branches/worktrees separados para trabalho simultâneo, com integração
+  de PRs uma por vez. Este documento não é um bloqueio automático de edição:
+  conferir atividade alheia antes de modificar arquivos ou trocar branch.
 
 ## Próximo passo para o agente que assumir
 
@@ -109,8 +145,8 @@ ajuste de código pendente conhecido nesta tarefa.
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. A navegação do menu já está integrada e validada; conferir a publicação do
-   commit atual e seguir o próximo pedido. Não há autorização para instalar
-   ai-memory neste projeto.
+3. A navegação do menu já está integrada e validada. O trabalho atual é o PR de
+   CI e prévias, aguardando validação e aprovação conforme o topo deste resumo.
+   Não há autorização para instalar ai-memory neste projeto.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

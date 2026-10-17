@@ -1,16 +1,14 @@
-name: CI e publicação
+name: CI e prévias
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   testes-e-build:
@@ -18,6 +16,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -25,23 +25,25 @@ jobs:
       - run: npm ci
       # O build roda antes "npm run typecheck" e "npm test" (prebuild).
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v4
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: Identificar a versão testada
+        env:
+          BUILD_COMMIT: ${{ github.sha }}
+          BUILD_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          BUILD_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          writeFileSync('dist/version.json', JSON.stringify({
+            commit: process.env.BUILD_COMMIT,
+            head: process.env.BUILD_HEAD,
+            base: process.env.BUILD_BASE || null,
+            run: process.env.GITHUB_RUN_ID,
+            attempt: process.env.GITHUB_RUN_ATTEMPT,
+          }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@v4
         with:
+          name: game-build
           path: dist
-
-  publicar:
-    needs: testes-e-build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/configure-pages@v5
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          retention-days: 7
+          if-no-files-found: error
