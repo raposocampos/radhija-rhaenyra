@@ -35,11 +35,22 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
           composer.setPixelRatio(0.25);
           renderer.shadowMap.enabled = false;
           bloom.enabled = false;
+          // A fase 1 tem milhares de objetos: até em baixa resolução desenhar todo quadro
+          // satura a CPU do runner. A simulação/entrada continua em todo rAF; desenha 1/30
+          // dos quadros e sempre força um desenho real antes de capturar a tela.
+          const render = value.engine.render.bind(value.engine);
+          let frame = 0;
+          let last = [0, 0];
+          value.engine.render = (dt, t) => {
+            last = [dt, t];
+            if (frame++ % 30 === 0) render(dt, t);
+          };
+          window.__e2eRender = () => render(...last);
           Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
         },
       });
     });
-    console.log('[e2e] CI sem GPU: resolução 3D reduzida, sombras e bloom desativados apenas nesta página de teste.');
+    console.log('[e2e] CI sem GPU: desenho a cada 30 quadros, resolução 3D reduzida, sem sombras/bloom. Simulação e controles reais a cada quadro.');
     page.setDefaultTimeout(120000);
   }
   if (initScript) await page.addInitScript(initScript);
@@ -79,6 +90,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   };
   const ev = (js, arg) => page.evaluate(js, arg);
   const shot = async (name) => {
+    if (process.env.CI) await page.evaluate(() => window.__e2eRender?.());
     await page.screenshot({ path: resolve(OUT, name) });
     console.log(`  captura: ${outDir.replace(/\\/g, '/')}/${name}`);
   };
@@ -253,14 +265,14 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function press(key, after = 120) {
     await page.keyboard.press(key);
-    await sleep(after);
+    await (process.env.CI ? gsleep : sleep)(after);
   }
   async function load(query) {
     await page.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 });
     await page.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 });
     await page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 });
     await readBasis();
-    await sleep(1500);
+    await (process.env.CI ? gsleep : sleep)(1500);
   }
   /** Espera `pred(info())` virar verdade; o prazo conta em tempo de JOGO (ver `deadline`). Devolve o último info(). */
   async function waitFor(pred, { timeout = 10000, step = 80 } = {}) {
@@ -314,6 +326,8 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
 
   return {
     browser, page, errors, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, record, close, keysFor, readBasis,
+    // As suítes antigas também esperam o tempo simulado no runner sem GPU.
+    ...(process.env.CI ? { sleep: gsleep } : {}),
     get pass() { return pass; },
     get fail() { return fail; },
   };

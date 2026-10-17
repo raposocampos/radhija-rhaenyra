@@ -81,7 +81,9 @@ As partidas completas ficam separadas: abra [Actions → E2E manual](https://git
 clique em **Run workflow**, escolha o branch e confirme. Elas rodam em máquinas Linux do GitHub,
 com uma suíte por máquina. As capturas ficam nos artefatos da execução por 7 dias.
 Como essas máquinas não têm GPU, o navegador dos testes usa resolução 3D reduzida, sem sombras
-nem bloom. A lógica e os controles continuam reais; a qualidade visual do jogo publicado não muda.
+nem bloom, desenha a cada 30 quadros e força um desenho antes de cada captura. A simulação e os
+controles continuam em todos os quadros; as esperas acompanham o tempo do jogo. Essas partidas
+verificam a jogabilidade, não o desempenho gráfico. A qualidade visual do jogo publicado não muda.
 
 Os comandos abaixo continuam disponíveis para quem quiser rodar testes **localmente**:
 
