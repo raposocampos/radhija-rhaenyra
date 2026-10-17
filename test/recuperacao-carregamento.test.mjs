@@ -82,4 +82,3 @@ for (const point of ['build', 'createPuzzle', 'reset', 'dispose', 'compile']) {
     assert.equal(brokenCalls, 1, 'nova tentativa não duplica recursos');
   });
 }
-
