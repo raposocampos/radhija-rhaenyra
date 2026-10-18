@@ -28,7 +28,8 @@ async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn
 
 try {
   console.log('\n== Controle (gamepad simulado) ==');
-  // O foco não pode reiniciar a entrada do botão Jogar e fazê-lo desaparecer.
+  // O foco não pode reiniciar a entrada do botão Jogar e fazê-lo desaparecer (navegando entre Jogar e Opções).
+  // O resto do menu (modos, fases, Opções, Voltar com ○) está na suíte menu.
   // Amostra no navegador, inclusive na troca de classes: uma leitura tardia
   // pelo protocolo pode perder o intervalo invisível em runners sem GPU.
   await load('');
@@ -66,13 +67,13 @@ try {
   };
   await page.keyboard.press('ArrowUp'); // ativa o realce com Jogar selecionado
   await sleep(200);
-  await checkPlay(() => page.keyboard.press('ArrowDown'), 'select', 'teclado baixo');
+  await checkPlay(() => page.keyboard.press('ArrowDown'), 'options', 'teclado baixo');
   await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'teclado cima');
   await connect();
   await tap(B.UP); // ativa o dispositivo com Jogar selecionado
-  await checkPlay(() => tap(B.DOWN), 'select', 'D-pad baixo');
+  await checkPlay(() => tap(B.DOWN), 'options', 'D-pad baixo');
   await checkPlay(() => tap(B.UP), 'play', 'D-pad cima');
-  await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'select', 'analógico baixo');
+  await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'options', 'analógico baixo');
   await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'retorno ao teclado');
   await checkPlay(() => page.mouse.move(2, 2), 'play', 'retorno ao mouse');
   await shot('gp-00-menu-jogar-visivel.png');
@@ -217,12 +218,12 @@ try {
   await checkFocus('restart', 'D-pad esquerda: Menu inicial → Reiniciar fase');
   await tap(B.DOWN);
   await checkFocus('volume', 'D-pad baixo: Reiniciar fase → Volume');
-  const volumeBefore = Number(await page.locator('.rr-range').inputValue());
+  const volumeBefore = Number(await page.locator('.rr-pause .rr-range').inputValue());
   await tap(B.RIGHT);
-  const volumeAfter = Number(await page.locator('.rr-range').inputValue());
+  const volumeAfter = Number(await page.locator('.rr-pause .rr-range').inputValue());
   check(await focused() === 'volume' && volumeAfter === Math.min(100, volumeBefore + 5), 'D-pad direita no volume ajusta o valor e mantém o foco');
   await tap(B.LEFT);
-  check(await focused() === 'volume' && Number(await page.locator('.rr-range').inputValue()) === Math.max(0, volumeAfter - 5), 'D-pad esquerda no volume ajusta o valor e mantém o foco');
+  check(await focused() === 'volume' && Number(await page.locator('.rr-pause .rr-range').inputValue()) === Math.max(0, volumeAfter - 5), 'D-pad esquerda no volume ajusta o valor e mantém o foco');
   await tap(B.UP);
   await checkFocus('restart', 'D-pad cima: Volume → Reiniciar fase');
   await tap(B.UP);

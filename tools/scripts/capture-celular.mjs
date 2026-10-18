@@ -1,7 +1,8 @@
 // Capturas de revisão do celular e do PC, cada aparelho com a SUA qualidade gráfica (sem a redução do harness):
 // celular deitado (844×390, DPR 3, perfil médio), celular pequeno (667×375, DPR 2), tablet (1180×820, DPR 2) e PC
-// (1280×720, perfil alta, como sempre). Tela inicial, partida com os controles de toque, prompt e dica com ícones de
-// toque, pausa com o menu de qualidade, vitória, cartão de abertura, aviso de girar o celular e a fase 4.
+// (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (modos, fases, Opções), partida com os
+// controles de toque, prompt e dica com ícones de toque, pausa com o menu de qualidade, vitória, cartão de abertura,
+// aviso de girar o celular e a fase 4.
 // Roda no GitHub Actions (E2E manual, suíte toque), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro e desenha só na hora da captura (SwiftShader é lento). Saída: shots/celular-revisao/*.png.
 import { mkdirSync } from 'node:fs';
@@ -146,8 +147,16 @@ async function captureDevice(dev, url) {
     await step(20);
     await shot('01-titulo', 1500);
     if (dev.ios) {
-      // pausa com o passo a passo aberto e o aviso de girar com a dica
+      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → Fases → Continuar → Começar)
+      await press('.rr-btn--options');
+      await step(5);
+      await shot('01b-opcoes-tela-cheia');
+      await press('.rr-title .rr-back');
       await press('.rr-btn--play');
+      await press('.rr-mode--levels');
+      await press('.rr-btn--continue');
+      await step(60);
+      await press('[data-action="start"]');
       await step(150);
       await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
       await step(2);
@@ -159,7 +168,26 @@ async function captureDevice(dev, url) {
       return;
     }
 
+    // menu: Jogar → modos → Fases; Voltar; Opções (com as dicas desligadas e religadas); Fases → Continuar → Começar
     await press('.rr-btn--play');
+    await step(5);
+    await shot('01b-modos');
+    await press('.rr-mode--levels');
+    await step(5);
+    await shot('01c-fases');
+    await press('.rr-title .rr-back');
+    await press('.rr-title .rr-back');
+    await press('.rr-btn--options');
+    await step(5);
+    await press('.rr-title .rr-hopt[data-hints="off"]');
+    await shot('01d-opcoes-sem-dicas');
+    await press('.rr-title .rr-hopt[data-hints="on"]');
+    await press('.rr-title .rr-back');
+    await press('.rr-btn--play');
+    await press('.rr-mode--levels');
+    await press('.rr-btn--continue');
+    await step(60);
+    await press('[data-action="start"]');
     await step(150);
     await shot('02-jogando');
 

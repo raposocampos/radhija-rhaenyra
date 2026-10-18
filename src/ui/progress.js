@@ -1,10 +1,11 @@
 // Progresso salvo no navegador. Sem storage, a partida segue sem persistir.
 // Mantém formato/chave v1; uma versão declarada desconhecida nunca é sobrescrita.
+// `last` (opcional): id da última fase escolhida no menu, para o botão Continuar (continueTarget).
 import { storageKey } from '../game/storageKey.js';
 export const PROG_KEY = storageKey('rr-progress-v1');
 
 /** @typedef {{ done: boolean, best: number | null, treats: number, total: number | null, clears: number }} LevelProgress */
-/** @typedef {{ v: 1, levels: Record<string, LevelProgress> }} Progress */
+/** @typedef {{ v: 1, levels: Record<string, LevelProgress>, last?: string }} Progress */
 
 /** @returns {Progress} */
 function emptyProgress() { return { v: 1, levels: {} }; }
@@ -17,6 +18,9 @@ function isCount(value) { return typeof value === 'number' && Number.isSafeInteg
 
 /** @param {unknown} value @returns {value is number} */
 function isTime(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
+
+/** @param {unknown} value @returns {value is string} */
+function isLevelId(value) { return typeof value === 'string' && value.length > 0 && value.length <= 64; }
 
 /** @param {unknown} value @returns {LevelProgress | null} */
 function normalizeLevel(value) {
@@ -41,7 +45,10 @@ function normalizeProgress(value) {
     if (id && level) entries.push([id, level]);
   }
   // Não filtrar pelo registro atual de fases: saves podem conter fases de outra versão.
-  return { v: 1, levels: Object.fromEntries(entries) };
+  /** @type {Progress} */
+  const prog = { v: 1, levels: Object.fromEntries(entries) };
+  if (isLevelId(value.last)) prog.last = value.last;
+  return prog;
 }
 
 function readProgress() {
@@ -98,4 +105,46 @@ export function recordLevelClear(id, d, fallbackTotal) {
   prog.levels = { ...prog.levels, [id]: level };
   const saved = writable && saveProgress(prog);
   return { prog, rec: { best: level.best, record: better && prevBest !== null, first: !e?.done, prevTreats: e?.treats ?? null }, saved };
+}
+
+/**
+ * Guarda a fase escolhida no menu (cartão, Continuar ou Próxima fase) como a última jogada. Relê o save antes, como
+ * recordLevelClear, e junta a cópia em memória da UI (`current`): fases concluídas que não puderam ser gravadas
+ * (storage cheio, bloqueado ou de versão desconhecida) continuam valendo; o que está gravado (outra aba) prevalece.
+ * → { prog, saved }. Sem storage ou em versão desconhecida, só a cópia em memória muda.
+ * @param {string} id @param {Progress | null} [current]
+ */
+export function recordLastPlayed(id, current = null) {
+  const { prog: stored, writable } = readProgress();
+  const mem = normalizeProgress(current);
+  /** @type {Progress} */
+  const prog = { v: 1, levels: { ...(mem?.levels || {}), ...stored.levels } };
+  const last = stored.last ?? mem?.last;
+  if (last !== undefined) prog.last = last;
+  const memOnly = Object.keys(mem?.levels || {}).some((key) => !Object.hasOwn(stored.levels, key));
+  if (!isLevelId(id) || (stored.last === id && !memOnly)) return { prog, saved: false };
+  prog.last = id;
+  const saved = writable && saveProgress(prog);
+  return { prog, saved };
+}
+
+/**
+ * Fase do botão Continuar, pela ordem do catálogo (`ids`): a última escolhida, se ainda não foi concluída e está
+ * liberada; senão a primeira liberada ainda não concluída; com tudo concluído, a última escolhida (ou a última da
+ * lista). Uma fase é liberada quando é a primeira, quando a anterior foi concluída ou quando ela mesma já foi
+ * (unlockAll: catálogo de desenvolvimento, tudo liberado).
+ * → { index, fresh } (fresh: save sem nenhuma fase concluída nem escolhida, o botão diz Começar).
+ * @param {string[]} ids @param {Progress} prog @param {{ unlockAll?: boolean }} [opts]
+ */
+export function continueTarget(ids, prog, { unlockAll = false } = {}) {
+  const levels = prog?.levels || {};
+  const done = (i) => !!(Object.hasOwn(levels, ids[i]) && levels[ids[i]]?.done);
+  const open = (i) => unlockAll || i === 0 || done(i - 1) || done(i);
+  const last = isLevelId(prog?.last) ? ids.indexOf(prog.last) : -1;
+  const fresh = last < 0 && !ids.some((_, i) => done(i));
+  if (!ids.length) return { index: 0, fresh: true };
+  if (last >= 0 && !done(last) && open(last)) return { index: last, fresh };
+  const next = ids.findIndex((_, i) => !done(i) && open(i));
+  if (next >= 0) return { index: next, fresh };
+  return { index: last >= 0 ? last : ids.length - 1, fresh };
 }
