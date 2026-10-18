@@ -8,9 +8,13 @@ import modelo from '../src/levels/_modelo/index.js';
 import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS } from '../src/levels/dev.js';
 import { PAD } from '../src/game/input.js';
+import { createTrack } from '../src/levels/fase6/track.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const L = fase6.layout;
+const TRACK = createTrack();
+/** Diferença entre dois ângulos, em [0, π]. */
+const turn = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 const STATES = ['waiting', 'sneezing', 'movingLoop', 'movingDelivery', 'returning', 'ready', 'carrying', 'done'];
 function info(h) {
   const current = h.info();
@@ -309,9 +313,15 @@ test('fase 6: bafo pelo contorno não atravessa a ferrovia; janela aceita uma fa
       }
     }
   }
+  let fired = 0;
   for (const shot of shots) {
     h.puzzle.reset();
-    assert.equal(h.world.overlaps(shot.x, shot.z, radius, 'small'), false, 'origem possível da dog');
+    // a canaleta encosta na borda sul: dali a Radhija não sopra (o colisor dela ocupa a origem)
+    if (h.world.overlaps(shot.x, shot.z, radius, 'small')) {
+      assert.equal(h.world.overlaps(shot.x, shot.z, radius, 'small', { ignore: new Set(['canaleta']) }), false, `só a canaleta ocupa (${shot.x}, ${shot.z})`);
+      continue;
+    }
+    fired++;
     // A mesma distância boca→centro e velocidade do jogo, incluindo a cabeça
     // que pode ultrapassar visualmente a borda. O cheiro colide de verdade.
     scent.spawn({ x: shot.x + shot.dx * 0.36, z: shot.z + shot.dz * 0.36,
@@ -319,6 +329,7 @@ test('fase 6: bafo pelo contorno não atravessa a ferrovia; janela aceita uma fa
     for (let frame = 0; frame < 310; frame++) scent.update(1 / 60);
     assert.equal(info(h).trips, 0, `contorno rejeita bafo em (${shot.x}, ${shot.z})`);
   }
+  assert.ok(fired >= shots.length - 1, `quase todo o contorno foi testado (${fired} de ${shots.length})`);
   for (const offset of [-0.43, 0, 0.43]) {
     h.puzzle.reset();
     scent.spawn({ x: L.NOSE.x + offset, z: L.NOSE.frontZ + 0.2, speed: 0, life: 2 });
@@ -557,4 +568,220 @@ test('fase 6: passeio, estações e petiscos são alcançáveis por ambas, ferro
       }
     }
   }
+});
+
+// ------------------------------------------------------------------ trilho e composição (acabamento)
+
+/** Cantos do retângulo de um carro visto de cima (frente = cara da locomotiva = direção do yaw). */
+function footprint(pose, body) {
+  const fx = Math.sin(pose.yaw), fz = Math.cos(pose.yaw), rx = Math.cos(pose.yaw), rz = -Math.sin(pose.yaw);
+  return [[body.front, body.halfWidth], [body.front, -body.halfWidth], [-body.back, -body.halfWidth], [-body.back, body.halfWidth]]
+    .map(([f, r]) => [pose.x + fx * f + rx * r, pose.z + fz * f + rz * r]);
+}
+/** Folga (m) entre o retângulo do carro e um enfeite (círculo {x, z, r} ou retângulo {x, z, hx, hz}); < 0 = encosta. */
+function clearance(poly, d) {
+  if (d.r !== undefined) {
+    let inside = true, best = Infinity;
+    for (let i = 0; i < 4; i++) {
+      const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % 4];
+      const ex = bx - ax, ez = bz - az;
+      const k = Math.max(0, Math.min(1, ((d.x - ax) * ex + (d.z - az) * ez) / (ex * ex + ez * ez)));
+      best = Math.min(best, Math.hypot(ax + ex * k - d.x, az + ez * k - d.z));
+      if (ex * (d.z - az) - ez * (d.x - ax) > 0) inside = false;
+    }
+    return inside ? -1 : best - d.r;
+  }
+  const rect = [[d.x - d.hx, d.z - d.hz], [d.x + d.hx, d.z - d.hz], [d.x + d.hx, d.z + d.hz], [d.x - d.hx, d.z + d.hz]];
+  let gap = -Infinity; // maior separação entre as projeções (teorema do eixo separador)
+  for (const P of [poly, rect]) for (let i = 0; i < 4; i++) {
+    const [ax, az] = P[i], [bx, bz] = P[(i + 1) % 4];
+    const nx = az - bz, nz = bx - ax, len = Math.hypot(nx, nz);
+    const pa = poly.map(([x, z]) => (x * nx + z * nz) / len), pb = rect.map(([x, z]) => (x * nx + z * nz) / len);
+    gap = Math.max(gap, Math.min(...pb) - Math.max(...pa), Math.min(...pa) - Math.max(...pb));
+  }
+  return gap;
+}
+
+test('fase 6: trilho — a volta fecha alinhada na estação, o tronco acaba na agulha e não há quina nem salto', () => {
+  const { loop, delivery } = TRACK.routes;
+  assert.equal(loop.closed, true);
+  near(loop.end.x, L.TRAIN.start.x, 'a volta termina na estação (X)', 1e-9);
+  near(loop.end.z, L.TRAIN.start.z, 'a volta termina na estação (Z)', 1e-9);
+  near(loop.end.dx, loop.start.dx, 'chega andando na mesma direção em que saiu (X)', 1e-9);
+  near(loop.end.dz, loop.start.dz, 'chega andando na mesma direção em que saiu (Z)', 1e-9);
+  near(TRACK.junction.x, L.JUNCTION.x, 'tronco termina na agulha (X)', 1e-9);
+  near(TRACK.junction.z, L.JUNCTION.z, 'tronco termina na agulha (Z)', 1e-9);
+  const minRadius = Math.min(...TRACK.pieces.filter((p) => p.kind === 'arc').map((p) => p.r));
+  for (const route of [loop, delivery]) {
+    const step = 0.004;
+    let prev = route.at(0);
+    for (let s = step; s <= route.length + 1e-9; s += step) {
+      const p = route.at(s);
+      assert.ok(Math.hypot(p.x - prev.x, p.z - prev.z) <= step + 1e-9, `${route.name}: sem salto em s=${s.toFixed(3)}`);
+      assert.ok(turn(Math.atan2(p.dx, p.dz), Math.atan2(prev.dx, prev.dz)) <= (step / minRadius) * 1.001 + 1e-9, `${route.name}: sem quina em s=${s.toFixed(3)}`);
+      prev = p;
+    }
+  }
+  // as duas rotas saem juntas pelo tronco: a mesma pose parada, seja qual for a escolha
+  const rest = TRACK.consist('loop', 0), restDelivery = TRACK.consist('delivery', 0);
+  for (const k of ['x', 'z', 'yaw']) {
+    near(rest[k], restDelivery[k], `mesma pose parada nas duas rotas (${k})`, 1e-12);
+    near(rest.wagon[k], restDelivery.wagon[k], `mesmo vagão parado nas duas rotas (${k})`, 1e-12);
+  }
+  near(rest.wagon.x, L.BALL.x, 'vagão parado onde a bolinha começa (X)', 1e-9);
+  near(rest.wagon.z, L.BALL.z, 'vagão parado onde a bolinha começa (Z)', 1e-9);
+  // fim da entrega: vagão alinhado com a canaleta e inteiro sobre o trilho do para-choque
+  const end = TRACK.consist('delivery', delivery.length);
+  near(end.wagon.x, L.CHUTE.x, 'vagão alinhado com a canaleta', 1e-9);
+  const tailEnd = delivery.end.z + delivery.end.dz * L.TRACK.tail;
+  assert.ok(end.wagon.z + L.TRAIN_BODY.wagon.back <= tailEnd + 1e-9, 'vagão cabe no trilho antes do para-choque');
+  assert.ok(end.wagon.z + L.TRAIN_BODY.wagon.back < L.CHUTE.z0, 'vagão para dentro da maquete, antes da canaleta');
+});
+
+test('fase 6: o trem inteiro (corpo e teto) fica dentro da cerca e longe dos enfeites nas duas rotas', () => {
+  const Y = L.RAIL_YARD, inset = 0.07; // cerca sobre a moldura de 7 cm
+  const B = { minX: Y.x - Y.hx + inset, maxX: Y.x + Y.hx - inset, minZ: Y.z - Y.hz + inset, maxZ: Y.z + Y.hz - inset };
+  const bodyIn = (poly, what) => {
+    for (const [x, z] of poly) {
+      assert.ok(x >= B.minX && x <= B.maxX && z >= B.minZ && z <= B.maxZ, `${what} sai da maquete em (${x.toFixed(3)}, ${z.toFixed(3)})`);
+    }
+  };
+  for (const route of ['loop', 'delivery']) {
+    const length = TRACK.routes[route].length;
+    for (let s = 0; s <= length + 1e-9; s += 0.01) {
+      const c = TRACK.consist(route, s);
+      const cars = [['locomotiva', footprint(c, L.TRAIN_BODY.loco)], ['vagão', footprint(c.wagon, L.TRAIN_BODY.wagon)]];
+      for (const [what, poly] of cars) {
+        bodyIn(poly, `${route} s=${s.toFixed(2)}: ${what}`);
+        for (const [id, d] of Object.entries(L.YARD_DECOR)) {
+          assert.ok(clearance(poly, d) > 0.01, `${route} s=${s.toFixed(2)}: ${what} encosta em ${id}`);
+        }
+      }
+      bodyIn(footprint(c, L.TRAIN_BODY.roof), `${route} s=${s.toFixed(2)}: teto da cabine`);
+    }
+  }
+});
+
+test('fase 6: viagem real — locomotiva, vagão e bolinha seguem o trilho quadro a quadro, sem salto nem giro parado', async (t) => {
+  const h = await prototype(t);
+  const loco = h.props.train.object;
+  const wagon = h.engine.scene.getObjectByName('vagao');
+  const ball = h.props.ball.object;
+  const minRadius = Math.min(...TRACK.pieces.filter((p) => p.kind === 'arc').map((p) => p.r));
+  const stages = new Set();
+  let prev = null;
+  let frames = 0;
+  const check = () => {
+    const i = info(h);
+    stages.add(i.stage);
+    const c = TRACK.consist(i.tripRoute || 'loop', i.distance);
+    near(loco.position.x, c.x, 'locomotiva no trilho (X)', 1e-9);
+    near(loco.position.z, c.z, 'locomotiva no trilho (Z)', 1e-9);
+    assert.ok(turn(loco.rotation.y, c.yaw) < 1e-9, 'locomotiva na tangente do trilho');
+    near(wagon.position.x, c.wagon.x, 'vagão no trilho (X)', 1e-9);
+    near(wagon.position.z, c.wagon.z, 'vagão no trilho (Z)', 1e-9);
+    assert.ok(turn(wagon.rotation.y, c.wagon.yaw) < 1e-9, 'vagão na tangente do trilho (articulado)');
+    near(ball.position.x, c.wagon.x, 'bolinha no vagão (X)', 1e-9);
+    near(ball.position.y, L.TRAIN.cargoY, 'bolinha no vagão (Y)', 1e-9);
+    near(ball.position.z, c.wagon.z, 'bolinha no vagão (Z)', 1e-9);
+    if (prev) {
+      const moved = Math.hypot(loco.position.x - prev.x, loco.position.z - prev.z);
+      assert.ok(moved <= L.TRAIN.speed / 60 + 1e-9, `no máximo a velocidade de cruzeiro (${moved})`);
+      // na curva o giro é arco/raio; a corda andada é um tiquinho menor que o arco (folga de 0,1 %)
+      assert.ok(turn(loco.rotation.y, prev.yaw) <= (moved / minRadius) * 1.001 + 1e-9, 'só gira andando pela curva: nunca parado');
+    }
+    prev = { x: loco.position.x, z: loco.position.z, yaw: loco.rotation.y };
+    frames++;
+    return false;
+  };
+  frontCloud(h, 0.3);
+  h.step();
+  assert.equal(info(h).stage, 'sneezing');
+  check();
+  h.run(1, { until: () => { check(); return info(h).stage !== 'sneezing'; } });
+  assert.equal(info(h).stage, 'movingLoop');
+  assert.ok(info(h).distance > 0, 'o atchim já deu o tranco de ré antes do fim do espirro');
+  assert.ok(h.run(20, { until: () => { check(); return info(h).stage === 'waiting'; } }), 'a volta termina');
+  assert.ok(stages.has('returning'), 'a chegada pela curva do sul conta como voltando');
+  assert.ok(frames > 200, `quadros conferidos: ${frames}`);
+  near(loco.rotation.y, L.TRAIN.start.yaw, 'chega olhando para a janela, sem girar no lugar', 1e-9);
+  assert.equal(h.log('expresso:atchim').length, 1, 'um atchim por viagem');
+  assert.ok(h.log('expresso:chuff').length >= 10, 'a chaminé solta vapor no ritmo do trem');
+  assert.equal(h.log('expresso:return').length, 1);
+});
+
+test('fase 6: entrega real — o vagão para no para-choque, a caçamba bascula e a bolinha rola pela canaleta até a bandeja', async (t) => {
+  const h = await prototype(t, 'dog=rhaenyra');
+  jumpPedal(h);
+  assert.equal(info(h).route, 'delivery');
+  const bed = h.engine.scene.getObjectByName('cacamba');
+  const ball = h.props.ball.object;
+  frontCloud(h, 0.3);
+  h.step();
+  assert.ok(h.run(20, { until: () => info(h).unloading }), 'chegou ao fim da entrega');
+  const end = TRACK.consist('delivery', TRACK.routes.delivery.length);
+  near(h.props.train.object.position.z, end.z, 'locomotiva parou no fim do trilho', 1e-9);
+  assert.equal(h.log('expresso:unload').length, 1);
+  let maxTip = 0;
+  let lastZ = ball.position.z;
+  let minY = Infinity;
+  assert.ok(h.run(3, {
+    until: () => {
+      maxTip = Math.max(maxTip, Math.abs(bed.rotation.x));
+      assert.ok(ball.position.z >= lastZ - 1e-9, 'a bolinha só anda em direção à bandeja');
+      assert.ok(Math.abs(ball.position.x - L.CHUTE.x) < 1e-9, 'a bolinha desce pelo meio da canaleta');
+      lastZ = ball.position.z;
+      minY = Math.min(minY, ball.position.y);
+      return info(h).stage === 'ready';
+    },
+  }), 'descarga termina');
+  assert.ok(maxTip > 0.4, `a caçamba basculou (${maxTip.toFixed(2)} rad)`);
+  near(bed.rotation.x, 0, 'a caçamba volta ao lugar', 1e-9);
+  assert.ok(minY >= L.TRAY.y - 1e-9, 'a bolinha nunca afunda abaixo do fundo da bandeja');
+  near(ball.position.x, L.TRAY.x, 'bandeja X');
+  near(ball.position.y, L.TRAY.y, 'bandeja Y');
+  near(ball.position.z, L.TRAY.z, 'bandeja Z');
+  assert.ok(Math.abs(ball.rotation.x) > 1, 'a bolinha rolou (girou pela distância) em vez de deslizar');
+  assert.equal(h.log('expresso:delivery').length, 1);
+});
+
+test('fase 6: partida andando entre as estações, com a companheira junto, do início ao foguete', async (t) => {
+  const h = await prototype(t);
+  const inside = [];
+  // a cada quadro: nenhuma das duas fica dentro de móvel, maquete, canaleta ou alavanca
+  const watch = () => {
+    for (const name of ['radhija', 'rhaenyra']) {
+      const c = h.ctrls[name];
+      if (h.world.overlaps(c.x, c.z, c.r * 0.97, c.size)) inside.push(`${name} em (${c.x.toFixed(2)}, ${c.z.toFixed(2)})`);
+    }
+    return false;
+  };
+  // 1. a Rhaenyra anda até o pedal e pula
+  h.tap('KeyQ');
+  assert.equal(h.game.activeDog, 'rhaenyra');
+  h.walkTo(L.PEDAL.x, L.PEDAL.z, { tol: 0.15, until: watch });
+  h.tap('Space');
+  h.run(1.2, { until: watch });
+  assert.equal(info(h).route, 'delivery', 'o pulo de verdade virou a agulha');
+  assert.equal(info(h).routeChanges, 1);
+  // 2. a Radhija anda até a marca de mira, olha para a janela e sopra
+  h.tap('KeyQ');
+  assert.equal(h.game.activeDog, 'radhija');
+  h.walkPath([[-3.0, 1.75], [L.BLOW_SPOT.x, 1.75], [L.BLOW_SPOT.x, 1.4]], { tol: 0.12, until: watch });
+  h.keyDown('KeyR');
+  h.run(0.25, { until: watch });
+  h.keyUp('KeyR');
+  h.step();
+  assert.equal(h.log('dog:bafo').length, 1, 'superbafo de verdade');
+  assert.ok(h.run(20, { until: () => { watch(); return info(h).stage === 'ready'; } }), 'o trem levou a bolinha até a bandeja');
+  assert.equal(info(h).trips, 1, 'acertou de primeira: uma viagem só');
+  // 3. pega na bandeja e leva até o tapete de foguete
+  h.walkTo(L.TRAY.x, L.TRAY.z + 0.25, { tol: 0.12, until: watch });
+  h.tap('KeyE');
+  assert.equal(h.puzzle.carrier, 'radhija');
+  h.walkPath([[L.TRAY.x, 2.5], [L.GOAL.x, 2.5], [L.GOAL.x, L.GOAL.z]], { until: watch });
+  assert.ok(info(h).state === 'victory' || h.run(8, { until: (i) => i.state === 'victory' }), 'entrega no foguete termina a fase');
+  assert.deepEqual(inside, [], 'ninguém atravessou móveis nem a maquete');
+  assert.equal(h.log('item:pickup').length, 1);
+  assert.equal(h.log('victory').length, 1);
 });
