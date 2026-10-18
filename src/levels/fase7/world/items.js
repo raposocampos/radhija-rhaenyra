@@ -122,11 +122,14 @@ export function buildItems(root, layout) {
       frisbeeHl.update(dt, t);
     },
     reset() {
-      for (const [obj, home, rotY] of [[ballObj, ballHome, 0], [frisbeeObj, frisbeeHome, 0.4]]) {
+      /** @param {THREE.Object3D} obj @param {THREE.Vector3} home @param {number} rotY */
+      const back = (obj, home, rotY) => {
         if (obj.parent !== root) root.add(obj);
-        obj.position.copy(/** @type {THREE.Vector3} */ (home));
-        obj.rotation.set(0, /** @type {number} */ (rotY), 0);
-      }
+        obj.position.copy(home);
+        obj.rotation.set(0, rotY, 0);
+      };
+      back(ballObj, ballHome, 0);
+      back(frisbeeObj, frisbeeHome, 0.4);
       ballHl.reset();
       frisbeeHl.reset();
     },

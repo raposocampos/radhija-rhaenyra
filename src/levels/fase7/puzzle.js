@@ -98,7 +98,7 @@ export function createPuzzle(ctx) {
   // Fechado, o túnel é o único caminho e fica livre. A Radhija controlada pelo jogador passa sempre.
   const tunnelPlug = world.addDynamic({
     id: 'tunel-companheira', shape: 'box', x: (TUNNEL.x0 + TUNNEL.x1) / 2, z: TUNNEL.z, hx: 0.06, hz: TUNNEL.r,
-    companionOnly: true, enabled: false,
+    companionOnly: true, enabled: /** @type {boolean} */ (false),
   });
   const gateMid = { x: (GATE.hinge.x + GATE.latchPost.x) / 2, z: GATE.hinge.z };
   /** @type {Record<Thing, { item: ReturnType<typeof createCarryItem>, prop: import('../../types').ItemProp }>} */
