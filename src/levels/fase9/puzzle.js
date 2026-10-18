@@ -124,7 +124,7 @@ export function createPuzzle(ctx) {
     /** @type {BookPlace} */ book: /** @type {BookPlace} */ ('wardrobe'),
     bookX: BOOK_FALL.x, bookZ: BOOK_FALL.z, fallT: -1,
     /** @type {CatState} */ cat: /** @type {CatState} */ ('asleep'),
-    catT: 0, catD: 0,
+    catT: 0, catD: 0, catX: CAT.top.x, catZ: CAT.top.z,
     /** @type {null | { phase: string, t: number, x0: number, z0: number, yaw0: number, grabbed: boolean, lx: number, action?: string, slope?: number }} */
     climb: null,
     climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
@@ -421,6 +421,8 @@ export function createPuzzle(ctx) {
     } else if (S.cat === 'walking') {
       S.catD += CAT.walkSpeed * dt;
       const p = catPathAt(S.catD);
+      S.catX = p.x;
+      S.catZ = p.z;
       props.cat.setPose({ x: p.x, y: 0, z: p.z, yaw: p.yaw, mode: 'walk', k: S.catD });
       if (Math.abs(p.x - WALL_EH.x) < 0.05 && !S.flapT) {
         S.flapT = 1;
@@ -431,6 +433,8 @@ export function createPuzzle(ctx) {
   }
   function catToBed(animate) {
     S.cat = 'bed';
+    S.catX = CAT.bed.x;
+    S.catZ = CAT.bed.z;
     props.cat.setPose({ x: CAT.bed.x, y: 0, z: CAT.bed.z, yaw: CAT.bed.yaw, mode: 'sit', k: animate ? 0 : 1 });
     catCol.enabled = true;
     if (animate) emit('cat:bed', { x: CAT.bed.x, z: CAT.bed.z });
@@ -529,7 +533,10 @@ export function createPuzzle(ctx) {
     stepBookFall(dt);
 
     // porta do escritório: a maçaneta (de fora ou de dentro) abre; a mola fecha e espera quem estiver no vão
-    door.setTarget(handle.on || handleIn.on ? 1 : 0);
+    // a Radhija no vão é o calço: com a porta aberta, a mola só fecha depois que ela sai (senão a folha encostava nela e
+    // o vão ficava estreito demais para a Rhaenyra)
+    const radHolds = door.t > 0.7 && inDoorway(C.radhija);
+    door.setTarget(handle.on || handleIn.on || radHolds ? 1 : 0);
     door.update(dt, { ctrls: C });
     const open = doorOpen();
     if (open !== S.wasDoorOpen) emit(open ? 'door:open' : 'door:close', { x: WALL_EH.x, z: (DOOR.hinge.z + DOOR.latchPost.z) / 2 });
@@ -727,6 +734,7 @@ export function createPuzzle(ctx) {
     info: () => ({
       biblioteca: {
         state: stage(), glasses: S.glasses, book: S.book, bookAt: { x: +S.bookX.toFixed(2), z: +S.bookZ.toFixed(2) }, cat: S.cat,
+        catAt: { x: +S.catX.toFixed(2), z: +S.catZ.toFixed(2) },
         braked: !brake.on, damper: damper.on, aligned: S.aligned, held: held(), atGlasses: ladderAtGlasses(), globeClear: globeClear(),
         climb: S.climb ? { phase: S.climb.phase, y: +ctrls.radhija.y.toFixed(3) } : null,
         ladder: ladder.info(), globe: globe.info(), fan: fan.info(), door: { ...door.info(), open: doorOpen() },

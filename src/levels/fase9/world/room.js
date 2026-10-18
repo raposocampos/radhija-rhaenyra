@@ -345,7 +345,8 @@ function buildWalls(layout, updaters) {
     grp.add(c);
   }
   // portas de vidro abertas para o jardim de inverno (folhas giradas encostadas na divisória)
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#d7e8ee', roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.28, depthWrite: false });
+  // vidro fosco o bastante para o reflexo da lanterna não virar um clarão no brilho (bloom)
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#d7e8ee', roughness: 0.4, metalness: 0, transparent: true, opacity: 0.24, depthWrite: false, envMapIntensity: 0.6 });
   const leafFrame = stdMat('#f2efe6', { roughness: 0.45 });
   const leafW = (WALL_LJ.gap.z1 - WALL_LJ.gap.z0) / 2;
   for (const [hz, dir] of [[WALL_LJ.gap.z0, 1], [WALL_LJ.gap.z1, -1]]) {

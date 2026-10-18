@@ -156,20 +156,21 @@ try {
   await step(30);
   await shot('16-cheiro-no-vento', { pos: [fanAt.x + 1.6, 1.4, fanAt.z + 1.0], look: [fanAt.x, 0.5, fanAt.z - 1.6] });
   await until((i) => (i.scent?.clouds || []).some((c) => c.state === 'duct'), 400);
-  await step(40);
+  await step(85); // a baforada já passou da metade do cano, em cima do hall
   await shot('17-cheiro-no-duto', { pos: [0.5, 2.2, -0.6], look: [-1.5, 2.5, -3.5] });
   await until((i) => i.biblioteca.cat === 'waking', 600);
   await step(30);
   await shot('18-bichano-acordando', { pos: [-6.3, 2.3, -1.7], look: [L.CAT.top.x, L.CAT.top.y, L.CAT.top.z] });
   await until((i) => i.biblioteca.cat === 'jumping', 200);
-  await step(18);
-  await shot('19-bichano-pulando', { pos: [-5.4, 1.4, -0.6], look: [-6.6, 1.0, -2.6] });
+  await step(25);
+  await shot('19-bichano-pulando', { pos: [-5.2, 1.7, -0.3], look: [-6.6, 1.25, -2.6] });
   await until((i) => i.biblioteca.book === 'floor', 200);
   await step(20);
   await shot('20-livro-no-chao', { pos: [-5.6, 1.0, -1.2], look: [L.BOOK_FALL.x, 0.1, L.BOOK_FALL.z] });
   await until((i) => i.biblioteca.cat === 'walking', 200);
-  await step(120);
-  await shot('21-bichano-saindo', { pos: [-4.0, 1.2, 2.4], look: [-4.6, 0.2, 1.4] });
+  await until((i) => i.biblioteca.catAt.x > -4.62, 600);
+  await step(6);
+  await shot('21-bichano-saindo', { pos: [-3.0, 1.0, 2.85], look: [-4.45, 0.15, 2.0] });
   await until((i) => i.biblioteca.cat === 'bed', 900);
   await step(200);
   await shot('22-bichano-na-almofada', { pos: [-1.8, 0.9, 1.6], look: [L.CAT.bed.x, 0.1, L.CAT.bed.z] });

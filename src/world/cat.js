@@ -12,25 +12,60 @@ const TAU = Math.PI * 2;
 const smooth = (k) => { const x = Math.min(1, Math.max(0, k)); return x * x * (3 - 2 * x); };
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** Pelagem rajada: listras escuras transversais sobre laranja, barriga mais clara (UV da esfera: u em volta, v de cima a baixo). */
+/**
+ * Pelagem do tronco. A esfera do tronco tem os polos no peito e no rabo (geometria girada), então u dá a volta no
+ * corpo (u ≈ 0,25 embaixo, 0,75 no dorso) e v vai do peito ao rabo: as listras são linhas do canvas (anéis
+ * transversais no dorso e nos flancos) e a barriga creme é uma faixa vertical.
+ */
 function tabbyTexture() {
   return canvasTexture(256, 128, (g, w, h) => {
-    const grd = g.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, '#d98a3c');
-    grd.addColorStop(0.55, '#e79a4c');
-    grd.addColorStop(0.8, '#f3cf9e');
-    grd.addColorStop(1, '#fbe6c8');
+    const grd = g.createLinearGradient(0, 0, w, 0);
+    grd.addColorStop(0, '#e79a4c');
+    grd.addColorStop(0.13, '#f3cf9e');
+    grd.addColorStop(0.25, '#fbe6c8');
+    grd.addColorStop(0.37, '#f3cf9e');
+    grd.addColorStop(0.5, '#e79a4c');
+    grd.addColorStop(0.75, '#d68637');
+    grd.addColorStop(1, '#e79a4c');
     g.fillStyle = grd;
     g.fillRect(0, 0, w, h);
-    g.strokeStyle = 'rgba(150,72,22,0.55)';
+    g.strokeStyle = 'rgba(150,72,22,0.6)';
     g.lineCap = 'round';
-    for (let i = 0; i < 14; i++) {
-      const x = (i / 14) * w;
-      g.lineWidth = 5 + (i % 3) * 2;
-      g.beginPath();
-      g.moveTo(x, 4);
-      g.bezierCurveTo(x + 8, h * 0.2, x - 6, h * 0.38, x + 4, h * 0.55);
-      g.stroke();
+    for (let i = 0; i < 11; i++) {
+      const y = h * (0.12 + (i / 10) * 0.78);
+      g.lineWidth = 4 + (i % 3) * 1.5;
+      for (const off of [0, -w]) { // a listra passa pela emenda da esfera
+        g.beginPath();
+        g.moveTo(off + w * 0.42, y + 2);
+        g.bezierCurveTo(off + w * 0.6, y - 5, off + w * 0.9, y + 5, off + w * 1.08, y - 2);
+        g.stroke();
+      }
+    }
+  });
+}
+/** Pelagem da cabeça (polos em cima e embaixo; u = 0,25 é a cara): listras na testa e na nuca, focinho e queixo creme. */
+function headTexture() {
+  return canvasTexture(128, 64, (g, w, h) => {
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, '#d68637');
+    grd.addColorStop(0.5, '#e79a4c');
+    grd.addColorStop(1, '#f3cf9e');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, w, h);
+    const face = g.createRadialGradient(w * 0.25, h * 0.78, 2, w * 0.25, h * 0.78, w * 0.2);
+    face.addColorStop(0, 'rgba(251,230,200,1)');
+    face.addColorStop(1, 'rgba(251,230,200,0)');
+    g.fillStyle = face;
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(150,72,22,0.65)';
+    g.lineCap = 'round';
+    g.lineWidth = 2.5;
+    for (const dx of [-0.05, 0, 0.05]) {
+      g.beginPath(); g.moveTo(w * (0.25 + dx), h * 0.08); g.lineTo(w * (0.25 + dx * 0.7), h * 0.36); g.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+      const y = h * (0.18 + i * 0.13);
+      g.beginPath(); g.moveTo(w * 0.45, y); g.bezierCurveTo(w * 0.6, y - 3, w * 0.9, y + 3, w * 1.05, y); g.stroke();
     }
   });
 }
@@ -40,6 +75,7 @@ export function createCat() {
   root.name = 'bichano';
   const tex = tabbyTexture();
   const fur = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.85, sheen: 0.6, sheenColor: new THREE.Color('#ffd9a8'), sheenRoughness: 0.6 });
+  const furHead = new THREE.MeshPhysicalMaterial({ map: headTexture(), roughness: 0.85, sheen: 0.6, sheenColor: new THREE.Color('#ffd9a8'), sheenRoughness: 0.6 });
   const furPlain = new THREE.MeshPhysicalMaterial({ color: '#df9346', roughness: 0.85, sheen: 0.6, sheenColor: new THREE.Color('#ffd9a8') });
   const cream = new THREE.MeshPhysicalMaterial({ color: '#f8e2c2', roughness: 0.85, sheen: 0.5, sheenColor: new THREE.Color('#ffffff') });
   const pink = new THREE.MeshStandardMaterial({ color: '#e8908f', roughness: 0.5 });
@@ -50,15 +86,15 @@ export function createCat() {
   const body = new THREE.Group();
   body.position.y = 0.16;
   root.add(body);
-  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.1, 28, 18), fur);
+  // polos no peito e no rabo (ver tabbyTexture)
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.1, 28, 18).rotateX(Math.PI / 2), fur);
   torso.scale.set(0.95, 0.9, 1.75);
-  torso.rotation.x = 0;
   body.add(torso);
-  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.07, 18, 12), cream);
-  chest.scale.set(1, 1.1, 0.8);
-  chest.position.set(0, -0.02, 0.12);
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.055, 18, 12), cream);
+  chest.scale.set(1, 1.05, 0.75);
+  chest.position.set(0, -0.032, 0.132);
   body.add(chest);
-  const haunch = new THREE.Mesh(new THREE.SphereGeometry(0.085, 18, 12), fur);
+  const haunch = new THREE.Mesh(new THREE.SphereGeometry(0.085, 18, 12).rotateX(Math.PI / 2), fur);
   haunch.scale.set(1.08, 1, 1.1);
   haunch.position.set(0, -0.005, -0.1);
   body.add(haunch);
@@ -70,7 +106,7 @@ export function createCat() {
   const head = new THREE.Group();
   head.position.set(0, 0.06, 0.03);
   neck.add(head);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.075, 24, 16), fur);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.075, 24, 16), furHead);
   skull.scale.set(1.08, 0.92, 0.95);
   head.add(skull);
   const cheeks = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), cream);
