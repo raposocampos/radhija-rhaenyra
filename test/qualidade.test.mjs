@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import {
   QUALITY_PROFILES, QUALITY_MODES, MOBILE_LADDER, SKY_FIRST, SKY_LAST, detectDevice, readDeviceEnv, initialLevel,
   isAdaptive, isLowEndGpu, pixelRatioFor, createFrameCap, createFpsGovernor, applyQualityProfile, createQualityControl,
-  loadQualityMode, saveQualityMode,
+  loadQualityMode, saveQualityMode, needsInstallTip, readInstallEnv,
 } from '../src/core/quality.js';
 
 test('perfil do PC (alta) = os valores de sempre do engine', () => {
@@ -70,6 +70,32 @@ test('GPU de entrada de celular começa no perfil baixa', () => {
   assert.equal(createQualityControl({ device: 'phone', gpu: 'Apple GPU' }).level, 'media', 'iPhone');
   const pc = createQualityControl({ device: 'desktop', gpu: 'Mali-G57 MC2' });
   assert.ok(pc.level === 'alta' && !pc.lowGpu && !pc.capFps, 'no PC a GPU nem conta e não há teto de quadros');
+});
+
+test('dica de "Adicionar à Tela de Início": só no iPhone fora do app e sem tela cheia', () => {
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const android = 'Mozilla/5.0 (Linux; Android 14; Infinix X6833B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  const base = { ua: iphone, device: 'phone', standalone: false, fullscreenApi: false };
+  assert.ok(needsInstallTip(base), 'Safari do iPhone');
+  assert.ok(!needsInstallTip({ ...base, standalone: true }), 'aberto pelo ícone da tela inicial: já é tela cheia');
+  assert.ok(!needsInstallTip({ ...base, fullscreenApi: true }), 'com a API de tela cheia (iPad), usa o botão');
+  assert.ok(!needsInstallTip({ ...base, ua: android, fullscreenApi: true }), 'Android: tela cheia pelo toque');
+  assert.ok(!needsInstallTip({ ...base, ua: android }), 'Android sem a API também não (a dica é do iPhone)');
+  assert.ok(!needsInstallTip({ ...base, device: 'desktop' }), 'PC: nunca');
+  assert.ok(needsInstallTip({ ...base, ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', platform: 'MacIntel', touchPoints: 5, device: 'tablet' }),
+    'iPad que se diz Mac (toque), sem a API');
+  assert.ok(!needsInstallTip({ ...base, ua: 'Mozilla/5.0 (Macintosh)', platform: 'MacIntel', touchPoints: 0, device: 'tablet' }), 'Mac de verdade');
+  assert.ok(!needsInstallTip(), 'sem ambiente: nada');
+  const win = (o = {}) => ({
+    navigator: { userAgent: iphone, platform: 'iPhone', maxTouchPoints: 5, ...o.nav },
+    document: { fullscreenEnabled: false, documentElement: {}, ...o.doc },
+    matchMedia: (q) => ({ matches: !!o.modes?.includes(q) }),
+  });
+  assert.deepEqual(readInstallEnv(win()), { ua: iphone, platform: 'iPhone', touchPoints: 5, standalone: false, fullscreenApi: false });
+  assert.equal(readInstallEnv(win({ nav: { standalone: true } })).standalone, true, 'navigator.standalone (iOS)');
+  assert.equal(readInstallEnv(win({ modes: ['(display-mode: standalone)'] })).standalone, true, 'display-mode do manifest');
+  assert.equal(readInstallEnv(win({ doc: { fullscreenEnabled: true, documentElement: { requestFullscreen() {} } } })).fullscreenApi, true);
+  assert.equal(readInstallEnv({}).fullscreenApi, false);
 });
 
 test('perfil inicial e modo automático', () => {

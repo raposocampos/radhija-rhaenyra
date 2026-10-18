@@ -92,6 +92,35 @@ export function readGpuName(gl) {
   }
 }
 
+/**
+ * Dica de "Adicionar à Tela de Início": só no iPhone/iPad (ou iPad que se diz Mac) fora do app da tela inicial e sem
+ * a API de tela cheia. O Safari do iPhone não deixa uma página ocupar a tela inteira (requestFullscreen só vale para
+ * vídeo): o caminho é abrir pelo ícone da tela inicial (manifest + metas apple-* do index.html). PC e Android, nunca.
+ * @param {{ ua?: string, platform?: string, touchPoints?: number, standalone?: boolean, fullscreenApi?: boolean,
+ *           device?: DeviceKind }} [env]
+ */
+export function needsInstallTip({ ua = '', platform = '', touchPoints = 0, standalone = false, fullscreenApi = true, device = 'desktop' } = {}) {
+  if (device === 'desktop' || standalone || fullscreenApi) return false;
+  return /iPhone|iPad|iPod/.test(ua) || (platform === 'MacIntel' && touchPoints > 1);
+}
+
+/** Lê o ambiente para needsInstallTip (no navegador). */
+export function readInstallEnv(win = globalThis) {
+  const nav = /** @type {any} */ (win.navigator || {});
+  const doc = /** @type {any} */ (win.document || {});
+  const el = doc.documentElement || {};
+  const mm = (q) => {
+    try { return !!win.matchMedia?.(q).matches; } catch { return false; }
+  };
+  return {
+    ua: String(nav.userAgent || ''),
+    platform: String(nav.platform || ''),
+    touchPoints: Number(nav.maxTouchPoints) || 0,
+    standalone: nav.standalone === true || mm('(display-mode: standalone)') || mm('(display-mode: fullscreen)'),
+    fullscreenApi: !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled) && !!(el.requestFullscreen || el.webkitRequestFullscreen),
+  };
+}
+
 /** Modo válido do menu ('auto' para qualquer outra coisa). @param {unknown} mode @returns {QualityMode} */
 export const normalizeMode = (mode) => (QUALITY_MODES.includes(/** @type {QualityMode} */ (mode)) ? /** @type {QualityMode} */ (mode) : 'auto');
 
