@@ -127,7 +127,7 @@ jobs:
         if: matrix.suite == 'fase4'
         run: node tools/scripts/capture-pigeons.mjs
       - name: Capturas do Lambe-Lambe para revisão (qualidade visual completa)
-        if: matrix.suite == 'lambe'
+        if: always() && matrix.suite == 'lambe'
         run: node tools/scripts/capture-lambe.mjs
       - name: Guardar capturas para diagnóstico
         if: always()

@@ -72,12 +72,13 @@ function lawnTexture(layout) {
 /** Piso emborrachado: placas de 0,5 m em cores de parquinho, rejunte e brilho de chuva irregular. */
 function rubberTexture() {
   return canvasTexture(512, 512, (g, w, h) => {
-    const cols = ['#b5523f', '#5e8c5a', '#4f7898', '#c9953f', '#b5523f', '#5e8c5a'];
+    // cores de parquinho, mas gastas e molhadas (o vermelho-tijolo domina, verde e azul aparecem salteados)
+    const cols = ['#a65a48', '#a65a48', '#6f8a64', '#a65a48', '#5f7d92', '#a65a48', '#b98f52', '#6f8a64'];
     const r = rng(17);
     const n = 4; // 4 x 4 placas por repetição (2 m)
     const s = w / n;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-      g.fillStyle = cols[(i * 2 + j * 3 + ((i * j) % 2)) % cols.length];
+      g.fillStyle = cols[(i * 5 + j * 3 + ((i * j) % 3)) % cols.length];
       g.fillRect(i * s, j * s, s, s);
       // grânulos de borracha
       for (let k = 0; k < 900; k++) {
@@ -165,7 +166,7 @@ function ribbonGeometry(points, width, y) {
     }
     if (i < N) {
       const a = i * 2;
-      idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); // virado para cima
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -195,8 +196,11 @@ function curbGeometry(points, width) {
   return mergeGeometries(parts);
 }
 
-/** Tufos de grama instanciados (com vento), fora da calçada, do parquinho e das poças. */
-function grassTufts(root, layout) {
+/**
+ * Tufos de grama instanciados (com vento) nos pontos dados: { x, y?, z, s (escala), a (giro) }.
+ * @param {{ x: number, y?: number, z: number, s: number, a: number }[]} list @param {string} name
+ */
+export function tuftMesh(list, name = 'grama') {
   const blade = new THREE.ConeGeometry(0.012, 0.11, 3, 1, true).translate(0, 0.055, 0);
   const parts = [];
   for (let k = 0; k < 5; k++) {
@@ -209,6 +213,22 @@ function grassTufts(root, layout) {
   }
   const tuft = paint(mergeGeometries(parts), (p) => new THREE.Color('#4f7a2e').lerp(new THREE.Color('#a9c46a'), Math.min(1, p.y / 0.12)));
   const material = mat('f7-grass', () => addFoliageWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, side: THREE.DoubleSide }), { amp: 0.02, freq: 1.8 }));
+  const im = new THREE.InstancedMesh(tuft, material, list.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  list.forEach((t, i) => {
+    q.setFromAxisAngle(up, t.a);
+    s.set(t.s, t.s, t.s);
+    p.set(t.x, t.y ?? 0, t.z);
+    m4.compose(p, q, s);
+    im.setMatrixAt(i, m4);
+  });
+  im.receiveShadow = true;
+  im.name = name;
+  return im;
+}
+
+/** Tufos no gramado, fora da calçada, do parquinho, da toalha e das poças. */
+function grassTufts(root, layout) {
   const B = layout.WORLD.bounds, F = layout.FENCE;
   const r = rng(41);
   const list = [];
@@ -222,17 +242,7 @@ function grassTufts(root, layout) {
     if (fbm2(x * 0.9, z * 0.9, 2) < 0.38 && r() < 0.6) continue; // grama mais rala em manchas
     list.push({ x, z, s: 0.75 + r() * 0.6, a: r() * Math.PI * 2 });
   }
-  const im = new THREE.InstancedMesh(tuft, material, list.length);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-  list.forEach((t, i) => {
-    q.setFromAxisAngle(up, t.a);
-    s.set(t.s, t.s, t.s);
-    p.set(t.x, 0, t.z);
-    m4.compose(p, q, s);
-    im.setMatrixAt(i, m4);
-  });
-  im.receiveShadow = true;
-  im.name = 'grama';
+  const im = tuftMesh(list);
   root.add(im);
   return im;
 }
@@ -243,7 +253,7 @@ function buildPuddles(root, layout) {
   ripple.wrapS = ripple.wrapT = THREE.RepeatWrapping;
   ripple.repeat.set(2.5, 2.5);
   const water = new THREE.MeshPhysicalMaterial({
-    color: '#6f8796', roughness: 0.06, metalness: 0.1, transparent: true, opacity: 0.86,
+    color: '#4b5f6b', roughness: 0.04, metalness: 0.35, transparent: true, opacity: 0.78, envMapIntensity: 1.6,
     normalMap: ripple, normalScale: new THREE.Vector2(0.18, 0.18), clearcoat: 1, clearcoatRoughness: 0.05,
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
   });

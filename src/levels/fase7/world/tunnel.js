@@ -4,6 +4,17 @@
 import * as THREE from 'three';
 import { rng, vnoise2, fbm2, smoothstep, paint, plasterTexture, mat, contactShadow, canvasTexture } from '../../../world/util.js';
 import { smallFlowers, plantMat } from '../../../world/plants.js';
+import { tuftMesh } from './ground.js';
+
+/** Altura do terreno do morrinho no ponto local (x, z) relativo ao centro (sem o deslocamento de 1 cm). */
+function moundHeight(M, x, z) {
+  const ex = 0.32;
+  const qx = Math.max(Math.abs(x) - (M.hx - M.corner), 0), qz = Math.max(Math.abs(z) - (M.hz - M.corner), 0);
+  const core = 1 - smoothstep(0, 1, Math.hypot(qx, qz) / (M.corner + ex));
+  const dome = 1 - 0.18 * ((x / M.hx) ** 2 + (z / M.hz) ** 2);
+  const bump = (fbm2(x * 2.2 + 3, z * 2.2, 3) - 0.5) * 0.08;
+  return Math.max(0, M.height * core * dome + bump * core);
+}
 
 /** Concreto da manilha: cinza claro com manchas escuras de umidade embaixo. */
 function concreteTexture() {
@@ -22,20 +33,12 @@ function concreteTexture() {
 
 /** Terreno do morrinho: retângulo de cantos arredondados que sobe em domo até `height`. */
 function moundGeometry(M) {
-  const ex = 0.32; // a grama desce um pouco além do retângulo
+  const ex = 0.32; // a grama desce um pouco além do retângulo (como em moundHeight)
   const geo = new THREE.PlaneGeometry((M.hx + ex) * 2, (M.hz + ex) * 2, 46, 56).rotateX(-Math.PI / 2);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i);
-    // distância "arredondada" ao retângulo interno (0 dentro do núcleo, cresce para fora)
-    const qx = Math.max(Math.abs(x) - (M.hx - M.corner), 0), qz = Math.max(Math.abs(z) - (M.hz - M.corner), 0);
-    const d = Math.hypot(qx, qz) / (M.corner + ex); // 0 no núcleo … 1 na borda da grama
-    const core = 1 - smoothstep(0, 1, d);
-    // domo suave: mais alto no meio, com ondulação de terreno
-    const dome = 1 - 0.18 * ((x / M.hx) ** 2 + (z / M.hz) ** 2);
-    const bump = (fbm2(x * 2.2 + 3, z * 2.2, 3) - 0.5) * 0.08;
-    const y = Math.max(0, M.height * core * dome + bump * core) - 0.01;
-    p.setY(i, y);
+    // domo de cantos arredondados com ondulação de terreno (moundHeight), afundado 1 cm na borda
+    p.setY(i, moundHeight(M, p.getX(i), p.getZ(i)) - 0.01);
   }
   geo.computeVertexNormals();
   const dark = new THREE.Color('#3f6a2a'), mid = new THREE.Color('#5f8c38'), light = new THREE.Color('#93b551'), soil = new THREE.Color('#5b4732');
@@ -101,15 +104,23 @@ export function buildTunnel(root, layout) {
   mound.castShadow = true;
   mound.name = 'morrinho';
   group.add(mound);
-  // flores e tufos em cima do morrinho
+  // tufos de grama por todo o morrinho (menos em cima das bocas do túnel) e flores
   const r = rng(13);
+  const tufts = [];
+  for (let i = 0; i < 520 && tufts.length < 260; i++) {
+    const lx = (r() * 2 - 1) * (M.hx + 0.25), lz = (r() * 2 - 1) * (M.hz + 0.25);
+    const h = moundHeight(M, lx, lz);
+    if (h < 0.03) continue;
+    const wx = M.x + lx, wz = M.z + lz;
+    if (Math.abs(wz - T.z) < T.r + 0.12 && (wx < T.x0 + 0.5 || wx > T.x1 - 0.5)) continue;
+    tufts.push({ x: wx, y: h - 0.015, z: wz, s: 0.8 + r() * 0.7, a: r() * Math.PI * 2 });
+  }
+  group.add(tuftMesh(tufts, 'grama-do-morrinho'));
   for (let i = 0; i < 9; i++) {
     const a = r() * Math.PI * 2, d = 0.25 + r() * 0.45;
     const fx = M.x + Math.cos(a) * d * M.hx, fz = M.z + Math.sin(a) * d * M.hz;
     if (Math.abs(fz - T.z) < 0.42) continue;
-    const qx = Math.max(Math.abs(fx - M.x) - (M.hx - M.corner), 0), qz = Math.max(Math.abs(fz - M.z) - (M.hz - M.corner), 0);
-    const core = 1 - smoothstep(0, 1, Math.hypot(qx, qz) / (M.corner + 0.32));
-    const fy = M.height * core * (1 - 0.18 * (((fx - M.x) / M.hx) ** 2 + ((fz - M.z) / M.hz) ** 2)) - 0.02;
+    const fy = moundHeight(M, fx - M.x, fz - M.z) - 0.02;
     const fl = new THREE.Mesh(smallFlowers({ count: 14, radius: 0.1, height: 0.1, color: ['#fff6ee', '#ffd65a', '#f6a6c1'][i % 3], seed: 30 + i }), plantMat());
     fl.position.set(fx, fy, fz);
     group.add(fl);

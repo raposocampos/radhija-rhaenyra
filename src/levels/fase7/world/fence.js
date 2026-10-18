@@ -15,8 +15,9 @@ const SPACING = 0.112;
 /** Geometrias dos lápis (corpo sextavado, ponta apontada e grafite), com a base em y = 0. */
 function pencilGeometries(h = BODY_H) {
   const body = new THREE.CylinderGeometry(RADIUS, RADIUS, h, 6).translate(0, h / 2, 0);
-  const tip = new THREE.CylinderGeometry(RADIUS * 0.34, RADIUS, TIP_H, 6).translate(0, h + TIP_H / 2, 0);
-  const lead = new THREE.ConeGeometry(RADIUS * 0.34, LEAD_H, 6).translate(0, h + TIP_H + LEAD_H / 2, 0);
+  // ponta sem tampas e afundada 3 mm no corpo; o grafite também entra na ponta (nenhuma face no mesmo plano)
+  const tip = new THREE.CylinderGeometry(RADIUS * 0.34, RADIUS, TIP_H, 6, 1, true).translate(0, h - 0.003 + TIP_H / 2, 0);
+  const lead = new THREE.ConeGeometry(RADIUS * 0.36, LEAD_H, 6).translate(0, h - 0.006 + TIP_H + LEAD_H / 2, 0);
   return { body, tip, lead };
 }
 
@@ -163,7 +164,7 @@ export function buildFence(root, layout) {
   }
   for (const y of [0.13, 0.55]) {
     const r = new THREE.Mesh(rbox(0.035, 0.055, L - 0.04, 0.01), woodMat('#d9b98c', { key: 'f7-rail', rough: 0.75 }));
-    r.position.set(-0.045, y, -L / 2);
+    r.position.set(-0.042, y, -L / 2); // entra 3 mm nos montantes
     gate.add(r);
   }
   // diagonal (mão-francesa) do lado de dentro

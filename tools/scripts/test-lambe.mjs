@@ -53,7 +53,7 @@ try {
   await H.sleep(150);
   await H.clearLog();
   await padButton(6, true);
-  state = await waitFor((i) => i.lick.strokes >= 1, { timeout: 3000 });
+  state = await waitFor((i) => i.lick.on && i.lick.stage === 'licking' && i.lick.strokes >= 1, { timeout: 3000 });
   await padButton(6, false);
   check((await H.logOf('lick:start')).length === 1 && state.lick.strokes >= 1, 'L2/LT também lambe');
   await ev(() => { window.__fakePads = []; });

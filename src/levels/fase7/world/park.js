@@ -113,9 +113,9 @@ function hedgeLine(group, ax, az, bx, bz, seed, flowers = '#ff6a55') {
   const r = rng(seed);
   const len = Math.hypot(bx - ax, bz - az);
   const blobs = [];
-  for (let d = 0; d < len; d += 0.42 + r() * 0.2) {
+  for (let d = 0; d < len; d += 0.32 + r() * 0.14) {
     const t = d / len;
-    blobs.push({ x: ax + (bx - ax) * t + (r() - 0.5) * 0.12, y: 0.42 + r() * 0.12, z: az + (bz - az) * t + (r() - 0.5) * 0.12, r: 0.38 + r() * 0.12, sy: 1.0 });
+    blobs.push({ x: ax + (bx - ax) * t + (r() - 0.5) * 0.1, y: 0.3 + r() * 0.08, z: az + (bz - az) * t + (r() - 0.5) * 0.1, r: 0.27 + r() * 0.07, sy: 1.0 });
   }
   const geo = foliageCluster(blobs, { detail: 2, amp: 0.2, freq: 3.2, seed, dark: '#22401a', mid: '#3f6628', light: '#86a54c' });
   const hedge = new THREE.Mesh(geo, hedgeMat());
@@ -126,7 +126,7 @@ function hedgeLine(group, ax, az, bx, bz, seed, flowers = '#ff6a55') {
   for (let d = 0.4; d < len - 0.3; d += 0.7 + r() * 0.5) {
     const t = d / len;
     const fl = new THREE.Mesh(r() < 0.5 ? geranium({ radius: 0.16, height: 0.18, seed: seed + d * 10, flower: flowers }) : smallFlowers({ count: 18, radius: 0.13, height: 0.14, color: '#fff3f0', seed: seed + d * 7 }), plantMat());
-    fl.position.set(ax + (bx - ax) * t + nx * 0.42, 0, az + (bz - az) * t + nz * 0.42);
+    fl.position.set(ax + (bx - ax) * t + nx * 0.36, 0, az + (bz - az) * t + nz * 0.36);
     group.add(fl);
   }
 }
@@ -148,11 +148,11 @@ export function buildPark(root, layout) {
     sh.position.set(t.x, 0.006, t.z);
     group.add(sh);
   }
-  // cercas vivas nas bordas (por fora dos limites) com canteiros
-  hedgeLine(group, B.minX - 0.55, B.minZ - 0.5, B.maxX + 0.55, B.minZ - 0.5, 61, '#ff6a55');
-  hedgeLine(group, B.maxX + 0.55, B.minZ - 0.4, B.maxX + 0.55, B.maxZ + 0.4, 67, '#f6a6c1');
-  hedgeLine(group, B.minX - 0.55, B.maxZ + 0.4, B.minX - 0.55, B.minZ - 0.4, 71, '#ffd65a');
-  hedgeLine(group, B.minX - 0.4, B.maxZ + 0.55, B.maxX + 0.4, B.maxZ + 0.55, 73, '#ff6a55');
+  // cercas vivas baixas nas bordas norte, leste e oeste (por fora dos limites), com canteiros; o sul fica aberto
+  // (é de onde a câmera olha, inclusive na comemoração do piquenique)
+  hedgeLine(group, B.minX - 0.45, B.minZ - 0.42, B.maxX + 0.45, B.minZ - 0.42, 61, '#ff6a55');
+  hedgeLine(group, B.maxX + 0.45, B.minZ - 0.3, B.maxX + 0.45, B.maxZ + 0.2, 67, '#f6a6c1');
+  hedgeLine(group, B.minX - 0.45, B.maxZ + 0.2, B.minX - 0.45, B.minZ - 0.3, 71, '#ffd65a');
   // fundo: casas e prédios do bairro entre árvores
   const bg = new THREE.Group();
   bg.name = 'bairro';

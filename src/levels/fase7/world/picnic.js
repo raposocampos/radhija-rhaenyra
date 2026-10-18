@@ -75,7 +75,7 @@ export function buildPicnic(root, layout) {
   body.position.y = 0.11;
   for (const s of [-1, 1]) {
     const lid = new THREE.Mesh(rbox(0.17, 0.03, 0.27, 0.012), wicker);
-    lid.position.set(s * 0.09, 0.235, 0);
+    lid.position.set(s * 0.09, 0.232, 0);
     lid.rotation.z = s * 0.06;
     basket.add(lid);
   }
@@ -96,7 +96,7 @@ export function buildPicnic(root, layout) {
   const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.22, 16), new THREE.MeshPhysicalMaterial({ color: '#4fa3d9', roughness: 0.3, clearcoat: 0.8 }));
   tb.position.y = 0.11;
   const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.05, 16), stdMat('#f2ede2', { roughness: 0.4 }));
-  cap.position.y = 0.245;
+  cap.position.y = 0.242;
   thermos.add(tb, cap);
   group.add(thermos);
   // pratinho com sanduíches e laranja
@@ -113,8 +113,8 @@ export function buildPicnic(root, layout) {
       sl.position.y = y;
       sw.add(sl);
     }
-    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.053, 0.053, 0.012, 3), stdMat('#7fbf5a', { roughness: 0.7 }));
-    fill.position.y = 0.038;
+    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.053, 0.053, 0.014, 3), stdMat('#7fbf5a', { roughness: 0.7 }));
+    fill.position.y = 0.0375; // o recheio entra um pouco nas duas fatias
     sw.add(fill);
     sw.position.set(x, 0, z);
     sw.rotation.y = ry;

@@ -66,7 +66,8 @@ function buildSlide(group, layout) {
   // painéis com escotilha nos lados norte e sul
   const panelMat = wetPlastic('#4fa3d9', 'panel');
   const ringMat = wetPlastic('#f4cf4a', 'ring');
-  for (const z of [z0 + 0.02, z1 - 0.02]) {
+  // painel com escotilha só no lado norte; no sul (de onde a câmera olha) um guarda-corpo vazado, para a dog no deque aparecer
+  for (const z of [z0 + 0.02]) {
     const shape = new THREE.Shape();
     const w = T.hx * 2 - 0.14, h = 0.5;
     shape.moveTo(-w / 2, 0); shape.lineTo(w / 2, 0); shape.lineTo(w / 2, h); shape.lineTo(-w / 2, h); shape.closePath();
@@ -80,6 +81,16 @@ function buildSlide(group, layout) {
     ring.position.set(T.x, SL.deck + 0.05 + h * 0.52, z + (z < T.z ? -0.03 : 0.03));
     g.add(ring);
   }
+  for (const y of [0.24, 0.5]) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, T.hx * 2 - 0.12, 10).rotateZ(Math.PI / 2), ringMat);
+    bar.position.set(T.x, SL.deck + y, z1 - 0.05);
+    g.add(bar);
+  }
+  for (let k = 1; k < 5; k++) {
+    const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 8), wetMetal('#4fa3d9'));
+    spindle.position.set(x0 + 0.05 + (k * (T.hx * 2 - 0.1)) / 5, SL.deck + 0.36, z1 - 0.05);
+    g.add(spindle);
+  }
   // corrimãos do lado da rampa (oeste) e da escadinha (leste)
   for (const z of [T.z - 0.28, T.z + 0.28]) {
     const h = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.017, 8, 20, Math.PI), wetMetal('#e8574a'));
@@ -89,7 +100,7 @@ function buildSlide(group, layout) {
   }
   // telhadinho listrado (quatro águas)
   const roofTex = stripeTexture('#fff4e2', '#e8574a', 10);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(T.hx, T.hz) * 1.28, 0.55, 4, 1, false, Math.PI / 4), new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.55 }));
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(T.hx, T.hz) * 1.06, 0.55, 4, 1, false, Math.PI / 4), new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.55 }));
   roof.position.set(T.x, T.roof + 0.27, T.z);
   const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), ringMat);
   tip.position.set(T.x, T.roof + 0.57, T.z);
@@ -240,7 +251,7 @@ function buildSeesaw(group, layout) {
   beamGroup.add(plank);
   for (const sx of [-1, 1]) {
     const seat = new THREE.Mesh(rbox(0.26, 0.04, 0.24, 0.02), wetPlastic('#f4cf4a', 'seesaw-seat'));
-    seat.position.set(sx * (S.halfLength - 0.15), 0.075, 0);
+    seat.position.set(sx * (S.halfLength - 0.15), 0.072, 0); // assento afundado 3 mm na tábua
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 8, 16, Math.PI), wetMetal('#3f6fa8'));
     handle.position.set(sx * (S.halfLength - 0.36), 0.06, 0);
     handle.rotation.y = Math.PI / 2;

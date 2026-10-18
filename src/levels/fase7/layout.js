@@ -70,7 +70,7 @@ export const SEESAW = { x: 4.95, z: -0.95, halfLength: 0.85 };
 export const SANDBOX = { x: 3.35, z: 0.35, hx: 0.62, hz: 0.5 };
 export const SPRING_RIDER = { x: -0.75, z: -2.95, r: 0.22 };
 export const BENCHES = [{ x: -5.35, z: -1.9, yaw: Math.PI / 2 }, { x: 4.15, z: 3.12, yaw: Math.PI }];
-export const LAMPS = [{ x: -1.85, z: 1.8 }, { x: 5.55, z: 1.95 }, { x: -5.55, z: -3.95 }];
+export const LAMPS = [{ x: -2.3, z: -2.75 }, { x: 5.55, z: 1.95 }, { x: -5.55, z: -3.95 }];
 export const TREES = [{ x: -5.15, z: -3.55, r: 0.17, seed: 3 }, { x: 5.45, z: -3.9, r: 0.16, seed: 7 }, { x: -5.45, z: 0.35, r: 0.15, seed: 11 }];
 export const TRASH = { x: -5.35, z: -0.95, r: 0.18 };
 /** Poças d'água (só respingam, não sujam): { x, z, rx, rz, rot }. */
