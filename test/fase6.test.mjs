@@ -608,7 +608,8 @@ test('fase 6: passeio, estações e petiscos são alcançáveis por ambas, ferro
       }
     }
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const x = yard.x + dx * (yard.hx + c.r + 0.3);
+      // ao norte e ao sul, a oeste das duas canaletas (a do norte fica em x = 0, diante da sonda)
+      const x = yard.x + dx * (yard.hx + c.r + 0.3) + (dz ? -0.8 : 0);
       const z = yard.z + dz * (yard.hz + c.r + 0.3);
       for (const airborne of [false, true]) {
         const moved = h.world.move(x, z, -dx * 0.9, -dz * 0.9, c.r, c.size, { airborne });

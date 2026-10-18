@@ -199,8 +199,10 @@ export function buildRailway(root, track) {
     const p = { x: seg.x0, z: seg.z0 };
     if (seen.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 0.05)) continue;
     seen.push(p);
+    // na agulha as três rotas começam juntas, umas sobre as outras: a emenda fica por cima da mais alta
+    const lift = Math.max(...track.pieces.filter((o) => Math.hypot(o.x0 - p.x, o.z0 - p.z) < 0.05).map((o) => o.lift));
     seams.push(new THREE.BoxGeometry(TRACK.width + 0.006, 0.006, 0.012)
-      .rotateY(Math.atan2(seg.dx0, seg.dz0)).translate(p.x, YT + seg.lift + 0.002, p.z));
+      .rotateY(Math.atan2(seg.dx0, seg.dz0)).translate(p.x, YT + lift + 0.002, p.z));
   }
   add(grp, mergeGeometries(seams), stdMat('#8a5a3a', { roughness: 0.7 })).castShadow = false;
   // para-choques no fim do trilho da estrela e da lua (o vagão para encostado neles)
