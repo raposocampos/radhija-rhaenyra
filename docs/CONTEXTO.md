@@ -16,8 +16,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   cheia; aviso de girar; `index.html` sem zoom/rolagem, `viewport-fit=cover`, manifest e ícones
   (`tools/scripts/gen-icons.mjs`). Testes `test/qualidade.test.mjs` e `test/toque.test.mjs`; suíte E2E `toque` e
   capturas `capture-celular.mjs`. Documentado em ARQUITETURA §6, §9 e §10 e no README.
-- Próximo passo: CI verde, E2E `toque` e `todas`, revisar as capturas (celular e PC), entregar a prévia para o
-  usuário testar no próprio celular e **aguardar aprovação** antes do merge/deploy.
+- Primeira prévia testada pelo usuário (2026-10-18) num Infinix Note 30 5G (Mali-G57 MC2, tela de 120 Hz); também
+  precisa rodar bem num iPhone 13. Pedidos: HUD menor no celular (chips e objetivo no topo esquerdo, dica e prompt)
+  e desempenho bom em celular mediano. Feito: HUD do celular compacto (chip só com a dog ativa, companheira num
+  pontinho de estado, objetivo em até duas linhas); perfis do celular mais leves (médio: pixel ratio 1, sem MSAA nem
+  bloom; baixa: 0,85 e sombra a cada 2 quadros; mínima: sem sombra e sem compositor), céu desenhado por último no
+  celular, teto de 60 quadros por segundo, GPU de entrada começa no baixa, governador mais rápido (janelas de 1,5 s,
+  desce com uma janela abaixo de 30 fps) e sem a volta atrás. PC sem mudança (testes e E2E conferem).
+- Próximo passo: CI verde, E2E `todas`, revisar as capturas (celular e PC) e entregar a nova prévia; **aguardar
+  aprovação** antes do merge/deploy. Se ainda pesar nas fases 2 e 3 (luzes pontuais à noite), avaliar desligá-las
+  só no perfil mínimo.
 
 ## Entregue: fases 6 e 7 na campanha (Entrega B, PR #21)
 

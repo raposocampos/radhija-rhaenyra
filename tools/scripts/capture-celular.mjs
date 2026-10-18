@@ -191,6 +191,13 @@ async function captureDevice(dev, url) {
       await page.touchscreen.tap(422, 120);
       await step(150);
       await shot('08-fase4');
+      // os degraus mais leves do automático, para comparar com o médio
+      await page.evaluate(() => window.__game.engine.quality.forceLevel('baixa'));
+      await step(2);
+      await shot('09-fase4-baixa');
+      await page.evaluate(() => window.__game.engine.quality.forceLevel('minima'));
+      await step(2);
+      await shot('10-fase4-minima');
     }
     await page.close();
 }

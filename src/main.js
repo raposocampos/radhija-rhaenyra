@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { events } from './core/events.js';
 import { createEngine } from './core/engine.js';
+import { createFrameCap } from './core/quality.js';
 import { createDog } from './dogs/dog.js';
 import { createGame } from './game/game.js';
 import { createAudio } from './fx/audio.js';
@@ -60,8 +61,15 @@ async function boot() {
 
   const clock = new THREE.Clock();
   let elapsed = 0;
+  // Celular/tablet: no máximo 60 quadros por segundo (telas de 90/120 Hz desenhariam o dobro e esquentariam o
+  // aparelho). O quadro pulado não roda nada; o seguinte recebe o tempo inteiro em dt. No PC, todos os quadros.
+  const capFrame = engine.quality.capFps ? createFrameCap() : null;
 
-  function frame() {
+  function frame(now) {
+    if (capFrame && !capFrame(now)) {
+      requestAnimationFrame(frame);
+      return;
+    }
     const dt = Math.min(clock.getDelta(), 1 / 20);
     elapsed += dt;
     // Governador de FPS (só no modo automático do celular/tablet): mede os quadros da partida rodando.

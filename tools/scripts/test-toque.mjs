@@ -78,6 +78,7 @@ const quality = () => ev(() => {
     device: q.device, mode: q.mode, level: q.level, adaptive: q.adaptive, state: engine.qualityState,
     shadow: engine.sun.shadow.mapSize.x, soft: engine.renderer.shadowMap.type === THREE.PCFSoftShadowMap,
     samples: engine.composer.renderTarget1.samples, stored: localStorage.getItem('rr-quality'),
+    sky: engine.sky.renderOrder, everyFrame: engine.renderer.shadowMap.autoUpdate, cap: q.capFps, lowGpu: q.lowGpu,
   };
 });
 /** Texto visível de um botão de toque (o CSS esconde o rótulo da outra cachorrinha). */
@@ -152,7 +153,8 @@ try {
   let q = await quality();
   check(s.mobile === 'phone' && q.device === 'phone', 'celular detectado (data-mobile=phone)', `${s.mobile}/${q.device}`);
   check(q.mode === 'auto' && q.level === 'media' && q.adaptive, 'modo automático começa no perfil médio, com governador', q);
-  check(q.state.pixelRatio === 1.25 && q.shadow === 1024 && !q.soft && q.samples === 2, 'perfil médio aplicado: pixel ratio 1,25, sombras PCF 1024, MSAA 2', q);
+  check(q.state.pixelRatio === 1 && q.shadow === 1024 && !q.soft && q.samples === 0 && q.everyFrame, 'perfil médio aplicado: pixel ratio 1, sombras PCF 1024 a cada quadro, sem MSAA', q);
+  check(q.sky > 0 && q.cap && !q.lowGpu, 'celular: céu depois do cenário e teto de 60 quadros (GPU do teste não é de entrada)', q);
   check(s.device === 'keyboard' && !s.touchOn, 'antes do primeiro toque: sem controles de toque', s);
   const title = await ev(() => ['.rr-logo__svg', '.rr-btn--play', '.rr-levels'].map((sel) => {
     const r = document.querySelector(sel).getBoundingClientRect();
@@ -309,12 +311,12 @@ try {
   await shot('07-pausa.png');
   await tap('.rr-qopt[data-quality="baixa"]');
   q = await quality();
-  check(q.mode === 'baixa' && q.level === 'baixa' && q.state.level === 'baixa' && q.samples === 0 && !q.adaptive, 'forçar Baixa: aplica na hora', q);
+  check(q.mode === 'baixa' && q.level === 'baixa' && q.state.level === 'baixa' && q.state.pixelRatio === 0.85 && !q.everyFrame && !q.adaptive, 'forçar Baixa: aplica na hora (pixel ratio 0,85, sombra a cada 2 quadros)', q);
   check(q.stored === 'baixa', 'escolha salva no navegador', q.stored);
   check(await ev(() => document.querySelector('.rr-qopt[data-quality="baixa"]').classList.contains('is-selected')), 'opção marcada');
   await tap('.rr-qopt[data-quality="auto"]');
   q = await quality();
-  check(q.mode === 'auto' && q.level === 'media' && q.adaptive && q.stored === null, 'Auto: volta ao médio com governador', q);
+  check(q.mode === 'auto' && q.level === 'media' && q.adaptive && q.everyFrame && q.stored === null, 'Auto: volta ao médio com governador', q);
   check(await ev(() => document.querySelector('.rr-quality__now').textContent) === 'agora: média', 'mostra o perfil atual no automático');
   const fs = await ev(() => ({ api: !!document.fullscreenEnabled, hidden: document.querySelector('.rr-fullscreen').hidden }));
   check(fs.hidden === !fs.api, 'botão Tela cheia só se o navegador permitir', fs);
@@ -380,12 +382,14 @@ try {
       device: engine.quality.device, mode: engine.quality.mode, level: engine.quality.level, adaptive: engine.quality.adaptive,
       pr: engine.renderer.getPixelRatio(), shadow: engine.sun.shadow.mapSize.x, soft: engine.renderer.shadowMap.type === THREE.PCFSoftShadowMap,
       samples: engine.composer.renderTarget1.samples, bloom: engine.bloom.enabled, castShadow: engine.sun.castShadow,
+      sky: engine.sky.renderOrder, everyFrame: engine.renderer.shadowMap.autoUpdate, cap: engine.quality.capFps,
       mobile: root.dataset.mobile ?? null, uiMobile: ui.mobile, touch: document.querySelector('.rr-touch').classList.contains('is-on'),
       controlsBar: getComputedStyle(document.querySelector('.rr-title__controls')).display,
     };
   });
   check(pcq.device === 'desktop' && pcq.level === 'alta' && !pcq.adaptive, 'PC: perfil alta, sem governador', pcq);
   check(pcq.pr === 1 && pcq.shadow === 2048 && pcq.soft && pcq.samples === 4 && pcq.bloom && pcq.castShadow, 'PC: pixel ratio, sombras PCFSoft 2048, MSAA 4 e bloom como sempre', pcq);
+  check(pcq.sky === -10 && pcq.everyFrame && !pcq.cap, 'PC: céu primeiro, sombra a cada quadro e sem teto de quadros, como sempre', pcq);
   check(pcq.mobile === null && pcq.uiMobile === null && !pcq.touch && pcq.controlsBar !== 'none', 'PC: sem layout de celular nem controles de toque', pcq);
   await pc.mouse.click(640, 360);
   check(await pc.evaluate(() => document.querySelector('.rr').dataset.device) === 'keyboard', 'PC: clique do mouse não vira toque');

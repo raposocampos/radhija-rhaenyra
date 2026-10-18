@@ -1263,6 +1263,8 @@
 /* com o toque, a pausa vira o botão do canto: o canto superior direito do HUD abre espaço para ele */
 .rr[data-device="touch"] .rr-esc { display: none; }
 .rr[data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 62 * var(--s)); }
+.rr[data-mobile="phone"] .rr-tbtn--pause { --d: 36; top: calc(var(--sa-t) + 6px); }
+.rr[data-mobile="phone"][data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 54 * var(--s)); }
 
 /* Aviso de girar o celular (celular de pé) --------------------------------- */
 .rr-rotate {
@@ -1329,39 +1331,72 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-/* HUD */
-.rr[data-mobile="phone"] .rr-hud__tl { gap: 6px; }
-.rr[data-mobile="phone"] .rr-chip { gap: 7px; padding: 3px 12px 3px 3px; }
-.rr[data-mobile="phone"] .rr-chip__avatar { width: 36px; height: 36px; }
-.rr[data-mobile="phone"] .rr-chip__avatar .ico-dog { width: 31px; height: 31px; }
-.rr[data-mobile="phone"] .rr-chip__name { font-size: 15px; }
-.rr[data-mobile="phone"] .rr-chip__trait { font-size: 12.5px; }
-.rr[data-mobile="phone"] .rr-chip__swap { margin-top: 2px; font-size: 11px; }
-.rr[data-mobile="phone"] .rr-comp { padding: 3px 8px 3px 3px; }
-.rr[data-mobile="phone"] .rr-comp__avatar { width: 30px; height: 30px; }
-.rr[data-mobile="phone"] .rr-comp__avatar .ico-dog { width: 26px; height: 26px; }
+/* HUD: pequeno e discreto no celular. O chip mostra só a cachorrinha ativa (o botão Trocar faz o resto), a
+   companheira só o avatar e o estado, o objetivo em até duas linhas; dica e prompt finos entre os controles. */
+.rr[data-mobile="phone"] .rr-hud__tl { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); gap: 4px; }
+.rr[data-mobile="phone"] .rr-hud__tr { top: calc(var(--sa-t) + 8px); gap: 4px; }
+.rr[data-mobile="phone"] .rr-hud__dogs { gap: 5px; }
+.rr[data-mobile="phone"] .rr-chip { gap: 5px; padding: 2px 10px 2px 2px; }
+.rr[data-mobile="phone"] .rr-chip__avatar { width: 26px; height: 26px; box-shadow: inset 0 0 0 2px var(--acc); }
+.rr[data-mobile="phone"] .rr-chip__avatar .ico-dog { width: 22px; height: 22px; }
+.rr[data-mobile="phone"] .rr-chip__name { font-size: 12.5px; gap: 4px; }
+.rr[data-mobile="phone"] .rr-chip__trait { font-size: 10.5px; }
+.rr[data-mobile="phone"] .rr-chip__swap { display: none; }
+.rr[data-mobile="phone"] .rr-comp { gap: 4px; padding: 2px 6px 2px 2px; }
+.rr[data-mobile="phone"] .rr-comp__avatar { width: 22px; height: 22px; }
+.rr[data-mobile="phone"] .rr-comp__avatar .ico-dog { width: 18px; height: 18px; }
 .rr[data-mobile="phone"] .rr-comp__text { display: none; }
-.rr[data-mobile="phone"] .rr-objective { max-width: min(40vw, 330px); gap: 8px; padding: 6px 12px 6px 6px; border-radius: 14px; font-size: 12.5px; line-height: 1.28; }
-.rr[data-mobile="phone"] .rr-objective__icon { width: 22px; height: 22px; }
-.rr[data-mobile="phone"] .rr-objective__icon .ico { width: 13px; height: 13px; }
+.rr[data-mobile="phone"] .rr-comp__key { display: none; }
+.rr[data-mobile="phone"] .rr-comp::after {
+  /* estado da companheira num pontinho: verde seguindo, laranja esperando */
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+  margin-right: 1px;
+}
+.rr[data-mobile="phone"] .rr-comp[data-stay="1"]::after { background: var(--carrot); }
+.rr[data-mobile="phone"] .rr-objective {
+  max-width: min(32vw, 270px);
+  gap: 6px;
+  padding: 4px 9px 4px 4px;
+  border-radius: 11px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.rr[data-mobile="phone"] .rr-objective__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rr[data-mobile="phone"] .rr-objective__icon { width: 17px; height: 17px; box-shadow: 0 1.5px 0 var(--carrot-lo); }
+.rr[data-mobile="phone"] .rr-objective__icon .ico { width: 10px; height: 10px; }
 .rr[data-mobile="phone"] .rr-objective__label { display: none; }
-.rr[data-mobile="phone"] .rr-hud__tr { gap: 6px; }
-.rr[data-mobile="phone"] .rr-level { padding: 4px 9px 4px 4px; font-size: 12px; }
-.rr[data-mobile="phone"] .rr-level__item .ico { width: 20px; height: 20px; }
+.rr[data-mobile="phone"] .rr-objective .rr-tg, .rr[data-mobile="phone"] .rr-objective .rr-key,
+.rr[data-mobile="phone"] .rr-objective .rr-pad { font-size: 9.5px; }
+.rr[data-mobile="phone"] .rr-level { gap: 4px; padding: 2px 8px 2px 3px; font-size: 10.5px; }
+.rr[data-mobile="phone"] .rr-level__num { font-size: 10px; }
+.rr[data-mobile="phone"] .rr-level__item .ico { width: 16px; height: 16px; }
 .rr[data-mobile="phone"] .rr-level__name, .rr[data-mobile="phone"] .rr-level__sep { display: none; }
-.rr[data-mobile="phone"] .rr-treats { padding: 3px 12px 3px 5px; font-size: 17px; }
-.rr[data-mobile="phone"] .rr-treats .ico-bone { width: 28px; height: 28px; }
+.rr[data-mobile="phone"] .rr-treats { gap: 4px; padding: 2px 9px 2px 4px; font-size: 13.5px; }
+.rr[data-mobile="phone"] .rr-treats .ico-bone { width: 20px; height: 20px; }
 .rr[data-mobile="phone"] .rr-hud__bottom {
   /* entre o joystick e os botões */
-  bottom: calc(var(--sa-b) + 10px);
-  gap: 6px;
-  width: min(460px, calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r)))));
+  bottom: calc(var(--sa-b) + 8px);
+  gap: 4px;
+  width: min(380px, calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r)))));
 }
-.rr[data-mobile="phone"] .rr-hint { gap: 7px; padding: 7px 12px 7px 9px; border-radius: 13px; font-size: 12.5px; line-height: 1.3; }
-.rr[data-mobile="phone"] .rr-hint .ico { width: 15px; height: 15px; }
-.rr[data-mobile="phone"] .rr-prompt { gap: 8px; padding: 5px 14px 5px 5px; font-size: 15px; }
-.rr[data-mobile="phone"] .rr-prompt .rr-tg, .rr[data-mobile="phone"] .rr-prompt .rr-key, .rr[data-mobile="phone"] .rr-prompt .rr-pad { font-size: 14px; }
-.rr[data-mobile="phone"] .rr-celebrate__banner { top: calc(var(--sa-t) + 9vh); font-size: 19px; padding: 8px 20px 8px 10px; }
+.rr[data-mobile="phone"] .rr-hint { gap: 5px; padding: 4px 10px 4px 7px; border-radius: 10px; font-size: 11px; line-height: 1.25; }
+.rr[data-mobile="phone"] .rr-hint .ico { width: 12px; height: 12px; }
+.rr[data-mobile="phone"] .rr-hint .rr-tg, .rr[data-mobile="phone"] .rr-hint .rr-key,
+.rr[data-mobile="phone"] .rr-hint .rr-pad { font-size: 9.5px; }
+.rr[data-mobile="phone"] .rr-prompt { gap: 6px; padding: 3px 11px 3px 3px; font-size: 12.5px; }
+.rr[data-mobile="phone"] .rr-prompt .rr-tg, .rr[data-mobile="phone"] .rr-prompt .rr-key,
+.rr[data-mobile="phone"] .rr-prompt .rr-pad { font-size: 11px; }
+.rr[data-mobile="phone"] .rr-celebrate__banner { top: calc(var(--sa-t) + 8vh); gap: 8px; font-size: 15px; padding: 5px 14px 5px 6px; }
+.rr[data-mobile="phone"] .rr-celebrate__banner .rr-celebrate__item .ico { width: 30px; height: 30px; margin: -4px 0; }
 /* cartão de abertura */
 .rr[data-mobile="phone"] .rr-introcard { width: min(400px, calc(100vw - 32px)); padding: 12px 18px 14px; border-radius: 22px; bottom: calc(var(--sa-b) + 14px); }
 .rr[data-mobile="phone"] .rr-introcard__badge { width: 54px; height: 54px; margin-top: -26px; }

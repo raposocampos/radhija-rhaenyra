@@ -465,22 +465,31 @@ pausa tem o botão Tela cheia. `index.html` impede zoom e rolagem por gesto (`to
 Nada disso existe no PC: sem `data-mobile` e com teclado ou controle, a interface é a de sempre.
 
 **Qualidade gráfica por aparelho** (`src/core/quality.js`, aplicada pelo engine): `detectDevice` (dedo como ponteiro
-principal, `pointer: coarse` sem `hover`; celular se o lado menor da tela tem até 600 px) escolhe o perfil inicial.
+principal, `pointer: coarse` sem `hover`; celular se o lado menor da tela tem até 600 px) escolhe o perfil inicial; no
+celular/tablet o nome da GPU (`readGpuName`) também conta: GPU de entrada (`isLowEndGpu`: Mali-G57/G52/G68…,
+Adreno 5xx/60x–61x, PowerVR; ex.: Infinix Note 30 5G) começa no `baixa`. O iPhone informa "Apple GPU" e começa no
+`media`. No PC a GPU nem é consultada.
 
-| Perfil | Pixel ratio (teto) | Sombras | MSAA | Bloom | Quem usa |
-|---|---|---|---|---|---|
-| `alta` | 1,5 (sem orçamento) | PCFSoft 2048 | 4 | sim | PC (sempre o mesmo de antes) |
-| `media` | 1,25, até 1,2 Mpx | PCF 1024 | 2 | sim | celular e tablet no começo |
-| `baixa` | 1, até 0,8 Mpx | PCF 1024 | 0 | não | menu ou automático |
-| `minima` | 0,75, até 0,5 Mpx | desligadas | 0 | não | só o automático (último recurso) |
+| Perfil | Pixel ratio (teto) | Sombras | MSAA | Bloom | Compositor | Céu | Quem usa |
+|---|---|---|---|---|---|---|---|
+| `alta` | 1,5 (sem orçamento) | PCFSoft 2048, todo quadro | 4 | sim | sim | primeiro | PC (sempre o mesmo de antes) |
+| `media` | 1, até 0,6 Mpx | PCF 1024, todo quadro | 0 | não | sim | por último | celular e tablet no começo |
+| `baixa` | 0,85, até 0,42 Mpx | PCF 1024, a cada 2 quadros | 0 | não | sim | por último | GPU de entrada, menu ou automático |
+| `minima` | 0,7, até 0,3 Mpx | desligadas | 0 | não | não (direto na tela) | por último | só o automático (último recurso) |
+
+Por que esses cortes: cada fase tem ~800 a ~2.200 chamadas de desenho por quadro (a passada de sombra repete o
+cenário), e o céu calcula nuvens por ruído em cada pixel; desenhado por último, só roda nos pixels de céu que sobram.
+O celular/tablet também tem teto de 60 quadros por segundo (`createFrameCap` no laço de `main.js`): telas de 90/120 Hz
+desenhariam o dobro e esquentariam o aparelho.
 
 No modo automático do celular/tablet, o governador de FPS (`createFpsGovernor`, alimentado por `engine.quality.frame`
-a cada quadro da partida) mede a mediana dos intervalos em janelas de 3 s e desce um degrau depois de duas janelas
-seguidas abaixo de 45 fps; se a descida não melhorar ao menos 10% (aparelho preso a 30 Hz), volta e para. Pausa,
-menus e travadas longas não contam; ele nunca sobe sozinho. No PC o governador não existe. O menu de pausa tem
-Auto · Alta · Média · Baixa (`engine.quality.setMode`, salvo em `localStorage` `rr-quality`, por prévia como o
-volume); cada troca emite `quality:change {device, mode, level, reason, fps}` e `applyQualityProfile` mexe só no que
-mudou (pixel ratio, tipo/tamanho da sombra, MSAA dos alvos do compositor e bloom).
+a cada quadro desenhado da partida) mede a mediana dos intervalos em janelas de 1,5 s, depois de 2 s de aquecimento:
+desce um degrau depois de duas janelas seguidas abaixo de 45 fps, ou de uma só abaixo de 30. Aparelho preso a 30 Hz
+(economia de bateria, quadros em ~33 ms) só desce abaixo de 27. Se descer não melhorar ao menos 5%, para onde está.
+Pausa, menus e travadas longas não contam; ele nunca sobe sozinho. No PC o governador não existe. O menu de pausa
+tem Auto · Alta · Média · Baixa (`engine.quality.setMode`, salvo em `localStorage` `rr-quality`, por prévia como o
+volume; `forceLevel` é só diagnóstico). Cada troca emite `quality:change {device, mode, level, reason, fps}` e
+`applyQualityProfile` mexe só no que mudou (pixel ratio, sombra, MSAA dos alvos do compositor, bloom e ordem do céu).
 
 **Áudio** (`src/fx/audio.js` + `src/fx/audio/`): tudo sintetizado em WebAudio. `createAudio().play(nome, opts)`;
 sons novos entram em `soundsV1.js`, `soundsV2.js`, `soundsBafo.js` ou `soundsV3.js` (ou num arquivo novo) e na

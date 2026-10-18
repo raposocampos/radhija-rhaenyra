@@ -16,7 +16,8 @@ import { createSky } from '../world/sky.js';
 import { SUN_DIR, shared } from '../world/util.js';
 import { events } from './events.js';
 import {
-  applyQualityProfile, createQualityControl, detectDevice, loadQualityMode, pixelRatioFor, readDeviceEnv,
+  applyQualityProfile, createQualityControl, detectDevice, loadQualityMode, pixelRatioFor, readDeviceEnv, readGpuName,
+  SKY_FIRST, SKY_LAST,
 } from './quality.js';
 
 /** Iluminação de fim de tarde (fase 1). Cores em hex = sRGB; arrays em `sky.cloudTint`/`grade.*` = linear. */
@@ -77,16 +78,19 @@ const setColor = (c, v) => (Array.isArray(v) ? c.setRGB(v[0], v[1], v[2]) : c.se
  * @param {{ params?: URLSearchParams }} [opts]
  */
 export function createEngine(container, { params } = {}) {
-  // Qualidade por aparelho: o perfil inicial sai do aparelho e da escolha salva no menu (no PC, 'alta', com os
-  // mesmos valores de sempre). As trocas depois (menu ou governador de FPS do celular) passam por setProfile.
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
+  // Qualidade por aparelho: o perfil inicial sai do aparelho, da GPU (só no celular/tablet; no PC nem se consulta) e
+  // da escolha salva no menu (no PC, 'alta', com os mesmos valores de sempre). As trocas depois (menu ou governador
+  // de FPS do celular) passam por setProfile.
+  const device = detectDevice(readDeviceEnv(window));
   const quality = createQualityControl({
-    device: detectDevice(readDeviceEnv(window)),
+    device,
     mode: loadQualityMode(),
+    gpu: device === 'desktop' ? '' : readGpuName(renderer.getContext()),
     apply: (next, reason) => setProfile(next, reason),
     onChange: (s) => events.emit('quality:change', s),
   });
   let profile = quality.profile;
-  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
   const pr = pixelRatioFor(profile, { dpr: window.devicePixelRatio, width: window.innerWidth, height: window.innerHeight });
   /** Perfil aplicado (diagnóstico e testes): nível, pixel ratio e o motivo da última troca. */
   const qualityState = { level: profile.name, pixelRatio: pr, reason: 'inicio' };
@@ -97,6 +101,7 @@ export function createEngine(container, { params } = {}) {
   renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = profile.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = profile.shadowEvery <= 1;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -142,6 +147,8 @@ export function createEngine(container, { params } = {}) {
 
   // ------------------------------------------------ céu
   const sky = createSky(SUN_DIR);
+  // no celular o céu (nuvens por ruído, caro por pixel) vem depois do cenário: só os pixels de céu que sobram
+  sky.renderOrder = profile.skyLast ? SKY_LAST : SKY_FIRST;
   scene.add(sky);
 
   // ------------------------------------------------ pós-processamento
@@ -244,12 +251,13 @@ export function createEngine(container, { params } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
+  let shadowFrame = 0;
   /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
   function setProfile(next, reason) {
     const prev = profile;
     profile = next;
     qualityState.pixelRatio = applyQualityProfile({
-      renderer, composer, sun, bloom, scene, castShadow: lightCastsShadow,
+      renderer, composer, sun, bloom, scene, sky, castShadow: lightCastsShadow,
       dpr: window.devicePixelRatio, width: window.innerWidth, height: window.innerHeight,
     }, next, prev);
     qualityState.level = next.name;
@@ -270,7 +278,9 @@ export function createEngine(container, { params } = {}) {
       sky.material.uniforms.uTime.value = shared.time.value;
       // o céu acompanha a câmera (sem paralaxe)
       sky.position.copy(camera.position);
-      if (usePost) composer.render(dt);
+      // perfis leves redesenham o mapa de sombra a cada N quadros (a passada de sombra repete o cenário inteiro)
+      if (profile.shadowEvery > 1 && ++shadowFrame % profile.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
+      if (usePost && profile.post) composer.render(dt);
       else renderer.render(scene, camera);
     },
   };
