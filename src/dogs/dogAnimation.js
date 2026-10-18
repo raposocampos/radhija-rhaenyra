@@ -73,10 +73,10 @@ const POOP_STRAIN = [[0, 0], [0.13, 0], [0.19, 1], [0.48, 1], [0.54, 0], [1, 0]]
 /** Alívio: olhos fechados e boquinha aberta. */
 const POOP_RELIEF = [[0, 0], [0.52, 0], [0.57, 1], [0.66, 1], [0.72, 0.35], [0.94, 0.35], [1, 0]];
 /** Cavando com as traseiras. */
-const POOP_SCRATCH = [[0, 0], [0.64, 0], [0.68, 1], [0.92, 1], [0.96, 0], [1, 0]];
+const POOP_SCRATCH = [[0, 0], [0.69, 0], [0.73, 1], [0.93, 1], [0.97, 0], [1, 0]];
 /** Momento em que o cocô aparece e as patadas de cavar (o jogo solta a terrinha em cada uma). */
 export const POOP_DROP = 0.3;
-export const POOP_KICKS = Object.freeze({ from: 0.68, to: 0.92, n: 5 });
+export const POOP_KICKS = Object.freeze({ from: 0.73, to: 0.93, n: 5 });
 /** Patada de cavar: puxa a pata para trás rápido e devolve. */
 const kickShape = (u) => sstep(0, 0.28, u) * (1 - sstep(0.42, 0.95, u));
 /** Espirro (p da animação 'sneeze'): fareja, inclina a cabeça para trás, "atchim!" para baixo e sacode. */
@@ -491,9 +491,9 @@ export function createDogAnimation(ctx) {
     const spineYaw = clamp(st.turnS * 0.07, -0.25, 0.25);
     const wiggle = w.bow * Math.sin(t * 14) * 0.18;
     const flex = w.dash * Math.sin(sp2 - 0.4) * 0.12;
-    qE(Lq[BI.chest], -flex + squat * 0.36, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
+    qE(Lq[BI.chest], -flex + squat * 0.42, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
     const wallFlex = wallOn ? sstep(0.34, 0.42, wp) * (1 - sstep(0.5, 0.6, wp)) * 0.22 : 0; // garupa encolhe no impulso
-    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex - squat * 0.5 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
+    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex - squat * 0.56 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
     posOff[BI.chest].set(0, 0, w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
     posOff[BI.hips].set(0, 0, -w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
     fk(BI.hips);
@@ -759,7 +759,7 @@ export function createDogAnimation(ctx) {
     st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
     st.wagPhase += st.wagFreq * dt * TAU;
     const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3 + w.proud * 0.35 + w.aim * 0.15 - w.yuck * 0.2
-      + w.slide * 0.25 - st.mud * 0.35 + wEnv * 0.35 + squat * 0.3 + scratchK * 0.3 + xDig * 0.3;
+      + w.slide * 0.25 - st.mud * 0.35 + wEnv * 0.35 + squat * 0.05 + scratchK * 0.3 + xDig * 0.3;
     st.tailRaise = damp(st.tailRaise, raiseT, 4);
     for (let k = 0; k < 4; k++) {
       const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);

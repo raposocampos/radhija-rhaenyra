@@ -115,7 +115,7 @@ try {
     await tap('KeyC');
     // a câmera acompanha a direção final (depois da voltinha ela volta para a mesma)
     const d = await dogAt(name);
-    const marks = [[-0.17, 'voltinha'], [0.08, 'agacha'], [0.24, 'forca-1'], [0.34, 'saindo'], [0.46, 'saiu'], [0.6, 'alivio'], [0.72, 'cava-1'], [0.8, 'cava-2'], [0.97, 'fim']];
+    const marks = [[-0.17, 'voltinha'], [0.08, 'agacha'], [0.24, 'forca-1'], [0.34, 'saindo'], [0.46, 'saiu'], [0.58, 'alivio'], [0.66, 'passinho'], [0.76, 'cava-1'], [0.84, 'cava-2'], [0.97, 'fim']];
     for (const [k, label] of marks) {
       await until(new Function('i', `return (i.extras?.poop?.k ?? 1) >= ${k}`));
       await shot(`${name}-coco-${label}-lado`, around(d, 'side'));

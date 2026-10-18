@@ -17,6 +17,8 @@ export const POOP_PRE = 1.5;
 export const POOP_TIME = 4.8;
 /** Tempo que o cocô leva para sair (s), a partir de POOP_DROP. */
 const POOP_OUT = 0.6;
+/** Aliviada, ela dá um passinho à frente antes de cavar (as patadas não acertam o cocô). */
+const STEP = { from: 0.61, to: 0.7, dist: 0.2 };
 /** Duração de cada animação do cenário (s). */
 export const EXTRA_TIME = Object.freeze({ drink: 3.0, eat: 3.0, dig: 2.6, sneeze: 2.4, nudge: 1.7, roll: 3.8, swing: 6.0, spurt: 2.4 });
 const STRAIN_AT = [0.2, 0.31, 0.42];
@@ -102,9 +104,15 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     c.yawRate = 0;
     c.yaw = P.yaw;
     const p = Math.min(1, P.t / POOP_TIME);
+    // o passinho à frente (as patas andam: animSpeed acompanha o passo)
+    const su = Math.min(1, Math.max(0, (p - STEP.from) / (STEP.to - STEP.from)));
+    const se = su * su * (3 - 2 * su);
+    c.x = P.x + Math.sin(P.yaw) * STEP.dist * se;
+    c.z = P.z + Math.cos(P.yaw) * STEP.dist * se;
+    if (su > 0 && su < 1) c.animSpeed = (STEP.dist * 6 * su * (1 - su)) / ((STEP.to - STEP.from) * POOP_TIME);
     const fx = Math.sin(P.yaw);
     const fz = Math.cos(P.yaw);
-    const back = c.r * 1.7;
+    const back = c.r * 1.45;
     STRAIN_AT.forEach((k, i) => { if (once(P.marks, `s${i}`, p >= k)) emit('extra:strain', { name: P.who, x: c.x, z: c.z, n: i }); });
     if (once(P.marks, 'plop', p >= POOP_DROP)) {
       const x = c.x - fx * back;
