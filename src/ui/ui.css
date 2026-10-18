@@ -672,9 +672,12 @@
 
 /* Tela inicial: seleção de fases ------------------------------------------ */
 .rr-levels {
-  /* cinco fases numa linha em telas comuns; encolhe um pouco antes de quebrar a linha */
-  --card: clamp(184px, calc((100vw - 112px) / 5), 218px);
+  /* --per-row cartões por linha (até cinco; mais fases, linhas equilibradas: 7 → 4 + 3), vindo da UI.
+     Largura pela quantidade na linha, larga o bastante para "Lambe-Lambe na Pracinha"; perto do modo
+     compacto (761–800 px) os cartões encolhem para a linha caber em vez de quebrar em 3 + 3 + 1. */
   --gap: 12px;
+  --card: min(clamp(184px, calc((100vw - 112px) / var(--per-row, 5)), 288px),
+    calc((100vw - 33px - (var(--per-row, 5) - 1) * var(--gap)) / var(--per-row, 5)));
   position: absolute;
   left: 50%;
   bottom: calc(clamp(16px, 3.4vh, 30px) + 58px);
@@ -683,7 +686,6 @@
   flex-wrap: wrap;
   justify-content: center;
   width: max-content;
-  /* mais de cinco fases: linhas equilibradas (7 → 4 + 3); --per-row vem da UI (renderCards) */
   max-width: min(calc(100vw - 32px), calc(var(--per-row, 5) * (var(--card) + var(--gap)) - var(--gap) + 1px));
   gap: var(--gap);
 }
@@ -776,8 +778,8 @@
 .rr-levels__note {
   position: absolute;
   left: 50%;
-  /* acima da primeira linha de cartões (--level-rows vem da UI) */
-  bottom: calc(clamp(16px, 3.4vh, 30px) + 140px + (var(--level-rows, 1) - 1) * 74px);
+  /* uma linha de cartões; a UI sobe o aviso para cima da linha de cima quando há mais (showTitleNote) */
+  bottom: calc(clamp(16px, 3.4vh, 30px) + 140px);
   transform: translate(-50%, 6px);
   display: flex;
   align-items: center;

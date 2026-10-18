@@ -34,6 +34,19 @@ const menuWith = async (ids) => {
     })),
   }), saved);
 };
+/** Quantos cartões em cada linha, pela posição de layout (sem o transform do foco). */
+const rowsOf = (cards) => [...new Set(cards.map((card) => card.top))].map((top) => cards.filter((card) => card.top === top).length).join();
+const layoutCards = () => ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => ({ top: card.offsetTop })));
+/** Clica num cartão bloqueado: o aviso aparece acima da linha de cima, sem cobrir nenhum cartão. */
+const lockedNote = async () => {
+  await page.click('.rr-levels .rr-lvcard.is-locked');
+  await H.sleep(400);
+  return ev(() => {
+    const note = document.querySelector('.rr-levels__note.is-on')?.getBoundingClientRect();
+    const top = Math.min(...[...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => card.getBoundingClientRect().top));
+    return { shown: !!note, bottom: note?.bottom, top, clear: !!note && note.bottom <= top - 4 };
+  });
+};
 try {
   await load('?level=fase6&play');
   let state = await info();
@@ -197,11 +210,27 @@ try {
   let menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5']);
   const nums = menu.cards.map((card) => card.num).join();
   check(menu.state === 'title' && nums === '1,2,3,4,5,6,7', 'menu com as sete fases em ordem', nums);
-  const rows = [...new Set(menu.cards.map((card) => card.top))].map((top) => menu.cards.filter((card) => card.top === top).length);
-  check(rows.join() === '4,3', 'cartões em duas linhas equilibradas (4 + 3)', rows.join());
+  check(rowsOf(menu.cards) === '4,3', 'cartões em duas linhas equilibradas (4 + 3)', rowsOf(menu.cards));
   check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true', 'fase 5 concluída libera a 6; a 7 continua bloqueada', JSON.stringify(menu.cards));
   check(menu.unchanged, 'abrir o menu não reescreve o save antigo (medalhas e conclusões preservadas)');
+  await page.evaluate(() => document.fonts.ready);
+  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth)), 'nomes das sete fases inteiros nos cartões (sem reticências) em 1280 px');
   await shot('00-menu-sete-fases.png');
+  let note = await lockedNote();
+  check(note.clear, 'aviso de fase bloqueada acima das duas linhas, sem cobrir cartões', JSON.stringify(note));
+  await shot('00b-aviso-fase-bloqueada.png');
+  // perto do modo compacto (761–800 px) os cartões encolhem e as linhas continuam 4 + 3
+  for (const width of [780, 1024]) {
+    await page.setViewportSize({ width, height: 720 });
+    await H.sleep(400);
+    const cards = await layoutCards();
+    check(rowsOf(cards) === '4,3', `${width} px: cartões em 4 + 3`, rowsOf(cards));
+    note = await lockedNote();
+    check(note.clear, `${width} px: aviso acima dos cartões`, JSON.stringify(note));
+    if (width === 780) await shot('00c-menu-780px.png');
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await H.sleep(300);
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4']);
   check(menu.cards[5]?.locked === true && menu.cards[6]?.locked === true, 'sem a fase 5 concluída, a 6 e a 7 ficam bloqueadas');
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6']);
