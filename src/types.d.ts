@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -745,6 +745,38 @@ export interface Fase8Props extends LevelProps {
   rackButton: WallButtonProp;
   /** Caminha: spot(objeto) = onde ele fica (o puzzle prende ali a meia; a mantinha vai com blanket.place('bed')). */
   bed: PropBase & HighlightProp & { spot(thing: Fase8Thing): THREE.Object3D };
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
+export type Fase9Thing = 'glasses' | 'book';
+/** Pose do gato Bichano (src/world/cat.js): onde está, para onde olha e o que faz (k: progresso ou metros andados). */
+export interface CatPose { x: number; y?: number; z: number; yaw?: number; mode: 'sleep' | 'wake' | 'jump' | 'walk' | 'sit'; k?: number }
+export interface Fase9Props extends LevelProps {
+  /** Óculos do vovô (na prateleira alta da estante leste). */
+  glasses: ItemProp;
+  /** Livro de histórias: setFall(null = no alto do armário, debaixo do gato; 0..1 caindo; 1 = no chão). */
+  book: ItemProp & { setFall(k: number | null): void };
+  /** Escadinha de biblioteca com rodinhas (empurrável no trilho). */
+  ladder: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  /** Globo terrestre de rodinhas. */
+  globe: PropBase & { setPos(x: number, z: number): void };
+  /** Ventilador de chão: setAligned(on) acende a luzinha do encaixe na grade do duto. */
+  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void };
+  /** Porta do escritório: pivô na dobradiça, folha ao longo de -Z local. */
+  door: GateProp;
+  /** O gato Bichano. */
+  cat: PropBase & { setPose(p: CatPose): void };
+  /**
+   * Duto do aquecedor: setOpen(registro aberto), setPuffs(progresso 0..1 de cada baforada dentro do cano),
+   * outletPuff() = a baforada saindo pela grade do escritório em cima do gato.
+   */
+  duct: PropBase & { setOpen(on: boolean): void; setPuffs(list: number[]): void; outletPuff(): void };
+  brakeLever: WallButtonProp;
+  damperLever: WallButtonProp;
+  doorHandle: WallButtonProp;
+  doorHandleIn: WallButtonProp;
+  /** Mesinha ao lado da poltrona: spot(objeto) = onde ele fica (o puzzle prende ali). */
+  table: PropBase & HighlightProp & { spot(thing: Fase9Thing): THREE.Object3D };
   collectibles: CollectibleProp[];
   reset(): void;
 }
