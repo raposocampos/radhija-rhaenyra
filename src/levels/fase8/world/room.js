@@ -207,7 +207,8 @@ function buildWalls(layout, updaters) {
   const zN = B.minZ - T / 2; // centro da parede do fundo (face em B.minZ)
   const paint = plasterMat('#f4e7c6');
   const sideMat = plasterMat('#efe2c2');
-  const x0 = B.minX - T, x1 = B.maxX + T;
+  // a parede do fundo termina 2 cm dentro das laterais (as pontas não ficam no plano da face de fora delas)
+  const x0 = B.minX - T + 0.02, x1 = B.maxX + T - 0.02;
 
   // ---- parede do fundo com a janela
   const a = wi.cx - wi.w / 2, b = wi.cx + wi.w / 2;

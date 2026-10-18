@@ -154,8 +154,8 @@ test('Lambe-Lambe: trocar de dog, pausar e reiniciar não deixam a lambida presa
 });
 
 // ------------------------------------------------------------------------------------------------ fase 7
-test('fase 7: última fase da campanha, com cenário sob demanda e props reais', async (t) => {
-  assert.equal(INDEX, LEVELS.length - 1, 'a fase 7 fecha a campanha');
+test('fase 7: na campanha antes da 8, com cenário sob demanda e props reais', async (t) => {
+  assert.equal(LEVELS[INDEX + 1]?.id, 'fase8', 'depois da 7 vem a 8');
   assert.equal(LEVELS.filter((def) => def.id === 'fase7').length, 1);
   assert.equal(DEV_LEVELS.some((def) => def.id === 'fase7'), false, 'saiu do catálogo de desenvolvimento');
   assert.equal(typeof fase7.load, 'function');
