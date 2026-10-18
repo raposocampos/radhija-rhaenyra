@@ -44,7 +44,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
   let hooks = {};
   const fresh = () => ({
     used: false,
-    /** @type {null | { who: import('../types').DogName, t: number, x: number, z: number, yaw: number, marks: Set<string>, kick: number }} */
+    /** @type {null | { who: import('../types').DogName, t: number, x: number, z: number, yaw: number, yaw0: number, marks: Set<string>, kick: number }} */
     poop: null,
     /** @type {null | { who: import('../types').DogName, spot: ExtraSpot, t: number, dur: number, x0: number, z0: number, yaw0: number, x: number, z: number, yaw: number, y: number, marks: Set<string>, n: number, slope: number, action: string }} */
     act: null,
