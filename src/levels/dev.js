@@ -3,7 +3,8 @@
 import pulo from './_pulo/index.js';
 import bafo from './_bafo/index.js';
 import modelo from './_modelo/index.js';
+import fase6 from './fase6/index.js';
 
 // Cada definição valida o contrato concreto antes de entrar neste catálogo heterogêneo.
 /** @type {import('../types').LevelDef[]} */
-export const DEV_LEVELS = [pulo, bafo, modelo];
+export const DEV_LEVELS = [pulo, bafo, modelo, fase6];

@@ -47,8 +47,9 @@ EST-06 também foi aprovado e publicado pelo PR #12, squash `597c8f2`;
 CI main `39075921425`, deploy `39075957502` e versão pública conferidos.
 EST-07A foi aprovado e publicado pelo PR #13, squash `4552e60`;
 CI main `39077869869`, deploy `39077894749` e versão pública conferidos.
-Essa é a nova base do PR #14 (EST-07B), atualizado pelo coordenador em
-`codex/eventos-nucleo` e sujeito a validação/aprovação próprias.
+PR #14 (EST-07B) aprovado no head `cf33d69`, integrado em `fae8acd`; trabalho em
+`codex/eventos-nucleo`. CI main `39079619941` passou; deploy `39079647854` passou.
+Produção HTTP 200/version.json confirmou `fae8acd`.
 
 ## Boas práticas a preservar
 
@@ -81,22 +82,22 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
-| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | Configuração publicada no PR #13; eventos no PR #14, nova base em validação |
-| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
+| [x] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | PRs #13 e #14 aprovados, integrados e publicados |
+| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | Em implementação separada |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-EST-00 a EST-06 e EST-09 foram publicados. Faltam duas etapas: EST-07 e
-EST-08. Configuração da EST-07 já publicada em `4552e60`; eventos do PR #14
-atualizados para essa base, com novo CI/prévia e E2E antes da aprovação. Cada versão
+EST-00 a EST-07 e EST-09 foram publicados.
+Resta EST-08, em implementação separada. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
-principal. A proposta já está no PR #9; ainda não há tema/objeto aprovado
-nem código de fase 6 implementado.
+principal. O conceito Expresso do Superbafo do PR #9 foi escolhido pelo usuário
+para protótipo, mantendo a direção artística existente. Implementação em
+frentes próprias, conforme CONTEXTO; nenhuma aprovação antecipada de publicação.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -327,11 +328,11 @@ Escopo desta rodada em duas entregas, sem reescrever todo o núcleo:
   preservando ordem, limite e diagnóstico. Estado, carregamento, reset e
   descarte continuam em `game.js`. Implementação `40e83ce`, sete testes runtime
   e três provas negativas de tipos; revisão independente sem bloqueios.
-  PR #14 passou CI `39076449277` (180 testes/tipos/build) e E2E `39076448099`
-  no head `3a3d02e`, base `597c8f2`. Atualização para `4552e60` neste checkpoint
-  exige CI/prévia, E2E e aprovação da versão nova; não reutilizar os resultados.
+  PR #14 aprovado no head `cf33d69`, base `4552e60`: CI `39078268404` (183
+  testes/tipos/build), E2E completo `39078277583` e prévia conferidos. Integrado
+  em `fae8acd`; CI main/deploy passaram e produção foi conferida conforme CONTEXTO.
 
-Coordenador entregou #13 em `codex/estabilizacao-nucleo` e atualiza #14 em
+Coordenador entregou #13 em `codex/estabilizacao-nucleo` e #14 em
 `codex/eventos-nucleo`; cada executor usa worktree separado.
 Verificar identidade de configurações e histórico, ordem e efeitos da emissão;
 tipos/testes/build e E2E na nuvem. Demais extrações futuras dependem de uma
@@ -400,7 +401,9 @@ head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação
   (2026-10-17). PR #9 reformulado como **Expresso do Superbafo**: oficina de
   brinquedos, bolinha-planeta, pulo no pedal para selecionar trilho e superbafo
   no nariz mecânico do trem para trazer o objeto. Imagem conceitual apresentada;
-  desenho ainda não aprovado. Atualizar/revalidar a base do PR antes de entregá-lo.
+  desenho posteriormente escolhido para protótipo, com direção artística igual
+  à do jogo. `codex/prototipo-expresso` coordena cenário/testes em worktrees
+  separados, base publicada `4552e60`; somente DEV_LEVELS na primeira entrega.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
 - Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.

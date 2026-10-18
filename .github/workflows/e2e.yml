@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, recursos]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, recursos]
 
 permissions:
   contents: read
@@ -19,11 +19,12 @@ concurrency:
 jobs:
   infra-build:
     name: Infraestrutura e smoke do build
-    if: inputs.suite == 'todas'
+    if: inputs.suite == 'todas' || inputs.suite == 'expresso'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       CI: 'true'
+      SMOKE_DEV_LEVEL: ${{ (inputs.suite == 'expresso' || inputs.suite == 'todas') && 'fase6' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -53,11 +54,12 @@ jobs:
           retention-days: 7
   recursos:
     name: Recursos gráficos após trocas de fase
-    if: inputs.suite == 'todas' || inputs.suite == 'recursos'
+    if: inputs.suite == 'todas' || inputs.suite == 'recursos' || inputs.suite == 'expresso'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       CI: 'true'
+      MEASURE_DEV_LEVEL: ${{ (inputs.suite == 'expresso' || inputs.suite == 'todas') && 'fase6' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -89,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
