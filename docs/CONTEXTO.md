@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (menu principal e modo sem dicas; fase 8). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (extras escondidos, tarefa E). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: menu principal, Opções e modo sem dicas (pedido de 2026-10-18)
+## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 
 - Pedido do usuário: tela inicial só com **Jogar** e **Opções**; Jogar abre **Modo História** (visível, "Em breve")
   e o modo **Fases** (nome escolhido pelo usuário; constante `MODES` em `src/ui/markup.js`), que abre
@@ -34,28 +34,24 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **E (escopo ampliado pelo usuário, 2026-10-18):** as animações extras e o segredo combinado valem nas **10 fases**,
-  cada fase com animações do próprio cenário; o segredo só depois de pegar todos os ossinhos da fase (todas têm 3).
-  O usuário aceitou um registro técnico discreto nos docs (resposta de 2026-10-18); nada no jogo, no README ou na
-  tela de controles.
-- **B (aprovada, integrando; Claude):** fase 8 "Lavanderia de Domingo", PR #24, branch `claude/fase8-lavanderia`
-  (worktree próprio), base `09ed23a`. Nenhum teste ou build rodou no PC. Desenho aprovado pelo usuário: a meia
-  listrada presa com pregador no varal elétrico de teto (botão alto → o varal desce por 6 s; só o tranco da arrancada
-  da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de rodinhas na frente da máquina + botão de
-  centrifugar → ela cai no cesto; sem o cesto cai no chão e volta ao cesto com E; o cesto empurrado até a caminha a
-  entrega e estaciona ao lado). Entra direto na campanha (`LEVELS`, oito fases, 4 + 4 no menu); a meia é um item
-  novo (`sock`: pose de boca, ícone, nome, som, modelo em `toys.js`). `createPushCrate` ganhou `freeze()`.
-  Testes: `test/fase8.test.mjs`, catálogo com oito fases, suíte E2E `lavanderia` e capturas
-  `tools/scripts/capture-lavanderia.mjs`.
-- Validação do código em `5b97413`: CI `39160268932` verde, prévia publicada, E2E `todas` `39160265826` com sucesso
-  (na 1ª tentativa a partida `lavanderia` travou logo após carregar a fase e caiu no limite de 30 min; refeita, passou
-  12/12). O usuário aprovou a versão `1faefbd`, mas o main avançou (#25, tela cheia no iPhone): merge do main no
-  branch sem conflitos; pelo AGENTS.md, CI/prévia novos e nova aprovação antes de integrar.
-- Pendência registrada: no CI, os prazos do harness E2E contam tempo de jogo (`deadline`, `gsleep`, `waitFor`). Se o
-  jogo congelar, eles nunca vencem e o job só cai no limite de 30 min. Vale um prazo de relógio como teto (entrega
-  própria, fora do #24).
-- Próximo passo do #24: com a nova aprovação, merge squash com SHA esperado, CI do main, liberar o deploy e conferir
-  `version.json`.
+- **Ordem atual (pedido do usuário, 2026-10-18):** A e B entregues; **E agora**, antes de C (fase 9) e D (fase 10).
+- **E (em andamento, Claude):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
+  `claude/animacoes-extras` (worktree próprio), base `42715b6`. Regras do usuário: o cocô com **C** no teclado e
+  **R3** no controle, só depois dos 3 ossinhos e uma vez por fase (o reinício libera); a animação é o principal
+  (agachada, traseiras dobradas, rabinho em pé, tremidinha, cara de concentração, cocô de desenho fofo e alívio
+  cavando com as traseiras). As animações do cenário (beber, comer, balanço, areia etc.) valem a qualquer hora, com
+  E perto do objeto, e foram todas aprovadas. Tudo escondido no jogo e no README; a nota técnica discreta está em
+  ARQUITETURA §6 ("Extras"), liberada pelo usuário. O menu novo (PR #26) não pode citar o C nem o R3.
+  Arquivos: `src/game/extras.js`, poses em `src/dogs/dogAnimation.js`, `src/world/poop.js`, `src/world/extraProps.js`,
+  `src/levels/faseN/extras.js`, sons em `src/fx/audio/soundsExtras.js`, `test/extras.test.mjs`, suíte E2E `extras` e
+  `tools/scripts/capture-extras.mjs`. Próximo passo: CI, E2E `extras` e `todas`, revisar as capturas da animação,
+  ajustar e entregar a prévia.
+- **B entregue (fase 8, PR #24):** squash `42715b6` no main (head aprovado `2cd2eda`), CI do main `39166620003`,
+  deploy `39166669699` com sucesso; `version.json` de produção conferido em `42715b6`. Não repetir merge/deploy.
+- **C pausada (fase 9):** commit local de trabalho `a4f6c58` no branch `claude/fase9-biblioteca` (worktree
+  `.claude/worktrees/fase9-biblioteca`): layout, iluminação, definição e puzzle, sem cenário (world/), itens óculos e
+  livro, gato, sons, testes, E2E e capturas. Retomar depois da E, atualizando o branch com o main.
+- Prazo de relógio no harness E2E: entregue à parte (PR #27, de outra sessão); conferir o estado no GitHub.
 - **Retorno do usuário sobre a progressão (2026-10-18):** a 8 está de bom tamanho para apresentar a mecânica nova; a
   **9** deve ser um pouco mais complexa (mais elementos, **mais áreas**, puzzle mais difícil); a **10** fecha a demo
   com **todas as mecânicas**, o puzzle mais elaborado, **no mínimo 3 objetos** e um **pequeno enigma**: a ordem certa
