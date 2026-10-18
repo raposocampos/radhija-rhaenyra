@@ -1079,6 +1079,12 @@ export function createGame({ engine, dogs, levels, params }) {
     get input() { return input; },
     get stay() { return { ...stay }; },
     setStay(name, on) { if (ctrls?.[name] && name !== activeDog) setStay(name, on); },
+    /** Piso sob a dog (o deque do escorregador; no pulo, o chão) e se ela está numa rampa: para os anéis. */
+    floorOf(name) {
+      const c = ctrls?.[name];
+      if (!c) return { y: 0, ramp: false };
+      return { y: c.jumpT > 0 ? 0 : Math.max(0, c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
+    },
     update,
     reset,
     loadLevel,

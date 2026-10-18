@@ -979,24 +979,28 @@ export function createFeedback(opts) {
     // anéis das dogs + anel tracejado da companheira esperando
     for (const [name, r] of Object.entries(dogRings)) {
       const p = dogPos(name);
-      const on = showWorldUi && name === active && !!p;
+      // num piso elevado (o deque do escorregador) o anel sobe junto; na rampa inclinada, some
+      const surface = gm?.floorOf?.(name);
+      const floor = surface?.y || 0;
+      const onRamp = !!surface?.ramp;
+      const on = showWorldUi && name === active && !!p && !onRamp;
       r.a = damp(r.a, on ? 1 : 0, on ? 6 : 10, dt);
       r.s = damp(r.s, on ? 1 : 0.6, 8, dt);
       r.pop = Math.max(0, r.pop - dt * 2.5);
       r.mesh.visible = r.a > 0.01;
       if (r.mesh.visible && p) {
-        r.mesh.position.set(p.x, 0.018, p.z);
+        r.mesh.position.set(p.x, floor + 0.018, p.z);
         const pulse = 1 + Math.sin(r.pop * Math.PI) * 0.22;
         r.mesh.scale.setScalar(r.r * 2 * r.s * pulse);
         r.mat.uniforms.uOpacity.value = 0.55 * r.a;
       }
       const sr = stayRings[name];
-      const son = showWorldUi && name !== active && stay[name] && !!p;
+      const son = showWorldUi && name !== active && stay[name] && !!p && !onRamp;
       sr.a = damp(sr.a, son ? 1 : 0, son ? 5 : 9, dt);
       sr.pop = Math.max(0, sr.pop - dt * 2.2);
       sr.mesh.visible = sr.a > 0.01;
       if (sr.mesh.visible && p) {
-        sr.mesh.position.set(p.x, 0.016, p.z);
+        sr.mesh.position.set(p.x, floor + 0.016, p.z);
         const pulse = 1 + Math.sin(sr.pop * Math.PI) * 0.3;
         sr.mesh.scale.setScalar(sr.r * 2 * pulse * (0.96 + Math.sin(time * 2.4) * 0.04));
         sr.mat.uniforms.uOpacity.value = 0.5 * sr.a;
