@@ -1,0 +1,425 @@
+{
+  "schema": 2,
+  "status": "adopted",
+  "commit": "b4a61b380cfd96b1f27ba8f4fba28037ee228b4d",
+  "buildHash": "76f50595f93c659ade530cde16a157d9c944b469453f8e2259b728b68b03f630",
+  "run": "39082606479",
+  "attempt": "1",
+  "phases": [
+    {
+      "level": "fase1",
+      "environment": {
+        "node": "v24.21.0",
+        "os": "linux",
+        "release": "6.17.0-1022-azure",
+        "arch": "x64",
+        "cpu": "AMD EPYC 9V74 80-Core Processor",
+        "logicalCpus": 4,
+        "systemMemoryBytes": 16766414848,
+        "runnerImage": "ubuntu24",
+        "runnerImageVersion": "20261012.334.1",
+        "browser": "131.0.6778.33"
+      },
+      "conditions": {
+        "protocol": "isolated-level-v2",
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "deviceScaleFactor": 1,
+        "warmupCycles": 1,
+        "measuredCycles": 3,
+        "minimumFrames": 20,
+        "minimumDurationMs": 8000,
+        "postGcWarmupFrames": 4,
+        "postGcWarmupMs": 1000,
+        "scope": "boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels",
+        "state": "playing",
+        "inputs": "none; idle puzzle and companion update normally",
+        "camera": "bounds-based fixed overview per phase",
+        "quality": "normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish",
+        "cadence": "rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt",
+        "frameCpu": "game.update entry through engine.render return; includes UI/effects and probe overhead, not GPU completion",
+        "renderCpu": "synchronous engine.render call; not GPU time",
+        "load": "level:loading to level:loaded; includes procedural build and engine preparation, not isolated module/build/compile timings",
+        "uiReleasedRender": "first synchronous render return after boot overlay removed and transition curtain fully gone; submission proxy, not GPU presentation",
+        "heap": "CDP collectGarbage + Runtime.getHeapUsage between load and temporal warmup; JS heap, not VRAM/process memory",
+        "limitations": "headless Chromium on SwiftShader is a CI reference, not physical GPU/mobile performance or a complete gameplay workload",
+        "browserArguments": [
+          "--enable-gpu",
+          "--ignore-gpu-blocklist",
+          "--enable-unsafe-swiftshader",
+          "--autoplay-policy=no-user-gesture-required",
+          "--use-angle=swiftshader"
+        ]
+      },
+      "quality": {
+        "pixelRatio": 1,
+        "buffer": [
+          1280,
+          720
+        ],
+        "shadows": true,
+        "shadowSize": [
+          2048,
+          2048
+        ],
+        "bloom": true,
+        "passes": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      "camera": {
+        "position": [
+          8.72,
+          10.240000000000002,
+          13.930000000000001
+        ],
+        "fov": 38
+      },
+      "limits": {
+        "cadenceP95Ms": 3779.94999999999,
+        "frameCpuP95Ms": 25.779999999937715,
+        "loadMs": 13196.089999999976,
+        "uiReleasedRenderMs": 18114.435,
+        "heapUsedBytes": 15601916
+      }
+    },
+    {
+      "level": "fase2",
+      "environment": {
+        "node": "v24.21.0",
+        "os": "linux",
+        "release": "6.17.0-1022-azure",
+        "arch": "x64",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "logicalCpus": 4,
+        "systemMemoryBytes": 16766414848,
+        "runnerImage": "ubuntu24",
+        "runnerImageVersion": "20261012.334.1",
+        "browser": "131.0.6778.33"
+      },
+      "conditions": {
+        "protocol": "isolated-level-v2",
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "deviceScaleFactor": 1,
+        "warmupCycles": 1,
+        "measuredCycles": 3,
+        "minimumFrames": 20,
+        "minimumDurationMs": 8000,
+        "postGcWarmupFrames": 4,
+        "postGcWarmupMs": 1000,
+        "scope": "boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels",
+        "state": "playing",
+        "inputs": "none; idle puzzle and companion update normally",
+        "camera": "bounds-based fixed overview per phase",
+        "quality": "normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish",
+        "cadence": "rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt",
+        "frameCpu": "game.update entry through engine.render return; includes UI/effects and probe overhead, not GPU completion",
+        "renderCpu": "synchronous engine.render call; not GPU time",
+        "load": "level:loading to level:loaded; includes procedural build and engine preparation, not isolated module/build/compile timings",
+        "uiReleasedRender": "first synchronous render return after boot overlay removed and transition curtain fully gone; submission proxy, not GPU presentation",
+        "heap": "CDP collectGarbage + Runtime.getHeapUsage between load and temporal warmup; JS heap, not VRAM/process memory",
+        "limitations": "headless Chromium on SwiftShader is a CI reference, not physical GPU/mobile performance or a complete gameplay workload",
+        "browserArguments": [
+          "--enable-gpu",
+          "--ignore-gpu-blocklist",
+          "--enable-unsafe-swiftshader",
+          "--autoplay-policy=no-user-gesture-required",
+          "--use-angle=swiftshader"
+        ]
+      },
+      "quality": {
+        "pixelRatio": 1,
+        "buffer": [
+          1280,
+          720
+        ],
+        "shadows": true,
+        "shadowSize": [
+          2048,
+          2048
+        ],
+        "bloom": true,
+        "passes": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      "camera": {
+        "position": [
+          8.565000000000001,
+          10.48,
+          14.21
+        ],
+        "fov": 38
+      },
+      "limits": {
+        "cadenceP95Ms": 5291.645999999999,
+        "frameCpuP95Ms": 34.580000000080325,
+        "loadMs": 18216.464999999997,
+        "uiReleasedRenderMs": 28265.10000000021,
+        "heapUsedBytes": 17781139.8
+      }
+    },
+    {
+      "level": "fase3",
+      "environment": {
+        "node": "v24.21.0",
+        "os": "linux",
+        "release": "6.17.0-1022-azure",
+        "arch": "x64",
+        "cpu": "AMD EPYC 9V45 96-Core Processor",
+        "logicalCpus": 4,
+        "systemMemoryBytes": 16766414848,
+        "runnerImage": "ubuntu24",
+        "runnerImageVersion": "20261012.334.1",
+        "browser": "131.0.6778.33"
+      },
+      "conditions": {
+        "protocol": "isolated-level-v2",
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "deviceScaleFactor": 1,
+        "warmupCycles": 1,
+        "measuredCycles": 3,
+        "minimumFrames": 20,
+        "minimumDurationMs": 8000,
+        "postGcWarmupFrames": 4,
+        "postGcWarmupMs": 1000,
+        "scope": "boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels",
+        "state": "playing",
+        "inputs": "none; idle puzzle and companion update normally",
+        "camera": "bounds-based fixed overview per phase",
+        "quality": "normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish",
+        "cadence": "rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt",
+        "frameCpu": "game.update entry through engine.render return; includes UI/effects and probe overhead, not GPU completion",
+        "renderCpu": "synchronous engine.render call; not GPU time",
+        "load": "level:loading to level:loaded; includes procedural build and engine preparation, not isolated module/build/compile timings",
+        "uiReleasedRender": "first synchronous render return after boot overlay removed and transition curtain fully gone; submission proxy, not GPU presentation",
+        "heap": "CDP collectGarbage + Runtime.getHeapUsage between load and temporal warmup; JS heap, not VRAM/process memory",
+        "limitations": "headless Chromium on SwiftShader is a CI reference, not physical GPU/mobile performance or a complete gameplay workload",
+        "browserArguments": [
+          "--enable-gpu",
+          "--ignore-gpu-blocklist",
+          "--enable-unsafe-swiftshader",
+          "--autoplay-policy=no-user-gesture-required",
+          "--use-angle=swiftshader"
+        ]
+      },
+      "quality": {
+        "pixelRatio": 1,
+        "buffer": [
+          1280,
+          720
+        ],
+        "shadows": true,
+        "shadowSize": [
+          2048,
+          2048
+        ],
+        "bloom": true,
+        "passes": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      "camera": {
+        "position": [
+          8.58,
+          10.56,
+          14.32
+        ],
+        "fov": 38
+      },
+      "limits": {
+        "cadenceP95Ms": 4056.794999999967,
+        "frameCpuP95Ms": 27.24000000021187,
+        "loadMs": 13544.970000000007,
+        "uiReleasedRenderMs": 28046.749999999985,
+        "heapUsedBytes": 19477053.8
+      }
+    },
+    {
+      "level": "fase4",
+      "environment": {
+        "node": "v24.21.0",
+        "os": "linux",
+        "release": "6.17.0-1022-azure",
+        "arch": "x64",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "logicalCpus": 4,
+        "systemMemoryBytes": 16766414848,
+        "runnerImage": "ubuntu24",
+        "runnerImageVersion": "20261012.334.1",
+        "browser": "131.0.6778.33"
+      },
+      "conditions": {
+        "protocol": "isolated-level-v2",
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "deviceScaleFactor": 1,
+        "warmupCycles": 1,
+        "measuredCycles": 3,
+        "minimumFrames": 20,
+        "minimumDurationMs": 8000,
+        "postGcWarmupFrames": 4,
+        "postGcWarmupMs": 1000,
+        "scope": "boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels",
+        "state": "playing",
+        "inputs": "none; idle puzzle and companion update normally",
+        "camera": "bounds-based fixed overview per phase",
+        "quality": "normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish",
+        "cadence": "rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt",
+        "frameCpu": "game.update entry through engine.render return; includes UI/effects and probe overhead, not GPU completion",
+        "renderCpu": "synchronous engine.render call; not GPU time",
+        "load": "level:loading to level:loaded; includes procedural build and engine preparation, not isolated module/build/compile timings",
+        "uiReleasedRender": "first synchronous render return after boot overlay removed and transition curtain fully gone; submission proxy, not GPU presentation",
+        "heap": "CDP collectGarbage + Runtime.getHeapUsage between load and temporal warmup; JS heap, not VRAM/process memory",
+        "limitations": "headless Chromium on SwiftShader is a CI reference, not physical GPU/mobile performance or a complete gameplay workload",
+        "browserArguments": [
+          "--enable-gpu",
+          "--ignore-gpu-blocklist",
+          "--enable-unsafe-swiftshader",
+          "--autoplay-policy=no-user-gesture-required",
+          "--use-angle=swiftshader"
+        ]
+      },
+      "quality": {
+        "pixelRatio": 1,
+        "buffer": [
+          1280,
+          720
+        ],
+        "shadows": true,
+        "shadowSize": [
+          2048,
+          2048
+        ],
+        "bloom": true,
+        "passes": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      "camera": {
+        "position": [
+          8.32,
+          10.240000000000002,
+          13.880000000000003
+        ],
+        "fov": 38
+      },
+      "limits": {
+        "cadenceP95Ms": 5938.104499999959,
+        "frameCpuP95Ms": 41.83499999982305,
+        "loadMs": 19657.334999999865,
+        "uiReleasedRenderMs": 33910.45000000002,
+        "heapUsedBytes": 17627653.6
+      }
+    },
+    {
+      "level": "fase5",
+      "environment": {
+        "node": "v24.21.0",
+        "os": "linux",
+        "release": "6.17.0-1022-azure",
+        "arch": "x64",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "logicalCpus": 4,
+        "systemMemoryBytes": 16766414848,
+        "runnerImage": "ubuntu24",
+        "runnerImageVersion": "20261012.334.1",
+        "browser": "131.0.6778.33"
+      },
+      "conditions": {
+        "protocol": "isolated-level-v2",
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "deviceScaleFactor": 1,
+        "warmupCycles": 1,
+        "measuredCycles": 3,
+        "minimumFrames": 20,
+        "minimumDurationMs": 8000,
+        "postGcWarmupFrames": 4,
+        "postGcWarmupMs": 1000,
+        "scope": "boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels",
+        "state": "playing",
+        "inputs": "none; idle puzzle and companion update normally",
+        "camera": "bounds-based fixed overview per phase",
+        "quality": "normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish",
+        "cadence": "rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt",
+        "frameCpu": "game.update entry through engine.render return; includes UI/effects and probe overhead, not GPU completion",
+        "renderCpu": "synchronous engine.render call; not GPU time",
+        "load": "level:loading to level:loaded; includes procedural build and engine preparation, not isolated module/build/compile timings",
+        "uiReleasedRender": "first synchronous render return after boot overlay removed and transition curtain fully gone; submission proxy, not GPU presentation",
+        "heap": "CDP collectGarbage + Runtime.getHeapUsage between load and temporal warmup; JS heap, not VRAM/process memory",
+        "limitations": "headless Chromium on SwiftShader is a CI reference, not physical GPU/mobile performance or a complete gameplay workload",
+        "browserArguments": [
+          "--enable-gpu",
+          "--ignore-gpu-blocklist",
+          "--enable-unsafe-swiftshader",
+          "--autoplay-policy=no-user-gesture-required",
+          "--use-angle=swiftshader"
+        ]
+      },
+      "quality": {
+        "pixelRatio": 1,
+        "buffer": [
+          1280,
+          720
+        ],
+        "shadows": true,
+        "shadowSize": [
+          2048,
+          2048
+        ],
+        "bloom": true,
+        "passes": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      "camera": {
+        "position": [
+          8.32,
+          10.240000000000002,
+          13.880000000000003
+        ],
+        "fov": 38
+      },
+      "limits": {
+        "cadenceP95Ms": 1886.6955000000114,
+        "frameCpuP95Ms": 26.55500000004541,
+        "loadMs": 9115.099999999977,
+        "uiReleasedRenderMs": 13710.200000000012,
+        "heapUsedBytes": 15584938.6
+      }
+    }
+  ]
+}

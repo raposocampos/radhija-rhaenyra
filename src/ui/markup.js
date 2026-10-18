@@ -67,8 +67,8 @@ export function richText(text) {
   return safe.replace(/\(([^)]{1,24})\)|\bShift\b/g, (m, inner) => {
     if (inner === undefined) return glyph('Shift');
     const t = inner.trim();
-    if (/^(E|Q|F|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
-    if (/\b(E|Q|F|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F)\b/g, (k) => glyph(k))}</span>`;
+    if (/^(E|Q|F|R|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
+    if (/\b(E|Q|F|R|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F|R)\b/g, (k) => glyph(k))}</span>`;
     return m;
   });
 }

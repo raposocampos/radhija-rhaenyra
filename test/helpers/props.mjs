@@ -175,6 +175,49 @@ export function stubFase5Props(root, layout) {
 }
 
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubFase6Props(root, layout) {
+  const ball = item(root, 'ball', layout.BALL);
+  ball.home.y = layout.BALL.y;
+  ball.object.position.copy(ball.home);
+  const trainObject = object(root, 'train');
+  const junctionObject = object(root, 'junction');
+  const noseObject = object(trainObject, 'nose');
+  /** @type {import('../../src/types').Fase6Props} */
+  const props = {
+    pedal: press(root, 'fase6.pedal'),
+    junction: checked('fase6.junction', {
+      object: junctionObject,
+      /** @param {import('../../src/types').Fase6Route} route */
+      setRoute(route) { junctionObject.rotation.y = route === 'delivery' ? Math.PI / 2 : -Math.PI / 2; },
+    }),
+    train: checked('fase6.train', {
+      object: trainObject,
+      /** @param {import('../../src/types').Fase6TrainPose} pose */
+      setPose(pose) { trainObject.position.set(pose.x, 0, pose.z); trainObject.rotation.y = pose.yaw; },
+    }),
+    nose: checked('fase6.nose', {
+      object: noseObject,
+      setSneeze(t) { noseObject.scale.set(1 + t * 0.3, 1 + t * 0.15, 1 - t * 0.55); },
+    }),
+    ball,
+    goal: highlight(root, 'fase6.goal'),
+    collectibles: [],
+    reset() {
+      props.pedal.setPress(0);
+      props.junction.setRoute('loop');
+      props.train.setPose(layout.TRAIN.start);
+      props.nose.setSneeze(0);
+      ball.object.position.copy(ball.home);
+      ball.object.rotation.set(0, 0, 0);
+      ball.setHighlight(false);
+      props.goal.setHighlight(false);
+    },
+  };
+  props.reset();
+  return level('fase6', props);
+}
+
+/** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubPlaceholderProps(root, layout) {
   const obj = object(root, 'item');
   const pos = layout.BALL || layout.SLIPPER;
@@ -208,6 +251,7 @@ export function stubProps(id, root, layout) {
     case 'fase3': return stubFase3Props(root, layout);
     case 'fase4': return stubFase4Props(root, layout);
     case 'fase5': return stubFase5Props(root, layout);
+    case 'fase6': return stubFase6Props(root, layout);
     case 'modelo':
     case 'pulo': return stubPlaceholderProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);

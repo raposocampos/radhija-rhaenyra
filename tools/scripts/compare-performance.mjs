@@ -35,7 +35,7 @@ for (const row of aggregate.phases) {
   const e = row.environment;
   lines.push(`| ${row.level} | ${e.browser} | ${e.cpu} | ${e.logicalCpus} | ${e.runnerImage} ${e.runnerImageVersion} |`);
 }
-lines.push('', 'Qualidade completa: 1280×720, DPR 1, sombras 2048, bloom e quatro passes. Cada navegador inicia diretamente na fase alvo, faz um reload de aquecimento e três reloads medidos da mesma fase. Cada janela exige pelo menos 20 quadros e 8 s; simulação/efeitos permanecem ativos e a câmera fixa é igual dentro de cada par. Heap após GC é coletado fora da janela e seguido de reaquecimento.', '',
+lines.push('', 'Qualidade completa: 1280×720, DPR 1, sombras 2048, bloom e quatro passes. Cada navegador inicia diretamente na fase alvo, faz um reload de aquecimento e três reloads medidos da mesma fase. Cada janela medida exige pelo menos 20 quadros e 8 s; simulação/efeitos permanecem ativos e a câmera fixa é igual dentro de cada par. Heap após GC é coletado fora da janela e seguido de reaquecimento.', '',
   '| Fase | Cadência p95 A / B (ms) | CPU quadro p95 A / B (ms) | Reload A / B (ms) | Render com UI liberada A / B (ms) | Heap A / B (MiB) |',
   '| --- | ---: | ---: | ---: | ---: | ---: |');
 for (const row of aggregate.phases) {

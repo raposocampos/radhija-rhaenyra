@@ -83,7 +83,7 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
 | [x] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | PRs #13 e #14 aprovados, integrados e publicados |
-| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 implementado; referências A/B em validação na nuvem |
+| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 com baseline revisada; validação final atualizada pendente |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
@@ -96,8 +96,9 @@ apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
 principal. O conceito Expresso do Superbafo do PR #9 foi escolhido pelo usuário
-para protótipo, mantendo a direção artística existente. Implementação em
-frentes próprias, conforme CONTEXTO; nenhuma aprovação antecipada de publicação.
+para protótipo, mantendo a direção artística existente. PR #15 aprovado e
+publicado em `b954b24`, somente DEV_LEVELS. Acabamento e entrada na campanha
+permanecem para outra entrega.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -328,11 +329,11 @@ Escopo desta rodada em duas entregas, sem reescrever todo o núcleo:
   preservando ordem, limite e diagnóstico. Estado, carregamento, reset e
   descarte continuam em `game.js`. Implementação `40e83ce`, sete testes runtime
   e três provas negativas de tipos; revisão independente sem bloqueios.
-  PR #14 passou CI `39076449277` (180 testes/tipos/build) e E2E `39076448099`
-  no head `3a3d02e`, base `597c8f2`. Atualização para `4552e60` neste checkpoint
-  exige CI/prévia, E2E e aprovação da versão nova; não reutilizar os resultados.
+  PR #14 aprovado no head `cf33d69`, base `4552e60`: CI `39078268404` (183
+  testes/tipos/build), E2E completo `39078277583` e prévia conferidos. Integrado
+  em `fae8acd`; CI main/deploy passaram e produção foi conferida conforme CONTEXTO.
 
-Coordenador entregou #13 em `codex/estabilizacao-nucleo` e atualiza #14 em
+Coordenador entregou #13 em `codex/estabilizacao-nucleo` e #14 em
 `codex/eventos-nucleo`; cada executor usa worktree separado.
 Verificar identidade de configurações e histórico, ordem e efeitos da emissão;
 tipos/testes/build e E2E na nuvem. Demais extrações futuras dependem de uma
@@ -340,16 +341,19 @@ necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 ### EST-08 Desempenho e expansão
 
-Implementação no PR #16, `codex/desempenho-expansao`, base `fae8acd`.
-Instrumento inicial `0b2a329` passou CI, mas medição `39080397088` excedeu 25 min
-em A, com 11/20 visitas: diagnóstico sem erros prévios, não referência válida.
-Redesenho `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
-no mesmo runner por fase, boot direto e reloads da mesma fase. Mantidos três
-reloads medidos, 20 quadros/8 s, qualidade completa e GC fora da janela.
-Agregação estrita de cinco pares; baseline schema 2 preserva ambiente/limites
-por fase. Redesenho e oito provas da infraestrutura ainda precisam de nuvem.
-Registrar resultados/limites duráveis após rodada válida e revalidar commit final.
-Não marcar concluída só pela existência do instrumento; detalhes no CONTEXTO.
+Implementação no PR #16, `codex/desempenho-expansao`, base atualizada `b954b24`.
+Medição `39082606479` no head `b4a61b3` passou: oito provas da infraestrutura,
+cinco pares A/B completos, três reloads medidos por referência, 20 quadros/8 s,
+qualidade completa, desenho real e provas negativas, sem erros/warnings.
+Baseline adotada com origem preservada em `performance-baseline.json`; valores,
+dispersão, limites e ressalvas em `DESEMPENHO-REFERENCIA.md`.
+
+Protocolo `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
+no mesmo runner por fase, boot direto e reloads isolados. GC fora da janela.
+Agregação estrita; ambiente/limite fixo por fase. O instrumento inicial `0b2a329`
+passou CI, mas medição `39080397088` excedeu 25 min; não é referência válida.
+O commit combinado com a nova base e os dados precisa de CI/prévia e medição
+próprios antes da aprovação. Resultados finais no PR, sem commit só de status.
 
 - Definir cenário, qualidade gráfica e ambiente de referência para medir
   carregamento, tempo por quadro e memória; estabelecer limites após medir.
@@ -413,7 +417,9 @@ head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação
   (2026-10-17). PR #9 reformulado como **Expresso do Superbafo**: oficina de
   brinquedos, bolinha-planeta, pulo no pedal para selecionar trilho e superbafo
   no nariz mecânico do trem para trazer o objeto. Imagem conceitual apresentada;
-  desenho ainda não aprovado. Atualizar/revalidar a base do PR antes de entregá-lo.
+  desenho posteriormente escolhido para protótipo, com direção artística igual
+  à do jogo. `codex/prototipo-expresso` coordena cenário/testes em worktrees
+  separados. PR #15 publicado em `b954b24`; somente DEV_LEVELS nesta entrega. Acabamento, áudio e campanha continuam pendentes.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
 - Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.

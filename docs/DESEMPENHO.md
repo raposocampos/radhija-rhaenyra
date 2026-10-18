@@ -72,6 +72,9 @@ na nuvem; não mudam o jogo distribuído.
 
 ## Limites depois de medir
 
+A referência adotada está em [DESEMPENHO-REFERENCIA.md](DESEMPENHO-REFERENCIA.md), com origem,
+valores e dispersão. Os limites completos ficam em [performance-baseline.json](performance-baseline.json).
+
 Não há números de referência inventados neste documento. A primeira execução válida gera, para cada fase,
 limites exploratórios a partir de seis visitas: `máximo + max(amplitude, 3×MAD, 10% da mediana, piso)`.
 Pisos: 5 ms para cadência/CPU, 50 ms para carregamento/render com UI liberada, 1 MiB para heap. São margens explícitas de

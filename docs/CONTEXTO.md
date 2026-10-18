@@ -5,43 +5,65 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-08 — referências isoladas em validação (2026-10-17, Codex)
+## EST-08 — referência adotada, validação final pendente (2026-10-17, Codex)
 
-Branch `codex/desempenho-expansao`, worktree `desempenho-expansao`, base `fae8acd`.
-PR #16 em desenvolvimento; CI `39080397092` aprovou 183 testes/tipos/build
-no instrumento inicial `0b2a329`. Medição `39080397088` falhou pelo watchdog
-após 25 min e 11/20 visitas: sem falhas de qualidade, erros prévios ou warnings;
-a janela de 20 quadros da fase 3 durou 142 s em SwiftShader. Referência B e
-prova negativa real não ocorreram. Resultado parcial não é baseline/aprovação.
+PR #16, branch `codex/desempenho-expansao`, worktree `desempenho-expansao`.
+Coordenador incorporou a base publicada `b954b24` (PR #15); conflitos apenas
+nos dois registros de contexto/plano, reconciliados sem alterar o runtime.
+Instrumento `b4a61b3`: CI `39082606472` aprovou 183 testes/tipos/build;
+medição `39082606479` passou oito provas da infraestrutura e cinco pares A/B,
+com três reloads medidos por referência, qualidade completa, desenho real,
+nenhum erro/warning e provas negativas corretas. Revisão dos dados por agentes
+independentes. Baseline preserva SHA/hash/run de origem, não o commit documental.
 
-Protocolo redesenhado `isolated-level-v2`: build único distribuído por artefato,
-cinco jobs independentes, A/B sequenciais no mesmo runner por fase. Navegador
-novo inicia diretamente na fase alvo pelo índice numérico, com ID/catálogo
-conferidos; um reload de aquecimento e três medidos da mesma fase. Preservados
-20 quadros/8 s mínimos, render completo, simulação normal, GC/heap fora da
-janela e reaquecimento. Heap/caches isolados não se comparam ao protocolo anterior.
-Agregador exige cinco pares completos, SHA/hash/run/tentativa/protocolo comuns,
-qualidade/ambiente iguais dentro do par e negativa real; baseline schema 2 guarda
-ambiente/limite fixo por fase. Timeouts e checkpoints diagnosticam a etapa corrente.
+Protocolo `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
+no mesmo runner por fase e navegador novo por referência. Boot direto, um reload
+de aquecimento e três medidos, 20 quadros/8 s mínimos, simulação/render normais,
+GC/heap fora da janela e reaquecimento. Ambiente e limite fixo por fase; hardware
+pode diferir entre fases. SwiftShader não representa GPU física nem FPS do jogador.
+Detalhes, valores, dispersão e limites em `DESEMPENHO-REFERENCIA.md` e
+`performance-baseline.json`; protocolo em `DESEMPENHO.md`. Não recalibrar limites
+silenciosamente. A rodada antiga `39080397088` excedeu 25 min, não é baseline.
 
-Nenhum runtime, E2E existente ou medidor de recursos alterado. Guia cobre nuvem,
-DEV antes do catálogo, factories estritas, contratos, ações inválidas, pausa/reset,
-progresso/hasNext, runner/workflow, arte e aprovação. Oito testes do instrumento
-incluem completude/agregação/identidades e referência fixa; ainda precisam de CI
-neste redesenho. Sem teste/build local, só revisão e `git diff --check`.
+Guia de novas fases cobre DEV antes do catálogo, factories estritas, contratos,
+ações inválidas, pausa/reset/descarte, progresso/hasNext, runner/workflow, arte e
+aprovação. PR #16 só altera instrumento/workflow/documentação em relação ao main.
+Nenhum teste/build local; inspeção, revisão de dados já produzidos e diff-check.
 
-Próximo passo: revisar/enviar o commit e acompanhar CI/prévia/medição próprios.
-Após rodada válida, revisar `baseline-candidate.json`, adotar como
-`docs/performance-baseline.json` e registrar resumo em `DESEMPENHO-REFERENCIA.md`
-com SHA/run de origem. Validar o commit final; não recalibrar limites a cada PR.
-EST-08 só termina com dados reais revisados e entrega da prévia para aprovação.
+Próximo passo: enviar o commit combinado (base + baseline + resumo), acompanhar
+CI/prévia e medição próprios. O novo run compara com a referência fixa; ambientes
+incompatíveis impedem comparação temporal, não justificam inventar conclusão.
+Conferir head/base/version.json, registrar resultados no PR e apresentar a prévia
+para aprovação. EST-08 ainda não está publicada. Não criar commit só para informar
+o resultado do CI deste próprio checkpoint.
 
-Produção: PR #14 publicado em `fae8acd`, detalhes abaixo. PR #15 separado,
-protótipo Expresso com mesma direção artística: head `92b9306`, base `fae8acd`,
-CI `39081102987` (206 testes) e E2E `39081100507` aprovados: 334 gameplay,
-4 infra, 23 smoke, 28 recuperação, 30 comparações gráficas estáveis. Prévia
-`/previews/pr-15/39081102987-1/?level=fase6&play` apresentada; aguarda aprovação
-própria. Não integrar/publicar #15 ou #16 usando a aprovação anterior de #14.
+## PR #15 — protótipo Expresso publicado (2026-10-17, Codex)
+
+Usuário aprovou o protótipo corrigido `05e2287`, base `fae8acd`, após prévia
+`/previews/pr-15/39082917531-1/?level=fase6&play`. CI `39082917531` passou
+207 testes/tipos/build; E2E Expresso `39082921941` passou 24 verificações,
+4 de infraestrutura, 23 de smoke, 28 de recuperação e 30 comparações de recursos
+estáveis, sem erros/warnings/descarte global. Capturas das seis fases revisadas.
+A correção impede dica falsa perto da bandeja em ready/carrying e tem regressão
+nos oito estados e interação real. Conversa de revisão resolvida com evidência.
+
+Integrado por squash `b954b24942fe93aa30429351f2c20fe7e41b8119`, árvore idêntica
+à aprovada. CI main `39083884706` passou; deploy `39083918751` passou após liberar
+somente o deployment `7147954364` com a aprovação do chat. Produção HTTP 200 e
+`version.json` confirmaram `b954b24` e o run do main. Não repetir merge/deploy.
+
+Acesso `?level=fase6&play`, somente `DEV_LEVELS`; cinco fases da campanha intactas.
+Oficina procedural na direção artística existente. Rhaenyra pousa no pedal para
+escolher trilho; Radhija sopra no nariz do trem, que espirra e traz a bolinha-planeta.
+Rota circular permite repetir; rota congelada em movimento. Oito estados, controle
+de nuvens, pausa/reset/descarte e petiscos opcionais. 18 testes da fase e oito
+provas negativas de tipos; suíte expresso também pertence ao E2E completo.
+
+Limites aprovados: blocagem jogável, espirro visual sem som exclusivo, curvas
+segmentadas com giro imediato do vagão. Próxima entrega: acabamento da oficina,
+animações/som e, depois de validar, entrada no catálogo/progressão. Manter arte
+coerente com o jogo. Proposta do PR #9 incorporada em `PROPOSTA-FASE6.md`.
+A aprovação/publicação de #15 não cobre #16 nem acabamento futuro.
 
 ## EST-07A — configuração publicada (2026-10-17, Codex)
 
@@ -276,11 +298,11 @@ aprovado e ao merge sintético; produção confirmada.
 
 ## Onde paramos
 
-**Configuração comum publicada; eventos atualizados para a nova base.**
-Produção em `4552e60`, PR #13 aprovado/publicado, após os PRs #8, #7, #10,
-#11 e #12. O PR #14 precisa validar a combinação atual e receber aprovação
-própria. Depois resta EST-08, com escopo delimitado no checkpoint inicial.
-O PR #9 propõe Expresso do Superbafo; não há nova fase implementada/aprovada.
+**PR #14 publicado; protótipo Expresso combinado para validação.**
+Produção confirmada em `fae8acd`, CI `39079619941` e deploy `39079647854`
+aprovados, HTTP/version.json conferidos. Não repetir merge/deploy.
+Protótipo autorizado em `codex/prototipo-expresso`; nunca publicar sem aprovação
+da prévia específica. EST-08 em implementação separada, única etapa restante.
 Testes continuam no GitHub; conferir estado atual pelos SHAs e execuções.
 
 Plano e critérios: [PLANO-ESTABILIZACAO.md](PLANO-ESTABILIZACAO.md).
@@ -513,13 +535,12 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 a #8 e #10 a #14 integrados e publicados. Produção atual
-   confirmada em `fae8acd`, deploy `39079647854`; não repetir merge/deploy.
-   PR #15 (`92b9306`) aguarda aprovação da prévia do protótipo Expresso em DEV.
-   PR #16 executa EST-08: validar as cinco referências A/B isoladas, adotar
-   baseline durável e conferir o commit final antes de apresentar aprovação.
-   PR #9 contém a proposta já incorporada ao protótipo. Não reutilizar aprovação
-   de versões anteriores nem tratar medição parcial como referência válida.
-   Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
+3. PRs #1 a #8 e #10 a #15 integrados e publicados. Produção confirmada em
+   `b954b24`, deploy `39083918751`; não repetir merge/deploy. O Expresso é
+   protótipo DEV, acabamento/áudio/campanha são uma próxima entrega.
+   PR #16 executa EST-08: baseline adotada de `b4a61b3`/`39082606479`; validar
+   o commit final atualizado e apresentar prévia para aprovação própria.
+   PR #9 contém a proposta já incorporada. Não reutilizar aprovação anterior
+   nem tratar medição parcial como referência. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
