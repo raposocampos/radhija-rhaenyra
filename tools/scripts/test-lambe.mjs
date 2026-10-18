@@ -1,4 +1,4 @@
-// Lambe-Lambe e a fase 7 (a última da campanha) no navegador: teleporte só prepara trechos; túnel, trinco,
+// Lambe-Lambe e a fase 7 (depois dela vem a 8) no navegador: teleporte só prepara trechos; túnel, trinco,
 // Lambe-Lambe, arrancada no escorregador, pegar e entregar usam entrada real (teclado e controle falso).
 // Fluxo: a Radhija atravessa o túnel e sai enlameada → sem arrancada e escorregando → destrava o portão →
 // a Rhaenyra lambe até limpar → arrancada sobe o escorregador e desce com o frisbee → bolinha e frisbee
@@ -69,7 +69,7 @@ try {
   });
   check(state.levelId === 'fase7' && state.stage === 'start', 'link por id (?level=fase7) abre a fase 7');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
-  check(catalog.ids === 'fase1,fase2,fase3,fase4,fase5,fase6,fase7' && catalog.level === 6, 'o link usa a campanha (sétima de sete), sem catálogo de desenvolvimento', JSON.stringify(catalog));
+  check(catalog.ids === 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8' && catalog.level === 6, 'o link usa a campanha (sétima de oito), sem catálogo de desenvolvimento', JSON.stringify(catalog));
   check(lambe(state).place?.frisbee === 'top' && lambe(state).place?.ball === 'ground' && !lambe(state).gateOpen, 'frisbee no escorregador, bolinha no parquinho, portão fechado');
   await shot('01-pracinha.png');
 
@@ -156,7 +156,7 @@ try {
   state = await waitFor((i) => i.state === 'victory', { timeout: 12000 });
   await H.gsleep(400);
   const actions = await ev(() => [...document.querySelectorAll('.rr-victory__actions [data-action]')].map((b) => b.dataset.action).join());
-  check(state.state === 'victory' && actions === 'restart,menu', 'a 7 é a última: a vitória oferece jogar de novo e o menu, sem "Próxima fase"', actions);
+  check(state.state === 'victory' && actions.split(',').includes('next'), 'vitória da 7 oferece "Próxima fase" (a 8)', actions);
   await ev(() => window.__game.game.reset());
   state = await info();
   check(state.stage === 'start' && lambe(state).mud.radhija.k === 0 && !lambe(state).gateOpen && lambe(state).place.frisbee === 'top', 'reinício restaura portão, lama, bolinha e frisbee');

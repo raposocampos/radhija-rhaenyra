@@ -542,10 +542,10 @@ test('fase 7: partida completa andando — túnel, trinco, Lambe-Lambe, escorreg
   assert.deepEqual(i.place, { ball: 'picnic', frisbee: 'picnic' });
   assert.equal(h.log('picnic:deliver').length, 2);
   assert.equal(h.log('mud:clean').length, 1);
-  // a última fase da campanha: a vitória não oferece "Próxima fase"
+  // depois dela vem a fase 8: a vitória oferece "Próxima fase"
   waitFor(h, (s) => s.state === 'victory', 'tela de vitória', 12);
   const vic = h.log('victory');
   assert.equal(vic.length, 1);
   assert.equal(vic[0].levelId, 'fase7');
-  assert.equal(vic[0].hasNext, false);
+  assert.equal(vic[0].hasNext, true);
 });

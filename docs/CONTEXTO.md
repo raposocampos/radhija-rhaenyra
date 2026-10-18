@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (impulso na parede). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (fase 8). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: demo de 10 fases (pedido de 2026-10-18)
@@ -11,20 +11,27 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), **PR #23**, com o main do #22
-  (`1fbc631`) integrado. Consultar o PR para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
-  Feito: `pickWallSpot`/`startWallJump`/`integrateWall` em `dogController.js` (roteiro de 1,05 s, toque no alto em
-  52%, volta 0,32 m afastada, sempre com colisão); `game.js` troca o pulo pelo impulso quando a fase oferece um
-  ponto (`puzzle.wallSpots`) e avisa o toque (`puzzle.onWallTouch`, `wall:touch`); pose em `dogAnimation.js`
-  (corpo de pé girando no quadril, IK com alvos na parede, pata no botão, carinha feliz); `createWallButton`
-  (botão com tempo e anel de luzes, alavanca, "uma vez") e `buildWallButton` (placa, botão de cogumelo ou
-  alavanca de bolinha, patinhas pintadas); sons `soundsParede.js`; parede de treino na Arena do Pulo (botão abre a
-  portinhola do armarinho por 6 s, alavanca liga as luzinhas). Testes: `test/parede.test.mjs` (escolha do ponto,
-  roteiro, pose no modelo real, botão/alavanca, arena com pausa/troca/reinício) e a suíte E2E `pulo`, com as
-  capturas `tools/scripts/capture-parede.mjs` (quadro a quadro, qualidade completa).
-- Próximo passo: CI verde, E2E `pulo` e revisão das capturas `shots/parede-revisao/` contra o padrão das fases
-  4 a 7; ajustar a pose se preciso; conferir o botão de pulo de toque (o impulso usa o mesmo `Jump`); entregar a
-  prévia (`?level=pulo&play`) e aguardar aprovação. Em seguida, apresentar o desenho da fase 8.
+- **E (escopo ampliado pelo usuário, 2026-10-18):** as animações extras e o segredo combinado valem nas **10 fases**,
+  cada fase com animações do próprio cenário; o segredo só depois de pegar todos os ossinhos da fase (todas têm 3).
+  Detalhes técnicos só com o ok do usuário sobre a nota nos docs.
+- **B (em andamento, Claude):** fase 8 "Lavanderia de Domingo", branch `claude/fase8-lavanderia` (worktree
+  próprio), base `09ed23a`. Consultar o PR dessa branch para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
+  Desenho aprovado pelo usuário: a meia listrada presa com pregador no varal elétrico de teto (botão alto → o varal
+  desce por 6 s; só o tranco da arrancada da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de
+  rodinhas na frente da máquina + botão de centrifugar → ela cai no cesto; sem o cesto cai no chão e volta ao cesto
+  com E; o cesto empurrado até a caminha a entrega e estaciona ao lado). Entra direto na campanha (`LEVELS`, oito
+  fases, 4 + 4 no menu); a meia é um item novo (`sock`: pose de boca, ícone, nome, som, modelo em `toys.js`).
+  `createPushCrate` ganhou `freeze()` (para de andar, continua sólido). Testes: `test/fase8.test.mjs`, catálogo
+  com oito fases, suíte E2E `lavanderia` e capturas `tools/scripts/capture-lavanderia.mjs`.
+- Próximo passo: CI verde, E2E `lavanderia` e `todas`, revisar as capturas contra o padrão das fases 4 a 7, entregar
+  a prévia e aguardar aprovação. Depois, apresentar o desenho da fase 9.
+
+## Entregue: impulso na parede (PR #23)
+
+`pickWallSpot`/`startWallJump`/`integrateWall` (`dogController.js`), pose em `dogAnimation.js`, `createWallButton` e
+`buildWallButton`, parede de treino na Arena do Pulo. Squash `09ed23a` no main, CI `39156660735`, deploy
+`39156707851` com sucesso; `version.json` de produção conferido em `09ed23a`. Detalhes em ARQUITETURA §6
+(Impulso na parede). Não repetir merge/deploy do #23.
 
 ## Entregue: jogar no celular (PR #22)
 

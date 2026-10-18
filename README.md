@@ -57,13 +57,18 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
 7. **Lambe-Lambe na Pracinha**: manhã depois da chuva. Só a Radhija cabe no túnel de lama e sai enlameada, lenta e
    sem arrancada; ela destrava o portão por dentro e a Rhaenyra a limpa com o Lambe-Lambe. Limpa, a Radhija sobe o
    escorregador com uma arrancada e desce com o frisbee; as duas levam frisbee e bolinha ao piquenique.
+8. **Lavanderia de Domingo**: manhã de sol na área de serviço, a fase do impulso na parede. Na parede com patinhas, a
+   Rhaenyra pega impulso e aperta os botões do alto: o do varal faz a meia listrada descer por alguns segundos (só o
+   tranco de uma arrancada da Radhija solta o pregador); o da centrífuga chacoalha a máquina e a mantinha escorrega
+   para o cesto de rodinhas, que a Rhaenyra empurra até a caminha.
 
 Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).
 
 Protótipos fora do menu (fases de desenvolvimento):
 
-- **Arena do Pulo**: `http://127.0.0.1:5173/?level=pulo&play`. Troncos dá para pular; muretas altas, não.
+- **Arena do Pulo**: `http://127.0.0.1:5173/?level=pulo&play`. Troncos dá para pular; muretas altas, não. Na parede de
+  treino, as patinhas marcam onde o pulo vira impulso na parede (botão e alavanca).
 - **Arena do Bafo**: `http://127.0.0.1:5173/?level=bafo&play`. O protótipo do puzzle do superbafo que virou a fase 4: a Rhaenyra
   encaixa o ventilador, a Radhija sopra no corredor, o vento leva o cheiro pelo duto, o pombo foge para o poleiro da
   placa e o portão abre.
