@@ -491,9 +491,15 @@ e a tabela de controles segue na pausa.
 **Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): layout compacto do HUD, da tela
 inicial, do cartão da fase, da pausa (duas colunas, sem a tabela de teclas) e da vitória; áreas seguras do entalhe
 (`env(safe-area-inset-*)`, `viewport-fit=cover`); sem desfoque de fundo sobre o 3D (custa caro na GPU do celular);
-transições mais curtas. Celular de pé: aviso "Gire o celular" (`.rr-rotate`) e a partida pausa. O primeiro toque num
-botão do menu pede tela cheia (Android; o iPhone usa "Adicionar à tela inicial", `public/manifest.webmanifest`), e a
-pausa tem o botão Tela cheia. `index.html` impede zoom e rolagem por gesto (`touch-action`, `overscroll-behavior`).
+transições mais curtas. Celular de pé: aviso "Gire o celular" (`.rr-rotate`) e a partida pausa. No Android, o
+primeiro toque num botão do menu pede tela cheia, e a pausa tem o botão Tela cheia. O Safari do iPhone não deixa uma
+página ocupar a tela inteira (`requestFullscreen` só vale para vídeo): lá a tela cheia é o app da tela inicial
+(`public/manifest.webmanifest` com `display: standalone` e `display_override: [fullscreen, standalone]`, metas
+`apple-mobile-web-app-*` e `viewport-fit=cover` no `index.html`). Fora dele, `src/ui/installHint.js` (só quando
+`needsInstallTip`: iPhone/iPad sem a API e fora do modo aplicativo) mostra uma vez um cartão sob o Jogar
+(Compartilhar → "Adicionar à Tela de Início"), uma linha no aviso de girar e uma nota com o passo a passo na pausa
+(só texto: nada focável que o teclado ou o controle ativariam sem efeito). O app da tela inicial guarda o progresso à parte do Safari (o iOS separa os dados).
+`index.html` impede zoom e rolagem por gesto (`touch-action`, `overscroll-behavior`).
 Nada disso existe no PC: sem `data-mobile` e com teclado ou controle, a interface é a de sempre.
 
 **Qualidade gráfica por aparelho** (`src/core/quality.js`, aplicada pelo engine): `detectDevice` (dedo como ponteiro

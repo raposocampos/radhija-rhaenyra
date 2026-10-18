@@ -5,7 +5,8 @@
 // sobreposição com o HUD, um trecho da fase 1 jogado só com o joystick e os botões virtuais (abertura, cordinha,
 // troca, carrinho empurrado com dois dedos, cenoura), multitoque, dicas com ícones de toque, menu de qualidade,
 // aviso de girar o celular, volta ao teclado e o cartão de abertura. No fim, uma página de PC (sem toque) confirma
-// que lá nada mudou (perfil 'alta' com os valores de sempre, sem controles de toque).
+// que lá nada mudou (perfil 'alta' com os valores de sempre, sem controles de toque), e páginas de iPhone (Safari sem
+// a API de tela cheia, como o de verdade) conferem a dica de "Adicionar à Tela de Início" e o modo aplicativo.
 //   node tools/scripts/test-toque.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -227,6 +228,9 @@ try {
   check((await info()).state === 'playing', 'toque em Começar começa a partida');
   check(s.device === 'touch' && s.touchOn, 'depois do toque: controles virtuais aparecem', s);
   check((await info()).input.device === 'touch', 'jogo com input.device touch');
+  const andFs = await ev(() => ({ fs: !!document.fullscreenElement, tip: !!document.querySelector('.rr-ios-tip'), mark: document.querySelector('.rr').dataset.installTip ?? null }));
+  check(andFs.fs, 'Android: o primeiro toque em Jogar já põe em tela cheia', andFs);
+  check(!andFs.tip && andFs.mark === null, 'Android: sem a dica do iPhone', andFs);
   const layout = await ev(() => {
     const box = (sel) => {
       const el = document.querySelector(sel);
@@ -372,8 +376,22 @@ try {
   q = await quality();
   check(q.mode === 'auto' && q.level === 'media' && q.adaptive && q.everyFrame && q.stored === null, 'Auto: volta ao médio com governador', q);
   check(await ev(() => document.querySelector('.rr-pause .rr-quality__now').textContent) === 'agora: média', 'mostra o perfil atual no automático');
-  const fs = await ev(() => ({ api: !!document.fullscreenEnabled, hidden: document.querySelector('.rr-pause .rr-fullscreen').hidden }));
-  check(fs.hidden === !fs.api, 'botão Tela cheia só se o navegador permitir', fs);
+  // volume, qualidade e tela cheia existem na tela Opções e na pausa: aqui, a cópia da pausa
+  const fsState = () => ev(() => ({
+    api: !!document.fullscreenEnabled, on: !!document.fullscreenElement,
+    hidden: document.querySelector('.rr-pause .rr-fullscreen').hidden, label: document.querySelector('.rr-pause .rr-fullscreen span').textContent,
+    ios: !!document.querySelector('.rr-ios-fs'),
+  }));
+  let fs = await fsState();
+  check(fs.api && !fs.hidden && fs.on && fs.label === 'Sair da tela cheia' && !fs.ios, 'Android: botão da pausa mostra a tela cheia ligada', fs);
+  await tap('.rr-pause .rr-fullscreen');
+  await sleep(400);
+  fs = await fsState();
+  check(!fs.on && fs.label === 'Tela cheia', 'Android: o botão sai da tela cheia', fs);
+  await tap('.rr-pause .rr-fullscreen');
+  await sleep(400);
+  fs = await fsState();
+  check(fs.on && fs.label === 'Sair da tela cheia', 'Android: e entra de novo', fs);
   await tap('[data-action="resume"]');
   await sleep(400);
   check((await info()).state === 'playing' && (await uiState()).touchOn, 'Continuar: volta com os controles');
@@ -468,6 +486,111 @@ try {
   await pc.mouse.click(640, 360);
   check(await pc.evaluate(() => document.querySelector('.rr').dataset.device) === 'keyboard', 'PC: clique do mouse não vira toque');
   await pc.close();
+
+  console.log('\n== iPhone (Safari): dica de tela cheia e modo aplicativo ==');
+  const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  /** Página de iPhone: sem a API de tela cheia (como o Safari do iPhone), opcionalmente aberta pelo ícone (standalone). */
+  const iphonePage = async ({ standalone = false } = {}) => {
+    const p = await H.browser.newPage({ viewport: PHONE, screen: PHONE, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA });
+    p.on('console', (m) => { if (m.type() === 'error') H.errors.push(`[iphone console.error] ${m.text()}`); });
+    p.on('pageerror', (e) => H.errors.push(`[iphone pageerror] ${e.message}`));
+    p.setDefaultTimeout(180000);
+    await p.addInitScript(({ app, ci }) => {
+      Object.defineProperty(Document.prototype, 'fullscreenEnabled', { configurable: true, get: () => false });
+      Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { configurable: true, get: () => false });
+      Element.prototype.requestFullscreen = undefined;
+      Object.defineProperty(Navigator.prototype, 'standalone', { configurable: true, get: () => app });
+      window.__fakePads = [];
+      Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value() { return window.__fakePads; } });
+      if (!ci) return;
+      // a mesma redução gráfica do harness no CI sem GPU (só o custo de desenho; o jogo é o mesmo)
+      Object.defineProperty(window, '__game', {
+        configurable: true,
+        set(value) {
+          const { renderer, composer, bloom } = value.engine;
+          const low = () => { renderer.setPixelRatio(0.25); composer.setPixelRatio(0.25); renderer.shadowMap.enabled = false; bloom.enabled = false; };
+          low();
+          value.events?.on?.('quality:change', low);
+          Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
+        },
+      });
+    }, { app: standalone, ci: !!process.env.CI });
+    await p.goto(BASE, { waitUntil: 'load', timeout: 180000 });
+    await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
+    await p.waitForTimeout(2500);
+    return p;
+  };
+  const center = (p, sel) => p.evaluate((s) => {
+    const r = document.querySelector(s)?.getBoundingClientRect();
+    return r && { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  }, sel);
+  const ip = await iphonePage();
+  let ios = await ip.evaluate(() => ({
+    mark: document.querySelector('.rr').dataset.installTip ?? null, tip: document.querySelector('.rr-ios-tip')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+    fsBtnHidden: document.querySelector('.rr-fullscreen').hidden, iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
+    mobile: document.querySelector('.rr').dataset.mobile ?? null,
+  }));
+  check(ios.mobile === 'phone' && ios.mark === '1', 'iPhone fora do app: dica ativa', ios);
+  check(/Compartilhar/.test(ios.tip || '') && /Adicionar à Tela de Início/.test(ios.tip || ''), 'cartão explica Compartilhar → Adicionar à Tela de Início', ios.tip);
+  check(ios.fsBtnHidden && ios.iosBtn && ios.rotateLine, 'sem o botão de tela cheia do Android; na pausa, o passo a passo; no aviso de girar, a dica', ios);
+  const tipBox = await center(ip, '.rr-ios-tip');
+  const playBox = await center(ip, '.rr-btn--play');
+  const optionsBox = await center(ip, '.rr-btn--options');
+  check(inView(tipBox) && !overlaps(tipBox, playBox) && !overlaps(tipBox, optionsBox) && tipBox.top >= optionsBox.bottom, 'cartão da dica cabe sob o Jogar e o Opções', { tipBox, playBox, optionsBox });
+  await ip.screenshot({ path: 'shots/toque/12-iphone-dica.png' });
+  // fechar no × some e não volta mais
+  const close = await center(ip, '.rr-ios-tip__close');
+  await ip.touchscreen.tap(close.x, close.y);
+  // o clique do toque chega quando a página (desenhando no SwiftShader) fica livre: espera o efeito, não um tempo fixo
+  await ip.waitForFunction(() => !document.querySelector('.rr-ios-tip'), null, { timeout: 15000 }).catch(() => {});
+  ios = await ip.evaluate(() => ({ tip: !!document.querySelector('.rr-ios-tip'), saved: localStorage.getItem('rr-dica-tela-inicial'), state: window.__game.game.state }));
+  check(!ios.tip && ios.saved === '1' && ios.state === 'title', 'fechar a dica: some, fica salvo e não começa a partida', ios);
+  await ip.reload({ waitUntil: 'load' });
+  await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
+  await ip.waitForTimeout(1500);
+  check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
+  // a pausa mostra o passo a passo: Jogar → Fases → Continuar → Começar
+  for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
+    const b = await center(ip, sel);
+    await ip.touchscreen.tap(b.x, b.y);
+    await ip.waitForTimeout(400);
+  }
+  await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
+  await ip.waitForTimeout(1200);
+  const start = await center(ip, '[data-action="start"]');
+  await ip.touchscreen.tap(start.x, start.y);
+  await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
+  await ip.waitForTimeout(1500);
+  check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');
+  const pauseBtn = await center(ip, '.rr-tbtn--pause');
+  await ip.touchscreen.tap(pauseBtn.x, pauseBtn.y);
+  await ip.waitForFunction(() => window.__game.game.state === 'paused', null, { timeout: 30000 });
+  await ip.waitForTimeout(700);
+  const how = await ip.evaluate(() => {
+    const el = document.querySelector('.rr-pause .rr-ios-fs__how');
+    const r = el.getBoundingClientRect();
+    return { shown: getComputedStyle(el).display !== 'none' && r.height > 0, text: el.textContent, nav: !!el.closest('[data-nav]') || !!el.querySelector('[data-nav]') };
+  });
+  check(how.shown && /Adicionar à Tela de Início/.test(how.text) && !how.nav, 'pausa: nota com o passo a passo (só texto, nada focável sem efeito)', how);
+  check(inView(await center(ip, '.rr-card--pause')), 'pausa com o passo a passo cabe na tela');
+  await ip.screenshot({ path: 'shots/toque/13-iphone-pausa.png' });
+  await ip.setViewportSize({ width: PHONE.height, height: PHONE.width });
+  await ip.waitForTimeout(500);
+  const rotIos = await ip.evaluate(() => ({ overlay: getComputedStyle(document.querySelector('.rr-rotate')).display, line: getComputedStyle(document.querySelector('.rr-rotate__ios')).display }));
+  check(rotIos.overlay === 'grid' && rotIos.line !== 'none', 'de pé: o aviso de girar traz a dica do iPhone', rotIos);
+  await ip.screenshot({ path: 'shots/toque/14-iphone-de-pe.png' });
+  await ip.close();
+
+  // aberto pelo ícone da tela inicial: tela cheia de verdade, nada de dica
+  const app = await iphonePage({ standalone: true });
+  const appState = await app.evaluate(() => ({
+    mark: document.querySelector('.rr').dataset.installTip ?? null, tip: !!document.querySelector('.rr-ios-tip'),
+    iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
+    mobile: document.querySelector('.rr').dataset.mobile ?? null,
+  }));
+  check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
+  await app.screenshot({ path: 'shots/toque/15-iphone-app.png' });
+  await app.close();
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {

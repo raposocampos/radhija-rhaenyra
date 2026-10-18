@@ -22,6 +22,14 @@ const DEVICES = [
   { id: 'celular-pequeno', opts: touchDevice(667, 375, 2), touch: true, quality: 'media' },
   { id: 'tablet', opts: touchDevice(1180, 820, 2), touch: true, quality: 'media' },
   { id: 'pc', opts: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }, touch: false, quality: null, full: true },
+  // iPhone no Safari (sem a API de tela cheia, como o de verdade): a dica de "Adicionar à Tela de Início"
+  {
+    id: 'iphone', ios: true, touch: true, quality: 'media',
+    opts: {
+      ...touchDevice(844, 390, 3),
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    },
+  },
 ];
 
 let server, browser;
@@ -57,6 +65,13 @@ async function captureDevice(dev, url) {
     page.setDefaultTimeout(180000);
     page.on('pageerror', (e) => errors.push(`[${dev.id}] ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${dev.id}] ${m.text()}`); });
+    if (dev.ios) {
+      await page.addInitScript(() => {
+        Object.defineProperty(Document.prototype, 'fullscreenEnabled', { configurable: true, get: () => false });
+        Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { configurable: true, get: () => false });
+        Element.prototype.requestFullscreen = undefined;
+      });
+    }
     await page.addInitScript((q) => {
       if (q) localStorage.setItem('rr-quality', q);
       const raf = window.requestAnimationFrame.bind(window);
@@ -130,7 +145,28 @@ async function captureDevice(dev, url) {
 
     await open('', 'title');
     await step(20);
-    await shot('01-titulo');
+    await shot('01-titulo', 1500);
+    if (dev.ios) {
+      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → Fases → Continuar → Começar)
+      await press('.rr-btn--options');
+      await step(5);
+      await shot('01b-opcoes-tela-cheia');
+      await press('.rr-title .rr-back');
+      await press('.rr-btn--play');
+      await press('.rr-mode--levels');
+      await press('.rr-btn--continue');
+      await step(60);
+      await press('[data-action="start"]');
+      await step(150);
+      await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
+      await step(2);
+      await shot('02-pausa-tela-cheia');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await step(2);
+      await shot('03-de-pe', 900);
+      await page.close();
+      return;
+    }
 
     // menu: Jogar → modos → Fases; Voltar; Opções (com as dicas desligadas e religadas); Fases → Continuar → Começar
     await press('.rr-btn--play');

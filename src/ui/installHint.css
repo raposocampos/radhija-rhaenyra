@@ -1,0 +1,62 @@
+/* Dica de tela cheia no iPhone (src/ui/installHint.js): só existe no iPhone fora do app da tela inicial. */
+.rr-ios-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(430px, 88vw);
+  margin-top: 2px;
+  padding: 5px 5px 5px 12px;
+  border-radius: 14px;
+  background: rgba(255, 246, 230, .94);
+  color: var(--choco-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.32;
+  pointer-events: auto;
+}
+.rr-title.is-on .rr-ios-tip { animation: rr-fade-up .6s var(--ease-out) both .9s; }
+/* .rr na frente: vence .rr .ico (bloco de 1em) de ui.css, qualquer que seja a ordem dos arquivos */
+.rr .rr-ios-tip .ico, .rr .rr-rotate__ios .ico, .rr .rr-ios-fs__how .ico {
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0 .15em 0 .1em;
+  vertical-align: -.3em;
+  color: #2F7DF6;
+}
+.rr-ios-tip__title { color: var(--carrot-lo); }
+.rr-ios-tip b, .rr-ios-fs__how b { color: var(--choco); }
+.rr-ios-tip__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(74, 52, 38, .08);
+  color: var(--choco-2);
+  font: 600 18px/1 'Fredoka', sans-serif;
+  cursor: pointer;
+}
+.rr-rotate .rr-rotate__ios {
+  max-width: 21em;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(74, 52, 38, .28);
+  font-size: 13px;
+  line-height: 1.45;
+  text-shadow: none;
+}
+.rr .rr-rotate__ios .ico { color: #FFF6E6; }
+.rr-ios-fs__how {
+  margin: 10px 0 0;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: rgba(74, 52, 38, .06);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--choco-2);
+}

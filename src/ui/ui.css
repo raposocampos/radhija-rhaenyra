@@ -1542,6 +1542,8 @@
 .rr[data-mobile="phone"] .rr-card--options .rr-card__head { margin: 0 0 6px; }
 .rr[data-mobile="phone"] .rr-card--options .rr-card__head h2 { font-size: 21px; }
 .rr[data-mobile="phone"] .rr-card--options .rr-settings { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: start; }
+/* a nota de tela cheia do iPhone (installHint.js) ocupa as duas colunas */
+.rr[data-mobile="phone"] .rr-card--options .rr-ios-fs__how { grid-column: 1 / -1; margin-top: 8px; }
 .rr[data-mobile="phone"] .rr-nohints { gap: 4px; padding: 2px 8px 2px 5px; font-size: 10.5px; }
 .rr[data-mobile="phone"] .rr-nohints .ico { width: 12px; height: 12px; }
 .rr[data-mobile="phone"] .rr-title__controls { display: none; }

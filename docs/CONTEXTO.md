@@ -10,14 +10,17 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **Continuar** + a grade de fases. Opções reúne volume, qualidade e **Dicas**
   (desligadas = modo desafio: sem objetivo escrito, marcador e dicas em balão; controles seguem na pausa).
   Registrar a visão do Modo História sem implementar: [MODO-HISTORIA.md](MODO-HISTORIA.md).
-- **Claude, branch `claude/menu-principal`** (worktree próprio, base `09ed23a`). Consultar o PR do branch para
-  SHA, CI, E2E e prévia; nada rodou no PC. Feito: telas do menu (`data-screen` em `.rr-title`, `showScreen`/`goBack`
+- **Claude, branch `claude/menu-principal`, PR #26** (worktree próprio, base `09ed23a`, depois atualizado com o main
+  `ccfaf4a` do PR #25). Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC. Feito: telas do menu (`data-screen` em `.rr-title`, `showScreen`/`goBack`
   em `ui.js`), Voltar por Esc, ○ · B ou botão do canto (também no cartão de abertura), `continueTarget` e `last` no
   save v1 (`progress.js`), opções salvas em `src/core/settings.js` (`rr-settings-v1`, evento `settings:change`),
   `settingsBlock()` igual em Opções e na pausa, HUD/feedback escondendo objetivo, dicas e marcador, e o atalho do
   núcleo que abre o cartão da fase já montada sem recarregar. Testes: `test/menu.test.mjs`, suíte E2E nova `menu`
   (teclado e controle), suíte `toque` passando pelo menu com dedos reais, `controle` e `expresso` ajustadas ao
   menu novo e capturas do menu em `capture-celular.mjs`.
+- Integração com o PR #25 (tela cheia no iPhone): a dica vai na tela principal do menu (`.rr-screen--main`), a nota
+  de passo a passo aparece na pausa e em Opções (duas colunas no celular: a nota ocupa as duas), e os trechos de
+  iPhone de `test-toque.mjs`/`capture-celular.mjs` passam por Jogar → Fases → Continuar → Começar.
 - Coordenação: a sessão das fases 8–10 mexe em `markup.js` (`ITEM_NOUN`), `icons.js` (item novo),
   `feedback.js` (eventos da lavanderia) e `test-expresso.mjs` (oito fases); este branch só toca o template, ícones no
   fim do arquivo, o bloco do marcador e `menuWith`. Quem integrar por último ajusta a lista de suítes do `e2e.yml`.
@@ -51,7 +54,23 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 Controles de toque (joystick flutuante e botões, `src/ui/touchControls.js`, dispositivo `touch`), layout próprio do
 celular (`.rr[data-mobile]`), perfis de qualidade por aparelho com governador de FPS (`src/core/quality.js`; PC =
-alta, sem mudança), manifest e ícones. Squash `1fbc631` no main. Detalhes em ARQUITETURA §6, §9 e §10.
+alta, sem mudança), manifest e ícones. Squash `1fbc631` no main, publicado pelo deploy `39151418291` (liberado com
+a aprovação do chat); `version.json` e HTTP 200 conferidos. Detalhes em ARQUITETURA §6, §9 e §10.
+
+## Em andamento: tela cheia no iPhone (branch `claude/iphone-tela-cheia`)
+
+- Retorno do usuário (2026-10-18): no iPhone 13 rodou bem, mas não abriu em tela cheia e a barra de endereço
+  atrapalha. O Safari do iPhone não deixa uma página ocupar a tela inteira; o caminho é o app da tela inicial.
+- Feito: manifest com `display: standalone` (o iOS respeita) e `display_override: [fullscreen, standalone]` (o
+  Android segue em tela cheia); dica discreta só no iPhone fora do app e sem a API de tela cheia
+  (`needsInstallTip`/`readInstallEnv` em `src/core/quality.js`; `src/ui/installHint.js` + `installHint.css`):
+  cartão sob o Jogar uma vez só, linha no aviso de girar e nota com o passo a passo na pausa (só texto). Elementos
+  inseridos no DOM depois da UI (sem mexer em `ui.js`/`markup.js`, que o menu novo e o PR #24 editam). E2E `toque`
+  confere o Android (tela cheia automática e o botão) e páginas de iPhone (dica, × salvo, pausa, modo aplicativo).
+- PR #25. O branch `claude/menu-principal` (menu novo) reescreve `ui.js`/`markup.js` e também mexe em `main.js`,
+  `test-toque.mjs` e `capture-celular.mjs`: quem integrar depois resolve os conflitos e confere que a dica ainda
+  encontra `.rr-title__center`, `.rr-rotate__box` e `.rr-pause__settings` (ou os equivalentes do menu novo).
+- Próximo passo: CI e E2E verdes, capturas do iPhone, prévia com o passo a passo e **aguardar aprovação**.
 
 ## Entregue: fases 6 e 7 na campanha (PR #21)
 
