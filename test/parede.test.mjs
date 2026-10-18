@@ -93,6 +93,31 @@ test('impulso: chega à parede, toca o alto uma vez no meio e volta ao chão afa
   assert.ok(Math.abs(c.x - K.x) < 0.01);
 });
 
+test('impulso: com algo no caminho não começa; se algo aparecer no caminho, não alcança o botão', () => {
+  const world = createCollisionWorld({
+    WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } },
+    STATIC_COLLIDERS: [{ id: 'parede', shape: 'box', x: 0, z: -2.5, hx: 3, hz: 0.5 }],
+  });
+  const gate = world.addDynamic({ id: 'portao', shape: 'segment', ax: -1, az: -1.55, bx: 1, bz: -1.55, t: 0.03 });
+  const c = rhaenyra(0, -1.15, Math.PI); // 0,4 m do ponto de impulso, com o portão entre ela e a parede
+  assert.equal(pickWallSpot(c, [SPOT]), SPOT, 'sem conferir o caminho, estaria ao alcance');
+  assert.equal(pickWallSpot(c, [SPOT], 0, 0, world), null, 'com o portão fechado no caminho, nada de impulso');
+  gate.enabled = false;
+  assert.equal(pickWallSpot(c, [SPOT], 0, 0, world), SPOT, 'portão aberto: vale');
+  // o portão fecha logo depois de começar: ela fica presa longe da parede e o toque não acontece
+  startWallJump(c, SPOT);
+  gate.enabled = true;
+  let hit = false;
+  for (let i = 0; i < 80; i++) {
+    steer(c, 1 / 60, { dx: 0, dz: 0, speed: 0 });
+    integrate(c, 1 / 60, world);
+    if (c.wallHit) hit = true;
+  }
+  assert.equal(hit, false, 'não alcança o botão através do portão');
+  assert.ok(c.z > -1.55, 'ficou do lado de cá do portão');
+  assert.equal(c.wallDur, 0, 'o impulso terminou e ela voltou ao chão');
+});
+
 test('impulso: com algo atrás, volta ao chão onde dá, sem atravessar', () => {
   const world = createCollisionWorld({
     WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } },

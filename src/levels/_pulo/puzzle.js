@@ -109,7 +109,7 @@ export function createPuzzle(ctx) {
     S.wallPushT = pushingWall ? S.wallPushT + dt : 0;
     if (S.wallPushT > 0.9) hints.cond('wallHow', 3.6, 10);
 
-    const wallReady = active.name === 'rhaenyra' && !airborne(active) && buttons.some((b) => b.inReach(active));
+    const wallReady = active.name === 'rhaenyra' && !airborne(active) && buttons.some((b) => b.inReach(active, world));
     if (nearBall(active)) hints.setPrompt('ball');
     else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
     cols.update(active);

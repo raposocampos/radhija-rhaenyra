@@ -514,7 +514,7 @@ export function createGame({ engine, dogs, levels, params }) {
       // De frente para uma parede marcada que a fase oferece (puzzle.wallSpots), vira impulso na parede.
       const jumpPressed = input.consume('Space', 'Jump');
       if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
-        const spot = pickWallSpot(A, puzzle.wallSpots?.(), Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
+        const spot = pickWallSpot(A, puzzle.wallSpots?.(), Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0, world);
         if (spot) {
           startWallJump(A, spot);
           emit('dog:wallJump', { name: A.name, id: spot.id, x: A.x, z: A.z, top: spot.top });

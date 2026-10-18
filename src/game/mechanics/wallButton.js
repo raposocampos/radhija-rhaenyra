@@ -88,8 +88,8 @@ export function createWallButton({ id, cfg, emit, prop = null }) {
     /** Segundos que faltam (botão com tempo). */
     get remaining() { return S.t; },
     get presses() { return S.presses; },
-    /** A dog `c` daria o impulso aqui agora (perto, do lado de cá e de frente)? Para o prompt do puzzle. */
-    inReach(c) { return pickWallSpot(c, [spot]) === spot; },
+    /** A dog `c` daria o impulso aqui agora (perto, do lado de cá, de frente e, com `world`, caminho livre)? Para o prompt. */
+    inReach(c, world = null) { return pickWallSpot(c, [spot], 0, 0, world) === spot; },
     /** Ponto do alto (onde fica o marcador do objetivo). */
     target(y = 0.25) { return { x: cfg.x + cfg.nx * 0.12, y: cfg.top + y, z: cfg.z + cfg.nz * 0.12 }; },
     /** Liga/desliga direto (jumpToStage e testes): sem evento. */

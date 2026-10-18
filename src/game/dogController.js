@@ -33,6 +33,8 @@ export const WALL_OFF = 0.62;
 export const WALL_GAP = 0.03;
 /** De frente para a parede: cosseno mínimo entre a direção (analógico ou corpo) e a parede (~70°). */
 const WALL_FACING = 0.34;
+/** O toque no alto só vale com a dog a até isto do ponto de impulso (algo no caminho a segurou longe). */
+const WALL_TOUCH_REACH = 0.12;
 
 /**
  * @param {import('../types').DogName} name
@@ -133,10 +135,12 @@ export function wallKick(spot, r) {
 /**
  * A parede marcada que vale para um impulso agora (ou null): a dog tem impulso, está do lado de cá da parede,
  * a até cfg.wallReach m do ponto de impulso e de frente para ela — pela direção do analógico (dx, dz) ou, parada,
- * pela frente do corpo. Com duas ao alcance, a mais perto.
+ * pela frente do corpo — e, com `world`, nada no caminho até o ponto de impulso (portão fechado, caixote).
+ * Com duas ao alcance, a mais perto.
  * @param {import('../types').DogController} c @param {import('../types').WallSpot[] | null | undefined} spots
+ * @param {number} [dx] @param {number} [dz] @param {import('../types').CollisionWorld | null} [world]
  */
-export function pickWallSpot(c, spots, dx = 0, dz = 0) {
+export function pickWallSpot(c, spots, dx = 0, dz = 0, world = null) {
   if (!c.cfg.wallJumpTime || !spots?.length) return null;
   const reach = c.cfg.wallReach ?? 0.8;
   const moving = Math.hypot(dx, dz) > 1e-4;
@@ -151,6 +155,7 @@ export function pickWallSpot(c, spots, dx = 0, dz = 0) {
     const front = (c.x - s.x) * s.nx + (c.z - s.z) * s.nz;
     if (d > reach || front < c.r * 0.5) continue;
     if (-(fx * s.nx + fz * s.nz) / L < WALL_FACING) continue;
+    if (world && !world.segmentClear(c.x, c.z, K.x, K.z, c.r * 0.9, c.size)) continue;
     if (d < bestD) {
       best = s;
       bestD = d;
@@ -208,7 +213,8 @@ function stepWallJump(c, dt) {
   c.v = 0;
   if (!c.wallTouched && p >= WALL_TOUCH) {
     c.wallTouched = true;
-    c.wallHit = W;
+    // só alcança o alto quem chegou à parede (algo que apareceu no caminho a segurou longe: sem toque)
+    if (Math.hypot(c.x - K.x, c.z - K.z) < WALL_TOUCH_REACH) c.wallHit = W;
   }
   if (p >= 1) {
     c.wall = null;
