@@ -2,9 +2,11 @@
 // API: buildWorld({ engine, root, layout }) → { props, seeThrough, update(dt, t), dispose() }
 // Tudo nasce dentro de `root`. Props: tipo Fase6Props em src/types.d.ts. Peças:
 //   workshop.js  sala, paredes, janelas e móveis (com as luzes quentes, sem sombra)
-//   railway.js   maquete do trem: base, feltro, trilho de madeira (de track.js), cerca, agulha e estação
+//   railway.js   maquete do trem: base, feltro, trilho de madeira (de track.js), cerca, agulha de três
+//                posições, cancela, elevador da lua e estação
 //   train.js     locomotiva com cara e nariz de mola, vagão-caçamba articulado e engate
-//   stations.js  pedal, canaleta e bandeja, marca de mira, tapete de foguete e a bolinha-planeta
+//   stations.js  pedal, canaletas e bandejas (estrela e lua), funil, placa da cancela, marca de mira,
+//                tapete com o foguete de dois berços, a bolinha-planeta e a lua na cestinha
 // O trilho visível e o movimento do trem saem do mesmo createTrack() (layout.TRACK).
 import { shared } from '../../../world/util.js';
 import { buildTreats } from '../../../world/treats.js';
@@ -31,12 +33,13 @@ export function buildWorld({ root }) {
   /** @type {import('../../../types').Fase6Props} */
   const props = {
     pedal: stations.pedal, junction: railway.junction, train: consist.train, nose: consist.nose,
-    ball: stations.ball, goal: stations.goal, collectibles: treats.list, fireflies: false,
+    ball: stations.ball, moon: stations.moon, barrier: railway.barrier, barrierPlate: stations.barrierPlate,
+    loader: railway.loader, goal: stations.goal, collectibles: treats.list, fireflies: false,
     update(dt, t) {
       treats.update(dt, t);
       railway.update(dt);
       consist.update(dt, t);
-      stations.update();
+      stations.update(dt);
     },
     reset() {
       railway.reset();

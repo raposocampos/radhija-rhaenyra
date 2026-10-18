@@ -439,6 +439,35 @@ export function createFeedback(opts) {
     sfx('toyWhistle', x, z);
     particles.ring({ x, y: 0.16, z }, { radius: 0.8, from: 0.2, life: 0.7, color: '#FFF1D6', opacity: 0.45, width: 0.08 });
   });
+  // cancela fechada: dois apitos e o "!" sobre o trem; cancela mexendo: catraca
+  events.on('expresso:blocked', ({ x, z }) => {
+    sfx('toyWhistle', x, z);
+    later(0.32, () => sfx('toyWhistle', x, z, { volume: 0.9 }));
+    popIcon('alert', { at: { x, y: 1.1, z }, life: 1.4, size: 0.24 });
+  });
+  events.on('expresso:barrier', ({ x, z }) => sfx('barrierMove', x, z));
+  // funil e elevador: a carga desce pelo tubo e cai no vagão
+  events.on('expresso:funnel', ({ x, z }) => {
+    sfx('funnelGulp', x, z);
+    particles.sparkle({ x, y: 0.6, z }, { count: 8, radius: 0.15, size: 0.8, rise: 0.6 });
+  });
+  events.on('expresso:loaded', ({ x, z }) => {
+    sfx('trayDing', x, z, { volume: 0.8 });
+    particles.sparkle({ x, y: 0.6, z }, { count: 10, radius: 0.2, size: 0.85, rise: 0.8 });
+  });
+  // foguete: cada carga encaixa com brilho; com as duas, decola com fumaça e confete
+  events.on('expresso:dock', ({ x, z }) => {
+    sfx('trayDing', x, z);
+    particles.sparkle({ x, y: 0.35, z }, { count: 16, radius: 0.3, size: 0.95, rise: 1.0 });
+    particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.15, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.09 });
+  });
+  events.on('expresso:launch', ({ x, z }) => {
+    later(0.2, () => sfx('rocketLaunch', x, z));
+    for (const at of [0.3, 0.7, 1.1, 1.5]) {
+      later(at, () => particles.dust({ x, y: 0.08, z }, { count: 9, size: 1.3, alpha: 0.5, color: '#F4EFE6', strength: 1.1, spread: 0.2 }));
+    }
+    later(0.9, () => particles.sparks({ x, y: 0.15, z }, { count: 16, size: 1.1, speed: 0.9 }));
+  });
   events.on('dog:bump', ({ x, z, strength = 0.7 }) => {
     sfx('bump', x, z, { strength });
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });

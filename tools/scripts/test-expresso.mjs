@@ -1,4 +1,6 @@
 // Protótipo DEV: teleporte prepara estações; ações do puzzle usam entrada real.
+// Fluxo longo: volta → cancela fechada barra a estrela → Rhaenyra fica na placa → planeta ao foguete →
+// lua da cestinha pelo funil e pela rota da lua → as duas no foguete, que decola.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -18,11 +20,12 @@ try {
   await load('?level=fase6&play');
   let state = await info();
   const layout = await ev(() => {
-    const { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN } = window.__game.layout;
-    return { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN_START: TRAIN.start };
+    const { PEDAL, BLOW_SPOT, TRAY, MOON_TRAY, GOAL, TRAIN, BARRIER_PLATE, MOON, FUNNEL } = window.__game.layout;
+    return { PEDAL, BLOW_SPOT, TRAY, MOON_TRAY, GOAL, TRAIN_START: TRAIN.start, BARRIER_PLATE, MOON, FUNNEL };
   });
   check(state.levelId === 'fase6' && state.state === 'playing', 'protótipo carregado pelo id');
   check(state.stage === 'waiting' && state.expresso.route === 'loop', 'início com trilho circular e trem parado');
+  check(state.expresso.barrier.open === 0 && state.expresso.place.moon === 'shelf', 'cancela fechada e lua na cestinha');
   await shot('01-oficina.png');
   await station('radhija', layout.BLOW_SPOT);
   await H.press('KeyE');
@@ -43,6 +46,7 @@ try {
     'o trem volta à estação olhando para a janela, sem girar no lugar');
   check((await H.logOf('expresso:atchim')).length === 1 && (await H.logOf('expresso:return')).length === 1, 'um atchim e um apito de volta por viagem');
 
+  // pedal pelo controle: a agulha aponta para a estrela
   await station('rhaenyra', layout.PEDAL);
   await H.sleep(750);
   await H.press('KeyE');
@@ -58,17 +62,49 @@ try {
   state = await waitFor((i) => i.expresso.route === 'delivery', { timeout: 3000 });
   check(state.expresso.route === 'delivery' && state.expresso.routeChanges === 1, 'pouso pelo controle troca trilho uma única vez');
   check((await H.logOf('dog:jump')).length === 1 && (await H.logOf('dog:land')).length === 1, 'pulo e pouso reais confirmados');
-  check(await page.locator('.rr-objective__text .k-pad [aria-label="L2 / LT"]').isVisible(), 'dica do superbafo mostra L2/LT quando o controle está ativo');
+  check(/placa/.test((await info()).objective || ''), 'com a cancela fechada, o objetivo manda a Rhaenyra para a placa');
   await ev(() => { window.__fakePads = []; });
   await H.sleep(700);
   check((await info()).expresso.routeChanges === 1, 'permanecer no pedal não repete a troca');
   await shot('02-trilho-da-estrela.png');
 
+  // sem ninguém na placa, a cancela segura o trem e ele volta com o planeta
   await station('radhija', layout.BLOW_SPOT);
   check((await info()).expresso.route === 'delivery', 'troca de personagem preserva escolha');
+  await H.clearLog();
+  await blow();
+  state = await waitFor((i) => i.stage === 'blocked', { timeout: 15000 });
+  check(state.stage === 'blocked' && state.expresso.barrier.open === 0, 'cancela fechada barra a viagem da estrela');
+  await shot('02a-cancela-fechada.png');
+  check((await H.logOf('expresso:blocked')).length === 1, 'um apito de cancela fechada');
+  state = await waitFor((i) => i.stage === 'waiting' && i.expresso.armed, { timeout: 20000 });
+  check(state.expresso.place.planet === 'wagon' && state.expresso.trips === 2, 'o trem volta à estação com o planeta no vagão');
+
+  // a Rhaenyra fica na placa (F) e a cancela sobe
+  await station('rhaenyra', layout.BARRIER_PLATE);
+  await H.press('KeyQ');
+  await H.press('KeyF');
+  state = await waitFor((i) => i.expresso.barrier.open === 1, { timeout: 4000 });
+  check(state.activeDog === 'radhija' && state.stay.rhaenyra && state.expresso.barrier.plate, 'Fica: a Rhaenyra segura a placa da cancela');
+  check(state.expresso.barrier.open === 1, 'a cancela subiu');
+  await shot('02b-cancela-aberta.png');
+
+  await station('radhija', layout.BLOW_SPOT);
+  // com o controle ativo (o botão de pulo não faz nada para a Radhija), o objetivo mostra o superbafo em L2/LT
+  await ev(() => {
+    window.__fakePads = [{ id: 'Controle falso (DualSense)', index: 0, connected: true, mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) }];
+  });
+  await H.sleep(100);
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[0] = { pressed: true, value: 1 }; p.timestamp = performance.now(); });
+  await H.sleep(200);
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[0] = { pressed: false, value: 0 }; p.timestamp = performance.now(); });
+  await H.sleep(300);
+  check(await page.locator('.rr-objective__text .k-pad [aria-label="L2 / LT"]').isVisible(), 'dica do superbafo mostra L2/LT quando o controle está ativo');
+  await ev(() => { window.__fakePads = []; });
+  await H.sleep(300);
   await blow();
   state = await waitFor((i) => ['sneezing', 'movingDelivery'].includes(i.stage), { timeout: 6000 });
-  check(['sneezing', 'movingDelivery'].includes(state.stage), 'segundo sopro inicia viagem à bandeja');
+  check(['sneezing', 'movingDelivery'].includes(state.stage), 'com a cancela aberta, o sopro inicia viagem à bandeja');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => window.__game.game.state === 'paused');
   const paused = await info();
@@ -85,11 +121,11 @@ try {
   state = await waitFor((i) => i.expresso.unloading || i.stage === 'ready', { timeout: 25000 });
   if (state.expresso.unloading) {
     await H.sleep(380); // caçamba no alto, bolinha descendo a canaleta
-    await shot('02b-descarga-na-canaleta.png');
+    await shot('02c-descarga-na-canaleta.png');
   }
   check((await H.logOf('expresso:unload')).length === 1, 'a caçamba bascula uma vez no fim da entrega');
   state = await waitFor((i) => i.stage === 'ready', { timeout: 25000 });
-  check(state.stage === 'ready' && state.expresso.trips === 2, 'viagem entrega uma única bolinha');
+  check(state.stage === 'ready' && state.expresso.trips === 3, 'viagem entrega uma única bolinha');
   const earlyHint = await ev(() => window.__game.game.puzzle.TEXT.hint.early);
   await station('radhija', { x: layout.TRAY.x, z: layout.TRAY.z + 0.7, yaw: 0 });
   await H.sleep(2700); // expira o cooldown da dica usada antes da chegada.
@@ -108,12 +144,58 @@ try {
   check((await info()).ball.holder === 'radhija' && !(await H.logOf('hint')).some((hint) => hint.text === earlyHint),
     'interagir novamente com a bolinha na boca não anuncia que ela está no trem');
   await H.walkPath([[layout.TRAY.x, 2.6], [layout.GOAL.x, 2.6], [layout.GOAL.x, layout.GOAL.z]]);
+  state = await waitFor((i) => i.stage === 'planetDocked', { timeout: 8000 });
+  check(state.stage === 'planetDocked' && state.state === 'playing', 'o planeta encaixa no foguete, mas falta a lua');
+  await shot('03-planeta-no-foguete.png');
+
+  // lua: cestinha → funil → elevador → vagão
+  state = await waitFor((i) => i.expresso.mode === 'idle', { timeout: 15000 });
+  check(state.expresso.mode === 'idle', 'o trem voltou sozinho para a estação');
+  await station('radhija', { x: layout.MOON.x - 0.42, z: layout.MOON.z, yaw: Math.PI / 2 });
+  await H.press('KeyE');
+  state = await info();
+  check(state.stage === 'carryingMoon' && state.moon.holder === 'radhija', 'pegou a lua na cestinha ao lado da bancada');
+  await station('radhija', { x: layout.FUNNEL.x, z: layout.FUNNEL.z + 0.45, yaw: Math.PI });
+  await H.press('KeyE');
+  state = await info();
+  check(state.stage === 'loading' && state.moon.holder === null, 'a lua desce pelo funil');
+  await H.gsleep(1250); // subindo pelo elevador de vidro
+  await shot('04-lua-no-elevador.png');
+  state = await waitFor((i) => i.stage === 'moonLoaded', { timeout: 6000 });
+  check(state.stage === 'moonLoaded' && state.expresso.cargo === 'moon', 'a lua caiu no vagão');
+
+  // pulo até a seta da lua e outro superbafo
+  await station('rhaenyra', layout.PEDAL);
+  await H.sleep(300);
+  await H.press('Space');
+  state = await waitFor((i) => i.expresso.route === 'moon', { timeout: 3000 });
+  check(state.expresso.route === 'moon' && state.expresso.routeChanges === 2, 'da estrela, um pulo leva a agulha à lua');
+  await station('radhija', layout.BLOW_SPOT);
+  await blow();
+  state = await waitFor((i) => i.stage === 'movingMoon' || i.expresso.unloading, { timeout: 8000 });
+  check(state.stage === 'movingMoon' || state.expresso.unloading, 'a lua parte pela rota da lua');
+  state = await waitFor((i) => i.expresso.unloading || i.stage === 'moonReady', { timeout: 15000 });
+  if (state.expresso.unloading) {
+    await H.sleep(380);
+    await shot('05-lua-na-canaleta.png');
+  }
+  state = await waitFor((i) => i.stage === 'moonReady', { timeout: 10000 });
+  check(state.stage === 'moonReady' && state.expresso.place.moon === 'tray-moon', 'a lua rolou até a bandeja do norte');
+
+  // leva a lua ao foguete: as duas cargas → decolagem
+  await station('radhija', { x: layout.MOON_TRAY.x + 0.45, z: layout.MOON_TRAY.z, yaw: -Math.PI / 2 });
+  await H.press('KeyE');
+  check((await info()).moon.holder === 'radhija', 'pegou a lua na bandeja');
+  await H.walkPath([[-3.7, -3.3], [-3.7, 2.0], [layout.GOAL.x, layout.GOAL.z]]);
   state = await waitFor((i) => ['celebrating', 'victory'].includes(i.state), { timeout: 8000 });
-  check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'percurso externo e entrega concluem missão');
-  await shot('03-planeta-entregue.png');
+  check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'as duas cargas no foguete concluem a missão');
+  check((await H.logOf('expresso:launch')).length === 1, 'o foguete decola uma vez');
+  await H.gsleep(1300);
+  await shot('06-foguete-decola.png');
   await ev(() => window.__game.game.reset());
   state = await info();
-  check(state.stage === 'waiting' && state.expresso.route === 'loop' && state.ball.holder === null, 'reinício restaura trem, rota e item');
+  check(state.stage === 'waiting' && state.expresso.route === 'loop' && state.ball.holder === null && state.moon.holder === null, 'reinício restaura trem, rota e cargas');
+  check(state.expresso.place.planet === 'wagon' && state.expresso.place.moon === 'shelf' && state.expresso.barrier.open === 0, 'reinício devolve planeta, lua e cancela');
   check(state.expresso.trips === 0 && state.expresso.routeChanges === 0 && state.expresso.blockedCloudIdsCount === 0, 'reinício limpa contadores e bloqueios de nuvens');
   await load('?play');
   check(!(await ev(() => window.__game.levels.some((level) => level.id === 'fase6'))), 'catálogo normal continua sem o protótipo');

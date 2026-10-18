@@ -567,14 +567,17 @@ export interface Fase5Props extends LevelProps {
   collectibles: CollectibleProp[];
 }
 /** Expresso do Superbafo (fase de desenvolvimento em DEV_LEVELS). */
-export type Fase6Route = 'loop' | 'delivery';
+/** Posições da agulha: a volta, a estrela (bandeja do sul) e a lua (bandeja do norte). */
+export type Fase6Route = 'loop' | 'delivery' | 'moon';
+/** As duas cargas do foguete. */
+export type Fase6Cargo = 'planet' | 'moon';
 /** Trecho do trilho: reta ['line', m] ou curva ['arc', raio, graus] (+ = esquerda). */
 export type Fase6TrackCommand = ['line', number] | ['arc', number, number];
 /** Desenho do trilho (src/levels/fase6/track.js): o mesmo para o movimento e para os trilhos visíveis. */
 export interface Fase6TrackSpec {
   width: number; gauge: number;
-  stem: Fase6TrackCommand[]; loop: Fase6TrackCommand[]; delivery: Fase6TrackCommand[];
-  tail: number; returnDistance: number;
+  stem: Fase6TrackCommand[]; loop: Fase6TrackCommand[]; delivery: Fase6TrackCommand[]; moon: Fase6TrackCommand[];
+  tail: { delivery: number; moon: number }; returnDistance: number;
 }
 export interface Fase6CarPose { x: number; z: number; yaw: number }
 /**
@@ -588,8 +591,20 @@ export interface Fase6Props extends LevelProps {
   train: PropBase & { setPose(pose: Fase6TrainPose): void };
   /** setSneeze(fase): o espirro inteiro, 0..1 (inspira, "atchim" em TRAIN.burstAt, recupera); 0 e 1 = repouso. */
   nose: PropBase & { setSneeze(t: number): void };
+  /** Bolinha-planeta (começa no vagão) e a lua de brinquedo (começa na cestinha ao lado da bancada). */
   ball: ItemProp;
-  goal: PropBase & HighlightProp;
+  moon: ItemProp;
+  /** Cancela da estrela: setOpen(0 = braço baixado .. 1 = em pé). */
+  barrier: PropBase & { setOpen(k: number): void };
+  /** Placa do lado de fora que segura a cancela aberta. */
+  barrierPlate: PressProp;
+  /** Elevador da estação: setSpout(0 = bica recolhida .. 1 = sobre o vagão). */
+  loader: PropBase & { setSpout(k: number): void };
+  /**
+   * Tapete com o foguete: socket(carga) = onde a carga encaixa (o puzzle prende o objeto ali);
+   * launch() = decolagem, animada pelo próprio cenário durante a comemoração (o reset devolve ao chão).
+   */
+  goal: PropBase & HighlightProp & { socket(cargo: Fase6Cargo): THREE.Object3D; launch(): void };
   collectibles: CollectibleProp[];
   reset(): void;
 }

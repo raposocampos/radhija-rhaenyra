@@ -1,9 +1,10 @@
 // Expresso do Superbafo · as estações do puzzle fora da maquete: pedal de mola (desenho de patinhas
-// saltando), canaleta de madeira e bandeja da estrela, marca de mira diante da janela do nariz, tapete de
-// foguete com um foguetinho de brinquedo e a bolinha-planeta (com anel, como um planeta de verdade).
+// saltando), canaletas e bandejas da estrela (sul) e da lua (norte), funil de carga, placa da cancela, marca
+// de mira diante da janela do nariz, tapete com o foguete de dois berços (decola na comemoração), a
+// bolinha-planeta (com anel) e a lua de brinquedo na cestinha ao lado da bancada.
 import * as THREE from 'three';
 import { rbox, stdMat, woodMat, canvasTexture, contactShadow } from '../../../world/util.js';
-import { PEDAL, CHUTE, TRAY, BLOW_SPOT, GOAL, BALL, RAIL_YARD } from '../layout.js';
+import { PEDAL, CHUTE, MOON_CHUTE, TRAY, MOON_TRAY, BLOW_SPOT, GOAL, BALL, MOON, FUNNEL, BARRIER_PLATE, ROCKET, RAIL_YARD } from '../layout.js';
 import { starShape } from './railway.js';
 
 const TAU = Math.PI * 2;
@@ -109,6 +110,83 @@ function planetTexture() {
     g.fillStyle = '#f2f7f9'; g.fillRect(0, 0, w, 8); g.fillRect(0, h - 8, w, 8);
   }, { repeat: false });
 }
+/** Lua de brinquedo: creme com crateras e uma carinha dormindo (de frente para +Z da esfera). */
+function moonTexture() {
+  return canvasTexture(256, 128, (g, w, h) => {
+    g.fillStyle = '#ece3c8'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(160,150,120,0.55)';
+    for (const [x, y, r] of [[30, 40, 12], [60, 90, 9], [110, 30, 7], [150, 95, 13], [200, 45, 10], [236, 88, 8], [180, 20, 6]]) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+    // carinha em U = 0,25 (na SphereGeometry, é o lado +Z)
+    const cx = w * 0.25, cy = h * 0.52;
+    g.strokeStyle = '#6e5a46'; g.lineWidth = 4; g.lineCap = 'round';
+    for (const s of [-1, 1]) { g.beginPath(); g.arc(cx + s * 13, cy - 6, 7, 0.2, Math.PI - 0.2); g.stroke(); }
+    g.beginPath(); g.arc(cx, cy + 8, 6, 0.3, Math.PI - 0.3); g.stroke();
+    g.fillStyle = 'rgba(232,140,128,0.6)';
+    for (const s of [-1, 1]) { g.beginPath(); g.ellipse(cx + s * 22, cy + 6, 6, 4, 0, 0, TAU); g.fill(); }
+  }, { repeat: false });
+}
+/** Ícone redondo de bandeja/funil: a lua crescente. */
+function moonBadgeTexture() {
+  return canvasTexture(128, 128, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = '#f3e6b0'; g.strokeStyle = '#a8742c'; g.lineWidth = 6;
+    g.beginPath(); g.arc(w / 2, h / 2, 42, 0, TAU); g.fill(); g.stroke();
+    g.globalCompositeOperation = 'destination-out';
+    g.beginPath(); g.arc(w / 2 + 24, h / 2 - 9, 35, 0, TAU); g.fill();
+  }, { repeat: false });
+}
+/** Placa da cancela: listras de atenção na borda e o desenho de uma cancela levantada. */
+function plateTexture() {
+  return canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#e8d4a6'; g.beginPath(); g.arc(w / 2, h / 2, 126, 0, TAU); g.fill();
+    g.save(); g.beginPath(); g.arc(w / 2, h / 2, 124, 0, TAU); g.arc(w / 2, h / 2, 96, 0, TAU, true); g.clip();
+    for (let i = 0; i < 24; i++) {
+      g.fillStyle = i % 2 ? '#f6efe2' : '#d9473a';
+      g.beginPath(); g.moveTo(w / 2, h / 2); g.arc(w / 2, h / 2, 130, (i * TAU) / 24, ((i + 1) * TAU) / 24); g.closePath(); g.fill();
+    }
+    g.restore();
+    g.fillStyle = '#3f7d79'; g.fillRect(84, 150, 16, 46);
+    g.save(); g.translate(92, 152); g.rotate(-1.2);
+    for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#f6efe2' : '#d9473a'; g.fillRect(i * 14, -6, 14, 12); }
+    g.restore();
+    g.fillStyle = '#7a4f36';
+    g.beginPath(); g.ellipse(160, 168, 20, 16, 0, 0, TAU); g.fill();
+    for (const [dx, dy] of [[-20, -12], [-7, -22], [7, -22], [20, -12]]) { g.beginPath(); g.ellipse(160 + dx, 168 + dy, 7, 9, 0, 0, TAU); g.fill(); }
+  }, { repeat: false });
+}
+
+/**
+ * Canaleta de madeira inclinada de (z0, y0) a (z1, y1), descendo para o lado de z1, com apoio na borda da
+ * maquete e dois pés perto da bandeja.
+ */
+function buildChute(root, C, woodM, tealM, footM) {
+  const dir = Math.sign(C.z1 - C.z0);
+  const len = Math.hypot(C.z1 - C.z0, C.y0 - C.y1);
+  const slope = Math.atan2(C.y0 - C.y1, Math.abs(C.z1 - C.z0));
+  const chute = new THREE.Group();
+  chute.name = 'canaleta';
+  chute.position.set(C.x, (C.y0 + C.y1) / 2, (C.z0 + C.z1) / 2);
+  chute.rotation.order = 'YXZ';
+  chute.rotation.set(slope, dir > 0 ? 0 : Math.PI, 0);
+  root.add(chute);
+  add(chute, rbox(C.halfWidth * 2, 0.025, len, 0.008), woodM, 0, -0.0125, 0);
+  for (const s of [-1, 1]) add(chute, rbox(0.025, 0.075, len, 0.008), tealM, s * (C.halfWidth + 0.0125), 0.025, 0);
+  add(root, rbox(C.halfWidth * 2 + 0.06, C.y0 - RAIL_YARD.height - 0.03, 0.06, 0.01), tealM, C.x, (C.y0 + RAIL_YARD.height - 0.03) / 2, C.z0 + dir * 0.03);
+  const footY = C.y1 + (C.y0 - C.y1) * 0.25;
+  for (const s of [-1, 1]) {
+    add(root, rbox(0.03, footY - 0.03, 0.03, 0.006), footM, C.x + s * (C.halfWidth - 0.02), (footY - 0.03) / 2, C.z1 - (C.z1 - C.z0) * 0.25);
+  }
+  return chute;
+}
+/** Bandeja de madeira com um ícone no fundo (a carga assenta com o centro em tray.y). */
+function buildTray(root, tray, woodMap, iconMat) {
+  const floorY = tray.y - BALL.r;
+  // o fundo fica 5 mm acima do assoalho (as duas faces da bandeja aparecem: sem plano em comum com o chão)
+  const dish = [[0.0001, floorY], [0.22, floorY], [0.262, floorY + 0.016], [0.288, floorY + 0.036], [0.31, floorY + 0.036], [0.32, floorY + 0.02], [0.315, 0.016], [0.296, 0.005], [0.0001, 0.005]]
+    .map(([r, y]) => new THREE.Vector2(r, y));
+  add(root, new THREE.LatheGeometry(dish, 40), new THREE.MeshStandardMaterial({ map: woodMap, color: '#c79563', roughness: 0.55, side: THREE.DoubleSide }), tray.x, 0, tray.z);
+  return { floorY, icon: (geo) => { const m = add(root, geo, iconMat, tray.x, floorY + 0.001, tray.z); m.castShadow = false; return m; } };
+}
 
 /** @param {THREE.Object3D} root */
 export function buildStations(root) {
@@ -148,39 +226,55 @@ export function buildStations(root) {
     },
   };
 
-  // ================================================================ canaleta e bandeja
-  const C = CHUTE;
-  const len = Math.hypot(C.z1 - C.z0, C.y0 - C.y1);
-  const slope = Math.atan2(C.y0 - C.y1, C.z1 - C.z0);
-  const chute = new THREE.Group();
-  chute.name = 'canaleta';
-  chute.position.set(C.x, (C.y0 + C.y1) / 2, (C.z0 + C.z1) / 2);
-  chute.rotation.x = slope;
-  root.add(chute);
+  // ================================================================ canaletas e bandejas (estrela ao sul, lua ao norte)
   const chuteWood = woodMat('#d7b07c', { key: 'expresso-moldura', rough: 0.6 });
-  add(chute, rbox(C.halfWidth * 2, 0.025, len, 0.008), chuteWood, 0, -0.0125, 0);
-  for (const s of [-1, 1]) add(chute, rbox(0.025, 0.075, len, 0.008), teal, s * (C.halfWidth + 0.0125), 0.025, 0);
-  // apoio na borda da maquete e pé perto da bandeja
-  add(root, rbox(C.halfWidth * 2 + 0.06, C.y0 - RAIL_YARD.height - 0.03, 0.06, 0.01), teal, C.x, (C.y0 + RAIL_YARD.height - 0.03) / 2, C.z0 + 0.03);
-  for (const s of [-1, 1]) {
-    const footY = C.y1 + (C.y0 - C.y1) * 0.25;
-    add(root, rbox(0.03, footY - 0.03, 0.03, 0.006), stdMat('#5a3b2c', { roughness: 0.7 }), C.x + s * (C.halfWidth - 0.02), (footY - 0.03) / 2, C.z1 - (C.z1 - C.z0) * 0.25);
-  }
-  // bandeja de madeira com a estrela no fundo (a bolinha assenta com o centro em TRAY.y)
-  const floorY = TRAY.y - BALL.r;
-  // o fundo fica 4 mm acima do assoalho (as duas faces da bandeja aparecem: sem plano em comum com o chão)
-  const dish = [[0.0001, floorY], [0.22, floorY], [0.262, floorY + 0.016], [0.288, floorY + 0.036], [0.31, floorY + 0.036], [0.32, floorY + 0.02], [0.315, 0.016], [0.296, 0.005], [0.0001, 0.005]]
-    .map(([r, y]) => new THREE.Vector2(r, y));
-  // o perfil vai do centro para a borda e desce: as duas faces aparecem (madeira emprestada da moldura)
-  add(root, new THREE.LatheGeometry(dish, 40), new THREE.MeshStandardMaterial({ map: chuteWood.map, color: '#c79563', roughness: 0.55, side: THREE.DoubleSide }), TRAY.x, 0, TRAY.z);
-  const trayStar = add(root, new THREE.ShapeGeometry(starShape(0.15)).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f2c766', emissive: '#e0a84a', emissiveIntensity: 0.18, ...decalOpts, transparent: false }), TRAY.x, floorY + 0.001, TRAY.z);
-  trayStar.castShadow = false;
+  const footMat = stdMat('#5a3b2c', { roughness: 0.7 });
+  buildChute(root, CHUTE, chuteWood, teal, footMat);
+  buildChute(root, MOON_CHUTE, chuteWood, teal, footMat);
+  const starTray = buildTray(root, TRAY, chuteWood.map, new THREE.MeshStandardMaterial({ color: '#f2c766', emissive: '#e0a84a', emissiveIntensity: 0.18, ...decalOpts, transparent: false }));
+  starTray.icon(new THREE.ShapeGeometry(starShape(0.15)).rotateX(-Math.PI / 2));
+  const moonBadge = new THREE.MeshStandardMaterial({ map: moonBadgeTexture(), ...decalOpts });
+  const moonTray = buildTray(root, MOON_TRAY, chuteWood.map, moonBadge);
+  moonTray.icon(new THREE.PlaneGeometry(0.3, 0.3).rotateX(-Math.PI / 2));
+
+  // ================================================================ funil de carga (do lado de fora; um tubo entra na base)
+  const funnel = new THREE.Group();
+  funnel.name = 'funil-de-carga';
+  funnel.position.set(FUNNEL.x, 0, FUNNEL.z);
+  root.add(funnel);
+  add(funnel, new THREE.CylinderGeometry(0.12, 0.14, 0.04, 20), teal, 0, 0.02, 0);
+  add(funnel, new THREE.CylinderGeometry(0.035, 0.035, FUNNEL.mouthY - 0.17, 12), brass, 0, (FUNNEL.mouthY - 0.17) / 2 + 0.04, 0);
+  const cone = [[0.035, 0], [0.05, 0.03], [0.17, 0.15], [0.18, 0.16]].map(([r, y]) => new THREE.Vector2(r, y));
+  add(funnel, new THREE.LatheGeometry(cone, 28), new THREE.MeshStandardMaterial({ color: '#4f8f8b', roughness: 0.45, side: THREE.DoubleSide }), 0, FUNNEL.mouthY - 0.16, 0);
+  const lip = add(funnel, new THREE.TorusGeometry(0.18, 0.012, 8, 28), brass, 0, FUNNEL.mouthY, 0);
+  lip.rotation.x = Math.PI / 2;
+  // tubo que corre no chão até a base da maquete (a lua vai por dentro até o elevador da estação)
+  const yardS = RAIL_YARD.z + RAIL_YARD.hz;
+  const pipe = add(funnel, new THREE.CylinderGeometry(0.03, 0.03, FUNNEL.z - yardS + 0.02, 10), brass, 0, 0.05, -(FUNNEL.z - yardS) / 2);
+  pipe.rotation.x = Math.PI / 2;
+  const badge = add(funnel, new THREE.CircleGeometry(0.07, 24), moonBadge, 0, 0.3, 0.036);
+  badge.castShadow = false;
+
+  // ================================================================ placa que segura a cancela (prop barrierPlate)
+  const plateObject = new THREE.Group();
+  plateObject.name = 'placa-da-cancela';
+  plateObject.position.set(BARRIER_PLATE.x, 0, BARRIER_PLATE.z);
+  root.add(plateObject);
+  add(plateObject, new THREE.CylinderGeometry(BARRIER_PLATE.r + 0.03, BARRIER_PLATE.r + 0.04, 0.02, 32), iron, 0, 0.01, 0);
+  const plateTop = new THREE.Group();
+  plateTop.position.y = 0.035;
+  plateObject.add(plateTop);
+  add(plateTop, new THREE.CylinderGeometry(BARRIER_PLATE.r, BARRIER_PLATE.r, 0.02, 32), woodMat('#cfa678', { key: 'expresso-plataforma', rough: 0.7 }), 0, -0.01, 0);
+  const plateFace = add(plateTop, new THREE.CircleGeometry(BARRIER_PLATE.r - 0.01, 32).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: plateTexture(), ...decalOpts }), 0, 0.001, 0);
+  plateFace.castShadow = false;
+  /** @type {import('../../../types').Fase6Props['barrierPlate']} */
+  const barrierPlate = { object: plateObject, setPress(t) { plateTop.position.y = 0.035 - Math.min(1, Math.max(0, t)) * 0.012; } };
 
   // ================================================================ marca de mira (superbafo daqui, pela janela)
   const aim = add(root, new THREE.PlaneGeometry(0.72, 0.72).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: aimTexture(), ...decalOpts }), BLOW_SPOT.x, 0.003, BLOW_SPOT.z);
   aim.castShadow = false;
 
-  // ================================================================ tapete de foguete + foguetinho
+  // ================================================================ tapete de foguete e o foguete com os dois berços
   const goalObject = new THREE.Group();
   goalObject.name = 'tapete-foguete';
   goalObject.position.set(GOAL.x, 0, GOAL.z);
@@ -188,23 +282,68 @@ export function buildStations(root) {
   const rugMat = new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1, emissive: '#d4a857', emissiveIntensity: 0 });
   const rug = add(goalObject, rbox(1.85, 0.014, 1.45, 0.006, 1), rugMat, 0, 0.007, 0);
   rug.castShadow = false;
+  const pad = new THREE.Group();
+  pad.name = 'base-do-foguete';
+  pad.position.set(ROCKET.x, 0.014, ROCKET.z);
+  root.add(pad);
+  add(pad, new THREE.CylinderGeometry(ROCKET.r, ROCKET.r + 0.02, 0.04, 28), woodMat('#b98457', { key: 'expresso-caixa', rough: 0.7 }), 0, 0.02, 0);
+  add(pad, new THREE.TorusGeometry(ROCKET.r - 0.03, 0.012, 6, 28).rotateX(Math.PI / 2), stdMat('#e0a84a', { roughness: 0.45 }), 0, 0.045, 0);
   const rocket = new THREE.Group();
-  rocket.position.set(-0.78, 0.014, 0.56);
-  rocket.rotation.y = 0.5;
-  goalObject.add(rocket);
-  add(rocket, new THREE.CylinderGeometry(0.055, 0.065, 0.24, 16), stdMat('#f3e6cc', { roughness: 0.5 }), 0, 0.15, 0);
-  add(rocket, new THREE.ConeGeometry(0.056, 0.12, 16), stdMat('#c8553d', { roughness: 0.5 }), 0, 0.33, 0);
+  rocket.name = 'foguete';
+  pad.add(rocket);
+  const cream = stdMat('#f3e6cc', { roughness: 0.45 });
+  const red = stdMat('#c8553d', { roughness: 0.45 });
+  add(rocket, new THREE.CylinderGeometry(0.1, 0.12, 0.5, 24), cream, 0, 0.32, 0);
+  add(rocket, new THREE.ConeGeometry(0.1, 0.22, 24), red, 0, 0.68, 0);
+  add(rocket, new THREE.CylinderGeometry(0.07, 0.09, 0.07, 18, 1, true), stdMat('#3a3330', { roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide }), 0, 0.075, 0);
   for (let i = 0; i < 3; i++) {
-    const fin = add(rocket, rbox(0.012, 0.09, 0.06, 0.004), teal, 0, 0.065, 0);
-    fin.position.set(Math.cos((i / 3) * TAU) * 0.065, 0.065, Math.sin((i / 3) * TAU) * 0.065);
-    fin.rotation.y = -(i / 3) * TAU;
+    const a = (i / 3) * TAU + Math.PI / 2;
+    const fin = add(rocket, rbox(0.02, 0.18, 0.12, 0.006), teal, Math.cos(a) * 0.13, 0.125, Math.sin(a) * 0.13);
+    fin.rotation.y = -a;
   }
-  const port = add(rocket, new THREE.CircleGeometry(0.022, 16), stdMat('#9fd0d6', { roughness: 0.2 }), 0, 0.2, 0.062);
-  port.castShadow = false;
+  for (const y of [0.18, 0.5]) add(rocket, new THREE.TorusGeometry(0.112, 0.01, 6, 28).rotateX(Math.PI / 2), stdMat('#c99a52', { roughness: 0.38, metalness: 0.55 }), 0, y + (y < 0.3 ? 0.002 : 0), 0);
+  // janelinha redonda (o corpo tem ~0,107 m de raio nessa altura: vidro e aro ficam à frente da superfície)
+  const windowRing = add(rocket, new THREE.TorusGeometry(0.04, 0.01, 8, 20), brass, 0, 0.4, 0.11);
+  windowRing.castShadow = false;
+  add(rocket, new THREE.CircleGeometry(0.036, 18), stdMat('#9fd0d6', { roughness: 0.15, emissive: '#7fc0c8', emissiveIntensity: 0.2 }), 0, 0.4, 0.112).castShadow = false;
+  // berços: braço de latão e um ninho de feltro; o soquete fica no centro da carga encaixada
+  /** @type {Record<import('../../../types').Fase6Cargo, THREE.Object3D>} */
+  const sockets = /** @type {any} */ ({});
+  for (const cargo of /** @type {import('../../../types').Fase6Cargo[]} */ (['planet', 'moon'])) {
+    const S = ROCKET.sockets[cargo];
+    const arm = add(rocket, new THREE.CylinderGeometry(0.012, 0.012, Math.abs(S.x) - 0.08, 8), brass, S.x / 2 + Math.sign(S.x) * 0.04, S.y - BALL.r - 0.01, S.z);
+    arm.rotation.z = Math.PI / 2;
+    const nest = add(rocket, new THREE.TorusGeometry(0.065, 0.02, 8, 20).rotateX(Math.PI / 2), stdMat(cargo === 'planet' ? '#e0a84a' : '#a8c4d8', { roughness: 0.9 }), S.x, S.y - BALL.r + 0.012, S.z);
+    nest.name = `berco-${cargo}`;
+    const socket = new THREE.Group();
+    socket.name = `encaixe-${cargo}`;
+    socket.position.set(S.x, S.y, S.z);
+    rocket.add(socket);
+    sockets[cargo] = socket;
+  }
+  // chama da decolagem (só aparece subindo)
+  const flameMat = new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.85, depthWrite: false });
+  const flame = add(rocket, new THREE.ConeGeometry(0.07, 0.24, 16).rotateX(Math.PI), flameMat, 0, -0.08, 0);
+  flame.castShadow = false;
+  flame.visible = false;
+  const launchState = { on: false, t: 0 };
+  function setLaunchPose() {
+    const t = launchState.t;
+    // treme, sobe devagar e acelera; a chama pisca
+    const rise = t < 0.6 ? 0 : (t - 0.6) * (t - 0.6) * 0.9;
+    rocket.position.set(t < 0.6 ? Math.sin(t * 60) * 0.006 : 0, Math.min(rise, 6), 0);
+    flame.visible = launchState.on && t > 0.2;
+    flame.scale.set(1, 0.8 + Math.abs(Math.sin(t * 30)) * 0.6, 1);
+  }
   /** @type {import('../../../types').Fase6Props['goal']} */
-  const goal = { object: goalObject, setHighlight(on) { rugMat.emissiveIntensity = on ? 0.22 : 0; } };
+  const goal = {
+    object: goalObject,
+    setHighlight(on) { rugMat.emissiveIntensity = on ? 0.22 : 0; },
+    socket(cargo) { return sockets[cargo]; },
+    launch() { launchState.on = true; launchState.t = 0; },
+  };
 
-  // ================================================================ bolinha-planeta
+  // ================================================================ as duas cargas: bolinha-planeta e a lua (na cestinha)
   const ballObject = new THREE.Group();
   ballObject.name = 'ball';
   ballObject.userData.carryKind = 'ball';
@@ -216,23 +355,57 @@ export function buildStations(root) {
   const ballHome = new THREE.Vector3(BALL.x, BALL.y, BALL.z);
   /** @type {import('../../../types').ItemProp} */
   const ball = { object: ballObject, home: ballHome, setHighlight(on) { ballMat.emissiveIntensity = on ? 0.22 : 0; } };
-  const ballShadow = contactShadow(0.13, 0.13, 0.3, 0.008);
-  root.add(ballShadow);
+  const basket = new THREE.Group();
+  basket.name = 'cestinha-da-lua';
+  basket.position.set(MOON.x, 0, MOON.z);
+  root.add(basket);
+  const wicker = woodMat('#c9a26b', { key: 'expresso-vime', rough: 0.9 });
+  add(basket, new THREE.CylinderGeometry(MOON.basketR, MOON.basketR - 0.03, 0.12, 20, 1, true), new THREE.MeshStandardMaterial({ map: wicker.map, color: '#c9a26b', roughness: 0.9, side: THREE.DoubleSide }), 0, 0.065, 0);
+  add(basket, new THREE.CylinderGeometry(MOON.basketR - 0.03, MOON.basketR - 0.03, 0.012, 20), wicker, 0, 0.011, 0);
+  add(basket, new THREE.TorusGeometry(MOON.basketR, 0.012, 6, 24).rotateX(Math.PI / 2), wicker, 0, 0.125, 0);
+  // almofadinha dentro da cesta: a lua fica com a metade de cima à mostra
+  const cushion = add(basket, new THREE.SphereGeometry(MOON.basketR - 0.035, 16, 10), stdMat('#7ca8b2', { roughness: 1 }), 0, 0.05, 0);
+  cushion.scale.y = 0.28;
+  const moonObject = new THREE.Group();
+  moonObject.name = 'moon';
+  moonObject.userData.carryKind = 'ball';
+  root.add(moonObject);
+  const moonMat = new THREE.MeshStandardMaterial({ map: moonTexture(), roughness: 0.65, emissive: '#e8d48a', emissiveIntensity: 0 });
+  add(moonObject, new THREE.SphereGeometry(MOON.r, 28, 18), moonMat);
+  const moonHome = new THREE.Vector3(MOON.x, MOON.y, MOON.z);
+  /** @type {import('../../../types').ItemProp} */
+  const moon = { object: moonObject, home: moonHome, setHighlight(on) { moonMat.emissiveIntensity = on ? 0.25 : 0; } };
+  const shadows = [ballObject, moonObject].map((o) => {
+    const sh = contactShadow(0.13, 0.13, 0.3, 0.008);
+    root.add(sh);
+    return { o, sh };
+  });
 
   return {
-    pedal, goal, ball,
-    update() {
-      // sombrinha da bolinha só quando ela está no chão (bandeja), não no vagão nem na boca
-      const p = ballObject.position;
-      ballShadow.visible = ballObject.parent === root && p.y < TRAY.y + 0.05;
-      ballShadow.position.set(p.x, TRAY.y - BALL.r + 0.002, p.z);
+    pedal, goal, ball, moon, barrierPlate,
+    update(dt) {
+      // sombrinha das cargas só quando estão numa bandeja (não no vagão, na boca, no tubo ou no foguete)
+      for (const { o, sh } of shadows) {
+        const p = o.position;
+        sh.visible = o.parent === root && o.visible && p.y < TRAY.y + 0.05;
+        sh.position.set(p.x, TRAY.y - BALL.r + 0.002, p.z);
+      }
+      if (launchState.on) { launchState.t += dt; setLaunchPose(); }
     },
     reset() {
       pedal.setPress(0);
-      ballObject.position.copy(ballHome);
-      ballObject.rotation.set(0, 0, 0);
+      barrierPlate.setPress(0);
+      for (const [o, home] of /** @type {[THREE.Object3D, THREE.Vector3][]} */ ([[ballObject, ballHome], [moonObject, moonHome]])) {
+        o.position.copy(home);
+        o.rotation.set(0, 0, 0);
+        o.visible = true;
+      }
       ball.setHighlight(false);
+      moon.setHighlight(false);
       goal.setHighlight(false);
+      launchState.on = false;
+      launchState.t = 0;
+      setLaunchPose();
     },
   };
 }

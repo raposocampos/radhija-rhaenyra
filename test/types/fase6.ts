@@ -16,14 +16,22 @@ context.props.junction.setRoute('delivery');
 context.props.train.setPose({ x: 1, z: -0.5, yaw: Math.PI });
 context.props.nose.setSneeze(0.5);
 context.props.ball.home.copy(context.props.ball.object.position);
+context.props.junction.setRoute('moon');
+context.props.barrier.setOpen(1);
+context.props.barrierPlate.setPress(0.5);
+context.props.loader.setSpout(0.5);
+context.props.goal.socket('moon').add(context.props.moon.object);
+context.props.goal.launch();
+// @ts-expect-error o foguete só tem berços para o planeta e a lua
+context.props.goal.socket('sol');
 
-// @ts-expect-error fábrica headless também preserva as duas rotas declaradas
+// @ts-expect-error fábrica headless também preserva as três rotas declaradas
 fake.junction.setRoute('atalho');
 // @ts-expect-error guarda runtime não pode esconder retorno any da fábrica de teste
 fake.train.metodoInventado();
 // @ts-expect-error fábrica real não pode devolver props abertos ou any
 real.train.metodoInventado();
-// @ts-expect-error não há rota arbitrária além das duas declaradas
+// @ts-expect-error não há rota arbitrária além das três declaradas
 real.junction.setRoute('atalho');
 // @ts-expect-error pose do trem precisa de orientação, além de XZ
 real.train.setPose({ x: 1, z: 0 });

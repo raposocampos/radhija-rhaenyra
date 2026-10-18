@@ -5,7 +5,10 @@
 import * as THREE from 'three';
 import { rng, rbox, stdMat, woodMat, woodTexture, canvasTexture, mergeGeometries } from '../../../world/util.js';
 import { createRubberDuck } from '../../../world/toys.js';
-import { RAIL_YARD, TRACK, TRAIN, NOSE, CHUTE, SWITCH_SIGN, SWITCH_LEVER, PEDAL, YARD_DECOR as DECOR } from '../layout.js';
+import {
+  RAIL_YARD, TRACK, TRAIN, NOSE, CHUTE, MOON_CHUTE, SWITCH_SIGN, SWITCH_LEVER, PEDAL, BARRIER, BARRIER_PLATE, LOADER,
+  YARD_DECOR as DECOR,
+} from '../layout.js';
 
 const TAU = Math.PI * 2;
 
@@ -107,7 +110,17 @@ function feltTexture() {
     }
   });
 }
-/** Faces da placa da agulha: 'loop' (seta circular) e 'star' (seta para a estrela). */
+/** Lua crescente pintada (placas e decalques). */
+function paintMoon(g, x, y, r, fill = '#f3e6b0', stroke = '#a8742c') {
+  g.save();
+  g.beginPath(); g.arc(x, y, r, 0, TAU); g.closePath();
+  g.fillStyle = fill; g.fill();
+  g.lineWidth = Math.max(3, r * 0.14); g.strokeStyle = stroke; g.stroke();
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath(); g.arc(x + r * 0.55, y - r * 0.2, r * 0.82, 0, TAU); g.fill();
+  g.restore();
+}
+/** Faces da placa da agulha: 'loop' (seta circular), 'star' (seta para a estrela) e 'moon' (seta para a lua). */
 function signTexture(kind) {
   return canvasTexture(256, 192, (g, w, h) => {
     g.fillStyle = '#f6ebd2'; g.beginPath(); g.roundRect(6, 6, w - 12, h - 12, 26); g.fill();
@@ -119,6 +132,12 @@ function signTexture(kind) {
       // ponta da seta
       const a = -Math.PI * 0.15, x = w / 2 + Math.cos(a) * 50, y = h / 2 + 4 + Math.sin(a) * 50;
       g.fillStyle = '#4f8f8b'; g.beginPath(); g.moveTo(x + 22, y + 6); g.lineTo(x - 18, y - 6); g.lineTo(x + 6, y + 34); g.closePath(); g.fill();
+    } else if (kind === 'moon') {
+      // seta para cima (o norte da maquete) e a lua
+      g.strokeStyle = '#3e5f86'; g.lineWidth = 18;
+      g.beginPath(); g.moveTo(84, h - 36); g.lineTo(84, 58); g.stroke();
+      g.fillStyle = '#3e5f86'; g.beginPath(); g.moveTo(54, 74); g.lineTo(84, 34); g.lineTo(114, 74); g.closePath(); g.fill();
+      paintMoon(g, 176, h / 2 + 4, 40);
     } else {
       g.strokeStyle = '#c8553d'; g.lineWidth = 18;
       g.beginPath(); g.moveTo(40, h / 2 + 4); g.lineTo(150, h / 2 + 4); g.stroke();
@@ -184,25 +203,27 @@ export function buildRailway(root, track) {
       .rotateY(Math.atan2(seg.dx0, seg.dz0)).translate(p.x, YT + seg.lift + 0.002, p.z));
   }
   add(grp, mergeGeometries(seams), stdMat('#8a5a3a', { roughness: 0.7 })).castShadow = false;
-  // para-choque no fim do trilho da entrega (o vagão para encostado nele)
-  const tail = track.pieces.at(-1);
-  const tailEnd = track.sample(tail, tail.length);
-  const bumper = new THREE.Group();
-  bumper.position.set(tailEnd.x, 0, tailEnd.z);
-  bumper.rotation.y = Math.atan2(tailEnd.dx, tailEnd.dz);
-  for (const s of [-1, 1]) add(bumper, rbox(0.05, 0.16, 0.05, 0.01), stdMat('#5a3b2c', { roughness: 0.7 }), s * 0.13, Y.height + 0.08, 0.05);
-  add(bumper, rbox(0.38, 0.09, 0.06, 0.02), stdMat('#c8553d', { roughness: 0.55 }), 0, 0.31, 0.05);
-  for (const s of [-1, 1]) {
-    const pad = add(bumper, new THREE.CylinderGeometry(0.03, 0.03, 0.03, 12), stdMat('#c99a52', { roughness: 0.38, metalness: 0.55 }), s * 0.12, 0.31, 0.01);
-    pad.rotation.x = Math.PI / 2;
+  // para-choques no fim do trilho da estrela e da lua (o vagão para encostado neles)
+  for (const tail of [track.tails.delivery, track.tails.moon]) {
+    const tailEnd = track.sample(tail, tail.length);
+    const bumper = new THREE.Group();
+    bumper.position.set(tailEnd.x, 0, tailEnd.z);
+    bumper.rotation.y = Math.atan2(tailEnd.dx, tailEnd.dz);
+    for (const s of [-1, 1]) add(bumper, rbox(0.05, 0.16, 0.05, 0.01), stdMat('#5a3b2c', { roughness: 0.7 }), s * 0.13, Y.height + 0.08, 0.05);
+    add(bumper, rbox(0.38, 0.09, 0.06, 0.02), stdMat('#c8553d', { roughness: 0.55 }), 0, 0.31, 0.05);
+    for (const s of [-1, 1]) {
+      const pad = add(bumper, new THREE.CylinderGeometry(0.03, 0.03, 0.03, 12), stdMat('#c99a52', { roughness: 0.38, metalness: 0.55 }), s * 0.12, 0.31, 0.01);
+      pad.rotation.x = Math.PI / 2;
+    }
+    grp.add(bumper);
   }
-  grp.add(bumper);
 
   // ---- cerquinha de ripas sobre a moldura (aberturas: janela do nariz e canaleta)
   const fenceIn = 0.035;
   const fx = Y.hx - fenceIn, zN = Y.z - Y.hz + fenceIn, zS = Y.z + Y.hz - fenceIn;
   const windowHalf = NOSE.halfWidth + 0.06;
   const chuteGap = [CHUTE.x - CHUTE.halfWidth - 0.07, CHUTE.x + CHUTE.halfWidth + 0.07];
+  const moonGap = [MOON_CHUTE.x - MOON_CHUTE.halfWidth - 0.07, MOON_CHUTE.x + MOON_CHUTE.halfWidth + 0.07];
   const picketShape = new THREE.Shape();
   picketShape.moveTo(-0.024, 0); picketShape.lineTo(0.024, 0); picketShape.lineTo(0.024, 0.26); picketShape.lineTo(0, 0.3); picketShape.lineTo(-0.024, 0.26); picketShape.closePath();
   const picketBase = new THREE.ExtrudeGeometry(picketShape, { depth: 0.018, bevelEnabled: false }).translate(0, 0, -0.009);
@@ -225,7 +246,8 @@ export function buildRailway(root, track) {
       rails.push(new THREE.BoxGeometry(len, 0.03, 0.02).rotateY(ang).translate((ax + bx) / 2 + ox * 0.018, ry, (az + bz) / 2 + oz * 0.018));
     }
   };
-  side(-fx, zN, fx, zN, 0, -1);
+  side(-fx, zN, moonGap[0], zN, 0, -1);
+  side(moonGap[1], zN, fx, zN, 0, -1);
   side(-fx, zN, -fx, zS, -1, 0);
   side(fx, zN, fx, zS, 1, 0);
   side(-fx, zS, -windowHalf, zS, 0, 1);
@@ -237,7 +259,8 @@ export function buildRailway(root, track) {
   // mourões nos cantos e nas aberturas, com bolinhas no topo
   const postMat = stdMat('#3f7d79', { roughness: 0.55 });
   const knobMat = stdMat('#e0a84a', { roughness: 0.5 });
-  const posts = [[-fx, zN], [fx, zN], [-fx, zS], [fx, zS], [-windowHalf, zS], [windowHalf, zS], [chuteGap[0], zS], [chuteGap[1], zS]];
+  const posts = [[-fx, zN], [fx, zN], [-fx, zS], [fx, zS], [-windowHalf, zS], [windowHalf, zS], [chuteGap[0], zS], [chuteGap[1], zS],
+    [moonGap[0], zN], [moonGap[1], zN]];
   for (const [x, z] of posts) {
     add(grp, rbox(0.065, Y.fenceTop - Y.height + 0.02, 0.065, 0.012), postMat, x, (Y.fenceTop + Y.height + 0.02) / 2, z);
     add(grp, new THREE.SphereGeometry(0.04, 12, 10), knobMat, x, Y.fenceTop + 0.06, z);
@@ -247,6 +270,12 @@ export function buildRailway(root, track) {
   for (const x of chuteGap) {
     const st = add(grp, starGeo, stdMat('#e0a84a', { roughness: 0.45, emissive: '#e0a84a', emissiveIntensity: 0.12 }), x, Y.fenceTop + 0.16, zS);
     st.rotation.z = 0.1;
+  }
+  // luas crescentes no topo dos mourões da canaleta do norte (a bandeja da lua)
+  const crescent = new THREE.TorusGeometry(0.05, 0.02, 8, 18, Math.PI * 1.25);
+  for (const x of moonGap) {
+    const mn = add(grp, crescent, stdMat('#f3e6b0', { roughness: 0.45, emissive: '#e8d48a', emissiveIntensity: 0.12 }), x, Y.fenceTop + 0.16, zN);
+    mn.rotation.z = Math.PI * 0.62;
   }
   // janela do nariz: grades de latão nos lados (o meio fica livre para o nariz) e as plaquinhas
   const brass = stdMat('#c99a52', { roughness: 0.38, metalness: 0.55 });
@@ -261,22 +290,32 @@ export function buildRailway(root, track) {
     face.castShadow = false;
   }
 
-  // ---- placa da agulha (prop junction): gira entre a seta circular e a seta da estrela
+  // ---- placa da agulha (prop junction): prisma de três faces que gira para a seta da volta, da estrela ou
+  // da lua (sempre para a frente, como uma catraca)
   const sign = new THREE.Group();
   sign.name = 'seta-do-trilho';
   sign.position.set(SWITCH_SIGN.x, 0, SWITCH_SIGN.z);
   grp.add(sign);
   add(sign, new THREE.CylinderGeometry(0.025, 0.03, 0.86, 10), postMat, 0, Y.height + 0.43, 0);
   add(sign, new THREE.CylinderGeometry(0.07, 0.08, 0.03, 16), postMat, 0, Y.height + 0.015, 0);
-  const board = new THREE.Group();
+  const faces = ['loop', 'star', 'moon'].map((k) => new THREE.MeshStandardMaterial({ map: signTexture(k), roughness: 0.6 }));
+  /** Prisma triangular com uma face por rota; a face 0 (volta) olha para +Z com o prisma em 0. */
+  const prism = (parent, w, h) => {
+    const g = new THREE.Group();
+    parent.add(g);
+    // núcleo: cilindro de 3 lados com as faces a w/(2√3) do eixo (uma delas virada para +Z)
+    add(g, new THREE.CylinderGeometry(w / Math.sqrt(3), w / Math.sqrt(3), h + 0.02, 3, 1, false, Math.PI / 3), knobMat);
+    const d = w / (2 * Math.sqrt(3)) + 0.003;
+    faces.forEach((m, k) => {
+      const a = (k * 2 * Math.PI) / 3;
+      const f = add(g, new THREE.PlaneGeometry(w * 0.9, h * 0.9), m, Math.sin(a) * d, 0, Math.cos(a) * d);
+      f.rotation.y = a;
+      f.castShadow = false;
+    });
+    return g;
+  };
+  const board = prism(sign, 0.38, 0.28);
   board.position.set(0, 1.12, 0);
-  sign.add(board);
-  add(board, rbox(0.4, 0.3, 0.012, 0.03), knobMat);
-  const faces = { loop: new THREE.MeshStandardMaterial({ map: signTexture('loop'), roughness: 0.6 }), star: new THREE.MeshStandardMaterial({ map: signTexture('star'), roughness: 0.6 }) };
-  const front = add(board, new THREE.PlaneGeometry(0.36, 0.27), faces.loop, 0, 0, 0.0085);
-  const back = add(board, new THREE.PlaneGeometry(0.36, 0.27), faces.star, 0, 0, -0.0085);
-  back.rotation.y = Math.PI;
-  front.castShadow = back.castShadow = false;
   // alavanca dentro da maquete, do lado do pedal: caixa de madeira, alavanca que tomba e uma plaquinha igual à
   // placa grande (o pulo vira as duas ao mesmo tempo)
   const lever = new THREE.Group();
@@ -291,14 +330,9 @@ export function buildRailway(root, track) {
   add(handle, new THREE.CylinderGeometry(0.014, 0.014, 0.3, 8), brass, 0, 0.15, 0);
   add(handle, new THREE.SphereGeometry(0.045, 14, 10), stdMat('#c8553d', { roughness: 0.4 }), 0, 0.31, 0);
   // plaquinha num pino na frente da caixa, acima da cerca (a câmera e quem está no pedal veem)
-  const mini = new THREE.Group();
+  const mini = prism(lever, 0.16, 0.12);
   mini.position.set(0, 0.43, SWITCH_LEVER.hz - 0.02);
-  lever.add(mini);
   add(lever, new THREE.CylinderGeometry(0.01, 0.01, 0.14, 6), brass, 0, 0.32, SWITCH_LEVER.hz - 0.02);
-  const miniFront = add(mini, new THREE.PlaneGeometry(0.16, 0.12), faces.loop, 0, 0, 0.002);
-  const miniBack = add(mini, new THREE.PlaneGeometry(0.16, 0.12), faces.star, 0, 0, -0.002);
-  miniBack.rotation.y = Math.PI;
-  miniFront.castShadow = miniBack.castShadow = false;
   // haste do pedal: corre no chão até a base da maquete e, por cima do feltro, até a caixa da alavanca
   const baseX = Y.x - Y.hx;
   const floorLink = add(grp, new THREE.CylinderGeometry(0.014, 0.014, baseX - (PEDAL.x + PEDAL.r) + 0.03, 8), brass,
@@ -307,21 +341,28 @@ export function buildRailway(root, track) {
   const feltLink = add(grp, new THREE.CylinderGeometry(0.012, 0.012, SWITCH_LEVER.x - SWITCH_LEVER.hx - (baseX + 0.07) + 0.02, 8), brass,
     (SWITCH_LEVER.x - SWITCH_LEVER.hx + baseX + 0.07) / 2, Y.height + 0.03, SWITCH_LEVER.z);
   feltLink.rotation.z = Math.PI / 2;
-  const sw = { route: 'loop', k: 0 };
+  // a catraca só anda para a frente: cada rota nova soma um terço de volta ao alvo
+  const ORDER = ['loop', 'delivery', 'moon'];
+  const STEP = (2 * Math.PI) / 3;
+  const sw = { route: 'loop', turns: 0, angle: 0, lever: 0.5 };
   /** @type {import('../../../types').Fase6Props['junction']} */
   const junction = {
     object: sign,
-    setRoute(route) { sw.route = route; },
+    setRoute(route) {
+      sw.turns += (ORDER.indexOf(route) - ORDER.indexOf(sw.route) + 3) % 3;
+      sw.route = route;
+    },
   };
   function updateSwitch(dt) {
-    const target = sw.route === 'delivery' ? 1 : 0;
-    sw.k += Math.sign(target - sw.k) * Math.min(Math.abs(target - sw.k), dt * 3.2);
-    const e = sw.k * sw.k * (3 - 2 * sw.k);
-    board.rotation.y = e * Math.PI;
-    mini.rotation.y = e * Math.PI;
-    handle.rotation.z = 0.5 - e;
+    const target = -sw.turns * STEP;
+    sw.angle += Math.sign(target - sw.angle) * Math.min(Math.abs(target - sw.angle), dt * 4.2);
+    board.rotation.y = sw.angle;
+    mini.rotation.y = sw.angle;
+    const tilt = 0.5 - ORDER.indexOf(sw.route) * 0.5;
+    sw.lever += Math.sign(tilt - sw.lever) * Math.min(Math.abs(tilt - sw.lever), dt * 3);
+    handle.rotation.z = sw.lever;
   }
-  function snapSwitch() { sw.k = sw.route === 'delivery' ? 1 : 0; updateSwitch(0); }
+  function snapSwitch() { sw.turns = ORDER.indexOf(sw.route); sw.angle = -sw.turns * STEP; sw.lever = 0.5 - sw.turns * 0.5; updateSwitch(0); }
 
   // ---- estação: plataforma, casinha com telhado, poste de luz e banquinho (posições em YARD_DECOR)
   const station = new THREE.Group();
@@ -351,6 +392,73 @@ export function buildRailway(root, track) {
   add(station, new THREE.CylinderGeometry(0.012, 0.014, 0.42, 8), postMat, L.x, Y.height + 0.27, L.z);
   add(station, new THREE.SphereGeometry(0.04, 12, 10), stdMat('#fff1cf', { roughness: 0.4, emissive: '#ffd58a', emissiveIntensity: 0.5 }), L.x, Y.height + 0.5, L.z);
   add(station, rbox(0.06, 0.05, 0.2, 0.008), woodMat('#8a5a3a', { key: 'expresso-banco', rough: 0.7 }), Bn.x, Y.height + 0.085, Bn.z);
+
+  // ---- cancela da estrela (prop barrier): braço listrado que sobe com alguém na placa do lado de fora
+  const barrierGrp = new THREE.Group();
+  barrierGrp.name = 'cancela';
+  barrierGrp.position.set(BARRIER.postX, Y.height, BARRIER.z);
+  grp.add(barrierGrp);
+  add(barrierGrp, rbox(0.06, 0.42, 0.06, 0.012), postMat, 0, 0.21, 0);
+  add(barrierGrp, rbox(0.1, 0.03, 0.1, 0.01), postMat, 0, 0.015, 0);
+  const lamp = { red: new THREE.MeshStandardMaterial({ color: '#d9473a', emissive: '#ff4a32', emissiveIntensity: 0.9, roughness: 0.3 }),
+    green: new THREE.MeshStandardMaterial({ color: '#4f9b5a', emissive: '#52e07a', emissiveIntensity: 0, roughness: 0.3 }) };
+  // caixinha das luzes no alto do mourão, virada para a câmera (vermelha = fechada, verde = aberta)
+  add(barrierGrp, rbox(0.07, 0.12, 0.05, 0.012), stdMat('#2f2724', { roughness: 0.6 }), 0, 0.48, 0.02);
+  add(barrierGrp, new THREE.SphereGeometry(0.02, 10, 8), lamp.red, 0, 0.51, 0.048);
+  add(barrierGrp, new THREE.SphereGeometry(0.02, 10, 8), lamp.green, 0, 0.45, 0.048);
+  const armPivot = new THREE.Group();
+  armPivot.position.set(-0.045, 0.34, 0);
+  barrierGrp.add(armPivot);
+  const stripes = canvasTexture(128, 16, (g, w, h) => {
+    for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f6efe2' : '#d9473a'; g.fillRect((i * w) / 8, 0, w / 8 + 1, h); }
+  }, { repeat: false });
+  const ARM = BARRIER.postX - BARRIER.x + 0.3; // passa do outro lado do trilho
+  add(armPivot, rbox(ARM, 0.04, 0.025, 0.01), new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.55 }), -ARM / 2, 0, 0);
+  add(armPivot, rbox(0.08, 0.06, 0.04, 0.012), stdMat('#2f2724', { roughness: 0.6 }), 0.06, 0, 0);
+  /** @type {import('../../../types').Fase6Props['barrier']} */
+  const barrier = {
+    object: barrierGrp,
+    setOpen(k) {
+      const e = Math.min(1, Math.max(0, k));
+      armPivot.rotation.z = -e * (Math.PI / 2);
+      lamp.red.emissiveIntensity = 0.9 * (1 - e);
+      lamp.green.emissiveIntensity = 0.9 * e;
+    },
+  };
+  barrier.setOpen(0);
+  // cabo da placa até a cancela: no chão até a base e, por cima do feltro, até o mourão
+  const yardE = Y.x + Y.hx;
+  const plateLink = add(grp, new THREE.CylinderGeometry(0.012, 0.012, BARRIER_PLATE.x - BARRIER_PLATE.r - yardE + 0.03, 8), brass,
+    (BARRIER_PLATE.x - BARRIER_PLATE.r + yardE) / 2, 0.03, BARRIER.z + 0.08);
+  plateLink.rotation.z = Math.PI / 2;
+  const feltCable = add(grp, new THREE.CylinderGeometry(0.01, 0.01, yardE - 0.07 - BARRIER.postX, 8), brass, (yardE - 0.07 + BARRIER.postX) / 2, Y.height + 0.025, BARRIER.z + 0.08);
+  feltCable.rotation.z = Math.PI / 2;
+
+  // ---- elevador de vidro da estação (prop loader): a lua sobe por ele e a bica despeja no vagão
+  const loaderGrp = new THREE.Group();
+  loaderGrp.name = 'elevador-da-lua';
+  loaderGrp.position.set(LOADER.x, Y.height, LOADER.z);
+  grp.add(loaderGrp);
+  add(loaderGrp, rbox(0.16, 0.06, 0.16, 0.012), postMat, 0, 0.03, 0);
+  const glass = new THREE.MeshStandardMaterial({ color: '#cfe6ee', roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false });
+  const tube = add(loaderGrp, new THREE.CylinderGeometry(0.055, 0.055, LOADER.top - 0.22, 18, 1, true), glass, 0, (LOADER.top - 0.22) / 2 + 0.06, 0);
+  tube.castShadow = false;
+  for (const y of [0.07, LOADER.top - 0.16]) {
+    const ring = add(loaderGrp, new THREE.TorusGeometry(0.058, 0.01, 6, 20), brass, 0, y, 0);
+    ring.rotation.x = Math.PI / 2;
+  }
+  add(loaderGrp, new THREE.CylinderGeometry(0.075, 0.07, 0.06, 16), knobMat, 0, LOADER.top - Y.height + 0.0, 0);
+  const spout = new THREE.Group();
+  spout.position.set(-0.04, LOADER.top - Y.height, 0);
+  loaderGrp.add(spout);
+  add(spout, rbox(0.26, 0.025, 0.07, 0.008), brass, -0.13, 0, 0);
+  for (const s of [-1, 1]) add(spout, rbox(0.26, 0.04, 0.012, 0.004), brass, -0.13, 0.02, s * 0.035);
+  /** @type {import('../../../types').Fase6Props['loader']} */
+  const loader = {
+    object: loaderGrp,
+    setSpout(k) { spout.rotation.z = -1.1 + Math.min(1, Math.max(0, k)) * 1.55; },
+  };
+  loader.setSpout(0);
 
   // ---- linha de estrelas ao lado do trilho da entrega, até a canaleta
   const stars = [];
@@ -403,8 +511,8 @@ export function buildRailway(root, track) {
   add(tower, new THREE.ConeGeometry(0.14, 0.1, 18), roofMat, 0, 0.59, 0);
 
   return {
-    group: grp, junction,
+    group: grp, junction, barrier, loader,
     update(dt) { updateSwitch(dt); },
-    reset() { sw.route = 'loop'; snapSwitch(); },
+    reset() { sw.route = 'loop'; snapSwitch(); barrier.setOpen(0); loader.setSpout(0); },
   };
 }

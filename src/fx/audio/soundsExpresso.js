@@ -45,6 +45,25 @@ export const SOUNDS_EXPRESSO = {
     fm(G, o, { f: mtof(91) * p, t: t + 0.11, d: 0.8, peak: 0.06, ratio: 3.5, index: 1.4, idxD: 0.1 });
     return 1;
   },
+  // cancela subindo ou descendo: catraca de madeira e um zumbido curto
+  barrierMove(G, o, t, p) {
+    for (let i = 0; i < 4; i++) nz(G, o, { t: t + i * 0.07, a: 0.001, d: 0.025, peak: 0.12, type: 'bandpass', f: 2100 * p, q: 3 });
+    tone(G, o, { type: 'triangle', f: 300 * p, to: 360 * p, t, a: 0.02, d: 0.26, peak: 0.03 });
+    return 0.4;
+  },
+  // carga caindo no funil: "glu-glu" descendo pelo tubo
+  funnelGulp(G, o, t, p) {
+    for (let i = 0; i < 3; i++) tone(G, o, { type: 'sine', f: (520 - i * 90) * p, to: (380 - i * 70) * p, t: t + i * 0.11, a: 0.004, d: 0.09, peak: 0.07 });
+    nz(G, o, { t: t + 0.05, a: 0.04, hold: 0.25, d: 0.2, peak: 0.04, type: 'bandpass', f: 420 * p, q: 1.2, buf: G.pink });
+    return 0.6;
+  },
+  // decolagem do foguete: ronco que sobe e um "fiuuu" agudo
+  rocketLaunch(G, o, t, p) {
+    nz(G, o, { t, a: 0.3, hold: 0.9, d: 0.9, peak: 0.16, type: 'lowpass', f: 300 * p, to: 1400 * p, toT: 1.8, q: 0.7, buf: G.pink });
+    tone(G, o, { type: 'triangle', f: 220 * p, to: 880 * p, t: t + 0.4, a: 0.2, hold: 0.6, d: 0.6, peak: 0.05, vib: 6, vibRate: 9 });
+    marimba(G, o, mtof(91) * p, t + 1.5, 0.05, 0.6);
+    return 2.2;
+  },
   // apito de brinquedo ao voltar para a estação: "piuí"
   toyWhistle(G, o, t, p) {
     tone(G, o, { type: 'triangle', f: 980 * p, to: 1180 * p, t, a: 0.02, d: 0.16, peak: 0.07, vib: 18, vibRate: 30 });
@@ -53,6 +72,15 @@ export const SOUNDS_EXPRESSO = {
     return 0.5;
   },
 };
-export const MIN_GAP_EXPRESSO = { trainSniff: 0.5, trainSneeze: 0.5, trainChuff: 0.12, railSwitch: 0.2, ballRoll: 0.5, trayDing: 0.4, toyWhistle: 0.5 };
-export const PITCH_VAR_EXPRESSO = { trainSniff: 0.03, trainSneeze: 0.04, trainChuff: 0.08, railSwitch: 0.04, ballRoll: 0.03, trayDing: 0.02, toyWhistle: 0.03 };
-export const VERB_EXPRESSO = { trainSniff: 0.1, trainSneeze: 0.14, trainChuff: 0.05, railSwitch: 0.1, ballRoll: 0.08, trayDing: 0.22, toyWhistle: 0.15 };
+export const MIN_GAP_EXPRESSO = {
+  trainSniff: 0.5, trainSneeze: 0.5, trainChuff: 0.12, railSwitch: 0.2, ballRoll: 0.5, trayDing: 0.4, toyWhistle: 0.3,
+  barrierMove: 0.3, funnelGulp: 0.5, rocketLaunch: 2,
+};
+export const PITCH_VAR_EXPRESSO = {
+  trainSniff: 0.03, trainSneeze: 0.04, trainChuff: 0.08, railSwitch: 0.04, ballRoll: 0.03, trayDing: 0.02, toyWhistle: 0.03,
+  barrierMove: 0.05, funnelGulp: 0.04, rocketLaunch: 0.02,
+};
+export const VERB_EXPRESSO = {
+  trainSniff: 0.1, trainSneeze: 0.14, trainChuff: 0.05, railSwitch: 0.1, ballRoll: 0.08, trayDing: 0.22, toyWhistle: 0.15,
+  barrierMove: 0.06, funnelGulp: 0.12, rocketLaunch: 0.25,
+};

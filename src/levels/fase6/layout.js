@@ -16,13 +16,15 @@ export const DOGS = {
  */
 export const RAIL_YARD = { x: 0, z: -1.015, hx: 2.65, hz: 1.685, height: 0.16, fenceTop: 0.5 };
 export const PEDAL = { x: -3.75, z: 0.35, r: 0.8, pulseTime: 0.5 };
-/** Agulha do trilho: onde a volta e a entrega se separam (fim do tronco de TRACK). */
+/** Agulha do trilho: onde a volta, a estrela e a lua se separam (fim do tronco de TRACK). */
 export const JUNCTION = { x: 0, z: -1.5 };
+/** Ordem das posições da agulha: cada pouso no pedal avança uma (a volta, a estrela, a lua e de novo a volta). */
+export const ROUTE_ORDER = /** @type {import('../../types').Fase6Route[]} */ (['loop', 'delivery', 'moon']);
 /**
- * Placa da agulha e alavanca que repete a seta perto do pedal: as duas dentro da maquete (na área isolada,
- * fora do caminho do trem), ligadas ao pedal por uma haste que entra na base.
+ * Placa da agulha (prisma de três faces) e alavanca que repete a seta perto do pedal: as duas dentro da
+ * maquete (na área isolada, fora do caminho do trem), ligadas ao pedal por uma haste que entra na base.
  */
-export const SWITCH_SIGN = { x: 0.48, z: -1.12 };
+export const SWITCH_SIGN = { x: 0.48, z: -1.38 };
 export const SWITCH_LEVER = { x: -2.36, z: 0.38, hx: 0.1, hz: 0.12 };
 /**
  * Trem: locomotiva de brinquedo (centro em `start`, cara para o sul) e um vagão `cargoOffset` à frente no
@@ -35,13 +37,18 @@ export const TRAIN = {
   start: { x: 0, z: -0.3, yaw: 0 }, speed: 1.35, accel: 2.4, kick: 0.85, brake: 1.6, minSpeed: 0.22,
   sneezeTime: 0.9, burstAt: 0.55, unloadTime: 1.25, cargoOffset: 0.8, cargoY: 0.5,
   railY: 0.18, noseY: 0.6, noseZ: 0.58, chimney: { z: 0.3, y: 0.95 }, chuffEvery: 0.42,
+  /** Depois de descarregar, o trem espera `homePause` e volta sozinho para a estação (andando de frente). */
+  homePause: 0.8,
+  /** Parado diante da cancela fechada: apita, espera `blockedPause` e volta de frente para a estação. */
+  blockedPause: 0.9,
 };
 /**
  * Trilho de madeira (o mesmo desenho move o trem e desenha os trilhos: ver track.js). O trem sai de
  * TRAIN.start andando de ré para o norte. Trechos: ['line', m] ou ['arc', raio, graus], + = curva à
  * esquerda. `stem` vai da estação à agulha; `loop` fecha o circuito chegando de novo na estação pelo sul,
- * já alinhado (sem girar parado); `delivery` termina antes da canaleta, e `tail` é o trilho onde o vagão
- * para diante do para-choque. `width` = largura da peça; `gauge` = distância entre os sulcos.
+ * já alinhado (sem girar parado); `delivery` (a estrela) termina antes da canaleta do sul e `moon` (a lua)
+ * logo depois da agulha, com o vagão diante da canaleta do norte. `tail` é o trilho depois do fim de cada
+ * rota, onde o vagão para diante do para-choque. `width` = largura da peça; `gauge` = distância entre os sulcos.
  * @type {import('../../types').Fase6TrackSpec}
  */
 export const TRACK = {
@@ -49,16 +56,44 @@ export const TRACK = {
   stem: [['line', 1.2]],
   loop: [['arc', 0.6, 90], ['line', 0.4], ['arc', 0.6, 90], ['line', 1.15], ['arc', 0.5, 90], ['line', 0.65], ['arc', 0.45, 90]],
   delivery: [['arc', 0.6, -90], ['line', 0.6], ['arc', 0.6, -90], ['line', 0.97]],
-  tail: 1.08,
+  moon: [['line', 0.01]],
+  tail: { delivery: 1.08, moon: 1.07 },
   /** A volta passa a contar como "voltando" nos últimos metros (reta do sul + curva final). */
   returnDistance: 1.36,
 };
+/**
+ * Cancela de brinquedo na reta leste da estrela (`s` = ponto da rota onde fica o braço). Só sobe com alguém
+ * em cima da placa do lado de fora (BARRIER_PLATE); com ela fechada, o trem para antes, apita e volta.
+ * Depois que o trem passou do ponto de parada, ela fica aberta até ele sair (não desce em cima do trem).
+ */
+export const BARRIER = { s: 4.13, x: 1.8, z: -1.05, postX: 2.16 };
+export const BARRIER_PLATE = { id: 'expresso-cancela', x: 3.15, z: -1.05, r: 0.3 };
 export const NOSE = { id: 'expresso-nariz', x: 0, z: 0.38, r: 0.45, frontZ: 0.65, halfWidth: 0.58 };
 export const BLOW_SPOT = { x: 0, z: 1.65, yaw: Math.PI };
+/** Bandeja da estrela (sul) e da lua (norte): o centro da bolinha assenta em `y`. */
 export const TRAY = { x: 1.8, z: 1.3, y: 0.16, pickupR: 0.6 };
-/** Canaleta da descarga: rampa de madeira da borda da maquete até a bandeja (superfície de y0 a y1). */
+export const MOON_TRAY = { x: 0, z: -3.28, y: 0.16, pickupR: 0.6 };
+/** Canaletas da descarga: rampa de madeira da borda da maquete até a bandeja (superfície de y0 a y1). */
 export const CHUTE = { x: TRAY.x, z0: RAIL_YARD.z + RAIL_YARD.hz, z1: 1.06, y0: 0.37, y1: 0.12, halfWidth: 0.17 };
+export const MOON_CHUTE = { x: MOON_TRAY.x, z0: RAIL_YARD.z - RAIL_YARD.hz, z1: -3.02, y0: 0.37, y1: 0.12, halfWidth: 0.17 };
 export const BALL = { x: TRAIN.start.x, z: TRAIN.start.z - TRAIN.cargoOffset, y: TRAIN.cargoY, r: 0.09, pickupR: TRAY.pickupR };
+/**
+ * Lua de brinquedo: começa numa cestinha no chão, encostada na ponta sul da bancada (ao alcance da boca e à
+ * vista da câmera), e viaja como a bolinha.
+ */
+export const MOON = { x: 4.3, z: -0.6, y: 0.17, r: 0.085, pickupR: 0.6, basketR: 0.16 };
+/**
+ * Carga da lua: o funil fica do lado de fora da maquete (a dog solta a lua nele com E); um tubo por dentro da
+ * base leva a lua ao elevador da estação, que a despeja no vagão parado. Só aceita com o trem na estação e o
+ * vagão vazio. `loadTime` = do funil até o vagão.
+ */
+export const FUNNEL = { x: 0.95, z: 0.88, r: 0.2, mouthY: 0.55, reach: 0.75 };
+export const LOADER = { x: 0.42, z: -1.1, r: 0.07, top: 0.86, loadTime: 2.4 };
+/**
+ * Foguete no tapete: decola quando os dois berços (planeta e lua) estiverem ocupados. Os berços ficam dos
+ * dois lados do foguete (locais ao foguete).
+ */
+export const ROCKET = { x: -4.65, z: 3.15, r: 0.24, sockets: { planet: { x: 0.2, y: 0.2, z: 0.06 }, moon: { x: -0.2, y: 0.2, z: 0.06 } } };
 /**
  * Corpo da composição visto de cima, a partir do centro de cada carro (frente = cara da locomotiva):
  * a parte baixa (até a altura da cerca) e o teto da cabine. O teste varre as duas rotas com estes retângulos
@@ -81,6 +116,8 @@ export const YARD_DECOR = {
   bench: { x: 0.84, z: -0.7, r: 0.1 },
   sign: { x: SWITCH_SIGN.x, z: SWITCH_SIGN.z, r: 0.08 },
   lever: { x: SWITCH_LEVER.x, z: SWITCH_LEVER.z, hx: SWITCH_LEVER.hx, hz: SWITCH_LEVER.hz },
+  loader: { x: LOADER.x, z: LOADER.z, r: LOADER.r },
+  barrierPost: { x: BARRIER.postX, z: BARRIER.z, r: 0.05 },
   pond: { x: -0.8, z: -1.05, hx: 0.26, hz: 0.38 },
   tower: { x: -2.22, z: -1.62, r: 0.16 },
   treeA: { x: -1.0, z: -1.6, r: 0.12 }, treeB: { x: -0.75, z: -0.55, r: 0.1 }, treeC: { x: -2.25, z: -0.2, r: 0.13 },
@@ -108,8 +145,12 @@ export const STATIC_COLLIDERS = [
   { id: 'parede-leste', shape: 'box', x: 5.7, z: 0, hx: 0.2, hz: 4.2 },
   // Área inteira inacessível, inclusive durante saltos; trem nunca colide com dogs.
   { id: 'ferrovia', shape: 'box', x: RAIL_YARD.x, z: RAIL_YARD.z, hx: RAIL_YARD.hx, hz: RAIL_YARD.hz },
-  // A canaleta sai da maquete; termina antes da bandeja, que fica livre para pegar a bolinha.
+  // As canaletas saem da maquete; terminam antes das bandejas, que ficam livres para pegar a carga.
   { id: 'canaleta', shape: 'box', x: CHUTE.x, z: (CHUTE.z0 + 0.98) / 2, hx: CHUTE.halfWidth + 0.03, hz: (0.98 - CHUTE.z0) / 2 },
+  { id: 'canaleta-lua', shape: 'box', x: MOON_CHUTE.x, z: (MOON_CHUTE.z0 - 2.95) / 2, hx: MOON_CHUTE.halfWidth + 0.03, hz: (MOON_CHUTE.z0 + 2.95) / 2 },
+  { id: 'funil', shape: 'circle', x: FUNNEL.x, z: FUNNEL.z, r: FUNNEL.r },
+  { id: 'foguete', shape: 'circle', x: ROCKET.x, z: ROCKET.z, r: ROCKET.r },
+  { id: 'cestinha-da-lua', shape: 'circle', x: MOON.x, z: MOON.z, r: MOON.basketR },
   { id: 'bancada', shape: 'box', x: BENCH.x, z: BENCH.z, hx: BENCH.hx + 0.02, hz: BENCH.hz + 0.02 },
   { id: 'bau', shape: 'box', x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx + 0.02, hz: TOY_CHEST.hz + 0.02 },
   { id: 'estante', shape: 'box', x: TOY_SHELF.x, z: TOY_SHELF.z, hx: TOY_SHELF.hx, hz: TOY_SHELF.hz + 0.02 },
@@ -128,7 +169,7 @@ export const NAV_NODES = {
 export const NAV_EDGES = [['SW', 'S'], ['S', 'SE'], ['SE', 'E'], ['E', 'NE'], ['NE', 'N'], ['N', 'NW'], ['NW', 'W'], ['W', 'SW']];
 /** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
-  { id: 'lapis', x: -4.7, z: -2.6 }, { id: 'planetas', x: 0.6, z: -3.35 }, { id: 'caixinha', x: 4.5, z: 2.4 },
+  { id: 'lapis', x: -4.7, z: -2.6 }, { id: 'planetas', x: -1.4, z: -3.4 }, { id: 'caixinha', x: 4.5, z: 2.4 },
 ];
 export const COLLECTIBLE_PICKUP_R = 0.42;
 /** @type {import('../../types').Goal} */
@@ -147,8 +188,8 @@ export const CAMERA = {
   celebrate: { pos: [-2.8, 1.6, 5.1], look: [-3.85, 0.3, 2.85] },
 };
 /** @type {import('../../types').LevelLayout} */
-const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, SWITCH_SIGN, SWITCH_LEVER, TRAIN, TRACK, NOSE, BLOW_SPOT, TRAY,
-  CHUTE, BALL, TRAIN_BODY, YARD_DECOR, BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, RAG_RUG, TOY_PILE,
+const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, ROUTE_ORDER, SWITCH_SIGN, SWITCH_LEVER, TRAIN, TRACK, BARRIER,
+  BARRIER_PLATE, NOSE, BLOW_SPOT, TRAY, MOON_TRAY, CHUTE, MOON_CHUTE, BALL, MOON, FUNNEL, LOADER, ROCKET, TRAIN_BODY, YARD_DECOR, BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, RAG_RUG, TOY_PILE,
   FLOOR_LAMP, STATIC_COLLIDERS, NAV_NODES,
   NAV_EDGES, COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA };
 export default LAYOUT;

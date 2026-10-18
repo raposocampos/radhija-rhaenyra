@@ -1,9 +1,37 @@
 # Continuidade da fase 6 — Expresso do Superbafo
 
 Passagem Codex → Claude, 2026-10-17. A **Entrega A (acabamento mantendo DEV)**
-foi implementada por Claude em 2026-10-18 no branch `claude/acabamento-fase6`
-e aguarda CI, E2E e a aprovação do usuário (estado em [CONTEXTO.md](CONTEXTO.md)).
-A Entrega B (campanha) continua por fazer.
+foi publicada por Claude em 2026-10-18 (PR #18, squash `31e8b26`). A pedido do
+usuário, a fase ficou mais longa no branch `claude/fase6-longa`, que aguarda CI,
+E2E e aprovação (estado em [CONTEXTO.md](CONTEXTO.md)). A Entrega B (campanha)
+continua por fazer.
+
+### Fase mais longa (duas entregas e cancela)
+
+O foguete do tapete só decola com **as duas cargas**, e as duas precisam chegar
+de trem a uma bandeja (direto ao foguete, a dica pede o funil):
+
+1. **Planeta pela estrela.** O pedal agora tem três posições (volta → estrela →
+   lua → volta; a placa da agulha é um prisma de três faces). Na reta leste da
+   estrela há uma **cancela** que só sobe com alguém na **placa do lado de fora**
+   da maquete; com a Radhija soprando, a Rhaenyra precisa ficar lá com o Fica (F).
+   Fechada, o trem para antes do braço, apita duas vezes e volta com a carga
+   (recuperável). Depois de passar, o próprio trem segura a cancela em pé até sair.
+2. Em cada descarga a carga rola até a bandeja e o **trem volta sozinho** para a
+   estação, de frente (`parked` → `home`). Duas cargas cabem lado a lado na bandeja.
+3. **Lua pela rota da lua.** A lua começa na cestinha ao lado da bancada. Na boca,
+   vai até o **funil** da maquete (só com o trem parado e o vagão vazio): desce,
+   corre por dentro da base, sobe no **elevador de vidro** da estação e a bica a
+   derruba no vagão. A rota da lua é curta (logo depois da agulha) e descarrega
+   na canaleta e bandeja do **norte**, pegas pelo corredor norte.
+4. Com planeta e lua nos berços do foguete, ele treme, acende a chama e decola.
+
+Etapas novas: `blocked`, `movingMoon`, `planetDocked`, `loading`, `moonLoaded`,
+`moonReady`, `carryingMoon` (todas em `?stage=`). Viagem vazia não muda a etapa.
+Testes: entrega real, cancela (barra e não desce sobre o trem), funil, lua e
+foguete, e partida longa andando com a companheira (sem atravessar móveis).
+Capturas novas do E2E: `02a-cancela-fechada`, `02b-cancela-aberta`,
+`04-lua-no-elevador`, `05-lua-na-canaleta`, `06-foguete-decola`.
 
 ### O que mudou no acabamento
 
@@ -71,8 +99,9 @@ pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o nú
 - [x] Sincronizar olhos/nariz, antecipação, recuo e partida com o tempo do puzzle;
   revisar câmera e dicas vendo o movimento completo. Nenhuma ação deve exigir
   precisão de plataforma ou duas personagens agindo simultaneamente.
-- [ ] Entregar prévia própria do acabamento em DEV; publicar somente após
-  aprovação explícita dessa versão. A aprovação do protótipo não cobre a arte final.
+- [x] Entregar prévia própria do acabamento em DEV; publicar somente após
+  aprovação explícita dessa versão. → aprovado e publicado no PR #18.
+- [ ] Fase mais longa (cancela + lua + foguete): prévia própria e nova aprovação.
 
 ### Divisão segura entre agentes
 
@@ -105,7 +134,8 @@ visual se isso dificultar revisar causalidade e acabamento.
   → `test/fase6.test.mjs`: partida andando, viagem quadro a quadro, entrega com
   caçamba, trilho fechado e varredura do corpo do trem contra cerca e enfeites.
 - [ ] Revisar capturas das curvas/descarga e comparar direção artística com a fase 5.
-  O E2E `expresso` agora grava `01b-volta-na-curva` e `02b-descarga-na-canaleta`.
+  O E2E `expresso` grava a volta na curva, a cancela, as duas descargas, o
+  elevador da lua e a decolagem.
   Recursos devem estabilizar após trocas, sem descarte de recursos globais.
 - [ ] Tipos/testes/build e E2E `expresso` na nuvem; E2E `todas` na entrega importante.
   Conferir SHA do head final, smoke em subcaminho e jobs de recursos. Ver guia

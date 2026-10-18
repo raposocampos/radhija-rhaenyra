@@ -107,19 +107,24 @@ export function createTrack(spec = TRACK, start = TRAIN.start, cargoOffset = TRA
   const junction = { x: p.x, z: p.z, dx: p.dx, dz: p.dz };
   const loopBranch = chain(spec.loop, { ...junction }, 'loop');
   const deliveryBranch = chain(spec.delivery, { ...junction }, 'delivery');
+  const moonBranch = chain(spec.moon, { ...junction }, 'moon');
   const routes = {
     loop: makePath('loop', [...stem, ...loopBranch], true),
     delivery: makePath('delivery', [...stem, ...deliveryBranch], false),
+    moon: makePath('moon', [...stem, ...moonBranch], false),
   };
-  const e = routes.delivery.end;
-  const tail = chain([['line', spec.tail]], { ...e }, 'tail');
-  // A entrega sai da agulha por cima da volta: 3 mm acima, as duas peças não ficam no mesmo plano.
-  const pieces = [...stem, ...loopBranch, ...deliveryBranch, ...tail].map((seg) => ({
-    ...seg, lift: seg.route === 'delivery' || seg.route === 'tail' ? 0.003 : 0,
+  // trilho depois do fim de cada rota aberta, onde o vagão para diante do para-choque
+  const deliveryTail = chain([['line', spec.tail.delivery]], { ...routes.delivery.end }, 'tail-delivery');
+  const moonTail = chain([['line', spec.tail.moon]], { ...routes.moon.end }, 'tail-moon');
+  // As três saem juntas da agulha: a estrela 3 mm acima da volta e a lua 6 mm (nenhuma peça no plano da outra).
+  const LIFT = { delivery: 0.003, 'tail-delivery': 0.003, moon: 0.006, 'tail-moon': 0.006 };
+  const pieces = [...stem, ...loopBranch, ...deliveryBranch, ...deliveryTail, ...moonBranch, ...moonTail].map((seg) => ({
+    ...seg, lift: LIFT[seg.route] || 0,
   }));
+  const tails = { delivery: deliveryTail[0], moon: moonTail[0] };
   const tmp = { x: 0, z: 0, dx: 0, dz: 0 };
   return {
-    spec, routes, pieces, junction, cargoOffset,
+    spec, routes, pieces, tails, junction, cargoOffset,
     /** Pose da composição a `s` metros do início da rota (locomotiva e vagão, cada um na tangente do trilho). */
     consist(/** @type {import('../../types').Fase6Route} */ route, /** @type {number} */ s) {
       const path = routes[route];
