@@ -14,17 +14,24 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - **E (escopo ampliado pelo usuário, 2026-10-18):** as animações extras e o segredo combinado valem nas **10 fases**,
   cada fase com animações do próprio cenário; o segredo só depois de pegar todos os ossinhos da fase (todas têm 3).
   Detalhes técnicos só com o ok do usuário sobre a nota nos docs.
-- **B (em andamento, Claude):** fase 8 "Lavanderia de Domingo", branch `claude/fase8-lavanderia` (worktree
-  próprio), base `09ed23a`. Consultar o PR dessa branch para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
-  Desenho aprovado pelo usuário: a meia listrada presa com pregador no varal elétrico de teto (botão alto → o varal
-  desce por 6 s; só o tranco da arrancada da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de
-  rodinhas na frente da máquina + botão de centrifugar → ela cai no cesto; sem o cesto cai no chão e volta ao cesto
-  com E; o cesto empurrado até a caminha a entrega e estaciona ao lado). Entra direto na campanha (`LEVELS`, oito
-  fases, 4 + 4 no menu); a meia é um item novo (`sock`: pose de boca, ícone, nome, som, modelo em `toys.js`).
-  `createPushCrate` ganhou `freeze()` (para de andar, continua sólido). Testes: `test/fase8.test.mjs`, catálogo
-  com oito fases, suíte E2E `lavanderia` e capturas `tools/scripts/capture-lavanderia.mjs`.
-- Próximo passo: CI verde, E2E `lavanderia` e `todas`, revisar as capturas contra o padrão das fases 4 a 7, entregar
-  a prévia e aguardar aprovação. Depois, apresentar o desenho da fase 9.
+- **B (entregue para aprovação, Claude):** fase 8 "Lavanderia de Domingo", PR #24, branch `claude/fase8-lavanderia`
+  (worktree próprio), base `09ed23a`. Nenhum teste ou build rodou no PC. Desenho aprovado pelo usuário: a meia
+  listrada presa com pregador no varal elétrico de teto (botão alto → o varal desce por 6 s; só o tranco da arrancada
+  da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de rodinhas na frente da máquina + botão de
+  centrifugar → ela cai no cesto; sem o cesto cai no chão e volta ao cesto com E; o cesto empurrado até a caminha a
+  entrega e estaciona ao lado). Entra direto na campanha (`LEVELS`, oito fases, 4 + 4 no menu); a meia é um item
+  novo (`sock`: pose de boca, ícone, nome, som, modelo em `toys.js`). `createPushCrate` ganhou `freeze()`.
+  Testes: `test/fase8.test.mjs`, catálogo com oito fases, suíte E2E `lavanderia` e capturas
+  `tools/scripts/capture-lavanderia.mjs`.
+- Validação do código em `5b97413`: CI `39160268932` verde, prévia publicada, E2E `todas` `39160265826` com sucesso
+  (na 1ª tentativa a partida `lavanderia` travou logo após carregar a fase e caiu no limite de 30 min; refeita, passou
+  12/12). O commit seguinte só atualiza este arquivo: conferir no PR o CI e a prévia do head atual.
+- Pendência registrada: no CI, os prazos do harness E2E contam tempo de jogo (`deadline`, `gsleep`, `waitFor`). Se o
+  jogo congelar, eles nunca vencem e o job só cai no limite de 30 min. Vale um prazo de relógio como teto (entrega
+  própria, fora do #24).
+- Próximo passo: aguardar a aprovação do usuário para o #24 (só então merge squash com SHA esperado, CI do main,
+  liberar o deploy e conferir `version.json`). Depois, apresentar o desenho da fase 9 e esperar o ok. Pergunta ainda
+  sem resposta: o usuário aceita uma nota técnica discreta nos docs para a tarefa E?
 
 ## Entregue: impulso na parede (PR #23)
 
