@@ -13,8 +13,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   cenário e objetos em poucas linhas e esperar o ok.
 - **E (escopo ampliado pelo usuário, 2026-10-18):** as animações extras e o segredo combinado valem nas **10 fases**,
   cada fase com animações do próprio cenário; o segredo só depois de pegar todos os ossinhos da fase (todas têm 3).
-  Detalhes técnicos só com o ok do usuário sobre a nota nos docs.
-- **B (entregue para aprovação, Claude):** fase 8 "Lavanderia de Domingo", PR #24, branch `claude/fase8-lavanderia`
+  O usuário aceitou um registro técnico discreto nos docs (resposta de 2026-10-18); nada no jogo, no README ou na
+  tela de controles.
+- **B (aprovada, integrando; Claude):** fase 8 "Lavanderia de Domingo", PR #24, branch `claude/fase8-lavanderia`
   (worktree próprio), base `09ed23a`. Nenhum teste ou build rodou no PC. Desenho aprovado pelo usuário: a meia
   listrada presa com pregador no varal elétrico de teto (botão alto → o varal desce por 6 s; só o tranco da arrancada
   da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de rodinhas na frente da máquina + botão de
@@ -25,13 +26,28 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `tools/scripts/capture-lavanderia.mjs`.
 - Validação do código em `5b97413`: CI `39160268932` verde, prévia publicada, E2E `todas` `39160265826` com sucesso
   (na 1ª tentativa a partida `lavanderia` travou logo após carregar a fase e caiu no limite de 30 min; refeita, passou
-  12/12). O commit seguinte só atualiza este arquivo: conferir no PR o CI e a prévia do head atual.
+  12/12). O usuário aprovou a versão `1faefbd`, mas o main avançou (#25, tela cheia no iPhone): merge do main no
+  branch sem conflitos; pelo AGENTS.md, CI/prévia novos e nova aprovação antes de integrar.
 - Pendência registrada: no CI, os prazos do harness E2E contam tempo de jogo (`deadline`, `gsleep`, `waitFor`). Se o
   jogo congelar, eles nunca vencem e o job só cai no limite de 30 min. Vale um prazo de relógio como teto (entrega
   própria, fora do #24).
-- Próximo passo: aguardar a aprovação do usuário para o #24 (só então merge squash com SHA esperado, CI do main,
-  liberar o deploy e conferir `version.json`). Depois, apresentar o desenho da fase 9 e esperar o ok. Pergunta ainda
-  sem resposta: o usuário aceita uma nota técnica discreta nos docs para a tarefa E?
+- Próximo passo do #24: com a nova aprovação, merge squash com SHA esperado, CI do main, liberar o deploy e conferir
+  `version.json`.
+- **Retorno do usuário sobre a progressão (2026-10-18):** a 8 está de bom tamanho para apresentar a mecânica nova; a
+  **9** deve ser um pouco mais complexa (mais elementos, **mais áreas**, puzzle mais difícil); a **10** fecha a demo
+  com **todas as mecânicas**, o puzzle mais elaborado, **no mínimo 3 objetos** e um **pequeno enigma**: a ordem certa
+  de colocar os 3 objetos, com a pista num detalhe de um quadro ou parede. Atualizar COMO-CRIAR-UMA-FASE §1 junto.
+- **C (desenho aprovado, 2026-10-18):** fase 9 "Biblioteca do Vovô", noite de chuva, quatro áreas (hall de entrada,
+  biblioteca com lareira e a poltrona do vovô = entrega, escritório fechado com portinha de gato, jardim de inverno).
+  Óculos (Radhija) no alto da estante: impulso na alavanca do freio da escada de rodinhas → a Rhaenyra empurra o
+  globo para fora do trilho e a escada até os óculos → só o peso dela segura a escada (Fica no pé) enquanto a Radhija
+  sobe os degraus largos. Livro (Rhaenyra, pesado) no alto do armário do escritório, com o gato Bichano dormindo em
+  cima: latido não adianta, superbafo direto não alcança; impulso no botão do ventilador do jardim de inverno, a
+  Rhaenyra empurra o ventilador até a boca do duto, a Radhija sopra o superbafo no vento, a grade alta do escritório
+  solta o cheiro, o Bichano pula, derruba o livro e sai pela portinha; impulso na maçaneta (alavanca alta) abre a
+  porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro.
+- **D (rascunho):** fase 10 "Festa no Quintal": laço, chapéu e vela estrela na torre de presentes; o quadro "Festa
+  do ano passado" na varanda mostra a ordem de baixo para cima (ordem errada: a peça balança e cai na grama).
 
 ## Entregue: impulso na parede (PR #23)
 
