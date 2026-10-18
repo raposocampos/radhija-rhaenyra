@@ -2,6 +2,7 @@
 // API: createEngine(container, { params }) → {
 //   renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
 //   applyLighting(preset, bounds)  // por fase: sol/lua, hemisfério, névoa, céu, env map, grading, sombra
+//   quality                        // qualidade por aparelho (src/core/quality.js): PC 'alta' (a de sempre), celular mais leve
 //   render(dt, t)
 // }
 // Formato do preset: ver LIGHTING_DEFAULT (= fim de tarde da fase 1) e docs/ARQUITETURA.md §4.3 (tipo LightingPreset).
@@ -13,6 +14,10 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createSky } from '../world/sky.js';
 import { SUN_DIR, shared } from '../world/util.js';
+import { events } from './events.js';
+import {
+  applyQualityProfile, createQualityControl, detectDevice, loadQualityMode, pixelRatioFor, readDeviceEnv,
+} from './quality.js';
 
 /** Iluminação de fim de tarde (fase 1). Cores em hex = sRGB; arrays em `sky.cloudTint`/`grade.*` = linear. */
 export const LIGHTING_DEFAULT = {
@@ -72,15 +77,26 @@ const setColor = (c, v) => (Array.isArray(v) ? c.setRGB(v[0], v[1], v[2]) : c.se
  * @param {{ params?: URLSearchParams }} [opts]
  */
 export function createEngine(container, { params } = {}) {
+  // Qualidade por aparelho: o perfil inicial sai do aparelho e da escolha salva no menu (no PC, 'alta', com os
+  // mesmos valores de sempre). As trocas depois (menu ou governador de FPS do celular) passam por setProfile.
+  const quality = createQualityControl({
+    device: detectDevice(readDeviceEnv(window)),
+    mode: loadQualityMode(),
+    apply: (next, reason) => setProfile(next, reason),
+    onChange: (s) => events.emit('quality:change', s),
+  });
+  let profile = quality.profile;
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
-  const pr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const pr = pixelRatioFor(profile, { dpr: window.devicePixelRatio, width: window.innerWidth, height: window.innerHeight });
+  /** Perfil aplicado (diagnóstico e testes): nível, pixel ratio e o motivo da última troca. */
+  const qualityState = { level: profile.name, pixelRatio: pr, reason: 'inicio' };
   renderer.setPixelRatio(pr);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = profile.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -98,7 +114,7 @@ export function createEngine(container, { params } = {}) {
   const sunTarget = new THREE.Vector3(0.4, 0, -0.15);
   scene.add(sun, sun.target);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(profile.shadowSize, profile.shadowSize);
 
   /** Ajusta o frustum ortográfico da sombra só à área da fase (+ margem), no espaço da luz. */
   function fitShadow(b) {
@@ -131,12 +147,13 @@ export function createEngine(container, { params } = {}) {
   // ------------------------------------------------ pós-processamento
   const size = new THREE.Vector2();
   renderer.getDrawingBufferSize(size);
-  const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+  const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: profile.msaa });
   const composer = new EffectComposer(renderer, rt);
   composer.setPixelRatio(pr);
   composer.setSize(window.innerWidth, window.innerHeight);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.22, 0.55, 0.92);
+  bloom.enabled = profile.bloom;
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
@@ -182,13 +199,15 @@ export function createEngine(container, { params } = {}) {
   }
 
   let lighting = LIGHTING_DEFAULT;
+  let lightCastsShadow = true; // a fase quer sombra do sol (o perfil de qualidade pode desligar)
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
     lighting = L;
     SUN_DIR.set(.../** @type {[number, number, number]} */ (L.sun.dir)).normalize();
     sun.color.set(L.sun.color);
     sun.intensity = L.sun.intensity;
-    sun.castShadow = L.sun.castShadow !== false;
+    lightCastsShadow = L.sun.castShadow !== false;
+    sun.castShadow = lightCastsShadow && profile.shadows;
     sun.shadow.bias = L.sun.shadowBias;
     sun.shadow.normalBias = L.sun.shadowNormalBias;
     hemi.color.set(L.hemi.sky);
@@ -225,10 +244,27 @@ export function createEngine(container, { params } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
+  /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
+  function setProfile(next, reason) {
+    const prev = profile;
+    profile = next;
+    qualityState.pixelRatio = applyQualityProfile({
+      renderer, composer, sun, bloom, scene, castShadow: lightCastsShadow,
+      dpr: window.devicePixelRatio, width: window.innerWidth, height: window.innerHeight,
+    }, next, prev);
+    qualityState.level = next.name;
+    qualityState.reason = reason;
+  }
+
   return {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
     get lighting() { return lighting; },
+    /** Controle da qualidade: device, mode, level, setMode(m) (menu), frame(now, active) (governador). Cada troca
+     *  emite 'quality:change' no barramento de eventos. */
+    quality,
+    /** Perfil aplicado agora: { level, pixelRatio, reason }. */
+    get qualityState() { return { ...qualityState }; },
     render(dt, t) {
       shared.time.value = t ?? shared.time.value;
       sky.material.uniforms.uTime.value = shared.time.value;

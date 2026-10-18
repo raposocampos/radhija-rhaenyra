@@ -1058,3 +1058,336 @@
 .rr-load-error .rr-btn:focus-visible, .rr-load-error .rr-btn.is-focus { outline: 3px solid var(--choco); outline-offset: 4px; }
 .rr-boot-reload { padding: 12px 24px; border: 2px solid #4a3426; border-radius: 12px; background: #fff6e6; color: #4a3426; font: 600 18px system-ui, sans-serif; cursor: pointer; }
 .rr-boot-reload:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+
+/* =========================================================================
+   Toque e celular. Tudo aqui depende de .rr[data-device="touch"] (último dispositivo usado foi o dedo) ou de
+   .rr[data-mobile] (celular/tablet, detectado em src/core/quality.js). No PC com teclado ou controle nada muda,
+   exceto a linha de qualidade gráfica do menu de pausa.
+   ========================================================================= */
+.rr {
+  /* áreas seguras (entalhe da câmera, barra de gestos): zero fora do celular */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+  /* escala dos controles de toque: 1 px no celular deitado (~390 px de altura), até 1,45 px no tablet */
+  --s: clamp(1px, .26vmin, 1.45px);
+}
+
+/* Ícone de toque no lugar da tecla/botão (dicas, objetivo, prompt, HUD) ------- */
+.rr:not([data-device="touch"]) .k-touch { display: none; }
+.rr[data-device="touch"] .k-kb, .rr[data-device="touch"] .k-pad { display: none; }
+.rr-tg {
+  --c: 107, 77, 58;
+  display: inline-grid;
+  place-items: center;
+  width: 1.95em;
+  height: 1.95em;
+  border-radius: 50%;
+  font-size: .74em;
+  color: #FFF9EF;
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 60%), rgb(var(--c));
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18), 0 0 0 1.5px rgba(255, 246, 230, .75), 0 2px 0 rgba(40, 24, 14, .3);
+  transform: translateY(-1px);
+  vertical-align: middle;
+  flex: none;
+}
+.rr-tg .ico { width: 1.2em; height: 1.2em; }
+.rr-tg--act, .rr-tbtn--act { --c: 236, 124, 48; }
+.rr-tg--jump, .rr-tbtn--jump { --c: 104, 146, 88; }
+.rr-tg--bafo, .rr-tbtn--bafo { --c: 140, 118, 196; }
+.rr-tg--dash, .rr-tbtn--dash { --c: 64, 140, 146; }
+.tg-r, .tg-h, .tg-fica, .tg-vem { display: contents; }
+.rr:not([data-dog="rhaenyra"]) .tg-h, .rr[data-dog="rhaenyra"] .tg-r { display: none; }
+.rr-chip__swap .rr-tg, .rr-esc .rr-tg { font-size: 10.5px; }
+.rr-objective .rr-tg, .rr-hint .rr-tg { font-size: 11.5px; margin: 0 1px; }
+.rr-prompt .rr-tg { font-size: 17px; animation: rr-key-tap 1.6s ease-in-out infinite; }
+.rr-comp__key .rr-tg { font-size: 11px; }
+.rr-title__controls .rr-tg { font-size: 12.5px; }
+.rr-ctl-table__touch .rr-tg { font-size: 11.5px; }
+
+/* Tabela de controles: coluna Toque só no toque (as outras duas somem) ------- */
+.rr-ctl-table__touch, .rr-ctl-table__head--touch { display: none; }
+.rr-ctl-table__touch { align-items: center; gap: 3px; justify-self: center; font-size: 15.5px; }
+.rr[data-device="touch"] .rr-ctl-table { grid-template-columns: 1fr auto; }
+.rr[data-device="touch"] .rr-ctl-table__kb, .rr[data-device="touch"] .rr-ctl-table__pad,
+.rr[data-device="touch"] .rr-ctl-table__head:not(.rr-ctl-table__head--touch) { display: none; }
+.rr[data-device="touch"] .rr-ctl-table__touch { display: inline-flex; }
+.rr[data-device="touch"] .rr-ctl-table__head--touch { display: flex; color: var(--carrot-lo); }
+
+/* Qualidade gráfica (menu de pausa) -------------------------------------- */
+.rr-quality {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 12px 2px 2px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.rr-quality[hidden] { display: none; }
+.rr-quality__label { display: flex; align-items: center; gap: 10px; }
+.rr-quality__label .ico { width: 20px; height: 20px; color: var(--choco-2); }
+.rr-quality__opts {
+  justify-self: end;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(74, 52, 38, .07);
+  box-shadow: inset 0 0 0 1.5px rgba(74, 52, 38, .12);
+}
+.rr-qopt {
+  appearance: none;
+  border: 0;
+  outline: none;
+  cursor: pointer;
+  padding: .45em .78em;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--choco-2);
+  font: 600 13.5px/1 'Fredoka', sans-serif;
+  transition: background-color .15s, color .15s, box-shadow .15s;
+}
+.rr-qopt:hover { background: rgba(74, 52, 38, .09); }
+.rr-qopt.is-selected { color: #FFF9EF; background: linear-gradient(180deg, var(--carrot-hi), #EC7C30); box-shadow: 0 2px 0 var(--carrot-lo); }
+.rr.is-nav .rr-qopt.is-focus,
+.rr[data-device="gamepad"] .rr-qopt.is-focus { box-shadow: 0 0 0 2.5px #FFF9EE, 0 0 0 5px #F08A3C; }
+.rr-quality__now { grid-column: 1 / -1; justify-self: end; min-height: 1em; font-size: 12px; color: var(--choco-a); }
+.rr-fullscreen { width: 100%; margin-top: 12px; font-size: 16px; padding: .62em 1em; }
+.rr-fullscreen[hidden] { display: none; }
+
+/* Controles de toque ------------------------------------------------------ */
+.rr-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility 0s linear .25s;
+}
+.rr-touch.is-on { opacity: 1; visibility: visible; transition: opacity .25s ease, visibility 0s; }
+.rr-touch * { pointer-events: none; }
+.rr-touch.is-on .rr-touch__zone, .rr-touch.is-on .rr-tbtn { pointer-events: auto; touch-action: none; }
+.rr-touch__zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 74%; }
+.rr-touch__stick {
+  position: absolute;
+  left: calc(var(--sa-l) + 24 * var(--s));
+  bottom: calc(var(--sa-b) + 20 * var(--s));
+  width: calc(128 * var(--s));
+  height: calc(128 * var(--s));
+  opacity: .6;
+  transition: opacity .2s;
+}
+.rr-touch__stick.is-on { opacity: 1; }
+.rr-touch__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 246, 230, .08) 0 54%, rgba(255, 246, 230, .2) 56% 100%);
+  border: 2px solid rgba(255, 246, 230, .62);
+  box-shadow: 0 4px 14px rgba(40, 24, 14, .22), inset 0 0 0 1px rgba(74, 52, 38, .12);
+}
+.rr-touch__knob {
+  position: absolute;
+  left: 27%;
+  top: 27%;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #FFFDF8, #EAD5B6);
+  border: 2px solid rgba(74, 52, 38, .22);
+  box-shadow: 0 3px 8px rgba(40, 24, 14, .35);
+}
+.rr-touch__stick:not(.is-on) .rr-touch__knob { transition: transform .12s ease-out; }
+.rr-touch__pad { position: absolute; right: var(--sa-r); bottom: var(--sa-b); width: 0; height: 0; }
+.rr-tbtn {
+  /* --d diâmetro; --x/--y centro a partir do canto inferior direito (unidades de --s); --c cor (r, g, b) */
+  --d: 58;
+  position: absolute;
+  right: calc((var(--x) - var(--d) / 2) * var(--s));
+  bottom: calc((var(--y) - var(--d) / 2) * var(--s));
+  width: calc(var(--d) * var(--s));
+  height: calc(var(--d) * var(--s));
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(1 * var(--s));
+  color: #FFF9EF;
+  text-shadow: 0 1px 1px rgba(40, 24, 14, .5);
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 60%), rgba(var(--c, 107, 77, 58), .56);
+  border: 2px solid rgba(255, 246, 230, .7);
+  box-shadow: 0 4px 12px rgba(40, 24, 14, .26), inset 0 -3px 0 rgba(0, 0, 0, .12);
+  transition: transform .08s ease-out, background-color .08s;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.rr-tbtn.is-down { transform: scale(.9); background-color: rgba(var(--c, 107, 77, 58), .86); }
+.rr-tbtn__ico { display: flex; }
+.rr-tbtn__ico .ico { width: calc(var(--d) * .4 * var(--s)); height: calc(var(--d) * .4 * var(--s)); filter: drop-shadow(0 1px 1px rgba(40, 24, 14, .35)); }
+.rr-tbtn__label { font: 600 calc(10.5 * var(--s))/1 'Fredoka', sans-serif; letter-spacing: .01em; white-space: nowrap; }
+.rr-tbtn--act { --d: 76; --x: 72; --y: 72; }
+.rr-tbtn--act .rr-tbtn__label { font-size: calc(12 * var(--s)); }
+.rr-tbtn--act.is-ready { animation: rr-tbtn-ready 1.2s ease-in-out infinite; }
+.rr-tbtn--jump { --d: 62; --x: 166; --y: 50; }
+.rr-tbtn--dash { --d: 58; --x: 152; --y: 140; }
+.rr-tbtn--dash .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
+.rr-tbtn--bafo { --d: 58; --x: 80; --y: 172; }
+.rr-tbtn--swap { --d: 48; --x: 44; --y: 250; }
+.rr-tbtn--stay { --d: 48; --x: 106; --y: 250; }
+.rr-tbtn--swap .rr-tbtn__label, .rr-tbtn--stay .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
+.rr-tbtn--stay:not([data-stay="1"]) .tg-vem, .rr-tbtn--stay[data-stay="1"] .tg-fica { display: none; }
+.rr-tbtn--stay[data-stay="1"] { --c: 194, 96, 31; }
+.rr-tbtn--pause {
+  --d: 42;
+  right: auto;
+  bottom: auto;
+  top: calc(var(--sa-t) + 10 * var(--s));
+  left: calc(100% - var(--sa-r) - (10 + var(--d)) * var(--s));
+}
+.rr-tbtn--pause .rr-tbtn__label { display: none; }
+@keyframes rr-tbtn-ready {
+  0%, 100% { box-shadow: 0 4px 12px rgba(40, 24, 14, .26), 0 0 0 0 rgba(255, 214, 160, .7); }
+  50% { box-shadow: 0 4px 12px rgba(40, 24, 14, .26), 0 0 0 calc(8 * var(--s)) rgba(255, 214, 160, 0); }
+}
+/* com o toque, a pausa vira o botão do canto: o canto superior direito do HUD abre espaço para ele */
+.rr[data-device="touch"] .rr-esc { display: none; }
+.rr[data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 62 * var(--s)); }
+
+/* Aviso de girar o celular (celular de pé) --------------------------------- */
+.rr-rotate {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: #FFF6E6;
+  background: radial-gradient(120% 90% at 50% 40%, #F6C894 0%, #E59A62 55%, #8A4F33 100%);
+  pointer-events: auto;
+  touch-action: none;
+}
+@media (orientation: portrait) {
+  .rr[data-mobile="phone"] .rr-rotate { display: grid; }
+}
+.rr-rotate__box { display: grid; justify-items: center; gap: 12px; text-shadow: 0 2px 0 #4A3426; }
+.rr-rotate .ico-rotate { width: 104px; height: 104px; filter: drop-shadow(0 2px 0 #4A3426); animation: rr-rotate-hint 2.6s ease-in-out infinite; }
+.rr-rotate strong { font: 700 28px/1.1 'Fredoka', sans-serif; }
+.rr-rotate span { max-width: 17em; font-size: 16px; font-weight: 700; line-height: 1.4; }
+@keyframes rr-rotate-hint { 0%, 15%, 100% { transform: rotate(0); } 45%, 70% { transform: rotate(-14deg); } }
+
+/* Celular e tablet: menos custo de GPU (sem desfoque do fundo sobre o 3D) ---- */
+.rr[data-mobile] .rr-glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 246, 230, .93); }
+.rr[data-mobile] .rr-level { background: rgba(255, 246, 230, .88); }
+.rr[data-mobile] .rr-hint { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(70, 48, 34, .93); }
+.rr[data-mobile] .rr-pause { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(44, 28, 18, .5); }
+.rr[data-mobile] .rr-hud__tl { top: calc(var(--sa-t) + 12px); left: calc(var(--sa-l) + 12px); }
+.rr[data-mobile] .rr-hud__tr { top: calc(var(--sa-t) + 12px); }
+.rr[data-mobile]:not([data-device="touch"]) .rr-hud__tr { right: calc(var(--sa-r) + 12px); }
+.rr[data-mobile] .rr-introcard { left: calc(var(--sa-l) + clamp(16px, 4vw, 52px)); bottom: calc(var(--sa-b) + clamp(16px, 6vh, 56px)); }
+
+/* Celular deitado: layout compacto ------------------------------------------ */
+.rr[data-mobile="phone"] .rr-layer { transition-duration: .3s; }
+/* tela inicial */
+.rr[data-mobile="phone"] .rr-title__center { top: calc(var(--sa-t) + 10px); gap: 8px; width: min(76vw, 560px); }
+.rr[data-mobile="phone"] .rr-logo__svg { width: min(100%, 440px); }
+.rr[data-mobile="phone"] .rr-logo__ribbon { font-size: 13px; padding: .42em 1.05em .42em .6em; }
+.rr[data-mobile="phone"] .rr-btn--play { font-size: 20px; margin-top: 0; }
+.rr[data-mobile="phone"] .rr-title__controls { display: none; }
+.rr[data-mobile="phone"] .rr-levels { bottom: calc(var(--sa-b) + 10px); }
+.rr[data-mobile="phone"] .rr-lvcard__eyebrow, .rr[data-mobile="phone"] .rr-lvcard__stats { display: none; }
+.rr[data-mobile="phone"] .rr-lvcard__icon { width: 36px; height: 36px; }
+.rr[data-mobile="phone"] .rr-lvcard__icon > .ico { width: 25px; height: 25px; }
+.rr[data-mobile="phone"] .rr-lvcard__name { font-size: 13px; }
+/* HUD */
+.rr[data-mobile="phone"] .rr-hud__tl { gap: 6px; }
+.rr[data-mobile="phone"] .rr-chip { gap: 7px; padding: 3px 12px 3px 3px; }
+.rr[data-mobile="phone"] .rr-chip__avatar { width: 36px; height: 36px; }
+.rr[data-mobile="phone"] .rr-chip__avatar .ico-dog { width: 31px; height: 31px; }
+.rr[data-mobile="phone"] .rr-chip__name { font-size: 15px; }
+.rr[data-mobile="phone"] .rr-chip__trait { font-size: 12.5px; }
+.rr[data-mobile="phone"] .rr-chip__swap { margin-top: 2px; font-size: 11px; }
+.rr[data-mobile="phone"] .rr-comp { padding: 3px 8px 3px 3px; }
+.rr[data-mobile="phone"] .rr-comp__avatar { width: 30px; height: 30px; }
+.rr[data-mobile="phone"] .rr-comp__avatar .ico-dog { width: 26px; height: 26px; }
+.rr[data-mobile="phone"] .rr-comp__text { display: none; }
+.rr[data-mobile="phone"] .rr-objective { max-width: min(40vw, 330px); gap: 8px; padding: 6px 12px 6px 6px; border-radius: 14px; font-size: 12.5px; line-height: 1.28; }
+.rr[data-mobile="phone"] .rr-objective__icon { width: 22px; height: 22px; }
+.rr[data-mobile="phone"] .rr-objective__icon .ico { width: 13px; height: 13px; }
+.rr[data-mobile="phone"] .rr-objective__label { display: none; }
+.rr[data-mobile="phone"] .rr-hud__tr { gap: 6px; }
+.rr[data-mobile="phone"] .rr-level { padding: 4px 9px 4px 4px; font-size: 12px; }
+.rr[data-mobile="phone"] .rr-level__item .ico { width: 20px; height: 20px; }
+.rr[data-mobile="phone"] .rr-level__name, .rr[data-mobile="phone"] .rr-level__sep { display: none; }
+.rr[data-mobile="phone"] .rr-treats { padding: 3px 12px 3px 5px; font-size: 17px; }
+.rr[data-mobile="phone"] .rr-treats .ico-bone { width: 28px; height: 28px; }
+.rr[data-mobile="phone"] .rr-hud__bottom {
+  /* entre o joystick e os botões */
+  bottom: calc(var(--sa-b) + 10px);
+  gap: 6px;
+  width: min(460px, calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r)))));
+}
+.rr[data-mobile="phone"] .rr-hint { gap: 7px; padding: 7px 12px 7px 9px; border-radius: 13px; font-size: 12.5px; line-height: 1.3; }
+.rr[data-mobile="phone"] .rr-hint .ico { width: 15px; height: 15px; }
+.rr[data-mobile="phone"] .rr-prompt { gap: 8px; padding: 5px 14px 5px 5px; font-size: 15px; }
+.rr[data-mobile="phone"] .rr-prompt .rr-tg, .rr[data-mobile="phone"] .rr-prompt .rr-key, .rr[data-mobile="phone"] .rr-prompt .rr-pad { font-size: 14px; }
+.rr[data-mobile="phone"] .rr-celebrate__banner { top: calc(var(--sa-t) + 9vh); font-size: 19px; padding: 8px 20px 8px 10px; }
+/* cartão de abertura */
+.rr[data-mobile="phone"] .rr-introcard { width: min(400px, calc(100vw - 32px)); padding: 12px 18px 14px; border-radius: 22px; bottom: calc(var(--sa-b) + 14px); }
+.rr[data-mobile="phone"] .rr-introcard__badge { width: 54px; height: 54px; margin-top: -26px; }
+.rr[data-mobile="phone"] .rr-introcard__badge .ico { width: 36px; height: 36px; }
+.rr[data-mobile="phone"] .rr-introcard__name { font-size: 23px; }
+.rr[data-mobile="phone"] .rr-introcard__sub { font-size: 12.5px; }
+.rr[data-mobile="phone"] .rr-introcard__text { margin: 8px 0 10px; font-size: 13.5px; line-height: 1.4; }
+.rr[data-mobile="phone"] .rr-btn--start { font-size: 18px; }
+/* pausa: duas colunas (ações | volume, qualidade e tela cheia), sem a tabela de controles */
+.rr[data-mobile="phone"] .rr-card--pause {
+  width: min(700px, calc(100vw - 24px - var(--sa-l) - var(--sa-r)));
+  max-height: calc(100% - 16px - var(--sa-t) - var(--sa-b));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  column-gap: 22px;
+  padding: 14px 18px;
+  border-radius: 22px;
+}
+.rr[data-mobile="phone"] .rr-card--pause .rr-card__head { grid-column: 1; grid-row: 1; justify-content: flex-start; margin: 0 0 10px; }
+.rr[data-mobile="phone"] .rr-card__head h2 { font-size: 23px; }
+.rr[data-mobile="phone"] .rr-card__head .ico-paw { width: 22px; height: 22px; }
+.rr[data-mobile="phone"] .rr-pause__level { grid-column: 2; grid-row: 1; justify-content: flex-end; margin: 0 0 10px; align-self: center; font-size: 13px; }
+.rr[data-mobile="phone"] .rr-card--pause .rr-card__actions { grid-column: 1; grid-row: 2; gap: 8px; }
+.rr[data-mobile="phone"] .rr-card__actions .rr-btn { font-size: 16.5px; padding: .62em 1em; }
+.rr[data-mobile="phone"] .rr-card__actions .rr-card__pair .rr-btn { font-size: 14.5px; padding: .66em .6em; }
+.rr[data-mobile="phone"] .rr-pause__settings { grid-column: 2; grid-row: 2; }
+.rr[data-mobile="phone"] .rr-volume { margin: 0 2px 2px; font-size: 14px; }
+.rr[data-mobile="phone"] .rr-quality { margin-top: 8px; font-size: 14px; }
+.rr[data-mobile="phone"] .rr-qopt { font-size: 12.5px; padding: .5em .66em; }
+.rr[data-mobile="phone"] .rr-fullscreen { margin-top: 8px; font-size: 14.5px; padding: .55em 1em; }
+.rr[data-mobile="phone"] .rr-ctl-table { display: none; }
+/* vitória */
+.rr[data-mobile="phone"] .rr-card--victory { width: min(480px, 92vw); padding: 38px 20px 14px; }
+.rr[data-mobile="phone"] .rr-victory__badge { width: 70px; height: 70px; margin: -35px 0 0 -35px; }
+.rr[data-mobile="phone"] .rr-victory__badge .ico { width: 46px; height: 46px; }
+.rr[data-mobile="phone"] .rr-victory__end { margin-bottom: 8px; font-size: 13.5px; padding: 5px 12px; }
+.rr[data-mobile="phone"] .rr-victory h2 { font-size: 21px; }
+.rr[data-mobile="phone"] .rr-victory__sub { margin-top: 4px; font-size: 13px; }
+.rr[data-mobile="phone"] .rr-stats { margin: 10px 0 8px; }
+.rr[data-mobile="phone"] .rr-stat { padding: 7px 8px 8px; gap: 3px; }
+.rr[data-mobile="phone"] .rr-stat strong { font-size: 24px; }
+.rr[data-mobile="phone"] .rr-victory__msg { margin: 2px 6px 10px; font-size: 13px; }
+.rr[data-mobile="phone"] .rr-victory__actions { grid-template-columns: 1fr 1fr; gap: 8px; }
+.rr[data-mobile="phone"] .rr-victory .rr-btn { font-size: 16px; padding: .62em .8em; }
+.rr[data-mobile="phone"] .rr-victory__actions .rr-btn--soft { font-size: 15px; }
+/* transição e erro de carregamento */
+.rr[data-mobile="phone"] .rr-curtain__badge { width: 80px; height: 80px; margin-bottom: 8px; }
+.rr[data-mobile="phone"] .rr-curtain__badge .ico { width: 50px; height: 50px; }
+.rr[data-mobile="phone"] .rr-curtain__paws { margin-top: 14px; }
+.rr[data-mobile="phone"] .rr-load-error__card p { font-size: 15px; margin-bottom: 16px; }

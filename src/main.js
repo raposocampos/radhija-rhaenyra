@@ -45,7 +45,8 @@ async function boot() {
     get layout() { return game.levelDef?.layout ?? LEVELS[0].layout; },
   });
   // no catálogo de desenvolvimento (prévias dos protótipos) o menu libera todas as fases para teste
-  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev });
+  // input: controles de toque; quality: menu de qualidade gráfica e layout do celular (engine.quality.device)
+  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality });
 
   // Fase inicial: ?level=2 (1-based) para testes; ?play pula a tela inicial.
   const lv = dev ? dev.index : Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
@@ -61,6 +62,8 @@ async function boot() {
   function frame() {
     const dt = Math.min(clock.getDelta(), 1 / 20);
     elapsed += dt;
+    // Governador de FPS (só no modo automático do celular/tablet): mede os quadros da partida rodando.
+    engine.quality.frame(performance.now(), game.state === 'playing' && !document.hidden);
     game.update(dt, elapsed);
     if (game.state === 'loading' || game.state === 'load-error') {
       // A UI segue acessível, mas nenhum efeito ou desenho usa uma fase parcial.

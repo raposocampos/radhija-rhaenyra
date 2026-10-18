@@ -3,7 +3,26 @@
 Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: Lambe-Lambe e fase 7 (pracinha depois da chuva)
+## Em andamento: jogar no celular (toque, layout e qualidade por aparelho)
+
+- Pedido do usuário (2026-10-18): abrir e testar o jogo pelo celular no mesmo link, sem mudar nada no PC; toda a
+  UI/HUD deve se comportar diferente na tela pequena.
+- Branch **`claude/celular`** (worktree próprio), base `dc1a0e5`. Consultar o PR para SHA, CI, E2E e prévia.
+  Nenhum teste ou build roda no PC. O PR #21 (fases 6 e 7 no menu) mexe em `ui.js`/`ui.css`/`main.js`: integrar o
+  main depois dele e revisar a tela inicial do celular com sete cartões.
+- Feito: `src/core/quality.js` (perfis alta/media/baixa/minima, `detectDevice`, governador de FPS, menu salvo em
+  `rr-quality`); engine com o perfil do aparelho (PC = alta, valores de sempre); `input.touch` e `TOUCH_BUTTONS`
+  (`src/game/input.js`) com o dispositivo `touch`; `src/ui/touchControls.js` (joystick flutuante e botões, multitoque);
+  glifos de toque nas dicas (`.k-touch`); layout compacto `.rr[data-mobile]` em `ui.css`; pausa com Qualidade e Tela
+  cheia; aviso de girar; `index.html` sem zoom/rolagem, `viewport-fit=cover`, manifest e ícones
+  (`tools/scripts/gen-icons.mjs`). Testes `test/qualidade.test.mjs` e `test/toque.test.mjs`; suíte E2E `toque` e
+  capturas `capture-celular.mjs`. Documentado em ARQUITETURA §6, §9 e §10 e no README.
+- Próximo passo: CI verde, E2E `toque` e `todas`, revisar as capturas (celular e PC), entregar a prévia para o
+  usuário testar no próprio celular e **aguardar aprovação** antes do merge/deploy.
+
+## Entregue: Lambe-Lambe e fase 7 (pracinha depois da chuva, PR #20)
+
+Integrado ao main no squash `dc1a0e5`; o registro abaixo é o da entrega.
 
 - Pedido do usuário (2026-10-18): nova habilidade da Rhaenyra, o **Lambe-Lambe**,
   no mesmo botão do superbafo (R / L2·LT), e uma fase de teste em que a Radhija
