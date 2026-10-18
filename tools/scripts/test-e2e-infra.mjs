@@ -48,8 +48,9 @@ test('infra E2E: asserção falha continua reprovando sem erro de console', { ti
   assert.match(result.stdout, /FALHOU assertion/);
 });
 
-// Tetos de relógio: o jogo lento continua em tempo de jogo; parado, lento demais ou com a aba travada, a suíte reprova
-// em segundos, dizendo qual espera, em que linha e a última leitura do estado (antes, só o timeout do workflow).
+// Tetos de relógio: o jogo lento continua em tempo de jogo (e, devagar demais, segue com aviso no teto, como sempre);
+// parado ou com a aba travada, a suíte reprova em segundos, dizendo qual espera, em que linha e a última leitura do
+// estado (antes, só o timeout do workflow).
 test('infra E2E: jogo lento mas andando mantém o prazo em tempo de jogo', { timeout: 65000 }, async () => {
   const result = await run('paced');
   assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
@@ -57,9 +58,17 @@ test('infra E2E: jogo lento mas andando mantém o prazo em tempo de jogo', { tim
   assert.doesNotMatch(result.stdout, /\[harness\]/);
 });
 
+test('infra E2E: jogo devagar demais termina a espera no teto de relógio, com aviso, sem reprovar', { timeout: 65000 }, async () => {
+  const result = await run('slow');
+  assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /2 ok, 0 falha\(s\)/);
+  assert.match(result.stdout, /\[harness\] aviso: gsleep\(1000 ms\) \(harness-probe\.mjs:\d+\) terminou pelo teto de relógio de 2 s, com [\d.]+ s de jogo \(ritmo 0\.0\d+×\) dos 1 s pedidos/);
+  assert.match(result.stdout, /esperas encerradas pelo teto de relógio: 1 /);
+  assert.doesNotMatch(result.stdout, /parou de avançar|FALHOU/);
+});
+
 for (const [kind, label, diagnosis] of [
-  ['stalled', 'jogo parado', /waitFor\(\(\) => false, 120000 ms\) \(harness-probe\.mjs:\d+\): o jogo parou de avançar \(simSec 0 sem mudar há [\d.]+ s\).*Última leitura: estado=playing fase=prova/],
-  ['slow', 'jogo lento demais', /gsleep\(1000 ms\) \(harness-probe\.mjs:\d+\): o jogo anda devagar demais: [\d.]+ s de jogo em [\d.]+ s de relógio \(ritmo 0\.0\d+×\); prazo pedido 1 s de jogo, teto de relógio 2 s/],
+  ['stalled', 'jogo parado (várias esperas curtas)', /gsleep\(200 ms\) \(harness-probe\.mjs:\d+\): o jogo parou de avançar: simSec 0 sem mudar há [\d.]+ s; prazo pedido 0\.2 s de jogo\. Última leitura: estado=playing fase=prova/],
   ['hung', 'aba travada', /info\(\) \(harness-probe\.mjs:\d+\): a página não respondeu em 2 s .*Última leitura do estado, há [\d.]+ s: estado=playing/],
 ]) {
   test(`infra E2E: ${label} reprova em segundos com diagnóstico`, { timeout: 65000 }, async () => {
@@ -71,7 +80,6 @@ for (const [kind, label, diagnosis] of [
     assert.ok(sec < 45, `levou ${sec} s`);
     assert.match(result.stdout, /FALHOU exceção: \[harness\] /);
     assert.match(result.stdout, diagnosis);
-    if (kind === 'slow') assert.doesNotMatch(result.stdout, /parou de avançar/);
     if (kind === 'hung') assert.match(result.stdout, /ok +com a página travada, a ida seguinte ao navegador falha na hora/);
     assert.match(result.stdout, new RegExp(`FALHOU ${kind}`));
   });

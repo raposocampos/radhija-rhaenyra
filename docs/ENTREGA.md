@@ -51,9 +51,9 @@ também somente leitura, gera seu próprio build de produção e serve `dist` em
 subcaminho semelhante à prévia. O smoke abre todas as fases e confere imports
 sob demanda e recursos carregados. A prova negativa injeta erros numa página
 mínima para verificar que `console.error` e exceções não capturadas reprovam o
-processo E2E. Na mesma página, um jogo parado, lento demais ou com a aba travada
-precisa reprovar em segundos, com diagnóstico, e um jogo lento que anda mantém o
-prazo em tempo de jogo (tetos de relógio do harness, ver ARQUITETURA).
+processo E2E. Na mesma página, um jogo parado ou com a aba travada precisa
+reprovar em segundos, com diagnóstico, e um jogo lento que anda mantém o prazo
+em tempo de jogo (tetos de relógio do harness, ver ARQUITETURA).
 Selecionar uma partida individual não roda esse job adicional.
 
 O mesmo job gera o manifest do build e executa `test-load-recovery.mjs`:

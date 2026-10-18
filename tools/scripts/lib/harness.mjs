@@ -13,12 +13,12 @@ export function parseArgs(argv = process.argv.slice(2)) {
 }
 
 /** Tetos de RELÓGIO (ms). As esperas continuam contando em tempo de jogo enquanto o jogo anda, mesmo devagar; estes
- *  limites só existem para que uma aba travada ou um jogo parado reprove a suíte em segundos, com diagnóstico, em vez
- *  de prender o job até o timeout do workflow. Ajuste por variável de ambiente ou por `createHarness({ limits })`. */
+ *  limites só existem para que uma aba travada ou um jogo parado reprove a suíte em até um minuto, com diagnóstico, em
+ *  vez de prender o job até o timeout do workflow. Ajuste por variável de ambiente ou por `createHarness({ limits })`. */
 export const DEFAULT_LIMITS = {
-  wallFactor: 8, // E2E_WALL_FACTOR: cada espera de `ms` de jogo vence em max(wallMinMs, wallFactor × ms) de relógio
+  wallFactor: 8, // E2E_WALL_FACTOR: uma espera de `ms` de jogo termina (com aviso) em max(wallMinMs, wallFactor × ms)
   wallMinMs: 10000, // E2E_WALL_MIN_MS
-  stallMs: 30000, // E2E_STALL_MS: simSec sem mudar por esse tempo de relógio = o jogo parou de avançar
+  stallMs: 60000, // E2E_STALL_MS: simSec sem mudar por esse tempo de relógio = o jogo parou de avançar (reprova)
   evalMs: 60000, // E2E_EVAL_MS: cada ida ao navegador (info(), page.evaluate, teclado, mouse)
   closeMs: 30000, // E2E_CLOSE_MS: fechar o navegador no fim
 };
@@ -127,6 +127,10 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   // página fica marcada como travada e as idas seguintes falham na hora (o catch da suíte e o close() terminam rápido).
   let wedged = null; // primeira operação sem resposta
   let lastRead = null; // { i, at }: última leitura do estado que voltou (diagnóstico)
+  // { sim, at }: quando o simSec mudou pela última vez, entre TODAS as leituras (muitas esperas curtas seguidas, cada
+  // uma terminando no próprio teto, não escondem um jogo parado). Zerado a cada load().
+  let progress = null;
+  let capHits = 0; // esperas encerradas pelo teto de relógio (aviso, não falha)
   const aborts = []; // mensagens dos HarnessAbort: o close() reprova as que a suíte não registrou
   const lastReadText = () => (lastRead ? `Última leitura do estado, há ${secs(Date.now() - lastRead.at)}: ${describe(lastRead.i)}` : 'Nenhuma leitura do estado ainda.');
   function abort(what, site, why) {
@@ -176,6 +180,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     }, withHold);
     const now = Date.now();
     lastRead = { i, at: now };
+    if (typeof i.simSec === 'number' && i.simSec !== progress?.sim) progress = { sim: i.simSec, at: now };
     pace.n++;
     pace.lat += now - t;
     pace.maxLat = Math.max(pace.maxLat, now - t);
@@ -222,34 +227,33 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   /** Prazo em tempo de JOGO: vence quando passaram `ms` no relógio E `ms` simulados (debug.info().simSec). Sem carga
    *  as duas coisas andam juntas; sob carga (menos de 20 fps) o jogo anda mais devagar e o prazo espera por ele.
-   *  Tetos de RELÓGIO (`limits`): a espera reprova a suíte (HarnessAbort, com a espera, a linha e a última leitura) se
-   *  o simSec ficar `stallMs` sem mudar (o jogo parou) ou se passar de max(wallMinMs, wallFactor × ms) de relógio
-   *  (o jogo anda devagar demais). Até uma espera de 110 ms tolera a compilação/desenho de um quadro pesado por
-   *  software: o mínimo de 10 s não solta o botão antes de a página conseguir lê-lo.
-   *  over(i): o prazo de jogo venceu? wall(i, extra): só confere os tetos. */
+   *  Tetos de RELÓGIO (`limits`):
+   *  - simSec `stallMs` sem mudar, contado entre as leituras de todas as esperas (ver `progress`): o jogo parou e a
+   *    suíte reprova (HarnessAbort com a espera, a linha da suíte e a última leitura);
+   *  - max(wallMinMs, wallFactor × ms) de relógio com o jogo andando: a espera termina, como sempre terminou, e sai um
+   *    aviso. Depois de reiniciar a fase, o SwiftShader recompila a cena e o jogo chega a andar 0,03 s em 10 s; a
+   *    partida segue normalmente depois. Até uma espera de 110 ms tolera um quadro pesado por software: o mínimo de
+   *    10 s não solta o botão antes de a página conseguir lê-lo.
+   *  over(i): o prazo de jogo (ou o teto) venceu? wall(i, extra): só os tetos (true = teto de relógio). */
   function deadline(ms, what) {
     const site = new Error();
     const t0 = Date.now();
     const cap = Math.max(limits.wallMinMs, ms * limits.wallFactor);
     let s0 = null;
-    let lastSim = null;
-    let movedAt = t0;
-    const track = (sim, now) => {
-      if (s0 === null || sim < s0) s0 = sim; // primeira leitura (ou página recarregada)
-      if (sim !== lastSim) {
-        lastSim = sim;
-        movedAt = now;
-      }
+    const stalled = (i, now, extra) => {
+      if (!progress || now - progress.at < limits.stallMs) return;
+      throw abort(what, siteOf(site), `o jogo parou de avançar: simSec ${progress.sim} sem mudar há ${secs(now - progress.at)}; `
+        + `prazo pedido ${secs(ms)} de jogo${extra}. Última leitura: ${describe(i)}`);
     };
-    const checkWall = (i, now, extra) => {
-      const real = now - t0;
-      const still = now - movedAt;
-      if (still < limits.stallMs && real < cap) return;
-      const played = i.simSec - s0;
-      const why = typeof i.simSec !== 'number' ? 'o teto de relógio venceu (info() sem simSec)'
-        : played <= 0 || still >= limits.stallMs ? `o jogo parou de avançar (simSec ${i.simSec} sem mudar há ${secs(still)})`
-          : `o jogo anda devagar demais: ${played.toFixed(2)} s de jogo em ${secs(real)} de relógio (ritmo ${(played / (real / 1000)).toFixed(3)}×)`;
-      throw abort(what, siteOf(site), `${why}; prazo pedido ${secs(ms)} de jogo, teto de relógio ${secs(cap)}${extra}. Última leitura: ${describe(i)}`);
+    const capped = (i, now, extra) => {
+      if (now - t0 < cap) return false;
+      const played = typeof i?.simSec === 'number' && s0 !== null ? i.simSec - s0 : null;
+      const rate = played === null ? 'sem simSec' : `${played.toFixed(2)} s de jogo (ritmo ${(played / ((now - t0) / 1000)).toFixed(3)}×)`;
+      const at = siteOf(site);
+      capHits++;
+      console.log(`  [harness] aviso: ${what}${at ? ` (${at})` : ''} terminou pelo teto de relógio de ${secs(cap)}, `
+        + `com ${rate} dos ${secs(ms)} pedidos${extra}. Última leitura: ${describe(i)}`);
+      return true;
     };
     return {
       t0,
@@ -257,16 +261,16 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         const now = Date.now();
         const sim = i?.simSec;
         if (typeof sim !== 'number') return now - t0 >= ms;
-        track(sim, now);
+        if (s0 === null || sim < s0) s0 = sim; // primeira leitura (ou página recarregada)
         if (now - t0 >= ms && (sim - s0) * 1000 >= ms) return true;
-        checkWall(i, now, '');
-        return false;
+        stalled(i, now, '');
+        return capped(i, now, '');
       },
       wall(i, extra = '') {
         const now = Date.now();
-        if (typeof i?.simSec === 'number') track(i.simSec, now);
-        else movedAt = now; // sem simSec não há como ver o jogo parado: só o teto de relógio vale
-        checkWall(i ?? {}, now, extra);
+        if (typeof i?.simSec === 'number' && (s0 === null || i.simSec < s0)) s0 = i.simSec;
+        stalled(i, now, extra);
+        return capped(i, now, extra);
       },
     };
   }
@@ -409,7 +413,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         const i = await read(what, true);
         const h = i.__hold;
         if (!h || h.done) break;
-        dl.wall(i, `; teclas que chegaram à página: ${h.seen} de ${h.of}`);
+        if (dl.wall(i, `; teclas que chegaram à página: ${h.seen} de ${h.of}`)) break;
         await sleep(30);
       }
     } catch (e) {
@@ -433,6 +437,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function load(query) {
     const what = `load('${query}')`;
+    progress = null; // página nova: o tempo sem leituras durante a navegação não conta como jogo parado
     const step = async (stage, run) => {
       const site = new Error();
       try {
@@ -504,6 +509,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps); `
         + `leitura do estado: ${Math.round(pace.lat / pace.n)} ms em média, ${pace.maxLat} ms no pior caso`);
     }
+    if (capHits) console.log(`esperas encerradas pelo teto de relógio: ${capHits} (avisos [harness] acima; o jogo andava devagar)`);
     // Uma espera abortada reprova mesmo que a suíte tenha engolido a exceção.
     for (const m of aborts) {
       if (failures.some((f) => f.includes(m))) continue;

@@ -8,11 +8,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Motivo: no E2E manual `39160265826` (suíte lavanderia, 1ª tentativa) o log parou em `load('?level=fase8&play')`
   e o job só caiu no timeout de 30 min, sem nenhum check: `page.evaluate` não tem prazo e as esperas contavam só
   tempo de jogo. Refeita, a suíte passou 12/12 em 78 s; a causa do travamento não foi identificada.
-- Feito no branch `claude/e2e-teto-relogio` (PR para main; consultar o PR para SHA, CI e E2E):
-  `tools/scripts/lib/harness.mjs` ganhou `DEFAULT_LIMITS`/`HarnessAbort` (jogo parado 30 s ou max(10 s, 8× o
-  prazo) de relógio reprovam com diagnóstico), prazo de 60 s em cada `page.evaluate`/teclado/mouse com a página
-  marcada como travada, `holdUntil` sem a espera silenciosa, etapas do `load()` nomeadas e `close()` com prazo.
-  Provas em `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `stalled`, `slow`, `hung`).
+- Feito no branch `claude/e2e-teto-relogio`, **PR #27** (consultar o PR para SHA, CI e E2E):
+  `tools/scripts/lib/harness.mjs` ganhou `DEFAULT_LIMITS`/`HarnessAbort`: `simSec` 60 s sem mudar (contado entre
+  esperas) reprova com diagnóstico; prazo de 60 s em cada `page.evaluate`/teclado/mouse, com a página marcada como
+  travada; etapas do `load()` nomeadas; `close()` com prazo. O teto max(10 s, 8× o prazo) com o jogo andando só
+  encerra a espera com aviso, como antes: a 1ª versão reprovava ali e o E2E `39165419409` mostrou que fase1/fase3
+  passam por esse teto depois de `ui:restart` (0,03–0,06 s de jogo em 10 s). Provas em
+  `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`).
   Docs: ARQUITETURA (seção do E2E) e ENTREGA.
 - Nenhum teste ou build no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `todas` verdes no
   head do PR, entregar e aguardar aprovação. Os PRs #24 e #26 recebem os tetos ao atualizar a base.

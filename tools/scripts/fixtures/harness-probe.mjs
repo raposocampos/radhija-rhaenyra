@@ -10,8 +10,8 @@ if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 
 
 // Tetos de relógio curtos só nas provas de travamento (os padrões são de dezenas de segundos).
 const LIMITS = {
-  stalled: { stallMs: 1500, wallMinMs: 60000 }, // teto de 16 min na espera: só o detector de jogo parado encerra
-  slow: { wallFactor: 2, wallMinMs: 1000, stallMs: 60000 },
+  stalled: { stallMs: 2500, wallMinMs: 1000 }, // cada espera curta termina no próprio teto: o detector soma entre elas
+  slow: { wallFactor: 2, wallMinMs: 1000 },
   hung: { evalMs: 2000, closeMs: 10000 },
 };
 
@@ -54,11 +54,16 @@ if (args.runner) {
       const played = end.simSec - start.simSec;
       H.check(waited >= 2300 && waited < 9000 && played >= 1, 'jogo a 0,4×: waitFor espera 1 s de jogo, sem teto de relógio', `${waited} ms de relógio, ${played.toFixed(2)} s de jogo`);
     } else if (kind === 'stalled') {
+      // jogo parado com a página respondendo: 100 esperas de 200 ms levariam 100 s, uma por teto de relógio
       await fakeGame(0);
-      await H.waitFor(() => false, { timeout: 120000 });
+      for (let k = 0; k < 100; k++) await H.gsleep(200);
     } else if (kind === 'slow') {
-      await fakeGame(0.05); // 1 s de jogo levaria 20 s; o teto (2×) vence em 2 s
+      // jogo andando devagar demais: a espera termina no teto de relógio (2×) com aviso e a suíte segue, como sempre
+      await fakeGame(0.05);
+      const t0 = Date.now();
       await H.gsleep(1000);
+      const waited = Date.now() - t0;
+      H.check(waited >= 1900 && waited < 6000, 'jogo a 0,05×: a espera termina no teto de relógio e a suíte segue', `${waited} ms`);
     } else if (kind === 'hung') {
       await fakeGame(1);
       await H.info();
