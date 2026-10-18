@@ -291,7 +291,9 @@ export function createGame({ engine, dogs, levels, params }) {
       const dx = lick.spot.x - A.x;
       const dz = lick.spot.z - A.z;
       const d = Math.hypot(dx, dz);
-      if (d > 0.05 && lick.t < LICK_APPROACH) {
+      // já na distância certa do ponto (qualquer ângulo), só vira e lambe; senão vai até o lugar dela
+      const radial = Math.abs(Math.hypot(A.x - lick.point.x, A.z - lick.point.z) - LICK_DIST);
+      if (d > 0.05 && radial > 0.06 && lick.t < LICK_APPROACH) {
         return { dx: dx / d, dz: dz / d, speed: Math.min(A.cfg.walkSpeed * 0.8, Math.max(0.35, d * 5)) };
       }
       if (Math.hypot(A.x - lick.point.x, A.z - lick.point.z) > LICK_DIST + 0.35) {
