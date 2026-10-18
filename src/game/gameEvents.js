@@ -15,6 +15,7 @@ const RUMBLE = {
   'plate:press': () => [0.08, 0.2, 60],
   'dog:land': () => [0.18, 0.22, 70],
   'dog:bafo': () => [0.12, 0.4, 260],
+  'expresso:atchim': () => [0.28, 0.3, 170],
 };
 
 /**

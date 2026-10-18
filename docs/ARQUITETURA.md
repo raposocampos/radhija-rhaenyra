@@ -50,6 +50,8 @@ src/levels/                as fases
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
+  fase6/                   Expresso do Superbafo (ainda em dev.js): track.js descreve o trilho uma vez só, para o
+                           movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
   dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
                            compartilhadas: toys.js (patinho, ursinho), treats.js (ossinhos), pigeon.js (pombo)
@@ -213,7 +215,14 @@ Peças de cenário compartilhadas (fases 4 em diante): `createRubberDuck` e `cre
 (itens carregáveis: eixo longo em X; o nome e `userData.carryKind` dizem a pose da boca; o ursinho tem `sit()`/`lie()`),
 `buildTreats(root, COLLECTIBLES)` em `src/world/treats.js` (ossinhos com a animação de coleta), `createPigeon()` em
 `src/world/pigeon.js` (pombo com `setPose({ x, y, z, yaw, flying, asleep })` e `peek()`) e `stripeTexture()` em
-`src/world/util.js` (lona listrada).
+`src/world/util.js` (lona listrada). Ao usar o patinho ou o ursinho só como enfeite, renomeie o objeto e apague
+`userData.carryKind` (a fase 6 faz isso na estante, no baú e no laguinho da maquete).
+
+Mecanismo que anda num caminho (fase 6): o caminho é descrito **uma vez** no layout (`TRACK`: retas e arcos com
+tangente contínua) e `src/levels/fase6/track.js` o transforma em rotas com `at(s)` e `consist(rota, s)`. O puzzle só
+avança a distância `s` (com aceleração e freada) e o cenário desenha os trilhos com as mesmas peças; assim o trem nunca
+sai do trilho visível. O teste `test/fase6.test.mjs` varre as rotas com o corpo inteiro (`TRAIN_BODY`) contra a cerca
+e os enfeites (`YARD_DECOR`) e confere a viagem real quadro a quadro.
 - `update(dt, t)`: animações do cenário (água, vagalumes, luzes).
 
 ### 4.5 Puzzle (`puzzle.js`, tipos `PuzzleContext` e `Puzzle`)
@@ -384,7 +393,11 @@ Quem emite e quem ouve:
 - **Mecânicas** (sempre com `x, z`): `plate:press`/`plate:release`, `gate:open`/`gate:close`/`gate:locked`, `wedge:kick`,
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
   `goose:alert`/`goose:honk`/`goose:charge`/`goose:hit`/`goose:lured`/`goose:return`; fase 1: `rope:tug`, `cart:move`,
-  `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando).
+  `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando);
+  fase 6: `expresso:route {route, signX, signZ}` (pulo no pedal virou a agulha), `expresso:sneeze` (o nariz sentiu o
+  cheiro: "ah... ah..."), `expresso:atchim {x, y, z, dirX, dirZ}` (o espirro e o tranco de ré; vibra),
+  `expresso:chuff {x, y, z}` (vapor da chaminé a cada `TRAIN.chuffEvery` m), `expresso:unload` (caçamba basculando),
+  `expresso:delivery` (bolinha na bandeja) e `expresso:return` (a volta chegou à estação; apito).
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.

@@ -1,8 +1,28 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-17, Codex → Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar. O usuário pediu
-publicar o PR #16 e documentar a passagem; continuará o desenvolvimento com Claude.
+Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
+e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: acabamento da fase 6 (Entrega A)
+
+- Pedido do usuário: melhorar a fase 6 no mesmo padrão das fases 4 e 5, seguindo
+  [CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md). A fase continua só em `DEV_LEVELS`.
+- Branch **`claude/acabamento-fase6`** (worktree próprio), base `5e434f7` (PR #17
+  no main). Consultar o PR dessa branch para SHA, CI, E2E `expresso` e prévia;
+  este texto não antecipa resultados. Nenhum teste ou build rodou no PC.
+- Feito: trilho único (`src/levels/fase6/track.js`), volta fechada sem giro
+  parado, vagão articulado com caçamba, espirro sincronizado com o tranco de ré,
+  oficina e maquete detalhadas, sons e partículas `expresso:*`, iluminação própria
+  e testes novos em `test/fase6.test.mjs` (viagem quadro a quadro, entrega,
+  varredura do corpo do trem, partida andando). Detalhes na continuidade.
+- Próximo passo: CI verde, E2E `expresso` (e `todas` antes de integrar), revisar
+  as capturas, entregar a prévia e **aguardar aprovação** antes do merge/deploy.
+  Depois, Entrega B (campanha) em outro PR.
+
+## Passagem anterior (Codex → Claude, 2026-10-17)
+
+O usuário pediu publicar o PR #16 e documentar a passagem; continuará o
+desenvolvimento com Claude.
 
 ## Estado atual confirmado
 
@@ -97,13 +117,9 @@ não foram implementados. Plano concreto em [CONTINUIDADE-FASE6.md](CONTINUIDADE
 1. Conferir branch, status, worktrees e `origin/main`. A pasta principal foi
    sincronizada por fast-forward em `45bf0cc`, sem mudar o branch `main`, e estava
    limpa. Não presumir que worktrees antigos tenham a mesma base; não descartá-los.
-2. Esta consolidação documental está em **`codex/passagem-claude`**, no worktree
-   **`desempenho-expansao`** reutilizado pelo coordenador após o #16. Consultar o PR
-   dessa branch para SHA, CI/prévia e estado de aprovação atuais. O commit do
-   próprio documento precisa de CI próprio; este texto não antecipa seu resultado.
-3. A aprovação do #16 já foi consumada na publicação acima. Esta documentação
-   posterior segue como PR separado; não a integrar/publicar sem aprovação da sua
-   versão. As instruções e o plano podem ser lidos imediatamente pelo branch/PR.
+2. A consolidação documental do Codex (`codex/passagem-claude`) virou o PR #17,
+   integrado ao main em `5e434f7`.
+3. A aprovação do #16 já foi consumada na publicação acima; não repetir.
 4. Próximo trabalho de jogo: **acabamento da fase 6 mantendo DEV**, começando por
    contrato de trajetória/trem e divisão da composição. Cenário e áudio podem
    avançar em worktrees exclusivos depois de reservar arquivos. Após validar o
@@ -115,7 +131,6 @@ não foram implementados. Plano concreto em [CONTINUIDADE-FASE6.md](CONTINUIDADE
    E2E da suíte e `todas` na entrega importante. Preservar save, recursos e arte;
    aprovação explícita antes de merge/deploy. Não instalar ai-memory.
 
-Não há implementação de acabamento em andamento ou entregas de executores
-pendentes de integração. Nenhum processo local de teste/build foi iniciado nesta entrega. A última frente é somente esta
-passagem documental; histórico de branches e capturas ignoradas foi preservado.
-Conferir o estado remoto ao retomar, pois este é um checkpoint, não uma fonte viva.
+Na passagem do Codex não havia acabamento em andamento; o trabalho atual está na
+seção "Em andamento" no topo. Histórico de branches e capturas ignoradas foi
+preservado. Conferir o estado remoto ao retomar: este é um checkpoint, não uma fonte viva.

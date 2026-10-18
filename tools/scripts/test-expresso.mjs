@@ -18,8 +18,8 @@ try {
   await load('?level=fase6&play');
   let state = await info();
   const layout = await ev(() => {
-    const { PEDAL, BLOW_SPOT, TRAY, GOAL } = window.__game.layout;
-    return { PEDAL, BLOW_SPOT, TRAY, GOAL };
+    const { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN } = window.__game.layout;
+    return { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN_START: TRAIN.start };
   });
   check(state.levelId === 'fase6' && state.state === 'playing', 'protótipo carregado pelo id');
   check(state.stage === 'waiting' && state.expresso.route === 'loop', 'início com trilho circular e trem parado');
@@ -32,8 +32,16 @@ try {
   state = await waitFor((i) => i.expresso.trips === 1, { timeout: 6000 });
   check(state.expresso.trips === 1 && state.expresso.tripRoute === 'loop', 'nuvem real inicia a rota escolhida');
   check((await H.logOf('dog:bafo')).length === 1, 'comando real de superbafo confirmado');
+  state = await waitFor((i) => (i.expresso.distance || 0) > 2.3 || i.stage === 'waiting', { timeout: 8000 });
+  await shot('01b-volta-na-curva.png');
+  check(state.stage !== 'sneezing', 'o atchim deu a partida de ré');
+  state = await waitFor((i) => i.stage === 'returning' || i.stage === 'waiting', { timeout: 12000 });
+  check(['returning', 'waiting'].includes(state.stage), 'a volta chega pela curva do sul');
   state = await waitFor((i) => i.stage === 'waiting' && i.expresso.armed, { timeout: 25000 });
   check(state.stage === 'waiting' && state.ball.holder === null, 'rota circular retorna com o item e permite nova tentativa');
+  check(Math.abs(state.expresso.train.yaw - layout.TRAIN_START.yaw) < 1e-6 && Math.abs(state.expresso.train.z - layout.TRAIN_START.z) < 1e-6,
+    'o trem volta à estação olhando para a janela, sem girar no lugar');
+  check((await H.logOf('expresso:atchim')).length === 1 && (await H.logOf('expresso:return')).length === 1, 'um atchim e um apito de volta por viagem');
 
   await station('rhaenyra', layout.PEDAL);
   await H.sleep(750);
@@ -74,6 +82,12 @@ try {
   await page.waitForFunction(() => window.__game.game.state === 'playing');
   await H.press('KeyE');
   check((await info()).ball.holder === null, 'retirada recusada durante percurso');
+  state = await waitFor((i) => i.expresso.unloading || i.stage === 'ready', { timeout: 25000 });
+  if (state.expresso.unloading) {
+    await H.sleep(380); // caçamba no alto, bolinha descendo a canaleta
+    await shot('02b-descarga-na-canaleta.png');
+  }
+  check((await H.logOf('expresso:unload')).length === 1, 'a caçamba bascula uma vez no fim da entrega');
   state = await waitFor((i) => i.stage === 'ready', { timeout: 25000 });
   check(state.stage === 'ready' && state.expresso.trips === 2, 'viagem entrega uma única bolinha');
   const earlyHint = await ev(() => window.__game.game.puzzle.TEXT.hint.early);

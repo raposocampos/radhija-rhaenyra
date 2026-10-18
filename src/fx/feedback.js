@@ -404,6 +404,41 @@ export function createFeedback(opts) {
     particles.dust({ x, y: 0.1, z }, { count: 8, size: 1.0, alpha: 0.4, strength: 0.8, spread: 0.4 });
     particles.burst({ x: x - 0.3, y: 0.3, z }, { kind: 'stars', count: 6, size: 0.7, speed: 0.6 });
   });
+  // fase 6: o trenzinho que espirra. Fungada ao sentir o cheiro, "atchim" (spray para a janela e o tranco
+  // de ré), vapor da chaminé no ritmo do trem, agulha mudando, bolinha descendo a canaleta, plim na bandeja
+  // e apito ao voltar. Sons de uma vez só: nada fica tocando depois de pausa, reinício ou troca de fase.
+  events.on('expresso:sneeze', ({ x, z }) => {
+    sfx('trainSniff', x, z);
+    particles.sparkle({ x, y: 0.62, z }, { count: 5, radius: 0.12, size: 0.6, rise: 0.4, color: '#CDEBA8' });
+  });
+  events.on('expresso:atchim', ({ x, y = 0.6, z, dirX = 0, dirZ = 1 }) => {
+    sfx('trainSneeze', x, z);
+    particles.dust({ x: x + dirX * 0.08, y, z: z + dirZ * 0.08 }, { count: 10, size: 1.05, alpha: 0.55, color: '#F7F3EA', dir: { x: dirX, z: dirZ }, strength: 1.2, spread: 0.08 });
+    particles.splash({ x, y, z }, { count: 8, size: 0.6, strength: 0.5, mist: 4, dir: { x: dirX * 0.8, z: dirZ * 0.8 } });
+    particles.burst({ x, y: y + 0.1, z }, { kind: 'stars', count: 6, size: 0.65, speed: 0.6 });
+  });
+  events.on('expresso:chuff', ({ x, y = 0.95, z }) => {
+    sfx('trainChuff', x, z);
+    particles.dust({ x, y, z }, { count: 2, size: 0.8, alpha: 0.42, color: '#FBF7EE', strength: 0.5, spread: 0.03 });
+  });
+  events.on('expresso:route', ({ x, z, signX, signZ }) => {
+    const sx = Number.isFinite(signX) ? signX : x;
+    const sz = Number.isFinite(signZ) ? signZ : z;
+    later(0.12, () => {
+      sfx('railSwitch', sx, sz);
+      particles.sparkle({ x: sx, y: 1.12, z: sz }, { count: 8, radius: 0.18, size: 0.8, rise: 0.5 });
+    });
+  });
+  events.on('expresso:unload', ({ x, z }) => sfx('ballRoll', x, z));
+  events.on('expresso:delivery', ({ x, z }) => {
+    sfx('trayDing', x, z);
+    particles.sparkle({ x, y: 0.25, z }, { count: 14, radius: 0.3, size: 0.9, rise: 1.0 });
+    particles.ring({ x, y: 0, z }, { radius: 0.75, from: 0.15, life: 0.8, color: '#FFE09A', opacity: 0.6, width: 0.09 });
+  });
+  events.on('expresso:return', ({ x, z }) => {
+    sfx('toyWhistle', x, z);
+    particles.ring({ x, y: 0.16, z }, { radius: 0.8, from: 0.2, life: 0.7, color: '#FFF1D6', opacity: 0.45, width: 0.08 });
+  });
   events.on('dog:bump', ({ x, z, strength = 0.7 }) => {
     sfx('bump', x, z, { strength });
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });

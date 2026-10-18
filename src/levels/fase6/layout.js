@@ -1,4 +1,6 @@
-// Expresso do Superbafo — protótipo de desenvolvimento. Metros, chão XZ, norte = -Z.
+// Expresso do Superbafo — fase de desenvolvimento. Metros, chão XZ, norte = -Z.
+// Uma oficina de brinquedos em corte de maquete: a maquete do trem fica no meio (área isolada, ninguém
+// entra nem pulando), o passeio contorna tudo e os móveis encostam nas paredes, longe do passeio.
 import { withStart } from '../../dogs/config.js';
 
 export const WORLD = { bounds: { minX: -5.5, maxX: 5.5, minZ: -4, maxZ: 4 } };
@@ -7,22 +9,97 @@ export const DOGS = {
   radhija: withStart('radhija', { x: -3.5, z: 2.55, yaw: 0.7 }),
   rhaenyra: withStart('rhaenyra', { x: -4.25, z: 2.4, yaw: 0.7 }),
 };
-export const RAIL_YARD = { x: 0, z: -1.05, hx: 2.65, hz: 1.65, height: 0.16 };
+/**
+ * Maquete do trem: base de madeira com feltro verde (topo em `height`) e cerquinha em volta (até `fenceTop`).
+ * Vai de z = -2,7 a 0,67: a borda sul dá folga para a locomotiva fazer a última curva da volta sem passar
+ * da cerca (conferido no teste, com o corpo inteiro e não só o eixo do trilho).
+ */
+export const RAIL_YARD = { x: 0, z: -1.015, hx: 2.65, hz: 1.685, height: 0.16, fenceTop: 0.5 };
 export const PEDAL = { x: -3.75, z: 0.35, r: 0.8, pulseTime: 0.5 };
+/** Agulha do trilho: onde a volta e a entrega se separam (fim do tronco de TRACK). */
 export const JUNCTION = { x: 0, z: -1.5 };
+/**
+ * Placa da agulha e alavanca que repete a seta perto do pedal: as duas dentro da maquete (na área isolada,
+ * fora do caminho do trem), ligadas ao pedal por uma haste que entra na base.
+ */
+export const SWITCH_SIGN = { x: 0.48, z: -1.12 };
+export const SWITCH_LEVER = { x: -2.36, z: 0.38, hx: 0.1, hz: 0.12 };
+/**
+ * Trem: locomotiva de brinquedo (centro em `start`, cara para o sul) e um vagão `cargoOffset` à frente no
+ * trilho. O espirro dura `sneezeTime`; no "atchim" (`burstAt`) o trem leva um tranco de ré (`kick`, m/s),
+ * acelera até `speed` e freia perto do fim (`brake`, m/s²), nunca abaixo de `minSpeed`.
+ * Alturas: `railY` = fundo do sulco do trilho (onde as rodas apoiam); `cargoY` = centro da bolinha no vagão;
+ * `noseY`/`chimney` = de onde saem o espirro e o vapor (locais da locomotiva).
+ */
 export const TRAIN = {
-  start: { x: 0, z: -0.3, yaw: 0 }, speed: 1.35, sneezeTime: 0.9,
-  returnTime: 0.8, unloadTime: 0.85, cargoOffset: 0.8, cargoY: 0.5,
+  start: { x: 0, z: -0.3, yaw: 0 }, speed: 1.35, accel: 2.4, kick: 0.85, brake: 1.6, minSpeed: 0.22,
+  sneezeTime: 0.9, burstAt: 0.55, unloadTime: 1.25, cargoOffset: 0.8, cargoY: 0.5,
+  railY: 0.18, noseY: 0.6, noseZ: 0.58, chimney: { z: 0.3, y: 0.95 }, chuffEvery: 0.42,
+};
+/**
+ * Trilho de madeira (o mesmo desenho move o trem e desenha os trilhos: ver track.js). O trem sai de
+ * TRAIN.start andando de ré para o norte. Trechos: ['line', m] ou ['arc', raio, graus], + = curva à
+ * esquerda. `stem` vai da estação à agulha; `loop` fecha o circuito chegando de novo na estação pelo sul,
+ * já alinhado (sem girar parado); `delivery` termina antes da canaleta, e `tail` é o trilho onde o vagão
+ * para diante do para-choque. `width` = largura da peça; `gauge` = distância entre os sulcos.
+ * @type {import('../../types').Fase6TrackSpec}
+ */
+export const TRACK = {
+  width: 0.5, gauge: 0.34,
+  stem: [['line', 1.2]],
+  loop: [['arc', 0.6, 90], ['line', 0.4], ['arc', 0.6, 90], ['line', 1.15], ['arc', 0.5, 90], ['line', 0.65], ['arc', 0.45, 90]],
+  delivery: [['arc', 0.6, -90], ['line', 0.6], ['arc', 0.6, -90], ['line', 0.97]],
+  tail: 1.08,
+  /** A volta passa a contar como "voltando" nos últimos metros (reta do sul + curva final). */
+  returnDistance: 1.36,
 };
 export const NOSE = { id: 'expresso-nariz', x: 0, z: 0.38, r: 0.45, frontZ: 0.65, halfWidth: 0.58 };
 export const BLOW_SPOT = { x: 0, z: 1.65, yaw: Math.PI };
 export const TRAY = { x: 1.8, z: 1.3, y: 0.16, pickupR: 0.6 };
-export const BALL = { x: TRAIN.start.x, z: TRAIN.start.z - TRAIN.cargoOffset, y: TRAIN.cargoY, pickupR: TRAY.pickupR };
-/** @type {Record<import('../../types').Fase6Route, import('../../types').XZ[]>} */
-export const ROUTES = {
-  loop: [{ x: 0, z: -0.3 }, { x: 0, z: -1.5 }, { x: -1.6, z: -1.5 }, { x: -1.6, z: -0.3 }, { x: 0, z: -0.3 }],
-  delivery: [{ x: 0, z: -0.3 }, { x: 0, z: -1.5 }, { x: 1.8, z: -1.5 }, { x: 1.8, z: -0.3 }],
+/** Canaleta da descarga: rampa de madeira da borda da maquete até a bandeja (superfície de y0 a y1). */
+export const CHUTE = { x: TRAY.x, z0: RAIL_YARD.z + RAIL_YARD.hz, z1: 1.06, y0: 0.37, y1: 0.12, halfWidth: 0.17 };
+export const BALL = { x: TRAIN.start.x, z: TRAIN.start.z - TRAIN.cargoOffset, y: TRAIN.cargoY, r: 0.09, pickupR: TRAY.pickupR };
+/**
+ * Corpo da composição visto de cima, a partir do centro de cada carro (frente = cara da locomotiva):
+ * a parte baixa (até a altura da cerca) e o teto da cabine. O teste varre as duas rotas com estes retângulos
+ * contra a cerca e os enfeites da maquete.
+ */
+export const TRAIN_BODY = {
+  loco: { front: 0.5, back: 0.49, halfWidth: 0.24 },
+  roof: { front: -0.07, back: 0.47, halfWidth: 0.27 },
+  wagon: { front: 0.32, back: 0.27, halfWidth: 0.22 },
 };
+/**
+ * Enfeites dentro da maquete (estação, placa da agulha, laguinho, árvores de feltro, caixa d'água): círculos
+ * { x, z, r } ou retângulos { x, z, hx, hz }. O cenário é montado com estas posições e o teste confere que o
+ * trem passa longe de todos, nas duas rotas.
+ */
+export const YARD_DECOR = {
+  station: { x: 1.18, z: -0.85, hx: 0.21, hz: 0.25 },
+  platform: { x: 0.7, z: -0.8, hx: 0.24, hz: 0.24 },
+  lampPost: { x: 0.5, z: -0.64, r: 0.05 },
+  bench: { x: 0.84, z: -0.7, r: 0.1 },
+  sign: { x: SWITCH_SIGN.x, z: SWITCH_SIGN.z, r: 0.08 },
+  lever: { x: SWITCH_LEVER.x, z: SWITCH_LEVER.z, hx: SWITCH_LEVER.hx, hz: SWITCH_LEVER.hz },
+  pond: { x: -0.8, z: -1.05, hx: 0.26, hz: 0.38 },
+  tower: { x: -2.22, z: -1.62, r: 0.16 },
+  treeA: { x: -1.0, z: -1.6, r: 0.12 }, treeB: { x: -0.75, z: -0.55, r: 0.1 }, treeC: { x: -2.25, z: -0.2, r: 0.13 },
+  treeD: { x: -2.3, z: -2.3, r: 0.11 }, treeE: { x: 2.3, z: -2.3, r: 0.12 }, treeF: { x: 2.32, z: -0.7, r: 0.1 },
+  bushA: { x: -1.15, z: -0.85, r: 0.07 }, bushB: { x: -2.35, z: -1.05, r: 0.09 }, bushC: { x: 2.35, z: -1.6, r: 0.08 },
+};
+
+// Móveis da oficina (encostados nas paredes; o passeio do grafo fica livre)
+export const BENCH = { x: 4.95, z: -1.9, hx: 0.43, hz: 1.05, height: 0.9 };
+export const TOY_CHEST = { x: 4.95, z: 0.95, hx: 0.42, hz: 0.32, height: 0.5 };
+export const TOY_SHELF = { x: -5.2, z: -1.25, hx: 0.27, hz: 0.75, height: 0.95 };
+export const LOW_CABINET = { x: 0, z: -3.84, hx: 1.6, hz: 0.16, height: 0.55 };
+export const BLOCK_CRATES = { x: 3.55, z: -3.8, hx: 0.55, hz: 0.2, height: 0.42 };
+export const PLANT = { x: -5.05, z: 1.4, r: 0.26 };
+/** Tapete de retalhos no meio do lado sul (sem colisão) e cantinho de brinquedos perto da borda sudeste. */
+export const RAG_RUG = { x: 1.1, z: 3.05, r: 0.85 };
+export const TOY_PILE = { x: 3.9, z: 3.3, r: 0.36 };
+export const FLOOR_LAMP = { x: -5.12, z: -3.62, r: 0.2 };
+
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   { id: 'parede-norte', shape: 'box', x: 0, z: -4.2, hx: 5.9, hz: 0.2 },
@@ -31,6 +108,16 @@ export const STATIC_COLLIDERS = [
   { id: 'parede-leste', shape: 'box', x: 5.7, z: 0, hx: 0.2, hz: 4.2 },
   // Área inteira inacessível, inclusive durante saltos; trem nunca colide com dogs.
   { id: 'ferrovia', shape: 'box', x: RAIL_YARD.x, z: RAIL_YARD.z, hx: RAIL_YARD.hx, hz: RAIL_YARD.hz },
+  // A canaleta sai da maquete; termina antes da bandeja, que fica livre para pegar a bolinha.
+  { id: 'canaleta', shape: 'box', x: CHUTE.x, z: (CHUTE.z0 + 0.98) / 2, hx: CHUTE.halfWidth + 0.03, hz: (0.98 - CHUTE.z0) / 2 },
+  { id: 'bancada', shape: 'box', x: BENCH.x, z: BENCH.z, hx: BENCH.hx + 0.02, hz: BENCH.hz + 0.02 },
+  { id: 'bau', shape: 'box', x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx + 0.02, hz: TOY_CHEST.hz + 0.02 },
+  { id: 'estante', shape: 'box', x: TOY_SHELF.x, z: TOY_SHELF.z, hx: TOY_SHELF.hx, hz: TOY_SHELF.hz + 0.02 },
+  { id: 'armario-baixo', shape: 'box', x: LOW_CABINET.x, z: LOW_CABINET.z, hx: LOW_CABINET.hx + 0.02, hz: LOW_CABINET.hz },
+  { id: 'caixotes', shape: 'box', x: BLOCK_CRATES.x, z: BLOCK_CRATES.z, hx: BLOCK_CRATES.hx, hz: BLOCK_CRATES.hz },
+  { id: 'planta', shape: 'circle', x: PLANT.x, z: PLANT.z, r: PLANT.r },
+  { id: 'brinquedos', shape: 'circle', x: TOY_PILE.x, z: TOY_PILE.z, r: TOY_PILE.r },
+  { id: 'luminaria', shape: 'circle', x: FLOOR_LAMP.x, z: FLOOR_LAMP.z, r: FLOOR_LAMP.r },
 ];
 export const NAV_NODES = {
   SW: { x: -3.7, z: 2.5 }, S: { x: 0, z: 2.5 }, SE: { x: 3.6, z: 2.5 },
@@ -50,6 +137,8 @@ export const GOAL = {
   celebrate: { radhija: { x: -3.5, z: 2.85 }, rhaenyra: { x: -4.2, z: 2.85 } },
   entryPoints: [{ x: -4.5, z: -1 }, { x: 3.8, z: 2.5 }],
 };
+/** Sol de fim de tarde entrando de cima e do sudoeste (a maquete não tem teto). */
+export const SUN = { direction: [-0.45, 0.8, 0.42], color: '#ffe1b8', intensity: 2.15 };
 /** @type {import('../../types').CameraConfig} */
 export const CAMERA = {
   fov: 38, offset: [1.4, 4.3, 4.7], lookHeight: 0.3,
@@ -58,6 +147,8 @@ export const CAMERA = {
   celebrate: { pos: [-2.8, 1.6, 5.1], look: [-3.85, 0.3, 2.85] },
 };
 /** @type {import('../../types').LevelLayout} */
-const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, TRAIN, NOSE, BLOW_SPOT, TRAY, BALL, ROUTES,
-  STATIC_COLLIDERS, NAV_NODES, NAV_EDGES, COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, CAMERA };
+const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, SWITCH_SIGN, SWITCH_LEVER, TRAIN, TRACK, NOSE, BLOW_SPOT, TRAY,
+  CHUTE, BALL, TRAIN_BODY, YARD_DECOR, BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, RAG_RUG, TOY_PILE,
+  FLOOR_LAMP, STATIC_COLLIDERS, NAV_NODES,
+  NAV_EDGES, COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA };
 export default LAYOUT;

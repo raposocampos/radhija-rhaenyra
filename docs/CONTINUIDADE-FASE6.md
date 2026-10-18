@@ -1,8 +1,34 @@
 # Continuidade da fase 6 — Expresso do Superbafo
 
-Passagem Codex → Claude, 2026-10-17. Este é o plano da **próxima entrega**,
-ainda não implementada nem aprovada para publicação. Estado confirmado da
-estabilização, produção e PR documental em [CONTEXTO.md](CONTEXTO.md).
+Passagem Codex → Claude, 2026-10-17. A **Entrega A (acabamento mantendo DEV)**
+foi implementada por Claude em 2026-10-18 no branch `claude/acabamento-fase6`
+e aguarda CI, E2E e a aprovação do usuário (estado em [CONTEXTO.md](CONTEXTO.md)).
+A Entrega B (campanha) continua por fazer.
+
+### O que mudou no acabamento
+
+- **Trilho único** (`src/levels/fase6/track.js` + `TRACK` no layout): retas e
+  arcos com tangente contínua. O puzzle só avança a distância; o cenário desenha
+  as mesmas peças. A volta é um circuito fechado que chega à estação pelo sul já
+  alinhado (acabou o giro parado); `returning` é a reta e a curva finais.
+- **Composição**: locomotiva com cara (pálpebras, bochechas, nariz vermelho numa
+  mola), vagão-caçamba articulado na própria tangente, engate entre os dois,
+  rodas e bielas girando pela distância. Na entrega, a caçamba bascula e a
+  bolinha rola pela canaleta até a bandeja.
+- **Espirro sincronizado**: `nose.setSneeze(fase)` cobre o espirro inteiro;
+  inspira até `TRAIN.burstAt`, o "atchim" dá o tranco de ré (a partida), o trem
+  acelera, freia perto do fim e chega devagar. Plano de câmera acompanha o trem.
+- **Oficina** no padrão da fase 5: laje com o corte escuro, tábuas largas, lambri,
+  janelas de fim de tarde, painel de ferramentas, placa, bandeirinhas, mural de
+  desenhos, bancada com luminária, baú com o ursinho, estante com globo,
+  armário, caixotes, planta e luminária de pé; maquete com feltro, trilho de
+  madeira com sulcos, cerquinha, janela do nariz, placa da agulha que vira
+  (seta circular / seta da estrela), alavanca ao lado do pedal, estação,
+  linha de estrelas, laguinho com patinho, arvorezinhas e caixa d'água.
+- **Som e efeitos** (`src/fx/audio/soundsExpresso.js` e `feedback.js`): fungada,
+  atchim com spray, vapor da chaminé, agulha, bolinha rolando, plim e apito.
+- A borda sul da maquete passou para z = 0,67 para a locomotiva fazer a última
+  curva sem passar da cerca; nariz, janela e marca de mira não mudaram.
 
 ## Ponto de partida
 
@@ -26,21 +52,23 @@ pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o nú
 
 ## Entrega A — acabamento mantendo DEV
 
-- [ ] Definir o contrato da trajetória, locomotiva, vagão e carga. Antes de
+- [x] Definir o contrato da trajetória, locomotiva, vagão e carga. Antes de
   paralelizar, separar a composição da oficina do trem hoje reunidos em
   `src/levels/fase6/world/index.js`. Fazer apenas extrações necessárias.
-- [ ] Usar a mesma descrição geométrica para trilhos visíveis e movimento.
+  → `track.js`; `world/{workshop,railway,train,stations}.js`; `Fase6TrainPose`
+  com `wagon` e `tip` opcionais (os dublês continuam valendo).
+- [x] Usar a mesma descrição geométrica para trilhos visíveis e movimento.
   Suavizar curvas e junções, orientar pela tangente e manter velocidade
   previsível. Articular o vagão, que vai à frente na marcha à ré; bola deve
   acompanhar o vagão sem saltos. Resolver também o giro parado no retorno.
-- [ ] Acrescentar detalhes procedurais da oficina, madeira, brinquedos e bancada
+- [x] Acrescentar detalhes procedurais da oficina, madeira, brinquedos e bancada
   com os materiais existentes. Preservar leitura do pedal, janela do nariz,
   bandeja e tapete, corredores livres e visibilidade das interações.
-- [ ] Acrescentar som procedural do espirro ao evento `expresso:sneeze`, já
+- [x] Acrescentar som procedural do espirro ao evento `expresso:sneeze`, já
   emitido pelo puzzle, mas sem tratamento específico em `src/fx/feedback.js`.
   Reusar `src/fx/audio.js` e a biblioteca `src/fx/audio/`; respeitar volume,
   pausa e limpeza de efeitos. Não baixar assets ou publicar fotos pessoais.
-- [ ] Sincronizar olhos/nariz, antecipação, recuo e partida com o tempo do puzzle;
+- [x] Sincronizar olhos/nariz, antecipação, recuo e partida com o tempo do puzzle;
   revisar câmera e dicas vendo o movimento completo. Nenhuma ação deve exigir
   precisão de plataforma ou duas personagens agindo simultaneamente.
 - [ ] Entregar prévia própria do acabamento em DEV; publicar somente após
@@ -71,10 +99,13 @@ visual se isso dificultar revisar causalidade e acabamento.
   rotas e retorno. Trem fica dentro da área isolada, sem plataforma móvel/física nova.
 - [ ] Pausa, reinício e troca de fase em todos os estados: nenhum efeito sonoro,
   callback, nuvem, item ou recurso exclusivo deve sobreviver indevidamente.
-- [ ] Acrescentar uma partida caminhando entre estações. A suíte atual usa
+- [x] Acrescentar uma partida caminhando entre estações. A suíte atual usa
   comandos reais nas habilidades, mas posiciona personagens para preparar trechos;
   isso não substitui a revisão do percurso completo e da companheira.
+  → `test/fase6.test.mjs`: partida andando, viagem quadro a quadro, entrega com
+  caçamba, trilho fechado e varredura do corpo do trem contra cerca e enfeites.
 - [ ] Revisar capturas das curvas/descarga e comparar direção artística com a fase 5.
+  O E2E `expresso` agora grava `01b-volta-na-curva` e `02b-descarga-na-canaleta`.
   Recursos devem estabilizar após trocas, sem descarte de recursos globais.
 - [ ] Tipos/testes/build e E2E `expresso` na nuvem; E2E `todas` na entrega importante.
   Conferir SHA do head final, smoke em subcaminho e jobs de recursos. Ver guia

@@ -566,13 +566,27 @@ export interface Fase5Props extends LevelProps {
   bed: PropBase & HighlightProp;
   collectibles: CollectibleProp[];
 }
-/** Expresso do Superbafo (protótipo em DEV_LEVELS). */
+/** Expresso do Superbafo (fase de desenvolvimento em DEV_LEVELS). */
 export type Fase6Route = 'loop' | 'delivery';
-export interface Fase6TrainPose { x: number; z: number; yaw: number }
+/** Trecho do trilho: reta ['line', m] ou curva ['arc', raio, graus] (+ = esquerda). */
+export type Fase6TrackCommand = ['line', number] | ['arc', number, number];
+/** Desenho do trilho (src/levels/fase6/track.js): o mesmo para o movimento e para os trilhos visíveis. */
+export interface Fase6TrackSpec {
+  width: number; gauge: number;
+  stem: Fase6TrackCommand[]; loop: Fase6TrackCommand[]; delivery: Fase6TrackCommand[];
+  tail: number; returnDistance: number;
+}
+export interface Fase6CarPose { x: number; z: number; yaw: number }
+/**
+ * Pose da composição: a locomotiva em (x, z, yaw); o vagão na própria pose do trilho (nas curvas ele não
+ * fica alinhado à locomotiva) ou, sem `wagon`, rígido atrás dela; `tip` 0..1 = caçamba basculando.
+ */
+export interface Fase6TrainPose extends Fase6CarPose { wagon?: Fase6CarPose; tip?: number }
 export interface Fase6Props extends LevelProps {
   pedal: PressProp;
   junction: PropBase & { setRoute(route: Fase6Route): void };
   train: PropBase & { setPose(pose: Fase6TrainPose): void };
+  /** setSneeze(fase): o espirro inteiro, 0..1 (inspira, "atchim" em TRAIN.burstAt, recupera); 0 e 1 = repouso. */
   nose: PropBase & { setSneeze(t: number): void };
   ball: ItemProp;
   goal: PropBase & HighlightProp;
@@ -654,6 +668,7 @@ declare global {
     __f3Timings?: any;
     __f4Timings?: any;
     __f5Timings?: any;
+    __f6Timings?: any;
     __envTimings?: any;
     webkitAudioContext?: typeof AudioContext;
   }
