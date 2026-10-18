@@ -177,11 +177,13 @@ try {
 
   // 5. a porta: impulso na maçaneta e a Radhija segurando o vão
   const kd = kick(L.HANDLE);
-  await setup({ active: 'rhaenyra', place: { rhaenyra: kd, radhija: { x: L.WALL_EH.x - 0.08, z: 0.03, yaw: Math.PI / 2 } }, stay: 'radhija' });
+  await setup({ active: 'rhaenyra', place: { rhaenyra: kd, radhija: { x: -3.3, z: 1.2, yaw: -Math.PI / 2 } }, stay: 'radhija' });
   await tap('Space');
   await until((i) => (i.dogs.rhaenyra.wall?.k ?? 0) >= 0.52, 120);
   await shot('23-impulso-na-macaneta', { pos: [-2.9, 1.3, 0.6], look: [-4.3, 0.9, -0.4] });
   await until((i) => i.biblioteca.door.open, 200);
+  // aberta, a Radhija entra no vão e fica: a mola espera ela sair (antes de abrir, a folha a empurraria para dentro)
+  await setup({ place: { radhija: { x: L.WALL_EH.x - 0.08, z: 0.03, yaw: Math.PI / 2 } } });
   await step(260);
   await shot('24-radhija-segura-a-porta', { pos: [-3.0, 1.3, 1.4], look: [-4.6, 0.5, 0.2] });
 

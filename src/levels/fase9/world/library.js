@@ -460,7 +460,7 @@ function buildReadingCorner(root, layout) {
     const sp = new THREE.Object3D();
     sp.position.set(TABLE_SPOTS[k].x - T.x, TABLE_SPOTS[k].y, TABLE_SPOTS[k].z - T.z);
     // o livro já deita sozinho (props.book.setLying); os óculos deitam dobrados, as lentes para cima
-    if (k === 'book') sp.rotation.set(0, 0.4, 0);
+    if (k === 'book') sp.rotation.set(0, 0.3, 0);
     else sp.rotation.set(-Math.PI / 2 + 0.15, 0, 0.5);
     table.add(sp);
     spots[k] = sp;
@@ -597,7 +597,7 @@ function buildStudyTable(root, layout) {
   grp.add(saucer, cup, tea, handle);
   const mag = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.006, 8, 24).rotateX(Math.PI / 2), brass);
-  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.044, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#dbe9ef', roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }));
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.044, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#dbe9ef', transparent: true, opacity: 0.25, depthWrite: false }));
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.09, 8).rotateZ(Math.PI / 2), stdMat('#3a2416', { roughness: 0.5 }));
   grip.position.x = 0.095;
   mag.add(ring, lens, grip);

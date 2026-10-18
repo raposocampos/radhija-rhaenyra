@@ -133,8 +133,8 @@ export const RUG = { x: 1.2, z: -1.4, rx: 1.45, rz: 0.95 };
 /** Mesa de estudos do vovô na metade sul da biblioteca (a Radhija passa por baixo; a Rhaenyra contorna) e as cadeiras. */
 export const STUDY_TABLE = { x: 1.35, z: 1.95, hx: 0.72, hz: 0.36, h: 0.74 };
 export const STUDY_CHAIRS = [{ x: 0.95, z: 1.36, yaw: 0.15, r: 0.24 }, { x: 1.8, z: 1.38, yaw: -0.2, r: 0.24 }];
-/** Onde cada objeto fica na mesinha. */
-export const TABLE_SPOTS = { glasses: { x: 0.88, y: SIDE_TABLE.h + 0.02, z: -1.12 }, book: { x: 1.02, y: SIDE_TABLE.h + 0.02, z: -0.98 } };
+/** Onde cada objeto fica na mesinha: os óculos na frente (para a câmera), o livro atrás à esquerda, longe do abajur. */
+export const TABLE_SPOTS = { glasses: { x: 1.06, y: SIDE_TABLE.h + 0.02, z: -0.91 }, book: { x: 0.83, y: SIDE_TABLE.h + 0.02, z: -1.07 } };
 
 // ---- jardim de inverno
 /** Duto: a grade de baixo no jardim de inverno (entrada) e a grade alta do escritório (saída, sobre o armário). */

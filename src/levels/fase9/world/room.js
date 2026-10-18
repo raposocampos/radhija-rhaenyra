@@ -328,7 +328,7 @@ function buildWalls(layout, updaters) {
   flapFrame.position.set(WALL_EH.x + T / 2 + 0.012, flapH / 2, fzc);
   const flapPivot = new THREE.Group();
   flapPivot.position.set(WALL_EH.x, flapH - 0.02, fzc);
-  const flapLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.008, flapH - 0.05, flen - 0.04), new THREE.MeshStandardMaterial({ color: '#cfe3ea', roughness: 0.15, transparent: true, opacity: 0.55, depthWrite: false }));
+  const flapLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.008, flapH - 0.05, flen - 0.04), new THREE.MeshBasicMaterial({ color: '#cfe3ea', transparent: true, opacity: 0.4, depthWrite: false }));
   flapLeaf.position.y = -(flapH - 0.05) / 2;
   flapPivot.add(flapLeaf);
   grp.add(flapFrame, flapPivot);
@@ -345,8 +345,8 @@ function buildWalls(layout, updaters) {
     grp.add(c);
   }
   // portas de vidro abertas para o jardim de inverno (folhas giradas encostadas na divisória)
-  // vidro fosco o bastante para o reflexo da lanterna não virar um clarão no brilho (bloom)
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#d7e8ee', roughness: 0.4, metalness: 0, transparent: true, opacity: 0.24, depthWrite: false, envMapIntensity: 0.6 });
+  // vidro só tingido (sem brilho especular): o reflexo do luar na folha transparente estourava em branco
+  const glassMat = new THREE.MeshBasicMaterial({ color: '#cfe3ea', transparent: true, opacity: 0.16, depthWrite: false });
   const leafFrame = stdMat('#f2efe6', { roughness: 0.45 });
   const leafW = (WALL_LJ.gap.z1 - WALL_LJ.gap.z0) / 2;
   for (const [hz, dir] of [[WALL_LJ.gap.z0, 1], [WALL_LJ.gap.z1, -1]]) {
