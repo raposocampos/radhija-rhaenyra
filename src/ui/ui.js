@@ -1,11 +1,15 @@
-// Interface (DOM em #ui): tela inicial + seleção de fases, transição entre fases, cartão de abertura,
+// Interface (DOM em #ui): tela inicial com o menu, transição entre fases, cartão de abertura,
 // HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad); menus também por ponteiro/toque.
-// API: createUI({ audio, layout, levels, params, unlockAll, input, quality }) → { update(dt), state, progress, device, ... }
+// Telas do menu inicial (data-screen da camada .rr-title): main (Jogar, Opções) → modes (Modo História "em breve",
+// Fases) → levels (Continuar e os cartões das fases); options (volume, qualidade, dicas, tela cheia). Voltar com
+// Esc, ○ · B ou o botão do canto; do cartão de abertura, Voltar leva de novo à tela das fases.
+// API: createUI({ audio, layout, levels, params, unlockAll, input, quality, settings }) → { update(dt), state, screen, ... }
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
-// input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade).
+// input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade);
+// settings: opções salvas (src/core/settings.js; modo sem dicas: .rr[data-hints="off"] esconde objetivo e dicas).
 // No celular/tablet (quality.device), a raiz ganha data-mobile e o CSS usa o layout compacto; o PC não muda.
 // Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
-//       interact:prompt, hint, collectible:pickup, victory, input:device, quality:change.
+//       interact:prompt, hint, collectible:pickup, victory, input:device, quality:change, settings:change.
 // Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
 // Partes: markup.js (template e HTML gerado), hud.js, curtain.js (transição), menuNav.js (foco e
 // controle nos menus), touchControls.js (joystick e botões de toque), progress.js (progresso salvo), icons.js e ui.css.
@@ -16,19 +20,24 @@ import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/700.css';
 import './ui.css';
 import { events } from '../core/events.js';
-import { boneIcon, clockIcon, restartIcon, itemIcon, lockIcon, checkIcon, trophyIcon, homeIcon, nextIcon } from './icons.js';
-import { esc, fmtTime, treatMessage, pawPattern, template, QUALITY_NAMES } from './markup.js';
-import { loadProgress, saveProgress, recordLevelClear } from './progress.js';
+import { boneIcon, clockIcon, restartIcon, itemIcon, lockIcon, checkIcon, trophyIcon, homeIcon, nextIcon, sparkIcon } from './icons.js';
+import { esc, fmtTime, treatMessage, pawPattern, template, QUALITY_NAMES, HINTS_NOTE, MODES } from './markup.js';
+import { loadProgress, saveProgress, recordLevelClear, recordLastPlayed, continueTarget } from './progress.js';
 import { createHud, retrigger } from './hud.js';
 import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
 import { createTouchControls } from './touchControls.js';
 
+/** Telas do menu inicial e a tela de onde cada uma é aberta (Voltar). */
+const SCREEN_PARENT = { main: null, modes: 'main', levels: 'modes', options: 'main' };
+/** Botão que abre cada tela: ganha o foco ao voltar dela. */
+const SCREEN_OPENER = { modes: 'play', levels: 'levels', options: 'options' };
+
 /**
  * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams,
- *           unlockAll?: boolean, input?: any, quality?: any }} [opts]
+ *           unlockAll?: boolean, input?: any, quality?: any, settings?: { noHints: boolean, setNoHints(on: boolean): void } }} [opts]
  */
-export function createUI({ audio, layout, levels, params, unlockAll = false, input = null, quality = null } = {}) {
+export function createUI({ audio, layout, levels, params, unlockAll = false, input = null, quality = null, settings = null } = {}) {
   /** @type {Partial<import('../types').LevelDef>[]} */
   const LV = levels?.length ? levels : [{ id: 'fase1', number: 1, name: 'Operação Cenoura', item: 'carrot', layout, texts: {} }];
   const host = document.getElementById('ui');
@@ -54,8 +63,10 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     victory: $('.rr-victory'),
     loadError: $('.rr-load-error'),
   };
-  const range = $('.rr-range');
-  const rangeOut = $('.rr-volume output');
+  /** @param {string} s */
+  const $$ = (s) => /** @type {HTMLElement[]} */ ([...root.querySelectorAll(s)]);
+  // volume, qualidade, dicas e tela cheia existem na tela Opções e na pausa (settingsBlock): todas as cópias juntas
+  const ranges = /** @type {HTMLInputElement[]} */ ($$('.rr-range'));
   $('.rr-curtain__pattern').style.backgroundImage = pawPattern('rgba(196, 132, 74, 0.13)');
 
   // Ajusta o viewBox do logotipo ao texto real (depois que a fonte carregar).
@@ -75,8 +86,9 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   let victoryData = null;
   let victoryRec = null;
   let playClock = 0;
-  let starting = false;
   let victoryAt = 0;
+  let screen = 'main'; // tela do menu inicial
+  let nextTitleScreen = 'main'; // tela ao voltar à tela inicial (do cartão de abertura: a das fases)
   let device = 'keyboard';
   let prog = loadProgress();
 
@@ -112,8 +124,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     return null;
   }
   const focus = createMenuFocus({
-    root, audio, getLayer: menuLayer, isTitle: () => uiState === 'title',
-    slider: { el: range, step: (dx) => setVolumePct(Number(range.value) + dx * 5) },
+    root, audio, getLayer: menuLayer,
+    slider: { step: (dx, el) => setVolumePct(Number(el.querySelector('input')?.value ?? 70) + dx * 5) },
   });
   const { setFocus, defaultFocus } = focus;
 
@@ -136,7 +148,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     show('loadError', s === 'load-error');
     syncTouch();
     const layer = menuLayer();
-    if (layer && (!focus.el || !layer.contains(focus.el))) setFocus(defaultFocus(), { silent: true });
+    // foco fora da camada ou numa tela do menu escondida: o padrão da tela visível
+    if (layer && (!focus.el || !focus.focusables().includes(focus.el))) setFocus(defaultFocus(), { silent: true });
     if (!layer) setFocus(null, { silent: true });
   }
 
@@ -144,11 +157,14 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     if (s === uiState) return;
     const prev = uiState;
     uiState = s;
-    if (s !== 'title') L.title.classList.remove('is-leaving');
-    if (s === 'title') { starting = false; resetRun(); renderCards(); }
+    if (s === 'title') {
+      resetRun();
+      showScreen(nextTitleScreen);
+      nextTitleScreen = 'main';
+    }
     if (s === 'intro') renderIntro();
     if (s === 'playing' && (prev === 'title' || prev === 'intro' || prev === 'victory' || prev === null)) playClock = 0;
-    if (s === 'paused') { syncVolume(); renderQuality(); }
+    if (s === 'paused') renderSettings();
     if (s === 'playing') checkOrientation();
     if (s === 'victory') { renderVictory(); victoryAt = performance.now(); }
     if (s !== 'playing') hud.setPrompt(null);
@@ -196,8 +212,67 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     $('.rr-introcard__meta').innerHTML = bits.join('');
   }
 
+  // ---------- menu inicial: telas, Continuar e modos ----------
+  const levelIds = () => LV.map((d) => d.id);
+  const continueInfo = () => continueTarget(levelIds(), prog, { unlockAll });
+
+  /** Mostra uma tela do menu inicial (main, modes, levels, options) e põe o foco no padrão dela. */
+  function showScreen(name) {
+    const next = Object.hasOwn(SCREEN_PARENT, name) ? name : 'main';
+    // depois da primeira troca de tela, as entradas do Jogar e do Opções ficam rápidas (ui.css, .is-moved)
+    if (next !== screen) L.title.classList.add('is-moved');
+    screen = next;
+    L.title.dataset.screen = screen;
+    hideTitleNote();
+    if (screen === 'modes') renderModes();
+    if (screen === 'levels') { renderContinue(); renderCards(); }
+    if (screen === 'options') renderSettings();
+    if (uiState === 'title') setFocus(defaultFocus(), { silent: true });
+  }
+
+  /** Esc, ○ · B ou o botão Voltar: uma tela acima no menu; no cartão de abertura, de volta às fases. */
+  function goBack() {
+    if (uiState === 'title') {
+      const parent = SCREEN_PARENT[screen];
+      if (!parent) return;
+      audio?.play?.('uiBack');
+      const from = screen;
+      showScreen(parent);
+      const opener = /** @type {HTMLElement} */ (L.title.querySelector(`.rr-screen [data-action="${SCREEN_OPENER[from]}"]`));
+      if (opener && focus.focusables().includes(opener)) setFocus(opener, { silent: true });
+      return;
+    }
+    if (uiState === 'intro' && !blocking()) {
+      audio?.play?.('uiBack');
+      nextTitleScreen = 'levels';
+      events.emit('ui:menu', {});
+    }
+  }
+
+  function renderModes() {
+    const done = LV.filter((d) => prog.levels[d.id]?.done).length;
+    const treats = LV.reduce((n, d) => n + (prog.levels[d.id]?.treats ?? 0), 0);
+    $('.rr-mode__count').textContent = `${LV.length} fases`;
+    const bits = [`<span>${checkIcon()}${done} de ${LV.length} concluídas</span>`];
+    if (treats > 0) bits.push(`<span>${boneIcon()}${treats}</span>`);
+    $('.rr-mode__progress').innerHTML = bits.join('');
+  }
+
+  function renderContinue() {
+    const { index, fresh } = continueInfo();
+    const m = meta(index);
+    const verb = fresh ? 'Começar' : 'Continuar';
+    const btn = $('.rr-btn--continue');
+    btn.dataset.index = String(index);
+    btn.setAttribute('aria-label', `${verb}: Fase ${m.number}, ${m.name}`);
+    $('.rr-continue__badge').innerHTML = itemIcon(m.item);
+    $('.rr-continue__label').textContent = verb;
+    $('.rr-continue__level').textContent = `Fase ${m.number} · ${m.name}`;
+  }
+
   function renderCards() {
     const box = $('.rr-levels');
+    const target = continueInfo().index;
     // até cinco cartões por linha; com mais fases, linhas equilibradas (7 → 4 + 3)
     box.style.setProperty('--per-row', String(Math.ceil(LV.length / Math.ceil(LV.length / 5))));
     box.innerHTML = LV.map((d, i) => {
@@ -211,7 +286,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
         stat = `<span class="rr-lvcard__stat">${clockIcon()}${Number.isFinite(p.best) ? fmtTime(p.best) : '—'}</span>`
           + `<span class="rr-lvcard__stat">${boneIcon()}${p.treats ?? 0}/${p.total ?? m.total}</span>`;
       } else stat = '<span class="rr-lvcard__stat is-new">Nova!</span>';
-      const cls = ['rr-lvcard', locked && 'is-locked', done && 'is-done', i === cur.index && 'is-current'].filter(Boolean).join(' ');
+      // realce na fase do Continuar
+      const cls = ['rr-lvcard', locked && 'is-locked', done && 'is-done', i === target && 'is-current'].filter(Boolean).join(' ');
       return `<button class="${cls}" data-action="select" data-index="${i}" data-nav aria-label="Fase ${m.number}: ${esc(m.name)}${locked ? ' (bloqueada)' : ''}">
         <span class="rr-lvcard__icon">${itemIcon(m.item)}<b class="rr-lvcard__num">${m.number}</b>${done ? `<i class="rr-lvcard__check">${checkIcon()}</i>` : ''}${locked ? `<i class="rr-lvcard__lock">${lockIcon()}</i>` : ''}</span>
         <span class="rr-lvcard__body"><span class="rr-lvcard__eyebrow">Fase ${m.number}</span><span class="rr-lvcard__name">${esc(m.name)}</span><span class="rr-lvcard__stats">${stat}</span></span>
@@ -260,44 +336,72 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   }
 
   // ---------- volume ----------
-  function syncVolume() {
-    const v = Math.round((audio?.getVolume?.() ?? 0.7) * 100);
-    range.value = String(v);
-    rangeOut.textContent = `${v}%`;
-    range.style.setProperty('--pct', `${v}%`);
+  function paintVolume(v) {
+    for (const range of ranges) {
+      range.value = String(v);
+      range.style.setProperty('--pct', `${v}%`);
+      const out = range.parentElement?.querySelector('output');
+      if (out) out.textContent = `${v}%`;
+    }
   }
+  function syncVolume() { paintVolume(Math.round((audio?.getVolume?.() ?? 0.7) * 100)); }
   function setVolumePct(v) {
     v = Math.max(0, Math.min(100, Math.round(v)));
-    range.value = String(v);
     audio?.setVolume?.(v / 100);
-    rangeOut.textContent = `${v}%`;
-    range.style.setProperty('--pct', `${v}%`);
+    paintVolume(v);
   }
   syncVolume();
-  range.addEventListener('input', () => setVolumePct(Number(range.value)));
-  range.addEventListener('change', () => {
-    audio?.play?.('uiClick');
-    range.blur();
-  });
-  range.addEventListener('pointerup', () => setTimeout(() => range.blur(), 0));
-  range.addEventListener('keydown', (e) => {
-    // deixa Esc chegar ao jogo e não prende as setas no slider
-    if (!['ArrowLeft', 'ArrowRight'].includes(e.code)) range.blur();
-  });
+  for (const range of ranges) {
+    range.addEventListener('input', () => setVolumePct(Number(range.value)));
+    range.addEventListener('change', () => {
+      audio?.play?.('uiClick');
+      range.blur();
+    });
+    range.addEventListener('pointerup', () => setTimeout(() => range.blur(), 0));
+    range.addEventListener('keydown', (e) => {
+      // deixa Esc chegar ao jogo e não prende as setas no slider
+      if (!['ArrowLeft', 'ArrowRight'].includes(e.code)) range.blur();
+    });
+  }
 
   // ---------- qualidade gráfica (engine.quality) ----------
   function renderQuality() {
-    const box = $('.rr-quality');
-    if (!quality) { box.hidden = true; return; }
-    for (const b of root.querySelectorAll('.rr-qopt')) {
-      const on = /** @type {HTMLElement} */ (b).dataset.quality === quality.mode;
+    for (const box of $$('.rr-quality:not(.rr-hints)')) box.hidden = !quality;
+    if (!quality) return;
+    for (const b of $$('.rr-qopt[data-quality]')) {
+      const on = b.dataset.quality === quality.mode;
       b.classList.toggle('is-selected', on);
       b.setAttribute('aria-pressed', String(on));
     }
-    $('.rr-quality__now').textContent = quality.mode === 'auto' ? `agora: ${QUALITY_NAMES[quality.level] || quality.level}` : '';
+    const now = quality.mode === 'auto' ? `agora: ${QUALITY_NAMES[quality.level] || quality.level}` : '';
+    for (const n of $$('.rr-quality:not(.rr-hints) .rr-quality__now')) n.textContent = now;
   }
   events.on('quality:change', () => renderQuality());
   renderQuality();
+
+  // ---------- dicas: modo desafio (settings.noHints) ----------
+  function renderHints() {
+    const off = !!settings?.noHints;
+    root.dataset.hints = off ? 'off' : 'on';
+    hud.setNoHints(off);
+    for (const box of $$('.rr-hints')) box.hidden = !settings;
+    for (const b of $$('.rr-hopt')) {
+      const on = (b.dataset.hints === 'off') === off;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    for (const n of $$('.rr-hints__now')) n.textContent = off ? HINTS_NOTE.off : HINTS_NOTE.on;
+  }
+  events.on('settings:change', () => renderHints());
+  renderHints();
+
+  /** Volume, qualidade, dicas e tela cheia em dia (ao abrir Opções ou a pausa). */
+  function renderSettings() {
+    syncVolume();
+    renderQuality();
+    renderHints();
+    renderFullscreen();
+  }
 
   // ---------- tela cheia e orientação (celular) ----------
   const docAny = /** @type {any} */ (document);
@@ -319,11 +423,12 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   function exitFullscreen() {
     try { Promise.resolve((docAny.exitFullscreen || docAny.webkitExitFullscreen)?.call(document)).catch(() => {}); } catch { /* idem */ }
   }
-  const fsBtn = /** @type {HTMLButtonElement} */ ($('.rr-fullscreen'));
-  const renderFullscreen = () => {
-    fsBtn.hidden = !mobile || !canFullscreen();
-    fsBtn.querySelector('span').textContent = isFullscreen() ? 'Sair da tela cheia' : 'Tela cheia';
-  };
+  function renderFullscreen() {
+    for (const fsBtn of $$('.rr-fullscreen')) {
+      fsBtn.hidden = !mobile || !canFullscreen();
+      fsBtn.querySelector('span').textContent = isFullscreen() ? 'Sair da tela cheia' : 'Tela cheia';
+    }
+  }
   document.addEventListener('fullscreenchange', renderFullscreen);
   document.addEventListener('webkitfullscreenchange', renderFullscreen);
   renderFullscreen();
@@ -355,16 +460,11 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     runAction(el);
   }
 
-  function startGame() {
-    if (starting || uiState !== 'title') return;
-    starting = true;
-    audio?.unlock?.();
-    audio?.play?.('uiClick');
-    L.title.classList.add('is-leaving');
-    events.emit('ui:play', {});
-    setTimeout(() => {
-      if (uiState === 'title') { starting = false; L.title.classList.remove('is-leaving'); }
-    }, 2500);
+  /** Abre o cartão da fase `i` (Continuar, um cartão, Próxima fase) e a guarda como a última escolhida. */
+  function chooseLevel(i) {
+    const id = LV[i]?.id;
+    if (id) prog = recordLastPlayed(id).prog;
+    events.emit('ui:selectLevel', { index: i });
   }
 
   function runAction(b) {
@@ -388,9 +488,33 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       renderQuality();
       return;
     }
+    if (a === 'hints') {
+      audio?.play?.('uiClick');
+      settings?.setNoHints(b.dataset.hints === 'off');
+      renderHints();
+      return;
+    }
+    if (a === 'back') { goBack(); return; }
     maybeAutoFullscreen();
-    if (a === 'play') { startGame(); return; }
     audio?.unlock?.();
+    if (uiState === 'title') {
+      if (a === 'story') {
+        audio?.play?.('uiDenied');
+        retrigger(b, 'is-deny');
+        showTitleNote(`${MODES.story.name}: em breve! Ainda está em desenvolvimento.`, { below: b, icon: sparkIcon() });
+        return;
+      }
+      if (a === 'play' || a === 'options' || a === 'levels') {
+        audio?.play?.('uiClick');
+        showScreen(a === 'play' ? 'modes' : a);
+        return;
+      }
+      if (a === 'continue') {
+        audio?.play?.('uiClick');
+        chooseLevel(Number(b.dataset.index) || 0);
+        return;
+      }
+    }
     if (a === 'select') {
       const i = Number(b.dataset.index);
       if (b.classList.contains('is-locked')) {
@@ -400,32 +524,49 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
         return;
       }
       audio?.play?.('uiClick');
-      events.emit('ui:selectLevel', { index: i });
+      chooseLevel(i);
       return;
     }
     audio?.play?.('uiClick');
     if (a === 'start') { if (uiState === 'intro') events.emit('ui:play', {}); }
     else if (a === 'resume') events.emit('ui:resume', {});
     else if (a === 'restart') events.emit('ui:restart', {});
-    else if (a === 'next') events.emit('ui:nextLevel', {});
-    else if (a === 'menu') events.emit('ui:menu', {});
+    else if (a === 'next') {
+      const nextId = LV[cur.index + 1]?.id;
+      if (nextId) prog = recordLastPlayed(nextId).prog;
+      events.emit('ui:nextLevel', {});
+    } else if (a === 'menu') events.emit('ui:menu', {});
   }
 
   let noteTimer = 0;
-  function showTitleNote(text) {
+  /**
+   * Aviso curto na tela inicial. Sem `below`: 20 px acima da linha de cima dos cartões das fases (quantas linhas a
+   * largura da tela fizer); com `below`, logo abaixo desse elemento (o cartão do Modo História).
+   * @param {string} text @param {{ below?: HTMLElement | null, icon?: string }} [opts]
+   */
+  function showTitleNote(text, { below = null, icon = lockIcon() } = {}) {
     let n = $('.rr-levels__note');
     if (!n) {
       n = document.createElement('div');
       n.className = 'rr-levels__note';
       L.title.appendChild(n);
     }
-    n.innerHTML = `${lockIcon()}<span>${esc(text)}</span>`;
-    // 20 px acima da linha de cima dos cartões, quantas linhas a largura da tela fizer
-    const above = L.title.getBoundingClientRect().bottom - $('.rr-levels').getBoundingClientRect().top;
-    n.style.bottom = above > 0 ? `${Math.round(above + 20)}px` : '';
+    n.innerHTML = `${icon}<span>${esc(text)}</span>`;
+    if (below) {
+      n.style.top = `${Math.round(below.getBoundingClientRect().bottom - L.title.getBoundingClientRect().top + 16)}px`;
+      n.style.bottom = 'auto';
+    } else {
+      const above = L.title.getBoundingClientRect().bottom - $('.rr-levels').getBoundingClientRect().top;
+      n.style.top = '';
+      n.style.bottom = above > 0 ? `${Math.round(above + 20)}px` : '';
+    }
     retrigger(n, 'is-on');
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => n.classList.remove('is-on'), 2200);
+  }
+  function hideTitleNote() {
+    clearTimeout(noteTimer);
+    $('.rr-levels__note')?.classList.remove('is-on');
   }
 
   root.addEventListener('mousedown', (e) => {
@@ -471,8 +612,14 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     setDevice('keyboard');
     const layer = menuLayer();
     if (!layer) return;
+    if (e.code === 'Escape' && (uiState === 'title' || uiState === 'intro')) {
+      // Esc nas telas do menu volta uma tela (a pausa continua com o Esc do jogo)
+      e.preventDefault();
+      if (!e.repeat) goBack();
+      return;
+    }
     if (DIRS[e.code]) {
-      if (e.target === range) return;
+      if (/** @type {Element} */ (e.target)?.classList?.contains('rr-range')) return;
       e.preventDefault();
       focus.moveFocus(...DIRS[e.code]);
       if (uiState === 'load-error') focus.el?.focus();
@@ -497,7 +644,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     const style = /xbox|xinput|045e/i.test(id) ? 'xbox' : 'ps';
     if (root.dataset.pad !== style) root.dataset.pad = style;
   };
-  const menuPad = createMenuPad({ focus, audio, getLayer: menuLayer, getUiState: () => uiState, activate: activateFocused, setDevice, setPadStyle });
+  const menuPad = createMenuPad({ focus, audio, getLayer: menuLayer, getUiState: () => uiState, activate: activateFocused, back: goBack, setDevice, setPadStyle });
 
   // ---------- eventos do jogo ----------
   events.on('game:state', ({ state }) => setState(state));
@@ -551,20 +698,22 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       // robustez: espelha o estado exposto pelo jogo, caso algum evento tenha se perdido
       const gm = window.__game?.game;
       if (gm) {
-        if (typeof gm.state === 'string' && gm.state !== uiState && !(starting && gm.state === 'title')) setState(gm.state);
+        if (typeof gm.state === 'string' && gm.state !== uiState) setState(gm.state);
         if (gm.activeDog && gm.activeDog !== hud.activeDog) { hud.setDog(gm.activeDog); root.dataset.dog = gm.activeDog; }
       }
       try { menuPad.poll(dt); } catch (_) { /* controle indisponível */ }
       menuPad.frameState = gm?.state ?? uiState;
     },
     get state() { return uiState; },
+    /** Tela do menu inicial: 'main', 'modes', 'levels' ou 'options'. */
+    get screen() { return screen; },
     get device() { return device; },
     setDevice,
     /** Controles de toque (diagnóstico e testes: state(), releaseAll()). */
     touch,
     get mobile() { return mobile; },
     get progress() { return prog; },
-    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); },
+    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderModes(); },
     get curtain() { return curtain.phase; },
     get level() { return cur; },
     get focus() { return focus.el; },

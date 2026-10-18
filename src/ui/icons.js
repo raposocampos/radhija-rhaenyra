@@ -285,3 +285,44 @@ export function rotatePhoneIcon() {
   <path d="M51.5 39v13" opacity=".5"/>
   <path d="M46 12c6 2.5 9.5 8 9.6 14.5"/><path d="M51.4 23.6l4.2 3.4 3.4-4.3"/></svg>`;
 }
+
+// ---------------------------------------------------------------------------
+//  Menu inicial: Opções, Voltar, Dicas e os modos de jogo
+// ---------------------------------------------------------------------------
+/** Opções: engrenagem. */
+export function gearIcon() {
+  return stroke('<path d="M18.53 9.76L21.07 10.44V13.56L18.53 14.24L18.2 15.03L19.51 17.31L17.31 19.51L15.03 18.2L14.24 18.53L13.56 21.07H10.44L9.76 18.53L8.97 18.2L6.69 19.51L4.49 17.31L5.8 15.03L5.47 14.24L2.93 13.56V10.44L5.47 9.76L5.8 8.97L4.49 6.69L6.69 4.49L8.97 5.8L9.76 5.47L10.44 2.93H13.56L14.24 5.47L15.03 5.8L17.31 4.49L19.51 6.69L18.2 8.97Z" fill="currentColor" fill-opacity=".16"/><circle cx="12" cy="12" r="3"/>', 1.8);
+}
+/** Voltar: seta para a esquerda. */
+export function backIcon() {
+  return stroke('<path d="M19.5 12H5.5"/><path d="M11 6.2L5.2 12l5.8 5.8"/>', 2.4);
+}
+/** Dicas: lâmpada. */
+export function bulbIcon() {
+  return stroke('<path d="M12 3.4a6.1 6.1 0 0 0-3.6 11c.8.6 1.2 1.4 1.2 2.3v.6h4.8v-.6c0-.9.4-1.7 1.2-2.3A6.1 6.1 0 0 0 12 3.4z" fill="currentColor" fill-opacity=".18"/><path d="M9.8 20.4h4.4"/>', 1.9);
+}
+/** Sem dicas (modo desafio): lâmpada riscada. */
+export function noBulbIcon() {
+  return stroke('<path d="M12 3.4a6.1 6.1 0 0 0-3.6 11c.8.6 1.2 1.4 1.2 2.3v.6h4.8v-.6c0-.9.4-1.7 1.2-2.3A6.1 6.1 0 0 0 12 3.4z" fill="currentColor" fill-opacity=".18"/><path d="M9.8 20.4h4.4"/><path d="M4.2 4.2l15.6 15.6"/>', 1.9);
+}
+/** Modo História: mapa dobrado com ilhas, trilha pontilhada e um alfinete laranja. */
+export function mapArt() {
+  return `<svg class="ico ico-map" viewBox="0 0 64 64" aria-hidden="true">
+  <g stroke="${INK}" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M5 15 L22 9 L42 15 L59 9 V49 L42 55 L22 49 L5 55 Z" fill="#CFE6EE"/>
+    <path d="M22 9 V49 M42 15 V55" fill="none" opacity=".35"/>
+  </g>
+  <path d="M22 9 L42 15 V55 L22 49 Z" fill="#B9D9E4"/>
+  <g stroke="${INK}" stroke-width="2" stroke-linejoin="round">
+    <path d="M9.5 24 c3-4 9-4.5 11.5-1 c2 3-.5 7.5-5 8 c-4 .5-8.5-3-6.5-7 Z" fill="#9CC488"/>
+    <path d="M30 31 c4-3.5 10.5-2.5 11.5 1.5 c1 4.5-4 8-8.5 7 c-4-1-5.5-5.5-3-8.5 Z" fill="#B7D49A"/>
+    <path d="M46 19 c3.5-2 8.5-.5 9 3 c.5 3.5-3 6-6.5 5.5 c-3.5-.5-5-6-2.5-8.5 Z" fill="#9CC488"/>
+  </g>
+  <path d="M17 29 C 24 37, 26 38, 32 36 M41 34 C 46 30, 47 27, 49 25" fill="none" stroke="${INK}" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="1.5 3.2" opacity=".7"/>
+  <path d="M15 42 l3 3 M18 42 l-3 3" stroke="#C2601F" stroke-width="2.2" stroke-linecap="round"/>
+  <g stroke="${INK}" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M50.5 6.5 c-4.6 0-8 3.3-8 7.6 c0 5.4 8 12.4 8 12.4 s8-7 8-12.4 c0-4.3-3.4-7.6-8-7.6 Z" fill="#F08A3C"/>
+  </g>
+  <circle cx="50.5" cy="14" r="2.8" fill="#FFF6E6"/>
+</svg>`;
+}

@@ -34,9 +34,15 @@ Depois, abra `http://127.0.0.1:5173/`.
 
 A tela desenha os botões no estilo PlayStation; se o controle conectado for de Xbox, no estilo Xbox.
 
+**Menu**: Jogar abre a escolha do modo. O Modo História (mapas abertos, a começar pelo Condomínio) aparece como
+"Em breve"; em Fases, o botão Continuar leva à próxima fase não concluída (ou à última escolhida) e os cartões
+abrem qualquer fase liberada. Em Opções ficam o volume, a qualidade gráfica e as Dicas: desligadas (modo desafio),
+o jogo não mostra o objetivo escrito, o marcador laranja nem as dicas em balão; os controles continuam na pausa, onde
+também dá para religar as dicas. Para voltar: Esc, ○ · B ou o botão Voltar no canto.
+
 **No celular**: abra o mesmo link com o celular deitado. Os controles de toque aparecem depois do primeiro toque e
 somem se você usar teclado ou controle. O jogo escolhe uma qualidade gráfica mais leve para o celular e baixa sozinho
-se ficar lento; no menu de pausa dá para escolher Auto, Alta, Média ou Baixa. No Android, o primeiro toque já põe em
+se ficar lento; em Opções ou na pausa dá para escolher Auto, Alta, Média ou Baixa. No Android, o primeiro toque já põe em
 tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para jogar em tela cheia. No PC nada muda.
 
 ## Fases

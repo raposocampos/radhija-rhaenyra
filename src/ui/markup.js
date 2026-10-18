@@ -1,11 +1,11 @@
-// Marcação da interface: o template HTML das camadas (tela inicial, cartão da fase, HUD, pausa,
-// comemoração, vitória e cortina) e os pedaços de HTML gerados (teclas, botões do controle e botões de toque
+// Marcação da interface: o template HTML das camadas (tela inicial com as telas do menu, cartão da fase, HUD,
+// pausa, comemoração, vitória e cortina) e os pedaços de HTML gerados (teclas, botões do controle e botões de toque
 // desenhados, texto com "(E)" virando tecla, confete, padrão de patinhas). Só funções puras que devolvem strings.
 import {
   boneIcon, dogIcon, pawIcon, clockIcon, speakerIcon, sparkIcon, playIcon, restartIcon,
   heartIcon, homeIcon, followIcon, stayIcon, keyboardIcon, gamepadIcon,
   jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, pauseIcon, stickIcon, fullscreenIcon, qualityIcon,
-  rotatePhoneIcon,
+  rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, mapArt, itemIcon,
 } from './icons.js';
 
 export const DOG_INFO = {
@@ -73,14 +73,14 @@ export const TOUCH_BTN = {
 const KEY_TO_TOUCH = {
   E: ['act'], Enter: [], Q: ['swap'], F: ['stay'], Shift: ['dash'], Esc: ['pause'], X: ['act'], WASD: ['stick'], Espaço: ['jump'], R: ['bafo'],
 };
-/** Tecla lógica → tecla desenhada + botão do controle e botão de toque equivalentes. */
-/** @param {string} k @param {{ pad?: string[] }} [opts] */
-export function glyph(k, { pad } = {}) {
+/** Tecla lógica → tecla desenhada + botão do controle e botão de toque equivalentes (pad/touch trocam os padrões). */
+/** @param {string} k @param {{ pad?: string[], touch?: string[] }} [opts] */
+export function glyph(k, { pad, touch: touchIds } = {}) {
   const l = k === 'WASD' ? 'WASD' : keyLabel(k);
   const kb = l === 'WASD' ? `<span class="rr-keys">${['W', 'A', 'S', 'D'].map(kbd).join('')}</span>` : kbd(l);
   const pads = pad || KEY_TO_PAD[l];
   if (!pads) return kb;
-  const touch = (KEY_TO_TOUCH[l] || []).map((t) => TOUCH_BTN[t]).join('');
+  const touch = (touchIds || KEY_TO_TOUCH[l] || []).map((t) => TOUCH_BTN[t]).join('');
   return `<span class="rr-g"><span class="k-kb">${kb}</span><span class="k-pad">${pads.map((p) => PAD_BTN[p] || '').join('')}</span><span class="k-touch">${touch}</span></span>`;
 }
 
@@ -146,9 +146,45 @@ export const CONTROLS = [
   ['Fica · Vem (companheira)', 'F', ['Y'], ['stay']],
   ['Pausar', 'Esc', ['Start'], ['pause']],
 ];
-/** Opções de qualidade do menu de pausa (src/core/quality.js). */
+/** Opções de qualidade (tela Opções e pausa; src/core/quality.js). */
 export const QUALITY_OPTIONS = [['auto', 'Auto'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']];
 export const QUALITY_NAMES = { alta: 'alta', media: 'média', baixa: 'baixa', minima: 'mínima' };
+/** Linha de explicação das dicas (tela Opções e pausa): com dicas / modo desafio (src/core/settings.js). */
+export const HINTS_NOTE = { on: 'objetivo, marcador e dicas na tela', off: 'desafio: sem objetivo, marcador e dicas' };
+
+/**
+ * Modos do botão Jogar. O nome do modo das fases ainda está em aberto com o usuário (Fases, Aventuras ou Puzzles):
+ * trocar aqui muda o cartão do modo, o rótulo da tela de fases e os textos de acessibilidade.
+ */
+export const MODES = {
+  story: { name: 'Modo História', badge: 'Em breve', eyebrow: 'Mapa aberto', text: 'Mapas abertos para explorar, a começar pelo Condomínio.' },
+  levels: { name: 'Fases', text: 'Escolha uma fase ou continue de onde parou.' },
+};
+/** Voltar nos menus: Esc no teclado, ○ · B no controle (no toque, o próprio botão). */
+export const backGlyph = () => glyph('Esc', { pad: ['B'], touch: [] });
+
+/**
+ * Volume, qualidade gráfica, dicas (modo desafio) e tela cheia: a mesma marcação na tela Opções e na pausa.
+ * A UI atualiza todas as cópias juntas (ui.js).
+ */
+export function settingsBlock() {
+  const qualityOpts = QUALITY_OPTIONS.map(([mode, label]) => `<button class="rr-qopt" data-action="quality" data-quality="${mode}" data-nav aria-pressed="false">${label}</button>`).join('');
+  const hintOpts = [['on', 'Ligadas'], ['off', 'Desligadas']]
+    .map(([v, label]) => `<button class="rr-qopt rr-hopt" data-action="hints" data-hints="${v}" data-nav aria-pressed="${v === 'on'}">${label}</button>`).join('');
+  // data-default: foco inicial da tela Opções (na pausa, o Continuar vem antes e continua sendo o padrão)
+  return `<label class="rr-volume" data-nav data-slider data-default>${speakerIcon()}<span>Volume</span><input class="rr-range" type="range" min="0" max="100" step="1" value="70" tabindex="-1" aria-label="Volume"><output>70%</output></label>
+        <div class="rr-quality" role="group" aria-label="Qualidade gráfica">
+          <span class="rr-quality__label">${qualityIcon()}<span>Qualidade</span></span>
+          <span class="rr-quality__opts">${qualityOpts}</span>
+          <span class="rr-quality__now" aria-live="polite"></span>
+        </div>
+        <div class="rr-quality rr-hints" role="group" aria-label="Dicas e guia">
+          <span class="rr-quality__label">${bulbIcon()}<span>Dicas</span></span>
+          <span class="rr-quality__opts">${hintOpts}</span>
+          <span class="rr-quality__now rr-hints__now" aria-live="polite">${HINTS_NOTE.on}</span>
+        </div>
+        <button class="rr-btn rr-btn--soft rr-fullscreen" data-action="fullscreen" data-nav hidden>${fullscreenIcon()}<span>Tela cheia</span></button>`;
+}
 
 export function template() {
   const ctlBar = [
@@ -164,11 +200,15 @@ export function template() {
     const tc = touch.length ? touch.map((t) => TOUCH_BTN[t]).join('') : '<span class="rr-none">—</span>';
     return `<span class="rr-ctl-table__label">${esc(label)}</span><span class="rr-ctl-table__kb">${kb}</span><span class="rr-ctl-table__pad">${pads.map((p) => PAD_BTN[p]).join('')}</span><span class="rr-ctl-table__touch">${tc}</span>`;
   }).join('');
-  const qualityOpts = QUALITY_OPTIONS.map(([mode, label]) => `<button class="rr-qopt" data-action="quality" data-quality="${mode}" data-nav aria-pressed="false">${label}</button>`).join('');
+  const back = `<button class="rr-back rr-glass" data-action="back" data-nav aria-label="Voltar">${backIcon()}<span>Voltar</span>${backGlyph()}</button>`;
+  const fanItems = ['carrot', 'ball', 'duck'].map((item) => `<i>${itemIcon(item)}</i>`).join('');
 
+  // Tela inicial: data-screen na seção escolhe a tela visível (ui.css): main (Jogar e Opções), modes (Modo
+  // História e Fases), levels (Continuar e os cartões das fases) e options. Voltar (canto) fora da principal.
   return `
-  <section class="rr-layer rr-title" aria-label="Tela inicial">
+  <section class="rr-layer rr-title" data-screen="main" aria-label="Tela inicial">
     <div class="rr-title__shade"></div>
+    ${back}
     <div class="rr-title__center">
       <div class="rr-logo">
         <svg class="rr-logo__svg" viewBox="0 0 1000 150" role="img" aria-label="Radhija &amp; Rhaenyra">
@@ -179,14 +219,47 @@ export function template() {
         </svg>
         <div class="rr-logo__ribbon"><span class="rr-logo__item"></span><span class="rr-logo__name">Operação Cenoura</span><span class="rr-logo__dogs">${dogIcon('radhija')}${dogIcon('rhaenyra')}</span></div>
       </div>
-      <button class="rr-btn rr-btn--primary rr-btn--play" data-action="play" data-nav data-default>${playIcon()}<span>Jogar</span>${glyph('Enter')}</button>
+      <div class="rr-screen rr-screen--main" role="group" aria-label="Menu inicial">
+        <button class="rr-btn rr-btn--primary rr-btn--play" data-action="play" data-nav data-default>${playIcon()}<span>Jogar</span>${glyph('Enter')}</button>
+        <button class="rr-btn rr-btn--glass rr-btn--options" data-action="options" data-nav>${gearIcon()}<span>Opções</span></button>
+      </div>
+      <div class="rr-screen rr-screen--modes" role="group" aria-label="Modos de jogo">
+        <button class="rr-mode rr-mode--story" data-action="story" data-nav aria-disabled="true" aria-label="${MODES.story.name} (${MODES.story.badge.toLowerCase()})">
+          <span class="rr-mode__art">${mapArt()}</span>
+          <span class="rr-mode__badge">${MODES.story.badge}</span>
+          <span class="rr-mode__eyebrow">${MODES.story.eyebrow}</span>
+          <span class="rr-mode__name">${MODES.story.name}</span>
+          <span class="rr-mode__text">${MODES.story.text}</span>
+        </button>
+        <button class="rr-mode rr-mode--levels" data-action="levels" data-nav data-default aria-label="${MODES.levels.name}">
+          <span class="rr-mode__art rr-mode__art--items">${fanItems}</span>
+          <span class="rr-mode__eyebrow rr-mode__count"></span>
+          <span class="rr-mode__name">${MODES.levels.name}</span>
+          <span class="rr-mode__text">${MODES.levels.text}</span>
+          <span class="rr-mode__progress"></span>
+        </button>
+      </div>
+      <div class="rr-screen rr-screen--levels" role="group" aria-label="${MODES.levels.name}">
+        <button class="rr-btn rr-btn--primary rr-btn--continue" data-action="continue" data-nav data-default>
+          <span class="rr-continue__badge"></span>
+          <span class="rr-continue__body"><span class="rr-continue__label">Continuar</span><span class="rr-continue__level"></span></span>
+          ${glyph('Enter')}
+        </button>
+      </div>
+      <div class="rr-screen rr-screen--options">
+        <div class="rr-card rr-card--options" role="group" aria-label="Opções">
+          <div class="rr-card__head">${gearIcon()}<h2>Opções</h2></div>
+          <div class="rr-settings">${settingsBlock()}</div>
+        </div>
+      </div>
     </div>
-    <div class="rr-levels" role="group" aria-label="Fases"></div>
+    <div class="rr-levels" role="group" aria-label="${MODES.levels.name}"></div>
     <div class="rr-title__controls rr-glass">${ctlBar}</div>
   </section>
 
   <section class="rr-layer rr-intro" aria-label="Abertura da fase">
     <div class="rr-intro__shade"></div>
+    ${back.replace('aria-label="Voltar"', 'aria-label="Voltar às fases"')}
     <div class="rr-introcard">
       <div class="rr-introcard__top">
         <div class="rr-introcard__badge"></div>
@@ -234,6 +307,7 @@ export function template() {
         <div class="rr-treats rr-glass" aria-label="Petiscos">${boneIcon()}<span class="rr-treats__count">0</span><span class="rr-treats__total">/3</span></div>
       </div>
       <div class="rr-esc">${glyph('Esc')}pausa</div>
+      <div class="rr-nohints rr-glass" title="Modo desafio: sem objetivo, marcador e dicas. Dá para religar na pausa.">${noBulbIcon()}<span>sem dicas</span></div>
     </div>
     <div class="rr-hud__bottom">
       <div class="rr-hint" role="status">${sparkIcon()}<span class="rr-hint__text"></span></div>
@@ -257,13 +331,7 @@ export function template() {
         </div>
       </div>
       <div class="rr-pause__settings">
-        <label class="rr-volume" data-nav data-slider>${speakerIcon()}<span>Volume</span><input class="rr-range" type="range" min="0" max="100" step="1" value="70" tabindex="-1"><output>70%</output></label>
-        <div class="rr-quality" role="group" aria-label="Qualidade gráfica">
-          <span class="rr-quality__label">${qualityIcon()}<span>Qualidade</span></span>
-          <span class="rr-quality__opts">${qualityOpts}</span>
-          <span class="rr-quality__now" aria-live="polite"></span>
-        </div>
-        <button class="rr-btn rr-btn--soft rr-fullscreen" data-action="fullscreen" data-nav hidden>${fullscreenIcon()}<span>Tela cheia</span></button>
+        ${settingsBlock()}
       </div>
       <div class="rr-ctl-table">
         <span></span>

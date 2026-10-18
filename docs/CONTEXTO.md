@@ -1,7 +1,28 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (impulso na parede). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (menu principal e modo sem dicas). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: menu principal, Opções e modo sem dicas (pedido de 2026-10-18)
+
+- Pedido do usuário: tela inicial só com **Jogar** e **Opções**; Jogar abre **Modo História** (visível, "Em breve")
+  e o modo das fases (nome em aberto: **Fases**, sugestão atual, ou Aventuras ou Puzzles; constante `MODES` em
+  `src/ui/markup.js`), que abre **Continuar** + a grade de fases. Opções reúne volume, qualidade e **Dicas**
+  (desligadas = modo desafio: sem objetivo escrito, marcador e dicas em balão; controles seguem na pausa).
+  Registrar a visão do Modo História sem implementar: [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- **Claude, branch `claude/menu-principal`** (worktree próprio, base `09ed23a`). Consultar o PR do branch para
+  SHA, CI, E2E e prévia; nada rodou no PC. Feito: telas do menu (`data-screen` em `.rr-title`, `showScreen`/`goBack`
+  em `ui.js`), Voltar por Esc, ○ · B ou botão do canto (também no cartão de abertura), `continueTarget` e `last` no
+  save v1 (`progress.js`), opções salvas em `src/core/settings.js` (`rr-settings-v1`, evento `settings:change`),
+  `settingsBlock()` igual em Opções e na pausa, HUD/feedback escondendo objetivo, dicas e marcador, e o atalho do
+  núcleo que abre o cartão da fase já montada sem recarregar. Testes: `test/menu.test.mjs`, suíte E2E nova `menu`
+  (teclado e controle), suíte `toque` passando pelo menu com dedos reais, `controle` e `expresso` ajustadas ao
+  menu novo e capturas do menu em `capture-celular.mjs`.
+- Coordenação: a sessão das fases 8–10 mexe em `markup.js` (`ITEM_NOUN`), `icons.js` (item novo),
+  `feedback.js` (eventos da lavanderia) e `test-expresso.mjs` (oito fases); este branch só toca o template, ícones no
+  fim do arquivo, o bloco do marcador e `menuWith`. Quem integrar por último ajusta a lista de suítes do `e2e.yml`.
+- Próximo passo: CI e E2E (`menu`, `toque`, `controle`, `expresso` e depois `todas`) no head do PR, revisar as
+  capturas (`shots/menu/`, `shots/celular-revisao/`), entregar a prévia e perguntar o nome do modo das fases.
 
 ## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 

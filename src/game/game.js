@@ -1022,6 +1022,11 @@ export function createGame({ engine, dogs, levels, params }) {
   });
   events.on('ui:selectLevel', (/** @type {{ index?: number }} */ { index } = {}) => {
     if (state === 'loading' || state === 'load-error' || !Number.isFinite(index)) return;
+    // A fase da tela inicial já está montada e zerada (boot, ui:menu): abre o cartão dela sem recarregar.
+    if (state === 'title' && index === levelIndex) {
+      setState('intro');
+      return;
+    }
     loadLevel(index, { mode: 'intro' });
   });
   events.on('ui:menu', () => {

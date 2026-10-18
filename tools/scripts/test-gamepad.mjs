@@ -28,7 +28,8 @@ async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn
 
 try {
   console.log('\n== Controle (gamepad simulado) ==');
-  // O foco não pode reiniciar a entrada do botão Jogar e fazê-lo desaparecer.
+  // O foco não pode reiniciar a entrada do botão Jogar e fazê-lo desaparecer (navegando entre Jogar e Opções).
+  // O resto do menu (modos, fases, Opções, Voltar com ○) está na suíte menu.
   // Amostra no navegador, inclusive na troca de classes: uma leitura tardia
   // pelo protocolo pode perder o intervalo invisível em runners sem GPU.
   await load('');
@@ -66,13 +67,13 @@ try {
   };
   await page.keyboard.press('ArrowUp'); // ativa o realce com Jogar selecionado
   await sleep(200);
-  await checkPlay(() => page.keyboard.press('ArrowDown'), 'select', 'teclado baixo');
+  await checkPlay(() => page.keyboard.press('ArrowDown'), 'options', 'teclado baixo');
   await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'teclado cima');
   await connect();
   await tap(B.UP); // ativa o dispositivo com Jogar selecionado
-  await checkPlay(() => tap(B.DOWN), 'select', 'D-pad baixo');
+  await checkPlay(() => tap(B.DOWN), 'options', 'D-pad baixo');
   await checkPlay(() => tap(B.UP), 'play', 'D-pad cima');
-  await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'select', 'analógico baixo');
+  await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'options', 'analógico baixo');
   await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'retorno ao teclado');
   await checkPlay(() => page.mouse.move(2, 2), 'play', 'retorno ao mouse');
   await shot('gp-00-menu-jogar-visivel.png');

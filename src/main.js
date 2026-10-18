@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { events } from './core/events.js';
 import { createEngine } from './core/engine.js';
 import { createFrameCap } from './core/quality.js';
+import { createSettings } from './core/settings.js';
 import { createDog } from './dogs/dog.js';
 import { createGame } from './game/game.js';
 import { createAudio } from './fx/audio.js';
@@ -41,15 +42,17 @@ async function boot() {
   const game = createGame({ engine, dogs, levels: LEVELS, params });
   const audio = createAudio();
   const particles = createParticles(engine);
+  // opções salvas (modo sem dicas): a UI esconde objetivo e dicas, o feedback esconde o marcador do objetivo
+  const settings = createSettings();
   // props/layout da fase atual (mudam a cada fase): o feedback lê via getters.
   const feedback = createFeedback({
-    engine, audio, particles, dogs, game,
+    engine, audio, particles, dogs, game, settings,
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout ?? LEVELS[0].layout; },
   });
   // no catálogo de desenvolvimento (prévias dos protótipos) o menu libera todas as fases para teste
   // input: controles de toque; quality: menu de qualidade gráfica e layout do celular (engine.quality.device)
-  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality });
+  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality, settings });
 
   // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial.
   const lv = dev ? dev.index : published ?? 0;
@@ -96,7 +99,7 @@ async function boot() {
 
   // Ganchos de teste/depuração (usados por tools/shot.mjs e pelo QA).
   window.__game = {
-    engine, dogs, game, audio, particles, feedback, ui, events, levels: LEVELS, THREE,
+    engine, dogs, game, audio, particles, feedback, ui, events, settings, levels: LEVELS, THREE,
     // capturas quadro a quadro (tools/scripts/capture-lambe.mjs): o mesmo "ver através" do quadro normal
     seeThrough: () => updateSeeThrough(dogs, game.activeDog || 'radhija'),
     get env() { return game.built?.env; },

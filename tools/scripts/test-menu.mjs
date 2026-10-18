@@ -1,0 +1,339 @@
+// Menu inicial (suíte 'menu'): Jogar → Modo História (em breve) ou Fases → Continuar e os cartões; Opções (volume,
+// qualidade, dicas). Navegação com TECLAS REAIS (setas, Enter, Esc) e com o CONTROLE simulado (D-pad, analógico,
+// ✕ confirma, ○ volta), como na suíte controle. Também: o Continuar segue o save (próxima fase não concluída ou a
+// última escolhida), o Voltar do cartão de abertura, e o modo sem dicas salvo no navegador: sem objetivo escrito,
+// marcador do objetivo e dicas em balão, valendo depois de recarregar e religável na pausa. O toque fica na suíte
+// toque (dedos reais no celular deitado).
+//   node tools/scripts/test-menu.mjs [--url http://127.0.0.1:5176/]
+import { createHarness, parseArgs } from './lib/harness.mjs';
+
+const args = parseArgs();
+const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
+const H = await createHarness({ base: BASE, outDir: 'shots/menu' });
+const { page, check, sleep, info, ev, shot, logOf, clearLog, load, press, waitFor } = H;
+const B = { A: 0, B: 1, X: 2, Y: 3, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+const DONE = { done: true, best: 80, treats: 2, total: 3, clears: 1 };
+
+/** Estado da UI: estado do jogo, tela do menu, fase e o elemento com foco (nome legível). */
+const ui = () => ev(() => {
+  const g = window.__game;
+  const f = /** @type {HTMLElement} */ (document.querySelector('.rr .is-focus'));
+  let focus = null;
+  if (f) {
+    const a = f.dataset.action;
+    if (f.hasAttribute('data-slider')) focus = 'volume';
+    else if (a === 'quality') focus = `quality:${f.dataset.quality}`;
+    else if (a === 'hints') focus = `hints:${f.dataset.hints}`;
+    else if (a === 'select') focus = `select:${f.dataset.index}`;
+    else focus = a ?? null;
+  }
+  return { state: g.game.state, screen: g.ui.screen, level: g.game.level, focus, device: document.querySelector('.rr').dataset.device };
+});
+/** Ações visíveis (com caixa na tela) dentro da camada da tela inicial. */
+const visibleActions = () => ev(() => [...document.querySelectorAll('.rr-title [data-action]')]
+  .filter((el) => el.getClientRects().length > 0)
+  .map((el) => el.dataset.action + (el.dataset.index ? `:${el.dataset.index}` : '')));
+const shown = (sel) => ev((s) => {
+  const el = document.querySelector(s);
+  return !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+}, sel);
+/** Aperta uma tecla até o foco satisfazer `ok` (no máximo `max` vezes). */
+async function pressUntil(key, ok, max = 6) {
+  for (let n = 0; n < max; n++) {
+    const u = await ui();
+    if (ok(u.focus)) return u;
+    await press(key, 150);
+  }
+  return ui();
+}
+
+// ---------- controle falso (mesmo mapeamento da suíte controle) ----------
+const connect = () => ev(() => {
+  const pad = {
+    id: 'Controle falso (STANDARD GAMEPAD)', index: 0, connected: true, mapping: 'standard', timestamp: performance.now(),
+    axes: [0, 0, 0, 0],
+    buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
+  };
+  window.__fakePads = [pad];
+  window.dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: pad }));
+});
+const btn = (i, on) => ev(([ii, o]) => { const p = window.__fakePads[0]; p.buttons[ii] = { pressed: o, touched: o, value: o ? 1 : 0 }; p.timestamp = performance.now(); }, [i, on]);
+const axes = (x, y) => ev(([xx, yy]) => { const p = window.__fakePads[0]; p.axes = [xx, yy, 0, 0]; p.timestamp = performance.now(); }, [x, y]);
+async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn(i, false); await sleep(160); }
+
+try {
+  console.log('\n== Teclado: tela principal, modos e fases ==');
+  await page.goto(BASE, { waitUntil: 'load', timeout: 120000 });
+  await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
+  await load('');
+  let u = await ui();
+  check(u.state === 'title' && u.screen === 'main', 'tela inicial abre na tela principal', u);
+  let acts = await visibleActions();
+  check(acts.join() === 'play,options', 'tela principal: só Jogar e Opções (sem cartões nem Voltar)', acts);
+  check(!(await shown('.rr-levels .rr-lvcard')), 'cartões das fases fora da tela principal');
+  await shot('menu-01-principal.png');
+
+  u = await pressUntil('ArrowDown', (f) => f === 'options');
+  check(u.focus === 'options', 'seta para baixo: Jogar → Opções', u);
+  await press('ArrowUp', 150);
+  u = await ui();
+  check(u.focus === 'play', 'seta para cima: Opções → Jogar', u);
+  await press('Enter', 300);
+  u = await ui();
+  check(u.state === 'title' && u.screen === 'modes' && u.focus === 'levels', 'Enter em Jogar: escolha do modo, foco em Fases', u);
+  acts = await visibleActions();
+  check(acts.join() === 'back,story,levels', 'modos: Voltar, Modo História e Fases', acts);
+  const story = await ev(() => {
+    const card = document.querySelector('.rr-mode--story');
+    return { badge: card.querySelector('.rr-mode__badge').textContent, disabled: card.getAttribute('aria-disabled'), name: card.querySelector('.rr-mode__name').textContent };
+  });
+  check(story.name === 'Modo História' && story.badge === 'Em breve' && story.disabled === 'true', 'Modo História visível com o selo "Em breve"', story);
+  await sleep(500);
+  await shot('menu-02-modos.png');
+
+  await press('ArrowLeft', 150);
+  u = await ui();
+  check(u.focus === 'story', 'seta para a esquerda: Modo História', u);
+  await press('Enter', 300);
+  u = await ui();
+  const note = await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '');
+  check(u.state === 'title' && u.screen === 'modes' && /em breve/i.test(note), 'Modo História não abre nada: aviso "em breve"', { u, note });
+  await shot('menu-03-historia-em-breve.png');
+  await press('ArrowRight', 150);
+  await press('Enter', 300);
+  u = await ui();
+  check(u.screen === 'levels' && u.focus === 'continue', 'Enter em Fases: tela das fases com foco em Continuar', u);
+  const fresh = await ev(() => ({
+    label: document.querySelector('.rr-continue__label').textContent,
+    level: document.querySelector('.rr-continue__level').textContent,
+    cards: [...document.querySelectorAll('.rr-levels .rr-lvcard')].filter((el) => el.getClientRects().length > 0).length,
+    total: window.__game.levels.length,
+  }));
+  check(fresh.label === 'Começar' && /^Fase 1 · /.test(fresh.level), 'save novo: Começar pela fase 1', fresh);
+  check(fresh.cards === fresh.total && fresh.total >= 7, 'grade com todas as fases', fresh);
+  await sleep(500);
+  await shot('menu-04-fases.png');
+  await press('ArrowDown', 150);
+  u = await ui();
+  check(/^select:/.test(u.focus || ''), 'seta para baixo: um cartão de fase', u);
+  await press('Escape', 250);
+  u = await ui();
+  check(u.screen === 'modes' && u.focus === 'levels', 'Esc: volta aos modos com o foco em Fases', u);
+  await press('Escape', 250);
+  u = await ui();
+  check(u.screen === 'main' && u.focus === 'play', 'Esc: volta à tela principal com o foco em Jogar', u);
+  await press('Escape', 250);
+  u = await ui();
+  check(u.state === 'title' && u.screen === 'main', 'Esc na tela principal não faz nada', u);
+
+  console.log('\n== Teclado: Opções ==');
+  await press('ArrowDown', 150);
+  await press('Enter', 300);
+  u = await ui();
+  check(u.screen === 'options' && u.focus === 'volume', 'Opções abre com o foco no volume', u);
+  acts = await visibleActions();
+  check(['back', 'quality:', 'hints'].every((a) => acts.some((x) => x.startsWith(a.replace(':', '')))), 'Opções: Voltar, qualidade e dicas', acts);
+  check(!(await shown('.rr-title__controls')), 'barra de teclas escondida em Opções');
+  const vol0 = await ev(() => Math.round(window.__game.audio.getVolume() * 100));
+  await press('ArrowRight', 150);
+  const vol = await ev(() => ({ audio: Math.round(window.__game.audio.getVolume() * 100), ranges: [...document.querySelectorAll('.rr-range')].map((r) => Number(r.value)) }));
+  check(vol.audio === Math.min(100, vol0 + 5) && vol.ranges.every((v) => v === vol.audio), 'seta para a direita no volume: +5 e as duas cópias (Opções e pausa) iguais', { vol0, vol });
+  await press('ArrowLeft', 150);
+  await shot('menu-05-opcoes.png');
+  u = await pressUntil('ArrowDown', (f) => /^hints:/.test(f || ''));
+  check(/^hints:/.test(u.focus || ''), 'setas para baixo alcançam a linha das dicas', u);
+  u = await pressUntil('ArrowRight', (f) => f === 'hints:off', 3);
+  check(u.focus === 'hints:off', 'seta para a direita: Desligadas', u);
+  await press('Enter', 200);
+  const off = await ev(() => ({
+    setting: window.__game.settings.noHints,
+    stored: localStorage.getItem('rr-settings-v1'),
+    hints: document.querySelector('.rr').dataset.hints,
+    selected: document.querySelector('.rr-title .rr-hopt[data-hints="off"]').classList.contains('is-selected'),
+    note: document.querySelector('.rr-title .rr-hints__now').textContent,
+  }));
+  check(off.setting === true && off.hints === 'off' && off.selected && /desafio/.test(off.note), 'Enter: modo sem dicas ligado e marcado', off);
+  check(off.stored === '{"noHints":true}', 'escolha salva no navegador (rr-settings-v1)', off.stored);
+  await shot('menu-06-opcoes-sem-dicas.png');
+  await press('Escape', 250);
+  u = await ui();
+  check(u.screen === 'main' && u.focus === 'options', 'Esc: volta à tela principal com o foco em Opções', u);
+
+  console.log('\n== Continuar pelo save e o modo sem dicas depois de recarregar ==');
+  await ev((saved) => localStorage.setItem('rr-progress-v1', saved), JSON.stringify({ v: 1, levels: { fase1: DONE, fase2: DONE }, last: 'fase2' }));
+  await load('');
+  const kept = await ev(() => ({ noHints: window.__game.settings.noHints, hints: document.querySelector('.rr').dataset.hints }));
+  check(kept.noHints === true && kept.hints === 'off', 'recarregou: o modo sem dicas continua ligado', kept);
+  await press('Enter', 300);
+  await press('Enter', 300);
+  u = await ui();
+  const cont = await ev(() => ({
+    label: document.querySelector('.rr-continue__label').textContent,
+    level: document.querySelector('.rr-continue__level').textContent,
+    index: document.querySelector('.rr-btn--continue').dataset.index,
+    current: [...document.querySelectorAll('.rr-levels .rr-lvcard.is-current')].map((el) => el.dataset.index),
+    progress: document.querySelector('.rr-mode__progress').textContent,
+  }));
+  check(u.screen === 'levels' && cont.label === 'Continuar' && /^Fase 3 · /.test(cont.level) && cont.index === '2', 'fases 1 e 2 concluídas: Continuar na fase 3', cont);
+  check(cont.current.join() === '2', 'o cartão da fase 3 tem o realce do Continuar', cont.current);
+  check(/2 de \d+ concluídas/.test(cont.progress), 'o cartão do modo mostra as fases concluídas', cont.progress);
+  await shot('menu-07-continuar.png');
+  await press('Enter', 200);
+  let i = await waitFor((x) => x.state === 'intro' && x.level === 2, { timeout: 60000 });
+  check(i.state === 'intro' && i.levelId === 'fase3', 'Continuar abre o cartão da fase 3', i.levelId);
+  const last = await ev(() => JSON.parse(localStorage.getItem('rr-progress-v1')).last);
+  check(last === 'fase3', 'a fase escolhida fica salva como a última', last);
+  await sleep(1200);
+  check(await shown('.rr-intro .rr-back'), 'cartão de abertura com Voltar');
+  await press('Escape', 300);
+  u = await ui();
+  check(u.state === 'title' && u.screen === 'levels' && u.focus === 'continue', 'Esc no cartão de abertura: de volta às fases', u);
+  await clearLog();
+  await press('Enter', 300);
+  i = await waitFor((x) => x.state === 'intro', { timeout: 10000 });
+  check(i.state === 'intro' && i.levelId === 'fase3' && (await logOf('level:loading')).length === 0, 'Continuar de novo: a fase já montada abre o cartão sem recarregar', i.levelId);
+  await sleep(800);
+  await press('Enter', 300);
+  i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });
+  check(i.state === 'playing', 'Começar: partida da fase 3');
+  await H.gsleep(1500);
+
+  // marcador: com a dog longe do alvo do objetivo (perto dele o marcador some de qualquer jeito)
+  const away = async () => {
+    const t = (await logOf('objective')).at(-1)?.target ?? (await ev(() => window.__game.game.puzzle.objective(window.__game.game.activeDog).target));
+    let d = (await info()).dogs[(await info()).activeDog];
+    let dist = Math.hypot(d.x - t.x, d.z - t.z);
+    if (dist < 2) {
+      await ev(([tx, tz]) => { const g = window.__game.game; g.debug.teleport(g.activeDog, tx + 2.6, tz); }, [t.x, t.z]);
+      await H.gsleep(300);
+      d = (await info()).dogs[(await info()).activeDog];
+      dist = Math.hypot(d.x - t.x, d.z - t.z);
+    }
+    return { target: t, dist };
+  };
+  let where = await away();
+  await H.gsleep(800);
+  const hud = () => ev(() => {
+    const g = window.__game;
+    const vis = (s) => { const el = document.querySelector(s); return !!el && getComputedStyle(el).display !== 'none' && !el.classList.contains('is-empty'); };
+    return {
+      text: g.game.puzzle.objective(g.game.activeDog)?.text || '',
+      objective: vis('.rr-objective'),
+      chip: vis('.rr-nohints'),
+      marker: g.feedback.marker.visible,
+      hint: vis('.rr-hint') && document.querySelector('.rr-hint').classList.contains('is-on'),
+    };
+  });
+  await ev(() => window.__game.events.emit('hint', { text: 'Uma dica de teste (E)', duration: 30 }));
+  await sleep(300);
+  let h = await hud();
+  check(h.text.length > 0 && !h.objective, 'sem dicas: a fase tem objetivo, mas o texto não aparece', h);
+  check(where.dist > 1.6 && h.marker === false, 'sem dicas: marcador do objetivo escondido (dog longe do alvo)', { ...where, marker: h.marker });
+  check(!h.hint, 'sem dicas: dica em balão não aparece', h);
+  check(h.chip, 'selo "sem dicas" no HUD', h);
+  await shot('menu-08-jogando-sem-dicas.png');
+
+  console.log('\n== Pausa: religar as dicas ==');
+  await press('Escape', 300);
+  u = await ui();
+  check(u.state === 'paused' && u.focus === 'resume', 'Esc pausa com o foco em Continuar', u);
+  check(await shown('.rr-pause .rr-ctl-table'), 'controles continuam na pausa');
+  u = await pressUntil('ArrowDown', (f) => /^hints:/.test(f || ''), 8);
+  u = await pressUntil('ArrowLeft', (f) => f === 'hints:on', 3);
+  check(u.focus === 'hints:on', 'pausa: setas alcançam Dicas ligadas', u);
+  await press('Enter', 200);
+  const on = await ev(() => ({ setting: window.__game.settings.noHints, stored: localStorage.getItem('rr-settings-v1'), hints: document.querySelector('.rr').dataset.hints }));
+  check(on.setting === false && on.hints === 'on' && on.stored === '{"noHints":false}', 'pausa: dicas religadas e salvas', on);
+  const card = await ev(() => {
+    const r = document.querySelector('.rr-card--pause').getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom, vh: innerHeight };
+  });
+  check(card.top >= 0 && card.bottom <= card.vh, 'pausa com a linha das dicas cabe em 1280×720', card);
+  await shot('menu-09-pausa-dicas.png');
+  await press('Escape', 300);
+  i = await waitFor((x) => x.state === 'playing', { timeout: 5000 });
+  where = await away();
+  await H.gsleep(1200);
+  await ev(() => window.__game.events.emit('hint', { text: 'Outra dica de teste (E)', duration: 30 }));
+  await sleep(300);
+  h = await hud();
+  check(h.objective && !h.chip && h.hint, 'com dicas: objetivo e dica de volta, sem o selo', h);
+  check(where.dist > 1.6 && h.marker === true, 'com dicas: marcador do objetivo de volta', { ...where, marker: h.marker });
+  await shot('menu-10-jogando-com-dicas.png');
+
+  console.log('\n== Controle: tela principal, modos, fases e Opções ==');
+  await ev(() => localStorage.removeItem('rr-progress-v1'));
+  await load('');
+  await connect();
+  await tap(B.UP);
+  u = await ui();
+  check(u.device === 'gamepad' && u.screen === 'main' && u.focus === 'play', 'controle conectado: foco em Jogar', u);
+  await tap(B.DOWN);
+  u = await ui();
+  check(u.focus === 'options', 'D-pad baixo: Opções', u);
+  await tap(B.UP);
+  await axes(0, 1);
+  await sleep(120);
+  await axes(0, 0);
+  await sleep(160);
+  u = await ui();
+  check(u.focus === 'options', 'analógico para baixo: Opções', u);
+  await tap(B.UP);
+  await tap(B.A);
+  u = await ui();
+  check(u.screen === 'modes' && u.focus === 'levels', '✕ em Jogar: modos, foco em Fases', u);
+  await tap(B.LEFT);
+  await tap(B.A);
+  u = await ui();
+  check(u.screen === 'modes' && u.focus === 'story' && u.state === 'title', '✕ no Modo História: continua nos modos (em breve)', u);
+  await tap(B.B);
+  u = await ui();
+  check(u.screen === 'main' && u.focus === 'play', '○ volta à tela principal', u);
+  await tap(B.A);
+  await tap(B.A);
+  u = await ui();
+  check(u.screen === 'levels' && u.focus === 'continue', '✕ em Jogar e em Fases: tela das fases', u);
+  const glyphs = await ev(() => {
+    const g = document.querySelector('.rr-title .rr-back .rr-g');
+    const vis = (s) => { const e = g.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; };
+    return { pad: vis('.k-pad'), kb: vis('.k-kb'), circle: !!g.querySelector('.k-pad .rr-pad--b') };
+  });
+  check(glyphs.pad && !glyphs.kb && glyphs.circle, 'Voltar mostra o ○ do controle', glyphs);
+  await sleep(400);
+  await shot('menu-11-fases-controle.png');
+  await tap(B.DOWN);
+  u = await ui();
+  check(/^select:/.test(u.focus || ''), 'D-pad baixo: um cartão de fase', u);
+  await tap(B.B);
+  u = await ui();
+  check(u.screen === 'modes' && u.focus === 'levels', '○ volta aos modos', u);
+  await tap(B.B);
+  await tap(B.DOWN);
+  await tap(B.A);
+  u = await ui();
+  check(u.screen === 'options' && u.focus === 'volume', '✕ em Opções: foco no volume', u);
+  await tap(B.B);
+  u = await ui();
+  check(u.screen === 'main' && u.focus === 'options', '○ volta de Opções com o foco em Opções', u);
+  // Fases → Continuar → cartão: ○ no cartão de abertura volta às fases
+  await tap(B.UP);
+  await tap(B.A);
+  await tap(B.A);
+  await tap(B.A);
+  i = await waitFor((x) => x.state === 'intro', { timeout: 10000 });
+  check(i.state === 'intro' && i.levelId === 'fase1', '✕ em Continuar: cartão da fase 1', i);
+  await sleep(600);
+  await tap(B.B);
+  u = await ui();
+  check(u.state === 'title' && u.screen === 'levels', '○ no cartão de abertura: de volta às fases', u);
+  await tap(B.A);
+  await sleep(600);
+  await tap(B.A);
+  i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });
+  check(i.state === 'playing' && (await logOf('dog:jump')).length === 0, '✕ em Começar: partida (o ✕ do menu não vira pulo)', i.state);
+} catch (err) {
+  check(false, `erro inesperado: ${err.stack || err.message}`);
+} finally {
+  const failed = await H.close();
+  process.exit(failed ? 1 : 0);
+}
