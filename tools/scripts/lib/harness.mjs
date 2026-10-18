@@ -150,12 +150,34 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   // quando; o log ganha "ainda aguardando" a cada minuto; passado opMaxMs, o processo sai com diagnóstico (o prazo
   // próprio da operação não funcionou). Se nem este relógio rodar (event loop bloqueado, máquina sem CPU), o runner
   // vê o silêncio e o sinal parado, e encerra a suíte de fora.
+  // A aba (renderer) ou o navegador caiu: o Playwright deixa page.evaluate e waitForFunction pendentes para sempre,
+  // sem vencer o próprio prazo. Toda operação em curso corre contra este sinal e falha na hora, dizendo o motivo.
+  const LOST = Symbol('lost');
+  let lost = null;
+  let closing = false;
+  let signalLost;
+  const lostSignal = new Promise((_, fail) => { signalLost = fail; });
+  lostSignal.catch(() => {});
+  const markLost = (why) => {
+    if (lost || closing) return;
+    lost = why;
+    wedged = wedged || why;
+    console.log(`  [harness] ${why}`);
+    signalLost(LOST);
+  };
+  page.on('crash', () => markLost('a aba do navegador caiu (crash do renderer)'));
+  browser.on('disconnected', () => markLost('o navegador fechou ou caiu'));
+
   const pending = new Set();
   async function during(what, run) {
+    const site = new Error();
     const op = { what, since: Date.now(), told: 0 };
     pending.add(op);
     try {
-      return await run();
+      return await Promise.race([Promise.resolve().then(run), lostSignal]);
+    } catch (e) {
+      if (e === LOST) throw abort(what, siteOf(site), `${lost}. ${lastReadText()}`);
+      throw e;
     } finally {
       pending.delete(op);
     }
@@ -175,12 +197,17 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       const age = now - op.since;
       if (age >= limits.opMaxMs) {
         clearInterval(beat);
-        fail++;
-        const m = `[harness] ${op.what} sem retorno há ${secs(age)}, mesmo com os prazos (Playwright ou navegador travado). ${lastReadText()}`;
-        failures.push(m);
-        console.log(`  FALHOU ${m}`);
-        console.log(`\n${pass} ok, ${fail + errors.length} falha(s)`);
-        process.exit(1); // o Playwright encerra o navegador na saída
+        // a página ainda responde? (sem aviso de queda: senão a operação já teria falhado pelo lostSignal)
+        peek().then((state) => {
+          fail++;
+          const m = `[harness] ${op.what} sem retorno há ${secs(age)}, mesmo com os prazos (Playwright ou navegador travado; `
+            + `sem aviso de queda da aba). ${lastReadText()} Agora: ${state}`;
+          failures.push(m);
+          console.log(`  FALHOU ${m}`);
+          console.log(`\n${pass} ok, ${fail + errors.length} falha(s)`);
+          process.exit(1); // o Playwright encerra o navegador na saída
+        });
+        return;
       }
       if (age >= 60000 && now - op.told >= 60000) {
         op.told = now;
@@ -201,8 +228,12 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     const op = Promise.resolve().then(start);
     let timer;
     try {
-      return await Promise.race([op, new Promise((_, fail) => { timer = setTimeout(fail, ms, TIMEOUT); })]);
+      return await Promise.race([op, lostSignal, new Promise((_, fail) => { timer = setTimeout(fail, ms, TIMEOUT); })]);
     } catch (e) {
+      if (e === LOST || (lost && e !== TIMEOUT)) {
+        op.catch(() => {});
+        throw abort(what, siteOf(site), `${lost}. ${lastReadText()}`);
+      }
       if (e !== TIMEOUT) throw e;
       op.catch(() => {}); // a resposta tardia (ou o erro ao fechar o navegador) não vira rejeição solta
       wedged = `${what} ficou ${secs(ms)} sem resposta`;
@@ -501,7 +532,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         return await during(`${what}: ${stage}`, run);
       } catch (e) {
         if (e instanceof HarnessAbort) throw e;
-        throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${await peek()}`);
+        const state = await peek(); // dá tempo de o aviso de queda da aba chegar, se o erro veio dela
+        if (lost) throw abort(`${what}: ${stage}`, siteOf(site), `${lost}. ${lastReadText()}`);
+        throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${state}`);
       }
     };
     await step('abrir a página', () => page.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
@@ -552,6 +585,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function close() {
     clearInterval(beat);
+    closing = true; // o 'disconnected' do fechamento não é queda
     let timer;
     const closed = await Promise.race([
       browser.close().then(() => true),

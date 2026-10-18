@@ -7,7 +7,7 @@ import { runSuites } from '../lib/suite-runner.mjs';
 
 const args = parseArgs();
 const kind = args.case;
-if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung', 'stuck', 'mute'].includes(kind)) throw new Error('caso inválido');
+if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung', 'stuck', 'mute', 'crash'].includes(kind)) throw new Error('caso inválido');
 
 // Tetos de relógio curtos só nas provas de travamento (os padrões são de dezenas de segundos).
 const LIMITS = {
@@ -15,6 +15,7 @@ const LIMITS = {
   slow: { wallFactor: 2, wallMinMs: 1000 },
   hung: { evalMs: 2000, closeMs: 10000 },
   stuck: { opMaxMs: 3000 }, // a navegação tem 120 s de prazo; aqui o harness desiste antes, como se o prazo falhasse
+  crash: { opMaxMs: 20000 }, // rede de segurança da própria prova: a queda da aba precisa encerrar bem antes
 };
 
 if (args.runner) {
@@ -23,10 +24,15 @@ if (args.runner) {
   }], 'about:blank', process.cwd(), { silenceMs: kind === 'mute' ? 8000 : undefined });
 } else {
   let base = 'about:blank';
-  if (kind === 'stuck') {
-    // servidor que aceita a conexão e nunca responde: page.goto fica em curso
-    const server = createServer(() => {});
+  if (kind === 'stuck' || kind === 'crash') {
+    // stuck: aceita a conexão e nunca responde (page.goto fica em curso); crash: página sem jogo (load() fica
+    // esperando window.__game, como no boot que travou no CI)
+    const server = createServer(kind === 'stuck' ? () => {} : (req, res) => {
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end('<!doctype html><title>Sem jogo</title><p>sem window.__game</p>');
+    });
     await new Promise((done) => server.listen(0, '127.0.0.1', done));
+    server.unref();
     base = `http://127.0.0.1:${server.address().port}/`;
   }
   const H = await createHarness({ base, outDir: 'shots/infra', limits: LIMITS[kind] });
@@ -86,6 +92,12 @@ if (args.runner) {
       }
     } else if (kind === 'stuck') {
       await H.load('?trava'); // o sinal do harness encerra o processo em opMaxMs
+    } else if (kind === 'crash') {
+      // derruba a aba (renderer) no meio da espera por window.__game
+      setTimeout(() => {
+        H.page.context().newCDPSession(H.page).then((cdp) => cdp.send('Page.crash')).catch(() => {});
+      }, 1500);
+      await H.load('?sem-jogo');
     } else if (kind === 'mute') {
       for (;;); // o próprio processo da suíte trava (event loop bloqueado): só o runner, de fora, pode encerrá-lo
     }

@@ -99,6 +99,19 @@ test('infra E2E: operação sem retorno apesar do prazo encerra a suíte com dia
   assert.match(result.stdout, /FALHOU stuck/);
 });
 
+// Hipótese dos travamentos no primeiro load() (lavanderia, expresso): a aba cai e o Playwright deixa a espera pendente.
+test('infra E2E: aba que cai no meio do load() reprova na hora, dizendo que caiu', { timeout: 65000 }, async () => {
+  const t0 = Date.now();
+  const result = await run('crash');
+  const sec = (Date.now() - t0) / 1000;
+  assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
+  assert.equal(result.signal, null);
+  assert.ok(sec < 15, `levou ${sec} s (antes do prazo de 120 s do Playwright e do opMaxMs de 20 s)`);
+  assert.match(result.stdout, /\[harness\] a aba do navegador caiu \(crash do renderer\)/);
+  assert.match(result.stdout, /FALHOU exceção: \[harness\] load\('\?sem-jogo'\): [^(]+ \(harness-probe\.mjs:\d+\): a aba do navegador caiu \(crash do renderer\)/);
+  assert.match(result.stdout, /FALHOU crash/);
+});
+
 test('infra E2E: suíte calada é encerrada pelo runner com o diagnóstico', { timeout: 65000 }, async () => {
   const t0 = Date.now();
   const result = await run('mute');

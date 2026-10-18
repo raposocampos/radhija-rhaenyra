@@ -574,6 +574,8 @@ o motivo e a última leitura do estado (`estado`, `fase`, `timeSec`, `simSec`, p
 suíte ainda reprova no `close()`. Já o jogo que anda devagar demais NÃO reprova: em max(10 s, 8 × o prazo) de
 relógio a espera termina, como sempre terminou, e sai um aviso `[harness] aviso: ... terminou pelo teto de relógio`
 (depois de `ui:restart`, o SwiftShader recompila a cena e o jogo chega a andar 0,03 s em 10 s; a partida segue).
+Se a aba cair (`crash` do renderer) ou o navegador desconectar, toda operação em curso falha na hora com esse motivo:
+o Playwright deixaria `page.evaluate` e `waitForFunction` pendentes para sempre, sem vencer o próprio prazo.
 Por fim, duas redes para quando nem esses prazos funcionam: uma operação em curso (etapa do `load()`, captura) que
 passa de 4 min encerra o processo da suíte com diagnóstico (o log já ganha "ainda aguardando ..." a cada minuto); e
 o runner (`tools/scripts/lib/suite-runner.mjs`) encerra, de fora, uma suíte que fica 5 min sem escrever nada (o
@@ -583,7 +585,8 @@ CPU) e mostra carga, memória e os processos por CPU. Isso cobre o E2E `39166156
 30 min no primeiro `load()` sem que nenhum prazo interno chegasse a imprimir nada. Ajustes: `E2E_WALL_FACTOR`,
 `E2E_WALL_MIN_MS`, `E2E_STALL_MS`, `E2E_EVAL_MS`, `E2E_CLOSE_MS`, `E2E_OP_MAX_MS` ou `createHarness({ limits })`
 e, no runner, `E2E_SILENCE_MS`. As provas (jogo a 0,4× mantém o prazo de jogo; a 0,05× segue com aviso; parado em
-esperas curtas seguidas, aba travada, navegação sem resposta e processo da suíte bloqueado reprovam em segundos)
+esperas curtas seguidas, aba travada, aba que cai, navegação sem resposta e processo da suíte bloqueado reprovam
+em segundos)
 estão em `tools/scripts/test-e2e-infra.mjs`, no job de infraestrutura do E2E manual.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho

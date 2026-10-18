@@ -20,8 +20,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (`opMaxMs`), e o runner (`suite-runner.mjs`) encerra de fora uma suíte 5 min calada, com o sinal do harness por
   IPC (o que estava em curso, se o processo parou de responder), carga, memória e processos. Provas em
   `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`, `stuck`,
-  `mute`). Docs: ARQUITETURA (seção do E2E) e ENTREGA. Se a lavanderia/expresso travar de novo, o diagnóstico
-  do runner é o ponto de partida para achar a causa.
+  `mute`, `crash`). Docs: ARQUITETURA (seção do E2E) e ENTREGA.
+- E2E `39169122476` (head `0f3e940`): 13 de 14 jobs ok; `expresso` reprovou em 4,5 min (antes 30) com
+  "`load('?level=fase6&play'): esperar window.__game` sem retorno há 242 s": a página abriu, `window.__game` nunca
+  apareceu e o prazo de 120 s do `waitForFunction` não venceu, com o processo da suíte vivo. Hipótese: a aba caiu
+  no boot e o Playwright deixou a espera pendente; por isso o harness passou a ouvir `crash`/`disconnected`.
+  Atenção: sem este PR o `expresso` passou nas 7 execuções recentes; com ele, travou em 2 de 3. Não se achou
+  mecanismo no código (as chamadas do harness nesse ponto são as mesmas da 1ª versão, que passou), mas antes de
+  integrar é preciso mais execuções para descartar que o PR aumente os travamentos.
 - Nenhum teste ou build no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `todas` verdes no
   head do PR, entregar e aguardar aprovação. Os PRs #24 e #26 recebem os tetos ao atualizar a base.
 
