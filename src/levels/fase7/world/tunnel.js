@@ -39,17 +39,21 @@ function moundGeometry(M, T) {
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     // domo de cantos arredondados com ondulação de terreno (moundHeight), afundado 1 cm na borda
-    const x = p.getX(i), z = p.getZ(i);
-    let y = moundHeight(M, x, z) - 0.01;
-    // a manilha atravessa o morrinho: onde a grama ficaria abaixo do topo do tubo, ela afunda (o tubo
-    // aparece saindo do barranco e, olhando pela boca, não há grama dentro dele)
-    const wx = M.x + x, dz = M.z + z - T.z;
-    if (wx > T.x0 - 0.03 && wx < T.x1 + 0.03 && Math.abs(dz) < outerR + 0.01) {
-      const top = T.r + Math.sqrt(Math.max(0, outerR * outerR - dz * dz));
-      if (y < top + 0.012) y = -0.08;
-    }
-    p.setY(i, y);
+    p.setY(i, moundHeight(M, p.getX(i), p.getZ(i)) - 0.01);
   }
+  // A manilha atravessa o morrinho: os triângulos da grama que ficariam abaixo do topo do tubo saem da malha
+  // (o tubo aparece saindo do barranco e, olhando pela boca, não há grama dentro dele).
+  const idx = geo.index.array;
+  const keep = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    let cx = 0, cy = 0, cz = 0;
+    for (let k = 0; k < 3; k++) { cx += p.getX(idx[t + k]) / 3; cy += p.getY(idx[t + k]) / 3; cz += p.getZ(idx[t + k]) / 3; }
+    const wx = M.x + cx, dz = M.z + cz - T.z;
+    const inTube = wx > T.x0 - 0.04 && wx < T.x1 + 0.04 && Math.abs(dz) < outerR + 0.02;
+    const top = T.r + Math.sqrt(Math.max(0, outerR * outerR - dz * dz));
+    if (!(inTube && cy < top + 0.015)) keep.push(idx[t], idx[t + 1], idx[t + 2]);
+  }
+  geo.setIndex(keep);
   geo.computeVertexNormals();
   const dark = new THREE.Color('#3f6a2a'), mid = new THREE.Color('#5f8c38'), light = new THREE.Color('#93b551'), soil = new THREE.Color('#5b4732');
   const c = new THREE.Color();
@@ -157,7 +161,7 @@ export function buildTunnel(root, layout) {
   pipe.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(pipe);
   // lama no fundo
-  const mudMat = new THREE.MeshPhysicalMaterial({ color: '#4a3020', roughness: 0.22, clearcoat: 0.9, clearcoatRoughness: 0.15, metalness: 0 });
+  const mudMat = new THREE.MeshPhysicalMaterial({ color: '#3a2618', roughness: 0.38, clearcoat: 0.45, clearcoatRoughness: 0.3, metalness: 0, envMapIntensity: 0.45 });
   const mud = new THREE.Mesh(mudGeometry(T, T.x0 + 0.12, T.x1 - 0.12), mudMat);
   mud.receiveShadow = true;
   mud.name = 'lama';

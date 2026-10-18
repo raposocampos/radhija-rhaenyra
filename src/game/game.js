@@ -27,7 +27,7 @@ const FOLLOW_HOLD = 0.6; // s que a nova companheira espera (olhando) antes de s
 const STAY_SOFT_PEN = 0.1; // penetração máxima da líder numa companheira em "Fica" (obstáculo macio)
 // Lambe-Lambe: a Rhaenyra para a LICK_DIST m do ponto lambido (a cabeça dela encosta na irmã), chega lá em
 // até LICK_APPROACH s e desiste se a irmã ficar a mais de LICK_GIVEUP m desse lugar.
-const LICK_DIST = 0.5;
+const LICK_DIST = 0.56;
 const LICK_APPROACH = 0.8;
 const LICK_GIVEUP = 0.7;
 const LICK_SOLO = 0.3; // cada lambidinha no próprio focinho (ninguém por perto)

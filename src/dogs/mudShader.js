@@ -45,11 +45,11 @@ float mNoise(vec3 x) {
 float mudShape(vec3 p) {
   float jag = (mNoise(p * 22.0) - 0.5) * 0.09;
   float boots = 1.0 - smoothstep(0.1 + jag, 0.17 + jag, p.y);
-  float belly = 1.0 - smoothstep(0.2 + jag, 0.235 + jag, p.y);
+  float belly = 1.0 - smoothstep(0.175 + jag, 0.205 + jag, p.y);
   // respingos esticados na vertical (escorrendo) com a borda rasgada
   float drip = mNoise(vec3(p.x * 12.0, p.y * 6.0, p.z * 12.0) + 4.1) + (mNoise(p * 46.0) - 0.5) * 0.24;
-  float splat = smoothstep(0.6, 0.66, drip);
-  float dots = smoothstep(0.76, 0.8, mNoise(p * 38.0 + 9.7));
+  float splat = smoothstep(0.64, 0.7, drip);
+  float dots = smoothstep(0.79, 0.83, mNoise(p * 38.0 + 9.7));
   return max(max(boots, belly * 0.95), max(splat, dots * 0.9));
 }
 float mudMask(vec3 p) {
