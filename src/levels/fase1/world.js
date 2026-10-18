@@ -2,6 +2,7 @@
 // O jardim da fase 1 mora em src/world/ (environment.js e props.js).
 import { buildEnvironment } from '../../world/environment.js';
 import { createProps } from '../../world/props.js';
+import { createPuddle } from '../../world/extraProps.js';
 
 /**
  * Monta o cenário e os props dentro de `root` (Group descartado ao trocar de fase).
@@ -14,6 +15,8 @@ export function buildWorld({ engine, root, layout }) {
   eng.scene = root;
   const env = buildEnvironment(eng, layout);
   const props = createProps(eng, layout);
+  // poça no pé do bebedouro dos passarinhos (as dogs bebem ali: extras escondidos)
+  createPuddle({ root, x: 3.72, z: -0.3, rx: 0.17, rz: 0.12 });
   return {
     env,
     props,

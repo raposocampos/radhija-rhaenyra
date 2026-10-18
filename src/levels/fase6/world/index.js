@@ -16,6 +16,7 @@ import { buildWorkshop } from './workshop.js';
 import { buildRailway } from './railway.js';
 import { buildTrain } from './train.js';
 import { buildStations } from './stations.js';
+import { createToyBall } from '../../../world/extraProps.js';
 
 /** @param {import('../../../types').LevelBuildArgs} args
  * @returns {import('../../../types').LevelBuild<import('../../../types').Fase6Props>} */
@@ -29,6 +30,8 @@ export function buildWorld({ root }) {
   const consist = T('train', () => buildTrain(root));
   const stations = T('stations', () => buildStations(root));
   const treats = buildTreats(root, COLLECTIBLES, { glow: 0.16 });
+  // bolinha listrada solta perto do baú (rola com a focinhada: extras escondidos)
+  const toyBall = createToyBall({ root, x: 3.8, z: 1.9, bounds: { minX: 3.3, maxX: 4.2, minZ: 1.5, maxZ: 2.3 } });
   if (typeof window !== 'undefined') window.__f6Timings = timings;
   /** @type {import('../../../types').Fase6Props} */
   const props = {
@@ -52,10 +55,12 @@ export function buildWorld({ root }) {
   return {
     props,
     env: { track, workshop, timings },
+    extras: { ball: toyBall.hook },
     seeThrough: workshop.seeThrough,
     update(dt, t) {
       shared.time.value = t;
       props.update(dt, t);
+      toyBall.update(dt);
     },
     dispose() {},
   };

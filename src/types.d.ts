@@ -216,6 +216,8 @@ export interface LevelBuild<P extends LevelProps = LevelProps> {
   seeThrough?: (THREE.Object3D | null | undefined)[];
   /** Cenário estático (informativo, para depuração e capturas). */
   env?: any;
+  /** Ganchos dos extras (balanço, bolinha). */
+  extras?: ExtraHooks;
   update?(dt: number, t: number): void;
   dispose?(): void;
 }
@@ -249,6 +251,8 @@ export interface LevelDef<P extends LevelProps = LevelProps> {
    */
   load?(): Promise<LevelModule<P>>;
   createPuzzle(ctx: PuzzleContext<P>): Puzzle;
+  /** Pontos das animações do cenário (extras escondidos; docs/ARQUITETURA.md, "Extras"). */
+  extras?: ExtraSpot[];
 }
 
 // Eventos da fronteira de carregamento. Eventos específicos de mecânicas continuam abertos;
@@ -827,6 +831,44 @@ export interface DogAnim {
   wallPaws?: number;
   wallSide?: number;
   wallLat?: number;
+  /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
+  poopK?: number;
+  /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
+  extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
+}
+
+/** Animações do cenário dos extras (as que têm pose própria em dogAnimation.js; swing e spurt usam ações). */
+export type ExtraKind = 'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll' | 'swing' | 'spurt';
+/**
+ * Ponto de uma animação do cenário (EXTRAS na definição da fase): E perto dele, de frente, quando a fase não usou o
+ * E. stand = onde a dog fica; face = para onde olha; y = altura em cima de algo (rolar na pilha); size = só uma das
+ * dogs; when = flag de puzzle.navFlags() que precisa valer; seat = assento do balanço; color/particles = efeitos.
+ */
+export interface ExtraSpot {
+  id: string;
+  kind: ExtraKind;
+  x: number;
+  z: number;
+  r?: number;
+  face?: XZ;
+  stand?: XZ;
+  y?: number;
+  /** Altura do que ela cheira (flores no alto: a cabeça abaixa menos). */
+  h?: number;
+  /** Pula para dentro (caixa de areia) até stand e, no fim, pula de volta. */
+  hop?: boolean;
+  size?: DogSize;
+  when?: string;
+  seat?: number;
+  color?: string;
+  particles?: string;
+}
+/** Ganchos do cenário para os extras (LevelBuild.extras). */
+export interface ExtraHooks {
+  /** Balanço: setAngle(assento, rad | null = solto); seatAt = onde a dog senta e para onde fica virada. */
+  swing?: { setAngle(seat: number, angle: number | null): void; seatAt(seat: number, angle: number): { x: number; y: number; z: number; faceYaw: number } };
+  /** Bolinha solta no chão: posição atual, roll(dirX, dirZ) = rola um pouco nessa direção; reset volta. */
+  ball?: { readonly x: number; readonly z: number; roll(dirX: number, dirZ: number): void; reset(): void };
 }
 
 /** Cachorrinha procedural (createDog em src/dogs/dog.js). */

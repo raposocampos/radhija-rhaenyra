@@ -55,6 +55,7 @@ export function buildWorld({ root, layout }) {
   return {
     props,
     env: { ground, park, tunnel, timings },
+    extras: equipment.extras,
     seeThrough: [...fence.seeThrough, ...tunnel.seeThrough, ...equipment.seeThrough],
     update(dt, t) {
       shared.time.value = t;

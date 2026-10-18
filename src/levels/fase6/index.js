@@ -1,5 +1,6 @@
 // Fase 6 da campanha (levels/index.js). O link do tempo de protótipo, ?level=fase6&play, continua abrindo esta fase.
 import layout from './layout.js';
+import extras from './extras.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';
 
@@ -12,4 +13,5 @@ export default {
   layout, lighting,
   load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
   createPuzzle,
+  extras,
 };

@@ -38,6 +38,7 @@ const PAD_EDGE_CODES = [
   [PAD.Y, 'KeyF'],
   [PAD.LB, 'KeyQ'],
   [PAD.START, 'Escape'],
+  [PAD.RS, 'KeyC'], // extra (docs/ARQUITETURA.md, "Extras")
 ];
 
 function connectedPads() {
