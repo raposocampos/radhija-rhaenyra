@@ -3,28 +3,32 @@
 Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: fase 6 mais longa
+## Em andamento: Lambe-Lambe e fase 7 (pracinha depois da chuva)
 
-- Pedido do usuário (2026-10-18): o acabamento ficou bonito, mas a fase curta.
-  Escolheu **as duas coisas**: cancela no trilho da estrela e duas entregas pelo
-  trem. A fase continua só em `DEV_LEVELS`.
-- Branch **`claude/fase6-longa`** (worktree próprio), base `31e8b26`. Consultar o
+- Pedido do usuário (2026-10-18): nova habilidade da Rhaenyra, o **Lambe-Lambe**,
+  no mesmo botão do superbafo (R / L2·LT), e uma fase de teste em que a Radhija
+  passa por um cano com lama, fica lenta e sem arrancada, e a irmã a limpa
+  lambendo, com animação caprichada.
+- Proposta aprovada pelo usuário no chat: **pracinha depois da chuva**, com o
+  **frisbee** como segundo objeto. A bolinha caiu dentro do parquinho cercado; a
+  Radhija entra pelo túnel de manilha enlameado (só ela cabe) e destrava o portão
+  por dentro. O frisbee está no alto do escorregador: só uma arrancada sobe, e com
+  as patas enlameadas ela escorrega de volta, por isso o Lambe-Lambe é obrigatório.
+  As duas levam os objetos à toalha de piquenique. Fica só em `DEV_LEVELS` (id `fase7`).
+- Branch **`claude/lambe-lambe`** (worktree próprio), base `0281956`. Consultar o
   PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa resultados.
-  Nenhum teste ou build rodou no PC.
-- Feito: agulha com três posições (volta → lua → estrela); a lua começa presa num
-  pórtico dentro da maquete e o trem a busca (ela cai no vagão ao lado do planeta);
-  cancela na reta leste da estrela que só sobe com alguém na placa do lado de fora
-  (Fica) e barra o trem antes do braço; as duas cargas descem juntas até a bandeja;
-  o trem volta sozinho depois de cada parada; cada dog leva uma carga na boca (as
-  duas podem ir juntas, a pedido do usuário); foguete com dois berços que decola.
-  Na primeira prévia a lua ficava do lado de fora e ia a um funil; o usuário
-  apontou que isso não fazia sentido e o fluxo foi refeito. Testes em `test/fase6.test.mjs` e
-  E2E `expresso` reescritos. Detalhes na continuidade.
-- Diretriz do usuário para as próximas fases: **dois objetos** por fase até a 10;
-  a partir da 11, três ou mecânicas novas (ver COMO-CRIAR-UMA-FASE, seção 1).
-- Próximo passo: CI verde, E2E `expresso` e `todas`, revisar as capturas,
-  entregar a prévia e **aguardar aprovação** antes do merge/deploy. Depois,
-  Entrega B (campanha) em outro PR.
+  Nenhum teste ou build roda no PC.
+- Próximo passo: implementar habilidade, lama, item frisbee, fase, testes e E2E
+  `lambe`; revisar capturas contra as fases 4 a 6; entregar a prévia e **aguardar
+  aprovação** antes do merge/deploy.
+
+## Entregue: fase 6 mais longa (PR #19)
+
+Lua no pórtico, cancela na estrela e foguete de duas cargas, ainda em `DEV_LEVELS`.
+Squash `0281956` no main. Ao abrir a tarefa do Lambe-Lambe, o deploy
+`39103395850` aguardava a liberação, que cabe à sessão que entregou o #19.
+Diretriz do usuário para as próximas fases: **dois objetos** por fase até a 10;
+a partir da 11, três ou mecânicas novas (ver COMO-CRIAR-UMA-FASE, seção 1).
 
 ## Entregue: acabamento da fase 6 (PR #18)
 
