@@ -87,7 +87,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   let victoryRec = null;
   let playClock = 0;
   let victoryAt = 0;
-  let screen = 'main'; // tela do menu inicial
+  let menuScreen = 'main'; // tela do menu inicial (não chamar de screen: esconderia window.screen)
   let nextTitleScreen = 'main'; // tela ao voltar à tela inicial (do cartão de abertura: a das fases)
   let device = 'keyboard';
   let prog = loadProgress();
@@ -220,23 +220,23 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   function showScreen(name) {
     const next = Object.hasOwn(SCREEN_PARENT, name) ? name : 'main';
     // depois da primeira troca de tela, as entradas do Jogar e do Opções ficam rápidas (ui.css, .is-moved)
-    if (next !== screen) L.title.classList.add('is-moved');
-    screen = next;
-    L.title.dataset.screen = screen;
+    if (next !== menuScreen) L.title.classList.add('is-moved');
+    menuScreen = next;
+    L.title.dataset.screen = menuScreen;
     hideTitleNote();
-    if (screen === 'modes') renderModes();
-    if (screen === 'levels') { renderContinue(); renderCards(); }
-    if (screen === 'options') renderSettings();
+    if (menuScreen === 'modes') renderModes();
+    if (menuScreen === 'levels') { renderContinue(); renderCards(); }
+    if (menuScreen === 'options') renderSettings();
     if (uiState === 'title') setFocus(defaultFocus(), { silent: true });
   }
 
   /** Esc, ○ · B ou o botão Voltar: uma tela acima no menu; no cartão de abertura, de volta às fases. */
   function goBack() {
     if (uiState === 'title') {
-      const parent = SCREEN_PARENT[screen];
+      const parent = SCREEN_PARENT[menuScreen];
       if (!parent) return;
       audio?.play?.('uiBack');
-      const from = screen;
+      const from = menuScreen;
       showScreen(parent);
       const opener = /** @type {HTMLElement} */ (L.title.querySelector(`.rr-screen [data-action="${SCREEN_OPENER[from]}"]`));
       if (opener && focus.focusables().includes(opener)) setFocus(opener, { silent: true });
@@ -416,7 +416,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     if (!req) return;
     try {
       Promise.resolve(req.call(fsTarget, { navigationUI: 'hide' }))
-        .then(() => /** @type {any} */ (screen).orientation?.lock?.('landscape'))
+        .then(() => /** @type {any} */ (window.screen).orientation?.lock?.('landscape'))
         .catch(() => { /* recusado pelo navegador: segue sem tela cheia */ });
     } catch { /* idem */ }
   }
@@ -463,7 +463,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   /** Abre o cartão da fase `i` (Continuar, um cartão, Próxima fase) e a guarda como a última escolhida. */
   function chooseLevel(i) {
     const id = LV[i]?.id;
-    if (id) prog = recordLastPlayed(id).prog;
+    if (id) prog = recordLastPlayed(id, prog).prog;
     events.emit('ui:selectLevel', { index: i });
   }
 
@@ -533,7 +533,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     else if (a === 'restart') events.emit('ui:restart', {});
     else if (a === 'next') {
       const nextId = LV[cur.index + 1]?.id;
-      if (nextId) prog = recordLastPlayed(nextId).prog;
+      if (nextId) prog = recordLastPlayed(nextId, prog).prog;
       events.emit('ui:nextLevel', {});
     } else if (a === 'menu') events.emit('ui:menu', {});
   }
@@ -706,7 +706,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     },
     get state() { return uiState; },
     /** Tela do menu inicial: 'main', 'modes', 'levels' ou 'options'. */
-    get screen() { return screen; },
+    get screen() { return menuScreen; },
     get device() { return device; },
     setDevice,
     /** Controles de toque (diagnóstico e testes: state(), releaseAll()). */

@@ -4,6 +4,7 @@
 // toque é conferida no E2E (suíte menu, tools/scripts/test-menu.mjs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { loadProgress, recordLastPlayed, recordLevelClear, continueTarget, PROG_KEY } from '../src/ui/progress.js';
 import { createSettings, loadSettings, saveSettings, normalizeSettings, SETTINGS_KEY } from '../src/core/settings.js';
 import { template, settingsBlock, MODES, HINTS_NOTE } from '../src/ui/markup.js';
@@ -106,6 +107,32 @@ test('save: versão desconhecida nunca é sobrescrita pela escolha de uma fase',
   assert.equal(s.values.get(PROG_KEY), future);
 });
 
+test('save: storage cheio ou bloqueado não faz a escolha esquecer fases concluídas nesta aba', (t) => {
+  // gravar falha (cota cheia): a vitória e a escolha seguem só na memória da UI
+  const s = memoryStorage(t, { [PROG_KEY]: JSON.stringify(prog(done('fase1'))) });
+  s.api.setItem = () => { throw new Error('QuotaExceededError'); };
+  const clear = recordLevelClear('fase2', { timeSec: 40, collected: 1, total: 3 }, 3);
+  assert.equal(clear.saved, false);
+  const r = recordLastPlayed('fase3', clear.prog);
+  assert.equal(r.saved, false);
+  assert.deepEqual(Object.keys(r.prog.levels).sort(), ['fase1', 'fase2'], 'a fase 2 concluída nesta aba continua');
+  assert.equal(r.prog.last, 'fase3');
+  assert.equal(continueTarget(IDS, r.prog).index, 2, 'a fase 3 continua liberada');
+  // leitura negada: vale só a memória
+  s.api.getItem = () => { throw new Error('SecurityError'); };
+  const r2 = recordLastPlayed('fase2', r.prog);
+  assert.deepEqual(Object.keys(r2.prog.levels).sort(), ['fase1', 'fase2']);
+  assert.equal(r2.prog.last, 'fase2');
+});
+
+test('save: o gravado (outra aba) prevalece sobre a memória na mesma fase', (t) => {
+  const newer = { done: true, best: 20, treats: 3, total: 3, clears: 2 };
+  memoryStorage(t, { [PROG_KEY]: JSON.stringify({ v: 1, levels: { fase1: newer } }) });
+  const r = recordLastPlayed('fase2', prog(done('fase1')));
+  assert.equal(r.saved, true);
+  assert.deepEqual(loadProgress(), { v: 1, levels: { fase1: newer }, last: 'fase2' });
+});
+
 // ---------------------------------------------------------------------------------------------- opções
 test('opções: padrão com dicas; JSON corrompido ou campos estranhos voltam ao padrão', () => {
   assert.equal(SETTINGS_KEY, 'rr-settings-v1');
@@ -175,6 +202,12 @@ test('template: Opções e pausa têm o mesmo bloco (volume, qualidade, dicas, t
   assert.match(html, /class="rr-nohints[^"]*"/);
   // a pausa continua com a tabela de controles (acessível também no modo sem dicas)
   assert.match(html.slice(html.indexOf('rr-layer rr-pause')), /rr-ctl-table/);
+});
+
+test('ui.js não esconde window.screen (a tela cheia trava a paisagem por ele)', async () => {
+  const src = await readFile(new URL('../src/ui/ui.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /\b(?:let|const|var|function)\s+screen\b/, 'uma variável "screen" esconderia window.screen');
+  assert.match(src, /window\.screen\)\.orientation\?\.lock/);
 });
 
 // ---------------------------------------------------------------------------------------------- núcleo

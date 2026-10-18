@@ -109,11 +109,20 @@ export function recordLevelClear(id, d, fallbackTotal) {
 
 /**
  * Guarda a fase escolhida no menu (cartão, Continuar ou Próxima fase) como a última jogada. Relê o save antes, como
- * recordLevelClear. → { prog, saved }. Sem storage ou em versão desconhecida, só a cópia em memória muda.
+ * recordLevelClear, e junta a cópia em memória da UI (`current`): fases concluídas que não puderam ser gravadas
+ * (storage cheio, bloqueado ou de versão desconhecida) continuam valendo; o que está gravado (outra aba) prevalece.
+ * → { prog, saved }. Sem storage ou em versão desconhecida, só a cópia em memória muda.
+ * @param {string} id @param {Progress | null} [current]
  */
-export function recordLastPlayed(id) {
-  const { prog, writable } = readProgress();
-  if (!isLevelId(id) || prog.last === id) return { prog, saved: false };
+export function recordLastPlayed(id, current = null) {
+  const { prog: stored, writable } = readProgress();
+  const mem = normalizeProgress(current);
+  /** @type {Progress} */
+  const prog = { v: 1, levels: { ...(mem?.levels || {}), ...stored.levels } };
+  const last = stored.last ?? mem?.last;
+  if (last !== undefined) prog.last = last;
+  const memOnly = Object.keys(mem?.levels || {}).some((key) => !Object.hasOwn(stored.levels, key));
+  if (!isLevelId(id) || (stored.last === id && !memOnly)) return { prog, saved: false };
   prog.last = id;
   const saved = writable && saveProgress(prog);
   return { prog, saved };
