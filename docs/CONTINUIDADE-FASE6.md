@@ -1,0 +1,120 @@
+# Continuidade da fase 6 — Expresso do Superbafo
+
+Passagem Codex → Claude, 2026-10-17. Este é o plano da **próxima entrega**,
+ainda não implementada nem aprovada para publicação. Estado confirmado da
+estabilização, produção e PR documental em [CONTEXTO.md](CONTEXTO.md).
+
+## Ponto de partida
+
+O PR #15 publicou a blocagem jogável aprovada (`b954b24`), preservada no PR #16.
+Acesso: https://raposocampos.github.io/radhija-rhaenyra/?level=fase6&play.
+São cinco fases normais; a sexta está só em `DEV_LEVELS`. O usuário escolheu
+oficina, trem que espirra e bolinha-planeta e exigiu **a mesma direção artística
+já existente no jogo**: maquete procedural, materiais, iluminação, escala,
+câmera e personagens coerentes. Não voltar à proposta com pombo/ventilador.
+
+Puzzle existente: o pouso da Rhaenyra no pedal escolhe o trilho; o superbafo
+frontal da Radhija faz o trem espirrar e recuar. Rota circular retorna e permite
+repetir; rota correta entrega a bolinha à bandeja. Qualquer dog pode retirar e
+levar ao tapete de foguete. Há oito estados, petiscos opcionais, bloqueio de
+nuvens antigas, pausa, reinício e descarte. A dica falsa perto da bandeja foi
+corrigida e aprovada no head `05e2287`; não reabrir esse bug sem reprodução nova.
+
+Limites atuais aprovados como protótipo: oficina simplificada, espirro visual
+sem som exclusivo e trem com curvas segmentadas/giro imediato. Esses são os
+pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o núcleo.
+
+## Entrega A — acabamento mantendo DEV
+
+- [ ] Definir o contrato da trajetória, locomotiva, vagão e carga. Antes de
+  paralelizar, separar a composição da oficina do trem hoje reunidos em
+  `src/levels/fase6/world/index.js`. Fazer apenas extrações necessárias.
+- [ ] Usar a mesma descrição geométrica para trilhos visíveis e movimento.
+  Suavizar curvas e junções, orientar pela tangente e manter velocidade
+  previsível. Articular o vagão, que vai à frente na marcha à ré; bola deve
+  acompanhar o vagão sem saltos. Resolver também o giro parado no retorno.
+- [ ] Acrescentar detalhes procedurais da oficina, madeira, brinquedos e bancada
+  com os materiais existentes. Preservar leitura do pedal, janela do nariz,
+  bandeja e tapete, corredores livres e visibilidade das interações.
+- [ ] Acrescentar som procedural do espirro ao evento `expresso:sneeze`, já
+  emitido pelo puzzle, mas sem tratamento específico em `src/fx/feedback.js`.
+  Reusar `src/fx/audio.js` e a biblioteca `src/fx/audio/`; respeitar volume,
+  pausa e limpeza de efeitos. Não baixar assets ou publicar fotos pessoais.
+- [ ] Sincronizar olhos/nariz, antecipação, recuo e partida com o tempo do puzzle;
+  revisar câmera e dicas vendo o movimento completo. Nenhuma ação deve exigir
+  precisão de plataforma ou duas personagens agindo simultaneamente.
+- [ ] Entregar prévia própria do acabamento em DEV; publicar somente após
+  aprovação explícita dessa versão. A aprovação do protótipo não cobre a arte final.
+
+### Divisão segura entre agentes
+
+| Frente | Área exclusiva depois da divisão inicial | Coordenação necessária |
+| --- | --- | --- |
+| Coordenador | Composição de `world/index.js`, `layout.js`, tipos, fábrica de props, integração e capturas | Define contrato e reserva arquivos compartilhados antes de delegar |
+| Movimento | `puzzle.js` e módulo local de trajetória/trem a criar | Trilhos e movimento consomem a mesma geometria; cenário não redefine rota |
+| Cenário | Módulo extraído da oficina | Mantém colisores, escala, circulação e materiais combinados |
+| Áudio | Biblioteca procedural e tratamento do evento em `feedback.js` | Não disputa efeitos/câmera com coordenador; som único por viagem |
+| Revisão | Leitura de diff, dados e capturas | Pode ocorrer em paralelo sem editar arquivos dos executores |
+
+Cada executor usa branch e worktree próprios. Não distribuir o mesmo
+`world/index.js` a dois agentes. Coordenador integra uma frente por vez e
+revalida o conjunto; não misturar promoção à campanha com a primeira rodada
+visual se isso dificultar revisar causalidade e acabamento.
+
+### Regressões a preservar e ampliar na nuvem
+
+- [ ] Manter pulo real (pouso único), sensor frontal e bloqueio de nuvens antigas;
+  andar/latir/interagir não substituem habilidades. Não mudar habilidades globais.
+- [ ] Não trocar rota nem enfileirar viagem durante movimento; retirar a bola
+  apenas em `ready`; rota errada continua recuperável sem perda/duplicação.
+- [ ] Conferir continuidade nas curvas, alinhamento da carga, chegada nas duas
+  rotas e retorno. Trem fica dentro da área isolada, sem plataforma móvel/física nova.
+- [ ] Pausa, reinício e troca de fase em todos os estados: nenhum efeito sonoro,
+  callback, nuvem, item ou recurso exclusivo deve sobreviver indevidamente.
+- [ ] Acrescentar uma partida caminhando entre estações. A suíte atual usa
+  comandos reais nas habilidades, mas posiciona personagens para preparar trechos;
+  isso não substitui a revisão do percurso completo e da companheira.
+- [ ] Revisar capturas das curvas/descarga e comparar direção artística com a fase 5.
+  Recursos devem estabilizar após trocas, sem descarte de recursos globais.
+- [ ] Tipos/testes/build e E2E `expresso` na nuvem; E2E `todas` na entrega importante.
+  Conferir SHA do head final, smoke em subcaminho e jobs de recursos. Ver guia
+  [COMO-CRIAR-UMA-FASE.md](COMO-CRIAR-UMA-FASE.md) e [ENTREGA.md](ENTREGA.md).
+
+## Entrega B — entrada na campanha, após acabamento validado
+
+- [ ] Promover a definição de `DEV_LEVELS` para `LEVELS`, sem duplicar ID e sem
+  perder o import sob demanda. Acrescentar ao fim, preservando ordem/IDs existentes.
+- [ ] Preservar o link por ID: hoje `src/main.js` resolve IDs pelo catálogo dev
+  e usa `parseInt` para fases normais. Remover `fase6` de DEV sem ajustar essa
+  resolução faz `?level=fase6&play` cair na fase 1. Criar regressão do link existente.
+- [ ] Atualizar progressão 5→6, menu, tela de vitória e expectativas de `hasNext`,
+  incluindo `test/fase5.test.mjs`, testes da nova última fase e suítes de navegador.
+- [ ] Adaptar `test/contratos-props.test.mjs`: o laço sobre `LEVELS` presume que
+  toda fase tem `gate` ou `petGate`. A fase 6 não tem portão; testar seus contratos
+  reais sem inventar um prop para satisfazer um pressuposto inadequado.
+- [ ] Rever expectativas de protótipo em `test/fase6.test.mjs` e
+  `tools/scripts/test-expresso.mjs`: atualmente exigem fase6 fora do catálogo normal.
+- [ ] Validar save v1 antigo: preservar medalhas/conclusões e liberar a fase 6 ao
+  concluir a 5. O save já usa IDs e preserva registros desconhecidos; não há
+  necessidade observada de migração do formato ou limpeza do armazenamento.
+- [ ] Atualizar README, testes de catálogo, runner/workflow, smoke e condições
+  hoje especiais para DEV. A suíte `expresso` já existe e já participa de `todas`.
+- [ ] Ampliar explicitamente o catálogo de medição temporal, testes do instrumento
+  e referência de cinco para seis fases. `REFERENCE_LEVELS` e a matriz de
+  `.github/workflows/desempenho.yml` são fixos; não apenas acrescentar a fase ao jogo.
+  Preservar a origem anterior, medir na nuvem e revisar a nova referência antes
+  de adotá-la. Não recalibrar limites silenciosamente para esconder regressão.
+- [ ] Validar campanha completa, recursos, save e links; entregar nova prévia,
+  aguardar aprovação da versão, integrar e conferir deploy/version.json.
+
+## O que não é pendência da estabilização
+
+Tipar todo o jogo, dividir mais o núcleo, trocar tecnologia, otimizar sem uma
+regressão medida e provar ausência de vazamento de longo prazo não são tarefas
+abertas da rodada encerrada. Só abrir essas frentes com necessidade concreta.
+O medidor temporal usa SwiftShader; não promete FPS em GPU física. O medidor
+de recursos verifica contagens e ownership, não mede VRAM em megabytes.
+
+O próximo executor deve começar pela Entrega A, com uma mudança pequena e
+revisável no contrato da trajetória/composição. Não publicar antecipadamente
+acabamento ou campanha usando aprovações de PRs antigos.
