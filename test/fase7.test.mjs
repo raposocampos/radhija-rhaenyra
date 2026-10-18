@@ -7,9 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import fase7 from '../src/levels/fase7/index.js';
-import modelo from '../src/levels/_modelo/index.js';
 import { LEVELS } from '../src/levels/index.js';
-import { DEV_LEVELS, devCatalog } from '../src/levels/dev.js';
+import { DEV_LEVELS } from '../src/levels/dev.js';
 import { DOG_CONFIG } from '../src/dogs/config.js';
 import { STAGES, slideY } from '../src/levels/fase7/puzzle.js';
 import { createCollisionWorld } from '../src/game/collision.js';
@@ -17,18 +16,21 @@ import { createNavigator } from '../src/game/navigation.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const L = fase7.layout;
+/** Posição da fase 7 na campanha (a última). */
+const INDEX = LEVELS.indexOf(fase7);
 const info = (h) => {
   const i = h.info();
   return { ...i, ...i.lambe, state: i.state };
 };
 
-async function prototype(t, query = '') {
+/** A fase 7 na campanha, com o cenário real; as outras fases ficam com dublês. */
+async function campaign(t, query = '') {
   const module = await fase7.load();
   const h = await createHeadlessGame({
-    levels: [fase7, modelo], query,
+    level: INDEX + 1, query,
     configure({ levels, engine }) {
       // A fábrica real recebe o mesmo root e escopo de recursos do jogo.
-      levels[0].build = module.build;
+      levels[INDEX].build = module.build;
       engine.renderer.getDrawingBufferSize = (v) => v.set(1280, 720);
       engine.renderer.capabilities = { getMaxAnisotropy: () => 4 };
       engine.sun = new THREE.DirectionalLight();
@@ -38,7 +40,7 @@ async function prototype(t, query = '') {
   t.after(async () => {
     h.releaseAll();
     h.setPad(null);
-    if (h.game.level === 0) await h.game.loadLevel(1, { mode: 'title', initial: true });
+    if (h.game.level === INDEX) await h.game.loadLevel(0, { mode: 'title', initial: true });
   });
   assert.equal(h.game.state, 'playing', 'o cenário e o puzzle reais carregam juntos');
   return h;
@@ -152,12 +154,13 @@ test('Lambe-Lambe: trocar de dog, pausar e reiniciar não deixam a lambida presa
 });
 
 // ------------------------------------------------------------------------------------------------ fase 7
-test('fase 7: protótipo só no catálogo de desenvolvimento, com cenário sob demanda e props reais', async (t) => {
-  assert.equal(LEVELS.some((def) => def.id === 'fase7'), false, 'não altera campanha nem progresso');
-  assert.equal(DEV_LEVELS.filter((def) => def.id === 'fase7').length, 1);
+test('fase 7: última fase da campanha, com cenário sob demanda e props reais', async (t) => {
+  assert.equal(INDEX, LEVELS.length - 1, 'a fase 7 fecha a campanha');
+  assert.equal(LEVELS.filter((def) => def.id === 'fase7').length, 1);
+  assert.equal(DEV_LEVELS.some((def) => def.id === 'fase7'), false, 'saiu do catálogo de desenvolvimento');
   assert.equal(typeof fase7.load, 'function');
   assert.equal(fase7.item, 'frisbee');
-  const h = await prototype(t);
+  const h = await campaign(t);
   const i = info(h);
   assert.equal(i.levelId, 'fase7');
   assert.equal(i.stage, 'start');
@@ -166,24 +169,6 @@ test('fase 7: protótipo só no catálogo de desenvolvimento, com cenário sob d
   assert.equal(i.mud.radhija.k, 0);
   assert.ok(h.props.frisbee.object.position.y > L.SLIDE.deck - 0.01, 'o frisbee começa no alto do escorregador');
   assert.equal(i.objective, 'Só a Radhija cabe no túnel do morrinho: entre no parquinho por ele');
-});
-
-test('catálogo das prévias: os protótipos 6 e 7 entram juntos e em ordem; arenas entram sozinhas', () => {
-  const ids = (catalog) => catalog.levels.map((def) => def.id);
-  const published = LEVELS.map((def) => def.id);
-  for (const [id, index] of [['fase6', published.length], ['fase7', published.length + 1]]) {
-    const catalog = devCatalog(LEVELS, id);
-    assert.deepEqual(ids(catalog), [...published, 'fase6', 'fase7'], `${id}: o menu mostra as fases 6 e 7`);
-    assert.equal(catalog.index, index, `${id}: começa na fase pedida`);
-    catalog.levels.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: numeração em sequência no menu`));
-  }
-  for (const id of ['pulo', 'bafo', 'modelo']) {
-    const catalog = devCatalog(LEVELS, id);
-    assert.deepEqual(ids(catalog), [...published, id], `${id}: arena entra sozinha no fim`);
-    assert.equal(catalog.index, published.length);
-  }
-  assert.equal(devCatalog(LEVELS, 'nada'), null);
-  assert.deepEqual(LEVELS.map((def) => def.id), published, 'a campanha publicada não muda');
 });
 
 test('fase 7: os petiscos ficam em lugares livres e alcançáveis pela Radhija', () => {
@@ -207,7 +192,7 @@ test('fase 7: os petiscos ficam em lugares livres e alcançáveis pela Radhija',
 });
 
 test('fase 7: só a Radhija cabe no túnel; ela sai enlameada, lenta e sem arrancada', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   // a Rhaenyra empaca na boca do túnel
   select(h, 'rhaenyra');
   h.teleport('rhaenyra', L.TUNNEL.x0 - 0.6, L.TUNNEL.z, Math.PI / 2);
@@ -249,7 +234,7 @@ test('fase 7: só a Radhija cabe no túnel; ela sai enlameada, lenta e sem arran
 });
 
 test('fase 7: o trinco do portão só abre por dentro', async (t) => {
-  const h = await prototype(t, 'stage=inside');
+  const h = await campaign(t, 'stage=inside');
   // de fora, a Rhaenyra não alcança
   select(h, 'rhaenyra');
   h.teleport('rhaenyra', L.LATCH.x, L.FENCE.south + 0.35, Math.PI);
@@ -277,7 +262,7 @@ test('fase 7: o trinco do portão só abre por dentro', async (t) => {
 });
 
 test('fase 7: cinco lambidas tiram a lama em placas; ela sacode e a arrancada volta', async (t) => {
-  const h = await prototype(t, 'stage=muddy&dog=rhaenyra');
+  const h = await campaign(t, 'stage=muddy&dog=rhaenyra');
   assert.equal(h.game.activeDog, 'rhaenyra');
   const rad = h.ctrls.radhija;
   h.teleport('rhaenyra', rad.x - 0.75, rad.z, Math.PI / 2);
@@ -334,7 +319,7 @@ test('fase 7: cinco lambidas tiram a lama em placas; ela sacode e a arrancada vo
 });
 
 test('fase 7: com a cerca ou o portão fechado no meio, a Rhaenyra não lambe a irmã', async (t) => {
-  const h = await prototype(t, 'stage=inside&dog=rhaenyra');
+  const h = await campaign(t, 'stage=inside&dog=rhaenyra');
   const F = L.FENCE;
   // pela cerca e pelo portão fechado: as duas a 0,8 m, dentro do alcance da lambida
   for (const x of [0.5, (L.GATE.hinge.x + L.GATE.latchPost.x) / 2]) {
@@ -355,7 +340,7 @@ test('fase 7: com a cerca ou o portão fechado no meio, a Rhaenyra não lambe a 
 });
 
 test('fase 7: pegar a bolinha no meio da lambida encerra o Lambe-Lambe', async (t) => {
-  const h = await prototype(t, 'stage=muddy&dog=rhaenyra');
+  const h = await campaign(t, 'stage=muddy&dog=rhaenyra');
   // a bolinha fica entre as duas, ao alcance da Rhaenyra
   h.teleport('radhija', L.BALL.x, L.BALL.z - 0.36, Math.PI / 2);
   h.teleport('rhaenyra', L.BALL.x, L.BALL.z + 0.3, Math.PI);
@@ -376,7 +361,7 @@ test('fase 7: pegar a bolinha no meio da lambida encerra o Lambe-Lambe', async (
 });
 
 test('fase 7: no escorregador, andando, enlameada ou a Rhaenyra escorregam de volta', async (t) => {
-  const h = await prototype(t, 'stage=muddy');
+  const h = await campaign(t, 'stage=muddy');
   select(h, 'radhija');
   h.game.setStay('rhaenyra', true);
   h.teleport('radhija', L.SLIDE_ENTRY.minX - 0.3, L.SLIDE.z, Math.PI / 2);
@@ -412,7 +397,7 @@ test('fase 7: no escorregador, andando, enlameada ou a Rhaenyra escorregam de vo
 });
 
 test('fase 7: limpa, a arrancada sobe a rampa; lá em cima pega o frisbee e desce de barriga', async (t) => {
-  const h = await prototype(t, 'stage=clean');
+  const h = await campaign(t, 'stage=clean');
   assert.equal(h.game.activeDog, 'radhija');
   h.game.setStay('rhaenyra', true);
   h.teleport('radhija', L.SLIDE_ENTRY.minX - 0.25, L.SLIDE.z, Math.PI / 2);
@@ -452,7 +437,7 @@ test('fase 7: limpa, a arrancada sobe a rampa; lá em cima pega o frisbee e desc
 });
 
 test('fase 7: pausa congela a descida e reiniciar devolve tudo', async (t) => {
-  const h = await prototype(t, 'stage=clean');
+  const h = await campaign(t, 'stage=clean');
   h.game.setStay('rhaenyra', true);
   h.teleport('radhija', L.SLIDE_ENTRY.minX - 0.25, L.SLIDE.z, Math.PI / 2);
   h.hold([1, 0], ['ShiftLeft']);
@@ -481,7 +466,7 @@ test('fase 7: pausa congela a descida e reiniciar devolve tudo', async (t) => {
 });
 
 test('fase 7: todas as etapas de depuração montam um estado coerente', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   for (const st of STAGES) {
     const who = h.puzzle.jumpToStage(st);
     assert.ok(who === 'radhija' || who === 'rhaenyra', `${st}: devolve a dog ativa`);
@@ -500,7 +485,7 @@ test('fase 7: todas as etapas de depuração montam um estado coerente', async (
 });
 
 test('fase 7: com o portão aberto, a companheira volta pelo portão e não se suja no túnel', async (t) => {
-  const h = await prototype(t, 'stage=clean&dog=rhaenyra');
+  const h = await campaign(t, 'stage=clean&dog=rhaenyra');
   const L2 = h.layout;
   const ctx = { size: 'small', r: L2.DOGS.radhija.radius, flags: h.puzzle.navFlags() };
   // como no jogo: o caminho da companheira é planejado no modo companheira
@@ -517,7 +502,7 @@ test('fase 7: com o portão aberto, a companheira volta pelo portão e não se s
 });
 
 test('fase 7: partida completa andando — túnel, trinco, Lambe-Lambe, escorregador e piquenique', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const T = L.TUNNEL;
   // 1. a Radhija atravessa o túnel (a Rhaenyra fica esperando no gramado)
   select(h, 'radhija');
@@ -557,4 +542,10 @@ test('fase 7: partida completa andando — túnel, trinco, Lambe-Lambe, escorreg
   assert.deepEqual(i.place, { ball: 'picnic', frisbee: 'picnic' });
   assert.equal(h.log('picnic:deliver').length, 2);
   assert.equal(h.log('mud:clean').length, 1);
+  // a última fase da campanha: a vitória não oferece "Próxima fase"
+  waitFor(h, (s) => s.state === 'victory', 'tela de vitória', 12);
+  const vic = h.log('victory');
+  assert.equal(vic.length, 1);
+  assert.equal(vic[0].levelId, 'fase7');
+  assert.equal(vic[0].hasNext, false);
 });
