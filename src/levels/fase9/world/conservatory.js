@@ -139,7 +139,7 @@ export function buildConservatory({ root, layout }) {
   grp.name = 'jardim-de-inverno';
   POTS.forEach((p, i) => grp.add(potPlant(p.x, p.z, p.r * 0.85, i === 0 ? 'fern' : 'monstera', 31 + i)));
   // vasinhos pequenos no peitoril das vidraças (só enfeite, perto do vidro)
-  for (const [x, k] of [[4.85, 'fern'], [7.4, 'monstera']]) {
+  for (const [x, k] of /** @type {[number, string][]} */ ([[4.85, 'fern'], [7.4, 'monstera']])) {
     const small = potPlant(x, B.minZ + 0.18, 0.09, k, 70 + x);
     small.scale.setScalar(0.55);
     small.position.y = 0.0;

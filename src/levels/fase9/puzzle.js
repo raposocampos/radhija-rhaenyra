@@ -116,7 +116,7 @@ export function createPuzzle(ctx) {
   const glasses = createCarryItem({ obj: props.glasses.object, dogs, scene: root, name: 'glasses' });
   const book = createCarryItem({ obj: props.book.object, dogs, scene: root, name: 'book', carrier: 'large' });
   // o gato deitado na almofada do hall é sólido (as dogs não passam por cima dele)
-  const catCol = world.addDynamic({ id: 'gato', kind: 'npc', shape: 'circle', x: CAT.bed.x, z: CAT.bed.z, r: 0.2, enabled: false });
+  const catCol = world.addDynamic({ id: 'gato', kind: 'npc', shape: 'circle', x: CAT.bed.x, z: CAT.bed.z, r: 0.2, enabled: /** @type {boolean} */ (false) });
 
   const fresh = () => ({
     done: false, disposed: false, objKey: '',
@@ -357,7 +357,7 @@ export function createPuzzle(ctx) {
     id: 'bichano', x: CAT.top.x, z: CAT.top.z, r: CAT.smellR,
     onSmell: (cloud) => {
       if (S.cat !== 'asleep') return;
-      if (cloud.duct === duct) {
+      if (/** @type {any} */ (cloud).duct === duct) {
         cloud.age = cloud.life; // a grade solta o cheiro bem em cima dele (o cenário desenha a baforada)
         props.duct.outletPuff();
         wakeCat();
@@ -517,7 +517,7 @@ export function createPuzzle(ctx) {
     props.duct.setDamper(damper.on);
     // baforadas viajando no duto (o cenário desenha um brilho correndo pelo cano)
     const puffs = [];
-    for (const cl of scent.clouds) if (cl.state === 'duct' && cl.duct === duct) puffs.push(clamp01(cl.ductT / DUCT.travel));
+    for (const cl of /** @type {any[]} */ (scent.clouds)) if (cl.state === 'duct' && cl.duct === duct) puffs.push(clamp01(cl.ductT / DUCT.travel));
     props.duct.setPuffs(puffs);
     if (puffs.length && !S.ductHint) { S.ductHint = true; hints.now('duct', 2.8, 0); }
     if (S.cat === 'asleep') {

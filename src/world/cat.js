@@ -210,6 +210,7 @@ export function createCat() {
     let bodyY = 0.16, bodyPitch = 0, bodyRoll = 0, headPitch = 0, headYaw = 0, headRoll = 0, neckPitch = 0;
     let eyesOpen = 1, earsBack = 0;
     let tailRaise = 0.4, tailCurl = 0.1, tailSway = 0.3;
+    /** @type {(leg: { front: boolean }, i: number) => number[]} */
     let legFn = () => [0, 0];
     const breathe = Math.sin(t * 2.1) * 0.004;
     if (mode === 'sleep' || (mode === 'sit' && S.sitT > 2.2)) {

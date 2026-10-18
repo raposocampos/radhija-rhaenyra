@@ -112,7 +112,7 @@ function buildDesk(root, D) {
   const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.09, 12, 1, true), stdMat('#7a2a28', { roughness: 0.6, side: THREE.DoubleSide }));
   cup.position.set(-0.18, D.h + 0.045, -0.5);
   grp.add(cup);
-  for (const [dx, c] of [[-0.01, '#e8c040'], [0.012, '#3f6f8a'], [0.0, '#d94a3a']]) {
+  for (const [dx, c] of /** @type {[number, string][]} */ ([[-0.01, '#e8c040'], [0.012, '#3f6f8a'], [0.0, '#d94a3a']])) {
     const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.15, 6), stdMat(c, { roughness: 0.4 }));
     pen.position.set(-0.18 + dx, D.h + 0.1, -0.5 + dx);
     pen.rotation.z = dx * 6;

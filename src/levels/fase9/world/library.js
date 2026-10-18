@@ -198,7 +198,7 @@ function photoTexture() {
   return canvasTexture(128, 96, (g, w, h) => {
     g.fillStyle = '#cfe0e8'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#9cc48a'; g.fillRect(0, h * 0.62, w, h);
-    for (const [x, c] of [[44, '#f3e2c4'], [84, '#fbfbf6']]) {
+    for (const [x, c] of /** @type {[number, string][]} */ ([[44, '#f3e2c4'], [84, '#fbfbf6']])) {
       g.fillStyle = c;
       g.beginPath(); g.ellipse(x, 58, 16, 12, 0, 0, TAU); g.fill();
       g.beginPath(); g.arc(x - 10, 40, 11, 0, TAU); g.fill();
