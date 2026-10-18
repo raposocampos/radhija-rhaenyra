@@ -338,6 +338,7 @@ export function buildRailway(root, track) {
   // a catraca só anda para a frente: cada rota nova soma um terço de volta ao alvo
   const ORDER = ROUTE_ORDER;
   const STEP = (2 * Math.PI) / 3;
+  /** @type {{ route: import('../../../types').Fase6Route, turns: number, angle: number, lever: number }} */
   const sw = { route: 'loop', turns: 0, angle: 0, lever: 0.5 };
   /** @type {import('../../../types').Fase6Props['junction']} */
   const junction = {
