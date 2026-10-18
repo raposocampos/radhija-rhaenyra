@@ -15,6 +15,7 @@ import { createDebugDraw } from './debugDraw.js';
 import { applySeeThroughTo } from '../world/seeThrough.js';
 import { createScentField } from './mechanics/scent.js';
 import { createScentView } from '../fx/scentView.js';
+import { createExtras } from './extras.js';
 
 const NAMES = ['radhija', 'rhaenyra'];
 const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
@@ -81,11 +82,13 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0 };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
   const locks = { radhija: null, rhaenyra: null };
+  /** Extras (src/game/extras.js): criados com os controladores, refeitos a cada fase. */
+  let extras = null;
 
   /** @type {import('../types').GameState} */
   let state = 'loading';
@@ -468,11 +471,17 @@ export function createGame({ engine, dogs, levels, params }) {
     playTime += dt;
     barkCd = Math.max(0, barkCd - dt);
     jumpHintCd = Math.max(0, jumpHintCd - dt);
-    if (input.consume('KeyQ') && !puzzle.lockFor(activeDog)) switchDog();
+    if (input.consume('KeyQ') && !puzzle.lockFor(activeDog) && !extras.busy(activeDog)) switchDog();
     const A = ctrls[activeDog];
     const compName = other(activeDog);
     const C = ctrls[compName];
     if (input.consume('KeyF')) setStay(compName, !stay[compName]);
+    if (input.consume('KeyC')) {
+      extras.tryPoop(A, {
+        allTreats: puzzle.total > 0 && puzzle.collected >= puzzle.total,
+        free: !puzzle.lockFor(activeDog) && !lick.on && !bafo.aiming && !(bafo.blowT > 0),
+      });
+    }
 
     // Entrada relativa à câmera (analógico: velocidade proporcional à inclinação)
     const ax = input.axis();
@@ -488,7 +497,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const shift = input.shift();
     let action = 'none';
     let intent;
-    const lock = puzzle.lockFor(activeDog);
+    const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog);
     locks[activeDog] = lock;
     if (lock) {
       intent = { dx: 0, dz: 0, speed: 0, faceX: lock.faceX, faceZ: lock.faceZ };
@@ -591,7 +600,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
     world.setCompanionMode?.(true);
-    const compLock = puzzle.lockFor(compName);
+    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName);
     locks[compName] = compLock;
     const licked = lick.on && lick.target === compName;
     let ci;
@@ -636,10 +645,11 @@ export function createGame({ engine, dogs, levels, params }) {
 
     // Interações (E: interagir ou latir · X do controle: latir sempre)
     if (input.consume('KeyE') && !lock) {
-      if (!puzzle.interact(A)) bark(A);
+      if (!puzzle.interact(A) && !extras.interact(A, puzzle.navFlags?.() || {})) bark(A);
     }
     if (input.consume('Bark') && !lock) bark(A);
     const ev = puzzle.update(dt, { active: A, comp: C, ctrls, stay });
+    extras.update(dt);
     setLook(activeDog, lick.on && !lick.solo ? lick.point : puzzle.lookTarget(A));
     for (const n of NAMES) reactToScent(n, dt);
     if (ev === 'delivered') startCelebration();
@@ -648,6 +658,7 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- comemoração ----------
   const celebCam = engine.camera.clone();
   function startCelebration() {
+    extras?.cancel();
     for (const n of NAMES) setStay(n, false);
     setState('celebrating');
     celebrateT = 0;
@@ -754,6 +765,8 @@ export function createGame({ engine, dogs, levels, params }) {
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
       an.carrying = carries(n);
+      an.poopK = extras ? extras.poopK(n) : -1;
+      an.extra = extras ? extras.extraAnim(n) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       an.jump = W ? 0 : c.y;
       an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
@@ -841,6 +854,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
   function reset() {
     for (const n of NAMES) setStay(n, false, { silent: true });
+    extras?.reset();
     puzzle.reset();
     scent.reset();
     cancelBafo();
@@ -857,6 +871,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
   /** Pula para uma etapa da fase atual (depuração/testes). */
   function setStage(st, dogName) {
+    extras?.cancel();
     const who = puzzle.jumpToStage?.(st, { who: dogName || (dogParam === 'radhija' || dogParam === 'rhaenyra' ? dogParam : undefined) });
     if (!who) return false;
     activeDog = who;
@@ -930,6 +945,8 @@ export function createGame({ engine, dogs, levels, params }) {
           };
         } else cam.configure(L);
         if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
+        if (!extras) extras = createExtras({ emit, ctrls, carries, camera: engine.camera, resolve: (x, z, r, size) => world.resolve(x, z, r, size) });
+        extras.setLevel({ spots: def.extras || [], root, hooks: built.extras || {} });
         for (const n of NAMES) setStay(n, false, { silent: true });
         puzzle = def.createPuzzle({
           layout: L, props: built.props, world, nav, scent, dogs, ctrls, emit, cam, root, place, params, engine,
@@ -1090,6 +1107,7 @@ export function createGame({ engine, dogs, levels, params }) {
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
       bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent?.info() ?? null,
       lick: { on: lick.on, stage: lick.on ? lick.stage : null, solo: lick.solo, target: lick.target, strokes: lick.strokes, phase: lick.on ? +lick.phase.toFixed(3) : null },
+      extras: extras?.info() ?? null,
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam?.mode ?? null, shot: cam?.shotActive ?? false },
     };
   }

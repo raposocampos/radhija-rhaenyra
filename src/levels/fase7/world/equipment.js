@@ -221,14 +221,34 @@ function buildSwings(group, layout) {
     pivot.add(seat);
     droplets(seat, 10, (r) => ({ x: (r() - 0.5) * 0.36, y: 0.014 + 0.0, z: (r() - 0.5) * 0.12 }), 9 + i);
     g.add(pivot);
-    seats.push({ pivot, ph: i * 2.1 });
+    seats.push({ pivot, ph: i * 2.1, ride: /** @type {number | null} */ (null) });
   });
   shadowed(g);
   group.add(g);
+  // do pivô ao topo do assento (onde uma dog senta)
+  const L = S.height - 0.45 + 0.02 - 0.0125;
   return {
     object: g,
     update(t) {
-      for (const s of seats) s.pivot.rotation.z = Math.sin(t * 1.1 + s.ph) * 0.035 + Math.sin(t * 0.37 + s.ph) * 0.02;
+      for (const s of seats) {
+        if (s.ride != null) {
+          s.pivot.rotation.x = s.ride;
+          s.pivot.rotation.z = 0;
+        } else {
+          s.pivot.rotation.x *= 0.92; // depois de uma volta, o assento acalma
+          s.pivot.rotation.z = Math.sin(t * 1.1 + s.ph) * 0.035 + Math.sin(t * 0.37 + s.ph) * 0.02;
+        }
+      }
+    },
+    /** Gancho dos extras (src/game/extras.js): balançar um assento e onde a dog senta nele (virada para o sul). */
+    ride: {
+      /** @param {number} i @param {number | null} angle */
+      setAngle(i, angle) { if (seats[i]) seats[i].ride = angle; },
+      /** @param {number} i @param {number} angle */
+      seatAt(i, angle) {
+        const py = S.height - 0.02;
+        return { x: S.x + (S.seats[i] ?? 0), y: py - L * Math.cos(angle), z: S.z - L * Math.sin(angle), faceYaw: 0 };
+      },
     },
   };
 }
@@ -394,6 +414,7 @@ export function buildEquipment(root, layout) {
   return {
     group,
     seeThrough: [slide.object, swings.object],
+    extras: { swing: swings.ride },
     update(dt, t) {
       slide.update(t);
       swings.update(t);

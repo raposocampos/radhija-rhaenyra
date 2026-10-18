@@ -1,6 +1,7 @@
 // FASE 4 · Operação Patinho — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
 // Primeira fase do superbafo da Radhija. Cenário: ./world/index.js (sob demanda). Puzzle: ./puzzle.js.
 import layout from './layout.js';
+import extras from './extras.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';
 
@@ -24,4 +25,5 @@ export default {
   lighting,
   load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
   createPuzzle,
+  extras,
 };

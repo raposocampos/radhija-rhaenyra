@@ -1,6 +1,7 @@
 // FASE 1 · Operação Cenoura — definição da fase (formato: tipo LevelDef, docs/ARQUITETURA.md §4.1).
 // Cenário: ./world.js (sob demanda). Puzzle: ./puzzle.js.
 import layout from './layout.js';
+import extras from './extras.js';
 import { createPuzzle } from './puzzle.js';
 import { LIGHTING_DEFAULT } from '../../core/engine.js';
 
@@ -25,4 +26,5 @@ export default {
   // Cenário fora do pacote inicial: baixado só quando a fase carrega.
   load: async () => ({ build: (await import('./world.js')).buildWorld }),
   createPuzzle,
+  extras,
 };

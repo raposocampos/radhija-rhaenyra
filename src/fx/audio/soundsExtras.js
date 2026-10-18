@@ -1,0 +1,89 @@
+// Sons das animações escondidas (src/game/extras.js). Cada som: (G, dest, t, p, opts) → duração (s).
+// Entram na biblioteca em ./sounds.js; o feedback toca nos eventos extra:*. Fofos e curtinhos.
+import { mtof, nz, tone, fm, marimba, drips, boing } from './synth.js';
+
+export const SOUNDS_EXTRAS = {
+  // força: "hmm!" fechadinho, um pouco mais agudo a cada empurrão (opts.n = 0, 1, 2)
+  extraStrain(G, o, t, p, opts = {}) {
+    const n = opts.n ?? 0;
+    const f = (190 + n * 22) * p;
+    tone(G, o, { type: 'triangle', f, to: f * 1.08, t, a: 0.05, hold: 0.22, d: 0.12, peak: 0.035, vib: 7, vibRate: 9 });
+    nz(G, o, { t, a: 0.05, hold: 0.2, d: 0.1, peak: 0.012, type: 'bandpass', f: 520 * p, q: 6 });
+    return 0.45;
+  },
+  // o cocô saindo: "ploc" de desenho
+  extraPlop(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 620 * p, to: 140 * p, t, a: 0.002, d: 0.13, peak: 0.12 });
+    nz(G, o, { t: t + 0.01, a: 0.002, d: 0.06, peak: 0.05, type: 'lowpass', f: 700 * p, q: 1 });
+    return 0.3;
+  },
+  // alívio: suspiro "aaah" e um plim de estrelinha
+  extraRelief(G, o, t, p) {
+    nz(G, o, { t, a: 0.08, hold: 0.25, d: 0.35, peak: 0.045, type: 'bandpass', f: 900 * p, to: 600 * p, toT: 0.6, q: 1.4, buf: G.pink });
+    tone(G, o, { type: 'sine', f: 330 * p, to: 250 * p, t, a: 0.08, hold: 0.2, d: 0.3, peak: 0.02 });
+    fm(G, o, { f: mtof(88) * p, t: t + 0.32, d: 0.7, peak: 0.05, ratio: 3.5, index: 1.2, idxD: 0.12 });
+    marimba(G, o, mtof(95) * p, t + 0.42, 0.04, 0.5);
+    return 1.1;
+  },
+  // patada de cavar: terra raspando
+  extraScratch(G, o, t, p) {
+    nz(G, o, { t, a: 0.003, d: 0.09, peak: 0.07, type: 'bandpass', f: 1300 * p, to: 700 * p, toT: 0.09, q: 1.2 });
+    return 0.15;
+  },
+  // lambida de água
+  extraLap(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 900 * p, to: 1500 * p, t, a: 0.002, d: 0.05, peak: 0.04 });
+    drips(G, o, t + 0.02, 1, 0.02, 0.025, 1800 * p, 2600 * p);
+    return 0.12;
+  },
+  // mastigando ração: crec-crec
+  extraCrunch(G, o, t, p) {
+    for (let i = 0; i < 3; i++) nz(G, o, { t: t + i * 0.035, a: 0.001, d: 0.025, peak: 0.06, type: 'bandpass', f: (2400 + i * 300) * p, q: 2.5 });
+    return 0.16;
+  },
+  // cavando na areia
+  extraDig(G, o, t, p) {
+    nz(G, o, { t, a: 0.004, d: 0.12, peak: 0.07, type: 'lowpass', f: 1100 * p, to: 600 * p, toT: 0.12, q: 0.8, buf: G.pink });
+    return 0.18;
+  },
+  // farejando: três fungadinhas
+  extraSniff(G, o, t, p) {
+    for (let i = 0; i < 3; i++) nz(G, o, { t: t + i * 0.13, a: 0.01, d: 0.06, peak: 0.035, type: 'highpass', f: 2200 * p, q: 0.7 });
+    return 0.45;
+  },
+  // espirro fofo: "a-a-tchim!"
+  extraSneeze(G, o, t, p) {
+    tone(G, o, { type: 'triangle', f: 520 * p, to: 760 * p, t: t - 0.12, a: 0.04, d: 0.08, peak: 0.02 });
+    nz(G, o, { t, a: 0.002, d: 0.14, peak: 0.13, type: 'bandpass', f: 3200 * p, to: 1600 * p, toT: 0.14, q: 1.4 });
+    tone(G, o, { type: 'square', f: 880 * p, to: 440 * p, t, a: 0.002, d: 0.08, peak: 0.015 });
+    return 0.35;
+  },
+  // focinhada na bola: "boop" de borracha
+  extraBoop(G, o, t, p) {
+    boing(G, o, t, p, 520, 0.06, 0.22);
+    return 0.3;
+  },
+  // rolando na roupa: farfalhar
+  extraRustle(G, o, t, p) {
+    nz(G, o, { t, a: 0.05, hold: 0.12, d: 0.18, peak: 0.05, type: 'bandpass', f: 800 * p, to: 1300 * p, toT: 0.3, q: 0.9, buf: G.pink });
+    return 0.4;
+  },
+  // corrente do balanço rangendo
+  extraCreak(G, o, t, p) {
+    nz(G, o, { t, a: 0.03, hold: 0.08, d: 0.12, peak: 0.03, type: 'bandpass', f: 1700 * p, to: 2100 * p, toT: 0.2, q: 9 });
+    tone(G, o, { type: 'sine', f: 1100 * p, to: 1250 * p, t, a: 0.03, d: 0.18, peak: 0.008 });
+    return 0.3;
+  },
+};
+export const MIN_GAP_EXTRAS = {
+  extraStrain: 0.2, extraPlop: 0.2, extraRelief: 0.5, extraScratch: 0.08, extraLap: 0.08, extraCrunch: 0.1, extraDig: 0.1,
+  extraSniff: 0.3, extraSneeze: 0.3, extraBoop: 0.2, extraRustle: 0.2, extraCreak: 0.25,
+};
+export const PITCH_VAR_EXTRAS = {
+  extraStrain: 0.02, extraPlop: 0.05, extraRelief: 0.02, extraScratch: 0.08, extraLap: 0.1, extraCrunch: 0.08, extraDig: 0.08,
+  extraSniff: 0.06, extraSneeze: 0.04, extraBoop: 0.06, extraRustle: 0.08, extraCreak: 0.06,
+};
+export const VERB_EXTRAS = {
+  extraStrain: 0.05, extraPlop: 0.08, extraRelief: 0.2, extraScratch: 0.04, extraLap: 0.06, extraCrunch: 0.04, extraDig: 0.04,
+  extraSniff: 0.04, extraSneeze: 0.08, extraBoop: 0.1, extraRustle: 0.05, extraCreak: 0.1,
+};

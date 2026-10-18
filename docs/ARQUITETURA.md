@@ -385,6 +385,20 @@ modelo (`dog.setMud(k, pontosLimpos)`, `dog.setShine(k)`).
 **Fica / Vem**: F alterna a companheira entre seguir e ficar sentada onde está. Quem vira ativa perde o "Fica";
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.
 
+**Extras** (escondidos de propósito; não remover): pedido do responsável pelo projeto, que conta o segredo a quem
+quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquista ou texto, e nada no README
+(`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
+- **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
+  todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
+  boca. A sequência dura `POOP_TIME` s, e as poses vêm de `poopK` em `dogAnimation.js`: agacha, faz força, solta o
+  cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã por perto vira a cara.
+- **Animações do cenário**: `extras` na definição da fase (`src/levels/faseN/extras.js`, tipo `ExtraSpot`). Com o E
+  perto e de frente para o ponto, quando a fase não usou o E, a dog bebe, come, cava, cheira e espirra, focinha a
+  bola, rola, balança ou leva um esguicho. Valem sempre. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
+  7 e a bolinha da fase 6.
+- Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
+  `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
+
 ## 7. Personagens
 
 **Configuração** (`src/dogs/config.js`): `DOG_CONFIG` contém os atributos comuns, sem coordenadas,

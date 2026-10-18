@@ -205,6 +205,7 @@ export function createFeedback(opts) {
     audio.play(name, { pan: pan(x, z), ...o, volume: (o.volume ?? 1) * near(x, z) });
   };
   const dogPos = (name) => dogs[name]?.object.position;
+  const _fxv = new THREE.Vector3();
   /** Topo da cabeça da dog (markerAnchor) ou estimativa. */
   function headPos(name, out) {
     const d = dogs[name];
@@ -501,6 +502,57 @@ export function createFeedback(opts) {
       particles.sparkle({ x, y: y + 0.05, z }, { count: 10, radius: 0.18, size: 0.9, rise: 0.6, color: '#FFE7A8' });
       particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.15, life: 0.7, color: '#FFE3A6', opacity: 0.5, width: 0.08 });
     }
+  });
+  // extras escondidos (src/game/extras.js): o cocô e as animações do cenário
+  events.on('extra:strain', ({ x, z, n = 0 }) => sfx('extraStrain', x, z, { n }));
+  events.on('extra:plop', ({ x, z }) => {
+    sfx('extraPlop', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.6, alpha: 0.3, strength: 0.3, color: '#C9B79A' });
+  });
+  events.on('extra:relief', ({ name, x, z }) => {
+    sfx('extraRelief', x, z);
+    const h = headPos(name, _fxv) || { x, y: 0.55, z };
+    particles.sparkle({ x: h.x, y: h.y + 0.12, z: h.z }, { count: 8, radius: 0.16, size: 0.85, rise: 0.6 });
+    later(0.3, () => particles.burst({ x: h.x, y: h.y + 0.18, z: h.z }, { kind: 'stars', count: 4, size: 0.6, speed: 0.5 }));
+  });
+  events.on('extra:scratch', ({ x, z, dirX = 0, dirZ = 0 }) => {
+    sfx('extraScratch', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.7, alpha: 0.5, dir: { x: dirX, z: dirZ }, strength: 1.1, spread: 0.05, color: '#8A6A48' });
+  });
+  events.on('extra:lap', ({ x, z, color = '#8fc8e8' }) => {
+    sfx('extraLap', x, z);
+    particles.splash({ x, y: 0.05, z }, { count: 2, size: 0.45, strength: 0.25, mist: 0, color });
+  });
+  events.on('extra:crunch', ({ x, z }) => sfx('extraCrunch', x, z));
+  events.on('extra:dig', ({ x, z, dirX = 0, dirZ = 0, color = '#E6CF98' }) => {
+    sfx('extraDig', x, z);
+    particles.dust({ x, y: 0.04, z }, { count: 6, size: 0.7, alpha: 0.6, dir: { x: dirX, z: dirZ }, strength: 1.2, spread: 0.06, color });
+  });
+  events.on('extra:sniff', ({ x, z }) => sfx('extraSniff', x, z));
+  events.on('extra:sneeze', ({ x, y = 0.35, z, color = '#FFD36B' }) => {
+    sfx('extraSneeze', x, z);
+    particles.dust({ x, y, z }, { count: 8, size: 0.7, alpha: 0.55, strength: 0.8, spread: 0.06, color: '#F7F3EA' });
+    particles.sparkle({ x, y: y + 0.05, z }, { count: 7, radius: 0.12, size: 0.55, rise: 0.5, color });
+  });
+  events.on('extra:nudge', ({ x, z }) => {
+    sfx('extraBoop', x, z);
+    later(0.1, () => sfx('ballRoll', x, z, { volume: 0.7 }));
+  });
+  events.on('extra:roll', ({ x, z }) => {
+    sfx('extraRustle', x, z);
+    particles.dust({ x, y: 0.15, z }, { count: 3, size: 0.6, alpha: 0.35, strength: 0.4, color: '#F2E6D2' });
+  });
+  events.on('extra:swing', ({ x, z }) => sfx('extraCreak', x, z));
+  events.on('extra:hop', ({ x, z }) => sfx('jump', x, z));
+  events.on('extra:spurt', ({ x, y = 0.3, z, dirX = 0, dirZ = 0 }) => {
+    sfx('splash', x, z, { volume: 0.7 });
+    particles.splash({ x, y, z }, { count: 10, size: 0.7, strength: 0.6, mist: 4, dir: { x: dirX * 0.6, z: dirZ * 0.6 } });
+  });
+  events.on('extra:shake', ({ name, x, z }) => {
+    sfx('shake', x, z);
+    const h = name === 'rhaenyra' ? 0.42 : 0.32;
+    particles.drops({ x, y: h, z }, { count: 12, radius: 0.15, speed: 0.9 });
+    later(0.25, () => particles.drops({ x, y: h, z }, { count: 8, radius: 0.15, speed: 0.7 }));
   });
   events.on('wall:tick', ({ x, z, left }) => sfx('buttonTick', x, z, { left }));
   events.on('wall:timeout', ({ x, z }) => sfx('buttonTimeout', x, z));
