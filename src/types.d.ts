@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -96,6 +96,9 @@ export interface DogStats {
   jumpTime?: number;
   jumpSpeed?: number;
   jumpCooldown?: number;
+  /** Só a Rhaenyra: Lambe-Lambe — duração de cada lambida (s) e distância máxima até a irmã para começar (m). */
+  lickStroke?: number;
+  lickReach?: number;
   accel: number;
   decel: number;
   /** Giro máximo do corpo (rad/s). */
@@ -105,8 +108,11 @@ export interface DogStats {
   visual: { length: number; headTop: number; shoulder: number };
 }
 
-/** Aresta do grafo de navegação: [nóA, nóB, { requires }]. `requires`: 'small' | 'large' | flag do puzzle. */
-export type NavEdge = [string, string] | [string, string, { requires?: string }];
+/**
+ * Aresta do grafo de navegação: [nóA, nóB, { requires }]. `requires`: 'small' | 'large' | flag do puzzle, ou uma
+ * lista delas (todas precisam valer, ex.: ['small', 'tunnel']).
+ */
+export type NavEdge = [string, string] | [string, string, { requires?: string | string[] }];
 
 export interface Collectible { id: string; x: number; z: number; hint?: string }
 
@@ -407,7 +413,25 @@ export interface Objective {
 }
 
 /** Trava a entrada da dog (ex.: puxando a corda, girando o registro). */
-export interface InputLock { action: string; faceX: number; faceZ: number }
+export interface InputLock {
+  action: string;
+  faceX: number;
+  faceZ: number;
+  /** Pose roteirizada: a fase move a dog (x, z, yaw, y, animSpeed) e o núcleo não chama steer/integrate. */
+  drive?: boolean;
+  /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
+  slope?: number;
+}
+
+/** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick). */
+export interface LickInfo {
+  target: DogName;
+  /** Número da lambida nesta sessão (1, 2…). */
+  stroke: number;
+  /** Ponto lambido no mundo (y = altura) e no referencial da irmã (z para a frente, x para a esquerda dela). */
+  point: XYZ;
+  local: XYZ;
+}
 
 /** O que createPuzzle(ctx) devolve. Campos com ? são opcionais. */
 export interface Puzzle {
@@ -449,6 +473,18 @@ export interface Puzzle {
   dispose?(): void;
   /** Latido da dog ativa (ex.: atrair a gansa). */
   onBark?(ctrl: DogController): void;
+  /** Multiplicador da velocidade de andar (ex.: 0,5 enlameada). Vale para a ativa e para a companheira. */
+  speedScale?(ctrl: DogController): number;
+  /** false impede a arrancada (Shift) desta dog; o núcleo emite dog:dashBlocked e chama onDashBlocked. */
+  canDash?(ctrl: DogController): boolean;
+  onDashBlocked?(ctrl: DogController): void;
+  /**
+   * Lambe-Lambe: cada lambida que chega à irmã. Declarar este método diz ao núcleo que a fase dá um efeito às
+   * lambidas (e cuida das dicas). Devolva { stop: true } para encerrar depois desta lambida.
+   */
+  onLick?(ctrl: DogController, lick: LickInfo): { stop?: boolean } | null | void;
+  /** R / L2 com a Rhaenyra longe da irmã, numa fase que declarou onLick (para a dica da fase). */
+  onLickMiss?(ctrl: DogController): void;
   [k: string]: any;
 }
 
@@ -610,6 +646,21 @@ export interface Fase6Props extends LevelProps {
   collectibles: CollectibleProp[];
   reset(): void;
 }
+/** Lambe-Lambe na Pracinha (fase de desenvolvimento em DEV_LEVELS): os dois objetos do piquenique. */
+export type Fase7Thing = 'ball' | 'frisbee';
+export interface Fase7Props extends LevelProps {
+  /** Portão do parquinho: pivô na dobradiça, folha ao longo de -Z local (yaw = GATE.closedYaw…openYaw). */
+  gate: GateProp;
+  /** Trinco do lado de dentro do portão: setTurn(0..1) = destravando. */
+  latch: PropBase & { setTurn(k: number): void };
+  /** Bolinha no chão do parquinho e frisbee no deque do escorregador. */
+  ball: ItemProp;
+  frisbee: ItemProp;
+  /** Toalha de piquenique: spot(objeto) = onde ele fica (o puzzle prende o objeto ali). */
+  goal: PropBase & HighlightProp & { spot(thing: Fase7Thing): THREE.Object3D };
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
 export interface PigeonPose {
   x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean;
   /** Progresso 0..1 para desacelerar o pouso; null volta à animação livre. */
@@ -623,7 +674,7 @@ export interface PigeonPose {
 /** Ação de animação pedida a cada quadro (anim.action). */
 export type DogAction =
   | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled' | 'jump'
-  | 'bafoAim' | 'bafo' | 'proud' | 'yuck';
+  | 'bafoAim' | 'bafo' | 'proud' | 'yuck' | 'lick' | 'licked' | 'slide';
 
 export interface DogAnim {
   /** Velocidade real (m/s). */
@@ -638,6 +689,14 @@ export interface DogAnim {
   jump?: number;
   /** Progresso do pulo 0..1 (decolagem → pouso); −1 = no chão. */
   airK?: number;
+  /** Lambe-Lambe: fase da lambida atual 0..1 (contato em 0,5) para quem lambe e para quem é lambida; −1 = sem. */
+  lickPhase?: number;
+  /** Lado da lambida (±1, alterna a cada uma: a cabeça balança). */
+  lickSide?: number;
+  /** Lambidinha no próprio focinho (ninguém por perto). */
+  lickSolo?: boolean;
+  /** Inclinação do corpo inteiro (rad, + = focinho para cima). */
+  slope?: number;
 }
 
 /** Cachorrinha procedural (createDog em src/dogs/dog.js). */
@@ -652,11 +711,20 @@ export interface DogModel {
   onFootstep: ((foot: number) => void) | null;
   update(dt: number, anim?: DogAnim): void;
   triggerBark(): void;
-  /** Força a pose de boca ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear') ou null para detectar pelo item. */
+  /** Força a pose de boca ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee') ou null para detectar pelo item. */
   setCarryPose(kind: ItemKind | null): void;
   readonly carryKind: ItemKind;
   /** Pelo molhado 0..1. */
   setWet(k: number): void;
+  /**
+   * Lama 0..1 (manchas que somem em placas conforme k cai) e pontos já limpos no referencial da dog
+   * ({ x, y, z, r }, onde a irmã lambeu). Opcional: os dublês dos testes não desenham lama.
+   */
+  setMud?(k: number, clean?: (XYZ & { r: number })[]): void;
+  /** Brilho de pelo limpinho 0..1 (some sozinho no feedback). */
+  setShine?(k: number): void;
+  /** Lama atual (0..1), para pegadas e respingos. */
+  readonly mud?: number;
   stats?: any;
   bones?: THREE.Bone[];
   skeleton?: THREE.Skeleton;
@@ -686,6 +754,7 @@ declare global {
     __f4Timings?: any;
     __f5Timings?: any;
     __f6Timings?: any;
+    __f7Timings?: any;
     __envTimings?: any;
     webkitAudioContext?: typeof AudioContext;
   }

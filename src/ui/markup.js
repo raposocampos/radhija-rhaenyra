@@ -11,7 +11,7 @@ export const DOG_INFO = {
   rhaenyra: { name: 'Rhaenyra', trait: 'forte' },
 };
 export const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
-export const ITEM_NOUN = { carrot: 'a cenoura', ball: 'a bolinha', slipper: 'a pantufa', duck: 'o patinho', bear: 'o ursinho' };
+export const ITEM_NOUN = { carrot: 'a cenoura', ball: 'a bolinha', slipper: 'a pantufa', duck: 'o patinho', bear: 'o ursinho', frisbee: 'o frisbee' };
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -116,6 +116,7 @@ export const CONTROLS = [
   ['Latir', null, ['X']],
   ['Pular (Rhaenyra)', 'Space', ['A']],
   ['Superbafo (Radhija): segure e solte', 'R', ['LT']],
+  ['Lambe-Lambe (Rhaenyra): segure perto da irmã', 'R', ['LT']],
   ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT']],
   ['Trocar de cachorrinha', 'Q', ['LB']],
   ['Fica · Vem (companheira)', 'F', ['Y']],

@@ -19,9 +19,11 @@ const KNOWN_TIGHT_EDGES = new Set([
   'fase3:A_door-A_nookOut:large', // quina sul do cantinho
 ]);
 
-const sizesFor = (req) => (req === 'small' ? ['small'] : req === 'large' ? ['large'] : ['small', 'large']);
+/** Restrições de uma aresta como lista (`requires` pode ser uma só ou várias). */
+const reqs = (opt) => [].concat(opt?.requires ?? []);
+const sizesFor = (opt) => (reqs(opt).includes('small') ? ['small'] : reqs(opt).includes('large') ? ['large'] : ['small', 'large']);
 const radius = (L, size) => (size === 'small' ? L.DOGS.radhija.radius : L.DOGS.rhaenyra.radius);
-const allFlags = (L) => Object.fromEntries(L.NAV_EDGES.map((e) => e[2]?.requires).filter((r) => r && r !== 'small' && r !== 'large').map((f) => [f, true]));
+const allFlags = (L) => Object.fromEntries(L.NAV_EDGES.flatMap((e) => reqs(e[2])).filter((r) => r !== 'small' && r !== 'large').map((f) => [f, true]));
 
 for (const [id, L] of Object.entries(LAYOUTS)) {
   test(`${id}: nós de navegação dentro dos limites e livres de colisores`, () => {
@@ -37,12 +39,12 @@ for (const [id, L] of Object.entries(LAYOUTS)) {
     const world = createCollisionWorld(L);
     for (const [a, b, opt] of L.NAV_EDGES) {
       assert.ok(L.NAV_NODES[a] && L.NAV_NODES[b], `aresta ${a}-${b} cita nó inexistente`);
-      for (const size of sizesFor(opt?.requires)) {
+      for (const size of sizesFor(opt)) {
         const key = `${id}:${a}-${b}:${size}`;
         const A = L.NAV_NODES[a];
         const B = L.NAV_NODES[b];
         // arestas de pulo cruzam obstáculos puláveis de propósito: confere como quem está no ar
-        const clear = world.segmentClear(A.x, A.z, B.x, B.z, radius(L, size) * 0.9, size, { airborne: opt?.requires === 'jump' });
+        const clear = world.segmentClear(A.x, A.z, B.x, B.z, radius(L, size) * 0.9, size, { airborne: reqs(opt).includes('jump') });
         if (KNOWN_TIGHT_EDGES.has(key)) continue;
         assert.ok(clear, `aresta ${key} atravessa um colisor`);
       }
@@ -60,7 +62,7 @@ for (const [id, L] of Object.entries(LAYOUTS)) {
       assert.ok(near.length > 0, `nenhum nó visível do início (${size})`);
       const { dist } = nav.dijkstra([{ id: near[0].id, d: 0 }], ctx);
       // Nós que só se alcançam por arestas 'small' ficam fora para a Rhaenyra.
-      const onlySmall = new Set(Object.keys(L.NAV_NODES).filter((n) => L.NAV_EDGES.filter((e) => e[0] === n || e[1] === n).every((e) => e[2]?.requires === 'small')));
+      const onlySmall = new Set(Object.keys(L.NAV_NODES).filter((n) => L.NAV_EDGES.filter((e) => e[0] === n || e[1] === n).every((e) => reqs(e[2]).includes('small'))));
       for (const n of Object.keys(L.NAV_NODES)) {
         if (size === 'large' && onlySmall.has(n)) continue;
         assert.ok(Number.isFinite(dist.get(n)), `${n} inalcançável para ${size} com todas as flags`);

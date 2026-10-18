@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { DOG_CONFIG } from './config.js';
 import { buildDogGeometry } from './dogModel.js';
 import { createFurMaterial } from './furMaterial.js';
+import { MUD_GLSL, MAX_CLEAN, createMudUniforms } from './mudShader.js';
 import { createDogRig } from './dogRig.js';
 import { createDogFace } from './dogFace.js';
 import { createCarrySocket } from './carryPose.js';
@@ -46,18 +47,31 @@ export function createDog(kind) {
   });
   // "subsurface" barato: um pouco da cor base volta como emissão quente (pele clara não fica azulada na sombra)
   const wetU = { value: 0 }; // 0..1 molhada: pele mais escura e brilhante
+  // Lama e brilho de limpinha (mudShader.js): os mesmos uniforms na pele e no pelo.
+  const mudU = createMudUniforms();
   skinMat.onBeforeCompile = (sh) => {
     sh.uniforms.uWet = wetU;
+    Object.assign(sh.uniforms, mudU);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMudP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvMudP = position;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uWet;')
-      .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= mix(1.0, 0.7, uWet);')
+      .replace('#include <common>', `#include <common>\nuniform float uWet;\nvarying vec3 vMudP;\nfloat gMud;\n${MUD_GLSL}`)
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        diffuseColor.rgb *= mix(1.0, 0.7, uWet);
+        gMud = mudMask(vMudP);
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(MUD_WET, MUD_DRY, 0.3), gMud * 0.95);`,
+      )
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.36, gMud);')
       .replace(
         '#include <emissivemap_fragment>',
-        '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vec3(0.16, 0.12, 0.08) * (1.0 - 0.45 * uWet);',
+        '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * (vec3(0.16, 0.12, 0.08) * (1.0 - 0.45 * uWet) + 0.1 * uShine);',
       );
   };
-  skinMat.customProgramCacheKey = () => 'dogSkin_v2';
-  const furMat = createFurMaterial({ strandFreq: P.strandFreq / s, gravity: 0.32 });
+  skinMat.customProgramCacheKey = () => 'dogSkin_v3';
+  const furMat = createFurMaterial({ strandFreq: P.strandFreq / s, gravity: 0.32, mud: mudU });
   const bodyMesh = new THREE.SkinnedMesh(G.bodyGeo, skinMat);
   const earMesh = new THREE.SkinnedMesh(G.earGeo, skinMat);
   const furMesh = new THREE.SkinnedMesh(G.furGeo, furMat);
@@ -102,10 +116,15 @@ export function createDog(kind) {
   const shadowBase = { x: 0.3 * s, z: cfg.visual.length * 1.05 };
 
   // ------------------------------------------------------------------ animação
-  const { st, update } = createDogAnimation({
+  const { st, update: animate } = createDogAnimation({
     object, inner, cfg, s, rig, face, carry, furMat, shadow, shadowBase, markerAnchor,
     onFootstep: (i) => self.onFootstep?.(i),
   });
+  /** @param {number} dt @param {import('../types').DogAnim} [anim] */
+  const update = (dt, anim) => {
+    animate(dt, anim);
+    mudU.uTime.value = st.t;
+  };
 
   const self = {
     kind,
@@ -122,7 +141,7 @@ export function createDog(kind) {
     triggerBark() {
       st.bark = 0;
     },
-    /** Força a pose do item na boca: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | null (automático). */
+    /** Força a pose do item na boca: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | null (automático). */
     setCarryPose(kind) {
       carry.setForced(kind);
     },
@@ -136,6 +155,26 @@ export function createDog(kind) {
       skinMat.sheen = lerp(1.0, 0.35, st.wet);
       furMat.roughness = lerp(0.92, 0.5, st.wet);
     },
+    /**
+     * Lama 0..1 (some em placas conforme cai) e pontos já limpos { x, y, z, r } no referencial da dog
+     * (onde a irmã lambeu). O estado do jogo fica em src/game/mechanics/mud.js.
+     * @param {number} k @param {{ x: number, y: number, z: number, r: number }[]} [clean]
+     */
+    setMud(k, clean = []) {
+      st.mud = clamp(k || 0, 0, 1);
+      mudU.uMud.value = st.mud;
+      const last = clean.slice(-MAX_CLEAN); // os mais recentes
+      mudU.uClean.value.forEach((slot, i) => {
+        const c = last[i];
+        if (c) slot.set(c.x, c.y, c.z, c.r);
+        else slot.set(0, 0, 0, 0);
+      });
+    },
+    /** Brilho de pelo limpinho 0..1 (o feedback faz o brilho sumir aos poucos). */
+    setShine(k) {
+      mudU.uShine.value = clamp(k || 0, 0, 1);
+    },
+    get mud() { return st.mud; },
   };
 
   // pose inicial

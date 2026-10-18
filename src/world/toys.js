@@ -176,3 +176,37 @@ export function boneGeometry() {
   merged.scale(1, 0.62, 1);
   return merged;
 }
+
+/**
+ * Frisbee de plástico (≈ size de diâmetro), deitado com a base em y = 0: disco levemente abaulado, borda
+ * enrolada por baixo, anel branco e uma estrelinha no meio. A boca morde pela borda (carryPose 'frisbee').
+ * @param {number} [size]
+ */
+export function createFrisbee(size = 0.2) {
+  const R = size / 2;
+  const g = new THREE.Group();
+  g.name = 'frisbee';
+  g.userData.carryKind = 'frisbee';
+  const plastic = new THREE.MeshPhysicalMaterial({ color: '#f26b5b', roughness: 0.34, clearcoat: 0.7, clearcoatRoughness: 0.2, sheen: 0.15 });
+  const white = new THREE.MeshPhysicalMaterial({ color: '#fff4e2', roughness: 0.4, clearcoat: 0.4 });
+  const gold = new THREE.MeshPhysicalMaterial({ color: '#ffc94d', roughness: 0.35, clearcoat: 0.5 });
+  // perfil (raio, altura) do centro de cima, pela borda enrolada, até o centro de baixo
+  const prof = [[0, 0.15], [0.35, 0.145], [0.62, 0.13], [0.84, 0.105], [0.95, 0.08], [1.0, 0.05], [0.99, 0.015], [0.95, 0.0], [0.9, 0.012], [0.88, 0.05], [0.84, 0.085], [0.6, 0.11], [0.3, 0.12], [0, 0.122]];
+  const disc = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(Math.max(1e-4, r * R), y * R)), 48), plastic);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(R * 0.66, R * 0.035, 8, 48).rotateX(Math.PI / 2), white);
+  ring.scale.y = 0.4;
+  ring.position.y = R * 0.13;
+  // estrelinha de cinco pontas no centro
+  const star = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = (i % 2 ? 0.11 : 0.26) * R;
+    if (i) star.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    else star.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  const starMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(star, { depth: R * 0.02, bevelEnabled: false }).rotateX(-Math.PI / 2), gold);
+  starMesh.position.y = R * 0.148;
+  g.add(disc, ring, starMesh);
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.carryKind = 'frisbee'; } });
+  return g;
+}

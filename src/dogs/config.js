@@ -39,6 +39,10 @@ export const DOG_CONFIG = Object.freeze({
     jumpTime: 0.42,
     jumpSpeed: 3.0,
     jumpCooldown: 0.15,
+    // Lambe-Lambe (R / L2, o mesmo botão do superbafo): pertinho da irmã (até lickReach m), segurar lambe
+    // em ritmo, uma lambida a cada lickStroke s. O efeito de cada lambida é decidido pela fase (puzzle.onLick).
+    lickStroke: 0.44,
+    lickReach: 1.5,
     accel: 12,
     decel: 16,
     turnSpeed: 10,

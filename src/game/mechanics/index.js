@@ -6,3 +6,4 @@ export { createPushCrate } from './pushCrate.js';
 export { createSprinkler } from './sprinkler.js';
 export { createLockedInteractable } from './lockedInteractable.js';
 export { createGooseNPC } from './gooseNpc.js';
+export { createMud } from './mud.js';

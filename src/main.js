@@ -82,6 +82,8 @@ async function boot() {
   // Ganchos de teste/depuração (usados por tools/shot.mjs e pelo QA).
   window.__game = {
     engine, dogs, game, audio, particles, feedback, ui, events, levels: LEVELS, THREE,
+    // capturas quadro a quadro (tools/scripts/capture-lambe.mjs): o mesmo "ver através" do quadro normal
+    seeThrough: () => updateSeeThrough(dogs, game.activeDog || 'radhija'),
     get env() { return game.built?.env; },
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout; },

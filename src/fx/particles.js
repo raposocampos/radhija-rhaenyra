@@ -607,7 +607,7 @@ export function createParticles(engine) {
     }
   }
 
-  /** Respingo: gotas voando + névoa macia. opts: count, size, strength, mist, dir {x,z}. */
+  /** Respingo: gotas voando + névoa macia. opts: count, size, strength, mist, dir {x,z}, color (gotas; padrão água). */
   function splash(pos, opts = {}) {
     const p = P(pos);
     const n = opts.count ?? 16;
@@ -621,7 +621,7 @@ export function createParticles(engine) {
       spawn(soft, {
         x: p.x + rnd(-0.06, 0.06), y: Math.max(0.05, p.y) + rnd(0, 0.08), z: p.z + rnd(-0.06, 0.06),
         vx: Math.cos(a) * h + dx * st, vy: rnd(1.4, 3.0) * st, vz: Math.sin(a) * h + dz * st,
-        color: pick(WATER),
+        color: opts.color ?? pick(WATER),
         life: rnd(0.6, 1.1),
         s0: rnd(0.055, 0.095) * sc,
         alpha: 0.95,
@@ -638,7 +638,7 @@ export function createParticles(engine) {
       spawn(soft, {
         x: p.x + Math.cos(a) * rnd(0, 0.15), y: Math.max(0.06, p.y) + rnd(0, 0.2), z: p.z + Math.sin(a) * rnd(0, 0.15),
         vx: Math.cos(a) * rnd(0.1, 0.4) * st, vy: rnd(0.15, 0.45), vz: Math.sin(a) * rnd(0.1, 0.4) * st,
-        color: '#E8F5FF',
+        color: opts.mistColor ?? '#E8F5FF',
         life: rnd(0.8, 1.4),
         s0: rnd(0.12, 0.2) * sc,
         s1: rnd(0.45, 0.7) * sc,
@@ -652,7 +652,7 @@ export function createParticles(engine) {
     }
   }
 
-  /** Gotas radiais (chacoalhar o pelo): saem quase na horizontal ao redor do ponto. */
+  /** Gotas radiais (chacoalhar o pelo): saem quase na horizontal ao redor do ponto. opts.color: padrão água. */
   function drops(pos, opts = {}) {
     const p = P(pos);
     const n = opts.count ?? 14;
@@ -664,7 +664,7 @@ export function createParticles(engine) {
       spawn(soft, {
         x: p.x + Math.cos(a) * R, y: p.y + rnd(-0.08, 0.1), z: p.z + Math.sin(a) * R,
         vx: Math.cos(a) * s, vy: rnd(0.4, 1.3), vz: Math.sin(a) * s,
-        color: pick(WATER),
+        color: opts.color ?? pick(WATER),
         life: rnd(0.5, 0.9),
         s0: rnd(0.055, 0.09) * sc,
         alpha: 0.95,

@@ -1,10 +1,11 @@
 // Rosto da dog (filhos do osso da cabeça): olhos com reflexo de luz, nariz de botão e boca com língua.
-// A animação (dogAnimation.js) escala os olhos (piscar, susto) e abre a boca (latido, carregar item).
+// A animação (dogAnimation.js) escala os olhos (piscar, susto), abre a boca (latido, carregar item) e
+// estica a língua comprida do Lambe-Lambe.
 import * as THREE from 'three';
 
 /**
  * opts: { headBone, toHead(p) (ponto do design → espaço da cabeça), design, s (escala), P (parâmetros) }
- * → { eyes: Group[], lip: Mesh, tongue: Mesh, mouthW }
+ * → { eyes: Group[], lip: Mesh, tongue: Mesh, mouthW, lickTongue }
  */
 export function createDogFace({ headBone, toHead, design, s, P }) {
   const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#140b07', roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 });
@@ -71,5 +72,30 @@ export function createDogFace({ headBone, toHead, design, s, P }) {
   headBone.add(mouth);
   const mouthW = 0.017 * s * P.hs;
 
-  return { eyes, lip, tongue, mouthW };
+  // Língua do Lambe-Lambe: sai da boca em dois gomos (base e ponta) que a animação estica e enrola para cima.
+  // Os gomos são elipsoides que começam no pivô (z = 0) e vão até z = 1 antes da escala.
+  const lickMat = new THREE.MeshPhysicalMaterial({ color: '#e0727f', roughness: 0.32, clearcoat: 0.55, clearcoatRoughness: 0.25 });
+  const lobeGeo = new THREE.SphereGeometry(0.5, 18, 12).translate(0, 0, 0.5);
+  {
+    // sulco no meio e borda um pouco mais fina: lê como língua, não como bala
+    const p = lobeGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i);
+      const groove = Math.exp(-(x * x) / 0.012) * 0.12 * (y > 0 ? 1 : 0);
+      p.setY(i, y * (1 - 0.35 * Math.abs(x) / 0.5) - groove);
+    }
+    lobeGeo.computeVertexNormals();
+  }
+  const lickRoot = new THREE.Group();
+  lickRoot.position.set(0, -0.004 * s, 0.002 * s);
+  const lickBase = new THREE.Mesh(lobeGeo, lickMat);
+  const lickTipPivot = new THREE.Group();
+  const lickTip = new THREE.Mesh(lobeGeo, lickMat);
+  lickTipPivot.add(lickTip);
+  lickRoot.add(lickBase, lickTipPivot);
+  lickRoot.visible = false;
+  mouth.add(lickRoot);
+  const lickTongue = { root: lickRoot, base: lickBase, tipPivot: lickTipPivot, tip: lickTip, width: 0.026 * s * P.hs, length: 0.075 * s * P.hs };
+
+  return { eyes, lip, tongue, mouthW, lickTongue };
 }

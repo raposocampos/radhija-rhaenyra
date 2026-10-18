@@ -1,8 +1,10 @@
 // Material de pelo por cascas (shells): cada casca é extrudada ao longo da normal já com skinning,
 // com leve gravidade; alpha vem de ruído 3D na posição de repouso (fios contínuos entre cascas).
+// Lama e brilho de limpinha: mudShader.js (uniforms compartilhados com a pele, passados em `mud`).
 import * as THREE from 'three';
+import { MUD_GLSL, createMudUniforms } from './mudShader.js';
 
-export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0015 } = {}) {
+export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0015, mud = createMudUniforms() } = {}) {
   const mat = new THREE.MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.92,
@@ -17,6 +19,7 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
     uBase: { value: base },
     uWind: { value: new THREE.Vector3() }, // deslocamento extra das pontas (ex.: arrancada)
     uWet: { value: 0 }, // 0..1 molhado: pelo curto, caído, grudado em mechas e mais escuro
+    ...mud, // uMud, uClean, uShine, uTime (lama em placas e brilho de limpinha)
   };
   mat.userData.uniforms = uniforms;
   mat.onBeforeCompile = (shader) => {
@@ -34,7 +37,8 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
         uniform float uWet;
         varying float vShell;
         varying float vFur;
-        varying vec3 vRest;`,
+        varying vec3 vRest;
+        ${MUD_GLSL}`,
       )
       .replace(
         '#include <skinning_vertex>',
@@ -43,9 +47,10 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
         {
           float hh = aShell;
           vec3 nrmF = normalize(objectNormal);
-          float fl = aFur * (1.0 - 0.55 * uWet);
+          float mudV = mudMask(position); // enlameado: pelo grudado, curto e caído
+          float fl = aFur * (1.0 - 0.55 * uWet) * (1.0 - 0.5 * mudV);
           transformed += nrmF * (uBase + fl * hh);
-          transformed += (vec3(0.0, -(uGravity * aGrav * 2.5 + uWet * 1.3), 0.0) + uWind) * fl * hh * hh;
+          transformed += (vec3(0.0, -(uGravity * aGrav * 2.5 + uWet * 1.3 + mudV * 1.1), 0.0) + uWind) * fl * hh * hh;
           vShell = hh;
           vFur = aFur;
         }`,
@@ -59,6 +64,8 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
         varying float vShell;
         varying float vFur;
         varying vec3 vRest;
+        float gMud;
+        ${MUD_GLSL}
         float fhash(vec3 p) {
           p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
           p *= 17.0;
@@ -82,7 +89,8 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
           float n = fnoise(q) * 0.6 + fnoise(q * 2.3 + 7.1) * 0.4;
           float clump = fnoise(q * 0.18 + 3.3);
           n = n * 0.75 + clump * 0.35;
-          n = mix(n, clump * 1.25 - 0.1, uWet * 0.7); // molhado: fios grudados em mechas
+          gMud = mudMask(vRest);
+          n = mix(n, clump * 1.25 - 0.1, max(uWet * 0.7, gMud * 0.85)); // molhado/enlameado: mechas grudadas
           float fw = length(fwidth(q));
           n = mix(n, 0.55, clamp(fw * 0.45 - 0.1, 0.0, 0.85));
           float h = vShell;
@@ -92,13 +100,26 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
           if (a < 0.02) discard;
           diffuseColor.a = a;
           diffuseColor.rgb *= mix(0.8, 1.06, h) * mix(1.0, 0.7, uWet);
+          // lama: escura e molhada na raiz, mais clara (secando) nas pontas
+          vec3 mudC = mix(MUD_WET, MUD_DRY, smoothstep(0.3, 1.0, h) * 0.55 + 0.2 * fnoise(q * 0.5));
+          diffuseColor.rgb = mix(diffuseColor.rgb, mudC, gMud * 0.94);
         }`,
       )
       .replace(
+        '#include <roughnessmap_fragment>',
+        '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.4, gMud);',
+      )
+      .replace(
         '#include <emissivemap_fragment>',
-        '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vec3(0.17, 0.13, 0.09) * (0.6 + 0.6 * vShell);',
+        `#include <emissivemap_fragment>
+        totalEmissiveRadiance += diffuseColor.rgb * vec3(0.17, 0.13, 0.09) * (0.6 + 0.6 * vShell);
+        if (uShine > 0.001) {
+          // limpinha: pelo mais claro e brilhinhos que piscam nas pontas dos fios
+          float glint = step(0.993, mHash(floor(vRest * 150.0) + floor(uTime * 5.0))) * smoothstep(0.4, 0.9, vShell);
+          totalEmissiveRadiance += uShine * (diffuseColor.rgb * (0.12 + 0.22 * vShell) + vec3(1.0, 0.96, 0.86) * glint * 1.6);
+        }`,
       );
   };
-  mat.customProgramCacheKey = () => 'dogFurShells_v2';
+  mat.customProgramCacheKey = () => 'dogFurShells_v3';
   return mat;
 }

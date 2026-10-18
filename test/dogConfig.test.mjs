@@ -69,6 +69,7 @@ test('todos os layouts preservam os pontos de entrada e as habilidades das perso
       assert.equal(!!canDash(controller), name === 'radhija', `${id}: arrancada`);
       assert.equal(canJump(controller), name === 'rhaenyra', `${id}: pulo`);
       assert.equal(!!cfg.bafoSpeed, name === 'radhija', `${id}: superbafo`);
+      assert.equal(!!cfg.lickStroke, name === 'rhaenyra', `${id}: Lambe-Lambe`);
     }
   }
 });
