@@ -16,7 +16,8 @@ Princípios que valem para o projeto todo:
 
 - **Tudo procedural.** Modelos, texturas, sons e música são gerados em código. Nenhum asset baixado.
 - **Português do Brasil** em todos os textos visíveis e nos comentários.
-- **Teclado e controle** (gamepad) com a mesma qualidade, inclusive nos menus.
+- **Teclado e controle** (gamepad) com a mesma qualidade, inclusive nos menus; no celular, toque (joystick e botões
+  virtuais) e um layout compacto. O PC não muda por causa do celular: perfil gráfico e interface continuam os mesmos.
 - **Fases são dados + puzzle.** O núcleo (`src/game/`) não conhece nenhuma fase específica; tudo o que é de uma fase
   vem da definição dela em `src/levels/faseN/`.
 
@@ -314,18 +315,18 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 
 ## 6. Entrada
 
-| Ação | Teclado | Controle (PlayStation · Xbox, por posição) | Código lógico |
-|---|---|---|---|
-| Mover | WASD / setas | analógico esquerdo (velocidade proporcional) / D-pad | `axis()` |
-| Pular (Rhaenyra) | Espaço | ✕ · A | `Jump` |
-| Interagir / latir | E | ○ · B | `KeyE` |
-| Latir | — | □ · X | `Bark` |
-| Fica / Vem (companheira) | F | △ · Y | `KeyF` |
-| Superbafo (Radhija): segurar mira, soltar sopra | R | L2 · LT | `bafo()` |
-| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | `shift()` |
-| Trocar de cachorrinha | Q | L1 · LB | `KeyQ` |
-| Pausar | Esc | Options · Start | `Escape` |
-| Menus | setas, Tab, Enter, Esc | D-pad/analógico, ✕ confirma, ○ volta | |
+| Ação | Teclado | Controle (PlayStation · Xbox, por posição) | Toque (celular) | Código lógico |
+|---|---|---|---|---|
+| Mover | WASD / setas | analógico esquerdo (velocidade proporcional) / D-pad | joystick virtual (proporcional) | `axis()` |
+| Pular (Rhaenyra) | Espaço | ✕ · A | Pular | `Jump` |
+| Interagir / latir | E | ○ · B | Agir | `KeyE` |
+| Latir | — | □ · X | (Agir, sem nada perto) | `Bark` |
+| Fica / Vem (companheira) | F | △ · Y | Fica · Vem | `KeyF` |
+| Superbafo (Radhija): segurar mira, soltar sopra | R | L2 · LT | Bafo · Lamber | `bafo()` |
+| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar | `shift()` |
+| Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
+| Pausar | Esc | Options · Start | botão do canto | `Escape` |
+| Menus | setas, Tab, Enter, Esc | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões | |
 
 A UI desenha os botões nos dois estilos (`PAD_BTN` em `src/ui/markup.js`) e mostra o do controle conectado:
 Xbox se o id do controle tiver "xbox"/"xinput", PlayStation nos demais casos (padrão).
@@ -333,6 +334,15 @@ Xbox se o id do controle tiver "xbox"/"xinput", PlayStation nos demais casos (pa
 `src/game/input.js` traduz o controle para os mesmos códigos lógicos do teclado, então o jogo não sabe de onde veio
 o comando. Ao voltar de um menu para o jogo, os botões segurados ficam travados até serem soltos (`latchPad`):
 o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira latido e o L2 não vira bafo. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
+
+**Toque** (`src/ui/touchControls.js` → `input.touch`): joystick à esquerda (flutuante: tocando fora do aro, ele vem
+para baixo do dedo; `touchStick` usa a mesma zona morta e curva do analógico) e botões à direita (`TOUCH_BUTTONS`):
+Agir, Pular, Bafo/Lamber (segurar), Arrancada/Empurrar (toque = arrancada, segurar = empurrar), Trocar e Fica/Vem,
+mais a pausa no canto. Os rótulos acompanham a dog ativa (`.rr[data-dog]`) e o Fica vira Vem. Multitoque por Pointer
+Events: um dedo no joystick e outro nos botões; arrastar o dedo de um botão para outro troca. O dispositivo atual
+(`input.device`, evento `input:device`) é `keyboard`, `gamepad` ou `touch`: um dedo na tela (pointerType touch/pen)
+liga os controles de toque e as dicas passam a mostrar os ícones dos botões (`.k-touch` em `glyph()`); uma tecla ou o
+controle os escondem. Os controles só aparecem durante a partida, fora da cortina e das telas de menu.
 
 **Pulo** (`dogController.js`): só quem tem `jumpHeight` nas estatísticas (a Rhaenyra). Arco de altura fixa
 (`jumpHeight`, ~0,5 m) e duração `jumpTime` (~0,42 s), com impulso horizontal mínimo `jumpSpeed` na direção da
@@ -401,7 +411,8 @@ Quem emite e quem ouve:
   `level:error {index, id?, name?, initial, canReturn, message}` (retorno só antes de alterar a fase anterior),
   `victory {timeSec, collected, total, level, levelId, hasNext, texts}`.
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
-  desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
+  desenha o botão do controle ou de toque), `hint {text, duration}`, `input:device {type}` (`keyboard`, `gamepad` ou
+  `touch`), `quality:change {device, mode, level, reason, fps}` (perfil gráfico, §9).
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase),
   `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
@@ -437,12 +448,48 @@ que um payload inválido seja aceito por uma assinatura genérica permissiva.
 ## 9. Interface, áudio e efeitos
 
 **UI** (`src/ui/`, DOM sobre o canvas): `ui.js` orquestra as camadas (tela inicial com seleção de fases, cartão da
-fase, HUD, pausa, comemoração, vitória); `markup.js` tem o template e o HTML gerado (teclas e botões desenhados);
-`hud.js`, o HUD; `curtain.js`, a transição entre fases; `menuNav.js`, o foco por teclado e controle; `progress.js`,
+fase, HUD, pausa, comemoração, vitória); `markup.js` tem o template e o HTML gerado (teclas, botões do controle e de
+toque desenhados); `hud.js`, o HUD; `curtain.js`, a transição entre fases; `menuNav.js`, o foco por teclado e controle;
+`touchControls.js`, o joystick e os botões de toque (§6); `progress.js`,
 o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e conclusões por fase; uma fase é
 liberada quando a anterior foi concluída). Os cartões das fases vão no máximo cinco por linha; com mais fases,
 `renderCards` reparte em linhas equilibradas (`--per-row`; sete fases = 4 + 3). Estilos em `ui.css`, ícones SVG em
 `icons.js`.
+
+**Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): layout compacto do HUD, da tela
+inicial, do cartão da fase, da pausa (duas colunas, sem a tabela de teclas) e da vitória; áreas seguras do entalhe
+(`env(safe-area-inset-*)`, `viewport-fit=cover`); sem desfoque de fundo sobre o 3D (custa caro na GPU do celular);
+transições mais curtas. Celular de pé: aviso "Gire o celular" (`.rr-rotate`) e a partida pausa. O primeiro toque num
+botão do menu pede tela cheia (Android; o iPhone usa "Adicionar à tela inicial", `public/manifest.webmanifest`), e a
+pausa tem o botão Tela cheia. `index.html` impede zoom e rolagem por gesto (`touch-action`, `overscroll-behavior`).
+Nada disso existe no PC: sem `data-mobile` e com teclado ou controle, a interface é a de sempre.
+
+**Qualidade gráfica por aparelho** (`src/core/quality.js`, aplicada pelo engine): `detectDevice` (dedo como ponteiro
+principal, `pointer: coarse` sem `hover`; celular se o lado menor da tela tem até 600 px) escolhe o perfil inicial; no
+celular/tablet o nome da GPU (`readGpuName`) também conta: GPU de entrada (`isLowEndGpu`: Mali-G57/G52/G68…,
+Adreno 5xx/60x–61x, PowerVR; ex.: Infinix Note 30 5G) começa no `baixa`. O iPhone informa "Apple GPU" e começa no
+`media`. No PC a GPU nem é consultada.
+
+| Perfil | Pixel ratio (teto) | Sombras | MSAA | Bloom | Compositor | Céu | Quem usa |
+|---|---|---|---|---|---|---|---|
+| `alta` | 1,5 (sem orçamento) | PCFSoft 2048, todo quadro | 4 | sim | sim | primeiro | PC (sempre o mesmo de antes) |
+| `media` | 1, até 0,6 Mpx | PCF 1024, todo quadro | 0 | não | sim | por último | celular e tablet no começo |
+| `baixa` | 0,85, até 0,42 Mpx | PCF 1024, a cada 2 quadros | 0 | não | sim | por último | GPU de entrada, menu ou automático |
+| `minima` | 0,7, até 0,3 Mpx | desligadas | 0 | não | não (direto na tela) | por último | só o automático (último recurso) |
+
+Por que esses cortes: cada fase tem ~800 a ~2.200 chamadas de desenho por quadro (a passada de sombra repete o
+cenário), e o céu calcula nuvens por ruído em cada pixel; desenhado por último, só roda nos pixels de céu que sobram.
+O celular/tablet também tem teto de 60 quadros por segundo (`createFrameCap` no laço de `main.js`): telas de 90/120 Hz
+desenhariam o dobro e esquentariam o aparelho.
+
+No modo automático do celular/tablet, o governador de FPS (`createFpsGovernor`, alimentado por `engine.quality.frame`
+a cada quadro desenhado da partida) mede a mediana dos intervalos em janelas de 1,5 s, depois de 2 s de aquecimento:
+desce um degrau depois de duas janelas seguidas abaixo de 45 fps, ou de uma só abaixo de 30. Aparelho preso a 30 Hz
+(economia de bateria, quadros em ~33 ms) só desce abaixo de 27. Se descer não melhorar ao menos 5%, para onde está.
+Pausa, menus e travadas longas não contam; ele nunca sobe sozinho. No PC o governador não existe. O menu de pausa
+tem Auto · Alta · Média · Baixa (`engine.quality.setMode`, salvo em `localStorage` `rr-quality`, por prévia como o
+volume; `forceLevel` é só diagnóstico). Cada troca emite `quality:change {device, mode, level, reason, fps}` e
+`applyQualityProfile` mexe só no que mudou (pixel ratio, sombra, MSAA dos alvos do compositor, bloom e ordem do céu).
 
 **Áudio** (`src/fx/audio.js` + `src/fx/audio/`): tudo sintetizado em WebAudio. `createAudio().play(nome, opts)`;
 sons novos entram em `soundsV1.js`, `soundsV2.js`, `soundsBafo.js` ou `soundsV3.js` (ou num arquivo novo) e na
@@ -495,7 +542,16 @@ quadro a quadro com `record(game => amostra)`, que roda na página a cada `reque
 suíte sai o diagnóstico `ritmo do jogo` (jogo/relógio) e a latência das leituras do estado. Para conferir: rodar uma
 suíte com carga artificial ou uma segunda instância do e2e em paralelo (cada uma sobe o próprio Vite).
 
-**Outras ferramentas**: `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
+**Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
+(`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
+protocolo do navegador (`Input.dispatchTouchEvent`, com multitoque): perfil do celular, controles que aparecem com o
+toque e somem com o teclado, layout sem sobreposição, um trecho da fase 1 só com joystick e botões, menu de qualidade,
+aviso de girar e, no fim, uma página de PC confirmando o perfil `alta` de sempre. O joystick anda em malha fechada
+com uma trava na página (`ui.touch.releaseStick()`), como a do `walkTo`. Depois da partida, `capture-celular.mjs`
+grava celular, celular pequeno, tablet e PC, cada um com a sua qualidade gráfica (`shots/celular-revisao/`).
+No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:change`.
+
+**Outras ferramentas**: `tools/scripts/gen-icons.mjs` (ícones de "Adicionar à tela inicial"), `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
 `tools/scripts/sim-sprinkler.mjs` (equilíbrio do irrigador), `sandbox/*.html` (dogs, gansa, cenário e efeitos isolados).
 
 **Parâmetros de URL**: `?level=2` ou `?level=fase2` (fase inicial, pela posição ou pelo id; os links por id das

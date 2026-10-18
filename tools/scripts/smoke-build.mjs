@@ -16,7 +16,7 @@ const LINKED_IDS = ['fase6', 'fase7'];
 if (DEV_LEVELS.some((id) => !/^[a-z][a-z0-9_-]*$/i.test(id))) throw new Error('SMOKE_DEV_LEVEL inválido');
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json',
 };
 const server = createServer(async (request, response) => {
   try {

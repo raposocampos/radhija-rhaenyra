@@ -1,6 +1,7 @@
-// Entrada: teclado (KeyboardEvent.code) + controle (Gamepad API, mapeamento "standard").
+// Entrada: teclado (KeyboardEvent.code) + controle (Gamepad API, mapeamento "standard") + toque (botões e joystick
+// virtuais da tela, src/ui/touchControls.js, que chamam input.touch).
 // Estado contínuo (isDown / shift / axis) + toques de borda (consume) por quadro.
-// O controle é lido por polling (poll() no começo do quadro) e traduzido para os MESMOS códigos
+// O controle é lido por polling (poll() no começo do quadro) e, como o toque, traduzido para os MESMOS códigos
 // lógicos do teclado, então o jogo não precisa saber de onde veio o comando:
 // Mapeamento por posição (PlayStation / Xbox):
 //   ✕/A → 'Jump' (pular; teclado Espaço) · ○/B → 'KeyE' (interagir/latir) · □/X → 'Bark' (latir sempre)
@@ -8,6 +9,10 @@
 //   R1/RB ou R2/RT → Shift (segurar = empurrar; borda = arrancada)
 //   L2/LT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
+// Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Bafo/Lamber → bafo() (segurar) · Arrancada/Empurrar →
+//   Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' · Pausa → 'Escape';
+//   joystick virtual (touchStick) → axis().
+// Dispositivo atual ('keyboard' | 'gamepad' | 'touch'): tecla, controle ou dedo na tela (pointerType touch/pen).
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
 const MOVE = {
@@ -18,6 +23,7 @@ const MOVE = {
 };
 const SHIFT = ['ShiftLeft', 'ShiftRight'];
 const PAD_SHIFT = 'PadShift';
+const TOUCH_SHIFT = 'TouchShift';
 const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
 
 /** Índices do mapeamento "standard" (Xbox / PlayStation). */
@@ -61,6 +67,33 @@ export function shapeStick(rx, ry, dead = PAD_DEADZONE) {
   const u = Math.min(1, (m - dead) / (1 - dead));
   const k = 0.12 + 0.88 * Math.pow(u, 1.35); // devagar → trote, sem degrau no fim da zona morta
   return { x: (rx / m) * k, y: (-ry / m) * k, m: k };
+}
+
+// ---------- toque ----------
+/**
+ * Botões da tela de toque → entrada lógica (os mesmos códigos do teclado e do controle).
+ * code: borda consumida pelo jogo (consume); hold: enquanto o dedo está no botão ('bafo' → bafo(), 'shift' → shift()).
+ * @type {Record<string, { code?: string, hold?: 'bafo' | 'shift' }>}
+ */
+export const TOUCH_BUTTONS = {
+  act: { code: 'KeyE' }, // Agir: interagir ou latir
+  jump: { code: 'Jump' }, // Pular (Rhaenyra)
+  bafo: { hold: 'bafo' }, // Bafo (Radhija) / Lamber (Rhaenyra): segurar e soltar
+  dash: { code: TOUCH_SHIFT, hold: 'shift' }, // Arrancada (Radhija, toque) / Empurrar (Rhaenyra, segurar)
+  swap: { code: 'KeyQ' }, // Trocar de cachorrinha
+  stay: { code: 'KeyF' }, // Fica / Vem (companheira)
+  pause: { code: 'Escape' }, // Pausar
+};
+export const TOUCH_DEADZONE = 0.14;
+
+/**
+ * Joystick virtual: deslocamento do dedo desde o centro (px; y para baixo) e raio do aro → { x, y (frente +), m 0..1 },
+ * com a mesma zona morta radial e curva do analógico (velocidade proporcional; no aro, trote).
+ * @param {number} dx @param {number} dy @param {number} radius
+ */
+export function touchStick(dx, dy, radius) {
+  const r = radius > 0 ? radius : 1;
+  return shapeStick(dx / r, dy / r, TOUCH_DEADZONE);
 }
 
 /**
@@ -108,12 +141,13 @@ export function rumblePad(pad, strong = 0.3, weak = 0.3, ms = 120) {
 
 /**
  * Entrada do jogo. opts.onDevice(type) é chamado quando o último dispositivo usado muda
- * ('keyboard' | 'gamepad') — o jogo emite `input:device {type}`.
+ * ('keyboard' | 'gamepad' | 'touch') — o jogo emite `input:device {type}`.
+ * @param {{ onDevice?: (type: 'keyboard' | 'gamepad' | 'touch') => void }} [opts]
  */
-/** @param {{ onDevice?: (type: 'keyboard' | 'gamepad') => void }} [opts] */
 export function createInput({ onDevice } = {}) {
   const down = new Set();
   const pressed = new Set();
+  /** @type {'keyboard' | 'gamepad' | 'touch'} */
   let device = 'keyboard';
   const setDevice = (t) => {
     if (t === device) return;
@@ -130,6 +164,16 @@ export function createInput({ onDevice } = {}) {
   };
   const onUp = (e) => {
     down.delete(e.code);
+  };
+  // Um dedo (ou caneta) na tela troca para o toque: a UI mostra os controles virtuais e os ícones de toque.
+  const onPointer = (e) => {
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') setDevice('touch');
+  };
+  // ---------- toque (botões e joystick virtuais) ----------
+  const virt = { held: new Set(), stick: { x: 0, y: 0, m: 0 } }; // estado dos controles virtuais
+  const touchHeld = (kind) => {
+    for (const id of virt.held) if (TOUCH_BUTTONS[id].hold === kind) return true;
+    return false;
   };
   // ---------- controle ----------
   const pad = {
@@ -148,10 +192,13 @@ export function createInput({ onDevice } = {}) {
   const clear = () => {
     down.clear();
     pressed.clear();
+    virt.held.clear();
+    virt.stick = { x: 0, y: 0, m: 0 };
     pad.latched = new Set(pad.cur.map((d, i) => (d ? i : -1)).filter((i) => i >= 0));
   };
   addEventListener('keydown', onDown);
   addEventListener('keyup', onUp);
+  addEventListener('pointerdown', onPointer, true);
   addEventListener('blur', clear);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) clear();
@@ -234,13 +281,14 @@ export function createInput({ onDevice } = {}) {
       }
       return hit;
     },
-    shift: () => any(SHIFT) || pad.shiftHeld,
-    /** Superbafo: segurando (teclado R ou L2/LT). */
-    bafo: () => down.has('KeyR') || pad.bafo,
+    shift: () => any(SHIFT) || pad.shiftHeld || touchHeld('shift'),
+    /** Superbafo / Lambe-Lambe: segurando (teclado R, L2/LT ou o botão de toque). */
+    bafo: () => down.has('KeyR') || pad.bafo || touchHeld('bafo'),
     consumeShift() {
       let hit = false;
       for (const c of SHIFT) if (pressed.delete(c)) hit = true;
       if (pressed.delete(PAD_SHIFT)) hit = true;
+      if (pressed.delete(TOUCH_SHIFT)) hit = true;
       return hit;
     },
     /**
@@ -249,6 +297,7 @@ export function createInput({ onDevice } = {}) {
      */
     axis() {
       if (pad.stick.m > 0) return { x: pad.stick.x, y: pad.stick.y, m: pad.stick.m };
+      if (virt.stick.m > 0) return { x: virt.stick.x, y: virt.stick.y, m: virt.stick.m };
       let x = (any(MOVE.right) ? 1 : 0) - (any(MOVE.left) ? 1 : 0) + pad.dpad.x;
       let y = (any(MOVE.up) ? 1 : 0) - (any(MOVE.down) ? 1 : 0) + pad.dpad.y;
       x = Math.max(-1, Math.min(1, x));
@@ -271,6 +320,40 @@ export function createInput({ onDevice } = {}) {
     dropPadEdges() {
       for (const [, code] of PAD_EDGE_CODES) if (code !== 'Escape') pressed.delete(code);
       pressed.delete(PAD_SHIFT);
+      pressed.delete(TOUCH_SHIFT);
+    },
+    /**
+     * Controles de toque (src/ui/touchControls.js): press/release de um botão de TOUCH_BUTTONS e o joystick virtual
+     * (stick(x, y, m), já com touchStick). Apertar gera a borda do código; segurar conta para bafo()/shift().
+     */
+    touch: {
+      /** @param {string} id */
+      press(id) {
+        const b = TOUCH_BUTTONS[id];
+        if (!b) return false;
+        setDevice('touch');
+        if (virt.held.has(id)) return true;
+        virt.held.add(id);
+        if (b.code) pressed.add(b.code);
+        return true;
+      },
+      /** @param {string} id */
+      release(id) {
+        virt.held.delete(id);
+      },
+      /** @param {number} x @param {number} y @param {number} m */
+      stick(x, y, m) {
+        virt.stick = m > 0 ? { x, y, m } : { x: 0, y: 0, m: 0 };
+        if (m > 0) setDevice('touch');
+      },
+      /** Solta tudo (dedos fora da tela, troca de dispositivo, fim da partida). */
+      releaseAll() {
+        virt.held.clear();
+        virt.stick = { x: 0, y: 0, m: 0 };
+      },
+      /** @param {string} id */
+      isHeld: (id) => virt.held.has(id),
+      get stickState() { return { ...virt.stick }; },
     },
     /** Vibração curta no controle usado por último (só se o último dispositivo for o controle). */
     rumble(strong, weak, ms) {

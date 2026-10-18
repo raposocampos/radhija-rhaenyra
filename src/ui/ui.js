@@ -1,12 +1,14 @@
 // Interface (DOM em #ui): tela inicial + seleção de fases, transição entre fases, cartão de abertura,
-// HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad).
-// API: createUI({ audio, layout, levels, params, unlockAll }) → { update(dt), state, progress, device, ... }
+// HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad); menus também por ponteiro/toque.
+// API: createUI({ audio, layout, levels, params, unlockAll, input, quality }) → { update(dt), state, progress, device, ... }
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
+// input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade).
+// No celular/tablet (quality.device), a raiz ganha data-mobile e o CSS usa o layout compacto; o PC não muda.
 // Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
-//       interact:prompt, hint, collectible:pickup, victory, input:device.
+//       interact:prompt, hint, collectible:pickup, victory, input:device, quality:change.
 // Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
 // Partes: markup.js (template e HTML gerado), hud.js, curtain.js (transição), menuNav.js (foco e
-// controle nos menus), progress.js (progresso salvo), icons.js e ui.css.
+// controle nos menus), touchControls.js (joystick e botões de toque), progress.js (progresso salvo), icons.js e ui.css.
 import '@fontsource/fredoka/500.css';
 import '@fontsource/fredoka/600.css';
 import '@fontsource/fredoka/700.css';
@@ -15,16 +17,18 @@ import '@fontsource/nunito/700.css';
 import './ui.css';
 import { events } from '../core/events.js';
 import { boneIcon, clockIcon, restartIcon, itemIcon, lockIcon, checkIcon, trophyIcon, homeIcon, nextIcon } from './icons.js';
-import { esc, fmtTime, treatMessage, pawPattern, template } from './markup.js';
+import { esc, fmtTime, treatMessage, pawPattern, template, QUALITY_NAMES } from './markup.js';
 import { loadProgress, saveProgress, recordLevelClear } from './progress.js';
 import { createHud, retrigger } from './hud.js';
 import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
+import { createTouchControls } from './touchControls.js';
 
 /**
- * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams, unlockAll?: boolean }} [opts]
+ * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams,
+ *           unlockAll?: boolean, input?: any, quality?: any }} [opts]
  */
-export function createUI({ audio, layout, levels, params, unlockAll = false } = {}) {
+export function createUI({ audio, layout, levels, params, unlockAll = false, input = null, quality = null } = {}) {
   /** @type {Partial<import('../types').LevelDef>[]} */
   const LV = levels?.length ? levels : [{ id: 'fase1', number: 1, name: 'Operação Cenoura', item: 'carrot', layout, texts: {} }];
   const host = document.getElementById('ui');
@@ -33,6 +37,10 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
   root.className = 'rr';
   root.dataset.device = 'keyboard';
   root.dataset.pad = 'ps'; // desenho dos botões: 'ps' (padrão) ou 'xbox', conforme o controle conectado
+  root.dataset.dog = 'radhija'; // cachorrinha ativa: os botões de toque de bafo/arrancada mudam com ela
+  // Celular ou tablet: layout compacto (ui.css, .rr[data-mobile]); no PC o atributo não existe e nada muda.
+  const mobile = quality?.device && quality.device !== 'desktop' ? quality.device : null;
+  if (mobile) root.dataset.mobile = mobile;
   root.innerHTML = template();
   host.appendChild(root);
 
@@ -109,6 +117,11 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
   });
   const { setFocus, defaultFocus } = focus;
 
+  // ---------- controles de toque ----------
+  const touch = createTouchControls({ root, input: () => input });
+  // só durante a partida (sem cortina) e com o toque como último dispositivo usado
+  const syncTouch = () => touch.setActive(uiState === 'playing' && !blocking() && device === 'touch');
+
   // ---------- camadas ----------
   function show(name, on) { L[name].classList.toggle('is-on', on); }
   function refreshLayers() {
@@ -121,6 +134,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     show('celebrate', s === 'celebrating');
     show('victory', s === 'victory');
     show('loadError', s === 'load-error');
+    syncTouch();
     const layer = menuLayer();
     if (layer && (!focus.el || !layer.contains(focus.el))) setFocus(defaultFocus(), { silent: true });
     if (!layer) setFocus(null, { silent: true });
@@ -134,7 +148,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     if (s === 'title') { starting = false; resetRun(); renderCards(); }
     if (s === 'intro') renderIntro();
     if (s === 'playing' && (prev === 'title' || prev === 'intro' || prev === 'victory' || prev === null)) playClock = 0;
-    if (s === 'paused') syncVolume();
+    if (s === 'paused') { syncVolume(); renderQuality(); }
+    if (s === 'playing') checkOrientation();
     if (s === 'victory') { renderVictory(); victoryAt = performance.now(); }
     if (s !== 'playing') hud.setPrompt(null);
     if (document.activeElement && root.contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
@@ -270,6 +285,66 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     if (!['ArrowLeft', 'ArrowRight'].includes(e.code)) range.blur();
   });
 
+  // ---------- qualidade gráfica (engine.quality) ----------
+  function renderQuality() {
+    const box = $('.rr-quality');
+    if (!quality) { box.hidden = true; return; }
+    for (const b of root.querySelectorAll('.rr-qopt')) {
+      const on = /** @type {HTMLElement} */ (b).dataset.quality === quality.mode;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    $('.rr-quality__now').textContent = quality.mode === 'auto' ? `agora: ${QUALITY_NAMES[quality.level] || quality.level}` : '';
+  }
+  events.on('quality:change', () => renderQuality());
+  renderQuality();
+
+  // ---------- tela cheia e orientação (celular) ----------
+  const docAny = /** @type {any} */ (document);
+  const fsTarget = /** @type {any} */ (document.documentElement);
+  const canFullscreen = () => !!(docAny.fullscreenEnabled || docAny.webkitFullscreenEnabled) && !!(fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen);
+  const isFullscreen = () => !!(docAny.fullscreenElement || docAny.webkitFullscreenElement);
+  const standalone = () => {
+    try { return matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches; } catch { return false; }
+  };
+  function enterFullscreen() {
+    const req = fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen;
+    if (!req) return;
+    try {
+      Promise.resolve(req.call(fsTarget, { navigationUI: 'hide' }))
+        .then(() => /** @type {any} */ (screen).orientation?.lock?.('landscape'))
+        .catch(() => { /* recusado pelo navegador: segue sem tela cheia */ });
+    } catch { /* idem */ }
+  }
+  function exitFullscreen() {
+    try { Promise.resolve((docAny.exitFullscreen || docAny.webkitExitFullscreen)?.call(document)).catch(() => {}); } catch { /* idem */ }
+  }
+  const fsBtn = /** @type {HTMLButtonElement} */ ($('.rr-fullscreen'));
+  const renderFullscreen = () => {
+    fsBtn.hidden = !mobile || !canFullscreen();
+    fsBtn.querySelector('span').textContent = isFullscreen() ? 'Sair da tela cheia' : 'Tela cheia';
+  };
+  document.addEventListener('fullscreenchange', renderFullscreen);
+  document.addEventListener('webkitfullscreenchange', renderFullscreen);
+  renderFullscreen();
+  // No celular, o primeiro toque num botão do menu (Jogar, Começar, uma fase…) já pede tela cheia, uma vez só.
+  let autoFullscreen = !!mobile;
+  function maybeAutoFullscreen() {
+    if (!autoFullscreen || device !== 'touch') return;
+    autoFullscreen = false;
+    if (canFullscreen() && !isFullscreen() && !standalone()) enterFullscreen();
+  }
+  // Celular de pé: o aviso "Gire o celular" cobre a tela (CSS) e a partida pausa.
+  const portrait = (() => {
+    try { return matchMedia('(orientation: portrait)'); } catch { return null; }
+  })();
+  function checkOrientation() {
+    if (mobile === 'phone' && portrait?.matches && uiState === 'playing') events.emit('ui:pause', {});
+  }
+  portrait?.addEventListener?.('change', checkOrientation);
+  // iOS ignora user-scalable=no: a pinça não pode dar zoom na página do jogo (só no celular/tablet)
+  if (mobile) for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
+
   // ---------- foco e ações ----------
   function activateFocused() {
     const el = focus.el && focus.focusables().includes(focus.el) ? focus.el : defaultFocus();
@@ -300,6 +375,20 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
       else if (a === 'cancel-load') events.emit('ui:cancelLoad', {});
       return;
     }
+    if (a === 'fullscreen') {
+      audio?.play?.('uiClick');
+      if (isFullscreen()) exitFullscreen();
+      else enterFullscreen();
+      autoFullscreen = false;
+      return;
+    }
+    if (a === 'quality') {
+      audio?.play?.('uiClick');
+      quality?.setMode(b.dataset.quality);
+      renderQuality();
+      return;
+    }
+    maybeAutoFullscreen();
     if (a === 'play') { startGame(); return; }
     audio?.unlock?.();
     if (a === 'select') {
@@ -358,10 +447,11 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
 
   // ---------- dispositivo ----------
   function setDevice(type) {
-    const t = type === 'gamepad' ? 'gamepad' : 'keyboard';
+    const t = type === 'gamepad' || type === 'touch' ? type : 'keyboard';
     if (t === device) return;
     device = t;
     root.dataset.device = t;
+    syncTouch();
   }
 
   // Teclado: setas/Tab navegam, Enter confirma. Qualquer gesto destrava o áudio.
@@ -369,7 +459,12 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     if (e.type === 'keydown' && (e.code === 'Escape' || e.repeat)) return;
     if (audio && !audio.unlocked && uiState && uiState !== 'title') audio.unlock();
   };
-  addEventListener('pointerdown', (e) => { gestureUnlock(e); setDevice('keyboard'); }, true);
+  addEventListener('pointerdown', (e) => {
+    gestureUnlock(e);
+    setDevice(e.pointerType === 'touch' || e.pointerType === 'pen' ? 'touch' : 'keyboard');
+  }, true);
+  // iOS só libera o áudio no fim do toque (pointerdown não basta): também destrava ao soltar o dedo.
+  addEventListener('touchend', (e) => gestureUnlock(e), { capture: true, passive: true });
   const DIRS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
   addEventListener('keydown', (e) => {
     gestureUnlock(e);
@@ -430,7 +525,10 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     reload.focus();
   });
   events.on('objective', ({ text }) => hud.setObjective(text));
-  events.on('dog:switch', ({ name }) => hud.setDog(name));
+  events.on('dog:switch', ({ name }) => {
+    hud.setDog(name);
+    if (name === 'radhija' || name === 'rhaenyra') root.dataset.dog = name;
+  });
   events.on('companion:stay', ({ name, stay: st }) => hud.setStay(name, st));
   events.on('interact:prompt', (p) => hud.setPrompt(p));
   events.on('hint', ({ text, duration }) => hud.showHint(text, duration));
@@ -454,7 +552,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
       const gm = window.__game?.game;
       if (gm) {
         if (typeof gm.state === 'string' && gm.state !== uiState && !(starting && gm.state === 'title')) setState(gm.state);
-        if (gm.activeDog && gm.activeDog !== hud.activeDog) hud.setDog(gm.activeDog);
+        if (gm.activeDog && gm.activeDog !== hud.activeDog) { hud.setDog(gm.activeDog); root.dataset.dog = gm.activeDog; }
       }
       try { menuPad.poll(dt); } catch (_) { /* controle indisponível */ }
       menuPad.frameState = gm?.state ?? uiState;
@@ -462,6 +560,9 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
     get state() { return uiState; },
     get device() { return device; },
     setDevice,
+    /** Controles de toque (diagnóstico e testes: state(), releaseAll()). */
+    touch,
+    get mobile() { return mobile; },
     get progress() { return prog; },
     resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); },
     get curtain() { return curtain.phase; },

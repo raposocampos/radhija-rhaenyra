@@ -3,7 +3,33 @@
 Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: fases 6 e 7 na campanha (Entrega B)
+## Em andamento: jogar no celular (toque, layout e qualidade por aparelho)
+
+- Pedido do usuário (2026-10-18): abrir e testar o jogo pelo celular no mesmo link, sem mudar nada no PC; toda a
+  UI/HUD deve se comportar diferente na tela pequena.
+- Branch **`claude/celular`** (worktree próprio), **PR #22**, com o main do #21 (`a7d59ed`) integrado. Consultar
+  o PR para SHA, CI, E2E e prévia. Nenhum teste ou build roda no PC.
+- Feito: `src/core/quality.js` (perfis alta/media/baixa/minima, `detectDevice`, governador de FPS, menu salvo em
+  `rr-quality`); engine com o perfil do aparelho (PC = alta, valores de sempre); `input.touch` e `TOUCH_BUTTONS`
+  (`src/game/input.js`) com o dispositivo `touch`; `src/ui/touchControls.js` (joystick flutuante e botões, multitoque);
+  glifos de toque nas dicas (`.k-touch`); layout compacto `.rr[data-mobile]` em `ui.css`; pausa com Qualidade e Tela
+  cheia; aviso de girar; `index.html` sem zoom/rolagem, `viewport-fit=cover`, manifest e ícones
+  (`tools/scripts/gen-icons.mjs`). Testes `test/qualidade.test.mjs` e `test/toque.test.mjs`; suíte E2E `toque` e
+  capturas `capture-celular.mjs`. Documentado em ARQUITETURA §6, §9 e §10 e no README.
+- Primeira prévia testada pelo usuário (2026-10-18) num Infinix Note 30 5G (Mali-G57 MC2, tela de 120 Hz); também
+  precisa rodar bem num iPhone 13. Pedidos: HUD menor no celular (chips e objetivo no topo esquerdo, dica e prompt)
+  e desempenho bom em celular mediano. Feito: HUD do celular compacto (chip só com a dog ativa, companheira num
+  pontinho de estado, objetivo em até duas linhas); perfis do celular mais leves (médio: pixel ratio 1, sem MSAA nem
+  bloom; baixa: 0,85 e sombra a cada 2 quadros; mínima: sem sombra e sem compositor), céu desenhado por último no
+  celular, teto de 60 quadros por segundo, GPU de entrada começa no baixa, governador mais rápido (janelas de 1,5 s,
+  desce com uma janela abaixo de 30 fps) e sem a volta atrás. PC sem mudança (testes e E2E conferem).
+- Próximo passo: CI verde, E2E `todas`, revisar as capturas (celular e PC) e entregar a nova prévia; **aguardar
+  aprovação** antes do merge/deploy. Se ainda pesar nas fases 2 e 3 (luzes pontuais à noite), avaliar desligá-las
+  só no perfil mínimo.
+
+## Entregue: fases 6 e 7 na campanha (Entrega B, PR #21)
+
+Integrado ao main no squash `a7d59ed`; o registro abaixo é o da entrega.
 
 - Pedido do usuário (2026-10-18): "a fase 6 não está aparecendo ali no menu, temos
   que organizar as fases de uma maneira melhor". As fases 6 (Expresso do Superbafo)

@@ -12,11 +12,12 @@ export function parseArgs(argv = process.argv.slice(2)) {
   }, []));
 }
 
-export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 } }) {
+/** device: opções extras da página do Playwright (ex.: celular: isMobile, hasTouch, deviceScaleFactor, screen). */
+export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 }, device = {} }) {
   const OUT = resolve(outDir);
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch(browserOptions());
-  const page = await browser.newPage({ viewport });
+  const page = await browser.newPage({ viewport, ...device });
   // Isola os testes de controles REAIS conectados ao Windows (o Chrome headless enxerga XInput):
   // navigator.getGamepads devolve só o controle falso do teste (window.__fakePads), se houver.
   await page.addInitScript(() => {
@@ -31,10 +32,15 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         configurable: true,
         set(value) {
           const { renderer, composer, bloom } = value.engine;
-          renderer.setPixelRatio(0.25);
-          composer.setPixelRatio(0.25);
-          renderer.shadowMap.enabled = false;
-          bloom.enabled = false;
+          const lowGfx = () => {
+            renderer.setPixelRatio(0.25);
+            composer.setPixelRatio(0.25);
+            renderer.shadowMap.enabled = false;
+            bloom.enabled = false;
+          };
+          lowGfx();
+          // uma troca de qualidade (menu ou governador do celular) reaplica o perfil: volta à redução do teste
+          value.events?.on?.('quality:change', lowGfx);
           // A fase 1 tem milhares de objetos: até em baixa resolução desenhar todo quadro
           // satura a CPU do runner. A simulação/entrada continua em todo rAF; desenha 1/30
           // dos quadros e sempre força um desenho real antes de capturar a tela.

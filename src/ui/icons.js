@@ -231,3 +231,57 @@ export function gamepadIcon() {
   <path d="M7.5 9.8v3.4M5.8 11.5h3.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
   <circle cx="16" cy="10.4" r="1.1" fill="currentColor"/><circle cx="18" cy="12.4" r="1.1" fill="currentColor"/></svg>`;
 }
+
+// ---------------------------------------------------------------------------
+//  Toque: botões virtuais (src/ui/touchControls.js) e os mesmos ícones nas dicas
+// ---------------------------------------------------------------------------
+const stroke = (d, w = 2.3) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+
+/** Pular: seta para cima saindo do chão. */
+export function jumpIcon() {
+  return stroke('<path d="M12 17.5V5.5"/><path d="M6.8 10.6L12 5.4l5.2 5.2"/><path d="M5.5 20.5h13" opacity=".55"/>');
+}
+/** Superbafo: rajadas de vento. */
+export function windIcon() {
+  return stroke('<path d="M3.5 9.5h9.8a2.6 2.6 0 1 0-2.6-2.6"/><path d="M3.5 14h13.4a2.9 2.9 0 1 1-2.9 2.9"/><path d="M3.5 18.3h5.5" opacity=".6"/>');
+}
+/** Lambe-Lambe: linguinha. */
+export function lickIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4.5 7.5c2.2 1.4 4.7 2.1 7.5 2.1s5.3-.7 7.5-2.1"/>
+  <path d="M7.6 9.1v3.9a4.4 4.4 0 0 0 8.8 0V9.1" fill="currentColor" fill-opacity=".22"/><path d="M12 10.2v3.6"/></svg>`;
+}
+/** Arrancada: seta com rastro de velocidade. */
+export function dashIcon() {
+  return stroke('<path d="M13 5.5l6.5 6.5-6.5 6.5"/><path d="M4 8.5h6M2.8 12h9.5M4 15.5h6"/>');
+}
+/** Empurrar: caixa com seta. */
+export function pushIcon() {
+  return stroke('<rect x="12.5" y="6" width="8.5" height="12" rx="1.6" fill="currentColor" fill-opacity=".22"/><path d="M2.8 12h7"/><path d="M7 8.6l3.3 3.4L7 15.4"/>');
+}
+/** Trocar de cachorrinha: duas setas em círculo. */
+export function swapIcon() {
+  return stroke('<path d="M16.5 3.8l3.2 3.2-3.2 3.2"/><path d="M19.5 7H9.2a5 5 0 0 0-5 5"/><path d="M7.5 20.2l-3.2-3.2 3.2-3.2"/><path d="M4.5 17h10.3a5 5 0 0 0 5-5"/>', 2.2);
+}
+export function pauseIcon() {
+  return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.2" y="5" width="4.2" height="14" rx="1.5" fill="currentColor"/><rect x="13.6" y="5" width="4.2" height="14" rx="1.5" fill="currentColor"/></svg>';
+}
+/** Joystick virtual (para "Mover" nas dicas e na tabela de controles). */
+export function stickIcon() {
+  return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="3.9" fill="currentColor"/></svg>';
+}
+export function fullscreenIcon() {
+  return stroke('<path d="M4 9V4.5h4.5M20 9V4.5h-4.5M4 15v4.5h4.5M20 15v4.5h-4.5"/>');
+}
+/** Qualidade gráfica: quadro com paisagem. */
+export function qualityIcon() {
+  return stroke('<rect x="3" y="5" width="18" height="14" rx="2.6"/><path d="M6.4 16l3.6-4 2.6 3 2.1-2.1L18 16"/><circle cx="15.6" cy="9.2" r="1.3" fill="currentColor"/>', 1.9);
+}
+/** Aviso de girar o celular: aparelho deitando, com seta. */
+export function rotatePhoneIcon() {
+  return `<svg class="ico ico-rotate" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="20" y="6" width="22" height="38" rx="4.5" opacity=".45" stroke-dasharray="4 5"/>
+  <rect x="12" y="34" width="44" height="23" rx="4.5" fill="currentColor" fill-opacity=".14"/>
+  <path d="M51.5 39v13" opacity=".5"/>
+  <path d="M46 12c6 2.5 9.5 8 9.6 14.5"/><path d="M51.4 23.6l4.2 3.4 3.4-4.3"/></svg>`;
+}
