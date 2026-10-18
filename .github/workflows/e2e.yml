@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, recursos]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, recursos]
 
 permissions:
   contents: read
@@ -19,12 +19,13 @@ concurrency:
 jobs:
   infra-build:
     name: Infraestrutura e smoke do build
-    if: inputs.suite == 'todas' || inputs.suite == 'expresso'
+    if: inputs.suite == 'todas' || inputs.suite == 'expresso' || inputs.suite == 'lambe'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       CI: 'true'
-      SMOKE_DEV_LEVEL: ${{ (inputs.suite == 'expresso' || inputs.suite == 'todas') && 'fase6' || '' }}
+      # protótipos de desenvolvimento conferidos pelo id no build (lista separada por vírgula)
+      SMOKE_DEV_LEVEL: ${{ inputs.suite == 'todas' && 'fase6,fase7' || inputs.suite == 'expresso' && 'fase6' || inputs.suite == 'lambe' && 'fase7' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -54,12 +55,14 @@ jobs:
           retention-days: 7
   recursos:
     name: Recursos gráficos após trocas de fase
-    if: inputs.suite == 'todas' || inputs.suite == 'recursos' || inputs.suite == 'expresso'
+    if: inputs.suite == 'todas' || inputs.suite == 'recursos' || inputs.suite == 'expresso' || inputs.suite == 'lambe'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       CI: 'true'
-      MEASURE_DEV_LEVEL: ${{ (inputs.suite == 'expresso' || inputs.suite == 'todas') && 'fase6' || '' }}
+      # os protótipos de fases novas entram juntos no catálogo (devCatalog): uma medição cobre as fases 1 a 7;
+      # o id escolhido só decide qual delas ganha a captura extra do cenário
+      MEASURE_DEV_LEVELS: ${{ (inputs.suite == 'todas' || inputs.suite == 'lambe') && 'fase7' || inputs.suite == 'expresso' && 'fase6' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -74,13 +77,21 @@ jobs:
       - name: Instalar Chromium e dependências Linux
         run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Medir recursos com qualidade gráfica completa
-        run: node tools/scripts/measure-resources.mjs
+        run: |
+          if [ -z "$MEASURE_DEV_LEVELS" ]; then
+            node tools/scripts/measure-resources.mjs
+          else
+            for level in $MEASURE_DEV_LEVELS; do
+              MEASURE_DEV_LEVEL="$level" node tools/scripts/measure-resources.mjs
+              mv shots/resources "shots/resources-$level"
+            done
+          fi
       - name: Guardar medições e capturas mesmo em falha
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: recursos-graficos
-          path: shots/resources/
+          path: shots/resources*/
           if-no-files-found: error
           retention-days: 7
   partidas:
@@ -91,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -116,6 +127,9 @@ jobs:
       - name: Comparar pombos com a base (qualidade visual completa)
         if: matrix.suite == 'fase4'
         run: node tools/scripts/capture-pigeons.mjs
+      - name: Capturas do Lambe-Lambe para revisão (qualidade visual completa)
+        if: always() && matrix.suite == 'lambe'
+        run: node tools/scripts/capture-lambe.mjs
       - name: Guardar capturas para diagnóstico
         if: always()
         uses: actions/upload-artifact@v4

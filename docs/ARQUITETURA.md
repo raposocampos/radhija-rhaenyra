@@ -8,7 +8,7 @@ Os tipos de todas as APIs citadas aqui estão em [`src/types.d.ts`](../src/types
 
 Aventura 3D curta em fases, em Three.js r170 + Vite, JavaScript puro com ES modules. O jogador controla uma de
 duas cachorrinhas (a Radhija, pequena e rápida, que dá arrancadas e solta o superbafo; a Rhaenyra, grande e forte,
-que empurra e pula) e troca entre elas; a outra vira
+que empurra, pula e limpa a irmã com o Lambe-Lambe) e troca entre elas; a outra vira
 companheira e segue sozinha (ou espera, com o comando **Fica**). Cada fase é um puzzle cooperativo que termina
 levando um item até um objetivo.
 
@@ -52,9 +52,11 @@ src/levels/                as fases
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
   fase6/                   Expresso do Superbafo (ainda em dev.js): track.js descreve o trilho uma vez só, para o
                            movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
-  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
+  fase7/                   Lambe-Lambe na Pracinha (ainda em dev.js): túnel de lama, trinco por dentro, Lambe-Lambe e
+                           escorregador (pose roteirizada com lock.drive); world/ separado por peça da pracinha
+  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id> (devCatalog)
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
-                           compartilhadas: toys.js (patinho, ursinho), treats.js (ossinhos), pigeon.js (pombo)
+                           compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)
   config.js                atributos globais das personagens; withStart cria a configuração de cada layout
 src/characters/goose.js    a Dona Gansa
@@ -241,12 +243,14 @@ E devolve um objeto com:
 | `update(dt, { active, comp, ctrls, stay })` | todo quadro em `playing`; devolva `'delivered'` para comemorar |
 | `updateAlways?(dt)` | todo quadro em `playing` e `celebrating` (animações) |
 | `interact(ctrl)` → bool | E / A; `false` faz a dog latir |
-| `lockFor(nome)` → `{ action, faceX, faceZ }` ou null | trava a entrada (puxando corda, girando registro) |
+| `lockFor(nome)` → `{ action, faceX, faceZ, drive?, slope? }` ou null | trava a entrada (puxando corda, girando registro); `drive` = pose roteirizada (a fase move a dog, como na subida do escorregador da fase 7) e `slope` inclina o corpo |
 | `lookTarget(ctrl)` | para onde a dog ativa olha |
 | `modifyIntent?`, `assist?` | empurrar caixotes; "funis" que ajudam a entrar em passagens |
 | `navFlags()` → `{ flag: bool }` | libera arestas do grafo (`gateOpen`, `bridge`…) |
 | `reset()`, `jumpToStage?(etapa, {who})` | reiniciar; `?stage=` e testes |
 | `onBark?(ctrl)`, `endActions?()`, `info?()`, `dispose?()` | latido; fim da fase; depuração; descarte |
+| `speedScale?(ctrl)`, `canDash?(ctrl)`, `onDashBlocked?(ctrl)` | estado da dog que a fase controla (lama: metade da velocidade e sem arrancada) |
+| `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl, { blocked })` | efeito de cada lambida do Lambe-Lambe (declarar `onLick` também tira a dica genérica do botão) |
 | `onStageChange` (setter) | o núcleo registra um callback para reemitir o objetivo |
 
 Peças prontas:
@@ -256,8 +260,9 @@ Peças prontas:
 - `src/game/mechanics/`: `createPressurePlate` (placa que exige peso: `requires 'large' | 'any'`), `createHingedGate`
   (portão com dobradiça que não esmaga ninguém ao fechar), `createPushCrate` (caixote em 2 eixos com `onLimit`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
-  `createGooseNPC` (patrulha, alerta, investida, atração por latido) e `createDogEffects` (empurrão, ações que travam a
-  entrada, pelo molhado).
+  `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
+  entrada, pelo molhado) e `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
+  o Lambe-Lambe; liga `speedScale`/`canDash`/`onLick` do puzzle).
 
 **Comemoração**: ao entregar, as duas dogs vão para `GOAL.celebrate`. Uma dog longe e fora do quadro reaparece
 num dos `GOAL.entryPoints` (fora da câmera) e chega andando; se não chegar a tempo, termina o trajeto durante a
@@ -340,6 +345,16 @@ Segurando R/L2 ela para e mira (gira com o analógico) e uma prévia no chão mo
 soltando, "HÁÁÁ!": nasce uma nuvem na frente dela (`dog:bafo`). Depois ela fica toda orgulhosa; a Rhaenyra perto
 de uma nuvem vira a cara (`dog:yuck`). Mirar é cancelado ao pausar ou trocar de dog. Ver §5.1.
 
+**Lambe-Lambe** (`game.js`): o mesmo botão (R/L2) com a Rhaenyra, que tem `lickStroke`/`lickReach` nas estatísticas.
+Pertinho da irmã (até `lickReach`), ela escolhe o ponto do corpo da irmã mais perto (garupa, flanco, bochecha ou
+focinho), encosta (`lick:start`), vira para ele e lambe em ritmo enquanto o botão estiver seguro: cada lambida dura
+`lickStroke` s e chega à irmã no meio do ciclo (`dog:lick {target, x, y, z, stroke}` e `puzzle.onLick`). A irmã fica
+parada, vira a cabeça e reage a cada lambida (`action 'licked'`, no mesmo `lickPhase`). Soltar termina a lambida em
+curso (`lick:end`); trocar de dog, reiniciar ou sair encerram; pausar congela. Longe da irmã é só uma lambidinha no
+focinho (`dog:lick` sem alvo); com a boca cheia, não lambe. Numa fase que não declara `onLick`, a dica explica que o
+superbafo é da Radhija e que o R da Rhaenyra é o Lambe-Lambe. A lama da fase 7 é `createMud` (§4.5): o visual fica no
+modelo (`dog.setMud(k, pontosLimpos)`, `dog.setShine(k)`).
+
 **Fica / Vem**: F alterna a companheira entre seguir e ficar sentada onde está. Quem vira ativa perde o "Fica";
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.
 
@@ -386,7 +401,8 @@ Quem emite e quem ouve:
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle), `hint {text, duration}`, `input:device {type}`.
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
-  `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`.
+  `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase),
+  `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
   `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
   (o pombo ignorou o latido).
@@ -401,7 +417,11 @@ Quem emite e quem ouve:
   `expresso:delivery {cargo}` (carga na bandeja), `expresso:return` (o trem chegou à estação; apito),
   `expresso:blocked` (cancela fechada segurou o trem), `expresso:barrier {open}` (cancela subindo/descendo),
   `expresso:fetch` (a portinhola do pórtico abriu), `expresso:loaded` (a lua caiu no vagão), `expresso:dock {cargo}`
-  (encaixou no foguete) e `expresso:launch` (as duas cargas: o foguete decola).
+  (encaixou no foguete) e `expresso:launch` (as duas cargas: o foguete decola); lama (`createMud`): `mud:soak`
+  (entrou na lama), `mud:splash` (pisando nela), `mud:lick {x, y, z, k}` (uma placa saiu) e `mud:clean` (limpinha:
+  sacode e brilha); fase 7: `slide:climb`/`slide:top`/`slide:down`/`slide:land` (escorregador), `slide:slip
+  {reason}`/`slide:slipBack`/`slide:slipEnd` (escorregou de volta), `puddle:splash` e `picnic:deliver {item}`.
+- **Pegadas**: o feedback desenha pegadas de barro em cada `dog:step` de uma dog com `dog.mud` > 0,15.
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.

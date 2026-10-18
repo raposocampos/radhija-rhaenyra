@@ -18,6 +18,8 @@ export function createNavigator(layout, world) {
 
   function edgeOk(req, ctx) {
     if (!req) return true;
+    // Várias restrições ao mesmo tempo (ex.: ['small', 'tunnel']): todas precisam valer.
+    if (Array.isArray(req)) return req.every((r) => edgeOk(r, ctx));
     if (req === 'small') return ctx.size === 'small';
     if (req === 'large') return ctx.size === 'large';
     // Demais restrições são flags definidas pelo puzzle da fase (puzzle.navFlags()).

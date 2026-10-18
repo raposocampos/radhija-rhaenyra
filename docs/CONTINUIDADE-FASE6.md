@@ -144,7 +144,7 @@ visual se isso dificultar revisar causalidade e acabamento.
 - [ ] Promover a definição de `DEV_LEVELS` para `LEVELS`, sem duplicar ID e sem
   perder o import sob demanda. Acrescentar ao fim, preservando ordem/IDs existentes.
 - [ ] Preservar o link por ID: hoje `src/main.js` resolve IDs pelo catálogo dev
-  e usa `parseInt` para fases normais. Remover `fase6` de DEV sem ajustar essa
+  (`devCatalog`, que já põe as fases 6 e 7 em ordem nas prévias) e usa `parseInt` para fases normais. Remover `fase6` de DEV sem ajustar essa
   resolução faz `?level=fase6&play` cair na fase 1. Criar regressão do link existente.
 - [ ] Atualizar progressão 5→6, menu, tela de vitória e expectativas de `hasNext`,
   incluindo `test/fase5.test.mjs`, testes da nova última fase e suítes de navegador.

@@ -1,5 +1,6 @@
 // Feedback: liga eventos do jogo a som + partículas, e desenha o marcador de objetivo, o anel da dog
-// ativa, o anel tracejado da companheira esperando e ícones flutuantes (patinha, "!", "?").
+// ativa, o anel tracejado da companheira esperando, ícones flutuantes (patinha, "!", "?") e as pegadas de
+// barro de uma dog enlameada (dogs[nome].mud).
 // Independente de fase: props/layout são lidos na hora (opts.props / opts.layout são getters) e as
 // posições vêm sempre dos payloads.
 // API: createFeedback({ engine, audio, particles, dogs, game, props, layout }) → { update(dt, t), marker, dogRings }
@@ -88,6 +89,89 @@ function makeIconTexture(kind) {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
+
+/** Pegada (patinha) ou mancha de barro, em canvas: branco com alfa, tingido pelo material. */
+function makeMudTexture(kind) {
+  const S = 64;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#ffffff';
+  if (kind === 'paw') {
+    g.translate(32, 36);
+    g.scale(1.7, 1.7);
+    g.beginPath();
+    g.moveTo(0, -1);
+    g.bezierCurveTo(-7, -1, -11, 6, -9, 9);
+    g.bezierCurveTo(-7, 12, -3, 10, 0, 10);
+    g.bezierCurveTo(3, 10, 7, 12, 9, 9);
+    g.bezierCurveTo(11, 6, 7, -1, 0, -1);
+    g.fill();
+    for (const [x, y, r] of [[-10, -6, 3.2], [-4, -12, 3.4], [4, -12, 3.4], [10, -6, 3.2]]) {
+      g.beginPath();
+      g.ellipse(x, y, r * 0.85, r, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else {
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      const r = i ? 6 + Math.random() * 7 : 16;
+      g.beginPath();
+      g.arc(32 + (i ? Math.cos(a) * 15 : 0), 32 + (i ? Math.sin(a) * 15 : 0), r, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Pegadas e manchas de barro no chão (piscina fixa, somem devagar). */
+function createMudPrints(scene) {
+  const N = 56;
+  const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const tex = { paw: makeMudTexture('paw'), splat: makeMudTexture('splat') };
+  const pool = [];
+  for (let i = 0; i < N; i++) {
+    const mat = new THREE.MeshBasicMaterial({ map: tex.paw, color: '#4a3020', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const m = new THREE.Mesh(geo, mat);
+    m.visible = false;
+    m.renderOrder = 2;
+    m.name = 'fx-pegada';
+    scene.add(m);
+    pool.push({ m, mat, age: 0, life: 1, alpha: 0 });
+  }
+  let cursor = 0;
+  return {
+    /** kind: 'paw' | 'splat'; size em metros; alpha 0..1. */
+    add(kind, x, z, yaw, size, alpha) {
+      const p = pool[cursor];
+      cursor = (cursor + 1) % N;
+      p.mat.map = tex[kind] || tex.paw;
+      p.mat.needsUpdate = true;
+      p.m.position.set(x, 0.013, z);
+      p.m.rotation.y = yaw;
+      p.m.scale.set(size, 1, size);
+      p.age = 0;
+      p.life = kind === 'paw' ? 10 : 7;
+      p.alpha = alpha;
+      p.m.visible = true;
+    },
+    update(dt) {
+      for (const p of pool) {
+        if (!p.m.visible) continue;
+        p.age += dt;
+        const k = p.age / p.life;
+        if (k >= 1) { p.m.visible = false; continue; }
+        p.mat.opacity = p.alpha * Math.min(1, p.age * 8) * (1 - Math.max(0, (k - 0.6) / 0.4));
+      }
+    },
+    clear() { for (const p of pool) p.m.visible = false; },
+  };
+}
+
+const MUD_COLORS = ['#5a3d26', '#4a3020', '#6b4a2e'];
+const PAW_BONES = ['FLp', 'FRp', 'HLp', 'HRp'];
 
 export function createFeedback(opts) {
   const { engine, audio, particles, dogs } = opts;
@@ -236,10 +320,15 @@ export function createFeedback(opts) {
   let lastPickupFx = -10;
   let lastRevealFx = -10;
 
+  const prints = createMudPrints(scene);
+  /** Brilho de limpinha de cada dog: começo (s) do brilho; some em ~3 s. */
+  const shine = { radhija: -10, rhaenyra: -10 };
   function resetFx() {
     queue.length = 0;
     trails.length = 0;
     glowItem = null;
+    prints.clear();
+    for (const n of Object.keys(shine)) { shine[n] = -10; dogs[n]?.setShine?.(0); }
     lastCrate = null;
     particles.clear?.();
     audio.stop?.('cartRoll');
@@ -285,9 +374,9 @@ export function createFeedback(opts) {
     if (time - lastPickupFx < 0.2) return;
     lastPickupFx = time;
     glowItem = null;
-    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear' }[item] || 'pickupCarrot';
+    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee' }[item] || 'pickupCarrot';
     sfx(snd, x, z);
-    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A' }[item] || '#FFB46E';
+    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394' }[item] || '#FFB46E';
     particles.burst({ x, y: 0.35, z }, { kind: 'stars', count: 10, size: 0.85, speed: 0.8 });
     particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.6, color: col, opacity: 0.55, width: 0.09 });
   }
@@ -333,6 +422,10 @@ export function createFeedback(opts) {
   });
   events.on('objective', ({ target }) => {
     mk.height = Number.isFinite(target?.y) ? target.y : 0.85;
+    // alvo num piso elevado (o deque do escorregador): o anel fica nesse piso, não no chão embaixo dele
+    const ground = Number.isFinite(target?.ground) ? target.ground : 0;
+    groundRing.position.y = ground + 0.022;
+    pingRing.position.y = ground + 0.024;
     setTarget(target);
   });
 
@@ -350,8 +443,22 @@ export function createFeedback(opts) {
       if (p) particles.ring({ x: p.x, y: 0, z: p.z }, { radius: dogRings[name].r * 1.6, from: dogRings[name].r * 0.6, life: 0.5, color: '#FFF1D6', opacity: 0.6, width: 0.12 });
     }
   });
-  events.on('dog:step', ({ name, x, z, speed = 0 }) => {
+  /** Pegada de barro da pata que pisou (osso da pata, se o modelo tiver; senão o meio do corpo). */
+  const _paw = new THREE.Vector3();
+  function mudStep(name, x, z, foot) {
+    const d = dogs[name];
+    const mud = d?.mud ?? 0;
+    if (mud < 0.15) return;
+    const bone = foot >= 0 ? d.bones?.find((b) => b.name === PAW_BONES[foot]) : null;
+    if (bone) bone.getWorldPosition(_paw);
+    else _paw.set(x, 0, z);
+    const size = name === 'rhaenyra' ? 0.085 : 0.072;
+    prints.add('paw', _paw.x, _paw.z, (d.object.rotation.y || 0) + Math.PI, size, 0.45 + 0.4 * mud);
+    if (Math.random() < 0.35 * mud) particles.drops({ x: _paw.x, y: 0.2, z: _paw.z }, { count: 2, size: 0.7, speed: 0.25, radius: 0.04, color: MUD_COLORS[(Math.random() * 3) | 0] });
+  }
+  events.on('dog:step', ({ name, x, z, speed = 0, foot = -1 }) => {
     if (speed < 0.4) return;
+    mudStep(name, x, z, foot);
     sfx('step', x, z, { speed, volume: name === active ? 1 : 0.55 });
     if (speed > 1.5 && Math.random() < (speed > 3 ? 0.9 : 0.55)) {
       particles.dust({ x, y: 0.03, z }, { count: speed > 3 ? 2 : 1, size: name === 'rhaenyra' ? 0.85 : 0.7, alpha: 0.32, strength: 0.4 });
@@ -473,6 +580,85 @@ export function createFeedback(opts) {
     particles.dust({ x, y: 0.05, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.5 });
   });
   events.on('dog:bark', ({ name, x, z }) => sfx(`bark-${name}`, x, z));
+  // Lambe-Lambe: estalinho molhado a cada lambida, gotinhas no ponto lambido e, de vez em quando, um coração
+  events.on('dog:lick', ({ name, target, x, y = 0.4, z, stroke = 1 }) => {
+    sfx('lickSlurp', x, z, { solo: !target });
+    if (!target) {
+      const h = headPos(name, tmp);
+      if (h) particles.drops({ x: h.x, y: h.y - 0.12, z: h.z }, { count: 2, size: 0.45, speed: 0.25, radius: 0.02, color: '#E8F6FF' });
+      return;
+    }
+    particles.drops({ x, y, z }, { count: 3, size: 0.5, speed: 0.3, radius: 0.03, color: '#E8F6FF' });
+    if (stroke % 2 === 0) {
+      const h = headPos(target, tmp);
+      if (h) particles.burst({ x: h.x, y: h.y, z: h.z }, { kind: 'hearts', count: 1, size: 0.75 });
+    }
+  });
+  // lama: entrar (chlep e respingos marrons), pisar dentro, tentar a arrancada enlameada
+  events.on('mud:soak', ({ x, z }) => {
+    sfx('mudSquelch', x, z);
+    particles.splash({ x, y: 0.06, z }, { count: 10, size: 0.85, strength: 0.45, mist: 0, color: MUD_COLORS[0] });
+  });
+  events.on('mud:splash', ({ x, z }) => {
+    sfx('mudSquelch', x, z, { volume: 0.6 });
+    particles.splash({ x, y: 0.04, z }, { count: 4, size: 0.7, strength: 0.3, mist: 0, color: MUD_COLORS[1] });
+  });
+  events.on('dog:dashBlocked', ({ x, z }) => {
+    sfx('dashBlocked', x, z);
+    particles.splash({ x, y: 0.05, z }, { count: 5, size: 0.7, strength: 0.3, mist: 0, color: MUD_COLORS[2] });
+  });
+  // uma placa de lama sai a cada lambida: torrões caindo e manchas no chão
+  events.on('mud:lick', ({ x, y = 0.3, z }) => {
+    sfx('mudPlop', x, z);
+    particles.drops({ x, y, z }, { count: 7, size: 1.25, speed: 0.4, radius: 0.04, color: MUD_COLORS[(Math.random() * 3) | 0] });
+    for (let i = 0; i < 2; i++) prints.add('splat', x + (Math.random() - 0.5) * 0.3, z + (Math.random() - 0.5) * 0.3, Math.random() * 6.3, 0.07 + Math.random() * 0.05, 0.7);
+  });
+  // limpinha: brilho no pelo, estrelinhas, plim e a sacudida que joga as últimas gotas
+  events.on('mud:clean', ({ name }) => {
+    const p = dogPos(name);
+    if (!p) return;
+    sfx('cleanSparkle', p.x, p.z);
+    shine[name] = time;
+    const h = name === 'rhaenyra' ? 0.42 : 0.32;
+    later(0.12, () => {
+      const q = dogPos(name);
+      if (!q) return;
+      sfx('shake', q.x, q.z);
+      particles.drops({ x: q.x, y: h, z: q.z }, { count: 14, radius: 0.15, speed: 0.9, color: '#9C7A58' });
+      later(0.25, () => { const r = dogPos(name); if (r) particles.drops({ x: r.x, y: h, z: r.z }, { count: 10, radius: 0.15, speed: 0.8 }); });
+    });
+    later(0.7, () => {
+      const q = dogPos(name);
+      if (!q) return;
+      particles.sparkle({ x: q.x, y: h, z: q.z }, { count: 26, radius: 0.32, size: 1.0, rise: 0.9, color: '#FFFFFF' });
+      particles.burst({ x: q.x, y: h + 0.15, z: q.z }, { kind: 'stars', count: 8, size: 0.75, speed: 0.6 });
+      particles.ring({ x: q.x, y: 0, z: q.z }, { radius: 0.7, from: 0.15, life: 0.8, color: '#FFF6D8', opacity: 0.6, width: 0.09 });
+    });
+  });
+  // escorregador: patinhas subindo, "zuuum" descendo, tum embaixo; quem escorrega de volta ganha um "?"
+  events.on('slide:climb', ({ x, z }) => sfx('slideScrabble', x, z));
+  events.on('slide:top', ({ x, y = 1.05, z }) => particles.sparkle({ x, y: y + 0.15, z }, { count: 6, radius: 0.2, size: 0.7, rise: 0.4 }));
+  events.on('slide:down', ({ x, z }) => sfx('slideWhoosh', x, z));
+  events.on('slide:land', ({ x, z }) => {
+    sfx('slideThump', x, z);
+    particles.splash({ x, y: 0.05, z }, { count: 8, size: 0.7, strength: 0.45, mist: 3 });
+  });
+  events.on('slide:slip', ({ x, z }) => sfx('slideScrabble', x, z, { volume: 0.75 }));
+  events.on('slide:slipBack', ({ name, x, z }) => {
+    sfx('slipBack', x, z);
+    popIcon('curious', { follow: name, life: 1.3, size: 0.22 });
+  });
+  events.on('slide:slipEnd', ({ x, z }) => particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.7, alpha: 0.35, strength: 0.4 }));
+  events.on('puddle:splash', ({ x, z, speed = 1 }) => {
+    sfx('puddleSplash', x, z, { volume: Math.min(1, 0.5 + speed * 0.2) });
+    particles.splash({ x, y: 0.03, z }, { count: 6, size: 0.6, strength: 0.4 + speed * 0.05, mist: 2 });
+    particles.ring({ x, y: 0.012, z }, { radius: 0.35, from: 0.06, life: 0.6, color: WATER_RING, opacity: 0.45, width: 0.06 });
+  });
+  events.on('picnic:deliver', ({ x, z }) => {
+    sfx('picnicPlop', x, z);
+    particles.sparkle({ x, y: 0.2, z }, { count: 16, radius: 0.3, size: 0.95, rise: 1.0 });
+    particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.15, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.09 });
+  });
 
   events.on('companion:stay', ({ name, stay: on, x, z }) => {
     if (!dogs[name]) return;
@@ -730,6 +916,15 @@ export function createFeedback(opts) {
       for (const q of queue) q.at += dt;
     }
 
+    // pegadas de barro (congeladas na pausa) e brilho de limpinha sumindo
+    if (state !== 'paused') prints.update(dt);
+    for (const n of Object.keys(shine)) {
+      const age = time - shine[n];
+      if (age > 4) continue;
+      const k = age < 0.6 ? age / 0.6 : 1 - (age - 0.6) / 3.2;
+      dogs[n]?.setShine?.(Math.max(0, k));
+    }
+
     // rastro do dash
     for (let i = trails.length - 1; i >= 0; i--) {
       const tr = trails[i];
@@ -784,24 +979,28 @@ export function createFeedback(opts) {
     // anéis das dogs + anel tracejado da companheira esperando
     for (const [name, r] of Object.entries(dogRings)) {
       const p = dogPos(name);
-      const on = showWorldUi && name === active && !!p;
+      // num piso elevado (o deque do escorregador) o anel sobe junto; na rampa inclinada, some
+      const surface = gm?.floorOf?.(name);
+      const floor = surface?.y || 0;
+      const onRamp = !!surface?.ramp;
+      const on = showWorldUi && name === active && !!p && !onRamp;
       r.a = damp(r.a, on ? 1 : 0, on ? 6 : 10, dt);
       r.s = damp(r.s, on ? 1 : 0.6, 8, dt);
       r.pop = Math.max(0, r.pop - dt * 2.5);
       r.mesh.visible = r.a > 0.01;
       if (r.mesh.visible && p) {
-        r.mesh.position.set(p.x, 0.018, p.z);
+        r.mesh.position.set(p.x, floor + 0.018, p.z);
         const pulse = 1 + Math.sin(r.pop * Math.PI) * 0.22;
         r.mesh.scale.setScalar(r.r * 2 * r.s * pulse);
         r.mat.uniforms.uOpacity.value = 0.55 * r.a;
       }
       const sr = stayRings[name];
-      const son = showWorldUi && name !== active && stay[name] && !!p;
+      const son = showWorldUi && name !== active && stay[name] && !!p && !onRamp;
       sr.a = damp(sr.a, son ? 1 : 0, son ? 5 : 9, dt);
       sr.pop = Math.max(0, sr.pop - dt * 2.2);
       sr.mesh.visible = sr.a > 0.01;
       if (sr.mesh.visible && p) {
-        sr.mesh.position.set(p.x, 0.016, p.z);
+        sr.mesh.position.set(p.x, floor + 0.016, p.z);
         const pulse = 1 + Math.sin(sr.pop * Math.PI) * 0.3;
         sr.mesh.scale.setScalar(sr.r * 2 * pulse * (0.96 + Math.sin(time * 2.4) * 0.04));
         sr.mat.uniforms.uOpacity.value = 0.5 * sr.a;

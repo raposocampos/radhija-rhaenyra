@@ -153,9 +153,20 @@ export function bearIcon() {
 </svg>`;
 }
 
-/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear'). */
+export function frisbeeIcon() {
+  return `<svg class="ico ico-frisbee" viewBox="0 0 64 64" aria-hidden="true">
+  <ellipse cx="32" cy="38" rx="26" ry="12" fill="#C8483C" stroke="${INK}" stroke-width="2.6"/>
+  <ellipse cx="32" cy="33" rx="26" ry="12.5" fill="#F26B5B" stroke="${INK}" stroke-width="2.6"/>
+  <ellipse cx="32" cy="32" rx="16.5" ry="7.4" fill="none" stroke="#FFF4E2" stroke-width="2.6"/>
+  <path d="M32 26.5l1.9 3.6 4 .5-2.9 2.6.8 3.9-3.8-2-3.8 2 .8-3.9-2.9-2.6 4-.5z" fill="#FFC94D" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M12 28.5 C 16 24, 24 21.5, 31 21.3" fill="none" stroke="#FFC1B7" stroke-width="2.6" stroke-linecap="round"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee'). */
 export function itemIcon(item) {
   if (item === 'ball') return ballIcon();
+  if (item === 'frisbee') return frisbeeIcon();
   if (item === 'slipper') return slipperIcon();
   if (item === 'duck') return duckIcon();
   if (item === 'bear') return bearIcon();

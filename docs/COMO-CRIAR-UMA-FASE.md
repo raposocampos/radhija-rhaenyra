@@ -26,8 +26,11 @@ Antes do código, escreva em poucas linhas:
   maquete, onde só o trem chega; levar uma lua já de fora até o trem "não fez sentido").
 - **Os beats**, em ordem: cada um deve exigir as duas cachorrinhas de um jeito diferente. As ferramentas que o
   jogador já conhece: a Radhija passa por aberturas, dá arrancada e solta o **superbafo** (cheiro que o vento e os
-  dutos levam até um alvo); a Rhaenyra pesa (placas), empurra (caixotes, ventiladores), pula obstáculos baixos e
-  carrega coisas pesadas; o **Fica** segura uma dog num lugar; o latido atrai a gansa.
+  dutos levam até um alvo); a Rhaenyra pesa (placas), empurra (caixotes, ventiladores), pula obstáculos baixos,
+  carrega coisas pesadas e limpa a irmã com o **Lambe-Lambe** (R pertinho dela; o efeito é do puzzle, `onLick`); o
+  **Fica** segura uma dog num lugar; o latido atrai a gansa. A **lama** (`createMud`, fase 7) deixa a Radhija lenta
+  e sem arrancada até ser lambida: use quando a arrancada for necessária depois (na fase 7, só ela sobe o
+  escorregador).
 - **As etapas** (`stages`): normalmente uma por beat, terminando em `'carrying'` e `'done'`.
 - **Sem becos sem saída**: em qualquer momento deve dar para desfazer o erro (o portão reabre, o caixote não
   trava num canto, a dog molhada é empurrada para um lugar válido). Com caixotes, prefira limites que façam sentido
@@ -138,10 +141,13 @@ layout) e exporte em `mechanics/index.js`.
 ## 6. Registre primeiro o protótipo, depois a fase publicada
 
 Durante o protótipo, importe a definição somente em `src/levels/dev.js` e acrescente-a a `DEV_LEVELS`.
-Abra a **prévia do PR** com `?level=<id>&play`; menu e progressão normais continuam com o catálogo publicado.
+Abra a **prévia do PR** com `?level=<id>&play`; sem esse parâmetro, menu e progressão continuam com o catálogo
+publicado. Com ele, `devCatalog` (em `dev.js`) monta o catálogo da partida: os protótipos de fases novas (número
+depois da última publicada, como `fase6` e `fase7`) entram **juntos e em ordem** depois das publicadas, e o menu
+libera todas as fases para teste; uma arena (`pulo`, `bafo`, `modelo`) entra sozinha no fim.
 Os testes gerais de navegação, colisão e cenário também descobrem `DEV_LEVELS`.
 
-`DEV_LEVELS` não é um isolamento de armazenamento: a definição é acrescentada à lista quando aberta pela URL.
+`DEV_LEVELS` não é um isolamento de armazenamento: as definições entram na lista quando abertas pela URL.
 Teste pelo subcaminho da prévia, que usa chave de save por PR; não use o link principal para experimentar saves.
 Conferir também o smoke do build com o ID de desenvolvimento quando a suíte de protótipo o suportar.
 
@@ -200,7 +206,8 @@ quanto na nova última, incluindo as suítes headless e de navegador. O smoke de
    ```
 
    Cubra a partida completa e cada caso de borda que o puzzle prevê (a dog errada na placa, sair sem o Fica…).
-   Para pular: `h.hold([1, 0]); h.tap('Space')`; para o superbafo: `h.keyDown('KeyR'); h.run(0.4); h.keyUp('KeyR')`.
+   Para pular: `h.hold([1, 0]); h.tap('Space')`; para o superbafo: `h.keyDown('KeyR'); h.run(0.4); h.keyUp('KeyR')`;
+   para o Lambe-Lambe (com a Rhaenyra pertinho da irmã): `h.keyDown('KeyR'); h.run(2); h.keyUp('KeyR')`.
    Cubra reset com item na boca, pausa/retomada, troca de dog no meio da ação e estados inválidos recuperáveis.
    Para uma regressão, registre prova negativa na nuvem contra o comportamento defeituoso e a aprovação após
    corrigir a causa. Não enviar uma mutação defeituosa à produção nem usar resultado de outro SHA como validação.

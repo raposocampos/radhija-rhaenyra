@@ -238,6 +238,42 @@ export function stubFase6Props(root, layout) {
 }
 
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubFase7Props(root, layout) {
+  const ball = item(root, 'ball', layout.BALL);
+  const frisbee = item(root, 'frisbee', layout.FRISBEE);
+  frisbee.home.y = layout.FRISBEE.y;
+  frisbee.object.position.copy(frisbee.home);
+  const goalObject = object(root, 'goal');
+  const spots = { ball: object(goalObject, 'spot-ball'), frisbee: object(goalObject, 'spot-frisbee') };
+  /** @type {import('../../src/types').Fase7Props} */
+  const props = {
+    gate: gate(root, 'fase7.gate'),
+    latch: checked('fase7.latch', { object: object(root, 'latch'), setTurn(k) {} }),
+    ball,
+    frisbee,
+    goal: checked('fase7.goal', {
+      object: goalObject,
+      setHighlight(on) {},
+      /** @param {import('../../src/types').Fase7Thing} thing */
+      spot(thing) { return spots[thing]; },
+    }),
+    collectibles: [],
+    reset() {
+      props.gate.setOpen(0);
+      props.latch.setTurn(0);
+      for (const it of [ball, frisbee]) {
+        it.object.position.copy(it.home);
+        it.object.rotation.set(0, 0, 0);
+        it.setHighlight(false);
+      }
+      props.goal.setHighlight(false);
+    },
+  };
+  props.reset();
+  return level('fase7', props);
+}
+
+/** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubPlaceholderProps(root, layout) {
   const obj = object(root, 'item');
   const pos = layout.BALL || layout.SLIPPER;
@@ -272,6 +308,7 @@ export function stubProps(id, root, layout) {
     case 'fase4': return stubFase4Props(root, layout);
     case 'fase5': return stubFase5Props(root, layout);
     case 'fase6': return stubFase6Props(root, layout);
+    case 'fase7': return stubFase7Props(root, layout);
     case 'modelo':
     case 'pulo': return stubPlaceholderProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);

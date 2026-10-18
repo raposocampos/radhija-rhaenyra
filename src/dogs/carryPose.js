@@ -1,9 +1,10 @@
 // Item na boca: o `mouthSocket` (filho do osso da cabeça) onde o jogo pendura a cenoura, a bolinha, a
-// pantufa, o patinho ou o ursinho. A pose da boca se ajusta ao tipo do item: detectado pelo nome/userData.carryKind do objeto
+// pantufa, o patinho, o ursinho ou o frisbee. A pose da boca se ajusta ao tipo do item: detectado pelo nome/userData.carryKind do objeto
 // (ou pela forma da caixa envolvente) ou forçado com setForced(kind). Cenoura = pose da v1 (atravessada).
 import * as THREE from 'three';
 
 /** Pose por tipo de item: abertura da boca, deslocamento e rotação do socket (em unidades da cabeça). */
+/** @type {Record<import('../types').ItemKind, { open: number, pos: number[], rot: number[] }>} */
 export const CARRY = {
   carrot: { open: 0.35, pos: [0, 0, 0], rot: [0, 0, 0] },
   // bolinha: boca bem aberta, bola à frente e abaixo — os dentes da frente "afundam" nela
@@ -14,6 +15,8 @@ export const CARRY = {
   duck: { open: 0.85, pos: [0, -0.03, 0.022], rot: [0, 0, 0] },
   // ursinho: mordido pela barriga, atravessado e pendendo para o lado (como a pantufa)
   bear: { open: 0.7, pos: [0.03, -0.035, 0.016], rot: [0.1, 0.12, -0.42] },
+  // frisbee: mordido pela borda, o disco à frente do focinho, um pouco inclinado para baixo
+  frisbee: { open: 0.42, pos: [0, -0.03, 0.01], rot: [0.85, 0, 0] },
 };
 
 /**
@@ -56,6 +59,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
     if (/carrot|cenoura/.test(tag)) return 'carrot';
     if (/duck|patinho/.test(tag)) return 'duck';
     if (/bear|ursinho/.test(tag)) return 'bear';
+    if (/frisbee|disco/.test(tag)) return 'frisbee';
     const b = localBox(o);
     if (b.isEmpty()) return 'carrot';
     const d = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].sort((a, c) => a - c);
@@ -79,6 +83,8 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         }
         b.getCenter(_v2).applyQuaternion(mouthSocket.quaternion);
         mouthSocket.position.sub(_v2);
+        // frisbee: a boca segura a borda, então o centro do disco vai para a frente do focinho
+        if (kind === 'frisbee') mouthSocket.position.add(_v2.set(0, 0, dz * 0.42).applyQuaternion(mouthSocket.quaternion));
       }
     }
   }
@@ -93,7 +99,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         applyCarryPose(carryForced || (ch ? detectKind(ch) : 'carrot'), ch);
       }
     },
-    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | null (automático). */
+    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | null (automático). */
     setForced(kind) {
       carryForced = kind || null;
       carryChild = undefined; // reaplica no próximo sync
