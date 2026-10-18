@@ -380,6 +380,10 @@ function buildWalls(layout, updaters) {
     fm.position.set(B.maxX + 0.02, parapet + (C - parapet) / 2, fz);
     grp.add(fm);
   }
+  const capZ0 = B.minZ + 0.005, capZ1 = zMid + sideLen / 2;
+  const cap = new THREE.Mesh(rbox(0.09, 0.05, capZ1 - capZ0, 0.01), frameMat);
+  cap.position.set(B.maxX + 0.02, C - 0.005, (capZ0 + capZ1) / 2);
+  grp.add(cap);
   wallBox(grp, (B.minX + B.maxX) / 2, 0, B.maxZ + T / 2, B.maxX - B.minX + 2 * T + 0.008, 0.22, T, stdMat('#e6dccb', { roughness: 0.8 }));
 
   // ---- rodapés de madeira (parede do fundo e laterais; as divisórias ganham os seus)

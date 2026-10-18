@@ -386,7 +386,7 @@ export interface MoveIntent {
 
 export interface ScentCloud { id: number; x: number; z: number; vx: number; vz: number; r: number; age: number; life: number; state: 'free' | 'duct' }
 /** Faixa de vento a partir de (x, z) na direção (dirX, dirZ). Mova/desligue mexendo no próprio objeto. */
-export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; enabled?: boolean }
+export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; funnel?: number; enabled?: boolean }
 export interface ScentDuct {
   id?: string;
   inlet: { x: number; z: number; r: number };

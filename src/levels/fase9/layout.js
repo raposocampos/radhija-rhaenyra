@@ -130,6 +130,9 @@ export const SIDE_TABLE = { x: 0.95, z: -1.05, r: 0.26, h: 0.58 };
 export const FOOTSTOOL = { x: 0.85, z: -2.05, hx: 0.22, hz: 0.22, h: 0.36 };
 export const FLOOR_LAMP = { x: -0.6, z: -2.3, r: 0.16 };
 export const RUG = { x: 1.2, z: -1.4, rx: 1.45, rz: 0.95 };
+/** Mesa de estudos do vovô na metade sul da biblioteca (a Radhija passa por baixo; a Rhaenyra contorna) e as cadeiras. */
+export const STUDY_TABLE = { x: 1.35, z: 1.95, hx: 0.72, hz: 0.36, h: 0.74 };
+export const STUDY_CHAIRS = [{ x: 0.95, z: 1.36, yaw: 0.15, r: 0.24 }, { x: 1.8, z: 1.38, yaw: -0.2, r: 0.24 }];
 /** Onde cada objeto fica na mesinha. */
 export const TABLE_SPOTS = { glasses: { x: 0.88, y: SIDE_TABLE.h + 0.02, z: -1.12 }, book: { x: 1.02, y: SIDE_TABLE.h + 0.02, z: -0.98 } };
 
@@ -152,7 +155,7 @@ export const DAMPER_LEVER = { x: 6.55, z: WORLD.bounds.minZ, nx: 0, nz: 1, top: 
  */
 export const FAN = {
   start: { x: 6.75, z: 0.7 }, half: 0.3, height: 0.95, minX: 5.3, maxX: 6.75, minZ: -2.75, maxZ: 1.0, pushSpeed: 0.8,
-  wind: { offset: 0.34, length: 2.9, halfWidth: 0.36, strength: 2.6 }, alignTol: 0.2, alignZ: -0.4,
+  wind: { offset: 0.34, length: 2.9, halfWidth: 0.45, strength: 2.6, funnel: 2.2 }, alignTol: 0.2, alignZ: -0.4,
 };
 /**
  * Vasos grandes encostados na parede leste do jardim de inverno: entre eles (0,40 m) só a Radhija passa e o ossinho
@@ -199,6 +202,11 @@ export const STATIC_COLLIDERS = [
   { id: 'mesinha', shape: 'circle', x: SIDE_TABLE.x, z: SIDE_TABLE.z, r: SIDE_TABLE.r },
   { id: 'pufe', shape: 'box', x: FOOTSTOOL.x, z: FOOTSTOOL.z, hx: FOOTSTOOL.hx, hz: FOOTSTOOL.hz, jumpable: true, height: FOOTSTOOL.h },
   { id: 'abajur', shape: 'circle', x: FLOOR_LAMP.x, z: FLOOR_LAMP.z, r: FLOOR_LAMP.r },
+  ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => /** @type {import('../../types').CircleCollider} */ ({
+    id: `pe-da-mesa-de-estudos-${i + 1}`, shape: 'circle', x: STUDY_TABLE.x + sx * (STUDY_TABLE.hx - 0.06), z: STUDY_TABLE.z + sz * (STUDY_TABLE.hz - 0.06), r: 0.04,
+  })),
+  { id: 'mesa-de-estudos', shape: 'box', x: STUDY_TABLE.x, z: STUDY_TABLE.z, hx: STUDY_TABLE.hx, hz: STUDY_TABLE.hz, blocks: 'large' },
+  ...STUDY_CHAIRS.map((c, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `cadeira-de-estudos-${i + 1}`, shape: 'circle', x: c.x, z: c.z, r: c.r })),
   // jardim de inverno
   ...POTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
   { id: 'poltrona-de-vime', shape: 'circle', x: WICKER_CHAIR.x, z: WICKER_CHAIR.z, r: WICKER_CHAIR.r },
@@ -258,6 +266,7 @@ const LAYOUT = {
   WORLD, DOGS, WALLS, WALL_EH, WALL_HL, WALL_LJ, CONSERVATORY, FRONT_DOOR, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN,
   WARDROBE, DESK, DESK_CHAIR, BOOK_FALL, CAT, HALL_BENCH, UMBRELLA_STAND, COAT_RACK, CONSOLE, SHELF_W, FIREPLACE,
   SHELF_E, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB, BRAKE_LEVER, ARMCHAIR, SIDE_TABLE, FOOTSTOOL, FLOOR_LAMP, RUG,
+  STUDY_TABLE, STUDY_CHAIRS,
   TABLE_SPOTS, DUCT, DAMPER_LEVER, FAN, POTS, WICKER_CHAIR, PLANT_TABLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };

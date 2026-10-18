@@ -1,7 +1,8 @@
 // FASE 9 · A biblioteca: duas estantes altas cheias de livros (InstancedMesh, cores variadas, alguns tombados), a
 // lareira acesa com o fogo que tremula, consolo com relógio e porta-retratos, o trilho de latão da escadinha, a
 // escadinha de rodinhas (degraus largos e patamar), o globo terrestre de rodinhas, a poltrona do vovô com o cardigã,
-// a mesinha com o abajur (onde os óculos e o livro ficam), o abajur de pé, o pufe e o tapete persa.
+// a mesinha com o abajur (onde os óculos e o livro ficam), o abajur de pé, o pufe, o tapete persa e a mesa de estudos
+// com a luminária de banqueiro, livros, a xícara de chá, a lupa e as cadeiras.
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, stdMat, woodMat, contactShadow, shadowAll } from '../../../world/util.js';
 
@@ -119,9 +120,31 @@ function buildFireplace(root, F, B, photo) {
     b.position.set(x, y0 + h / 2, B.minZ + F.depth / 2);
     grp.add(b);
   }
-  const firebox = new THREE.Mesh(new THREE.BoxGeometry(mouthW, mouthH, F.depth - 0.04), dark);
-  firebox.position.set(cx, mouthH / 2, B.minZ + F.depth / 2 - 0.03);
-  grp.add(firebox);
+  // boca oca: fundo e laterais de tijolo com fuligem (o pé brilha com o fogo) e o chão de cinzas; a frente fica aberta
+  // para a lenha e as chamas aparecerem
+  const fb = { w: mouthW - 0.02, h: mouthH - 0.01, z0: B.minZ + 0.03, z1: zF - 0.01 };
+  const sootTex = canvasTexture(64, 64, (g, w, h) => {
+    const gr = g.createLinearGradient(0, h, 0, 0);
+    gr.addColorStop(0, '#6a3416'); gr.addColorStop(0.35, '#2a150c'); gr.addColorStop(1, '#0c0908');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1;
+    for (let y = 6; y < h; y += 9) {
+      g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+      for (let x = (y % 18 ? 0 : 8); x < w; x += 16) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 9); g.stroke(); }
+    }
+  }, { repeat: false });
+  const sootMat = new THREE.MeshStandardMaterial({ map: sootTex, emissiveMap: sootTex, emissive: '#ff8a3a', emissiveIntensity: 0.55, roughness: 0.95 });
+  const fireBack = new THREE.Mesh(new THREE.PlaneGeometry(fb.w, fb.h), sootMat);
+  fireBack.position.set(cx, fb.h / 2, fb.z0);
+  const ash = new THREE.Mesh(new THREE.PlaneGeometry(fb.w, fb.z1 - fb.z0).rotateX(-Math.PI / 2), dark);
+  ash.position.set(cx, 0.004, (fb.z0 + fb.z1) / 2);
+  grp.add(fireBack, ash);
+  for (const s of [-1, 1]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(fb.z1 - fb.z0, fb.h), sootMat);
+    side.rotation.y = -s * Math.PI / 2;
+    side.position.set(cx + s * fb.w / 2, fb.h / 2, (fb.z0 + fb.z1) / 2);
+    grp.add(side);
+  }
   // consolo de madeira e a pedra da frente (laje rasa, rente ao chão)
   const mantel = new THREE.Mesh(rbox(W + 0.14, 0.06, F.depth + 0.1, 0.012), woodMat('#5a3a24', { key: 'f9-consolo', rough: 0.5 }));
   mantel.position.set(cx, F.h + 0.03, B.minZ + F.depth / 2 + 0.03);
@@ -477,6 +500,143 @@ function buildReadingCorner(root, layout) {
   };
 }
 
+// ------------------------------------------------------------------ mesa de estudos
+/** Mesa de estudos com tampo de couro verde, a luminária de banqueiro acesa, livros, a xícara, a lupa e as cadeiras. */
+function buildStudyTable(root, layout) {
+  const { STUDY_TABLE: T, STUDY_CHAIRS } = layout;
+  const grp = new THREE.Group();
+  grp.name = 'mesa-de-estudos';
+  const wood = woodMat('#4e321f', { key: 'f9-mesa-estudos', rough: 0.45 });
+  const brass = stdMat('#c99a45', { roughness: 0.3, metalness: 0.8 });
+  // passadeira listrada embaixo
+  const runTex = canvasTexture(256, 160, (g, w, h) => {
+    g.fillStyle = '#2f4a5e'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#d8b25a'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20);
+    g.strokeStyle = '#8a2f2a'; g.lineWidth = 8; g.strokeRect(24, 24, w - 48, h - 48);
+    g.fillStyle = '#d8b25a';
+    for (let i = 0; i < 5; i++) {
+      const x = 60 + i * 34;
+      g.beginPath(); g.moveTo(x, h / 2 - 14); g.lineTo(x + 12, h / 2); g.lineTo(x, h / 2 + 14); g.lineTo(x - 12, h / 2); g.closePath(); g.fill();
+    }
+  }, { repeat: false });
+  const runner = new THREE.Mesh(new THREE.PlaneGeometry(T.hx * 2 + 0.9, T.hz * 2 + 1.0).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: runTex, roughness: 0.95 }));
+  runner.position.set(T.x, 0.005, T.z - 0.15);
+  runner.receiveShadow = true;
+  grp.add(runner);
+  // tampo com couro, saia e pernas torneadas
+  const top = new THREE.Mesh(rbox(T.hx * 2, 0.05, T.hz * 2, 0.012), wood);
+  top.position.set(T.x, T.h - 0.025, T.z);
+  const leather = new THREE.Mesh(rbox(T.hx * 2 - 0.2, 0.006, T.hz * 2 - 0.16, 0.003), stdMat('#2f5a46', { roughness: 0.7 }));
+  leather.position.set(T.x, T.h + 0.002, T.z);
+  const apron = new THREE.Mesh(rbox(T.hx * 2 - 0.1, 0.11, T.hz * 2 - 0.1, 0.01), wood);
+  apron.position.set(T.x, T.h - 0.1, T.z);
+  grp.add(top, leather, apron);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, T.h - 0.06, 10), wood);
+    leg.position.set(T.x + sx * (T.hx - 0.06), (T.h - 0.06) / 2, T.z + sz * (T.hz - 0.06));
+    grp.add(leg);
+  }
+  const y0 = T.h + 0.005; // em cima do couro
+  // luminária de banqueiro: cúpula de vidro verde, lâmpada acesa e a poça de luz no tampo
+  const lamp = new THREE.Group();
+  lamp.position.set(T.x + 0.42, y0, T.z - 0.12);
+  lamp.rotation.y = -0.35;
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.025, 20), brass);
+  lampBase.position.y = 0.0115;
+  const lampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.27, 8), brass);
+  lampStem.position.y = 0.15;
+  const shade = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.075, 0.075, 0.3, 20, 1, true, 0, Math.PI).rotateZ(Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: '#1f6a4a', roughness: 0.25, metalness: 0.2, emissive: '#2a8a5a', emissiveIntensity: 0.2, side: THREE.DoubleSide }),
+  );
+  shade.position.y = 0.3;
+  const bulb = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.16, 4, 8).rotateZ(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#fff1c8' }));
+  bulb.position.y = 0.282;
+  lamp.add(lampBase, lampStem, shade, bulb);
+  grp.add(lamp);
+  const poolTex = canvasTexture(64, 64, (g, w, h) => {
+    const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    gr.addColorStop(0, 'rgba(255,214,150,0.9)'); gr.addColorStop(1, 'rgba(255,214,150,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  }, { repeat: false });
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.72).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+  pool.position.set(T.x + 0.22, y0 + 0.004, T.z - 0.02);
+  grp.add(pool);
+  // pilha de livros e um livro aberto (páginas creme)
+  ['#7a2a28', '#2f4a5e', '#5a6a2a'].forEach((c, i) => {
+    const b = new THREE.Mesh(rbox(0.26 - i * 0.02, 0.05, 0.19 - i * 0.01, 0.006), stdMat(c, { roughness: 0.7 }));
+    b.position.set(T.x - 0.48, y0 + 0.026 + i * 0.052, T.z + 0.04);
+    b.rotation.y = 0.2 - i * 0.25;
+    grp.add(b);
+  });
+  const open = new THREE.Group();
+  open.position.set(T.x + 0.02, y0, T.z + 0.07);
+  open.rotation.y = 0.15;
+  const cover = new THREE.Mesh(rbox(0.36, 0.01, 0.25, 0.003), stdMat('#5a2a20', { roughness: 0.6 }));
+  cover.position.y = 0.006;
+  open.add(cover);
+  const pageMat = stdMat('#f1e6cc', { roughness: 0.8 });
+  for (const s of [-1, 1]) {
+    const pg = new THREE.Mesh(rbox(0.165, 0.016, 0.23, 0.004), pageMat);
+    pg.position.set(s * 0.088, 0.017, 0);
+    pg.rotation.z = -s * 0.08;
+    open.add(pg);
+  }
+  grp.add(open);
+  // xícara de chá no pires e a lupa
+  const china = stdMat('#f4f0e6', { roughness: 0.3 });
+  const cupAt = { x: T.x - 0.2, z: T.z - 0.2 };
+  const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.01, 20), china);
+  saucer.position.set(cupAt.x, y0 + 0.006, cupAt.z);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.028, 0.05, 18, 1, true), new THREE.MeshStandardMaterial({ color: '#f4f0e6', roughness: 0.3, side: THREE.DoubleSide }));
+  cup.position.set(cupAt.x, y0 + 0.036, cupAt.z);
+  const tea = new THREE.Mesh(new THREE.CircleGeometry(0.031, 18).rotateX(-Math.PI / 2), stdMat('#7a4a22', { roughness: 0.2 }));
+  tea.position.set(cupAt.x, y0 + 0.05, cupAt.z);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.004, 6, 12), china);
+  handle.position.set(cupAt.x + 0.042, y0 + 0.038, cupAt.z);
+  grp.add(saucer, cup, tea, handle);
+  const mag = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.006, 8, 24).rotateX(Math.PI / 2), brass);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.044, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#dbe9ef', roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }));
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.09, 8).rotateZ(Math.PI / 2), stdMat('#3a2416', { roughness: 0.5 }));
+  grip.position.x = 0.095;
+  mag.add(ring, lens, grip);
+  mag.position.set(T.x + 0.3, y0 + 0.008, T.z + 0.18);
+  mag.rotation.y = 0.6;
+  grp.add(mag);
+  // cadeiras de encosto de ripas com almofada (de frente para a mesa)
+  const pad = stdMat('#7a2a28', { roughness: 0.85 });
+  for (const c of STUDY_CHAIRS) {
+    const ch = new THREE.Group();
+    ch.position.set(c.x, 0, c.z);
+    ch.rotation.y = c.yaw;
+    const seat = new THREE.Mesh(rbox(0.4, 0.05, 0.38, 0.015), wood);
+    seat.position.y = 0.44;
+    const cushion = new THREE.Mesh(rbox(0.34, 0.035, 0.32, 0.015), pad);
+    cushion.position.y = 0.48;
+    ch.add(seat, cushion);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const h = sz < 0 ? 0.92 : 0.42; // as pernas de trás sobem e viram o encosto
+      const leg = new THREE.Mesh(rbox(0.035, h, 0.035, 0.006), wood);
+      leg.position.set(sx * 0.17, h / 2, sz * 0.16);
+      ch.add(leg);
+    }
+    for (const y of [0.62, 0.84]) {
+      const slat = new THREE.Mesh(rbox(0.32, 0.06, 0.025, 0.008), wood);
+      slat.position.set(0, y, -0.16);
+      ch.add(slat);
+    }
+    grp.add(ch);
+  }
+  shadowAll(grp);
+  for (const m of [runner, pool, bulb]) m.castShadow = false;
+  const sh = contactShadow(T.hx + 0.12, T.hz + 0.12, 0.32);
+  sh.position.set(T.x, 0.008, T.z);
+  grp.add(sh);
+  root.add(grp);
+  return { group: grp };
+}
+
 // ------------------------------------------------------------------ tudo junto
 export function buildLibrary({ root, layout }) {
   const { SHELF_W, SHELF_E, FIREPLACE, LADDER, GLOBE, GLASSES, WORLD } = layout;
@@ -496,8 +656,9 @@ export function buildLibrary({ root, layout }) {
   const ladder = buildLadder(root, LADDER, LADDER.start.z);
   const globe = buildGlobe(root, GLOBE);
   const corner = buildReadingCorner(root, layout);
+  const study = buildStudyTable(root, layout);
   return {
-    shelfE, fire, ladder, globe, corner,
+    shelfE, fire, ladder, globe, corner, study,
     firePos: new THREE.Vector3((FIREPLACE.x0 + FIREPLACE.x1) / 2, 0.5, B.minZ + FIREPLACE.depth + 0.2),
     update(dt, t) {
       fire.update(dt, t);
