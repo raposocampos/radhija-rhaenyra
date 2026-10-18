@@ -21,13 +21,13 @@ const decalOpts = { transparent: true, polygonOffset: true, polygonOffsetFactor:
 
 /** Mola vertical (hélice) de altura 1 (escala em Y = altura). */
 function coilGeometry(radius, turns, tube) {
-  class Coil extends THREE.Curve {
-    getPoint(t, out = new THREE.Vector3()) {
-      const a = t * turns * TAU;
-      return out.set(Math.cos(a) * radius, t, Math.sin(a) * radius);
-    }
+  const n = Math.round(turns * 16);
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, a = t * turns * TAU;
+    pts.push(new THREE.Vector3(Math.cos(a) * radius, t, Math.sin(a) * radius));
   }
-  return new THREE.TubeGeometry(new Coil(), Math.round(turns * 16), tube, 6, false);
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, tube, 6, false);
 }
 
 // ------------------------------------------------------------------ texturas

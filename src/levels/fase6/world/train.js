@@ -31,13 +31,13 @@ function decalMat(draw, w, h) {
 
 /** Mola em hélice ao longo de +Z, de 0 a 1 (escala em Z = comprimento). */
 function springGeometry(radius, turns, tube) {
-  class Helix extends THREE.Curve {
-    getPoint(t, out = new THREE.Vector3()) {
-      const a = t * turns * TAU;
-      return out.set(Math.cos(a) * radius, Math.sin(a) * radius, t);
-    }
+  const n = Math.round(turns * 18);
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, a = t * turns * TAU;
+    pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, t));
   }
-  return new THREE.TubeGeometry(new Helix(), Math.round(turns * 18), tube, 6, false);
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, tube, 6, false);
 }
 
 /**

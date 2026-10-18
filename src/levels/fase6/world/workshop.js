@@ -447,7 +447,9 @@ export function buildWorkshop(root) {
   // caixa de ferramentas vermelha e latas na prateleira de baixo
   add(bench, rbox(0.42, 0.18, 0.26, 0.02), stdMat('#c8553d', { roughness: 0.45, metalness: 0.2 }), -0.02, 0.295, 0.45);
   add(bench, rbox(0.3, 0.025, 0.04, 0.01), steel, -0.02, 0.4, 0.45);
-  for (const [dz, c] of [[-0.3, '#4f8f8b'], [-0.55, '#e0a84a']]) add(bench, new THREE.CylinderGeometry(0.08, 0.08, 0.17, 16), stdMat(c, { roughness: 0.5 }), 0.05, 0.29, dz);
+  /** @type {[number, string][]} */
+  const benchCans = [[-0.3, '#4f8f8b'], [-0.55, '#e0a84a']];
+  for (const [dz, c] of benchCans) add(bench, new THREE.CylinderGeometry(0.08, 0.08, 0.17, 16), stdMat(c, { roughness: 0.5 }), 0.05, 0.29, dz);
   // em cima: torno, trenzinho em construção, rodinhas soltas, potes de tinta, pincel, régua e lascas
   const top = bh;
   add(bench, rbox(0.14, 0.09, 0.16, 0.012), stdMat('#4f6f73', { roughness: 0.4, metalness: 0.5 }), -0.3, top + 0.045, 0.82);
