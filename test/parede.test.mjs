@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createCollisionWorld } from '../src/game/collision.js';
 import {
-  createController, steer, integrate, pickWallSpot, startWallJump, wallKick, wallLift, canJump, WALL_TOUCH,
+  createController, placeController, steer, integrate, pickWallSpot, startWallJump, wallKick, wallLift, canJump, WALL_TOUCH,
 } from '../src/game/dogController.js';
 import { createWallButton, WALL_BUTTON_SHAPE } from '../src/game/mechanics/wallButton.js';
 import { createPressurePlate } from '../src/game/mechanics/pressurePlate.js';
@@ -68,7 +68,8 @@ test('impulso: chega à parede, toca o alto uma vez no meio e volta ao chão afa
   let landedAt = null;
   let peak = 0;
   for (let i = 1; i <= 90; i++) {
-    steer(c, dt, { dx: 1, dz: 0, speed: 2 }); // a entrada não muda o roteiro
+    // a entrada não muda o roteiro; depois do pouso ela fica parada (para medir onde pousou)
+    steer(c, dt, c.wallDur > 0 ? { dx: 1, dz: 0, speed: 2 } : { dx: 0, dz: 0, speed: 0 });
     integrate(c, dt, world);
     peak = Math.max(peak, c.y);
     assert.ok(!world.overlaps(c.x, c.z, c.r * 0.99, c.size), `quadro ${i}: dentro da parede (${c.x.toFixed(3)}, ${c.z.toFixed(3)})`);
@@ -192,43 +193,68 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
   const { createDog } = await import('../src/dogs/dog.js');
   const d = createDog('rhaenyra');
   const shape = WALL_BUTTON_SHAPE.button;
-  const gap = DOG_CONFIG.rhaenyra.radius + 0.03;
+  // o mesmo caminho do jogo: controlador de verdade numa parede (face em z = −2) e a animação recebendo o que o
+  // núcleo manda (game.js → applyDogs), começando 35 cm atrás do ponto de impulso
+  const world = createCollisionWorld({
+    WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } },
+    STATIC_COLLIDERS: [{ id: 'parede', shape: 'box', x: 0, z: -2.5, hx: 3, hz: 0.5 }],
+  });
   const top = 1.2;
-  const anim = (k) => ({ speed: 0, action: k >= 0 ? 'wallJump' : 'none', wallK: k, wallGap: gap, wallTop: top, wallOut: shape.out, wallPaws: top - shape.paws, wallSide: shape.side, wallLat: shape.lat });
-  const bone = (name) => d.bones.find((b) => b.name === name);
-  const pos = (name) => bone(name).getWorldPosition(new THREE.Vector3());
-  for (let i = 0; i < 30; i++) d.update(1 / 60, anim(-1));
-  const N = Math.round(D * 60);
-  let maxZ = -Infinity;
+  /** @type {import('../src/types').WallSpot} */
+  const spot = { id: 'pose', x: 0, z: -2, nx: 0, nz: 1, top, out: shape.out, paws: top - shape.paws, side: shape.side, lat: shape.lat };
+  const c = rhaenyra(0, 0, Math.PI);
+  const K = wallKick(spot, c.r);
+  placeController(c, K.x, K.z + 0.35, Math.PI);
+  const sync = () => {
+    const W = c.wallDur > 0 ? c.wall : null;
+    d.object.position.set(c.x, 0, c.z);
+    d.object.rotation.y = c.yaw;
+    d.update(1 / 60, {
+      speed: c.animSpeed, action: W ? 'wallJump' : 'none',
+      wallK: W ? Math.min(1, c.wallT / c.wallDur) : -1,
+      wallGap: W ? (c.x - W.x) * W.nx + (c.z - W.z) * W.nz : 0,
+      wallTop: W?.top ?? 0, wallOut: W?.out ?? 0, wallPaws: W?.paws ?? 0, wallSide: W?.side ?? 0, wallLat: W?.lat ?? 0,
+    });
+    d.object.updateMatrixWorld(true);
+  };
+  for (let i = 0; i < 30; i++) sync();
+  startWallJump(c, spot);
+  // posições em relação ao botão: x para a direita de quem olha a parede (+X), y altura, z distância da parede
+  const rel = (name) => {
+    const p = d.bones.find((b) => b.name === name).getWorldPosition(new THREE.Vector3());
+    return new THREE.Vector3(p.x - spot.x, p.y, p.z - spot.z);
+  };
+  let minWall = Infinity;
   let minY = Infinity;
   let maxY = 0;
   const at = {};
   const v = new THREE.Vector3();
-  for (let i = 0; i <= N; i++) {
-    const k = i / N;
-    d.update(1 / 60, anim(k));
-    d.object.updateMatrixWorld(true);
+  for (let i = 0; i < 80 && (c.wallDur > 0 || i < 2); i++) {
+    steer(c, 1 / 60, { dx: 0, dz: 0, speed: 0 });
+    integrate(c, 1 / 60, world);
+    const k = c.wallDur > 0 ? c.wallT / c.wallDur : 1;
+    sync();
     for (const b of d.bones) {
       b.getWorldPosition(v);
-      maxZ = Math.max(maxZ, v.z);
+      minWall = Math.min(minWall, v.z - spot.z);
       minY = Math.min(minY, v.y);
       maxY = Math.max(maxY, v.y);
     }
-    if (Math.abs(k - WALL_TOUCH) <= 0.5 / N) at.touch = { FR: pos('FRp'), FL: pos('FLp') };
-    if (Math.abs(k - 0.45) <= 0.5 / N) at.kick = { HL: pos('HLp'), HR: pos('HRp') };
+    if (!at.touch && k >= WALL_TOUCH) at.touch = { FR: rel('FRp'), FL: rel('FLp') };
+    if (!at.kick && k >= 0.45) at.kick = { HL: rel('HLp'), HR: rel('HRp') };
   }
   const near = (p, x, y, z, tol, msg) => {
     const dd = p.distanceTo(new THREE.Vector3(x, y, z));
-    assert.ok(dd < tol, `${msg}: ${dd.toFixed(3)} m de (${x}, ${y}, ${z}) → (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})`);
+    assert.ok(dd < tol, `${msg}: ${dd.toFixed(3)} m de (${x.toFixed(3)}, ${y.toFixed(3)}, ${z.toFixed(3)}) → (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})`);
   };
-  near(at.touch.FR, -shape.lat - 0.01, top - 0.025, gap - shape.out - 0.02, 0.03, 'a pata direita no botão');
-  near(at.touch.FL, shape.side - shape.lat, top - shape.paws - 0.022, gap - 0.03, 0.03, 'a esquerda na patinha pintada');
-  near(at.kick.HL, 0.055, 0.345, gap - 0.022, 0.035, 'traseira esquerda pegando impulso');
-  near(at.kick.HR, -0.055, 0.345, gap - 0.022, 0.035, 'traseira direita pegando impulso');
-  assert.ok(maxZ < gap + 0.005, `nenhuma articulação atravessa a parede (z máx ${maxZ.toFixed(3)}, parede em ${gap})`);
+  // em relação ao botão: a dog está lat m à esquerda (−X, olhando para o norte); a pata direita toca o botão
+  near(at.touch.FR, 0.01, top - 0.025, shape.out + 0.02, 0.035, 'a pata direita no botão');
+  near(at.touch.FL, -shape.side, top - shape.paws - 0.022, 0.03, 0.035, 'a esquerda na patinha pintada');
+  near(at.kick.HL, -shape.lat - 0.055, 0.345, 0.022, 0.04, 'traseira esquerda pegando impulso');
+  near(at.kick.HR, -shape.lat + 0.055, 0.345, 0.022, 0.04, 'traseira direita pegando impulso');
+  assert.ok(minWall > -0.005, `nenhuma articulação atravessa a parede (a ${minWall.toFixed(3)} m dela)`);
   assert.ok(minY > -0.02, `nada abaixo do chão (y mín ${minY.toFixed(3)})`);
   assert.ok(maxY > top - 0.05, 'chega lá no alto');
-  d.update(1 / 60, anim(-1));
   const inner = d.object.children[0];
   assert.ok(Math.abs(inner.rotation.x) < 1e-6 && Math.abs(inner.position.z) < 1e-6, 'depois do impulso o corpo volta ao normal');
 });
@@ -320,8 +346,8 @@ test('Arena do Pulo: de costas é pulo comum; a Radhija não pega impulso e ganh
   const h = await arena();
   h.tap('KeyF');
   faceWall(h, BTN);
-  h.hold([0, 1]); // vira para o sul
-  h.run(0.12);
+  h.hold([0, 1]); // vira para o sul (o giro de 180° leva ~0,25 s)
+  h.run(0.35);
   h.hold(null);
   h.run(0.3);
   h.clearLog();
