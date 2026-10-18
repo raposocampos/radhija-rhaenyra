@@ -81,7 +81,8 @@ try {
   check(lib(state).aligned, 'ventilador empurrado até a grade do duto', JSON.stringify(lib(state).fan));
   await page.keyboard.press('KeyQ');
   const f = lib(await info()).fan;
-  await walkTo(f.x + 0.5, f.z - 0.75, { tol: 0.1 });
+  // contorna o ventilador pelo leste e fica na frente dele, no vento
+  await walkPath([[f.x + 0.8, f.z + 0.6], [f.x + 0.75, f.z - 0.75]], { tol: 0.12 });
   await walkTo(f.x + 0.12, f.z - 0.75, { tol: 0.08 });
   await H.hold(keysFor(0, -1), 250);
   await clearLog();

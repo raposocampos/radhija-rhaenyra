@@ -108,9 +108,10 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   assert.ok(push(h, fanOf, L.FAN.half, [0, -1], (i) => i.biblioteca.aligned, [[6.7, 1.3]]), 'ventilador na grade do duto');
   as(h, 'radhija');
   const f = fanOf(h);
-  // na frente do ventilador, no vento, de frente para a grade do duto
-  h.walkTo(f.x + 0.5, f.z - 0.75, { tol: 0.08 });
-  h.walkTo(f.x + 0.12, f.z - 0.75, { tol: 0.06 });
+  // contorna o ventilador pelo leste e fica na frente dele, no vento, de frente para a grade do duto
+  h.walkPath([[f.x + 0.8, f.z + 0.6], [f.x + 0.75, f.z - 0.75], [f.x + 0.12, f.z - 0.75, { tol: 0.06 }]], { tol: 0.1 });
+  const rad = h.ctrls.radhija;
+  assert.ok(Math.hypot(rad.x - f.x - 0.12, rad.z - f.z + 0.75) < 0.15, `a Radhija na frente do ventilador (${rad.x.toFixed(2)}, ${rad.z.toFixed(2)})`);
   h.hold([0, -1]);
   h.run(0.25);
   h.hold(null);
@@ -119,7 +120,9 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   h.keyDown('KeyR');
   h.run(0.3);
   h.keyUp('KeyR');
-  assert.ok(h.run(6, { until: (i) => i.biblioteca.cat !== 'asleep' }), 'o cheiro foi pelo duto e acordou o Bichano');
+  const woke = h.run(6, { until: (i) => i.biblioteca.cat !== 'asleep' });
+  const why = JSON.stringify({ fan: fanOf(h), aligned: lib(h).aligned, damper: lib(h).damper, bafo: h.log('dog:bafo'), spawn: h.log('scent:spawn'), duct: h.log('scent:duct'), smell: h.log('scent:smell'), fade: h.log('scent:fade') });
+  assert.ok(woke, `o cheiro foi pelo duto e acordou o Bichano ${why}`);
   assert.ok(h.log('scent:duct').length >= 1, 'entrou no duto');
   assert.ok(h.run(5, { until: (i) => i.biblioteca.book === 'floor' }), 'o livro caiu no chão do escritório');
   assert.ok(h.run(10, { until: (i) => i.biblioteca.cat === 'bed' }), 'o Bichano saiu pela portinha e foi para a almofada');
