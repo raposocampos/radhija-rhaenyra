@@ -298,6 +298,22 @@ test('Arena do Pulo: a alavanca liga e desliga as luzinhas (um impulso cada); �
   h.setPad(null);
 });
 
+test('Arena do Pulo: o botão de pulo do toque também pega impulso na parede', async () => {
+  const h = await arena();
+  h.tap('KeyF');
+  faceWall(h, BTN);
+  h.clearLog();
+  const touch = h.game.input.touch;
+  touch.press('jump');
+  h.step();
+  touch.release('jump');
+  h.run(D + 0.3);
+  assert.equal(h.log('dog:wallJump').length, 1, 'impulso pelo botão de toque');
+  assert.equal(h.log('dog:jump').length, 0);
+  assert.equal(h.info().wall.button.on, true);
+  assert.equal(h.info().input.device, 'touch');
+});
+
 test('Arena do Pulo: de costas é pulo comum; a Radhija não pega impulso e ganha a dica', async () => {
   const h = await arena();
   h.tap('KeyF');

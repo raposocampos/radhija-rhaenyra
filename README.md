@@ -19,20 +19,25 @@ npm run dev
 
 Depois, abra `http://127.0.0.1:5173/`.
 
-| Ação | Teclado | Controle (PlayStation · Xbox) |
-|---|---|---|
-| Mover | WASD / setas | analógico esquerdo / D-pad |
-| Pular (Rhaenyra) | Espaço | ✕ · A |
-| Interagir / latir | E | ○ · B |
-| Latir | — | □ · X |
-| Fica / Vem (companheira) | F | △ · Y |
-| Superbafo (Radhija): segure para mirar, solte para soprar | R | L2 · LT |
-| Lambe-Lambe (Rhaenyra, perto da irmã): segure para lamber | R | L2 · LT |
-| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT |
-| Trocar de cachorrinha | Q | L1 · LB |
-| Pausar | Esc | Options · Start |
+| Ação | Teclado | Controle (PlayStation · Xbox) | Celular (toque) |
+|---|---|---|---|
+| Mover | WASD / setas | analógico esquerdo / D-pad | joystick à esquerda |
+| Pular · impulso na parede com patinhas (Rhaenyra) | Espaço | ✕ · A | Pular |
+| Interagir / latir | E | ○ · B | Agir |
+| Latir | — | □ · X | Agir (sem nada perto) |
+| Fica / Vem (companheira) | F | △ · Y | Fica · Vem |
+| Superbafo (Radhija): segure para mirar, solte para soprar | R | L2 · LT | Bafo |
+| Lambe-Lambe (Rhaenyra, perto da irmã): segure para lamber | R | L2 · LT | Lamber |
+| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar |
+| Trocar de cachorrinha | Q | L1 · LB | Trocar |
+| Pausar | Esc | Options · Start | botão no canto |
 
 A tela desenha os botões no estilo PlayStation; se o controle conectado for de Xbox, no estilo Xbox.
+
+**No celular**: abra o mesmo link com o celular deitado. Os controles de toque aparecem depois do primeiro toque e
+somem se você usar teclado ou controle. O jogo escolhe uma qualidade gráfica mais leve para o celular e baixa sozinho
+se ficar lento; no menu de pausa dá para escolher Auto, Alta, Média ou Baixa. No Android, o primeiro toque já põe em
+tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para jogar em tela cheia. No PC nada muda.
 
 ## Fases
 

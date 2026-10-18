@@ -1,9 +1,11 @@
 // Marcação da interface: o template HTML das camadas (tela inicial, cartão da fase, HUD, pausa,
-// comemoração, vitória e cortina) e os pedaços de HTML gerados (teclas e botões do controle desenhados,
-// texto com "(E)" virando tecla, confete, padrão de patinhas). Só funções puras que devolvem strings.
+// comemoração, vitória e cortina) e os pedaços de HTML gerados (teclas, botões do controle e botões de toque
+// desenhados, texto com "(E)" virando tecla, confete, padrão de patinhas). Só funções puras que devolvem strings.
 import {
   boneIcon, dogIcon, pawIcon, clockIcon, speakerIcon, sparkIcon, playIcon, restartIcon,
-  heartIcon, homeIcon, followIcon, keyboardIcon, gamepadIcon,
+  heartIcon, homeIcon, followIcon, stayIcon, keyboardIcon, gamepadIcon,
+  jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, pauseIcon, stickIcon, fullscreenIcon, qualityIcon,
+  rotatePhoneIcon,
 } from './icons.js';
 
 export const DOG_INFO = {
@@ -16,7 +18,7 @@ export const ITEM_NOUN = { carrot: 'a cenoura', ball: 'a bolinha', slipper: 'a p
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ---------------------------------------------------------------------------
-//  Teclas e botões do controle (os dois são desenhados; o CSS mostra o do dispositivo atual)
+//  Teclas, botões do controle e botões de toque (os três são desenhados; o CSS mostra o do dispositivo atual)
 // ---------------------------------------------------------------------------
 export function keyLabel(k) {
   if (!k) return '';
@@ -50,14 +52,36 @@ export const PAD_BTN = {
 const KEY_TO_PAD = {
   E: ['B'], Enter: ['A'], Q: ['LB'], F: ['Y'], Shift: ['RB'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['A'], R: ['LT'],
 };
-/** Tecla lógica → tecla desenhada + botão do controle equivalente. */
+// Botões de toque desenhados como os da tela (src/ui/touchControls.js). O de bafo e o de arrancada mudam com a
+// cachorrinha ativa (.rr[data-dog]): tg-r = Radhija (bafo, arrancada), tg-h = Rhaenyra (lamber, empurrar).
+const tbtn = (cls, label, icon) => `<span class="rr-tg rr-tg--${cls}" aria-label="${label}">${icon}</span>`;
+const byDog = (r, h) => `<span class="tg-r">${r}</span><span class="tg-h">${h}</span>`;
+export const TOUCH_BTN = {
+  act: tbtn('act', 'Agir', pawIcon()),
+  jump: tbtn('jump', 'Pular', jumpIcon()),
+  bafo: tbtn('bafo', 'Bafo ou Lamber', byDog(windIcon(), lickIcon())),
+  wind: tbtn('bafo', 'Bafo', windIcon()),
+  lick: tbtn('bafo', 'Lamber', lickIcon()),
+  dash: tbtn('dash', 'Arrancada ou Empurrar', byDog(dashIcon(), pushIcon())),
+  dashOnly: tbtn('dash', 'Arrancada', dashIcon()),
+  push: tbtn('dash', 'Empurrar', pushIcon()),
+  swap: tbtn('swap', 'Trocar', swapIcon()),
+  stay: tbtn('stay', 'Fica ou Vem', stayIcon()),
+  pause: tbtn('pause', 'Pausa', pauseIcon()),
+  stick: tbtn('stick', 'Joystick', stickIcon()),
+};
+const KEY_TO_TOUCH = {
+  E: ['act'], Enter: [], Q: ['swap'], F: ['stay'], Shift: ['dash'], Esc: ['pause'], X: ['act'], WASD: ['stick'], Espaço: ['jump'], R: ['bafo'],
+};
+/** Tecla lógica → tecla desenhada + botão do controle e botão de toque equivalentes. */
 /** @param {string} k @param {{ pad?: string[] }} [opts] */
 export function glyph(k, { pad } = {}) {
   const l = k === 'WASD' ? 'WASD' : keyLabel(k);
   const kb = l === 'WASD' ? `<span class="rr-keys">${['W', 'A', 'S', 'D'].map(kbd).join('')}</span>` : kbd(l);
   const pads = pad || KEY_TO_PAD[l];
   if (!pads) return kb;
-  return `<span class="rr-g"><span class="k-kb">${kb}</span><span class="k-pad">${pads.map((p) => PAD_BTN[p] || '').join('')}</span></span>`;
+  const touch = (KEY_TO_TOUCH[l] || []).map((t) => TOUCH_BTN[t]).join('');
+  return `<span class="rr-g"><span class="k-kb">${kb}</span><span class="k-pad">${pads.map((p) => PAD_BTN[p] || '').join('')}</span><span class="k-touch">${touch}</span></span>`;
 }
 
 // Troca "(E)", "(Q)", "(F)", "(segure Shift)" e Shift no texto corrido por
@@ -109,19 +133,22 @@ export function pawPattern(color) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-/** @type {[label: string, key: string | null, pads: string[]][]} */
+/** @type {[label: string, key: string | null, pads: string[], touch: string[]][]} */
 export const CONTROLS = [
-  ['Mover', 'WASD', ['LS', 'DPad']],
-  ['Interagir · latir', 'E', ['B']],
-  ['Latir', null, ['X']],
-  ['Pular (Rhaenyra)', 'Space', ['A']],
-  ['Superbafo (Radhija): segure e solte', 'R', ['LT']],
-  ['Lambe-Lambe (Rhaenyra): segure perto da irmã', 'R', ['LT']],
-  ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT']],
-  ['Trocar de cachorrinha', 'Q', ['LB']],
-  ['Fica · Vem (companheira)', 'F', ['Y']],
-  ['Pausar', 'Esc', ['Start']],
+  ['Mover', 'WASD', ['LS', 'DPad'], ['stick']],
+  ['Interagir · latir', 'E', ['B'], ['act']],
+  ['Latir', null, ['X'], []],
+  ['Pular · impulso na parede (Rhaenyra)', 'Space', ['A'], ['jump']],
+  ['Superbafo (Radhija): segure e solte', 'R', ['LT'], ['wind']],
+  ['Lambe-Lambe (Rhaenyra): segure perto da irmã', 'R', ['LT'], ['lick']],
+  ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT'], ['dashOnly', 'push']],
+  ['Trocar de cachorrinha', 'Q', ['LB'], ['swap']],
+  ['Fica · Vem (companheira)', 'F', ['Y'], ['stay']],
+  ['Pausar', 'Esc', ['Start'], ['pause']],
 ];
+/** Opções de qualidade do menu de pausa (src/core/quality.js). */
+export const QUALITY_OPTIONS = [['auto', 'Auto'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']];
+export const QUALITY_NAMES = { alta: 'alta', media: 'média', baixa: 'baixa', minima: 'mínima' };
 
 export function template() {
   const ctlBar = [
@@ -132,10 +159,12 @@ export function template() {
     `<span class="rr-ctl">${glyph('Shift')}Correr · empurrar</span>`,
     `<span class="rr-ctl">${glyph('Esc')}Pausar</span>`,
   ].join('<i class="rr-dot"></i>');
-  const ctlRows = CONTROLS.map(([label, key, pads]) => {
+  const ctlRows = CONTROLS.map(([label, key, pads, touch]) => {
     const kb = key ? (key === 'WASD' ? `<span class="rr-keys">${['W', 'A', 'S', 'D'].map(kbd).join('')}</span>` : kbd(key)) : '<span class="rr-none">—</span>';
-    return `<span class="rr-ctl-table__label">${esc(label)}</span><span class="rr-ctl-table__kb">${kb}</span><span class="rr-ctl-table__pad">${pads.map((p) => PAD_BTN[p]).join('')}</span>`;
+    const tc = touch.length ? touch.map((t) => TOUCH_BTN[t]).join('') : '<span class="rr-none">—</span>';
+    return `<span class="rr-ctl-table__label">${esc(label)}</span><span class="rr-ctl-table__kb">${kb}</span><span class="rr-ctl-table__pad">${pads.map((p) => PAD_BTN[p]).join('')}</span><span class="rr-ctl-table__touch">${tc}</span>`;
   }).join('');
+  const qualityOpts = QUALITY_OPTIONS.map(([mode, label]) => `<button class="rr-qopt" data-action="quality" data-quality="${mode}" data-nav aria-pressed="false">${label}</button>`).join('');
 
   return `
   <section class="rr-layer rr-title" aria-label="Tela inicial">
@@ -227,11 +256,20 @@ export function template() {
           <button class="rr-btn rr-btn--soft" data-action="menu" data-nav>${homeIcon()}<span>Menu inicial</span></button>
         </div>
       </div>
-      <label class="rr-volume" data-nav data-slider>${speakerIcon()}<span>Volume</span><input class="rr-range" type="range" min="0" max="100" step="1" value="70" tabindex="-1"><output>70%</output></label>
+      <div class="rr-pause__settings">
+        <label class="rr-volume" data-nav data-slider>${speakerIcon()}<span>Volume</span><input class="rr-range" type="range" min="0" max="100" step="1" value="70" tabindex="-1"><output>70%</output></label>
+        <div class="rr-quality" role="group" aria-label="Qualidade gráfica">
+          <span class="rr-quality__label">${qualityIcon()}<span>Qualidade</span></span>
+          <span class="rr-quality__opts">${qualityOpts}</span>
+          <span class="rr-quality__now" aria-live="polite"></span>
+        </div>
+        <button class="rr-btn rr-btn--soft rr-fullscreen" data-action="fullscreen" data-nav hidden>${fullscreenIcon()}<span>Tela cheia</span></button>
+      </div>
       <div class="rr-ctl-table">
         <span></span>
         <span class="rr-ctl-table__head">${keyboardIcon()}Teclado</span>
         <span class="rr-ctl-table__head">${gamepadIcon()}Controle</span>
+        <span class="rr-ctl-table__head rr-ctl-table__head--touch">${stickIcon()}Toque</span>
         ${ctlRows}
       </div>
     </div>
@@ -262,6 +300,10 @@ export function template() {
         <button class="rr-btn rr-btn--soft" data-action="cancel-load" data-nav hidden>Voltar à fase atual</button>
       </div>
     </div>
+  </section>
+
+  <section class="rr-rotate" role="alert" aria-label="Gire o celular">
+    <div class="rr-rotate__box">${rotatePhoneIcon()}<strong>Gire o celular</strong><span>Radhija &amp; Rhaenyra se joga com a tela deitada.</span></div>
   </section>
 
   <section class="rr-curtain" aria-live="polite">

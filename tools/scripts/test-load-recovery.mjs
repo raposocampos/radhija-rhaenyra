@@ -11,7 +11,7 @@ import { createHarness } from './lib/harness.mjs';
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const MOUNT = '/previews/pr-903/1-1/';
 const PROGRESS_KEY = 'rr-preview-pr-903:rr-progress-v1';
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const temporary = await mkdtemp(join(tmpdir(), 'rr-load-recovery-'));
 let serving = DIST;
 let H;

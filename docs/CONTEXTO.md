@@ -10,10 +10,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   alto) e animações extras de interação. Entregas em sequência, um PR cada, com prévia e aprovação:
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
-  cenário e objetos em poucas linhas e esperar o ok. O PR #22 (celular, toque) mexe em input e interface: as
-  entregas que tocarem nessas áreas começam depois dele.
-- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), base `a7d59ed`. Consultar o PR
-  dessa branch para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
+  cenário e objetos em poucas linhas e esperar o ok.
+- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), **PR #23**, com o main do #22
+  (`1fbc631`) integrado. Consultar o PR para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
   Feito: `pickWallSpot`/`startWallJump`/`integrateWall` em `dogController.js` (roteiro de 1,05 s, toque no alto em
   52%, volta 0,32 m afastada, sempre com colisão); `game.js` troca o pulo pelo impulso quando a fase oferece um
   ponto (`puzzle.wallSpots`) e avisa o toque (`puzzle.onWallTouch`, `wall:touch`); pose em `dogAnimation.js`
@@ -24,8 +23,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   roteiro, pose no modelo real, botão/alavanca, arena com pausa/troca/reinício) e a suíte E2E `pulo`, com as
   capturas `tools/scripts/capture-parede.mjs` (quadro a quadro, qualidade completa).
 - Próximo passo: CI verde, E2E `pulo` e revisão das capturas `shots/parede-revisao/` contra o padrão das fases
-  4 a 7; ajustar a pose se preciso; entregar a prévia (`?level=pulo&play`) e aguardar aprovação. Depois do #22,
-  conferir o botão de pulo de toque. Em seguida, apresentar o desenho da fase 8.
+  4 a 7; ajustar a pose se preciso; conferir o botão de pulo de toque (o impulso usa o mesmo `Jump`); entregar a
+  prévia (`?level=pulo&play`) e aguardar aprovação. Em seguida, apresentar o desenho da fase 8.
+
+## Entregue: jogar no celular (PR #22)
+
+Controles de toque (joystick flutuante e botões, `src/ui/touchControls.js`, dispositivo `touch`), layout próprio do
+celular (`.rr[data-mobile]`), perfis de qualidade por aparelho com governador de FPS (`src/core/quality.js`; PC =
+alta, sem mudança), manifest e ícones. Squash `1fbc631` no main. Detalhes em ARQUITETURA §6, §9 e §10.
 
 ## Entregue: fases 6 e 7 na campanha (PR #21)
 
