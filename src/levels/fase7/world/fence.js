@@ -169,7 +169,7 @@ export function buildFence(root, layout) {
   }
   // diagonal (mão-francesa) do lado de dentro
   const diag = new THREE.Mesh(rbox(0.03, 0.05, Math.hypot(L - 0.12, 0.4), 0.01), woodMat('#d9b98c', { key: 'f7-rail', rough: 0.75 }));
-  diag.position.set(-0.05, 0.34, -L / 2);
+  diag.position.set(-0.056, 0.34, -L / 2); // longe do plano da lingueta do ferrolho
   diag.rotation.x = Math.atan2(0.4, L - 0.12);
   gate.add(diag);
   const gateSpots = [];

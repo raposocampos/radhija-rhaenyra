@@ -52,7 +52,7 @@ export const BALL = { x: 0.35, z: 0.45, r: 0.068, pickupR: 0.5 };
  */
 export const SLIDE = { z: -2.75, x0: 1.55, x1: 3.55, halfWidth: 0.27, deck: 1.05 };
 export const TOWER = { x: 4.08, z: SLIDE.z, hx: 0.53, hz: 0.52, deck: SLIDE.deck, roof: 2.05 };
-export const SLIDE_ENTRY = { minX: 0.98, maxX: 1.78, minZ: SLIDE.z - 0.3, maxZ: SLIDE.z + 0.3 };
+export const SLIDE_ENTRY = { minX: 0.98, maxX: 1.78, minZ: SLIDE.z - 0.38, maxZ: SLIDE.z + 0.38 };
 /** Tempos (s) da subida correndo, da pegada lá em cima, do giro e da descida de barriga. */
 export const SLIDE_TIMES = { climb: 0.8, grab: 0.4, turn: 0.4, slide: 0.95, runout: 0.38, slip: 0.95 };
 /** Frisbee no deque da casinha (centro do disco; base em y). */

@@ -112,7 +112,7 @@ export function createPuzzle(ctx) {
     gateOpen: false, done: false, disposed: false, objKey: '', climbs: 0, slips: 0,
     /** @type {Record<Thing, Place>} */
     place: { ball: 'ground', frisbee: 'top' },
-    /** @type {null | { who: import('../../types').DogName, mode: SlideMode, phase: SlidePhase, t: number, x0: number, yaw0: number, reason: string, grabbed: boolean, action?: string, slope?: number }} */
+    /** @type {null | { who: import('../../types').DogName, mode: SlideMode, phase: SlidePhase, t: number, x0: number, z0: number, yaw0: number, reason: string, grabbed: boolean, action?: string, slope?: number }} */
     slide: null,
     slideDt: 1 / 60,
     slipCd: 0,
@@ -213,22 +213,22 @@ export function createPuzzle(ctx) {
     const pushing = c.animSpeed > 0.25 || c.hits?.some((h) => h.id === 'escorregador');
     if (!dashing && !pushing) return;
     if (dashing && c.name === 'radhija' && mud.canDash('radhija')) {
-      S.slide = { who: c.name, mode: 'climb', phase: 'up', t: 0, x0: c.x, yaw0: c.yaw, reason: '', grabbed: false };
+      S.slide = { who: c.name, mode: 'climb', phase: 'up', t: 0, x0: c.x, z0: c.z, yaw0: c.yaw, reason: '', grabbed: false };
       S.climbs++;
       emit('slide:climb', { name: c.name, x: c.x, z: SLIDE.z });
       return;
     }
     const reason = c.name === 'rhaenyra' ? 'slipRh' : mud.muddy(c.name) ? 'slipMud' : 'slipWalk';
-    S.slide = { who: c.name, mode: 'slip', phase: 'slipUp', t: 0, x0: c.x, yaw0: c.yaw, reason, grabbed: false };
+    S.slide = { who: c.name, mode: 'slip', phase: 'slipUp', t: 0, x0: c.x, z0: c.z, yaw0: c.yaw, reason, grabbed: false };
     S.slips++;
     emit('slide:slip', { name: c.name, x: c.x, z: SLIDE.z, reason });
   }
 
   /** Pose roteirizada de quem está no escorregador (a fase move a dog: lockFor devolve drive). */
-  function pose(c, x, y, yaw, speed, action, slope) {
+  function pose(c, x, y, yaw, speed, action, slope, z = SLIDE.z) {
     const px = c.x, pz = c.z;
     c.x = x;
-    c.z = SLIDE.z;
+    c.z = z;
     c.yaw = yaw;
     c.y = y;
     c.v = 0;
@@ -254,7 +254,9 @@ export function createPuzzle(ctx) {
       const u = Math.min(1, sl.t / T.climb);
       // embalada pela arrancada: quase constante, freando um pouco no alto
       const x = sl.x0 + (top - sl.x0) * (0.4 * u + 0.6 * (1 - (1 - u) * (1 - u)));
-      pose(c, x, slideY(x), EAST, 3.2, 'dash', x < SLIDE.x1 ? SLOPE : SLOPE * (1 - smooth((x - SLIDE.x1) / 0.12)));
+      // nos primeiros instantes ela se alinha com a rampa (sem salto de posição nem de giro)
+      const k = smooth(sl.t / 0.15);
+      pose(c, x, slideY(x), sl.yaw0 + wrap(EAST - sl.yaw0) * k, 3.2, 'dash', x < SLIDE.x1 ? SLOPE : SLOPE * (1 - smooth((x - SLIDE.x1) / 0.12)), sl.z0 + (SLIDE.z - sl.z0) * k);
       if (u >= 1) {
         Object.assign(sl, { phase: 'grab', t: 0 });
         emit('slide:top', { name: c.name, x: c.x, y: SLIDE.deck, z: SLIDE.z });
@@ -300,7 +302,8 @@ export function createPuzzle(ctx) {
     } else if (sl.phase === 'slipUp') {
       const u = Math.min(1, sl.t / (T.slip * 0.45));
       const x = sl.x0 + (SLIDE.x0 + 0.42 - sl.x0) * smooth(u);
-      pose(c, x, slideY(x), EAST, 1.6, 'strain', x > SLIDE.x0 ? SLOPE : 0);
+      const k = smooth(sl.t / 0.2);
+      pose(c, x, slideY(x), sl.yaw0 + wrap(EAST - sl.yaw0) * k, 1.6, 'strain', x > SLIDE.x0 ? SLOPE : 0, sl.z0 + (SLIDE.z - sl.z0) * k);
       if (u >= 1) {
         Object.assign(sl, { phase: 'slipDown', t: 0 });
         emit('slide:slipBack', { name: c.name, x: c.x, z: SLIDE.z, reason: sl.reason });
@@ -327,7 +330,7 @@ export function createPuzzle(ctx) {
     c.animSpeed = 0;
     emit(landed ? 'slide:land' : 'slide:slipEnd', { name: c.name, x: c.x, z: c.z });
     S.slide = null;
-    S.slipCd = landed ? 0.3 : 0.9;
+    S.slipCd = landed ? 0.3 : 0.6;
     notifyStage();
   }
 

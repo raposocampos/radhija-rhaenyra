@@ -319,6 +319,7 @@ test('fase 7: no escorregador, andando, enlameada ou a Rhaenyra escorregam de vo
   // a Rhaenyra também não sobe
   select(h, 'rhaenyra');
   h.teleport('rhaenyra', L.SLIDE_ENTRY.minX - 0.3, L.SLIDE.z, Math.PI / 2);
+  h.run(0.8); // passa a pausa depois da escorregada anterior
   h.clearLog();
   h.hold([1, 0]);
   waitFor(h, (i) => i.slide?.mode === 'slip', 'a Rhaenyra escorrega', 3);
