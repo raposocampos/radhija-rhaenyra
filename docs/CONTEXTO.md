@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (extras escondidos, tarefa E). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
@@ -23,8 +23,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   iPhone de `test-toque.mjs`/`capture-celular.mjs` passam por Jogar → Fases → Continuar → Começar.
 - Integração com a fase 8 (PR #24): as listas de suítes (`e2e.yml`, `run-e2e.mjs`) têm `lavanderia` e `menu`; a
   tela das fases mostra as oito fases (4 + 4) e `menuWith` (`test-expresso.mjs`) abre Jogar → Fases antes de ler.
-- Próximo passo: CI e E2E (`menu`, `toque`, `controle`, `expresso` e depois `todas`) no head do PR, revisar as
-  capturas (`shots/menu/`, `shots/celular-revisao/`) e entregar a prévia. Merge só com a aprovação do usuário.
+- Integrado ao main (squash `1cc73d0`, CI do main `39169001462`). Não repetir merge/deploy do #26.
 
 ## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 
@@ -34,9 +33,24 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **Ordem atual (pedido do usuário, 2026-10-18):** A e B entregues; **E agora**, antes de C (fase 9) e D (fase 10).
-- **E (em andamento, Claude):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
-  `claude/animacoes-extras` (worktree próprio), base `42715b6`. Regras do usuário: o cocô com **C** no teclado e
+- **Ordem atual:** A, B e E entregues; **C (fase 9) em andamento**; depois D (fase 10).
+- **C (em andamento, Claude): fase 9 "Biblioteca do Vovô"**, branch `claude/fase9-biblioteca` (worktree próprio),
+  **PR #29**, já com o main `d306983`. Feito: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
+  hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,
+  poltrona, mesa de estudos, duto no alto, ventilador, vasos, chuva nas vidraças), o gato (`src/world/cat.js`), os
+  itens óculos e livro (`src/world/toys.js`, `carryPose.js`, ícones), sons (`soundsBiblioteca.js`), o puzzle
+  (`puzzle.js`), os extras da fase, `test/fase9.test.mjs`, a suíte E2E `biblioteca` e `capture-biblioteca.mjs`.
+- Decisões da fase 9: o vento do ventilador tem `funnel` (opcional em `scent.addWind`; as outras fases não mudam),
+  porque com o teclado a frente segue a câmera, girada uns 15°, e o sopro escapava da faixa; a Radhija no vão mantém
+  a porta aberta (a folha encostava nela e o vão ficava estreito demais para a Rhaenyra); `info().biblioteca.catAt`
+  serve aos testes e capturas; no E2E, as condições do `holdUntil` rodam na página (dados de fora só pelo `arg`).
+- Próximo passo da C: conferir CI e E2E `biblioteca` no head do PR #29, revisar as capturas
+  (`shots/biblioteca-revisao/`), rodar o E2E `todas`, entregar a prévia e esperar a aprovação. Depois, apresentar o
+  desenho da fase 10 e esperar o ok.
+- **E entregue (extras escondidos, PR #28):** squash `d306983` no main, CI do main `39174689553`, deployment
+  `7162054221` no ambiente `github-pages`; `version.json` de produção conferido em `d306983`. Não repetir
+  merge/deploy. Resumo: extras escondidos nas fases, branch
+  `claude/animacoes-extras`. Regras do usuário: o cocô com **C** no teclado e
   **R3** no controle, só depois dos 3 ossinhos e uma vez por fase (o reinício libera); a animação é o principal
   (agachada, traseiras dobradas, rabinho em pé, tremidinha, cara de concentração, cocô de desenho fofo e alívio
   cavando com as traseiras). As animações do cenário (beber, comer, balanço, areia etc.) valem a qualquer hora, com
@@ -44,13 +58,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   ARQUITETURA §6 ("Extras"), liberada pelo usuário. O menu novo (PR #26) não pode citar o C nem o R3.
   Arquivos: `src/game/extras.js`, poses em `src/dogs/dogAnimation.js`, `src/world/poop.js`, `src/world/extraProps.js`,
   `src/levels/faseN/extras.js`, sons em `src/fx/audio/soundsExtras.js`, `test/extras.test.mjs`, suíte E2E `extras` e
-  `tools/scripts/capture-extras.mjs`. Próximo passo: CI, E2E `extras` e `todas`, revisar as capturas da animação,
-  ajustar e entregar a prévia.
+  `tools/scripts/capture-extras.mjs`. A fase 9 já tem os seus extras (`src/levels/fase9/extras.js`).
 - **B entregue (fase 8, PR #24):** squash `42715b6` no main (head aprovado `2cd2eda`), CI do main `39166620003`,
   deploy `39166669699` com sucesso; `version.json` de produção conferido em `42715b6`. Não repetir merge/deploy.
-- **C pausada (fase 9):** commit local de trabalho `a4f6c58` no branch `claude/fase9-biblioteca` (worktree
-  `.claude/worktrees/fase9-biblioteca`): layout, iluminação, definição e puzzle, sem cenário (world/), itens óculos e
-  livro, gato, sons, testes, E2E e capturas. Retomar depois da E, atualizando o branch com o main.
 - Prazo de relógio no harness E2E: entregue à parte (PR #27, de outra sessão); conferir o estado no GitHub.
 - **Retorno do usuário sobre a progressão (2026-10-18):** a 8 está de bom tamanho para apresentar a mecânica nova; a
   **9** deve ser um pouco mais complexa (mais elementos, **mais áreas**, puzzle mais difícil); a **10** fecha a demo
@@ -64,7 +74,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   cima: latido não adianta, superbafo direto não alcança; impulso no botão do ventilador do jardim de inverno, a
   Rhaenyra empurra o ventilador até a boca do duto, a Radhija sopra o superbafo no vento, a grade alta do escritório
   solta o cheiro, o Bichano pula, derruba o livro e sai pela portinha; impulso na maçaneta (alavanca alta) abre a
-  porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro.
+  porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro. Na versão construída,
+  o ventilador fica no jardim de inverno e o impulso é no registro do duto (alavanca na parede de tijolos).
 - **D (rascunho):** fase 10 "Festa no Quintal": laço, chapéu e vela estrela na torre de presentes; o quadro "Festa
   do ano passado" na varanda mostra a ordem de baixo para cima (ordem errada: a peça balança e cai na grama).
 

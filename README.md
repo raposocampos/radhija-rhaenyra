@@ -67,6 +67,13 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    Rhaenyra pega impulso e aperta os botões do alto: o do varal faz a meia listrada descer por alguns segundos (só o
    tranco de uma arrancada da Radhija solta o pregador); o da centrífuga chacoalha a máquina e a mantinha escorrega
    para o cesto de rodinhas, que a Rhaenyra empurra até a caminha.
+9. **Biblioteca do Vovô**: noite de chuva na casa do vovô, com escritório, hall, biblioteca e jardim de inverno. Os
+   óculos estão no alto da estante: um impulso na alavanca solta o freio da escadinha de rodinhas, a Rhaenyra tira o
+   globo do trilho e empurra a escada até debaixo dos óculos, e com ela segurando a escada (Fica) a Radhija sobe e
+   pega. O livro de histórias está no alto do armário, embaixo do gato Bichano: a Rhaenyra abre o registro do duto
+   e encaixa o ventilador na grade, o superbafo da Radhija vai pelo vento e pelo duto até o gato, que acorda, pula e
+   derruba o livro. A porta do escritório tem mola: a Radhija fica no vão enquanto a Rhaenyra busca o livro, e os
+   dois vão para a mesinha da poltrona.
 
 Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).
