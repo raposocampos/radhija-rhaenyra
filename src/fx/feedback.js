@@ -484,6 +484,34 @@ export function createFeedback(opts) {
     sfx('land', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.9, alpha: 0.4, strength: 0.55 });
   });
+  // impulso na parede e o botão/alavanca do alto
+  events.on('dog:wallJump', ({ x, z }) => {
+    sfx('wallKick', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.85, alpha: 0.38, strength: 0.6 });
+  });
+  events.on('wall:touch', ({ x, y = 1.2, z }) => {
+    sfx('wallTap', x, z);
+    particles.dust({ x, y: 0.4, z }, { count: 3, size: 0.6, alpha: 0.3, strength: 0.35, spread: 0.12 });
+    particles.sparkle({ x, y, z }, { count: 5, radius: 0.1, size: 0.6, rise: 0.25 });
+  });
+  events.on('wall:button', ({ kind, on, x, y = 1.2, z }) => {
+    if (kind === 'lever') sfx('leverClunk', x, z, { on });
+    else sfx('buttonClick', x, z, { on });
+    if (on) {
+      particles.sparkle({ x, y: y + 0.05, z }, { count: 10, radius: 0.18, size: 0.9, rise: 0.6, color: '#FFE7A8' });
+      particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.15, life: 0.7, color: '#FFE3A6', opacity: 0.5, width: 0.08 });
+    }
+  });
+  events.on('wall:tick', ({ x, z, left }) => sfx('buttonTick', x, z, { left }));
+  events.on('wall:timeout', ({ x, z }) => sfx('buttonTimeout', x, z));
+  events.on('hatch:open', ({ x, z }) => {
+    sfx('hatchOpen', x, z);
+    later(0.1, () => particles.sparkle({ x, y: 0.35, z }, { count: 6, radius: 0.2, size: 0.7, rise: 0.4 }));
+  });
+  events.on('hatch:close', ({ x, z }) => {
+    sfx('hatchClose', x, z);
+    particles.dust({ x, y: 0.04, z }, { count: 3, size: 0.7, alpha: 0.3, strength: 0.4 });
+  });
   // superbafo: mira, sopro (poeira verde), nuvem saindo de duto e a Rhaenyra fazendo "eca"
   events.on('bafo:aim', ({ x, z }) => sfx('bafoAim', x, z));
   events.on('dog:bafo', ({ x, z, dirX = 0, dirZ = 0 }) => {

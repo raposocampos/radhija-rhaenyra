@@ -39,6 +39,12 @@ export const DOG_CONFIG = Object.freeze({
     jumpTime: 0.42,
     jumpSpeed: 3.0,
     jumpCooldown: 0.15,
+    // Impulso na parede (o mesmo Espaço / ✕, de frente para uma parede marcada com patinhas, até wallReach m
+    // dela): sobe apoiando as patas, aperta o botão ou puxa a alavanca no alto e volta ao chão em wallJumpTime s,
+    // wallBack m afastada da parede (src/game/dogController.js).
+    wallJumpTime: 1.05,
+    wallReach: 0.8,
+    wallBack: 0.32,
     // Lambe-Lambe (R / L2, o mesmo botão do superbafo): pertinho da irmã (até lickReach m), segurar lambe
     // em ritmo, uma lambida a cada lickStroke s. O efeito de cada lambida é decidido pela fase (puzzle.onLick).
     lickStroke: 0.44,

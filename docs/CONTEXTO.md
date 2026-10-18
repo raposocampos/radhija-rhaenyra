@@ -1,29 +1,38 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (impulso na parede). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: fases 6 e 7 na campanha (Entrega B)
+## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 
-- Pedido do usuário (2026-10-18): "a fase 6 não está aparecendo ali no menu, temos
-  que organizar as fases de uma maneira melhor". As fases 6 (Expresso do Superbafo)
-  e 7 (Lambe-Lambe na Pracinha) saem de `DEV_LEVELS` e entram em `LEVELS`, nessa
-  ordem; o menu normal passa a ter sete fases.
-- Branch **`claude/campanha-fases-6-7`** (worktree próprio), base `dc1a0e5`.
-  Consultar o PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa
-  resultados. Nenhum teste ou build rodou no PC.
-- Feito: `LEVELS = [fase1…fase7]`, `DEV_LEVELS` só com as arenas; `publishedLevelIndex`
-  (`levels/index.js`) faz `?level=fase6`/`?level=fase7` (links da época de protótipo) e
-  `?level=6` abrirem a fase na campanha, sem baixar `dev.js` nem liberar o menu todo.
-  Menu reparte sete cartões em 4 + 3 (máximo de cinco por linha) e o aviso de fase
-  bloqueada sobe acima delas. Testes: `test/catalogo.test.mjs` (ordem, IDs, links,
-  protótipos futuros, `hasNext`), fases 6 e 7 jogadas na campanha real, contratos de
-  tudo que abre (`setOpen`), fase 5 com "Próxima fase"; E2E `expresso` (links, menu,
-  save v1 liberando 6 e 7), `lambe` (última fase), `fase5` e smoke (`LINKED_IDS`).
-- Fica para uma entrega própria (proposta): ampliar a medição temporal para sete fases.
-  Até lá `desempenho.yml` recusa o catálogo de sete por desenho (DESEMPENHO.md).
-- Próximo passo: CI verde, E2E `todas`, revisar a captura `00-menu-sete-fases`,
-  entregar a prévia e **aguardar aprovação** antes do merge/deploy.
+- Pedido do usuário: mais três fases criativas (8, 9 e 10, fechando a demo), puzzles mais complexos, **no mínimo
+  dois objetos** em cada uma, a mecânica nova de **pulo na parede** da Rhaenyra (alcançar botões e alavancas no
+  alto) e animações extras de interação. Entregas em sequência, um PR cada, com prévia e aprovação:
+  **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
+  **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
+  cenário e objetos em poucas linhas e esperar o ok. O PR #22 (celular, toque) mexe em input e interface: as
+  entregas que tocarem nessas áreas começam depois dele.
+- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), base `a7d59ed`. Consultar o PR
+  dessa branch para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
+  Feito: `pickWallSpot`/`startWallJump`/`integrateWall` em `dogController.js` (roteiro de 1,05 s, toque no alto em
+  52%, volta 0,32 m afastada, sempre com colisão); `game.js` troca o pulo pelo impulso quando a fase oferece um
+  ponto (`puzzle.wallSpots`) e avisa o toque (`puzzle.onWallTouch`, `wall:touch`); pose em `dogAnimation.js`
+  (corpo de pé girando no quadril, IK com alvos na parede, pata no botão, carinha feliz); `createWallButton`
+  (botão com tempo e anel de luzes, alavanca, "uma vez") e `buildWallButton` (placa, botão de cogumelo ou
+  alavanca de bolinha, patinhas pintadas); sons `soundsParede.js`; parede de treino na Arena do Pulo (botão abre a
+  portinhola do armarinho por 6 s, alavanca liga as luzinhas). Testes: `test/parede.test.mjs` (escolha do ponto,
+  roteiro, pose no modelo real, botão/alavanca, arena com pausa/troca/reinício) e a suíte E2E `pulo`, com as
+  capturas `tools/scripts/capture-parede.mjs` (quadro a quadro, qualidade completa).
+- Próximo passo: CI verde, E2E `pulo` e revisão das capturas `shots/parede-revisao/` contra o padrão das fases
+  4 a 7; ajustar a pose se preciso; entregar a prévia (`?level=pulo&play`) e aguardar aprovação. Depois do #22,
+  conferir o botão de pulo de toque. Em seguida, apresentar o desenho da fase 8.
+
+## Entregue: fases 6 e 7 na campanha (PR #21)
+
+As fases 6 (Expresso do Superbafo) e 7 (Lambe-Lambe na Pracinha) saíram de `DEV_LEVELS` e entraram em `LEVELS`;
+o menu tem sete fases (4 + 3) e os links por id da época de protótipo continuam valendo (`publishedLevelIndex`).
+Squash `a7d59ed` no main. A medição temporal para sete fases ficou como entrega própria; até lá `desempenho.yml`
+recusa o catálogo de sete por desenho (DESEMPENHO.md).
 
 ## Entregue: Lambe-Lambe e fase 7 (PR #20)
 
