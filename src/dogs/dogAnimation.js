@@ -52,13 +52,13 @@ export function keyed(keys, p) {
 // agacha, salta ficando de pé contra a parede, as traseiras pegam impulso nas patinhas marcadas, uma dianteira
 // aperta o botão no alto e ela desce de volta, de frente para a parede. O corpo gira em torno do quadril.
 /** Corpo de pé (rad, focinho para cima): levanta antes de chegar perto, para a cabeça não bater na parede. */
-const WALL_REAR = [[0, 0], [0.12, 0.08], [0.22, 0.55], [0.3, 1.0], [0.4, 1.28], [0.52, 1.36], [0.62, 1.28], [0.72, 0.95], [0.82, 0.5], [0.92, 0.08], [1, 0]];
+const WALL_REAR = [[0, 0], [0.12, 0.08], [0.22, 0.55], [0.3, 1.0], [0.4, 1.28], [0.52, 1.36], [0.62, 1.26], [0.72, 0.88], [0.82, 0.45], [0.92, 0.08], [1, 0]];
 /** Subida do quadril, em frações do pico (o pico depende da altura do botão). */
 const WALL_LIFT = [[0, 0], [0.14, 0], [0.3, 0.3], [0.4, 0.62], [0.52, 1], [0.62, 0.9], [0.8, 0.38], [0.94, 0], [1, 0]];
 /** Agachadinho antes do salto (frações de 3 cm na escala da dog). */
 const WALL_CROUCH = [[0, 0], [0.12, 1], [0.26, 0]];
 /** Distância do quadril à parede (m): longe enquanto levanta, encostada no alto, se afastando na volta. */
-const WALL_DIST = [[0, 0.6], [0.2, 0.5], [0.3, 0.36], [0.4, 0.22], [0.52, 0.2], [0.62, 0.21], [0.72, 0.34], [0.82, 0.5], [1, 0.62]];
+const WALL_DIST = [[0, 0.6], [0.2, 0.5], [0.3, 0.36], [0.4, 0.22], [0.52, 0.2], [0.62, 0.22], [0.72, 0.4], [0.82, 0.53], [1, 0.62]];
 
 /** Estado da animação (aleatório no começo para as duas dogs não andarem em sincronia). */
 function createAnimState() {
