@@ -12,7 +12,7 @@ const MOUNT = '/previews/pr-smoke/1-1/';
 // Um ou mais protótipos de desenvolvimento (separados por vírgula): cada um abre a própria aba pelo id.
 const DEV_LEVELS = (process.env.SMOKE_DEV_LEVEL || '').split(',').map((id) => id.trim()).filter(Boolean);
 // Fases publicadas cujo link por id circulou quando eram protótipos (?level=fase6&play): abrem a mesma fase.
-const LINKED_IDS = ['fase6', 'fase7'];
+const LINKED_IDS = ['fase6', 'fase7', 'fase8'];
 if (DEV_LEVELS.some((id) => !/^[a-z][a-z0-9_-]*$/i.test(id))) throw new Error('SMOKE_DEV_LEVEL inválido');
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',

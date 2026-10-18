@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -721,6 +721,30 @@ export interface Fase7Props extends LevelProps {
   frisbee: ItemProp;
   /** Toalha de piquenique: spot(objeto) = onde ele fica (o puzzle prende o objeto ali). */
   goal: PropBase & HighlightProp & { spot(thing: Fase7Thing): THREE.Object3D };
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
+export type Fase8Thing = 'sock' | 'blanket';
+/** Onde a mantinha está: em cima da máquina, no cesto, no chão (caiu sem o cesto) ou na caminha. */
+export type Fase8BlanketPlace = 'machine' | 'basket' | 'floor' | 'bed';
+export interface Fase8Props extends LevelProps {
+  /** A meia listrada: começa presa no varal (filha de rack.sockAnchor); a boca da Radhija a leva. */
+  sock: ItemProp;
+  /** Varal elétrico de teto: setLower(0 em cima … 1 embaixo); a meia fica em sockAnchor. */
+  rack: PropBase & { setLower(t: number): void; sockAnchor: THREE.Object3D };
+  /** Máquina de lavar: setSpin(0 parada … 1 centrifugando: o tambor gira e ela chacoalha). */
+  washer: PropBase & { setSpin(k: number): void };
+  /**
+   * A mantinha dobrada (grande demais para a boca). place(lugar, anima) leva para o lugar (anima = vai num arco
+   * suave até lá); wobble(k 0..1) = escorregando na tampa da máquina que chacoalha.
+   */
+  blanket: PropBase & { place(where: Fase8BlanketPlace, animate?: boolean): void; wobble(k: number): void };
+  /** Cesto de roupa com rodinhas (empurrável): a mantinha vai em anchor. */
+  basket: PropBase & HighlightProp & { setPos(x: number, z: number): void; anchor: THREE.Object3D };
+  spinButton: WallButtonProp;
+  rackButton: WallButtonProp;
+  /** Caminha: spot(objeto) = onde ele fica (o puzzle prende ali a meia; a mantinha vai com blanket.place('bed')). */
+  bed: PropBase & HighlightProp & { spot(thing: Fase8Thing): THREE.Object3D };
   collectibles: CollectibleProp[];
   reset(): void;
 }

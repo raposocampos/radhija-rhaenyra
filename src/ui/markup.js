@@ -13,7 +13,7 @@ export const DOG_INFO = {
   rhaenyra: { name: 'Rhaenyra', trait: 'forte' },
 };
 export const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
-export const ITEM_NOUN = { carrot: 'a cenoura', ball: 'a bolinha', slipper: 'a pantufa', duck: 'o patinho', bear: 'o ursinho', frisbee: 'o frisbee' };
+export const ITEM_NOUN = { carrot: 'a cenoura', ball: 'a bolinha', slipper: 'a pantufa', duck: 'o patinho', bear: 'o ursinho', frisbee: 'o frisbee', sock: 'a meia' };
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

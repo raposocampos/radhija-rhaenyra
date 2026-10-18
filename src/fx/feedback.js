@@ -374,9 +374,9 @@ export function createFeedback(opts) {
     if (time - lastPickupFx < 0.2) return;
     lastPickupFx = time;
     glowItem = null;
-    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee' }[item] || 'pickupCarrot';
+    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee', sock: 'pickupSock' }[item] || 'pickupCarrot';
     sfx(snd, x, z);
-    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394' }[item] || '#FFB46E';
+    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394', sock: '#FF9A8F' }[item] || '#FFB46E';
     particles.burst({ x, y: 0.35, z }, { kind: 'stars', count: 10, size: 0.85, speed: 0.8 });
     particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.6, color: col, opacity: 0.55, width: 0.09 });
   }
@@ -504,6 +504,31 @@ export function createFeedback(opts) {
   });
   events.on('wall:tick', ({ x, z, left }) => sfx('buttonTick', x, z, { left }));
   events.on('wall:timeout', ({ x, z }) => sfx('buttonTimeout', x, z));
+  // lavanderia (fase 8): varal, centrífuga, mantinha, meia e caminha
+  events.on('rack:move', ({ dir, x, z }) => sfx('rackMotor', x, z, { dir }));
+  events.on('washer:spin', ({ x, z, time }) => {
+    sfx('washerSpin', x, z, { time });
+    particles.dust({ x, y: 0.05, z: z + 0.32 }, { count: 4, size: 0.7, alpha: 0.25, strength: 0.4, spread: 0.3 });
+  });
+  events.on('sock:yank', ({ x, y = 0.5, z }) => {
+    sfx('sockYank', x, z);
+    particles.sparkle({ x, y, z }, { count: 8, radius: 0.15, size: 0.8, rise: 0.5, color: '#FFD6CF' });
+  });
+  events.on('blanket:fall', ({ x, z }) => sfx('blanketFall', x, z));
+  events.on('blanket:land', ({ x, z, inBasket }) => {
+    sfx('blanketPlop', x, z, { inBasket });
+    particles.dust({ x, y: inBasket ? 0.3 : 0.04, z }, { count: 5, size: 0.8, alpha: 0.3, strength: 0.5, spread: 0.25 });
+    if (inBasket) particles.sparkle({ x, y: 0.45, z }, { count: 7, radius: 0.2, size: 0.8, rise: 0.5 });
+  });
+  events.on('blanket:load', ({ x, z }) => {
+    sfx('blanketPlop', x, z, { inBasket: true });
+    particles.sparkle({ x, y: 0.45, z }, { count: 6, radius: 0.18, size: 0.7, rise: 0.4 });
+  });
+  events.on('bed:deliver', ({ x, z }) => {
+    sfx('bedPlop', x, z);
+    particles.sparkle({ x, y: 0.25, z }, { count: 12, radius: 0.25, size: 0.9, rise: 0.9 });
+    particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.09 });
+  });
   events.on('hatch:open', ({ x, z }) => {
     sfx('hatchOpen', x, z);
     later(0.1, () => particles.sparkle({ x, y: 0.35, z }, { count: 6, radius: 0.2, size: 0.7, rise: 0.4 }));

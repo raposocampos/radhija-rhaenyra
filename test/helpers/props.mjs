@@ -273,6 +273,54 @@ export function stubFase7Props(root, layout) {
   return level('fase7', props);
 }
 
+/** Fase 8: meia no varal, mantinha (guarda o lugar pedido), cesto, máquina, botões e caminha.
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubFase8Props(root, layout) {
+  const rackObj = object(root, 'rack');
+  const sockAnchor = object(rackObj, 'rack:meia');
+  const sock = item(sockAnchor, 'sock', { x: 0, z: 0 });
+  const bedObject = object(root, 'bed');
+  const spots = { sock: object(bedObject, 'spot-sock'), blanket: object(bedObject, 'spot-blanket') };
+  const basketObj = object(root, 'basket');
+  const anchor = object(basketObj, 'basket:anchor');
+  /** @satisfies {import('../../src/types').Fase8Props} */
+  const props = {
+    sock,
+    rack: checked('fase8.rack', { object: rackObj, sockAnchor, lower: 0, setLower(t) { this.lower = t; } }),
+    washer: checked('fase8.washer', { object: object(root, 'washer'), spin: 0, setSpin(k) { this.spin = k; } }),
+    blanket: checked('fase8.blanket', {
+      object: object(root, 'blanket'), where: 'machine', wobbleK: 0,
+      /** @param {import('../../src/types').Fase8BlanketPlace} where */
+      place(where, animate = false) { this.where = where; },
+      wobble(k) { this.wobbleK = k; },
+    }),
+    basket: checked('fase8.basket', {
+      object: basketObj, anchor,
+      setPos(x, z) { basketObj.position.set(x, 0, z); },
+      setHighlight(on) {},
+    }),
+    spinButton: wallButton(root, 'fase8.spinButton'),
+    rackButton: wallButton(root, 'fase8.rackButton'),
+    bed: checked('fase8.bed', {
+      object: bedObject,
+      setHighlight(on) {},
+      /** @param {import('../../src/types').Fase8Thing} thing */
+      spot(thing) { return spots[thing]; },
+    }),
+    collectibles: [],
+    reset() {
+      sockAnchor.add(sock.object);
+      sock.object.position.copy(sock.home);
+      props.blanket.place('machine');
+      props.basket.setPos(layout.BASKET.start.x, layout.BASKET.start.z);
+      props.rack.setLower(0);
+      props.washer.setSpin(0);
+    },
+  };
+  props.reset();
+  return level('fase8', props);
+}
+
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubPlaceholderProps(root, layout) {
   const obj = object(root, 'item');
@@ -332,6 +380,7 @@ export function stubProps(id, root, layout) {
     case 'fase5': return stubFase5Props(root, layout);
     case 'fase6': return stubFase6Props(root, layout);
     case 'fase7': return stubFase7Props(root, layout);
+    case 'fase8': return stubFase8Props(root, layout);
     case 'modelo': return stubPlaceholderProps(root, layout);
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);
