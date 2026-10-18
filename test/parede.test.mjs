@@ -225,6 +225,7 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
     return new THREE.Vector3(p.x - spot.x, p.y, p.z - spot.z);
   };
   let minWall = Infinity;
+  let minWallAt = '';
   let minY = Infinity;
   let maxY = 0;
   const at = {};
@@ -236,7 +237,10 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
     sync();
     for (const b of d.bones) {
       b.getWorldPosition(v);
-      minWall = Math.min(minWall, v.z - spot.z);
+      if (v.z - spot.z < minWall) {
+        minWall = v.z - spot.z;
+        minWallAt = `${b.name} em ${(k * 100).toFixed(0)}%`;
+      }
       minY = Math.min(minY, v.y);
       maxY = Math.max(maxY, v.y);
     }
@@ -252,7 +256,7 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
   near(at.touch.FL, -shape.side, top - shape.paws - 0.022, 0.03, 0.035, 'a esquerda na patinha pintada');
   near(at.kick.HL, -shape.lat - 0.055, 0.345, 0.022, 0.04, 'traseira esquerda pegando impulso');
   near(at.kick.HR, -shape.lat + 0.055, 0.345, 0.022, 0.04, 'traseira direita pegando impulso');
-  assert.ok(minWall > -0.005, `nenhuma articulação atravessa a parede (a ${minWall.toFixed(3)} m dela)`);
+  assert.ok(minWall > -0.005, `nenhuma articulação atravessa a parede (a ${minWall.toFixed(3)} m dela: ${minWallAt})`);
   assert.ok(minY > -0.02, `nada abaixo do chão (y mín ${minY.toFixed(3)})`);
   assert.ok(maxY > top - 0.05, 'chega lá no alto');
   const inner = d.object.children[0];

@@ -140,6 +140,21 @@ export function createDogAnimation(ctx) {
     const py = y - inner.position.y, pz = z - inner.position.z;
     return out.set(x - inner.position.x, py * c - pz * sn, py * sn + pz * c);
   }
+  /** Distância (z do objeto) de um ponto do referencial da dog: o caminho inverso de toInner. */
+  function objZ(T) {
+    const a = st.slope + st.wallTheta;
+    return inner.position.z - T.y * Math.sin(a) + T.z * Math.cos(a);
+  }
+  /** Nenhum alvo de pata passa da parede (a almofadinha fica `margin` além do alvo). */
+  function keepOffWall(T, margin) {
+    const z = objZ(T);
+    const lim = wallCtx.gap - margin;
+    if (z <= lim) return;
+    const a = st.slope + st.wallTheta;
+    const c = Math.cos(a), sn = Math.sin(a);
+    const y = inner.position.y + T.y * c + T.z * sn;
+    toInner(T, inner.position.x + T.x, y, lim);
+  }
   /**
    * Alvo da pata li no impulso: as dianteiras se esticam no salto e apoiam na parede (a direita aperta o botão),
    * as traseiras pegam impulso nas patinhas marcadas e depois se recolhem; na volta, as dianteiras se preparam.
@@ -150,14 +165,17 @@ export function createDogAnimation(ctx) {
     // fica ~3 cm além dele, rumo à parede, e 2–3 cm acima: os alvos recuam para a pata encostar sem atravessar.
     const face = gap - 0.03;
     if (leg.front) {
-      // no salto, as dianteiras se esticam para a frente e para cima, rumo à parede
+      // no salto, as dianteiras se esticam para cima (e um pouco para a frente), rumo à parede
       const reach = sstep(0.1, 0.26, p) * (1 - sstep(0.36, 0.44, p));
-      T.z += reach * 0.1 * s;
-      T.y += reach * 0.08 * s;
+      T.z += reach * 0.06 * s;
+      T.y += reach * 0.1 * s;
       const brace = sstep(0.62, 0.76, p) * (1 - sstep(0.9, 1, p));
       T.z += brace * 0.045 * s;
       const on = sstep(0.3, 0.38, p) * (1 - sstep(0.62, 0.72, p));
-      if (on <= 0) return;
+      if (on <= 0) {
+        keepOffWall(T, 0.03);
+        return;
+      }
       // a esquerda apoia na patinha pintada; a direita apoia ao lado do corpo, sobe até o botão (ou a bolinha da
       // alavanca, que fica lat m à direita dela) e volta
       if (li === 0) toInner(_wallV, side - lat, paws - 0.022, face);
@@ -166,14 +184,17 @@ export function createDogAnimation(ctx) {
         toInner(_wallV, lerp(-0.1, -lat - 0.01, boop), lerp(paws - 0.05, top, boop) - 0.025, lerp(face, gap - out - 0.02, boop));
       }
       T.lerp(_wallV, on);
+      keepOffWall(T, 0.03);
     } else {
       const tuckK = sstep(0.5, 0.58, p) * (1 - sstep(0.7, 0.86, p));
       T.y += tuckK * 0.03 * s;
       T.z += tuckK * 0.02 * s;
       const on = sstep(0.33, 0.39, p) * (1 - sstep(0.5, 0.57, p));
-      if (on <= 0) return;
-      toInner(_wallV, leg.side * 0.055, 0.345, gap - 0.022);
-      T.lerp(_wallV, on);
+      if (on > 0) {
+        toInner(_wallV, leg.side * 0.055, 0.345, gap - 0.022);
+        T.lerp(_wallV, on);
+      }
+      keepOffWall(T, 0.022);
     }
   }
 
