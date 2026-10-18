@@ -20,12 +20,13 @@ async function wallJump(cfg, via = []) {
   await waitFor((s) => !!s.dogs.rhaenyra.wall, { timeout: 1500 });
   return waitFor((s) => !s.dogs.rhaenyra.wall, { timeout: 3000 });
 }
-/** Empurra (Shift) a caixa de `pick(info)` na direção (dx, dz) até `pred(info)`. */
-async function push(pick, half, dx, dz, pred, via = [], timeout = 10000) {
+/** Empurra (Shift) a caixa de `pick(info)` na direção (dx, dz) até `pred(info, arg)` (roda na página: dados de fora
+ *  só pelo `arg`). */
+async function push(pick, half, dx, dz, pred, { via = [], timeout = 10000, arg = null } = {}) {
   if (via.length) await walkPath(via, { tol: 0.12 });
   const b = pick(await info());
   await walkTo(b.x - dx * (half + 0.3), b.z - dz * (half + 0.3), { tol: 0.08, timeout: 6000 });
-  return H.holdUntil([...keysFor(dx, dz), 'ShiftLeft'], pred, { timeout });
+  return H.holdUntil([...keysFor(dx, dz), 'ShiftLeft'], pred, { timeout, arg });
 }
 
 try {
@@ -47,18 +48,18 @@ try {
   await page.keyboard.press('KeyF'); // a Radhija espera no hall
   state = await wallJump(L.BRAKE, [[-2.2, 0.2], [-0.9, 0.15], [1.4, 0.35], [3.6, -1.0]]);
   check(!lib(state).braked, 'impulso na alavanca solta o freio da escadinha');
-  state = await push((s) => lib(s).globe, L.GLOBE.half, -1, 0, (s) => s.biblioteca.globeClear, [[2.75, -2.2]]);
+  state = await push((s) => lib(s).globe, L.GLOBE.half, -1, 0, (s) => s.biblioteca.globeClear, { via: [[2.75, -2.2]] });
   check(lib(state).globeClear, 'globo empurrado (Shift) para a frente da lareira');
-  state = await push((s) => lib(s).ladder, L.LADDER.half, -1, 0, (s) => s.biblioteca.atGlasses, [[2.6, -2.0], [4.0, -2.0]]);
+  state = await push((s) => lib(s).ladder, L.LADDER.half, -1, 0, (s) => s.biblioteca.atGlasses, { via: [[2.6, -2.0], [4.0, -2.0]] });
   check(lib(state).atGlasses, 'escadinha empurrada pelo trilho até debaixo dos óculos', JSON.stringify(lib(state).ladder));
   const hx = L.LADDER.minX + L.HOLD.side;
   await walkPath([[hx + 0.2, -1.9], [hx + 0.05, L.HOLD.z + 0.05]], { tol: 0.1 });
-  // a Radhija vem até a escada (ela estava no hall com o Fica)
+  // troca para a Radhija (que estava no hall com o Fica) e manda a Rhaenyra ficar no pé da escada antes que ela siga
   await page.keyboard.press('KeyQ');
-  await walkPath([[-0.9, 0.15], [1.4, 0.35], [L.LADDER.minX + 0.1, -1.5], [L.LADDER.minX, -1.98]], { tol: 0.1 });
-  await page.keyboard.press('KeyF'); // a Rhaenyra fica no pé da escada
+  await page.keyboard.press('KeyF');
   state = await waitFor((s) => s.biblioteca.held, { timeout: 1500 });
   check(lib(state).held && state.stay.rhaenyra, 'a Rhaenyra parada no pé da escada (Fica) segura a escadinha');
+  await walkPath([[-0.9, 0.15], [1.4, 0.35], [L.LADDER.minX + 0.1, -1.5], [L.LADDER.minX, -1.98]], { tol: 0.1 });
   await H.hold(keysFor(0, -1), 150);
   await clearLog();
   await page.keyboard.press('KeyE');
@@ -74,8 +75,9 @@ try {
   await page.keyboard.press('KeyQ');
   state = await wallJump(L.DAMPER, [[2.2, -0.6], [3.7, 0.25], [5.1, 0.25], [6.3, -1.5]]);
   check(lib(state).damper, 'impulso no registro abre o duto');
-  await push((s) => lib(s).fan, L.FAN.half, -1, 0, (s) => Math.abs(s.biblioteca.fan.x - L.DUCT.inlet.x) < 0.12, [[7.3, -0.3], [7.3, 0.7]]);
-  state = await push((s) => lib(s).fan, L.FAN.half, 0, -1, (s) => s.biblioteca.aligned, [[6.7, 1.3]]);
+  state = await push((s) => lib(s).fan, L.FAN.half, -1, 0, (s, x) => s.biblioteca.fan.x < x + 0.08, { via: [[7.3, -0.3], [7.3, 0.7]], arg: L.DUCT.inlet.x });
+  check(Math.abs(lib(state).fan.x - L.DUCT.inlet.x) < L.FAN.alignTol, 'ventilador empurrado (Shift) até a linha da grade', JSON.stringify(lib(state).fan));
+  state = await push((s) => lib(s).fan, L.FAN.half, 0, -1, (s) => s.biblioteca.aligned, { via: [[6.7, 1.3]] });
   check(lib(state).aligned, 'ventilador empurrado até a grade do duto', JSON.stringify(lib(state).fan));
   await page.keyboard.press('KeyQ');
   const f = lib(await info()).fan;
