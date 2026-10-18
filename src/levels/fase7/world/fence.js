@@ -68,21 +68,28 @@ function spotsAlong(ax, az, bx, bz, pad = 0.07) {
 
 /** Plaquinha PARQUINHO (canvas). */
 function signTexture() {
-  return canvasTexture(256, 96, (g, w, h) => {
+  return canvasTexture(512, 190, (g, w, h) => {
     g.fillStyle = '#fff3d6';
     g.fillRect(0, 0, w, h);
     g.strokeStyle = '#4a3426';
-    g.lineWidth = 8;
-    g.strokeRect(6, 6, w - 12, h - 12);
+    g.lineWidth = 12;
+    g.strokeRect(9, 9, w - 18, h - 18);
     const letters = 'PARQUINHO';
     const cols = ['#e8574a', '#f39a3d', '#6fbf5a', '#4fa3d9', '#8a6fd1', '#ef7fb0', '#e8574a', '#f39a3d', '#4fa3d9'];
-    g.font = '700 50px Fredoka, "Segoe UI", sans-serif';
+    // mede a palavra num tamanho de referência e ajusta a fonte para caber inteira dentro da moldura
+    const font = (px) => `700 ${px}px Fredoka, "Segoe UI", sans-serif`;
+    g.font = font(100);
+    const widths = [...letters].map((ch) => g.measureText(ch).width || 62);
+    const gap = 4;
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (letters.length - 1);
+    const k = Math.min(1.1, (w - 72) / total);
+    g.font = font(Math.floor(100 * k));
     g.textBaseline = 'middle';
-    let x = 22;
+    let x = (w - total * k) / 2;
     for (let i = 0; i < letters.length; i++) {
       g.fillStyle = cols[i];
-      g.fillText(letters[i], x, h / 2 + (i % 2 ? 3 : -3));
-      x += g.measureText(letters[i]).width + 1 || 24;
+      g.fillText(letters[i], x, h / 2 + (i % 2 ? 5 : -5));
+      x += (widths[i] + gap) * k;
     }
   }, { repeat: false });
 }

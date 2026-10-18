@@ -407,8 +407,8 @@ export interface PuzzleContext<P extends LevelProps = LevelProps> {
 
 export interface Objective {
   text: string | null;
-  /** Onde fica o marcador (y = altura); null = sem marcador. */
-  target: XYZ | null;
+  /** Onde fica o marcador (y = altura da gota; ground = altura do piso do anel, se não for o chão); null = sem marcador. */
+  target: (XYZ & { ground?: number }) | null;
   stage: string;
 }
 

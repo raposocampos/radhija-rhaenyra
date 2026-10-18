@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import fase7 from '../src/levels/fase7/index.js';
 import modelo from '../src/levels/_modelo/index.js';
 import { LEVELS } from '../src/levels/index.js';
-import { DEV_LEVELS } from '../src/levels/dev.js';
+import { DEV_LEVELS, devCatalog } from '../src/levels/dev.js';
 import { DOG_CONFIG } from '../src/dogs/config.js';
 import { STAGES, slideY } from '../src/levels/fase7/puzzle.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
@@ -164,6 +164,44 @@ test('fase 7: protótipo só no catálogo de desenvolvimento, com cenário sob d
   assert.equal(i.mud.radhija.k, 0);
   assert.ok(h.props.frisbee.object.position.y > L.SLIDE.deck - 0.01, 'o frisbee começa no alto do escorregador');
   assert.equal(i.objective, 'Só a Radhija cabe no túnel do morrinho: entre no parquinho por ele');
+});
+
+test('catálogo das prévias: os protótipos 6 e 7 entram juntos e em ordem; arenas entram sozinhas', () => {
+  const ids = (catalog) => catalog.levels.map((def) => def.id);
+  const published = LEVELS.map((def) => def.id);
+  for (const [id, index] of [['fase6', published.length], ['fase7', published.length + 1]]) {
+    const catalog = devCatalog(LEVELS, id);
+    assert.deepEqual(ids(catalog), [...published, 'fase6', 'fase7'], `${id}: o menu mostra as fases 6 e 7`);
+    assert.equal(catalog.index, index, `${id}: começa na fase pedida`);
+    catalog.levels.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: numeração em sequência no menu`));
+  }
+  for (const id of ['pulo', 'bafo', 'modelo']) {
+    const catalog = devCatalog(LEVELS, id);
+    assert.deepEqual(ids(catalog), [...published, id], `${id}: arena entra sozinha no fim`);
+    assert.equal(catalog.index, published.length);
+  }
+  assert.equal(devCatalog(LEVELS, 'nada'), null);
+  assert.deepEqual(LEVELS.map((def) => def.id), published, 'a campanha publicada não muda');
+});
+
+test('fase 7: os petiscos ficam em lugares livres e alcançáveis pela Radhija', async (t) => {
+  const h = await prototype(t);
+  const c = h.ctrls.radhija;
+  for (const stage of ['start', 'clean']) {
+    h.puzzle.jumpToStage(stage);
+    h.step();
+    const ctx = { r: c.r, size: c.size, flags: h.puzzle.navFlags() };
+    for (const point of L.COLLECTIBLES) {
+      assert.equal(h.world.overlaps(point.x, point.z, c.r, c.size), false, `${point.id}: petisco num lugar livre`);
+      const path = h.nav.findPath(L.DOGS.radhija.start, point, ctx);
+      assert.equal(path.reachable, true, `${point.id} (${stage}): petisco alcançável`);
+      let previous = L.DOGS.radhija.start;
+      for (const next of [...path.waypoints, point]) {
+        assert.ok(h.world.segmentClear(previous.x, previous.z, next.x, next.z, c.r * 0.9, c.size), `${point.id}: caminho sem atravessar nada`);
+        previous = next;
+      }
+    }
+  }
 });
 
 test('fase 7: só a Radhija cabe no túnel; ela sai enlameada, lenta e sem arrancada', async (t) => {

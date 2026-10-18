@@ -21,11 +21,12 @@ async function boot() {
   await nextPaint();
 
   // ?level=<id> de uma fase de desenvolvimento (ex.: ?level=pulo): carregada só sob demanda, no fim da lista.
+  // Os protótipos de fases novas (fase6, fase7…) entram juntos e em ordem (devCatalog em levels/dev.js).
   const levelParam = params.get('level') || '';
-  const devLevel = levelParam && !/^\d+$/.test(levelParam)
-    ? (await import('./levels/dev.js')).DEV_LEVELS.find((d) => d.id === levelParam)
+  const dev = levelParam && !/^\d+$/.test(levelParam)
+    ? (await import('./levels/dev.js')).devCatalog(ALL_LEVELS, levelParam)
     : null;
-  const LEVELS = devLevel ? [...ALL_LEVELS, devLevel] : ALL_LEVELS;
+  const LEVELS = dev ? dev.levels : ALL_LEVELS;
 
   const engine = createEngine(document.getElementById('app'), { params });
   const dogs = {
@@ -43,10 +44,11 @@ async function boot() {
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout ?? LEVELS[0].layout; },
   });
-  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params });
+  // no catálogo de desenvolvimento (prévias dos protótipos) o menu libera todas as fases para teste
+  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev });
 
   // Fase inicial: ?level=2 (1-based) para testes; ?play pula a tela inicial.
-  const lv = devLevel ? LEVELS.length - 1 : Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
+  const lv = dev ? dev.index : Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
   await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.

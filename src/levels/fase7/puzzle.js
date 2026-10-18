@@ -31,7 +31,7 @@ export const TEXT = {
     tunnelRh: 'A Rhaenyra não cabe no túnel: troque para a Radhija (Q)',
     latch: 'O trinco do portão fica do lado de dentro: destrave com a Radhija (E)',
     latchRh: 'A Radhija está no parquinho: troque (Q) e destrave o portão por dentro',
-    lickRh: 'Chegue pertinho da Radhija e segure R para o Lambe-Lambe',
+    lickRh: 'Chegue pertinho da Radhija e faça o Lambe-Lambe (segure R)',
     comeIn: 'Portão aberto! Entre no parquinho com a Rhaenyra para limpar a Radhija',
     muddyRad: 'Enlameada, a Radhija fica lenta e sem arrancada: troque para a Rhaenyra (Q) e faça o Lambe-Lambe (R)',
     climb: 'Suba o escorregador com uma arrancada (Shift) e pegue o frisbee',
@@ -188,7 +188,7 @@ export function createPuzzle(ctx) {
       const full = carriedBy('radhija');
       if (activeName === 'rhaenyra') return { text: O.climbRh, target: at(SLIDE.x0 + 0.3, SLIDE.z, 0.6), stage: st };
       if (full) return { text: O.climbFull, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
-      return { text: O.climb, target: at(FRISBEE.x, FRISBEE.z, FRISBEE.y + 0.25), stage: st };
+      return { text: O.climb, target: { ...at(FRISBEE.x, FRISBEE.z, FRISBEE.y + 0.32), ground: SLIDE.deck }, stage: st };
     }
     // carregando (o frisbee já saiu do escorregador): o que falta levar ao piquenique
     const mine = carriedBy(activeName);

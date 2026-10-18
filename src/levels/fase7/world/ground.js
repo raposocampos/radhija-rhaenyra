@@ -3,7 +3,7 @@
 // portuguesa em ondas do piquenique até o portão, e poças d'água que refletem o céu.
 // Medidas do layout (FENCE, PUDDLES, PICNIC, GATE); nada de assets: texturas em canvas.
 import * as THREE from 'three';
-import { rng, fbm2, vnoise2, smoothstep, canvasTexture, mergeGeometries, paint, rippleNormalTexture, mat, addFoliageWind } from '../../../world/util.js';
+import { shared, rng, fbm2, vnoise2, smoothstep, canvasTexture, mergeGeometries, rippleNormalTexture, mat } from '../../../world/util.js';
 
 const R = { x0: -15, x1: 15, z0: -12, z1: 11 };
 const MW = 360, MH = 276;
@@ -34,10 +34,25 @@ const puddleField = (layout, x, z) => {
   return m;
 };
 
-/** Gramado: mapa de cor com variação, manchas encharcadas e terra perto das árvores e do morrinho. */
+/** Gramado molhado da manhã: verdes variados, manchas encharcadas, terra batida perto das árvores e da calçada. */
+const LAWN = { a: new THREE.Color('#5f8f3c'), b: new THREE.Color('#7fab4a'), c: new THREE.Color('#a3c15c'), wet: new THREE.Color('#41682e'), soil: new THREE.Color('#6b5638') };
+/** Cor do gramado em (x, z), em espaço linear (a textura e os tufos usam a mesma). */
+function lawnColor(layout, x, z, out) {
+  const n = fbm2(x * 0.45, z * 0.45, 4);
+  const fine = vnoise2(x * 3.1, z * 3.1);
+  out.copy(LAWN.a).lerp(LAWN.b, smoothstep(0.3, 0.62, n)).lerp(LAWN.c, smoothstep(0.62, 0.8, n) * 0.55);
+  out.multiplyScalar(0.92 + fine * 0.16);
+  // encharcado: perto das poças e em manchas baixas do terreno
+  const wet = Math.max(puddleField(layout, x, z), smoothstep(0.6, 0.74, fbm2(x * 0.3 + 7, z * 0.3 - 3, 3)) * 0.45);
+  out.lerp(LAWN.wet, wet * 0.45);
+  // terra batida: em volta das árvores; grama gasta na borda da calçada
+  let soil = 0;
+  for (const t of layout.TREES) soil = Math.max(soil, 1 - smoothstep(0.25, 0.65, Math.hypot(x - t.x, z - t.z)));
+  soil = Math.max(soil, (1 - smoothstep(WALK_WIDTH / 2, WALK_WIDTH / 2 + 0.2, walkDist(x, z))) * 0.3 * (0.6 + 0.4 * fine));
+  return out.lerp(LAWN.soil, soil * 0.7);
+}
+
 function lawnTexture(layout) {
-  const cA = new THREE.Color('#4f7a32'), cB = new THREE.Color('#6f9a3e'), cC = new THREE.Color('#8fae4c');
-  const cWet = new THREE.Color('#355a26'), cSoil = new THREE.Color('#5a4630');
   const col = new THREE.Color();
   return canvasTexture(MW, MH, (g, w, h) => {
     const img = g.createImageData(w, h);
@@ -45,19 +60,8 @@ function lawnTexture(layout) {
       const z = R.z0 + ((j + 0.5) / h) * (R.z1 - R.z0);
       for (let i = 0; i < w; i++) {
         const x = R.x0 + ((i + 0.5) / w) * (R.x1 - R.x0);
-        const n = fbm2(x * 0.45, z * 0.45, 4);
-        const fine = vnoise2(x * 3.1, z * 3.1);
-        col.copy(cA).lerp(cB, smoothstep(0.3, 0.62, n)).lerp(cC, smoothstep(0.62, 0.8, n) * 0.6);
-        col.multiplyScalar(0.9 + fine * 0.2);
-        // encharcado: perto das poças e em manchas baixas do terreno
-        const wet = Math.max(puddleField(layout, x, z), smoothstep(0.58, 0.72, fbm2(x * 0.3 + 7, z * 0.3 - 3, 3)) * 0.6);
-        col.lerp(cWet, wet * 0.7);
-        // terra batida: em volta das árvores e no pé do morrinho; grama gasta na borda da calçada
-        let soil = 0;
-        for (const t of layout.TREES) soil = Math.max(soil, 1 - smoothstep(0.25, 0.7, Math.hypot(x - t.x, z - t.z)));
-        const wd = walkDist(x, z);
-        soil = Math.max(soil, (1 - smoothstep(WALK_WIDTH / 2, WALK_WIDTH / 2 + 0.25, wd)) * 0.35 * (0.6 + 0.4 * fine));
-        col.lerp(cSoil, soil * 0.75);
+        // a cor é linear e a textura é sRGB: converte antes de gravar (senão o gramado escurece duas vezes)
+        lawnColor(layout, x, z, col).convertLinearToSRGB();
         const k = (j * w + i) * 4; // linha 0 do canvas = norte (v = 1 depois do flipY)
         img.data[k] = Math.min(255, col.r * 255);
         img.data[k + 1] = Math.min(255, col.g * 255);
@@ -196,55 +200,136 @@ function curbGeometry(points, width) {
   return mergeGeometries(parts);
 }
 
-/**
- * Tufos de grama instanciados (com vento) nos pontos dados: { x, y?, z, s (escala), a (giro) }.
- * @param {{ x: number, y?: number, z: number, s: number, a: number }[]} list @param {string} name
- */
-export function tuftMesh(list, name = 'grama') {
-  const blade = new THREE.ConeGeometry(0.012, 0.11, 3, 1, true).translate(0, 0.055, 0);
-  const parts = [];
-  for (let k = 0; k < 5; k++) {
-    const b = blade.clone();
-    b.rotateZ((k - 2) * 0.22);
-    b.rotateY(k * 1.3);
-    b.translate((k - 2) * 0.012, 0, (k % 2) * 0.01);
-    b.scale(1, 0.8 + (k % 3) * 0.18, 1);
-    parts.push(b);
+/** Material dos tufos: lâminas mais escuras na base, pontas claras e amareladas, vento pela altura (aH). */
+const grassMat = () => mat('f7-grass-blades', () => {
+  const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.9, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = shared.time;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aH; varying float vH; uniform float uTime;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvH = aH;')
+      .replace('#include <project_vertex>', `
+        vec4 mvPosition = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          mvPosition = instanceMatrix * mvPosition;
+        #endif
+        {
+          float ph = uTime * 1.9 + mvPosition.x * 0.8 + mvPosition.z * 0.55;
+          float gust = 0.55 + 0.45 * sin(uTime * 0.45 + mvPosition.x * 0.2 - mvPosition.z * 0.13);
+          float w = aH * aH;
+          mvPosition.x += (sin(ph) * 0.6 + 0.5) * 0.04 * gust * w * (0.4 + mvPosition.y * 6.0);
+          mvPosition.z += cos(ph * 0.8 + 1.1) * 0.018 * gust * w * (0.4 + mvPosition.y * 6.0);
+        }
+        mvPosition = modelViewMatrix * mvPosition;
+        gl_Position = projectionMatrix * mvPosition;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vH;')
+      .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize(vNormal);')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        diffuseColor.rgb *= mix(0.78, 1.22, vH);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.08, 0.78), smoothstep(0.6, 1.0, vH) * 0.5);`);
+  };
+  m.customProgramCacheKey = () => 'f7-grass-blades';
+  return m;
+});
+
+/** Tufo de lâminas curvas achatadas (altura 1, escalado por instância), com o atributo aH (0 na base … 1 na ponta). */
+function tuftGeometry(blades, seed) {
+  const r = rng(seed);
+  const pos = [], hs = [], nor = [], idx = [];
+  let base = 0;
+  for (let b = 0; b < blades; b++) {
+    const a = r() * Math.PI * 2;
+    const ox = Math.cos(a) * r() * 0.035, oz = Math.sin(a) * r() * 0.035;
+    const lean = 0.25 + r() * 0.5, h = 0.6 + r() * 0.4, wdt = 0.014 + r() * 0.01;
+    const fa = a + (r() - 0.5) * 1.2;
+    const fx = Math.cos(fa + Math.PI / 2), fz = Math.sin(fa + Math.PI / 2);
+    const segs = 3;
+    for (let k = 0; k <= segs; k++) {
+      const t = k / segs;
+      const bend = lean * t * t;
+      const cx = ox + Math.cos(a) * bend * 0.05, cz = oz + Math.sin(a) * bend * 0.05;
+      const ww = wdt * (1 - t * 0.92);
+      pos.push(cx - fx * ww, t * h, cz - fz * ww, cx + fx * ww, t * h, cz + fz * ww);
+      hs.push(t, t);
+      nor.push(0, 1, 0, 0, 1, 0);
+    }
+    for (let k = 0; k < segs; k++) {
+      const i0 = base + k * 2;
+      idx.push(i0, i0 + 1, i0 + 2, i0 + 1, i0 + 3, i0 + 2);
+    }
+    base += (segs + 1) * 2;
   }
-  const tuft = paint(mergeGeometries(parts), (p) => new THREE.Color('#4f7a2e').lerp(new THREE.Color('#a9c46a'), Math.min(1, p.y / 0.12)));
-  const material = mat('f7-grass', () => addFoliageWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, side: THREE.DoubleSide }), { amp: 0.02, freq: 1.8 }));
-  const im = new THREE.InstancedMesh(tuft, material, list.length);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('aH', new THREE.Float32BufferAttribute(hs, 1));
+  g.setIndex(idx);
+  return g;
+}
+
+/**
+ * Tufos de grama instanciados (com vento): { x, y?, z, h (altura), r (0..1, giro e largura), color? }.
+ * Sem cor, cada tufo pega a cor do gramado no lugar. tall: tufos altos (mais lâminas).
+ * @param {{ x: number, y?: number, z: number, h: number, r: number, color?: THREE.Color }[]} list
+ * @param {{ name?: string, tall?: boolean, layout?: import('../../../types').LevelLayout }} [opts]
+ */
+export function tuftMesh(list, { name = 'grama', tall = false, layout = null } = {}) {
+  const geo = tuftGeometry(tall ? 9 : 6, tall ? 5 : 3);
+  const im = new THREE.InstancedMesh(geo, grassMat(), list.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3();
+  const c = new THREE.Color();
+  const widthScale = tall ? 1.6 : 1.25;
   list.forEach((t, i) => {
-    q.setFromAxisAngle(up, t.a);
-    s.set(t.s, t.s, t.s);
+    e.set(0, t.r * Math.PI * 2, 0);
+    q.setFromEuler(e);
+    sc.set(widthScale * (0.8 + t.r * 0.5), t.h, widthScale * (0.8 + t.r * 0.5));
     p.set(t.x, t.y ?? 0, t.z);
-    m4.compose(p, q, s);
+    m4.compose(p, q, sc);
     im.setMatrixAt(i, m4);
+    if (t.color) c.copy(t.color);
+    else if (layout) lawnColor(layout, t.x, t.z, c);
+    else c.set('#6f9a3e');
+    im.setColorAt(i, c.multiplyScalar(1.12 + (t.r - 0.5) * 0.2));
   });
+  im.instanceMatrix.needsUpdate = true;
   im.receiveShadow = true;
+  im.castShadow = false;
+  im.frustumCulled = false;
   im.name = name;
   return im;
 }
 
-/** Tufos no gramado, fora da calçada, do parquinho, da toalha e das poças. */
+/** Gramado denso (como nos jardins das fases 1 a 3): tufos baixos por toda parte, altos junto às bordas. */
 function grassTufts(root, layout) {
-  const B = layout.WORLD.bounds, F = layout.FENCE;
-  const r = rng(41);
-  const list = [];
-  for (let i = 0; i < 2600 && list.length < 1500; i++) {
-    const x = B.minX - 1.5 + r() * (B.maxX - B.minX + 3);
-    const z = B.minZ - 1.5 + r() * (B.maxZ - B.minZ + 3);
-    const inPark = x > F.west - 0.05 && z < F.south + 0.05 && x < B.maxX + 0.3 && z > B.minZ - 0.3;
-    if (inPark || walkDist(x, z) < WALK_WIDTH / 2 + 0.06 || puddleField(layout, x, z) > 0.35) continue;
-    const P = layout.PICNIC;
-    if (Math.abs(x - P.x) < P.hx + 0.05 && Math.abs(z - P.z) < P.hz + 0.05) continue;
-    if (fbm2(x * 0.9, z * 0.9, 2) < 0.38 && r() < 0.6) continue; // grama mais rala em manchas
-    list.push({ x, z, s: 0.75 + r() * 0.6, a: r() * Math.PI * 2 });
+  const B = layout.WORLD.bounds, F = layout.FENCE, M = layout.MOUND, P = layout.PICNIC;
+  const solid = layout.STATIC_COLLIDERS.filter((c) => c.shape === 'circle' || (c.shape === 'box' && c.hx < 0.8 && c.hz < 0.8));
+  const near = (x, z, pad) => solid.some((c) => (c.shape === 'circle'
+    ? Math.hypot(x - c.x, z - c.z) < c.r + pad
+    : Math.abs(x - c.x) < c.hx + pad && Math.abs(z - c.z) < c.hz + pad));
+  const r = rng(77);
+  const low = [], tall = [];
+  const step = 0.12;
+  for (let z = B.minZ - 0.9; z < B.maxZ + 1.4; z += step) {
+    for (let x = B.minX - 0.9; x < B.maxX + 0.9; x += step) {
+      const px = x + (r() - 0.5) * step * 1.3, pz = z + (r() - 0.5) * step * 1.3;
+      if (px > F.west - 0.04 && pz < F.south + 0.04) continue; // piso do parquinho
+      if (Math.abs(px - M.x) < M.hx + 0.12 && Math.abs(pz - M.z) < M.hz + 0.12) continue; // o morrinho tem os seus
+      if (walkDist(px, pz) < WALK_WIDTH / 2 + 0.05 || puddleField(layout, px, pz) > 0.25) continue;
+      if (Math.abs(px - P.x) < P.hx + 0.06 && Math.abs(pz - P.z) < P.hz + 0.06) continue;
+      if (near(px, pz, 0.02)) continue;
+      const edge = near(px, pz, 0.28) || px < B.minX + 0.2 || px > B.maxX - 0.2 || pz < B.minZ + 0.2
+        || (px < F.west && px > F.west - 0.22 && pz < F.south) || (pz > F.south && pz < F.south + 0.22 && px > F.west);
+      // perto de um petisco a grama fica baixa, para ele não sumir no meio dela
+      const treat = layout.COLLECTIBLES.some((c) => Math.hypot(px - c.x, pz - c.z) < 0.4);
+      if (edge && r() < 0.85) tall.push({ x: px, z: pz, h: treat ? 0.08 + r() * 0.03 : 0.12 + r() * 0.15, r: r() });
+      else if (r() < 0.85) low.push({ x: px, z: pz, h: 0.045 + r() * 0.04, r: r() });
+    }
   }
-  const im = tuftMesh(list);
-  root.add(im);
-  return im;
+  const lowMesh = tuftMesh(low, { name: 'grama-baixa', layout });
+  const tallMesh = tuftMesh(tall, { name: 'grama-alta', tall: true, layout });
+  root.add(lowMesh, tallMesh);
+  return { lowMesh, tallMesh, count: low.length + tall.length };
 }
 
 /** Poças: água rasa que reflete o céu, com ondinhas e a borda escura de terra molhada. */

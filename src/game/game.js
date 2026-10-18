@@ -31,7 +31,7 @@ const LICK_DIST = 0.56;
 const LICK_APPROACH = 0.8;
 const LICK_GIVEUP = 0.7;
 const LICK_SOLO = 0.3; // cada lambidinha no próprio focinho (ninguém por perto)
-const LICK_HINT = 'Só a Radhija tem o superbafo! Com a Rhaenyra, o R é o Lambe-Lambe: chegue pertinho da irmã.';
+const LICK_HINT = 'Só a Radhija tem o superbafo! Com a Rhaenyra, o mesmo botão (R) faz o Lambe-Lambe: chegue pertinho da irmã.';
 const sstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);

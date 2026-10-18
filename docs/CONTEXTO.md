@@ -27,8 +27,18 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `test/fase7.test.mjs`; E2E `lambe` e capturas em qualidade completa
   (`tools/scripts/capture-lambe.mjs`, artefato da suíte). Arestas de navegação
   aceitam várias restrições (`requires: ['small', 'tunnel']`).
-- Próximo passo: CI verde, E2E `lambe` e `todas`, revisar as capturas contra as
-  fases 4 a 6, entregar a prévia e **aguardar aprovação** antes do merge/deploy.
+- Primeira prévia testada pelo usuário (2026-10-18). Correções pedidas e feitas:
+  dica com o glifo do controle (teclas só entre parênteses viram glifo), petisco
+  do balanço fora do alcance (movido para a frente dos assentos; teste de alcance),
+  anel do objetivo no deque do escorregador (`target.ground` no `objective`),
+  gramado (cor convertida para sRGB e tufos de lâminas como nas fases do jardim),
+  placa PARQUINHO cabendo na moldura. Também: no menu da prévia faltava a fase 6;
+  `devCatalog` (`levels/dev.js`) põe as fases 6 e 7 juntas e em ordem e o menu do
+  catálogo de desenvolvimento libera todas as fases para teste.
+- Próximo passo: CI verde, E2E `lambe` (capturas) e `todas`, revisar as capturas
+  e entregar a nova prévia; **aguardar aprovação** antes do merge/deploy.
+  Promover as fases 6 e 7 à campanha (Entrega B de CONTINUIDADE-FASE6) é outra
+  entrega, ainda só proposta.
 
 ## Entregue: fase 6 mais longa (PR #19)
 

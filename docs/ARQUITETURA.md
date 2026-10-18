@@ -54,7 +54,7 @@ src/levels/                as fases
                            movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
   fase7/                   Lambe-Lambe na Pracinha (ainda em dev.js): túnel de lama, trinco por dentro, Lambe-Lambe e
                            escorregador (pose roteirizada com lock.drive); world/ separado por peça da pracinha
-  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id>
+  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id> (devCatalog)
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
                            compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)

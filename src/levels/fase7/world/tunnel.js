@@ -55,7 +55,7 @@ function moundGeometry(M, T) {
   }
   geo.setIndex(keep);
   geo.computeVertexNormals();
-  const dark = new THREE.Color('#3f6a2a'), mid = new THREE.Color('#5f8c38'), light = new THREE.Color('#93b551'), soil = new THREE.Color('#5b4732');
+  const dark = new THREE.Color('#4a7a30'), mid = new THREE.Color('#679a3e'), light = new THREE.Color('#9cbd56'), soil = new THREE.Color('#5f4b34');
   const c = new THREE.Color();
   paint(geo, (pos, n) => {
     const t = Math.min(1, pos.y / M.height);
@@ -122,16 +122,17 @@ export function buildTunnel(root, layout) {
   // tufos de grama por todo o morrinho (menos em cima das bocas do túnel) e flores
   const r = rng(13);
   const tufts = [];
-  for (let i = 0; i < 520 && tufts.length < 260; i++) {
+  const tuftCol = new THREE.Color('#6f9c40'), tuftLight = new THREE.Color('#a3c15c');
+  for (let i = 0; i < 1100 && tufts.length < 520; i++) {
     const lx = (r() * 2 - 1) * (M.hx + 0.25), lz = (r() * 2 - 1) * (M.hz + 0.25);
     const h = moundHeight(M, lx, lz);
     if (h < 0.03) continue;
     const wx = M.x + lx, wz = M.z + lz;
     // nada de tufos onde a grama afundou para o tubo aparecer (perto das bocas)
     if (Math.abs(wz - T.z) < outerR + 0.08 && h < T.r + outerR + 0.06) continue;
-    tufts.push({ x: wx, y: h - 0.015, z: wz, s: 0.8 + r() * 0.7, a: r() * Math.PI * 2 });
+    tufts.push({ x: wx, y: h - 0.01, z: wz, h: 0.05 + r() * 0.06, r: r(), color: tuftCol.clone().lerp(tuftLight, r() * 0.5) });
   }
-  group.add(tuftMesh(tufts, 'grama-do-morrinho'));
+  group.add(tuftMesh(tufts, { name: 'grama-do-morrinho' }));
   for (let i = 0; i < 9; i++) {
     const a = r() * Math.PI * 2, d = 0.25 + r() * 0.45;
     const fx = M.x + Math.cos(a) * d * M.hx, fz = M.z + Math.sin(a) * d * M.hz;

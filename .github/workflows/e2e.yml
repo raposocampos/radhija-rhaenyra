@@ -60,8 +60,9 @@ jobs:
     timeout-minutes: 45
     env:
       CI: 'true'
-      # uma medição completa por protótipo (cada uma inclui as cinco fases publicadas)
-      MEASURE_DEV_LEVELS: ${{ inputs.suite == 'todas' && 'fase6 fase7' || inputs.suite == 'expresso' && 'fase6' || inputs.suite == 'lambe' && 'fase7' || '' }}
+      # os protótipos de fases novas entram juntos no catálogo (devCatalog): uma medição cobre as fases 1 a 7;
+      # o id escolhido só decide qual delas ganha a captura extra do cenário
+      MEASURE_DEV_LEVELS: ${{ (inputs.suite == 'todas' || inputs.suite == 'lambe') && 'fase7' || inputs.suite == 'expresso' && 'fase6' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:

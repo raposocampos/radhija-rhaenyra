@@ -141,10 +141,13 @@ layout) e exporte em `mechanics/index.js`.
 ## 6. Registre primeiro o protótipo, depois a fase publicada
 
 Durante o protótipo, importe a definição somente em `src/levels/dev.js` e acrescente-a a `DEV_LEVELS`.
-Abra a **prévia do PR** com `?level=<id>&play`; menu e progressão normais continuam com o catálogo publicado.
+Abra a **prévia do PR** com `?level=<id>&play`; sem esse parâmetro, menu e progressão continuam com o catálogo
+publicado. Com ele, `devCatalog` (em `dev.js`) monta o catálogo da partida: os protótipos de fases novas (número
+depois da última publicada, como `fase6` e `fase7`) entram **juntos e em ordem** depois das publicadas, e o menu
+libera todas as fases para teste; uma arena (`pulo`, `bafo`, `modelo`) entra sozinha no fim.
 Os testes gerais de navegação, colisão e cenário também descobrem `DEV_LEVELS`.
 
-`DEV_LEVELS` não é um isolamento de armazenamento: a definição é acrescentada à lista quando aberta pela URL.
+`DEV_LEVELS` não é um isolamento de armazenamento: as definições entram na lista quando abertas pela URL.
 Teste pelo subcaminho da prévia, que usa chave de save por PR; não use o link principal para experimentar saves.
 Conferir também o smoke do build com o ID de desenvolvimento quando a suíte de protótipo o suportar.
 

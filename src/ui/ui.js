@@ -1,6 +1,7 @@
 // Interface (DOM em #ui): tela inicial + seleção de fases, transição entre fases, cartão de abertura,
 // HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad).
-// API: createUI({ audio, layout, levels, params }) → { update(dt), state, progress, device, ... }
+// API: createUI({ audio, layout, levels, params, unlockAll }) → { update(dt), state, progress, device, ... }
+// unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
 // Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
 //       interact:prompt, hint, collectible:pickup, victory, input:device.
 // Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
@@ -21,9 +22,9 @@ import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
 
 /**
- * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams }} [opts]
+ * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams, unlockAll?: boolean }} [opts]
  */
-export function createUI({ audio, layout, levels, params } = {}) {
+export function createUI({ audio, layout, levels, params, unlockAll = false } = {}) {
   /** @type {Partial<import('../types').LevelDef>[]} */
   const LV = levels?.length ? levels : [{ id: 'fase1', number: 1, name: 'Operação Cenoura', item: 'carrot', layout, texts: {} }];
   const host = document.getElementById('ui');
@@ -81,7 +82,7 @@ export function createUI({ audio, layout, levels, params } = {}) {
   let cur = meta(Math.max(0, Math.min(LV.length - 1, (parseInt(params?.get?.('level') || '1', 10) || 1) - 1)));
 
   const isDone = (i) => !!prog.levels[LV[i]?.id]?.done;
-  const isUnlocked = (i) => i === 0 || isDone(i - 1) || isDone(i);
+  const isUnlocked = (i) => unlockAll || i === 0 || isDone(i - 1) || isDone(i);
 
   // ---------- partes ----------
   const hud = createHud({ $, getTotal: () => cur.total });

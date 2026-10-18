@@ -139,7 +139,7 @@ export const NAV_EDGES = [
 ];
 /** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
-  { id: 'arvore', x: -5.5, z: -2.95 }, { id: 'balanco', x: -0.35, z: -4.2 }, { id: 'canto', x: 5.45, z: 3.0 },
+  { id: 'arvore', x: -5.5, z: -2.95 }, { id: 'balanco', x: 0.42, z: -3.22 }, { id: 'canto', x: 5.45, z: 3.0 },
 ];
 export const COLLECTIBLE_PICKUP_R = 0.42;
 /** @type {import('../../types').Goal} */

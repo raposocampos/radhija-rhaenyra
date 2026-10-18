@@ -422,6 +422,10 @@ export function createFeedback(opts) {
   });
   events.on('objective', ({ target }) => {
     mk.height = Number.isFinite(target?.y) ? target.y : 0.85;
+    // alvo num piso elevado (o deque do escorregador): o anel fica nesse piso, não no chão embaixo dele
+    const ground = Number.isFinite(target?.ground) ? target.ground : 0;
+    groundRing.position.y = ground + 0.022;
+    pingRing.position.y = ground + 0.024;
     setTarget(target);
   });
 
