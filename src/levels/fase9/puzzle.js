@@ -1,0 +1,742 @@
+// Biblioteca do Vovô · puzzle. Tudo avança por dt (pausa congela a porta, o gato, a subida e o duto).
+//   ÓCULOS: na prateleira alta da estante leste. A Rhaenyra puxa a alavanca do freio da escadinha (impulso na
+//     parede), empurra o globo para a frente da lareira e a escadinha pelo trilho até debaixo dos óculos. Destravada,
+//     a escada rola com peso em cima: a Rhaenyra parada no pé dela com o Fica segura, e a Radhija sobe (E), pega os
+//     óculos e desce. Sem ninguém segurando, a escada rola e a Radhija desce de novo.
+//   LIVRO: no alto do armário do escritório, com o Bichano dormindo em cima. A Rhaenyra abre o registro do duto no
+//     jardim de inverno (impulso) e empurra o ventilador até a grade de baixo; o superbafo da Radhija no vento entra
+//     no duto e sai pela grade alta do escritório: o Bichano pula, derruba o livro e sai pela portinha de gato.
+//     A porta do escritório abre com o impulso na maçaneta e a mola fecha de novo; com alguém no vão, ela espera.
+//     Com o livro (pesado, só a Rhaenyra carrega) na boca não dá impulso: presa lá dentro, ela larga o livro (E).
+//   Entrega: os dois objetos na mesinha ao lado da poltrona. Nenhuma ordem trava e tudo se refaz.
+import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
+import { createPushCrate, createWallButton, createHingedGate } from '../../game/mechanics/index.js';
+import { airborne, wallKick } from '../../game/dogController.js';
+import {
+  WALL_EH, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN, WARDROBE, BOOK_FALL, CAT, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB,
+  BRAKE_LEVER, TABLE_SPOTS, DUCT, DAMPER_LEVER, FAN, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_HL, WALL_LJ,
+} from './layout.js';
+
+/**
+ * @typedef {'start'|'glasses'|'book'|'carrying'|'done'} Stage
+ * @typedef {'shelf'|'carried'|'table'} GlassesPlace
+ * @typedef {'wardrobe'|'falling'|'floor'|'carried'|'table'} BookPlace
+ * @typedef {'asleep'|'waking'|'jumping'|'walking'|'bed'} CatState
+ */
+/** @type {Stage[]} */
+export const STAGES = ['start', 'glasses', 'book', 'carrying', 'done'];
+export const TEXT = {
+  objective: {
+    brakeRh: 'A escadinha está travada: pegue impulso nas patinhas e puxe a alavanca do freio (Espaço)',
+    brakeRad: 'Os óculos estão no alto da estante: a Rhaenyra solta o freio da escadinha (Q)',
+    globe: 'O globo está no trilho: empurre-o até a frente da lareira (segure Shift)',
+    ladder: 'Empurre a escadinha pelo trilho até debaixo dos óculos (segure Shift)',
+    pushRad: 'Só a Rhaenyra empurra: troque (Q)',
+    holdRh: 'Pare no pé da escadinha, mande a Rhaenyra ficar (F) e troque para a Radhija (Q)',
+    holdNow: 'A Rhaenyra segura a escadinha! Troque para a Radhija (Q) e suba',
+    climbRad: 'A escadinha está firme: suba (E) e pegue os óculos',
+    holdRad: 'A escadinha rola com peso em cima: a Rhaenyra precisa segurar o pé dela (Q)',
+    carryGlasses: 'Leve os óculos até a mesinha da poltrona',
+    damperRh: 'O Bichano dorme em cima do livro. No jardim de inverno, abra o registro do duto (Espaço)',
+    damperRad: 'O Bichano dorme em cima do livro. A Rhaenyra abre o registro do duto no jardim de inverno (Q)',
+    fanRh: 'Empurre o ventilador até a grade de baixo do duto (segure Shift)',
+    fanRad: 'O ventilador é pesado: a Rhaenyra empurra até a grade do duto (Q)',
+    blowRad: 'Solte o superbafo no vento do ventilador (segure R e solte)',
+    blowRh: 'Vento no duto! Agora o superbafo da Radhija (Q)',
+    cat: 'O Bichano acordou!',
+    doorRh: 'O livro caiu! Abra a porta do escritório: impulso na maçaneta (Espaço)',
+    doorRad: 'O livro caiu no escritório: a Rhaenyra abre a porta com o impulso (Q)',
+    holdDoorRad: 'Fique no vão da porta para ela não fechar (F) e troque para a Rhaenyra (Q)',
+    holdDoorRh: 'A porta fecha sozinha: a Radhija segura o vão (Q, depois F)',
+    bookRh: 'Pegue o livro (E) e leve até a mesinha da poltrona',
+    bookRad: 'O livro é pesado: só a Rhaenyra carrega (Q)',
+    carryBook: 'Leve o livro até a mesinha da poltrona',
+    dropBook: 'Com o livro na boca não dá impulso: largue o livro (E) e abra a porta',
+  },
+  hint: {
+    braked: 'A escadinha está travada! A alavanca do freio fica no alto da parede.',
+    released: 'Soltou o freio! Agora a escadinha anda no trilho.',
+    globeWay: 'O globo está no caminho da escadinha: empurre-o para a frente da lareira.',
+    shift: 'Segure Shift para empurrar.',
+    heavy: 'Pesado demais para a Radhija: a Rhaenyra empurra (Q, segure Shift).',
+    roll: 'A escadinha rolou! Alguém pesado precisa segurar o pé dela (a Rhaenyra, com o Fica).',
+    climbRh: 'A escadinha é estreita para a Rhaenyra: ela segura, a Radhija sobe.',
+    farGlasses: 'Daqui de cima não alcança: a escadinha precisa ficar debaixo dos óculos.',
+    gotGlasses: 'Pegou os óculos do vovô!',
+    wallRadhija: 'Alto demais para a Radhija! A Rhaenyra pega impulso nas patinhas da parede (Q).',
+    catBark: 'O Bichano nem abriu o olho. Um latido não resolve…',
+    catHigh: 'Daqui de baixo o cheiro não chega lá em cima. A grade do aquecedor sopra bem em cima do armário…',
+    catSleep: 'Psiu! O Bichano dorme lá no alto, em cima do livro.',
+    damperOpen: 'O registro abriu: o duto vai até a grade do escritório.',
+    damperClosed: 'O registro do duto está fechado: abra com o impulso na parede.',
+    noWind: 'Sem vento, o cheiro não entra na grade. Traga o ventilador!',
+    aligned: 'O ventilador sopra direto na grade do duto!',
+    duct: 'O cheiro foi pelo duto!',
+    catWake: 'O Bichano acordou ofendido! Lá vai o livro…',
+    bookFell: 'O livro caiu no chão do escritório!',
+    doorLocked: 'A porta está fechada. A maçaneta fica no alto: a Rhaenyra alcança com o impulso.',
+    doorClosing: 'A mola fecha a porta! Alguém precisa ficar no vão (Fica).',
+    bookHeavy: 'O livro é pesado demais para a Radhija. A Rhaenyra carrega!',
+    bookNoJump: 'Com o livro na boca não dá impulso. Largue o livro (E) e abra a porta.',
+    dropped: 'Largou o livro.',
+    gotBook: 'Pegou o livro de histórias!',
+    mouthFull: 'A boca já está ocupada!',
+    glassesHome: 'Os óculos estão na mesinha!',
+    bookHome: 'O livro está na mesinha!',
+    needBook: 'Falta o livro: o Bichano dorme em cima dele, no alto do armário do escritório.',
+    needGlasses: 'Falta os óculos: estão no alto da estante, perto da escadinha.',
+  },
+  prompt: { climb: 'Subir a escadinha', book: 'Pegar o livro', drop: 'Largar o livro', wall: 'Impulso na parede' },
+};
+
+const clamp01 = (k) => Math.min(1, Math.max(0, k));
+const smooth = (k) => { const x = clamp01(k); return x * x * (3 - 2 * x); };
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const NORTH = Math.PI;
+const SOUTH = 0;
+const LADDER_SPOT = LADDER.minX; // a escada debaixo dos óculos
+const GLOBE_CLEAR = LADDER_SPOT - LADDER.half - GLOBE.half + 0.01; // globo a oeste disto não atrapalha
+const STEP_RISE = LADDER.top / LADDER.steps;
+
+/** @param {import('../../types').PuzzleContext<import('../../types').Fase9Props>} ctx @returns {import('../../types').Puzzle} */
+export function createPuzzle(ctx) {
+  const { props, dogs, ctrls, root, emit, world, place, scent, cam } = ctx;
+  const hints = createHints(emit, TEXT);
+  const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
+  const brake = createWallButton({ id: 'alavanca-freio', cfg: BRAKE_LEVER, emit, prop: props.brakeLever });
+  const damper = createWallButton({ id: 'registro-duto', cfg: DAMPER_LEVER, emit, prop: props.damperLever });
+  const handle = createWallButton({ id: 'macaneta', cfg: DOOR_HANDLE, emit, prop: props.doorHandle });
+  const handleIn = createWallButton({ id: 'macaneta-dentro', cfg: DOOR_HANDLE_IN, emit, prop: props.doorHandleIn });
+  const levers = [brake, damper, handle, handleIn];
+  const ladder = createPushCrate({ id: 'escadinha', cfg: LADDER, world, emit, prop: props.ladder });
+  const globe = createPushCrate({ id: 'globo', cfg: GLOBE, world, emit, prop: props.globe });
+  const fan = createPushCrate({ id: 'ventilador', cfg: FAN, world, emit, prop: props.fan });
+  const crates = [ladder, globe, fan];
+  const door = createHingedGate({ id: 'porta-escritorio', cfg: DOOR, world, prop: props.door, thickness: 0.05 });
+  const glasses = createCarryItem({ obj: props.glasses.object, dogs, scene: root, name: 'glasses' });
+  const book = createCarryItem({ obj: props.book.object, dogs, scene: root, name: 'book', carrier: 'large' });
+  // o gato deitado na almofada do hall é sólido (as dogs não passam por cima dele)
+  const catCol = world.addDynamic({ id: 'gato', kind: 'npc', shape: 'circle', x: CAT.bed.x, z: CAT.bed.z, r: 0.2, enabled: false });
+
+  const fresh = () => ({
+    done: false, disposed: false, objKey: '',
+    /** @type {GlassesPlace} */ glasses: /** @type {GlassesPlace} */ ('shelf'),
+    /** @type {BookPlace} */ book: /** @type {BookPlace} */ ('wardrobe'),
+    bookX: BOOK_FALL.x, bookZ: BOOK_FALL.z, fallT: -1,
+    /** @type {CatState} */ cat: /** @type {CatState} */ ('asleep'),
+    catT: 0, catD: 0,
+    /** @type {null | { phase: string, t: number, x0: number, z0: number, yaw0: number, grabbed: boolean, lx: number, action?: string, slope?: number }} */
+    climb: null,
+    climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
+    aligned: false, wasDoorOpen: false, doorHintT: 0, ductHint: false, wasAligned: false,
+  });
+  const S = fresh();
+  /** @type {(stage: string) => void} */
+  let onStageChange = () => {};
+  let lastStage = /** @type {Stage} */ ('start');
+  const at = (x, z, y = 0.7) => ({ x, y, z });
+  const inOffice = (c) => c.x < WALL_EH.x;
+  const inConservatory = (c) => c.x > WALL_LJ.x;
+  const westSide = (c) => c.x < WALL_HL.x;
+  const ladderAtGlasses = () => Math.abs(ladder.x - LADDER_SPOT) < 0.06;
+  const globeClear = () => globe.x <= GLOBE_CLEAR;
+  const doorOpen = () => door.t > 0.85;
+  const inDoorway = (c) => Math.abs(c.x - WALL_EH.x) < 0.42 && c.z > DOOR.latchPost.z - 0.05 && c.z < DOOR.hinge.z + 0.05;
+  const bookInOffice = () => S.book === 'wardrobe' || S.book === 'falling' || (S.book === 'floor' && S.bookX < WALL_EH.x);
+
+  // ------------------------------------------------------------------ etapa (derivada do estado)
+  /** @returns {Stage} */
+  function stage() {
+    if (S.done) return 'done';
+    const gOut = S.glasses !== 'shelf';
+    const bOut = S.book === 'floor' || S.book === 'carried' || S.book === 'table';
+    if (gOut && bOut) return 'carrying';
+    if (gOut) return 'glasses';
+    if (bOut) return 'book';
+    return 'start';
+  }
+  function notifyStage() {
+    const st = stage();
+    if (st !== lastStage) { lastStage = st; onStageChange(st); }
+  }
+
+  // ------------------------------------------------------------------ segurar a escada
+  /** Onde a Rhaenyra segura (o lado mais perto dela). */
+  function holdSpot(c = ctrls.rhaenyra) {
+    const side = c.x < ladder.x ? -1 : 1;
+    return { x: ladder.x + side * LADDER_HOLD.side, z: LADDER_HOLD.z };
+  }
+  const inHoldZone = (c) => [-1, 1].some((s) => Math.hypot(c.x - (ladder.x + s * LADDER_HOLD.side), c.z - LADDER_HOLD.z) < LADDER_HOLD.r);
+  /** A escada está firme: travada no freio ou segura pela Rhaenyra parada (Fica) no pé dela. */
+  const held = () => inHoldZone(ctrls.rhaenyra) && ctx.isStaying('rhaenyra');
+  const steady = () => !brake.on || held();
+
+  // ------------------------------------------------------------------ objetivo
+  /** O que falta dos óculos para quem está ativa. */
+  function glassesStep(name) {
+    const O = TEXT.objective;
+    if (!brake.on) return name === 'rhaenyra' ? { text: O.brakeRh, target: brake.target(0.3) } : { text: O.brakeRad, target: brake.target(0.3) };
+    if (!globeClear()) return { text: name === 'rhaenyra' ? O.globe : O.pushRad, target: at(globe.x, globe.z, 0.95) };
+    if (!ladderAtGlasses()) return { text: name === 'rhaenyra' ? O.ladder : O.pushRad, target: at(ladder.x, ladder.z, 1.5) };
+    if (name === 'rhaenyra') {
+      const h = holdSpot();
+      return held() ? { text: O.holdNow, target: at(ladder.x, ladder.z + LADDER.half + CLIMB.front, 0.6) } : { text: O.holdRh, target: at(h.x, h.z, 0.4) };
+    }
+    return held() ? { text: O.climbRad, target: at(GLASSES.x, GLASSES.z, GLASSES.y + 0.3) } : { text: O.holdRad, target: at(holdSpot().x, LADDER_HOLD.z, 0.5) };
+  }
+  /** O que falta do livro para quem está ativa. */
+  function bookStep(name) {
+    const O = TEXT.objective;
+    if (S.cat === 'asleep') {
+      if (!damper.on) return { text: name === 'rhaenyra' ? O.damperRh : O.damperRad, target: damper.target(0.3) };
+      if (!S.aligned) return { text: name === 'rhaenyra' ? O.fanRh : O.fanRad, target: at(fan.x, fan.z, 1.1) };
+      return name === 'radhija' ? { text: O.blowRad, target: at(fan.x, fan.z + 0.75, 0.5) } : { text: O.blowRh, target: at(fan.x, fan.z + 0.75, 0.5) };
+    }
+    if (S.cat === 'waking' || S.cat === 'jumping' || S.book === 'falling') return { text: O.cat, target: at(CAT.top.x, CAT.top.z, CAT.top.y + 0.4) };
+    if (S.book === 'carried') return { text: O.carryBook, target: at(GOAL.x, GOAL.z, 0.6) };
+    const rh = ctrls.rhaenyra;
+    const rad = ctrls.radhija;
+    const bookAt = at(S.bookX, S.bookZ, 0.45);
+    if (bookInOffice() && !inOffice(rh)) {
+      if (!doorOpen()) return { text: name === 'rhaenyra' ? O.doorRh : O.doorRad, target: handle.target(0.3) };
+      if (!inDoorway(rad)) return { text: name === 'radhija' ? O.holdDoorRad : O.holdDoorRh, target: at(WALL_EH.x, (DOOR.hinge.z + DOOR.latchPost.z) / 2, 0.5) };
+    }
+    return { text: name === 'rhaenyra' ? O.bookRh : O.bookRad, target: bookAt };
+  }
+  /** @param {import('../../types').DogName} activeName */
+  function objective(activeName) {
+    const O = TEXT.objective;
+    const st = stage();
+    if (st === 'done') return { text: null, target: null, stage: st };
+    const goal = at(GOAL.x, GOAL.z, 0.9);
+    if (glasses.holder === activeName) return { text: O.carryGlasses, target: goal, stage: st };
+    if (book.holder === activeName) {
+      if (inOffice(ctrls[activeName]) && !doorOpen() && !inDoorway(ctrls.radhija)) return { text: O.dropBook, target: handleIn.target(0.3), stage: st };
+      return { text: O.carryBook, target: goal, stage: st };
+    }
+    const gPending = S.glasses === 'shelf';
+    const bPending = S.book !== 'table' && !book.holder;
+    const c = ctrls[activeName];
+    // o que tem pressa primeiro: a porta aberta com o livro lá dentro, a escada segura esperando a Radhija
+    const urgentBook = bPending && S.cat !== 'asleep' && bookInOffice() && doorOpen();
+    const preferBook = bPending && (urgentBook || inConservatory(c) || (westSide(c) && S.cat !== 'asleep') || inOffice(c) || !gPending);
+    const step = preferBook ? bookStep(activeName) : gPending ? glassesStep(activeName) : null;
+    if (step) return { ...step, stage: st };
+    return { text: glasses.holder ? O.carryGlasses : O.carryBook, target: goal, stage: st };
+  }
+
+  // ------------------------------------------------------------------ óculos e escadinha
+  function grabGlasses(c) {
+    glasses.attach(c.name);
+    props.glasses.setHighlight(false);
+    S.glasses = 'carried';
+    emit('item:pickup', { name: c.name, item: 'glasses', x: GLASSES.x, z: GLASSES.z });
+    hints.now('gotGlasses', 3, 0);
+    notifyStage();
+  }
+  /** A Radhija começa a subir (escada firme) ou sobe um degrau e a escada rola (ninguém segurando). */
+  function startClimb(c) {
+    const ok = steady();
+    S.climb = { phase: ok ? 'up' : 'slipUp', t: 0, x0: c.x, z0: c.z, yaw0: c.yaw, grabbed: false, lx: ladder.x };
+    if (!ok) {
+      S.rollFrom = ladder.x;
+      S.rollTo = Math.min(LADDER.maxX, ladder.x + LADDER.rollBack);
+    }
+    emit(ok ? 'ladder:climb' : 'ladder:slip', { name: c.name, x: ladder.x, z: ladder.z });
+  }
+  /** Pose roteirizada de quem está na escada (lockFor devolve drive). */
+  function pose(c, x, y, z, yaw, speed, action, slope = 0) {
+    const px = c.x;
+    const pz = c.z;
+    c.x = x;
+    c.z = z;
+    c.y = y;
+    c.yaw = yaw;
+    c.v = 0;
+    c.dashT = 0;
+    c.animSpeed = speed;
+    const idt = 1 / Math.max(1e-4, S.climbDt);
+    c.vx = (c.x - px) * idt;
+    c.vz = (c.z - pz) * idt;
+    S.climb.action = action;
+    S.climb.slope = slope;
+  }
+  /** Ponto do degrau i (0 = chão na frente, 1..steps-1 = degraus, steps = patamar) para a escada em lx. */
+  function stepPoint(i, lx) {
+    const front = LADDER.start.z + LADDER.half;
+    const z0 = front + 0.18;
+    const zTop = LADDER.start.z - LADDER.half + 0.2;
+    const k = i / LADDER.steps;
+    return { x: lx, y: i === 0 ? 0 : i * STEP_RISE, z: i === 0 ? z0 : front - 0.08 + (zTop - (front - 0.08)) * ((i - 1) / (LADDER.steps - 1)) * (i < LADDER.steps ? 1 : 1) + (i === LADDER.steps ? 0 : 0) * k };
+  }
+  /** Interpolação com pulinho entre os degraus a e b (u 0..1). */
+  function hop(a, b, u) {
+    const e = smooth(u);
+    return { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e + Math.sin(Math.PI * u) * 0.09, z: a.z + (b.z - a.z) * e };
+  }
+  function stepClimb(dt) {
+    const cl = S.climb;
+    if (!cl) return;
+    const c = ctrls.radhija;
+    S.climbDt = dt;
+    cl.t += dt;
+    const n = LADDER.steps;
+    const slope = Math.atan2(LADDER.top, 0.66) * 0.55;
+    if (cl.phase === 'up') {
+      const u = clamp01(cl.t / CLIMB.upTime);
+      const f = u * n;
+      const i = Math.min(n - 1, Math.floor(f));
+      const p = hop(i === 0 ? { x: cl.x0, y: 0, z: cl.z0 } : stepPoint(i, cl.lx), stepPoint(i + 1, cl.lx), f - i);
+      const k = smooth(cl.t / 0.2);
+      pose(c, p.x, p.y, p.z, cl.yaw0 + wrap(NORTH - cl.yaw0) * k, 1.4, 'jump', slope * (u < 0.95 ? 1 : 0));
+      if (u >= 1) Object.assign(cl, { phase: 'grab', t: 0 });
+    } else if (cl.phase === 'grab') {
+      const u = clamp01(cl.t / CLIMB.grabTime);
+      const top = stepPoint(n, cl.lx);
+      pose(c, top.x, top.y, top.z - 0.04 * smooth(u / 0.5), NORTH, 0, u > 0.25 ? 'sniff' : 'none', u > 0.25 && u < 0.85 ? 0.35 : 0);
+      if (!cl.grabbed && u >= 0.6) {
+        cl.grabbed = true;
+        if (S.glasses === 'shelf' && Math.abs(cl.lx - GLASSES.x) < 0.08 && !glasses.holder) grabGlasses(c);
+        else if (S.glasses === 'shelf') hints.now('farGlasses', 3.6, 2);
+      }
+      if (u >= 1) Object.assign(cl, { phase: 'turn', t: 0 });
+    } else if (cl.phase === 'turn') {
+      const u = clamp01(cl.t / 0.45);
+      const top = stepPoint(n, cl.lx);
+      pose(c, top.x, top.y, top.z, wrap(NORTH + Math.PI * smooth(u)), 0.6, 'none', 0);
+      if (u >= 1) Object.assign(cl, { phase: 'down', t: 0 });
+    } else if (cl.phase === 'down') {
+      const u = clamp01(cl.t / CLIMB.downTime);
+      const f = u * n;
+      const i = Math.min(n - 1, Math.floor(f));
+      const from = stepPoint(n - i, cl.lx);
+      const to = n - i - 1 === 0 ? { x: cl.lx, y: 0, z: stepPoint(0, cl.lx).z + 0.12 } : stepPoint(n - i - 1, cl.lx);
+      const p = hop(from, to, f - i);
+      pose(c, p.x, p.y, p.z, SOUTH, 1.4, 'jump', -slope * (u < 0.95 ? 1 : 0));
+      if (u >= 1) finishClimb(c);
+    } else if (cl.phase === 'slipUp') {
+      // um degrau e a escada rola para o leste com ela em cima
+      const u = clamp01(cl.t / (CLIMB.slipTime * 0.55));
+      const lx = S.rollFrom + (S.rollTo - S.rollFrom) * smooth((u - 0.35) / 0.65);
+      ladder.setPos(lx, ladder.z);
+      const p = hop({ x: cl.x0, y: 0, z: cl.z0 }, stepPoint(1, lx), Math.min(1, u * 1.6));
+      const k = smooth(cl.t / 0.2);
+      pose(c, p.x + (lx - S.rollFrom) * smooth(u), p.y, p.z, cl.yaw0 + wrap(NORTH - cl.yaw0) * k, 0.8, u > 0.5 ? 'startled' : 'jump', 0);
+      if (u >= 1) {
+        Object.assign(cl, { phase: 'slipDown', t: 0, lx });
+        emit('ladder:roll', { x: lx, z: ladder.z });
+      }
+    } else if (cl.phase === 'slipDown') {
+      const u = clamp01(cl.t / (CLIMB.slipTime * 0.45));
+      const from = stepPoint(1, cl.lx);
+      const p = hop(from, { x: cl.lx, y: 0, z: stepPoint(0, cl.lx).z + 0.16 }, u);
+      pose(c, p.x, p.y, p.z, NORTH, 0, 'startled', 0);
+      if (u >= 1) {
+        hints.now('roll', 4.2, 2);
+        finishClimb(c);
+      }
+    }
+  }
+  function finishClimb(c) {
+    const res = world.resolve(c.x, c.z, c.r, c.size);
+    c.x = res.x;
+    c.z = res.z;
+    c.y = 0;
+    c.vx = c.vz = 0;
+    c.v = 0;
+    c.animSpeed = 0;
+    emit('ladder:down', { name: c.name, x: c.x, z: c.z });
+    S.climb = null;
+    notifyStage();
+  }
+
+  // ------------------------------------------------------------------ duto, ventilador e o Bichano
+  const wind = scent.addWind({ id: 'ventilador', x: FAN.start.x, z: FAN.start.z - FAN.wind.offset, dirX: 0, dirZ: -1, ...FAN.wind });
+  const duct = scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => damper.on && S.aligned });
+  scent.addNose({
+    id: 'bichano', x: CAT.top.x, z: CAT.top.z, r: CAT.smellR,
+    onSmell: (cloud) => {
+      if (S.cat !== 'asleep') return;
+      if (cloud.duct === duct) {
+        cloud.age = cloud.life; // a grade solta o cheiro bem em cima dele (o cenário desenha a baforada)
+        props.duct.outletPuff();
+        wakeCat();
+      } else hints.now('catHigh', 4.4, 6);
+    },
+  });
+  function wakeCat() {
+    S.cat = 'waking';
+    S.catT = 0;
+    emit('cat:wake', { x: CAT.top.x, z: CAT.top.z, y: CAT.top.y });
+    hints.now('catWake', 3.4, 0);
+    cam?.focusShot(CAT.top.x + 0.6, CAT.top.z + 1.4, { hold: 2.6, y: 1.4, target: { x: CAT.top.x, y: CAT.top.y - 0.6, z: CAT.top.z + 0.4 } });
+  }
+  /** Ponto do caminho do gato a uma distância d (desde o pé do armário). */
+  function catPathAt(d) {
+    const pts = CAT.path;
+    let left = d;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const L = Math.hypot(b.x - a.x, b.z - a.z);
+      if (left <= L) {
+        const k = left / Math.max(1e-6, L);
+        return { x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k, yaw: Math.atan2(b.x - a.x, b.z - a.z), end: false };
+      }
+      left -= L;
+    }
+    const z = pts[pts.length - 1];
+    const y = pts[pts.length - 2];
+    return { x: z.x, z: z.z, yaw: Math.atan2(z.x - y.x, z.z - y.z), end: true };
+  }
+  function stepCat(dt) {
+    if (S.cat === 'asleep' || S.cat === 'bed') return;
+    S.catT += dt;
+    const T = CAT.top;
+    if (S.cat === 'waking') {
+      props.cat.setPose({ x: T.x, y: T.y, z: T.z, yaw: 0.4, mode: 'wake', k: clamp01(S.catT / 1.1) });
+      if (S.catT >= 1.1) {
+        S.cat = 'jumping';
+        S.catT = 0;
+        S.book = 'falling';
+        S.fallT = 0;
+        props.book.setFall(0);
+        emit('cat:jump', { x: T.x, z: T.z, y: T.y });
+        emit('book:fall', { x: BOOK_FALL.x, z: BOOK_FALL.z });
+      }
+    } else if (S.cat === 'jumping') {
+      const u = clamp01(S.catT / 0.7);
+      const p0 = CAT.path[0];
+      const e = smooth(u);
+      props.cat.setPose({
+        x: T.x + (p0.x - T.x) * e, y: T.y * (1 - u * u) + Math.sin(Math.PI * u) * 0.25, z: T.z + (p0.z - T.z) * e,
+        yaw: Math.atan2(p0.x - T.x, p0.z - T.z), mode: 'jump', k: u,
+      });
+      if (u >= 1) {
+        S.cat = 'walking';
+        S.catT = 0;
+        S.catD = 0;
+        emit('cat:land', { x: p0.x, z: p0.z });
+      }
+    } else if (S.cat === 'walking') {
+      S.catD += CAT.walkSpeed * dt;
+      const p = catPathAt(S.catD);
+      props.cat.setPose({ x: p.x, y: 0, z: p.z, yaw: p.yaw, mode: 'walk', k: S.catD });
+      if (Math.abs(p.x - WALL_EH.x) < 0.05 && !S.flapT) {
+        S.flapT = 1;
+        emit('cat:flap', { x: WALL_EH.x, z: p.z });
+      }
+      if (p.end) catToBed(true);
+    }
+  }
+  function catToBed(animate) {
+    S.cat = 'bed';
+    props.cat.setPose({ x: CAT.bed.x, y: 0, z: CAT.bed.z, yaw: CAT.bed.yaw, mode: 'sit', k: animate ? 0 : 1 });
+    catCol.enabled = true;
+    if (animate) emit('cat:bed', { x: CAT.bed.x, z: CAT.bed.z });
+  }
+  function stepBookFall(dt) {
+    if (S.book !== 'falling') return;
+    S.fallT += dt;
+    const u = clamp01(S.fallT / 0.6);
+    props.book.setFall(u);
+    if (u >= 1) {
+      S.book = 'floor';
+      S.bookX = BOOK_FALL.x;
+      S.bookZ = BOOK_FALL.z;
+      S.fallT = -1;
+      emit('book:land', { x: BOOK_FALL.x, z: BOOK_FALL.z });
+      hints.now('bookFell', 3.4, 0);
+      notifyStage();
+    }
+  }
+
+  // ------------------------------------------------------------------ entregas
+  function deliver(thing) {
+    const it = thing === 'glasses' ? glasses : book;
+    it.returnHome();
+    const obj = thing === 'glasses' ? props.glasses : props.book;
+    const spot = props.table.spot(thing);
+    spot.add(obj.object);
+    obj.object.position.set(0, 0, 0);
+    obj.object.rotation.set(0, 0, 0);
+    obj.setHighlight(false);
+    if (thing === 'glasses') S.glasses = 'table';
+    else S.book = 'table';
+    emit('table:deliver', { item: thing, x: TABLE_SPOTS[thing].x, z: TABLE_SPOTS[thing].z });
+    const other = thing === 'glasses' ? S.book === 'table' : S.glasses === 'table';
+    hints.now(other ? (thing === 'glasses' ? 'glassesHome' : 'bookHome') : (thing === 'glasses' ? 'needBook' : 'needGlasses'), 3.8, 0);
+    notifyStage();
+  }
+  function dropBook(c) {
+    const x = c.x + Math.sin(c.yaw) * 0.32;
+    const z = c.z + Math.cos(c.yaw) * 0.32;
+    const res = world.resolve(x, z, 0.12, 'small');
+    book.drop(res.x, res.z, 0.035);
+    S.book = 'floor';
+    S.bookX = res.x;
+    S.bookZ = res.z;
+    emit('book:drop', { name: c.name, x: res.x, z: res.z });
+    hints.now('dropped', 2.4, 0);
+    notifyStage();
+  }
+  function takeBook(c) {
+    book.attach(c.name);
+    props.book.setHighlight(false);
+    S.book = 'carried';
+    emit('item:pickup', { name: c.name, item: 'book', x: S.bookX, z: S.bookZ });
+    hints.now('gotBook', 3, 0);
+    notifyStage();
+  }
+
+  // ------------------------------------------------------------------ quadro
+  function update(dt, { active, comp, ctrls: C, stay }) {
+    if (S.disposed) return null;
+    hints.frame(dt);
+    for (const b of levers) b.update(dt);
+
+    // escada, globo e ventilador (empurrados no modifyIntent); a escada travada ou com a Radhija em cima não anda
+    ladder.update(dt, { comp, pushSpeed: !brake.on || S.climb ? 0 : undefined });
+    globe.update(dt, { comp });
+    fan.update(dt, { comp });
+    stepClimb(dt);
+
+    // vento do ventilador (sempre para o norte) e o encaixe na grade
+    wind.x = fan.x;
+    wind.z = fan.z - FAN.wind.offset;
+    S.aligned = Math.abs(fan.x - DUCT.inlet.x) < FAN.alignTol && fan.z <= FAN.alignZ;
+    if (S.aligned && !S.wasAligned) {
+      emit('fan:aligned', { x: fan.x, z: fan.z });
+      hints.now('aligned', 3.2, 4);
+    }
+    S.wasAligned = S.aligned;
+    props.fan.setAligned(S.aligned);
+    props.duct.setOpen(damper.on);
+    // baforadas viajando no duto (o cenário desenha um brilho correndo pelo cano)
+    const puffs = [];
+    for (const cl of scent.clouds) if (cl.state === 'duct' && cl.duct === duct) puffs.push(clamp01(cl.ductT / DUCT.travel));
+    props.duct.setPuffs(puffs);
+    if (puffs.length && !S.ductHint) { S.ductHint = true; hints.now('duct', 2.8, 0); }
+    if (S.cat === 'asleep') {
+      const nearInlet = scent.near(DUCT.inlet.x, DUCT.inlet.z, DUCT.inlet.r * 0.4);
+      if (nearInlet && !duct.active()) hints.cond(damper.on ? 'noWind' : 'damperClosed', 3.8, 6);
+    }
+
+    stepCat(dt);
+    stepBookFall(dt);
+
+    // porta do escritório: a maçaneta (de fora ou de dentro) abre; a mola fecha e espera quem estiver no vão
+    door.setTarget(handle.on || handleIn.on ? 1 : 0);
+    door.update(dt, { ctrls: C });
+    const open = doorOpen();
+    if (open !== S.wasDoorOpen) emit(open ? 'door:open' : 'door:close', { x: WALL_EH.x, z: (DOOR.hinge.z + DOOR.latchPost.z) / 2 });
+    S.wasDoorOpen = open;
+    if (door.blocked && bookInOffice()) hints.cond('doorClosing', 3, 10);
+
+    // entregas na mesinha
+    for (const it of [glasses, book]) {
+      if (!it.holder) continue;
+      if (deliveredAt(GOAL, C[it.holder], active)) deliver(it === glasses ? 'glasses' : 'book');
+    }
+
+    // dicas, prompts e destaques
+    const nearLever = levers.some((b) => {
+      const K = wallKick(b.spot, active.r);
+      return Math.hypot(active.x - K.x, active.z - K.z) < 1.1;
+    });
+    if (nearLever && active.name === 'radhija') hints.cond('wallRadhija', 3.6, 10);
+    if (book.holder === 'rhaenyra' && active.name === 'rhaenyra' && inOffice(active) && !open) {
+      const K = wallKick(handleIn.spot, active.r);
+      if (Math.hypot(active.x - K.x, active.z - K.z) < 0.9) hints.cond('bookNoJump', 4, 8);
+    }
+    const wallReady = active.name === 'rhaenyra' && !airborne(active) && !book.holder && levers.some((b) => b.inReach(active, world));
+    const canClimb = !S.climb && active.name === 'radhija' && nearClimb(active);
+    const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && !glasses.holder !== false;
+    if (canClimb) hints.setPrompt('climb');
+    else if (canBook && !book.holder && glasses.holder !== 'rhaenyra') hints.setPrompt('book');
+    else if (book.holder === active.name && inOffice(active) && !open) hints.setPrompt('drop');
+    else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
+    props.ladder.setHighlight(brake.on && globeClear() && !ladderAtGlasses() && active.name === 'rhaenyra');
+    props.glasses.setHighlight(S.glasses === 'shelf' && ladderAtGlasses() && brake.on);
+    props.book.setHighlight(S.book === 'floor');
+    props.table.setHighlight(!!glasses.holder || !!book.holder);
+    cols.update(active);
+    void stay;
+
+    const o = objective(active.name);
+    const key = `${o.stage}|${o.text}`;
+    if (key !== S.objKey) { S.objKey = key; onStageChange(o.stage); }
+    notifyStage();
+    if (!S.done && S.glasses === 'table' && S.book === 'table') {
+      S.done = true;
+      notifyStage();
+      return 'delivered';
+    }
+    return null;
+  }
+
+  /** A Radhija está na frente dos degraus, de frente para a estante? */
+  function nearClimb(c) {
+    const fx = ladder.x;
+    const fz = ladder.z + LADDER.half + CLIMB.front * 0.55;
+    return Math.hypot(c.x - fx, c.z - fz) < CLIMB.r + 0.12 && Math.abs(wrap(c.yaw - NORTH)) < CLIMB.faceTol;
+  }
+
+  /** Empurrar a escada, o globo e o ventilador (Shift encostada); a Radhija só faz força. */
+  function modifyIntent(dt, c, intent, opts) {
+    let out = null;
+    for (const cr of crates) {
+      const r = cr.modifyIntent(dt, c, intent, opts);
+      if (!out && r.contact) out = { r, cr };
+    }
+    if (!out) return null;
+    const { r, cr } = out;
+    if (r.contact === 'needShift') hints.cond('shift', 3, 8);
+    if (r.contact === 'strain') hints.cond('heavy', 3.4, 8);
+    if (r.contact === 'push' && cr === ladder && !brake.on) hints.cond('braked', 3.6, 6);
+    if (r.contact === 'push' && cr === ladder && brake.on && ladder.blockedBy === 'globo') hints.cond('globeWay', 3.6, 6);
+    return r;
+  }
+
+  // ------------------------------------------------------------------ interação (E)
+  function interact(c) {
+    if (book.holder === c.name) {
+      if (!deliveredAt(GOAL, c, c)) dropBook(c);
+      return true;
+    }
+    if (S.book === 'floor' && reach(c, S.bookX, S.bookZ) < 0.55) {
+      if (c.name !== 'rhaenyra') hints.now('bookHeavy', 3.4, 2);
+      else if (glasses.holder === c.name) hints.now('mouthFull', 2.6, 2);
+      else takeBook(c);
+      return true;
+    }
+    if (!S.climb && nearClimb(c)) {
+      if (c.name === 'rhaenyra') hints.now('climbRh', 3.6, 2);
+      else startClimb(c);
+      return true;
+    }
+    if (S.cat === 'asleep' && inOffice(c) && reach(c, WARDROBE.x, WARDROBE.z + WARDROBE.hz) < 0.9) {
+      hints.now('catSleep', 3.4, 3);
+      return true;
+    }
+    if (!bookInOffice() || inOffice(c)) return false;
+    if (!doorOpen() && Math.abs(c.x - WALL_EH.x) < 0.9 && c.z > DOOR.latchPost.z - 0.6 && c.z < DOOR.hinge.z + 0.3) {
+      hints.now('doorLocked', 3.6, 3);
+      return true;
+    }
+    return false;
+  }
+
+  // ------------------------------------------------------------------ impulso na parede
+  function onWallTouch(c, spot) {
+    if (spot.id === brake.id && !brake.on) {
+      brake.touch();
+      hints.now('released', 3, 0);
+    }
+    if (spot.id === damper.id && !damper.on) {
+      damper.touch();
+      hints.now('damperOpen', 3.2, 0);
+    }
+    if (spot.id === handle.id) handle.touch();
+    if (spot.id === handleIn.id) handleIn.touch();
+  }
+
+  // ------------------------------------------------------------------ reinício e etapas de depuração
+  function reset() {
+    glasses.returnHome();
+    book.returnHome();
+    props.reset();
+    hints.reset();
+    cols.reset();
+    for (const b of levers) b.reset();
+    for (const cr of crates) cr.reset();
+    door.reset();
+    catCol.enabled = false;
+    Object.assign(S, fresh());
+    S.flapT = 0;
+    lastStage = 'start';
+  }
+  /** Óculos com a Radhija, escada no lugar (freio solto, globo na lareira). */
+  function setupGlasses(x = LADDER_SPOT + 0.15, z = LADDER.start.z + 1.3) {
+    brake.setOn(true);
+    globe.setPos(GLOBE.minX, GLOBE.start.z);
+    ladder.setPos(LADDER_SPOT, LADDER.start.z);
+    place('radhija', x, z, Math.PI);
+    grabGlasses(ctrls.radhija);
+  }
+  /** Livro com a Rhaenyra, no hall (o gato já na almofada, registro aberto, ventilador na grade). */
+  function setupBook(x = WALL_EH.x + 0.9, z = 0.35) {
+    damper.setOn(true);
+    fan.setPos(DUCT.inlet.x, FAN.alignZ - 0.3);
+    catToBed(false);
+    props.book.setFall(1);
+    place('rhaenyra', x, z, Math.PI / 2);
+    takeBook(ctrls.rhaenyra);
+  }
+  /** @param {string} st @param {{ who?: import('../../types').DogName }} [opts] */
+  function jumpToStage(st, { who } = {}) {
+    if (!STAGES.includes(/** @type {Stage} */ (st))) return null;
+    reset();
+    if (st === 'start') return who || 'radhija';
+    if (st === 'glasses' || st === 'carrying') setupGlasses();
+    if (st === 'book' || st === 'carrying') setupBook();
+    if (st === 'done') {
+      setupGlasses(GOAL.x + 0.35, GOAL.z + 0.55);
+      setupBook(GOAL.x - 0.5, GOAL.z + 0.45);
+    }
+    notifyStage();
+    return who || (st === 'book' ? 'rhaenyra' : 'radhija');
+  }
+
+  function lockFor(name) {
+    const cl = S.climb;
+    const c = ctrls[name];
+    if (cl && name === 'radhija') {
+      return { action: cl.action || 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: cl.slope || 0 };
+    }
+    // a Rhaenyra firme no pé da escada enquanto a irmã sobe
+    if (cl && name === 'rhaenyra' && held()) return { action: 'push', faceX: ladder.x, faceZ: ladder.z };
+    return null;
+  }
+
+  return {
+    S: hints.S, TEXT, stages: STAGES, objective, update, interact, reset, jumpToStage, modifyIntent, lockFor,
+    navFlags: () => ({ doorOpen: doorOpen() }),
+    wallSpots: () => (book.holder ? [] : levers.map((b) => b.spot)),
+    onWallTouch,
+    onBark: (c) => { if (S.cat === 'asleep' && (inOffice(c) || Math.abs(c.x - WALL_EH.x) < 1.2)) hints.now('catBark', 3.4, 5); },
+    lookTarget: (c) => {
+      if (S.glasses === 'shelf' && Math.hypot(c.x - ladder.x, c.z - ladder.z) < 1.4 && ladderAtGlasses()) return at(GLASSES.x, GLASSES.z, GLASSES.y);
+      if (S.book === 'floor' && reach(c, S.bookX, S.bookZ) < 1.0) return at(S.bookX, S.bookZ, 0.05);
+      if (S.cat === 'asleep' && inOffice(c) && reach(c, WARDROBE.x, WARDROBE.z) < 1.8) return at(CAT.top.x, CAT.top.z, CAT.top.y + 0.1);
+      return null;
+    },
+    setPrompt: (kind) => hints.setPrompt(kind),
+    endActions() { S.climb = null; },
+    /** Testes e capturas: põe a escada, o globo ou o ventilador num ponto (dentro dos limites), sem empurrão. */
+    placeCrate(id, x, z) {
+      const cr = { escadinha: ladder, globo: globe, ventilador: fan }[id];
+      if (!cr) return;
+      const cfg = cr === ladder ? LADDER : cr === globe ? GLOBE : FAN;
+      cr.setPos(Math.min(cfg.maxX, Math.max(cfg.minX, x)), Math.min(cfg.maxZ, Math.max(cfg.minZ, z ?? cr.z)));
+    },
+    dispose() { S.disposed = true; },
+    info: () => ({
+      biblioteca: {
+        state: stage(), glasses: S.glasses, book: S.book, bookAt: { x: +S.bookX.toFixed(2), z: +S.bookZ.toFixed(2) }, cat: S.cat,
+        braked: !brake.on, damper: damper.on, aligned: S.aligned, held: held(), atGlasses: ladderAtGlasses(), globeClear: globeClear(),
+        climb: S.climb ? { phase: S.climb.phase, y: +ctrls.radhija.y.toFixed(3) } : null,
+        ladder: ladder.info(), globe: globe.info(), fan: fan.info(), door: { ...door.info(), open: doorOpen() },
+        levers: { brake: brake.info(), damper: damper.info(), handle: handle.info(), handleIn: handleIn.info() },
+      },
+      glasses: { holder: glasses.holder },
+      book: { holder: book.holder },
+      objective: objective(ctx.activeDog).text,
+    }),
+    get stage() { return stage(); },
+    get carrier() { return glasses.holder || book.holder; },
+    carries: (name) => glasses.holder === name || book.holder === name,
+    get collected() { return cols.count; }, get total() { return cols.total; },
+    set onStageChange(fn) { onStageChange = fn; },
+  };
+}
