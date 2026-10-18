@@ -632,7 +632,8 @@ export function buildWorkshop(root) {
   // xilofone: base de madeira e teclas coloridas em pininhos (3 mm acima da base)
   add(pile, rbox(0.42, 0.05, 0.22, 0.012), woodMat('#c79a64', { key: 'expresso-caixote', rough: 0.8 }), 0, 0.025, 0.08);
   const keys = ['#c8553d', '#e0a84a', '#f2c766', '#7aa857', '#4f8f8b', '#7ca8b2'];
-  keys.forEach((c, i) => add(pile, rbox(0.05, 0.016, 0.17 - i * 0.012, 0.005), stdMat(c, { roughness: 0.45 }), -0.16 + i * 0.064, 0.061, 0.08));
+  // teclas vizinhas alternam 3 mm de altura (nenhum topo no mesmo plano do vizinho)
+  keys.forEach((c, i) => add(pile, rbox(0.05, 0.016, 0.17 - i * 0.012, 0.005), stdMat(c, { roughness: 0.45 }), -0.16 + i * 0.064, 0.061 + (i % 2) * 0.003, 0.08));
   for (const s of [-1, 1]) {
     const mallet = add(pile, new THREE.CylinderGeometry(0.007, 0.007, 0.22, 6), handleMat, 0.05 * s, 0.075, -0.07);
     mallet.rotation.set(Math.PI / 2, 0, 0.3 * s);
