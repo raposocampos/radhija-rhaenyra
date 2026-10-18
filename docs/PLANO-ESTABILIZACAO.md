@@ -1,6 +1,10 @@
 # Plano de estabilização do jogo
 
-Data de início: 2026-10-17. Coordenação: Codex.
+Data de início e conclusão: 2026-10-17. Coordenação: Codex.
+
+**Rodada encerrada:** EST-00 a EST-09 aprovadas, integradas e publicadas.
+Produção confirmada em `45bf0cc` (PR #16). Próximo trabalho de conteúdo em
+[CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md); passagem atual em [CONTEXTO.md](CONTEXTO.md).
 
 Preparar o jogo para receber novas fases e mecânicas com menos regressões.
 A execução foi autorizada pelo usuário. As regras de entrega, privacidade e
@@ -10,7 +14,7 @@ da aprovação explícita de cada versão apresentada.
 ## Base e organização
 
 Base inicial: `baa8af07e8f1e81bf03c7ec6f379c32955a2efd6`.
-A [avaliação registrada](CONTEXTO.md) confirmou 123 testes rápidos e
+A [avaliação registrada](HISTORICO-ESTABILIZACAO.md#evidências-da-avaliação-anterior) confirmou 123 testes rápidos e
 299 verificações E2E nessa base. Novos commits precisam de validação própria.
 
 Um coordenador mantém prioridades, reconcilia registros e revisa entregas.
@@ -83,22 +87,22 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
 | [x] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | PRs #13 e #14 aprovados, integrados e publicados |
-| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 com baseline revisada; validação final atualizada pendente |
+| [x] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 aprovado, integrado e publicado em 45bf0cc |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
-Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
-revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
-EST-08 seguem em entregas próprias, com escopo ajustado às medições.
+A sequência planejada foi concluída: E2E/Vite → carregamento/progresso → recursos
+→ contratos → configuração/eventos → desempenho/guia. Todas as prioridades da
+avaliação inicial foram reconciliadas com essas entregas; não sobra etapa de
+estabilização obrigatória para iniciar o acabamento da fase 6.
 
-EST-00 a EST-07 e EST-09 foram publicados.
-Resta EST-08, com instrumento/guia no PR #16 e medições na nuvem. Cada versão
-apresentada exige aprovação própria. Áreas reservadas e checkpoints em
-`CONTEXTO.md`; cada executor registra sua entrega na própria branch.
-Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
-principal. O conceito Expresso do Superbafo do PR #9 foi escolhido pelo usuário
-para protótipo, mantendo a direção artística existente. PR #15 aprovado e
-publicado em `b954b24`, somente DEV_LEVELS. Acabamento e entrada na campanha
-permanecem para outra entrega.
+PR #16 aprovado no head `622d303`, base `b954b24`; squash `45bf0cc`. CI do head
+`39084258076`, medição final `39084258063`, CI main `39087411898` e deploy
+`39087441755` passaram. Produção HTTP 200/version.json conferida. Não repetir
+merge/deploy. As notas por etapa abaixo preservam critérios e evidências históricas.
+
+Expresso do Superbafo foi aprovado como protótipo e publicado pelo PR #15,
+somente DEV_LEVELS. PR #9 encerrado por substituição. Acabamento visual, animações,
+áudio e entrada na campanha permanecem para novas entregas com aprovação própria.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -352,8 +356,11 @@ Protocolo `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequencia
 no mesmo runner por fase, boot direto e reloads isolados. GC fora da janela.
 Agregação estrita; ambiente/limite fixo por fase. O instrumento inicial `0b2a329`
 passou CI, mas medição `39080397088` excedeu 25 min; não é referência válida.
-O commit combinado com a nova base e os dados precisa de CI/prévia e medição
-próprios antes da aprovação. Resultados finais no PR, sem commit só de status.
+Head final `622d303`, base `b954b24`: CI `39084258076` (207 testes/tipos/build)
+e medição `39084258063` aprovados, com 600 quadros e dez provas negativas reais.
+Fases 2/5 comparáveis sem excessos; fases 1/3/4 com CPUs diferentes, sem comparação
+temporal. Usuário aprovou; squash `45bf0cc` publicado após CI main `39087411898`
+e deploy `39087441755`. Baseline original preservada. EST-08 concluída.
 
 - Definir cenário, qualidade gráfica e ambiente de referência para medir
   carregamento, tempo por quadro e memória; estabelecer limites após medir.
@@ -404,7 +411,11 @@ deploy `39060461084` concluiu após liberação do deployment `7144319080`
 com a aprovação do chat. Produção HTTP 200 e `version.json` confirmou
 head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação.
 
-### Preparação da próxima fase (proposta)
+### Preparação da próxima fase (proposta e protótipo concluídos)
+
+Estado atual: #15 publicado; #9 encerrado como substituído. O plano de acabamento
+e promoção está em [CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md). As notas abaixo
+registram a preparação original, não uma nova escolha pendente do cenário.
 
 - Usar `_modelo` e registro em `DEV_LEVELS` para protótipo isolado, com pasta
   e testes próprios. A prévia do PR isola o save; `DEV_LEVELS` sozinho não.

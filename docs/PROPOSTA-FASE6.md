@@ -9,7 +9,9 @@ para protótipo em 17/10/2026**, após apresentação da imagem conceitual. O us
 exigiu preservar a direção artística existente: maquete procedural, materiais,
 iluminação, escala e câmera coerentes com as fases atuais e personagens intactas.
 A aprovação do conceito não aprova antecipadamente a versão jogável/publicação.
-Implementação e validação do protótipo registradas em CONTEXTO.md.
+Protótipo posteriormente aprovado e publicado pelo PR #15, preservado no #16.
+Este documento conserva o desenho do puzzle; estado real em CONTEXTO.md e
+próxima entrega em [CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md).
 
 **Missão:** recuperar uma bolinha pintada como um planeta, que ficou no vagão,
 e levá-la ao tapete de foguete das duas irmãs. Rhaenyra pula sobre um pedal de
@@ -214,60 +216,46 @@ habilidade, por fim o comando com o markup existente para teclado/controle.
 Se a rota circular for usada, destacar a seta, sem tratar tentativa como derrota.
 Sem limite de tempo, sincronização entre dogs ou penalidade por experimentar.
 
-## Critérios de aceitação do protótipo
+## Critérios e evidências do protótipo entregue
 
-- [x] Escolher cenário e objeto com o usuário; aprovação da proposta não aprova
-  antecipadamente uma versão jogável nem sua publicação.
-- [ ] Provar num cenário em blocos que um pulo no lugar aciona o pedal uma vez;
-  andar, ficar, latir e interação não substituem o salto. Testar troca no ar.
-- [ ] Provar que o superbafo real é necessário; aproximação, latido e interação
-  não acionam o trem. Testar setor frontal e todos os atalhos descritos acima.
-- [ ] Demonstrar causalidade completa: pulo → trilho → bafo → destino da bolinha;
-  rota circular recuperável e rota de entrega, sem duas dogs agindo ao mesmo tempo.
-- [ ] Garantir idempotência durante movimento, rearme sem nuvem antiga e retirada
-  só após a chegada; sem duplicar item/evento ou mudar rota no meio do percurso.
-- [ ] Provar que contato lateral rejeitado não ganha outra chance ao entrar pela
-  frente. Provar também que nuvem antiga fora do alcance no instante do rearme
-  continua ignorada ao chegar depois; só um sopro criado após o rearme aciona.
-  Conferir poda dos IDs expirados e limpeza completa desse conjunto no reset.
-- [ ] Cobrir pausa, reinício e troca de fase em cada estado, inclusive bolinha
-  na boca, sem callbacks tardios nem recursos exclusivos retidos.
-- [ ] Testar câmera, dicas, controles e passagem da companheira com ambas ativas;
-  nenhuma navegação para dentro dos trilhos e nenhuma ação depende de precisão.
-- [ ] Antes da inclusão principal, registrar `fase6` com import dinâmico, teste
-  de contrato e save compatível: fase 5 concluída libera a 6 e preserva marcas.
-  Atualizar contagens/`hasNext` de testes e documentação de modo coordenado.
-- [ ] Adicionar suíte ao runner e ao workflow E2E, ajustar medição de recursos
-  para abranger a sexta fase e testar build servido em subcaminho. O smoke já
-  percorre `LEVELS`, mas não substitui a partida e as provas negativas da fase.
-- [ ] Executar tipos, testes, build, E2E e medição no GitHub; revisar capturas
-  e apresentar prévia do head/base final para aprovação do usuário.
+PR #15 aprovado no head corrigido `05e2287`, publicado por squash `b954b24`.
+CI `39082917531`: 207 testes/tipos/build; E2E `39082921941`: 24 verificações
+Expresso, infraestrutura/smoke/recuperação e recursos das seis fases aprovados.
+Detalhes e limitações no CONTEXTO; o catálogo normal ainda tem cinco fases.
+
+- [x] Usuário escolheu oficina, trem que espirra e bolinha-planeta, com arte na
+  mesma direção do jogo; aprovou a versão jogável como blocagem.
+- [x] Pouso real aciona pedal uma vez; andar, ficar, latir/interagir não o substituem.
+  Troca de personagem no ar preserva o pouso único.
+- [x] Superbafo real frontal aciona o trem; aproximação/latido/interação e contato
+  lateral não substituem o sopro. Rota circular recuperável e entrega funcionam.
+- [x] Rota congelada em movimento, rearme bloqueia nuvens antigas (inclusive
+  distantes), poda/reset dos IDs, retirada só em ready e regressão da dica falsa.
+- [x] Pausa, reinício e troca de fase em todos os estados, incluindo item na boca;
+  contratos reais, factories explícitas e navegação/colisão do passeio cobertos.
+- [x] Suíte expresso registrada no runner e workflow/todas; smoke em subcaminho e
+  recursos incluem a fase DEV. Capturas revisadas e prévia aprovada pelo usuário.
+- [ ] Acabamento visual, curvas/articulação do trem e som exclusivo do espirro.
+- [ ] Partida de revisão caminhando entre estações durante o acabamento; o E2E
+  atual posiciona personagens para preparar trechos das interações reais.
+- [ ] Promoção ao catálogo, progressão 5→6, URL por ID, saves/hasNext, pressupostos
+  dos testes e protocolo temporal de seis fases. Isso não fazia parte da publicação DEV.
 
 ## Sequência de entrega e coordenação
 
-EST-03/04/05/06 já estão integradas na base examinada: carregamento, progresso,
-recursos e contratos não são mais obstáculos pendentes para começar um protótipo.
-A fase pode avançar em paralelo com EST-07/08, depois de escolher a proposta,
-em branch/worktree próprios. Não há necessidade técnica de aguardar toda a
-divisão do núcleo, desde que o protótipo respeite os contratos publicados.
+1. **Escolha do desenho e protótipo:** concluídos; proposta do #9 incorporada ao
+   #15, publicado. Não pedir novamente escolha de cenário nem reimplementar a blocagem.
+2. **Acabamento mantendo DEV:** próxima entrega, com movimento, cenário, câmera,
+   dicas e som coerentes; revisar prévia própria e obter aprovação dessa versão.
+3. **Campanha:** depois do acabamento validado, promover catálogo/progresso,
+   revisar testes/medição e apresentar outra prévia para aprovação.
 
-1. **Escolha do desenho:** confirmar oficina, trem que espirra e bolinha-planeta.
-2. **Protótipo jogável em blocos:** validar a causalidade e os atalhos acima;
-   entregar prévia para jogar antes de investir em acabamento.
-3. **Cenário e conclusão:** arte procedural, câmera, dicas, som e petiscos,
-   catálogo/progresso, testes completos e medição; nova prévia para aprovação.
+A estabilização EST-00 a EST-09 foi encerrada com o PR #16. Não há impedimento
+arquitetural pendente para iniciar o acabamento. O checklist e a divisão de
+arquivos por agente estão em [CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md).
+Manter worktrees exclusivos, coordenar arquivos compartilhados e integrar uma
+frente por vez. A prévia por PR isola o progresso; DEV_LEVELS sozinho não cria
+uma chave de save separada. Aprovações antigas não cobrem novas versões.
 
-Não há prazo fechado nesta proposta. A primeira prévia jogável depende da
-escolha e da validação das duas mecânicas locais; a versão final depende do
-teste do usuário e da aprovação do resultado, não apenas do término de EST-07.
-
-Executor da fase: pasta da fase, testes específicos e roteiro. Coordenador:
-reservar edições de catálogo, tipos globais, helpers e workflows; reconciliar
-base, checklist e contexto antes de cada integração. Não misturar a nova fase
-com a extração do núcleo. A prévia por PR isola o progresso de produção;
-`DEV_LEVELS` sozinho não cria uma chave de save separada.
-
-O PR #9 preserva a revisão documental anterior. Esta proposta acompanha agora
-o protótipo autorizado; CI/E2E/capturas da implementação devem demonstrar os
-critérios acima antes da entrega jogável. A proposta anterior permanece no
-histórico; quintal, ursinho e percurso com pombo foram substituídos.
+PR #9 encerrado como substituído pelo #15; história da proposta preservada no Git.
+A alternativa antiga com quintal, ursinho e pombo foi rejeitada pelo usuário.
