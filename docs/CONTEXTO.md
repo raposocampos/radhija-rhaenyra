@@ -3,21 +3,34 @@
 Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: acabamento da fase 6 (Entrega A)
+## Em andamento: fase 6 mais longa
 
-- Pedido do usuário: melhorar a fase 6 no mesmo padrão das fases 4 e 5, seguindo
-  [CONTINUIDADE-FASE6.md](CONTINUIDADE-FASE6.md). A fase continua só em `DEV_LEVELS`.
-- Branch **`claude/acabamento-fase6`** (worktree próprio), base `5e434f7` (PR #17
-  no main). Consultar o PR dessa branch para SHA, CI, E2E `expresso` e prévia;
-  este texto não antecipa resultados. Nenhum teste ou build rodou no PC.
-- Feito: trilho único (`src/levels/fase6/track.js`), volta fechada sem giro
-  parado, vagão articulado com caçamba, espirro sincronizado com o tranco de ré,
-  oficina e maquete detalhadas, sons e partículas `expresso:*`, iluminação própria
-  e testes novos em `test/fase6.test.mjs` (viagem quadro a quadro, entrega,
-  varredura do corpo do trem, partida andando). Detalhes na continuidade.
-- Próximo passo: CI verde, E2E `expresso` (e `todas` antes de integrar), revisar
-  as capturas, entregar a prévia e **aguardar aprovação** antes do merge/deploy.
-  Depois, Entrega B (campanha) em outro PR.
+- Pedido do usuário (2026-10-18): o acabamento ficou bonito, mas a fase curta.
+  Escolheu **as duas coisas**: cancela no trilho da estrela e duas entregas pelo
+  trem. A fase continua só em `DEV_LEVELS`.
+- Branch **`claude/fase6-longa`** (worktree próprio), base `31e8b26`. Consultar o
+  PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa resultados.
+  Nenhum teste ou build rodou no PC.
+- Feito: agulha com três posições (volta → lua → estrela); a lua começa presa num
+  pórtico dentro da maquete e o trem a busca (ela cai no vagão ao lado do planeta);
+  cancela na reta leste da estrela que só sobe com alguém na placa do lado de fora
+  (Fica) e barra o trem antes do braço; as duas cargas descem juntas até a bandeja;
+  o trem volta sozinho depois de cada parada; cada dog leva uma carga na boca (as
+  duas podem ir juntas, a pedido do usuário); foguete com dois berços que decola.
+  Na primeira prévia a lua ficava do lado de fora e ia a um funil; o usuário
+  apontou que isso não fazia sentido e o fluxo foi refeito. Testes em `test/fase6.test.mjs` e
+  E2E `expresso` reescritos. Detalhes na continuidade.
+- Diretriz do usuário para as próximas fases: **dois objetos** por fase até a 10;
+  a partir da 11, três ou mecânicas novas (ver COMO-CRIAR-UMA-FASE, seção 1).
+- Próximo passo: CI verde, E2E `expresso` e `todas`, revisar as capturas,
+  entregar a prévia e **aguardar aprovação** antes do merge/deploy. Depois,
+  Entrega B (campanha) em outro PR.
+
+## Entregue: acabamento da fase 6 (PR #18)
+
+Squash `31e8b26` no main, publicado pelo deploy `39095730915` (deployment
+`7149690293`, liberado com a aprovação do chat); `version.json` e HTTP 200
+conferidos. Não repetir merge/deploy do #18.
 
 ## Passagem anterior (Codex → Claude, 2026-10-17)
 
@@ -120,10 +133,9 @@ não foram implementados. Plano concreto em [CONTINUIDADE-FASE6.md](CONTINUIDADE
 2. A consolidação documental do Codex (`codex/passagem-claude`) virou o PR #17,
    integrado ao main em `5e434f7`.
 3. A aprovação do #16 já foi consumada na publicação acima; não repetir.
-4. Próximo trabalho de jogo: **acabamento da fase 6 mantendo DEV**, começando por
-   contrato de trajetória/trem e divisão da composição. Cenário e áudio podem
-   avançar em worktrees exclusivos depois de reservar arquivos. Após validar o
-   acabamento, promover ao catálogo em outra entrega, conforme o checklist.
+4. O acabamento da fase 6 (DEV) foi publicado no #18; a versão mais longa está
+   em andamento (topo deste arquivo). Depois de aprovada, promover ao catálogo
+   em outra entrega, conforme o checklist.
 5. Ao promover, corrigir três pressupostos: URL por ID hoje só busca DEV;
    contratos genéricos presumem portão; fase 5 espera `hasNext=false`. Rever também
    testes que exigem fase6 fora do catálogo e ampliar medição temporal para seis fases.

@@ -236,6 +236,7 @@ E devolve um objeto com:
 | Membro | Quando o núcleo chama |
 |---|---|
 | `stages`, `stage`, `carrier`, `collected`, `total` | leitura (UI, depuração, vitória) |
+| `carries?(nome)` → bool | com mais de um item, se a dog leva algo na boca (passo e pose); sem ele vale `carrier === nome` |
 | `objective(ativa)` → `{ text, target, stage }` | sempre que a etapa ou a dog ativa muda (texto do HUD + marcador) |
 | `update(dt, { active, comp, ctrls, stay })` | todo quadro em `playing`; devolva `'delivered'` para comemorar |
 | `updateAlways?(dt)` | todo quadro em `playing` e `celebrating` (animações) |
@@ -397,7 +398,10 @@ Quem emite e quem ouve:
   fase 6: `expresso:route {route, signX, signZ}` (pulo no pedal virou a agulha), `expresso:sneeze` (o nariz sentiu o
   cheiro: "ah... ah..."), `expresso:atchim {x, y, z, dirX, dirZ}` (o espirro e o tranco de ré; vibra),
   `expresso:chuff {x, y, z}` (vapor da chaminé a cada `TRAIN.chuffEvery` m), `expresso:unload` (caçamba basculando),
-  `expresso:delivery` (bolinha na bandeja) e `expresso:return` (a volta chegou à estação; apito).
+  `expresso:delivery {cargo}` (carga na bandeja), `expresso:return` (o trem chegou à estação; apito),
+  `expresso:blocked` (cancela fechada segurou o trem), `expresso:barrier {open}` (cancela subindo/descendo),
+  `expresso:fetch` (a portinhola do pórtico abriu), `expresso:loaded` (a lua caiu no vagão), `expresso:dock {cargo}`
+  (encaixou no foguete) e `expresso:launch` (as duas cargas: o foguete decola).
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,
 emita um evento no puzzle e trate-o lá.

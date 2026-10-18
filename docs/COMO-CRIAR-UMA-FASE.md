@@ -20,6 +20,10 @@ Os formatos exatos estão em [`src/types.d.ts`](../src/types.d.ts) e o editor av
 Antes do código, escreva em poucas linhas:
 
 - **O item e o objetivo**: o que as dogs vão buscar e para onde levam (por exemplo, "a bolinha até a caminha").
+- **Quantos itens** (pedido do usuário, 2026-10-18): da fase 6 à 10, **dois objetos** a entregar; a partir da
+  fase 11, três objetos ou mecânicas novas. Cada objeto precisa de um motivo visível para o caminho: se as dogs
+  alcançam o objeto direto, o mecanismo não pode ser obrigatório (na fase 6, a lua começa presa dentro da
+  maquete, onde só o trem chega; levar uma lua já de fora até o trem "não fez sentido").
 - **Os beats**, em ordem: cada um deve exigir as duas cachorrinhas de um jeito diferente. As ferramentas que o
   jogador já conhece: a Radhija passa por aberturas, dá arrancada e solta o **superbafo** (cheiro que o vento e os
   dutos levam até um alvo); a Rhaenyra pesa (placas), empurra (caixotes, ventiladores), pula obstáculos baixos e

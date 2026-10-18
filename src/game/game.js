@@ -204,6 +204,11 @@ export function createGame({ engine, dogs, levels, params }) {
     setLook(n, { x: c.x + (ax / L) * 1.5, y: 0.45, z: c.z + (az / L) * 1.5 });
   }
 
+  /** A dog leva algo na boca? Fases com dois itens respondem por dog (puzzle.carries). */
+  function carries(name) {
+    return puzzle?.carries ? puzzle.carries(name) : puzzle?.carrier === name;
+  }
+
   function setStay(name, on, { silent = false } = {}) {
     on = !!on;
     if (stay[name] === on) return;
@@ -340,7 +345,7 @@ export function createGame({ engine, dogs, levels, params }) {
         jumpHintCd = 6;
         emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 2.6 });
       }
-      if (puzzle.carrier === A.name) speed *= 0.94;
+      if (carries(A.name)) speed *= 0.94;
       intent = { dx, dz, speed, turnScale: action === 'push' ? 0.7 : 1 };
       const pr = puzzle.modifyIntent?.(dt, A, intent, { shift, comp: C }) || {};
       if (pr.intent) intent = pr.intent;
@@ -530,7 +535,7 @@ export function createGame({ engine, dogs, levels, params }) {
       d.object.rotation.y = c.yaw;
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
-      an.carrying = puzzle.carrier === n;
+      an.carrying = carries(n);
       an.jump = c.y;
       an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
       if (c.landed) {
@@ -826,7 +831,7 @@ export function createGame({ engine, dogs, levels, params }) {
       if (!c) return null;
       return {
         x: +c.x.toFixed(3), z: +c.z.toFixed(3), yaw: +c.yaw.toFixed(3), v: +c.v.toFixed(3),
-        speed: +c.animSpeed.toFixed(3), action: anims[n].action, carrying: puzzle?.carrier === n,
+        speed: +c.animSpeed.toFixed(3), action: anims[n].action, carrying: carries(n),
         dashing: c.dashT > 0, mode: n === activeDog ? 'active' : brains[n].mode,
         path: brains[n].path.map((w) => w.id), reachable: brains[n].reachable,
         stuck: +brains[n].stuckAccum.toFixed(2), sitting: anims[n].action === 'sit',

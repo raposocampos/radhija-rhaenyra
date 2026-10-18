@@ -1,9 +1,35 @@
 # Continuidade da fase 6 — Expresso do Superbafo
 
 Passagem Codex → Claude, 2026-10-17. A **Entrega A (acabamento mantendo DEV)**
-foi implementada por Claude em 2026-10-18 no branch `claude/acabamento-fase6`
-e aguarda CI, E2E e a aprovação do usuário (estado em [CONTEXTO.md](CONTEXTO.md)).
-A Entrega B (campanha) continua por fazer.
+foi publicada por Claude em 2026-10-18 (PR #18, squash `31e8b26`). A pedido do
+usuário, a fase ficou mais longa no branch `claude/fase6-longa`, que aguarda CI,
+E2E e aprovação (estado em [CONTEXTO.md](CONTEXTO.md)). A Entrega B (campanha)
+continua por fazer.
+
+### Fase mais longa (duas cargas e cancela)
+
+O foguete do tapete só decola com **as duas cargas**, e as duas começam **dentro da maquete**, onde só o trem
+chega. (Uma primeira versão deixava a lua numa cestinha do lado de fora e exigia levá-la a um funil para o trem;
+o usuário apontou que isso não fazia sentido: se as dogs já alcançam a lua, o trem não é necessário.)
+
+1. **A lua no pórtico.** No fim da rota da lua (logo depois da agulha) há um pórtico de postes finos com uma
+   cestinha suspensa. O pedal tem três posições, na ordem **volta → lua → estrela** (placa da agulha em prisma
+   de três faces). Com a seta da lua e um superbafo, o vagão para embaixo da cestinha, a portinhola abre e a lua
+   cai no lugar da frente do vagão (o planeta rola para trás); o trem volta sozinho, de frente, com as duas.
+2. **As duas pela estrela.** Na reta leste da estrela há uma **cancela** que só sobe com alguém na **placa do
+   lado de fora** da maquete: a Rhaenyra fica lá com o **Fica (F)** enquanto a Radhija sopra. Fechada, o trem
+   para antes do braço, apita e volta com as cargas (recuperável); depois de passar, o próprio trem segura a
+   cancela em pé até sair. No fim, a caçamba bascula e as cargas descem pela canaleta, a da frente primeiro,
+   cada uma para o seu lado da bandeja; o trem volta sozinho.
+3. Cada dog leva uma carga na boca: com a boca vazia, a outra irmã pega a segunda (Q para trocar) e as duas
+   vão juntas ao foguete; também dá para levar uma de cada vez. Com planeta e lua nos berços, ele decola.
+
+A ordem inversa também vale (planeta pela estrela, depois buscar a lua e outra viagem pela estrela); viagem à
+lua com o pórtico vazio só dá uma volta. Etapas: `blocked`, `movingMoon`, `moonLoaded`, `ready` (as duas na
+bandeja), `planetDocked` (planeta no foguete, lua no pórtico), `moonReady`, `carryingMoon` (todas em `?stage=`).
+Testes: pórtico, as duas pela estrela, ordem inversa, cancela, entrega real e partida longa andando com a
+companheira (sem atravessar móveis). Capturas do E2E: `02a-lua-caindo`, `02b-cancela-fechada`,
+`02c-cancela-aberta`, `03-descarga-das-duas`, `04-as-duas-na-boca`, `05-foguete-decola`.
 
 ### O que mudou no acabamento
 
@@ -71,8 +97,9 @@ pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o nú
 - [x] Sincronizar olhos/nariz, antecipação, recuo e partida com o tempo do puzzle;
   revisar câmera e dicas vendo o movimento completo. Nenhuma ação deve exigir
   precisão de plataforma ou duas personagens agindo simultaneamente.
-- [ ] Entregar prévia própria do acabamento em DEV; publicar somente após
-  aprovação explícita dessa versão. A aprovação do protótipo não cobre a arte final.
+- [x] Entregar prévia própria do acabamento em DEV; publicar somente após
+  aprovação explícita dessa versão. → aprovado e publicado no PR #18.
+- [ ] Fase mais longa (lua no pórtico + cancela + foguete): prévia própria e nova aprovação.
 
 ### Divisão segura entre agentes
 
@@ -105,7 +132,8 @@ visual se isso dificultar revisar causalidade e acabamento.
   → `test/fase6.test.mjs`: partida andando, viagem quadro a quadro, entrega com
   caçamba, trilho fechado e varredura do corpo do trem contra cerca e enfeites.
 - [ ] Revisar capturas das curvas/descarga e comparar direção artística com a fase 5.
-  O E2E `expresso` agora grava `01b-volta-na-curva` e `02b-descarga-na-canaleta`.
+  O E2E `expresso` grava a volta na curva, a cancela, as duas descargas, o
+  elevador da lua e a decolagem.
   Recursos devem estabilizar após trocas, sem descarte de recursos globais.
 - [ ] Tipos/testes/build e E2E `expresso` na nuvem; E2E `todas` na entrega importante.
   Conferir SHA do head final, smoke em subcaminho e jobs de recursos. Ver guia

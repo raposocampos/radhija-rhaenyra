@@ -179,9 +179,14 @@ export function stubFase6Props(root, layout) {
   const ball = item(root, 'ball', layout.BALL);
   ball.home.y = layout.BALL.y;
   ball.object.position.copy(ball.home);
+  const moon = item(root, 'moon', layout.MOON);
+  moon.home.y = layout.MOON.y;
+  moon.object.position.copy(moon.home);
   const trainObject = object(root, 'train');
   const junctionObject = object(root, 'junction');
   const noseObject = object(trainObject, 'nose');
+  const goalObject = object(root, 'goal');
+  const sockets = { planet: object(goalObject, 'socket-planet'), moon: object(goalObject, 'socket-moon') };
   /** @type {import('../../src/types').Fase6Props} */
   const props = {
     pedal: press(root, 'fase6.pedal'),
@@ -200,16 +205,31 @@ export function stubFase6Props(root, layout) {
       setSneeze(t) { noseObject.scale.set(1 + t * 0.3, 1 + t * 0.15, 1 - t * 0.55); },
     }),
     ball,
-    goal: highlight(root, 'fase6.goal'),
+    moon,
+    barrier: checked('fase6.barrier', { object: object(root, 'barrier'), setOpen(k) {} }),
+    barrierPlate: press(root, 'fase6.barrierPlate'),
+    hopper: checked('fase6.hopper', { object: object(root, 'hopper'), setOpen(k) {} }),
+    goal: checked('fase6.goal', {
+      object: goalObject,
+      setHighlight(on) {},
+      /** @param {import('../../src/types').Fase6Cargo} cargo */
+      socket(cargo) { return sockets[cargo]; },
+      launch() {},
+    }),
     collectibles: [],
     reset() {
       props.pedal.setPress(0);
+      props.barrierPlate.setPress(0);
       props.junction.setRoute('loop');
       props.train.setPose(layout.TRAIN.start);
       props.nose.setSneeze(0);
-      ball.object.position.copy(ball.home);
-      ball.object.rotation.set(0, 0, 0);
-      ball.setHighlight(false);
+      props.barrier.setOpen(0);
+      props.hopper.setOpen(0);
+      for (const it of [ball, moon]) {
+        it.object.position.copy(it.home);
+        it.object.rotation.set(0, 0, 0);
+        it.setHighlight(false);
+      }
       props.goal.setHighlight(false);
     },
   };
