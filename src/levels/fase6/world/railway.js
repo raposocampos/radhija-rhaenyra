@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import { rng, rbox, stdMat, woodMat, woodTexture, canvasTexture, mergeGeometries } from '../../../world/util.js';
 import { createRubberDuck } from '../../../world/toys.js';
 import {
-  RAIL_YARD, TRACK, TRAIN, NOSE, CHUTE, MOON_CHUTE, SWITCH_SIGN, SWITCH_LEVER, PEDAL, BARRIER, BARRIER_PLATE, LOADER,
-  YARD_DECOR as DECOR,
+  RAIL_YARD, TRACK, TRAIN, NOSE, CHUTE, SWITCH_SIGN, SWITCH_LEVER, PEDAL, BARRIER, BARRIER_PLATE, MOON_GANTRY, MOON,
+  ROUTE_ORDER, YARD_DECOR as DECOR,
 } from '../layout.js';
 
 const TAU = Math.PI * 2;
@@ -225,7 +225,6 @@ export function buildRailway(root, track) {
   const fx = Y.hx - fenceIn, zN = Y.z - Y.hz + fenceIn, zS = Y.z + Y.hz - fenceIn;
   const windowHalf = NOSE.halfWidth + 0.06;
   const chuteGap = [CHUTE.x - CHUTE.halfWidth - 0.07, CHUTE.x + CHUTE.halfWidth + 0.07];
-  const moonGap = [MOON_CHUTE.x - MOON_CHUTE.halfWidth - 0.07, MOON_CHUTE.x + MOON_CHUTE.halfWidth + 0.07];
   const picketShape = new THREE.Shape();
   picketShape.moveTo(-0.024, 0); picketShape.lineTo(0.024, 0); picketShape.lineTo(0.024, 0.26); picketShape.lineTo(0, 0.3); picketShape.lineTo(-0.024, 0.26); picketShape.closePath();
   const picketBase = new THREE.ExtrudeGeometry(picketShape, { depth: 0.018, bevelEnabled: false }).translate(0, 0, -0.009);
@@ -248,8 +247,7 @@ export function buildRailway(root, track) {
       rails.push(new THREE.BoxGeometry(len, 0.03, 0.02).rotateY(ang).translate((ax + bx) / 2 + ox * 0.018, ry, (az + bz) / 2 + oz * 0.018));
     }
   };
-  side(-fx, zN, moonGap[0], zN, 0, -1);
-  side(moonGap[1], zN, fx, zN, 0, -1);
+  side(-fx, zN, fx, zN, 0, -1);
   side(-fx, zN, -fx, zS, -1, 0);
   side(fx, zN, fx, zS, 1, 0);
   side(-fx, zS, -windowHalf, zS, 0, 1);
@@ -261,8 +259,7 @@ export function buildRailway(root, track) {
   // mourões nos cantos e nas aberturas, com bolinhas no topo
   const postMat = stdMat('#3f7d79', { roughness: 0.55 });
   const knobMat = stdMat('#e0a84a', { roughness: 0.5 });
-  const posts = [[-fx, zN], [fx, zN], [-fx, zS], [fx, zS], [-windowHalf, zS], [windowHalf, zS], [chuteGap[0], zS], [chuteGap[1], zS],
-    [moonGap[0], zN], [moonGap[1], zN]];
+  const posts = [[-fx, zN], [fx, zN], [-fx, zS], [fx, zS], [-windowHalf, zS], [windowHalf, zS], [chuteGap[0], zS], [chuteGap[1], zS]];
   for (const [x, z] of posts) {
     add(grp, rbox(0.065, Y.fenceTop - Y.height + 0.02, 0.065, 0.012), postMat, x, (Y.fenceTop + Y.height + 0.02) / 2, z);
     add(grp, new THREE.SphereGeometry(0.04, 12, 10), knobMat, x, Y.fenceTop + 0.06, z);
@@ -272,12 +269,6 @@ export function buildRailway(root, track) {
   for (const x of chuteGap) {
     const st = add(grp, starGeo, stdMat('#e0a84a', { roughness: 0.45, emissive: '#e0a84a', emissiveIntensity: 0.12 }), x, Y.fenceTop + 0.16, zS);
     st.rotation.z = 0.1;
-  }
-  // luas crescentes no topo dos mourões da canaleta do norte (a bandeja da lua)
-  const crescent = new THREE.TorusGeometry(0.05, 0.02, 8, 18, Math.PI * 1.25);
-  for (const x of moonGap) {
-    const mn = add(grp, crescent, stdMat('#f3e6b0', { roughness: 0.45, emissive: '#e8d48a', emissiveIntensity: 0.12 }), x, Y.fenceTop + 0.16, zN);
-    mn.rotation.z = Math.PI * 0.62;
   }
   // janela do nariz: grades de latão nos lados (o meio fica livre para o nariz) e as plaquinhas
   const brass = stdMat('#c99a52', { roughness: 0.38, metalness: 0.55 });
@@ -300,7 +291,8 @@ export function buildRailway(root, track) {
   grp.add(sign);
   add(sign, new THREE.CylinderGeometry(0.025, 0.03, 0.86, 10), postMat, 0, Y.height + 0.43, 0);
   add(sign, new THREE.CylinderGeometry(0.07, 0.08, 0.03, 16), postMat, 0, Y.height + 0.015, 0);
-  const faces = ['loop', 'star', 'moon'].map((k) => new THREE.MeshStandardMaterial({ map: signTexture(k), roughness: 0.6 }));
+  // uma face por posição da agulha, na ordem do pedal
+  const faces = ROUTE_ORDER.map((k) => new THREE.MeshStandardMaterial({ map: signTexture(k === 'delivery' ? 'star' : k), roughness: 0.6 }));
   /** Prisma triangular com uma face por rota; a face 0 (volta) olha para +Z com o prisma em 0. */
   const prism = (parent, w, h) => {
     const g = new THREE.Group();
@@ -344,7 +336,7 @@ export function buildRailway(root, track) {
     (SWITCH_LEVER.x - SWITCH_LEVER.hx + baseX + 0.07) / 2, Y.height + 0.03, SWITCH_LEVER.z);
   feltLink.rotation.z = Math.PI / 2;
   // a catraca só anda para a frente: cada rota nova soma um terço de volta ao alvo
-  const ORDER = ['loop', 'delivery', 'moon'];
+  const ORDER = ROUTE_ORDER;
   const STEP = (2 * Math.PI) / 3;
   const sw = { route: 'loop', turns: 0, angle: 0, lever: 0.5 };
   /** @type {import('../../../types').Fase6Props['junction']} */
@@ -436,31 +428,53 @@ export function buildRailway(root, track) {
   const feltCable = add(grp, new THREE.CylinderGeometry(0.01, 0.01, yardE - 0.07 - BARRIER.postX, 8), brass, (yardE - 0.07 + BARRIER.postX) / 2, Y.height + 0.025, BARRIER.z + 0.08);
   feltCable.rotation.z = Math.PI / 2;
 
-  // ---- elevador de vidro da estação (prop loader): a lua sobe por ele e a bica despeja no vagão
-  const loaderGrp = new THREE.Group();
-  loaderGrp.name = 'elevador-da-lua';
-  loaderGrp.position.set(LOADER.x, Y.height, LOADER.z);
-  grp.add(loaderGrp);
-  add(loaderGrp, rbox(0.16, 0.06, 0.16, 0.012), postMat, 0, 0.03, 0);
-  const glass = new THREE.MeshStandardMaterial({ color: '#cfe6ee', roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false });
-  const tube = add(loaderGrp, new THREE.CylinderGeometry(0.055, 0.055, LOADER.top - 0.22, 18, 1, true), glass, 0, (LOADER.top - 0.22) / 2 + 0.06, 0);
-  tube.castShadow = false;
-  for (const y of [0.07, LOADER.top - 0.16]) {
-    const ring = add(loaderGrp, new THREE.TorusGeometry(0.058, 0.01, 6, 20), brass, 0, y, 0);
-    ring.rotation.x = Math.PI / 2;
+  // ---- pórtico da lua (prop hopper): dois postes finos ladeiam o fim da rota da lua e a viga segura uma
+  // cestinha bem em cima da carga da frente do vagão; a portinhola do fundo abre e a lua cai no vagão
+  const G = MOON_GANTRY;
+  const gantry = new THREE.Group();
+  gantry.name = 'portico-da-lua';
+  gantry.position.set(G.x, Y.height, G.z);
+  grp.add(gantry);
+  const topY = G.top - Y.height;
+  for (const s of [-1, 1]) {
+    add(gantry, new THREE.CylinderGeometry(G.legR, G.legR, topY, 10), postMat, s * G.legX, topY / 2, 0);
+    add(gantry, new THREE.CylinderGeometry(0.045, 0.05, 0.02, 14), postMat, s * G.legX, 0.01, 0);
+    add(gantry, new THREE.SphereGeometry(0.03, 12, 10), knobMat, s * G.legX, topY + 0.05, 0);
   }
-  add(loaderGrp, new THREE.CylinderGeometry(0.075, 0.07, 0.06, 16), knobMat, 0, LOADER.top - Y.height + 0.0, 0);
-  const spout = new THREE.Group();
-  spout.position.set(-0.04, LOADER.top - Y.height, 0);
-  loaderGrp.add(spout);
-  add(spout, rbox(0.26, 0.025, 0.07, 0.008), brass, -0.13, 0, 0);
-  for (const s of [-1, 1]) add(spout, rbox(0.26, 0.04, 0.012, 0.004), brass, -0.13, 0.02, s * 0.035);
-  /** @type {import('../../../types').Fase6Props['loader']} */
-  const loader = {
-    object: loaderGrp,
-    setSpout(k) { spout.rotation.z = -1.1 + Math.min(1, Math.max(0, k)) * 1.55; },
+  add(gantry, rbox(G.legX * 2 + 0.08, 0.05, 0.06, 0.012), stdMat('#c8553d', { roughness: 0.5 }), 0, topY, 0);
+  // medalhão com a lua em cima da viga (virado para a câmera)
+  const medal = add(gantry, new THREE.CylinderGeometry(0.1, 0.1, 0.02, 28), knobMat, 0, topY + 0.12, 0);
+  medal.rotation.x = Math.PI / 2;
+  const moonSign = canvasTexture(128, 128, (g, w, h) => {
+    g.fillStyle = '#f6ebd2'; g.beginPath(); g.arc(w / 2, h / 2, 62, 0, TAU); g.fill();
+    g.strokeStyle = '#3e5f86'; g.lineWidth = 8; g.beginPath(); g.arc(w / 2, h / 2, 56, 0, TAU); g.stroke();
+    paintMoon(g, w / 2 - 4, h / 2, 34);
+  }, { repeat: false });
+  add(gantry, new THREE.CircleGeometry(0.094, 28), new THREE.MeshStandardMaterial({ map: moonSign, roughness: 0.6 }), 0, topY + 0.12, 0.013).castShadow = false;
+  // braço da viga até a cestinha, que fica sobre a carga da frente do vagão (MOON_GANTRY.hopperZ)
+  const hz = G.hopperZ - G.z;
+  const armRod = add(gantry, new THREE.CylinderGeometry(0.014, 0.014, hz + 0.02, 8), brass, 0, topY, hz / 2);
+  armRod.rotation.x = Math.PI / 2;
+  const bucketTop = MOON.y + 0.01 - Y.height; // a lua aparece da cintura para cima
+  const bucketH = 0.1;
+  add(gantry, new THREE.CylinderGeometry(G.hopperR, G.hopperR, bucketH, 22, 1, true),
+    new THREE.MeshStandardMaterial({ color: '#4f8f8b', roughness: 0.5, side: THREE.DoubleSide }), 0, bucketTop - bucketH / 2, hz);
+  const rim = add(gantry, new THREE.TorusGeometry(G.hopperR, 0.01, 6, 24), brass, 0, bucketTop, hz);
+  rim.rotation.x = Math.PI / 2;
+  // alça da cestinha presa no braço
+  add(gantry, new THREE.TorusGeometry(G.hopperR, 0.007, 6, 18, Math.PI), brass, 0, bucketTop, hz);
+  // portinhola no fundo (a lua passa folgada), com a dobradiça no lado oeste
+  const doorR = G.hopperR - 0.005;
+  const doorPivot = new THREE.Group();
+  doorPivot.position.set(-doorR, bucketTop - bucketH, hz);
+  gantry.add(doorPivot);
+  add(doorPivot, new THREE.CylinderGeometry(doorR, doorR, 0.012, 22), stdMat('#e0a84a', { roughness: 0.5 }), doorR, -0.006, 0);
+  /** @type {import('../../../types').Fase6Props['hopper']} */
+  const hopper = {
+    object: gantry,
+    setOpen(k) { doorPivot.rotation.z = -Math.min(1, Math.max(0, k)) * Math.PI * 0.55; },
   };
-  loader.setSpout(0);
+  hopper.setOpen(0);
 
   // ---- linha de estrelas ao lado do trilho da entrega, até a canaleta
   const stars = [];
@@ -513,8 +527,8 @@ export function buildRailway(root, track) {
   add(tower, new THREE.ConeGeometry(0.14, 0.1, 18), roofMat, 0, 0.59, 0);
 
   return {
-    group: grp, junction, barrier, loader,
+    group: grp, junction, barrier, hopper,
     update(dt) { updateSwitch(dt); },
-    reset() { sw.route = 'loop'; snapSwitch(); barrier.setOpen(0); loader.setSpout(0); },
+    reset() { sw.route = 'loop'; snapSwitch(); barrier.setOpen(0); hopper.setOpen(0); },
   };
 }

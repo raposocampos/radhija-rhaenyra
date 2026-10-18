@@ -51,10 +51,11 @@ export const SOUNDS_EXPRESSO = {
     tone(G, o, { type: 'triangle', f: 300 * p, to: 360 * p, t, a: 0.02, d: 0.26, peak: 0.03 });
     return 0.4;
   },
-  // carga caindo no funil: "glu-glu" descendo pelo tubo
-  funnelGulp(G, o, t, p) {
-    for (let i = 0; i < 3; i++) tone(G, o, { type: 'sine', f: (520 - i * 90) * p, to: (380 - i * 70) * p, t: t + i * 0.11, a: 0.004, d: 0.09, peak: 0.07 });
-    nz(G, o, { t: t + 0.05, a: 0.04, hold: 0.25, d: 0.2, peak: 0.04, type: 'bandpass', f: 420 * p, q: 1.2, buf: G.pink });
+  // portinhola do pórtico abrindo e a lua caindo: rangido curto e um assobio que desce
+  hopperDrop(G, o, t, p) {
+    nz(G, o, { t, a: 0.02, hold: 0.08, d: 0.12, peak: 0.07, type: 'bandpass', f: 900 * p, to: 600 * p, toT: 0.2, q: 6 });
+    for (let i = 0; i < 2; i++) nz(G, o, { t: t + 0.02 + i * 0.06, a: 0.001, d: 0.02, peak: 0.1, type: 'bandpass', f: 2400 * p, q: 4 });
+    tone(G, o, { type: 'sine', f: 1200 * p, to: 520 * p, t: t + 0.22, a: 0.01, d: 0.3, peak: 0.05 });
     return 0.6;
   },
   // decolagem do foguete: ronco que sobe e um "fiuuu" agudo
@@ -74,13 +75,13 @@ export const SOUNDS_EXPRESSO = {
 };
 export const MIN_GAP_EXPRESSO = {
   trainSniff: 0.5, trainSneeze: 0.5, trainChuff: 0.12, railSwitch: 0.2, ballRoll: 0.5, trayDing: 0.4, toyWhistle: 0.3,
-  barrierMove: 0.3, funnelGulp: 0.5, rocketLaunch: 2,
+  barrierMove: 0.3, hopperDrop: 0.5, rocketLaunch: 2,
 };
 export const PITCH_VAR_EXPRESSO = {
   trainSniff: 0.03, trainSneeze: 0.04, trainChuff: 0.08, railSwitch: 0.04, ballRoll: 0.03, trayDing: 0.02, toyWhistle: 0.03,
-  barrierMove: 0.05, funnelGulp: 0.04, rocketLaunch: 0.02,
+  barrierMove: 0.05, hopperDrop: 0.04, rocketLaunch: 0.02,
 };
 export const VERB_EXPRESSO = {
   trainSniff: 0.1, trainSneeze: 0.14, trainChuff: 0.05, railSwitch: 0.1, ballRoll: 0.08, trayDing: 0.22, toyWhistle: 0.15,
-  barrierMove: 0.06, funnelGulp: 0.12, rocketLaunch: 0.25,
+  barrierMove: 0.06, hopperDrop: 0.12, rocketLaunch: 0.25,
 };

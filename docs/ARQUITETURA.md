@@ -399,7 +399,7 @@ Quem emite e quem ouve:
   `expresso:chuff {x, y, z}` (vapor da chaminé a cada `TRAIN.chuffEvery` m), `expresso:unload` (caçamba basculando),
   `expresso:delivery {cargo}` (carga na bandeja), `expresso:return` (o trem chegou à estação; apito),
   `expresso:blocked` (cancela fechada segurou o trem), `expresso:barrier {open}` (cancela subindo/descendo),
-  `expresso:funnel {cargo}` (carga solta no funil), `expresso:loaded` (caiu no vagão), `expresso:dock {cargo}`
+  `expresso:fetch` (a portinhola do pórtico abriu), `expresso:loaded` (a lua caiu no vagão), `expresso:dock {cargo}`
   (encaixou no foguete) e `expresso:launch` (as duas cargas: o foguete decola).
 
 O feedback (`src/fx/feedback.js`) ouve os eventos de jogo e toca sons, partículas e vibração; para um efeito novo,

@@ -208,7 +208,7 @@ export function stubFase6Props(root, layout) {
     moon,
     barrier: checked('fase6.barrier', { object: object(root, 'barrier'), setOpen(k) {} }),
     barrierPlate: press(root, 'fase6.barrierPlate'),
-    loader: checked('fase6.loader', { object: object(root, 'loader'), setSpout(k) {} }),
+    hopper: checked('fase6.hopper', { object: object(root, 'hopper'), setOpen(k) {} }),
     goal: checked('fase6.goal', {
       object: goalObject,
       setHighlight(on) {},
@@ -224,7 +224,7 @@ export function stubFase6Props(root, layout) {
       props.train.setPose(layout.TRAIN.start);
       props.nose.setSneeze(0);
       props.barrier.setOpen(0);
-      props.loader.setSpout(0);
+      props.hopper.setOpen(0);
       for (const it of [ball, moon]) {
         it.object.position.copy(it.home);
         it.object.rotation.set(0, 0, 0);

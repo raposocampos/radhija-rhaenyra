@@ -446,10 +446,10 @@ export function createFeedback(opts) {
     popIcon('alert', { at: { x, y: 1.1, z }, life: 1.4, size: 0.24 });
   });
   events.on('expresso:barrier', ({ x, z }) => sfx('barrierMove', x, z));
-  // funil e elevador: a carga desce pelo tubo e cai no vagão
-  events.on('expresso:funnel', ({ x, z }) => {
-    sfx('funnelGulp', x, z);
-    particles.sparkle({ x, y: 0.6, z }, { count: 8, radius: 0.15, size: 0.8, rise: 0.6 });
+  // pórtico da lua: a portinhola abre e a lua cai no vagão
+  events.on('expresso:fetch', ({ x, y = 0.85, z }) => {
+    sfx('hopperDrop', x, z);
+    particles.sparkle({ x, y, z }, { count: 8, radius: 0.15, size: 0.8, rise: 0.5 });
   });
   events.on('expresso:loaded', ({ x, z }) => {
     sfx('trayDing', x, z, { volume: 0.8 });

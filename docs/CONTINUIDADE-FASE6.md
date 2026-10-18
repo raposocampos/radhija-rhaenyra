@@ -6,32 +6,29 @@ usuário, a fase ficou mais longa no branch `claude/fase6-longa`, que aguarda CI
 E2E e aprovação (estado em [CONTEXTO.md](CONTEXTO.md)). A Entrega B (campanha)
 continua por fazer.
 
-### Fase mais longa (duas entregas e cancela)
+### Fase mais longa (duas cargas e cancela)
 
-O foguete do tapete só decola com **as duas cargas**, e as duas precisam chegar
-de trem a uma bandeja (direto ao foguete, a dica pede o funil):
+O foguete do tapete só decola com **as duas cargas**, e as duas começam **dentro da maquete**, onde só o trem
+chega. (Uma primeira versão deixava a lua numa cestinha do lado de fora e exigia levá-la a um funil para o trem;
+o usuário apontou que isso não fazia sentido: se as dogs já alcançam a lua, o trem não é necessário.)
 
-1. **Planeta pela estrela.** O pedal agora tem três posições (volta → estrela →
-   lua → volta; a placa da agulha é um prisma de três faces). Na reta leste da
-   estrela há uma **cancela** que só sobe com alguém na **placa do lado de fora**
-   da maquete; com a Radhija soprando, a Rhaenyra precisa ficar lá com o Fica (F).
-   Fechada, o trem para antes do braço, apita duas vezes e volta com a carga
-   (recuperável). Depois de passar, o próprio trem segura a cancela em pé até sair.
-2. Em cada descarga a carga rola até a bandeja e o **trem volta sozinho** para a
-   estação, de frente (`parked` → `home`). Duas cargas cabem lado a lado na bandeja.
-3. **Lua pela rota da lua.** A lua começa na cestinha ao lado da bancada. Na boca,
-   vai até o **funil** da maquete (só com o trem parado e o vagão vazio): desce,
-   corre por dentro da base, sobe no **elevador de vidro** da estação e a bica a
-   derruba no vagão. A rota da lua é curta (logo depois da agulha) e descarrega
-   na canaleta e bandeja do **norte**, pegas pelo corredor norte.
-4. Com planeta e lua nos berços do foguete, ele treme, acende a chama e decola.
+1. **A lua no pórtico.** No fim da rota da lua (logo depois da agulha) há um pórtico de postes finos com uma
+   cestinha suspensa. O pedal tem três posições, na ordem **volta → lua → estrela** (placa da agulha em prisma
+   de três faces). Com a seta da lua e um superbafo, o vagão para embaixo da cestinha, a portinhola abre e a lua
+   cai no lugar da frente do vagão (o planeta rola para trás); o trem volta sozinho, de frente, com as duas.
+2. **As duas pela estrela.** Na reta leste da estrela há uma **cancela** que só sobe com alguém na **placa do
+   lado de fora** da maquete: a Rhaenyra fica lá com o **Fica (F)** enquanto a Radhija sopra. Fechada, o trem
+   para antes do braço, apita e volta com as cargas (recuperável); depois de passar, o próprio trem segura a
+   cancela em pé até sair. No fim, a caçamba bascula e as cargas descem pela canaleta, a da frente primeiro,
+   cada uma para o seu lado da bandeja; o trem volta sozinho.
+3. Uma carga na boca de cada vez até o foguete; com planeta e lua nos berços, ele treme, acende e decola.
 
-Etapas novas: `blocked`, `movingMoon`, `planetDocked`, `loading`, `moonLoaded`,
-`moonReady`, `carryingMoon` (todas em `?stage=`). Viagem vazia não muda a etapa.
-Testes: entrega real, cancela (barra e não desce sobre o trem), funil, lua e
-foguete, e partida longa andando com a companheira (sem atravessar móveis).
-Capturas novas do E2E: `02a-cancela-fechada`, `02b-cancela-aberta`,
-`04-lua-no-elevador`, `05-lua-na-canaleta`, `06-foguete-decola`.
+A ordem inversa também vale (planeta pela estrela, depois buscar a lua e outra viagem pela estrela); viagem à
+lua com o pórtico vazio só dá uma volta. Etapas: `blocked`, `movingMoon`, `moonLoaded`, `ready` (as duas na
+bandeja), `planetDocked` (planeta no foguete, lua no pórtico), `moonReady`, `carryingMoon` (todas em `?stage=`).
+Testes: pórtico, as duas pela estrela, ordem inversa, cancela, entrega real e partida longa andando com a
+companheira (sem atravessar móveis). Capturas do E2E: `02a-lua-caindo`, `02b-cancela-fechada`,
+`02c-cancela-aberta`, `03-descarga-das-duas`, `04-planeta-no-foguete`, `05-foguete-decola`.
 
 ### O que mudou no acabamento
 
@@ -101,7 +98,7 @@ pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o nú
   precisão de plataforma ou duas personagens agindo simultaneamente.
 - [x] Entregar prévia própria do acabamento em DEV; publicar somente após
   aprovação explícita dessa versão. → aprovado e publicado no PR #18.
-- [ ] Fase mais longa (cancela + lua + foguete): prévia própria e nova aprovação.
+- [ ] Fase mais longa (lua no pórtico + cancela + foguete): prévia própria e nova aprovação.
 
 ### Divisão segura entre agentes
 

@@ -11,13 +11,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Branch **`claude/fase6-longa`** (worktree próprio), base `31e8b26`. Consultar o
   PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa resultados.
   Nenhum teste ou build rodou no PC.
-- Feito: agulha com três posições (volta → estrela → lua); cancela na reta leste
-  da estrela que só sobe com alguém na placa do lado de fora (Fica) e barra o
-  trem antes do braço; o trem volta sozinho depois de cada descarga; lua na
-  cestinha ao lado da bancada → funil → elevador de vidro → vagão → rota da lua →
-  bandeja do norte; foguete com dois berços que decola com as duas cargas.
-  Testes novos em `test/fase6.test.mjs` (entrega, cancela, funil, lua e foguete,
-  partida longa andando) e E2E `expresso` reescrito. Detalhes na continuidade.
+- Feito: agulha com três posições (volta → lua → estrela); a lua começa presa num
+  pórtico dentro da maquete e o trem a busca (ela cai no vagão ao lado do planeta);
+  cancela na reta leste da estrela que só sobe com alguém na placa do lado de fora
+  (Fica) e barra o trem antes do braço; as duas cargas descem juntas até a bandeja;
+  o trem volta sozinho depois de cada parada; foguete com dois berços que decola.
+  Na primeira prévia a lua ficava do lado de fora e ia a um funil; o usuário
+  apontou que isso não fazia sentido e o fluxo foi refeito. Testes em `test/fase6.test.mjs` e
+  E2E `expresso` reescritos. Detalhes na continuidade.
+- Diretriz do usuário para as próximas fases: **dois objetos** por fase até a 10;
+  a partir da 11, três ou mecânicas novas (ver COMO-CRIAR-UMA-FASE, seção 1).
 - Próximo passo: CI verde, E2E `expresso` e `todas`, revisar as capturas,
   entregar a prévia e **aguardar aprovação** antes do merge/deploy. Depois,
   Entrega B (campanha) em outro PR.

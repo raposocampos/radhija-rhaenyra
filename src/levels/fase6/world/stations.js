@@ -1,10 +1,10 @@
 // Expresso do Superbafo · as estações do puzzle fora da maquete: pedal de mola (desenho de patinhas
-// saltando), canaletas e bandejas da estrela (sul) e da lua (norte), funil de carga, placa da cancela, marca
-// de mira diante da janela do nariz, tapete com o foguete de dois berços (decola na comemoração), a
-// bolinha-planeta (com anel) e a lua de brinquedo na cestinha ao lado da bancada.
+// saltando), canaleta e bandeja da estrela, placa da cancela, marca de mira diante da janela do nariz, tapete
+// com o foguete de dois berços (decola na comemoração) e as duas cargas: a bolinha-planeta (com anel), que
+// começa no vagão, e a lua de brinquedo, que começa na cestinha do pórtico, dentro da maquete.
 import * as THREE from 'three';
 import { rbox, stdMat, woodMat, canvasTexture, contactShadow } from '../../../world/util.js';
-import { PEDAL, CHUTE, MOON_CHUTE, TRAY, MOON_TRAY, BLOW_SPOT, GOAL, BALL, MOON, FUNNEL, BARRIER_PLATE, ROCKET, RAIL_YARD } from '../layout.js';
+import { PEDAL, CHUTE, TRAY, BLOW_SPOT, GOAL, BALL, MOON, BARRIER_PLATE, ROCKET, RAIL_YARD } from '../layout.js';
 import { starShape } from './railway.js';
 
 const TAU = Math.PI * 2;
@@ -125,16 +125,6 @@ function moonTexture() {
     for (const s of [-1, 1]) { g.beginPath(); g.ellipse(cx + s * 22, cy + 6, 6, 4, 0, 0, TAU); g.fill(); }
   }, { repeat: false });
 }
-/** Ícone redondo de bandeja/funil: a lua crescente. */
-function moonBadgeTexture() {
-  return canvasTexture(128, 128, (g, w, h) => {
-    g.clearRect(0, 0, w, h);
-    g.fillStyle = '#f3e6b0'; g.strokeStyle = '#a8742c'; g.lineWidth = 6;
-    g.beginPath(); g.arc(w / 2, h / 2, 42, 0, TAU); g.fill(); g.stroke();
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath(); g.arc(w / 2 + 24, h / 2 - 9, 35, 0, TAU); g.fill();
-  }, { repeat: false });
-}
 /** Placa da cancela: listras de atenção na borda e o desenho de uma cancela levantada. */
 function plateTexture() {
   return canvasTexture(256, 256, (g, w, h) => {
@@ -226,34 +216,12 @@ export function buildStations(root) {
     },
   };
 
-  // ================================================================ canaletas e bandejas (estrela ao sul, lua ao norte)
+  // ================================================================ canaleta e bandeja da estrela (as duas cargas cabem nela)
   const chuteWood = woodMat('#d7b07c', { key: 'expresso-moldura', rough: 0.6 });
   const footMat = stdMat('#5a3b2c', { roughness: 0.7 });
   buildChute(root, CHUTE, chuteWood, teal, footMat);
-  buildChute(root, MOON_CHUTE, chuteWood, teal, footMat);
   const starTray = buildTray(root, TRAY, chuteWood.map, new THREE.MeshStandardMaterial({ color: '#f2c766', emissive: '#e0a84a', emissiveIntensity: 0.18, ...decalOpts, transparent: false }));
   starTray.icon(new THREE.ShapeGeometry(starShape(0.15)).rotateX(-Math.PI / 2));
-  const moonBadge = new THREE.MeshStandardMaterial({ map: moonBadgeTexture(), ...decalOpts });
-  const moonTray = buildTray(root, MOON_TRAY, chuteWood.map, moonBadge);
-  moonTray.icon(new THREE.PlaneGeometry(0.3, 0.3).rotateX(-Math.PI / 2));
-
-  // ================================================================ funil de carga (do lado de fora; um tubo entra na base)
-  const funnel = new THREE.Group();
-  funnel.name = 'funil-de-carga';
-  funnel.position.set(FUNNEL.x, 0, FUNNEL.z);
-  root.add(funnel);
-  add(funnel, new THREE.CylinderGeometry(0.12, 0.14, 0.04, 20), teal, 0, 0.02, 0);
-  add(funnel, new THREE.CylinderGeometry(0.035, 0.035, FUNNEL.mouthY - 0.17, 12), brass, 0, (FUNNEL.mouthY - 0.17) / 2 + 0.04, 0);
-  const cone = [[0.035, 0], [0.05, 0.03], [0.17, 0.15], [0.18, 0.16]].map(([r, y]) => new THREE.Vector2(r, y));
-  add(funnel, new THREE.LatheGeometry(cone, 28), new THREE.MeshStandardMaterial({ color: '#4f8f8b', roughness: 0.45, side: THREE.DoubleSide }), 0, FUNNEL.mouthY - 0.16, 0);
-  const lip = add(funnel, new THREE.TorusGeometry(0.18, 0.012, 8, 28), brass, 0, FUNNEL.mouthY, 0);
-  lip.rotation.x = Math.PI / 2;
-  // tubo que corre no chão até a base da maquete (a lua vai por dentro até o elevador da estação)
-  const yardS = RAIL_YARD.z + RAIL_YARD.hz;
-  const pipe = add(funnel, new THREE.CylinderGeometry(0.03, 0.03, FUNNEL.z - yardS + 0.02, 10), brass, 0, 0.05, -(FUNNEL.z - yardS) / 2);
-  pipe.rotation.x = Math.PI / 2;
-  const badge = add(funnel, new THREE.CircleGeometry(0.07, 24), moonBadge, 0, 0.3, 0.036);
-  badge.castShadow = false;
 
   // ================================================================ placa que segura a cancela (prop barrierPlate)
   const plateObject = new THREE.Group();
@@ -343,7 +311,7 @@ export function buildStations(root) {
     launch() { launchState.on = true; launchState.t = 0; },
   };
 
-  // ================================================================ as duas cargas: bolinha-planeta e a lua (na cestinha)
+  // ================================================================ as duas cargas: bolinha-planeta (no vagão) e a lua (no pórtico)
   const ballObject = new THREE.Group();
   ballObject.name = 'ball';
   ballObject.userData.carryKind = 'ball';
@@ -355,17 +323,6 @@ export function buildStations(root) {
   const ballHome = new THREE.Vector3(BALL.x, BALL.y, BALL.z);
   /** @type {import('../../../types').ItemProp} */
   const ball = { object: ballObject, home: ballHome, setHighlight(on) { ballMat.emissiveIntensity = on ? 0.22 : 0; } };
-  const basket = new THREE.Group();
-  basket.name = 'cestinha-da-lua';
-  basket.position.set(MOON.x, 0, MOON.z);
-  root.add(basket);
-  const wicker = woodMat('#c9a26b', { key: 'expresso-vime', rough: 0.9 });
-  add(basket, new THREE.CylinderGeometry(MOON.basketR, MOON.basketR - 0.03, 0.12, 20, 1, true), new THREE.MeshStandardMaterial({ map: wicker.map, color: '#c9a26b', roughness: 0.9, side: THREE.DoubleSide }), 0, 0.065, 0);
-  add(basket, new THREE.CylinderGeometry(MOON.basketR - 0.03, MOON.basketR - 0.03, 0.012, 20), wicker, 0, 0.011, 0);
-  add(basket, new THREE.TorusGeometry(MOON.basketR, 0.012, 6, 24).rotateX(Math.PI / 2), wicker, 0, 0.125, 0);
-  // almofadinha dentro da cesta: a lua fica com a metade de cima à mostra
-  const cushion = add(basket, new THREE.SphereGeometry(MOON.basketR - 0.035, 16, 10), stdMat('#7ca8b2', { roughness: 1 }), 0, 0.05, 0);
-  cushion.scale.y = 0.28;
   const moonObject = new THREE.Group();
   moonObject.name = 'moon';
   moonObject.userData.carryKind = 'ball';
@@ -384,7 +341,7 @@ export function buildStations(root) {
   return {
     pedal, goal, ball, moon, barrierPlate,
     update(dt) {
-      // sombrinha das cargas só quando estão numa bandeja (não no vagão, na boca, no tubo ou no foguete)
+      // sombrinha das cargas só quando estão na bandeja (não no vagão, no pórtico, na boca ou no foguete)
       for (const { o, sh } of shadows) {
         const p = o.position;
         sh.visible = o.parent === root && o.visible && p.y < TRAY.y + 0.05;

@@ -567,7 +567,7 @@ export interface Fase5Props extends LevelProps {
   collectibles: CollectibleProp[];
 }
 /** Expresso do Superbafo (fase de desenvolvimento em DEV_LEVELS). */
-/** Posições da agulha: a volta, a estrela (bandeja do sul) e a lua (bandeja do norte). */
+/** Posições da agulha: a volta, a estrela (canaleta e bandeja) e a lua (o pórtico onde o trem busca a lua). */
 export type Fase6Route = 'loop' | 'delivery' | 'moon';
 /** As duas cargas do foguete. */
 export type Fase6Cargo = 'planet' | 'moon';
@@ -591,15 +591,15 @@ export interface Fase6Props extends LevelProps {
   train: PropBase & { setPose(pose: Fase6TrainPose): void };
   /** setSneeze(fase): o espirro inteiro, 0..1 (inspira, "atchim" em TRAIN.burstAt, recupera); 0 e 1 = repouso. */
   nose: PropBase & { setSneeze(t: number): void };
-  /** Bolinha-planeta (começa no vagão) e a lua de brinquedo (começa na cestinha ao lado da bancada). */
+  /** Bolinha-planeta (começa no vagão) e a lua de brinquedo (começa no pórtico, dentro da maquete). */
   ball: ItemProp;
   moon: ItemProp;
   /** Cancela da estrela: setOpen(0 = braço baixado .. 1 = em pé). */
   barrier: PropBase & { setOpen(k: number): void };
   /** Placa do lado de fora que segura a cancela aberta. */
   barrierPlate: PressProp;
-  /** Elevador da estação: setSpout(0 = bica recolhida .. 1 = sobre o vagão). */
-  loader: PropBase & { setSpout(k: number): void };
+  /** Pórtico da lua: setOpen(0 = portinhola da cestinha fechada .. 1 = aberta, a lua cai no vagão). */
+  hopper: PropBase & { setOpen(k: number): void };
   /**
    * Tapete com o foguete: socket(carga) = onde a carga encaixa (o puzzle prende o objeto ali);
    * launch() = decolagem, animada pelo próprio cenário durante a comemoração (o reset devolve ao chão).

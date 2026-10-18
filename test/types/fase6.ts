@@ -19,7 +19,7 @@ context.props.ball.home.copy(context.props.ball.object.position);
 context.props.junction.setRoute('moon');
 context.props.barrier.setOpen(1);
 context.props.barrierPlate.setPress(0.5);
-context.props.loader.setSpout(0.5);
+context.props.hopper.setOpen(0.5);
 context.props.goal.socket('moon').add(context.props.moon.object);
 context.props.goal.launch();
 // @ts-expect-error o foguete só tem berços para o planeta e a lua
