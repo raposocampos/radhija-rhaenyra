@@ -8,7 +8,8 @@
 //      o trem espera um pouco e volta sozinho, de frente, para a estação.
 //   3. A estrela tem uma cancela que só sobe com alguém na placa do lado de fora (use o Fica). No fim dela,
 //      a caçamba bascula e as cargas rolam pela canaleta até a bandeja; o trem volta sozinho.
-//   4. Cada carga vai na boca até o foguete. Com as duas nos berços, ele decola.
+//   4. Cada dog leva uma carga na boca (as duas podem ir juntas: pegue uma, troque de dog e pegue a
+//      outra). Com as duas nos berços do foguete, ele decola.
 // Também vale levar o planeta primeiro pela estrela e depois buscar a lua: nenhuma ordem trava a fase.
 import { createCarryItem, createCollectibles, createHints, deliveredAt, reach } from '../../game/puzzleKit.js';
 import { createPressurePlate } from '../../game/mechanics/index.js';
@@ -51,6 +52,7 @@ export const TEXT = {
     pickupMoon: 'Pegue a lua na bandeja (E)',
     carrying: 'Leve a bolinha-planeta ao foguete',
     carryingMoon: 'Leve a lua ao foguete',
+    carryingBoth: 'Levem a bolinha-planeta e a lua juntas ao foguete',
   },
   hint: {
     jump: 'A mola precisa de um pulão! Pare no pedal e pule com a Rhaenyra (Espaço).',
@@ -63,7 +65,8 @@ export const TEXT = {
     nose: 'Esse nariz de brinquedo espirra com o superbafo da Radhija!',
     early: 'A carga ainda está no trem. Leve o vagão até a bandeja.',
     ready: 'A bolinha chegou! As duas podem pegá-la na bandeja (E).',
-    readyBoth: 'Chegaram as duas! Leve uma de cada vez ao foguete (E).',
+    readyBoth: 'Chegaram as duas! Cada irmã pode levar uma na boca (E).',
+    secondMouth: 'A outra irmã está de boca vazia: troque (Q) e pegue a outra carga para levarem juntas!',
     moonReady: 'A lua chegou! Pegue-a na bandeja (E).',
     sneeze: 'Atchim! O trem engatou a ré!',
     blocked: 'Fiu-fiu! A cancela está fechada. Alguém precisa ficar na placa ao lado da maquete.',
@@ -259,7 +262,8 @@ export function createPuzzle(ctx) {
     const C = ctx.ctrls;
     if (st === 'done') return { text: null, target: null, stage: st };
     if (st === 'carrying' || st === 'carryingMoon') {
-      return { text: st === 'carrying' ? O.carrying : O.carryingMoon, target: at(ROCKET.x, ROCKET.z, 1.0), stage: st };
+      const both = S.place.planet === 'carried' && S.place.moon === 'carried';
+      return { text: both ? O.carryingBoth : st === 'carrying' ? O.carrying : O.carryingMoon, target: at(ROCKET.x, ROCKET.z, 1.0), stage: st };
     }
     if (st === 'ready') return { text: O.pickup, target: at(TRAY.x, TRAY.z, 0.45), stage: st };
     if (st === 'moonReady') return { text: O.pickupMoon, target: at(TRAY.x, TRAY.z, 0.45), stage: st };
@@ -535,9 +539,8 @@ export function createPuzzle(ctx) {
       if (stepTrain(dt, 0, -1)) arriveHome();
     }
     enableAfterClear();
-    // prompts e destaques
-    const anyCarried = !!(items.planet.item.holder || items.moon.item.holder);
-    const trayCargo = anyCarried ? null : trayCargoNear(active);
+    // prompts e destaques (cada boca leva uma carga)
+    const trayCargo = carriedBy(active.name) ? null : trayCargoNear(active);
     hints.setPrompt(trayCargo === 'planet' ? 'ball' : trayCargo === 'moon' ? 'moon' : null);
     cols.update(active);
     for (const cargo of CARGOS) {
@@ -570,14 +573,17 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ interação (E)
   function interact(c) {
-    // uma carga na boca de cada vez, para as duas (a outra espera na bandeja)
-    if (!carriedBy(c.name) && !items.planet.item.holder && !items.moon.item.holder) {
+    // uma carga em cada boca: com a boca vazia, qualquer irmã pega a carga da bandeja
+    if (!carriedBy(c.name)) {
       const cargo = trayCargoNear(c);
       if (cargo) {
         items[cargo].item.attach(c.name);
         items[cargo].prop.setHighlight(false);
         S.place[cargo] = 'carried';
         emit('item:pickup', { name: c.name, item: 'ball', cargo, x: c.x, z: c.z });
+        // a outra ainda na bandeja e a outra boca vazia: dá para levarem juntas
+        const other = cargo === 'planet' ? 'moon' : 'planet';
+        if (S.place[other] === 'tray' && !carriedBy(c.name === 'radhija' ? 'rhaenyra' : 'radhija')) hints.now('secondMouth', 4.5, 30);
         notifyStage();
         return true;
       }
@@ -696,6 +702,7 @@ export function createPuzzle(ctx) {
     }),
     get stage() { return stage(); },
     get carrier() { return items.planet.item.holder || items.moon.item.holder; },
+    carries: (name) => carriedBy(name) !== null,
     get collected() { return cols.count; }, get total() { return cols.total; },
     set onStageChange(fn) { onStageChange = fn; },
   };

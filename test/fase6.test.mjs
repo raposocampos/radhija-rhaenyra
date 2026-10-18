@@ -474,12 +474,23 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
     assert.deepEqual(ball.position.toArray(), [0, 0, 0]);
     assert.equal(h.puzzle.stage, 'carrying');
   }
-  // uma carga na boca de cada vez: com o planeta na boca, a lua fica na bandeja
+  // uma carga em cada boca: quem já leva o planeta não pega a lua; a outra irmã, de boca vazia, pega
   h.game.debug.setStage('carrying', 'radhija');
   place(h, 'radhija', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
   h.tap('KeyE');
-  assert.equal(info(h).moon.holder, null, 'não pega a lua com o planeta na boca');
+  assert.equal(info(h).moon.holder, null, 'a mesma boca não leva duas cargas');
   assert.equal(info(h).place.moon, 'tray');
+  place(h, 'radhija', { x: L.TRAY.x - 0.6, z: L.TRAY.z + 0.9 });
+  select(h, 'rhaenyra');
+  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  h.tap('KeyE');
+  assert.equal(info(h).moon.holder, 'rhaenyra', 'a outra irmã, de boca vazia, pega a lua');
+  assert.equal(info(h).ball.holder, 'radhija', 'o planeta continua com a Radhija');
+  assert.equal(h.props.moon.object.parent, h.dogs.rhaenyra.mouthSocket);
+  assert.equal(h.puzzle.carries('radhija'), true);
+  assert.equal(h.puzzle.carries('rhaenyra'), true);
+  assert.equal(info(h).dogs.radhija.carrying && info(h).dogs.rhaenyra.carrying, true, 'o núcleo vê as duas carregando');
+  assert.equal(info(h).objective, h.puzzle.TEXT.objective.carryingBoth);
   // e a lua no pórtico não sai pela cerca: dentro da maquete, só o trem chega
   h.game.debug.setStage('waiting', 'radhija');
   select(h, 'radhija');
@@ -953,7 +964,7 @@ test('fase 6: pórtico — o trem busca a lua: a portinhola abre, a lua cai na f
   assert.deepEqual(info(h).place, { planet: 'tray', moon: 'tray' });
 });
 
-test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no seu lado da bandeja; no foguete, decolam', async (t) => {
+test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no seu lado da bandeja; uma em cada boca, decolam', async (t) => {
   const h = await prototype(t);
   h.game.debug.setStage('moonLoaded', 'radhija');
   const moon = h.props.moon.object;
@@ -981,20 +992,22 @@ test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no s
   assert.deepEqual(h.log('expresso:delivery').map((e) => e.cargo), ['moon', 'planet']);
   assert.ok(h.log('hint').some((x) => x.text === h.puzzle.TEXT.hint.readyBoth));
   waitFor(h, (i) => i.mode === 'idle', 'o trem voltou vazio', 12);
-  // uma de cada vez ao foguete
+  // cada irmã leva uma na boca: a Radhija pega o planeta, a Rhaenyra sai da placa e pega a lua
   select(h, 'radhija');
   place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  h.clearLog();
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija');
-  place(h, 'radhija', { x: L.GOAL.x, z: L.GOAL.z });
-  waitFor(h, (i) => i.place.planet === 'rocket', 'planeta no berço', 2);
-  assert.equal(info(h).stage, 'moonReady');
-  assert.equal(info(h).state, 'playing');
-  place(h, 'radhija', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  assert.ok(h.log('hint').some((x) => x.text === h.puzzle.TEXT.hint.secondMouth), 'sugere a outra boca');
+  h.tap('KeyQ');
+  assert.equal(h.game.activeDog, 'rhaenyra');
+  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
   h.tap('KeyE');
-  assert.equal(info(h).moon.holder, 'radhija');
-  place(h, 'radhija', { x: L.GOAL.x, z: L.GOAL.z });
-  waitFor(h, (i) => i.state === 'celebrating' || i.state === 'victory', 'as duas cargas no foguete terminam a fase', 3);
+  assert.equal(info(h).moon.holder, 'rhaenyra');
+  assert.equal(info(h).ball.holder, 'radhija');
+  // a Rhaenyra leva a lua até o tapete e a Radhija, seguindo com o planeta, chega junto
+  h.walkPath([[L.TRAY.x + 0.1, 2.5], [L.GOAL.x, 2.5], [L.GOAL.x, L.GOAL.z]]);
+  waitFor(h, (i) => i.state === 'celebrating' || i.state === 'victory', 'as duas cargas no foguete terminam a fase', 6);
   assert.equal(moon.parent, h.props.goal.socket('moon'));
   assert.equal(ball.parent, h.props.goal.socket('planet'));
   assert.equal(h.log('expresso:launch').length, 1);
@@ -1006,7 +1019,7 @@ test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no s
   assert.ok(p.y > 0.7, 'a lua subiu junto no berço');
 });
 
-test('fase 6: partida longa andando, com a companheira junto — lua no pórtico, cancela, estrela e decolagem', async (t) => {
+test('fase 6: partida longa andando, com a companheira junto — lua no pórtico, cancela, estrela e as duas cargas juntas', async (t) => {
   const h = await prototype(t);
   const inside = [];
   const count = {};
@@ -1064,17 +1077,17 @@ test('fase 6: partida longa andando, com a companheira junto — lua no pórtico
   walk([[L.BARRIER_PLATE.x, 1.75]]);
   blowNorth();
   assert.ok(h.run(20, { until: () => { watch(); return info(h).stage === 'ready'; } }), 'o trem levou as duas à bandeja');
-  // 5. pega o planeta (chegando pelo sul, diante dele) e leva ao foguete
+  // 5. a Radhija pega o planeta (chegando pelo sul, diante dele)
   walk([[L.TRAY.x - 0.1, 2.1], [L.TRAY.x - 0.1, L.TRAY.z + 0.32]]);
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija', 'pegou o planeta');
-  walk([[L.TRAY.x - 0.1, 2.5], [L.GOAL.x, 2.5], [L.GOAL.x, L.GOAL.z]]);
-  h.run(0.5, { until: watch });
-  assert.equal(info(h).place.planet, 'rocket', 'o planeta encaixou no foguete');
-  // 6. volta para a lua e decola
-  walk([[L.TRAY.x + 0.1, 2.5], [L.TRAY.x + 0.1, L.TRAY.z + 0.32]]);
+  // 6. a Rhaenyra sai da placa, pega a lua com a boca vazia e as duas levam juntas ao foguete
+  h.tap('KeyQ');
+  assert.equal(h.game.activeDog, 'rhaenyra');
+  walk([[L.BARRIER_PLATE.x, 1.75], [L.TRAY.x + 0.35, 2.1], [L.TRAY.x + 0.1, L.TRAY.z + 0.32]]);
   h.tap('KeyE');
-  assert.equal(info(h).moon.holder, 'radhija', 'pegou a lua');
+  assert.equal(info(h).moon.holder, 'rhaenyra', 'a Rhaenyra pegou a lua');
+  assert.equal(info(h).ball.holder, 'radhija', 'e a Radhija continua com o planeta');
   walk([[L.TRAY.x + 0.1, 2.5], [L.GOAL.x, 2.5], [L.GOAL.x, L.GOAL.z]]);
   waitFor(h, (i) => i.state === 'victory', 'as duas cargas no foguete terminam a fase', 12);
   assert.deepEqual(inside, [], 'ninguém atravessou móveis nem a maquete');
@@ -1083,7 +1096,7 @@ test('fase 6: partida longa andando, com a companheira junto — lua no pórtico
   assert.equal(count['expresso:dock'], 2, 'as duas cargas encaixaram');
   assert.equal(count['expresso:launch'], 1, 'o foguete decolou uma vez');
   assert.equal(count['expresso:blocked'] || 0, 0, 'com a Rhaenyra na placa, a cancela nunca barrou');
-  assert.equal(count['item:pickup'], 2, 'planeta e lua, cada um na sua vez');
+  assert.equal(count['item:pickup'], 2, 'planeta e lua, uma em cada boca');
   assert.equal(count.victory, 1);
   assert.equal(info(h).trips, 2);
   assert.equal(info(h).routeChanges, 2);

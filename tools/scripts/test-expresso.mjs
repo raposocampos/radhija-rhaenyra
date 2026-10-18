@@ -1,6 +1,6 @@
 // Protótipo DEV: teleporte prepara estações; ações do puzzle usam entrada real.
 // Fluxo: volta → pedal (lua) → o trem busca a lua no pórtico → pedal (estrela) → cancela fechada barra →
-// Rhaenyra fica na placa → as duas cargas descem até a bandeja → planeta e lua no foguete, que decola.
+// Rhaenyra fica na placa → as duas cargas descem até a bandeja → uma em cada boca até o foguete, que decola.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -147,18 +147,16 @@ try {
   await H.press('KeyE');
   check((await info()).ball.holder === 'radhija' && !(await H.logOf('hint')).some((hint) => hint.text === earlyHint),
     'interagir novamente com a bolinha na boca não anuncia que ela está no trem');
-  await H.walkPath([[layout.TRAY.x - 0.1, 2.6], [layout.GOAL.x, 2.6], [layout.GOAL.x, layout.GOAL.z]]);
-  state = await waitFor((i) => i.stage === 'moonReady', { timeout: 8000 });
-  check(state.stage === 'moonReady' && state.state === 'playing', 'o planeta encaixa no foguete, e a lua espera na bandeja');
-  await shot('04-planeta-no-foguete.png');
-
-  // a lua: da bandeja ao foguete → decola
-  await station('radhija', { x: layout.TRAY.x + 0.1, z: layout.TRAY.z + 0.35, yaw: Math.PI });
+  // a outra boca: a Rhaenyra sai da placa, pega a lua e as duas levam juntas ao foguete
+  await station('rhaenyra', { x: layout.TRAY.x + 0.1, z: layout.TRAY.z + 0.35, yaw: Math.PI });
   await H.press('KeyE');
-  check((await info()).moon.holder === 'radhija', 'pegou a lua na bandeja');
+  state = await info();
+  check(state.moon.holder === 'rhaenyra' && state.ball.holder === 'radhija', 'cada irmã leva uma carga na boca');
+  check(state.dogs.radhija.carrying && state.dogs.rhaenyra.carrying, 'as duas aparecem carregando');
+  await shot('04-as-duas-na-boca.png');
   await H.walkPath([[layout.TRAY.x + 0.1, 2.6], [layout.GOAL.x, 2.6], [layout.GOAL.x, layout.GOAL.z]]);
-  state = await waitFor((i) => ['celebrating', 'victory'].includes(i.state), { timeout: 8000 });
-  check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'as duas cargas no foguete concluem a missão');
+  state = await waitFor((i) => ['celebrating', 'victory'].includes(i.state), { timeout: 10000 });
+  check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'as duas chegam juntas e o foguete conclui a missão');
   check((await H.logOf('expresso:launch')).length === 1, 'o foguete decola uma vez');
   await H.gsleep(1600); // tremeu, acendeu e está subindo
   await shot('05-foguete-decola.png');

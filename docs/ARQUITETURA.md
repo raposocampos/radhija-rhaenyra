@@ -236,6 +236,7 @@ E devolve um objeto com:
 | Membro | Quando o núcleo chama |
 |---|---|
 | `stages`, `stage`, `carrier`, `collected`, `total` | leitura (UI, depuração, vitória) |
+| `carries?(nome)` → bool | com mais de um item, se a dog leva algo na boca (passo e pose); sem ele vale `carrier === nome` |
 | `objective(ativa)` → `{ text, target, stage }` | sempre que a etapa ou a dog ativa muda (texto do HUD + marcador) |
 | `update(dt, { active, comp, ctrls, stay })` | todo quadro em `playing`; devolva `'delivered'` para comemorar |
 | `updateAlways?(dt)` | todo quadro em `playing` e `celebrating` (animações) |

@@ -15,7 +15,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   pórtico dentro da maquete e o trem a busca (ela cai no vagão ao lado do planeta);
   cancela na reta leste da estrela que só sobe com alguém na placa do lado de fora
   (Fica) e barra o trem antes do braço; as duas cargas descem juntas até a bandeja;
-  o trem volta sozinho depois de cada parada; foguete com dois berços que decola.
+  o trem volta sozinho depois de cada parada; cada dog leva uma carga na boca (as
+  duas podem ir juntas, a pedido do usuário); foguete com dois berços que decola.
   Na primeira prévia a lua ficava do lado de fora e ia a um funil; o usuário
   apontou que isso não fazia sentido e o fluxo foi refeito. Testes em `test/fase6.test.mjs` e
   E2E `expresso` reescritos. Detalhes na continuidade.

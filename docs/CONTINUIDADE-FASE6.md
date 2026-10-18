@@ -21,14 +21,15 @@ o usuário apontou que isso não fazia sentido: se as dogs já alcançam a lua, 
    para antes do braço, apita e volta com as cargas (recuperável); depois de passar, o próprio trem segura a
    cancela em pé até sair. No fim, a caçamba bascula e as cargas descem pela canaleta, a da frente primeiro,
    cada uma para o seu lado da bandeja; o trem volta sozinho.
-3. Uma carga na boca de cada vez até o foguete; com planeta e lua nos berços, ele treme, acende e decola.
+3. Cada dog leva uma carga na boca: com a boca vazia, a outra irmã pega a segunda (Q para trocar) e as duas
+   vão juntas ao foguete; também dá para levar uma de cada vez. Com planeta e lua nos berços, ele decola.
 
 A ordem inversa também vale (planeta pela estrela, depois buscar a lua e outra viagem pela estrela); viagem à
 lua com o pórtico vazio só dá uma volta. Etapas: `blocked`, `movingMoon`, `moonLoaded`, `ready` (as duas na
 bandeja), `planetDocked` (planeta no foguete, lua no pórtico), `moonReady`, `carryingMoon` (todas em `?stage=`).
 Testes: pórtico, as duas pela estrela, ordem inversa, cancela, entrega real e partida longa andando com a
 companheira (sem atravessar móveis). Capturas do E2E: `02a-lua-caindo`, `02b-cancela-fechada`,
-`02c-cancela-aberta`, `03-descarga-das-duas`, `04-planeta-no-foguete`, `05-foguete-decola`.
+`02c-cancela-aberta`, `03-descarga-das-duas`, `04-as-duas-na-boca`, `05-foguete-decola`.
 
 ### O que mudou no acabamento
 

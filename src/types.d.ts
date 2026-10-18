@@ -416,6 +416,8 @@ export interface Puzzle {
   readonly stage: string;
   /** Quem carrega o item da fase (ou null). */
   readonly carrier: DogName | null;
+  /** Com mais de um item, cada dog pode levar um na boca: esta dog leva algo? (padrão: carrier === name) */
+  carries?(name: DogName): boolean;
   readonly collected: number;
   readonly total: number;
   /** Chamado pelo núcleo quando a etapa muda (para reemitir o objetivo). */
