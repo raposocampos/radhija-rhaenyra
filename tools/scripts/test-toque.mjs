@@ -1,6 +1,7 @@
 // Celular (suíte 'toque'): Chromium emulando um celular deitado (844×390, DPR 3, toque, isMobile) e DEDOS REAIS pelo
 // protocolo do navegador (Input.dispatchTouchEvent → touch + pointer events, como num celular de verdade).
-// Confere o perfil de qualidade do celular, os controles que só aparecem depois de um toque, o layout compacto sem
+// Confere o perfil de qualidade do celular, o menu inicial pelo toque (Jogar → modos → Fases → Continuar; Opções com o
+// modo sem dicas; Voltar), os controles que só aparecem depois de um toque, o layout compacto sem
 // sobreposição com o HUD, um trecho da fase 1 jogado só com o joystick e os botões virtuais (abertura, cordinha,
 // troca, carrinho empurrado com dois dedos, cenoura), multitoque, dicas com ícones de toque, menu de qualidade,
 // aviso de girar o celular, volta ao teclado e o cartão de abertura. No fim, uma página de PC (sem toque) confirma
@@ -94,6 +95,20 @@ const glyphShown = (sel) => ev((s) => {
 }, sel);
 const overlaps = (a, b) => a && b && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
 const inView = (r, vw = PHONE.width, vh = PHONE.height) => r && r.left >= 0 && r.top >= 0 && r.right <= vw + 0.5 && r.bottom <= vh + 0.5;
+/** Caixas de elementos visíveis (seletor → caixa; null se escondido). */
+const boxes = (sels) => ev((list) => list.map((sel) => {
+  const el = document.querySelector(sel);
+  if (!el || !el.getClientRects().length) return null;
+  const r = el.getBoundingClientRect();
+  return { sel, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+}), sels);
+/** Nenhum par de caixas se sobrepõe. → lista dos pares que se sobrepõem. */
+const overlapPairs = (list) => {
+  const out = [];
+  for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) if (overlaps(list[a], list[b])) out.push([list[a].sel, list[b].sel]);
+  return out;
+};
+const menuState = () => ev(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen, level: window.__game.game.level }));
 
 // ---------- joystick em malha fechada ----------
 let ring = null;
@@ -157,21 +172,60 @@ try {
   check(q.state.pixelRatio === 1 && q.shadow === 1024 && !q.soft && q.samples === 0 && q.everyFrame, 'perfil médio aplicado: pixel ratio 1, sombras PCF 1024 a cada quadro, sem MSAA', q);
   check(q.sky > 0 && q.cap && !q.lowGpu, 'celular: céu depois do cenário e teto de 60 quadros (GPU do teste não é de entrada)', q);
   check(s.device === 'keyboard' && !s.touchOn, 'antes do primeiro toque: sem controles de toque', s);
-  const title = await ev(() => ['.rr-logo__svg', '.rr-btn--play', '.rr-levels'].map((sel) => {
-    const r = document.querySelector(sel).getBoundingClientRect();
-    return { sel, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
-  }));
-  check(title.every((r) => inView(r)), 'tela inicial cabe na tela deitada', title);
-  check(!overlaps(title[1], title[2]) && !overlaps(title[0], title[1]), 'logotipo, Jogar e fases sem sobreposição', title);
+  const title = await boxes(['.rr-logo__svg', '.rr-logo__ribbon', '.rr-btn--play', '.rr-btn--options']);
+  check(title.every((r) => inView(r)), 'tela inicial (logotipo, Jogar e Opções) cabe na tela deitada', title);
+  check(overlapPairs(title).filter((p) => p.join() !== '.rr-logo__svg,.rr-logo__ribbon').length === 0, 'logotipo, Jogar e Opções sem sobreposição', title);
   check(await ev(() => getComputedStyle(document.querySelector('.rr-title__controls')).display === 'none'), 'barra de teclas escondida no celular');
   await shot('01-titulo-celular.png');
 
-  console.log('\n== Primeiro toque: Jogar ==');
+  console.log('\n== Menu pelo toque: Jogar, modos, Opções, Fases ==');
   await tap('.rr-btn--play');
+  let m = await menuState();
+  check(m.state === 'title' && m.screen === 'modes', 'toque em Jogar: escolha do modo', m);
+  await sleep(600);
+  const modes = await boxes(['.rr-logo__svg', '.rr-title .rr-back', '.rr-mode--story', '.rr-mode--levels']);
+  check(modes.every((r) => inView(r)), 'modos inteiros na tela deitada', modes);
+  check(overlapPairs(modes).length === 0, 'logotipo, Voltar e os dois modos sem sobreposição', modes);
+  await shot('01b-modos-celular.png');
+  await tap('.rr-mode--story');
+  m = await menuState();
+  check(m.screen === 'modes' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque no Modo História: aviso "em breve", sem sair dos modos', m);
+  await tap('.rr-title .rr-back');
+  m = await menuState();
+  check(m.screen === 'main', 'toque em Voltar: tela principal', m);
+  await tap('.rr-btn--options');
+  m = await menuState();
+  check(m.screen === 'options', 'toque em Opções', m);
+  await sleep(600);
+  const opts = await boxes(['.rr-title .rr-back', '.rr-card--options', '.rr-title .rr-hopt[data-hints="off"]', '.rr-title .rr-qopt[data-quality="baixa"]']);
+  check(opts.every((r) => inView(r)), 'cartão de Opções inteiro na tela deitada', opts);
+  check(!overlaps(opts[0], opts[1]), 'Voltar fora do cartão de Opções', opts);
+  await tap('.rr-title .rr-hopt[data-hints="off"]');
+  check(await ev(() => window.__game.settings.noHints && document.querySelector('.rr').dataset.hints === 'off'), 'toque em Dicas desligadas: modo sem dicas');
+  await shot('01c-opcoes-celular.png');
+  await tap('.rr-title .rr-hopt[data-hints="on"]');
+  check(await ev(() => !window.__game.settings.noHints), 'toque em Dicas ligadas: dicas de volta');
+  await tap('.rr-title .rr-back');
+  await tap('.rr-btn--play');
+  await tap('.rr-mode--levels');
+  m = await menuState();
+  check(m.screen === 'levels', 'toque em Fases: tela das fases', m);
+  await sleep(700);
+  const levels = await boxes(['.rr-logo__svg', '.rr-title .rr-back', '.rr-btn--continue', '.rr-levels']);
+  check(levels.every((r) => inView(r)), 'Continuar e cartões inteiros na tela deitada', levels);
+  check(overlapPairs(levels).length === 0, 'logotipo, Voltar, Continuar e cartões sem sobreposição', levels);
+  await shot('01d-fases-celular.png');
+
+  console.log('\n== Continuar pelo toque ==');
+  await tap('.rr-btn--continue');
+  m = await menuState();
+  check(m.state === 'intro' && m.level === 0, 'toque em Continuar (save novo): cartão da fase 1', m);
+  await sleep(1200);
+  await tap('[data-action="start"]');
   await waitFor((x) => x.state === 'playing', { timeout: 8000 });
   await sleep(1800);
   s = await uiState();
-  check((await info()).state === 'playing', 'toque em Jogar começa a partida');
+  check((await info()).state === 'playing', 'toque em Começar começa a partida');
   check(s.device === 'touch' && s.touchOn, 'depois do toque: controles virtuais aparecem', s);
   check((await info()).input.device === 'touch', 'jogo com input.device touch');
   const andFs = await ev(() => ({ fs: !!document.fullscreenElement, tip: !!document.querySelector('.rr-ios-tip'), mark: document.querySelector('.rr').dataset.installTip ?? null }));
@@ -313,27 +367,28 @@ try {
   check(inView(card), 'menu de pausa inteiro na tela deitada', card);
   check(await ev(() => getComputedStyle(document.querySelector('.rr-ctl-table')).display === 'none'), 'tabela de teclas escondida no celular');
   await shot('07-pausa.png');
-  await tap('.rr-qopt[data-quality="baixa"]');
+  await tap('.rr-pause .rr-qopt[data-quality="baixa"]');
   q = await quality();
   check(q.mode === 'baixa' && q.level === 'baixa' && q.state.level === 'baixa' && q.state.pixelRatio === 0.85 && !q.everyFrame && !q.adaptive, 'forçar Baixa: aplica na hora (pixel ratio 0,85, sombra a cada 2 quadros)', q);
   check(q.stored === 'baixa', 'escolha salva no navegador', q.stored);
-  check(await ev(() => document.querySelector('.rr-qopt[data-quality="baixa"]').classList.contains('is-selected')), 'opção marcada');
-  await tap('.rr-qopt[data-quality="auto"]');
+  check(await ev(() => document.querySelector('.rr-pause .rr-qopt[data-quality="baixa"]').classList.contains('is-selected')), 'opção marcada');
+  await tap('.rr-pause .rr-qopt[data-quality="auto"]');
   q = await quality();
   check(q.mode === 'auto' && q.level === 'media' && q.adaptive && q.everyFrame && q.stored === null, 'Auto: volta ao médio com governador', q);
-  check(await ev(() => document.querySelector('.rr-quality__now').textContent) === 'agora: média', 'mostra o perfil atual no automático');
+  check(await ev(() => document.querySelector('.rr-pause .rr-quality__now').textContent) === 'agora: média', 'mostra o perfil atual no automático');
+  // volume, qualidade e tela cheia existem na tela Opções e na pausa: aqui, a cópia da pausa
   const fsState = () => ev(() => ({
     api: !!document.fullscreenEnabled, on: !!document.fullscreenElement,
-    hidden: document.querySelector('.rr-fullscreen').hidden, label: document.querySelector('.rr-fullscreen span').textContent,
+    hidden: document.querySelector('.rr-pause .rr-fullscreen').hidden, label: document.querySelector('.rr-pause .rr-fullscreen span').textContent,
     ios: !!document.querySelector('.rr-ios-fs'),
   }));
   let fs = await fsState();
   check(fs.api && !fs.hidden && fs.on && fs.label === 'Sair da tela cheia' && !fs.ios, 'Android: botão da pausa mostra a tela cheia ligada', fs);
-  await tap('.rr-fullscreen');
+  await tap('.rr-pause .rr-fullscreen');
   await sleep(400);
   fs = await fsState();
   check(!fs.on && fs.label === 'Tela cheia', 'Android: o botão sai da tela cheia', fs);
-  await tap('.rr-fullscreen');
+  await tap('.rr-pause .rr-fullscreen');
   await sleep(400);
   fs = await fsState();
   check(fs.on && fs.label === 'Sair da tela cheia', 'Android: e entra de novo', fs);
@@ -384,13 +439,22 @@ try {
   await waitFor((x) => x.state === 'title', { timeout: 5000 });
   await sleep(900);
   await shot('09-titulo-depois-de-jogar.png');
+  check((await menuState()).screen === 'main', 'Menu inicial: volta à tela principal');
+  await tap('.rr-btn--play');
+  await tap('.rr-mode--levels');
   // a fase 2 só libera depois da 1: o cartão da fase 1 abre o cartão de abertura dela
   await tap('.rr-lvcard[data-index="0"]');
   i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 60000 });
   await sleep(1500);
-  const intro = await rect('.rr-introcard');
-  check(i.state === 'intro' && inView(intro), 'cartão de abertura inteiro na tela', intro);
+  const intro = await boxes(['.rr-introcard', '.rr-intro .rr-back']);
+  check(i.state === 'intro' && intro.every((r) => inView(r)) && !overlaps(intro[0], intro[1]), 'cartão de abertura e Voltar inteiros na tela', intro);
   await shot('10-abertura.png');
+  await tap('.rr-intro .rr-back');
+  m = await menuState();
+  check(m.state === 'title' && m.screen === 'levels', 'toque em Voltar no cartão de abertura: de volta às fases', m);
+  await tap('.rr-lvcard[data-index="0"]');
+  i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 10000 });
+  await sleep(1200);
   await tap('[data-action="start"]');
   i = await waitFor((x) => x.state === 'playing', { timeout: 5000 });
   await sleep(1500);
@@ -471,8 +535,8 @@ try {
   check(ios.fsBtnHidden && ios.iosBtn && ios.rotateLine, 'sem o botão de tela cheia do Android; na pausa, o passo a passo; no aviso de girar, a dica', ios);
   const tipBox = await center(ip, '.rr-ios-tip');
   const playBox = await center(ip, '.rr-btn--play');
-  const levelsBox = await center(ip, '.rr-levels');
-  check(inView(tipBox) && !overlaps(tipBox, playBox) && !overlaps(tipBox, levelsBox), 'cartão da dica cabe entre o Jogar e as fases', { tipBox, playBox, levelsBox });
+  const optionsBox = await center(ip, '.rr-btn--options');
+  check(inView(tipBox) && !overlaps(tipBox, playBox) && !overlaps(tipBox, optionsBox) && tipBox.top >= optionsBox.bottom, 'cartão da dica cabe sob o Jogar e o Opções', { tipBox, playBox, optionsBox });
   await ip.screenshot({ path: 'shots/toque/12-iphone-dica.png' });
   // fechar no × some e não volta mais
   const close = await center(ip, '.rr-ios-tip__close');
@@ -485,9 +549,16 @@ try {
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
-  // a pausa mostra o passo a passo
-  const play = await center(ip, '.rr-btn--play');
-  await ip.touchscreen.tap(play.x, play.y);
+  // a pausa mostra o passo a passo: Jogar → Fases → Continuar → Começar
+  for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
+    const b = await center(ip, sel);
+    await ip.touchscreen.tap(b.x, b.y);
+    await ip.waitForTimeout(400);
+  }
+  await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
+  await ip.waitForTimeout(1200);
+  const start = await center(ip, '[data-action="start"]');
+  await ip.touchscreen.tap(start.x, start.y);
   await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');
@@ -496,7 +567,7 @@ try {
   await ip.waitForFunction(() => window.__game.game.state === 'paused', null, { timeout: 30000 });
   await ip.waitForTimeout(700);
   const how = await ip.evaluate(() => {
-    const el = document.querySelector('.rr-ios-fs__how');
+    const el = document.querySelector('.rr-pause .rr-ios-fs__how');
     const r = el.getBoundingClientRect();
     return { shown: getComputedStyle(el).display !== 'none' && r.height > 0, text: el.textContent, nav: !!el.closest('[data-nav]') || !!el.querySelector('[data-nav]') };
   });

@@ -69,11 +69,16 @@ try {
   await wait(2600);
   await shot('v2-01-titulo');
 
-  // card bloqueado → aviso; Jogar
+  // Jogar → Fases; card bloqueado → aviso; Continuar → Começar
+  await page.click('.rr-btn--play');
+  await page.click('.rr-mode--levels');
+  await wait(600);
   await page.click('.rr-lvcard[data-index="2"]');
   await wait(400);
   await shot('v2-02-titulo-bloqueada');
-  await page.click('.rr-btn--play');
+  await page.click('.rr-btn--continue');
+  await waitState('intro');
+  await page.click('.rr-intro [data-action="start"]');
   await waitState('playing');
   await wait(1900);
   console.log('jogando f1:', JSON.stringify(await info()));
@@ -151,8 +156,10 @@ try {
   await waitState('title', 30000);
   await wait(1500);
   await shot('v2-18-titulo-progresso');
-  // seleção com o controle: baixo → cartões, direita, A → fase 2
+  // seleção com o controle: A em Jogar e em Fases, baixo → cartões, direita, A → fase 2
   await ev(`window.__pad.connected = true`);
+  await padPress(0);
+  await padPress(0);
   await padPress(13);
   await padPress(15);
   await wait(300);

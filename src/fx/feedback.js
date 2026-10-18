@@ -3,7 +3,8 @@
 // barro de uma dog enlameada (dogs[nome].mud).
 // Independente de fase: props/layout são lidos na hora (opts.props / opts.layout são getters) e as
 // posições vêm sempre dos payloads.
-// API: createFeedback({ engine, audio, particles, dogs, game, props, layout }) → { update(dt, t), marker, dogRings }
+// API: createFeedback({ engine, audio, particles, dogs, game, props, layout, settings? }) → { update(dt, t), marker, dogRings }
+// settings.noHints (modo desafio, src/core/settings.js): o marcador do objetivo não aparece.
 // Ambiente por fase (no level:loaded): áudio 'day' | 'dusk' | 'night' | 'city' | 'rain' (def.ambience, ou pelo número da fase)
 // e vagalumes automáticos em 'dusk'/'night' (desligue com props.fireflies === false, ou chame
 // particles.fireflies({...}) depois do build para trocar a área).
@@ -1052,9 +1053,9 @@ export function createFeedback(opts) {
 
     const showWorldUi = state === 'playing' || state === 'paused';
 
-    // marcador de objetivo
+    // marcador de objetivo (escondido no modo desafio)
     const ap = dogPos(active);
-    let want = showWorldUi && !!mk.target;
+    let want = showWorldUi && !!mk.target && !opts.settings?.noHints;
     if (want && ap) {
       const d = Math.hypot(ap.x - mk.target.x, ap.z - mk.target.z);
       const hide = mk.vis > 0.5 ? d < 1.2 : d < 1.45; // histerese

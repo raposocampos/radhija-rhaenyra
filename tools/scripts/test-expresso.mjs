@@ -19,11 +19,14 @@ const station = async (name, point) => {
 const blow = () => H.hold(['KeyR'], 450);
 const CAMPAIGN = 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8';
 const done = (id) => [id, { done: true, best: 95.5, treats: 1, total: 3, clears: 1 }];
-/** Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre o menu e lê os cartões. */
+/** Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre Jogar → Fases e lê os cartões. */
 const menuWith = async (ids) => {
   const saved = JSON.stringify({ v: 1, levels: Object.fromEntries(ids.map(done)) });
   await ev((saved) => localStorage.setItem('rr-progress-v1', saved), saved);
   await load('');
+  await page.click('.rr-btn--play');
+  await page.click('.rr-mode--levels');
+  await H.sleep(700);
   return ev((saved) => ({
     state: window.__game.game.state,
     unchanged: localStorage.getItem('rr-progress-v1') === saved,

@@ -326,7 +326,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
-| Menus | setas, Tab, Enter, Esc | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões | |
+| Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
 
 A UI desenha os botões nos dois estilos (`PAD_BTN` em `src/ui/markup.js`) e mostra o do controle conectado:
 Xbox se o id do controle tiver "xbox"/"xinput", PlayStation nos demais casos (padrão).
@@ -441,7 +441,8 @@ Quem emite e quem ouve:
   `victory {timeSec, collected, total, level, levelId, hasNext, texts}`.
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle ou de toque), `hint {text, duration}`, `input:device {type}` (`keyboard`, `gamepad` ou
-  `touch`), `quality:change {device, mode, level, reason, fps}` (perfil gráfico, §9).
+  `touch`), `quality:change {device, mode, level, reason, fps}` (perfil gráfico, §9), `settings:change {noHints}`
+  (opções salvas, §9).
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase),
   `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
@@ -478,14 +479,28 @@ que um payload inválido seja aceito por uma assinatura genérica permissiva.
 
 ## 9. Interface, áudio e efeitos
 
-**UI** (`src/ui/`, DOM sobre o canvas): `ui.js` orquestra as camadas (tela inicial com seleção de fases, cartão da
+**UI** (`src/ui/`, DOM sobre o canvas): `ui.js` orquestra as camadas (tela inicial com o menu, cartão da
 fase, HUD, pausa, comemoração, vitória); `markup.js` tem o template e o HTML gerado (teclas, botões do controle e de
 toque desenhados); `hud.js`, o HUD; `curtain.js`, a transição entre fases; `menuNav.js`, o foco por teclado e controle;
 `touchControls.js`, o joystick e os botões de toque (§6); `progress.js`,
-o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e conclusões por fase; uma fase é
-liberada quando a anterior foi concluída). Os cartões das fases vão no máximo cinco por linha; com mais fases,
-`renderCards` reparte em linhas equilibradas (`--per-row`; sete fases = 4 + 3). Estilos em `ui.css`, ícones SVG em
-`icons.js`.
+o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e conclusões por fase e, opcional,
+`last`, a última fase escolhida; uma fase é liberada quando a anterior foi concluída). Os cartões das fases vão no
+máximo cinco por linha; com mais fases, `renderCards` reparte em linhas equilibradas (`--per-row`; sete fases =
+4 + 3). Estilos em `ui.css`, ícones SVG em `icons.js`.
+
+**Menu inicial** (`data-screen` da camada `.rr-title`): `main` (Jogar e Opções) → `modes` (Modo História, que só
+mostra "Em breve" e tem a visão registrada em [MODO-HISTORIA.md](MODO-HISTORIA.md), e Fases; nomes e textos em
+`MODES`) → `levels` (Continuar e os cartões) e `options` (o mesmo `settingsBlock()` da pausa: volume, qualidade,
+dicas e tela cheia). Voltar sobe uma tela (Esc, ○ · B ou o botão do canto) e devolve o foco ao botão que a abriu; no
+cartão de abertura, volta à tela das fases. Continuar usa `continueTarget` (`progress.js`): a última fase escolhida
+se ainda não foi concluída e está liberada, senão a primeira liberada pendente (com tudo concluído, a última
+escolhida); escolher uma fase (Continuar, cartão ou Próxima fase) grava `last`. Escolher na tela inicial a fase que já
+está montada abre o cartão dela sem recarregar (`ui:selectLevel` no núcleo).
+
+**Opções salvas** (`src/core/settings.js`, `localStorage` `rr-settings-v1`, chave por PR nas prévias): `noHints`, o
+modo sem dicas. A raiz ganha `data-hints="off"` e o CSS esconde o objetivo escrito e as dicas em balão (o HUD também
+ignora `hint` e um selo "sem dicas" aparece); `fx/feedback.js` esconde o marcador do objetivo. Os puzzles não mudam
+e a tabela de controles segue na pausa.
 
 **Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): layout compacto do HUD, da tela
 inicial, do cartão da fase, da pausa (duas colunas, sem a tabela de teclas) e da vitória; áreas seguras do entalhe
@@ -543,7 +558,7 @@ embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vag
 |---|---|---|
 | `npm test` | testes em Node (`test/*.test.mjs`): as 7 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting, cenário fora do pacote inicial, irrigador, dogs e regressões | ~30 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–7, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–7, controle, regressões, pulo, bafo e menu; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~14 min |
 
@@ -585,7 +600,14 @@ protocolo do navegador (`Input.dispatchTouchEvent`, com multitoque): perfil do c
 toque e somem com o teclado, layout sem sobreposição, um trecho da fase 1 só com joystick e botões, menu de qualidade,
 aviso de girar e, no fim, uma página de PC confirmando o perfil `alta` de sempre. O joystick anda em malha fechada
 com uma trava na página (`ui.touch.releaseStick()`), como a do `walkTo`. Depois da partida, `capture-celular.mjs`
-grava celular, celular pequeno, tablet e PC, cada um com a sua qualidade gráfica (`shots/celular-revisao/`).
+grava celular, celular pequeno, tablet e PC, cada um com a sua qualidade gráfica (`shots/celular-revisao/`),
+inclusive as telas do menu inicial.
+
+**Menu no E2E** (suíte `menu`, `tools/scripts/test-menu.mjs`): teclas reais e o controle simulado percorrem Jogar,
+os modos (Modo História "em breve"), Fases, Opções e Voltar; o Continuar segue um save preparado; o modo sem dicas
+fica salvo depois de recarregar, esconde objetivo, marcador e dicas na partida e volta pela pausa. O toque fica na
+suíte `toque`. Em Node, `test/menu.test.mjs` cobre `continueTarget`, `last`, as opções salvas, o template e o atalho
+do núcleo.
 No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:change`.
 
 **Outras ferramentas**: `tools/scripts/gen-icons.mjs` (ícones de "Adicionar à tela inicial"), `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
