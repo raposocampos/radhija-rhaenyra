@@ -68,7 +68,8 @@ export function installPerformanceProbe() {
           active.elapsedMs = endedAt - active.startedAt;
           if (active.frames.length >= active.minimumFrames && active.elapsedMs >= active.minimumDurationMs) {
             m.active = null;
-            const { resolve, ...sample } = active;
+            clearTimeout(active.timer);
+            const { resolve, reject: _reject, timer: _timer, ...sample } = active;
             resolve(sample);
           }
         }
@@ -85,8 +86,14 @@ export function installPerformanceProbe() {
       };
       m.collect = ({ minimumFrames, minimumDurationMs }) => {
         if (m.active) throw new Error('overlapping temporal samples');
-        return new Promise((resolve) => {
-          m.active = { resolve, minimumFrames, minimumDurationMs, frames: [], elapsedMs: 0,
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            const active = m.active;
+            if (active?.resolve !== resolve) return;
+            m.active = null;
+            reject(new Error(`temporal window timed out: level=${active.level}, generation=${active.generation}, frames=${active.frames.length}, elapsedMs=${performance.now() - active.startedAt}`));
+          }, 270000);
+          m.active = { resolve, reject, timer, minimumFrames, minimumDurationMs, frames: [], elapsedMs: 0,
             startedAt: performance.now(), level: game.levelDef.id, root: phaseRoot(), generation: m.generation,
             quality: m.quality(), camera: { position: engine.camera.position.toArray(), fov: engine.camera.fov } };
         });

@@ -78,34 +78,59 @@ export function compareReferences(a, b) {
   });
 }
 
-export function createBaseline(reference, comparison) {
-  const { runner: _runner, ...environment } = reference.environment;
-  return { schema: 1, status: 'candidate-not-adopted', commit: reference.commit, run: reference.run, attempt: reference.attempt,
-    environment, conditions: reference.conditions,
-    phases: comparison.map(({ level, metrics }) => {
-      const sample = reference.samples.find((s) => s.level === level && s.measured);
-      return { level, quality: sample.quality, camera: sample.camera,
+export const REFERENCE_LEVELS = ['fase1', 'fase2', 'fase3', 'fase4', 'fase5'];
+
+export function aggregateReferences(pairs) {
+  if (pairs.length !== 5 || new Set(pairs.map((p) => p.level)).size !== 5 ||
+      pairs.some((p) => !REFERENCE_LEVELS.includes(p.level))) throw new Error('exactly five distinct phase pairs are required');
+  const first = pairs[0].a;
+  const phases = REFERENCE_LEVELS.map((level) => {
+    const { a, b } = pairs.find((p) => p.level === level);
+    for (const reference of [a, b]) {
+      if (reference.schema !== 2 || reference.selectedLevel !== level || JSON.stringify(reference.levels) !== JSON.stringify([level]) ||
+          JSON.stringify(reference.catalog) !== JSON.stringify(REFERENCE_LEVELS)) throw new Error(`wrong isolated phase/catalog: ${level}`);
+      if (reference.commit !== first.commit || reference.buildHash !== first.buildHash || reference.run !== first.run || reference.attempt !== first.attempt ||
+          JSON.stringify(reference.conditions) !== JSON.stringify(first.conditions)) throw new Error('all phases must share SHA/build/run/attempt/protocol');
+      if (reference.conditions.protocol !== 'isolated-level-v2' || reference.conditions.minimumFrames !== 20 || reference.conditions.minimumDurationMs !== 8000) throw new Error('isolated protocol was reduced or changed');
+      if (reference.samples.length !== 4 || [0, 1, 2, 3].some((cycle) => reference.samples.filter((s) => s.cycle === cycle && s.level === level && s.measured === (cycle > 0)).length !== 1)) throw new Error(`incomplete isolated visits: ${level}`);
+      for (const sample of reference.samples) {
+        const errors = validateWindow(sample);
+        if (errors.length || (sample.measured && (sample.frames.length < 20 || sample.minimumFrames !== 20 || sample.minimumDurationMs !== 8000))) throw new Error(`invalid isolated window ${level}: ${errors.join('; ') || 'reduced sample'}`);
+      }
+      if (JSON.stringify(reference.negativeProof?.rejectedBy) !== JSON.stringify(['draw: scene was not rendered'])) throw new Error(`missing real negative proof: ${level}`);
+    }
+    const comparison = compareReferences(a, b)[0];
+    const sample = a.samples.find((s) => s.measured);
+    return { ...comparison, environment: a.environment, conditions: a.conditions, quality: sample.quality, camera: sample.camera };
+  });
+  return { schema: 2, commit: first.commit, buildHash: first.buildHash, run: first.run, attempt: first.attempt, phases };
+}
+
+export function createBaseline(aggregate) {
+  return { schema: 2, status: 'candidate-not-adopted', commit: aggregate.commit, buildHash: aggregate.buildHash, run: aggregate.run, attempt: aggregate.attempt,
+    phases: aggregate.phases.map(({ level, environment: originalEnvironment, conditions, quality, camera, metrics }) => {
+      const { runner: _runner, ...environment } = originalEnvironment;
+      return { level, environment, conditions, quality, camera,
         limits: Object.fromEntries(Object.entries(metrics).map(([key, value]) => [key, value.envelope.upper])) };
     }) };
 }
 
-export function evaluateBaseline(baseline, reference, comparison) {
-  const candidate = createBaseline(reference, comparison), reasons = [];
-  if (baseline.schema !== 1 || baseline.status !== 'adopted' || !baseline.commit || !baseline.run) reasons.push('baseline must be explicitly adopted and identify its source');
-  if (JSON.stringify(baseline.environment) !== JSON.stringify(candidate.environment)) reasons.push('environment changed; do not compare timings');
-  if (JSON.stringify(baseline.conditions) !== JSON.stringify(candidate.conditions)) reasons.push('protocol changed');
-  if (JSON.stringify(baseline.phases?.map((p) => ({ level: p.level, quality: p.quality, camera: p.camera }))) !==
-      JSON.stringify(candidate.phases.map((p) => ({ level: p.level, quality: p.quality, camera: p.camera })))) reasons.push('catalog/quality/camera changed');
-  const metrics = [];
-  if (!reasons.length) for (const row of comparison) {
-    const phase = baseline.phases.find((p) => p.level === row.level);
-    for (const [metric, value] of Object.entries(row.metrics)) {
+export function evaluateBaseline(baseline, aggregate) {
+  const candidate = createBaseline(aggregate);
+  const commonReasons = [];
+  if (baseline.schema !== 2 || baseline.status !== 'adopted' || !baseline.commit || !baseline.buildHash || !baseline.run) commonReasons.push('baseline must be explicitly adopted and identify its schema/source');
+  if (JSON.stringify(baseline.phases?.map((p) => p.level)) !== JSON.stringify(REFERENCE_LEVELS)) commonReasons.push('baseline catalog changed or incomplete');
+  return { baselineCommit: baseline.commit, baselineRun: baseline.run, phases: candidate.phases.map((current) => {
+    const phase = baseline.phases?.find((p) => p.level === current.level), reasons = [...commonReasons];
+    if (JSON.stringify(phase?.environment) !== JSON.stringify(current.environment)) reasons.push('environment changed; do not compare timings');
+    if (JSON.stringify(phase?.conditions) !== JSON.stringify(current.conditions)) reasons.push('protocol changed');
+    if (JSON.stringify(phase?.quality) !== JSON.stringify(current.quality) || JSON.stringify(phase?.camera) !== JSON.stringify(current.camera)) reasons.push('quality/camera changed');
+    const metrics = [];
+    if (!reasons.length) for (const [metric, value] of Object.entries(aggregate.phases.find((p) => p.level === current.level).metrics)) {
       const upper = phase.limits[metric];
-      if (!Number.isFinite(upper) || upper <= 0) { reasons.push(`invalid baseline limit: ${row.level}/${metric}`); continue; }
-      metrics.push({ level: row.level, metric, baselineUpper: upper, observedMax: value.envelope.max,
-        requiresInvestigation: value.envelope.max > upper });
+      if (!Number.isFinite(upper) || upper <= 0) { reasons.push(`invalid baseline limit: ${metric}`); continue; }
+      metrics.push({ metric, baselineUpper: upper, observedMax: value.envelope.max, requiresInvestigation: value.envelope.max > upper });
     }
-  }
-  return { comparable: !reasons.length, baselineCommit: baseline.commit, baselineRun: baseline.run,
-    reasons, metrics: reasons.length ? [] : metrics };
+    return { level: current.level, comparable: !reasons.length, reasons, metrics: reasons.length ? [] : metrics };
+  }) };
 }

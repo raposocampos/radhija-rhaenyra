@@ -47,8 +47,9 @@ EST-06 também foi aprovado e publicado pelo PR #12, squash `597c8f2`;
 CI main `39075921425`, deploy `39075957502` e versão pública conferidos.
 EST-07A foi aprovado e publicado pelo PR #13, squash `4552e60`;
 CI main `39077869869`, deploy `39077894749` e versão pública conferidos.
-Essa é a nova base do PR #14 (EST-07B), atualizado pelo coordenador em
-`codex/eventos-nucleo` e sujeito a validação/aprovação próprias.
+PR #14 (EST-07B) aprovado no head `cf33d69`, integrado em `fae8acd`; trabalho em
+`codex/eventos-nucleo`. CI main `39079619941` passou; deploy `39079647854` passou.
+Produção HTTP 200/version.json confirmou `fae8acd`.
 
 ## Boas práticas a preservar
 
@@ -81,22 +82,22 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-04 | Validação e compatibilidade do progresso | Executor progresso | EST-01 integrado | PR #7 aprovado, integrado e publicado em 2ee7e07 |
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
-| [ ] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | Configuração publicada no PR #13; eventos no PR #14, nova base em validação |
-| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | A atribuir | EST-05 e EST-06 validados | Planejado |
+| [x] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | PRs #13 e #14 aprovados, integrados e publicados |
+| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 implementado; referências A/B em validação na nuvem |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
 revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
-EST-00 a EST-06 e EST-09 foram publicados. Faltam duas etapas: EST-07 e
-EST-08. Configuração da EST-07 já publicada em `4552e60`; eventos do PR #14
-atualizados para essa base, com novo CI/prévia e E2E antes da aprovação. Cada versão
+EST-00 a EST-07 e EST-09 foram publicados.
+Resta EST-08, com instrumento/guia no PR #16 e medições na nuvem. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
-principal. A proposta já está no PR #9; ainda não há tema/objeto aprovado
-nem código de fase 6 implementado.
+principal. O conceito Expresso do Superbafo do PR #9 foi escolhido pelo usuário
+para protótipo, mantendo a direção artística existente. Implementação em
+frentes próprias, conforme CONTEXTO; nenhuma aprovação antecipada de publicação.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -339,14 +340,16 @@ necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 ### EST-08 Desempenho e expansão
 
-Implementação em andamento em `codex/desempenho-expansao`, base `fae8acd`
-(PR #14 integrado/publicado). Instrumento/workflow próprios somente leitura,
-sem mudança de runtime: duas referências sequenciais, render normal, cinco
-fases, dados brutos/estatística, heap fora da janela, prova negativa de render
-vazio e guia atualizado. CI/medições ainda pendentes neste checkpoint.
-Depois de medir, registrar referência compacta e limites exploratórios duráveis
-no repositório, com SHA/run de origem; validar o commit final e entregar prévia.
-Não marcar concluída somente pela existência do instrumento. Detalhes no CONTEXTO.
+Implementação no PR #16, `codex/desempenho-expansao`, base `fae8acd`.
+Instrumento inicial `0b2a329` passou CI, mas medição `39080397088` excedeu 25 min
+em A, com 11/20 visitas: diagnóstico sem erros prévios, não referência válida.
+Redesenho `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
+no mesmo runner por fase, boot direto e reloads da mesma fase. Mantidos três
+reloads medidos, 20 quadros/8 s, qualidade completa e GC fora da janela.
+Agregação estrita de cinco pares; baseline schema 2 preserva ambiente/limites
+por fase. Redesenho e oito provas da infraestrutura ainda precisam de nuvem.
+Registrar resultados/limites duráveis após rodada válida e revalidar commit final.
+Não marcar concluída só pela existência do instrumento; detalhes no CONTEXTO.
 
 - Definir cenário, qualidade gráfica e ambiente de referência para medir
   carregamento, tempo por quadro e memória; estabelecer limites após medir.
@@ -356,7 +359,8 @@ Não marcar concluída somente pela existência do instrumento. Detalhes no CONT
 
 Escopo fechado em um PR após #14: instrumento temporal com render normal,
 carregamento e heap JS fora das amostras temporais; duas referências no mesmo
-SHA e ambiente fixado, cinco fases, dados brutos, dispersão e limites após medir.
+SHA/build e ambiente fixado dentro de cada par, cinco fases isoladas em jobs
+paralelos, dados brutos, dispersão e limites por fase após medir.
 Reutilizar infraestrutura/identidade/qualidade do medidor de recursos; ele já
 descobre LEVELS, mas seus dois renders controlados não medem FPS. SwiftShader
 não representa GPU física. Provas negativas e medição do head final na nuvem;

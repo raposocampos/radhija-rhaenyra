@@ -21,10 +21,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  referencias:
-    name: Duas referências sequenciais no mesmo runner
+  build:
+    name: Build único e infraestrutura de medição
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 15
     env:
       CI: 'true'
       MEASURE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -40,12 +40,47 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Gerar um build para ambas as referências
+      - name: Gerar um build para os cinco pares de referências
         run: npm run build
-      - name: Instalar Chromium fixado no lockfile
-        run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Validar análise e provas negativas da infraestrutura
         run: node --test tools/scripts/test-performance-infra.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desempenho-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+  referencias:
+    name: Referências A e B — ${{ matrix.fase }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        fase: [fase1, fase2, fase3, fase4, fase5]
+    env:
+      CI: 'true'
+      MEASURE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PERFORMANCE_LEVEL: ${{ matrix.fase }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Conferir identidade do checkout
+        run: test "$(git rev-parse HEAD)" = "$MEASURE_SHA"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: desempenho-build
+          path: dist/
+      - name: Instalar Chromium fixado no lockfile
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Referência A com qualidade completa
         run: node tools/scripts/measure-performance.mjs
         env:
@@ -54,7 +89,34 @@ jobs:
         run: node tools/scripts/measure-performance.mjs
         env:
           PERFORMANCE_REFERENCE: b
-      - name: Comparar dados e calcular limites exploratórios
+      - name: Guardar dados brutos e relatório mesmo em falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desempenho-${{ matrix.fase }}
+          path: shots/performance/
+          if-no-files-found: error
+          retention-days: 14
+  agregar:
+    name: Conferir cinco pares e gerar referência durável
+    needs: [build, referencias]
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desempenho-fase*
+          merge-multiple: true
+          path: shots/performance/
+      - name: Exigir cinco pares completos e comparar limites por fase
         run: node tools/scripts/compare-performance.mjs
       - name: Guardar dados brutos e relatório mesmo em falha
         if: always()

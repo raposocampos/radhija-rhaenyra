@@ -5,38 +5,43 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## EST-08 — instrumento implementado, aguardando nuvem (2026-10-17, Codex)
+## EST-08 — referências isoladas em validação (2026-10-17, Codex)
 
-Branch `codex/desempenho-expansao`, worktree `desempenho-expansao`, base
-`fae8acd` do PR #14 integrado. Coordenador confirmou publicação: CI main
-`39079619941` (183 testes/tipos/build), deploy `39079647854`, deployment
-`7147332851` e HTTP/version de produção conferidos. Não repetir merge/deploy.
-Fase 6 segue separadamente no PR #15, protótipo Expresso aprovado para
-implementação e obrigado a preservar a direção artística; sem aprovação de publicação.
+Branch `codex/desempenho-expansao`, worktree `desempenho-expansao`, base `fae8acd`.
+PR #16 em desenvolvimento; CI `39080397092` aprovou 183 testes/tipos/build
+no instrumento inicial `0b2a329`. Medição `39080397088` falhou pelo watchdog
+após 25 min e 11/20 visitas: sem falhas de qualidade, erros prévios ou warnings;
+a janela de 20 quadros da fase 3 durou 142 s em SwiftShader. Referência B e
+prova negativa real não ocorreram. Resultado parcial não é baseline/aprovação.
 
-Escopo EST-08: `measure-performance.mjs`, probe/estatística próprios, comparação,
-provas negativas e workflow `desempenho.yml` somente leitura. Nenhum runtime,
-E2E existente ou medidor de recursos alterado. Duas referências sequenciais
-no mesmo runner/build/SHA, cinco fases publicadas, render completo e simulação
-normal. Um ciclo de aquecimento, três medidos; heap/GC fora da janela temporal.
-Carga e submissão de render com UI liberada são métricas separadas; submissão
-não prova apresentação física da GPU. Dados brutos, percentis e dispersão no artefato.
-Prova negativa real recusa render vazio; seis testes da infraestrutura cobrem
-estatística, qualidade, identidade A/B e comparação com referência fixa.
+Protocolo redesenhado `isolated-level-v2`: build único distribuído por artefato,
+cinco jobs independentes, A/B sequenciais no mesmo runner por fase. Navegador
+novo inicia diretamente na fase alvo pelo índice numérico, com ID/catálogo
+conferidos; um reload de aquecimento e três medidos da mesma fase. Preservados
+20 quadros/8 s mínimos, render completo, simulação normal, GC/heap fora da
+janela e reaquecimento. Heap/caches isolados não se comparam ao protocolo anterior.
+Agregador exige cinco pares completos, SHA/hash/run/tentativa/protocolo comuns,
+qualidade/ambiente iguais dentro do par e negativa real; baseline schema 2 guarda
+ambiente/limite fixo por fase. Timeouts e checkpoints diagnosticam a etapa corrente.
 
-Guia atualizado: nuvem, registro DEV antes do catálogo, factories estritas,
-contratos reais, ações inválidas, pausa/reset, progresso/hasNext, runner E2E
-e workflow, direção artística e aprovação. Protocolo em `DESEMPENHO.md`.
-Próximos passos do coordenador: revisar commit, abrir PR draft e acompanhar
-CI/prévia e workflow de desempenho disparado pelo PR. Não houve teste/build
-local; só leitura/revisão e `git diff --check`. Resultados de nuvem ainda pendentes.
+Nenhum runtime, E2E existente ou medidor de recursos alterado. Guia cobre nuvem,
+DEV antes do catálogo, factories estritas, contratos, ações inválidas, pausa/reset,
+progresso/hasNext, runner/workflow, arte e aprovação. Oito testes do instrumento
+incluem completude/agregação/identidades e referência fixa; ainda precisam de CI
+neste redesenho. Sem teste/build local, só revisão e `git diff --check`.
 
-Após medir, revisar `baseline-candidate.json`, adotar referência compacta em
-`docs/performance-baseline.json` e resumo durável `DESEMPENHO-REFERENCIA.md`,
-identificando SHA/run de origem; não recalibrar limites a cada mudança.
-O commit final precisa de validação própria. Referências de ambiente/protocolo
-incompatível não são comparadas. Limites exploratórios não são gate preventivo.
-EST-08 permanece em andamento até dados reais, revisão e entrega da prévia.
+Próximo passo: revisar/enviar o commit e acompanhar CI/prévia/medição próprios.
+Após rodada válida, revisar `baseline-candidate.json`, adotar como
+`docs/performance-baseline.json` e registrar resumo em `DESEMPENHO-REFERENCIA.md`
+com SHA/run de origem. Validar o commit final; não recalibrar limites a cada PR.
+EST-08 só termina com dados reais revisados e entrega da prévia para aprovação.
+
+Produção: PR #14 publicado em `fae8acd`, detalhes abaixo. PR #15 separado,
+protótipo Expresso com mesma direção artística: head `92b9306`, base `fae8acd`,
+CI `39081102987` (206 testes) e E2E `39081100507` aprovados: 334 gameplay,
+4 infra, 23 smoke, 28 recuperação, 30 comparações gráficas estáveis. Prévia
+`/previews/pr-15/39081102987-1/?level=fase6&play` apresentada; aguarda aprovação
+própria. Não integrar/publicar #15 ou #16 usando a aprovação anterior de #14.
 
 ## EST-07A — configuração publicada (2026-10-17, Codex)
 
@@ -59,34 +64,25 @@ concluído após liberar somente o deployment `7147072605` com essa aprovação.
 Produção HTTP 200/version.json confirmou `4552e60` e o run do main.
 Publicado; não repetir merge/deploy do #13.
 
-## EST-07B — atualização da base em validação (2026-10-17, Codex)
+## EST-07B — eventos publicados (2026-10-17, Codex)
 
-[PR #14](https://github.com/raposocampos/radhija-rhaenyra/pull/14), branch
-`codex/eventos-nucleo`, worktree `eventos-nucleo`. Coordenador é o único editor;
-revisor trabalha somente em leitura no seu próprio worktree.
-Implementação `40e83ce`: emissão, tabela de vibração, histórico e diagnóstico
-da câmera extraídos para `gameEvents.js`. Estado, carregamento, reset e descarte
-continuam no núcleo. Cálculo de vibração adiado até conferir input/estado após
-os listeners. Sete testes runtime e três provas negativas preservam a API.
+[PR #14](https://github.com/raposocampos/radhija-rhaenyra/pull/14): emissão,
+vibração, histórico e diagnóstico da câmera extraídos para `gameEvents.js`,
+sete testes runtime e três provas negativas. Estado/carregamento/reset/descarte
+preservados no núcleo. Usuário aprovou head `cf33d69977aff41d96f40d984d3431a2a1648f44`,
+base `4552e60`; CI `39078268404` aprovou 183 testes/tipos/build; prévia conferida.
+E2E completo `39078277583`: 313 verificações de gameplay, quatro de infraestrutura,
+19 de smoke, 28 de recuperação; 25 amostras de recursos estáveis, globais
+preservados, erros/warnings vazios e capturas revisadas.
 
-No head anterior `3a3d02e`, base `597c8f2`: CI `39076449277` passou 180 testes,
-tipos/build; prévia conferida. E2E completo `39076448099` passou 313 verificações
-de gameplay, quatro de infraestrutura, 19 de smoke e 28 de recuperação;
-25 amostras de recursos estáveis e capturas revisadas. Esses resultados validam
-somente a base anterior, não substituem a validação da combinação atual.
-
-Atualização por merge de `4552e60`, sem reescrever histórico. Conflitos apenas
-em CONTEXTO/PLANO, reconciliados com as entregas reais; arquitetura combina
-configuração e eventos. Código de cada frente preservado. Neste checkpoint,
-o commit dessa atualização ainda precisa de CI/prévia e E2E `todas` próprios.
-Nenhum teste/build local. Conferir resultados pelo SHA que contém este registro;
-resultados finais ficam no PR, sem commit apenas para status do próprio CI.
-Próximo passo: concluir a validação, apresentar nova prévia e aguardar aprovação
-própria para integrar/publicar #14. A aprovação de #13 não inclui #14.
+Squash `fae8acdce2fc7ae15c8feaec33a695a974fc94e0`, árvore idêntica à aprovada.
+CI main `39079619941` passou. Deploy `39079647854`, deployment `7147332851`,
+concluído após liberação com essa aprovação. Produção HTTP 200/version.json
+confirmou `fae8acd` e o run do main. Publicado; não repetir merge/deploy.
 
 ## Etapas restantes e fase 6 (2026-10-17, Codex)
 
-Faltam concluir EST-07B e executar EST-08 para encerrar esta estabilização.
+EST-07B foi aprovado/integrado. Resta EST-08 para encerrar a estabilização.
 EST-08 foi delimitada a um PR após #14: medir carregamento, cadência com render
 normal e heap JS; duas referências comparáveis no mesmo SHA, qualidade completa,
 ambiente/amostras/dispersão registrados e limites definidos após medir. Reutilizar
@@ -102,7 +98,8 @@ como **Expresso do Superbafo**, head `aa48121`, base `597c8f2`; CI `39076630494`
 e prévia passaram. Oficina de brinquedos e bolinha-planeta: Rhaenyra pula no
 pedal para escolher o trilho; Radhija provoca um espirro do trem com superbafo
 para trazer o objeto. Proposta e imagem conceitual apresentadas; tema/puzzle
-ainda não aprovados e nenhum gameplay implementado. Branch `codex/proposta-fase6`,
+ainda não aprovados naquele checkpoint; escolha posterior e protótipo acima.
+Branch documental `codex/proposta-fase6`,
 worktree `proposta-fase6`. Não reutilizar a prévia antiga para aprovação após
 atualizar sua base. Protótipo pode avançar em paralelo após a escolha do desenho;
 as dependências técnicas EST-03/04/05/06 já foram entregues.
@@ -516,11 +513,13 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 a #8 e #10 a #13 integrados e publicados. Produção atual
-   confirmada em `4552e60`, deploy `39077894749`; não repetir merge/deploy.
-   Validar o PR #14 sobre essa base e apresentar a nova prévia para aprovação;
-   depois executar EST-08. PR #9 contém apenas a proposta Expresso do Superbafo.
-   Não reutilizar aprovação de versões anteriores.
+3. PRs #1 a #8 e #10 a #14 integrados e publicados. Produção atual
+   confirmada em `fae8acd`, deploy `39079647854`; não repetir merge/deploy.
+   PR #15 (`92b9306`) aguarda aprovação da prévia do protótipo Expresso em DEV.
+   PR #16 executa EST-08: validar as cinco referências A/B isoladas, adotar
+   baseline durável e conferir o commit final antes de apresentar aprovação.
+   PR #9 contém a proposta já incorporada ao protótipo. Não reutilizar aprovação
+   de versões anteriores nem tratar medição parcial como referência válida.
    Respeitar as áreas reservadas e a ordem de integração. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.

@@ -1,5 +1,5 @@
 // EST-08: render normal, cinco fases publicadas, nenhuma bateria local automática.
-// O workflow executa duas referências sequenciais deste script no mesmo runner/build.
+// Cada job mede uma fase isolada; A/B sequenciais usam o mesmo runner/build.
 import { createServer } from 'node:http';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, sep, extname } from 'node:path';
@@ -14,19 +14,23 @@ import { validateWindow, summarizeWindow } from './lib/performance-report.mjs';
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const REFERENCE = process.env.PERFORMANCE_REFERENCE || 'a';
 if (!/^[ab]$/.test(REFERENCE)) throw new Error('PERFORMANCE_REFERENCE must be a or b');
-const OUT = fileURLToPath(new URL(`../../shots/performance/${REFERENCE}/`, import.meta.url));
+const LEVEL = process.env.PERFORMANCE_LEVEL;
+if (!/^fase[1-5]$/.test(LEVEL || '')) throw new Error('PERFORMANCE_LEVEL must be fase1..fase5');
+const INDEX = Number(LEVEL.slice(4)) - 1;
+const OUT = fileURLToPath(new URL(`../../shots/performance/${LEVEL}/${REFERENCE}/`, import.meta.url));
 const MOUNT = '/previews/pr-performance/1-1/';
 const VIEWPORT = { width: 1280, height: 720 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
 const report = {
   startedAtUtc: new Date().toISOString(),
-  reference: REFERENCE, commit: process.env.MEASURE_SHA || process.env.GITHUB_SHA || null,
+  schema: 2, selectedLevel: LEVEL, reference: REFERENCE, commit: process.env.MEASURE_SHA || process.env.GITHUB_SHA || null,
   run: process.env.GITHUB_RUN_ID || null, attempt: process.env.GITHUB_RUN_ATTEMPT || null,
   environment: { node: process.version, os: platform(), release: release(), arch: arch(),
     cpu: cpus()[0]?.model, logicalCpus: cpus().length, systemMemoryBytes: totalmem(),
     runner: process.env.RUNNER_NAME || null, runnerImage: process.env.ImageOS || null, runnerImageVersion: process.env.ImageVersion || null },
-  conditions: { viewport: VIEWPORT, deviceScaleFactor: 1, warmupCycles: 1, measuredCycles: 3,
+  conditions: { protocol: 'isolated-level-v2', viewport: VIEWPORT, deviceScaleFactor: 1, warmupCycles: 1, measuredCycles: 3,
     minimumFrames: 20, minimumDurationMs: 8000, postGcWarmupFrames: 4, postGcWarmupMs: 1000,
+    scope: 'boot directly into selected published level; one warmup reload then three measured reloads of that level; no visits to other levels',
     state: 'playing', inputs: 'none; idle puzzle and companion update normally', camera: 'bounds-based fixed overview per phase',
     quality: 'normal engine; shadows 2048, bloom and all four compositor passes; no gl.finish',
     cadence: 'rAF timestamps of callbacks that executed game.update and engine.render; not capped game dt',
@@ -41,6 +45,17 @@ const report = {
 };
 const save = () => writeFile(resolve(OUT, 'report.json'), JSON.stringify(report, null, 2) + '\n');
 const check = (ok, message) => { if (!ok) report.failures.push(message); };
+async function step(stage, action, { cycle = null, timeoutMs = 180000 } = {}) {
+  report.pendingStage = { stage, cycle, level: LEVEL, startedAtUtc: new Date().toISOString(), timeoutMs };
+  console.log(`[performance ${LEVEL}/${REFERENCE}] ${stage}${cycle === null ? '' : ` cycle=${cycle}`}`);
+  await save();
+  let timer;
+  try {
+    return await Promise.race([action(), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${LEVEL}/${REFERENCE} cycle=${cycle} stage=${stage} exceeded ${timeoutMs}ms`)), timeoutMs);
+    })]);
+  } finally { clearTimeout(timer); }
+}
 const server = createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
@@ -86,73 +101,76 @@ try {
   page.on('response', (response) => { if (response.status() >= 400) report.errors.push(`HTTP ${response.status()}: ${response.url()}`); });
   page.on('request', (request) => { if (request.url().startsWith('http') && !request.url().startsWith(base)) report.errors.push(`outside build mount: ${request.url()}`); });
   await page.addInitScript(installPerformanceProbe);
-  await page.goto(`${base}?play`, { waitUntil: 'load', timeout: 180000 });
+  await step('boot', () => page.goto(`${base}?level=${INDEX + 1}&play`, { waitUntil: 'load', timeout: 180000 }));
   const waitVisible = () => page.waitForFunction(() => window.__performanceMeasurement?.loads.at(-1).firstUiReleasedRenderAt !== null && window.__game?.game.state === 'playing');
-  await waitVisible();
+  await step('boot-ui-released', waitVisible);
   await page.evaluate(() => document.fonts.ready);
   report.initialLoad = await page.evaluate(() => ({ ...window.__performanceMeasurement.loads[0],
     navigationToFirstRenderSubmissionMs: window.__performanceMeasurement.loads[0].firstRenderSubmittedAt,
     navigationToFirstUiReleasedRenderMs: window.__performanceMeasurement.loads[0].firstUiReleasedRenderAt }));
   const levels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
-  report.levels = levels;
+  report.catalog = levels; report.levels = [LEVEL];
   if (levels.join(',') !== 'fase1,fase2,fase3,fase4,fase5') throw new Error('this reference protocol requires exactly the five published phases');
+  if (report.initialLoad.level !== LEVEL) throw new Error(`boot selected ${report.initialLoad.level}, expected ${LEVEL}`);
   const cdp = await page.context().newCDPSession(page);
   const warmup = async () => {
     const start = await page.evaluate(() => ({ frames: window.__performanceMeasurement.framesDrawn, at: performance.now() }));
     await page.waitForFunction(({ frames, at }) => window.__performanceMeasurement.framesDrawn >= frames + 4 && performance.now() >= at + 1000, start);
   };
   for (let cycle = 0; cycle <= report.conditions.measuredCycles; cycle++) {
-    for (let index = 0; index < levels.length; index++) {
-      const load = await page.evaluate(async (index) => {
-        const m = window.__performanceMeasurement, before = m.loads.at(-1);
-        const startedAt = performance.now();
-        if (await window.__game.game.loadLevel(index, { mode: 'play' }) !== true) throw new Error(`load failed: ${index}`);
-        const current = m.loads.at(-1);
-        if (current.generation <= before.generation || current.root === before.root) throw new Error('load did not create a new generation/root');
-        current.promiseMs = performance.now() - startedAt;
-        return current.generation;
-      }, index);
-      await waitVisible(); await warmup();
-      // GC e coleta de heap nunca concorrem com a janela temporal.
+    const load = await step('reload', () => page.evaluate(async (index) => {
+      const m = window.__performanceMeasurement, before = m.loads.at(-1);
+      const startedAt = performance.now();
+      if (await window.__game.game.loadLevel(index, { mode: 'play' }) !== true) throw new Error(`load failed: ${index}`);
+      const current = m.loads.at(-1);
+      if (current.generation <= before.generation || current.root === before.root) throw new Error('load did not create a new generation/root');
+      current.promiseMs = performance.now() - startedAt;
+      return current.generation;
+    }, INDEX), { cycle });
+    await step('ui-released', waitVisible, { cycle });
+    await step('warmup-before-heap', warmup, { cycle });
+    // GC e coleta de heap nunca concorrem com a janela temporal.
+    const heap = await step('heap', async () => {
       await cdp.send('HeapProfiler.collectGarbage');
-      const heap = await cdp.send('Runtime.getHeapUsage');
-      await warmup();
-      const sample = await page.evaluate(async ({ cycle, generation, minimumFrames, minimumDurationMs }) => {
-        const m = window.__performanceMeasurement;
-        const value = await m.collect({ minimumFrames, minimumDurationMs });
-        if (value.generation !== generation) throw new Error('load changed before sampling');
-        return { ...value, cycle, measured: cycle > 0, load: { ...m.loads.at(-1) } };
-      }, { cycle, generation: load, minimumFrames: cycle === 0 ? 4 : report.conditions.minimumFrames, minimumDurationMs: cycle === 0 ? 1000 : report.conditions.minimumDurationMs });
-      sample.heap = heap;
-      sample.summary = summarizeWindow(sample);
-      sample.validation = validateWindow(sample);
-      report.failures.push(...sample.validation.map((message) => `cycle ${cycle} ${sample.level}: ${message}`));
-      check(sample.level === levels[index], `cycle ${cycle}: wrong level`);
-      check(sample.load.firstRenderSubmittedAt >= sample.load.loadedAt && sample.load.firstUiReleasedRenderAt >= sample.load.firstRenderSubmittedAt, `${sample.level}: invalid render submission/UI ordering`);
-      check(heap.usedSize > 0 && heap.totalSize >= heap.usedSize, `${sample.level}: invalid JS heap sample`);
-      report.samples.push(sample);
-      console.log(`[performance ${REFERENCE}] cycle=${cycle} ${sample.level} frames=${sample.frames.length} cadenceP95=${sample.summary.cadenceMs.p95.toFixed(1)}ms load=${(sample.load.loadedAt - sample.load.startedAt).toFixed(1)}ms heap=${heap.usedSize}`);
-      await save();
-    }
+      return cdp.send('Runtime.getHeapUsage');
+    }, { cycle });
+    await step('warmup-after-heap', warmup, { cycle });
+    const sample = await step('temporal-window', () => page.evaluate(async ({ cycle, generation, minimumFrames, minimumDurationMs }) => {
+      const m = window.__performanceMeasurement;
+      const value = await m.collect({ minimumFrames, minimumDurationMs });
+      if (value.generation !== generation) throw new Error('load changed before sampling');
+      return { ...value, cycle, measured: cycle > 0, load: { ...m.loads.at(-1) } };
+    }, { cycle, generation: load, minimumFrames: cycle === 0 ? 4 : report.conditions.minimumFrames, minimumDurationMs: cycle === 0 ? 1000 : report.conditions.minimumDurationMs }), { cycle, timeoutMs: 300000 });
+    sample.heap = heap;
+    sample.summary = summarizeWindow(sample);
+    sample.validation = validateWindow(sample);
+    report.failures.push(...sample.validation.map((message) => `cycle ${cycle} ${sample.level}: ${message}`));
+    check(sample.level === LEVEL, `cycle ${cycle}: wrong level`);
+    check(sample.load.firstRenderSubmittedAt >= sample.load.loadedAt && sample.load.firstUiReleasedRenderAt >= sample.load.firstRenderSubmittedAt, `${sample.level}: invalid render submission/UI ordering`);
+    check(heap.usedSize > 0 && heap.totalSize >= heap.usedSize, `${sample.level}: invalid JS heap sample`);
+    report.samples.push(sample);
+    console.log(`[performance ${LEVEL}/${REFERENCE}] cycle=${cycle} frames=${sample.frames.length} cadenceP95=${sample.summary.cadenceMs.p95.toFixed(1)}ms load=${(sample.load.loadedAt - sample.load.startedAt).toFixed(1)}ms heap=${heap.usedSize}`);
+    await save();
   }
   // Prova negativa real: um render vazio parece rápido, mas DEVE ser recusado.
   // Injeção termina antes do fechamento e não entra nas referências/estatísticas.
-  const negative = await page.evaluate(async () => {
+  const negative = await step('negative-proof', () => page.evaluate(async () => {
     const m = window.__performanceMeasurement; m.skipDraw = true;
     try { return await m.collect({ minimumFrames: 4, minimumDurationMs: 100 }); }
     finally { m.skipDraw = false; }
-  });
+  }));
   const rejectedBy = validateWindow(negative);
   report.negativeProof = { kind: 'skip engine.render in instrumented page only', sample: negative, rejectedBy };
   check(rejectedBy.length === 1 && rejectedBy[0] === 'draw: scene was not rendered', `negative proof failed or had unrelated errors: ${rejectedBy.join('; ')}`);
-  check(report.samples.length === 20, 'incomplete five-phase protocol');
+  check(report.samples.length === 4, `incomplete isolated protocol for ${LEVEL}`);
+  report.pendingStage = null;
 } catch (error) { report.errors.push(error.stack || String(error)); }
 finally {
   clearTimeout(watchdog);
   try { await browser?.close(); } catch (error) { report.errors.push(String(error)); }
   server.closeAllConnections();
   await new Promise((done) => server.close(done));
-  report.passed = report.errors.length === 0 && report.failures.length === 0 && report.samples.length === 20 && !!report.negativeProof;
+  report.passed = report.errors.length === 0 && report.failures.length === 0 && report.samples.length === 4 && !!report.negativeProof;
   report.endedAtUtc = new Date().toISOString();
   await save();
   console.log(JSON.stringify({ reference: REFERENCE, passed: report.passed, samples: report.samples.length, errors: report.errors, warnings: report.warnings, failures: report.failures }, null, 2));
