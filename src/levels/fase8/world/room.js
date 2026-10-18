@@ -305,7 +305,7 @@ function buildWalls(layout, updaters) {
     grp.add(f, pic);
   }
 
-  // ---- relógio (acima do tanque) e calendário (perto do armário)
+  // ---- relógio (acima do tanque) e calendário (entre o botão do varal e o relógio)
   const clock = new THREE.Group();
   const face = new THREE.Mesh(new THREE.CircleGeometry(0.16, 32), new THREE.MeshStandardMaterial({ color: '#fbf6ec', roughness: 0.5 }));
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.017, 8, 32), stdMat('#3f8fb0', { roughness: 0.4 }));
@@ -321,9 +321,9 @@ function buildWalls(layout, updaters) {
   minH.rotation.z = -1.0;
   grp.add(clock);
   const cal = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.32), new THREE.MeshStandardMaterial({ map: calendarTexture(), roughness: 0.8 }));
-  cal.position.set(-0.3, 1.75, B.minZ + 0.003);
+  cal.position.set(2.1, 1.8, B.minZ + 0.003);
   const pin = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), stdMat('#e8554a', { roughness: 0.4 }));
-  pin.position.set(-0.3, 1.9, B.minZ + 0.01);
+  pin.position.set(2.1, 1.95, B.minZ + 0.01);
   grp.add(cal, pin);
 
   // ---- raios de sol entrando pela janela (planos aditivos inclinados no sentido do sol)

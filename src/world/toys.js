@@ -221,8 +221,8 @@ export function createSock(len = 0.26) {
   tube.computeVertexNormals();
   const body = new THREE.Mesh(tube, knit);
   // ponta e calcanhar creme (tampas suaves), punho canelado
-  const toe = new THREE.Mesh(new THREE.SphereGeometry(r * 0.98, 14, 10), cream);
-  toe.scale.set(0.84, 0.9, 0.9);
+  const toe = new THREE.Mesh(new THREE.SphereGeometry(r * 0.86, 14, 10), cream);
+  toe.scale.set(0.82, 0.8, 0.7);
   toe.position.copy(curve.getPoint(1));
   const heel = new THREE.Mesh(new THREE.SphereGeometry(r * 0.9, 12, 8), cream);
   heel.position.set(0, -leg - r * 0.35, -r * 0.35);

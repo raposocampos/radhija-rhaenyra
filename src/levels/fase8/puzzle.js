@@ -351,8 +351,8 @@ export function createPuzzle(ctx) {
       S.sock = 'carried';
     }
     if (st === 'done') {
-      basket.setPos(DOG_BED.x - 0.5, DOG_BED.z - 0.25);
-      place('rhaenyra', DOG_BED.x - 1.1, DOG_BED.z - 0.25, Math.PI / 2);
+      basket.setPos(DOG_BED.x - 0.9, DOG_BED.z - 0.15); // encostado na caminha, sem entrar nela
+      place('rhaenyra', DOG_BED.x - 0.85, DOG_BED.z + 0.6, 2.2); // ao sul do cesto, olhando a caminha
       place('radhija', GOAL.x - 0.2, GOAL.z - 0.35, Math.PI / 2);
     }
     notifyStage();

@@ -196,10 +196,14 @@ function buildShelves(root, layout) {
     const plank = new THREE.Mesh(rbox(x1 - x0, 0.03, 0.26, 0.008), plankMat);
     plank.position.set((x0 + x1) / 2, y, zWall + 0.135);
     grp.add(plank);
+    // mão-francesa: chapinha na parede e o braço inclinado até a tábua
     for (const x of [x0 + 0.12, x1 - 0.12]) {
-      const br = new THREE.Mesh(rbox(0.02, 0.14, 0.2, 0.004), bracketMat);
-      br.position.set(x, y - 0.085, zWall + 0.11);
-      grp.add(br);
+      const plate = new THREE.Mesh(rbox(0.018, 0.1, 0.012, 0.004), bracketMat);
+      plate.position.set(x, y - 0.065, zWall + 0.008);
+      const arm = new THREE.Mesh(rbox(0.014, 0.012, 0.2, 0.004), bracketMat);
+      arm.position.set(x, y - 0.07, zWall + 0.1);
+      arm.rotation.x = -0.5;
+      grp.add(plate, arm);
     }
     root.add(grp);
     return grp;

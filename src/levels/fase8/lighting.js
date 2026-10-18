@@ -6,14 +6,14 @@ import { SUN } from './layout.js';
 
 export default {
   sun: { dir: SUN.direction, color: SUN.color, intensity: SUN.intensity, shadowBias: -0.0005, shadowNormalBias: 0.03 },
-  hemi: { sky: '#d3e4f6', ground: '#a3825f', intensity: 1.15 },
+  hemi: { sky: '#cfdff0', ground: '#9a7a58', intensity: 0.95 },
   fog: { color: '#d9e6f2', near: 18, far: 52 },
-  exposure: 1.08,
+  exposure: 0.98,
   sky: {
     zenith: '#5f9bd8', mid: '#8fbde6', horizon: '#d6e8f4', ground: '#b9a68e', sun: '#fff3dc',
     stars: 0, clouds: 0.35, glow: 0.4, disk: 0.6, cloudTint: [1.0, 0.98, 0.95],
   },
-  env: { intensity: 0.6, ground: '#a3825f' },
+  env: { intensity: 0.5, ground: '#9a7a58' },
   grade: { warm: [1.05, 1.01, 0.95], sat: 1.06, lift: [0.004, 0.004, 0.006], vignette: 0.26 },
-  bloom: { strength: 0.38, radius: 0.55, threshold: 0.88 },
+  bloom: { strength: 0.32, radius: 0.55, threshold: 0.92 },
 };

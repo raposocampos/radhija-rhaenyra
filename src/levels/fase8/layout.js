@@ -50,17 +50,17 @@ export const CATCH = { x: WASHER.x, z: WASHER.z + WASHER.hz + 0.31, r: 0.32 };
  * Botão do varal (impulso na parede): o varal elétrico desce por holdTime s e sobe sozinho.
  * @type {import('../../types').WallButtonCfg}
  */
-export const RACK_BUTTON = { x: 1.05, z: -3.2, nx: 0, nz: 1, top: 1.1, kind: 'button', mode: 'timed', holdTime: 6 };
+export const RACK_BUTTON = { x: 0.35, z: -3.2, nx: 0, nz: 1, top: 1.1, kind: 'button', mode: 'timed', holdTime: 6 };
 /**
  * Varal de teto: varetas leste-oeste de x0 a x1, centradas em z, com halfDepth de cada lado; em cima a `up`
  * de altura, embaixo a `down` (as dogs passam por baixo). Desce em lowerTime s e sobe em raiseTime s.
  */
-export const RACK = { x0: 0.75, x1: 2.85, z: -1.25, halfDepth: 0.26, up: 1.85, down: 0.74, lowerTime: 1.1, raiseTime: 1.3 };
+export const RACK = { x0: 1.35, x1: 3.25, z: -1.25, halfDepth: 0.26, up: 1.85, down: 0.74, lowerTime: 1.1, raiseTime: 1.3 };
 /**
  * A meia listrada, presa na vareta sul do varal (pendura `hang` m abaixo dela). Com o varal embaixo, a arrancada
  * da Radhija que passar com a cabeça a até grabR do ponto (x, z) dá o tranco e solta o pregador.
  */
-export const SOCK = { x: 2.3, z: RACK.z + RACK.halfDepth, hang: 0.3, grabR: 0.4, nearR: 0.7 };
+export const SOCK = { x: 2.6, z: RACK.z + RACK.halfDepth, hang: 0.3, grabR: 0.4, nearR: 0.7 };
 
 /** Tábua de passar: a Radhija passa por baixo das pernas em X; a Rhaenyra e o cesto não. */
 export const BOARD = { x: 0.2, z: 0.75, hx: 0.62, hz: 0.22, h: 0.82 };
@@ -123,7 +123,7 @@ export const GOAL = {
 };
 
 /** Sol da manhã de domingo vindo do norte (pela janela): a parede do fundo faz sombra e a janela, um retângulo de sol. */
-export const SUN = { direction: [-0.3, 0.78, -0.55], color: '#fff0d6', intensity: 2.2 };
+export const SUN = { direction: [-0.3, 0.78, -0.55], color: '#ffeccc', intensity: 1.6 };
 
 /** @type {import('../../types').CameraConfig} */
 export const CAMERA = {
