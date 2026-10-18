@@ -56,7 +56,7 @@ export function createMud({ dogs, emit, effects = null, licksToClean = 5, slow =
     s.k = Math.max(0, s.k - 1 / licksToClean - 1e-9);
     if (s.k < 0.02) s.k = 0;
     const L = lick.local;
-    s.spots.push({ x: L.x, y: L.y, z: L.z, r: 0.07 + 0.012 * Math.min(4, s.licks) });
+    s.spots.push({ x: L.x, y: L.y, z: L.z, r: 0.085 + 0.016 * Math.min(4, s.licks) });
     emit('mud:lick', { name, x: lick.point.x, y: lick.point.y, z: lick.point.z, k: +s.k.toFixed(3), licks: s.licks });
     if (s.k <= 0) {
       s.spots = [];

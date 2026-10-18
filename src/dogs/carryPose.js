@@ -16,7 +16,7 @@ export const CARRY = {
   // ursinho: mordido pela barriga, atravessado e pendendo para o lado (como a pantufa)
   bear: { open: 0.7, pos: [0.03, -0.035, 0.016], rot: [0.1, 0.12, -0.42] },
   // frisbee: mordido pela borda, o disco à frente do focinho, um pouco inclinado para baixo
-  frisbee: { open: 0.42, pos: [0, -0.024, 0.01], rot: [0.32, 0, 0] },
+  frisbee: { open: 0.42, pos: [0, -0.03, 0.01], rot: [0.85, 0, 0] },
 };
 
 /**

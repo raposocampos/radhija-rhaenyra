@@ -62,15 +62,17 @@ export function createDog(kind) {
         `#include <color_fragment>
         diffuseColor.rgb *= mix(1.0, 0.7, uWet);
         gMud = mudMask(vMudP);
-        diffuseColor.rgb = mix(diffuseColor.rgb, mix(MUD_WET, MUD_DRY, 0.3), gMud * 0.95);`,
+        diffuseColor.rgb = mix(diffuseColor.rgb, mudColor(vMudP), gMud * 0.96);`,
       )
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.36, gMud);')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.2, gMud * (0.4 + 0.6 * mudCore));')
+      // o brilho aveludado do pelo (sheen) deixaria a lama acinzentada: some onde há lama
+      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_SHEEN\n material.sheenColor *= 1.0 - gMud;\n#endif')
       .replace(
         '#include <emissivemap_fragment>',
         '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * (vec3(0.16, 0.12, 0.08) * (1.0 - 0.45 * uWet) + 0.1 * uShine);',
       );
   };
-  skinMat.customProgramCacheKey = () => 'dogSkin_v3';
+  skinMat.customProgramCacheKey = () => 'dogSkin_v4';
   const furMat = createFurMaterial({ strandFreq: P.strandFreq / s, gravity: 0.32, mud: mudU });
   const bodyMesh = new THREE.SkinnedMesh(G.bodyGeo, skinMat);
   const earMesh = new THREE.SkinnedMesh(G.earGeo, skinMat);

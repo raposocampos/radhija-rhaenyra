@@ -27,7 +27,7 @@ const FOLLOW_HOLD = 0.6; // s que a nova companheira espera (olhando) antes de s
 const STAY_SOFT_PEN = 0.1; // penetração máxima da líder numa companheira em "Fica" (obstáculo macio)
 // Lambe-Lambe: a Rhaenyra para a LICK_DIST m do ponto lambido (a cabeça dela encosta na irmã), chega lá em
 // até LICK_APPROACH s e desiste se a irmã ficar a mais de LICK_GIVEUP m desse lugar.
-const LICK_DIST = 0.47;
+const LICK_DIST = 0.5;
 const LICK_APPROACH = 0.8;
 const LICK_GIVEUP = 0.7;
 const LICK_SOLO = 0.3; // cada lambidinha no próprio focinho (ninguém por perto)
@@ -583,10 +583,13 @@ export function createGame({ engine, dogs, levels, params }) {
       ci = { dx: 0, dz: 0, speed: 0, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
       resetBrain(brains[compName]);
     } else if (licked) {
-      // Recebendo o Lambe-Lambe: para onde está, vira a cabeça para a irmã e fecha os olhos a cada lambida.
+      // Recebendo o Lambe-Lambe: para onde está, vira a cabeça um pouco para a irmã (sem esconder o lugar
+      // lambido) e fecha os olhos a cada lambida.
       const hx = A.x + Math.sin(A.yaw) * 0.4;
       const hz = A.z + Math.cos(A.yaw) * 0.4;
-      ci = { dx: 0, dz: 0, speed: 0, action: lick.stage === 'licking' ? 'licked' : 'none', lookAt: { x: hx, y: 0.42, z: hz } };
+      const fx = C.x + Math.sin(C.yaw) * 0.7;
+      const fz = C.z + Math.cos(C.yaw) * 0.7;
+      ci = { dx: 0, dz: 0, speed: 0, action: lick.stage === 'licking' ? 'licked' : 'none', lookAt: { x: fx + (hx - fx) * 0.4, y: 0.4, z: fz + (hz - fz) * 0.4 } };
       resetBrain(brains[compName]);
     } else if (stay[compName]) {
       ci = stayIntent(brains[compName], C, A, dt);

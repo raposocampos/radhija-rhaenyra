@@ -126,10 +126,16 @@ try {
     await shot(`06-lambe-lambe-${k + 1}`, faceCam);
   }
   await shot('07-lambe-lambe-de-lado', { pos: [C.x + 0.35, 0.75, C.z + 1.15], look: [C.x + 0.1, 0.3, C.z - 0.3] });
-  // 8. a lama saindo em placas (meio do caminho) e limpinha (brilho + sacudida)
+  // 8. a lama saindo em placas, vista do lado do corpo, no começo, depois de 3 e de 4 lambidas; e limpinha (sacudida + brilho)
+  const bodyCam = { pos: [C.x - 0.05, 0.5, C.z + 1.25], look: [C.x, 0.24, C.z - 0.05] };
+  await shot('08a-lama-comeco', bodyCam);
   await until((i) => i.lambe.mud.radhija.k <= 0.41, 600);
   await step(10);
+  await shot('08b-lama-3-lambidas', bodyCam);
   await shot('08-lama-saindo', faceCam);
+  await until((i) => i.lambe.mud.radhija.k <= 0.21, 600);
+  await step(10);
+  await shot('08c-lama-4-lambidas', bodyCam);
   await until((i) => i.lambe.mud.radhija.k === 0, 600);
   await page.keyboard.up('KeyR');
   await step(8);

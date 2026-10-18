@@ -32,13 +32,23 @@ function concreteTexture() {
 }
 
 /** Terreno do morrinho: retângulo de cantos arredondados que sobe em domo até `height`. */
-function moundGeometry(M) {
+function moundGeometry(M, T) {
+  const outerR = T.r + T.wall;
   const ex = 0.32; // a grama desce um pouco além do retângulo (como em moundHeight)
   const geo = new THREE.PlaneGeometry((M.hx + ex) * 2, (M.hz + ex) * 2, 46, 56).rotateX(-Math.PI / 2);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     // domo de cantos arredondados com ondulação de terreno (moundHeight), afundado 1 cm na borda
-    p.setY(i, moundHeight(M, p.getX(i), p.getZ(i)) - 0.01);
+    const x = p.getX(i), z = p.getZ(i);
+    let y = moundHeight(M, x, z) - 0.01;
+    // a manilha atravessa o morrinho: onde a grama ficaria abaixo do topo do tubo, ela afunda (o tubo
+    // aparece saindo do barranco e, olhando pela boca, não há grama dentro dele)
+    const wx = M.x + x, dz = M.z + z - T.z;
+    if (wx > T.x0 - 0.03 && wx < T.x1 + 0.03 && Math.abs(dz) < outerR + 0.01) {
+      const top = T.r + Math.sqrt(Math.max(0, outerR * outerR - dz * dz));
+      if (y < top + 0.012) y = -0.08;
+    }
+    p.setY(i, y);
   }
   geo.computeVertexNormals();
   const dark = new THREE.Color('#3f6a2a'), mid = new THREE.Color('#5f8c38'), light = new THREE.Color('#93b551'), soil = new THREE.Color('#5b4732');
@@ -94,11 +104,12 @@ function mudGeometry(T, x0, x1) {
 /** @param {THREE.Group} root @param {import('../../../types').LevelLayout} layout */
 export function buildTunnel(root, layout) {
   const M = layout.MOUND, T = layout.TUNNEL;
+  const outerR = T.r + T.wall;
   const group = new THREE.Group();
   group.name = 'morrinho-tunel';
   // morrinho
   const moundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-  const mound = new THREE.Mesh(moundGeometry(M), moundMat);
+  const mound = new THREE.Mesh(moundGeometry(M, T), moundMat);
   mound.position.set(M.x, 0, M.z);
   mound.receiveShadow = true;
   mound.castShadow = true;
@@ -112,7 +123,8 @@ export function buildTunnel(root, layout) {
     const h = moundHeight(M, lx, lz);
     if (h < 0.03) continue;
     const wx = M.x + lx, wz = M.z + lz;
-    if (Math.abs(wz - T.z) < T.r + 0.12 && (wx < T.x0 + 0.5 || wx > T.x1 - 0.5)) continue;
+    // nada de tufos onde a grama afundou para o tubo aparecer (perto das bocas)
+    if (Math.abs(wz - T.z) < outerR + 0.08 && h < T.r + outerR + 0.06) continue;
     tufts.push({ x: wx, y: h - 0.015, z: wz, s: 0.8 + r() * 0.7, a: r() * Math.PI * 2 });
   }
   group.add(tuftMesh(tufts, 'grama-do-morrinho'));
@@ -128,7 +140,6 @@ export function buildTunnel(root, layout) {
   // manilha (concreto) com a bolsa nas duas bocas
   const conc = mat('f7-concrete', () => new THREE.MeshStandardMaterial({ color: '#d8d4cb', map: concreteTexture(), roughness: 0.88, bumpMap: plasterTexture(), bumpScale: 0.8 }));
   const concIn = mat('f7-concrete-in', () => new THREE.MeshStandardMaterial({ color: '#8f8b82', map: concreteTexture(), roughness: 0.75, side: THREE.FrontSide }));
-  const outerR = T.r + T.wall;
   const pipe = new THREE.Group();
   pipe.name = 'manilha';
   pipe.position.set(0, T.r, T.z);

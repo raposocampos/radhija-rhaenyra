@@ -100,14 +100,14 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
           if (a < 0.02) discard;
           diffuseColor.a = a;
           diffuseColor.rgb *= mix(0.8, 1.06, h) * mix(1.0, 0.7, uWet);
-          // lama: escura e molhada na raiz, mais clara (secando) nas pontas
-          vec3 mudC = mix(MUD_WET, MUD_DRY, smoothstep(0.3, 1.0, h) * 0.55 + 0.2 * fnoise(q * 0.5));
-          diffuseColor.rgb = mix(diffuseColor.rgb, mudC, gMud * 0.94);
+          // lama: escura e molhada no miolo da placa, as pontas dos fios um pouco mais claras (secando)
+          vec3 mudC = mudColor(vRest) * mix(1.0, 1.35, smoothstep(0.4, 1.0, h));
+          diffuseColor.rgb = mix(diffuseColor.rgb, mudC, gMud * 0.95);
         }`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
-        '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.4, gMud);',
+        '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.24, gMud * (0.4 + 0.6 * mudCore));',
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -120,6 +120,6 @@ export function createFurMaterial({ strandFreq = 400, gravity = 0.35, base = 0.0
         }`,
       );
   };
-  mat.customProgramCacheKey = () => 'dogFurShells_v3';
+  mat.customProgramCacheKey = () => 'dogFurShells_v4';
   return mat;
 }

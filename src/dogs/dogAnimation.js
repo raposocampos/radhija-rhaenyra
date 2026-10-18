@@ -402,15 +402,15 @@ export function createDogAnimation(ctx) {
     const turnRoll = w.turn * (tu < 0.72 ? lerp(-0.42, 0.48, sstep(0, 0.72, tu)) : lerp(0.48, -0.42, sstep(0.72, 1, tu)));
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
     const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
-      + lk * (0.14 + 0.22 * lIn - 0.14 * lSweep * lExt) - ls * 0.1 - lr * 0.07 - w.slide * 0.2;
+      + lk * (0.14 + 0.3 * lIn - 0.22 * lSweep * lExt) - ls * 0.1 - lr * 0.09 - w.slide * 0.2;
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
     const lickYaw = lk * lSide * 0.08 * lSweep - lr * lSide * 0.1;
     qE(_q, bodyPitchW * 0.35 + neckPitch, st.lookYaw * 0.45 + shake * 0.3 + shk(0.5) * 0.25 + lickYaw * 0.4, shk(0.5) * 0.3 + turnRoll * 0.3);
     setWorld(BI.neck, _q);
     const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12
-      + lk * (0.2 * lIn - 0.52 * lSweep * lExt) - ls * (0.18 + 0.25 * lSweep * lExt) - lr * 0.28 - w.slide * 0.12;
+      + lk * (0.28 * lIn - 0.75 * lSweep * lExt) - ls * (0.18 + 0.25 * lSweep * lExt) - lr * 0.34 - w.slide * 0.12;
     const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 + w.proud * 0.12
-      + lk * lSide * 0.16 * (0.35 + 0.65 * lExt) + ls * lSide * 0.08 - lr * lSide * 0.24;
+      + lk * lSide * 0.2 * (0.35 + 0.65 * lExt) + ls * lSide * 0.08 - lr * lSide * 0.3;
     qE(_q, headPitch, st.lookYaw + shake + shk(0) * 0.35 + lickYaw, headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
     setWorld(BI.head, _q);
     fk(BI.jaw);
@@ -431,9 +431,9 @@ export function createDogAnimation(ctx) {
         const L1 = lickTongue.length * (lSolo ? 0.42 : 0.55) * lt;
         const L2 = lickTongue.length * (lSolo ? 0.38 : 0.5) * lt;
         const wd = lickTongue.width * (0.8 + 0.2 * lt);
-        lickTongue.base.scale.set(wd, 0.0075 * s, Math.max(1e-4, L1));
+        lickTongue.base.scale.set(wd, 0.009 * s, Math.max(1e-4, L1));
         lickTongue.tipPivot.position.set(0, 0, L1 * 0.86);
-        lickTongue.tip.scale.set(wd * 0.92, 0.0068 * s, Math.max(1e-4, L2));
+        lickTongue.tip.scale.set(wd * 0.92, 0.008 * s, Math.max(1e-4, L2));
         lickTongue.root.rotation.set(lSolo ? lerp(0.5, -1.1, lSweep) : lerp(0.95, 0.38, lt) - 0.6 * lSweep, 0, lSolo ? 0 : lSide * 0.12 * lSweep);
         lickTongue.tipPivot.rotation.x = -(lSolo ? 0.5 + 1.1 * lSweep : 0.25 + 0.95 * lSweep);
       }

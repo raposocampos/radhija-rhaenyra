@@ -74,7 +74,7 @@ export function createDogFace({ headBone, toHead, design, s, P }) {
 
   // Língua do Lambe-Lambe: sai da boca em dois gomos (base e ponta) que a animação estica e enrola para cima.
   // Os gomos são elipsoides que começam no pivô (z = 0) e vão até z = 1 antes da escala.
-  const lickMat = new THREE.MeshPhysicalMaterial({ color: '#e0727f', roughness: 0.32, clearcoat: 0.55, clearcoatRoughness: 0.25 });
+  const lickMat = new THREE.MeshPhysicalMaterial({ color: '#ef6f86', roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.2, emissive: '#5a1420', emissiveIntensity: 0.25 });
   const lobeGeo = new THREE.SphereGeometry(0.5, 18, 12).translate(0, 0, 0.5);
   {
     // sulco no meio e borda um pouco mais fina: lê como língua, não como bala
@@ -95,7 +95,7 @@ export function createDogFace({ headBone, toHead, design, s, P }) {
   lickRoot.add(lickBase, lickTipPivot);
   lickRoot.visible = false;
   mouth.add(lickRoot);
-  const lickTongue = { root: lickRoot, base: lickBase, tipPivot: lickTipPivot, tip: lickTip, width: 0.026 * s * P.hs, length: 0.075 * s * P.hs };
+  const lickTongue = { root: lickRoot, base: lickBase, tipPivot: lickTipPivot, tip: lickTip, width: 0.032 * s * P.hs, length: 0.11 * s * P.hs };
 
   return { eyes, lip, tongue, mouthW, lickTongue };
 }
