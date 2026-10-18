@@ -482,8 +482,8 @@ página ocupar a tela inteira (`requestFullscreen` só vale para vídeo): lá a 
 (`public/manifest.webmanifest` com `display: standalone` e `display_override: [fullscreen, standalone]`, metas
 `apple-mobile-web-app-*` e `viewport-fit=cover` no `index.html`). Fora dele, `src/ui/installHint.js` (só quando
 `needsInstallTip`: iPhone/iPad sem a API e fora do modo aplicativo) mostra uma vez um cartão sob o Jogar
-(Compartilhar → "Adicionar à Tela de Início"), uma linha no aviso de girar e um botão "Tela cheia" na pausa com o
-passo a passo. O app da tela inicial guarda o progresso à parte do Safari (o iOS separa os dados).
+(Compartilhar → "Adicionar à Tela de Início"), uma linha no aviso de girar e uma nota com o passo a passo na pausa
+(só texto: nada focável que o teclado ou o controle ativariam sem efeito). O app da tela inicial guarda o progresso à parte do Safari (o iOS separa os dados).
 `index.html` impede zoom e rolagem por gesto (`touch-action`, `overscroll-behavior`).
 Nada disso existe no PC: sem `data-mobile` e com teclado ou controle, a interface é a de sempre.
 

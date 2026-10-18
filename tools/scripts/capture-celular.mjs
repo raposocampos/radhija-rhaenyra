@@ -151,7 +151,6 @@ async function captureDevice(dev, url) {
       await step(150);
       await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
       await step(2);
-      await page.evaluate(() => document.querySelector('.rr-ios-fs').click());
       await shot('02-pausa-tela-cheia');
       await page.setViewportSize({ width: 390, height: 844 });
       await step(2);

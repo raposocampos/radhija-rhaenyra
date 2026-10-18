@@ -3,14 +3,14 @@
 // Safari, deitado e respeitando as áreas seguras). Fora dele, esta dica explica como, de três jeitos discretos:
 // - na tela inicial, um cartão sob o Jogar, uma vez só (fecha no ×, ou conta como visto ao começar a jogar deitado);
 // - no aviso de girar o celular, uma linha;
-// - na pausa, o botão "Tela cheia" mostra o passo a passo (o do Android pede a tela cheia; o iPhone não tem essa API).
+// - na pausa, uma nota curta com o passo a passo (no Android ali fica o botão Tela cheia; o iPhone não tem essa API).
+//   É só texto: nada focável que o teclado ou o controle ativariam sem efeito.
 // No PC, no Android, no iPad com tela cheia e no app da tela inicial nada disso existe (needsInstallTip).
 // Os elementos são inseridos no DOM da UI depois que ela é montada (ui.js não muda).
 import './installHint.css';
 import { events } from '../core/events.js';
 import { storageKey } from '../game/storageKey.js';
 import { needsInstallTip, readInstallEnv } from '../core/quality.js';
-import { fullscreenIcon } from './icons.js';
 
 export const INSTALL_TIP_KEY = storageKey('rr-dica-tela-inicial');
 
@@ -64,25 +64,13 @@ export function createInstallHint({ root, device, audio = null, storage = global
     rotate.appendChild(line);
   }
 
-  // 3) botão "Tela cheia" na pausa, com o passo a passo
+  // 3) na pausa, uma nota com o passo a passo (só texto)
   const settings = root.querySelector('.rr-pause__settings');
   if (settings) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'rr-btn rr-btn--soft rr-ios-fs';
-    btn.setAttribute('data-nav', '');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.innerHTML = `${fullscreenIcon()}<span>Tela cheia</span>`;
     const how = document.createElement('p');
     how.className = 'rr-ios-fs__how';
-    how.hidden = true;
-    how.innerHTML = `No iPhone, a tela cheia é pelo app da tela inicial: ${STEPS}`;
-    btn.addEventListener('click', () => {
-      audio?.play?.('uiClick');
-      how.hidden = !how.hidden;
-      btn.setAttribute('aria-expanded', String(!how.hidden));
-    });
-    settings.append(btn, how);
+    how.innerHTML = `<b class="rr-ios-tip__title">Tela cheia no iPhone:</b> ${STEPS}`;
+    settings.append(how);
   }
 
   return {

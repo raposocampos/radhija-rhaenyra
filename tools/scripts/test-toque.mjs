@@ -463,7 +463,7 @@ try {
   const ip = await iphonePage();
   let ios = await ip.evaluate(() => ({
     mark: document.querySelector('.rr').dataset.installTip ?? null, tip: document.querySelector('.rr-ios-tip')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
-    fsBtnHidden: document.querySelector('.rr-fullscreen').hidden, iosBtn: !!document.querySelector('.rr-ios-fs'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
+    fsBtnHidden: document.querySelector('.rr-fullscreen').hidden, iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
     mobile: document.querySelector('.rr').dataset.mobile ?? null,
   }));
   check(ios.mobile === 'phone' && ios.mark === '1', 'iPhone fora do app: dica ativa', ios);
@@ -484,7 +484,7 @@ try {
   await ip.reload({ waitUntil: 'load' });
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
   await ip.waitForTimeout(1500);
-  check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs')), 'recarregando: a dica não volta, o botão da pausa continua');
+  check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
   // a pausa mostra o passo a passo
   const play = await center(ip, '.rr-btn--play');
   await ip.touchscreen.tap(play.x, play.y);
@@ -495,12 +495,12 @@ try {
   await ip.touchscreen.tap(pauseBtn.x, pauseBtn.y);
   await ip.waitForFunction(() => window.__game.game.state === 'paused', null, { timeout: 30000 });
   await ip.waitForTimeout(700);
-  const how0 = await ip.evaluate(() => document.querySelector('.rr-ios-fs__how').hidden);
-  const iosFs = await center(ip, '.rr-ios-fs');
-  await ip.touchscreen.tap(iosFs.x, iosFs.y);
-  await ip.waitForFunction(() => !document.querySelector('.rr-ios-fs__how').hidden, null, { timeout: 15000 }).catch(() => {});
-  const how = await ip.evaluate(() => ({ hidden: document.querySelector('.rr-ios-fs__how').hidden, text: document.querySelector('.rr-ios-fs__how').textContent, state: window.__game.game.state }));
-  check(how0 && !how.hidden && /Adicionar à Tela de Início/.test(how.text) && how.state === 'paused', 'pausa: "Tela cheia" mostra o passo a passo', how);
+  const how = await ip.evaluate(() => {
+    const el = document.querySelector('.rr-ios-fs__how');
+    const r = el.getBoundingClientRect();
+    return { shown: getComputedStyle(el).display !== 'none' && r.height > 0, text: el.textContent, nav: !!el.closest('[data-nav]') || !!el.querySelector('[data-nav]') };
+  });
+  check(how.shown && /Adicionar à Tela de Início/.test(how.text) && !how.nav, 'pausa: nota com o passo a passo (só texto, nada focável sem efeito)', how);
   check(inView(await center(ip, '.rr-card--pause')), 'pausa com o passo a passo cabe na tela');
   await ip.screenshot({ path: 'shots/toque/13-iphone-pausa.png' });
   await ip.setViewportSize({ width: PHONE.height, height: PHONE.width });
@@ -514,7 +514,7 @@ try {
   const app = await iphonePage({ standalone: true });
   const appState = await app.evaluate(() => ({
     mark: document.querySelector('.rr').dataset.installTip ?? null, tip: !!document.querySelector('.rr-ios-tip'),
-    iosBtn: !!document.querySelector('.rr-ios-fs'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
+    iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
     mobile: document.querySelector('.rr').dataset.mobile ?? null,
   }));
   check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
