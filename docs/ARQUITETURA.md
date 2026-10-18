@@ -394,7 +394,8 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã por perto vira a cara.
 - **Animações do cenário**: `extras` na definição da fase (`src/levels/faseN/extras.js`, tipo `ExtraSpot`). Com o E
   perto e de frente para o ponto, quando a fase não usou o E, a dog bebe, come, cava, cheira e espirra, focinha a
-  bola, rola, balança ou leva um esguicho. Valem sempre. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
+  bola, rola, balança ou leva um esguicho. Valem sempre, com a boca vazia (com um objeto na boca não dá para comer,
+  beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6.
 - Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.

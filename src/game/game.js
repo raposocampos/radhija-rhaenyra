@@ -645,7 +645,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
     // Interações (E: interagir ou latir · X do controle: latir sempre)
     if (input.consume('KeyE') && !lock) {
-      if (!puzzle.interact(A) && !extras.interact(A, puzzle.navFlags?.() || {})) bark(A);
+      if (!puzzle.interact(A) && !extras.interact(A, puzzle.navFlags?.() || {}, !bafo.aiming && !(bafo.blowT > 0) && !lick.on)) bark(A);
     }
     if (input.consume('Bark') && !lock) bark(A);
     const ev = puzzle.update(dt, { active: A, comp: C, ctrls, stay });

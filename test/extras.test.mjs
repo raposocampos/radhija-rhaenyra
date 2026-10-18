@@ -86,7 +86,22 @@ for (const [i, def] of LEVELS.entries()) {
   });
 }
 
-test('extras: R3 no controle também faz o cocô (e carregando algo na boca não)', async () => {
+test('extras: andando o C não começa; parada, sim', async () => {
+  const h = await createHeadlessGame({ level: 5 });
+  h.run(0.3);
+  collectAll(h);
+  h.hold([1, 0]);
+  h.run(0.6);
+  h.clearLog();
+  h.tap('KeyC');
+  assert.equal(h.log('extra:start').length, 0, 'correndo: nada');
+  h.hold(null);
+  h.run(0.8);
+  h.tap('KeyC');
+  assert.equal(h.log('extra:start').at(-1)?.kind, 'poop', 'parada: começa');
+});
+
+test('extras: R3 no controle também faz o cocô', async () => {
   const h = await createHeadlessGame({ level: 1 });
   h.run(0.3);
   collectAll(h);

@@ -55,6 +55,8 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
 
   const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
   const grounded = (c) => !(c.jumpT > 0) && !(c.wallDur > 0) && (c.y || 0) < 0.02 && !(c.dashT > 0);
+  /** Parada (no máximo um passinho): os extras não arrancam a dog do meio de uma corrida. */
+  const still = (c) => Math.abs(c.animSpeed || 0) < 0.45;
   const busy = (n) => S.poop?.who === n || S.act?.who === n;
   /** Marca um momento da sequência (uma vez). */
   const once = (set, key, cond) => {
@@ -70,7 +72,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
    */
   function tryPoop(c, { allTreats, free = true }) {
     if (S.used || S.poop || S.act || !allTreats || !free) return false;
-    if (!grounded(c) || carries(c.name)) return false;
+    if (!grounded(c) || !still(c) || carries(c.name)) return false;
     S.used = true;
     S.poop = { who: c.name, t: -POOP_PRE, x: c.x, z: c.z, yaw: c.yaw, yaw0: c.yaw, marks: new Set(), kick: 0 };
     c.v = 0;
@@ -175,9 +177,12 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     if (sp.kind === 'nudge' && hooks.ball) return { x: hooks.ball.x, z: hooks.ball.z };
     return { x: sp.x, z: sp.z };
   }
-  /** E perto de um ponto do cenário (a fase não usou o E). flags: navFlags do puzzle. → true se começou. */
-  function interact(c, flags = {}) {
-    if (S.poop || S.act || !grounded(c) || carries(c.name)) return false;
+  /**
+   * E perto de um ponto do cenário (a fase não usou o E). flags: navFlags do puzzle; free: nada em curso na dog
+   * (superbafo mirando ou soprando, Lambe-Lambe). Com a boca cheia não vale (comer, beber, cheirar). → true se começou.
+   */
+  function interact(c, flags = {}, free = true) {
+    if (!free || S.poop || S.act || !grounded(c) || carries(c.name)) return false;
     const sp = spotFor(c, flags);
     if (!sp) return false;
     const pos = spotPos(sp);
