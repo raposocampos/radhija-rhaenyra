@@ -185,7 +185,10 @@ export const CAMERA = {
   fov: 38, offset: [1.4, 4.3, 4.7], lookHeight: 0.3,
   limits: { minX: -3.8, maxX: 3.8, minZ: -2.7, maxZ: 2.5 },
   title: { center: { x: 0, z: -0.1 }, radius: 7, angle: 0.35, height: 4.4, look: { x: 0, y: 0.2, z: -0.4 } },
-  celebrate: { pos: [-2.8, 1.6, 5.1], look: [-3.85, 0.3, 2.85] },
+  // mais baixa e olhando um pouco para cima: as duas no tapete e o foguete subindo até sair do quadro
+  celebrate: { pos: [-2.7, 1.25, 5.6], look: [-3.95, 0.72, 2.95] },
+  // na vitória o olhar volta a descer: as duas no terço esquerdo, na mesma altura das outras fases
+  victoryOffset: { pos: [1.1, 0.25, 0.7], look: [1.22, -0.25, 0] },
 };
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, ROUTE_ORDER, SWITCH_SIGN, SWITCH_LEVER, TRAIN, TRACK, BARRIER,

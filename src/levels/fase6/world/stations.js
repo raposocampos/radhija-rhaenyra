@@ -330,7 +330,7 @@ export function buildStations(root) {
   function setLaunchPose() {
     const t = launchState.t;
     // treme, sobe devagar e acelera; a chama pisca
-    const rise = t < 0.6 ? 0 : (t - 0.6) * (t - 0.6) * 0.9;
+    const rise = t < 0.6 ? 0 : (t - 0.6) * (t - 0.6) * 0.4;
     rocket.position.set(t < 0.6 ? Math.sin(t * 60) * 0.006 : 0, Math.min(rise, 6), 0);
     flame.visible = launchState.on && t > 0.2;
     flame.scale.set(1, 0.8 + Math.abs(Math.sin(t * 30)) * 0.6, 1);

@@ -190,7 +190,7 @@ try {
   state = await waitFor((i) => ['celebrating', 'victory'].includes(i.state), { timeout: 8000 });
   check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'as duas cargas no foguete concluem a missão');
   check((await H.logOf('expresso:launch')).length === 1, 'o foguete decola uma vez');
-  await H.gsleep(1300);
+  await H.gsleep(1600); // tremeu, acendeu e está subindo
   await shot('06-foguete-decola.png');
   await ev(() => window.__game.game.reset());
   state = await info();
