@@ -477,7 +477,8 @@ try {
   // fechar no × some e não volta mais
   const close = await center(ip, '.rr-ios-tip__close');
   await ip.touchscreen.tap(close.x, close.y);
-  await ip.waitForTimeout(300);
+  // o clique do toque chega quando a página (desenhando no SwiftShader) fica livre: espera o efeito, não um tempo fixo
+  await ip.waitForFunction(() => !document.querySelector('.rr-ios-tip'), null, { timeout: 15000 }).catch(() => {});
   ios = await ip.evaluate(() => ({ tip: !!document.querySelector('.rr-ios-tip'), saved: localStorage.getItem('rr-dica-tela-inicial'), state: window.__game.game.state }));
   check(!ios.tip && ios.saved === '1' && ios.state === 'title', 'fechar a dica: some, fica salvo e não começa a partida', ios);
   await ip.reload({ waitUntil: 'load' });
@@ -497,7 +498,7 @@ try {
   const how0 = await ip.evaluate(() => document.querySelector('.rr-ios-fs__how').hidden);
   const iosFs = await center(ip, '.rr-ios-fs');
   await ip.touchscreen.tap(iosFs.x, iosFs.y);
-  await ip.waitForTimeout(300);
+  await ip.waitForFunction(() => !document.querySelector('.rr-ios-fs__how').hidden, null, { timeout: 15000 }).catch(() => {});
   const how = await ip.evaluate(() => ({ hidden: document.querySelector('.rr-ios-fs__how').hidden, text: document.querySelector('.rr-ios-fs__how').textContent, state: window.__game.game.state }));
   check(how0 && !how.hidden && /Adicionar à Tela de Início/.test(how.text) && how.state === 'paused', 'pausa: "Tela cheia" mostra o passo a passo', how);
   check(inView(await center(ip, '.rr-card--pause')), 'pausa com o passo a passo cabe na tela');
