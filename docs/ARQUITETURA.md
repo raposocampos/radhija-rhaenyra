@@ -565,6 +565,17 @@ quadro a quadro com `record(game => amostra)`, que roda na página a cada `reque
 suíte sai o diagnóstico `ritmo do jogo` (jogo/relógio) e a latência das leituras do estado. Para conferir: rodar uma
 suíte com carga artificial ou uma segunda instância do e2e em paralelo (cada uma sobe o próprio Vite).
 
+*Tetos de relógio* (`DEFAULT_LIMITS` no harness): o tempo de jogo só vale enquanto o jogo anda. Cada espera
+(`waitFor`, `gsleep`, `walkTo`, `hold`/`holdUntil`) reprova a suíte com `HarnessAbort` se o `simSec` ficar 30 s sem
+mudar (o jogo parou) ou se passar de max(10 s, 8 × o prazo) de relógio (anda devagar demais); cada ida ao navegador
+(`info()`, `page.evaluate`, teclado, mouse) tem 60 s. Com a aba travada, a página fica marcada e as idas seguintes
+falham na hora, para o `catch` da suíte e o `close()` terminarem logo. As etapas do `load()` dizem qual delas venceu.
+A mensagem traz a espera, a linha da suíte, o motivo e a última leitura do estado (`estado`, `fase`, `timeSec`,
+`simSec`, posição); um aborto engolido pela suíte ainda reprova no `close()`. Ajustes: `E2E_WALL_FACTOR`,
+`E2E_WALL_MIN_MS`, `E2E_STALL_MS`, `E2E_EVAL_MS`, `E2E_CLOSE_MS` ou `createHarness({ limits })`. As provas
+(jogo a 0,4× mantém o prazo de jogo; parado, lento demais e aba travada reprovam em segundos) estão em
+`tools/scripts/test-e2e-infra.mjs`, no job de infraestrutura do E2E manual.
+
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
 protocolo do navegador (`Input.dispatchTouchEvent`, com multitoque): perfil do celular, controles que aparecem com o

@@ -1,7 +1,21 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (impulso na parede). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (tetos de relógio do E2E). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: tetos de relógio no harness do E2E (Claude, 2026-10-18)
+
+- Motivo: no E2E manual `39160265826` (suíte lavanderia, 1ª tentativa) o log parou em `load('?level=fase8&play')`
+  e o job só caiu no timeout de 30 min, sem nenhum check: `page.evaluate` não tem prazo e as esperas contavam só
+  tempo de jogo. Refeita, a suíte passou 12/12 em 78 s; a causa do travamento não foi identificada.
+- Feito no branch `claude/e2e-teto-relogio` (PR para main; consultar o PR para SHA, CI e E2E):
+  `tools/scripts/lib/harness.mjs` ganhou `DEFAULT_LIMITS`/`HarnessAbort` (jogo parado 30 s ou max(10 s, 8× o
+  prazo) de relógio reprovam com diagnóstico), prazo de 60 s em cada `page.evaluate`/teclado/mouse com a página
+  marcada como travada, `holdUntil` sem a espera silenciosa, etapas do `load()` nomeadas e `close()` com prazo.
+  Provas em `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `stalled`, `slow`, `hung`).
+  Docs: ARQUITETURA (seção do E2E) e ENTREGA.
+- Nenhum teste ou build no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `todas` verdes no
+  head do PR, entregar e aguardar aprovação. Os PRs #24 e #26 recebem os tetos ao atualizar a base.
 
 ## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 

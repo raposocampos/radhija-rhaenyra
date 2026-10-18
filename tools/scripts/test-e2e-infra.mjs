@@ -47,3 +47,32 @@ test('infra E2E: asserção falha continua reprovando sem erro de console', { ti
   assert.match(result.stdout, /sem erros de console/);
   assert.match(result.stdout, /FALHOU assertion/);
 });
+
+// Tetos de relógio: o jogo lento continua em tempo de jogo; parado, lento demais ou com a aba travada, a suíte reprova
+// em segundos, dizendo qual espera, em que linha e a última leitura do estado (antes, só o timeout do workflow).
+test('infra E2E: jogo lento mas andando mantém o prazo em tempo de jogo', { timeout: 65000 }, async () => {
+  const result = await run('paced');
+  assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /2 ok, 0 falha\(s\)/);
+  assert.doesNotMatch(result.stdout, /\[harness\]/);
+});
+
+for (const [kind, label, diagnosis] of [
+  ['stalled', 'jogo parado', /waitFor\(\(\) => false, 120000 ms\) \(harness-probe\.mjs:\d+\): o jogo parou de avançar \(simSec 0 sem mudar há [\d.]+ s\).*Última leitura: estado=playing fase=prova/],
+  ['slow', 'jogo lento demais', /gsleep\(1000 ms\) \(harness-probe\.mjs:\d+\): o jogo anda devagar demais: [\d.]+ s de jogo em [\d.]+ s de relógio \(ritmo 0\.0\d+×\); prazo pedido 1 s de jogo, teto de relógio 2 s/],
+  ['hung', 'aba travada', /info\(\) \(harness-probe\.mjs:\d+\): a página não respondeu em 2 s .*Última leitura do estado, há [\d.]+ s: estado=playing/],
+]) {
+  test(`infra E2E: ${label} reprova em segundos com diagnóstico`, { timeout: 65000 }, async () => {
+    const t0 = Date.now();
+    const result = await run(kind);
+    const sec = (Date.now() - t0) / 1000;
+    assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
+    assert.equal(result.signal, null, 'não pode depender do timeout do processo');
+    assert.ok(sec < 45, `levou ${sec} s`);
+    assert.match(result.stdout, /FALHOU exceção: \[harness\] /);
+    assert.match(result.stdout, diagnosis);
+    if (kind === 'slow') assert.doesNotMatch(result.stdout, /parou de avançar/);
+    if (kind === 'hung') assert.match(result.stdout, /ok +com a página travada, a ida seguinte ao navegador falha na hora/);
+    assert.match(result.stdout, new RegExp(`FALHOU ${kind}`));
+  });
+}
