@@ -234,7 +234,7 @@ function buildShelves(root, layout) {
   // prateleira do tanque com cestinhas e uma planta pendente
   const s2 = shelf(TANK.x - TANK.hx, TANK.x + TANK.hx, 1.55);
   const y2 = 1.55 + 0.015;
-  for (const [dx, c] of [[-0.25, '#d8b48a'], [0.05, '#c99a6a']]) {
+  for (const [dx, c] of /** @type {[number, string][]} */ ([[-0.25, '#d8b48a'], [0.05, '#c99a6a']])) {
     const bk = new THREE.Mesh(rbox(0.22, 0.13, 0.18, 0.02), stdMat(c, { roughness: 0.9 }));
     bk.position.set(TANK.x + dx, y2 + 0.065, zWall + 0.13);
     s2.add(bk);

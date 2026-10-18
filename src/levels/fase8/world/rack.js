@@ -87,7 +87,7 @@ export function buildRack({ root, layout, sock }) {
   const t1 = towel('#7fb0c8', 0.3, 0.2);
   t1.position.set(-0.62, 0, -R.halfDepth / 3);
   rack.add(t1);
-  for (const [dx, c] of [[-0.12, '#3f6f78'], [0.02, '#3f6f78']]) {
+  for (const [dx, c] of /** @type {[number, string][]} */ ([[-0.12, '#3f6f78'], [0.02, '#3f6f78']])) {
     const s = smallSock(c);
     s.position.set(dx, -0.012, -R.halfDepth);
     s.rotation.y = 0.2;
