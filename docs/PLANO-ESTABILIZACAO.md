@@ -83,7 +83,7 @@ validados. O estado de publicação é registrado separadamente.
 | [x] | EST-05 | Ciclo de vida dos recursos gráficos | Executor recursos + executor medição | EST-03 integrado | PR #11 aprovado, integrado e publicado em ca8c6f2 |
 | [x] | EST-06 | Contratos entre puzzle e cenário | Executor tipos + executor testes, coordenador | EST-05 integrado para edições no núcleo | PR #12 aprovado, integrado e publicado em 597c8f2 |
 | [x] | EST-07 | Configuração comum e divisão gradual do núcleo | Executor configuração + executor eventos, coordenador | EST-03, EST-05 e EST-06 integrados | PRs #13 e #14 aprovados, integrados e publicados |
-| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | Em implementação separada |
+| [ ] | EST-08 | Medições de desempenho e protocolo para novas fases | Executor desempenho + coordenador | EST-05 e EST-06 validados | PR #16 com baseline revisada; validação final atualizada pendente |
 | [x] | EST-09 | Botão Jogar desaparece ao navegar no menu | Coordenador | Primeira etapa publicada | PR #8 aprovado, integrado e publicado em d38574a |
 
 Etapa 1: EST-01 e EST-02. Etapa 2: EST-03 e EST-04. Etapa 3: EST-05 e
@@ -91,13 +91,14 @@ revisão sem edição de EST-06. Etapa 4: implementação de EST-06. EST-07 e
 EST-08 seguem em entregas próprias, com escopo ajustado às medições.
 
 EST-00 a EST-07 e EST-09 foram publicados.
-Resta EST-08, em implementação separada. Cada versão
+Resta EST-08, com instrumento/guia no PR #16 e medições na nuvem. Cada versão
 apresentada exige aprovação própria. Áreas reservadas e checkpoints em
 `CONTEXTO.md`; cada executor registra sua entrega na própria branch.
 Planejamento da próxima fase pode avançar em paralelo sem mudar o catálogo
 principal. O conceito Expresso do Superbafo do PR #9 foi escolhido pelo usuário
-para protótipo, mantendo a direção artística existente. Implementação em
-frentes próprias, conforme CONTEXTO; nenhuma aprovação antecipada de publicação.
+para protótipo, mantendo a direção artística existente. PR #15 aprovado e
+publicado em `b954b24`, somente DEV_LEVELS. Acabamento e entrada na campanha
+permanecem para outra entrega.
 
 Os estados são: planejado, em execução, em validação, aguardando aprovação e
 publicado. Um PR com CI aprovado ainda pode aguardar E2E ou aprovação humana.
@@ -340,6 +341,20 @@ necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 ### EST-08 Desempenho e expansão
 
+Implementação no PR #16, `codex/desempenho-expansao`, base atualizada `b954b24`.
+Medição `39082606479` no head `b4a61b3` passou: oito provas da infraestrutura,
+cinco pares A/B completos, três reloads medidos por referência, 20 quadros/8 s,
+qualidade completa, desenho real e provas negativas, sem erros/warnings.
+Baseline adotada com origem preservada em `performance-baseline.json`; valores,
+dispersão, limites e ressalvas em `DESEMPENHO-REFERENCIA.md`.
+
+Protocolo `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
+no mesmo runner por fase, boot direto e reloads isolados. GC fora da janela.
+Agregação estrita; ambiente/limite fixo por fase. O instrumento inicial `0b2a329`
+passou CI, mas medição `39080397088` excedeu 25 min; não é referência válida.
+O commit combinado com a nova base e os dados precisa de CI/prévia e medição
+próprios antes da aprovação. Resultados finais no PR, sem commit só de status.
+
 - Definir cenário, qualidade gráfica e ambiente de referência para medir
   carregamento, tempo por quadro e memória; estabelecer limites após medir.
 - Documentar o protocolo de nova fase: protótipo, mecânica, ações fora de
@@ -348,7 +363,8 @@ necessidade concreta; não são requisito aberto para concluir esta rodada.
 
 Escopo fechado em um PR após #14: instrumento temporal com render normal,
 carregamento e heap JS fora das amostras temporais; duas referências no mesmo
-SHA e ambiente fixado, cinco fases, dados brutos, dispersão e limites após medir.
+SHA/build e ambiente fixado dentro de cada par, cinco fases isoladas em jobs
+paralelos, dados brutos, dispersão e limites por fase após medir.
 Reutilizar infraestrutura/identidade/qualidade do medidor de recursos; ele já
 descobre LEVELS, mas seus dois renders controlados não medem FPS. SwiftShader
 não representa GPU física. Provas negativas e medição do head final na nuvem;
@@ -403,7 +419,7 @@ head/commit `d38574a`, run `39060437829`, tentativa 1. Não repetir publicação
   no nariz mecânico do trem para trazer o objeto. Imagem conceitual apresentada;
   desenho posteriormente escolhido para protótipo, com direção artística igual
   à do jogo. `codex/prototipo-expresso` coordena cenário/testes em worktrees
-  separados, base publicada `4552e60`; somente DEV_LEVELS na primeira entrega.
+  separados. PR #15 publicado em `b954b24`; somente DEV_LEVELS nesta entrega. Acabamento, áudio e campanha continuam pendentes.
 - Definir puzzle, ações fora de ordem, dicas, reset, colisores e navegação
   sem modificar núcleo, UI, progresso ou helpers reservados à estabilização.
 - Integrar ao menu após EST-03/04; adequar recursos e contratos a EST-05/06.

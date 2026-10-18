@@ -5,77 +5,65 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
-## PR #15 — dica da bandeja em correção (2026-10-17, Codex)
+## EST-08 — referência adotada, validação final pendente (2026-10-17, Codex)
 
-Usuário aprovou o protótipo `92b9306`, base `fae8acd`, após CI `39081102987`
-(206 testes/tipos/build), E2E completo `39081100507` (334 gameplay, 4 infra,
-23 smoke, 28 recuperação) e prévia conferidos. Arte/30 comparações de recursos
-revisadas, sem erros. Aprovou como blocagem jogável; acabamento é etapa posterior.
-Antes do merge, revisão automática apontou dica falsa perto da bandeja em
-`ready`/`carrying` (comentário `4305095927`). Achado válido; PR ainda NÃO integrado.
+PR #16, branch `codex/desempenho-expansao`, worktree `desempenho-expansao`.
+Coordenador incorporou a base publicada `b954b24` (PR #15); conflitos apenas
+nos dois registros de contexto/plano, reconciliados sem alterar o runtime.
+Instrumento `b4a61b3`: CI `39082606472` aprovou 183 testes/tipos/build;
+medição `39082606479` passou oito provas da infraestrutura e cinco pares A/B,
+com três reloads medidos por referência, qualidade completa, desenho real,
+nenhum erro/warning e provas negativas corretas. Revisão dos dados por agentes
+independentes. Baseline preserva SHA/hash/run de origem, não o commit documental.
 
-Coordenador corrige somente o alcance temporal da dica `early`, com regressão
-em todos os estados e comandos reais de interação no E2E Expresso, respeitando
-cooldown. Arquivos: puzzle da fase 6, teste rápido, E2E e este checkpoint.
-Novo commit exige CI/prévia e E2E próprios; a aprovação de `92b9306` não cobre
-esta correção. Após validar, resolver a conversa com evidência e apresentar nova
-prévia para aprovação. Não pedir autorização antes de concluir a correção.
+Protocolo `isolated-level-v2`: build único, cinco jobs paralelos, A/B sequenciais
+no mesmo runner por fase e navegador novo por referência. Boot direto, um reload
+de aquecimento e três medidos, 20 quadros/8 s mínimos, simulação/render normais,
+GC/heap fora da janela e reaquecimento. Ambiente e limite fixo por fase; hardware
+pode diferir entre fases. SwiftShader não representa GPU física nem FPS do jogador.
+Detalhes, valores, dispersão e limites em `DESEMPENHO-REFERENCIA.md` e
+`performance-baseline.json`; protocolo em `DESEMPENHO.md`. Não recalibrar limites
+silenciosamente. A rodada antiga `39080397088` excedeu 25 min, não é baseline.
 
-EST-08 segue separada no PR #16, `b4a61b3`, base `fae8acd`; CI `39082606472`
-aprovado, medição `39082606479` em andamento. Referências A/B agora por fase,
-com qualidade e amostragem preservadas; detalhes na branch `codex/desempenho-expansao`.
-O run antigo `39080397088` falhou por timeout e não é baseline. Se #15 entrar
-no main, atualizar #16 antes da validação final. Nenhum teste/build local.
+Guia de novas fases cobre DEV antes do catálogo, factories estritas, contratos,
+ações inválidas, pausa/reset/descarte, progresso/hasNext, runner/workflow, arte e
+aprovação. PR #16 só altera instrumento/workflow/documentação em relação ao main.
+Nenhum teste/build local; inspeção, revisão de dados já produzidos e diff-check.
 
-## Fase 6 — protótipo combinado, validação pendente (2026-10-17, Codex)
+Próximo passo: enviar o commit combinado (base + baseline + resumo), acompanhar
+CI/prévia e medição próprios. O novo run compara com a referência fixa; ambientes
+incompatíveis impedem comparação temporal, não justificam inventar conclusão.
+Conferir head/base/version.json, registrar resultados no PR e apresentar a prévia
+para aprovação. EST-08 ainda não está publicada. Não criar commit só para informar
+o resultado do CI deste próprio checkpoint.
 
-Usuário escolheu **Expresso do Superbafo** e exigiu preservar a direção artística
-existente: maquete procedural, materiais/iluminação/escala/câmera coerentes e
-personagens intactas. A imagem conceitual é referência do puzzle. Aprovar o
-protótipo não autoriza integrar/publicar a versão jogável sem testar sua prévia.
+## PR #15 — protótipo Expresso publicado (2026-10-17, Codex)
 
-Coordenador em `codex/prototipo-expresso`, worktree `prototipo-expresso`, sobre
-`fae8acd` (PR #14 aprovado e integrado). Implementação do executor `071ec4b`,
-testes `aef928c` e fábrica headless estrita `637662d` combinados; executores em
-worktrees exclusivos `expresso-cenario` e `expresso-testes`, agora sem edições.
-Revisor independente identificou a fábrica ausente nas suítes comuns; corrigida.
-Primeiro CI `39079850415`: tipos e 205/206 testes passaram; detector visual
-achou nove faces coplanares na ferrovia/molas. Geometria corrigida em `2aac58f`;
-CI `39079922180` passou 206 testes/tipos/build. Partida Expresso no head anterior
-`8758911` passou 20/20, sem erros (job `117534395824`); infra/recursos daquele
-run `39079849755` falharam no mesmo prebuild, não são aprovados. Dica automática
-não volta a pedir pulo após escolher a estrela; regressão adicionada antes do
-E2E completo `39080061925` passou no head `95bb78d`: 333 verificações de
-gameplay, quatro de infraestrutura, 23 de smoke, 28 de recuperação; 30 amostras
-de recursos/18 medidas/30 comparações estáveis, sem erros/warnings/descarte global.
-Arte procedural revisada com capturas das seis fases, coerente com a linguagem
-existente. CI `39080064637` aprovou 206 testes/tipos/build e prévia conferida.
-Revisão visual detectou dica de bafo ainda exibindo R com controle: formatação
-compartilhada agora reconhece R (mapeamento L2/LT já existia), E2E verifica glyph
-visível. Captura adicional sem linhas de debug acompanha a revisão artística,
-sem modificar as amostras medidas. Revalidar este commit final, sem reaproveitar
-validações antigas.
+Usuário aprovou o protótipo corrigido `05e2287`, base `fae8acd`, após prévia
+`/previews/pr-15/39082917531-1/?level=fase6&play`. CI `39082917531` passou
+207 testes/tipos/build; E2E Expresso `39082921941` passou 24 verificações,
+4 de infraestrutura, 23 de smoke, 28 de recuperação e 30 comparações de recursos
+estáveis, sem erros/warnings/descarte global. Capturas das seis fases revisadas.
+A correção impede dica falsa perto da bandeja em ready/carrying e tem regressão
+nos oito estados e interação real. Conversa de revisão resolvida com evidência.
 
-Apenas `DEV_LEVELS`, acesso `?level=fase6&play`; campanha/menu/progresso principal
-preservados. Oficina, ferrovia cercada e passeio externo; Rhaenyra pousa no pedal,
-Radhija sopra frontalmente no nariz, trem espirra e traz bolinha-planeta à bandeja.
-Rota circular retorna sem perda; rota fica congelada durante a viagem. Oito
-estados, consumo/snapshot/poda de nuvens, pausa/reset/descarte e petiscos opcionais.
-17 testes da fase e oito provas negativas de tipos escritos, além das suítes
-comuns. E2E `expresso` usa comandos reais e habilita smoke/recursos das seis fases;
-`todas` inclui a nova partida. O medidor mantém a qualidade completa nas capturas.
+Integrado por squash `b954b24942fe93aa30429351f2c20fe7e41b8119`, árvore idêntica
+à aprovada. CI main `39083884706` passou; deploy `39083918751` passou após liberar
+somente o deployment `7147954364` com a aprovação do chat. Produção HTTP 200 e
+`version.json` confirmaram `b954b24` e o run do main. Não repetir merge/deploy.
 
-Limites desta entrega: espirro visual sem som exclusivo e curvas do trem por
-segmentos (vagão gira imediatamente). Acabamento, catálogo/progressão definitivos
-ficam para a entrega seguinte após revisar o protótipo. Proposta em
-PROPOSTA-FASE6.md. Somente inspeção/diff-check locais; tipos/testes/build/E2E e
-revisão das capturas serão feitos a partir do GitHub. PR #15 aberto; próximo passo: validar head atual,
-executar `todas` no head final, conferir prévia/recursos/arte.
-Resultados finais no PR, sem commit apenas para atualizar status do próprio CI.
+Acesso `?level=fase6&play`, somente `DEV_LEVELS`; cinco fases da campanha intactas.
+Oficina procedural na direção artística existente. Rhaenyra pousa no pedal para
+escolher trilho; Radhija sopra no nariz do trem, que espirra e traz a bolinha-planeta.
+Rota circular permite repetir; rota congelada em movimento. Oito estados, controle
+de nuvens, pausa/reset/descarte e petiscos opcionais. 18 testes da fase e oito
+provas negativas de tipos; suíte expresso também pertence ao E2E completo.
 
-EST-08 iniciou em paralelo no worktree/branch `desempenho-expansao` /
-`codex/desempenho-expansao`, base `fae8acd`: instrumento/workflow próprios e guia
-para novas fases. Não editar seus arquivos; coordenador revisará commit e medições.
+Limites aprovados: blocagem jogável, espirro visual sem som exclusivo, curvas
+segmentadas com giro imediato do vagão. Próxima entrega: acabamento da oficina,
+animações/som e, depois de validar, entrada no catálogo/progressão. Manter arte
+coerente com o jogo. Proposta do PR #9 incorporada em `PROPOSTA-FASE6.md`.
+A aprovação/publicação de #15 não cobre #16 nem acabamento futuro.
 
 ## EST-07A — configuração publicada (2026-10-17, Codex)
 
@@ -547,9 +535,12 @@ Produção HTTP 200 e `version.json` confirmou head/commit `d38574a`, run
    estado remoto, preservando alterações existentes.
 2. Se precisar confirmar a última entrega, localizar o CI pelo SHA atual no
    GitHub. Não confundir um workflow anterior aprovado com o commit atual.
-3. PRs #1 a #8 e #10 a #14 integrados/publicados. Evidências #14 no bloco
-   acima. Validar protótipo Expresso e EST-08 em branches separados; cada versão
-   precisa de aprovação própria. PR #9 conserva a proposta original, incorporada
-   ao protótipo. Respeitar áreas reservadas; não instalar ai-memory.
+3. PRs #1 a #8 e #10 a #15 integrados e publicados. Produção confirmada em
+   `b954b24`, deploy `39083918751`; não repetir merge/deploy. O Expresso é
+   protótipo DEV, acabamento/áudio/campanha são uma próxima entrega.
+   PR #16 executa EST-08: baseline adotada de `b4a61b3`/`39082606479`; validar
+   o commit final atualizado e apresentar prévia para aprovação própria.
+   PR #9 contém a proposta já incorporada. Não reutilizar aprovação anterior
+   nem tratar medição parcial como referência. Não instalar ai-memory.
 4. Ao receber uma tarefa, atualizar este documento com o novo objetivo e,
    durante a execução, manter um ponto de retomada útil ao outro agente.
