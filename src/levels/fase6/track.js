@@ -77,7 +77,8 @@ function makePath(name, segments, closed) {
     name, closed, length, segments, start, end,
     /** @param {number} s @param {{ x: number, z: number, dx: number, dz: number }} [out] */
     at(s, out = { x: 0, z: 0, dx: 0, dz: 0 }) {
-      if (closed) s = ((s % length) + length) % length;
+      // só normaliza fora do circuito: dentro dele, s fica exato (a bolinha parada cai em BALL sem resíduo)
+      if (closed && (s < 0 || s >= length)) s = ((s % length) + length) % length;
       else if (s <= 0 || s >= length) {
         // além das pontas: segue reto (o vagão para no trilho do para-choque, depois do fim da entrega)
         const p = s <= 0 ? start : end;

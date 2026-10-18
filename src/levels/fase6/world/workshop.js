@@ -345,10 +345,11 @@ export function buildWorkshop(root) {
   }
   const tape = add(tools, new THREE.TorusGeometry(0.05, 0.025, 8, 20), stdMat('#e8d9b4', { roughness: 0.8 }), 0.66, 1.62, 0);
   tape.scale.z = 0.8;
-  const spool = add(tools, new THREE.CylinderGeometry(0.045, 0.045, 0.06, 14), stdMat('#c8553d', { roughness: 0.9 }), 0.88, 1.6, 0);
+  // carretel 2 cm para a frente: a aba de trás fica 7 mm à frente do painel (sem plano em comum)
+  const spool = add(tools, new THREE.CylinderGeometry(0.045, 0.045, 0.06, 14), stdMat('#c8553d', { roughness: 0.9 }), 0.88, 1.6, 0.02);
   spool.rotation.x = Math.PI / 2;
   for (const s of [-1, 1]) {
-    const flange = add(tools, new THREE.CylinderGeometry(0.058, 0.058, 0.008, 14), handleMat, 0.88, 1.6, s * 0.034);
+    const flange = add(tools, new THREE.CylinderGeometry(0.058, 0.058, 0.008, 14), handleMat, 0.88, 1.6, 0.02 + s * 0.034);
     flange.rotation.x = Math.PI / 2;
   }
   // rodas de trenzinho penduradas num pino
