@@ -11,7 +11,10 @@ import { PAD } from '../src/game/input.js';
 
 const ex = (h) => h.info().extras;
 
-/** Pega os ossinhos da fase levando a dog ativa (e, se precisar, a outra) até cada um. */
+/**
+ * Pega os ossinhos da fase levando a dog ativa (e, se precisar, a outra) até cada um; depois as duas voltam ao
+ * começo da fase (longe de irrigador, lama e gansa, que travam a dog e impedem o cocô).
+ */
 function collectAll(h) {
   for (const c of h.layout.COLLECTIBLES) {
     for (const name of [h.info().activeDog, h.info().activeDog === 'radhija' ? 'rhaenyra' : 'radhija']) {
@@ -22,6 +25,11 @@ function collectAll(h) {
       if (h.info().collected > before) break;
     }
   }
+  for (const n of ['radhija', 'rhaenyra']) {
+    const st = h.layout.DOGS[n].start;
+    h.teleport(n, st.x, st.z, st.yaw);
+  }
+  h.run(1.2); // seca, assenta e para
   return h.info().collected;
 }
 
@@ -160,12 +168,17 @@ for (const [i, def] of LEVELS.entries()) {
       if (sp.kind !== 'swing' && sp.kind !== 'spurt') assert.equal(h.dogs[who].anim.extra?.kind, sp.kind, `${sp.id}: animação`);
       assert.ok(h.run(dur, { until: () => !ex(h).act }), `${sp.id}: terminou`);
       assert.equal(h.log('extra:end').at(-1)?.kind, sp.kind);
-      assert.equal(h.log('hint').length, 0, `${sp.id}: nenhum texto`);
       assert.ok(!h.world.overlaps(h.ctrls[who].x, h.ctrls[who].z, h.ctrls[who].r * 0.9, h.ctrls[who].size), `${sp.id}: termina fora dos colisores`);
       assert.equal(h.ctrls[who].y || 0, 0, `${sp.id}: de volta ao chão`);
     }
   });
 }
+
+test('extras: o módulo nunca mostra texto (dica, prompt ou objetivo)', () => {
+  const src = readFileSync('src/game/extras.js', 'utf8');
+  assert.doesNotMatch(src, /emit\('(hint|objective|prompt)'/, 'extras.js não emite dica nem objetivo');
+  assert.doesNotMatch(src, /setPrompt|hints\./, 'extras.js não usa prompts nem dicas');
+});
 
 test('extras: nada no jogo nem no README cita o segredo', () => {
   const texts = [readFileSync('README.md', 'utf8'), readFileSync('index.html', 'utf8')];
