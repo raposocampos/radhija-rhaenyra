@@ -99,17 +99,21 @@ test('infra E2E: operação sem retorno apesar do prazo encerra a suíte com dia
   assert.match(result.stdout, /FALHOU stuck/);
 });
 
-// Hipótese dos travamentos no primeiro load() (lavanderia, expresso): a aba cai e o Playwright deixa a espera pendente.
-test('infra E2E: aba que cai no meio do load() reprova na hora, dizendo que caiu', { timeout: 65000 }, async () => {
+// Os travamentos no primeiro load() (lavanderia, expresso): a página abre, window.__game nunca aparece e a espera do
+// Playwright não vence. Com a aba derrubada no meio da espera, no CI, o Playwright não avisou a queda: a suíte precisa
+// reprovar em segundos mesmo assim, dizendo que a aba caiu ou que a página não responde.
+test('infra E2E: aba que cai no meio do load() reprova em segundos, com o motivo', { timeout: 65000 }, async () => {
   const t0 = Date.now();
   const result = await run('crash');
   const sec = (Date.now() - t0) / 1000;
   const out = `${result.stdout}\n${result.stderr}`;
   assert.equal(result.code, 1, out);
   assert.equal(result.signal, null, out);
-  assert.match(result.stdout, /\[harness\] a aba do navegador caiu \(crash do renderer\)/, out);
-  assert.match(result.stdout, /FALHOU exceção: \[harness\] load\('\?sem-jogo'\): [^(]+ \(harness-probe\.mjs:\d+\): a aba do navegador caiu \(crash do renderer\)/, out);
-  assert.ok(sec < 15, `levou ${sec} s (antes do prazo de 120 s do Playwright e do opMaxMs de 20 s)\n${out}`);
+  assert.match(result.stdout, new RegExp([
+    String.raw`FALHOU exceção: \[harness\] load\('\?sem-jogo'\): [^(]+ \(harness-probe\.mjs:\d+\): a aba do navegador caiu \(crash do renderer\)`,
+    String.raw`FALHOU \[harness\] load\('\?sem-jogo'\): esperar window\.__game sem retorno há [\d.]+ s, .*Agora: (a página não respondeu à leitura do estado em 5 s|a leitura do estado falhou)`,
+  ].join('|')), out);
+  assert.ok(sec < 25, `levou ${sec} s (o prazo de 120 s do Playwright não pode ser o que encerra)\n${out}`);
   assert.match(result.stdout, /FALHOU crash/, out);
 });
 

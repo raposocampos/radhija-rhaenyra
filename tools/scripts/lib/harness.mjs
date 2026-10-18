@@ -22,8 +22,9 @@ export const DEFAULT_LIMITS = {
   evalMs: 60000, // E2E_EVAL_MS: cada ida ao navegador (info(), page.evaluate, teclado, mouse)
   closeMs: 30000, // E2E_CLOSE_MS: fechar o navegador no fim
   // E2E_OP_MAX_MS: uma operação em curso (etapa do load(), captura, ida ao navegador) sem retorno por esse tempo, apesar
-  // dos prazos próprios (120 s do Playwright, evalMs), encerra o processo da suíte com diagnóstico
-  opMaxMs: 240000,
+  // dos prazos próprios (120 s do Playwright, evalMs), encerra o processo da suíte com diagnóstico. É o que pega a aba
+  // que caiu no CI: o Playwright não avisa a queda e deixa waitForFunction pendente para sempre.
+  opMaxMs: 150000,
 };
 const LIMIT_ENV = {
   wallFactor: 'E2E_WALL_FACTOR', wallMinMs: 'E2E_WALL_MIN_MS', stallMs: 'E2E_STALL_MS', evalMs: 'E2E_EVAL_MS', closeMs: 'E2E_CLOSE_MS', opMaxMs: 'E2E_OP_MAX_MS',
@@ -150,8 +151,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   // quando; o log ganha "ainda aguardando" a cada minuto; passado opMaxMs, o processo sai com diagnóstico (o prazo
   // próprio da operação não funcionou). Se nem este relógio rodar (event loop bloqueado, máquina sem CPU), o runner
   // vê o silêncio e o sinal parado, e encerra a suíte de fora.
-  // A aba (renderer) ou o navegador caiu: o Playwright deixa page.evaluate e waitForFunction pendentes para sempre,
-  // sem vencer o próprio prazo. Toda operação em curso corre contra este sinal e falha na hora, dizendo o motivo.
+  // A aba (renderer) ou o navegador caiu e o Playwright avisou: toda operação em curso corre contra este sinal e falha
+  // na hora, dizendo o motivo. No CI, uma aba derrubada com chrome://crash NÃO gerou o aviso (prova "crash"): a espera
+  // ficou pendente e quem a encerrou foi o opMaxMs, dizendo que a página não respondia.
   const LOST = Symbol('lost');
   let lost = null;
   let closing = false;

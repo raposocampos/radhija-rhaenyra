@@ -574,10 +574,11 @@ o motivo e a última leitura do estado (`estado`, `fase`, `timeSec`, `simSec`, p
 suíte ainda reprova no `close()`. Já o jogo que anda devagar demais NÃO reprova: em max(10 s, 8 × o prazo) de
 relógio a espera termina, como sempre terminou, e sai um aviso `[harness] aviso: ... terminou pelo teto de relógio`
 (depois de `ui:restart`, o SwiftShader recompila a cena e o jogo chega a andar 0,03 s em 10 s; a partida segue).
-Se a aba cair (`crash` do renderer) ou o navegador desconectar, toda operação em curso falha na hora com esse motivo:
-o Playwright deixaria `page.evaluate` e `waitForFunction` pendentes para sempre, sem vencer o próprio prazo.
-Por fim, duas redes para quando nem esses prazos funcionam: uma operação em curso (etapa do `load()`, captura) que
-passa de 4 min encerra o processo da suíte com diagnóstico (o log já ganha "ainda aguardando ..." a cada minuto); e
+Se o Playwright avisar que a aba caiu (`crash`) ou que o navegador desconectou, toda operação em curso falha na hora
+com esse motivo. Mas, no CI, uma aba derrubada no meio do `load()` não gerou esse aviso: o `waitForFunction` ficou
+pendente sem vencer os próprios 120 s, como nos travamentos reais da lavanderia e do `expresso`. Por isso as duas
+redes finais: uma operação em curso (etapa do `load()`, captura) que passa de 150 s encerra o processo da suíte com
+diagnóstico, dizendo se a página ainda responde (o log já ganha "ainda aguardando ..." a cada minuto); e
 o runner (`tools/scripts/lib/suite-runner.mjs`) encerra, de fora, uma suíte que fica 5 min sem escrever nada (o
 maior silêncio normal no CI é de 91 s), com o navegador. Pelo canal IPC, o harness manda a cada 2 s o que está em
 curso e a última leitura do estado; no diagnóstico, o runner diz se esse sinal parou (event loop bloqueado ou sem

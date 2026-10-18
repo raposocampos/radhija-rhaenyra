@@ -15,7 +15,7 @@ const LIMITS = {
   slow: { wallFactor: 2, wallMinMs: 1000 },
   hung: { evalMs: 2000, closeMs: 10000 },
   stuck: { opMaxMs: 3000 }, // a navegação tem 120 s de prazo; aqui o harness desiste antes, como se o prazo falhasse
-  crash: { opMaxMs: 20000 }, // rede de segurança da própria prova: a queda da aba precisa encerrar bem antes
+  crash: { opMaxMs: 5000 }, // sem o aviso de queda do Playwright, é o opMaxMs que encerra a espera pendente
 };
 
 if (args.runner) {
