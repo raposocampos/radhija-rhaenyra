@@ -10,12 +10,13 @@ import { createHeadlessGame } from './helpers/headless.mjs';
 
 const ids = (levels) => levels.map((def) => def.id);
 
-test('campanha: as sete fases em ordem, numeradas 1…7, com cenário sob demanda', () => {
-  assert.deepEqual(ids(LEVELS), ['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7']);
+test('campanha: as oito fases em ordem, numeradas 1…8, com cenário sob demanda', () => {
+  assert.deepEqual(ids(LEVELS), ['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7', 'fase8']);
   LEVELS.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: número do cartão = posição no menu`));
   for (const def of LEVELS.slice(5)) assert.equal(typeof def.load, 'function', `${def.id}: world/ continua num chunk à parte`);
   assert.equal(LEVELS.find((def) => def.id === 'fase6').name, 'Expresso do Superbafo');
   assert.equal(LEVELS.find((def) => def.id === 'fase7').name, 'Lambe-Lambe na Pracinha');
+  assert.equal(LEVELS.find((def) => def.id === 'fase8').name, 'Lavanderia de Domingo');
 });
 
 test('catálogo: nenhum id repetido entre a campanha e as fases de desenvolvimento', () => {
@@ -28,10 +29,12 @@ test('links: ?level= por posição e por id abrem a fase publicada; outro id fic
   // links das fases promovidas, publicados enquanto eram protótipos
   assert.equal(publishedLevelIndex(LEVELS, 'fase6'), 5);
   assert.equal(publishedLevelIndex(LEVELS, 'fase7'), 6);
+  assert.equal(publishedLevelIndex(LEVELS, 'fase8'), 7);
   // posição 1-based, limitada à lista, como antes
   assert.equal(publishedLevelIndex(LEVELS, '6'), 5);
   assert.equal(publishedLevelIndex(LEVELS, '7'), 6);
-  assert.equal(publishedLevelIndex(LEVELS, '99'), 6);
+  assert.equal(publishedLevelIndex(LEVELS, '8'), 7);
+  assert.equal(publishedLevelIndex(LEVELS, '99'), 7);
   assert.equal(publishedLevelIndex(LEVELS, '0'), 0);
   assert.equal(publishedLevelIndex(LEVELS, ''), 0);
   assert.equal(publishedLevelIndex(LEVELS, null), 0);
@@ -62,10 +65,10 @@ test('arenas: entram sozinhas no fim da campanha; protótipos futuros entram jun
   assert.equal(devCatalog(LEVELS, 'nada'), null);
   // protótipos de exemplo com número depois da última publicada (a próxima fase nova seguirá este caminho)
   const proto = (id, number) => ({ ...DEV_LEVELS[2], id, number });
-  const dev = [...DEV_LEVELS, proto('fase9', 9), proto('fase8', 8)];
-  for (const [id, index] of [['fase8', 7], ['fase9', 8]]) {
+  const dev = [...DEV_LEVELS, proto('fase10', 10), proto('fase9', 9)];
+  for (const [id, index] of [['fase9', 8], ['fase10', 9]]) {
     const catalog = devCatalog(LEVELS, id, dev);
-    assert.deepEqual(ids(catalog.levels), [...published, 'fase8', 'fase9'], `${id}: o menu da prévia mostra as fases 8 e 9`);
+    assert.deepEqual(ids(catalog.levels), [...published, 'fase9', 'fase10'], `${id}: o menu da prévia mostra as fases 9 e 10`);
     assert.equal(catalog.index, index, `${id}: começa na fase pedida`);
     catalog.levels.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: numeração em sequência no menu`));
   }
@@ -73,16 +76,16 @@ test('arenas: entram sozinhas no fim da campanha; protótipos futuros entram jun
   assert.deepEqual(ids(LEVELS), published, 'a campanha publicada não muda');
 });
 
-test('campanha: fases 5 e 6 oferecem a próxima; a 7 é a última', async () => {
+test('campanha: fases 5, 6 e 7 oferecem a próxima; a 8 é a última', async () => {
   const h = await createHeadlessGame({ level: 5, mode: 'title' });
   const loaded = [];
   const off = h.events.on('level:loaded', (info) => loaded.push(info));
   try {
-    for (const index of [4, 5, 6]) assert.equal(await h.game.loadLevel(index, { mode: 'title', initial: true }), true);
+    for (const index of [4, 5, 6, 7]) assert.equal(await h.game.loadLevel(index, { mode: 'title', initial: true }), true);
   } finally {
     off?.();
   }
   assert.deepEqual(loaded.map((info) => [info.id, info.number, info.count, info.hasNext]), [
-    ['fase5', 5, 7, true], ['fase6', 6, 7, true], ['fase7', 7, 7, false],
+    ['fase5', 5, 8, true], ['fase6', 6, 8, true], ['fase7', 7, 8, true], ['fase8', 8, 8, false],
   ]);
 });

@@ -178,6 +178,65 @@ export function boneGeometry() {
 }
 
 /**
+ * Meia listrada de algodão (≈ len de comprimento do punho à ponta), em pé: o punho canelado em cima (y = 0, onde o
+ * pregador e a boca seguram), o cano listrado descendo e o pé dobrado para a frente (+Z), com a ponta
+ * creme. Malha macia: tubo por um caminho com curva (TubeGeometry), listras numa textura de canvas.
+ * @param {number} [len]
+ */
+export function createSock(len = 0.26) {
+  const g = new THREE.Group();
+  g.name = 'meia';
+  g.userData.carryKind = 'sock';
+  // no tubo, u corre ao longo da meia e v em volta: as listras são colunas (viram anéis) e a ponta é creme
+  const stripes = canvasTexture(128, 32, (c, w, h) => {
+    c.fillStyle = '#fff4e2';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#e8554a';
+    for (let x = 0; x < w * 0.88; x += 16) c.fillRect(x, 0, 8, h);
+    c.fillStyle = '#fff1dd';
+    c.fillRect(Math.round(w * 0.9), 0, w, h);
+    // fiozinhos da malha, ao longo da meia
+    c.fillStyle = 'rgba(80,40,30,0.08)';
+    for (let y = 0; y < h; y += 4) c.fillRect(0, y, w, 1);
+  }, { repeat: false });
+  const knit = new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.95 });
+  const cream = new THREE.MeshStandardMaterial({ color: '#fff1dd', roughness: 0.95 });
+  const cuffMat = new THREE.MeshStandardMaterial({ color: '#f2c14e', roughness: 0.9 });
+  const r = len * 0.17;
+  // cano: do punho para baixo, curva no calcanhar e o pé para a frente
+  const leg = len * 0.62;
+  const foot = len * 0.5;
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -0.01, 0), new THREE.Vector3(0, -leg * 0.5, 0), new THREE.Vector3(0, -leg, -r * 0.2),
+    new THREE.Vector3(0, -leg - r * 0.9, foot * 0.3), new THREE.Vector3(0, -leg - r * 0.7, foot * 0.75), new THREE.Vector3(0, -leg - r * 0.3, foot),
+  ]);
+  const tube = new THREE.TubeGeometry(curve, 28, r, 14, false);
+  // achata o pé e afina a ponta
+  const pos = tube.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const ft = Math.max(0, Math.min(1, (v.z + r) / (foot + r)));
+    v.x *= 1 - 0.18 * ft;
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  tube.computeVertexNormals();
+  const body = new THREE.Mesh(tube, knit);
+  // a ponta fecha o tubo (creme, como o fim da malha), apontando para onde o pé aponta; punho canelado
+  const toe = new THREE.Mesh(new THREE.SphereGeometry(r * 0.9, 14, 10), cream);
+  toe.scale.set(0.82, 1, 0.8);
+  toe.position.copy(curve.getPointAt(1));
+  toe.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), curve.getTangentAt(1));
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.08, r * 1.04, len * 0.12, 16, 1, true), cuffMat);
+  cuff.position.y = -len * 0.06;
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r * 1.06, r * 0.18, 6, 18).rotateX(Math.PI / 2), cuffMat);
+  rim.position.y = -0.002;
+  g.add(body, toe, cuff, rim);
+  g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.carryKind = 'sock'; } });
+  return g;
+}
+
+/**
  * Frisbee de plástico (≈ size de diâmetro), deitado com a base em y = 0: disco levemente abaulado, borda
  * enrolada por baixo, anel branco e uma estrelinha no meio. A boca morde pela borda (carryPose 'frisbee').
  * @param {number} [size]

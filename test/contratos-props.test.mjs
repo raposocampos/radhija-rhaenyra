@@ -81,8 +81,9 @@ for (const def of LEVELS) {
     // O que abre na fase, como o cenário real declara: portão (fases 1–4 e 7), portãozinho (5), cancela e
     // portinhola do pórtico (6, que não tem portão). A pose da subárvore inteira conta: a cancela gira o braço,
     // não o objeto.
+    // A fase 8 não tem nada que abra (varal, máquina e botões têm contratos próprios em test/fase8.test.mjs).
     const opening = Object.entries(props).filter(([, prop]) => typeof prop?.setOpen === 'function');
-    assert.ok(opening.length > 0, 'a fase tem algo que abre');
+    if (def.id !== 'fase8') assert.ok(opening.length > 0, 'a fase tem algo que abre');
     const pose = (object) => {
       const values = [];
       object.traverse((o) => values.push(...o.quaternion.toArray(), ...o.position.toArray()));

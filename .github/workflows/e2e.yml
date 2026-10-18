@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, menu, recursos]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, recursos]
 
 permissions:
   contents: read
@@ -103,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe","toque","menu"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe","toque","lavanderia","menu"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -131,6 +131,9 @@ jobs:
       - name: Capturas do impulso na parede para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'pulo'
         run: node tools/scripts/capture-parede.mjs
+      - name: Capturas da lavanderia (fase 8) para revisão (qualidade visual completa)
+        if: always() && matrix.suite == 'lavanderia'
+        run: node tools/scripts/capture-lavanderia.mjs
       - name: Capturas do Lambe-Lambe para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'lambe'
         run: node tools/scripts/capture-lambe.mjs

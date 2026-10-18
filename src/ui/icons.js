@@ -163,10 +163,25 @@ export function frisbeeIcon() {
 </svg>`;
 }
 
-/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee'). */
+/** Meia listrada (vermelho e creme) com o punho canelado e o calcanhar dobrado. */
+export function sockIcon() {
+  return `<svg class="ico ico-sock" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M22 6 h20 v26 c0 4 1.5 6 5 9 c6 5 6.5 13 1 17 c-5 3.6 -11 2.4 -16 -1.4 l-10 -8 c-3.4 -2.8 -5 -6 -5 -10 Z"
+        fill="#FFF4E2" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M22 17 h20 v7 h-20 Z M22 31 h20.4 c.2 2.2 1 3.6 2.6 5.2 l-21.5 0 c-1 -1.4 -1.5 -3.2 -1.5 -5.2 Z" fill="#E8554A"/>
+  <path d="M28 44 c5 -1 10.5 .6 14 4 c-3 4 -9 4.6 -14 .2 Z" fill="#E8554A"/>
+  <path d="M22 6 h20 v6 h-20 Z" fill="#F2C14E" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+  <g stroke="${INK}" stroke-width="1.4" opacity=".55"><path d="M26 6.5 v5"/><path d="M30 6.5 v5"/><path d="M34 6.5 v5"/><path d="M38 6.5 v5"/></g>
+  <path d="M22 6 h20 v26 c0 4 1.5 6 5 9 c6 5 6.5 13 1 17 c-5 3.6 -11 2.4 -16 -1.4 l-10 -8 c-3.4 -2.8 -5 -6 -5 -10 Z"
+        fill="none" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock'). */
 export function itemIcon(item) {
   if (item === 'ball') return ballIcon();
   if (item === 'frisbee') return frisbeeIcon();
+  if (item === 'sock') return sockIcon();
   if (item === 'slipper') return slipperIcon();
   if (item === 'duck') return duckIcon();
   if (item === 'bear') return bearIcon();

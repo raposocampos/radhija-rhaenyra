@@ -154,8 +154,8 @@ test('Lambe-Lambe: trocar de dog, pausar e reiniciar não deixam a lambida presa
 });
 
 // ------------------------------------------------------------------------------------------------ fase 7
-test('fase 7: última fase da campanha, com cenário sob demanda e props reais', async (t) => {
-  assert.equal(INDEX, LEVELS.length - 1, 'a fase 7 fecha a campanha');
+test('fase 7: na campanha antes da 8, com cenário sob demanda e props reais', async (t) => {
+  assert.equal(LEVELS[INDEX + 1]?.id, 'fase8', 'depois da 7 vem a 8');
   assert.equal(LEVELS.filter((def) => def.id === 'fase7').length, 1);
   assert.equal(DEV_LEVELS.some((def) => def.id === 'fase7'), false, 'saiu do catálogo de desenvolvimento');
   assert.equal(typeof fase7.load, 'function');
@@ -542,10 +542,10 @@ test('fase 7: partida completa andando — túnel, trinco, Lambe-Lambe, escorreg
   assert.deepEqual(i.place, { ball: 'picnic', frisbee: 'picnic' });
   assert.equal(h.log('picnic:deliver').length, 2);
   assert.equal(h.log('mud:clean').length, 1);
-  // a última fase da campanha: a vitória não oferece "Próxima fase"
+  // depois dela vem a fase 8: a vitória oferece "Próxima fase"
   waitFor(h, (s) => s.state === 'victory', 'tela de vitória', 12);
   const vic = h.log('victory');
   assert.equal(vic.length, 1);
   assert.equal(vic[0].levelId, 'fase7');
-  assert.equal(vic[0].hasNext, false);
+  assert.equal(vic[0].hasNext, true);
 });

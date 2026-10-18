@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (menu principal e modo sem dicas). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (menu principal e modo sem dicas; fase 8). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: menu principal, Opções e modo sem dicas (pedido de 2026-10-18)
@@ -11,7 +11,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (desligadas = modo desafio: sem objetivo escrito, marcador e dicas em balão; controles seguem na pausa).
   Registrar a visão do Modo História sem implementar: [MODO-HISTORIA.md](MODO-HISTORIA.md).
 - **Claude, branch `claude/menu-principal`, PR #26** (worktree próprio, base `09ed23a`, depois atualizado com o main
-  `ccfaf4a` do PR #25). Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC. Feito: telas do menu (`data-screen` em `.rr-title`, `showScreen`/`goBack`
+  `ccfaf4a` do PR #25 e `42715b6` do PR #24, fase 8). Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC. Feito: telas do menu (`data-screen` em `.rr-title`, `showScreen`/`goBack`
   em `ui.js`), Voltar por Esc, ○ · B ou botão do canto (também no cartão de abertura), `continueTarget` e `last` no
   save v1 (`progress.js`), opções salvas em `src/core/settings.js` (`rr-settings-v1`, evento `settings:change`),
   `settingsBlock()` igual em Opções e na pausa, HUD/feedback escondendo objetivo, dicas e marcador, e o atalho do
@@ -21,9 +21,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Integração com o PR #25 (tela cheia no iPhone): a dica vai na tela principal do menu (`.rr-screen--main`), a nota
   de passo a passo aparece na pausa e em Opções (duas colunas no celular: a nota ocupa as duas), e os trechos de
   iPhone de `test-toque.mjs`/`capture-celular.mjs` passam por Jogar → Fases → Continuar → Começar.
-- Coordenação: a sessão das fases 8–10 mexe em `markup.js` (`ITEM_NOUN`), `icons.js` (item novo),
-  `feedback.js` (eventos da lavanderia) e `test-expresso.mjs` (oito fases); este branch só toca o template, ícones no
-  fim do arquivo, o bloco do marcador e `menuWith`. Quem integrar por último ajusta a lista de suítes do `e2e.yml`.
+- Integração com a fase 8 (PR #24): as listas de suítes (`e2e.yml`, `run-e2e.mjs`) têm `lavanderia` e `menu`; a
+  tela das fases mostra as oito fases (4 + 4) e `menuWith` (`test-expresso.mjs`) abre Jogar → Fases antes de ler.
 - Próximo passo: CI e E2E (`menu`, `toque`, `controle`, `expresso` e depois `todas`) no head do PR, revisar as
   capturas (`shots/menu/`, `shots/celular-revisao/`) e entregar a prévia. Merge só com a aprovação do usuário.
 
@@ -35,20 +34,50 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), **PR #23**, com o main do #22
-  (`1fbc631`) integrado. Consultar o PR para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
-  Feito: `pickWallSpot`/`startWallJump`/`integrateWall` em `dogController.js` (roteiro de 1,05 s, toque no alto em
-  52%, volta 0,32 m afastada, sempre com colisão); `game.js` troca o pulo pelo impulso quando a fase oferece um
-  ponto (`puzzle.wallSpots`) e avisa o toque (`puzzle.onWallTouch`, `wall:touch`); pose em `dogAnimation.js`
-  (corpo de pé girando no quadril, IK com alvos na parede, pata no botão, carinha feliz); `createWallButton`
-  (botão com tempo e anel de luzes, alavanca, "uma vez") e `buildWallButton` (placa, botão de cogumelo ou
-  alavanca de bolinha, patinhas pintadas); sons `soundsParede.js`; parede de treino na Arena do Pulo (botão abre a
-  portinhola do armarinho por 6 s, alavanca liga as luzinhas). Testes: `test/parede.test.mjs` (escolha do ponto,
-  roteiro, pose no modelo real, botão/alavanca, arena com pausa/troca/reinício) e a suíte E2E `pulo`, com as
-  capturas `tools/scripts/capture-parede.mjs` (quadro a quadro, qualidade completa).
-- Próximo passo: CI verde, E2E `pulo` e revisão das capturas `shots/parede-revisao/` contra o padrão das fases
-  4 a 7; ajustar a pose se preciso; conferir o botão de pulo de toque (o impulso usa o mesmo `Jump`); entregar a
-  prévia (`?level=pulo&play`) e aguardar aprovação. Em seguida, apresentar o desenho da fase 8.
+- **E (escopo ampliado pelo usuário, 2026-10-18):** as animações extras e o segredo combinado valem nas **10 fases**,
+  cada fase com animações do próprio cenário; o segredo só depois de pegar todos os ossinhos da fase (todas têm 3).
+  O usuário aceitou um registro técnico discreto nos docs (resposta de 2026-10-18); nada no jogo, no README ou na
+  tela de controles.
+- **B (aprovada, integrando; Claude):** fase 8 "Lavanderia de Domingo", PR #24, branch `claude/fase8-lavanderia`
+  (worktree próprio), base `09ed23a`. Nenhum teste ou build rodou no PC. Desenho aprovado pelo usuário: a meia
+  listrada presa com pregador no varal elétrico de teto (botão alto → o varal desce por 6 s; só o tranco da arrancada
+  da Radhija solta a meia) e a mantinha em cima da máquina (o cesto de rodinhas na frente da máquina + botão de
+  centrifugar → ela cai no cesto; sem o cesto cai no chão e volta ao cesto com E; o cesto empurrado até a caminha a
+  entrega e estaciona ao lado). Entra direto na campanha (`LEVELS`, oito fases, 4 + 4 no menu); a meia é um item
+  novo (`sock`: pose de boca, ícone, nome, som, modelo em `toys.js`). `createPushCrate` ganhou `freeze()`.
+  Testes: `test/fase8.test.mjs`, catálogo com oito fases, suíte E2E `lavanderia` e capturas
+  `tools/scripts/capture-lavanderia.mjs`.
+- Validação do código em `5b97413`: CI `39160268932` verde, prévia publicada, E2E `todas` `39160265826` com sucesso
+  (na 1ª tentativa a partida `lavanderia` travou logo após carregar a fase e caiu no limite de 30 min; refeita, passou
+  12/12). O usuário aprovou a versão `1faefbd`, mas o main avançou (#25, tela cheia no iPhone): merge do main no
+  branch sem conflitos; pelo AGENTS.md, CI/prévia novos e nova aprovação antes de integrar.
+- Pendência registrada: no CI, os prazos do harness E2E contam tempo de jogo (`deadline`, `gsleep`, `waitFor`). Se o
+  jogo congelar, eles nunca vencem e o job só cai no limite de 30 min. Vale um prazo de relógio como teto (entrega
+  própria, fora do #24).
+- Próximo passo do #24: com a nova aprovação, merge squash com SHA esperado, CI do main, liberar o deploy e conferir
+  `version.json`.
+- **Retorno do usuário sobre a progressão (2026-10-18):** a 8 está de bom tamanho para apresentar a mecânica nova; a
+  **9** deve ser um pouco mais complexa (mais elementos, **mais áreas**, puzzle mais difícil); a **10** fecha a demo
+  com **todas as mecânicas**, o puzzle mais elaborado, **no mínimo 3 objetos** e um **pequeno enigma**: a ordem certa
+  de colocar os 3 objetos, com a pista num detalhe de um quadro ou parede. Atualizar COMO-CRIAR-UMA-FASE §1 junto.
+- **C (desenho aprovado, 2026-10-18):** fase 9 "Biblioteca do Vovô", noite de chuva, quatro áreas (hall de entrada,
+  biblioteca com lareira e a poltrona do vovô = entrega, escritório fechado com portinha de gato, jardim de inverno).
+  Óculos (Radhija) no alto da estante: impulso na alavanca do freio da escada de rodinhas → a Rhaenyra empurra o
+  globo para fora do trilho e a escada até os óculos → só o peso dela segura a escada (Fica no pé) enquanto a Radhija
+  sobe os degraus largos. Livro (Rhaenyra, pesado) no alto do armário do escritório, com o gato Bichano dormindo em
+  cima: latido não adianta, superbafo direto não alcança; impulso no botão do ventilador do jardim de inverno, a
+  Rhaenyra empurra o ventilador até a boca do duto, a Radhija sopra o superbafo no vento, a grade alta do escritório
+  solta o cheiro, o Bichano pula, derruba o livro e sai pela portinha; impulso na maçaneta (alavanca alta) abre a
+  porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro.
+- **D (rascunho):** fase 10 "Festa no Quintal": laço, chapéu e vela estrela na torre de presentes; o quadro "Festa
+  do ano passado" na varanda mostra a ordem de baixo para cima (ordem errada: a peça balança e cai na grama).
+
+## Entregue: impulso na parede (PR #23)
+
+`pickWallSpot`/`startWallJump`/`integrateWall` (`dogController.js`), pose em `dogAnimation.js`, `createWallButton` e
+`buildWallButton`, parede de treino na Arena do Pulo. Squash `09ed23a` no main, CI `39156660735`, deploy
+`39156707851` com sucesso; `version.json` de produção conferido em `09ed23a`. Detalhes em ARQUITETURA §6
+(Impulso na parede). Não repetir merge/deploy do #23.
 
 ## Entregue: jogar no celular (PR #22)
 
