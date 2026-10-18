@@ -93,9 +93,10 @@ if (args.runner) {
     } else if (kind === 'stuck') {
       await H.load('?trava'); // o sinal do harness encerra o processo em opMaxMs
     } else if (kind === 'crash') {
-      // derruba a aba (renderer) no meio da espera por window.__game
+      // derruba a aba (renderer) no meio da espera por window.__game, como os testes do próprio Playwright fazem
       setTimeout(() => {
-        H.page.context().newCDPSession(H.page).then((cdp) => cdp.send('Page.crash')).catch(() => {});
+        console.log('  [prova] derrubando a aba (chrome://crash)');
+        H.page.goto('chrome://crash').catch(() => {});
       }, 1500);
       await H.load('?sem-jogo');
     } else if (kind === 'mute') {

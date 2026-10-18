@@ -77,7 +77,7 @@ for (const [kind, label, diagnosis] of [
     const sec = (Date.now() - t0) / 1000;
     assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
     assert.equal(result.signal, null, 'não pode depender do timeout do processo');
-    assert.ok(sec < 45, `levou ${sec} s`);
+    assert.ok(sec < 45, `levou ${sec} s\n${result.stdout}`);
     assert.match(result.stdout, /FALHOU exceção: \[harness\] /);
     assert.match(result.stdout, diagnosis);
     if (kind === 'hung') assert.match(result.stdout, /ok +com a página travada, a ida seguinte ao navegador falha na hora/);
@@ -93,7 +93,7 @@ test('infra E2E: operação sem retorno apesar do prazo encerra a suíte com dia
   const sec = (Date.now() - t0) / 1000;
   assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
   assert.equal(result.signal, null);
-  assert.ok(sec < 45, `levou ${sec} s`);
+  assert.ok(sec < 45, `levou ${sec} s\n${result.stdout}`);
   assert.match(result.stdout, /FALHOU \[harness\] load\('\?trava'\): abrir a página sem retorno há [\d.]+ s, mesmo com os prazos/);
   assert.match(result.stdout, /1 ok, 1 falha\(s\)/);
   assert.match(result.stdout, /FALHOU stuck/);
@@ -104,12 +104,13 @@ test('infra E2E: aba que cai no meio do load() reprova na hora, dizendo que caiu
   const t0 = Date.now();
   const result = await run('crash');
   const sec = (Date.now() - t0) / 1000;
-  assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
-  assert.equal(result.signal, null);
-  assert.ok(sec < 15, `levou ${sec} s (antes do prazo de 120 s do Playwright e do opMaxMs de 20 s)`);
-  assert.match(result.stdout, /\[harness\] a aba do navegador caiu \(crash do renderer\)/);
-  assert.match(result.stdout, /FALHOU exceção: \[harness\] load\('\?sem-jogo'\): [^(]+ \(harness-probe\.mjs:\d+\): a aba do navegador caiu \(crash do renderer\)/);
-  assert.match(result.stdout, /FALHOU crash/);
+  const out = `${result.stdout}\n${result.stderr}`;
+  assert.equal(result.code, 1, out);
+  assert.equal(result.signal, null, out);
+  assert.match(result.stdout, /\[harness\] a aba do navegador caiu \(crash do renderer\)/, out);
+  assert.match(result.stdout, /FALHOU exceção: \[harness\] load\('\?sem-jogo'\): [^(]+ \(harness-probe\.mjs:\d+\): a aba do navegador caiu \(crash do renderer\)/, out);
+  assert.ok(sec < 15, `levou ${sec} s (antes do prazo de 120 s do Playwright e do opMaxMs de 20 s)\n${out}`);
+  assert.match(result.stdout, /FALHOU crash/, out);
 });
 
 test('infra E2E: suíte calada é encerrada pelo runner com o diagnóstico', { timeout: 65000 }, async () => {
@@ -118,7 +119,7 @@ test('infra E2E: suíte calada é encerrada pelo runner com o diagnóstico', { t
   const sec = (Date.now() - t0) / 1000;
   assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
   assert.equal(result.signal, null, 'o runner encerra a suíte; ele mesmo termina normalmente');
-  assert.ok(sec < 45, `levou ${sec} s`);
+  assert.ok(sec < 45, `levou ${sec} s\n${result.stdout}`);
   assert.match(result.stdout, /\[e2e\] mute: \d+ s sem nenhuma saída; a suíte travou fora do alcance dos prazos do harness/);
   assert.match(result.stdout, /sinal do harness: o último foi há \d+ s; o processo da suíte parou de responder/);
   assert.match(result.stdout, /em curso: nada no harness/);
