@@ -241,13 +241,13 @@ function buildWalls(layout, updaters) {
     // caixilhos (montantes a cada ~0,55 m) e a viga de cima
     const n = Math.max(1, Math.round((b - a) / 0.55));
     for (let i = 0; i <= n; i++) {
-      const fx = a + ((b - a) * i) / n;
+      const fx = Math.min(b - 0.03, Math.max(a + 0.03, a + ((b - a) * i) / n));
       const fm = new THREE.Mesh(rbox(0.045, gh, 0.07, 0.008), frameMat);
       fm.position.set(fx, parapet + gh / 2, zN + 0.04);
       grp.add(fm);
     }
-    for (const fy of [parapet + 0.02, parapet + gh * 0.62, H - 0.18]) {
-      const fm = new THREE.Mesh(rbox(b - a, 0.045, 0.07, 0.008), frameMat);
+    for (const fy of [parapet + 0.02, parapet + gh * 0.62, H - 0.2]) {
+      const fm = new THREE.Mesh(rbox(b - a - 0.01, 0.045, 0.07, 0.008), frameMat);
       fm.position.set((a + b) / 2, fy, zN + 0.04);
       grp.add(fm);
     }
@@ -334,12 +334,12 @@ function buildWalls(layout, updaters) {
   grp.add(flapFrame, flapPivot);
   // batentes da porta do escritório e o arco do hall
   const casing = stdMat('#f3ecdd', { roughness: 0.5 });
-  for (const z of [WALL_EH.door.z0 - 0.03, WALL_EH.door.z1 + 0.03]) {
-    const c = new THREE.Mesh(rbox(T + 0.06, C + 0.02, 0.06, 0.01), casing);
-    c.position.set(WALL_EH.x, (C + 0.02) / 2, z);
+  for (const z of [WALL_EH.door.z0 - 0.02, WALL_EH.door.z1 + 0.02]) {
+    const c = new THREE.Mesh(rbox(T + 0.06, C + 0.035, 0.06, 0.01), casing);
+    c.position.set(WALL_EH.x, (C + 0.035) / 2, z);
     grp.add(c);
   }
-  for (const z of [WALL_HL.gap.z0 - 0.04, WALL_HL.gap.z1 + 0.04]) {
+  for (const z of [WALL_HL.gap.z0 - 0.03, WALL_HL.gap.z1 + 0.03]) {
     const c = new THREE.Mesh(rbox(T + 0.08, C + 0.04, 0.08, 0.02), casing);
     c.position.set(WALL_HL.x, (C + 0.04) / 2, z);
     grp.add(c);
@@ -384,8 +384,8 @@ function buildWalls(layout, updaters) {
 
   // ---- rodapés de madeira (parede do fundo e laterais; as divisórias ganham os seus)
   const sk = [];
-  sk.push(new THREE.BoxGeometry(B.maxX - B.minX - 0.01, 0.1, 0.02).translate((B.minX + B.maxX) / 2, 0.05, B.minZ + 0.012));
-  sk.push(new THREE.BoxGeometry(0.02, 0.1, B.maxZ - B.minZ - 0.01).translate(B.minX + 0.012, 0.05, (B.minZ + B.maxZ) / 2));
+  sk.push(new THREE.BoxGeometry(B.maxX - B.minX - 0.01, 0.09, 0.02).translate((B.minX + B.maxX) / 2, 0.045, B.minZ + 0.012));
+  sk.push(new THREE.BoxGeometry(0.02, 0.09, B.maxZ - B.minZ - 0.01).translate(B.minX + 0.012, 0.045, (B.minZ + B.maxZ) / 2));
   const skMesh = new THREE.Mesh(mergeGeometries(sk), stdMat('#4a3020', { roughness: 0.6 }));
   skMesh.receiveShadow = true;
   grp.add(skMesh);

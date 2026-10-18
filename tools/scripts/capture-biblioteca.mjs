@@ -148,7 +148,7 @@ try {
   await setup({ crates: [['ventilador', L.DUCT.inlet.x, L.FAN.alignZ - 0.25]] });
   await step(5);
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
-  await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.5, z: fanAt.z - 0.7, yaw: -Math.PI / 2 } } });
+  await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] });
   await keyDown('KeyR');
   await step(18);

@@ -108,10 +108,13 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   assert.ok(push(h, fanOf, L.FAN.half, [0, -1], (i) => i.biblioteca.aligned, [[6.7, 1.3]]), 'ventilador na grade do duto');
   as(h, 'radhija');
   const f = fanOf(h);
-  h.walkTo(f.x + 0.5, f.z - 0.7, { tol: 0.08 });
-  h.hold([-1, 0]);
-  h.run(0.12);
+  // na frente do ventilador, no vento, de frente para a grade do duto
+  h.walkTo(f.x + 0.5, f.z - 0.75, { tol: 0.08 });
+  h.walkTo(f.x + 0.12, f.z - 0.75, { tol: 0.06 });
+  h.hold([0, -1]);
+  h.run(0.25);
   h.hold(null);
+  h.run(0.1);
   h.clearLog();
   h.keyDown('KeyR');
   h.run(0.3);
@@ -225,15 +228,15 @@ test('fase 9: a porta fecha sozinha; com o livro na boca não dá impulso; E lar
   assert.ok(h.game.debug.setStage('book', 'rhaenyra'));
   assert.equal(h.info().book.holder, 'rhaenyra');
   const k = kickSpot(L.DOOR_HANDLE_IN);
-  h.teleport('rhaenyra', k.x, k.z, -Math.PI / 2 * -L.DOOR_HANDLE_IN.nx);
-  h.ctrls.rhaenyra.yaw = Math.atan2(-L.DOOR_HANDLE_IN.nx, -L.DOOR_HANDLE_IN.nz);
+  h.clearLog();
+  h.teleport('rhaenyra', k.x, k.z, Math.atan2(-L.DOOR_HANDLE_IN.nx, -L.DOOR_HANDLE_IN.nz));
   h.run(0.4);
   assert.notEqual(h.info().prompt, TEXT.prompt.wall, 'com o livro, sem o prompt do impulso');
+  assert.ok(h.log('hint').some((x) => x.text === TEXT.hint.bookNoJump), 'dica: largue o livro');
   h.clearLog();
   h.tap('Space');
   h.run(D);
   assert.equal(h.log('dog:wallJump').length, 0, 'com o livro na boca não dá impulso');
-  assert.ok(h.log('hint').some((x) => x.text === TEXT.hint.bookNoJump), 'dica: largue o livro');
   h.tap('KeyE');
   assert.equal(lib(h).book, 'floor', 'largou o livro');
   assert.equal(h.info().book.holder, null);

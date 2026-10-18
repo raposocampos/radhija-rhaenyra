@@ -79,8 +79,9 @@ try {
   check(lib(state).aligned, 'ventilador empurrado até a grade do duto', JSON.stringify(lib(state).fan));
   await page.keyboard.press('KeyQ');
   const f = lib(await info()).fan;
-  await walkTo(f.x + 0.5, f.z - 0.7, { tol: 0.1 });
-  await H.hold(keysFor(-1, 0), 120);
+  await walkTo(f.x + 0.5, f.z - 0.75, { tol: 0.1 });
+  await walkTo(f.x + 0.12, f.z - 0.75, { tol: 0.08 });
+  await H.hold(keysFor(0, -1), 250);
   await clearLog();
   await H.hold(['KeyR'], 350);
   state = await waitFor((s) => s.biblioteca.cat !== 'asleep', { timeout: 8000 });

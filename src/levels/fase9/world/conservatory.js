@@ -118,6 +118,7 @@ function buildFan(F) {
   const sh = contactShadow(0.3, 0.3, 0.38);
   sh.position.y = 0.004;
   holder.add(sh);
+  holder.position.set(F.start.x, 0, F.start.z);
   const st = { aligned: false, glow: 0 };
   return {
     object: holder,

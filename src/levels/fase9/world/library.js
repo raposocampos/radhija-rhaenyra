@@ -268,6 +268,7 @@ function buildLadder(root, L, laneZ) {
   sh.position.y = 0.004;
   const holder = new THREE.Group();
   holder.add(grp, sh);
+  holder.position.set(L.start.x, 0, L.start.z);
   root.add(holder);
   void laneZ;
   const st = { hl: false, glow: 0 };
@@ -332,6 +333,7 @@ function buildGlobe(root, G) {
   const sh = contactShadow(G.half * 1.2, G.half * 1.2, 0.35);
   sh.position.y = 0.004;
   holder.add(sh);
+  holder.position.set(G.start.x, 0, G.start.z);
   root.add(holder);
   const st = { x: G.start.x };
   return {
