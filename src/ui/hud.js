@@ -1,5 +1,6 @@
 // HUD durante a partida: chip da dog ativa, companheira (seguindo/esperando), objetivo, petiscos,
-// prompt de interação ("E Pegar a cenoura") e dicas temporárias.
+// prompt de interação ("E Pegar a cenoura") e dicas temporárias. No modo desafio (setNoHints) as dicas não
+// aparecem; o objetivo some pelo CSS (.rr[data-hints="off"]) mas continua atualizado para voltar ao religar.
 import { DOG_INFO, other, glyph, richText } from './markup.js';
 import { dogIcon, followIcon, stayIcon } from './icons.js';
 
@@ -36,6 +37,7 @@ export function createHud({ $, getTotal }) {
   let count = 0;
   let hintTimer = 0;
   let promptOn = false;
+  let noHints = false;
 
   function setDog(name) {
     const info = DOG_INFO[name];
@@ -117,7 +119,7 @@ export function createHud({ $, getTotal }) {
 
   function showHint(text, duration) {
     clearTimeout(hintTimer);
-    if (!text) { hideHint(); return; }
+    if (!text || noHints) { hideHint(); return; }
     hintText.innerHTML = richText(text);
     if (hint.classList.contains('is-on')) retrigger(hint, 'is-on');
     else hint.classList.add('is-on');
@@ -127,6 +129,12 @@ export function createHud({ $, getTotal }) {
   function hideHint() {
     clearTimeout(hintTimer);
     hint.classList.remove('is-on');
+  }
+
+  /** Modo desafio (opções): sem dicas em balão; uma dica na tela some na hora. */
+  function setNoHints(on) {
+    noHints = !!on;
+    if (noHints) hideHint();
   }
 
   /** Começo de uma partida: zera petiscos, Fica/Vem, prompt e dica. */
@@ -141,7 +149,7 @@ export function createHud({ $, getTotal }) {
   }
 
   return {
-    setDog, renderComp, setStay, setObjective, clearObjective, setCount, setTotalLabel, setPrompt, showHint, hideHint, reset,
+    setDog, renderComp, setStay, setObjective, clearObjective, setCount, setTotalLabel, setPrompt, showHint, hideHint, setNoHints, reset,
     get activeDog() { return activeDog; },
     get count() { return count; },
   };

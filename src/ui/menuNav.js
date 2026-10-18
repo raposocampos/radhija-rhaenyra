@@ -3,10 +3,11 @@
 import { events } from '../core/events.js';
 
 /**
- * Foco espacial. opts: { root, audio, getLayer() (camada de menu ativa ou null), isTitle(),
- *                        slider: { el, step(dx) } (o controle de volume consome esquerda/direita) }
+ * Foco espacial. opts: { root, audio, getLayer() (camada de menu ativa ou null),
+ *                        slider: { step(dx, el) } (um controle de volume [data-slider] consome esquerda/direita) }
+ * Foco inicial: o primeiro [data-default] visível da camada (na tela inicial, o da tela do menu aberta).
  */
-export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
+export function createMenuFocus({ root, audio, getLayer, slider }) {
   const nav = { el: null };
   function focusables() {
     const layer = getLayer();
@@ -15,7 +16,6 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
   }
   function defaultFocus() {
     const list = focusables();
-    if (isTitle()) return list.find((e) => e.dataset.action === 'play') || list[0] || null;
     return list.find((e) => e.hasAttribute('data-default')) || list[0] || null;
   }
   function setFocus(el, { silent = false } = {}) {
@@ -32,7 +32,7 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
     showNav(true);
     if (!nav.el || !list.includes(nav.el)) { setFocus(defaultFocus()); return; }
     if (nav.el.hasAttribute('data-slider') && dx) {
-      slider.step(dx);
+      slider.step(dx, nav.el);
       audio?.play?.('uiMove');
       return;
     }
@@ -84,11 +84,12 @@ export function createMenuFocus({ root, audio, getLayer, isTitle, slider }) {
 
 /**
  * Controle nos menus (polling a cada quadro, chamado pelo update da UI).
- * opts: { focus (createMenuFocus), audio, getLayer(), getUiState(), activate(), setDevice(type), setPadStyle?(id) }
+ * opts: { focus (createMenuFocus), audio, getLayer(), getUiState(), activate(), back?() (○ · B fora da pausa),
+ *         setDevice(type), setPadStyle?(id) }
  * → { poll(dt), frameState } (frameState: estado do jogo no fim do quadro anterior, para o Start não
  *    pausar e retomar no mesmo toque)
  */
-export function createMenuPad({ focus, audio, getLayer, getUiState, activate, setDevice, setPadStyle }) {
+export function createMenuPad({ focus, audio, getLayer, getUiState, activate, back, setDevice, setPadStyle }) {
   const pad = { prev: {}, hold: { up: 0, down: 0, left: 0, right: 0 }, frameState: null };
   function poll(dt) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : null;
@@ -131,7 +132,12 @@ export function createMenuPad({ focus, audio, getLayer, getUiState, activate, se
       if (pad.hold[k] >= 0) { pad.hold[k] -= 0.13; focus.moveFocus(dx, dy); }
     }
     if (edge('A')) { focus.showNav(true); activate(); }
-    if (edge('B') && getUiState() === 'paused' && before === 'paused') { audio?.play?.('uiBack'); events.emit('ui:resume', {}); }
+    if (edge('B')) {
+      // ○ · B volta: na pausa retoma (o mesmo quadro do Start não conta), nas telas do menu volta uma tela
+      if (getUiState() === 'paused') {
+        if (before === 'paused') { audio?.play?.('uiBack'); events.emit('ui:resume', {}); }
+      } else back?.();
+    }
   }
   return {
     poll,
