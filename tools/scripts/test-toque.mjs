@@ -345,6 +345,17 @@ try {
   await page.setViewportSize(PHONE);
   await sleep(500);
   check(await ev(() => getComputedStyle(document.querySelector('.rr-rotate')).display) === 'none', 'deitado de novo: aviso some');
+  // tela maior (tela cheia, tablet): o pixel ratio desce para caber no orçamento do perfil atual e volta
+  const prof = await ev(() => ({ ...window.__game.engine.quality.profile }));
+  const expect = (w, h) => Math.min(3, prof.pixelRatio, Math.max(0.5, Math.sqrt(prof.pixelBudget / (w * h))));
+  await page.setViewportSize({ width: 1300, height: 700 });
+  await sleep(400);
+  const big = (await quality()).state.pixelRatio;
+  await page.setViewportSize(PHONE);
+  await sleep(400);
+  const back = (await quality()).state.pixelRatio;
+  check(Math.abs(big - expect(1300, 700)) < 0.01 && Math.abs(back - expect(PHONE.width, PHONE.height)) < 0.01 && big < back,
+    'orçamento de pixels acompanha o tamanho da tela', { level: prof.name, big, back });
   await tap('[data-action="resume"]');
   await sleep(300);
   check((await info()).state === 'playing', 'continua de onde parou');

@@ -242,6 +242,16 @@ export function createEngine(container, { params } = {}) {
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
+    // perfis com orçamento de pixels (celular/tablet): o pixel ratio acompanha a tela (tela cheia, rotação, barra do
+    // navegador). No PC ('alta', sem orçamento) fica o de sempre, calculado uma vez.
+    if (profile.pixelBudget > 0) {
+      const next = pixelRatioFor(profile, { dpr: window.devicePixelRatio, width: w, height: h });
+      if (next !== qualityState.pixelRatio) {
+        qualityState.pixelRatio = next;
+        renderer.setPixelRatio(next);
+        composer.setPixelRatio(next);
+      }
+    }
     renderer.setSize(w, h);
     composer.setSize(w, h);
     camera.aspect = w / h;
