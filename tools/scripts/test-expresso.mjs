@@ -76,9 +76,23 @@ try {
   check((await info()).ball.holder === null, 'retirada recusada durante percurso');
   state = await waitFor((i) => i.stage === 'ready', { timeout: 25000 });
   check(state.stage === 'ready' && state.expresso.trips === 2, 'viagem entrega uma única bolinha');
+  const earlyHint = await ev(() => window.__game.game.puzzle.TEXT.hint.early);
+  await station('radhija', { x: layout.TRAY.x, z: layout.TRAY.z + 0.7, yaw: 0 });
+  await H.sleep(2700); // expira o cooldown da dica usada antes da chegada.
+  await H.clearLog();
+  await H.press('KeyE');
+  state = await info();
+  check(state.stage === 'ready' && state.ball.holder === null, 'interação na borda da bandeja não retira a bolinha');
+  check(!(await H.logOf('hint')).some((hint) => hint.text === earlyHint), 'bolinha na bandeja não recebe dica de que ainda está no trem');
+  await station('radhija', layout.TRAY);
   await H.press('KeyE');
   state = await info();
   check(state.stage === 'carrying' && state.ball.holder === 'radhija', 'interação pega item após chegada');
+  await H.sleep(2700);
+  await H.clearLog();
+  await H.press('KeyE');
+  check((await info()).ball.holder === 'radhija' && !(await H.logOf('hint')).some((hint) => hint.text === earlyHint),
+    'interagir novamente com a bolinha na boca não anuncia que ela está no trem');
   await H.walkPath([[layout.TRAY.x, 2.6], [layout.GOAL.x, 2.6], [layout.GOAL.x, layout.GOAL.z]]);
   state = await waitFor((i) => ['celebrating', 'victory'].includes(i.state), { timeout: 8000 });
   check(state.stage === 'done' && ['celebrating', 'victory'].includes(state.state), 'percurso externo e entrega concluem missão');

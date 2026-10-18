@@ -409,6 +409,24 @@ test('fase 6: retirada só em ready, inclusive quando a cabeça alcança a pose 
   assert.equal(h.puzzle.carrier, 'rhaenyra');
 });
 
+test('fase 6: dica da bandeja só anuncia a bola no trem antes da chegada', async (t) => {
+  const h = await prototype(t);
+  for (const stage of STATES) {
+    assert.equal(h.game.debug.setStage(stage, 'radhija'), true, stage);
+    // Fora do alcance de retirada (0,6), dentro da região da dica (0,85).
+    // A cabeça aponta para longe, mantendo reach em 0,7.
+    const c = { ...h.ctrls.radhija, x: L.TRAY.x, z: L.TRAY.z + 0.7, yaw: 0 };
+    const holder = h.puzzle.carrier;
+    h.clearLog();
+    const handled = h.puzzle.interact(c);
+    const beforeArrival = !['ready', 'carrying', 'done'].includes(stage);
+    assert.equal(handled, beforeArrival, `interação na borda: ${stage}`);
+    assert.equal(h.log('hint').some((hint) => hint.text === h.puzzle.TEXT.hint.early), beforeArrival,
+      `dica corresponde ao estado real: ${stage}`);
+    assert.equal(h.puzzle.carrier, holder, 'interação distante não muda quem carrega');
+  }
+});
+
 test('fase 6: pausa congela salto, espirro, trajetos, rearme e animação da descarga', async (t) => {
   const h = await prototype(t, 'dog=rhaenyra');
   select(h, 'rhaenyra');

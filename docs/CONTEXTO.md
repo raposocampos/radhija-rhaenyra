@@ -5,6 +5,28 @@
 Leia primeiro `AGENTS.md`, na raiz, para as regras de entrega, testes e
 privacidade. Este documento registra o andamento compartilhado com o Claude.
 
+## PR #15 — dica da bandeja em correção (2026-10-17, Codex)
+
+Usuário aprovou o protótipo `92b9306`, base `fae8acd`, após CI `39081102987`
+(206 testes/tipos/build), E2E completo `39081100507` (334 gameplay, 4 infra,
+23 smoke, 28 recuperação) e prévia conferidos. Arte/30 comparações de recursos
+revisadas, sem erros. Aprovou como blocagem jogável; acabamento é etapa posterior.
+Antes do merge, revisão automática apontou dica falsa perto da bandeja em
+`ready`/`carrying` (comentário `4305095927`). Achado válido; PR ainda NÃO integrado.
+
+Coordenador corrige somente o alcance temporal da dica `early`, com regressão
+em todos os estados e comandos reais de interação no E2E Expresso, respeitando
+cooldown. Arquivos: puzzle da fase 6, teste rápido, E2E e este checkpoint.
+Novo commit exige CI/prévia e E2E próprios; a aprovação de `92b9306` não cobre
+esta correção. Após validar, resolver a conversa com evidência e apresentar nova
+prévia para aprovação. Não pedir autorização antes de concluir a correção.
+
+EST-08 segue separada no PR #16, `b4a61b3`, base `fae8acd`; CI `39082606472`
+aprovado, medição `39082606479` em andamento. Referências A/B agora por fase,
+com qualidade e amostragem preservadas; detalhes na branch `codex/desempenho-expansao`.
+O run antigo `39080397088` falhou por timeout e não é baseline. Se #15 entrar
+no main, atualizar #16 antes da validação final. Nenhum teste/build local.
+
 ## Fase 6 — protótipo combinado, validação pendente (2026-10-17, Codex)
 
 Usuário escolheu **Expresso do Superbafo** e exigiu preservar a direção artística

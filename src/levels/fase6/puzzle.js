@@ -220,7 +220,7 @@ export function createPuzzle(ctx) {
     }
     if (onPedal(c)) { hints.now('jump'); return true; }
     if (atWindow(c)) { hints.now('nose'); return true; }
-    if (reach(c, TRAY.x, TRAY.z) < 0.85 && S.stage !== 'done') { hints.now('early'); return true; }
+    if (reach(c, TRAY.x, TRAY.z) < 0.85 && !['ready', 'carrying', 'done'].includes(S.stage)) { hints.now('early'); return true; }
     return false;
   }
   function reset() {
