@@ -1,26 +1,35 @@
 // Página mínima: prova a cadeia navegador → harness → processo da suíte → runner.
 // Só executada pelo teste de infraestrutura no GitHub; não integra o jogo.
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { createHarness, parseArgs } from '../lib/harness.mjs';
 import { runSuites } from '../lib/suite-runner.mjs';
 
 const args = parseArgs();
 const kind = args.case;
-if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung'].includes(kind)) throw new Error('caso inválido');
+if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung', 'stuck', 'mute'].includes(kind)) throw new Error('caso inválido');
 
 // Tetos de relógio curtos só nas provas de travamento (os padrões são de dezenas de segundos).
 const LIMITS = {
   stalled: { stallMs: 2500, wallMinMs: 1000 }, // cada espera curta termina no próprio teto: o detector soma entre elas
   slow: { wallFactor: 2, wallMinMs: 1000 },
   hung: { evalMs: 2000, closeMs: 10000 },
+  stuck: { opMaxMs: 3000 }, // a navegação tem 120 s de prazo; aqui o harness desiste antes, como se o prazo falhasse
 };
 
 if (args.runner) {
   process.exitCode = await runSuites([{
     id: kind, script: fileURLToPath(import.meta.url), args: ['--case', kind],
-  }], 'about:blank', process.cwd());
+  }], 'about:blank', process.cwd(), { silenceMs: kind === 'mute' ? 8000 : undefined });
 } else {
-  const H = await createHarness({ base: 'about:blank', outDir: 'shots/infra', limits: LIMITS[kind] });
+  let base = 'about:blank';
+  if (kind === 'stuck') {
+    // servidor que aceita a conexão e nunca responde: page.goto fica em curso
+    const server = createServer(() => {});
+    await new Promise((done) => server.listen(0, '127.0.0.1', done));
+    base = `http://127.0.0.1:${server.address().port}/`;
+  }
+  const H = await createHarness({ base, outDir: 'shots/infra', limits: LIMITS[kind] });
   /** Jogo de mentira: debug.info() com o simSec andando `rate`× o relógio (0 = parado). */
   const fakeGame = (rate) => H.page.evaluate((r) => {
     const t0 = performance.now();
@@ -75,6 +84,10 @@ if (args.runner) {
         const again = await H.ev(() => 1).then(() => 'respondeu', (e) => e.message);
         H.check(again.includes('já estava travada') && Date.now() - t0 < 1000, 'com a página travada, a ida seguinte ao navegador falha na hora', again);
       }
+    } else if (kind === 'stuck') {
+      await H.load('?trava'); // o sinal do harness encerra o processo em opMaxMs
+    } else if (kind === 'mute') {
+      for (;;); // o próprio processo da suíte trava (event loop bloqueado): só o runner, de fora, pode encerrá-lo
     }
   } catch (e) {
     H.check(false, `exceção: ${e.message}`);

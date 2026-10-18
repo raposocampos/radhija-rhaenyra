@@ -21,8 +21,16 @@ export const DEFAULT_LIMITS = {
   stallMs: 60000, // E2E_STALL_MS: simSec sem mudar por esse tempo de relógio = o jogo parou de avançar (reprova)
   evalMs: 60000, // E2E_EVAL_MS: cada ida ao navegador (info(), page.evaluate, teclado, mouse)
   closeMs: 30000, // E2E_CLOSE_MS: fechar o navegador no fim
+  // E2E_OP_MAX_MS: uma operação em curso (etapa do load(), captura, ida ao navegador) sem retorno por esse tempo, apesar
+  // dos prazos próprios (120 s do Playwright, evalMs), encerra o processo da suíte com diagnóstico
+  opMaxMs: 240000,
 };
-const LIMIT_ENV = { wallFactor: 'E2E_WALL_FACTOR', wallMinMs: 'E2E_WALL_MIN_MS', stallMs: 'E2E_STALL_MS', evalMs: 'E2E_EVAL_MS', closeMs: 'E2E_CLOSE_MS' };
+const LIMIT_ENV = {
+  wallFactor: 'E2E_WALL_FACTOR', wallMinMs: 'E2E_WALL_MIN_MS', stallMs: 'E2E_STALL_MS', evalMs: 'E2E_EVAL_MS', closeMs: 'E2E_CLOSE_MS', opMaxMs: 'E2E_OP_MAX_MS',
+};
+// Rodando sob o runner (suite-runner.mjs), o processo da suíte tem um canal IPC para o sinal do harness. O canal não
+// pode segurar o processo aberto depois que a suíte termina.
+process.channel?.unref?.();
 function limitsFrom(overrides) {
   const out = {};
   for (const [key, name] of Object.entries(LIMIT_ENV)) {
@@ -138,10 +146,58 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     aborts.push(e.message);
     return e;
   }
+  // ---- Operações em curso: o sinal do harness (a cada 2 s, pelo IPC do runner) diz o que a suíte espera e desde
+  // quando; o log ganha "ainda aguardando" a cada minuto; passado opMaxMs, o processo sai com diagnóstico (o prazo
+  // próprio da operação não funcionou). Se nem este relógio rodar (event loop bloqueado, máquina sem CPU), o runner
+  // vê o silêncio e o sinal parado, e encerra a suíte de fora.
+  const pending = new Set();
+  async function during(what, run) {
+    const op = { what, since: Date.now(), told: 0 };
+    pending.add(op);
+    try {
+      return await run();
+    } finally {
+      pending.delete(op);
+    }
+  }
+  const tick = () => {
+    const now = Date.now();
+    if (process.connected) {
+      try {
+        process.send({
+          e2eHeartbeat: true,
+          pending: [...pending].map((op) => ({ what: op.what, ms: now - op.since })),
+          lastRead: lastRead ? { ms: now - lastRead.at, text: describe(lastRead.i) } : null,
+        }, () => {});
+      } catch {}
+    }
+    for (const op of pending) {
+      const age = now - op.since;
+      if (age >= limits.opMaxMs) {
+        clearInterval(beat);
+        fail++;
+        const m = `[harness] ${op.what} sem retorno há ${secs(age)}, mesmo com os prazos (Playwright ou navegador travado). ${lastReadText()}`;
+        failures.push(m);
+        console.log(`  FALHOU ${m}`);
+        console.log(`\n${pass} ok, ${fail + errors.length} falha(s)`);
+        process.exit(1); // o Playwright encerra o navegador na saída
+      }
+      if (age >= 60000 && now - op.told >= 60000) {
+        op.told = now;
+        console.log(`  [harness] ainda aguardando ${op.what} há ${secs(age)}`);
+      }
+    }
+  };
+  const beat = setInterval(tick, 2000);
+  beat.unref();
+  tick(); // o runner sabe desde já que o harness existe
+
   const TIMEOUT = Symbol('timeout');
   async function guard(what, start, ms = limits.evalMs) {
     const site = new Error();
     if (wedged) throw new HarnessAbort(`${what} não executado: a página já estava travada (${wedged})`);
+    const job = { what, since: Date.now(), told: 0 };
+    pending.add(job);
     const op = Promise.resolve().then(start);
     let timer;
     try {
@@ -153,6 +209,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       throw abort(what, siteOf(site), `a página não respondeu em ${secs(ms)} (page.evaluate/entrada sem retorno: aba ou GPU travada?). ${lastReadText()}`);
     } finally {
       clearTimeout(timer);
+      pending.delete(job);
     }
   }
   const rawEvaluate = page.evaluate.bind(page);
@@ -196,7 +253,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   const shot = async (name) => {
     if (wedged) throw new HarnessAbort(`shot(${name}) não executado: a página já estava travada (${wedged})`);
     if (process.env.CI) await page.evaluate(() => window.__e2eRender?.());
-    await page.screenshot({ path: resolve(OUT, name) });
+    await during(`shot(${name})`, () => page.screenshot({ path: resolve(OUT, name) }));
     console.log(`  captura: ${outDir.replace(/\\/g, '/')}/${name}`);
   };
   const logOf = (name) => page.evaluate((n) => window.__game.game.debug.events(n).map((e) => e.payload), name);
@@ -441,7 +498,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     const step = async (stage, run) => {
       const site = new Error();
       try {
-        return await run();
+        return await during(`${what}: ${stage}`, run);
       } catch (e) {
         if (e instanceof HarnessAbort) throw e;
         throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${await peek()}`);
@@ -494,6 +551,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     };
   }
   async function close() {
+    clearInterval(beat);
     let timer;
     const closed = await Promise.race([
       browser.close().then(() => true),

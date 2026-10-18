@@ -13,9 +13,15 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   esperas) reprova com diagnóstico; prazo de 60 s em cada `page.evaluate`/teclado/mouse, com a página marcada como
   travada; etapas do `load()` nomeadas; `close()` com prazo. O teto max(10 s, 8× o prazo) com o jogo andando só
   encerra a espera com aviso, como antes: a 1ª versão reprovava ali e o E2E `39165419409` mostrou que fase1/fase3
-  passam por esse teto depois de `ui:restart` (0,03–0,06 s de jogo em 10 s). Provas em
-  `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`).
-  Docs: ARQUITETURA (seção do E2E) e ENTREGA.
+  passam por esse teto depois de `ui:restart` (0,03–0,06 s de jogo em 10 s). No E2E `39166156986` (head `78c076f`)
+  13 de 14 jobs passaram, mas `expresso` travou 30 min no primeiro `load('?level=fase6&play')` sem imprimir nada,
+  apesar dos prazos internos: a causa continua desconhecida (processo da suíte sem rodar ou prazo do Playwright
+  falhando). Por isso entraram duas redes: operação em curso além de 4 min encerra o processo da suíte
+  (`opMaxMs`), e o runner (`suite-runner.mjs`) encerra de fora uma suíte 5 min calada, com o sinal do harness por
+  IPC (o que estava em curso, se o processo parou de responder), carga, memória e processos. Provas em
+  `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`, `stuck`,
+  `mute`). Docs: ARQUITETURA (seção do E2E) e ENTREGA. Se a lavanderia/expresso travar de novo, o diagnóstico
+  do runner é o ponto de partida para achar a causa.
 - Nenhum teste ou build no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `todas` verdes no
   head do PR, entregar e aguardar aprovação. Os PRs #24 e #26 recebem os tetos ao atualizar a base.
 

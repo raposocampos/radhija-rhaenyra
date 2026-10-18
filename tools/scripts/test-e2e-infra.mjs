@@ -84,3 +84,31 @@ for (const [kind, label, diagnosis] of [
     assert.match(result.stdout, new RegExp(`FALHOU ${kind}`));
   });
 }
+
+// Quando nem os prazos do harness funcionam: uma operação em curso além de opMaxMs encerra o processo da suíte; um
+// processo calado (event loop bloqueado) é encerrado de fora pelo runner, com o navegador e o diagnóstico da máquina.
+test('infra E2E: operação sem retorno apesar do prazo encerra a suíte com diagnóstico', { timeout: 65000 }, async () => {
+  const t0 = Date.now();
+  const result = await run('stuck');
+  const sec = (Date.now() - t0) / 1000;
+  assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
+  assert.equal(result.signal, null);
+  assert.ok(sec < 45, `levou ${sec} s`);
+  assert.match(result.stdout, /FALHOU \[harness\] load\('\?trava'\): abrir a página sem retorno há [\d.]+ s, mesmo com os prazos/);
+  assert.match(result.stdout, /1 ok, 1 falha\(s\)/);
+  assert.match(result.stdout, /FALHOU stuck/);
+});
+
+test('infra E2E: suíte calada é encerrada pelo runner com o diagnóstico', { timeout: 65000 }, async () => {
+  const t0 = Date.now();
+  const result = await run('mute');
+  const sec = (Date.now() - t0) / 1000;
+  assert.equal(result.code, 1, `${result.stdout}\n${result.stderr}`);
+  assert.equal(result.signal, null, 'o runner encerra a suíte; ele mesmo termina normalmente');
+  assert.ok(sec < 45, `levou ${sec} s`);
+  assert.match(result.stdout, /\[e2e\] mute: \d+ s sem nenhuma saída; a suíte travou fora do alcance dos prazos do harness/);
+  assert.match(result.stdout, /sinal do harness: o último foi há \d+ s; o processo da suíte parou de responder/);
+  assert.match(result.stdout, /em curso: nada no harness/);
+  assert.match(result.stdout, /máquina: carga [\d.]+\/[\d.]+\/[\d.]+ em \d+ CPUs/);
+  assert.match(result.stdout, /FALHOU mute +sem contagem/);
+});
