@@ -32,10 +32,22 @@ async function sendTouch(type) {
 const finger = {
   async down(id, x, y) { fingers.set(id, { x, y }); await sendTouch('touchStart'); },
   async move(id, x, y) { fingers.set(id, { x, y }); await sendTouch('touchMove'); },
-  /** Levanta um dedo; os outros continuam na tela (a lista sem ele solta só ele). */
+  /** Levanta o último dedo na tela (o protocolo só solta todos de uma vez: touchEnd sem pontos). */
   async up(id) {
     if (!fingers.delete(id)) return;
-    await sendTouch(fingers.size ? 'touchMove' : 'touchEnd');
+    if (fingers.size) throw new Error('finger.up com outro dedo na tela: use liftOne');
+    await sendTouch('touchEnd');
+  },
+  /**
+   * Levanta UM dedo com outros na tela. O protocolo do navegador não solta um ponto sozinho (só touchEnd, que
+   * solta todos): o dedo sobe por um pointerup do próprio ponteiro (o id real, lido no pointerdown), como a trava
+   * de teclas usa keyup. O protocolo ainda o considera na tela até o próximo upAll, e o jogo ignora o resto.
+   */
+  async liftOne(sel) {
+    await ev((s) => {
+      const b = document.querySelector(s);
+      b.dispatchEvent(new PointerEvent('pointerup', { pointerId: window.__lastPointer, pointerType: 'touch', bubbles: true, isPrimary: false }));
+    }, sel);
   },
   async upAll() { fingers.clear(); await sendTouch('touchEnd'); },
 };
@@ -269,9 +281,10 @@ try {
   await finger.down(1, ring.x, ring.y);
   await finger.move(1, ring.x, ring.y - travel);
   await sleep(300);
+  await ev(() => { addEventListener('pointerdown', (e) => { window.__lastPointer = e.pointerId; }, { capture: true, once: true }); });
   await finger.down(2, dash.x, dash.y);
   await sleep(120);
-  await finger.up(2);
+  await finger.liftOne('.rr-tbtn--dash');
   await sleep(200);
   s = await uiState();
   check((await logOf('dog:dash')).length === 1, 'Arrancada com o joystick segurado');

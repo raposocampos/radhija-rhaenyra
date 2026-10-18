@@ -34,6 +34,24 @@ try {
 
   for (const dev of DEVICES) {
     console.log(`\n== ${dev.id} ==`);
+    // um aparelho com problema não impede as capturas dos outros
+    try { await captureDevice(dev, url); } catch (err) { errors.push(`[${dev.id}] ${err.stack || err.message}`); }
+  }
+} catch (err) {
+  errors.push(err.stack || err.message);
+} finally {
+  await browser?.close();
+  await server?.close();
+}
+console.log(`\n${shots} capturas em ${OUT}`);
+if (errors.length) {
+  console.log(`ERROS (${errors.length}):`);
+  for (const e of errors.slice(0, 20)) console.log(e);
+  process.exit(1);
+}
+
+/** Todas as capturas de um aparelho, numa página própria. */
+async function captureDevice(dev, url) {
     const page = await browser.newPage(dev.opts);
     page.setDefaultTimeout(180000);
     page.on('pageerror', (e) => errors.push(`[${dev.id}] ${e.message}`));
@@ -127,6 +145,8 @@ try {
     await step(30);
     await action('jump', 'Space');
     await step(20);
+    // a dica some em 2,6 s de relógio e o SwiftShader leva mais que isso para desenhar: a mesma dica, mais longa
+    await page.evaluate(() => window.__game.events.emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 60 }));
     await shot('03-prompt-e-dica');
 
     await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
@@ -173,16 +193,4 @@ try {
       await shot('08-fase4');
     }
     await page.close();
-  }
-} catch (err) {
-  errors.push(err.stack || err.message);
-} finally {
-  await browser?.close();
-  await server?.close();
-}
-console.log(`\n${shots} capturas em ${OUT}`);
-if (errors.length) {
-  console.log(`ERROS (${errors.length}):`);
-  for (const e of errors.slice(0, 20)) console.log(e);
-  process.exit(1);
 }

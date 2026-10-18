@@ -1297,6 +1297,16 @@
 .rr[data-mobile]:not([data-device="touch"]) .rr-hud__tr { right: calc(var(--sa-r) + 12px); }
 .rr[data-mobile] .rr-introcard { left: calc(var(--sa-l) + clamp(16px, 4vw, 52px)); bottom: calc(var(--sa-b) + clamp(16px, 6vh, 56px)); }
 
+/* celular sem teclado: Jogar e Começar sem a tecla Enter desenhada */
+.rr[data-mobile]:not([data-device="gamepad"]) .rr-btn--play .rr-g,
+.rr[data-mobile]:not([data-device="gamepad"]) .rr-btn--start .rr-g { display: none; }
+/* no toque, o :hover "gruda" depois do toque: sem os levantamentos de hover */
+.rr[data-mobile] .rr-lvcard { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.rr[data-mobile] .rr-lvcard:not(.is-locked):not(.is-current) { background: rgba(255, 246, 230, .93); }
+.rr[data-mobile] .rr-lvcard:hover { transform: none; }
+.rr[data-mobile] .rr-btn--primary:hover { transform: none; filter: none; box-shadow: 0 4px 0 var(--carrot-lo), 0 10px 22px rgba(130, 62, 18, .28); }
+.rr[data-mobile] .rr-btn--soft:hover { transform: none; }
+
 /* Celular deitado: layout compacto ------------------------------------------ */
 .rr[data-mobile="phone"] .rr-layer { transition-duration: .3s; }
 /* tela inicial */
@@ -1309,7 +1319,16 @@
 .rr[data-mobile="phone"] .rr-lvcard__eyebrow, .rr[data-mobile="phone"] .rr-lvcard__stats { display: none; }
 .rr[data-mobile="phone"] .rr-lvcard__icon { width: 36px; height: 36px; }
 .rr[data-mobile="phone"] .rr-lvcard__icon > .ico { width: 25px; height: 25px; }
-.rr[data-mobile="phone"] .rr-lvcard__name { font-size: 13px; }
+.rr[data-mobile="phone"] .rr-lvcard { gap: 8px; padding: 5px 10px 5px 5px; }
+.rr[data-mobile="phone"] .rr-lvcard__name {
+  /* nomes longos ("Lambe-Lambe na Pracinha") em até duas linhas em vez de cortados */
+  font-size: 13px;
+  line-height: 1.12;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
 /* HUD */
 .rr[data-mobile="phone"] .rr-hud__tl { gap: 6px; }
 .rr[data-mobile="phone"] .rr-chip { gap: 7px; padding: 3px 12px 3px 3px; }
