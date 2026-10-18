@@ -44,8 +44,8 @@ export function createPoop({ scale = 1 } = {}) {
   const N = new THREE.Vector3();
   const Bv = new THREE.Vector3();
   const up = new THREE.Vector3(0, 1, 0);
-  const dark = new THREE.Color('#4a2814');
-  const light = new THREE.Color('#8a5532');
+  const dark = new THREE.Color('#4e2b14');
+  const light = new THREE.Color('#a86c3e');
   const c = new THREE.Color();
   for (let i = 0; i <= SEG; i++) {
     const u = i / SEG;
@@ -66,7 +66,8 @@ export function createPoop({ scale = 1 } = {}) {
       const nz = N.z * cs + Bv.z * sn;
       pos.push(P.x + nx * r, P.y + ny * r, P.z + nz * r);
       nor.push(nx, ny, nz);
-      c.copy(dark).lerp(light, Math.min(1, u * 1.4) * (0.6 + 0.4 * Math.max(0, cs)));
+      // sulco escuro entre as voltas (embaixo do tubo) e crista clara em cima
+      c.copy(dark).lerp(light, (0.35 + 0.65 * Math.min(1, 0.4 + u)) * (0.35 + 0.65 * Math.max(0, 0.3 + 0.7 * cs)));
       col.push(c.r, c.g, c.b);
     }
   }
@@ -84,20 +85,21 @@ export function createPoop({ scale = 1 } = {}) {
   geo.setIndex(idx);
   geo.computeVertexNormals();
   const mat = new THREE.MeshPhysicalMaterial({
-    color: '#ffffff', vertexColors: true, roughness: 0.38, clearcoat: 0.75, clearcoatRoughness: 0.22, sheen: 0.35, sheenColor: new THREE.Color('#c08a5e'),
+    color: '#ffffff', vertexColors: true, roughness: 0.34, clearcoat: 0.8, clearcoatRoughness: 0.16, sheen: 0.35, sheenColor: new THREE.Color('#c08a5e'),
+    side: THREE.DoubleSide, // enquanto sai, a ponta aberta mostra o lado de dentro (marrom, não cinza)
   });
   const coil = new THREE.Mesh(geo, mat);
   coil.castShadow = true;
   body.add(coil);
   const triCount = idx.length;
   // base: um disquinho arredondado que fecha o começo da espiral
-  const base = new THREE.Mesh(new THREE.SphereGeometry(0.047, 20, 10), new THREE.MeshPhysicalMaterial({ color: '#52301a', roughness: 0.45, clearcoat: 0.6 }));
+  const base = new THREE.Mesh(new THREE.SphereGeometry(0.047, 20, 10), new THREE.MeshPhysicalMaterial({ color: '#5a3219', roughness: 0.42, clearcoat: 0.6 }));
   base.scale.set(1, 0.42, 1);
   base.position.y = 0.016;
   base.castShadow = true;
   body.add(base);
   // pontinha arredondada
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(tubeR(1) * 1.05, 10, 8), new THREE.MeshPhysicalMaterial({ color: '#8a5532', roughness: 0.38, clearcoat: 0.75 }));
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(tubeR(1) * 1.05, 10, 8), new THREE.MeshPhysicalMaterial({ color: '#a86c3e', roughness: 0.34, clearcoat: 0.8 }));
   spiral(1, tip.position);
   body.add(tip);
 

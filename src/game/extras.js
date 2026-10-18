@@ -179,7 +179,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       const L = Math.hypot(dx, dz) || 1;
-      const gap = c.r + 0.2;
+      const gap = c.r + 0.13;
       stand = { x: pos.x - (dx / L) * gap, z: pos.z - (dz / L) * gap };
     }
     const face = sp.face ?? pos;
@@ -214,13 +214,16 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       z = A.z0 + (A.z - A.z0) * a;
       yaw = A.yaw0 + wrap(A.yaw - A.yaw0) * a;
       if (sp.hop) {
+        // dentro, em cima do piso do ponto (a areia fica sp.y acima do chão)
+        const floor = sp.y ?? 0;
         const back = A.dur - A.t;
-        if (A.t < hopT) y = Math.sin(Math.PI * Math.min(1, A.t / hopT)) * 0.2;
+        y = floor;
+        if (A.t < hopT) y = floor * a + Math.sin(Math.PI * Math.min(1, A.t / hopT)) * 0.2;
         else if (back < hopT) {
           const u = smooth(1 - back / hopT);
           x = A.x + (A.x0 - A.x) * u;
           z = A.z + (A.z0 - A.z) * u;
-          y = Math.sin(Math.PI * Math.min(1, 1 - back / hopT)) * 0.2;
+          y = floor * (1 - u) + Math.sin(Math.PI * Math.min(1, 1 - back / hopT)) * 0.2;
         }
         if (once(A.marks, 'hopIn', A.t > 0.02)) emit('extra:hop', { name: A.who, x: A.x0, z: A.z0 });
         if (once(A.marks, 'hopOut', A.dur - A.t < hopT)) emit('extra:hop', { name: A.who, x: A.x, z: A.z });

@@ -460,7 +460,7 @@ export function createDogAnimation(ctx) {
     let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s - lr * 0.009 * s - w.slide * 0.045 * s - st.mud * 0.004 * s - (wallOn ? keyed(WALL_CROUCH, wp) * 0.03 * s : 0)
       - squat * 0.012 * s + effort * Math.sin(t * 61) * 0.001 * s - (xDrink + xEat) * 0.01 * s - xDig * 0.012 * s;
     let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s - w.aim * 0.012 * s + w.blow * 0.015 * s - w.yuck * 0.02 * s + lk * (0.008 + 0.016 * lIn) * s
-      + scratchK * 0.012 * s + xNudge * 0.035 * s + (xDrink + xEat) * 0.02 * s;
+      + scratchK * 0.012 * s + xNudge * 0.07 * s + (xDrink + xEat) * 0.02 * s;
     const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s - lr * lSide * 0.004 * s;
     qE(_q, pitch, 0, st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
     _rootPos.set(rest[0].x + rootX, rest[0].y + rootY, rest[0].z + rootZ);
@@ -479,7 +479,7 @@ export function createDogAnimation(ctx) {
     }
     if (squat > 0.001) {
       const C = rest[BI.FLu];
-      _m2.makeTranslation(0, C.y, C.z).multiply(_m3.makeRotationX(-0.58 * squat)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
+      _m2.makeTranslation(0, C.y, C.z).multiply(_m3.makeRotationX(-0.47 * squat)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
       _m.premultiply(_m2);
     }
     _m.decompose(_rootPos, Lq[0], _v);
@@ -491,9 +491,9 @@ export function createDogAnimation(ctx) {
     const spineYaw = clamp(st.turnS * 0.07, -0.25, 0.25);
     const wiggle = w.bow * Math.sin(t * 14) * 0.18;
     const flex = w.dash * Math.sin(sp2 - 0.4) * 0.12;
-    qE(Lq[BI.chest], -flex + squat * 0.24, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
+    qE(Lq[BI.chest], -flex + squat * 0.36, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
     const wallFlex = wallOn ? sstep(0.34, 0.42, wp) * (1 - sstep(0.5, 0.6, wp)) * 0.22 : 0; // garupa encolhe no impulso
-    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex - squat * 0.44 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
+    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex - squat * 0.5 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
     posOff[BI.chest].set(0, 0, w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
     posOff[BI.hips].set(0, 0, -w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
     fk(BI.hips);
@@ -538,7 +538,7 @@ export function createDogAnimation(ctx) {
         T.z += w.slide * 0.09 * s;
         T.y += w.slide * 0.055 * s;
         // extras: firmes um pouco à frente (agachada, cavando atrás); cavando com as da frente, uma de cada vez
-        T.z += scratchK * 0.02 * s + squat * 0.03 * s;
+        T.z += scratchK * 0.02 * s + squat * 0.012 * s;
         if (xDig > 0) {
           const f = xt * DIG_RATE;
           const mine = Math.floor(f) % 2 === li;
@@ -669,7 +669,7 @@ export function createDogAnimation(ctx) {
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
     const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
       + lk * (0.14 + 0.3 * lIn - 0.1 * lSweep * lExt) - ls * 0.1 - lr * 0.09 - w.slide * 0.2 + wEnv * st.wallTheta * 0.22
-      + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.6 - xRoll * 0.25;
+      + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 - xRoll * 0.25;
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
     const lickYaw = lk * lSide * 0.08 * lSweep - lr * lSide * 0.1;
     // impulso: no alto, a cabeça vira para a direita, olhando a pata no botão
