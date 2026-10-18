@@ -113,7 +113,7 @@ export function buildPicnic(root, layout) {
       sl.position.y = y;
       sw.add(sl);
     }
-    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.053, 0.053, 0.014, 3), stdMat('#7fbf5a', { roughness: 0.7 }));
+    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.014, 3), stdMat('#7fbf5a', { roughness: 0.7 }));
     fill.position.y = 0.0375; // o recheio entra um pouco nas duas fatias
     sw.add(fill);
     sw.position.set(x, 0, z);

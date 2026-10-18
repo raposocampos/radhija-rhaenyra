@@ -15,12 +15,20 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   por dentro. O frisbee está no alto do escorregador: só uma arrancada sobe, e com
   as patas enlameadas ela escorrega de volta, por isso o Lambe-Lambe é obrigatório.
   As duas levam os objetos à toalha de piquenique. Fica só em `DEV_LEVELS` (id `fase7`).
-- Branch **`claude/lambe-lambe`** (worktree próprio), base `0281956`. Consultar o
-  PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa resultados.
+- Branch **`claude/lambe-lambe`** (worktree próprio), base `0281956`, **PR #20**.
+  Consultar o PR para SHA, CI, E2E e prévia; este texto não antecipa resultados.
   Nenhum teste ou build roda no PC.
-- Próximo passo: implementar habilidade, lama, item frisbee, fase, testes e E2E
-  `lambe`; revisar capturas contra as fases 4 a 6; entregar a prévia e **aguardar
-  aprovação** antes do merge/deploy.
+- Feito: habilidade no núcleo (`game.js`: `lickStroke`/`lickReach` em
+  `dogs/config.js`, ganchos `onLick`/`onLickMiss`, `speedScale`/`canDash`, pose
+  roteirizada `lock.drive`/`slope`); animação de lamber, ser lambida e escorregar
+  (`dogAnimation.js`, língua em `dogFace.js`); lama no shader (`dogs/mudShader.js`)
+  e `mechanics/mud.js`; item frisbee; fase 7 completa em `src/levels/fase7/`;
+  sons (`fx/audio/soundsLambe.js`), pegadas e efeitos (`fx/feedback.js`); testes
+  `test/fase7.test.mjs`; E2E `lambe` e capturas em qualidade completa
+  (`tools/scripts/capture-lambe.mjs`, artefato da suíte). Arestas de navegação
+  aceitam várias restrições (`requires: ['small', 'tunnel']`).
+- Próximo passo: CI verde, E2E `lambe` e `todas`, revisar as capturas contra as
+  fases 4 a 6, entregar a prévia e **aguardar aprovação** antes do merge/deploy.
 
 ## Entregue: fase 6 mais longa (PR #19)
 
