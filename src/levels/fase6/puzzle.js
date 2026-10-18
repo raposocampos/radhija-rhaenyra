@@ -401,7 +401,7 @@ export function createPuzzle(ctx) {
     const k = S.barrierK + Math.sign(target - S.barrierK) * Math.min(Math.abs(target - S.barrierK), dt * 2.2);
     if (k !== S.barrierK) { S.barrierK = k; props.barrier.setOpen(k); }
     // a companheira saiu da placa seguindo a líder → ensinar o Fica (como nas pedras da fase 3)
-    const was = S.prevPlateBy;
+    const was = /** @type {import('../../types').DogName | null} */ (S.prevPlateBy);
     if (was && !p.pressed && was !== active.name && !ctx.isStaying?.(was) && S.route === 'delivery') hints.now('stayPlate', 4, 8);
     S.prevPlateBy = p.pressed ? p.by : null;
   }

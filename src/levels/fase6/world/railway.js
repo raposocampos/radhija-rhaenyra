@@ -464,7 +464,7 @@ export function buildRailway(root, track) {
   const stars = [];
   const del = track.routes.delivery;
   const tmp = { x: 0, z: 0, dx: 0, dz: 0 };
-  for (let s = 1.45; s < del.length + TRACK.tail - 0.4; s += 0.42) {
+  for (let s = 1.45; s < del.length + TRACK.tail.delivery - 0.4; s += 0.42) {
     del.at(s, tmp);
     stars.push(new THREE.ShapeGeometry(starShape(0.05)).rotateX(-Math.PI / 2).rotateY(Math.atan2(tmp.dx, tmp.dz) + Math.PI)
       .translate(tmp.x - tmp.dz * 0.34, Y.height + 0.001, tmp.z + tmp.dx * 0.34));
