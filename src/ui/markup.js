@@ -153,8 +153,8 @@ export const QUALITY_NAMES = { alta: 'alta', media: 'média', baixa: 'baixa', mi
 export const HINTS_NOTE = { on: 'objetivo, marcador e dicas na tela', off: 'desafio: sem objetivo, marcador e dicas' };
 
 /**
- * Modos do botão Jogar. O nome do modo das fases ainda está em aberto com o usuário (Fases, Aventuras ou Puzzles):
- * trocar aqui muda o cartão do modo, o rótulo da tela de fases e os textos de acessibilidade.
+ * Modos do botão Jogar (o usuário escolheu "Fases" para o modo das fases). Trocar um nome aqui muda o cartão do
+ * modo, o rótulo da tela de fases e os textos de acessibilidade.
  */
 export const MODES = {
   story: { name: 'Modo História', badge: 'Em breve', eyebrow: 'Mapa aberto', text: 'Mapas abertos para explorar, a começar pelo Condomínio.' },

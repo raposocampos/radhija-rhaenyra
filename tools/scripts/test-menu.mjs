@@ -245,10 +245,11 @@ try {
   const on = await ev(() => ({ setting: window.__game.settings.noHints, stored: localStorage.getItem('rr-settings-v1'), hints: document.querySelector('.rr').dataset.hints }));
   check(on.setting === false && on.hints === 'on' && on.stored === '{"noHints":false}', 'pausa: dicas religadas e salvas', on);
   const card = await ev(() => {
-    const r = document.querySelector('.rr-card--pause').getBoundingClientRect();
-    return { top: r.top, bottom: r.bottom, vh: innerHeight };
+    const el = document.querySelector('.rr-card--pause');
+    const r = el.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom, vh: innerHeight, scroll: el.scrollHeight - el.clientHeight };
   });
-  check(card.top >= 0 && card.bottom <= card.vh, 'pausa com a linha das dicas cabe em 1280×720', card);
+  check(card.top >= 0 && card.bottom <= card.vh && card.scroll <= 1, 'pausa com a linha das dicas cabe em 1280×720, sem rolar', card);
   await shot('menu-09-pausa-dicas.png');
   await press('Escape', 300);
   i = await waitFor((x) => x.state === 'playing', { timeout: 5000 });

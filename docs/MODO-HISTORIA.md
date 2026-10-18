@@ -73,7 +73,6 @@ poucas linhas antes da construção, como nas fases.
 
 ## Em aberto com o usuário
 
-- O nome do modo das fases no menu (Fases, Aventuras ou Puzzles).
 - Os lugares do Condomínio e a missão principal.
 - Como as cachorrinhas aparecem no mapa-múndi (as duas juntas, em miniatura?) e o ângulo da câmera.
 - O tema das próximas áreas (ilhas, cidades, bairros).

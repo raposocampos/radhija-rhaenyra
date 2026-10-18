@@ -6,8 +6,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 ## Em andamento: menu principal, Opções e modo sem dicas (pedido de 2026-10-18)
 
 - Pedido do usuário: tela inicial só com **Jogar** e **Opções**; Jogar abre **Modo História** (visível, "Em breve")
-  e o modo das fases (nome em aberto: **Fases**, sugestão atual, ou Aventuras ou Puzzles; constante `MODES` em
-  `src/ui/markup.js`), que abre **Continuar** + a grade de fases. Opções reúne volume, qualidade e **Dicas**
+  e o modo **Fases** (nome escolhido pelo usuário; constante `MODES` em `src/ui/markup.js`), que abre
+  **Continuar** + a grade de fases. Opções reúne volume, qualidade e **Dicas**
   (desligadas = modo desafio: sem objetivo escrito, marcador e dicas em balão; controles seguem na pausa).
   Registrar a visão do Modo História sem implementar: [MODO-HISTORIA.md](MODO-HISTORIA.md).
 - **Claude, branch `claude/menu-principal`** (worktree próprio, base `09ed23a`). Consultar o PR do branch para
@@ -22,7 +22,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `feedback.js` (eventos da lavanderia) e `test-expresso.mjs` (oito fases); este branch só toca o template, ícones no
   fim do arquivo, o bloco do marcador e `menuWith`. Quem integrar por último ajusta a lista de suítes do `e2e.yml`.
 - Próximo passo: CI e E2E (`menu`, `toque`, `controle`, `expresso` e depois `todas`) no head do PR, revisar as
-  capturas (`shots/menu/`, `shots/celular-revisao/`), entregar a prévia e perguntar o nome do modo das fases.
+  capturas (`shots/menu/`, `shots/celular-revisao/`) e entregar a prévia. Merge só com a aprovação do usuário.
 
 ## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 

@@ -218,12 +218,12 @@ try {
   await checkFocus('restart', 'D-pad esquerda: Menu inicial → Reiniciar fase');
   await tap(B.DOWN);
   await checkFocus('volume', 'D-pad baixo: Reiniciar fase → Volume');
-  const volumeBefore = Number(await page.locator('.rr-range').inputValue());
+  const volumeBefore = Number(await page.locator('.rr-pause .rr-range').inputValue());
   await tap(B.RIGHT);
-  const volumeAfter = Number(await page.locator('.rr-range').inputValue());
+  const volumeAfter = Number(await page.locator('.rr-pause .rr-range').inputValue());
   check(await focused() === 'volume' && volumeAfter === Math.min(100, volumeBefore + 5), 'D-pad direita no volume ajusta o valor e mantém o foco');
   await tap(B.LEFT);
-  check(await focused() === 'volume' && Number(await page.locator('.rr-range').inputValue()) === Math.max(0, volumeAfter - 5), 'D-pad esquerda no volume ajusta o valor e mantém o foco');
+  check(await focused() === 'volume' && Number(await page.locator('.rr-pause .rr-range').inputValue()) === Math.max(0, volumeAfter - 5), 'D-pad esquerda no volume ajusta o valor e mantém o foco');
   await tap(B.UP);
   await checkFocus('restart', 'D-pad cima: Volume → Reiniciar fase');
   await tap(B.UP);
