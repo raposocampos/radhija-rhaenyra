@@ -12,8 +12,11 @@
 import { createPoop } from '../world/poop.js';
 import { POOP_DROP, POOP_KICKS, SNEEZE_AT, NUDGE_AT, DIG_RATE } from '../dogs/dogAnimation.js';
 
-/** Duração da sequência do cocô (s). */
+/** Antes de agachar ela fareja o chão e dá uma voltinha (s); depois a agachada dura POOP_TIME s. */
+export const POOP_PRE = 1.5;
 export const POOP_TIME = 4.8;
+/** Tempo que o cocô leva para sair (s), a partir de POOP_DROP. */
+const POOP_OUT = 0.6;
 /** Duração de cada animação do cenário (s). */
 export const EXTRA_TIME = Object.freeze({ drink: 3.0, eat: 3.0, dig: 2.6, sneeze: 2.4, nudge: 1.7, roll: 3.8, swing: 6.0, spurt: 2.4 });
 const STRAIN_AT = [0.2, 0.31, 0.42];
@@ -67,7 +70,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     if (S.used || S.poop || S.act || !allTreats || !free) return false;
     if (!grounded(c) || carries(c.name)) return false;
     S.used = true;
-    S.poop = { who: c.name, t: 0, x: c.x, z: c.z, yaw: c.yaw, marks: new Set(), kick: 0 };
+    S.poop = { who: c.name, t: -POOP_PRE, x: c.x, z: c.z, yaw: c.yaw, yaw0: c.yaw, marks: new Set(), kick: 0 };
     c.v = 0;
     c.vx = c.vz = 0;
     c.animSpeed = 0;
@@ -79,13 +82,26 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     if (!P) return;
     const c = ctrls[P.who];
     P.t += dt;
-    const p = Math.min(1, P.t / POOP_TIME);
     c.x = P.x;
     c.z = P.z;
-    c.yaw = P.yaw;
     c.v = 0;
     c.vx = c.vz = 0;
     c.animSpeed = 0;
+    if (P.t < 0) {
+      // farejando o chão, dá uma voltinha completa no lugar (as patas andam com o giro)
+      const u = 1 + P.t / POOP_PRE;
+      const turnU = Math.min(1, Math.max(0, (u - 0.25) / 0.7));
+      const e = turnU * turnU * (3 - 2 * turnU);
+      const yaw = P.yaw0 + Math.PI * 2 * e;
+      c.yawRate = (yaw - c.yaw) / Math.max(dt, 1e-4);
+      c.yaw = yaw;
+      P.yaw = yaw;
+      if (once(P.marks, 'sniff', u > 0.05)) emit('extra:sniff', { name: P.who, x: c.x, z: c.z });
+      return;
+    }
+    c.yawRate = 0;
+    c.yaw = P.yaw;
+    const p = Math.min(1, P.t / POOP_TIME);
     const fx = Math.sin(P.yaw);
     const fz = Math.cos(P.yaw);
     const back = c.r * 1.7;
@@ -93,7 +109,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     if (once(P.marks, 'plop', p >= POOP_DROP)) {
       const x = c.x - fx * back;
       const z = c.z - fz * back;
-      dropPoop(x, z, c.name);
+      dropPoop(x, z);
       emit('extra:plop', { name: P.who, x, z });
     }
     if (once(P.marks, 'relief', p >= RELIEF_AT)) emit('extra:relief', { name: P.who, x: c.x, y: c.cfg?.visual?.headTop ?? 0.5, z: c.z });
@@ -112,15 +128,18 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       S.poop = null;
     }
   }
+  // cocozinho do tamanho da dog (a Radhija é menor)
+  const who0 = () => S.poop?.who ?? 'radhija';
+  const c0Scale = (n) => (n === 'rhaenyra' ? 0.7 : 0.6);
   function dropPoop(x, z) {
-    const poop = createPoop({ scale: 1 });
+    const poop = createPoop({ scale: c0Scale(who0()) });
     poop.object.position.set(x, 0, z);
     // a carinha olha para a câmera
     const cx = camera?.position.x ?? x;
     const cz = camera?.position.z ?? z + 5;
     poop.object.rotation.y = Math.atan2(cx - x, cz - z);
     root?.add(poop.object);
-    poop.appear();
+    poop.appear(POOP_OUT);
     S.poops.push(poop);
   }
 
@@ -154,7 +173,15 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     const sp = spotFor(c, flags);
     if (!sp) return false;
     const pos = spotPos(sp);
-    const stand = sp.stand ?? { x: c.x, z: c.z };
+    let stand = sp.stand ?? { x: c.x, z: c.z };
+    if (sp.kind === 'nudge') {
+      // pertinho da bola, do lado de onde ela veio
+      const dx = pos.x - c.x;
+      const dz = pos.z - c.z;
+      const L = Math.hypot(dx, dz) || 1;
+      const gap = c.r + 0.2;
+      stand = { x: pos.x - (dx / L) * gap, z: pos.z - (dz / L) * gap };
+    }
     const face = sp.face ?? pos;
     const yaw = Math.atan2(face.x - stand.x, face.z - stand.z);
     S.act = {
@@ -179,12 +206,26 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     let z = A.z;
     let y = 0;
     let yaw = A.yaw;
-    // chega ao ponto e vira para o objeto
-    const a = smooth(A.t / ALIGN_T);
+    // chega ao ponto e vira para o objeto (com sp.hop, pula para dentro e no fim pula de volta)
+    const hopT = 0.42;
+    const a = smooth(A.t / (sp.hop ? hopT : ALIGN_T));
     if (sp.kind !== 'swing') {
       x = A.x0 + (A.x - A.x0) * a;
       z = A.z0 + (A.z - A.z0) * a;
       yaw = A.yaw0 + wrap(A.yaw - A.yaw0) * a;
+      if (sp.hop) {
+        const back = A.dur - A.t;
+        if (A.t < hopT) y = Math.sin(Math.PI * Math.min(1, A.t / hopT)) * 0.2;
+        else if (back < hopT) {
+          const u = smooth(1 - back / hopT);
+          x = A.x + (A.x0 - A.x) * u;
+          z = A.z + (A.z0 - A.z) * u;
+          y = Math.sin(Math.PI * Math.min(1, 1 - back / hopT)) * 0.2;
+        }
+        if (once(A.marks, 'hopIn', A.t > 0.02)) emit('extra:hop', { name: A.who, x: A.x0, z: A.z0 });
+        if (once(A.marks, 'hopOut', A.dur - A.t < hopT)) emit('extra:hop', { name: A.who, x: A.x, z: A.z });
+        if (once(A.marks, 'land', A.t >= hopT)) emit('dog:land', { name: A.who, x: A.x, z: A.z });
+      }
     }
     const pos = spotPos(sp);
     if (sp.kind === 'drink' || sp.kind === 'eat') {
@@ -322,7 +363,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     /** Trava da dog (o núcleo pergunta antes do puzzle). */
     lockFor(name) {
       const c = ctrls[name];
-      if (S.poop?.who === name) return { action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
+      if (S.poop?.who === name) return { action: S.poop.t < 0 ? 'sniff' : 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
       if (S.act?.who === name) return { action: S.act.action, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: S.act.slope };
       const P = S.poop;
       if (P && name === other(P.who)) {
@@ -342,7 +383,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       return null;
     },
     /** Progresso do cocô da dog (0..1) ou −1. */
-    poopK(name) { return S.poop?.who === name ? Math.min(1, S.poop.t / POOP_TIME) : -1; },
+    poopK(name) { return S.poop?.who === name && S.poop.t >= 0 ? Math.min(1, S.poop.t / POOP_TIME) : -1; },
     /** Animação do cenário da dog ({ kind, k, t }) ou null (o balanço e o esguicho usam ações que já existem). */
     extraAnim(name) {
       const A = S.act;
@@ -370,7 +411,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       S = fresh();
     },
     info: () => ({
-      used: S.used, poop: S.poop ? { who: S.poop.who, k: +(S.poop.t / POOP_TIME).toFixed(3) } : null,
+      used: S.used, poop: S.poop ? { who: S.poop.who, k: +(Math.max(-1, S.poop.t / POOP_TIME)).toFixed(3) } : null,
       act: S.act ? { who: S.act.who, kind: S.act.spot.kind, id: S.act.spot.id, k: +(S.act.t / S.act.dur).toFixed(3) } : null,
       poops: S.poops.length, spots: spots.map((s) => s.id),
     }),

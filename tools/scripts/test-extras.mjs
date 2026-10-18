@@ -8,7 +8,7 @@ const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const H = await createHarness({ base: BASE, outDir: 'shots/extras' });
 const { check, info, ev, shot, logOf, clearLog, load, page, waitFor } = H;
-const POOP_MS = 4800;
+const POOP_MS = 1500 + 4800; // voltinha + agachada
 
 try {
   console.log('\n== Extras: fase 5 ==');

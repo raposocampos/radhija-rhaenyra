@@ -823,6 +823,8 @@ export interface ExtraSpot {
   y?: number;
   /** Altura do que ela cheira (flores no alto: a cabeça abaixa menos). */
   h?: number;
+  /** Pula para dentro (caixa de areia) até stand e, no fim, pula de volta. */
+  hop?: boolean;
   size?: DogSize;
   when?: string;
   seat?: number;

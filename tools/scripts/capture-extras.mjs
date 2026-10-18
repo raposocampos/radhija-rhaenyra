@@ -112,13 +112,14 @@ try {
     await put(name, 0.2, 1.3, 2.4);
     await collectAll();
     await put(name, 0.2, 1.3, 2.4);
-    const d = await dogAt(name);
     await tap('KeyC');
-    const marks = [[0.08, 'agacha'], [0.24, 'forca-1'], [0.36, 'forca-2'], [0.46, 'saiu'], [0.6, 'alivio'], [0.72, 'cava-1'], [0.8, 'cava-2'], [0.97, 'fim']];
+    // a câmera acompanha a direção final (depois da voltinha ela volta para a mesma)
+    const d = await dogAt(name);
+    const marks = [[-0.17, 'voltinha'], [0.08, 'agacha'], [0.24, 'forca-1'], [0.34, 'saindo'], [0.46, 'saiu'], [0.6, 'alivio'], [0.72, 'cava-1'], [0.8, 'cava-2'], [0.97, 'fim']];
     for (const [k, label] of marks) {
       await until(new Function('i', `return (i.extras?.poop?.k ?? 1) >= ${k}`));
       await shot(`${name}-coco-${label}-lado`, around(d, 'side'));
-      if (['forca-2', 'saiu', 'cava-1', 'fim'].includes(label)) await shot(`${name}-coco-${label}-tras`, around(d, 'back', 1.2, 0.6));
+      if (['forca-1', 'saindo', 'saiu', 'cava-1', 'fim'].includes(label)) await shot(`${name}-coco-${label}-tras`, around(d, 'back', 1.2, 0.6));
       if (['forca-1', 'alivio'].includes(label)) await shot(`${name}-coco-${label}-frente`, around(d, 'front', 1.05, 0.45, 0.3));
     }
     await until((i) => !i.extras?.poop);
@@ -131,11 +132,17 @@ try {
     await open(level);
     if (opts.stage) await page.evaluate((s) => window.__game.game.debug.setStage(s), opts.stage);
     const sp = await page.evaluate((i) => window.__game.game.levelDef.extras.find((e) => e.id === i), id);
+    // do lado de fora do ponto, oposto a `face` (como em test/extras.test.mjs)
     const face = sp.face ?? sp;
-    const ang = opts.approach ?? 0;
-    const x = sp.stand ? sp.stand.x + Math.sin(ang) * 0.12 : sp.x + Math.sin(ang) * ((sp.r ?? 0.6) - 0.15);
-    const z = sp.stand ? sp.stand.z + Math.cos(ang) * 0.12 : sp.z + Math.cos(ang) * ((sp.r ?? 0.6) - 0.15);
-    await put(who, x, z, Math.atan2(face.x - x, face.z - z));
+    let x, z;
+    if (sp.stand && !sp.hop) { x = sp.stand.x; z = sp.stand.z + 0.12; } else {
+      const away = Math.hypot(sp.x - face.x, sp.z - face.z) > 1e-3 ? Math.atan2(sp.x - face.x, sp.z - face.z) : (opts.approach ?? 0);
+      const d = (sp.r ?? 0.6) - 0.15;
+      x = sp.x + Math.sin(away) * d;
+      z = sp.z + Math.cos(away) * d;
+    }
+    const p = await page.evaluate(({ n, px, pz }) => window.__game.game.debug.teleport(n, px, pz), { n: who, px: x, pz: z });
+    await put(who, p.x, p.z, Math.atan2(face.x - p.x, face.z - p.z));
     await tap('KeyE');
     await until((i) => !!i.extras?.act, 30);
     for (const [k, label, kind] of marks) {
@@ -147,15 +154,15 @@ try {
   }
 
   // 2. as animações do cenário
-  await scene('fase5', 'racao', 'radhija', [[0.5, 'comendo', 'side']]);
+  await scene('fase5', 'racao', 'radhija', [[0.5, 'comendo', 'side'], [0.62, 'comendo-frente', 'front']]);
   await scene('fase5', 'agua', 'rhaenyra', [[0.5, 'bebendo', 'front']]);
   await scene('fase7', 'balanco-1', 'radhija', [[0.06, 'pulando', 'front'], [0.45, 'balancando', 'front'], [0.62, 'balancando-2', 'side']], { dist: 1.8, h: 0.9, lookY: 0.45 });
-  await scene('fase7', 'areia-sul', 'rhaenyra', [[0.4, 'cavando', 'side'], [0.6, 'cavando-2', 'front']]);
-  await scene('fase8', 'pilha-de-roupa', 'radhija', [[0.24, 'deitando', 'front'], [0.38, 'de-costas', 'front'], [0.6, 'rolando', 'side']]);
+  await scene('fase7', 'areia-sul', 'rhaenyra', [[0.12, 'pulando', 'side'], [0.4, 'cavando', 'side'], [0.6, 'cavando-2', 'front']]);
+  await scene('fase8', 'pilha-de-roupa', 'radhija', [[0.24, 'deitando', 'front'], [0.38, 'de-costas', 'side'], [0.6, 'rolando', 'front']], { dist: 1.4, h: 0.8, lookY: 0.12 });
   await scene('fase1', 'poca-bebedouro', 'radhija', [[0.5, 'bebendo', 'side']]);
   await scene('fase1', 'lavanda', 'rhaenyra', [[0.35, 'cheirando', 'side'], [0.64, 'atchim', 'front']]);
   await scene('fase3', 'lago-3', 'rhaenyra', [[0.5, 'bebendo', 'side']]);
-  await scene('fase4', 'floreira-3', 'radhija', [[0.64, 'atchim', 'front']], { approach: Math.PI / 2 });
+  await scene('fase4', 'floreira-3l', 'radhija', [[0.64, 'atchim', 'front']]);
   await scene('fase6', 'bolinha', 'radhija', [[0.43, 'focinhada', 'side'], [0.9, 'bola-rolou', 'front']]);
   await scene('fase2', 'irrigador', 'rhaenyra', [[0.4, 'esguicho', 'front'], [0.66, 'sacudindo', 'front']], { stage: 'sprinklersOff' });
 

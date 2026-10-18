@@ -53,10 +53,10 @@ export const SOUNDS_EXTRAS = {
   },
   // espirro fofo: "a-a-tchim!"
   extraSneeze(G, o, t, p) {
-    tone(G, o, { type: 'triangle', f: 520 * p, to: 760 * p, t: t - 0.12, a: 0.04, d: 0.08, peak: 0.02 });
-    nz(G, o, { t, a: 0.002, d: 0.14, peak: 0.13, type: 'bandpass', f: 3200 * p, to: 1600 * p, toT: 0.14, q: 1.4 });
-    tone(G, o, { type: 'square', f: 880 * p, to: 440 * p, t, a: 0.002, d: 0.08, peak: 0.015 });
-    return 0.35;
+    tone(G, o, { type: 'triangle', f: 520 * p, to: 760 * p, t, a: 0.04, d: 0.08, peak: 0.02 });
+    nz(G, o, { t: t + 0.12, a: 0.002, d: 0.14, peak: 0.13, type: 'bandpass', f: 3200 * p, to: 1600 * p, toT: 0.14, q: 1.4 });
+    tone(G, o, { type: 'square', f: 880 * p, to: 440 * p, t: t + 0.12, a: 0.002, d: 0.08, peak: 0.015 });
+    return 0.45;
   },
   // focinhada na bola: "boop" de borracha
   extraBoop(G, o, t, p) {

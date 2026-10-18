@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { LEVELS } from '../src/levels/index.js';
-import { POOP_TIME, EXTRA_TIME } from '../src/game/extras.js';
+import { POOP_PRE, POOP_TIME, EXTRA_TIME } from '../src/game/extras.js';
 import { PAD } from '../src/game/input.js';
 
 const ex = (h) => h.info().extras;
@@ -45,9 +45,13 @@ for (const [i, def] of LEVELS.entries()) {
     h.tap('KeyC');
     assert.equal(h.log('extra:start').at(-1)?.kind, 'poop', 'C com os ossinhos: começa');
     assert.equal(ex(h).poop?.who, who);
+    // antes de agachar: fareja e dá uma voltinha no lugar
+    h.run(POOP_PRE * 0.6);
+    assert.equal(h.dogs[who].anim.action, 'sniff', 'farejando antes');
+    assert.equal(h.dogs[who].anim.poopK, -1);
     // travada no lugar durante a sequência, com a animação recebendo o progresso
     h.hold([1, 0]);
-    h.run(POOP_TIME * 0.5);
+    h.run(POOP_PRE * 0.4 + POOP_TIME * 0.5);
     assert.ok(Math.hypot(c.x - at.x, c.z - at.z) < 0.02, 'fica parada fazendo força');
     const k = h.dogs[who].anim.poopK;
     assert.ok(k > 0.3 && k < 0.7, `a animação recebe o progresso (${k})`);
@@ -84,7 +88,7 @@ test('extras: R3 no controle também faz o cocô (e carregando algo na boca não
   h.run(0.1);
   assert.equal(ex(h).poop?.who, h.info().activeDog, 'R3 começa');
   h.setPad(null);
-  h.run(POOP_TIME + 0.2);
+  h.run(POOP_PRE + POOP_TIME + 0.2);
   assert.equal(ex(h).poops, 1);
 });
 
@@ -99,23 +103,30 @@ test('extras: a irmã por perto vira a cara para o cocô', async () => {
   h.run(0.3);
   h.clearLog();
   h.tap('KeyC');
-  h.run(POOP_TIME * 0.6);
+  h.run(POOP_PRE + POOP_TIME * 0.6);
   assert.equal(h.log('dog:yuck').filter((e) => e.name === b).length, 1, 'a irmã fez "eca"');
   assert.equal(h.dogs[b].anim.action, 'yuck');
 });
+
+/**
+ * Onde chegar para usar o ponto: perto do `stand` (se ela não pula para dentro) ou do lado de fora do ponto, na
+ * direção oposta a `face` (sul quando o ponto não tem `face`).
+ */
+export function approachOf(sp) {
+  if (sp.stand && !sp.hop) return { x: sp.stand.x, z: sp.stand.z + 0.12 };
+  const face = sp.face ?? sp;
+  const away = Math.hypot(sp.x - face.x, sp.z - face.z) > 1e-3 ? Math.atan2(sp.x - face.x, sp.z - face.z) : 0;
+  const d = (sp.r ?? 0.6) - 0.15;
+  return { x: sp.x + Math.sin(away) * d, z: sp.z + Math.cos(away) * d };
+}
 
 /** Leva a dog certa até perto do ponto, de frente para ele. */
 function goTo(h, sp) {
   const want = sp.size === 'large' ? 'rhaenyra' : sp.size === 'small' ? 'radhija' : h.info().activeDog;
   if (h.info().activeDog !== want) h.tap('KeyQ');
   const face = sp.face ?? sp;
-  const r = Math.min(0.32, (sp.r ?? 0.6) * 0.6);
-  // chega pelo lado de fora do ponto, olhando para ele (sul por padrão)
-  const ang = sp.approach ?? 0;
-  const x = sp.stand ? sp.stand.x + Math.sin(ang) * 0.12 : sp.x + Math.sin(ang) * ((sp.r ?? 0.6) - 0.12);
-  const z = sp.stand ? sp.stand.z + Math.cos(ang) * 0.12 : sp.z + Math.cos(ang) * ((sp.r ?? 0.6) - 0.12);
-  void r;
-  const p = h.teleport(want, x, z);
+  const a = approachOf(sp);
+  const p = h.teleport(want, a.x, a.z);
   h.ctrls[want].yaw = Math.atan2(face.x - p.x, face.z - p.z);
   h.run(0.1);
   return want;
