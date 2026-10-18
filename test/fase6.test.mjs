@@ -6,7 +6,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import fase6 from '../src/levels/fase6/index.js';
-import modelo from '../src/levels/_modelo/index.js';
 import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS } from '../src/levels/dev.js';
 import { PAD } from '../src/game/input.js';
@@ -15,6 +14,8 @@ import { STAGES as STATES, BARRIER_STOP } from '../src/levels/fase6/puzzle.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const L = fase6.layout;
+/** Posição da fase 6 na campanha (depois dela vem a fase 7). */
+const INDEX = LEVELS.indexOf(fase6);
 const TRACK = createTrack();
 /** Diferença entre dois ângulos, em [0, π]. */
 const turn = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -29,14 +30,15 @@ const near = (actual, expected, message, epsilon = 1e-7) => {
   assert.ok(Math.abs(actual - expected) < epsilon, `${message}: ${actual} ≠ ${expected}`);
 };
 
-async function prototype(t, query = '') {
+/** A fase 6 na campanha, com o cenário real; as outras fases ficam com dublês. */
+async function campaign(t, query = '') {
   const module = await fase6.load();
   const h = await createHeadlessGame({
-    levels: [fase6, modelo], query,
+    level: INDEX + 1, query,
     configure({ levels, engine }) {
       // A fábrica real recebe o mesmo root e escopo de recursos do jogo.
-      // O segundo cenário serve para exercitar o descarte de uma fase inteira.
-      levels[0].build = module.build;
+      // A fase seguinte (dublê) serve para exercitar o descarte de uma fase inteira.
+      levels[INDEX].build = module.build;
       engine.renderer.getDrawingBufferSize = (v) => v.set(1280, 720);
       engine.renderer.capabilities = { getMaxAnisotropy: () => 4 };
       engine.sun = new THREE.DirectionalLight();
@@ -46,7 +48,7 @@ async function prototype(t, query = '') {
   t.after(async () => {
     h.releaseAll();
     h.setPad(null);
-    if (h.game.level === 0) await h.game.loadLevel(1, { mode: 'title', initial: true });
+    if (h.game.level === INDEX) await h.game.loadLevel(INDEX + 1, { mode: 'title', initial: true });
   });
   assert.equal(h.game.state, 'playing', 'o cenário e puzzle reais carregam juntos');
   return h;
@@ -127,10 +129,11 @@ function snapshot(h) {
   };
 }
 
-test('fase 6: protótipo fica no catálogo de desenvolvimento, com props reais completos', async (t) => {
-  assert.equal(LEVELS.some((def) => def.id === 'fase6'), false, 'não altera campanha/progresso');
-  assert.equal(DEV_LEVELS.filter((def) => def.id === 'fase6').length, 1);
-  const h = await prototype(t);
+test('fase 6: na campanha depois da fase 5, com props reais completos', async (t) => {
+  assert.equal(INDEX, 5, 'sexta fase da campanha');
+  assert.equal(LEVELS.filter((def) => def.id === 'fase6').length, 1);
+  assert.equal(DEV_LEVELS.some((def) => def.id === 'fase6'), false, 'saiu do catálogo de desenvolvimento');
+  const h = await campaign(t);
   assert.equal(info(h).levelId, 'fase6');
   assert.equal(info(h).stage, 'waiting');
   assert.equal(info(h).route, 'loop');
@@ -170,7 +173,7 @@ test('fase 6: fábrica headless explícita suporta suítes comuns sem fabricar m
 });
 
 test('fase 6: andar, permanecer, latir, interagir e arrancar no pedal não trocam a rota', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   select(h, 'rhaenyra');
   place(h, 'rhaenyra', { x: L.PEDAL.x, z: L.PEDAL.z + L.PEDAL.r + 0.3 });
   h.walkTo(L.PEDAL.x, L.PEDAL.z, { tol: 0.1 });
@@ -195,7 +198,7 @@ test('fase 6: andar, permanecer, latir, interagir e arrancar no pedal não troca
 });
 
 test('fase 6: pouso real aciona uma vez; cada pulo avança a agulha (volta → lua → estrela → volta) e pouso fora não aciona', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   jumpPedal(h);
   assert.equal(info(h).route, 'moon');
   assert.equal(info(h).routeChanges, 1);
@@ -221,7 +224,7 @@ test('fase 6: pouso real aciona uma vez; cada pulo avança a agulha (volta → l
 });
 
 test('fase 6: trocar de personagem no ar preserva um único pouso no pedal', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   select(h, 'rhaenyra');
   place(h, 'rhaenyra', L.PEDAL);
   h.tap('Space');
@@ -236,7 +239,7 @@ test('fase 6: trocar de personagem no ar preserva um único pouso no pedal', asy
 });
 
 test('fase 6: aproximar, latir e interagir no nariz não substitui bafo', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   select(h, 'radhija');
   place(h, 'radhija', L.BLOW_SPOT);
   h.run(1);
@@ -257,7 +260,7 @@ test('fase 6: aproximar, latir e interagir no nariz não substitui bafo', async 
 });
 
 test('fase 6: ordem inversa — a volta é recuperável, a cancela barra a estrela e, segura na placa, o planeta chega antes da lua', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const ball = h.props.ball.object;
   blow(h);
   waitFor(h, (i) => i.stage === 'movingLoop', 'primeiro bafo inicia a rota circular');
@@ -318,7 +321,7 @@ test('fase 6: ordem inversa — a volta é recuperável, a cancela barra a estre
   near(h.props.moon.object.position.x, L.TRAY.x + 0.1, 'lua no lado leste da bandeja');
 });
 test('fase 6: rota fica travada no espirro/viagem, sem pulo enfileirado nem nova viagem', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   frontCloud(h, 0.3);
   h.step();
   assert.equal(info(h).stage, 'sneezing');
@@ -339,7 +342,7 @@ test('fase 6: rota fica travada no espirro/viagem, sem pulo enfileirado nem nova
 });
 
 test('fase 6: contato lateral consumido pelo cheiro real não ganha segunda chance pela frente', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const scent = h.game.debug.scent;
   const cloud = scent.spawn({ x: L.NOSE.x + L.NOSE.halfWidth + 0.12, z: L.NOSE.frontZ + 0.12, speed: 0, life: 10 });
   cloud.r = 1.05; // nuvem já espalhada: pior raio calmo do sistema existente.
@@ -358,7 +361,7 @@ test('fase 6: contato lateral consumido pelo cheiro real não ganha segunda chan
 });
 
 test('fase 6: bafo pelo contorno não atravessa a ferrovia; janela aceita uma faixa frontal ampla', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const scent = h.game.debug.scent;
   const yard = L.RAIL_YARD;
   const radius = L.DOGS.radhija.radius;
@@ -397,7 +400,7 @@ test('fase 6: bafo pelo contorno não atravessa a ferrovia; janela aceita uma fa
 });
 
 test('fase 6: rearme captura TODAS as nuvens, inclusive longe; expiração poda IDs e reset limpa', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const scent = h.game.debug.scent;
   frontCloud(h, 0.25);
   h.step();
@@ -430,7 +433,7 @@ test('fase 6: rearme captura TODAS as nuvens, inclusive longe; expiração poda 
 });
 
 test('fase 6: nuvem ainda no nariz impede rearme depois da volta', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const cloud = frontCloud(h, 60);
   h.step();
   waitFor(h, (i) => i.stage === 'waiting', 'trem retornou');
@@ -444,7 +447,7 @@ test('fase 6: nuvem ainda no nariz impede rearme depois da volta', async (t) => 
 });
 
 test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alcança a pose dela', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   for (const state of TRIP) {
     assert.equal(h.game.debug.setStage(state, 'radhija'), true, state);
     // Chama a interação real exatamente sobre a carga do vagão para provar a trava lógica,
@@ -500,7 +503,7 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
   assert.equal(info(h).place.moon, 'gantry');
 });
 test('fase 6: dica da bandeja só anuncia a carga no trem enquanto ele viaja', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   for (const stage of STATES) {
     assert.equal(h.game.debug.setStage(stage, 'radhija'), true, stage);
     // Fora do alcance de retirada (0,6), dentro da região da dica (0,85).
@@ -518,7 +521,7 @@ test('fase 6: dica da bandeja só anuncia a carga no trem enquanto ele viaja', a
 });
 
 test('fase 6: pausa congela salto, espirro, trajetos, rearme e animação da descarga', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   select(h, 'rhaenyra');
   place(h, 'rhaenyra', L.PEDAL);
   h.tap('Space');
@@ -551,7 +554,7 @@ test('fase 6: pausa congela salto, espirro, trajetos, rearme e animação da des
 });
 
 test('fase 6: reinício de cada estado devolve parent/pose das cargas, trem, rota, cancela, nuvens e petiscos', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const items = [h.props.ball.object, h.props.moon.object].map((o) => ({ o, parent: o.parent, pos: o.position.clone(), quat: o.quaternion.clone() }));
   const trainHome = h.props.train.object.position.clone();
   const rocket = h.engine.scene.getObjectByName('foguete');
@@ -591,7 +594,7 @@ test('fase 6: reinício de cada estado devolve parent/pose das cargas, trem, rot
 });
 
 test('fase 6: troca de fase em cada estado descarta nariz e item sem callbacks tardios', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   for (const state of STATES) {
     assert.equal(h.game.debug.setStage(state, 'radhija'), true, state);
     const scent = h.game.debug.scent;
@@ -607,7 +610,7 @@ test('fase 6: troca de fase em cada estado descarta nariz e item sem callbacks t
       geometry.addEventListener('dispose', entry.onDispose);
       return entry;
     });
-    assert.equal(await h.game.loadLevel(1, { mode: 'play', initial: true }), true);
+    assert.equal(await h.game.loadLevel(INDEX + 1, { mode: 'play', initial: true }), true);
     for (const entry of observers) entry.geometry.removeEventListener('dispose', entry.onDispose);
     assert.equal(oldRoot.parent, null, `root descartado: ${state}`);
     assert.ok(observers.some((entry) => entry.count === 1), `recurso local descartado: ${state}`);
@@ -625,14 +628,14 @@ test('fase 6: troca de fase em cada estado descarta nariz e item sem callbacks t
     scent.update(1);
     h.run(0.1);
     assert.deepEqual(oldPuzzle.info(), oldState, 'campo descartado não chama o puzzle antigo');
-    assert.equal(info(h).levelId, 'modelo');
-    assert.equal(await h.game.loadLevel(0, { mode: 'play', initial: true }), true);
+    assert.equal(info(h).levelId, 'fase7');
+    assert.equal(await h.game.loadLevel(INDEX, { mode: 'play', initial: true }), true);
     assert.equal(h.game.debug.scent.noses.filter((n) => n.id === L.NOSE.id).length, 1);
   }
 });
 
 test('fase 6: passeio, estações e petiscos são alcançáveis por ambas, ferrovia bloqueia inclusive saltos', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   // onde as dogs param para usar cada coisa
   const stations = [L.PEDAL, L.BLOW_SPOT, L.TRAY, L.GOAL, L.BARRIER_PLATE, ...L.COLLECTIBLES];
   const yard = L.RAIL_YARD;
@@ -777,7 +780,7 @@ test('fase 6: o trem inteiro (corpo e teto) fica dentro da cerca e longe dos enf
 });
 
 test('fase 6: viagem real — locomotiva, vagão e bolinha seguem o trilho quadro a quadro, sem salto nem giro parado', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const loco = h.props.train.object;
   const wagon = h.engine.scene.getObjectByName('vagao');
   const ball = h.props.ball.object;
@@ -825,7 +828,7 @@ test('fase 6: viagem real — locomotiva, vagão e bolinha seguem o trilho quadr
 });
 
 test('fase 6: entrega real — o vagão para no para-choque, a caçamba bascula, o planeta rola até a bandeja e o trem volta sozinho', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   jumpTo(h, 'delivery');
   holdBarrier(h);
   const bed = h.engine.scene.getObjectByName('cacamba');
@@ -869,7 +872,7 @@ test('fase 6: entrega real — o vagão para no para-choque, a caçamba bascula,
 });
 
 test('fase 6: cancela — fechada segura o trem antes do braço; segura na placa, deixa passar e não desce em cima dele', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   jumpTo(h, 'delivery');
   frontCloud(h, 0.3);
   h.step();
@@ -899,7 +902,7 @@ test('fase 6: cancela — fechada segura o trem antes do braço; segura na placa
 });
 
 test('fase 6: pórtico — o trem busca a lua: a portinhola abre, a lua cai na frente do vagão, o planeta abre espaço e os dois voltam', async (t) => {
-  const h = await prototype(t, 'dog=rhaenyra');
+  const h = await campaign(t, 'dog=rhaenyra');
   jumpPedal(h);
   assert.equal(info(h).route, 'moon', 'um pulo: a lua');
   const moon = h.props.moon.object;
@@ -965,7 +968,7 @@ test('fase 6: pórtico — o trem busca a lua: a portinhola abre, a lua cai na f
 });
 
 test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no seu lado da bandeja; uma em cada boca, decolam', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   h.game.debug.setStage('moonLoaded', 'radhija');
   const moon = h.props.moon.object;
   const ball = h.props.ball.object;
@@ -1020,7 +1023,7 @@ test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no s
 });
 
 test('fase 6: partida longa andando, com a companheira junto — lua no pórtico, cancela, estrela e as duas cargas juntas', async (t) => {
-  const h = await prototype(t);
+  const h = await campaign(t);
   const inside = [];
   const count = {};
   const offs = ['dog:bafo', 'expresso:dock', 'expresso:launch', 'expresso:blocked', 'expresso:loaded', 'item:pickup', 'victory']
@@ -1098,6 +1101,9 @@ test('fase 6: partida longa andando, com a companheira junto — lua no pórtico
   assert.equal(count['expresso:blocked'] || 0, 0, 'com a Rhaenyra na placa, a cancela nunca barrou');
   assert.equal(count['item:pickup'], 2, 'planeta e lua, uma em cada boca');
   assert.equal(count.victory, 1);
+  const vic = h.log('victory');
+  assert.equal(vic[0].levelId, 'fase6');
+  assert.equal(vic[0].hasNext, true, 'a vitória oferece a fase 7');
   assert.equal(info(h).trips, 2);
   assert.equal(info(h).routeChanges, 2);
 });

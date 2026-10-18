@@ -1,4 +1,4 @@
-// Fase de desenvolvimento: abrir ?level=fase6&play. Ainda fora do catálogo principal (ver docs/CONTINUIDADE-FASE6.md).
+// Fase 6 da campanha (levels/index.js). O link do tempo de protótipo, ?level=fase6&play, continua abrindo esta fase.
 import layout from './layout.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';

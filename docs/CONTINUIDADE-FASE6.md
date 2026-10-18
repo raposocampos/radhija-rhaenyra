@@ -1,10 +1,10 @@
 # Continuidade da fase 6 — Expresso do Superbafo
 
 Passagem Codex → Claude, 2026-10-17. A **Entrega A (acabamento mantendo DEV)**
-foi publicada por Claude em 2026-10-18 (PR #18, squash `31e8b26`). A pedido do
-usuário, a fase ficou mais longa no branch `claude/fase6-longa`, que aguarda CI,
-E2E e aprovação (estado em [CONTEXTO.md](CONTEXTO.md)). A Entrega B (campanha)
-continua por fazer.
+foi publicada por Claude em 2026-10-18 (PR #18, squash `31e8b26`); a fase mais
+longa, no PR #19 (squash `0281956`). A **Entrega B (campanha)** está no branch
+`claude/campanha-fases-6-7`, junto com a fase 7, aguardando CI, E2E e aprovação
+(estado em [CONTEXTO.md](CONTEXTO.md)).
 
 ### Fase mais longa (duas cargas e cancela)
 
@@ -60,7 +60,8 @@ companheira (sem atravessar móveis). Capturas do E2E: `02a-lua-caindo`, `02b-ca
 
 O PR #15 publicou a blocagem jogável aprovada (`b954b24`), preservada no PR #16.
 Acesso: https://raposocampos.github.io/radhija-rhaenyra/?level=fase6&play.
-São cinco fases normais; a sexta está só em `DEV_LEVELS`. O usuário escolheu
+(Na época eram cinco fases normais e a sexta estava só em `DEV_LEVELS`; a Entrega B a põe na campanha, e o link
+continua valendo.) O usuário escolheu
 oficina, trem que espirra e bolinha-planeta e exigiu **a mesma direção artística
 já existente no jogo**: maquete procedural, materiais, iluminação, escala,
 câmera e personagens coerentes. Não voltar à proposta com pombo/ventilador.
@@ -99,7 +100,7 @@ pontos de acabamento; não é necessário recomeçar o puzzle ou refatorar o nú
   precisão de plataforma ou duas personagens agindo simultaneamente.
 - [x] Entregar prévia própria do acabamento em DEV; publicar somente após
   aprovação explícita dessa versão. → aprovado e publicado no PR #18.
-- [ ] Fase mais longa (lua no pórtico + cancela + foguete): prévia própria e nova aprovação.
+- [x] Fase mais longa (lua no pórtico + cancela + foguete): prévia própria e nova aprovação. → PR #19.
 
 ### Divisão segura entre agentes
 
@@ -141,28 +142,35 @@ visual se isso dificultar revisar causalidade e acabamento.
 
 ## Entrega B — entrada na campanha, após acabamento validado
 
-- [ ] Promover a definição de `DEV_LEVELS` para `LEVELS`, sem duplicar ID e sem
+Feita junto com a fase 7 (Lambe-Lambe na Pracinha), na ordem 6 → 7, no branch `claude/campanha-fases-6-7`.
+
+- [x] Promover a definição de `DEV_LEVELS` para `LEVELS`, sem duplicar ID e sem
   perder o import sob demanda. Acrescentar ao fim, preservando ordem/IDs existentes.
-- [ ] Preservar o link por ID: hoje `src/main.js` resolve IDs pelo catálogo dev
-  (`devCatalog`, que já põe as fases 6 e 7 em ordem nas prévias) e usa `parseInt` para fases normais. Remover `fase6` de DEV sem ajustar essa
-  resolução faz `?level=fase6&play` cair na fase 1. Criar regressão do link existente.
-- [ ] Atualizar progressão 5→6, menu, tela de vitória e expectativas de `hasNext`,
+  → `LEVELS = [fase1…fase7]`; `DEV_LEVELS` só com as arenas (`pulo`, `bafo`, `modelo`);
+  `devCatalog` aceita uma lista de teste e continua pondo protótipos futuros juntos e em ordem.
+- [x] Preservar o link por ID: `src/main.js` resolvia IDs pelo catálogo dev e usava `parseInt` para fases
+  normais; sem ajuste, `?level=fase6&play` cairia na fase 1. → `publishedLevelIndex` (`levels/index.js`)
+  resolve posição ou id publicado antes de consultar `dev.js`. Regressões: `test/catalogo.test.mjs`,
+  `test-expresso`/`test-lambe` (link abre a fase na campanha) e o smoke do build (`LINKED_IDS`).
+- [x] Atualizar progressão 5→6, menu, tela de vitória e expectativas de `hasNext`,
   incluindo `test/fase5.test.mjs`, testes da nova última fase e suítes de navegador.
-- [ ] Adaptar `test/contratos-props.test.mjs`: o laço sobre `LEVELS` presume que
-  toda fase tem `gate` ou `petGate`. A fase 6 não tem portão; testar seus contratos
-  reais sem inventar um prop para satisfazer um pressuposto inadequado.
-- [ ] Rever expectativas de protótipo em `test/fase6.test.mjs` e
-  `tools/scripts/test-expresso.mjs`: atualmente exigem fase6 fora do catálogo normal.
-- [ ] Validar save v1 antigo: preservar medalhas/conclusões e liberar a fase 6 ao
-  concluir a 5. O save já usa IDs e preserva registros desconhecidos; não há
-  necessidade observada de migração do formato ou limpeza do armazenamento.
-- [ ] Atualizar README, testes de catálogo, runner/workflow, smoke e condições
-  hoje especiais para DEV. A suíte `expresso` já existe e já participa de `todas`.
+  → Os testes das fases 6 e 7 rodam na campanha real (vitória da 6 com "Próxima fase", a 7 sem);
+  `playthrough-fase5` confere o botão; o menu reparte sete cartões em 4 + 3.
+- [x] Adaptar `test/contratos-props.test.mjs`: o laço sobre `LEVELS` presumia `gate` ou `petGate`.
+  → Confere todo prop real com `setOpen` (portão, portãozinho, cancela e portinhola do pórtico), pela pose
+  da subárvore, sem inventar prop.
+- [x] Rever expectativas de protótipo em `test/fase6.test.mjs` e `tools/scripts/test-expresso.mjs`.
+- [x] Validar save v1 antigo: a suíte `expresso` grava saves v1, confere que abrir o menu não os reescreve,
+  que a 6 libera com a 5 concluída e a 7 com a 6. Sem migração de formato.
+- [x] Atualizar README, testes de catálogo, runner/workflow, smoke e condições
+  hoje especiais para DEV. → `SMOKE_DEV_LEVEL`/`MEASURE_DEV_LEVELS` vazios em `e2e.yml`.
 - [ ] Ampliar explicitamente o catálogo de medição temporal, testes do instrumento
-  e referência de cinco para seis fases. `REFERENCE_LEVELS` e a matriz de
+  e referência de cinco para sete fases. `REFERENCE_LEVELS` e a matriz de
   `.github/workflows/desempenho.yml` são fixos; não apenas acrescentar a fase ao jogo.
   Preservar a origem anterior, medir na nuvem e revisar a nova referência antes
   de adotá-la. Não recalibrar limites silenciosamente para esconder regressão.
+  **Fica para uma entrega própria**: até lá `measure-performance.mjs` recusa o catálogo de sete
+  (DESEMPENHO.md); o CI obrigatório e o E2E não dependem dele.
 - [ ] Validar campanha completa, recursos, save e links; entregar nova prévia,
   aguardar aprovação da versão, integrar e conferir deploy/version.json.
 

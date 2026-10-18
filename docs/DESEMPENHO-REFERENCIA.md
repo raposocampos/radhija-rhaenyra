@@ -83,8 +83,8 @@ no artefato; substituí-lo exige revisão explícita com origem preservada.
 
 Estas seis visitas por fase não provam ausência de vazamento de longo prazo. Heap JS não cobre
 VRAM, e o cenário sem comandos não representa todas as combinações de habilidades/partículas.
-A fase 6 permanece em DEV e está fora deste catálogo de cinco fases; sua inclusão futura exige
-ampliar explicitamente protocolo e referência. Não interpretar os segundos de cadência de
+As fases 6 e 7 entraram na campanha depois desta referência e estão fora deste catálogo de cinco
+fases; incluí-las exige ampliar explicitamente protocolo e referência (ver DESEMPENHO.md). Não interpretar os segundos de cadência de
 SwiftShader como desempenho do jogo no computador ou celular do usuário.
 
 Os artefatos `desempenho-cinco-fases`/`desempenho-faseN` da execução guardam os dados brutos por

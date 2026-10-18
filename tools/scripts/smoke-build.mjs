@@ -11,6 +11,8 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const MOUNT = '/previews/pr-smoke/1-1/';
 // Um ou mais protótipos de desenvolvimento (separados por vírgula): cada um abre a própria aba pelo id.
 const DEV_LEVELS = (process.env.SMOKE_DEV_LEVEL || '').split(',').map((id) => id.trim()).filter(Boolean);
+// Fases publicadas cujo link por id circulou quando eram protótipos (?level=fase6&play): abrem a mesma fase.
+const LINKED_IDS = ['fase6', 'fase7'];
 if (DEV_LEVELS.some((id) => !/^[a-z][a-z0-9_-]*$/i.test(id))) throw new Error('SMOKE_DEV_LEVEL inválido');
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
@@ -61,12 +63,17 @@ try {
     if (response.status() >= 400) failedRequests.push(`${response.status()} ${response.url()}`);
   });
 
+  const boot = async (query) => {
+    await page.goto(`${base}?play${query}`, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__game?.game?.debug?.info().timeSec > 0.3, null, { timeout: 120000 });
+    return page.evaluate(() => window.__game.levels.map((level) => ({ id: level.id, lazy: typeof level.load === 'function' })));
+  };
+  let campaign = null;
   for (const DEV_LEVEL of DEV_LEVELS.length ? DEV_LEVELS : ['']) {
     scripts.clear();
-    await page.goto(`${base}?play${DEV_LEVEL ? `&level=${encodeURIComponent(DEV_LEVEL)}` : ''}`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__game?.game?.debug?.info().timeSec > 0.3, null, { timeout: 120000 });
-    const levels = await page.evaluate(() => window.__game.levels.map((level) => ({ id: level.id, lazy: typeof level.load === 'function' })));
+    const levels = await boot(DEV_LEVEL ? `&level=${encodeURIComponent(DEV_LEVEL)}` : '');
     check(levels.length > 0, 'registro de fases presente no build');
+    if (!DEV_LEVEL) campaign = levels.map((level) => level.id).join();
     if (DEV_LEVEL) check((await H.info()).levelId === DEV_LEVEL && levels.some((level) => level.id === DEV_LEVEL), `${DEV_LEVEL}: protótipo incluído pelo id no build`);
     check(scripts.size >= 2, 'entrada e cenário inicial carregados como arquivos JavaScript');
     for (const [index, level] of levels.entries()) {
@@ -83,6 +90,13 @@ try {
         check([...scripts].some((url) => !before.has(url)), `${level.id}: import sob demanda buscou um novo chunk compilado`);
       }
     }
+  }
+  campaign ??= (await boot('')).map((level) => level.id).join();
+  for (const id of LINKED_IDS) {
+    const ids = (await boot(`&level=${id}`)).map((level) => level.id).join();
+    const state = await H.info();
+    check(state.levelId === id && state.state === 'playing', `?level=${id}: o link por id abre a fase publicada`, state.levelId);
+    check(ids === campaign, `?level=${id}: catálogo da campanha, sem fases de desenvolvimento`, ids);
   }
   await page.evaluate(() => document.fonts.ready);
   check(outsideMount.length === 0, 'todos os recursos respeitam o subcaminho da prévia', outsideMount);

@@ -26,7 +26,8 @@ Depois, abra `http://127.0.0.1:5173/`.
 | Interagir / latir | E | ○ · B | Agir |
 | Latir | — | □ · X | Agir (sem nada perto) |
 | Fica / Vem (companheira) | F | △ · Y | Fica · Vem |
-| Superbafo (Radhija) / Lambe-Lambe (Rhaenyra): segure e solte | R | L2 · LT | Bafo · Lamber |
+| Superbafo (Radhija): segure para mirar, solte para soprar | R | L2 · LT | Bafo |
+| Lambe-Lambe (Rhaenyra, perto da irmã): segure para lamber | R | L2 · LT | Lamber |
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar |
 | Pausar | Esc | Options · Start | botão no canto |
@@ -49,8 +50,15 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
 5. **Operação Ursinho**: tarde de chuva dentro de casa, a fase do pulo da Rhaenyra. Ela pula o portãozinho de bebê
    e abre a trava para a irmã, pula a barricada de caixas da mudança e empurra de dentro a caixa de almofadas (que
    desmonta); o ursinho está debaixo da mesa, atrás da toalha comprida, onde só a Radhija cabe.
+6. **Expresso do Superbafo**: uma oficina cheia de brinquedos. Um pulão da Rhaenyra no pedal muda o trilho e o
+   superbafo da Radhija faz o trem de brinquedo espirrar e partir. O trem busca a lua presa no pórtico; a cancela da
+   estrela só sobe com alguém na placa (a Rhaenyra fica lá com o Fica), e as duas levam o planeta e a lua ao
+   foguete, que decola.
+7. **Lambe-Lambe na Pracinha**: manhã depois da chuva. Só a Radhija cabe no túnel de lama e sai enlameada, lenta e
+   sem arrancada; ela destrava o portão por dentro e a Rhaenyra a limpa com o Lambe-Lambe. Limpa, a Radhija sobe o
+   escorregador com uma arrancada e desce com o frisbee; as duas levam frisbee e bolinha ao piquenique.
 
-Parâmetros úteis: `?level=2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
+Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).
 
 Protótipos fora do menu (fases de desenvolvimento):
@@ -107,9 +115,9 @@ Os comandos abaixo continuam disponíveis para quem quiser rodar testes **localm
 
 | Comando | O que faz |
 |---|---|
-| `npm test` | testes em Node, cerca de 30 s: as 5 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting (faces no mesmo plano "tremendo"), equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
+| `npm test` | testes em Node, cerca de 30 s: as 7 fases jogadas inteiras num jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting (faces no mesmo plano "tremendo"), equilíbrio do irrigador, dogs e regressões de bugs já corrigidos |
 | `npm run typecheck` | checagem de tipos (TypeScript sobre os comentários JSDoc) |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–5, controle, regressões, pulo e bafo), cerca de 15 minutos |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (fases 1–7, controle, regressões, pulo e bafo), cerca de 15 minutos |
 | `npm run build` | roda `typecheck` e `npm test` antes de gerar `dist/`: nenhum build sai quebrado |
 | `npm run verify` | build + partidas no navegador |
 

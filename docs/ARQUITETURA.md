@@ -41,7 +41,8 @@ src/game/                  NÚCLEO genérico
   mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa…)
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
 src/levels/                as fases
-  index.js                 registro das fases, em ordem
+  index.js                 registro das fases, em ordem (LEVELS: fase1…fase7) e publishedLevelIndex (?level= por
+                           posição ou id, usado pelo main.js)
   faseN/index.js           definição (nome, textos, item, layout, iluminação, load do cenário, createPuzzle)
   faseN/layout.js          coordenadas e regras: limites, colisores, grafo, objetivo, câmera
   faseN/lighting.js        preset de iluminação (a fase 1 usa o padrão do motor)
@@ -51,11 +52,12 @@ src/levels/                as fases
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
-  fase6/                   Expresso do Superbafo (ainda em dev.js): track.js descreve o trilho uma vez só, para o
+  fase6/                   Expresso do Superbafo: track.js descreve o trilho uma vez só, para o
                            movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
-  fase7/                   Lambe-Lambe na Pracinha (ainda em dev.js): túnel de lama, trinco por dentro, Lambe-Lambe e
+  fase7/                   Lambe-Lambe na Pracinha: túnel de lama, trinco por dentro, Lambe-Lambe e
                            escorregador (pose roteirizada com lock.drive); world/ separado por peça da pracinha
-  dev.js                   fases de desenvolvimento (fora do menu), abertas por ?level=<id> (devCatalog)
+  dev.js                   fases de desenvolvimento (fora do menu: as arenas e os protótipos de fases novas),
+                           abertas por ?level=<id> (devCatalog); só baixado quando o id não é de uma fase publicada
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
                            compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)
@@ -450,7 +452,9 @@ fase, HUD, pausa, comemoração, vitória); `markup.js` tem o template e o HTML 
 toque desenhados); `hud.js`, o HUD; `curtain.js`, a transição entre fases; `menuNav.js`, o foco por teclado e controle;
 `touchControls.js`, o joystick e os botões de toque (§6); `progress.js`,
 o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e conclusões por fase; uma fase é
-liberada quando a anterior foi concluída). Estilos em `ui.css`, ícones SVG em `icons.js`.
+liberada quando a anterior foi concluída). Os cartões das fases vão no máximo cinco por linha; com mais fases,
+`renderCards` reparte em linhas equilibradas (`--per-row`; sete fases = 4 + 3). Estilos em `ui.css`, ícones SVG em
+`icons.js`.
 
 **Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): layout compacto do HUD, da tela
 inicial, do cartão da fase, da pausa (duas colunas, sem a tabela de teclas) e da vitória; áreas seguras do entalhe
@@ -491,9 +495,9 @@ embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vag
 
 | Comando | O que faz | Tempo |
 |---|---|---|
-| `npm test` | testes em Node (`test/*.test.mjs`): as 5 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting, cenário fora do pacote inicial, irrigador, dogs e regressões | ~30 s |
+| `npm test` | testes em Node (`test/*.test.mjs`): as 7 fases jogadas inteiras no jogo headless, navegação e colisão de todas as fases, cenário sem z-fighting, cenário fora do pacote inicial, irrigador, dogs e regressões | ~30 s |
 | `npm run typecheck` | TypeScript sobre o JavaScript (JSDoc) | ~2 s |
-| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–5, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
+| `npm run test:e2e` | partidas com teclas reais no Chrome (Playwright): fases 1–7, controle, regressões, pulo e bafo; sobe e derruba sozinho um Vite sem HMR numa porta livre | ~13 min |
 | `npm run build` | roda typecheck + `npm test` antes (`prebuild`) e gera `dist/` | ~15 s |
 | `npm run verify` | build + e2e | ~14 min |
 
@@ -541,7 +545,8 @@ No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:cha
 **Outras ferramentas**: `tools/scripts/gen-icons.mjs` (ícones de "Adicionar à tela inicial"), `tools/shot.mjs` (captura com roteiro de teclas, ver o cabeçalho),
 `tools/scripts/sim-sprinkler.mjs` (equilíbrio do irrigador), `sandbox/*.html` (dogs, gansa, cenário e efeitos isolados).
 
-**Parâmetros de URL**: `?level=2` (fase inicial), `?level=pulo` (fase de desenvolvimento pelo id, ver
+**Parâmetros de URL**: `?level=2` ou `?level=fase2` (fase inicial, pela posição ou pelo id; os links por id das
+fases 6 e 7, do tempo de protótipo, continuam valendo), `?level=pulo` (fase de desenvolvimento pelo id, ver
 `src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?stage=<etapa>`
 (se o puzzle suportar), `?debug` (colisores e grafo), `?cam=x,y,z&look=x,y,z` (câmera fixa), `?nopost`
 (sem pós-processamento).

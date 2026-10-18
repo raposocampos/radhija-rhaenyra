@@ -198,6 +198,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
 
   function renderCards() {
     const box = $('.rr-levels');
+    // até cinco cartões por linha; com mais fases, linhas equilibradas (7 → 4 + 3)
+    box.style.setProperty('--per-row', String(Math.ceil(LV.length / Math.ceil(LV.length / 5))));
     box.innerHTML = LV.map((d, i) => {
       const m = meta(i);
       const p = prog.levels[d.id];
@@ -418,6 +420,9 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       L.title.appendChild(n);
     }
     n.innerHTML = `${lockIcon()}<span>${esc(text)}</span>`;
+    // 20 px acima da linha de cima dos cartões, quantas linhas a largura da tela fizer
+    const above = L.title.getBoundingClientRect().bottom - $('.rr-levels').getBoundingClientRect().top;
+    n.style.bottom = above > 0 ? `${Math.round(above + 20)}px` : '';
     retrigger(n, 'is-on');
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => n.classList.remove('is-on'), 2200);

@@ -95,8 +95,9 @@ try {
   i = await waitFor((s) => s.state === 'victory', { timeout: 6000 });
   check(i.state === 'victory', 'entrega na caminha → vitória');
   const vic = await logOf('victory');
-  check(vic.length === 1 && vic[0].levelId === 'fase5' && vic[0].hasNext === false, 'evento victory (fase5, última)', JSON.stringify(vic[0] || {}));
+  check(vic.length === 1 && vic[0].levelId === 'fase5' && vic[0].hasNext === true, 'evento victory (fase5, com a fase 6 depois)', JSON.stringify(vic[0] || {}));
   await sleep(1200);
+  check(await ev(() => !!document.querySelector('.rr-victory [data-action="next"]')), 'vitória da fase 5 oferece "Próxima fase"');
   await shot('f5-06-vitoria.png');
 
   console.log('\n== Fase 5: controle (✕ pula) e etapas ==');

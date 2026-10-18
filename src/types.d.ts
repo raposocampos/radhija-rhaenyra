@@ -605,7 +605,7 @@ export interface Fase5Props extends LevelProps {
   bed: PropBase & HighlightProp;
   collectibles: CollectibleProp[];
 }
-/** Expresso do Superbafo (fase de desenvolvimento em DEV_LEVELS). */
+/** Expresso do Superbafo (fase 6). */
 /** Posições da agulha: a volta, a estrela (canaleta e bandeja) e a lua (o pórtico onde o trem busca a lua). */
 export type Fase6Route = 'loop' | 'delivery' | 'moon';
 /** As duas cargas do foguete. */
@@ -647,7 +647,7 @@ export interface Fase6Props extends LevelProps {
   collectibles: CollectibleProp[];
   reset(): void;
 }
-/** Lambe-Lambe na Pracinha (fase de desenvolvimento em DEV_LEVELS): os dois objetos do piquenique. */
+/** Lambe-Lambe na Pracinha (fase 7): os dois objetos do piquenique. */
 export type Fase7Thing = 'ball' | 'frisbee';
 export interface Fase7Props extends LevelProps {
   /** Portão do parquinho: pivô na dobradiça, folha ao longo de -Z local (yaw = GATE.closedYaw…openYaw). */

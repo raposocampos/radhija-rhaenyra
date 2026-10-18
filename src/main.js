@@ -10,7 +10,7 @@ import { createParticles } from './fx/particles.js';
 import { createFeedback } from './fx/feedback.js';
 import { createUI } from './ui/ui.js';
 import { updateSeeThrough } from './world/seeThrough.js';
-import { LEVELS as ALL_LEVELS } from './levels/index.js';
+import { LEVELS as ALL_LEVELS, publishedLevelIndex } from './levels/index.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -20,10 +20,12 @@ const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTime
 async function boot() {
   await nextPaint();
 
-  // ?level=<id> de uma fase de desenvolvimento (ex.: ?level=pulo): carregada só sob demanda, no fim da lista.
-  // Os protótipos de fases novas (fase6, fase7…) entram juntos e em ordem (devCatalog em levels/dev.js).
+  // ?level=2 (posição, 1-based) ou ?level=fase6 (id) abrem uma fase publicada. Outro id é de uma fase de
+  // desenvolvimento (ex.: ?level=pulo), carregada só sob demanda no fim da lista; protótipos de fases novas
+  // entram juntos e em ordem (devCatalog em levels/dev.js).
   const levelParam = params.get('level') || '';
-  const dev = levelParam && !/^\d+$/.test(levelParam)
+  const published = publishedLevelIndex(ALL_LEVELS, levelParam);
+  const dev = published === null
     ? (await import('./levels/dev.js')).devCatalog(ALL_LEVELS, levelParam)
     : null;
   const LEVELS = dev ? dev.levels : ALL_LEVELS;
@@ -48,8 +50,8 @@ async function boot() {
   // input: controles de toque; quality: menu de qualidade gráfica e layout do celular (engine.quality.device)
   const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality });
 
-  // Fase inicial: ?level=2 (1-based) para testes; ?play pula a tela inicial.
-  const lv = dev ? dev.index : Math.max(1, Math.min(LEVELS.length, parseInt(params.get('level') || '1', 10) || 1)) - 1;
+  // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial.
+  const lv = dev ? dev.index : published ?? 0;
   await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.

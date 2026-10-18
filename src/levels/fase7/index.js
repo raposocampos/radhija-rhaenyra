@@ -1,4 +1,4 @@
-// Fase de desenvolvimento: abrir ?level=fase7&play. Fora do catálogo principal enquanto é protótipo.
+// Fase 7 da campanha (levels/index.js). O link do tempo de protótipo, ?level=fase7&play, continua abrindo esta fase.
 // Apresenta o Lambe-Lambe da Rhaenyra (R / L2 perto da irmã) e a lama que deixa a Radhija lenta e sem arrancada.
 import layout from './layout.js';
 import lighting from './lighting.js';

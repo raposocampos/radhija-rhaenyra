@@ -7,9 +7,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 - Pedido do usuário (2026-10-18): abrir e testar o jogo pelo celular no mesmo link, sem mudar nada no PC; toda a
   UI/HUD deve se comportar diferente na tela pequena.
-- Branch **`claude/celular`** (worktree próprio), base `dc1a0e5`. Consultar o PR para SHA, CI, E2E e prévia.
-  Nenhum teste ou build roda no PC. O PR #21 (fases 6 e 7 no menu) mexe em `ui.js`/`ui.css`/`main.js`: integrar o
-  main depois dele e revisar a tela inicial do celular com sete cartões.
+- Branch **`claude/celular`** (worktree próprio), **PR #22**, com o main do #21 (`a7d59ed`) integrado. Consultar
+  o PR para SHA, CI, E2E e prévia. Nenhum teste ou build roda no PC.
 - Feito: `src/core/quality.js` (perfis alta/media/baixa/minima, `detectDevice`, governador de FPS, menu salvo em
   `rr-quality`); engine com o perfil do aparelho (PC = alta, valores de sempre); `input.touch` e `TOUCH_BUTTONS`
   (`src/game/input.js`) com o dispositivo `touch`; `src/ui/touchControls.js` (joystick flutuante e botões, multitoque);
@@ -20,50 +19,41 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI verde, E2E `toque` e `todas`, revisar as capturas (celular e PC), entregar a prévia para o
   usuário testar no próprio celular e **aguardar aprovação** antes do merge/deploy.
 
-## Entregue: Lambe-Lambe e fase 7 (pracinha depois da chuva, PR #20)
+## Entregue: fases 6 e 7 na campanha (Entrega B, PR #21)
 
-Integrado ao main no squash `dc1a0e5`; o registro abaixo é o da entrega.
+Integrado ao main no squash `a7d59ed`; o registro abaixo é o da entrega.
 
-- Pedido do usuário (2026-10-18): nova habilidade da Rhaenyra, o **Lambe-Lambe**,
-  no mesmo botão do superbafo (R / L2·LT), e uma fase de teste em que a Radhija
-  passa por um cano com lama, fica lenta e sem arrancada, e a irmã a limpa
-  lambendo, com animação caprichada.
-- Proposta aprovada pelo usuário no chat: **pracinha depois da chuva**, com o
-  **frisbee** como segundo objeto. A bolinha caiu dentro do parquinho cercado; a
-  Radhija entra pelo túnel de manilha enlameado (só ela cabe) e destrava o portão
-  por dentro. O frisbee está no alto do escorregador: só uma arrancada sobe, e com
-  as patas enlameadas ela escorrega de volta, por isso o Lambe-Lambe é obrigatório.
-  As duas levam os objetos à toalha de piquenique. Fica só em `DEV_LEVELS` (id `fase7`).
-- Branch **`claude/lambe-lambe`** (worktree próprio), base `0281956`, **PR #20**.
-  Consultar o PR para SHA, CI, E2E e prévia; este texto não antecipa resultados.
-  Nenhum teste ou build roda no PC.
-- Feito: habilidade no núcleo (`game.js`: `lickStroke`/`lickReach` em
-  `dogs/config.js`, ganchos `onLick`/`onLickMiss`, `speedScale`/`canDash`, pose
-  roteirizada `lock.drive`/`slope`); animação de lamber, ser lambida e escorregar
-  (`dogAnimation.js`, língua em `dogFace.js`); lama no shader (`dogs/mudShader.js`)
-  e `mechanics/mud.js`; item frisbee; fase 7 completa em `src/levels/fase7/`;
-  sons (`fx/audio/soundsLambe.js`), pegadas e efeitos (`fx/feedback.js`); testes
-  `test/fase7.test.mjs`; E2E `lambe` e capturas em qualidade completa
-  (`tools/scripts/capture-lambe.mjs`, artefato da suíte). Arestas de navegação
-  aceitam várias restrições (`requires: ['small', 'tunnel']`).
-- Primeira prévia testada pelo usuário (2026-10-18). Correções pedidas e feitas:
-  dica com o glifo do controle (teclas só entre parênteses viram glifo), petisco
-  do balanço fora do alcance (movido para a frente dos assentos; teste de alcance),
-  anel do objetivo no deque do escorregador (`target.ground` no `objective`),
-  gramado (cor convertida para sRGB e tufos de lâminas como nas fases do jardim),
-  placa PARQUINHO cabendo na moldura. Também: no menu da prévia faltava a fase 6;
-  `devCatalog` (`levels/dev.js`) põe as fases 6 e 7 juntas e em ordem e o menu do
-  catálogo de desenvolvimento libera todas as fases para teste.
-- Próximo passo: CI verde, E2E `lambe` (capturas) e `todas`, revisar as capturas
-  e entregar a nova prévia; **aguardar aprovação** antes do merge/deploy.
-  Promover as fases 6 e 7 à campanha (Entrega B de CONTINUIDADE-FASE6) é outra
-  entrega, ainda só proposta.
+- Pedido do usuário (2026-10-18): "a fase 6 não está aparecendo ali no menu, temos
+  que organizar as fases de uma maneira melhor". As fases 6 (Expresso do Superbafo)
+  e 7 (Lambe-Lambe na Pracinha) saem de `DEV_LEVELS` e entram em `LEVELS`, nessa
+  ordem; o menu normal passa a ter sete fases.
+- Branch **`claude/campanha-fases-6-7`** (worktree próprio), base `dc1a0e5`.
+  Consultar o PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa
+  resultados. Nenhum teste ou build rodou no PC.
+- Feito: `LEVELS = [fase1…fase7]`, `DEV_LEVELS` só com as arenas; `publishedLevelIndex`
+  (`levels/index.js`) faz `?level=fase6`/`?level=fase7` (links da época de protótipo) e
+  `?level=6` abrirem a fase na campanha, sem baixar `dev.js` nem liberar o menu todo.
+  Menu reparte sete cartões em 4 + 3 (máximo de cinco por linha) e o aviso de fase
+  bloqueada sobe acima delas. Testes: `test/catalogo.test.mjs` (ordem, IDs, links,
+  protótipos futuros, `hasNext`), fases 6 e 7 jogadas na campanha real, contratos de
+  tudo que abre (`setOpen`), fase 5 com "Próxima fase"; E2E `expresso` (links, menu,
+  save v1 liberando 6 e 7), `lambe` (última fase), `fase5` e smoke (`LINKED_IDS`).
+- Fica para uma entrega própria (proposta): ampliar a medição temporal para sete fases.
+  Até lá `desempenho.yml` recusa o catálogo de sete por desenho (DESEMPENHO.md).
+- Próximo passo: CI verde, E2E `todas`, revisar a captura `00-menu-sete-fases`,
+  entregar a prévia e **aguardar aprovação** antes do merge/deploy.
+
+## Entregue: Lambe-Lambe e fase 7 (PR #20)
+
+Habilidade Lambe-Lambe da Rhaenyra (R / L2·LT perto da irmã), lama da Radhija,
+frisbee e a fase 7 (pracinha depois da chuva), entregues em `DEV_LEVELS`. Squash
+`dc1a0e5` no main, CI `39138452577`, deploy `39138502934` com sucesso;
+`version.json` de produção conferido em `dc1a0e5`. Não repetir merge/deploy do #20.
 
 ## Entregue: fase 6 mais longa (PR #19)
 
-Lua no pórtico, cancela na estrela e foguete de duas cargas, ainda em `DEV_LEVELS`.
-Squash `0281956` no main. Ao abrir a tarefa do Lambe-Lambe, o deploy
-`39103395850` aguardava a liberação, que cabe à sessão que entregou o #19.
+Lua no pórtico, cancela na estrela e foguete de duas cargas, entregues em `DEV_LEVELS`.
+Squash `0281956` no main, publicado antes do #20.
 Diretriz do usuário para as próximas fases: **dois objetos** por fase até a 10;
 a partir da 11, três ou mecânicas novas (ver COMO-CRIAR-UMA-FASE, seção 1).
 
@@ -81,8 +71,8 @@ desenvolvimento com Claude.
 ## Estado atual confirmado
 
 **A rodada inicial de estabilização EST-00 a EST-09 está concluída e publicada.**
-O protótipo da fase 6 também foi aprovado/publicado, mas ainda não é a fase final
-nem aparece no menu normal. Não reiniciar tarefas já entregues.
+As fases 6 e 7 foram aprovadas/publicadas em `DEV_LEVELS`; a entrada delas no menu
+normal está em andamento (topo). Não reiniciar tarefas já entregues.
 
 - Produção: https://raposocampos.github.io/radhija-rhaenyra/.
 - Main publicado: `45bf0cc4b90abc32b3992ce93fa7055bff248cdd` (squash do PR #16).
@@ -143,8 +133,8 @@ O run incompleto `39080397088` é diagnóstico de timeout, nunca baseline válid
 
 ## Fase 6: entregue como protótipo
 
-Acesso: https://raposocampos.github.io/radhija-rhaenyra/?level=fase6&play.
-Registro só em `src/levels/dev.js`; campanha principal continua com cinco fases.
+Acesso: https://raposocampos.github.io/radhija-rhaenyra/?level=fase6&play (o link
+continua valendo depois da promoção). Registro em `src/levels/dev.js` até a Entrega B.
 O usuário escolheu **Expresso do Superbafo**, rejeitou repetir pombo/ventilador e
 exigiu a **mesma direção artística do jogo**, sem redesenhar as personagens.
 
@@ -174,12 +164,11 @@ não foram implementados. Plano concreto em [CONTINUIDADE-FASE6.md](CONTINUIDADE
 2. A consolidação documental do Codex (`codex/passagem-claude`) virou o PR #17,
    integrado ao main em `5e434f7`.
 3. A aprovação do #16 já foi consumada na publicação acima; não repetir.
-4. O acabamento da fase 6 (DEV) foi publicado no #18; a versão mais longa está
-   em andamento (topo deste arquivo). Depois de aprovada, promover ao catálogo
-   em outra entrega, conforme o checklist.
-5. Ao promover, corrigir três pressupostos: URL por ID hoje só busca DEV;
-   contratos genéricos presumem portão; fase 5 espera `hasNext=false`. Rever também
-   testes que exigem fase6 fora do catálogo e ampliar medição temporal para seis fases.
+4. O acabamento da fase 6 (DEV) foi publicado no #18, a versão mais longa no #19 e
+   a fase 7 no #20. A promoção das duas à campanha está em andamento (topo).
+5. Os três pressupostos da promoção (URL por ID só no DEV, contratos que presumiam
+   portão, fase 5 com `hasNext=false`) foram corrigidos nesse branch; a medição
+   temporal para sete fases ficou como entrega própria.
 6. Toda validação pesada permanece no GitHub. CI e prévia próprios a cada head/base;
    E2E da suíte e `todas` na entrega importante. Preservar save, recursos e arte;
    aprovação explícita antes de merge/deploy. Não instalar ai-memory.

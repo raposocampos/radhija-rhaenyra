@@ -106,7 +106,7 @@ test('fase 5: partida completa (portãozinho → trava → barricada → caixa d
   assert.ok(h.run(6, { until: (s) => s.state === 'victory' }), 'vitória');
   const vic = h.log('victory');
   assert.equal(vic[0].levelId, 'fase5');
-  assert.equal(vic[0].hasNext, false);
+  assert.equal(vic[0].hasNext, true); // depois dela vem a fase 6
 
   h.events.emit('ui:restart', {});
   h.run(0.3);
