@@ -95,6 +95,9 @@ export const TOY_SHELF = { x: -5.2, z: -1.25, hx: 0.27, hz: 0.75, height: 0.95 }
 export const LOW_CABINET = { x: 0, z: -3.84, hx: 1.6, hz: 0.16, height: 0.55 };
 export const BLOCK_CRATES = { x: 3.55, z: -3.8, hx: 0.55, hz: 0.2, height: 0.42 };
 export const PLANT = { x: -5.05, z: 1.4, r: 0.26 };
+/** Tapete de retalhos no meio do lado sul (sem colisão) e cantinho de brinquedos perto da borda sudeste. */
+export const RAG_RUG = { x: 1.1, z: 3.05, r: 0.85 };
+export const TOY_PILE = { x: 3.9, z: 3.3, r: 0.36 };
 export const FLOOR_LAMP = { x: -5.12, z: -3.62, r: 0.2 };
 
 /** @type {import('../../types').Collider[]} */
@@ -113,6 +116,7 @@ export const STATIC_COLLIDERS = [
   { id: 'armario-baixo', shape: 'box', x: LOW_CABINET.x, z: LOW_CABINET.z, hx: LOW_CABINET.hx + 0.02, hz: LOW_CABINET.hz },
   { id: 'caixotes', shape: 'box', x: BLOCK_CRATES.x, z: BLOCK_CRATES.z, hx: BLOCK_CRATES.hx, hz: BLOCK_CRATES.hz },
   { id: 'planta', shape: 'circle', x: PLANT.x, z: PLANT.z, r: PLANT.r },
+  { id: 'brinquedos', shape: 'circle', x: TOY_PILE.x, z: TOY_PILE.z, r: TOY_PILE.r },
   { id: 'luminaria', shape: 'circle', x: FLOOR_LAMP.x, z: FLOOR_LAMP.z, r: FLOOR_LAMP.r },
 ];
 export const NAV_NODES = {
@@ -144,6 +148,7 @@ export const CAMERA = {
 };
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = { WORLD, DOGS, RAIL_YARD, PEDAL, JUNCTION, SWITCH_SIGN, SWITCH_LEVER, TRAIN, TRACK, NOSE, BLOW_SPOT, TRAY,
-  CHUTE, BALL, TRAIN_BODY, YARD_DECOR, BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, FLOOR_LAMP, STATIC_COLLIDERS, NAV_NODES,
+  CHUTE, BALL, TRAIN_BODY, YARD_DECOR, BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, RAG_RUG, TOY_PILE,
+  FLOOR_LAMP, STATIC_COLLIDERS, NAV_NODES,
   NAV_EDGES, COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA };
 export default LAYOUT;

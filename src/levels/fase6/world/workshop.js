@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, plasterMat, stdMat, woodMat, mergeGeometries, paint, potProfile, shadowAll } from '../../../world/util.js';
 import { createRubberDuck, createTeddyBear } from '../../../world/toys.js';
-import { BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, FLOOR_LAMP } from '../layout.js';
+import { BENCH, TOY_CHEST, TOY_SHELF, LOW_CABINET, BLOCK_CRATES, PLANT, FLOOR_LAMP, RAG_RUG, TOY_PILE } from '../layout.js';
 
 const TAU = Math.PI * 2;
 const POCHE = '#4a3426';
@@ -174,6 +174,22 @@ function globeTexture() {
     }
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.5;
     for (let y = 16; y < h; y += 24) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  }, { repeat: false });
+}
+/** Tapete de retalhos trançado: anéis de cores alternadas, com o tecido riscado. */
+function ragRugTexture() {
+  return canvasTexture(256, 256, (g, w, h) => {
+    const r = rng(53);
+    const colors = ['#c8553d', '#e8d6b0', '#4f8f8b', '#e0a84a', '#7ca8b2', '#e8d6b0'];
+    for (let i = 0; i < 12; i++) {
+      g.fillStyle = colors[i % colors.length];
+      g.beginPath(); g.arc(w / 2, h / 2, w / 2 - i * 10.5, 0, TAU); g.fill();
+    }
+    g.strokeStyle = 'rgba(60,40,24,0.18)'; g.lineWidth = 1.5;
+    for (let i = 0; i < 160; i++) {
+      const a = r() * TAU, rad = 8 + r() * 118;
+      g.beginPath(); g.arc(w / 2, h / 2, rad, a, a + 0.12); g.stroke();
+    }
   }, { repeat: false });
 }
 function checkTexture(a, b) {
@@ -604,6 +620,29 @@ export function buildWorkshop(root) {
     lf.rotation.set(-0.85 + (i % 3) * 0.22, a + Math.PI / 2, 0);
     add(plant, new THREE.CylinderGeometry(0.006, 0.008, 0.36, 5), stdMat('#5f8f4a', { roughness: 0.8 }), Math.cos(a) * 0.03, 0.36 + (i % 3) * 0.05, Math.sin(a) * 0.03);
   }
+
+  // ---- tapete de retalhos (lado sul, por onde as duas passam) e o cantinho de brinquedos
+  const rag = add(grp, new THREE.CylinderGeometry(RAG_RUG.r, RAG_RUG.r, 0.012, 48), new THREE.MeshStandardMaterial({ map: ragRugTexture(), roughness: 1 }), RAG_RUG.x, 0.006, RAG_RUG.z);
+  rag.userData.noShadow = true;
+  rag.receiveShadow = true;
+  const pile = new THREE.Group();
+  pile.position.set(TOY_PILE.x, 0, TOY_PILE.z);
+  pile.rotation.y = -0.3;
+  grp.add(pile);
+  // xilofone: base de madeira e teclas coloridas em pininhos (3 mm acima da base)
+  add(pile, rbox(0.42, 0.05, 0.22, 0.012), woodMat('#c79a64', { key: 'expresso-caixote', rough: 0.8 }), 0, 0.025, 0.08);
+  const keys = ['#c8553d', '#e0a84a', '#f2c766', '#7aa857', '#4f8f8b', '#7ca8b2'];
+  keys.forEach((c, i) => add(pile, rbox(0.05, 0.016, 0.17 - i * 0.012, 0.005), stdMat(c, { roughness: 0.45 }), -0.16 + i * 0.064, 0.061, 0.08));
+  for (const s of [-1, 1]) {
+    const mallet = add(pile, new THREE.CylinderGeometry(0.007, 0.007, 0.22, 6), handleMat, 0.05 * s, 0.075, -0.07);
+    mallet.rotation.set(Math.PI / 2, 0, 0.3 * s);
+    add(pile, new THREE.SphereGeometry(0.02, 10, 8), stdMat('#c8553d', { roughness: 0.4 }), 0.05 * s - 0.033 * s, 0.075, -0.175);
+  }
+  // torre de blocos: cada um um pouco girado sobre o de baixo
+  ['#4f8f8b', '#e0a84a', '#c8553d'].forEach((c, i) => {
+    const b = add(pile, rbox(0.11, 0.11, 0.11, 0.014), stdMat(c, { roughness: 0.6 }), 0.24, 0.055 + i * 0.11, -0.12);
+    b.rotation.y = i * 0.35;
+  });
 
   // ---- luminária de pé (canto noroeste)
   const fl = new THREE.Group();
