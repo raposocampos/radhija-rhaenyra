@@ -4,6 +4,10 @@
 // rápido com queda de velocidade; aceleração/desaceleração vêm do layout.
 // Pulo (só quem tem cfg.jumpHeight, a Rhaenyra): arco de altura fixa e duração cfg.jumpTime, com pouco
 // controle no ar; enquanto está no ar, os colisores marcados jumpable (troncos, muretas baixas) não bloqueiam.
+// Impulso na parede (só quem tem cfg.wallJumpTime, a Rhaenyra): de frente para uma parede marcada (WallSpot que a
+// fase oferece em puzzle.wallSpots), o pulo vira um movimento roteirizado de cfg.wallJumpTime s: avança até a
+// parede, sobe apoiando as patas, alcança o alto (wallHit, uma vez, em WALL_TOUCH) e volta ao chão um pouco
+// afastada. A pose é da animação (dogAnimation.js, wallK); aqui ficam posição, giro e tempo.
 
 export const TAU = Math.PI * 2;
 export const wrapAngle = (a) => {
@@ -16,6 +20,21 @@ export const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v
 const PIVOT_ANGLE = (120 * Math.PI) / 180;
 const TURN_GAIN = 12; // rad/s por rad de erro (suaviza o fim do giro)
 const BUMP_SPEED = 2.2; // m/s contra a normal para contar como "batida"
+const sstep = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+// Impulso na parede (frações de cfg.wallJumpTime): chega à parede, alcança o alto e começa a voltar.
+export const WALL_AT = 0.34;
+export const WALL_TOUCH = 0.52;
+export const WALL_OFF = 0.62;
+/** Folga entre o círculo de colisão e a parede no ponto de impulso (m). */
+export const WALL_GAP = 0.03;
+/** De frente para a parede: cosseno mínimo entre a direção (analógico ou corpo) e a parede (~70°). */
+const WALL_FACING = 0.34;
+/** O toque no alto só vale com a dog a até isto do ponto de impulso (algo no caminho a segurou longe). */
+const WALL_TOUCH_REACH = 0.12;
 
 /**
  * @param {import('../types').DogName} name
@@ -53,6 +72,14 @@ export function createController(name, cfg) {
     jumpDx: 0,
     jumpDz: 1,
     landed: false, // pousou neste quadro (o jogo emite dog:land e zera)
+    wall: null, // impulso na parede: ponto em uso (null = fora do impulso)
+    wallT: 0,
+    wallDur: 0,
+    wallFrom: { x: 0, z: 0 },
+    wallGoalX: 0,
+    wallGoalZ: 0,
+    wallTouched: false,
+    wallHit: null, // alcançou o alto neste quadro (o jogo emite wall:touch e zera)
   };
 }
 
@@ -75,15 +102,128 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.jumpT = 0;
   c.jumpCd = 0;
   c.landed = false;
+  c.wall = null;
+  c.wallT = 0;
+  c.wallDur = 0;
+  c.wallTouched = false;
+  c.wallHit = null;
 }
 
+/** No ar: pulo comum ou impulso na parede. */
+export const airborne = (c) => c.jumpT > 0 || c.wallDur > 0;
+
 export function canDash(c) {
-  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0 && !(c.jumpT > 0);
+  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0 && !airborne(c);
 }
 
 /** A dog pode pular agora? (só quem tem cfg.jumpHeight; no chão, fora da arrancada e sem recarga) */
 export function canJump(c) {
-  return !!c.cfg.jumpHeight && !(c.jumpT > 0) && c.jumpCd <= 0 && c.dashT <= 0;
+  return !!c.cfg.jumpHeight && !airborne(c) && c.jumpCd <= 0 && c.dashT <= 0;
+}
+
+/**
+ * Ponto do chão de onde a dog de raio r dá o impulso: encostada na parede, em frente às patinhas e spot.lat m à
+ * esquerda do botão (de frente para a parede), para a pata direita apertá-lo sem a cabeça ficar na frente.
+ */
+export function wallKick(spot, r) {
+  const d = r + WALL_GAP;
+  const lat = spot.lat ?? 0;
+  // esquerda de quem olha para a parede (−n): (−nz, nx)
+  return { x: spot.x + spot.nx * d - spot.nz * lat, z: spot.z + spot.nz * d + spot.nx * lat };
+}
+
+/**
+ * A parede marcada que vale para um impulso agora (ou null): a dog tem impulso, está do lado de cá da parede,
+ * a até cfg.wallReach m do ponto de impulso e de frente para ela — pela direção do analógico (dx, dz) ou, parada,
+ * pela frente do corpo — e, com `world`, nada no caminho até o ponto de impulso (portão fechado, caixote).
+ * Com duas ao alcance, a mais perto.
+ * @param {import('../types').DogController} c @param {import('../types').WallSpot[] | null | undefined} spots
+ * @param {number} [dx] @param {number} [dz] @param {import('../types').CollisionWorld | null} [world]
+ */
+export function pickWallSpot(c, spots, dx = 0, dz = 0, world = null) {
+  if (!c.cfg.wallJumpTime || !spots?.length) return null;
+  const reach = c.cfg.wallReach ?? 0.8;
+  const moving = Math.hypot(dx, dz) > 1e-4;
+  const fx = moving ? dx : Math.sin(c.yaw);
+  const fz = moving ? dz : Math.cos(c.yaw);
+  const L = Math.hypot(fx, fz) || 1;
+  let best = null;
+  let bestD = Infinity;
+  for (const s of spots) {
+    const K = wallKick(s, c.r);
+    const d = Math.hypot(c.x - K.x, c.z - K.z);
+    const front = (c.x - s.x) * s.nx + (c.z - s.z) * s.nz;
+    if (d > reach || front < c.r * 0.5) continue;
+    if (-(fx * s.nx + fz * s.nz) / L < WALL_FACING) continue;
+    if (world && !world.segmentClear(c.x, c.z, K.x, K.z, c.r * 0.9, c.size)) continue;
+    if (d < bestD) {
+      best = s;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** Começa o impulso na parede no ponto `spot` (veja pickWallSpot). */
+export function startWallJump(c, spot) {
+  c.wall = spot;
+  c.wallT = 0;
+  c.wallDur = c.cfg.wallJumpTime ?? 1;
+  c.wallFrom = { x: c.x, z: c.z };
+  c.wallGoalX = c.x;
+  c.wallGoalZ = c.z;
+  c.wallTouched = false;
+  c.wallHit = null;
+  c.jumpT = 0;
+  c.dashT = 0;
+  c.v = 0;
+  c.y = 0;
+  c.landed = false;
+  c.pivoting = false;
+}
+
+/** Altura do impulso (m) no progresso p: o quanto o quadril sobe (a mesma curva da animação, para info e testes). */
+export function wallLift(p, top = 1.2) {
+  const peak = Math.max(0.2, top - 0.84);
+  if (p < WALL_TOUCH) return peak * sstep(0.14, WALL_TOUCH, p);
+  return peak * (1 - sstep(WALL_OFF, 0.94, p));
+}
+
+/** Um quadro do impulso na parede: avança o tempo, a posição-alvo, o giro e o toque no alto. */
+function stepWallJump(c, dt) {
+  const { cfg } = c;
+  const W = c.wall;
+  c.wallT += dt;
+  const p = Math.min(1, c.wallT / c.wallDur);
+  const K = wallKick(W, c.r);
+  if (p < WALL_OFF) {
+    const e = sstep(0.02, WALL_AT, p);
+    c.wallGoalX = c.wallFrom.x + (K.x - c.wallFrom.x) * e;
+    c.wallGoalZ = c.wallFrom.z + (K.z - c.wallFrom.z) * e;
+  } else {
+    const e = sstep(WALL_OFF, 0.95, p) * (cfg.wallBack ?? 0.32);
+    c.wallGoalX = K.x + W.nx * e;
+    c.wallGoalZ = K.z + W.nz * e;
+  }
+  // de frente para a parede (gira rápido no começo, antes de subir)
+  const want = Math.atan2(-W.nx, -W.nz);
+  const maxTurn = cfg.turnSpeed * 1.6 * dt;
+  c.yaw = wrapAngle(c.yaw + Math.max(-maxTurn, Math.min(maxTurn, wrapAngle(want - c.yaw))));
+  c.y = wallLift(p, W.top);
+  c.v = 0;
+  if (!c.wallTouched && p >= WALL_TOUCH) {
+    c.wallTouched = true;
+    // só alcança o alto quem chegou à parede (algo que apareceu no caminho a segurou longe: sem toque)
+    if (Math.hypot(c.x - K.x, c.z - K.z) < WALL_TOUCH_REACH) c.wallHit = W;
+  }
+  if (p >= 1) {
+    c.wall = null;
+    c.wallT = 0;
+    c.wallDur = 0;
+    c.y = 0;
+    c.jumpCd = cfg.jumpCooldown ?? 0.15;
+    c.landed = true;
+  }
 }
 
 /**
@@ -136,7 +276,11 @@ export function steer(c, dt, intent) {
   if (c.jumpCd > 0) c.jumpCd = Math.max(0, c.jumpCd - dt);
   const turnScale = intent.turnScale ?? 1;
 
-  if (c.jumpT > 0) {
+  if (c.wallDur > 0) {
+    // Impulso na parede: roteirizado (a entrada não muda nada até voltar ao chão).
+    stepWallJump(c, dt);
+    c.pivoting = false;
+  } else if (c.jumpT > 0) {
     // No ar: velocidade horizontal constante, pouco controle de direção; o corpo acompanha o pulo.
     const has = intent.speed > 1e-3 && (intent.dx || intent.dz);
     if (has) {
@@ -227,6 +371,7 @@ export function steer(c, dt, intent) {
 
 /** Move a dog pelo mundo (com sub-passos) e mede a velocidade real. → { hits, bump } */
 export function integrate(c, dt, world, opts = {}) {
+  if (c.wallDur > 0) return integrateWall(c, dt, world);
   let dirX;
   let dirZ;
   const airborne = c.jumpT > 0;
@@ -288,4 +433,24 @@ export function integrate(c, dt, world, opts = {}) {
   c.stillT = actual < 0.15 ? c.stillT + dt : 0;
   c.hits = res.hits;
   return { hits: res.hits, bump };
+}
+
+/** Impulso na parede: leva a dog até a posição-alvo do quadro, com colisão (nunca atravessa a parede). */
+function integrateWall(c, dt, world) {
+  const px = c.x;
+  const pz = c.z;
+  const res = world.move(c.x, c.z, c.wallGoalX - c.x, c.wallGoalZ - c.z, c.r, c.size);
+  if (Number.isFinite(res.x) && Number.isFinite(res.z)) {
+    c.x = res.x;
+    c.z = res.z;
+  }
+  const idt = 1 / Math.max(dt, 1e-4);
+  c.vx = (c.x - px) * idt;
+  c.vz = (c.z - pz) * idt;
+  c.animSpeed *= Math.exp(-dt * 12);
+  if (c.animSpeed < 0.01) c.animSpeed = 0;
+  c.stillT = 0;
+  c.prevHitIds = new Set(res.hits.map((h) => h.id));
+  c.hits = res.hits;
+  return { hits: res.hits, bump: null };
 }

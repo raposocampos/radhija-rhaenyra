@@ -1,55 +1,43 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude**. Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-18, Claude** (impulso na parede). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: jogar no celular (toque, layout e qualidade por aparelho)
+## Em andamento: demo de 10 fases (pedido de 2026-10-18)
 
-- Pedido do usuário (2026-10-18): abrir e testar o jogo pelo celular no mesmo link, sem mudar nada no PC; toda a
-  UI/HUD deve se comportar diferente na tela pequena.
-- Branch **`claude/celular`** (worktree próprio), **PR #22**, com o main do #21 (`a7d59ed`) integrado. Consultar
-  o PR para SHA, CI, E2E e prévia. Nenhum teste ou build roda no PC.
-- Feito: `src/core/quality.js` (perfis alta/media/baixa/minima, `detectDevice`, governador de FPS, menu salvo em
-  `rr-quality`); engine com o perfil do aparelho (PC = alta, valores de sempre); `input.touch` e `TOUCH_BUTTONS`
-  (`src/game/input.js`) com o dispositivo `touch`; `src/ui/touchControls.js` (joystick flutuante e botões, multitoque);
-  glifos de toque nas dicas (`.k-touch`); layout compacto `.rr[data-mobile]` em `ui.css`; pausa com Qualidade e Tela
-  cheia; aviso de girar; `index.html` sem zoom/rolagem, `viewport-fit=cover`, manifest e ícones
-  (`tools/scripts/gen-icons.mjs`). Testes `test/qualidade.test.mjs` e `test/toque.test.mjs`; suíte E2E `toque` e
-  capturas `capture-celular.mjs`. Documentado em ARQUITETURA §6, §9 e §10 e no README.
-- Primeira prévia testada pelo usuário (2026-10-18) num Infinix Note 30 5G (Mali-G57 MC2, tela de 120 Hz); também
-  precisa rodar bem num iPhone 13. Pedidos: HUD menor no celular (chips e objetivo no topo esquerdo, dica e prompt)
-  e desempenho bom em celular mediano. Feito: HUD do celular compacto (chip só com a dog ativa, companheira num
-  pontinho de estado, objetivo em até duas linhas); perfis do celular mais leves (médio: pixel ratio 1, sem MSAA nem
-  bloom; baixa: 0,85 e sombra a cada 2 quadros; mínima: sem sombra e sem compositor), céu desenhado por último no
-  celular, teto de 60 quadros por segundo, GPU de entrada começa no baixa, governador mais rápido (janelas de 1,5 s,
-  desce com uma janela abaixo de 30 fps) e sem a volta atrás. PC sem mudança (testes e E2E conferem).
-- Próximo passo: CI verde, E2E `todas`, revisar as capturas (celular e PC) e entregar a nova prévia; **aguardar
-  aprovação** antes do merge/deploy. Se ainda pesar nas fases 2 e 3 (luzes pontuais à noite), avaliar desligá-las
-  só no perfil mínimo.
+- Pedido do usuário: mais três fases criativas (8, 9 e 10, fechando a demo), puzzles mais complexos, **no mínimo
+  dois objetos** em cada uma, a mecânica nova de **pulo na parede** da Rhaenyra (alcançar botões e alavancas no
+  alto) e animações extras de interação. Entregas em sequência, um PR cada, com prévia e aprovação:
+  **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
+  **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
+  cenário e objetos em poucas linhas e esperar o ok.
+- **A (em andamento, Claude):** branch `claude/pulo-parede` (worktree próprio), **PR #23**, com o main do #22
+  (`1fbc631`) integrado. Consultar o PR para SHA, CI, E2E e prévia; nenhum teste ou build rodou no PC.
+  Feito: `pickWallSpot`/`startWallJump`/`integrateWall` em `dogController.js` (roteiro de 1,05 s, toque no alto em
+  52%, volta 0,32 m afastada, sempre com colisão); `game.js` troca o pulo pelo impulso quando a fase oferece um
+  ponto (`puzzle.wallSpots`) e avisa o toque (`puzzle.onWallTouch`, `wall:touch`); pose em `dogAnimation.js`
+  (corpo de pé girando no quadril, IK com alvos na parede, pata no botão, carinha feliz); `createWallButton`
+  (botão com tempo e anel de luzes, alavanca, "uma vez") e `buildWallButton` (placa, botão de cogumelo ou
+  alavanca de bolinha, patinhas pintadas); sons `soundsParede.js`; parede de treino na Arena do Pulo (botão abre a
+  portinhola do armarinho por 6 s, alavanca liga as luzinhas). Testes: `test/parede.test.mjs` (escolha do ponto,
+  roteiro, pose no modelo real, botão/alavanca, arena com pausa/troca/reinício) e a suíte E2E `pulo`, com as
+  capturas `tools/scripts/capture-parede.mjs` (quadro a quadro, qualidade completa).
+- Próximo passo: CI verde, E2E `pulo` e revisão das capturas `shots/parede-revisao/` contra o padrão das fases
+  4 a 7; ajustar a pose se preciso; conferir o botão de pulo de toque (o impulso usa o mesmo `Jump`); entregar a
+  prévia (`?level=pulo&play`) e aguardar aprovação. Em seguida, apresentar o desenho da fase 8.
 
-## Entregue: fases 6 e 7 na campanha (Entrega B, PR #21)
+## Entregue: jogar no celular (PR #22)
 
-Integrado ao main no squash `a7d59ed`; o registro abaixo é o da entrega.
+Controles de toque (joystick flutuante e botões, `src/ui/touchControls.js`, dispositivo `touch`), layout próprio do
+celular (`.rr[data-mobile]`), perfis de qualidade por aparelho com governador de FPS (`src/core/quality.js`; PC =
+alta, sem mudança), manifest e ícones. Squash `1fbc631` no main. Detalhes em ARQUITETURA §6, §9 e §10.
 
-- Pedido do usuário (2026-10-18): "a fase 6 não está aparecendo ali no menu, temos
-  que organizar as fases de uma maneira melhor". As fases 6 (Expresso do Superbafo)
-  e 7 (Lambe-Lambe na Pracinha) saem de `DEV_LEVELS` e entram em `LEVELS`, nessa
-  ordem; o menu normal passa a ter sete fases.
-- Branch **`claude/campanha-fases-6-7`** (worktree próprio), base `dc1a0e5`.
-  Consultar o PR dessa branch para SHA, CI, E2E e prévia; este texto não antecipa
-  resultados. Nenhum teste ou build rodou no PC.
-- Feito: `LEVELS = [fase1…fase7]`, `DEV_LEVELS` só com as arenas; `publishedLevelIndex`
-  (`levels/index.js`) faz `?level=fase6`/`?level=fase7` (links da época de protótipo) e
-  `?level=6` abrirem a fase na campanha, sem baixar `dev.js` nem liberar o menu todo.
-  Menu reparte sete cartões em 4 + 3 (máximo de cinco por linha) e o aviso de fase
-  bloqueada sobe acima delas. Testes: `test/catalogo.test.mjs` (ordem, IDs, links,
-  protótipos futuros, `hasNext`), fases 6 e 7 jogadas na campanha real, contratos de
-  tudo que abre (`setOpen`), fase 5 com "Próxima fase"; E2E `expresso` (links, menu,
-  save v1 liberando 6 e 7), `lambe` (última fase), `fase5` e smoke (`LINKED_IDS`).
-- Fica para uma entrega própria (proposta): ampliar a medição temporal para sete fases.
-  Até lá `desempenho.yml` recusa o catálogo de sete por desenho (DESEMPENHO.md).
-- Próximo passo: CI verde, E2E `todas`, revisar a captura `00-menu-sete-fases`,
-  entregar a prévia e **aguardar aprovação** antes do merge/deploy.
+## Entregue: fases 6 e 7 na campanha (PR #21)
+
+As fases 6 (Expresso do Superbafo) e 7 (Lambe-Lambe na Pracinha) saíram de `DEV_LEVELS` e entraram em `LEVELS`;
+o menu tem sete fases (4 + 3) e os links por id da época de protótipo continuam valendo (`publishedLevelIndex`).
+Squash `a7d59ed` no main. A medição temporal para sete fases ficou como entrega própria; até lá `desempenho.yml`
+recusa o catálogo de sete por desenho (DESEMPENHO.md).
 
 ## Entregue: Lambe-Lambe e fase 7 (PR #20)
 

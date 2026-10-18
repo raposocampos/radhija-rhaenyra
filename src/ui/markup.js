@@ -138,7 +138,7 @@ export const CONTROLS = [
   ['Mover', 'WASD', ['LS', 'DPad'], ['stick']],
   ['Interagir · latir', 'E', ['B'], ['act']],
   ['Latir', null, ['X'], []],
-  ['Pular (Rhaenyra)', 'Space', ['A'], ['jump']],
+  ['Pular · impulso na parede (Rhaenyra)', 'Space', ['A'], ['jump']],
   ['Superbafo (Radhija): segure e solte', 'R', ['LT'], ['wind']],
   ['Lambe-Lambe (Rhaenyra): segure perto da irmã', 'R', ['LT'], ['lick']],
   ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT'], ['dashOnly', 'push']],

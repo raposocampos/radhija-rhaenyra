@@ -27,6 +27,8 @@ Antes do código, escreva em poucas linhas:
 - **Os beats**, em ordem: cada um deve exigir as duas cachorrinhas de um jeito diferente. As ferramentas que o
   jogador já conhece: a Radhija passa por aberturas, dá arrancada e solta o **superbafo** (cheiro que o vento e os
   dutos levam até um alvo); a Rhaenyra pesa (placas), empurra (caixotes, ventiladores), pula obstáculos baixos,
+  alcança botões e alavancas no alto com o **impulso na parede** (Espaço de frente para as patinhas pintadas:
+  `createWallButton` + `buildWallButton`, pontos em `puzzle.wallSpots()`, efeito em `onWallTouch`; ARQUITETURA.md §6),
   carrega coisas pesadas e limpa a irmã com o **Lambe-Lambe** (R pertinho dela; o efeito é do puzzle, `onLick`); o
   **Fica** segura uma dog num lugar; o latido atrai a gansa. A **lama** (`createMud`, fase 7) deixa a Radhija lenta
   e sem arrancada até ser lambida: use quando a arrancada for necessária depois (na fase 7, só ela sobe o
@@ -220,7 +222,9 @@ O menu põe no máximo cinco cartões por linha e reparte mais fases em linhas e
 
    Cubra a partida completa e cada caso de borda que o puzzle prevê (a dog errada na placa, sair sem o Fica…).
    Para pular: `h.hold([1, 0]); h.tap('Space')`; para o superbafo: `h.keyDown('KeyR'); h.run(0.4); h.keyUp('KeyR')`;
-   para o Lambe-Lambe (com a Rhaenyra pertinho da irmã): `h.keyDown('KeyR'); h.run(2); h.keyUp('KeyR')`.
+   para o Lambe-Lambe (com a Rhaenyra pertinho da irmã): `h.keyDown('KeyR'); h.run(2); h.keyUp('KeyR')`; para o
+   impulso na parede, a Rhaenyra de frente para as patinhas (`h.hold([0, -1]); h.run(0.2); h.hold(null)`) e
+   `h.tap('Space'); h.run(1.1)` (o toque no alto vem em ~0,55 s; `test/parede.test.mjs` tem os casos de borda).
    Cubra reset com item na boca, pausa/retomada, troca de dog no meio da ação e estados inválidos recuperáveis.
    Para uma regressão, registre prova negativa na nuvem contra o comportamento defeituoso e a aprovação após
    corrigir a causa. Não enviar uma mutação defeituosa à produção nem usar resultado de outro SHA como validação.
@@ -277,6 +281,9 @@ O CI confere isso (`test/carregamento.test.mjs`). No build gerado pelo GitHub Ac
   `src/world/toys.js` e `src/world/pigeon.js`.
 - Cenário interno: a fase 5 mostra o corte de maquete (sem teto, parede do fundo inteira e as outras cortadas a meia
   altura com a faixa escura no topo). Com a câmera padrão, uma parede de fundo de 2,7 m esconde o céu.
+- Botão ou alavanca no alto (impulso na parede): ponha na parede do fundo, que a câmera vê de frente, com
+  `buildWallButton({ kind, top })` no pé da parede (`rotation.y = wallButtonYaw(nx, nz)`); o desenho já traz as
+  patinhas pintadas. `top` entre 0,9 e 1,45 m (o quadril sobe `top − 0,84` m); deixe ~0,8 m livres na frente.
 - Nada de assets baixados: geometria, texturas e sons em código.
 - Nunca deixe duas peças com faces no mesmo plano (a terra na altura exata da borda do vaso, uma tábua rente ao
   pilarete, um batente rente à ponta da parede): a superfície fica "tremendo" na tela. Afaste 2–4 mm ou faça uma peça

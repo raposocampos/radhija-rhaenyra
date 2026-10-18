@@ -8,7 +8,7 @@ import { createInput } from './input.js';
 import { createGameEvents } from './gameEvents.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
-import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump } from './dogController.js';
+import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump, airborne, pickWallSpot, startWallJump } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
@@ -81,7 +81,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0 };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0 };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -237,7 +237,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const mouthFull = carries(A.name);
     const near = !mouthFull && Math.hypot(C.x - A.x, C.z - A.z) <= reach;
     const blocked = near && !lickClear(A, C);
-    const canLick = near && !blocked && !puzzle.lockFor(C.name) && !(C.jumpT > 0);
+    const canLick = near && !blocked && !puzzle.lockFor(C.name) && !airborne(C);
     if (mouthFull) {
       if (lick.hintCd <= 0) {
         lick.hintCd = 4;
@@ -511,10 +511,17 @@ export function createGame({ engine, dogs, levels, params }) {
         }
       }
       // Pulo (Espaço / ✕): só quem tem pulo, fora da postura de empurrar. Quem não pula ganha a dica.
+      // De frente para uma parede marcada que a fase oferece (puzzle.wallSpots), vira impulso na parede.
       const jumpPressed = input.consume('Space', 'Jump');
       if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
-        startJump(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
-        emit('dog:jump', { name: A.name, x: A.x, z: A.z, dirX: A.jumpDx, dirZ: A.jumpDz });
+        const spot = pickWallSpot(A, puzzle.wallSpots?.(), Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0, world);
+        if (spot) {
+          startWallJump(A, spot);
+          emit('dog:wallJump', { name: A.name, id: spot.id, x: A.x, z: A.z, top: spot.top });
+        } else {
+          startJump(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
+          emit('dog:jump', { name: A.name, x: A.x, z: A.z, dirX: A.jumpDx, dirZ: A.jumpDz });
+        }
       } else if (jumpPressed && !A.cfg.jumpHeight && jumpHintCd <= 0) {
         jumpHintCd = 6;
         emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 2.6 });
@@ -550,7 +557,7 @@ export function createGame({ engine, dogs, levels, params }) {
     // Lambe-Lambe (R / L2 com a Rhaenyra, o mesmo botão): pertinho da irmã, segurar lambe em ritmo.
     lick.hintCd = Math.max(0, lick.hintCd - dt);
     if (A.cfg.lickStroke && !lock) {
-      if (bafoHeld && !bafo.held && !lick.on && !(A.jumpT > 0)) startLick(A, C);
+      if (bafoHeld && !bafo.held && !lick.on && !airborne(A)) startLick(A, C);
       if (lick.on) {
         const li = stepLick(A, C, dt, bafoHeld);
         if (li) {
@@ -570,6 +577,7 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     if (A.dashT > 0) action = 'dash';
     if (A.jumpT > 0) action = 'jump';
+    if (A.wallDur > 0) action = 'wallJump';
 
     puzzle.assist?.(A, intent, dt);
     // Pose roteirizada (lock.drive): a fase move a dog (subir o escorregador…); o núcleo não a desloca.
@@ -746,9 +754,27 @@ export function createGame({ engine, dogs, levels, params }) {
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
       an.carrying = carries(n);
-      an.jump = c.y;
+      const W = c.wallDur > 0 ? c.wall : null;
+      an.jump = W ? 0 : c.y;
       an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
+      an.wallK = W ? Math.min(1, c.wallT / c.wallDur) : -1;
+      an.wallGap = W ? (c.x - W.x) * W.nx + (c.z - W.z) * W.nz : 0;
+      an.wallTop = W ? W.top : 0;
+      an.wallOut = W ? W.out ?? 0.05 : 0;
+      an.wallPaws = W ? W.paws ?? W.top - 0.07 : 0;
+      an.wallSide = W ? W.side ?? 0.165 : 0;
+      an.wallLat = W ? W.lat ?? 0 : 0;
+      if (W) an.action = 'wallJump'; // também como companheira (trocou de dog no meio do impulso)
       an.slope = state === 'playing' || state === 'paused' ? locks[n]?.slope ?? 0 : 0;
+      if (c.wallHit) {
+        // Impulso na parede: as patas alcançaram o alto (uma vez por impulso; ativa ou companheira).
+        const spot = c.wallHit;
+        c.wallHit = null;
+        if (state === 'playing' || state === 'celebrating') {
+          emit('wall:touch', { name: n, id: spot.id, x: spot.x + spot.nx * 0.08, y: spot.top, z: spot.z + spot.nz * 0.08 });
+          if (state === 'playing') puzzle.onWallTouch?.(c, spot);
+        }
+      }
       if (c.landed) {
         // Pouso (ativa ou companheira, até depois de trocar de dog no ar).
         c.landed = false;
@@ -1051,6 +1077,7 @@ export function createGame({ engine, dogs, levels, params }) {
         stuck: +brains[n].stuckAccum.toFixed(2), sitting: anims[n].action === 'sit',
         visible: isVisible(c.x, c.z), stay: stay[n],
         y: +c.y.toFixed(3), jumping: c.jumpT > 0,
+        wall: c.wallDur > 0 ? { id: c.wall.id, k: +(c.wallT / c.wallDur).toFixed(3) } : null,
       };
     };
     const p = engine.camera.position;
@@ -1083,7 +1110,7 @@ export function createGame({ engine, dogs, levels, params }) {
     floorOf(name) {
       const c = ctrls?.[name];
       if (!c) return { y: 0, ramp: false };
-      return { y: c.jumpT > 0 ? 0 : Math.max(0, c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
+      return { y: airborne(c) ? 0 : Math.max(0, c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
     },
     update,
     reset,

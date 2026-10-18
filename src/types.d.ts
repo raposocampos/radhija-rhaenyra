@@ -96,6 +96,13 @@ export interface DogStats {
   jumpTime?: number;
   jumpSpeed?: number;
   jumpCooldown?: number;
+  /**
+   * Só a Rhaenyra: impulso na parede — duração do impulso inteiro (s), distância máxima até o ponto de impulso para
+   * começar (m) e quanto ela se afasta da parede ao voltar ao chão (m).
+   */
+  wallJumpTime?: number;
+  wallReach?: number;
+  wallBack?: number;
   /** Só a Rhaenyra: Lambe-Lambe — duração de cada lambida (s) e distância máxima até a irmã para começar (m). */
   lickStroke?: number;
   lickReach?: number;
@@ -323,6 +330,38 @@ export interface DogController {
   jumpDz: number;
   /** Pousou neste quadro (o jogo emite dog:land e zera). */
   landed: boolean;
+  /** Impulso na parede: ponto em uso (null = nenhum), tempo decorrido e duração (0 = fora do impulso). */
+  wall: WallSpot | null;
+  wallT: number;
+  wallDur: number;
+  /** Onde o impulso começou (a dog avança dali até a parede). */
+  wallFrom: XZ;
+  /** Onde a dog deve estar neste quadro (steer calcula, integrate move com colisão). */
+  wallGoalX: number;
+  wallGoalZ: number;
+  /** As patas já alcançaram o alto neste impulso (o toque acontece uma vez). */
+  wallTouched: boolean;
+  /** O ponto alcançado neste quadro (o jogo emite wall:touch, chama puzzle.onWallTouch e zera). */
+  wallHit: WallSpot | null;
+}
+
+/**
+ * Parede marcada para o impulso da Rhaenyra (botão ou alavanca no alto). (x, z): pé da parede, no meio das
+ * patinhas; (nx, nz): normal unitária da parede, para o lado de onde a dog vem; top: altura do que a pata toca (m);
+ * out: quanto isso sai da parede (m); paws e side: altura das patinhas dianteiras pintadas e o afastamento de cada
+ * uma para o lado (m), onde as patas da frente apoiam; lat: quanto a dog fica à esquerda do botão (m).
+ */
+export interface WallSpot { id: string; x: number; z: number; nx: number; nz: number; top: number; out?: number; paws?: number; side?: number; lat?: number }
+/**
+ * Botão/alavanca do alto no layout (createWallButton): o pé da parede e a normal como em WallSpot; top = altura do
+ * que a pata toca. mode: 'timed' liga por holdTime s (padrão do botão), 'toggle' troca a cada impulso (padrão da
+ * alavanca), 'once' liga e fica.
+ */
+export interface WallButtonCfg {
+  x: number; z: number; nx: number; nz: number; top: number;
+  kind?: 'button' | 'lever';
+  mode?: 'timed' | 'toggle' | 'once';
+  holdTime?: number;
 }
 
 /** Intenção de movimento de um quadro (steer). */
@@ -486,6 +525,10 @@ export interface Puzzle {
   /** R / L2 com a Rhaenyra longe da irmã, numa fase que declarou onLick (para a dica da fase). */
   /** Lambe-Lambe sem alcançar a irmã; blocked = ela está perto, mas há algo no meio (cerca, portão fechado). */
   onLickMiss?(ctrl: DogController, miss?: { blocked: boolean }): void;
+  /** Paredes marcadas onde o pulo da Rhaenyra vira impulso na parede (as que valem agora). */
+  wallSpots?(): WallSpot[];
+  /** O impulso na parede alcançou o alto do ponto `spot` (uma vez por impulso, no meio dele). */
+  onWallTouch?(ctrl: DogController, spot: WallSpot): void;
   [k: string]: any;
 }
 
@@ -500,6 +543,16 @@ export interface ItemProp extends PropBase, HighlightProp { home: THREE.Vector3 
 export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void }
 export interface GateProp extends PropBase { setOpen(t: number): void }
 export interface PressProp extends PropBase { setPress(t: number): void }
+/** Botão ou alavanca no alto da parede (src/world/wallButton.js), acionado pelo impulso na parede. */
+export interface WallButtonProp extends PropBase {
+  /** 0..1: o botão afundado pela patinha (ou a alavanca puxada no toque). */
+  setPress(t: number): void;
+  /** Ligado: luz acesa (botão) ou alavanca para baixo. */
+  setOn(on: boolean): void;
+  /** Botão com tempo: fração que falta (1 → 0) no anel de luzes; null apaga o anel. */
+  setTimer?(k: number | null): void;
+  update?(dt: number, t: number): void;
+}
 
 /** Props comuns a todas as fases. */
 export interface LevelProps {
@@ -516,6 +569,15 @@ export interface PlaceholderProps extends LevelProps {
   ball?: PropBase & HighlightProp;
   gate?: GateProp;
   plate?: PressProp;
+}
+
+/** Arena do Pulo: o cenário provisório e a parede de treino do impulso na parede. */
+export interface PuloProps extends PlaceholderProps {
+  wallButton: WallButtonProp;
+  wallLever: WallButtonProp;
+  /** Portinhola do armarinho (0 fechada … 1 levantada). */
+  hatch: GateProp;
+  lights: PropBase & { setOn(on: boolean): void };
 }
 
 /** Arena de desenvolvimento do bafo (não confundir a placa simples com a da fase 4). */
@@ -698,6 +760,17 @@ export interface DogAnim {
   lickSolo?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima). */
   slope?: number;
+  /**
+   * Impulso na parede: progresso 0..1 (−1 = sem), distância do centro da dog à parede (m), altura e saliência do
+   * que a pata toca (m) e altura das patinhas dianteiras (m).
+   */
+  wallK?: number;
+  wallGap?: number;
+  wallTop?: number;
+  wallOut?: number;
+  wallPaws?: number;
+  wallSide?: number;
+  wallLat?: number;
 }
 
 /** Cachorrinha procedural (createDog em src/dogs/dog.js). */

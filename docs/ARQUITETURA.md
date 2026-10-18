@@ -318,7 +318,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Ação | Teclado | Controle (PlayStation · Xbox, por posição) | Toque (celular) | Código lógico |
 |---|---|---|---|---|
 | Mover | WASD / setas | analógico esquerdo (velocidade proporcional) / D-pad | joystick virtual (proporcional) | `axis()` |
-| Pular (Rhaenyra) | Espaço | ✕ · A | Pular | `Jump` |
+| Pular · impulso na parede (Rhaenyra) | Espaço | ✕ · A | Pular | `Jump` |
 | Interagir / latir | E | ○ · B | Agir | `KeyE` |
 | Latir | — | □ · X | (Agir, sem nada perto) | `Bark` |
 | Fica / Vem (companheira) | F | △ · Y | Fica · Vem | `KeyF` |
@@ -351,6 +351,21 @@ pressão; não pula na postura de empurrar. A companheira não pula: arestas do 
 exigem uma flag que nunca liga, e ela espera do lado de cá. Colisores dinâmicos também podem ser puláveis: a fase 5
 marca o portãozinho e a caixa de almofadas com `col.jumpable = true`. Quem não pula (a Radhija) ganha a dica
 "Só a Rhaenyra pula! (Q)". Eventos: `dog:jump` e `dog:land`.
+
+**Impulso na parede** (`dogController.js` + `src/game/mechanics/wallButton.js`): o mesmo pulo, de frente para uma
+parede marcada com patinhas pintadas. A fase oferece os pontos em `puzzle.wallSpots()` (`WallSpot`: pé da parede,
+normal, altura do que a pata toca e as medidas do desenho); com a Rhaenyra a até `wallReach` (0,8 m) do ponto de
+impulso, do lado de cá e de frente (analógico ou, parada, o corpo), Espaço/✕ começa um movimento roteirizado de
+`wallJumpTime` (1,05 s): ela avança até a parede, fica de pé, as traseiras pegam impulso nas patinhas, uma dianteira
+alcança o alto em `WALL_TOUCH` (52%) e ela volta ao chão `wallBack` m afastada. A posição anda com colisão
+(`integrateWall`), nunca atravessa nada; a pose (corpo girando no quadril, IK com alvos na própria parede) fica em
+`dogAnimation.js` (`wallK`, quadros-chave `WALL_*`). No meio do impulso não há outro pulo, arrancada nem lambida; a
+placa de pressão não conta quem está nele; trocar de dog deixa a Rhaenyra terminar como companheira; pausa congela;
+reiniciar cancela sem toque. O toque emite `wall:touch` e chama `puzzle.onWallTouch(ctrl, spot)` uma vez por impulso.
+Fora de um ponto marcado, ou de costas, é o pulo comum. Eventos: `dog:wallJump {id, top}`, `wall:touch {id, y}`.
+`createWallButton` dá o botão (com tempo e anel de luzes), a alavanca (liga/desliga) e o modo "uma vez"
+(`wall:button {kind, on}`, `wall:tick {left}`, `wall:timeout`); o desenho é `buildWallButton` (`src/world/wallButton.js`).
+Demonstração: a parede de treino da Arena do Pulo (`?level=pulo&play`).
 
 **Superbafo** (`game.js` + `src/game/mechanics/scent.js`): só quem tem `bafoSpeed` nas estatísticas (a Radhija).
 Segurando R/L2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
@@ -413,7 +428,7 @@ Quem emite e quem ouve:
 - **Interface do jogo**: `objective {text, target, stage}`, `interact:prompt {text, key}` (key é a tecla lógica, a UI
   desenha o botão do controle ou de toque), `hint {text, duration}`, `input:device {type}` (`keyboard`, `gamepad` ou
   `touch`), `quality:change {device, mode, level, reason, fps}` (perfil gráfico, §9).
-- **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
+- **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase),
   `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
@@ -422,6 +437,8 @@ Quem emite e quem ouve:
 - **Itens**: `item:pickup`, `item:revealed`, `collectible:pickup {count, total}`, `celebrate:start`.
 - **Mecânicas** (sempre com `x, z`): `plate:press`/`plate:release`, `gate:open`/`gate:close`/`gate:locked`, `wedge:kick`,
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
+  `wall:touch {id, y}`, `wall:button {id, kind, on, y}`, `wall:tick {id, left}`, `wall:timeout {id}` (impulso na parede),
+  `hatch:open`/`hatch:close` (portinhola da parede de treino),
   `goose:alert`/`goose:honk`/`goose:charge`/`goose:hit`/`goose:lured`/`goose:return`; fase 1: `rope:tug`, `cart:move`,
   `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando);
   fase 6: `expresso:route {route, signX, signZ}` (pulo no pedal virou a agulha), `expresso:sneeze` (o nariz sentiu o

@@ -22,7 +22,7 @@ Depois, abra `http://127.0.0.1:5173/`.
 | Ação | Teclado | Controle (PlayStation · Xbox) | Celular (toque) |
 |---|---|---|---|
 | Mover | WASD / setas | analógico esquerdo / D-pad | joystick à esquerda |
-| Pular (Rhaenyra) | Espaço | ✕ · A | Pular |
+| Pular · impulso na parede com patinhas (Rhaenyra) | Espaço | ✕ · A | Pular |
 | Interagir / latir | E | ○ · B | Agir |
 | Latir | — | □ · X | Agir (sem nada perto) |
 | Fica / Vem (companheira) | F | △ · Y | Fica · Vem |

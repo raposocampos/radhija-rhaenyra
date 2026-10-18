@@ -285,6 +285,29 @@ export function stubPlaceholderProps(root, layout) {
   return checked('placeholder', props, ['ball', 'plate', 'gate', 'update', 'fireflies']);
 }
 
+/** @param {THREE.Group} root @param {string} name */
+function wallButton(root, name) {
+  return checked(name, { object: object(root, name), setPress(t) {}, setOn(on) {}, setTimer(k) {}, update(dt, t) {} });
+}
+
+/** Arena do Pulo: o cenário provisório (item, sem ball/plate/gate) e a parede de treino do impulso.
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubPuloProps(root, layout) {
+  const obj = object(root, 'item');
+  obj.position.set(layout.BALL.x, 0.07, layout.BALL.z);
+  /** @satisfies {import('../../src/types').PuloProps} */
+  const props = {
+    item: checked('pulo.item', { object: obj, setHighlight(on) {} }),
+    wallButton: wallButton(root, 'pulo.wallButton'),
+    wallLever: wallButton(root, 'pulo.wallLever'),
+    hatch: gate(root, 'pulo.hatch'),
+    lights: checked('pulo.lights', { object: object(root, 'lights'), setOn(on) {} }),
+    collectibles: [],
+    reset() {},
+  };
+  return checked('pulo', props, ['ball', 'plate', 'gate', 'update', 'fireflies']);
+}
+
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubBafoProps(root, layout) {
   /** @satisfies {import('../../src/types').BafoProps} */
@@ -309,8 +332,8 @@ export function stubProps(id, root, layout) {
     case 'fase5': return stubFase5Props(root, layout);
     case 'fase6': return stubFase6Props(root, layout);
     case 'fase7': return stubFase7Props(root, layout);
-    case 'modelo':
-    case 'pulo': return stubPlaceholderProps(root, layout);
+    case 'modelo': return stubPlaceholderProps(root, layout);
+    case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);
     default: throw new Error(`Fase sem fábrica explícita de props: ${id}`);
   }
