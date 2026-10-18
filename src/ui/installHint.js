@@ -3,7 +3,8 @@
 // Safari, deitado e respeitando as áreas seguras). Fora dele, esta dica explica como, de três jeitos discretos:
 // - na tela inicial, um cartão sob o Jogar, uma vez só (fecha no ×, ou conta como visto ao começar a jogar deitado);
 // - no aviso de girar o celular, uma linha;
-// - na pausa, uma nota curta com o passo a passo (no Android ali fica o botão Tela cheia; o iPhone não tem essa API).
+// - nos ajustes da pausa (e das Opções, no menu com telas), uma nota curta com o passo a passo (no Android ali fica o
+//   botão Tela cheia; o iPhone não tem essa API).
 //   É só texto: nada focável que o teclado ou o controle ativariam sem efeito.
 // No PC, no Android, no iPad com tela cheia e no app da tela inicial nada disso existe (needsInstallTip).
 // Os elementos são inseridos no DOM da UI depois que ela é montada (ui.js não muda).
@@ -41,7 +42,8 @@ export function createInstallHint({ root, device, audio = null, storage = global
     card.remove();
     try { storage?.setItem(INSTALL_TIP_KEY, '1'); } catch { /* armazenamento indisponível */ }
   };
-  if (!seen) root.querySelector('.rr-title__center')?.appendChild(card);
+  // sob o Jogar: na tela principal do menu (.rr-screen--main, do menu com telas) ou no centro da tela inicial
+  if (!seen) (root.querySelector('.rr-screen--main') || root.querySelector('.rr-title__center'))?.appendChild(card);
   card.querySelector('button').addEventListener('click', (e) => {
     e.stopPropagation();
     audio?.play?.('uiClick');
@@ -64,9 +66,8 @@ export function createInstallHint({ root, device, audio = null, storage = global
     rotate.appendChild(line);
   }
 
-  // 3) na pausa, uma nota com o passo a passo (só texto)
-  const settings = root.querySelector('.rr-pause__settings');
-  if (settings) {
+  // 3) nos ajustes (pausa e, no menu com telas, Opções), uma nota com o passo a passo (só texto)
+  for (const settings of root.querySelectorAll('.rr-pause__settings, .rr-card--options .rr-settings')) {
     const how = document.createElement('p');
     how.className = 'rr-ios-fs__how';
     how.innerHTML = `<b class="rr-ios-tip__title">Tela cheia no iPhone:</b> ${STEPS}`;
