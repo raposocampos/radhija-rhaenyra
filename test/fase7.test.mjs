@@ -333,6 +333,48 @@ test('fase 7: cinco lambidas tiram a lama em placas; ela sacode e a arrancada vo
   assert.ok(hints(h).some((x) => x.startsWith('A Radhija já está limpinha')));
 });
 
+test('fase 7: com a cerca ou o portão fechado no meio, a Rhaenyra não lambe a irmã', async (t) => {
+  const h = await prototype(t, 'stage=inside&dog=rhaenyra');
+  const F = L.FENCE;
+  // pela cerca e pelo portão fechado: as duas a 0,8 m, dentro do alcance da lambida
+  for (const x of [0.5, (L.GATE.hinge.x + L.GATE.latchPost.x) / 2]) {
+    h.teleport('radhija', x, F.south - 0.4, Math.PI / 2);
+    h.teleport('rhaenyra', x, F.south + 0.4, Math.PI);
+    h.game.setStay('radhija', true);
+    h.run(0.3);
+    h.clearLog();
+    holdR(h, 1.2);
+    h.run(0.4);
+    assert.equal(h.log('lick:start').length, 0, `x=${x}: nada de lambida através da cerca`);
+    assert.ok(h.log('dog:lick').every((l) => l.target === null), 'só a lambidinha no focinho');
+    assert.equal(h.log('mud:lick').length, 0);
+    assert.equal(info(h).mud.radhija.k, 1, 'a lama continua');
+    // a dica tem intervalo mínimo entre repetições: só a primeira tentativa a mostra
+    if (x === 0.5) assert.ok(hints(h).some((text) => text.startsWith('Tem cerca no meio')), 'a dica explica a cerca');
+  }
+});
+
+test('fase 7: pegar a bolinha no meio da lambida encerra o Lambe-Lambe', async (t) => {
+  const h = await prototype(t, 'stage=muddy&dog=rhaenyra');
+  // a bolinha fica entre as duas, ao alcance da Rhaenyra
+  h.teleport('radhija', L.BALL.x, L.BALL.z - 0.36, Math.PI / 2);
+  h.teleport('rhaenyra', L.BALL.x, L.BALL.z + 0.3, Math.PI);
+  h.game.setStay('radhija', true);
+  h.run(0.2);
+  h.clearLog();
+  h.keyDown('KeyR');
+  waitFor(h, (i) => i.lick.on && i.lick.stage === 'licking' && i.lick.strokes >= 1, 'começou a lamber', 2);
+  h.tap('KeyE');
+  h.run(0.1);
+  assert.equal(info(h).place.ball, 'carried', 'pegou a bolinha');
+  assert.equal(info(h).lick.on, false, 'com a boca ocupada a lambida acaba');
+  const licks = h.log('mud:lick').length;
+  h.run(1.5);
+  h.keyUp('KeyR');
+  assert.equal(h.log('mud:lick').length, licks, 'nenhuma lambida com a bolinha na boca');
+  assert.equal(h.log('lick:end').length, 1);
+});
+
 test('fase 7: no escorregador, andando, enlameada ou a Rhaenyra escorregam de volta', async (t) => {
   const h = await prototype(t, 'stage=muddy');
   select(h, 'radhija');

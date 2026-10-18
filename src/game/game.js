@@ -31,6 +31,7 @@ const LICK_DIST = 0.56;
 const LICK_APPROACH = 0.8;
 const LICK_GIVEUP = 0.7;
 const LICK_SOLO = 0.3; // cada lambidinha no próprio focinho (ninguém por perto)
+const LICK_LOS_R = 0.05; // linha entre as duas: cerca, portão fechado ou parede no meio impedem a lambida
 const LICK_HINT = 'Só a Radhija tem o superbafo! Com a Rhaenyra, o mesmo botão (R) faz o Lambe-Lambe: chegue pertinho da irmã.';
 const sstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -226,12 +227,17 @@ export function createGame({ engine, dogs, levels, params }) {
     return { local, point, spot: { x: spot.x, z: spot.z } };
   }
 
+  /** Nada entre as duas (cerca, portão fechado, parede): uma linha fina de uma à outra está livre. */
+  const lickClear = (A, C) => world.segmentClear(A.x, A.z, C.x, C.z, LICK_LOS_R, A.size);
+
   /** R / L2 com a Rhaenyra: começa o Lambe-Lambe (ou a lambidinha no focinho, sem ninguém por perto). */
   function startLick(A, C) {
     const declared = typeof puzzle.onLick === 'function';
     const reach = A.cfg.lickReach ?? 1.5;
     const mouthFull = carries(A.name);
-    const canLick = !mouthFull && Math.hypot(C.x - A.x, C.z - A.z) <= reach && !puzzle.lockFor(C.name) && !(C.jumpT > 0);
+    const near = !mouthFull && Math.hypot(C.x - A.x, C.z - A.z) <= reach;
+    const blocked = near && !lickClear(A, C);
+    const canLick = near && !blocked && !puzzle.lockFor(C.name) && !(C.jumpT > 0);
     if (mouthFull) {
       if (lick.hintCd <= 0) {
         lick.hintCd = 4;
@@ -244,7 +250,7 @@ export function createGame({ engine, dogs, levels, params }) {
       emit('hint', { text: LICK_HINT, duration: 3.2 });
     }
     if (!canLick) {
-      if (declared) puzzle.onLickMiss?.(A);
+      if (declared) puzzle.onLickMiss?.(A, { blocked });
       Object.assign(lick, { on: true, solo: true, stage: 'licking', t: 0, phase: 0, strokes: 0, release: true, stop: false, by: A.name, target: null });
       return;
     }
@@ -277,8 +283,8 @@ export function createGame({ engine, dogs, levels, params }) {
       }
       return { dx: 0, dz: 0, speed: 0 };
     }
-    // A irmã ocupada (sacudindo, empurrada…) ou longe demais: encerra.
-    if (puzzle.lockFor(C.name) || Math.hypot(C.x - lick.spot.x, C.z - lick.spot.z) > LICK_DIST + LICK_GIVEUP) {
+    // A irmã ocupada (sacudindo, empurrada…), longe demais, ou a boca ficou ocupada (pegou um objeto): encerra.
+    if (puzzle.lockFor(C.name) || Math.hypot(C.x - lick.spot.x, C.z - lick.spot.z) > LICK_DIST + LICK_GIVEUP || carries(A.name)) {
       cancelLick();
       return null;
     }

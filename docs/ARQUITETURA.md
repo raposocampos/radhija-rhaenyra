@@ -250,7 +250,7 @@ E devolve um objeto com:
 | `reset()`, `jumpToStage?(etapa, {who})` | reiniciar; `?stage=` e testes |
 | `onBark?(ctrl)`, `endActions?()`, `info?()`, `dispose?()` | latido; fim da fase; depuração; descarte |
 | `speedScale?(ctrl)`, `canDash?(ctrl)`, `onDashBlocked?(ctrl)` | estado da dog que a fase controla (lama: metade da velocidade e sem arrancada) |
-| `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl)` | efeito de cada lambida do Lambe-Lambe (declarar `onLick` também tira a dica genérica do botão) |
+| `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl, { blocked })` | efeito de cada lambida do Lambe-Lambe (declarar `onLick` também tira a dica genérica do botão) |
 | `onStageChange` (setter) | o núcleo registra um callback para reemitir o objetivo |
 
 Peças prontas:

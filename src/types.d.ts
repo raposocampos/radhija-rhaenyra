@@ -484,7 +484,8 @@ export interface Puzzle {
    */
   onLick?(ctrl: DogController, lick: LickInfo): { stop?: boolean } | null | void;
   /** R / L2 com a Rhaenyra longe da irmã, numa fase que declarou onLick (para a dica da fase). */
-  onLickMiss?(ctrl: DogController): void;
+  /** Lambe-Lambe sem alcançar a irmã; blocked = ela está perto, mas há algo no meio (cerca, portão fechado). */
+  onLickMiss?(ctrl: DogController, miss?: { blocked: boolean }): void;
   [k: string]: any;
 }
 
