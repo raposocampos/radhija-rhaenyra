@@ -150,6 +150,27 @@ try {
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] });
+  // DIAGNÓSTICO TEMPORÁRIO: objetos visíveis perto da câmera da captura 15
+  console.log('DIAG ' + JSON.stringify(await page.evaluate(() => {
+    const G = window.__game;
+    const cam = G.engine.camera;
+    const cp = cam.position;
+    const out = [];
+    G.engine.scene.traverse((o) => {
+      if (!o.visible || !(o.isMesh || o.isSprite || o.isPoints)) return;
+      let v = true;
+      for (let p = o.parent; p; p = p.parent) if (!p.visible) { v = false; break; }
+      if (!v) return;
+      const e = o.matrixWorld.elements;
+      const d = Math.hypot(e[12] - cp.x, e[13] - cp.y, e[14] - cp.z);
+      if (d > 2.6) return;
+      const chain = [];
+      for (let p = o; p && chain.length < 5; p = p.parent) chain.push(p.name || p.type);
+      const m = Array.isArray(o.material) ? o.material[0] : o.material;
+      out.push({ d: +d.toFixed(2), at: [+e[12].toFixed(2), +e[13].toFixed(2), +e[14].toFixed(2)], s: +Math.hypot(e[0], e[1], e[2]).toFixed(2), chain: chain.join('<'), mat: m?.type, color: m?.color?.getHexString?.(), op: m?.opacity, tr: m?.transparent, bl: m?.blending });
+    });
+    return out.sort((x, y) => x.d - y.d).slice(0, 40);
+  })));
   await keyDown('KeyR');
   await step(18);
   await keyUp('KeyR');
