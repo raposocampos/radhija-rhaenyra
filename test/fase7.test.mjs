@@ -12,6 +12,8 @@ import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS, devCatalog } from '../src/levels/dev.js';
 import { DOG_CONFIG } from '../src/dogs/config.js';
 import { STAGES, slideY } from '../src/levels/fase7/puzzle.js';
+import { createCollisionWorld } from '../src/game/collision.js';
+import { createNavigator } from '../src/game/navigation.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const L = fase7.layout;
@@ -184,20 +186,20 @@ test('catálogo das prévias: os protótipos 6 e 7 entram juntos e em ordem; are
   assert.deepEqual(LEVELS.map((def) => def.id), published, 'a campanha publicada não muda');
 });
 
-test('fase 7: os petiscos ficam em lugares livres e alcançáveis pela Radhija', async (t) => {
-  const h = await prototype(t);
-  const c = h.ctrls.radhija;
-  for (const stage of ['start', 'clean']) {
-    h.puzzle.jumpToStage(stage);
-    h.step();
-    const ctx = { r: c.r, size: c.size, flags: h.puzzle.navFlags() };
+test('fase 7: os petiscos ficam em lugares livres e alcançáveis pela Radhija', () => {
+  // só o cenário fixo: portão, bolinha e a irmã se mexem (a navegação do jogo contorna)
+  const world = createCollisionWorld(L);
+  const nav = createNavigator(L, world);
+  const r = L.DOGS.radhija.radius, size = 'small';
+  for (const flags of [{ tunnel: true, gateOpen: false }, { tunnel: false, gateOpen: true }]) {
+    const when = flags.gateOpen ? 'portão aberto' : 'pelo túnel';
     for (const point of L.COLLECTIBLES) {
-      assert.equal(h.world.overlaps(point.x, point.z, c.r, c.size), false, `${point.id}: petisco num lugar livre`);
-      const path = h.nav.findPath(L.DOGS.radhija.start, point, ctx);
-      assert.equal(path.reachable, true, `${point.id} (${stage}): petisco alcançável`);
+      assert.equal(world.overlaps(point.x, point.z, r, size), false, `${point.id}: petisco num lugar livre`);
+      const path = nav.findPath(L.DOGS.radhija.start, point, { r, size, flags });
+      assert.equal(path.reachable, true, `${point.id} (${when}): petisco alcançável`);
       let previous = L.DOGS.radhija.start;
       for (const next of [...path.waypoints, point]) {
-        assert.ok(h.world.segmentClear(previous.x, previous.z, next.x, next.z, c.r * 0.9, c.size), `${point.id}: caminho sem atravessar nada`);
+        assert.ok(world.segmentClear(previous.x, previous.z, next.x, next.z, r * 0.9, size), `${point.id} (${when}): caminho sem atravessar nada`);
         previous = next;
       }
     }
