@@ -255,6 +255,17 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       obj[m] = (...a) => guard(`${name}.${m}(${a.filter((x) => typeof x !== 'object').join(', ')})`, () => raw(...a), limits.evalMs + (a.at(-1)?.delay || 0));
     }
   }
+  // Sessões CDP desta página (os dedos reais da suíte toque: Input.dispatchTouchEvent): o mesmo teto em cada comando.
+  const context = page.context();
+  const rawCDPSession = context.newCDPSession.bind(context);
+  context.newCDPSession = async (target) => {
+    const session = await rawCDPSession(target);
+    if (target === page) {
+      const send = session.send.bind(session);
+      session.send = (method, params) => guard(`cdp.send(${method})`, () => send(method, params));
+    }
+    return session;
+  };
 
   // Razão tempo de jogo / relógio entre leituras seguidas (diagnóstico: < 1 = abaixo de 20 fps, máquina carregada).
   // Também a latência de cada leitura (ida e volta): alta = o próprio teste está sem CPU e as teclas chegam atrasadas.

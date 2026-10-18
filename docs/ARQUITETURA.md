@@ -597,8 +597,8 @@ suíte com carga artificial ou uma segunda instância do e2e em paralelo (cada u
 
 *Tetos de relógio* (`DEFAULT_LIMITS` no harness): o tempo de jogo só vale enquanto o jogo anda. Se o `simSec` ficar
 60 s sem mudar, contados entre as leituras de todas as esperas (`waitFor`, `gsleep`, `walkTo`, `hold`/`holdUntil`),
-a suíte reprova com `HarnessAbort`: o jogo parou. Cada ida ao navegador (`info()`, `page.evaluate`, teclado, mouse)
-tem 60 s; com a aba travada, a página fica marcada e as idas seguintes falham na hora, para o `catch` da suíte e o
+a suíte reprova com `HarnessAbort`: o jogo parou. Cada ida ao navegador (`info()`, `page.evaluate`, teclado, mouse,
+comandos das sessões CDP da página, como os dedos da suíte `toque`) tem 60 s; com a aba travada, a página fica marcada e as idas seguintes falham na hora, para o `catch` da suíte e o
 `close()` terminarem logo. As etapas do `load()` dizem qual delas venceu. A mensagem traz a espera, a linha da suíte,
 o motivo e a última leitura do estado (`estado`, `fase`, `timeSec`, `simSec`, posição); um aborto engolido pela
 suíte ainda reprova no `close()`. Já o jogo que anda devagar demais NÃO reprova: em max(10 s, 8 × o prazo) de
