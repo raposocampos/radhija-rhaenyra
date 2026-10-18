@@ -1,6 +1,7 @@
 // Fase 8 da campanha (levels/index.js). Também abre por ?level=fase8&play.
 // Apresenta o impulso na parede da Rhaenyra: dois botões no alto, uma meia no varal e uma mantinha em cima da máquina.
 import layout from './layout.js';
+import extras from './extras.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';
 
@@ -17,4 +18,5 @@ export default {
   layout, lighting,
   load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
   createPuzzle,
+  extras,
 };
