@@ -2,6 +2,7 @@
 // A maior fase antes da 10: quatro cômodos, três impulsos na parede, a escada de rodinhas, o duto do aquecedor e o
 // gato do vovô dormindo em cima do livro.
 import layout from './layout.js';
+import extras from './extras.js';
 import lighting from './lighting.js';
 import { createPuzzle } from './puzzle.js';
 
@@ -18,4 +19,5 @@ export default {
   layout, lighting,
   load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
   createPuzzle,
+  extras,
 };

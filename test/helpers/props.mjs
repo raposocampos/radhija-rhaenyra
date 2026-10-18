@@ -321,6 +321,52 @@ export function stubFase8Props(root, layout) {
   return level('fase8', props);
 }
 
+/** Fase 9: óculos e livro (com a queda e o deitar), escada, globo, ventilador, porta, gato, duto, alavancas e mesinha.
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubFase9Props(root, layout) {
+  const glasses = item(root, 'glasses', { x: layout.GLASSES.x, z: layout.GLASSES.z });
+  const book = item(root, 'book', { x: layout.CAT.top.x, z: layout.CAT.top.z });
+  const tableObj = object(root, 'table');
+  const spots = { glasses: object(tableObj, 'spot-glasses'), book: object(tableObj, 'spot-book') };
+  const crate = (name) => checked(`fase9.${name}`, { object: object(root, name), setPos(x, z) { this.object.position.set(x, 0, z); } });
+  /** @satisfies {import('../../src/types').Fase9Props} */
+  const props = {
+    glasses,
+    book: Object.assign(book, {
+      fall: /** @type {number | null} */ (null), lying: true,
+      setFall(k) { this.fall = k; },
+      setLying(on) { this.lying = on; },
+    }),
+    ladder: checked('fase9.ladder', { object: object(root, 'ladder'), setPos(x, z) { this.object.position.set(x, 0, z); }, setHighlight(on) {} }),
+    globe: crate('globe'),
+    fan: checked('fase9.fan', { object: object(root, 'fan'), aligned: false, setPos(x, z) { this.object.position.set(x, 0, z); }, setAligned(on) { this.aligned = on; } }),
+    door: gate(root, 'fase9.door'),
+    cat: checked('fase9.cat', { object: object(root, 'cat'), pose: null, setPose(p) { this.pose = { ...p }; } }),
+    duct: checked('fase9.duct', { object: object(root, 'duct'), damper: false, puffs: [], outs: 0, setDamper(on) { this.damper = on; }, setPuffs(list) { this.puffs = list; }, outletPuff() { this.outs++; } }),
+    brakeLever: wallButton(root, 'fase9.brakeLever'),
+    damperLever: wallButton(root, 'fase9.damperLever'),
+    doorHandle: wallButton(root, 'fase9.doorHandle'),
+    doorHandleIn: wallButton(root, 'fase9.doorHandleIn'),
+    table: checked('fase9.table', {
+      object: tableObj,
+      setHighlight(on) {},
+      /** @param {import('../../src/types').Fase9Thing} thing */
+      spot(thing) { return spots[thing]; },
+    }),
+    collectibles: [],
+    reset() {
+      root.add(glasses.object);
+      glasses.object.position.copy(glasses.home);
+      root.add(book.object);
+      book.object.position.copy(book.home);
+      props.book.setFall(null);
+      props.door.setOpen(0);
+    },
+  };
+  props.reset();
+  return level('fase9', props);
+}
+
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubPlaceholderProps(root, layout) {
   const obj = object(root, 'item');
@@ -381,6 +427,7 @@ export function stubProps(id, root, layout) {
     case 'fase6': return stubFase6Props(root, layout);
     case 'fase7': return stubFase7Props(root, layout);
     case 'fase8': return stubFase8Props(root, layout);
+    case 'fase9': return stubFase9Props(root, layout);
     case 'modelo': return stubPlaceholderProps(root, layout);
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);

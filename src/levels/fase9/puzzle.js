@@ -41,7 +41,7 @@ export const TEXT = {
     damperRad: 'O Bichano dorme em cima do livro. A Rhaenyra abre o registro do duto no jardim de inverno (Q)',
     fanRh: 'Empurre o ventilador até a grade de baixo do duto (segure Shift)',
     fanRad: 'O ventilador é pesado: a Rhaenyra empurra até a grade do duto (Q)',
-    blowRad: 'Solte o superbafo no vento do ventilador (segure R e solte)',
+    blowRad: 'Solte o superbafo na frente do ventilador, no vento (segure R e solte)',
     blowRh: 'Vento no duto! Agora o superbafo da Radhija (Q)',
     cat: 'O Bichano acordou!',
     doorRh: 'O livro caiu! Abra a porta do escritório: impulso na maçaneta (Espaço)',
@@ -190,7 +190,7 @@ export function createPuzzle(ctx) {
     if (S.cat === 'asleep') {
       if (!damper.on) return { text: name === 'rhaenyra' ? O.damperRh : O.damperRad, target: damper.target(0.3) };
       if (!S.aligned) return { text: name === 'rhaenyra' ? O.fanRh : O.fanRad, target: at(fan.x, fan.z, 1.1) };
-      return name === 'radhija' ? { text: O.blowRad, target: at(fan.x, fan.z + 0.75, 0.5) } : { text: O.blowRh, target: at(fan.x, fan.z + 0.75, 0.5) };
+      return { text: name === 'radhija' ? O.blowRad : O.blowRh, target: at(fan.x, fan.z - FAN.half - 0.55, 0.5) };
     }
     if (S.cat === 'waking' || S.cat === 'jumping' || S.book === 'falling') return { text: O.cat, target: at(CAT.top.x, CAT.top.z, CAT.top.y + 0.4) };
     if (S.book === 'carried') return { text: O.carryBook, target: at(GOAL.x, GOAL.z, 0.6) };
@@ -460,6 +460,7 @@ export function createPuzzle(ctx) {
     spot.add(obj.object);
     obj.object.position.set(0, 0, 0);
     obj.object.rotation.set(0, 0, 0);
+    if (thing === 'book') props.book.setLying(true);
     obj.setHighlight(false);
     if (thing === 'glasses') S.glasses = 'table';
     else S.book = 'table';
@@ -472,7 +473,8 @@ export function createPuzzle(ctx) {
     const x = c.x + Math.sin(c.yaw) * 0.32;
     const z = c.z + Math.cos(c.yaw) * 0.32;
     const res = world.resolve(x, z, 0.12, 'small');
-    book.drop(res.x, res.z, 0.035);
+    book.drop(res.x, res.z, 0);
+    props.book.setLying(true);
     S.book = 'floor';
     S.bookX = res.x;
     S.bookZ = res.z;
@@ -481,6 +483,7 @@ export function createPuzzle(ctx) {
     notifyStage();
   }
   function takeBook(c) {
+    props.book.setLying(false);
     book.attach(c.name);
     props.book.setHighlight(false);
     S.book = 'carried';
@@ -511,7 +514,7 @@ export function createPuzzle(ctx) {
     }
     S.wasAligned = S.aligned;
     props.fan.setAligned(S.aligned);
-    props.duct.setOpen(damper.on);
+    props.duct.setDamper(damper.on);
     // baforadas viajando no duto (o cenário desenha um brilho correndo pelo cano)
     const puffs = [];
     for (const cl of scent.clouds) if (cl.state === 'duct' && cl.duct === duct) puffs.push(clamp01(cl.ductT / DUCT.travel));
@@ -551,9 +554,9 @@ export function createPuzzle(ctx) {
     }
     const wallReady = active.name === 'rhaenyra' && !airborne(active) && !book.holder && levers.some((b) => b.inReach(active, world));
     const canClimb = !S.climb && active.name === 'radhija' && nearClimb(active);
-    const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && !glasses.holder !== false;
+    const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && glasses.holder !== 'rhaenyra';
     if (canClimb) hints.setPrompt('climb');
-    else if (canBook && !book.holder && glasses.holder !== 'rhaenyra') hints.setPrompt('book');
+    else if (canBook) hints.setPrompt('book');
     else if (book.holder === active.name && inOffice(active) && !open) hints.setPrompt('drop');
     else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
     props.ladder.setHighlight(brake.on && globeClear() && !ladderAtGlasses() && active.name === 'rhaenyra');

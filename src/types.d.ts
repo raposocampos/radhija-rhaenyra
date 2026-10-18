@@ -758,8 +758,11 @@ export interface CatPose { x: number; y?: number; z: number; yaw?: number; mode:
 export interface Fase9Props extends LevelProps {
   /** Óculos do vovô (na prateleira alta da estante leste). */
   glasses: ItemProp;
-  /** Livro de histórias: setFall(null = no alto do armário, debaixo do gato; 0..1 caindo; 1 = no chão). */
-  book: ItemProp & { setFall(k: number | null): void };
+  /**
+   * Livro de histórias: setFall(null = no alto do armário, debaixo do gato; 0..1 caindo; 1 = no chão);
+   * setLying(deitado: chão, armário, mesinha | de pé: na boca).
+   */
+  book: ItemProp & { setFall(k: number | null): void; setLying(on: boolean): void };
   /** Escadinha de biblioteca com rodinhas (empurrável no trilho). */
   ladder: PropBase & HighlightProp & { setPos(x: number, z: number): void };
   /** Globo terrestre de rodinhas. */
@@ -771,10 +774,10 @@ export interface Fase9Props extends LevelProps {
   /** O gato Bichano. */
   cat: PropBase & { setPose(p: CatPose): void };
   /**
-   * Duto do aquecedor: setOpen(registro aberto), setPuffs(progresso 0..1 de cada baforada dentro do cano),
+   * Duto do aquecedor: setDamper(registro aberto), setPuffs(progresso 0..1 de cada baforada dentro do cano),
    * outletPuff() = a baforada saindo pela grade do escritório em cima do gato.
    */
-  duct: PropBase & { setOpen(on: boolean): void; setPuffs(list: number[]): void; outletPuff(): void };
+  duct: PropBase & { setDamper(on: boolean): void; setPuffs(list: number[]): void; outletPuff(): void };
   brakeLever: WallButtonProp;
   damperLever: WallButtonProp;
   doorHandle: WallButtonProp;

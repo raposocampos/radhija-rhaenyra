@@ -434,8 +434,9 @@ function buildReadingCorner(root, layout) {
   for (const k of /** @type {const} */ (['glasses', 'book'])) {
     const sp = new THREE.Object3D();
     sp.position.set(TABLE_SPOTS[k].x - T.x, TABLE_SPOTS[k].y, TABLE_SPOTS[k].z - T.z);
-    if (k === 'book') sp.rotation.set(-Math.PI / 2, 0, 0.4); // o livro fica deitado na mesinha
-    else sp.rotation.set(-0.3, 0.5, 0);
+    // o livro já deita sozinho (props.book.setLying); os óculos deitam dobrados, as lentes para cima
+    if (k === 'book') sp.rotation.set(0, 0.4, 0);
+    else sp.rotation.set(-Math.PI / 2 + 0.15, 0, 0.5);
     table.add(sp);
     spots[k] = sp;
   }

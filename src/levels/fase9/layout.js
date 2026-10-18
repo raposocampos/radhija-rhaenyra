@@ -20,7 +20,7 @@
 //     sopra bem ali.
 //     1. No jardim de inverno, o registro do duto fica no alto da parede (impulso na parede: abre).
 //     2. O ventilador está virado para as plantas: a Rhaenyra o empurra até a grade de baixo do duto.
-//     3. A Radhija solta o superbafo no vento: o duto leva o cheiro até a grade do escritório, o Bichano pula
+//     3. A Radhija solta o superbafo no vento, na frente do ventilador: o duto leva o cheiro até a grade do escritório, o Bichano pula
 //        ofendido, derruba o livro e sai pela portinha de gato.
 //     4. A porta do escritório: impulso na maçaneta (do hall ou de dentro) destrava e ela abre, mas a mola fecha
 //        de novo em DOOR_HANDLE.holdTime s. Com alguém no vão (a Radhija com o Fica), ela espera. Com o livro na
@@ -115,7 +115,7 @@ export const GLOBE = { start: { x: 2.15, z: LANE_Z }, half: 0.24, minX: 1.2, max
 /** Óculos do vovô na prateleira alta, acima de onde a escada para (y = altura da prateleira). */
 export const GLASSES = { x: LADDER.minX, y: 1.72, z: SHELF_E.z + 0.04 };
 /** Onde a Rhaenyra segura a escada: pé da escada, de um lado ou do outro (centro ± side). */
-export const LADDER_HOLD = { side: 0.62, z: LANE_Z + 0.22, r: 0.36 };
+export const LADDER_HOLD = { side: 0.72, z: LANE_Z + 0.2, r: 0.36 };
 /** De onde a Radhija sobe (na frente dos degraus) e quanto tempo leva. */
 export const CLIMB = { front: 0.62, r: 0.36, faceTol: 1.0, upTime: 1.5, grabTime: 0.7, downTime: 1.2, slipTime: 0.9 };
 /**

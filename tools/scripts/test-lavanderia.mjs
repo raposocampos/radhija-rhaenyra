@@ -82,7 +82,7 @@ try {
   state = await waitFor((s) => s.state === 'victory', { timeout: 12000 });
   await H.gsleep(400);
   const actions = await ev(() => [...document.querySelectorAll('.rr-victory__actions [data-action]')].map((b) => b.dataset.action).join());
-  check(state.state === 'victory' && actions === 'restart,menu', 'a 8 é a última por enquanto: jogar de novo e menu', actions);
+  check(state.state === 'victory' && actions.split(',').includes('next'), 'vitória da 8 oferece "Próxima fase" (a 9)', actions);
   await ev(() => window.__game.game.reset());
   state = await info();
   check(lav(state).sock === 'rack' && lav(state).blanket === 'machine' && !lav(state).rackDown, 'reinício devolve meia, mantinha, cesto e varal');
