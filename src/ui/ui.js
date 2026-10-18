@@ -183,6 +183,10 @@ export function createUI({ audio, layout, levels, params, unlockAll = false } = 
 
   function renderCards() {
     const box = $('.rr-levels');
+    // até cinco cartões por linha; com mais fases, linhas equilibradas (7 → 4 + 3) e o aviso acima delas
+    const rows = Math.ceil(LV.length / 5);
+    box.style.setProperty('--per-row', String(Math.ceil(LV.length / rows)));
+    L.title.style.setProperty('--level-rows', String(rows));
     box.innerHTML = LV.map((d, i) => {
       const m = meta(i);
       const p = prog.levels[d.id];

@@ -1,6 +1,7 @@
-// Protótipo DEV: teleporte prepara estações; ações do puzzle usam entrada real.
+// Fase 6 (Expresso do Superbafo): teleporte prepara estações; ações do puzzle usam entrada real.
 // Fluxo: volta → pedal (lua) → o trem busca a lua no pórtico → pedal (estrela) → cancela fechada barra →
 // Rhaenyra fica na placa → as duas cargas descem até a bandeja → uma em cada boca até o foguete, que decola.
+// No fim, o menu da campanha: sete fases em linhas equilibradas e o save liberando a 6 e a 7 em ordem.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -16,6 +17,23 @@ const station = async (name, point) => {
   await H.sleep(200);
 };
 const blow = () => H.hold(['KeyR'], 450);
+const CAMPAIGN = 'fase1,fase2,fase3,fase4,fase5,fase6,fase7';
+const done = (id) => [id, { done: true, best: 95.5, treats: 1, total: 3, clears: 1 }];
+/** Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre o menu e lê os cartões. */
+const menuWith = async (ids) => {
+  const saved = JSON.stringify({ v: 1, levels: Object.fromEntries(ids.map(done)) });
+  await ev((saved) => localStorage.setItem('rr-progress-v1', saved), saved);
+  await load('');
+  return ev((saved) => ({
+    state: window.__game.game.state,
+    unchanged: localStorage.getItem('rr-progress-v1') === saved,
+    cards: [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => ({
+      num: card.querySelector('.rr-lvcard__num')?.textContent,
+      locked: card.classList.contains('is-locked'),
+      top: card.offsetTop, // posição de layout (sem o transform do foco)
+    })),
+  }), saved);
+};
 try {
   await load('?level=fase6&play');
   let state = await info();
@@ -23,7 +41,9 @@ try {
     const { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN, BARRIER_PLATE, MOON } = window.__game.layout;
     return { PEDAL, BLOW_SPOT, TRAY, GOAL, TRAIN_START: TRAIN.start, BARRIER_PLATE, MOON };
   });
-  check(state.levelId === 'fase6' && state.state === 'playing', 'protótipo carregado pelo id');
+  check(state.levelId === 'fase6' && state.state === 'playing', 'link por id (?level=fase6) abre a fase 6');
+  const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
+  check(catalog.ids === CAMPAIGN && catalog.level === 5, 'o link usa a campanha (sexta de sete), sem catálogo de desenvolvimento', JSON.stringify(catalog));
   check(state.stage === 'waiting' && state.expresso.route === 'loop', 'início com trilho circular e trem parado');
   check(state.expresso.barrier.open === 0 && state.expresso.place.moon === 'gantry', 'cancela fechada e lua presa no pórtico');
   await shot('01-oficina.png');
@@ -160,13 +180,33 @@ try {
   check((await H.logOf('expresso:launch')).length === 1, 'o foguete decola uma vez');
   await H.gsleep(1600); // tremeu, acendeu e está subindo
   await shot('05-foguete-decola.png');
+  state = await waitFor((i) => i.state === 'victory', { timeout: 12000 });
+  await H.gsleep(400);
+  const next = await ev(() => !!document.querySelector('.rr-victory [data-action="next"]'));
+  check(state.state === 'victory' && next, 'vitória da fase 6 oferece "Próxima fase" (a 7)');
   await ev(() => window.__game.game.reset());
   state = await info();
   check(state.stage === 'waiting' && state.expresso.route === 'loop' && state.ball.holder === null && state.moon.holder === null, 'reinício restaura trem, rota e cargas');
   check(state.expresso.place.planet === 'wagon' && state.expresso.place.moon === 'gantry' && state.expresso.barrier.open === 0, 'reinício devolve planeta, lua e cancela');
   check(state.expresso.trips === 0 && state.expresso.routeChanges === 0 && state.expresso.blockedCloudIdsCount === 0, 'reinício limpa contadores e bloqueios de nuvens');
-  await load('?play');
-  check(!(await ev(() => window.__game.levels.some((level) => level.id === 'fase6'))), 'catálogo normal continua sem o protótipo');
+  await load('?level=6&play');
+  state = await info();
+  check(state.levelId === 'fase6' && (await ev(() => window.__game.levels.map((level) => level.id).join())) === CAMPAIGN, 'posição na lista (?level=6) também abre a fase 6');
+
+  // ---------------------------------------------------------------- menu da campanha e save v1
+  let menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5']);
+  const nums = menu.cards.map((card) => card.num).join();
+  check(menu.state === 'title' && nums === '1,2,3,4,5,6,7', 'menu com as sete fases em ordem', nums);
+  const rows = [...new Set(menu.cards.map((card) => card.top))].map((top) => menu.cards.filter((card) => card.top === top).length);
+  check(rows.join() === '4,3', 'cartões em duas linhas equilibradas (4 + 3)', rows.join());
+  check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true', 'fase 5 concluída libera a 6; a 7 continua bloqueada', JSON.stringify(menu.cards));
+  check(menu.unchanged, 'abrir o menu não reescreve o save antigo (medalhas e conclusões preservadas)');
+  await shot('00-menu-sete-fases.png');
+  menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4']);
+  check(menu.cards[5]?.locked === true && menu.cards[6]?.locked === true, 'sem a fase 5 concluída, a 6 e a 7 ficam bloqueadas');
+  menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6']);
+  check(menu.cards.every((card) => !card.locked) && menu.unchanged, 'fase 6 concluída libera a 7');
+  await ev(() => localStorage.removeItem('rr-progress-v1'));
 } catch (error) {
   check(false, `exceção: ${error.stack || error}`);
 }

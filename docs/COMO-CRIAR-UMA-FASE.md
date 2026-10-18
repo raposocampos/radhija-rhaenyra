@@ -143,29 +143,40 @@ layout) e exporte em `mechanics/index.js`.
 Durante o protótipo, importe a definição somente em `src/levels/dev.js` e acrescente-a a `DEV_LEVELS`.
 Abra a **prévia do PR** com `?level=<id>&play`; sem esse parâmetro, menu e progressão continuam com o catálogo
 publicado. Com ele, `devCatalog` (em `dev.js`) monta o catálogo da partida: os protótipos de fases novas (número
-depois da última publicada, como `fase6` e `fase7`) entram **juntos e em ordem** depois das publicadas, e o menu
-libera todas as fases para teste; uma arena (`pulo`, `bafo`, `modelo`) entra sozinha no fim.
+depois da última publicada, como foram `fase6` e `fase7`) entram **juntos e em ordem** depois das publicadas, e o
+menu libera todas as fases para teste; uma arena (`pulo`, `bafo`, `modelo`) entra sozinha no fim.
 Os testes gerais de navegação, colisão e cenário também descobrem `DEV_LEVELS`.
 
 `DEV_LEVELS` não é um isolamento de armazenamento: as definições entram na lista quando abertas pela URL.
 Teste pelo subcaminho da prévia, que usa chave de save por PR; não use o link principal para experimentar saves.
-Conferir também o smoke do build com o ID de desenvolvimento quando a suíte de protótipo o suportar.
+Conferir também o smoke do build com o ID de desenvolvimento: em `.github/workflows/e2e.yml`, `SMOKE_DEV_LEVEL`
+(smoke) e `MEASURE_DEV_LEVELS` (recursos) recebem o id do protótipo na suíte dele e em `todas`.
 
 Depois de puzzle, arte, contratos e prévia aprovados, faça a integração ao catálogo como entrega explícita.
-Retire a entrada de `DEV_LEVELS` ao promover a mesma definição, evitando IDs duplicados.
+Retire a entrada de `DEV_LEVELS` ao promover a mesma definição, evitando IDs duplicados. O link por id que circulou
+na prévia (`?level=fase8&play`) continua valendo: o `main.js` resolve ids publicados (`publishedLevelIndex`, em
+`levels/index.js`) antes de consultar `dev.js`. Na mesma entrega (como na promoção das fases 6 e 7):
+
+- tire o id de `SMOKE_DEV_LEVEL`/`MEASURE_DEV_LEVELS` e acrescente-o a `LINKED_IDS` em
+  `tools/scripts/smoke-build.mjs`, que abre o link por id no build;
+- troque, nos testes da fase e na suíte de navegador, as verificações de "fora do catálogo" pela posição na
+  campanha (`test/catalogo.test.mjs` confere ordem, numeração, IDs únicos e links);
+- a medição temporal (`desempenho.yml`, `REFERENCE_LEVELS`) tem catálogo fixo e recusa outro: ampliá-la exige
+  medir na nuvem e revisar a nova referência antes de adotá-la ([DESEMPENHO.md](DESEMPENHO.md)), em entrega própria.
 
 Em `src/levels/index.js`:
 
 ```js
-import novaFase from './fase7/index.js';
+import novaFase from './fase8/index.js';
 // Na declaração existente de LEVELS, acrescente novaFase ao fim.
-// Preserve todas as entradas atuais e sua ordem; não promova outro protótipo junto.
+// Preserve todas as entradas atuais e sua ordem; promova outro protótipo junto só se a entrega pedir
+// (as fases 6 e 7 entraram juntas, nessa ordem).
 ```
 
 A tela inicial ganha o cartão da fase (liberado quando a fase anterior for concluída), a vitória da fase anterior passa a oferecer
 "Próxima fase" (atualize o `hasNext` esperado nos testes headless e na suíte de navegador dessa fase) e o som
 ambiente vem de `ambience` (`'day'`, `'dusk'`, `'night'`, `'city'` ou `'rain'`). O ícone do item vem de `item`
-(`'carrot'`, `'ball'`, `'slipper'`, `'duck'` ou `'bear'`). Um item de tipo novo precisa de:
+(`'carrot'`, `'ball'`, `'slipper'`, `'duck'`, `'bear'` ou `'frisbee'`). Um item de tipo novo precisa de:
 
 - tipo em `ItemKind` (`src/types.d.ts`) e nome em `createCarryItem` (`src/game/puzzleKit.js`);
 - ícone em `src/ui/icons.js` (`itemIcon`) e artigo + nome em `ITEM_NOUN` (`src/ui/markup.js`);
@@ -178,11 +189,13 @@ registros desconhecidos; acrescentar uma fase não exige limpar o save nem mudar
 válido anterior, manter medalhas/conclusões, liberar a fase nova após a anterior e concluí-la sem apagar outros
 registros. Só introduza migração se o formato realmente mudar. Confira `hasNext` tanto na antiga última fase
 quanto na nova última, incluindo as suítes headless e de navegador. O smoke descobre `LEVELS` automaticamente.
+O menu põe no máximo cinco cartões por linha e reparte mais fases em linhas equilibradas (sete = 4 + 3); a suíte
+`expresso` confere as linhas e o desbloqueio com um save v1 antigo.
 
 ## 7. Teste a lógica
 
-1. **Na prévia do PR**: abra a URL publicada com `?level=<id>&play` no protótipo; após registro, use
-   `?level=<posição-na-lista>&play` (posição começa em 1 e pode diferir do número no nome da pasta).
+1. **Na prévia do PR**: abra a URL publicada com `?level=<id>&play`, no protótipo e depois do registro; após
+   registro também vale `?level=<posição-na-lista>&play` (posição começa em 1 e pode diferir do número no nome da pasta).
    Use `&debug` para ver colisores e o
    grafo, `&stage=gateOpen` para pular etapas e `&dog=rhaenyra` para começar com a Rhaenyra. Enquanto a fase não
    estiver registrada, acrescente-a a `DEV_LEVELS` em `src/levels/dev.js` e abra com `?level=<id>&play`.

@@ -672,6 +672,9 @@
 
 /* Tela inicial: seleção de fases ------------------------------------------ */
 .rr-levels {
+  /* cinco fases numa linha em telas comuns; encolhe um pouco antes de quebrar a linha */
+  --card: clamp(184px, calc((100vw - 112px) / 5), 218px);
+  --gap: 12px;
   position: absolute;
   left: 50%;
   bottom: calc(clamp(16px, 3.4vh, 30px) + 58px);
@@ -680,8 +683,9 @@
   flex-wrap: wrap;
   justify-content: center;
   width: max-content;
-  max-width: calc(100vw - 32px);
-  gap: 12px;
+  /* mais de cinco fases: linhas equilibradas (7 → 4 + 3); --per-row vem da UI (renderCards) */
+  max-width: min(calc(100vw - 32px), calc(var(--per-row, 5) * (var(--card) + var(--gap)) - var(--gap) + 1px));
+  gap: var(--gap);
 }
 .rr-lvcard {
   appearance: none;
@@ -693,8 +697,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* cinco fases numa linha em telas comuns; encolhe um pouco antes de quebrar a linha */
-  width: clamp(184px, calc((100vw - 112px) / 5), 218px);
+  width: var(--card);
   padding: 7px 14px 7px 7px;
   border-radius: 20px;
   background: rgba(255, 246, 230, .82);
@@ -773,7 +776,8 @@
 .rr-levels__note {
   position: absolute;
   left: 50%;
-  bottom: calc(clamp(16px, 3.4vh, 30px) + 140px);
+  /* acima da primeira linha de cartões (--level-rows vem da UI) */
+  bottom: calc(clamp(16px, 3.4vh, 30px) + 140px + (var(--level-rows, 1) - 1) * 74px);
   transform: translate(-50%, 6px);
   display: flex;
   align-items: center;
@@ -1026,15 +1030,15 @@
 
 /* telas médias: cinco cartões numa linha sem cortar o nome da fase */
 @media (max-width: 1240px) {
-  .rr-levels { gap: 10px; }
+  .rr-levels { --gap: 10px; }
   .rr-lvcard { gap: 8px; padding-right: 9px; }
   .rr-lvcard__icon { width: 42px; height: 42px; }
   .rr-lvcard__icon > .ico { width: 30px; height: 30px; }
   .rr-lvcard__name { font-size: 14px; }
 }
 @media (max-width: 760px) {
-  .rr-levels { gap: 6px; width: 94vw; bottom: calc(clamp(16px, 3.4vh, 30px) + 92px); }
-  .rr-lvcard { width: auto; flex: 1; padding: 5px 8px 5px 5px; gap: 6px; }
+  .rr-levels { --gap: 6px; width: 94vw; bottom: calc(clamp(16px, 3.4vh, 30px) + 92px); }
+  .rr-lvcard { width: auto; flex: 0 1 calc((100% - (var(--per-row, 5) - 1) * var(--gap)) / var(--per-row, 5)); padding: 5px 8px 5px 5px; gap: 6px; }
   .rr-lvcard__icon { width: 38px; height: 38px; }
   .rr-lvcard__icon > .ico { width: 26px; height: 26px; }
   .rr-lvcard__eyebrow, .rr-lvcard__stats { display: none; }

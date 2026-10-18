@@ -103,7 +103,13 @@ de longo prazo; contagens gráficas e testes de ownership continuam necessários
 SwiftShader renderiza por software e não representa a GPU física do jogador. Este cenário parado com simulação
 ativa também não mede todas as combinações de pulo, superbafo e partículas. Problemas concretos nesses caminhos
 pedem cenário de medição próprio. Expandir o protocolo para uma sexta fase exige atualizar explicitamente seu
-catálogo e a referência; o protótipo em `DEV_LEVELS` não entra silenciosamente nos números desta rodada.
+catálogo e a referência; uma fase nova não entra silenciosamente nos números desta rodada.
+
+**Campanha com sete fases (promoção das fases 6 e 7):** o protocolo continua com o catálogo fixo das cinco
+primeiras. `measure-performance.mjs` exige exatamente `fase1…fase5` no jogo e, por desenho, recusa o catálogo
+de sete; o workflow só volta a medir depois de ampliado (`REFERENCE_LEVELS`, matriz de `desempenho.yml`,
+provas de `test-performance-infra.mjs` e nova referência medida na nuvem e revisada antes de adotada).
+A referência adotada `b4a61b3` continua sendo a origem das cinco fases.
 
 ## Diagnóstico da instalação
 

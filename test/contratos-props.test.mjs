@@ -53,7 +53,7 @@ for (const def of DEV_LEVELS.filter((entry) => entry.id === 'modelo' || entry.id
 }
 
 for (const def of LEVELS) {
-  test(`${def.id}: item carregável, portão e coletáveis mantêm o contrato do cenário real`, async (t) => {
+  test(`${def.id}: item carregável, o que abre e coletáveis mantêm o contrato do cenário real`, async (t) => {
     const fixture = await buildLevelWorld(def);
     t.after(() => fixture.dispose());
     const { root, built } = fixture;
@@ -78,14 +78,25 @@ for (const def of LEVELS) {
       assert.equal(carry.holder, null);
       assert.equal(dogs[name].carryKind, null);
     }
-    const gate = props.gate ?? props.petGate;
-    assert.ok(gate.object instanceof THREE.Object3D);
-    gate.setOpen(0);
-    const closed = gate.object.quaternion.clone();
-    gate.setOpen(1);
-    assert.ok(!gate.object.quaternion.equals(closed), 'abrir muda a orientação do objeto real');
-    props.reset();
-    assert.ok(gate.object.quaternion.equals(closed), 'reset do cenário fecha o portão');
+    // O que abre na fase, como o cenário real declara: portão (fases 1–4 e 7), portãozinho (5), cancela e
+    // portinhola do pórtico (6, que não tem portão). A pose da subárvore inteira conta: a cancela gira o braço,
+    // não o objeto.
+    const opening = Object.entries(props).filter(([, prop]) => typeof prop?.setOpen === 'function');
+    assert.ok(opening.length > 0, 'a fase tem algo que abre');
+    const pose = (object) => {
+      const values = [];
+      object.traverse((o) => values.push(...o.quaternion.toArray(), ...o.position.toArray()));
+      return values;
+    };
+    for (const [name, prop] of opening) {
+      assert.ok(prop.object instanceof THREE.Object3D, `${name}: objeto real`);
+      props.reset();
+      const closed = pose(prop.object);
+      prop.setOpen(1);
+      assert.notDeepEqual(pose(prop.object), closed, `${name}: abrir muda a pose do objeto real`);
+      props.reset();
+      assert.deepEqual(pose(prop.object), closed, `${name}: reset do cenário fecha`);
+    }
     assert.deepEqual(props.collectibles.map((entry) => entry.id).sort(), def.layout.COLLECTIBLES.map((entry) => entry.id).sort());
     for (const collectible of props.collectibles) {
       assert.ok(collectible.object instanceof THREE.Object3D);

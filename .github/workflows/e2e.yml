@@ -24,8 +24,9 @@ jobs:
     timeout-minutes: 15
     env:
       CI: 'true'
-      # protótipos de desenvolvimento conferidos pelo id no build (lista separada por vírgula)
-      SMOKE_DEV_LEVEL: ${{ inputs.suite == 'todas' && 'fase6,fase7' || inputs.suite == 'expresso' && 'fase6' || inputs.suite == 'lambe' && 'fase7' || '' }}
+      # protótipos de desenvolvimento conferidos pelo id no build (lista separada por vírgula). Nenhum agora:
+      # as fases 6 e 7 estão na campanha e o smoke confere os links ?level=fase6 / ?level=fase7 de qualquer modo.
+      SMOKE_DEV_LEVEL: ''
     steps:
       - uses: actions/checkout@v6
         with:
@@ -60,9 +61,9 @@ jobs:
     timeout-minutes: 45
     env:
       CI: 'true'
-      # os protótipos de fases novas entram juntos no catálogo (devCatalog): uma medição cobre as fases 1 a 7;
-      # o id escolhido só decide qual delas ganha a captura extra do cenário
-      MEASURE_DEV_LEVELS: ${{ (inputs.suite == 'todas' || inputs.suite == 'lambe') && 'fase7' || inputs.suite == 'expresso' && 'fase6' || '' }}
+      # protótipos de fases novas entram juntos no catálogo (devCatalog) e ganham uma captura extra do cenário.
+      # Nenhum agora: a medição normal já percorre as sete fases da campanha.
+      MEASURE_DEV_LEVELS: ''
     steps:
       - uses: actions/checkout@v6
         with:
