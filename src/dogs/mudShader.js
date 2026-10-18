@@ -55,10 +55,11 @@ float mudShape(vec3 p) {
 float mudMask(vec3 p) {
   mudCore = 0.0;
   if (uMud < 0.002) return 0.0;
-  // cada região sai num momento: as mais fracas primeiro
-  float strength = 0.15 + 0.85 * mNoise(p * 4.5 + 11.3);
+  // cada região sai num momento: as mais fracas primeiro. O ruído é esticado para ficar quase uniforme,
+  // então cada lambida tira mais ou menos a mesma quantidade de placas.
+  float strength = 0.1 + 0.9 * clamp((mNoise(p * 4.5 + 11.3) - 0.5) * 2.3 + 0.5, 0.0, 1.0);
   float f = mudShape(p) * strength;
-  float th = mix(1.02, 0.04, pow(uMud, 1.5));
+  float th = mix(1.02, 0.04, uMud);
   float m = smoothstep(th, th + 0.035, f);
   mudCore = smoothstep(th + 0.03, th + 0.3, f);
   for (int i = 0; i < ${MAX_CLEAN}; i++) {
