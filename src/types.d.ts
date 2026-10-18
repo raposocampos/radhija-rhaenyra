@@ -349,9 +349,9 @@ export interface DogController {
  * Parede marcada para o impulso da Rhaenyra (botão ou alavanca no alto). (x, z): pé da parede, no meio das
  * patinhas; (nx, nz): normal unitária da parede, para o lado de onde a dog vem; top: altura do que a pata toca (m);
  * out: quanto isso sai da parede (m); paws e side: altura das patinhas dianteiras pintadas e o afastamento de cada
- * uma para o lado (m), onde as patas da frente apoiam.
+ * uma para o lado (m), onde as patas da frente apoiam; lat: quanto a dog fica à esquerda do botão (m).
  */
-export interface WallSpot { id: string; x: number; z: number; nx: number; nz: number; top: number; out?: number; paws?: number; side?: number }
+export interface WallSpot { id: string; x: number; z: number; nx: number; nz: number; top: number; out?: number; paws?: number; side?: number; lat?: number }
 /**
  * Botão/alavanca do alto no layout (createWallButton): o pé da parede e a normal como em WallSpot; top = altura do
  * que a pata toca. mode: 'timed' liga por holdTime s (padrão do botão), 'toggle' troca a cada impulso (padrão da
@@ -770,6 +770,7 @@ export interface DogAnim {
   wallOut?: number;
   wallPaws?: number;
   wallSide?: number;
+  wallLat?: number;
 }
 
 /** Cachorrinha procedural (createDog em src/dogs/dog.js). */

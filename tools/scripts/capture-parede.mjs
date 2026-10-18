@@ -76,11 +76,14 @@ try {
     shots++;
     console.log(`  captura: ${OUT}/${name}.png`);
   };
-  /** Coloca a Rhaenyra no ponto de impulso de `cfg`, de frente para a parede, e a Radhija longe (Fica). */
+  /** Coloca a Rhaenyra 12 cm atrás do ponto de impulso de `cfg` (à esquerda do botão), de frente para a parede,
+   *  e a Radhija longe (Fica). */
   const ready = (cfg) => page.evaluate((c) => {
     const g = window.__game.game;
     const r = g.debug.ctrls.rhaenyra;
-    g.debug.teleport('rhaenyra', c.x, c.z + r.r + 0.03 + 0.12);
+    const d = r.r + 0.03 + 0.12;
+    const lat = 0.14; // WALL_BUTTON_SHAPE.lat
+    g.debug.teleport('rhaenyra', c.x + c.nx * d - c.nz * lat, c.z + c.nz * d + c.nx * lat);
     r.yaw = Math.atan2(-c.nx, -c.nz);
     g.debug.teleport('radhija', c.x + 1.3, c.z + 1.4);
     g.setStay('radhija', true);
@@ -91,17 +94,18 @@ try {
     return { B: l.WALL_BUTTON, V: l.WALL_LEVER, C: l.CUBBY };
   });
   const B = L.B;
-  // câmeras: de lado (perfil, vinda do leste), de três quartos por trás e de perto do botão
-  const side = { pos: [B.x + 1.75, 0.95, B.z + 0.55], look: [B.x, 0.72, B.z + 0.2] };
-  const back = { pos: [B.x + 0.9, 1.45, B.z + 2.2], look: [B.x, 0.78, B.z + 0.1] };
-  const close = { pos: [B.x + 0.55, 1.3, B.z + 0.75], look: [B.x, 1.16, B.z + 0.05] };
+  // câmeras: de lado (perfil, vinda do oeste, sem o armarinho na frente), de três quartos por trás e de perto do
+  // botão pela direita (a cabeça dela fica à esquerda)
+  const side = { pos: [B.x - 1.85, 0.9, B.z + 0.6], look: [B.x - 0.1, 0.68, B.z + 0.22] };
+  const back = { pos: [B.x + 0.55, 1.45, B.z + 2.2], look: [B.x - 0.08, 0.72, B.z + 0.1] };
+  const close = { pos: [B.x + 0.62, 1.22, B.z + 0.72], look: [B.x - 0.06, 1.04, B.z + 0.05] };
 
   // 1. parede de treino com a câmera do jogo
   await ready(B);
   await step(60);
   await shot('01-parede-de-treino');
-  await shot('02-botao-e-patinhas', { pos: [B.x + 0.3, 0.95, B.z + 1.6], look: [B.x, 0.75, B.z] });
-  await shot('03-alavanca', { pos: [L.V.x + 0.45, 1.25, L.V.z + 0.8], look: [L.V.x, 1.1, L.V.z] });
+  await shot('02-botao-e-patinhas', { pos: [B.x + 0.45, 0.9, B.z + 1.6], look: [B.x - 0.05, 0.7, B.z] });
+  await shot('03-alavanca', { pos: [L.V.x + 0.45, 1.15, L.V.z + 0.8], look: [L.V.x, 1.0, L.V.z] });
 
   // 2. o impulso inteiro, de lado e por trás, nos mesmos instantes
   const phases = [0.1, 0.22, 0.32, 0.42, 0.52, 0.6, 0.72, 0.86];
@@ -131,7 +135,7 @@ try {
   await ready(L.V);
   await key('Space');
   await until((i) => (i.dogs.rhaenyra.wall?.k ?? 0) >= 0.53, 120);
-  await shot('23-pata-na-alavanca', { pos: [L.V.x + 0.6, 1.3, L.V.z + 0.8], look: [L.V.x, 1.12, L.V.z + 0.05] });
+  await shot('23-pata-na-alavanca', { pos: [L.V.x + 0.62, 1.22, L.V.z + 0.75], look: [L.V.x - 0.06, 1.02, L.V.z + 0.05] });
   await until((i) => !i.dogs.rhaenyra.wall, 120);
   await step(40);
   await shot('24-luzinhas-acesas');

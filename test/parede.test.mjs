@@ -126,10 +126,12 @@ test('botão e alavanca: tempo, troca, uma vez, eventos e o desenho', () => {
   const timed = createWallButton({ id: 'b', cfg: { x: 1, z: -2, nx: 0, nz: 1, top: 1.2, holdTime: 3 }, emit, prop });
   assert.equal(timed.mode, 'timed');
   assert.deepEqual(
-    { out: timed.spot.out, paws: timed.spot.paws, side: timed.spot.side },
-    { out: WALL_BUTTON_SHAPE.button.out, paws: 1.2 - WALL_BUTTON_SHAPE.button.paws, side: WALL_BUTTON_SHAPE.button.side },
+    { out: timed.spot.out, paws: timed.spot.paws, side: timed.spot.side, lat: timed.spot.lat },
+    { out: WALL_BUTTON_SHAPE.button.out, paws: 1.2 - WALL_BUTTON_SHAPE.button.paws, side: WALL_BUTTON_SHAPE.button.side, lat: WALL_BUTTON_SHAPE.button.lat },
     'o spot leva as medidas do desenho para a pose',
   );
+  const K = wallKick(timed.spot, 0.22);
+  assert.ok(Math.abs(K.x - (1 - WALL_BUTTON_SHAPE.button.lat)) < 1e-9, 'a dog fica à esquerda do botão (oeste, olhando para o norte)');
   timed.touch();
   assert.equal(timed.on, true);
   assert.deepEqual(log.at(-1)[0], 'wall:button');
@@ -192,7 +194,7 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
   const shape = WALL_BUTTON_SHAPE.button;
   const gap = DOG_CONFIG.rhaenyra.radius + 0.03;
   const top = 1.2;
-  const anim = (k) => ({ speed: 0, action: k >= 0 ? 'wallJump' : 'none', wallK: k, wallGap: gap, wallTop: top, wallOut: shape.out, wallPaws: top - shape.paws, wallSide: shape.side });
+  const anim = (k) => ({ speed: 0, action: k >= 0 ? 'wallJump' : 'none', wallK: k, wallGap: gap, wallTop: top, wallOut: shape.out, wallPaws: top - shape.paws, wallSide: shape.side, wallLat: shape.lat });
   const bone = (name) => d.bones.find((b) => b.name === name);
   const pos = (name) => bone(name).getWorldPosition(new THREE.Vector3());
   for (let i = 0; i < 30; i++) d.update(1 / 60, anim(-1));
@@ -219,8 +221,8 @@ test('pose do impulso no modelo real: patas na parede e no botão; nada atravess
     const dd = p.distanceTo(new THREE.Vector3(x, y, z));
     assert.ok(dd < tol, `${msg}: ${dd.toFixed(3)} m de (${x}, ${y}, ${z}) → (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})`);
   };
-  near(at.touch.FR, -0.01, top - 0.025, gap - shape.out - 0.02, 0.03, 'a pata direita no botão');
-  near(at.touch.FL, shape.side, top - shape.paws - 0.022, gap - 0.03, 0.03, 'a esquerda nas patinhas pintadas');
+  near(at.touch.FR, -shape.lat - 0.01, top - 0.025, gap - shape.out - 0.02, 0.03, 'a pata direita no botão');
+  near(at.touch.FL, shape.side - shape.lat, top - shape.paws - 0.022, gap - 0.03, 0.03, 'a esquerda na patinha pintada');
   near(at.kick.HL, 0.055, 0.345, gap - 0.022, 0.035, 'traseira esquerda pegando impulso');
   near(at.kick.HR, -0.055, 0.345, gap - 0.022, 0.035, 'traseira direita pegando impulso');
   assert.ok(maxZ < gap + 0.005, `nenhuma articulação atravessa a parede (z máx ${maxZ.toFixed(3)}, parede em ${gap})`);

@@ -119,10 +119,15 @@ export function canJump(c) {
   return !!c.cfg.jumpHeight && !airborne(c) && c.jumpCd <= 0 && c.dashT <= 0;
 }
 
-/** Ponto do chão de onde a dog de raio r dá o impulso: em frente às patinhas, encostada na parede. */
+/**
+ * Ponto do chão de onde a dog de raio r dá o impulso: encostada na parede, em frente às patinhas e spot.lat m à
+ * esquerda do botão (de frente para a parede), para a pata direita apertá-lo sem a cabeça ficar na frente.
+ */
 export function wallKick(spot, r) {
   const d = r + WALL_GAP;
-  return { x: spot.x + spot.nx * d, z: spot.z + spot.nz * d };
+  const lat = spot.lat ?? 0;
+  // esquerda de quem olha para a parede (−n): (−nz, nx)
+  return { x: spot.x + spot.nx * d - spot.nz * lat, z: spot.z + spot.nz * d + spot.nx * lat };
 }
 
 /**

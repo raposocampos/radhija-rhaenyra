@@ -57,6 +57,7 @@ try {
 
   // Impulso na parede: de frente para as patinhas pintadas, Espaço vira impulso; o botão abre a portinhola.
   console.log('\n== Impulso na parede (parede de treino) ==');
+  await load('?level=pulo&play&dog=rhaenyra'); // de novo do começo: a parede de treino fica do lado de cá da cerca
   const W = await ev(() => { const l = window.__game.layout; return { B: l.WALL_BUTTON, V: l.WALL_LEVER, C: l.CUBBY }; });
   await page.keyboard.press('KeyF'); // a Radhija fica
   await walkTo(W.B.x, W.B.z + 0.55, { tol: 0.12 });

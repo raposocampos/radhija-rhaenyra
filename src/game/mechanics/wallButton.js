@@ -13,11 +13,12 @@ import { pickWallSpot } from '../dogController.js';
 
 /**
  * Medidas do desenho (src/world/wallButton.js) que a pose usa: out = quanto o que a pata toca sai da parede;
- * paws = quanto abaixo do toque ficam as patinhas dianteiras pintadas, side = quanto para cada lado (m).
+ * paws = quanto abaixo do toque fica a patinha dianteira pintada, side = quanto à esquerda (de quem olha para a
+ * parede); lat = quanto a dog fica à esquerda do botão, para a pata direita apertar e a cabeça ficar de lado (m).
  */
 export const WALL_BUTTON_SHAPE = Object.freeze({
-  button: Object.freeze({ out: 0.058, paws: 0.07, side: 0.165 }),
-  lever: Object.freeze({ out: 0.08, paws: 0.07, side: 0.165 }),
+  button: Object.freeze({ out: 0.058, paws: 0.07, side: 0.165, lat: 0.14 }),
+  lever: Object.freeze({ out: 0.08, paws: 0.07, side: 0.165, lat: 0.14 }),
 });
 
 /**
@@ -28,9 +29,9 @@ export function createWallButton({ id, cfg, emit, prop = null }) {
   const kind = cfg.kind || 'button';
   const mode = cfg.mode || (kind === 'lever' ? 'toggle' : 'timed');
   const holdTime = cfg.holdTime ?? 5;
-  /** @type {import('../../types').WallSpot} */
   const shape = WALL_BUTTON_SHAPE[kind];
-  const spot = { id, x: cfg.x, z: cfg.z, nx: cfg.nx, nz: cfg.nz, top: cfg.top, out: shape.out, paws: cfg.top - shape.paws, side: shape.side };
+  /** @type {import('../../types').WallSpot} */
+  const spot = { id, x: cfg.x, z: cfg.z, nx: cfg.nx, nz: cfg.nz, top: cfg.top, out: shape.out, paws: cfg.top - shape.paws, side: shape.side, lat: shape.lat };
   const S = { on: false, t: 0, press: 0, presses: 0 };
   const at = () => ({ id, x: cfg.x + cfg.nx * 0.1, y: cfg.top, z: cfg.z + cfg.nz * 0.1 });
 

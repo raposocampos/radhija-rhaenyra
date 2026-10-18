@@ -164,8 +164,8 @@ export function buildPuloWorld({ root, layout }) {
     root.add(prop.object);
     return prop;
   };
-  const wallButton = place(buildWallButton({ kind: 'button', top: WALL_BUTTON.top, color: '#e8554a', name: 'botao-treino', markColor: '#fffaf0' }), WALL_BUTTON);
-  const wallLever = place(buildWallButton({ kind: 'lever', top: WALL_LEVER.top, color: '#f2c14e', trim: '#c96f4a', name: 'alavanca-treino', markColor: '#fffaf0' }), WALL_LEVER);
+  const wallButton = place(buildWallButton({ kind: 'button', top: WALL_BUTTON.top, color: '#e8554a', name: 'botao-treino' }), WALL_BUTTON);
+  const wallLever = place(buildWallButton({ kind: 'lever', top: WALL_LEVER.top, color: '#f2c14e', trim: '#c96f4a', name: 'alavanca-treino' }), WALL_LEVER);
   // o ossinho do armarinho fica em cima da almofada; os outros, no chão
   const inCubby = (c) => c.x > CUBBY.x0 && c.x < CUBBY.x1 && c.z > CUBBY.zBack && c.z < CUBBY.zFront;
   const floorTreats = buildTreats(root, COLLECTIBLES.filter((c) => !inCubby(c)));

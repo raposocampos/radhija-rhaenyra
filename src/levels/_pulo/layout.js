@@ -22,10 +22,10 @@ export const BALL = { x: 3.7, z: -2.0, pickupR: 0.55 };
 export const WALL_TRAINING = { z: -4.0, x0: -5.0, x1: 1.0, height: 1.85 };
 /** Botão com tempo: abre a portinhola do armarinho por holdTime s. top = meio do botão.
  * @type {import('../../types').WallButtonCfg} */
-export const WALL_BUTTON = { x: -1.9, z: -4.0, nx: 0, nz: 1, top: 1.2, kind: 'button', mode: 'timed', holdTime: 6 };
+export const WALL_BUTTON = { x: -1.9, z: -4.0, nx: 0, nz: 1, top: 1.1, kind: 'button', mode: 'timed', holdTime: 6 };
 /** Alavanca: liga e desliga as luzinhas da parede. top = bolinha levantada.
  * @type {import('../../types').WallButtonCfg} */
-export const WALL_LEVER = { x: -3.0, z: -4.0, nx: 0, nz: 1, top: 1.22, kind: 'lever', mode: 'toggle' };
+export const WALL_LEVER = { x: -3.0, z: -4.0, nx: 0, nz: 1, top: 1.12, kind: 'lever', mode: 'toggle' };
 /** Armarinho encostado na parede: miolo x0..x1 (cabe a Rhaenyra), fundo na parede, portinhola em zFront. */
 export const CUBBY = { x0: -1.0, x1: -0.4, zBack: -4.0, zFront: -3.38, wall: 0.05, height: 0.62 };
 /** Luzinhas penduradas ao longo da parede de treino. */

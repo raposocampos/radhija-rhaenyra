@@ -44,12 +44,13 @@ function pawPrint(g, x, y, size, tilt = 0) {
 }
 
 /**
- * As patinhas pintadas na parede (a textura começa a MARKS_BASE m do chão e tem height × width m): duas traseiras
- * onde ela pega impulso (a 0,36 m do chão), as duas dianteiras dos lados da placa (side m do meio, 5 cm abaixo do
- * topo da textura) e setinhas subindo até a placa (arrowTop m acima da base). Tinta branca com falhas de pincel
- * seco (o material tinge).
+ * As patinhas pintadas na parede, onde as patas da Rhaenyra encostam (a textura começa a MARKS_BASE m do chão e
+ * tem height × width m, centrada no botão): ela fica `lat` m à esquerda do botão (−X da parede); as duas traseiras
+ * pegam impulso a 0,36 m do chão, a dianteira esquerda apoia `side` m à esquerda (5 cm abaixo do topo da textura) e
+ * setinhas sobem na linha dela até a placa (arrowTop m acima da base). Tinta branca com falhas de pincel seco
+ * (o material tinge).
  */
-function pawMarksTexture(height, width, side, arrowTop) {
+function pawMarksTexture(height, width, side, lat, arrowTop) {
   const W = 160;
   const H = Math.round((W * height) / width);
   return canvasTexture(W, H, (g) => {
@@ -60,10 +61,9 @@ function pawMarksTexture(height, width, side, arrowTop) {
     g.fillStyle = 'rgba(255,255,255,0.95)';
     const pawS = 0.075 * px;
     const hind = 0.36 - MARKS_BASE;
-    pawPrint(g, xOf(-0.055), yOf(hind + 0.01), pawS, -0.12);
-    pawPrint(g, xOf(0.055), yOf(hind - 0.01), pawS, 0.12);
+    pawPrint(g, xOf(-lat + 0.055), yOf(hind + 0.01), pawS, 0.12);
+    pawPrint(g, xOf(-lat - 0.055), yOf(hind - 0.01), pawS, -0.12);
     pawPrint(g, xOf(-side), yOf(height - 0.05), pawS * 0.92, -0.22);
-    pawPrint(g, xOf(side), yOf(height - 0.06), pawS * 0.92, 0.22);
     // setinhas para cima, das traseiras até a placa
     g.strokeStyle = 'rgba(255,255,255,0.8)';
     g.lineWidth = Math.max(2, 0.012 * px);
@@ -71,14 +71,15 @@ function pawMarksTexture(height, width, side, arrowTop) {
     g.lineJoin = 'round';
     const y0 = yOf(hind + 0.07);
     const y1 = yOf(arrowTop);
+    const ax = xOf(-lat);
     const n = Math.max(1, Math.floor((y0 - y1) / (0.085 * px)));
     for (let i = 0; i < n; i++) {
       const y = y0 - ((i + 0.5) * (y0 - y1)) / n;
       const w = 0.03 * px;
       g.beginPath();
-      g.moveTo(W / 2 - w, y + w * 0.7);
-      g.lineTo(W / 2, y);
-      g.lineTo(W / 2 + w, y + w * 0.7);
+      g.moveTo(ax - w, y + w * 0.7);
+      g.lineTo(ax, y);
+      g.lineTo(ax + w, y + w * 0.7);
       g.stroke();
     }
     // falhas da tinta (pincel seco)
@@ -108,8 +109,8 @@ function capPawTexture() {
  * @returns {import('../types').WallButtonProp}
  */
 export function buildWallButton({
-  kind = 'button', top = 1.2, color = '#e8554a', plate = '#f4ecdc', trim = '#3f6f78',
-  marks = true, markColor = '#ffffff', markOpacity = 0.8, name = 'botao-parede',
+  kind = 'button', top = 1.1, color = '#e8554a', plate = '#f4ecdc', trim = '#3f6f78',
+  marks = true, markColor = '#8a5a3c', markOpacity = 0.78, name = 'botao-parede',
 } = {}) {
   const object = new THREE.Group();
   object.name = name;
@@ -198,15 +199,15 @@ export function buildWallButton({
     if (/** @type {THREE.Mesh} */ (o).isMesh && o !== cap) o.receiveShadow = true;
   });
 
-  // ---- patinhas na parede: traseiras embaixo, dianteiras dos lados da placa (top − shape.paws, ±shape.side)
+  // ---- patinhas na parede: traseiras embaixo, a dianteira esquerda ao lado da placa (top − shape.paws, shape.side)
   if (marks) {
     const h = Math.max(0.5, top - shape.paws + 0.05 - MARKS_BASE);
-    const w = 2 * (shape.side + 0.055);
+    const w = 2 * (Math.max(shape.side, shape.lat + 0.055) + 0.06);
     const arrowTop = plateY - plateH / 2 - 0.035 - MARKS_BASE;
     const decal = new THREE.Mesh(
       new THREE.PlaneGeometry(w, h),
       new THREE.MeshStandardMaterial({
-        map: pawMarksTexture(h, w, shape.side, arrowTop), color: markColor, transparent: true, opacity: markOpacity, depthWrite: false, roughness: 0.92,
+        map: pawMarksTexture(h, w, shape.side, shape.lat, arrowTop), color: markColor, transparent: true, opacity: markOpacity, depthWrite: false, roughness: 0.92,
         polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
       }),
     );

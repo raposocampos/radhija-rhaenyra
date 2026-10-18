@@ -81,7 +81,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0 };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0 };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -763,6 +763,7 @@ export function createGame({ engine, dogs, levels, params }) {
       an.wallOut = W ? W.out ?? 0.05 : 0;
       an.wallPaws = W ? W.paws ?? W.top - 0.07 : 0;
       an.wallSide = W ? W.side ?? 0.165 : 0;
+      an.wallLat = W ? W.lat ?? 0 : 0;
       if (W) an.action = 'wallJump'; // também como companheira (trocou de dog no meio do impulso)
       an.slope = state === 'playing' || state === 'paused' ? locks[n]?.slope ?? 0 : 0;
       if (c.wallHit) {
