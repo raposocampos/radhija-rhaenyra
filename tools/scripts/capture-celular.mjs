@@ -150,8 +150,13 @@ try {
       // cartão de abertura (menu → fase 1)
       await page.evaluate(() => window.__game.events.emit('ui:menu', {}));
       await step(5);
-      await page.evaluate(() => window.__game.events.emit('ui:selectLevel', { index: 0 }));
+      // o carregamento espera um quadro (nextPaint): descongela só durante a troca (o laço principal já parou)
+      await page.evaluate(() => {
+        window.__freezeReview = false;
+        window.__game.events.emit('ui:selectLevel', { index: 0 });
+      });
       await page.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 120000 });
+      await page.evaluate(() => { window.__freezeReview = true; });
       await step(60);
       await shot('06-abertura', 2500);
     }

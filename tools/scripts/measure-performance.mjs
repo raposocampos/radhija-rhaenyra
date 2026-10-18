@@ -20,7 +20,7 @@ const INDEX = Number(LEVEL.slice(4)) - 1;
 const OUT = fileURLToPath(new URL(`../../shots/performance/${LEVEL}/${REFERENCE}/`, import.meta.url));
 const MOUNT = '/previews/pr-performance/1-1/';
 const VIEWPORT = { width: 1280, height: 720 };
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
 const report = {
   startedAtUtc: new Date().toISOString(),
   schema: 2, selectedLevel: LEVEL, reference: REFERENCE, commit: process.env.MEASURE_SHA || process.env.GITHUB_SHA || null,
