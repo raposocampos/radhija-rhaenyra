@@ -199,6 +199,14 @@ export function createPushCrate({ id = 'crate', cfg, world, emit, prop = null, o
     S.dir = 0;
   }
 
+  /** Para de andar, mas continua sólido (ex.: o cesto estacionado ao lado da caminha). reset() libera. */
+  function freeze() {
+    S.enabled = false;
+    endPush();
+    S.v = 0;
+    S.dir = 0;
+  }
+
   function reset() {
     S.enabled = true;
     col.enabled = true;
@@ -212,7 +220,7 @@ export function createPushCrate({ id = 'crate', cfg, world, emit, prop = null, o
   }
 
   return {
-    id, col, modifyIntent, update, setPos, blockedAt, disable, reset, endPush, faceOf,
+    id, col, modifyIntent, update, setPos, blockedAt, disable, freeze, reset, endPush, faceOf,
     get x() { return S.x; },
     get z() { return S.z; },
     get v() { return S.v; },

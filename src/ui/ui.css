@@ -214,7 +214,6 @@
 .rr-title.is-on .rr-logo { animation: rr-drop-in .9s var(--ease-back) both .1s; }
 .rr-title.is-on .rr-btn--play { animation: rr-rise .6s var(--ease-out) both .35s; }
 .rr-title.is-on .rr-title__controls { animation: rr-fade-up .7s var(--ease-out) both .7s; }
-.rr-title.is-leaving { opacity: 0; transition: opacity .35s ease; }
 
 /* HUD --------------------------------------------------------------------- */
 .rr-hud__tl {
@@ -330,6 +329,11 @@
   padding-right: 4px;
 }
 .rr-esc .rr-key { font-size: 10.5px; text-shadow: none; }
+/* Modo sem dicas (Opções): sem objetivo escrito nem dicas em balão; um selo discreto lembra o modo */
+.rr-nohints { display: none; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px; font: 600 12.5px/1 'Fredoka', sans-serif; color: var(--choco-2); }
+.rr-nohints .ico { width: 15px; height: 15px; color: var(--carrot-lo); }
+.rr[data-hints="off"] .rr-nohints { display: flex; }
+.rr[data-hints="off"] .rr-objective, .rr[data-hints="off"] .rr-hint { display: none; }
 
 .rr-hud__bottom {
   position: absolute;
@@ -654,11 +658,11 @@
   transform: translateY(-2px);
   box-shadow: 0 0 0 3px rgba(255, 249, 238, .98), 0 0 0 6.5px #F08A3C, 0 12px 24px rgba(130, 62, 18, .28);
 }
-/* Jogar mantém rr-rise: substituir sua animação no foco faria a entrada
-   reiniciar com opacidade zero ao navegar para uma fase. O halo e o anel
+/* Jogar e Opções mantêm rr-rise: substituir a animação no foco faria a entrada
+   reiniciar com opacidade zero ao navegar entre os dois. O halo e o anel
    continuam indicando o foco sem interromper a animação de entrada. */
-.rr.is-nav .rr-btn:not(.rr-btn--play).is-focus,
-.rr[data-device="gamepad"] .rr-btn:not(.rr-btn--play).is-focus {
+.rr.is-nav .rr-btn:not(.rr-btn--play):not(.rr-btn--options).is-focus,
+.rr[data-device="gamepad"] .rr-btn:not(.rr-btn--play):not(.rr-btn--options).is-focus {
   animation: rr-focus-pulse 1.6s ease-in-out infinite;
 }
 .rr.is-nav .rr-btn--primary.is-focus,
@@ -774,7 +778,7 @@
   box-shadow: 0 0 0 3px rgba(255, 249, 238, .98), 0 0 0 6.5px #F08A3C, 0 14px 26px rgba(80, 44, 18, .28);
   animation: rr-focus-pulse 1.6s ease-in-out infinite;
 }
-.rr-title.is-on .rr-levels { --tx: -50%; animation: rr-fade-up .7s var(--ease-out) both .55s; }
+.rr-title.is-on .rr-levels { --tx: -50%; animation: rr-fade-up .5s var(--ease-out) both .12s; }
 .rr-levels__note {
   position: absolute;
   left: 50%;
@@ -797,6 +801,185 @@
 }
 .rr-levels__note .ico { width: 15px; height: 15px; color: #F8B06E; }
 .rr-levels__note.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Tela inicial: telas do menu (data-screen) --------------------------------
+   main: Jogar e Opções · modes: Modo História (em breve) e Fases · levels: Continuar e os cartões · options */
+.rr-screen { display: none; }
+.rr-title[data-screen="main"] .rr-screen--main,
+.rr-title[data-screen="levels"] .rr-screen--levels { display: flex; flex-direction: column; align-items: center; }
+.rr-title[data-screen="modes"] .rr-screen--modes { display: flex; justify-content: center; align-items: stretch; gap: clamp(14px, 1.6vw, 22px); }
+.rr-title[data-screen="options"] .rr-screen--options { display: block; }
+.rr-title:not([data-screen="levels"]) .rr-levels { display: none; }
+.rr-title[data-screen="options"] .rr-title__controls { display: none; }
+.rr-screen--main { gap: clamp(10px, 1.6vh, 14px); }
+/* a primeira entrada é mais lenta (logotipo, Jogar, Opções); trocando de tela, tudo vem logo */
+.rr-title.is-on .rr-screen:not(.rr-screen--main) { animation: rr-fade-up .42s var(--ease-out) both .05s; }
+.rr-title.is-on .rr-btn--options { animation: rr-rise .6s var(--ease-out) both .48s; }
+.rr-title.is-moved .rr-btn--play { animation-delay: .04s; }
+.rr-title.is-moved .rr-btn--options { animation-delay: .1s; }
+.rr-title.is-moved .rr-title__controls { animation-delay: .12s; }
+
+/* Opções: botão creme, abaixo do Jogar */
+.rr-btn--glass {
+  color: var(--choco);
+  background: rgba(255, 247, 234, .93);
+  box-shadow: 0 3px 0 rgba(74, 52, 38, .24), 0 9px 20px rgba(54, 32, 16, .2), inset 0 1px 0 #FFFFFF;
+}
+.rr-btn--glass:hover { transform: translateY(-2px); background: rgba(255, 250, 242, .98); }
+.rr-btn--glass:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(74, 52, 38, .24), 0 4px 10px rgba(54, 32, 16, .18); }
+.rr-btn--options { font-size: clamp(17px, 1.7vw, 21px); padding: .62em 1.5em .62em 1.3em; }
+.rr-btn--options .ico { width: 1.15em; height: 1.15em; color: var(--carrot-lo); }
+
+/* Voltar: canto superior esquerdo nas telas do menu e no cartão de abertura */
+.rr-back {
+  appearance: none;
+  cursor: pointer;
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--sa-t) + clamp(14px, 3vh, 26px));
+  left: calc(var(--sa-l) + clamp(14px, 2.4vw, 30px));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 999px;
+  font: 600 16px/1 'Fredoka', sans-serif;
+  color: var(--choco);
+  outline: none;
+  transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), background-color .18s;
+}
+.rr-back > .ico { width: 18px; height: 18px; color: var(--carrot-lo); }
+.rr-back .rr-key, .rr-back .rr-pad { font-size: 11px; }
+.rr-back:hover { transform: translateY(-1px); background: rgba(255, 250, 242, .96); }
+.rr-title[data-screen="main"] .rr-back { display: none; }
+.rr-title.is-on .rr-back, .rr-intro.is-on .rr-back { animation: rr-fade-up .42s var(--ease-out) both .05s; }
+.rr.is-nav .rr-back.is-focus,
+.rr[data-device="gamepad"] .rr-back.is-focus { box-shadow: 0 0 0 3px rgba(255, 249, 238, .98), 0 0 0 6.5px #F08A3C, 0 10px 20px rgba(80, 44, 18, .25); }
+
+/* Cartões dos modos (Jogar) */
+.rr-mode {
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: clamp(236px, 24vw, 296px);
+  padding: 18px 20px 16px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, .75);
+  background: rgba(255, 248, 237, .98);
+  box-shadow: var(--shadow), inset 0 1px 0 #FFFFFF;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  outline: none;
+  transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), background-color .2s;
+}
+.rr-mode:hover { transform: translateY(-3px); }
+.rr-mode__art {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 36% 30%, #FFFDF8, #FBE1BD);
+  box-shadow: 0 0 0 4px #FFFFFF, 0 6px 14px rgba(54, 32, 16, .16);
+}
+.rr-mode__art .ico { width: 60px; height: 60px; }
+.rr-mode--story .rr-mode__art { background: radial-gradient(circle at 36% 30%, #F6FBFC, #CFE4E6); }
+.rr-mode__art--items { width: auto; display: flex; padding-left: 14px; background: none; box-shadow: none; }
+.rr-mode__art--items i {
+  width: 64px;
+  height: 64px;
+  margin-left: -16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 36% 30%, #FFFDF8, #FBE1BD);
+  box-shadow: 0 0 0 4px #FFFFFF, 0 6px 14px rgba(54, 32, 16, .16);
+}
+.rr-mode__art--items i:nth-child(1) { transform: rotate(-8deg) translateY(6px); }
+.rr-mode__art--items i:nth-child(2) { position: relative; z-index: 1; width: 78px; height: 78px; }
+.rr-mode__art--items i:nth-child(3) { transform: rotate(8deg) translateY(6px); }
+.rr-mode__art--items .ico { width: 44px; height: 44px; }
+.rr-mode__art--items i:nth-child(2) .ico { width: 54px; height: 54px; }
+.rr-mode__badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: #FFF8EC;
+  font: 600 12px/1 'Fredoka', sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(150, 70, 20, .4);
+  background: linear-gradient(180deg, #F6A057, #E6772E);
+  box-shadow: 0 2px 0 var(--carrot-lo), 0 6px 12px rgba(130, 62, 18, .22);
+  transform: rotate(5deg);
+}
+.rr-mode__eyebrow { margin-top: 14px; font: 600 11px/1 'Fredoka', sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--carrot-lo); }
+.rr-mode__name { margin-top: 4px; font: 600 26px/1.08 'Fredoka', sans-serif; }
+.rr-mode__text { margin-top: 6px; font-size: 14.5px; line-height: 1.38; color: var(--choco-2); }
+.rr-mode__progress { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: auto; padding-top: 10px; font-size: 12.5px; font-weight: 700; color: var(--sage-lo); }
+.rr-mode__progress span { display: inline-flex; align-items: center; gap: 4px; }
+.rr-mode__progress .ico { width: 14px; height: 14px; }
+.rr-mode__progress .ico-bone { width: 18px; height: 18px; margin: -2px -1px; }
+/* Modo História: ainda em desenvolvimento (aparece, mas não abre) */
+.rr-mode--story { background: rgba(247, 240, 229, .97); }
+.rr-mode--story .rr-mode__art .ico { filter: saturate(.8); }
+.rr-mode--story .rr-mode__name, .rr-mode--story .rr-mode__text { color: var(--choco-2); }
+.rr-mode--story .rr-mode__eyebrow { color: #8B7766; }
+.rr-mode.is-deny { animation: rr-shake .42s ease; }
+.rr.is-nav .rr-mode.is-focus,
+.rr[data-device="gamepad"] .rr-mode.is-focus {
+  transform: translateY(-4px) scale(1.025);
+  box-shadow: 0 0 0 3px rgba(255, 249, 238, .98), 0 0 0 6.5px #F08A3C, 0 18px 30px rgba(80, 44, 18, .3);
+  animation: rr-focus-pulse 1.6s ease-in-out infinite;
+}
+.rr.is-nav .rr-mode.is-focus.is-deny,
+.rr[data-device="gamepad"] .rr-mode.is-focus.is-deny { animation: rr-shake .42s ease; }
+
+/* Continuar (tela das fases): a fase do save, com o item dela */
+.rr-btn--continue {
+  font-size: clamp(21px, 2.1vw, 27px);
+  gap: .55em;
+  padding: .36em 1em .36em .4em;
+  margin-top: clamp(4px, 1vh, 12px);
+  text-align: left;
+}
+.rr-continue__badge {
+  flex: none;
+  width: 2.05em;
+  height: 2.05em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 36% 30%, #FFFDF8, #FBE1BD);
+  box-shadow: 0 0 0 2.5px rgba(255, 246, 230, .8), inset 0 -2px 0 rgba(150, 70, 20, .12);
+}
+.rr-btn .rr-continue__badge .ico { width: 1.45em; height: 1.45em; }
+.rr-continue__body { display: flex; flex-direction: column; gap: .2em; }
+.rr-continue__label { font: 600 1em/1 'Fredoka', sans-serif; }
+.rr-continue__level { font: 700 .54em/1.1 'Nunito', system-ui, sans-serif; letter-spacing: .02em; opacity: .94; }
+.rr-btn--continue .rr-key {
+  font-size: .46em;
+  color: #FFF8EC;
+  background: rgba(255, 246, 230, .2);
+  border-color: rgba(255, 246, 230, .5);
+  box-shadow: none;
+  margin-left: .2em;
+}
+.rr-btn--continue .rr-pad { font-size: .52em; margin-left: .2em; box-shadow: 0 0 0 2px rgba(255, 246, 230, .55), inset 0 -2px 0 rgba(0, 0, 0, .2); }
+
+/* Opções: o mesmo bloco da pausa num cartão sob o logotipo */
+.rr-card--options { width: min(470px, 92vw); padding: 18px 24px 16px; }
+.rr-card__head > .ico { width: 26px; height: 26px; color: var(--carrot); }
+
+/* Dicas (Opções e pausa): mesma linha da qualidade gráfica */
+.rr-hints .rr-quality__now { min-height: 1.2em; }
+.rr[data-hints="off"] .rr-hints .rr-quality__now { color: var(--carrot-lo); }
 
 /* Cartão de abertura da fase ---------------------------------------------- */
 .rr-intro__shade {
@@ -904,7 +1087,12 @@
 .rr-title__controls .rr-pad { font-size: 12.5px; }
 
 /* Pausa com controles ----------------------------------------------------- */
-.rr-card--pause { width: min(540px, 92vw); padding: 20px 24px 18px; }
+/* em janelas baixas o cartão rola em vez de cortar (a pausa ganhou a linha das dicas) */
+.rr-card--pause { width: min(540px, 92vw); padding: 20px 24px 18px; max-height: calc(100% - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.rr-pause__settings .rr-hints { margin-top: 6px; }
+/* a linha das dicas cabe em 720 px de altura: a tabela de controles fica um pouco mais justa */
+.rr-card--pause .rr-ctl-table { margin-top: 10px; padding-top: 10px; row-gap: 3px; }
+.rr-pause__settings .rr-hints .rr-quality__now { display: none; }
 .rr-card--pause .rr-card__head { margin-bottom: 6px; }
 .rr-pause__level { display: flex; justify-content: center; align-items: center; gap: 7px; margin-bottom: 14px; font: 600 14px/1 'Fredoka', sans-serif; color: var(--choco-a); }
 .rr-pause__level .ico { width: 22px; height: 22px; }
@@ -1299,9 +1487,13 @@
 .rr[data-mobile]:not([data-device="touch"]) .rr-hud__tr { right: calc(var(--sa-r) + 12px); }
 .rr[data-mobile] .rr-introcard { left: calc(var(--sa-l) + clamp(16px, 4vw, 52px)); bottom: calc(var(--sa-b) + clamp(16px, 6vh, 56px)); }
 
-/* celular sem teclado: Jogar e Começar sem a tecla Enter desenhada */
+/* celular sem teclado: Jogar, Continuar, Começar e Voltar sem a tecla desenhada */
 .rr[data-mobile]:not([data-device="gamepad"]) .rr-btn--play .rr-g,
+.rr[data-mobile]:not([data-device="gamepad"]) .rr-btn--continue .rr-g,
+.rr[data-mobile]:not([data-device="gamepad"]) .rr-back .rr-g,
 .rr[data-mobile]:not([data-device="gamepad"]) .rr-btn--start .rr-g { display: none; }
+.rr[data-mobile] .rr-back { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.rr[data-mobile] .rr-mode:hover, .rr[data-mobile] .rr-back:hover, .rr[data-mobile] .rr-btn--glass:hover { transform: none; }
 /* no toque, o :hover "gruda" depois do toque: sem os levantamentos de hover */
 .rr[data-mobile] .rr-lvcard { -webkit-backdrop-filter: none; backdrop-filter: none; }
 .rr[data-mobile] .rr-lvcard:not(.is-locked):not(.is-current) { background: rgba(255, 246, 230, .93); }
@@ -1316,6 +1508,44 @@
 .rr[data-mobile="phone"] .rr-logo__svg { width: min(100%, 440px); }
 .rr[data-mobile="phone"] .rr-logo__ribbon { font-size: 13px; padding: .42em 1.05em .42em .6em; }
 .rr[data-mobile="phone"] .rr-btn--play { font-size: 20px; margin-top: 0; }
+.rr[data-mobile="phone"] .rr-screen--main { gap: 8px; }
+.rr[data-mobile="phone"] .rr-btn--options { font-size: 16px; }
+/* nas outras telas o logotipo encolhe (sem a fita) para o Voltar e os cartões caberem */
+.rr[data-mobile="phone"] .rr-title:not([data-screen="main"]) .rr-title__center { width: min(54vw, 400px); }
+.rr[data-mobile="phone"] .rr-title:not([data-screen="main"]) .rr-logo__ribbon { display: none; }
+.rr[data-mobile="phone"] .rr-back { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); font-size: 14px; padding: 6px 11px 6px 8px; }
+.rr[data-mobile="phone"] .rr-back > .ico { width: 15px; height: 15px; }
+.rr[data-mobile="phone"] .rr-title[data-screen="modes"] .rr-screen--modes { gap: 12px; }
+.rr[data-mobile="phone"] .rr-mode { width: min(272px, 40vw); padding: 12px 14px 10px; border-radius: 20px; }
+.rr[data-mobile="phone"] .rr-mode__art { width: 58px; height: 58px; box-shadow: 0 0 0 3px #FFFFFF, 0 4px 10px rgba(54, 32, 16, .16); }
+.rr[data-mobile="phone"] .rr-mode__art .ico { width: 42px; height: 42px; }
+.rr[data-mobile="phone"] .rr-mode__art--items { width: auto; padding-left: 12px; box-shadow: none; }
+.rr[data-mobile="phone"] .rr-mode__art--items i { width: 46px; height: 46px; margin-left: -12px; box-shadow: 0 0 0 3px #FFFFFF, 0 4px 10px rgba(54, 32, 16, .16); }
+.rr[data-mobile="phone"] .rr-mode__art--items i:nth-child(2) { width: 56px; height: 56px; }
+.rr[data-mobile="phone"] .rr-mode__art--items .ico { width: 32px; height: 32px; }
+.rr[data-mobile="phone"] .rr-mode__art--items i:nth-child(2) .ico { width: 40px; height: 40px; }
+.rr[data-mobile="phone"] .rr-mode__badge { top: 10px; right: 10px; font-size: 10.5px; padding: 5px 9px; }
+.rr[data-mobile="phone"] .rr-mode__eyebrow { margin-top: 8px; font-size: 10px; }
+.rr[data-mobile="phone"] .rr-mode__name { font-size: 20px; }
+.rr[data-mobile="phone"] .rr-mode__text { font-size: 12.5px; line-height: 1.3; margin-top: 4px; }
+.rr[data-mobile="phone"] .rr-mode__progress { font-size: 11.5px; padding-top: 6px; }
+.rr[data-mobile="phone"] .rr-btn--continue { font-size: 19px; margin-top: 0; }
+.rr[data-mobile="phone"] .rr-card--options {
+  width: min(680px, calc(100vw - 24px - var(--sa-l) - var(--sa-r)));
+  max-height: calc(100vh - 110px - var(--sa-t) - var(--sa-b));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 12px 18px 12px;
+  border-radius: 22px;
+}
+.rr[data-mobile="phone"] .rr-card--options .rr-card__head { margin: 0 0 6px; }
+.rr[data-mobile="phone"] .rr-card--options .rr-card__head h2 { font-size: 21px; }
+.rr[data-mobile="phone"] .rr-card--options .rr-settings { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: start; }
+/* a nota de tela cheia do iPhone (installHint.js) ocupa as duas colunas */
+.rr[data-mobile="phone"] .rr-card--options .rr-ios-fs__how { grid-column: 1 / -1; margin-top: 8px; }
+.rr[data-mobile="phone"] .rr-nohints { gap: 4px; padding: 2px 8px 2px 5px; font-size: 10.5px; }
+.rr[data-mobile="phone"] .rr-nohints .ico { width: 12px; height: 12px; }
 .rr[data-mobile="phone"] .rr-title__controls { display: none; }
 .rr[data-mobile="phone"] .rr-levels { bottom: calc(var(--sa-b) + 10px); }
 .rr[data-mobile="phone"] .rr-lvcard__eyebrow, .rr[data-mobile="phone"] .rr-lvcard__stats { display: none; }
