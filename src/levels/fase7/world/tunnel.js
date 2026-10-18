@@ -161,7 +161,7 @@ export function buildTunnel(root, layout) {
   pipe.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(pipe);
   // lama no fundo
-  const mudMat = new THREE.MeshPhysicalMaterial({ color: '#3a2618', roughness: 0.38, clearcoat: 0.45, clearcoatRoughness: 0.3, metalness: 0, envMapIntensity: 0.45 });
+  const mudMat = new THREE.MeshStandardMaterial({ color: '#4a2f1c', roughness: 0.48, metalness: 0, envMapIntensity: 0.25 });
   const mud = new THREE.Mesh(mudGeometry(T, T.x0 + 0.12, T.x1 - 0.12), mudMat);
   mud.receiveShadow = true;
   mud.name = 'lama';
