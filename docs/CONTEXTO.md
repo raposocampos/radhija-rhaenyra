@@ -25,7 +25,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   capturas do Lambe-Lambe (`shots/lambe-revisao/10b-*`, `10c-*`) e do celular, entregar a prévia e aguardar a
   aprovação. Consultar o PR para SHA, CI, E2E e prévia.
 
-## Em andamento: pombo mais bonito (Claude, PR #34)
+## Entregue: Pombo mais bonito (PR #34, squash `168bda6`, deploy `39303626593`)
 
 - Pedido do usuário: "melhorar o visual do modelo do pombo, pode ser mais bonito" (fases 4 e 10). Branch
   `claude/pombo-bonito` (worktree próprio), **PR #34**, base `eb1a148`; consultar o PR para SHA, CI, E2E e prévia.
