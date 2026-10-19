@@ -199,8 +199,8 @@ export function buildTreehouse(root, layout) {
     brace.rotation.z = -sx * 0.6;
     deck.add(brace);
   }
-  // corrimão: frente (sul) aberta onde o balde chega; leste com a boca do escorregador (a casinha fecha o canto de
-  // trás); oeste inteiro; fundo até a casinha
+  // corrimão: frente (sul) aberta onde o balde chega e na boca do escorregador; leste inteiro (a casinha fecha o canto
+  // de trás); oeste inteiro; fundo até a casinha
   const railH = DECK_RAIL.h;
   const railMat = woodMat('#c48a58', { key: 'f10-corrimao' });
   const rails = [];
@@ -223,12 +223,13 @@ export function buildTreehouse(root, layout) {
   const ri = DECK_RAIL.inset;
   const zF = DECK.z1 - ri, xE = DECK.x1 - ri, xW = DECK.x0 + ri, zB = DECK.z0 + ri;
   const gapW = BUCKET.r + 0.03;
+  const slideW = SLIDE.halfWidth + 0.04;
   railRun(xW, zF, BUCKET.x - gapW, zF);
-  railRun(BUCKET.x + gapW, zF, xE, zF);
+  railRun(BUCKET.x + gapW, zF, SLIDE.x - slideW, zF);
+  railRun(SLIDE.x + slideW, zF, xE, zF);
   railRun(xW, zB, HUT.x0, zB);
   railRun(xW, zB, xW, zF);
-  railRun(xE, HUT.z1, xE, SLIDE.z - SLIDE.halfWidth - 0.04);
-  railRun(xE, SLIDE.z + SLIDE.halfWidth + 0.04, xE, zF);
+  railRun(xE, HUT.z1, xE, zF);
   const railMesh = new THREE.Mesh(mergeGeometries(rails), railMat);
   const balMesh = new THREE.Mesh(mergeGeometries(balusters), railMat);
   railMesh.castShadow = balMesh.castShadow = true;
@@ -240,7 +241,7 @@ export function buildTreehouse(root, layout) {
   const flagXs = [];
   for (let x = xW + 0.12; x < xE - 0.06; x += 0.15) {
     // fora da abertura do balde e do trecho do cano e do laço
-    if (Math.abs(x - BUCKET.x) < gapW + 0.07 || (x > TUBE.inlet.x - 0.48 && x < RIBBON.x + 0.2)) continue;
+    if (Math.abs(x - BUCKET.x) < gapW + 0.07 || Math.abs(x - SLIDE.x) < slideW + 0.07 || (x > TUBE.inlet.x - 0.48 && x < RIBBON.x + 0.2)) continue;
     flagXs.push(x);
   }
   const flags = new THREE.InstancedMesh(flagGeo, stdMat('#ffffff', { roughness: 0.75, side: THREE.DoubleSide }), flagXs.length);
@@ -416,7 +417,7 @@ export function buildTreehouse(root, layout) {
   const bucket = new THREE.Group();
   bucket.name = 'balde';
   const tin = new THREE.MeshStandardMaterial({ color: '#b8c4cc', metalness: 0.75, roughness: 0.35, side: THREE.DoubleSide });
-  const bH = 0.34;
+  const bH = BUCKET.h;
   const pail = new THREE.Mesh(new THREE.CylinderGeometry(BUCKET.r, BUCKET.r * 0.82, bH, 28, 1, true), tin);
   pail.position.y = bH / 2;
   const pailBottom = new THREE.Mesh(new THREE.CircleGeometry(BUCKET.r * 0.82, 28).rotateX(-Math.PI / 2), tin);
@@ -447,6 +448,8 @@ export function buildTreehouse(root, layout) {
   bucket.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
   bucket.position.set(BUCKET.x, 0, BUCKET.z);
   group.add(bucket);
+  // a ponta da alça (onde a corda prende), no espaço do balde
+  const bailTop = new THREE.Vector3(0, bH + BUCKET.r * 0.95, 0);
   const bucketShadow = contactShadow(BUCKET.r + 0.06, BUCKET.r + 0.06, 0.4);
   bucketShadow.position.set(BUCKET.x, 0.006, BUCKET.z);
   group.add(bucketShadow);
@@ -571,16 +574,18 @@ export function buildTreehouse(root, layout) {
   pigeon.setPose({ x: PIGEON.x, y: PIGEON.y, z: PIGEON.z, yaw: 0.3, asleep: true });
   group.add(pigeon.object);
 
-  // ================================================================ escorregador amarelo (do deque ao gramado, para o leste)
+  // ================================================================ escorregador amarelo (da frente do deque ao gramado, para o sul)
+  // montado ao longo de +X local (0 = boca no deque) e girado para descer para o sul (+Z)
   const slide = new THREE.Group();
   slide.name = 'escorregador';
   const sw = SLIDE.halfWidth * 2;
-  const x0 = SLIDE.x0, x1 = SLIDE.x1, y0 = top, y1 = 0.22;
+  const x0 = 0, x1 = SLIDE.z1 - SLIDE.z0, y0 = top, y1 = 0.22;
+  const SZ = 0;
   // perfil da calha (U) ao longo do caminho: reta do deque até o fim e a "língua" que aplaina
   /** @type {THREE.CurvePath<THREE.Vector3>} */
   const path = new THREE.CurvePath();
-  path.add(new THREE.LineCurve3(new THREE.Vector3(x0 - 0.05, y0 + 0.01, SLIDE.z), new THREE.Vector3(x1 - 0.12, y1 + 0.05, SLIDE.z)));
-  path.add(new THREE.QuadraticBezierCurve3(new THREE.Vector3(x1 - 0.12, y1 + 0.05, SLIDE.z), new THREE.Vector3(x1 + 0.04, y1 - 0.04, SLIDE.z), new THREE.Vector3(x1 + 0.28, y1 - 0.03, SLIDE.z)));
+  path.add(new THREE.LineCurve3(new THREE.Vector3(x0 - 0.05, y0 + 0.01, SZ), new THREE.Vector3(x1 - 0.12, y1 + 0.05, SZ)));
+  path.add(new THREE.QuadraticBezierCurve3(new THREE.Vector3(x1 - 0.12, y1 + 0.05, SZ), new THREE.Vector3(x1 + 0.04, y1 - 0.04, SZ), new THREE.Vector3(x1 + SLIDE.tongue, y1 - 0.03, SZ)));
   const N = 40;
   const pos = [], idx = [];
   const prof = [];
@@ -625,23 +630,30 @@ export function buildTreehouse(root, layout) {
   // pezinhos no fim e a alça no alto
   for (const s of [-1, 1]) {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, y1 + 0.04, 8), stdMat('#7cc4e8', { roughness: 0.4 }));
-    leg.position.set(x1 - 0.1, (y1 + 0.04) / 2, SLIDE.z + s * (sw / 2 - 0.03));
+    leg.position.set(x1 - 0.1, (y1 + 0.04) / 2, SZ + s * (sw / 2 - 0.03));
     slide.add(leg);
     const grab = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.016, 8, 16, Math.PI), stdMat('#ff9a3c', { roughness: 0.35 }));
-    grab.position.set(x0 - 0.02, y0 + 0.12, SLIDE.z + s * (sw / 2 + 0.02));
+    grab.position.set(x0 - 0.02, y0 + 0.12, SZ + s * (sw / 2 + 0.02));
     slide.add(grab);
   }
+  slide.position.set(SLIDE.x, 0, SLIDE.z0);
+  slide.rotation.y = -Math.PI / 2;
   group.add(slide);
   seeThrough.push(slide);
 
   // ================================================================ estado
-  const st = { y: 0, pull: 0, holder: /** @type {any} */ (null), puffs: /** @type {number[]} */ ([]), glow: 0, outT: -1, peckT: 0, flap: 0 };
+  const st = { y: 0, tilt: 1, pull: 0, holder: /** @type {any} */ (null), puffs: /** @type {number[]} */ ([]), glow: 0, outT: -1, peckT: 0, flap: 0 };
+  const _bt = new THREE.Vector3();
   function layoutRope() {
     const by = st.y;
-    // balde
-    bucket.position.y = by;
+    // balde: deitado (tilt 1, boca para o sul, encostado no chão pela lateral) até em pé (tilt 0)
+    const th = st.tilt * Math.PI / 2;
+    bucket.rotation.x = th;
+    bucket.position.set(BUCKET.x, by + BUCKET.r * Math.sin(th), BUCKET.z - (bH / 2) * Math.sin(th));
+    bucket.updateMatrixWorld(true);
     bucketShadow.material.opacity = 0.4 * Math.max(0, 1 - by / 1.2);
-    const bucketTop = new THREE.Vector3(BUCKET.x, by + 0.34 + BUCKET.r * 0.95, BUCKET.z);
+    bucketShadow.scale.set((BUCKET.r + 0.06) * 2, 1, (BUCKET.r + 0.06) * 2 * (1 + 0.5 * st.tilt));
+    const bucketTop = bucket.localToWorld(_bt.copy(bailTop));
     stretch(ropeV, new THREE.Vector3(pulleyPos.x, pulleyPos.y - 0.06, pulleyPos.z), bucketTop);
     // roldana → argola
     stretch(ropeD, pOut, ringPos);
@@ -658,6 +670,8 @@ export function buildTreehouse(root, layout) {
     bucket: {
       object: bucket,
       setY(y) { st.y = y; },
+      /** 1 = deitado no chão (boca para o sul), 0 = em pé. */
+      setTilt(k) { st.tilt = Math.max(0, Math.min(1, k)); },
     },
     rope: {
       handle,

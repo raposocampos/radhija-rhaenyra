@@ -137,7 +137,7 @@ export function buildPorch(root, layout) {
   deck.receiveShadow = true;
   group.add(deck);
   // vasos com samambaias nos cantos do deque
-  for (const [x, z, s] of [[PORCH.x0 + 0.3, PORCH.z1 - 0.3, 3], [PORCH.x1 - 0.25, PORCH.z0 + 0.35, 5]]) {
+  for (const { x, z, s } of layout.PORCH_POTS) {
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.3, 16), stdMat('#c96b5a', { roughness: 0.8 }));
     pot.position.set(x, DECK_Y + 0.15, z);
     pot.castShadow = true;

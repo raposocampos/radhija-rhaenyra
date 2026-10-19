@@ -138,7 +138,7 @@ try {
   await page.keyboard.press('KeyE');
   state = await waitFor((s) => s.quintal.rope.holder === 'rhaenyra', { timeout: 1500 });
   check(qt(state).rope.holder === 'rhaenyra', 'E: a Rhaenyra pega a corda');
-  await walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 2.9, { tol: 0.12, timeout: 12000, stopIf: (s) => !!s.quintal.deck || s.quintal.onDeck });
+  await walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 3.2, { tol: 0.12, timeout: 12000, stopIf: (s) => !!s.quintal.deck || s.quintal.onDeck });
   state = await waitFor((s) => s.quintal.onDeck, { timeout: 4000 });
   check(qt(state).onDeck, 'andando para longe do balde, ele sobe e a Radhija pula para o deque', JSON.stringify(qt(state).bucket));
   await shot('06-no-deque.png');

@@ -443,7 +443,7 @@ function buildPaintingLights(group, PAINTING, zN, { glow, halo, canvasMat }) {
 
 export function buildHouse(root, layout) {
   const {
-    WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR, FLOOR_LAMP, RUG,
+    WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR, FLOOR_LAMP, RUG, DOG_BEDS,
     COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, WORLD,
   } = layout;
   const group = new THREE.Group();
@@ -898,7 +898,7 @@ export function buildHouse(root, layout) {
     g.fillStyle = '#fffaf0'; g.font = 'bold 20px "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(name, w / 2, h / 2 + 1);
   }, { repeat: false });
-  for (const [x, z, col, name, rr] of /** @type {[number, number, string, string, number][]} */ ([[-11.45, -3.75, '#e8a0a8', 'Radhija', 0.3], [-11.35, -4.55, '#8fc0d8', 'Rhaenyra', 0.36]])) {
+  for (const { x, z, color: col, name, r: rr } of DOG_BEDS) {
     const bed = new THREE.Group();
     const rim2 = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.07, 10, 28).rotateX(Math.PI / 2), stdMat(col, { roughness: 0.95 }));
     rim2.position.y = 0.07;

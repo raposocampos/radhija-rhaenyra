@@ -841,8 +841,8 @@ export interface Fase10Props extends LevelProps {
   pigeon: PropBase & { setPose(p: PigeonPose): void; peck?(): void };
   /** Cano de brinquedo do funil até o pombo: progresso (0..1) de cada baforada de cheiro lá dentro. */
   tube: PropBase & { setPuffs(list: number[]): void; outletPuff?(): void };
-  /** Elevador de balde: altura do balde (0 no chão). */
-  bucket: PropBase & { setY(y: number): void };
+  /** Elevador de balde: altura do balde (0 no chão) e setTilt (1 = deitado no chão, boca para o sul; 0 = em pé). */
+  bucket: PropBase & { setY(y: number): void; setTilt?(k: number): void };
   /** Corda da roldana: handle = a ponta (vai na boca da Rhaenyra); setPull(metros puxados, quem segura). */
   rope: { handle: THREE.Object3D; setPull(pulled: number, holder: DogModel | null): void };
   /** Placa de pressão na frente do galpão e a porta basculante (0 fechada … 1 aberta). */

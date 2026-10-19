@@ -136,7 +136,7 @@ try {
   await shot('09b-pombo-em-cima-do-laco', { pos: [8.95, 2.75, -2.45], look: [L.PIGEON.x, L.PIGEON.y - 0.05, L.PIGEON.z] });
   await shot('09c-funil-e-cano', { pos: [7.1, 1.4, -1.0], look: [8.1, 0.9, -3.3] });
   await shot('09d-roldana-e-balde', { pos: [5.9, 1.9, -0.9], look: [L.BUCKET.x, 1.3, L.BUCKET.z] });
-  await shot('09e-escorregador', { pos: [11.4, 2.2, -2.0], look: [10.6, 1.0, L.SLIDE.z] });
+  await shot('09e-escorregador', { pos: [11.0, 1.9, -0.4], look: [9.4, 0.9, -2.6] });
   await shot('09f-deque-visto-de-cima', { pos: [8.2, 5.6, -1.4], look: [8.2, L.DECK.h, -4.8] });
   await shot('09g-casinha-luneta-e-bau', { pos: [7.9, 3.2, -3.0], look: [8.6, 2.4, -5.4] });
   await shot('10-horta', { pos: [7.4, 1.8, 4.2], look: [8.0, 0.2, 1.6] });
@@ -262,15 +262,22 @@ try {
   await shot('22-pombo-voando', { pos: [8.6, 2.6, -1.3], look: [9.2, 3.0, -4.4] });
 
   // 5. o balde: a Radhija dentro, a Rhaenyra puxando, o deque, o laço e o escorregador
+  const bucketCam = { pos: [L.BUCKET.x - 1.0, 1.2, L.BUCKET.z + 1.7], look: [L.BUCKET.x, 0.3, L.BUCKET.z] };
   await setup({ set: [['pigeon', true]], active: 'radhija', place: { radhija: { x: L.BUCKET.x, z: L.BUCKET.z + 0.7, yaw: Math.PI } } });
+  await shot('23-balde-deitado', bucketCam);
   await tap('KeyE');
   await step(40);
-  await shot('23-no-balde', { pos: [L.BUCKET.x - 1.0, 1.2, L.BUCKET.z + 1.6], look: [L.BUCKET.x, 0.4, L.BUCKET.z] });
+  await shot('23a-entrando-no-balde', bucketCam);
+  await until((i) => i.quintal.bucket.riding, 90);
+  await step(10);
+  await shot('23b-deitada-no-balde', bucketCam);
   await setup({ active: 'rhaenyra', place: { rhaenyra: { x: L.ROPE.rest.x, z: L.ROPE.rest.z + 0.5, yaw: Math.PI } } });
   await tap('KeyE');
-  // anda para longe do balde com a corda (teclas reais, para o sul)
+  // anda para longe do balde com a corda (teclas reais, para o sul): primeiro o balde fica em pé
   await keyDown('KeyS');
-  await step(40);
+  await until((i) => i.quintal.bucket.tilt < 0.55, 200);
+  await shot('23c-balde-levantando', bucketCam);
+  await step(30);
   await shot('24-puxando-a-corda-camera-do-jogo');
   await until((i) => i.quintal.deck === 'hop', 400);
   await keyUp('KeyS');
@@ -295,7 +302,7 @@ try {
   await tap('KeyE');
   await until((i) => i.quintal.deck === 'slide', 60);
   await step(28);
-  await shot('26-escorregando', { pos: [11.4, 2.0, -2.2], look: [10.6, 1.0, L.SLIDE.z] });
+  await shot('26-escorregando', { pos: [10.9, 1.7, -0.6], look: [9.4, 1.0, -2.6] });
   await until((i) => !i.quintal.deck, 300);
   await step(20);
   await shot('26b-no-gramado-com-o-laco-camera-do-jogo');

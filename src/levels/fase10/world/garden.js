@@ -179,7 +179,7 @@ export function buildGarden(root, layout) {
     t.position.set((r() - 0.5) * 0.25, 0.25 + r() * 0.5, 0.12 + (r() - 0.5) * 0.1);
     tomato.add(t);
   }
-  tomato.position.set(7.35, 0, 0.62);
+  tomato.position.set(layout.TOMATO.x, 0, layout.TOMATO.z);
   tomato.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
   group.add(tomato);
   // girassóis junto da cerca norte da horta (do lado de fora, altos)
@@ -228,7 +228,7 @@ export function buildGarden(root, layout) {
   const canHandle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.01, 6, 12, Math.PI), canBody.material);
   canHandle.position.set(-0.02, 0.18, 0);
   can.add(canBody, canSpout, canHandle);
-  can.position.set(8.45, 0, 3.2);
+  can.position.set(layout.WATERING_CAN.x, 0, layout.WATERING_CAN.z);
   can.rotation.y = 0.6;
   can.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
   group.add(can);
