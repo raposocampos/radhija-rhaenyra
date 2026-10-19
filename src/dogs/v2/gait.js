@@ -78,10 +78,9 @@ const CHAINS = [
 
 /**
  * @param {{ skel2: { bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> },
- *           retarget: { P2: THREE.Vector3[], Q2: THREE.Quaternion[] }, s: number,
- *           onStep?: (foot: number, speed: number) => void }} opts
+ *           retarget: { P2: THREE.Vector3[], Q2: THREE.Quaternion[] }, s: number }} opts
  */
-export function createGait({ skel2, retarget, s, onStep = null }) {
+export function createGait({ skel2, retarget, s }) {
   const { bones, rest, parentIdx, index: I } = skel2;
   const { P2, Q2 } = retarget;
   const V = () => new THREE.Vector3();
@@ -105,7 +104,7 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
       a: 0, b: 0,
       // estado: no ar (swing), por tempo (passinho de ajuste) ou pela fase; u = progresso do balanço
       swing: false, timed: false, settle: false, u: 0, u0: 0, rate: 0, lift: 0, phSwing: false, stanceT: 0,
-      over: false, stretch: 1,
+      over: false, dragged: false, stretch: 1,
       foot: rest[idx[idx.length - 1]].clone(), from: V(),
       // alvos do quadro: junta de cima (ombro/quadril) antes da descida do tronco, pulso/jarrete, giro do tronco, dedos
       R0: V(), J: V(), qY: new THREE.Quaternion(), toe: 0,
@@ -171,6 +170,9 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
   let staticN = 0; // quadros seguidos parada no mundo
   let ph = 0; // fase das patas: a do guia; mais rápida numa curva fechada (e volta ao compasso dele depois)
   let lastG = -1; // fase do guia no quadro anterior
+  /** @type {[number, number][]} pisadas do quadro (pata, passada m/s): o dog.js avisa o jogo no fim do quadro */
+  const steps = [];
+  const info = { boost: 1, drags: 0 }; // para testes e capturas
   const MAX_DROP = 0.01 * s, MAX_STRETCH = 1.04;
   /** Leva um ponto parado no chão do referencial do corpo do quadro anterior para o de agora. */
   const carry = (p, lx, lz, dy) => {
@@ -249,7 +251,10 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
     }
 
     const gate = locomotionGate(st, A, s);
-    weight += (gate - weight) * (1 - Math.exp(-(gate > weight ? 10 : hardGate(A) ? 45 : 14) * dt));
+    // de pé no empurrão e na parede o corpo inteiro inclina: misturar as patas daria uma pose no meio que afunda no
+    // chão, então a locomoção sai na hora
+    if (hardGate(A)) weight = 0;
+    else weight += (gate - weight) * (1 - Math.exp(-(gate > weight ? 10 : 14) * dt));
     if (gate < 0.02 && weight < 0.02) weight = 0;
     if (weight < 0.02 || teleport || lastG < 0) {
       ph = st.phase;
@@ -275,6 +280,7 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
     const fStraight = (Math.abs(mv.v) * R.beta) / reach;
     const fCurve = ((Math.abs(mv.v) + Math.abs(mv.w) * 0.2 * s) * R.beta) / reach;
     const boost = clamp(fCurve / Math.max(fStraight, R.f), 1, 2.2);
+    info.boost = boost;
     ph = fract(ph + fract(st.phase - lastG) * boost);
     lastG = st.phase;
     if (boost < 1.02) ph = fract(ph + (fract(st.phase - ph + 0.5) - 0.5) * (1 - Math.exp(-4 * dt)));
@@ -318,7 +324,7 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
         leg.foot.y = leg.neutral.y + leg.lift * Math.sin(Math.PI * leg.u);
         if (leg.u >= 1) {
           // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
-          if (onStep && weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) onStep(li, leg.settle ? 0.1 : stepSpeed);
+          if (weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) steps.push([li, leg.settle ? 0.1 : stepSpeed]);
           leg.swing = false;
           leg.timed = false;
           leg.settle = false;
@@ -378,6 +384,7 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
       // apoiada e longe demais da junta de cima (mesmo com a pata um pouco esticada): quanto o tronco precisa descer;
       // mais que MAX_DROP, a pata pede um passo extra (e, sem poder dar, é arrastada para perto)
       leg.over = false;
+      leg.dragged = false;
       if (!leg.swing) {
         const dx = leg.J.x - leg.R0.x, dz = leg.J.z - leg.R0.z, dy = leg.R0.y - leg.J.y;
         const maxD = (leg.a + leg.b) * (MAX_STRETCH - 0.005);
@@ -385,9 +392,14 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
         if (n > MAX_DROP) {
           leg.over = true;
           if (!moving || lifting() >= 2) {
-            leg.foot.x += (leg.neutral.x - leg.foot.x) * 0.2;
-            leg.foot.z += (leg.neutral.z - leg.foot.z) * 0.2;
+            // arrastada para perto, devagar (nunca um salto)
+            const ex = leg.neutral.x - leg.foot.x, ez = leg.neutral.z - leg.foot.z;
+            const k = Math.min(0.2, (0.004 * s) / Math.max(Math.hypot(ex, ez), 1e-6));
+            leg.foot.x += ex * k;
+            leg.foot.z += ez * k;
             leg.J.copy(leg.foot).sub(Wr);
+            leg.dragged = true;
+            info.drags++;
           }
         }
         if (gate > 0.9) need = Math.max(need, Math.min(n, MAX_DROP));
@@ -448,12 +460,21 @@ export function createGait({ skel2, retarget, s, onStep = null }) {
     reset() {
       prev.ok = false;
       lastG = -1;
+      steps.length = 0;
       mv.v = 0;
       mv.w = 0;
     },
     /** Estado das patas (testes e capturas): no ar ou apoiada e a posição no referencial do corpo. */
     legs,
     get weight() { return weight; },
+    /** As pisadas do último quadro (pata, passada m/s), uma vez só. */
+    takeSteps() {
+      const out = steps.slice();
+      steps.length = 0;
+      return out;
+    },
+    /** Compasso das patas sobre o do guia (curvas fechadas) e quantas vezes uma pata foi arrastada. */
+    info,
     /** Quanto o tronco desceu (m) para as patas plantadas alcançarem o chão. */
     get drop() { return drop * weight; },
     /** Velocidade (m/s) e giro (rad/s) do corpo sobre o chão, medidos. */

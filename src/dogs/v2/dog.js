@@ -133,7 +133,7 @@ export function createDogV2(kind) {
   // rolar de costas: pose própria do modelo novo por cima da do guia (roll.js)
   const roll = createRollOverlay({ skel2, cfg });
   // andar, trotar, galopar e girar: patas próprias, plantadas no chão, no ritmo do guia (gait.js)
-  const gait = createGait({ skel2, retarget, s, onStep: (i, v) => self.onFootstep?.(i, v) });
+  const gait = createGait({ skel2, retarget, s });
 
   const I2 = BONE_INDEX_V2;
   const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
@@ -192,6 +192,8 @@ export function createDogV2(kind) {
     settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0);
     earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
+    // pisadas da locomoção própria, com a pose do quadro pronta (a pegada sai onde a pata pousou)
+    for (const [i, v] of gait.takeSteps()) self.onFootstep?.(i, v);
   };
 
   const self = {

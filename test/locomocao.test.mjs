@@ -47,7 +47,7 @@ function walk(d, { speed, turn = 0, secs, action = 'none', move = true, each = n
 function slideMeter(d) {
   let prev = null;
   let prevSwing = null;
-  const out = { max: 0, sum: 0, n: 0, lifts: 0, worst: '' };
+  const out = { max: 0, sum: 0, n: 0, lifts: 0, worst: '', events: [] };
   const each = () => {
     const now = pawsWorld(d);
     const swing = d.locomotion.legs.map((l) => l.swing);
@@ -58,6 +58,11 @@ function slideMeter(d) {
         const sl = Math.hypot(now[i].x - prev[i].x, now[i].z - prev[i].z);
         out.sum += sl;
         out.n++;
+        if (sl > 0.004 && out.events.length < 6) {
+          const L = d.locomotion.legs[i];
+          const off = Math.hypot(L.foot.x - L.neutral.x, L.foot.z - L.neutral.z);
+          out.events.push(`${PAWS[i]} ${(sl * 1000).toFixed(1)} mm: fora ${(off * 100).toFixed(1)} cm, esticada ${L.stretch.toFixed(3)}, longe ${L.over}, arrastada ${L.dragged}, compasso ${d.locomotion.info.boost.toFixed(2)}, no ar ${d.locomotion.legs.filter((l) => l.swing).length}, tronco ${(d.locomotion.drop * 1000).toFixed(1)} mm`);
+        }
         if (sl > out.max) {
           out.max = sl;
           out.worst = PAWS[i];
@@ -99,7 +104,8 @@ test('locomoção nova: na voltinha da comemoração (o corpo anda o círculo co
       each: (f) => { if (f / 60 >= 1.15 && f / 60 < 2.05) m.each(); },
     });
     const o = m.out;
-    report.push(`${kind}: escorrega até ${(o.max * 1000).toFixed(2)} mm/quadro (${o.worst}), média ${(o.sum / Math.max(o.n, 1) * 1000).toFixed(3)}, ${o.lifts} passos`);
+    report.push(`${kind}: escorrega até ${(o.max * 1000).toFixed(2)} mm/quadro (${o.worst}), média ${(o.sum / Math.max(o.n, 1) * 1000).toFixed(3)}, ${o.lifts} passos, ${d.locomotion.info.drags} arrastos${o.events.length ? `\n    ${o.events.join('\n    ')}` : ''}`);
+    console.log(`[locomoção] voltinha ${report[report.length - 1]}`);
     assert.ok(o.n > 60, `${kind}: patas apoiadas na voltinha (${o.n})`);
     assert.ok(o.lifts >= 6, `${kind}: as patas dão passos na voltinha (${o.lifts})`);
     // a voltinha é bem fechada (raio de 20 cm, menor que a dog): numa curva assim a pata pode girar um pouco no chão
