@@ -504,6 +504,35 @@ export function createFeedback(opts) {
       particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.15, life: 0.7, color: '#FFE3A6', opacity: 0.5, width: 0.08 });
     }
   });
+  // empurrão em pé da Rhaenyra (src/game/shove.js) e o que cai lá de cima (src/game/mechanics/shoveTarget.js)
+  events.on('dog:rear', ({ x, z }) => {
+    sfx('shoveRear', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.75, alpha: 0.32, strength: 0.45 });
+  });
+  events.on('dog:shove', ({ name, kind, x, y = 0.45, z }) => {
+    sfx('shoveThump', x, z, { kind });
+    // a rosnadinha sai de quem empurra
+    const p = dogPos(name);
+    sfx('shoveGrowl', p ? p.x : x, p ? p.z : z);
+    particles.dust({ x, y: Math.max(0.05, y - 0.05), z }, { count: 2, size: 0.45, alpha: 0.22, strength: 0.25, spread: 0.06 });
+  });
+  events.on('shove:hit', ({ kind, n = 1, x, z }) => {
+    if (kind !== 'tree') return;
+    sfx('leafRustle', x, z, { n });
+    particles.leaves({ x, y: 1.25, z }, { count: 2 + Math.min(3, n), radius: 0.4, size: 0.8 });
+  });
+  events.on('shove:drop', ({ kind, x, y = 1, z }) => {
+    sfx('shoveRelease', x, z, { kind });
+    particles.sparkle({ x, y, z }, { count: 5, radius: 0.08, size: 0.6, rise: 0.3 });
+  });
+  events.on('shove:bounce', ({ id, x, z, k = 0.5 }) => {
+    sfx('shoveBounce', x, z, { id, k });
+    if (k > 0.3) particles.dust({ x, y: 0.03, z }, { count: 2, size: 0.5, alpha: 0.28, strength: 0.3, spread: 0.05 });
+  });
+  events.on('shove:settle', ({ x, z, k }) => sfx('shoveSettle', x, z, { k }));
+  events.on('shove:land', ({ x, z }) => {
+    particles.ring({ x, y: 0, z }, { radius: 0.28, from: 0.06, life: 0.5, color: '#FFE3A6', opacity: 0.4, width: 0.05 });
+  });
   // extras escondidos (src/game/extras.js): o cocô e as animações do cenário
   events.on('extra:strain', ({ x, z, n = 0 }) => sfx('extraStrain', x, z, { n }));
   events.on('extra:plop', ({ x, z }) => {

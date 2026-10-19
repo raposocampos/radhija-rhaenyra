@@ -332,6 +332,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Superbafo (Radhija): segurar mira, soltar sopra | R | R2 · RT | Superbafo | `bafo()` |
 | Lambe-Lambe (as duas, perto da irmã): segurar | L | L2 · LT | Lamber | `lick()` |
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar | `shift()` |
+| Empurrão em pé (Rhaenyra, de frente para algo empurrável no alto), segurar | Shift | R1 · RB | Empurrar (segurar) | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
 | Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
@@ -376,6 +377,31 @@ Fora de um ponto marcado, ou de costas, é o pulo comum. Eventos: `dog:wallJump 
 `createWallButton` dá o botão (com tempo e anel de luzes), a alavanca (liga/desliga) e o modo "uma vez"
 (`wall:button {kind, on}`, `wall:tick {left}`, `wall:timeout`); o desenho é `buildWallButton` (`src/world/wallButton.js`).
 Demonstração: a parede de treino da Arena do Pulo (`?level=pulo&play`).
+
+**Empurrão em pé** (`dogController.js` + `src/game/shove.js` + `src/game/mechanics/shoveTarget.js`): a mania da
+Rhaenyra de empurrar ficando de pé. O mesmo empurrar (Shift · R1/RB · Empurrar segurado), de frente para algo empurrável
+no alto que a fase oferece em `puzzle.shoveSpots()` (`ShoveSpot`: pé da superfície, normal, altura das patas `y`, meia
+largura `w` e `over` quando as patas apoiam em cima de uma beirada), vira um movimento roteirizado (só dogs `large`):
+com ela a até `SHOVE_REACH` (0,4 m) de onde fica encostada, do lado de cá e de frente (analógico ou corpo) e nada no
+caminho, ela se ergue e chega ao ponto já de pé (`SHOVE_UP`, 0,46 s), empurra em ciclos de `SHOVE_CYCLE` (0,66 s)
+enquanto o botão estiver seguro (cada empurrão conta em `SHOVE_HIT` do ciclo, só encostada: `shoveHit` →
+`dog:shove {id, kind, n}` e `puzzle.onShove(ctrl, spot, ctrls)`) e volta às quatro patas recuando `SHOVE_BACK` (0,16 m,
+para o focinho não ficar na coisa) em `SHOVE_DOWN`. Um toque dá um empurrão; soltar termina o ciclo em curso. A posição
+anda com colisão (`integrateScripted`, a mesma do impulso), nunca atravessa o que ela empurra; no meio não há pulo,
+arrancada, lambida nem E; trocar de dog deixa a Rhaenyra terminar o empurrão como companheira; fora da partida ela
+desce; pausa congela; reiniciar cancela. A irmã não é empurrada (pedido do usuário). A pose fica em
+`src/dogs/shovePose.js` (funções puras: `shoveStand` dá o ângulo do corpo pela altura do apoio, ≈ 50° num tronco, 60°
+numa mesinha e 70° num tampo alto, o quadril e o alvo das patas; `shoveBeat` dá o ciclo de cada empurrão pelos quadros
+`SHOVE_COCK`, `SHOVE_JOLT`, `SHOVE_PRESS` e `SHOVE_GROWL`) e é aplicada em `dogAnimation.js` (`shoveK`, `shoveCycle`,
+`shoveN`, `shoveGap`, `shoveY`, `shoveOver`): o empurrão sai das patas da frente e dos ombros (as patas armam e batem
+esticando, o peito dá um tranco curto para a frente), o quadril e as traseiras ficam parados, e a cada empurrão ela
+solta uma rosnadinha (som `shoveGrowl` e boquinha franzida). `createShoveTarget` dá o empurrável: uma mola de balanço por
+tipo (`SHOVE_SWAY`: a árvore balança pelo pé com a copa atrasada; a mesinha e a estante tombam pela aresta de trás e
+voltam aos pés) e o item lá em cima, que no `pushes`-ésimo empurrão (3) cai do outro lado: escorrega até a beirada ou
+se solta dos galhos, cai com gravidade, quica e rola até o primeiro ponto livre de `item.land` (sem colisor nem dog),
+sem passar do chão em nenhum giro (`fallPath`). Eventos `shove:hit`, `shove:drop`, `shove:bounce`, `shove:settle` e
+`shove:land`. Os visuais estão em `src/world/shoveProps.js` (arvorezinha, mesinha, estante baixa). A Radhija não fica
+de pé (o Shift dela é a arrancada). Demonstração: a Arena do Empurrão (`?level=empurra&play`).
 
 **Superbafo** (`game.js` + `src/game/mechanics/scent.js`): só quem tem `bafoSpeed` nas estatísticas (a Radhija).
 Segurando R/R2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
@@ -440,7 +466,8 @@ não faz parte deste contrato; só a posição é reaplicada ao trocar ou reinic
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,
 `carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
 `airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
-`dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`. A pose de boca é detectada pelo nome
+`dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`, `shove` (empurrão em pé: os campos
+`shove*` estão em `DogAnim`, `src/types.d.ts`). A pose de boca é detectada pelo nome
 (ou `userData.carryKind`) do objeto no `mouthSocket` ou pela forma dele.
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
