@@ -63,6 +63,11 @@ try {
     await pose('20-escorregando', side({ action: 'slide' }));
     await pose('21-latindo', { view: 'face', bark: 1.85, sim: 1.95 });
     await pose('22-molhada', { view: '34', wet: 1, sim: 1 });
+    // comemoração: pulinho, a voltinha andando (vista de cima e em 3/4) e a reverência
+    for (const [i, sim] of [0.2, 1.0, 1.3, 1.6, 1.9, 2.6].entries()) {
+      await pose(`25-comemorando-${i}-cima`, { view: 'top', action: 'celebrate', sim });
+      await pose(`25-comemorando-${i}-34`, { view: '34', action: 'celebrate', sim });
+    }
     // a rolagem nova, passo a passo (de lado e em 3/4)
     for (const [i, xk] of [0.16, 0.24, 0.3, 0.36, 0.44, 0.52, 0.58, 0.7, 0.78, 0.86].entries()) {
       await pose(`23-rolando-${i}-lado`, side({ extra: 'roll', xk, sim: 2 }));

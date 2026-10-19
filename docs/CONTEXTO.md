@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (empurrão em pé da Rhaenyra, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (comemoração com voltinha andando, PR #39). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: empurrão em pé, pés no chão no modelo novo (Claude, branch `claude/empurrao-pes-no-chao`)
@@ -17,8 +17,30 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Feito: `curl *= gaitAmp * (1 − sk)` e o alvo da pata não passa da altura de apoio (`dogAnimation.js`, sem mexer na
   comemoração do #39; `git merge-tree` com `claude/comemoracao-natural` sem conflito); teste novo com o modelo novo em
   `test/empurrao.test.mjs`; capturas: a descida no meio dela e o close da rosnadinha de perfil.
-- Próximo passo: PR, CI, E2E `empurra` (e `todas`), prévia e aprovação; ordem combinada: #40 → #39 → este → #33
-  (se o #39 entrar antes, sincronizar e conferir).
+- **PR #41.** Atualizado com o main `9715ee8` (PRs #40 e #39): conferir no PR o CI, o E2E `empurra` e a prévia do
+  head atual. Próximo passo: aprovação do usuário e integração; depois vêm o #42 e o #33.
+
+## Entregue: comemoração sem giro parado (PR #39, squash `9715ee8`, deploy `39336319071`)
+
+- Pedido do usuário (2026-10-19): na comemoração as dogs "giram um 360 sem andar, estranho, não fica natural".
+- Feito: em `dogAnimation.js` o ciclo da comemoração (3,2 s) virou pulinhos → **voltinha andando** num círculo de
+  ~20 cm (rumo, velocidade e giro vêm do círculo: as patas pisam, o corpo inclina e curva, a cabeça olha para onde
+  vai) → reverência. O giro de 360° do corpo parado saiu. `game.js` manda `anim.celebrateSide` (a voltinha vai para o
+  lado de fora, longe da irmã). Vale para o modelo atual e para o novo (que copia a pose). Teste em
+  `test/dogs.test.mjs`.
+- Retorno na prévia: "no fim das fases ... o loop corta no meio e ela fica sentada": a voltinha em andamento
+  termina antes de sentar ou parar (teste novo). Ordem combinada: entra depois do #38 (empurrão em pé).
+- O usuário aprovou a versão `2b3fdf0`, mas o merge ficou bloqueado por 3 observações da revisão automática (a
+  proteção do `main` exige conversas resolvidas). Corrigido depois da aprovação (pede CI, prévia e aprovação novas):
+  a voltinha é só visual, então `src/game/celebrateLoop.js` escolhe lado e tamanho que cabem (colisores, irmã e a
+  borda da caminha `GOAL.celebrateRim` nas fases 5 e 8 e na Arena dos Porquinhos); sem espaço, pulinhos no lugar
+  (fase 5). As pisadas da voltinha levam a passada da animação (`onFootstep(i, v)`: som e pegadas). Interrompida
+  por outra ação, ela volta ao lugar suave. Testes em `test/dogs.test.mjs` e `test/comemoracao.test.mjs`.
+- Branch atualizado com o main `369b0ff` (PR #38, empurrão em pé: a voltinha e o empurrão convivem em
+  `dogAnimation.js`/`game.js`) e depois com `1cd6647` (PR #40). E2E `todas` verde em `2c5f328` (39327099995, 2ª
+  tentativa; a 1ª caiu no teste instável dos porquinhos, corrigido no #40). As 3 conversas da revisão foram
+  respondidas e resolvidas.
+- Integrado ao main e publicado (squash `9715ee8`, deploy `39336319071`). Não repetir merge/deploy do #39.
 
 ## Entregue: empurrão em pé da Rhaenyra (PR #38, squash `369b0ff`, deploy `39326965839`)
 
@@ -29,8 +51,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `src/world/shoveProps.js`, `puzzle.shoveSpots`/`onShove` (ARQUITETURA §6). A fase 10 (#33) usa a árvore.
 - Aprovado no chat e integrado (head `07dc74a`, base `1a8fde5`); CI do main `39326868737`; produção conferida em
   `369b0ff`. Não repetir merge/deploy do #38. Campos do `anim` e quadros da pose enviados à sessão dos modelos.
+- A correção seguinte do empurrão (pés no chão no modelo novo) está no PR #41.
 
-## Entregue: os porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`)
+## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40 (squash `1cd6647`, deploy `39332428726`)
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
@@ -62,9 +85,20 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   nem fica onde a dog não chega) e a porteira não fecha com uma dog dentro do chiqueiro. Testes novos: o caso que
   travava, a rede de segurança, a dog no chiqueiro e uma bagunça longa com semente (200 s de jogo, ações
   aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
-- Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
-  esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
-  `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
+- Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
+  do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
+- Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`, atualizado com o main `369b0ff`, PR #38): o teste "presos no
+  cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou bugs
+  reais no caminho dos porcos, corrigidos em `pigHerd.js`: (1) dois porcos entravam juntos no vão da porteira,
+  entalavam lado a lado e ninguém saía: agora passa um de cada vez (`assignDoor`/`waitDoor`: a vez é de quem está mais
+  perto do vão; quem espera fica antes dele e, colado, recua); (2) o desvio pela ponta da porteira aberta tinha os dois
+  pontos a 0,28 m e o porco "chegava" nos dois sem andar, preso para sempre do lado de fora depois do sininho: agora
+  ficam a 0,64 m e, já atrás da ponta, ele vai direto ao do outro lado; (3) dois porcos se empurrando focinho com
+  focinho não contavam como empacados: 2,5 s sem chegar mais perto do ponto agora conta. Também: a saída que não deu
+  certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
+  alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
+  volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
+  Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 

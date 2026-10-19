@@ -120,7 +120,7 @@ export function createDog(kind) {
   // ------------------------------------------------------------------ animação
   const { st, update: animate } = createDogAnimation({
     object, inner, cfg, s, rig, face, carry, furMat, shadow, shadowBase, markerAnchor, design, fur: P.fur,
-    onFootstep: (i) => self.onFootstep?.(i),
+    onFootstep: (i, v) => self.onFootstep?.(i, v),
   });
   /** @param {number} dt @param {import('../types').DogAnim} [anim] */
   const update = (dt, anim) => {

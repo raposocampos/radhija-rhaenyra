@@ -179,6 +179,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
 
   const S = {
     t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, nextFood: 1, eaten: 0, done: 0, errors: 0,
+    /** quem tem a vez na porteira (índice do porco) e desde quando @type {number | null} */ doorPig: null, doorT: 0,
     /** @type {Record<string, number>} */ dogCd: {},
     /** há quanto tempo cada dog leva algo na boca (s; 0 = boca vazia) @type {Record<string, number>} */ carryT: {},
   };
@@ -338,11 +339,65 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const ux = (tip.x - h.x) / L, uz = (tip.z - h.z) / L;
     const ex = tip.x + ux * (r + 0.05), ez = tip.z + uz * (r + 0.05);
     const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+    const crosses = (bx, bz) => o(h.x, h.z, ex, ez, P.x, P.z) * o(h.x, h.z, ex, ez, bx, bz) < 0
+      && o(P.x, P.z, bx, bz, h.x, h.z) * o(P.x, P.z, bx, bz, ex, ez) < 0;
+    if (!crosses(p.x, p.z)) return null;
     const sP = o(h.x, h.z, ex, ez, P.x, P.z), sp = o(h.x, h.z, ex, ez, p.x, p.z);
-    if (!(sP * sp < 0 && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, ex, ez) < 0)) return null;
+    // os dois pontos bem separados (0,64 m): parado entre dois pontos próximos, o porco "chegava" nos dois sem andar e
+    // ficava trocando de um para o outro sem sair do lugar
     const far = r + 0.22;
-    const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.14, z: tip.z + uz * far + ux * side * 0.14, leaf: true });
-    return [at(Math.sign(sP)), at(Math.sign(sp))];
+    const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.32, z: tip.z + uz * far + ux * side * 0.32, leaf: true });
+    const near = at(Math.sign(sP)), other = at(Math.sign(sp));
+    // já atrás da ponta (dá para ir direto ao ponto do outro lado sem cruzar a folha): não volta ao do seu lado
+    return crosses(other.x, other.z) ? [near, other] : [other];
+  }
+
+  // A porteira é estreita: um porco de cada vez (dois lado a lado entalavam no vão e ficavam se empurrando sem sair).
+  // Entre os que querem passar e estão perto dela (DOOR_ZONE m do corredor door.in–door.out), a vez é do mais perto do
+  // vão; outro só toma a vez se estiver bem mais perto, ou se quem a tem empacou (DOOR_HOLD s). Os outros esperam.
+  const DOOR_ZONE = 0.8, DOOR_HOLD = 6;
+  const doorSeg = { ax: door.in.x, az: door.in.z, bx: door.out.x, bz: door.out.z };
+  const toDoor = (P) => {
+    const [qx, qz] = closestOn(P.x, P.z, doorSeg);
+    return Math.hypot(P.x - qx, P.z - qz);
+  };
+  const toMid = (P) => Math.hypot(P.x - gateMid.x, P.z - gateMid.z);
+  const wantsDoor = (P) => (P.state === 'exit' || P.state === 'return') && P.route.some((q) => q.door) && toDoor(P) < DOOR_ZONE;
+  function assignDoor() {
+    const cur = S.doorPig != null ? pigs[S.doorPig] : null;
+    const held = !!cur && wantsDoor(cur);
+    const expired = held && S.t - S.doorT > DOOR_HOLD;
+    let best = null;
+    for (const P of pigs) if (wantsDoor(P) && !(expired && P === cur) && (!best || toMid(P) < toMid(best))) best = P;
+    if (held && !expired && (!best || best === cur || toMid(best) > toMid(cur) - 0.15)) return;
+    const next = best || (held ? cur : null);
+    if ((next?.i ?? null) !== S.doorPig) {
+      S.doorPig = next ? next.i : null;
+      S.doorT = S.t;
+    }
+  }
+  /** Espera a vez: parado, olhando para a porteira; colado no vão, recua devagar (para longe do meio dela). */
+  function waitDoor(P, dt, ctrls) {
+    faceDir(P, gateMid.x - P.x, gateMid.z - P.z, dt, 2);
+    if (toDoor(P) < 0.4) {
+      let bx = P.x - gateMid.x, bz = P.z - gateMid.z;
+      if (Math.hypot(bx, bz) < 1e-3) {
+        const s = inPen(P.x, P.z) ? door.in : door.out;
+        bx = s.x - gateMid.x;
+        bz = s.z - gateMid.z;
+      }
+      const l = Math.hypot(bx, bz) || 1, step = 0.3 * dt;
+      const res = world.move(P.x, P.z, (bx / l) * step, (bz / l) * step, r, 'large', { ignore: P.ignore });
+      P.x = res.x;
+      P.z = res.z;
+      avoidDogs(P, ctrls);
+      P.speed = 0.2;
+      P.action = 'walk';
+    } else {
+      stand(P, dt);
+      P.action = 'idle';
+    }
+    P.stuckT = 0;
   }
 
   /** Segue P.route; → true ao chegar no último ponto. Contorna a folha aberta da porteira; empacado, dá um passo de lado. */
@@ -354,6 +409,26 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (w) {
       P.route.unshift(...w);
       p = w[0];
+    }
+    if (S.doorPig !== P.i && wantsDoor(P)) {
+      waitDoor(P, dt, ctrls);
+      return false;
+    }
+    // 2,5 s sem chegar mais perto do ponto (dois porcos se empurrando focinho com focinho, por exemplo: cada um anda
+    // um pouco e o outro devolve) também é estar empacado
+    if (P.wp !== p) {
+      P.wp = p;
+      P.wpD = Infinity;
+      P.wpT = 0;
+    }
+    const dp = Math.hypot(p.x - P.x, p.z - P.z);
+    if (dp < P.wpD - 0.05) {
+      P.wpD = dp;
+      P.wpT = 0;
+    } else if ((P.wpT += dt) > 2.5) {
+      P.stuckT = 2;
+      P.wpT = 0;
+      P.wpD = Infinity;
     }
     if (P.stuckT > 1.5) {
       const dx = p.x - P.x, dz = p.z - P.z;
@@ -749,22 +824,36 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const [qx, qz] = closestOn(P.x, P.z, { ax: door.in.x, az: door.in.z, bx: door.out.x, bz: door.out.z });
     if (Math.hypot(P.x - qx, P.z - qz) < 0.45) return; // no corredor da porteira: segue direto
     const d = inside ? door.in : door.out;
-    if (p.x !== d.x || p.z !== d.z) P.route.unshift({ ...d });
+    if (p.x !== d.x || p.z !== d.z) P.route.unshift({ ...d, door: true });
   }
 
   function exit(P, dt, ctrls) {
     viaDoor(P);
     P.action = 'walk';
-    if (follow(P, cfg.trotSpeed, dt, ctrls, 'none') || P.t > 12) {
+    if (follow(P, cfg.trotSpeed, dt, ctrls, 'none')) {
       setState(P, 'roam', { idleAct: 'sniff', idleT: 0.6 + Math.random(), boredT: 0 });
+    } else if (P.t > 12) {
+      // não conseguiu sair: ainda no cercado, tenta de novo daqui a pouco (fora dele, passeia de onde está)
+      if (inPen(P.x, P.z)) {
+        setState(P, 'pen', { route: [], idleAct: 'idle', idleT: 1 });
+        P.exitAt = S.t + 0.5;
+      } else setState(P, 'roam', { idleAct: 'sniff', idleT: 0.6 + Math.random(), boredT: 0 });
     }
   }
 
   function goHome(P, dt, ctrls) {
     viaDoor(P);
     P.action = 'walk';
-    if (follow(P, cfg.trotSpeed, dt, ctrls, inPen(P.x, P.z) ? 'pen' : 'none') || (P.t > 20 && inPen(P.x, P.z))) {
+    const arrived = follow(P, cfg.trotSpeed, dt, ctrls, inPen(P.x, P.z) ? 'pen' : 'none');
+    // já dentro, longe da porta e sem porta pela frente: está em casa (o cantinho pode estar com alguém cochilando)
+    const inside = inPen(P.x, P.z, -r * 0.5) && !P.route.some((q) => q.door) && Math.hypot(P.x - door.in.x, P.z - door.in.z) > 0.6;
+    P.homeT = inside ? (P.homeT || 0) + dt : 0;
+    const home = homes[P.i];
+    if (arrived || (inside && (Math.hypot(P.x - home.x, P.z - home.z) < 0.5 || P.homeT > 3)) || (P.t > 20 && inPen(P.x, P.z))) {
       setState(P, 'pen', { idleAct: 'idle', idleT: 1 + Math.random() * 2 });
+    } else if (P.t > 20) {
+      // ainda fora depois de 20 s: refaz a rota do zero
+      setState(P, 'return', { route: [{ ...door.out, door: true }, { ...door.in, door: true }, { x: home.x, z: home.z }] });
     }
   }
 
@@ -789,7 +878,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       if (distracted(P)) finishDistraction(P, 'recall');
       if (P.state === 'pen') continue;
       const home = homes[P.i];
-      P.route = inPen(P.x, P.z) ? [{ x: home.x, z: home.z }] : [{ ...door.out }, { ...door.in }, { x: home.x, z: home.z }];
+      P.route = inPen(P.x, P.z) ? [{ x: home.x, z: home.z }] : [{ ...door.out, door: true }, { ...door.in, door: true }, { x: home.x, z: home.z }];
       setState(P, 'return', { dog: null });
     }
   }
@@ -808,7 +897,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
 
   function reset() {
     foods.length = 0;
-    Object.assign(S, { t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, dogCd: {}, carryT: {}, eaten: 0, done: 0 });
+    Object.assign(S, { t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, dogCd: {}, carryT: {}, eaten: 0, done: 0, doorPig: null, doorT: 0 });
     gate.reset();
     for (const P of pigs) {
       const h = homes[P.i];
@@ -864,7 +953,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (S.released) {
       for (const P of pigs) {
         if (P.state !== 'pen' || S.t < P.exitAt) continue;
-        P.route = [{ ...door.in }, { ...door.out }, { ...exits[P.i] }];
+        P.route = [{ ...door.in, door: true }, { ...door.out, door: true }, { ...exits[P.i] }];
         setState(P, 'exit');
         oink(P, 'happy');
       }
@@ -873,6 +962,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       assignFoods();
       dogHits(ctrls);
       assignSlots();
+      assignDoor();
     });
     // cada porco num passo protegido: um erro num deles não pode congelar o jogo (sai no console e ele volta a passear)
     for (const P of pigs) guarded(P, () => stepPig(P, dt, active, ctrls));
