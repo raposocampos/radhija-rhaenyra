@@ -189,6 +189,34 @@ function withSeed(seed, fn) {
   }
 }
 
+/** Igual a withSeed, para uma função assíncrona (Math.random volta só quando ela termina). */
+async function withSeedAsync(seed, fn) {
+  const random = Math.random;
+  Math.random = seeded(seed);
+  try {
+    return await fn();
+  } finally {
+    Math.random = random;
+  }
+}
+
+/**
+ * A dog chega a d m de (x, z), do lado oposto a (ax, az), virada para lá, e aperta E. Os outros porquinhos estão em
+ * volta dela e um esbarrão (susto de 0,3 s) pode engolir o E: ela tenta de novo, como quem joga (até 4 vezes).
+ * → true se `ok()` ficou verdadeiro.
+ */
+function pickFrom(h, name, { x, z, ax, az, d }, ok) {
+  for (let k = 0; k < 4; k++) {
+    const ux = x - ax, uz = z - az, ul = Math.hypot(ux, uz) || 1;
+    h.teleport(name, x + (ux / ul) * d, z + (uz / ul) * d, Math.atan2(-ux, -uz));
+    h.run(0.05);
+    h.tap('KeyE');
+    if (ok()) return true;
+    h.run(0.35);
+  }
+  return false;
+}
+
 /** Foto curta dos porcos (para a mensagem de um teste que falhou): estado, posição, vez na porteira e rota. */
 function snap(h) {
   const f = (v) => +v.toFixed(2);
@@ -528,7 +556,10 @@ test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e ele
   assert.ok(h.log('plate:press').length >= 1);
 });
 
-test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', async () => {
+test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', () =>
+  withSeedAsync(58, legumeSteps)); // semente 58: um esbarrão engolia o E da Radhija ao pegar de volta
+
+async function legumeSteps() {
   const h = await arena();
   h.puzzle.jumpToStage('pigsOut');
   h.run(1);
@@ -557,14 +588,12 @@ test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho com
   // a Radhija pega o milho de volta (chegando pelo lado oposto ao do porquinho): ele reclama e volta a atrapalhar
   const eater = h.puzzle.pigs.pigs.find((P) => P.state === 'eat');
   assert.ok(eater, 'um porquinho comendo');
-  const ux = veg.x - eater.x, uz = veg.z - eater.z, ul = Math.hypot(ux, uz) || 1;
-  h.teleport('radhija', veg.x + (ux / ul) * 0.42, veg.z + (uz / ul) * 0.42, Math.atan2(-ux, -uz));
-  h.run(0.05);
   h.clearLog();
-  h.tap('KeyE');
-  assert.equal(h.info().veggies.find((v) => v.kind === 'corn').holder, 'radhija');
+  const corn = () => h.info().veggies.find((v) => v.kind === 'corn');
+  assert.ok(pickFrom(h, 'radhija', { x: veg.x, z: veg.z, ax: eater.x, az: eater.z, d: 0.42 }, () => corn().holder === 'radhija'), 'pegou o milho de volta');
   assert.ok(h.log('pig:done').some((e) => e.reason === 'taken'));
-});
+  h.releaseAll();
+}
 
 test('arena: o legume comido até o fim volta para o lugar; o sininho chama os porquinhos de volta', async () => {
   const h = await arena();
@@ -598,7 +627,9 @@ test('arena: o legume comido até o fim volta para o lugar; o sininho chama os p
   assert.equal(h.log('pig:home').length, 1);
 });
 
-test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', async () => {
+test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', () => withSeedAsync(1, bolinhaSteps));
+
+async function bolinhaSteps() {
   const h = await arena();
   h.puzzle.jumpToStage('carrying');
   assert.equal(h.info().ball.holder, 'radhija');
@@ -614,13 +645,10 @@ test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog
   assert.ok(h.info().objective.startsWith('Pegue a bolinha de volta'));
   // a dog pega de novo onde caiu (chegando pelo lado oposto ao porquinho mais perto)
   const P = [...h.puzzle.pigs.pigs].sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0];
-  const ux = b.x - P.x, uz = b.z - P.z, ul = Math.hypot(ux, uz) || 1;
-  h.teleport('radhija', b.x + (ux / ul) * 0.3, b.z + (uz / ul) * 0.3, Math.atan2(-ux, -uz));
-  h.run(0.05);
-  h.tap('KeyE');
-  assert.equal(h.info().ball.holder, 'radhija');
+  assert.ok(pickFrom(h, 'radhija', { x: b.x, z: b.z, ax: P.x, az: P.z, d: 0.3 }, () => h.info().ball.holder === 'radhija'), 'pegou a bolinha de novo');
   assert.equal(h.info().stage, 'carrying');
-});
+  h.releaseAll();
+}
 
 test('arena: a bolinha do chiqueiro na caminha termina a fase', async () => {
   const h = await arena();
