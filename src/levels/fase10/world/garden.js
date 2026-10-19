@@ -126,7 +126,7 @@ export function buildGarden(root, layout) {
   // o vão: uma ripa pendurada torta num prego e outra caída na grama
   const hanging = new THREE.Mesh(pk, rustic);
   hanging.scale.y = fh / 0.9;
-  hanging.position.set(HORTA.x0 - 0.02, fh * 0.6 + 0.02, HORTA.gap.z0 + 0.05);
+  hanging.position.set(HORTA.x0 - 0.05, fh * 0.6 + 0.02, HORTA.gap.z0 + 0.05);
   hanging.rotation.set(0, -Math.PI / 2, 2.6);
   hanging.castShadow = true;
   const fallen = new THREE.Mesh(pk, rustic);

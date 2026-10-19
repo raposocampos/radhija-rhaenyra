@@ -257,10 +257,7 @@ try {
   await setup({ place: { rhaenyra: { x: L.PLATE.x, z: L.PLATE.z, yaw: Math.PI / 2 } }, settle: 70 });
   await shot('29-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });
   await setup({ active: 'radhija', place: { radhija: { x: 9.8, z: L.RAMP.z - 0.05, yaw: Math.PI / 2 } }, settle: 10 });
-  await keyDown('KeyD');
-  await step(3);
   await tap('ShiftLeft');
-  await keyUp('KeyD');
   await until((i) => i.quintal.ramp === 'up', 60);
   await step(18);
   await shot('30-arrancada-na-rampa', { pos: [10.3, 1.4, 4.3], look: [10.8, 0.7, 3.0] });

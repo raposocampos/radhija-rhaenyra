@@ -605,7 +605,8 @@ export function createPuzzle(ctx) {
     if (S.ramp || S.slipCd > 0 || c.jumpT > 0 || effects.busy(c.name)) return;
     if (!inRect(RAMP_ENTRY, c.x, c.z) || Math.abs(wrap(c.yaw - EAST)) > 0.8) return;
     const dashing = S.dashRecent[c.name] > 0;
-    const pushing = c.animSpeed > 0.25 || c.hits?.some((hit) => hit.id === 'rampa');
+    // andando, só escorrega quem encosta na tábua (chegar perto e dar a arrancada vale)
+    const pushing = !!c.hits?.some((hit) => hit.id === 'rampa');
     if (!dashing && !pushing) return;
     if (c.name === 'rhaenyra') {
       if (pushing) hints.cond('rampRh', 3, 8);

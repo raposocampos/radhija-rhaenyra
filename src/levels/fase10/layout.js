@@ -102,7 +102,7 @@ export const HOSE = [{ x: -4.32, z: -1.15 }, { x: -3.75, z: -0.9 }, { x: -3.05, 
 export const CRATE = { start: { x: -3.05, z: -0.6 }, half: 0.3, height: 0.5, minX: -4.05, maxX: 2.6, minZ: -2.3, maxZ: 3.3, pushSpeed: 0.75, blockR: 0.34 };
 /** Ventilador do quintal (fixo, a oeste da piscininha, soprando para o leste) e a tomada na parede da casa. */
 export const FAN = { x: -3.05, z: POOL.z, r: 0.28, height: 0.95 };
-export const OUTLET = { x: HOUSE.x1 + WALLS.t / 2 + 0.02, y: 0.26, z: -0.62 };
+export const OUTLET = { x: HOUSE.x1 + WALLS.t / 2 + 0.02, y: 0.48, z: -0.62 };
 /** Vasos grandes perto da varanda: entre eles só a Radhija passa (um ossinho atrás). */
 export const PLANTERS = [{ x: 1.7, z: -5.42, r: 0.3 }, { x: 2.72, z: -5.42, r: 0.3 }];
 export const LITTLE_TREE = { x: 3.4, z: -3.6, r: 0.22 };

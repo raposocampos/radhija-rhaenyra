@@ -144,6 +144,7 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e o bolo na or
   h.tap('KeyE');
   assert.ok(h.run(1, { until: (i) => i.quintal.gateOpen }), 'a cordinha destravou o portãozinho');
   assert.equal(h.log('gate:open').length, 1);
+  h.run(0.6); // termina de puxar (enquanto puxa, ela fica presa na cordinha)
 
   // ---- o pombo: superbafo no funil do cano de brinquedo
   put(h, 'radhija', L.TUBE.inlet.x, L.TUBE.inlet.z + 0.85, Math.PI);
@@ -207,10 +208,8 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e o bolo na or
 
   // ---- a rampa: arrancada e a vela lá no alto
   h.walkPath([[9.0, 2.0], [9.9, 2.0], [9.8, L.RAMP.z - 0.05, { tol: 0.08 }]], { tol: 0.12 });
-  h.hold([1, 0]);
-  h.run(0.1);
+  put(h, 'radhija', h.ctrls.radhija.x, h.ctrls.radhija.z, Math.PI / 2); // de frente para a rampa, parada
   h.tap('ShiftLeft');
-  h.hold(null);
   assert.ok(h.run(4, { until: (i) => i.candle.holder === 'radhija' && !i.quintal.ramp }), `subiu a rampa e pegou a vela ${JSON.stringify({ ramp: q(h).ramp, x: h.ctrls.radhija.x, z: h.ctrls.radhija.z })}`);
   assert.equal(h.ctrls.radhija.y, 0);
 
@@ -424,10 +423,8 @@ test('fase 10: lama sem arrancada; placa só com a Rhaenyra (e ela fica na troca
   assert.ok(hints(h).includes(TEXT.hint.rampSlip));
   h.run(1);
   h.walkTo(9.8, L.RAMP.z - 0.05, { tol: 0.08 });
-  h.hold([1, 0]);
-  h.run(0.1);
+  put(h, 'radhija', h.ctrls.radhija.x, h.ctrls.radhija.z, Math.PI / 2);
   h.tap('ShiftLeft');
-  h.hold(null);
   assert.ok(h.run(4, { until: (i) => i.candle.holder === 'radhija' && !i.quintal.ramp }), 'com arrancada, pegou a vela');
 });
 

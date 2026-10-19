@@ -428,8 +428,10 @@ export function buildHouse(root, layout) {
   wallBox(walls, xE, 0, (PORCH_DOOR.z1 + zS + T / 2) / 2, T, eastH, zS + T / 2 - PORCH_DOOR.z1, eastMat, false);
   wallBox(walls, xE, 2.05, (PORCH_DOOR.z0 + PORCH_DOOR.z1) / 2, T, eastH - 2.05, PORCH_DOOR.z1 - PORCH_DOOR.z0, eastMat, false);
   // rodapé de pedra da fachada e o beiral de telhas
-  const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, zS - zN + T), stdMat('#9a8e7e', { roughness: 0.9 }));
-  stoneBase.position.set(xE + T / 2 + 0.015, 0.16, (zN + zS) / 2);
+  // começa 3 mm dentro da parede e termina 4 mm antes da quina (nenhuma face no plano da fachada ou do muro)
+  const sbZ0 = zN, sbZ1 = zS + T / 2 - 0.004;
+  const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, sbZ1 - sbZ0), stdMat('#9a8e7e', { roughness: 0.9 }));
+  stoneBase.position.set(xE + T / 2 + 0.012, 0.16, (sbZ0 + sbZ1) / 2);
   walls.add(stoneBase);
   const tileMat = stdMat('#b8553a', { roughness: 0.7 });
   const eave = new THREE.Group();

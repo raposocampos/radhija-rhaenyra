@@ -163,8 +163,10 @@ export function buildPorch(root, layout) {
   const xs = [PERGOLA_POSTS[0].x, PERGOLA_POSTS[1].x];
   const zs = [PERGOLA_POSTS[0].z, PERGOLA_POSTS[2].z];
   for (const z of zs) {
-    const beam = new THREE.Mesh(rbox(xs[1] - xs[0] + 0.5, 0.16, 0.08, 0.012), beamWood);
-    beam.position.set((xs[0] + xs[1]) / 2, postH - 0.08, z);
+    // a viga encosta na fachada (não passa por cima da parede: o topo dela fica no mesmo plano)
+    const bx0 = PORCH.x0 + 0.02, bx1 = xs[1] + 0.25;
+    const beam = new THREE.Mesh(rbox(bx1 - bx0, 0.16, 0.08, 0.012), beamWood);
+    beam.position.set((bx0 + bx1) / 2, postH - 0.08, z);
     beam.castShadow = true;
     group.add(beam);
   }

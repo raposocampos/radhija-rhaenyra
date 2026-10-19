@@ -109,6 +109,7 @@ try {
   await page.keyboard.press('KeyE');
   state = await waitFor((s) => s.quintal.gateOpen, { timeout: 2000 });
   check(qt(state).gateOpen, 'a outra puxa a cordinha: o portãozinho abre');
+  await H.gsleep(700); // termina de puxar
   await put('radhija', L.TUBE.inlet.x, L.TUBE.inlet.z + 0.85, Math.PI);
   await clearLog();
   await H.hold(['KeyR'], 350);
@@ -154,7 +155,9 @@ try {
   state = await as('radhija');
   check(state.stay?.rhaenyra === true, 'trocando, a Rhaenyra fica na placa');
   await walkPath([[9.0, 2.0], [9.9, 2.0], [9.8, L.RAMP.z - 0.05, { tol: 0.1 }]], { tol: 0.15 });
-  await H.holdUntil(keysFor(1, 0), () => false, { timeout: 200, during: async () => { await H.gsleep(80); await page.keyboard.press('ShiftLeft'); } });
+  state = await info();
+  await put('radhija', state.dogs.radhija.x, state.dogs.radhija.z, Math.PI / 2); // de frente para a rampa, parada
+  await page.keyboard.press('ShiftLeft');
   state = await waitFor((s) => s.candle?.holder === 'radhija' && !s.quintal.ramp, { timeout: 5000 });
   check(state.candle?.holder === 'radhija', 'com uma arrancada, a Radhija sobe a rampa e pega a vela do 3', JSON.stringify({ ramp: qt(state).ramp, rad: state.dogs.radhija }));
   await clearLog();

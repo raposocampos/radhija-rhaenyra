@@ -223,7 +223,7 @@ export function buildFences(root, layout) {
     for (let k = 0; k < 60; k++) g.fillRect(r() * w, r() * h, 1, 10 + r() * 20);
   });
   const wallH = 1.9;
-  const northLen = 12.4 - (HOUSE.x1 + 0.1);
+  const northLen = 12.26 - (HOUSE.x1 + 0.1); // termina na face do muro leste (sem topo sobreposto na quina)
   const tN = boardTex.clone(); tN.needsUpdate = true; tN.repeat.set(northLen / 1.6, 1);
   const north = new THREE.Mesh(new THREE.BoxGeometry(northLen, wallH, 0.08), new THREE.MeshStandardMaterial({ map: tN, roughness: 0.9 }));
   north.position.set(HOUSE.x1 + 0.1 + northLen / 2, wallH / 2, B.minZ - 0.12);
