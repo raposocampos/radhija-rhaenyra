@@ -1,7 +1,34 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-19, Claude** (Lambe-Lambe também na Radhija, em andamento). Ler primeiro
+[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
+
+- Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
+  no L2". Tecla do Lambe-Lambe escolhida pelo usuário: **L** (o R continua sendo o superbafo). Controle: R1 = arrancada
+  ou empurrar, R2 = superbafo, L2 = Lambe-Lambe. Toque: botões separados Superbafo (só a Radhija; apagado com a
+  Rhaenyra, apertar dá a dica) e Lamber (as duas), num arco em volta do Agir.
+- Feito: `input.lick()` (L / L2 / botão `lick`) e `bafo()` no R / R2; `lickStroke`/`lickReach` também na Radhija
+  (0,38 s, mais rapidinho); núcleo genérico (`lickDist`: quem é menor para mais perto; lambendo não há arrancada nem
+  bafo, mirando não começa lambida; dica genérica só quando não alcança, numa fase sem `onLick`); pose de quem lambe
+  para cima (`anim.lickY` em `dogAnimation.js`: peito sobe, pescoço estica, língua para a frente) e a Rhaenyra lambida
+  abaixa a cabeça para a irmã menor. Fase 7: textos com (L); a lambida da Radhija na irmã é só carinho (dica para
+  trocar), a lama continua saindo só com a Rhaenyra. Ajuda (tabela de controles, glifos `R`→R2/Superbafo,
+  `L`→L2/Lamber, Shift→R1), README e ARQUITETURA §4/§6. Testes headless e as suítes E2E `lambe`, `toque`,
+  `controle`, `bafo` e `expresso`; capturas novas da Radhija lambendo (bochecha e flanco) em `capture-lambe.mjs`.
+- **Fase 10 (PR #33, outra sessão)**: não foi editada aqui. O `onLick` dela já recebe quem lambeu (`ctrl`) e
+  `lick.target`; hoje, com a Radhija lambendo a Rhaenyra, ela mostra a dica `alreadyClean` e o `onLickMiss` mostra
+  `lickFar` ("Chegue pertinho da Radhija…") também quando quem tenta é a Radhija, e os textos dela ainda dizem R.
+  A sessão da fase 10 ajusta depois deste PR (aviso a ela no merge).
+- Próximo passo: CI e E2E (`lambe`, `toque`, `controle`, `bafo`, `expresso`, `menu`) no head do PR, revisar as
+  capturas do Lambe-Lambe (`shots/lambe-revisao/10b-*`, `10c-*`) e do celular, entregar a prévia e aguardar a
+  aprovação. Consultar o PR para SHA, CI, E2E e prévia.
+
+## Entregue: diagnóstico do travamento no primeiro boot do E2E (PR #31, squash `eb1a148`)
+
+- Integrado ao main depois dos PRs #29 e #32; conferir o deploy no GitHub. Detalhes na seção "Registro:
+  travamento no primeiro boot" abaixo. Não repetir merge/deploy do #31.
 
 ## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 
@@ -47,7 +74,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
   `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
-## Em andamento: travamento no primeiro boot do E2E (Claude, PR #31)
+## Registro: travamento no primeiro boot do E2E (Claude, PR #31, integrado em `eb1a148`)
 
 - Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
   fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado por merge com o main `0bd48d0` (PR #30) e

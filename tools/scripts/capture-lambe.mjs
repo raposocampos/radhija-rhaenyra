@@ -121,7 +121,7 @@ try {
   const C = { x: 1.0, z: -0.45 };
   await setup({ stage: 'muddy', active: 'rhaenyra', place: { radhija: { x: C.x, z: C.z, yaw: Math.PI / 2 }, rhaenyra: { x: C.x + 0.18, z: C.z - 0.62, yaw: Math.PI } }, stay: 'radhija', settle: 30 });
   const faceCam = { pos: [C.x + 1.25, 0.62, C.z - 0.05], look: [C.x + 0.12, 0.36, C.z - 0.28] };
-  await page.keyboard.down('KeyR');
+  await page.keyboard.down('KeyL');
   await until((i) => i.lick.stage === 'licking' && i.lick.strokes >= 1 && i.lick.phase > 0.9, 400);
   // um ciclo inteiro em cinco instantes: língua saindo, encostando, varrendo, no alto e voltando
   const phases = [0.18, 0.34, 0.5, 0.64, 0.82];
@@ -141,11 +141,33 @@ try {
   await step(10);
   await shot('08c-lama-4-lambidas', bodyCam);
   await until((i) => i.lambe.mud.radhija.k === 0, 600);
-  await page.keyboard.up('KeyR');
+  await page.keyboard.up('KeyL');
   await step(8);
   await shot('09-sacudindo', faceCam);
   await step(40);
   await shot('10-limpinha-brilho', { pos: [C.x + 1.0, 0.55, C.z + 0.5], look: [C.x, 0.28, C.z] });
+  // 10b. a Radhija lambendo a Rhaenyra: na bochecha (estica o pescoço para cima) e no flanco; a Rhaenyra fecha os
+  // olhos e abaixa a cabeça para a irmã menor. A Rhaenyra olha para +x; a Radhija vem do lado direito dela (−z).
+  const R2 = { x: 1.0, z: -0.3 };
+  const radLick = async (name, at, cams) => {
+    await setup({ stage: 'clean', active: 'radhija', place: { rhaenyra: { x: R2.x, z: R2.z, yaw: Math.PI / 2 }, radhija: { x: R2.x + at.dx, z: R2.z + at.dz, yaw: 0 } }, stay: 'rhaenyra', settle: 30 });
+    await page.keyboard.down('KeyL');
+    await until((i) => i.lick.by === 'radhija' && i.lick.stage === 'licking' && i.lick.strokes >= 1 && i.lick.phase > 0.9, 400);
+    for (const [k, ph] of [0.2, 0.42, 0.62].entries()) {
+      await until(new Function('i', `return i.lick.stage === 'licking' && i.lick.strokes >= 2 && i.lick.phase >= ${ph}`), 200);
+      for (const [c, cam] of cams.entries()) await shot(`${name}-${k + 1}${'abc'[c]}`, cam);
+    }
+    await page.keyboard.up('KeyL');
+    await until((i) => !i.lick.on, 120);
+  };
+  await radLick('10b-radhija-lambe-bochecha', { dx: 0.32, dz: -0.6 }, [
+    { pos: [R2.x + 1.45, 0.58, R2.z - 0.55], look: [R2.x + 0.25, 0.38, R2.z - 0.35] },
+    { pos: [R2.x + 0.85, 0.48, R2.z - 0.75], look: [R2.x + 0.28, 0.4, R2.z - 0.45] },
+  ]);
+  await radLick('10c-radhija-lambe-flanco', { dx: -0.12, dz: -0.62 }, [
+    { pos: [R2.x + 0.9, 0.6, R2.z - 0.85], look: [R2.x - 0.12, 0.33, R2.z - 0.5] },
+    { pos: [R2.x - 0.9, 0.62, R2.z - 0.95], look: [R2.x - 0.1, 0.32, R2.z - 0.5] },
+  ]);
   // 11. escorregador: subindo com a arrancada, pegando o frisbee, descendo de barriga
   await setup({ stage: 'clean', active: 'radhija', place: { radhija: { x: L.SLIDE_ENTRY.minX - 0.25, z: L.SLIDE.z, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 20 });
   const sideCam = { pos: [(L.SLIDE.x0 + L.SLIDE.x1) / 2 + 0.3, 1.1, L.SLIDE.z + 2.1], look: [(L.SLIDE.x0 + L.SLIDE.x1) / 2 + 0.3, 0.55, L.SLIDE.z] };

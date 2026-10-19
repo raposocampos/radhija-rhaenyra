@@ -2,7 +2,8 @@
 // Lambe-Lambe, arrancada no escorregador, pegar e entregar usam entrada real (teclado e controle falso).
 // Fluxo: a Radhija atravessa o túnel e sai enlameada → sem arrancada e escorregando → destrava o portão →
 // a Rhaenyra lambe até limpar → arrancada sobe o escorregador e desce com o frisbee → bolinha e frisbee
-// no piquenique. Antes, o Lambe-Lambe na fase 1 (teclado e L2) não pode virar superbafo.
+// no piquenique. Antes, o Lambe-Lambe na fase 1 com as duas dogs (teclado L e L2): não vira superbafo, e o R e o
+// R2 continuam sendo o superbafo da Radhija.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -42,12 +43,16 @@ try {
   });
   await H.sleep(300);
   await H.clearLog();
-  let state = await H.holdUntil(['KeyR'], (i) => i.lick.strokes >= 2, { timeout: 3000 });
-  check(state.lick.strokes >= 2 || (await H.logOf('dog:lick')).length >= 2, 'segurar R lambe a irmã em ritmo');
-  check((await H.logOf('dog:bafo')).length === 0, 'R com a Rhaenyra não vira superbafo');
-  check((await H.logOf('hint')).some((h) => h.text.startsWith('Só a Radhija tem o superbafo') && h.text.includes('Lambe-Lambe')), 'dica explica o botão compartilhado');
+  let state = await H.holdUntil(['KeyL'], (i) => i.lick.strokes >= 2, { timeout: 3000 });
+  check(state.lick.strokes >= 2 || (await H.logOf('dog:lick')).length >= 2, 'segurar L lambe a irmã em ritmo');
+  check((await H.logOf('dog:bafo')).length === 0, 'L com a Rhaenyra não vira superbafo');
   state = await waitFor((i) => !i.lick.on, { timeout: 2000 });
-  check(!state.lick.on, 'soltar R termina a lambida');
+  check(!state.lick.on, 'soltar L termina a lambida');
+  await H.clearLog();
+  await H.hold(['KeyR'], 300);
+  await H.sleep(200);
+  state = await info();
+  check(!state.lick.on && (await H.logOf('lick:start')).length === 0 && (await H.logOf('hint')).some((h) => h.text.startsWith('Só a Radhija tem o superbafo')), 'R com a Rhaenyra: só a dica do superbafo (não lambe)');
   // L2 do controle faz o mesmo
   await fakePad();
   await H.sleep(150);
@@ -56,6 +61,47 @@ try {
   state = await waitFor((i) => i.lick.on && i.lick.stage === 'licking' && i.lick.strokes >= 1, { timeout: 3000 });
   await padButton(6, false);
   check((await H.logOf('lick:start')).length === 1 && state.lick.strokes >= 1, 'L2/LT também lambe');
+  await waitFor((i) => !i.lick.on, { timeout: 2000 });
+  await ev(() => { window.__fakePads = []; });
+  await H.sleep(300);
+
+  // a Radhija também lambe (L), na bochecha da irmã maior; R e R2 seguem sendo o superbafo dela
+  console.log('\n== A Radhija lambe a Rhaenyra ==');
+  await H.press('KeyQ');
+  await ev(() => {
+    const g = window.__game.game;
+    const r = g.debug.ctrls.rhaenyra;
+    r.yaw = Math.PI / 2;
+    g.debug.teleport('radhija', r.x + 0.32, r.z - 0.62);
+    g.debug.ctrls.radhija.yaw = 0;
+    g.setStay('rhaenyra', true);
+  });
+  await H.sleep(300);
+  await H.clearLog();
+  await page.keyboard.down('KeyL');
+  state = await waitFor((i) => i.lick.on && i.lick.by === 'radhija' && i.lick.stage === 'licking' && i.lick.strokes >= 2 && i.lick.phase > 0.3 && i.lick.phase < 0.6, { timeout: 4000 });
+  check(state.lick.by === 'radhija' && state.lick.target === 'rhaenyra' && state.dogs.radhija.action === 'lick' && state.dogs.rhaenyra.action === 'licked', 'L com a Radhija lambe a Rhaenyra (e ela fecha os olhos)', `${state.lick.by}→${state.lick.target} ${state.dogs.radhija.action}/${state.dogs.rhaenyra.action}`);
+  await shot('00-radhija-lambe.png');
+  await page.keyboard.up('KeyL');
+  state = await waitFor((i) => !i.lick.on, { timeout: 2000 });
+  const licksRad = await H.logOf('dog:lick');
+  check(!state.lick.on && licksRad.length >= 2 && licksRad.every((l) => l.name === 'radhija' && l.target === 'rhaenyra'), 'soltar L termina; cada lambida chegou na irmã', JSON.stringify(licksRad.slice(0, 2)));
+  check((await H.logOf('dog:bafo')).length === 0, 'L com a Radhija não sopra');
+  await H.clearLog();
+  await page.keyboard.down('KeyR');
+  state = await waitFor((i) => i.bafo.aiming, { timeout: 2000 });
+  await page.keyboard.up('KeyR');
+  await H.sleep(250);
+  check((await H.logOf('dog:bafo')).length === 1 && (await H.logOf('lick:start')).length === 0, 'R com a Radhija continua sendo o superbafo');
+  await H.sleep(900); // resfriamento do bafo
+  await fakePad();
+  await H.sleep(150);
+  await H.clearLog();
+  await padButton(7, true);
+  state = await waitFor((i) => i.bafo.aiming, { timeout: 2000 });
+  await padButton(7, false);
+  await H.sleep(250);
+  check((await H.logOf('dog:bafo')).length === 1, 'R2/RT: superbafo');
   await ev(() => { window.__fakePads = []; });
   await H.sleep(300);
 
@@ -115,11 +161,11 @@ try {
   // Lambe-Lambe até limpar
   await station('rhaenyra', { x: L.LATCH.x - 0.35, z: L.LATCH.z - 0.75, yaw: 0.4 });
   await H.clearLog();
-  await page.keyboard.down('KeyR');
+  await page.keyboard.down('KeyL');
   state = await waitFor((i) => i.lick.strokes >= 2 && i.lick.stage === 'licking' && i.lick.phase > 0.25 && i.lick.phase < 0.55, { timeout: 5000 });
   await shot('05-lambe-lambe.png');
   state = await waitFor((i) => lambe(i).mud.radhija.k === 0, { timeout: 8000 });
-  await page.keyboard.up('KeyR');
+  await page.keyboard.up('KeyL');
   check(lambe(state).mud.radhija.k === 0, 'cinco lambidas limpam a Radhija');
   check((await H.logOf('mud:lick')).length === 5 && (await H.logOf('mud:clean')).length === 1, 'cada lambida tira uma placa; a última deixa limpinha');
   await H.gsleep(800);
