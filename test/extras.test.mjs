@@ -213,11 +213,12 @@ test('extras: sem espaço ela nem gira (fareja e agacha ali), sem atravessar nad
   h.game.setStay(sis, true);
   const c = h.ctrls[who];
   // encostada na beirada da fase, de frente para ela (não cabe nem um passo para a frente), num ponto em que ela
-  // cabe parada (sem ficar espremida entre a beirada e algum colisor)
+  // cabe parada (sem ficar espremida entre a beirada e algum colisor) e com chão livre atrás
   let want = null;
   for (let x = b.minX + 1; x < b.maxX - 1 && !want; x += 0.4) {
     const p = h.teleport(who, x, b.minZ - 0.5);
-    if (!hitsStatic(h, p.x, p.z, c.r * 0.98, c.size) && p.z - b.minZ < c.r + 0.01) want = { x, z: b.minZ - 0.5 };
+    const open = !hitsStatic(h, p.x, p.z, c.r * 0.98, c.size) && !hitsStatic(h, p.x, p.z + 0.4, 0.2, c.size);
+    if (open && p.z - b.minZ < c.r + 0.01) want = { x, z: b.minZ - 0.5 };
   }
   assert.ok(want, 'um ponto livre na beirada');
   const p = h.teleport(who, want.x, want.z);

@@ -195,11 +195,20 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     x: x - Math.sin(yaw) * c.r * back + Math.cos(yaw) * c.r * side,
     z: z - Math.cos(yaw) * c.r * back - Math.sin(yaw) * c.r * side,
   });
-  /** O chão livre mais perto de atrás dela (encostada em algo, o cocô não cai dentro dele). */
+  /**
+   * O chão livre mais perto de atrás dela (encostada em algo, o cocô não cai dentro dele): atrás, um pouco para os
+   * lados e, num cantinho apertado, em volta dela.
+   */
   function freePoopSpot(c, x, z, yaw) {
     for (const [back, side] of [[1.45, 0], [1.45, 0.6], [1.45, -0.6], [1.2, 0.9], [1.2, -0.9], [1.2, 0]]) {
       const spot = poopSpot(c, x, z, yaw, back, side);
       if (!overlaps(spot.x, spot.z, 0.05, c.size)) return spot;
+    }
+    for (const a of [0.6, -0.6, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2, Math.PI]) {
+      for (const d of [1.5, 1.9]) {
+        const spot = poopSpot(c, x, z, yaw, d * Math.cos(a), d * Math.sin(a));
+        if (!overlaps(spot.x, spot.z, 0.05, c.size)) return spot;
+      }
     }
     return poopSpot(c, x, z, yaw);
   }
