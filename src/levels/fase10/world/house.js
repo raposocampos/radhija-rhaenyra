@@ -191,17 +191,18 @@ export function paintingTexture() {
     g.beginPath(); g.moveTo(lx - 4, ly + 4); g.lineTo(lx - 14, ly + 26); g.lineTo(lx - 4, ly + 22); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(lx + 4, ly + 4); g.lineTo(lx + 14, ly + 26); g.lineTo(lx + 4, ly + 22); g.closePath(); g.fill();
     g.fillStyle = '#b83a6e'; g.beginPath(); g.arc(lx, ly, 6, 0, TAU); g.fill();
-    // vela do 2 no andar do meio (com a chaminha)
-    const cx2 = tx + 32, cy2 = b0 - 96 - 4;
+    // vela do 2 no anel do andar do meio, ao lado do andar de cima (com a chaminha)
+    const cx2 = tx + 48, cy2 = b0 - 96 + 5;
+    g.fillStyle = '#3a2a20'; g.fillRect(cx2 - 1.5, cy2 - 2, 3, 6); // o espeto entrando no bolo
     g.fillStyle = '#7cc4e8';
-    g.font = 'bold 44px "Trebuchet MS", sans-serif';
+    g.font = 'bold 30px "Trebuchet MS", sans-serif';
     g.textAlign = 'center';
     g.fillText('2', cx2, cy2);
     g.strokeStyle = '#fffaf0'; g.lineWidth = 2; g.strokeText('2', cx2, cy2);
     g.strokeStyle = '#3a2a20'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(cx2, cy2 - 32); g.lineTo(cx2, cy2 - 38); g.stroke();
-    g.fillStyle = '#ffb63d'; g.beginPath(); g.ellipse(cx2, cy2 - 45, 5, 9, 0, 0, TAU); g.fill();
-    g.fillStyle = '#fff3b0'; g.beginPath(); g.ellipse(cx2, cy2 - 43, 2.4, 5, 0, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(cx2, cy2 - 22); g.lineTo(cx2, cy2 - 27); g.stroke();
+    g.fillStyle = '#ffb63d'; g.beginPath(); g.ellipse(cx2, cy2 - 33, 4.5, 8, 0, 0, TAU); g.fill();
+    g.fillStyle = '#fff3b0'; g.beginPath(); g.ellipse(cx2, cy2 - 31, 2.2, 4.5, 0, 0, TAU); g.fill();
     // chapeuzinho no topo
     const hx = tx, hy = b0 - 134;
     g.fillStyle = '#ff8fc4';
@@ -707,34 +708,35 @@ export function buildHouse(root, layout) {
   // ---- estante de livros no canto
   const shelf = new THREE.Group();
   const shelfWood = woodMat('#7a5234', { key: 'f10-estante' });
+  // encostada na parede do fundo, com as prateleiras viradas para a sala (e para a câmera)
   const sw = BOOKSHELF.hx * 2, sd = BOOKSHELF.hz * 2;
   for (const s of [-1, 1]) {
-    const side = new THREE.Mesh(new THREE.BoxGeometry(sw, BOOKSHELF.h, 0.03), shelfWood);
-    side.position.set(0, BOOKSHELF.h / 2, s * (sd / 2 - 0.015));
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.03, BOOKSHELF.h, sd), shelfWood);
+    side.position.set(s * (sw / 2 - 0.015), BOOKSHELF.h / 2, 0);
     shelf.add(side);
   }
-  const backP = new THREE.Mesh(new THREE.BoxGeometry(0.02, BOOKSHELF.h, sd), shelfWood);
-  backP.position.set(-sw / 2 + 0.01, BOOKSHELF.h / 2, 0);
+  const backP = new THREE.Mesh(new THREE.BoxGeometry(sw, BOOKSHELF.h, 0.02), shelfWood);
+  backP.position.set(0, BOOKSHELF.h / 2, -sd / 2 + 0.01);
   shelf.add(backP);
   const r = rng(77);
   const bookCols = ['#c96b5a', '#6f9a8a', '#f2c14e', '#5a6fa0', '#e8a0a8', '#8a6a9a', '#a0c070', '#f0e0c0'];
   const books = [];
   for (let k = 0; k < 5; k++) {
     const y = 0.08 + k * 0.42;
-    const board = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.03, sd - 0.04), shelfWood);
-    board.position.set(0, y, 0);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(sw - 0.04, 0.03, sd - 0.02), shelfWood);
+    board.position.set(0, y, 0.01);
     shelf.add(board);
     if (k === 4) break;
-    let z = -sd / 2 + 0.05;
-    while (z < sd / 2 - 0.08) {
+    let x = -sw / 2 + 0.05;
+    while (x < sw / 2 - 0.08) {
       const bw = 0.03 + r() * 0.035, bh = 0.2 + r() * 0.13;
-      if (r() < 0.12) { z += 0.06; continue; }
-      const g = new THREE.BoxGeometry(0.2 + r() * 0.06, bh, bw);
-      g.translate(-sw / 2 + 0.14, y + 0.015 + bh / 2, z + bw / 2);
-      if (r() < 0.15) g.rotateX(0.12);
+      if (r() < 0.12) { x += 0.06; continue; }
+      const g = new THREE.BoxGeometry(bw, bh, 0.2 + r() * 0.05);
+      if (r() < 0.15) g.rotateZ(0.12);
+      g.translate(x + bw / 2, y + 0.015 + bh / 2, -sd / 2 + 0.14);
       paint(g, bookCols[Math.floor(r() * bookCols.length)]);
       books.push(g);
-      z += bw + 0.004;
+      x += bw + 0.004;
     }
   }
   const bookMesh = new THREE.Mesh(mergeGeometries(books), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 }));

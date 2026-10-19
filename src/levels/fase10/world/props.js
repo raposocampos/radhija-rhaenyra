@@ -69,12 +69,22 @@ export function createBow() {
   const satin = new THREE.MeshPhysicalMaterial({ color: '#f06aa0', roughness: 0.32, sheen: 1, sheenColor: new THREE.Color('#ffd0e3'), clearcoat: 0.4, emissive: '#000000', side: THREE.DoubleSide });
   const dark = new THREE.MeshPhysicalMaterial({ color: '#d0467e', roughness: 0.35, sheen: 1, sheenColor: new THREE.Color('#ffc0d8'), emissive: '#000000' });
   for (const s of [-1, 1]) {
-    // alça: anel achatado inclinado
-    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.016, 10, 24), satin);
-    loop.scale.set(1.25, 0.8, 0.45);
-    loop.position.set(s * 0.05, 0.008, 0);
-    loop.rotation.z = s * 0.25;
-    g.add(loop);
+    // alça: gota estufada (mais larga na ponta, afinando no nó), com a dobra mais escura por dentro
+    const lobeGeo = new THREE.SphereGeometry(0.036, 18, 12);
+    const lp = lobeGeo.attributes.position;
+    for (let i = 0; i < lp.count; i++) {
+      const x = lp.getX(i);
+      const k = 0.62 + 0.38 * ((x / 0.036) * s * 0.5 + 0.5); // afina perto do nó
+      lp.setXYZ(i, x * 1.55, lp.getY(i) * k, lp.getZ(i) * 0.55 * k);
+    }
+    lobeGeo.computeVertexNormals();
+    const lobe = new THREE.Mesh(lobeGeo, satin);
+    lobe.position.set(s * 0.052, 0.01, 0);
+    lobe.rotation.z = s * 0.28;
+    const fold = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), dark);
+    fold.scale.set(1.6, 1, 0.8);
+    fold.position.set(s * 0.03, 0.006, 0.014);
+    g.add(lobe, fold);
     // ponta caída com o corte em V
     const tail = new THREE.Shape();
     tail.moveTo(-0.014, 0); tail.lineTo(0.014, 0); tail.lineTo(0.02, -0.08); tail.lineTo(0, -0.066); tail.lineTo(-0.012, -0.084); tail.closePath();
@@ -262,7 +272,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   const st = {
     hlHat: false, hlRibbon: false, hlCandle: false, glow: { hat: 0, ribbon: 0, candle: 0 },
     hatOnBoat: true, power: false, powerT: -1, lightsOn: false, fanWant: false, fanOn: false, tapOn: false,
-    lit: false, litT: 0,
+    lit: false, litT: 0, lampI: 0,
   };
   const boatPos = new THREE.Vector3();
   /** O chapéu acompanha o barquinho (no convés) enquanto ninguém o pega. */
@@ -362,7 +372,9 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       const fanReady = st.lightsOn && conduitOutlet.arrived;
       const fanOn = st.fanWant && fanReady;
       if (fanOn !== st.fanOn) { st.fanOn = fanOn; yard.fan.setPower(fanOn); }
-      porchLight.intensity = ease(porchLight.intensity, st.lightsOn ? 1.4 : 0.0, dt, 3) + (st.lit ? 0.4 * Math.sin(t * 13) * Math.sin(t * 7.3) + 0.5 : 0);
+      // o lampião acende com a festa; com a vela acesa, uma chaminha tremendo por cima (sem acumular)
+      st.lampI = ease(st.lampI, st.lightsOn ? 1.3 : 0.0, dt, 3);
+      porchLight.intensity = st.lampI + (st.lit ? 0.25 + 0.12 * Math.sin(t * 13) * Math.sin(t * 7.3) : 0);
       if (st.lit) porchLight.color.set('#ffb070'); else porchLight.color.set('#ffc48a');
       // chapéu no barco
       hatOnBoatPose();

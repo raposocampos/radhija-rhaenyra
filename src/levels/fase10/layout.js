@@ -56,7 +56,7 @@ export const COFFEE_TABLE = { x: -10.0, z: -2.35, hx: 0.48, hz: 0.28, h: 0.36 };
 export const SIDEBOARD = { x: -10.3, z: -5.78, hx: 0.85, hz: 0.22, h: 0.62 };
 /** O quadro da festa do ano passado: na parede do fundo, em cima do aparador (centro, altura e tamanho). */
 export const PAINTING = { x: -10.3, y: 1.62, z: -6.0, w: 1.15, h: 0.82 };
-export const BOOKSHELF = { x: -11.62, z: -5.4, hx: 0.34, hz: 0.5, h: 2.0 };
+export const BOOKSHELF = { x: -11.575, z: -5.7, hx: 0.42, hz: 0.3, h: 2.0 };
 export const ARMCHAIR = { x: -11.2, z: -2.6, r: 0.42 };
 export const FLOOR_LAMP = { x: -11.55, z: -1.0, r: 0.14 };
 export const RUG = { x: -10.0, z: -2.4, rx: 1.45, rz: 1.0 };

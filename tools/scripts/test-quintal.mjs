@@ -139,7 +139,9 @@ try {
   await shot('06-balde-la-em-cima.png');
   state = await waitFor((s) => s.ribbon?.holder === 'radhija' && !s.quintal.deck, { timeout: 12000 });
   check(state.ribbon?.holder === 'radhija', 'lá em cima ela desamarra o laço e desce pelo escorregador');
-  await page.keyboard.press('KeyE'); // solta a corda
+  await page.keyboard.press('KeyE'); // solta a corda (espera antes do Q: no mesmo quadro, o E iria para a Radhija)
+  state = await waitFor((s) => s.quintal.rope.holder === null, { timeout: 1500 });
+  check(qt(state).rope.holder === null, 'E: a Rhaenyra solta a corda (o balde desce)');
   await as('radhija');
   await clearLog();
   state = await toCake(L);
@@ -155,6 +157,7 @@ try {
   await put('rhaenyra', 8.95, L.HORTA.z0 - 0.42, 0);
   state = await H.holdUntil(keysFor(0, 1), (s) => s.quintal.inHorta.rhaenyra && !s.dogs.rhaenyra.jumping, { timeout: 2000, during: () => page.keyboard.press('Space') });
   check(qt(state).inHorta.rhaenyra, 'a Rhaenyra pula a cerca baixa da horta');
+  await walkTo(8.62, 1.75, { tol: 0.12 }); // pertinho da irmã
   state = await H.holdUntil(['KeyR'], (s) => s.quintal.mud.k === 0, { timeout: 8000 });
   check(qt(state).mud.k === 0, 'o Lambe-Lambe tira a lama', JSON.stringify(qt(state).mud));
   await walkTo(L.PLATE.x, L.PLATE.z, { tol: 0.1 });
