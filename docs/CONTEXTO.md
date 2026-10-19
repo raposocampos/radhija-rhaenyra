@@ -26,7 +26,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI e E2E no head novo, prévia ao usuário e aprovação explícita antes de integrar; avisar o
   orquestrador ao integrar. Se o #36 entrar antes, atualizar com o main e revalidar.
 
-## Em andamento: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (Claude)
+## Entregue: os porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`)
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
