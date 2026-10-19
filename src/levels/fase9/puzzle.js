@@ -125,7 +125,7 @@ export function createPuzzle(ctx) {
     bookX: BOOK_FALL.x, bookZ: BOOK_FALL.z, fallT: -1,
     /** @type {CatState} */ cat: /** @type {CatState} */ ('asleep'),
     catT: 0, catD: 0, catX: CAT.top.x, catZ: CAT.top.z,
-    /** @type {null | { phase: string, t: number, x0: number, z0: number, yaw0: number, grabbed: boolean, lx: number, action?: string, slope?: number }} */
+    /** @type {null | { phase: string, t: number, x0: number, z0: number, yaw0: number, grabbed: boolean, lx: number, action?: string, slope?: number, fx?: number, fy?: number, fz?: number, fyaw?: number }} */
     climb: null,
     climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
     aligned: false, wasDoorOpen: false, doorHintT: 0, ductHint: false, wasAligned: false,
@@ -282,6 +282,13 @@ export function createPuzzle(ctx) {
     cl.t += dt;
     const n = LADDER.steps;
     const slope = Math.atan2(LADDER.top, 0.66) * 0.55;
+    // a Rhaenyra soltou no meio da subida (desligou o Fica ou saiu do pé da escada): a escada rola e a Radhija desce
+    if ((cl.phase === 'up' || (cl.phase === 'grab' && !cl.grabbed)) && !steady()) {
+      S.rollFrom = cl.lx;
+      S.rollTo = Math.min(LADDER.maxX, cl.lx + LADDER.rollBack);
+      Object.assign(cl, { phase: 'fall', t: 0, fx: c.x, fy: c.y, fz: c.z, fyaw: c.yaw });
+      emit('ladder:slip', { name: c.name, x: cl.lx, z: ladder.z });
+    }
     if (cl.phase === 'up') {
       const u = clamp01(cl.t / CLIMB.upTime);
       const f = u * n;
@@ -319,12 +326,25 @@ export function createPuzzle(ctx) {
       const u = clamp01(cl.t / (CLIMB.slipTime * 0.55));
       const lx = S.rollFrom + (S.rollTo - S.rollFrom) * smooth((u - 0.35) / 0.65);
       ladder.setPos(lx, ladder.z);
+      // stepPoint já acompanha a escada rolando (lx)
       const p = hop({ x: cl.x0, y: 0, z: cl.z0 }, stepPoint(1, lx), Math.min(1, u * 1.6));
       const k = smooth(cl.t / 0.2);
-      pose(c, p.x + (lx - S.rollFrom) * smooth(u), p.y, p.z, cl.yaw0 + wrap(NORTH - cl.yaw0) * k, 0.8, u > 0.5 ? 'startled' : 'jump', 0);
+      pose(c, p.x, p.y, p.z, cl.yaw0 + wrap(NORTH - cl.yaw0) * k, 0.8, u > 0.5 ? 'startled' : 'jump', 0);
       if (u >= 1) {
         Object.assign(cl, { phase: 'slipDown', t: 0, lx });
         emit('ladder:roll', { x: lx, z: ladder.z });
+      }
+    } else if (cl.phase === 'fall') {
+      // a escada rola para o leste e ela pula de onde estava para o chão, na frente dos degraus
+      const u = clamp01(cl.t / (CLIMB.slipTime * 0.75));
+      const lx = S.rollFrom + (S.rollTo - S.rollFrom) * smooth(u / 0.6);
+      ladder.setPos(lx, ladder.z);
+      const p = hop({ x: cl.fx, y: cl.fy, z: cl.fz }, { x: cl.fx, y: 0, z: stepPoint(0, S.rollFrom).z + 0.16 }, u);
+      pose(c, p.x, p.y, p.z, cl.fyaw, 0, 'startled', 0);
+      if (u >= 1) {
+        emit('ladder:roll', { x: lx, z: ladder.z });
+        hints.now('roll', 4.2, 2);
+        finishClimb(c);
       }
     } else if (cl.phase === 'slipDown') {
       const u = clamp01(cl.t / (CLIMB.slipTime * 0.45));

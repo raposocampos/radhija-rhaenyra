@@ -154,6 +154,36 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   assert.equal(vic[0].hasNext, false, 'a 9 é a última por enquanto');
 });
 
+test('fase 9: se a Rhaenyra solta no meio da subida, a escada rola e a Radhija desce sem os óculos', async () => {
+  const h = await game();
+  h.run(0.3);
+  as(h, 'rhaenyra');
+  wallJump(h, L.BRAKE_LEVER, [[-2.2, 0.2], [-0.9, 0.15], [1.4, 0.35], [3.6, -1.0]]);
+  h.game.debug.puzzle.placeCrate('globo', L.GLOBE.minX);
+  h.game.debug.puzzle.placeCrate('escadinha', L.LADDER.minX);
+  h.run(0.1);
+  const hold = { x: L.LADDER.minX + L.LADDER_HOLD.side, z: L.LADDER_HOLD.z };
+  h.walkPath([[hold.x + 0.2, -1.9], [hold.x + 0.05, hold.z + 0.05]], { tol: 0.1 });
+  h.tap('KeyQ');
+  h.tap('KeyF');
+  assert.equal(lib(h).held, true, 'a Rhaenyra segura a escada');
+  h.walkPath([[L.LADDER.minX + 0.1, -1.55], [L.LADDER.minX, -1.98]], { tol: 0.08 });
+  h.hold([0, -1]);
+  h.run(0.15);
+  h.hold(null);
+  h.run(0.1);
+  h.tap('KeyE');
+  assert.equal(lib(h).climb?.phase, 'up', 'começou a subir');
+  h.run(0.5);
+  h.tap('KeyF'); // a Rhaenyra deixa de ficar no meio da subida
+  h.run(0.05);
+  assert.equal(lib(h).climb?.phase, 'fall', 'sem apoio, a escada rola e ela desce');
+  assert.ok(h.run(2, { until: (i) => !i.biblioteca.climb }), 'desceu');
+  assert.equal(h.ctrls.radhija.y, 0);
+  assert.equal(lib(h).glasses, 'shelf', 'os óculos continuam na estante');
+  assert.ok(ladderOf(h).x > L.LADDER.minX + 0.1, 'a escada rolou para o leste');
+});
+
 test('fase 9: travada, a escada não anda; sem segurar, ela rola; a Rhaenyra não sobe', async () => {
   const h = await game();
   h.run(0.3);
