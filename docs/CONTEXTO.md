@@ -3,7 +3,22 @@
 Última atualização: **2026-10-19, Claude** (pombo mais bonito, PR #34, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
+## Em andamento: comemoração sem giro parado (Claude, branch `claude/comemoracao-natural`)
+
+- Pedido do usuário (2026-10-19): na comemoração as dogs "giram um 360 sem andar, estranho, não fica natural".
+- Feito: em `dogAnimation.js` o ciclo da comemoração (3,2 s) virou pulinhos → **voltinha andando** num círculo de
+  ~20 cm (rumo, velocidade e giro vêm do círculo: as patas pisam, o corpo inclina e curva, a cabeça olha para onde
+  vai) → reverência. O giro de 360° do corpo parado saiu. `game.js` manda `anim.celebrateSide` (a voltinha vai para o
+  lado de fora, longe da irmã). Vale para o modelo atual e para o novo (que copia a pose). Teste em
+  `test/dogs.test.mjs`.
+- Próximo passo: CI e E2E `todas` (a comemoração fecha todas as fases), prévia e aprovação.
+
+## Entregue: modelos novos das dogs, etapa 1 (PR #37, squash `e9e61fb`, deploy `39312448427`)
+
+Aprovado pelo usuário na versão `1be2cc6`; produção conferida em `e9e61fb`. Não repetir merge/deploy. O que segue é o
+registro da etapa 1 (as etapas 2–5 continuam):
+
+### Modelos novos das dogs: plano e etapa 1
 
 - Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
   sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +

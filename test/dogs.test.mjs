@@ -71,3 +71,36 @@ test('createDog: todas as ações rodam sem NaN nos ossos', () => {
   assert.equal(d.meshes.fur.material.userData.uniforms.uWet.value, 1, 'setWet limita a 1');
   d.setWet(0);
 });
+
+test('comemoração: a volta é andando (o corpo percorre um círculo e as patas pisam), não um giro parado', () => {
+  for (const kind of ['radhija', 'rhaenyra']) {
+    for (const side of [1, -1]) {
+      const d = createDog(kind);
+      const inner = d.object.children[0];
+      let steps = 0;
+      d.onFootstep = () => steps++;
+      for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+      let far = 0;
+      let halfX = 0;
+      let maxTurn = 0;
+      let stepsInCircle = 0;
+      for (let f = 0; f < Math.round(3.2 * 60); f++) {
+        const t = f / 60;
+        const before = steps;
+        d.update(1 / 60, { speed: 0, action: 'celebrate', celebrateSide: side });
+        const off = Math.hypot(inner.position.x, inner.position.z);
+        far = Math.max(far, off);
+        maxTurn = Math.max(maxTurn, Math.abs(inner.rotation.y));
+        // no meio da voltinha (de costas para onde estava olhando), ela está do lado pedido, longe do lugar
+        if (Math.abs(Math.abs(inner.rotation.y) - Math.PI) < 0.25) halfX = inner.position.x;
+        if (t > 0.8 && t < 2.1) stepsInCircle += steps - before;
+      }
+      d.onFootstep = null;
+      assert.ok(maxTurn > 5.5, `${kind}: deu a volta inteira (${maxTurn.toFixed(2)} rad)`);
+      assert.ok(far > 0.3, `${kind}: andou o círculo (afastou ${far.toFixed(2)} m do lugar)`);
+      assert.ok(halfX * side > 0.25, `${kind}: a voltinha vai para o lado ${side > 0 ? 'esquerdo' : 'direito'} (x ${halfX.toFixed(2)} m)`);
+      assert.ok(stepsInCircle >= 3, `${kind}: as patas pisam na voltinha (${stepsInCircle} pisadas)`);
+      assert.ok(Math.hypot(inner.position.x, inner.position.z) < 0.02 && Math.abs(inner.rotation.y % (2 * Math.PI)) < 0.05, `${kind}: termina de frente, no lugar dela`);
+    }
+  }
+});

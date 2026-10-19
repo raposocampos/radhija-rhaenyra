@@ -868,6 +868,8 @@ export interface DogAnim {
   party?: PoopPartyPose | null;
   /** Extras: segundos desde que a irmã viu a comemoração (−1 = sem). */
   cheer?: number;
+  /** Comemoração: lado da voltinha andando (+1 = esquerda da dog, −1 = direita), longe da irmã. */
+  celebrateSide?: number;
   /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
   extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
 }

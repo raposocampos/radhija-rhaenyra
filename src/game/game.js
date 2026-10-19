@@ -87,7 +87,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -734,6 +734,10 @@ export function createGame({ engine, dogs, levels, params }) {
       steer(c, dt, intent);
       integrate(c, dt, world);
       anims[n].action = st.arrived ? 'celebrate' : 'none';
+      // a voltinha da comemoração vai para o lado de fora, longe da irmã (o x local da dog é a esquerda dela)
+      const sis = G.celebrate[n === 'radhija' ? 'rhaenyra' : 'radhija'];
+      const away = (spot.x - sis.x) * Math.cos(c.yaw) - (spot.z - sis.z) * Math.sin(c.yaw);
+      anims[n].celebrateSide = away < 0 ? -1 : 1;
       setLook(n, st.arrived ? { x: celebCam.position.x, y: 1.0, z: celebCam.position.z } : null);
     }
     if (celebrateT >= CELEBRATE_DUR) {

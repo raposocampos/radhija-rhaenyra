@@ -10,7 +10,8 @@
 //   botão, m), wallPaws/wallSide (altura e afastamento das patinhas dianteiras pintadas, m), wallLat (quanto ela está
 //   à esquerda do botão, m), poopK (0..1 da sequência do cocô; −1 sem), poopPre (0..1 da voltinha antes dela; −1 sem),
 //   party (comemoração do segredo: { glee, bow, hop (m), air (0..1 no ar; −1 no chão), jump, brace, zoom }; null sem),
-//   cheer (s desde que a irmã viu a comemoração; −1 sem), extra ({ kind, k (0..1), t (s) }: animação do cenário —
+//   cheer (s desde que a irmã viu a comemoração; −1 sem), celebrateSide (±1: para que lado ela dá a voltinha da
+//   comemoração, longe da irmã; + = esquerda dela), extra ({ kind, k (0..1), t (s) }: animação do cenário —
 //   'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll'; null sem) }). Os extras ficam em src/game/extras.js.
 import * as THREE from 'three';
 
@@ -82,6 +83,14 @@ const POOP_SCRATCH = [[0, 0], [0.69, 0], [0.73, 1], [0.93, 1], [0.97, 0], [1, 0]
 /** Momento em que o cocô aparece e as patadas de cavar (o jogo solta a terrinha em cada uma). */
 export const POOP_DROP = 0.3;
 export const POOP_KICKS = Object.freeze({ from: 0.73, to: 0.93, n: 5 });
+/**
+ * Comemoração (action 'celebrate'), em ciclos de CEL_CYCLE s: dois pulinhos, uma voltinha andando de verdade num
+ * círculo pequeno (as patas pisam e o corpo inclina na curva; antes era um giro de 360° parado, sem andar) e a
+ * reverência de brincadeira. CEL_CIRCLE = [início, fim] da voltinha (s no ciclo); CEL_R = raio do círculo (m, × escala).
+ */
+const CEL_CYCLE = 3.2;
+const CEL_CIRCLE = [0.8, 2.1];
+const CEL_R = 0.2;
 /** A irmã vendo a comemoração (s): olhos arregalados e orelhas em pé ("uau!"), depois alegria. */
 const CHEER_WOW = [[0, 0], [0.07, 1], [0.5, 1], [0.78, 0]];
 /** Patada de cavar: puxa a pata para trás rápido e devolve. */
@@ -308,8 +317,22 @@ export function createDogAnimation(ctx) {
     const A = anim || {};
     carry.sync();
     const action = A.action || 'none';
-    const speedIn = Math.max(0, A.speed || 0);
-    const turn = A.turn || 0;
+    // comemoração: na voltinha, a passada e a curva vêm do próprio círculo (velocidade e giro de verdade)
+    let circ = null;
+    if (action === 'celebrate') {
+      const c = ((action !== st.prevAction ? 0 : st.celT) + dt) % CEL_CYCLE; // a comemoração recomeça do zero
+      if (c >= CEL_CIRCLE[0] && c < CEL_CIRCLE[1]) {
+        const T = CEL_CIRCLE[1] - CEL_CIRCLE[0];
+        const u = (c - CEL_CIRCLE[0]) / T;
+        const dir = A.celebrateSide < 0 ? -1 : 1;
+        const R = CEL_R * s;
+        const phi = dir * TAU * (u * u * (3 - 2 * u)); // rumo (rad): começa e termina de frente, devagar nas pontas
+        const om = (dir * TAU * 6 * u * (1 - u)) / T; // rad/s
+        circ = { phi, om, v: R * Math.abs(om), x: R * dir * (1 - Math.cos(phi)), z: R * dir * Math.sin(phi) };
+      }
+    }
+    const speedIn = Math.max(0, A.speed || 0, circ ? circ.v : 0);
+    const turn = circ ? circ.om : A.turn || 0;
     st.t += dt;
     const t = st.t;
     const damp = (cur, target, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
@@ -353,7 +376,8 @@ export function createDogAnimation(ctx) {
     const glee = PY ? PY.glee : 0;
     const pBrace = PY ? PY.brace : 0;
     const pAir = PY && PY.air >= 0 ? PY.air : -1;
-    const curveW = Math.max(w.pre, PY ? PY.zoom : 0); // apoios girando com o corpo na curva
+    st.circW = damp(st.circW || 0, circ ? 1 : 0, 10);
+    const curveW = Math.max(w.pre, PY ? PY.zoom : 0, st.circW); // apoios girando com o corpo na curva
     const ct = A.cheer ?? -1;
     const wow = ct >= 0 ? keyed(CHEER_WOW, ct) : 0;
     const glad = ct >= 0 ? sstep(0.45, 0.75, ct) : 0;
@@ -450,23 +474,23 @@ export function createDogAnimation(ctx) {
     const xStill = Math.max(squat, scratchK, xEnv, xRoll);
     const happyX = Math.max(reliefK * 0.9, scratchK * 0.7, xDig * 0.85, xRoll * 0.8, xEat * 0.55, xDrink * 0.45, glee, glad * 0.95, w.pre * 0.55);
 
-    // comemoração: pulinhos → giro → "play bow"
-    let hopTarget = 0, bowTarget = 0, spinTarget = null, celHappy = w.celebrate;
+    // comemoração: pulinhos → voltinha andando → "play bow"
+    let hopTarget = 0, bowTarget = 0, celHappy = w.celebrate;
     if (action === 'celebrate') {
       st.celT += dt;
-      const c = st.celT % 2.8;
-      if (c < 0.9) {
-        const u = (c % 0.45) / 0.45;
+      const c = st.celT % CEL_CYCLE;
+      if (c < CEL_CIRCLE[0]) {
+        const u = (c % 0.4) / 0.4;
         hopTarget = Math.sin(Math.PI * u) * 0.075 * s;
-      } else if (c < 1.65) {
-        const u = (c - 0.9) / 0.75;
-        spinTarget = TAU * Math.floor(st.celT / 2.8) + TAU * (u * u * (3 - 2 * u));
-        hopTarget = Math.sin(Math.PI * u) * 0.05 * s;
-      } else {
+      } else if (c >= CEL_CIRCLE[1]) {
         bowTarget = 1;
       }
-      if (spinTarget === null) spinTarget = TAU * Math.round(st.spin / TAU);
-      st.spin = c >= 0.9 && c < 1.65 ? spinTarget : damp(st.spin, spinTarget, 10);
+      // na voltinha o rumo é o do círculo; fora dela volta suave para a frente
+      if (circ) st.spin = circ.phi;
+      else {
+        st.spin = damp(st.spin, TAU * Math.round(st.spin / TAU), 10);
+        if (Math.abs(st.spin - TAU * Math.round(st.spin / TAU)) < 1e-3) st.spin = 0;
+      }
     } else {
       st.spin = damp(st.spin, TAU * Math.round(st.spin / TAU), 6);
       if (Math.abs(st.spin - TAU * Math.round(st.spin / TAU)) < 1e-3) st.spin = 0;
@@ -498,6 +522,10 @@ export function createDogAnimation(ctx) {
     const xBack = xKind === 'roll' ? sstep(1.3, 2.5, rollA) : 0; // de costas (patinhas para o ar)
     inner.rotation.z = rollA;
     inner.position.x = 0;
+    // voltinha da comemoração: o corpo anda o círculo em volta do lugar dela
+    const circX = circ ? circ.x : 0, circZ = circ ? circ.z : 0;
+    inner.position.x += circX;
+    inner.position.z += circZ;
     if (rollA !== 0) {
       // gira em torno do meio do tronco (0, hc), que fica no lugar; a altura vem do contato com o chão (no fim)
       const hc = cfg.visual.shoulder * 0.72;
@@ -763,7 +791,7 @@ export function createDogAnimation(ctx) {
       const c = Math.cos(yaw), sn = Math.sin(yaw);
       const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
       const hp = Wp[BI.head];
-      tYaw = clamp(Math.atan2(lx - hp.x, lz - hp.z), -1.15, 1.15);
+      tYaw = clamp(Math.atan2(lx - hp.x, lz - hp.z), -1.15, 1.15) * (1 - st.circW) + st.turnS * 0.12 * st.circW;
       const hd = Math.hypot(lx - hp.x, lz - hp.z);
       tPitch = clamp(-Math.atan2((A.lookAt.y ?? 0.3) - (object.position.y + hp.y), Math.max(hd, 0.2)), -0.5, 0.55);
     } else {
@@ -938,8 +966,8 @@ export function createDogAnimation(ctx) {
     // sombra de contato e marcador
     const rp = Wp[0];
     const cs = Math.cos(st.spin), sn = Math.sin(st.spin);
-    shadow.position.x = rp.x * cs + rp.z * sn;
-    shadow.position.z = -rp.x * sn + rp.z * cs - w.sit * 0.03 * s + inner.position.z * 0.6;
+    shadow.position.x = rp.x * cs + rp.z * sn + circX;
+    shadow.position.z = -rp.x * sn + rp.z * cs - w.sit * 0.03 * s + (inner.position.z - circZ) * 0.6 + circZ;
     shadow.rotation.y = st.spin;
     const lift01 = clamp(st.hop / (0.1 * s), 0, 1);
     const liftJ = clamp((jumpY + wallLiftY * 0.7) / 0.5, 0, 1); // sombra do pulo: fica no chão, menor e mais clara
@@ -947,9 +975,9 @@ export function createDogAnimation(ctx) {
     shadow.material.opacity = 0.55 * (1 - lift01 * 0.5) * (1 - liftJ * 0.5);
     const hp = Wp[BI.head];
     markerAnchor.position.set(
-      lerp(markerAnchor.position.x, hp.x * cs + hp.z * sn, 0.2),
+      lerp(markerAnchor.position.x, hp.x * cs + hp.z * sn + circX, 0.2),
       cfg.visual.headTop + 0.14 + st.hop + jumpY + wallLiftY,
-      lerp(markerAnchor.position.z, -hp.x * sn + hp.z * cs, 0.2),
+      lerp(markerAnchor.position.z, -hp.x * sn + hp.z * cs + circZ, 0.2),
     );
   }
 
