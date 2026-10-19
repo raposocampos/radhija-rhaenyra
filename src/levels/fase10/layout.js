@@ -165,7 +165,7 @@ export const BUCKET = { x: 6.95, z: -3.12, r: 0.24, top: DECK.h, pulleyY: 2.85, 
  * A corda desce da roldana (em cima do balde) até a argola num espeto no chão, ao lado; a ponta solta fica no chão
  * (rest). Quem segura a ponta e se afasta da argola mais que `slack` levanta o balde (andando para o portão).
  */
-export const ROPE = { ring: { x: 6.42, y: 0.12, z: -2.9 }, rest: { x: 6.55, z: -2.58 }, slack: 0.55, maxPull: DECK.h, grabR: 0.55 };
+export const ROPE = { ring: { x: 6.12, y: 0.12, z: -2.95 }, rest: { x: 5.98, z: -2.55 }, slack: 0.55, maxPull: DECK.h, grabR: 0.55 };
 /**
  * Lá em cima: onde a Radhija chega do balde (e volta para ele), onde ela fica para desamarrar o laço e a boca do
  * escorregador (no lado leste, descendo para o leste até o gramado).

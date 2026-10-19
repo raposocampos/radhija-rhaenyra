@@ -966,6 +966,12 @@ export function createPuzzle(ctx) {
       startCord(c);
       return true;
     }
+    // o balde e a ponta da corda ficam lado a lado: para a Radhija vale o balde, para a Rhaenyra a corda
+    const atBucket = !S.riding && !S.deck && !S.hop && S.bucketY < 0.05 && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR;
+    if (atBucket && c.name === 'radhija') {
+      S.hop = { t: 0, dur: 0.42, a: { x: c.x, y: 0, z: c.z }, b: { x: BUCKET.x, y: 0.14, z: BUCKET.z }, then: 'ride' };
+      return true;
+    }
     if (!handle.holder && reach(c, ROPE.rest.x, ROPE.rest.z) < ROPE.grabR && S.bucketY < 0.05) {
       if (c.name !== 'rhaenyra') { hints.now('ropeLight', 3.4, 2); return true; }
       handle.attach('rhaenyra');
@@ -973,11 +979,7 @@ export function createPuzzle(ctx) {
       hints.now('ropeTip', 4.2, 0);
       return true;
     }
-    if (!S.riding && !S.deck && !S.hop && S.bucketY < 0.05 && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR) {
-      if (c.name !== 'radhija') { hints.now('bucketHeavy', 3.4, 2); return true; }
-      S.hop = { t: 0, dur: 0.42, a: { x: c.x, y: 0, z: c.z }, b: { x: BUCKET.x, y: 0.14, z: BUCKET.z }, then: 'ride' };
-      return true;
-    }
+    if (atBucket) { hints.now('bucketHeavy', 3.4, 2); return true; }
     if (inHouse(c) && Math.hypot(c.x - PAINTING.x, c.z - (PAINTING.z + 0.95)) < 1.0) {
       S.lookedPainting = true;
       cam?.focusShot(PAINTING.x, PAINTING.z + 1.4, { hold: 3.2, inT: 0.6, outT: 0.7, scale: 0.42, target: { x: PAINTING.x, y: PAINTING.y, z: PAINTING.z + 0.05 } });
