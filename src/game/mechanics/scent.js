@@ -3,6 +3,7 @@
 //   sumir. Não atravessa paredes (colide como um círculo pequeno, passa onde a Radhija passa).
 // - Vento (addWind): faixa retangular a partir de uma origem, numa direção. Dentro dela a nuvem é levada
 //   pela corrente e fica compacta. Mova o objeto devolvido (x, z, dirX, dirZ) ou desligue com enabled.
+//   funnel (opcional, 1/s): também puxa a nuvem de volta para o eixo da faixa (não escapa pelos lados).
 // - Duto (addDuct): uma nuvem que chega à boca (inlet) com o duto ativo é engolida e sai pela outra ponta
 //   (outlet) depois de `travel` segundos, soprada na direção da saída.
 // - Nariz (addNose): alvo que reage quando uma nuvem o alcança (onSmell), uma vez por nuvem.
@@ -47,6 +48,11 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
       const k = w.strength * (1 - 0.45 * (along / w.length)); // enfraquece longe do ventilador
       wx += ux * k;
       wz += uz * k;
+      if (w.funnel) {
+        const side = -rx * uz + rz * ux; // distância ao eixo, com sinal
+        wx += side * w.funnel * uz;
+        wz -= side * w.funnel * ux;
+      }
     }
     return { x: wx, z: wz };
   }
@@ -177,7 +183,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     return best;
   }
 
-  /** Vento: { id, x, z (origem), dirX, dirZ, length, halfWidth, strength (m/s), enabled }. Devolve o objeto (mutável). */
+  /** Vento: { id, x, z (origem), dirX, dirZ, length, halfWidth, strength (m/s), funnel?, enabled }. Devolve o objeto (mutável). */
   function addWind(w) {
     const o = Object.assign({ enabled: true, length: 3, halfWidth: 0.35, strength: 2.4 }, w);
     winds.push(o);

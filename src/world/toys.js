@@ -269,3 +269,101 @@ export function createFrisbee(size = 0.2) {
   g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.carryKind = 'frisbee'; } });
   return g;
 }
+
+/**
+ * Óculos de leitura do vovô (≈ 13 cm de largura), dobrados para caber na boca: armação redonda dourada, lentes
+ * claras levemente azuladas, ponte em arco e as hastes dobradas para trás das lentes. Centro na ponte, lentes no
+ * plano XY (frente para +Z). A boca morde pela ponte (carryPose 'glasses').
+ */
+export function createGlasses() {
+  const g = new THREE.Group();
+  g.name = 'oculos';
+  g.userData.carryKind = 'glasses';
+  const gold = new THREE.MeshPhysicalMaterial({ color: '#c9a24a', metalness: 0.85, roughness: 0.28, clearcoat: 0.4 });
+  const lensMat = new THREE.MeshPhysicalMaterial({ color: '#dff1ff', roughness: 0.05, metalness: 0, transparent: true, opacity: 0.32, clearcoat: 1, depthWrite: false });
+  const R = 0.026;
+  for (const sx of [-1, 1]) {
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(R, 0.0024, 8, 32), gold);
+    rim.position.x = sx * 0.032;
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(R - 0.001, 28), lensMat);
+    lens.position.set(sx * 0.032, 0, 0.0005);
+    // haste dobrada: sai da borda de fora e volta por trás da lente
+    const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.004, 0.006), gold);
+    hinge.position.set(sx * (0.032 + R + 0.002), 0.004, -0.002);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.0014, 0.0014, 0.05, 6).rotateZ(Math.PI / 2), gold);
+    arm.position.set(sx * 0.034, 0.004, -0.007);
+    g.add(rim, lens, hinge, arm);
+  }
+  const bridge = new THREE.Mesh(new THREE.TorusGeometry(0.0075, 0.0022, 6, 14, Math.PI), gold);
+  bridge.position.y = 0.006;
+  g.add(bridge);
+  g.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.userData.carryKind = 'glasses'; } });
+  return g;
+}
+
+/**
+ * Livro de histórias de capa dura (≈ 18 × 22 × 3,5 cm), em pé: capa vermelha com moldura e título dourados e uma
+ * lua com estrelinhas, lombada arredondada (+X), miolo creme com as linhas das folhas. Base em y = 0, frente +Z.
+ * Pesado: só a Rhaenyra carrega, mordendo pela borda de cima (carryPose 'book').
+ */
+export function createStorybook() {
+  const W = 0.18, H = 0.22, T = 0.036;
+  const g = new THREE.Group();
+  g.name = 'livro';
+  g.userData.carryKind = 'book';
+  const coverTex = canvasTexture(256, 320, (c, w, h) => {
+    c.fillStyle = '#9c2f2a'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#e6c25a'; c.lineWidth = 6; c.strokeRect(14, 14, w - 28, h - 28);
+    c.lineWidth = 2; c.strokeRect(24, 24, w - 48, h - 48);
+    // lua e estrelinhas
+    c.fillStyle = '#f6e3a0';
+    c.beginPath(); c.arc(w / 2, h * 0.42, 46, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#9c2f2a';
+    c.beginPath(); c.arc(w / 2 + 22, h * 0.39, 42, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#f6e3a0';
+    for (const [x, y, r] of [[60, 70, 5], [196, 92, 4], [78, 170, 3], [190, 176, 5], [150, 60, 3]]) {
+      c.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        const rr = i % 2 ? r * 0.45 : r * 1.6;
+        c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      }
+      c.fill();
+    }
+    c.fillStyle = '#e6c25a';
+    c.font = '700 30px Fredoka, sans-serif';
+    c.textAlign = 'center';
+    c.fillText('Era uma vez', w / 2, h * 0.8);
+  }, { repeat: false });
+  const pagesTex = canvasTexture(64, 64, (c, w, h) => {
+    c.fillStyle = '#f6ecd6'; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(120,100,70,0.25)';
+    for (let x = 0; x < w; x += 3) c.fillRect(x, 0, 1, h);
+  });
+  const cover = new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6 });
+  const plain = new THREE.MeshStandardMaterial({ color: '#8f2a25', roughness: 0.6 });
+  const pages = new THREE.MeshStandardMaterial({ map: pagesTex, roughness: 0.85 });
+  // miolo (um pouco menor que a capa) e as duas capas
+  const block = new THREE.Mesh(new THREE.BoxGeometry(W - 0.008, H - 0.008, T - 0.006), pages);
+  block.position.set(-0.002, H / 2, 0);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.0035), [plain, plain, plain, plain, cover, plain]);
+  front.position.set(0, H / 2, T / 2 - 0.0017);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.0035), plain);
+  back.position.set(0, H / 2, -T / 2 + 0.0017);
+  // lombada arredondada com dois frisos dourados
+  const spine = new THREE.Mesh(new THREE.CylinderGeometry(T / 2, T / 2, H, 16, 1, false, 0, Math.PI), plain);
+  spine.rotation.y = Math.PI / 2;
+  spine.position.set(W / 2 - 0.004, H / 2, 0);
+  spine.scale.set(1, 1, 0.45);
+  const goldMat = new THREE.MeshStandardMaterial({ color: '#e6c25a', roughness: 0.35, metalness: 0.6 });
+  for (const y of [0.04, H - 0.04]) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(T / 2 + 0.0004, 0.0012, 4, 16, Math.PI), goldMat);
+    band.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    band.position.set(W / 2 - 0.004, y, 0);
+    band.scale.set(1, 0.45, 1);
+    g.add(band);
+  }
+  g.add(block, front, back, spine);
+  g.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; o.userData.carryKind = 'book'; } });
+  return g;
+}

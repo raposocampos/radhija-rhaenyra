@@ -31,6 +31,11 @@ export function createCameraRig(camera, layout) {
   const limits = { minX: -3.3, maxX: 4.3, minZ: -3.75, maxZ: 2.3 };
   const titleCfg = { cx: -2.5, cz: -3.4, R: 5.6, Ramp: 0.45, a0: 0.5, aAmp: 0.24, h: 2.0, hAmp: 0.22, look: new THREE.Vector3(-2.85, 0.85, -3.55), lookSway: 0.3, fov: 36 };
   const celebrate = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  /** @type {NonNullable<import('../types').CameraConfig['zones']>} */
+  let zones = [];
+  const zoneOff = new Set(); // ids de zonas desligadas pela fase (cam.setZone)
+  const zoneBias = new THREE.Vector3(); // deslocamento atual (x, y = altura extra do olhar, z), amortecido
+  const zoneAt = (p) => zones.find((q) => !(q.id && zoneOff.has(q.id)) && p.x >= q.minX && p.x <= q.maxX && p.z >= q.minZ && p.z <= q.maxZ);
   const victoryOffset = { pos: new THREE.Vector3(1.1, 0.25, 0.7), look: new THREE.Vector3(1.22, 0.14, 0) };
 
   /** Reconfigura a câmera para o layout de uma fase (chamado a cada carregamento de fase). */
@@ -41,6 +46,9 @@ export function createCameraRig(camera, layout) {
     baseFov = C.fov ?? 38;
     lookHeight = C.lookHeight ?? 0.3;
     if (C.limits) Object.assign(limits, C.limits);
+    zones = C.zones || [];
+    zoneOff.clear();
+    zoneBias.set(0, 0, 0);
     if (C.title) {
       const T = C.title;
       Object.assign(titleCfg, {
@@ -103,6 +111,12 @@ export function createCameraRig(camera, layout) {
     outPos.copy(outLook).add(offset);
     outPos.y = offset.y; // altura absoluta (chão plano)
     outLook.y = lookHeight;
+    // zona: a câmera fica no mesmo lugar e o olhar sobe/avança (dx, dz deslocam os dois)
+    outPos.x += zoneBias.x;
+    outPos.z += zoneBias.z;
+    outLook.x += zoneBias.x;
+    outLook.z += zoneBias.z;
+    outLook.y += zoneBias.y;
     let f = baseFov;
     if (shot) {
       const s = shot;
@@ -136,6 +150,8 @@ export function createCameraRig(camera, layout) {
   function snapFollow(x, z) {
     focus.set(x, 0, z);
     clampFocus(focus);
+    const zn = zoneAt(focus);
+    zoneBias.set(zn?.dx ?? 0, zn?.lookY ?? 0, zn?.dz ?? 0);
     focusVel.set(0, 0, 0);
     lead.set(0, 0, 0);
     shot = null;
@@ -149,6 +165,12 @@ export function createCameraRig(camera, layout) {
     y = lookHeight + 0.1, target = null } = {}) {
     shot = { point: new THREE.Vector3(x, y, z), target, t: 0, inT, hold, outT, scale,
       fromPos: pos.clone(), fromLook: look.clone() };
+  }
+
+  /** Liga ou desliga uma zona do layout pelo id (a fase decide quando ela faz sentido); a volta é suave. */
+  function setZone(id, on) {
+    if (on) zoneOff.delete(id);
+    else zoneOff.add(id);
   }
 
   function onSwitch() {
@@ -181,6 +203,13 @@ export function createCameraRig(camera, layout) {
       switchT = Math.max(0, switchT - dt);
       const st = 0.24 + 0.4 * Math.min(1, switchT / 0.8);
       damp3(focus, focusTarget, focusVel, st, dt);
+      if (zones.length) {
+        const zn = zoneAt(focus);
+        const kz = 1 - Math.exp(-dt * 2.2);
+        zoneBias.x += ((zn?.dx ?? 0) - zoneBias.x) * kz;
+        zoneBias.y += ((zn?.lookY ?? 0) - zoneBias.y) * kz;
+        zoneBias.z += ((zn?.dz ?? 0) - zoneBias.z) * kz;
+      }
     }
     if (shot) {
       shot.t += dt;
@@ -222,7 +251,7 @@ export function createCameraRig(camera, layout) {
   apply();
 
   return {
-    update, setMode, snapFollow, focusShot, onSwitch, limits, configure,
+    update, setMode, snapFollow, focusShot, onSwitch, setZone, limits, configure,
     get mode() { return mode; },
     get shotActive() { return !!shot; },
     get position() { return pos; },

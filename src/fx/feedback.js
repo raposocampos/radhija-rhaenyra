@@ -376,9 +376,9 @@ export function createFeedback(opts) {
     if (time - lastPickupFx < 0.2) return;
     lastPickupFx = time;
     glowItem = null;
-    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee', sock: 'pickupSock' }[item] || 'pickupCarrot';
+    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee', sock: 'pickupSock', glasses: 'pickupGlasses', book: 'pickupBook' }[item] || 'pickupCarrot';
     sfx(snd, x, z);
-    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394', sock: '#FF9A8F' }[item] || '#FFB46E';
+    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394', sock: '#FF9A8F', glasses: '#FFE8A3', book: '#F08A7E' }[item] || '#FFB46E';
     particles.burst({ x, y: 0.35, z }, { kind: 'stars', count: 10, size: 0.85, speed: 0.8 });
     particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.6, color: col, opacity: 0.55, width: 0.09 });
   }
@@ -576,6 +576,52 @@ export function createFeedback(opts) {
   events.on('blanket:load', ({ x, z }) => {
     sfx('blanketPlop', x, z, { inBasket: true });
     particles.sparkle({ x, y: 0.45, z }, { count: 6, radius: 0.18, size: 0.7, rise: 0.4 });
+  });
+  // biblioteca do vovô (fase 9): escadinha, gato, livro, porta, duto e a mesinha
+  events.on('ladder:climb', ({ x, z }) => {
+    for (let i = 0; i < 4; i++) later(0.12 + i * 0.36, () => sfx('ladderStep', x, z));
+  });
+  events.on('ladder:slip', ({ x, z }) => sfx('ladderStep', x, z));
+  events.on('ladder:roll', ({ x, z }) => {
+    sfx('ladderRoll', x, z, { dur: 0.45 });
+    particles.dust({ x, y: 0.03, z: z + 0.3 }, { count: 4, size: 0.6, alpha: 0.3, strength: 0.4 });
+  });
+  events.on('ladder:down', ({ x, z }) => sfx('land', x, z, { volume: 0.6 }));
+  events.on('cat:wake', ({ x, y = 2, z }) => {
+    sfx('catMeow', x, z);
+    particles.sparkle({ x, y: y + 0.25, z: z + 0.1 }, { count: 6, radius: 0.12, size: 0.6, rise: 0.4, color: '#FFD08A' });
+  });
+  events.on('cat:jump', ({ x, z }) => sfx('catJump', x, z));
+  events.on('cat:land', ({ x, z }) => {
+    sfx('catLand', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.6, alpha: 0.35, strength: 0.4 });
+  });
+  events.on('cat:flap', ({ x, z }) => sfx('catFlap', x, z));
+  events.on('cat:bed', ({ x, z }) => later(1.6, () => sfx('catPurr', x, z, { volume: 0.7 })));
+  events.on('book:fall', ({ x, z }) => sfx('bookFall', x, z));
+  events.on('book:land', ({ x, z }) => {
+    sfx('bookThud', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 6, size: 0.8, alpha: 0.4, strength: 0.5 });
+  });
+  events.on('book:drop', ({ x, z }) => sfx('bookThud', x, z, { volume: 0.6 }));
+  events.on('door:open', ({ x, z }) => sfx('doorCreak', x, z));
+  events.on('door:close', ({ x, z }) => sfx('doorLatch', x, z));
+  events.on('scent:duct', ({ x, z }) => sfx('ductWhoosh', x, z, { dur: 2.2 }));
+  events.on('power:on', ({ x, z }) => {
+    sfx('powerOn', x, z);
+    particles.sparks?.({ x, y: 1.05, z: z + 0.08 }, { count: 8 });
+  });
+  events.on('duct:open', ({ x, z }) => {
+    sfx('ductOpen', x, z);
+    particles.sparkle({ x, y: 0.3, z: z + 0.1 }, { count: 6, radius: 0.18, size: 0.6, rise: 0.3, color: '#9BE05A' });
+  });
+  events.on('duct:close', ({ x, z }) => sfx('ductClose', x, z));
+  events.on('fan:switch', ({ x, z, on }) => sfx('fanSwitch', x, z, { on }));
+  events.on('ladder:hold', ({ x, z }) => sfx('ladderHold', x, z));
+  events.on('table:deliver', ({ x, z }) => {
+    sfx('tableDeliver', x, z);
+    particles.sparkle({ x, y: 0.7, z }, { count: 12, radius: 0.22, size: 0.9, rise: 0.9 });
+    particles.ring({ x, y: 0.6, z }, { radius: 0.45, from: 0.08, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.07 });
   });
   events.on('bed:deliver', ({ x, z }) => {
     sfx('bedPlop', x, z);
