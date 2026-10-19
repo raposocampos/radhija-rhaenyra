@@ -445,7 +445,10 @@ tamanho da da Radhija, barriga recolhida; as orelhas são desenhadas dos dois la
 animação atual: um esqueleto atual invisível é animado por `dogAnimation.js` e cada osso novo copia a pose do osso
 correspondente (`retarget.js`; os gomos novos dividem a curva entre as pontas). `contacts.js` calcula o ponto mais
 baixo do corpo com as formas do desenho; se a pose afundaria no chão (`GROUND_TOLERANCE`), o corpo gira sobre as
-patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garupa sobe) e, se ainda faltar, sobe. Para ver:
+patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garupa sobe) e, se ainda faltar, sobe.
+Por cima da pose do guia, o modelo novo já tem: a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
+pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
+física (`physics.js`: correntinha de três gomos com mola, inércia, gravidade e chão; a pose do guia é o descanso). Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).

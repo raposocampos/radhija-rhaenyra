@@ -218,7 +218,7 @@ for (const kind of KINDS) {
         worst = worst.map((x, i) => Math.min(x, low[i]));
         // o osso novo e o atual no mesmo lugar (fora a subida do corpo quando a pose afundaria no chão; com o giro
         // sobre as patas apoiadas, o corpo inteiro gira e a comparação não vale neste quadro)
-        if (d.tilt) continue;
+        if (d.tilt || d.overlay) continue;
         d.driver.inner.updateMatrixWorld(true);
         const rise = d.object.children[0].position.y - d.driver.inner.position.y;
         for (const [n2, n1] of FOLLOW) {
@@ -265,6 +265,79 @@ test('modelo novo sentada: as patas da frente ficam no chão (se a garupa afunda
       assert.ok(y < 0.035 * s, `${kind}: ${p} no chão sentada (${y.toFixed(3)} m; giro ${(d.tilt * 180 / Math.PI).toFixed(1)}°, subida ${(d.lift * 1000).toFixed(0)} mm)`);
     }
     console.log(`[v2] ${kind} sentada: giro ${(d.tilt * 180 / Math.PI).toFixed(1)}°, subida ${(d.lift * 1000).toFixed(1)} mm, mais baixo ${d.lowestBone}`);
+  }
+});
+
+test('modelo novo rolando: apoiada no chão, de costas em "C" e com as patas dobradas', () => {
+  for (const kind of KINDS) {
+    const d = v2[kind];
+    const parts = regions(d);
+    const bone = (n) => d.bones.find((b) => b.name === n);
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    for (let i = 0; i < 60; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    d.object.updateMatrixWorld(true);
+    const restReach = bone('FLp').getWorldPosition(new THREE.Vector3()).distanceTo(bone('FLu').getWorldPosition(new THREE.Vector3()));
+    const dur = EXTRA_TIME.roll;
+    const N = Math.round(dur * 60);
+    let touchBack = Infinity;
+    let worst = Infinity;
+    let curve = 0;
+    let reach = Infinity;
+    for (let f = 0; f <= N; f++) {
+      const k = f / N;
+      d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k, t: k * dur, h: 0 } });
+      if (f % 4) continue;
+      const low = lowestByRegion(d, parts)[0];
+      worst = Math.min(worst, low);
+      if (k > 0.44 && k < 0.6) {
+        touchBack = Math.min(touchBack, low);
+        d.object.updateMatrixWorld(true);
+        // "C": o peito e a garupa apontam para lados diferentes (ângulo entre os eixos do comprimento)
+        const fwd = (n) => new THREE.Vector3(0, 0, 1).applyQuaternion(bone(n).getWorldQuaternion(new THREE.Quaternion()));
+        curve = Math.max(curve, fwd('chest').angleTo(fwd('hips')));
+        reach = Math.min(reach, bone('FLp').getWorldPosition(v).distanceTo(bone('FLu').getWorldPosition(w)));
+      }
+    }
+    console.log(`[v2] ${kind} rolando: mais baixo ${worst.toFixed(3)} m, de costas ${touchBack.toFixed(3)} m, curva ${(curve * 180 / Math.PI).toFixed(0)}°, pata da frente a ${(reach * 100).toFixed(1)} cm do ombro (em pé ${(restReach * 100).toFixed(1)})`);
+    assert.ok(worst > -0.012, `${kind}: nada atravessa o chão (${worst.toFixed(3)})`);
+    assert.ok(touchBack < 0.02, `${kind}: de costas, encostada no chão (${touchBack.toFixed(3)} m)`);
+    assert.ok(curve > 0.25, `${kind}: de costas, o corpo curva (${(curve * 180 / Math.PI).toFixed(0)}°)`);
+    assert.ok(reach < restReach * 0.75, `${kind}: as patas da frente dobram (${(reach * 100).toFixed(1)} × ${(restReach * 100).toFixed(1)} cm)`);
+  }
+});
+
+test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca passam do chão', () => {
+  for (const kind of KINDS) {
+    const d = v2[kind];
+    const bone = (n) => d.bones.find((b) => b.name === n);
+    const tipInHead = () => {
+      d.object.updateMatrixWorld(true);
+      return bone('head').worldToLocal(bone('earL2').getWorldPosition(new THREE.Vector3()));
+    };
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } });
+    const rest = tipInHead();
+    let swing = 0;
+    for (let f = 0; f <= 36; f++) {
+      const k = f / 25;
+      d.update(1 / 60, k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.5 * k * (1 - k), lookAt: { x: 0, y: 0.3, z: 4 } } : { speed: 0, lookAt: { x: 0, y: 0.3, z: 4 } });
+      swing = Math.max(swing, tipInHead().distanceTo(rest));
+    }
+    for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } });
+    const back = tipInHead().distanceTo(rest);
+    console.log(`[v2] ${kind}: orelha balançou ${(swing * 1000).toFixed(1)} mm no pulo e voltou a ${(back * 1000).toFixed(1)} mm`);
+    assert.ok(swing > 0.008, `${kind}: a orelha reage ao pulo (${(swing * 1000).toFixed(1)} mm)`);
+    assert.ok(back < 0.006, `${kind}: a orelha volta ao lugar (${(back * 1000).toFixed(1)} mm)`);
+    // rolando, as orelhas ficam sobre o chão
+    let low = Infinity;
+    const dur = EXTRA_TIME.roll;
+    for (let f = 0; f <= 60; f++) {
+      d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k: 0.4 + f / 300, t: f / 60, h: 0 } });
+      d.object.updateMatrixWorld(true);
+      for (const n of ['earL1', 'earL2', 'earR1', 'earR2']) low = Math.min(low, bone(n).getWorldPosition(v).y);
+    }
+    void dur;
+    assert.ok(low > -0.005, `${kind}: rolando, as juntas da orelha ficam acima do chão (${low.toFixed(3)})`);
   }
 });
 

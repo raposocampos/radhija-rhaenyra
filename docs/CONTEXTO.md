@@ -31,8 +31,17 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Achados: o modelo novo segue o guia com 0,00 mm em todas as ações; triângulos até 111% do atual (pelo da
   Rhaenyra, orelhas maiores); a montagem leva o mesmo tempo. Pendente para as próximas etapas: a franja das orelhas
   longas deixa a pele da orelha aparecer perto do pescoço em close (cascas de pelo com gravidade).
-- Próximo passo: entregar a prévia (`?level=canil&play` e `?level=1&play&dogs=novo`) e esperar a aprovação; a
-  integração segue a ordem combinada com o orquestrador (#33 e #35 antes; conflitos de lista com o #36).
+- Retornos do usuário nas prévias (2026-10-19), já atendidos no PR: orelhas "vazando o outro lado" (a grade da malha
+  cortava a beirada da orelha achatada: `groupsBounds` com `exact` só no modelo novo, orelha mais grossa e desenhada
+  dos dois lados); cabeça da Rhaenyra grande demais (agora ~103% da da Radhija); orelhas dela grandes demais
+  (menores); orelhas com física no pulo (`src/dogs/v2/physics.js`: correntinha com mola, inércia, gravidade e chão);
+  rolagem "nada natural" (`src/dogs/v2/roll.js`: pose própria por cima do guia, tomba pelo ombro, de costas em "C",
+  patas dobradas pedalando, se esfrega; o corpo fica apoiado no chão pelo ponto mais baixo).
+- Pedido registrado para a **etapa 4** (retorno da prévia da fase 10, vale para todas as fases): a cabeça das dogs
+  ainda atravessa algumas paredes e móveis, porque passa do círculo único de colisão quando a dog anda de frente.
+- Próximo passo: CI e E2E (`canil` e `todas`) no head atualizado com o main, revisar `shots/modelos/` (rolagem e
+  pulo com as orelhas), entregar a prévia e esperar a aprovação. Ordem de integração recomendada pelo orquestrador:
+  #35, #36, este (#37) e a fase 10; quem entra por último resolve os conflitos mantendo os dois lados.
 
 ## Em andamento: pombo mais bonito (Claude, PR #34)
 

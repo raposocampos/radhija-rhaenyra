@@ -7,7 +7,7 @@
 //   wet=<0..1>   then=<ação depois de 'at' s>  at=<s>
 //   extra=drink|eat|dig|sneeze|nudge|roll  xk=<0..1> (progresso fixo; sem ele, repete a cada xdur s)
 //   lick=1 (fase da lambida em ciclo)   airk=<0..1> + jumph=<m> (no ar)   slope=<rad>   poop=<0..1>
-//   wallk=<0..1> (impulso na parede, com a parede a 0,45 m à frente)
+//   wallk=<0..1> (impulso na parede, com a parede a 0,45 m à frente)   hop=1 (pula a cada 1 s: física das orelhas)
 // window.__pose({ ...mesmos campos }) refaz a pose sem remontar as dogs (capturas em série, tools/scripts).
 import * as THREE from 'three';
 import { createDog, createPlushCarrot } from '../src/dogs/dog.js';
@@ -72,6 +72,7 @@ function readConfig(src) {
     slope: num('slope', 0),
     poop: src.poop !== undefined && src.poop !== null && src.poop !== '' ? Number(src.poop) : null,
     wallk: src.wallk !== undefined && src.wallk !== null && src.wallk !== '' ? Number(src.wallk) : null,
+    hop: String(get('hop', '')) === '1',
   });
   cfg.carry = !!cfg.carryKind && cfg.carryKind !== '0';
 }
@@ -232,6 +233,14 @@ function animAt(t) {
     a.jump = 4 * cfg.jumph * cfg.airk * (1 - cfg.airk);
   }
   if (cfg.poop !== null) a.poopK = cfg.poop;
+  if (cfg.hop) {
+    // pulo de verdade a cada 1 s (0,5 s no ar, 0,4 m): as orelhas reagem à física
+    const u = t % 1;
+    if (u < 0.5) {
+      a.airK = u / 0.5;
+      a.jump = 4 * 0.4 * a.airK * (1 - a.airK);
+    }
+  }
   if (cfg.wallk !== null) Object.assign(a, { action: 'wallJump', wallK: cfg.wallk, wallGap: 0.45, wallTop: 1.1, wallOut: 0.05, wallPaws: 1.03, wallSide: 0.165, wallLat: 0.14 });
   return a;
 }

@@ -63,6 +63,13 @@ try {
     await pose('20-escorregando', side({ action: 'slide' }));
     await pose('21-latindo', { view: 'face', bark: 1.85, sim: 1.95 });
     await pose('22-molhada', { view: '34', wet: 1, sim: 1 });
+    // a rolagem nova, passo a passo (de lado e em 3/4)
+    for (const [i, xk] of [0.16, 0.24, 0.3, 0.36, 0.44, 0.52, 0.58, 0.7, 0.78, 0.86].entries()) {
+      await pose(`23-rolando-${i}-lado`, side({ extra: 'roll', xk, sim: 2 }));
+      await pose(`23-rolando-${i}-34`, { view: '34', extra: 'roll', xk, sim: 2 });
+    }
+    // orelhas com física no pulo: subindo, no alto, descendo, no pouso e logo depois
+    for (const [i, sim] of [2.12, 2.25, 2.38, 2.47, 2.53, 2.6, 2.7].entries()) await pose(`24-pulo-orelhas-${i}`, { view: 'side', hop: '1', sim });
     // tira do trote, quadro a quadro (fluidez do passo)
     for (let k = 0; k < 8; k++) await pose(`30-trote-${k}`, side({ speed: 1.9, sim: 1.2 + k * 0.05 }));
     await page.close();

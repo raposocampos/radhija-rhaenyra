@@ -21,6 +21,7 @@ import { createSkinMaterial } from './materials.js';
 import { createRetarget } from './retarget.js';
 import { groundContacts, lowestPoint } from './contacts.js';
 import { createEarPhysics } from './physics.js';
+import { createRollOverlay } from './roll.js';
 
 /**
  * Quanto as formas de contato podem passar do chão antes de o corpo ser levantado (m). As formas já levam a folga da
@@ -124,6 +125,8 @@ export function createDogV2(kind) {
   const contacts = groundContacts(design, BONE_INDEX_V2, skel2.rest, { skip: ['tail', 'ear'] });
   // orelhas com física (mola, inércia, gravidade e chão): reagem ao pulo, às curvas e ao rolar
   const earPhysics = createEarPhysics({ skel2, design });
+  // rolar de costas: pose própria do modelo novo por cima da do guia (roll.js)
+  const roll = createRollOverlay({ skel2, cfg });
 
   const I2 = BONE_INDEX_V2;
   const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
@@ -136,10 +139,16 @@ export function createDogV2(kind) {
   /**
    * Nada do corpo passa do chão. Se a pose afundaria (a garupa da Rhaenyra sentada, por exemplo), o corpo primeiro
    * gira sobre as patas que estão apoiadas do outro lado (sentada: as da frente ficam no chão e a garupa sobe); o que
-   * ainda faltar, o corpo inteiro sobe.
+   * ainda faltar, o corpo inteiro sobe. rest (0..1): rolando, o corpo fica apoiado no chão (`floor`, a altura do monte
+   * quando houver): a altura vem do ponto mais baixo, para cima ou para baixo.
    */
-  function settle() {
+  function settle(rest = 0, floor = 0) {
     let low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+    if (rest > 0) {
+      inner.position.y += (floor - low) * rest;
+      low += (floor - low) * rest;
+    }
+    low -= floor;
     self.lowest = low;
     self.lowestBone = bones[lowestPoint.bone]?.name ?? '';
     self.tilt = 0;
@@ -155,7 +164,7 @@ export function createDogV2(kind) {
       inner.position.sub(pivot).applyQuaternion(_qx).add(pivot);
       inner.quaternion.premultiply(_qx);
       self.tilt = th;
-      low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+      low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion) - floor;
     }
     if (low < -GROUND_TOLERANCE) {
       self.lift = -GROUND_TOLERANCE - low;
@@ -169,7 +178,10 @@ export function createDogV2(kind) {
     inner.position.copy(driverInner.position);
     inner.quaternion.copy(driverInner.quaternion);
     retarget.apply();
-    settle();
+    self.overlay = roll.apply(anim?.extra, inner);
+    if (self.overlay > 0) retarget.refresh();
+    // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
+    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0);
     earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
   };
@@ -193,6 +205,8 @@ export function createDogV2(kind) {
      */
     lowest: 0,
     lowestBone: '',
+    /** Peso da pose própria do modelo novo (a rolagem) sobre a do guia, no último quadro (0..1). */
+    overlay: 0,
     tilt: 0,
     lift: 0,
     /** Esqueleto guia (atual, sem malha): testes e capturas comparam com ele. */
