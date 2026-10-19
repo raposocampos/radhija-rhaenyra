@@ -334,12 +334,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     vista): o nicho agora tem a largura da fresta, a tábua abre para fora e o muro leste e o nicho entram no "ver
     através". As galinhas foram para o campinho (milho e legumes) e ganharam modelo arredondado (cores por vértice,
     crista serrilhada, asas em penas) e animação (cabeça parada que dá o tranco, ciscar, planar, piscar, arrepiar).
-  - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (PR #38, esperando aprovação) e
-    a cabeça atravessando paredes (etapa 4 do PR #37; repassado à sessão dos modelos).
-- Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar capturas e entregar a prévia;
-  depois do PR #36 aprovado, trocar o marcador `pigs` pelo `createPigHerd` (os legumes distraem por um tempo
-  generoso e eles voltam); depois do PR #35, a Rhaenyra na lama da horta fica suja e a Radhija a lambe (textos de
-  controle R2/L2). Integrar só com a aprovação do usuário; squash com SHA esperado, deploy e aviso ao orquestrador.
+  - Com o #38 no main: a piñata começa enroscada no galho, perto da copa da mangueira (`MANGO_SHOVE.tangled`; fora de
+    alcance, o superbafo não a mexe). A Rhaenyra fica de pé de frente para o tronco e empurra (`createShoveTarget` só
+    para o balanço da copa e a contagem; `shoveSpots`/`onShove` no puzzle); no 3º empurrão ela escorrega pelo galho
+    (`slide`) e desce na corda (`drop`) até em cima da roseira (`free`), e daí segue o superbafo e as batidas.
+    `debugSet('pinataDown')` pula a etapa. A Rhaenyra só se suja quando o jogador anda com ela na lama (parada ali na
+    troca, não).
+  - Ainda falta: a cabeça das dogs atravessando paredes e móveis (etapa 4 do PR #37, das sessões dos modelos).
+- Próximo passo da D: com o #40 (correção dos porquinhos) no main, atualizar com o main, rodar CI e E2E `todas` no
+  head final, revisar as capturas e entregar a prévia completa; integrar só com a aprovação do usuário (squash com SHA
+  esperado, deploy do `github-pages` dessa versão e aviso ao orquestrador).
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,

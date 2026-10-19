@@ -429,6 +429,7 @@ export function stubFase10Props(root, layout) {
     styGate: gate(root, 'fase10.styGate'),
     crates: checked('fase10.crates', { list: layout.PANTRY_CRATES.list.map(() => ({ x: layout.PANTRY_CRATES.x0, locked: false })), setCrate(i, x, locked) { this.list[i] = { x, locked }; } }),
     pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),
+    mango: checked('fase10.mango', { object: object(root, 'mangueira'), a: 0, setSway(a, va) { this.a = a; void va; } }),
     farm: { spots, makeVeg(kind) { const o = new THREE.Group(); o.name = `veg:${kind}`; return o; } },
     secretBoard: checked('fase10.secretBoard', { object: object(root, 'tabua-solta'), open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),
     breaker: wallButton(root, 'fase10.breaker'),

@@ -93,7 +93,14 @@ export function buildPinata(root, layout) {
   const crownGeo = foliageCluster(blobs, { detail: 3, amp: 0.28, freq: 1.4, seed: 63, dark: '#22401a', mid: '#3f6c2c', light: '#86ad4e' });
   const crown = new THREE.Mesh(crownGeo, crownMat());
   const leaves = leafSkin(crownGeo, { count: 700, size: 0.11, seed: 63, material: crownMat() });
-  tree.add(crown, leaves);
+  // a copa (com as mangas) balança pelo alto do tronco quando a Rhaenyra empurra (a folhagem atrasada)
+  const crownSway = new THREE.Group();
+  crownSway.position.set(MANGO_TREE.x, 2.3, MANGO_TREE.z);
+  const crownIn = new THREE.Group();
+  crownIn.position.set(-MANGO_TREE.x, -2.3, -MANGO_TREE.z);
+  crownSway.add(crownIn);
+  crownIn.add(crown, leaves);
+  tree.add(crownSway);
   const mangoG = new THREE.SphereGeometry(0.06, 10, 8);
   mangoG.scale(0.85, 1.2, 0.85);
   const mangoMat = stdMat('#f2a03a', { roughness: 0.5 });
@@ -104,7 +111,7 @@ export function buildPinata(root, layout) {
     m.translate(MANGO_TREE.x + Math.cos(a) * d, 3.0 + r() * 0.4, MANGO_TREE.z + Math.sin(a) * d * 0.8);
     mangos.push(m);
   }
-  tree.add(new THREE.Mesh(mergeGeometries(mangos), mangoMat));
+  crownIn.add(new THREE.Mesh(mergeGeometries(mangos), mangoMat));
   tree.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(tree);
   const tsh = contactShadow(1.4, 1.2, 0.32);
@@ -235,6 +242,14 @@ export function buildPinata(root, layout) {
   layoutPin();
   root.add(group);
   return {
+    /** A mangueira (empurrão em pé): setSway(a, va) inclina a copa para longe da dog (a rad, + = para o sul). */
+    mango: {
+      object: crownSway,
+      setSway(a, va) {
+        crownSway.rotation.x = a * 0.7 + va * 0.012;
+        crownSway.rotation.z = va * 0.004;
+      },
+    },
     group,
     pinata: {
       object: pin,

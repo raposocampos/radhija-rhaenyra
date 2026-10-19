@@ -93,9 +93,10 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    a dog leva na boca, e só os legumes do campinho largados no chão os distraem, por um tempo; a Radhija sobe a
    rampa com uma arrancada até a vela.
    Os legumes do campinho (milho, cenoura e abóbora) podem ser colhidos e largados no chão. Duas galinhas ciscam no
-   campinho: fogem de quem chega de frente e saem voando com um latido. A estrela está dentro da
-   piñata pendurada na mangueira, em cima da roseira: o superbafo a faz balançar para fora dos espinhos e a Rhaenyra
-   pula e bate nela quando ela passa por cima; três batidas e ela abre. São cinco ossinhos nesta fase.
+   campinho: fogem de quem chega de frente e saem voando com um latido. A estrela está dentro da piñata, que enroscou
+   no alto da mangueira: a Rhaenyra fica de pé e empurra o tronco até ela escorregar e descer na corda, em cima da
+   roseira; o superbafo a faz balançar para fora dos espinhos e a Rhaenyra pula e bate nela quando ela passa por cima;
+   três batidas e ela abre. São cinco ossinhos nesta fase.
 
 Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).

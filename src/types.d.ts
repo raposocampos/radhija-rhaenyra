@@ -936,6 +936,8 @@ export interface Fase10Props extends LevelProps {
   crates: { setCrate(i: number, x: number, locked: boolean): void };
   /** A piñata em cima da roseira: setPos(gancho e inclinações), setCracks(batidas), burst() abre, reset(). */
   pinata: { setPos(x: number, y: number, z: number, tiltX: number, tiltZ: number): void; setCracks(n: number): void; burst(): void; reset(): void };
+  /** A mangueira da piñata (empurrão em pé): setSway(a, va) inclina a copa. */
+  mango: { object: THREE.Object3D; setSway(a: number, va: number): void };
   /** O campinho: os pés de legume (setReady: com ou sem legume) e makeVeg(tipo) cria o legume para carregar. */
   farm: { spots: { id: string; kind: string; x: number; z: number; setReady(on: boolean): void }[]; makeVeg(kind: string): THREE.Object3D };
   /** A tábua solta do muro leste (0 fechada … 1 aberta); setLoose: frouxa, balançando de leve. */

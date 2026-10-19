@@ -482,6 +482,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     styGate: sty.gate,
     crates: pantry.crates,
     pinata: pinata.pinata,
+    mango: pinata.mango,
     farm: { spots: farm.spots, makeVeg: farm.makeVeg },
     secretBoard: secret.board,
     breaker,
@@ -589,6 +590,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       for (const b of shedButtons) b.setOn?.(false);
       layout.PANTRY_CRATES.list.forEach((_, i) => pantry.crates.setCrate(i, layout.PANTRY_CRATES.x0, false));
       pinata.pinata.reset();
+      pinata.mango.setSway(0, 0);
       star.visible = false;
       star.rotation.set(0, 0, 0);
       cookie.rotation.set(0, 0.4, 0);

@@ -157,6 +157,16 @@ export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
  * piñata está ao alcance (reach). hits batidas abrem a piñata.
  */
 export const PINATA = { pivot: { x: ROSE_BUSH.x, y: 2.75, z: ROSE_BUSH.z }, L: 1.62, size: 0.42, damp: 0.25, kick: 1.6, hitR: 0.42, reach: 1.1, hits: 3 };
+/**
+ * No começo a piñata está enroscada no galho, perto da copa (fora de alcance; o superbafo nem chega lá). A Rhaenyra
+ * fica de pé e empurra o tronco da mangueira (empurrão em pé, pelo norte): no 3º empurrão ela escorrega pelo galho
+ * (slide s) e desce na corda até em cima da roseira (drop s).
+ * @type {import('../../types').ShoveTargetCfg & { tangled: { x: number, y: number, z: number }, slide: number, drop: number }}
+ */
+export const MANGO_SHOVE = {
+  x: MANGO_TREE.x + 0.02, z: MANGO_TREE.z + 0.06 - 0.33, nx: 0, nz: -1, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3,
+  tangled: { x: MANGO_TREE.x - 0.85, y: 2.45, z: MANGO_TREE.z - 0.62 }, slide: 0.55, drop: 0.65,
+};
 
 // ---------------------------------------------------------------------------------------------- cerca e gansa
 /** Cerca de ripas entre o quintal e o fundo (x fixo) com o portãozinho. */
@@ -340,7 +350,7 @@ export const STATIC_COLLIDERS = [
   ...PLANTATION.pumpkins.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `abobora-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.22 })),
   // a piñata: a roseira embaixo e a mangueira
   { id: 'roseira', shape: 'circle', x: ROSE_BUSH.x, z: ROSE_BUSH.z, r: ROSE_BUSH.r },
-  { id: 'mangueira-grande', shape: 'circle', x: MANGO_TREE.x, z: MANGO_TREE.z, r: MANGO_TREE.r },
+  { id: 'mangueira-grande', shape: 'circle', x: MANGO_TREE.x + 0.02, z: MANGO_TREE.z + 0.06, r: 0.33 },
   { id: 'ventilador', shape: 'circle', x: FAN.x, z: FAN.z, r: FAN.r },
   ...PLANTERS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
   { id: 'arvorezinha', shape: 'circle', x: LITTLE_TREE.x, z: LITTLE_TREE.z, r: LITTLE_TREE.r },
@@ -457,7 +467,7 @@ const LAYOUT = {
   WORLD, EAST_WALL, DOGS, WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR,
   FLOOR_LAMP, RUG, DOG_BEDS, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PANTRY, CUPBOARD, PANTRY_CRATES, PANTRY_SHELF,
   PORCH, PERGOLA_POSTS, CAKE_TABLE, CAKE, CAKE_ORDER, CAKE_REJECT, GIFTS, PORCH_BENCH, PORCH_POTS, POOL, BOAT, TAP, HOSE,
-  CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, PINATA,
+  CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, MANGO_SHOVE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
   VEG_BEDS, TOMATO, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,

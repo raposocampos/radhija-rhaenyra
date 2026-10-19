@@ -111,7 +111,7 @@ try {
       CORD: l.CORD, GATE: l.GATE, TUBE: l.TUBE, PIGEON: l.PIGEON, BUCKET: l.BUCKET, ROPE: l.ROPE, DECK: l.DECK, SLIDE: l.SLIDE,
       HORTA: l.HORTA, MUD: l.MUD, SHED: l.SHED, RAMP: l.RAMP, CANDLE: l.CANDLE, FAN: l.FAN, TREE: l.TREE,
       DECK_PATH: l.DECK_PATH, HUT: l.HUT, SOFA: l.SOFA, COLLECTIBLES: l.COLLECTIBLES, HOUSE: l.HOUSE,
-      CUPBOARD: l.CUPBOARD, PANTRY_CRATES: l.PANTRY_CRATES, CHICKENS: l.CHICKENS, PANTRY: l.PANTRY, PLANTATION: l.PLANTATION, ROSE_BUSH: l.ROSE_BUSH, STY: l.STY,
+      CUPBOARD: l.CUPBOARD, PANTRY_CRATES: l.PANTRY_CRATES, CHICKENS: l.CHICKENS, MANGO_SHOVE: l.MANGO_SHOVE, PANTRY: l.PANTRY, PLANTATION: l.PLANTATION, ROSE_BUSH: l.ROSE_BUSH, STY: l.STY,
       SHED_BUTTONS: l.SHED_BUTTONS, SECRET: l.SECRET, EAST_WALL: l.EAST_WALL, DOG_BOWLS: l.DOG_BOWLS,
     };
   });
@@ -338,7 +338,7 @@ try {
   await until((i) => i.quintal.mud.k === 0, 600);
   await keyUp('KeyL');
   // a Rhaenyra pisa na lama e a Radhija a lambe
-  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, stay: 'radhija', settle: 50 });
+  await setup({ active: 'rhaenyra', set: [['cleanRh', false]], place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, stay: 'radhija', settle: 50 });
   await shot('28b-rhaenyra-na-lama', { pos: [7.9, 1.1, 2.9], look: [7.4, 0.3, 1.7] });
   await setup({ active: 'radhija', place: { rhaenyra: { x: 8.6, z: 1.9, yaw: -Math.PI / 2 }, radhija: { x: 8.15, z: 1.95, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 10 });
   await keyDown('KeyL');
@@ -437,9 +437,29 @@ try {
   await step(30);
   await shot('35b-cenoura-no-chao', { pos: [car.x + 0.9, 1.0, car.z + 1.5], look: [car.x, 0.2, car.z + 0.5] });
 
+  // 6d2. a piñata enroscada no alto da mangueira: a Rhaenyra empurra o tronco de pé e ela desce em cima da roseira
+  const MS = L.MANGO_SHOVE;
+  const treeCam = { pos: [MS.x - 2.6, 1.9, MS.z - 2.4], look: [MS.x - 0.9, 1.4, MS.z - 0.4] };
+  await setup({ stage: 'cake4', active: 'rhaenyra', place: { rhaenyra: { x: MS.x, z: MS.z - 0.55, yaw: 0 }, radhija: { x: MS.x - 2.2, z: MS.z - 1.6, yaw: 1 } }, stay: 'radhija', settle: 20 });
+  await shot('36a0-pinata-enroscada', treeCam);
+  const toTrunk = await page.evaluate(() => window.__keysFor(0, 1));
+  for (const k of [...toTrunk, 'ShiftLeft']) await keyDown(k);
+  await until((i) => !!i.dogs.rhaenyra.shove, 120);
+  await step(30);
+  await shot('36a-empurrando-a-mangueira', { pos: [MS.x + 1.4, 1.2, MS.z - 1.6], look: [MS.x, 0.8, MS.z] });
+  await until((i) => i.quintal.pinata.stage === 'slide', 400);
+  await step(12);
+  await shot('36a2-pinata-escorregando', treeCam);
+  await until((i) => i.quintal.pinata.stage === 'drop', 120);
+  for (const k of [...toTrunk, 'ShiftLeft']) await keyUp(k);
+  await step(18);
+  await shot('36a3-pinata-descendo-na-corda', treeCam);
+  await until((i) => i.quintal.pinata.stage === 'free', 120);
+  await step(60);
+
   // 6e. ESTRELA: o superbafo balança a piñata; a Rhaenyra pula e bate três vezes
   const R = L.ROSE_BUSH;
-  await setup({ stage: 'cake4', active: 'radhija', place: { radhija: { x: R.x - 1.5, z: R.z, yaw: Math.PI / 2 }, rhaenyra: { x: R.x + 0.98, z: R.z, yaw: -Math.PI / 2 } }, stay: 'rhaenyra', settle: 20 });
+  await setup({ active: 'radhija', set: [['pinataDown', true]], place: { radhija: { x: R.x - 1.5, z: R.z, yaw: Math.PI / 2 }, rhaenyra: { x: R.x + 0.98, z: R.z, yaw: -Math.PI / 2 } }, stay: 'rhaenyra', settle: 20 });
   await keyDown('KeyR');
   await step(18);
   await keyUp('KeyR');

@@ -67,6 +67,7 @@ try {
       TAP: l.TAP, BREAKER: l.BREAKER, CRATE: l.CRATE, BOAT: l.BOAT, GOAL: l.GOAL, PAINTING: l.PAINTING, CORD: l.CORD,
       TUBE: l.TUBE, BUCKET: l.BUCKET, ROPE: l.ROPE, HORTA: l.HORTA, RAMP: l.RAMP, DECK: l.DECK,
       DECK_PATH: l.DECK_PATH, PANTRY_CRATES: l.PANTRY_CRATES, SHED_BUTTONS: l.SHED_BUTTONS, ROSE_BUSH: l.ROSE_BUSH, CHICKENS: l.CHICKENS,
+      MANGO_SHOVE: l.MANGO_SHOVE,
     };
   });
   check(state.levelId === 'fase10' && state.state === 'playing', 'link por id (?level=fase10) abre a fase 10');
@@ -254,6 +255,16 @@ try {
   await walkTo(L.GOAL.x, L.GOAL.z + 1.0, { tol: 0.15 });
   state = await waitFor((s) => s.quintal.cake.length === 4, { timeout: 3000 });
   check(qt(state).cake.join() === 'ribbon,cookie,candle,hat', 'o chapéu no quarto andar', JSON.stringify(qt(state).cake));
+
+  // ---- ESTRELA: a piñata enroscada no alto da mangueira; a Rhaenyra fica de pé e empurra o tronco (Shift)
+  await as('rhaenyra');
+  await put('rhaenyra', L.MANGO_SHOVE.x, L.MANGO_SHOVE.z - 0.55, 0);
+  state = await H.holdUntil([...keysFor(0, 1), 'ShiftLeft'], (s) => s.quintal.pinata.stage !== 'tree', { timeout: 9000 });
+  check(qt(state).pinata.stage !== 'tree', 'de pé, três empurrões no tronco soltam a piñata enroscada', JSON.stringify(qt(state).pinata));
+  await shot('10a-empurrando-a-mangueira.png');
+  state = await waitFor((s) => s.quintal.pinata.stage === 'free', { timeout: 4000 });
+  check(qt(state).pinata.stage === 'free', 'ela escorrega pelo galho e desce na corda, em cima da roseira');
+  await H.gsleep(800);
 
   // ---- ESTRELA: o superbafo balança a piñata; a Rhaenyra pula e bate quando ela passa por cima (três vezes)
   const west = { x: L.ROSE_BUSH.x - 1.5, z: L.ROSE_BUSH.z };

@@ -23,12 +23,13 @@ import { createGoose } from '../../characters/goose.js';
 import { createChicken } from '../../characters/chicken.js';
 import { createPig } from '../../characters/pig.js';
 import { createChickenFlock } from './chickens.js';
+import { createShoveTarget } from '../../game/mechanics/shoveTarget.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
   RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R, PANTRY, CUPBOARD, PANTRY_CRATES, PLANTATION, ROSE_BUSH,
-  PINATA, SHED_BUTTONS, STY, SECRET, EAST_WALL, CHICKENS, PIGS,
+  PINATA, MANGO_SHOVE, SHED_BUTTONS, STY, SECRET, EAST_WALL, CHICKENS, PIGS,
 } from './layout.js';
 
 /**
@@ -90,6 +91,8 @@ export const TEXT = {
     climbRad: 'Os caixotes viraram uma escadinha: suba até o pote (E na frente do caixote baixo)',
     climbRh: 'Os caixotes viraram uma escadinha: troque para a Radhija (Q), ela sobe por eles',
     // estrela
+    treeRh: 'A piñata da estrela enroscou no alto da mangueira: fique de pé e empurre o tronco (segure Shift de frente para ele)',
+    treeRad: 'A piñata enroscou no alto da mangueira: a Rhaenyra empurra o tronco de pé (Q)',
     starRad: 'A estrela está na piñata, em cima da roseira: solte o superbafo nela para ela balançar (segure R e solte)',
     starRh: 'A estrela está na piñata, em cima da roseira: quando ela balançar para fora, pule e bata nela (Espaço)',
     starSwingRh: 'A piñata está balançando: pule e bata nela quando ela passar por cima de você (Espaço)',
@@ -160,6 +163,9 @@ export const TEXT = {
     pinataHit: 'Pá! Mais uma…',
     pinataOpen: 'A piñata abriu: caíram balas e a estrela!',
     pinataThorns: 'A roseira tem espinhos, e a piñata está bem em cima dela. Um vento forte a faria balançar…',
+    pinataHigh: 'A piñata enroscou lá no alto da mangueira! Um empurrão forte no tronco a faria escorregar…',
+    treeShove: 'A copa balançou! Mais um empurrão…',
+    pinataFall: 'A piñata escorregou pelo galho e desceu na corda, bem em cima da roseira!',
     pinataJumpRad: 'Alto demais para a Radhija: a Rhaenyra pula e bate na piñata (Q).',
     rampSlip: 'Andando, a tábua é íngreme demais: a Radhija escorrega. Uma arrancada leva lá em cima!',
     rampMud: 'Enlameada, sem arrancada, a Radhija escorrega na tábua. Primeiro o Lambe-Lambe!',
@@ -280,7 +286,7 @@ export function createPuzzle(ctx) {
     /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ crateHold: null,
     /** @type {null | { path: { x: number, y: number, z: number }[], down?: { x: number, y: number, z: number }[], i: number, t: number, phase: string, grabbed: boolean, yaw0?: number, action?: string, slope?: number, airK?: number, crouch?: number }} */ climb: null,
     // piñata: ângulos e velocidades do balanço, batidas
-    pin: { ax: 0, az: 0, vx: 0, vz: 0, hits: 0, broken: false, cd: 0, swingHint: false, /** @type {Set<number>} */ used: new Set() },
+    pin: { stage: 'tree', st: 0, ax: 0, az: 0, vx: 0, vz: 0, hits: 0, broken: false, cd: 0, swingHint: false, /** @type {Set<number>} */ used: new Set() },
     // legumes: o que cada uma carrega, os largados no chão e os pés esperando rebrotar
     veg: { /** @type {Record<string, any>} */ held: { radhija: null, rhaenyra: null }, /** @type {any[]} */ floor: [], /** @type {Record<string, number>} */ regrow: {}, n: 0 },
     // o cantinho atrás do muro
@@ -378,6 +384,8 @@ export function createPuzzle(ctx) {
   function starStep(name) {
     const O = TEXT.objective;
     if (S.place.star === 'floor') return { text: fill(O.pickFloor, 'star'), target: at(S.floor.star.x, S.floor.star.z, 0.3) };
+    // enroscada no alto: primeiro o empurrão no tronco
+    if (S.pin.stage === 'tree') return name === 'rhaenyra' ? { text: O.treeRh, target: at(MANGO_SHOVE.x, MANGO_SHOVE.z, 1.0) } : { text: O.treeRad, target: at(MANGO_SHOVE.tangled.x, MANGO_SHOVE.tangled.z, MANGO_SHOVE.tangled.y) };
     const p = pinataPos();
     const swinging = Math.hypot(S.pin.ax, S.pin.az) > 0.12;
     if (name === 'radhija') return { text: O.starRad, target: at(p.x, p.z, p.y + 0.2) };
@@ -418,7 +426,7 @@ export function createPuzzle(ctx) {
     let pick = homeLeft[0];
     if (inBack(c)) pick = homeLeft.includes('candle') && (c.z > -0.6 || !homeLeft.includes('ribbon')) ? 'candle' : homeLeft.includes('ribbon') ? 'ribbon' : homeLeft[0];
     else if ((inHouse(c) || inPantry(c)) && homeLeft.includes('cookie')) pick = 'cookie';
-    else if (nearPinata(c) && homeLeft.includes('star')) pick = 'star';
+    else if ((nearPinata(c) || Math.hypot(c.x - MANGO_SHOVE.x, c.z - MANGO_SHOVE.z) < 2.2) && homeLeft.includes('star')) pick = 'star';
     else if (homeLeft.includes('hat')) pick = 'hat';
     // a Radhija no balde ou lá no deque: o objetivo continua sendo o laço (para as duas)
     if ((S.riding || S.onDeck || S.deck) && homeLeft.includes('ribbon')) pick = 'ribbon';
@@ -1038,6 +1046,23 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ estrela: a piñata (pêndulo)
   const OMEGA2 = 9.8 / PINATA.L;
+  // a mangueira: empurrável (empurrão em pé); no 3º empurrão a piñata enroscada escorrega e desce
+  const mangoShove = createShoveTarget({ id: 'mangueira', cfg: MANGO_SHOVE, emit, world, root, prop: props.mango });
+  const TANGLED = MANGO_SHOVE.tangled;
+  const TIP = { x: PINATA.pivot.x, y: PINATA.pivot.y - 0.12, z: PINATA.pivot.z };
+  function releasePinata() {
+    if (S.pin.stage !== 'tree') return;
+    Object.assign(S.pin, { stage: 'slide', st: 0 });
+    emit('pinata:release', { x: TANGLED.x, z: TANGLED.z });
+  }
+  /** Um empurrão no tronco chegou (empurrão em pé da Rhaenyra). */
+  function onShove(c, spot, C) {
+    if (spot.id !== mangoShove.spot.id) return;
+    const n = mangoShove.shove(c, C);
+    if (S.pin.stage !== 'tree') return;
+    if (n >= (MANGO_SHOVE.pushes ?? 3)) releasePinata();
+    else hints.now('treeShove', 2.4, 0);
+  }
   /** Onde está o gancho (fim da corda) da piñata. */
   function pinataPos() {
     const P = PINATA.pivot;
@@ -1046,6 +1071,34 @@ export function createPuzzle(ctx) {
   function stepPinata(dt, C) {
     const pn = S.pin;
     pn.cd = Math.max(0, pn.cd - dt);
+    mangoShove.update(dt);
+    // enroscada no alto (balança com a copa), escorregando pelo galho e descendo na corda
+    if (pn.stage !== 'free') {
+      pn.st += dt;
+      let x = TANGLED.x, y = TANGLED.y, z = TANGLED.z + mangoShove.sway * 1.6;
+      if (pn.stage === 'slide') {
+        const u = smooth(pn.st / MANGO_SHOVE.slide);
+        x = TANGLED.x + (TIP.x - TANGLED.x) * u;
+        y = TANGLED.y + (TIP.y - TANGLED.y) * u + Math.sin(Math.PI * u) * 0.08;
+        z = TANGLED.z + (TIP.z - TANGLED.z) * u;
+        if (pn.st >= MANGO_SHOVE.slide) Object.assign(pn, { stage: 'drop', st: 0 });
+      } else if (pn.stage === 'drop') {
+        // a corda desenrola: desce rápido e dá um pulinho no fim (passa um pouco e volta)
+        const u = Math.min(1, pn.st / MANGO_SHOVE.drop);
+        const e = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2);
+        x = TIP.x;
+        z = TIP.z;
+        y = TIP.y + (PINATA.pivot.y - PINATA.L - TIP.y) * e;
+        if (u >= 1) {
+          Object.assign(pn, { stage: 'free', st: 0, ax: 0.1, vx: 0, az: 0, vz: 0 });
+          emit('pinata:down', { x: TIP.x, z: TIP.z });
+          hints.now('pinataFall', 3.6, 0);
+          notifyStage();
+        }
+      }
+      props.pinata.setPos(x, y, z, pn.stage === 'tree' ? mangoShove.sway : 0, 0);
+      return;
+    }
     if (!pn.broken) {
       // pêndulo amortecido nos dois eixos
       pn.vx += (-OMEGA2 * Math.sin(pn.ax) - PINATA.damp * pn.vx) * dt;
@@ -1326,8 +1379,8 @@ export function createPuzzle(ctx) {
     // escorregadias (sem impulso na parede) até a irmã lambê-la
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) {
       const dc = C[n];
-      // a Rhaenyra só se suja quando é o jogador que a leva para a lama (seguindo a irmã, ela não escolheu)
-      const steps = n === 'radhija' || activeName === 'rhaenyra';
+      // a Rhaenyra só se suja quando é o jogador que anda com ela na lama (seguindo a irmã, ou parada ali na troca, não)
+      const steps = n === 'radhija' || (activeName === 'rhaenyra' && (dc.v || 0) > 0.05);
       if (steps && dc.x > MUD.x0 && dc.x < MUD.x1 && dc.z > MUD.z0 && dc.z < MUD.z1 && !dc.jumpT && !(dc.y > 0.02)) {
         const first = !mud.muddy(n);
         mud.soak(n, dt, dc);
@@ -1381,7 +1434,8 @@ export function createPuzzle(ctx) {
     if (!S.full && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.7) hints.cond(tap.on && crateOnHose() ? 'hoseBlocked' : 'poolDeep', 3.6, 12);
     if (S.full && !power() && !S.docked && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.8) hints.cond('boatFar', 3.6, 10);
     // a piñata em cima da roseira: parada, os espinhos não deixam chegar; balançando, quem bate é a Rhaenyra
-    if (!S.pin.broken && Math.hypot(active.x - ROSE_BUSH.x, active.z - ROSE_BUSH.z) < ROSE_BUSH.r + 0.9) {
+    if (S.pin.stage === 'tree' && (Math.hypot(active.x - ROSE_BUSH.x, active.z - ROSE_BUSH.z) < ROSE_BUSH.r + 1.2 || Math.hypot(active.x - MANGO_SHOVE.x, active.z - MANGO_SHOVE.z) < 1.6)) hints.cond('pinataHigh', 3.8, 12);
+    else if (!S.pin.broken && Math.hypot(active.x - ROSE_BUSH.x, active.z - ROSE_BUSH.z) < ROSE_BUSH.r + 0.9) {
       const swinging = Math.hypot(S.pin.ax, S.pin.az) > 0.12;
       if (swinging && k === 'radhija') hints.cond('pinataJumpRad', 3.4, 10);
       else if (!swinging) hints.cond('pinataThorns', 3.6, 12);
@@ -1606,6 +1660,7 @@ export function createPuzzle(ctx) {
     goose.reset();
     pigs.reset();
     chickens.reset();
+    mangoShove.reset();
     for (const v of S.veg.floor) v.obj.parent?.remove(v.obj);
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) { const h = S.veg.held[n]; if (h) { h.it.returnHome(); h.obj.parent?.remove(h.obj); } }
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) ctrls[n].y = 0;
@@ -1635,7 +1690,7 @@ export function createPuzzle(ctx) {
     if (placed('ribbon')) { S.gateOpen = true; gate.lock(); S.pigeon = 'gone'; props.pigeon.object.visible = false; }
     if (placed('candle')) { S.shedOpen = true; S.doorT = 1; }
     if (placed('hat')) { breaker.setOn(true); tap.setOn(true); S.water = 1; S.full = true; }
-    if (placed('star')) { S.pin.broken = true; props.pinata.burst(); }
+    if (placed('star')) { S.pin.stage = 'free'; S.pin.broken = true; props.pinata.burst(); }
     place('radhija', GOAL.celebrate.radhija.x, GOAL.celebrate.radhija.z + 0.6, NORTH);
     place('rhaenyra', GOAL.celebrate.rhaenyra.x, GOAL.celebrate.rhaenyra.z + 0.6, NORTH);
     notifyStage();
@@ -1643,7 +1698,8 @@ export function createPuzzle(ctx) {
   }
 
   return {
-    S: hints.S, TEXT, stages: STAGES, objective, update, interact, reset, jumpToStage, modifyIntent, lockFor, onWallTouch,
+    S: hints.S, TEXT, stages: STAGES, objective, update, interact, reset, jumpToStage, modifyIntent, lockFor, onWallTouch, onShove,
+    shoveSpots: () => [mangoShove.spot],
     navFlags: () => ({ gateOpen: S.gateOpen, shedOpen: doorOpen() }),
     // enlameada, a Rhaenyra escorrega na parede: sem impulso (o Espaço vira um pulinho comum)
     wallSpots: () => (mud.muddy('rhaenyra') ? [] : levers.map((b) => b.spot)),
@@ -1686,6 +1742,18 @@ export function createPuzzle(ctx) {
       if (key === 'doorButton') S.doorBtn = value ? 1 : 0;
       if (key === 'shed') { if (value) openShed(); }
       if (key === 'pigsOut') { openSty(); pigs.releaseNow(); }
+      if (key === 'vegHere') {
+        // testes: o legume que está no chão vai para a boca da dog ativa
+        const c = ctrls[ctx.activeDog];
+        const v = S.veg.floor[0];
+        if (v && !S.veg.held[c.name]) {
+          if (v.food) { pigs.removeFood(v.food); v.food = null; }
+          S.veg.floor = S.veg.floor.filter((f) => f !== v);
+          v.it.attach(c.name);
+          S.veg.held[c.name] = v;
+        }
+      }
+      if (key === 'pinataDown') { Object.assign(S.pin, { stage: 'free', st: 0, ax: 0, vx: 0, az: 0, vz: 0 }); }
       if (key === 'stairs') { S.crates.forEach((k) => { k.x = CR.x1; k.locked = !!value; if (!value) k.x = CR.x0; }); }
       if (key === 'secret') { S.secretReady = !!value; props.secretBoard.setLoose(!!value); }
     },
@@ -1704,7 +1772,7 @@ export function createPuzzle(ctx) {
         shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, pigs: pigs.info(),
         crates: S.crates.map((k) => ({ x: +k.x.toFixed(3), locked: k.locked })), crateHold: S.crateHold ? S.crateHold.i : null,
         climb: S.climb ? S.climb.phase : null, stairs: stairsReady(),
-        pinata: { ax: +S.pin.ax.toFixed(3), az: +S.pin.az.toFixed(3), hits: S.pin.hits, broken: S.pin.broken, ...(() => { const p = pinataPos(); return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }; })() },
+        pinata: { stage: S.pin.stage, shoves: mangoShove.pushes, ax: +S.pin.ax.toFixed(3), az: +S.pin.az.toFixed(3), hits: S.pin.hits, broken: S.pin.broken, ...(() => { const p = pinataPos(); return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }; })() },
         veg: { held: { radhija: S.veg.held.radhija?.kind ?? null, rhaenyra: S.veg.held.rhaenyra?.kind ?? null }, floor: S.veg.floor.length },
         secret: { ready: S.secretReady, open: S.secretOpen, seen: S.secretSeen },
         chickens: chickens.info(),
