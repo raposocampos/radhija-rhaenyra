@@ -150,21 +150,28 @@ try {
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] });
-  // DIAGNÓSTICO TEMPORÁRIO: a mesma captura sem o céu e sem as paredes (o borrão branco é de quem?)
+  // DIAGNÓSTICO TEMPORÁRIO: esconde um grupo por vez para achar o borrão branco
   {
     const cam15 = { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] };
-    console.log('DIAG ' + JSON.stringify(await page.evaluate(() => {
-      const G = window.__game;
-      return { skyOrder: G.engine.sky.renderOrder, skyVisible: G.engine.sky.visible, fov: G.engine.camera.fov, near: G.engine.camera.near };
-    })));
-    await page.evaluate(() => { window.__game.engine.sky.visible = false; });
-    await shot('15a-sem-ceu', cam15);
-    await page.evaluate(() => {
-      window.__game.engine.sky.visible = true;
-      window.__game.engine.scene.traverse((o) => { if (o.name === 'paredes') o.visible = false; });
-    });
-    await shot('15b-sem-paredes', cam15);
-    await page.evaluate(() => { window.__game.engine.scene.traverse((o) => { if (o.name === 'paredes') o.visible = true; }); });
+    const hide = (pred, on) => page.evaluate(({ src, on: v }) => {
+      const fn = new Function(`return (${src})`)();
+      const list = [];
+      window.__game.engine.scene.traverse((o) => { if (fn(o)) list.push(o); });
+      for (const o of list) o.visible = v;
+      return list.map((o) => o.name || o.type).slice(0, 8);
+    }, { src: pred.toString(), on });
+    const tries = [
+      ['15c-sem-ventilador', (o) => o.name === 'ventilador'],
+      ['15d-sem-jardim', (o) => o.name === 'jardim-de-inverno'],
+      ['15e-sem-fase', (o) => o.name === 'fase:fase9'],
+      ['15f-so-a-fase', (o) => o.parent && o.parent.type === 'Scene' && o.name !== 'fase:fase9'],
+    ];
+    for (const [name, pred] of tries) {
+      console.log('DIAG ' + name + ' ' + JSON.stringify(await hide(pred, false)));
+      await shot(name, cam15);
+      await hide(pred, true);
+    }
+    console.log('DIAG cena ' + JSON.stringify(await page.evaluate(() => window.__game.engine.scene.children.map((o) => `${o.type}:${o.name}:${o.visible}`))));
   }
   await keyDown('KeyR');
   await step(18);
