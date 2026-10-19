@@ -38,11 +38,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
   do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
 - Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`): o teste "presos no
-  cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou um bug
-  real: 3 de 400 vezes dois porcos entravam juntos no vão da porteira, entalavam lado a lado e ninguém saía. Agora a
-  porteira passa um de cada vez (`doorTurn`/`waitDoor` no `follow`; a vez passa quando quem a tem deixa os pontos da
-  porta para trás) e a saída que não deu certo em 12 s tenta de novo. Testes: o caso com a semente 191 (antes
-  travava), 200 sorteios de saída e 100 de volta com o sininho, sem dois porcos no vão ao mesmo tempo.
+  cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou bugs
+  reais no caminho dos porcos, corrigidos em `pigHerd.js`: (1) dois porcos entravam juntos no vão da porteira,
+  entalavam lado a lado e ninguém saía: agora passa um de cada vez (`assignDoor`/`waitDoor`: a vez é de quem está mais
+  perto do vão; quem espera fica antes dele e, colado, recua); (2) o desvio pela ponta da porteira aberta tinha os dois
+  pontos a 0,28 m e o porco "chegava" nos dois sem andar, preso para sempre do lado de fora depois do sininho: agora
+  ficam a 0,64 m e, já atrás da ponta, ele vai direto ao do outro lado; (3) dois porcos se empurrando focinho com
+  focinho não contavam como empacados: 2,5 s sem chegar mais perto do ponto agora conta. Também: a saída que não deu
+  certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
+  alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
+  volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
   Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)

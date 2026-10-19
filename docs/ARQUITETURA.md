@@ -484,8 +484,8 @@ está em `src/game/mechanics/gooseNpc.js`.
   atrás do outro e ficam na `cfg.area` (a horta). Atrapalham a dog que chega perto (a ativa primeiro): andando, se
   põem à frente dela, lado a lado; parada, chegam encostados, cheiram e dão um esbarrão de leve (`effects.knock`,
   0,32 m, com recarga por dog). Cada porco é um colisor dinâmico (círculo) que bloqueia as duas dogs; eles nunca
-  atravessam as dogs nem uns aos outros. A porteira passa um de cada vez (saindo ou voltando): quem chega perto
-  com a vez ocupada espera antes do vão. Cansam depois de `boredAfter` s e fuçam um pouco. Quem leva algo na boca
+  atravessam as dogs nem uns aos outros. A porteira passa um de cada vez (saindo ou voltando): a vez é de quem está
+  mais perto do vão e os outros esperam antes dele; a folha aberta é contornada pela ponta. Cansam depois de `boredAfter` s e fuçam um pouco. Quem leva algo na boca
   (`update(dt, { active, ctrls, carries })`, `carries(nome)`) é o alvo preferido: vão atrás dela de mais longe, mais
   rápido, sem cansar, esbarram mais e o esbarrão derruba o objeto: a fase passa `knockItem(nome, { pig, dirX, dirZ,
   x, z })` → true se derrubou (ela faz o objeto voar e cair; `cfg.knockChance`, e `cfg.knockGrace` s sem derrubar logo
