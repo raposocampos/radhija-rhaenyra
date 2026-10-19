@@ -3,7 +3,7 @@
 Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (Claude, 2026-10-19)
+## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash 415bd67, deploy 39202538581)
 
 - Pedido do usuário sobre os extras da tarefa E (já em produção): a animação do cocô estava dura (girava 360°
   parada antes de agachar) e precisava de uma recompensa própria; a de rolar (pilha de roupa da fase 8, tapete da
@@ -116,8 +116,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `src/levels/fase10/` (layout, puzzle, world/), `soundsQuintal.js`, eventos no feedback, catálogo com dez fases
   (menu 5 + 5; a 9 oferece "Próxima fase"), `test/fase10.test.mjs`, suíte E2E `quintal` e `capture-quintal.mjs`.
   Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC.
-- Próximo passo da D: CI e E2E `quintal` (depois `todas`) no PR, revisar as capturas (`shots/quintal-revisao/`),
-  corrigir o que o CI apontar (z-fighting, navegação, contratos) e entregar a prévia; esperar a aprovação.
+- Estado da D: **PR #33**, atualizado com o main `415bd67` (#32). O CI apontou faces coplanares, tipos e duas
+  esperas nos testes (corrigidos). O primeiro E2E passava de 30 min sem log; com a grama mais aberta, as auréolas
+  das luzinhas num desenho só e o ritmo medido logo no início, a suíte `quintal` roda em ~2 min (32/32) e as 66
+  capturas foram revisadas (ajustados: a vela do 2 no anel do meio do quadro, o brilho do bolo aceso, o laço e a
+  estante). No E2E, o E e o Q no mesmo quadro levavam o E para a outra dog: esperar o efeito do E antes do Q.
+- Próximo passo da D: com CI e E2E (`quintal` e `todas`) verdes no head final, entregar a prévia e esperar a
+  aprovação; integrar com squash e SHA esperado, liberar o deploy e avisar o orquestrador (o #31 entra na ordem da
+  aprovação; conflito previsto só no `e2e.yml`, mantendo as duas mudanças).
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,
