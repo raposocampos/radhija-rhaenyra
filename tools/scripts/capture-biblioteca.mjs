@@ -160,11 +160,14 @@ try {
       for (const o of list) o.visible = v;
       return list.map((o) => o.name || o.type).slice(0, 8);
     }, { src: pred.toString(), on });
+    console.log('DIAG fx ' + JSON.stringify(await page.evaluate(() => window.__game.engine.scene.children
+      .filter((o) => o.isSprite || (o.isMesh && !o.name))
+      .map((o) => { const m = o.material; return { t: o.type, p: o.position.toArray().map((v) => +v.toFixed(2)), s: o.scale.toArray().map((v) => +v.toFixed(2)), mt: m.type, op: m.opacity, dt: m.depthTest, bl: m.blending, c: m.color?.getHexString?.(), map: !!m.map, ro: o.renderOrder }; }))));
     const tries = [
-      ['15c-sem-ventilador', (o) => o.name === 'ventilador'],
-      ['15d-sem-jardim', (o) => o.name === 'jardim-de-inverno'],
-      ['15e-sem-fase', (o) => o.name === 'fase:fase9'],
-      ['15f-so-a-fase', (o) => o.parent && o.parent.type === 'Scene' && o.name !== 'fase:fase9'],
+      ['15g-sem-sprites', (o) => o.isSprite && o.parent?.type === 'Scene'],
+      ['15h-sem-malhas-fx', (o) => o.isMesh && !o.name && o.parent?.type === 'Scene'],
+      ['15i-sem-luzes', (o) => (o.isHemisphereLight || o.isDirectionalLight)],
+      ['15j-sem-particulas', (o) => o.name === 'fx-particles'],
     ];
     for (const [name, pred] of tries) {
       console.log('DIAG ' + name + ' ' + JSON.stringify(await hide(pred, false)));
