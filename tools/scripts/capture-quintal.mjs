@@ -246,7 +246,7 @@ try {
   await tap('KeyQ');
   await step(20);
   await tap('KeyE'); // a Radhija sai do balde
-  await until((i) => !i.quintal.bucket.riding && !i.quintal.deck, 120);
+  await until((i) => !i.quintal.bucket.riding && i.dogs.radhija.y === 0, 120); // o pulinho para fora terminou
   await setup({ active: 'radhija', place: { radhija: { x: L.TUBE.inlet.x, z: L.TUBE.inlet.z + 0.85, yaw: Math.PI } }, settle: 30 });
   await keyDown('KeyR');
   await step(18);

@@ -443,7 +443,8 @@ test('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolh
   assert.ok(h.run(4, { until: (i) => i.quintal.bucket.y === 0 }), 'o balde desceu');
   as(h, 'radhija');
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => !i.quintal.bucket.riding && !i.quintal.deck }), 'saiu do balde');
+  // o pulinho para fora termina no chão
+  assert.ok(h.run(1, { until: (i) => !i.quintal.bucket.riding && i.dogs.radhija.y === 0 }), 'saiu do balde');
   assert.equal(rad.y, 0);
   assert.equal(h.info().ribbon.holder, null, 'o laço ficou lá em cima');
   assert.equal(q(h).place.ribbon, 'home');
