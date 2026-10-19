@@ -170,7 +170,8 @@ try {
     const e = b.matrixWorld.elements;
     return [e[12], e[13], e[14]];
   });
-  const face = { pos: [head[0] - T.nz * 0.42 - T.nx * 0.04, head[1] + 0.1, head[2] + T.nx * 0.42 - T.nz * 0.04], look: [head[0] - T.nx * 0.05, head[1], head[2] - T.nz * 0.05] };
+  // do lado para onde ela olha (a bolinha fica na copa, do lado direito de quem olha o tronco)
+  const face = { pos: [head[0] + T.nz * 0.42 - T.nx * 0.04, head[1] + 0.1, head[2] - T.nx * 0.42 - T.nz * 0.04], look: [head[0] - T.nx * 0.05, head[1], head[2] - T.nz * 0.05] };
   await shot('40-armando-perto', face);
   await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.45; }, 120);
   await shot('41-rosnadinha-perto', face);
