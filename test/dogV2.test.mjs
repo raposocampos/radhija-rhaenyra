@@ -222,7 +222,8 @@ for (const kind of KINDS) {
         // da locomoção própria do modelo novo (gait.js, testada em test/locomocao.test.mjs): aí só o tronco segue o guia.
         if (d.tilt || d.overlay) continue;
         d.driver.inner.updateMatrixWorld(true);
-        const rise = d.object.children[0].position.y - d.driver.inner.position.y;
+        // andando com a passada comprida, o tronco desce um pouco para as patas plantadas alcançarem o chão (gait.js)
+        const rise = d.object.children[0].position.y - d.driver.inner.position.y - (d.gait > 0 ? d.locomotion.drop : 0);
         for (const [n2, n1] of FOLLOW) {
           if (d.gait > 0 && LEG_BONES.has(n2)) continue;
           byName(d.bones, n2).getWorldPosition(v);
