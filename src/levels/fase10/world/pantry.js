@@ -232,6 +232,7 @@ export function buildPantry(root, layout) {
   const markMats = C.list.map(() => new THREE.MeshStandardMaterial({ color: '#f6efe0', emissive: '#000000', roughness: 0.6 }));
   C.list.forEach((cr, i) => {
     const w = C.hx * 2 + 0.06, d = C.hz * 2 + 0.06, t = 0.025;
+    /** @type {THREE.BufferGeometry[]} */
     const parts = [[0, d / 2, w, t], [0, -d / 2, w, t], [w / 2, 0, t, d], [-w / 2, 0, t, d]].map(([x, z, lw, ld]) => {
       const p = new THREE.PlaneGeometry(lw, ld).rotateX(-Math.PI / 2);
       p.translate(C.x1 + x, FLOOR_Y + 0.003, cr.z + z);
