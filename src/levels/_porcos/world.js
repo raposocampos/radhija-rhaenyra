@@ -233,7 +233,7 @@ function crate(root, C) {
   g.position.set(C.x, 0, C.z);
   shadowAll(g);
   root.add(g);
-  return g;
+  return { group: g, wood: m };
 }
 
 /** Caminha redonda das dogs (o objetivo). */
@@ -284,7 +284,7 @@ export function buildPorcosWorld({ root, layout }) {
   const button = floorButton(root, BUTTON);
   const bell = bellPost(root, BELL);
   for (const [i, b] of BEDS.entries()) bed(root, b, BED_H, 21 + i);
-  const crateG = crate(root, CRATE);
+  const crateBox = crate(root, CRATE);
   dogBed(root, DOG_BED);
 
   // os três legumes de pegar, na frente do caixote
@@ -319,7 +319,7 @@ export function buildPorcosWorld({ root, layout }) {
   };
   return {
     props,
-    seeThrough: [pen.group, crateG, lowFence],
+    seeThrough: [pen.group, crateBox.wood, lowFence],
     update(dt, t) {
       pen.update(dt, t);
       bell.update(dt);

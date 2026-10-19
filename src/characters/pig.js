@@ -704,12 +704,12 @@ export function createPig({ variant = 0 } = {}) {
     const ay = clamp((vy - st.hvy) / Math.max(dt, 1e-3), -30, 30);
     st.hy1 = headY;
     st.hvy = vy;
-    const droop = lerp(0.5, 0.16, w.alert) + down * 0.12 + nose * 0.1;
+    const droop = lerp(0.44, 0.14, w.alert) + down * 0.12 + nose * 0.1;
     for (const e of ears) {
       const force = ay * 0.9 + shk * e.side * 70 + hic * 30 - oink * 8;
       e.v += (-140 * e.a - 9 * e.v + force) * dt;
       e.a = clamp(e.a + e.v * dt, -0.5, 0.75);
-      e.pivot.rotation.set(droop + e.a, e.side * 0.62, -e.side * 0.45, 'YXZ');
+      e.pivot.rotation.set(droop + e.a, e.side * 0.74, -e.side * 0.5, 'YXZ'); // caída para a frente, de lado (sem cobrir o olho)
     }
     const wagF = lerp(lerp(4, 7, amp), 9.5, Math.max(w.eat, oink));
     const wagA = (0.2 + 0.3 * w.eat + 0.15 * amp) * (1 - w.sleep * 0.85);
