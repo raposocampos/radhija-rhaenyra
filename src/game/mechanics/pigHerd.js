@@ -178,7 +178,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   const byCol = new Map(pigs.map((P) => [P.id, P]));
 
   const S = {
-    t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, nextFood: 1, eaten: 0, done: 0,
+    t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, nextFood: 1, eaten: 0, done: 0, errors: 0,
     /** @type {Record<string, number>} */ dogCd: {},
     /** há quanto tempo cada dog leva algo na boca (s; 0 = boca vazia) @type {Record<string, number>} */ carryT: {},
   };
@@ -457,7 +457,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     }
     fire('pig:done', { pig: P.i, food: food?.id ?? null, reason, x: P.x, z: P.z });
     S.done++;
-    setState(P, 'roam', { goal: null, pesterT: 0, boredT: 0 });
+    // volta a passear do zero: o passeio de antes do legume (idleAct 'go') não tem mais destino
+    setState(P, 'roam', { goal: null, pesterT: 0, boredT: 0, idleAct: 'sniff', idleT: 0.5 + Math.random() * 0.6 });
   }
 
   // ---------------------------------------------------------------------------- dogs
@@ -611,7 +612,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       return;
     }
     P.idleT -= dt;
-    if (P.idleAct === 'go') {
+    if (P.idleAct === 'go' && P.goal) {
       P.action = 'walk';
       if (walkTo(P, P.goal.x, P.goal.z, cfg.walkSpeed, dt, ctrls, { arrive: 0.12, limit: 'pen' }) || P.stuckT > 1) P.idleT = 0;
     } else {
@@ -644,7 +645,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       return;
     }
     P.idleT -= dt;
-    if (P.idleAct === 'go') {
+    if (P.idleAct === 'go' && P.goal) {
       P.action = 'walk';
       if (walkTo(P, P.goal.x, P.goal.z, cfg.walkSpeed, dt, ctrls, { arrive: 0.15 }) || P.stuckT > 1.2) P.idleT = 0;
     } else {
@@ -815,7 +816,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
         state: 'pen', t: 0, route: [], goal: null, food: null, dog: null, slot: 0, speed: 0, yawRate: 0, stuckT: 0,
         bumpT: 0, bumpWait: rand(cfg.bumpEvery), bumpPending: -1, bumpDog: null, oinkT: rand(cfg.oinkEvery), grumpyCd: 0,
         alertT: 0, idleT: 0.5 + P.i, idleAct: 'idle', pesterT: 0, boredT: 0, exitAt: 0, left: 0, phase: '', action: 'idle', lookAt: null,
-        fxT: 1 + P.i,
+        fxT: 1 + P.i, failed: false,
       });
       place(P, h.x, h.z, h.yaw ?? 0);
     }
@@ -868,58 +869,82 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
         oink(P, 'happy');
       }
     }
-    assignFoods();
-    dogHits(ctrls);
-    assignSlots();
-    for (const P of pigs) {
-      P.t += dt;
-      P.oinkT -= dt;
-      P.grumpyCd = Math.max(0, P.grumpyCd - dt);
-      P.lookAt = null;
-      P.yawRate *= 0.5;
-      if (P.bumpPending >= 0) {
-        P.bumpPending -= dt;
-        if (P.bumpPending < 0) doBump(P, ctrls);
-      }
-      if (P.alertT > 0 && (P.state === 'roam' || P.state === 'chase' || P.state === 'pen')) {
-        // ouviu um latido: para, olha e responde
-        P.alertT -= dt;
-        stand(P, dt);
-        faceDir(P, P.barkFrom.x - P.x, P.barkFrom.z - P.z, dt, 3.5);
-        P.lookAt = { x: P.barkFrom.x, y: 0.3, z: P.barkFrom.z };
-        P.action = 'alert';
-        if (P.oinkT <= 0) oink(P, 'alert');
-      } else {
-        switch (P.state) {
-          case 'pen': penIdle(P, dt, ctrls); break;
-          case 'exit': exit(P, dt, ctrls); break;
-          case 'roam': roam(P, dt, active, ctrls); break;
-          case 'chase': chase(P, dt, active, ctrls); break;
-          case 'toFood': toFood(P, dt, ctrls); break;
-          case 'eat': eat(P, dt); break;
-          case 'nap': nap(P, dt); break;
-          case 'wake': wake(P, dt); break;
-          case 'return': goHome(P, dt, ctrls); break;
-          default: setState(P, 'roam');
-        }
-      }
-      // fuçadas e roncos (só som: o feedback toca pig:snort / pig:snore)
-      P.fxT -= dt;
-      if (P.fxT <= 0) {
-        if (P.action === 'sniff') { fire('pig:snort', { pig: P.i, x: P.x, z: P.z }); P.fxT = 2.6 + Math.random() * 1.6; }
-        else if (P.action === 'sleep') { fire('pig:snore', { pig: P.i, x: P.x, z: P.z }); P.fxT = 2.4 + Math.random(); }
-        else P.fxT = 0.5;
-      }
-      syncModel(P, dt);
-    }
-    separatePigs();
-    if (S.recall && pigs.every((P) => P.state === 'pen' && inPen(P.x, P.z, -r * 0.5))) {
+    guarded(null, () => {
+      assignFoods();
+      dogHits(ctrls);
+      assignSlots();
+    });
+    // cada porco num passo protegido: um erro num deles não pode congelar o jogo (sai no console e ele volta a passear)
+    for (const P of pigs) guarded(P, () => stepPig(P, dt, active, ctrls));
+    guarded(null, separatePigs);
+    // todos em casa: a porteira fecha (com uma dog lá dentro, espera ela sair: nunca prende ninguém no chiqueiro)
+    if (S.recall && pigs.every((P) => P.state === 'pen' && inPen(P.x, P.z, -r * 0.5))
+      && !Object.values(ctrls).some((c) => inPen(c.x, c.z, c.r))) {
       S.recall = false;
       S.wantOpen = false;
       if (cfg.autoClose) gate.setTarget(0);
       fire('pig:home', { ...gateMid });
       fire('pig:gate', { open: false, ...gateMid });
     }
+  }
+
+  /**
+   * Roda fn; se der erro, registra no console (uma vez por porco: o E2E reprova com console.error) e põe o porco
+   * de volta num estado simples, sem travar o laço do jogo.
+   */
+  function guarded(P, fn) {
+    try {
+      fn();
+    } catch (err) {
+      if (!S.errors++ || (P && !P.failed)) console.error(`[porcos] erro${P ? ` no porco ${P.i} (${P.state})` : ''}:`, err);
+      if (!P) return;
+      P.failed = true;
+      if (P.food && P.food.pig === P.i && P.food.state !== 'done') { P.food.state = 'free'; P.food.pig = null; }
+      Object.assign(P, { food: null, route: [], goal: null, dog: null, speed: 0, yawRate: 0, bumpPending: -1, alertT: 0, action: 'idle', lookAt: null });
+      setState(P, inPen(P.x, P.z) ? 'pen' : 'roam', { idleAct: 'idle', idleT: 1 });
+    }
+  }
+
+  function stepPig(P, dt, active, ctrls) {
+    P.t += dt;
+    P.oinkT -= dt;
+    P.grumpyCd = Math.max(0, P.grumpyCd - dt);
+    P.lookAt = null;
+    P.yawRate *= 0.5;
+    if (P.bumpPending >= 0) {
+      P.bumpPending -= dt;
+      if (P.bumpPending < 0) doBump(P, ctrls);
+    }
+    if (P.alertT > 0 && (P.state === 'roam' || P.state === 'chase' || P.state === 'pen')) {
+      // ouviu um latido: para, olha e responde
+      P.alertT -= dt;
+      stand(P, dt);
+      faceDir(P, P.barkFrom.x - P.x, P.barkFrom.z - P.z, dt, 3.5);
+      P.lookAt = { x: P.barkFrom.x, y: 0.3, z: P.barkFrom.z };
+      P.action = 'alert';
+      if (P.oinkT <= 0) oink(P, 'alert');
+    } else {
+      switch (P.state) {
+        case 'pen': penIdle(P, dt, ctrls); break;
+        case 'exit': exit(P, dt, ctrls); break;
+        case 'roam': roam(P, dt, active, ctrls); break;
+        case 'chase': chase(P, dt, active, ctrls); break;
+        case 'toFood': toFood(P, dt, ctrls); break;
+        case 'eat': eat(P, dt); break;
+        case 'nap': nap(P, dt); break;
+        case 'wake': wake(P, dt); break;
+        case 'return': goHome(P, dt, ctrls); break;
+        default: setState(P, 'roam');
+      }
+    }
+    // fuçadas e roncos (só som: o feedback toca pig:snort / pig:snore)
+    P.fxT -= dt;
+    if (P.fxT <= 0) {
+      if (P.action === 'sniff') { fire('pig:snort', { pig: P.i, x: P.x, z: P.z }); P.fxT = 2.6 + Math.random() * 1.6; }
+      else if (P.action === 'sleep') { fire('pig:snore', { pig: P.i, x: P.x, z: P.z }); P.fxT = 2.4 + Math.random(); }
+      else P.fxT = 0.5;
+    }
+    syncModel(P, dt);
   }
 
   /** Só anima, sem andar (comemoração / fora do jogo). */
@@ -936,6 +961,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   function info() {
     return {
       open: gate.target > 0.5, gateT: round(gate.t), released: S.released, recall: S.recall, bumps: S.bumps, knocks: S.knocks, eaten: S.eaten,
+      /** Erros pegos pela rede de segurança do update (devem ser 0; cada um sai no console). */ errors: S.errors,
       pigs: pigs.map((P) => ({
         state: P.state, action: P.action, x: round(P.x), z: round(P.z), dog: P.dog, food: P.food?.id ?? null,
         distracted: distracted(P), left: P.state === 'toFood' ? round(P.food?.time ?? 0) : round(Math.max(0, P.left)),

@@ -474,11 +474,13 @@ está em `src/game/mechanics/gooseNpc.js`.
   `time` s de distração (contados da 1ª mordida), acorda se sacudindo e volta a atrapalhar (`pig:done`). Padrões
   por legume em `cfg.foods` (milho 32/18 s, cenoura 26/14 s, abóbora 40/24 s; outros tipos: `distractTime` 30 e
   `eatTime` 16); `time: Infinity` distrai de vez. `removeFood(f)` (a dog pegou de volta) devolve o porco às dogs.
-  Comida fora da área é ignorada. `recall()` leva todos para casa (a porteira fecha quando o último entra) e
-  `reset()` volta ao começo; `onBark(c)` faz os de perto pararem e olharem (latido não resolve). `info()`: `open`,
-  `gateT`, `released`, `pigs[i] { state, action, x, z, dog, food, distracted, left (s que faltam) }`,
-  `distracted`, `pestering`, `free`, `inPen`, `nextBack` (o menor tempo até um voltar) e `foods`. Para testes e
-  capturas: `place(i, x, z, yaw, state)` e `releaseNow()`.
+  Comida fora da área é ignorada. `recall()` leva todos para casa (a porteira fecha quando o último entra; com uma
+  dog dentro do chiqueiro, espera ela sair) e `reset()` volta ao começo; `onBark(c)` faz os de perto pararem e
+  olharem (latido não resolve). `info()`: `open`, `gateT`, `released`, `pigs[i] { state, action, x, z, dog, food,
+  distracted, left (s que faltam) }`, `distracted`, `pestering`, `free`, `inPen`, `nextBack` (o menor tempo até um
+  voltar), `foods` e `errors`. Rede de segurança: cada porco roda num passo protegido; um erro sai no console (uma
+  vez por porco), o porco volta a passear e o jogo segue (`errors` conta; deve ser 0). Para testes e capturas:
+  `place(i, x, z, yaw, state)` e `releaseNow()`.
 - Chiqueiro: `pigPenLayout(PEN)` (puro JS) devolve `{ pen, door, gate, colliders }` para o layout: as quatro cercas
   fora do miolo (a da porteira com o vão), o cfg da porteira (`createHingedGate`, abre para fora) e os pontos logo
   dentro e logo fora dela. `PEN = { x0, x1, z0, z1, t?, h?, door: { side: 'n' | 's' | 'e' | 'w', a, b }, swing?,
@@ -498,7 +500,8 @@ está em `src/game/mechanics/gooseNpc.js`.
   4. A fase decide quando abrir (`pigs.setOpen(true)` num botão, numa alavanca…) e transforma o legume largado em
      comida (`pigs.addFood(...)` com `onProgress: (k) => veg.setEaten(k)`); pegar de volta é `pigs.removeFood(f)`.
      O `knockItem` da fase larga o que a dog levava com um arco (legume derrubado na horta vira comida; a bolinha fica
-     no chão até a dog pegar de novo). A arena (`src/levels/_porcos/puzzle.js`) mostra tudo isso: pegar e largar com
+     no chão até a dog pegar de novo). O ponto de queda precisa ser alcançável: a arena usa `landingFor` (sem
+     atravessar nada alto no caminho, fora dos colisores, com lugar para a dog chegar; senão, aos pés dela). A arena (`src/levels/_porcos/puzzle.js`) mostra tudo isso: pegar e largar com
      E, o arco do legume caindo, a bolinha derrubada e a volta do legume comido.
   5. Sons e efeitos: o feedback já trata os eventos `pig:*` (§8); a fase emite `item:land {kind}` quando o que a dog
      levava cai no chão.

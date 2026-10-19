@@ -114,11 +114,40 @@ export function createPuzzle(ctx) {
     emit('item:pickup', { name: c.name, item: v.kind, x: c.x, z: c.z });
   }
 
+  /** Uma dog pequena cabe perto de (x, z)? (os porcos não contam: eles saem do lugar) */
+  const pigIds = () => new Set(pigs.pigs.map((P) => P.id));
+  function dogFits(x, z, ignore) {
+    if (!world.overlaps(x, z, 0.17, 'small', { ignore })) return true;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      if (!world.overlaps(x + Math.sin(a) * 0.3, z + Math.cos(a) * 0.3, 0.17, 'small', { ignore })) return true;
+    }
+    return false;
+  }
+  /**
+   * Onde o que a dog largou (ou derrubaram) pode cair sem ir para um limbo: sem atravessar nada alto no caminho (parede
+   * do chiqueiro, caixote; por cima da cerca baixa e dos canteiros pode), fora de qualquer colisor e com lugar para uma
+   * dog chegar perto. Tenta o ponto pedido, depois mais perto, depois para os lados; no fim, aos pés da própria dog.
+   */
+  function landingFor(c, ux, uz, dist) {
+    const ignore = pigIds();
+    const tries = [1, 0.75, 0.5, 0.3].map((k) => [ux, uz, dist * k]);
+    for (const a of [0.9, -0.9, 1.8, -1.8, Math.PI]) {
+      const ca = Math.cos(a), sa = Math.sin(a);
+      tries.push([ux * ca + uz * sa, uz * ca - ux * sa, 0.45]);
+    }
+    for (const [x, z, d] of tries) {
+      const p = world.resolve(c.x + x * d, c.z + z * d, 0.07, 'small', { ignore });
+      if (world.segmentClear(c.x, c.z, p.x, p.z, 0.06, 'small', { ignore, airborne: true }) && dogFits(p.x, p.z, ignore)) return p;
+    }
+    return { x: c.x, z: c.z };
+  }
+
   /** Larga (joga) o legume no chão à frente da dog (ou até `to`): um arco curto; na horta, vira comida dos porcos ao cair. */
   function tossVeg(v, c, to = null) {
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
     const sx = c.x + fx * (c.r + 0.12), sz = c.z + fz * (c.r + 0.12);
-    const land = to || world.resolve(c.x + fx * (c.r + VEGGIES.toss), c.z + fz * (c.r + VEGGIES.toss), 0.07, 'small');
+    const land = to || landingFor(c, fx, fz, c.r + VEGGIES.toss);
     v.item.drop(sx, sz, 0.3);
     v.holder = null;
     v.state = 'air';
@@ -194,7 +223,7 @@ export function createPuzzle(ctx) {
     const side = Math.random() < 0.5 ? -1 : 1, dist = 0.55 + Math.random() * 0.3;
     const ux = dirX * 0.8 - dirZ * side * 0.6, uz = dirZ * 0.8 + dirX * side * 0.6;
     const ul = Math.hypot(ux, uz) || 1;
-    const land = world.resolve(c.x + (ux / ul) * dist, c.z + (uz / ul) * dist, 0.07, 'small');
+    const land = landingFor(c, ux / ul, uz / ul, dist);
     const v = vegOf(name);
     let hit = false;
     if (v) { tossVeg(v, c, land); hit = true; }

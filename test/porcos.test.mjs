@@ -20,6 +20,31 @@ const L = porcos.layout;
 const levels = [...LEVELS, porcos];
 const arena = (query = '') => createHeadlessGame({ level: levels.length, levels, query });
 
+/** Roda fn guardando o que sair em console.error (a rede de segurança dos porcos registra lá). → as mensagens */
+async function consoleErrors(fn) {
+  const errs = [];
+  const error = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(' ')); };
+  try {
+    await fn();
+  } finally {
+    console.error = error;
+  }
+  return errs;
+}
+
+/** Aleatório com semente (mulberry32): a mesma bagunça em toda execução. */
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Ponto mais baixo de TODAS as malhas do porquinho (pele com esqueleto e peças rígidas), no mundo. */
 function lowestPoint(pig) {
   pig.object.updateMatrixWorld(true);
@@ -259,6 +284,49 @@ test('rebanho: comida no chão distrai o porco mais perto por um tempo; depois e
   assert.equal(inf.foods.length, 0);
 });
 
+test('rebanho: acabou a distração sem dog por perto: o porco volta a passear (o caso que travava a prévia)', async () => {
+  const h = herd({ foods: { corn: { time: 5, eat: 2 } } });
+  h.pigs.releaseNow();
+  h.run(2); // as dogs estão fora da área: eles só passeiam
+  // todos no meio de um passeio quando o legume cai (antes, ao voltar, o passeio ficava sem destino e o jogo parava)
+  for (const P of h.pigs.pigs) Object.assign(P, { state: 'roam', idleAct: 'go', goal: { x: P.x + 0.4, z: P.z + 0.4 }, idleT: 7 });
+  const P0 = h.pigs.pigs[0];
+  h.pigs.addFood({ x: P0.x, z: Math.min(P0.z + 0.8, 3.5), kind: 'corn' });
+  let P = null, x0 = 0, z0 = 0;
+  const errs = await consoleErrors(() => {
+    h.run(0.05);
+    P = h.pigs.pigs[h.events('pig:smell')[0].pig];
+    assert.equal(P.state, 'toFood');
+    h.run(11);
+    assert.equal(h.events('pig:done').length, 1, 'comeu, cochilou e acordou');
+    assert.equal(h.events('pig:done')[0].reason, 'time');
+    x0 = P.x;
+    z0 = P.z;
+    h.run(6);
+  });
+  assert.deepEqual(errs, []);
+  assert.equal(h.pigs.info().errors, 0);
+  assert.equal(P.state, 'roam');
+  assert.ok(Math.hypot(P.x - x0, P.z - z0) > 0.1, 'voltou a passear');
+});
+
+test('rebanho: um erro num porco não trava o jogo: sai no console uma vez por porco e os outros seguem', async () => {
+  const effects = { busy: () => false, knock: () => {} };
+  const h = herd({}, { effects, carries: (n) => n === 'rhaenyra', knockItem: () => { throw new Error('falha de teste'); } });
+  h.pigs.releaseNow();
+  Object.assign(h.ctrls.rhaenyra, { x: 2.6, z: 2.4 });
+  const errs = await consoleErrors(() => h.run(12));
+  const inf = h.pigs.info();
+  assert.ok(inf.errors >= 1, 'o erro aconteceu (e foi pego)');
+  assert.ok(errs.length >= 1 && errs.length <= h.pigs.pigs.length, `uma mensagem por porco: ${errs.length}`);
+  assert.ok(errs.every((m) => m.includes('[porcos]') && m.includes('falha de teste')));
+  for (const P of h.pigs.pigs) {
+    assert.ok(Number.isFinite(P.x) && Number.isFinite(P.z));
+    assert.ok(['roam', 'chase', 'pen'].includes(P.state), P.state);
+  }
+  assert.ok(inf.bumps >= 1, 'continuaram esbarrando');
+});
+
 test('rebanho: tempos padrão generosos por legume, comida tirada de volta e comida fora da área', () => {
   assert.ok(PIG_DEFAULTS.distractTime >= 25 && PIG_DEFAULTS.distractTime <= 40);
   for (const k of ['corn', 'carrot', 'pumpkin']) {
@@ -305,6 +373,22 @@ test('rebanho: recall leva todos de volta e a porteira fecha; reset volta ao com
   assert.equal(h.pigs.info().inPen, 3);
   assert.equal(h.pigs.gate.t, 0);
   assert.equal(h.pigs.info().foods.length, 0);
+});
+
+test('rebanho: o sininho não prende a dog no chiqueiro: com ela lá dentro, a porteira espera ela sair', () => {
+  const h = herd();
+  h.pigs.releaseNow();
+  h.run(2);
+  const c = h.ctrls.radhija;
+  Object.assign(c, { x: h.P.pen.x1 - 0.3, z: h.P.pen.z1 - 0.3 }); // num canto do chiqueiro
+  h.pigs.recall();
+  h.run(16);
+  assert.equal(h.events('pig:home').length, 0, 'não fecha com a dog lá dentro');
+  assert.ok(h.pigs.gate.t > 0.9, `porteira aberta (${h.pigs.gate.t})`);
+  Object.assign(c, { x: 3, z: 0.6 }); // saiu
+  h.run(5);
+  assert.equal(h.events('pig:home').length, 1, JSON.stringify(h.pigs.info().pigs));
+  assert.ok(h.pigs.gate.t < 0.05, 'agora fecha');
 });
 
 test('rebanho: a dog fora da área não é seguida; eles esperam na beirada', () => {
@@ -467,6 +551,173 @@ test('arena: a bolinha do chiqueiro na caminha termina a fase', async () => {
   h.run(1.2);
   assert.notEqual(h.info().state, 'playing', 'entregue: comemoração');
   h.run(3);
+});
+
+/**
+ * Onde a Radhija (a menor) consegue chegar a partir de (x, z), numa grade, com a porteira aberta (os colisores
+ * dinâmicos, porcos e porteira, não contam). near(x, z, d): há um lugar alcançável a menos de d de (x, z)?
+ */
+function reachableMap(world, from, step = 0.06) {
+  const b = world.bounds;
+  const ignore = new Set(world.dynamics.map((d) => d.id));
+  const nx = Math.ceil((b.maxX - b.minX) / step), nz = Math.ceil((b.maxZ - b.minZ) / step);
+  const cx = (i) => b.minX + (i + 0.5) * step, cz = (j) => b.minZ + (j + 0.5) * step;
+  const free = new Uint8Array(nx * nz), seen = new Uint8Array(nx * nz);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) free[j * nx + i] = world.overlaps(cx(i), cz(j), 0.17, 'small', { ignore }) ? 0 : 1;
+  const i0 = Math.floor((from.x - b.minX) / step), j0 = Math.floor((from.z - b.minZ) / step);
+  const queue = [j0 * nx + i0];
+  seen[queue[0]] = 1;
+  while (queue.length) {
+    const k = queue.pop();
+    const i = k % nx, j = (k - i) / nx;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const a = i + di, c = j + dj;
+      if (a < 0 || c < 0 || a >= nx || c >= nz) continue;
+      const q = c * nx + a;
+      if (free[q] && !seen[q]) { seen[q] = 1; queue.push(q); }
+    }
+  }
+  return {
+    count: seen.reduce((s, v) => s + v, 0),
+    near(x, z, d) {
+      const n = Math.ceil(d / step);
+      const ci = Math.floor((x - b.minX) / step), cj = Math.floor((z - b.minZ) / step);
+      for (let j = cj - n; j <= cj + n; j++) {
+        for (let i = ci - n; i <= ci + n; i++) {
+          if (i < 0 || j < 0 || i >= nx || j >= nz || !seen[j * nx + i]) continue;
+          if (Math.hypot(cx(i) - x, cz(j) - z) < d) return true;
+        }
+      }
+      return false;
+    },
+  };
+}
+
+test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai para um limbo, tudo segue ao alcance', async () => {
+  const random = Math.random;
+  const rnd = seeded(20261019);
+  Math.random = rnd;
+  const problems = [];
+  let h = null, map = null, acts = 0;
+  const seen = new Set();
+  try {
+    const errs = await consoleErrors(async () => {
+      h = await arena();
+      map = reachableMap(h.world, { x: h.ctrls.radhija.x, z: h.ctrls.radhija.z });
+      const A = L.PIGS.area, Bn = L.WORLD.bounds;
+      const TAU = Math.PI * 2;
+      const name = () => h.info().activeDog;
+      /** A dog ativa a d de (x, z), virada para lá. */
+      const near = (x, z, d = 0.32) => {
+        const a = rnd() * TAU;
+        h.teleport(name(), x + Math.sin(a) * d, z + Math.cos(a) * d, a + Math.PI);
+      };
+      const pick = (list) => list[Math.floor(rnd() * list.length)];
+      // encostada numa cerca, parede ou caixote, virada para ele (o que ela larga ou derrubam não pode atravessar)
+      const walls = () => [
+        { x: L.HORTA.x - 0.3, z: Bn.minZ + 0.4 + rnd() * (Bn.maxZ - Bn.minZ - 0.8), yaw: Math.PI / 2 },
+        { x: L.HORTA.x + 0.3, z: Bn.minZ + 0.4 + rnd() * (Bn.maxZ - Bn.minZ - 0.8), yaw: -Math.PI / 2 },
+        { x: L.PEN.x0 + 0.1 + rnd() * (L.PEN.x1 - L.PEN.x0 - 0.2), z: L.PEN.z1 + 0.33, yaw: Math.PI },
+        { x: L.PEN.x0 - 0.33, z: L.PEN.z0 + 0.2 + rnd() * (L.PEN.z1 - L.PEN.z0 - 0.4), yaw: Math.PI / 2 },
+        { x: L.PEN.x0 + 0.3 + rnd() * (L.PEN.x1 - L.PEN.x0 - 0.6), z: L.PEN.z0 + 0.3 + rnd() * (L.PEN.z1 - L.PEN.z0 - 0.6), yaw: rnd() * TAU },
+        { x: L.CRATE.x - 0.3 + rnd() * 0.6, z: L.CRATE.z + L.CRATE.hz + 0.25, yaw: Math.PI },
+        { x: L.CRATE.x + L.CRATE.hx + 0.25, z: L.CRATE.z, yaw: -Math.PI / 2 },
+        ...L.BEDS.map((b) => ({ x: b.x - b.hx - 0.25, z: b.z, yaw: Math.PI / 2 })),
+        { x: Bn.maxX - 0.25, z: rnd() * 3, yaw: Math.PI / 2 },
+        { x: L.BELL.x + 0.3, z: L.BELL.z, yaw: -Math.PI / 2 },
+      ];
+      const actions = {
+        andar() { h.hold([rnd() * 2 - 1, rnd() * 2 - 1], rnd() < 0.3 ? ['ShiftLeft'] : []); run(0.3 + rnd() * 1.4); h.hold(null); },
+        trocar() { h.tap('KeyQ'); },
+        legume() {
+          const v = h.info().veggies.filter((x) => x.state === 'home' || x.state === 'ground');
+          if (!v.length) return;
+          const t = pick(v);
+          near(t.x, t.z);
+          run(0.1);
+          h.tap('KeyE');
+        },
+        largar() { h.tap('KeyE'); },
+        dar() {
+          const other = name() === 'radhija' ? 'rhaenyra' : 'radhija';
+          h.puzzle.give(pick(['corn', 'carrot', 'pumpkin']), rnd() < 0.5 ? other : name());
+        },
+        horta() {
+          h.teleport(name(), A.minX + 0.3 + rnd() * (A.maxX - A.minX - 0.6), A.minZ + 0.3 + rnd() * (A.maxZ - A.minZ - 0.6), rnd() * TAU);
+          run(0.5 + rnd() * 3);
+        },
+        parede() {
+          const w = pick(walls());
+          h.teleport(name(), w.x, w.z, w.yaw);
+          run(0.1 + rnd() * 1.5);
+          if (rnd() < 0.6) h.tap('KeyE');
+        },
+        botao() { h.teleport(name(), L.BUTTON.x, L.BUTTON.z); run(0.4); },
+        sininho() { near(L.BELL.x, L.BELL.z, 0.45); run(0.1); h.tap('KeyE'); },
+        bolinha() {
+          const b = h.info().ball;
+          if (b.holder || b.air) return;
+          near(b.x, b.z, 0.35);
+          run(0.1);
+          h.tap('KeyE');
+        },
+        esperar() { run(1 + rnd() * 4); },
+      };
+      const weights = { andar: 5, trocar: 1, legume: 4, largar: 3, dar: 1, horta: 4, parede: 4, botao: 1, sininho: 1, bolinha: 2, esperar: 3 };
+      const bag = Object.entries(weights).flatMap(([k, n]) => Array(n).fill(k));
+      const air = {}, eaten = {};
+      let frame = 0;
+      /** Um quadro e as conferências (a cada quadro: porcos; a cada 0,25 s: legumes e bolinha ao alcance). */
+      function step() {
+        h.step();
+        frame++;
+        for (const P of h.puzzle.pigs.pigs) {
+          if (!Number.isFinite(P.x) || !Number.isFinite(P.z) || P.x < Bn.minX || P.x > Bn.maxX || P.z < Bn.minZ || P.z > Bn.maxZ) problems.push(`porco ${P.i} fora do mundo (${P.x}, ${P.z})`);
+          if (P.state === 'toFood' && P.t > 20) problems.push(`porco ${P.i} preso indo comer (${P.t.toFixed(1)} s)`);
+        }
+        if (frame % 15) return;
+        const inf = h.info();
+        const t = h.time.toFixed(1);
+        for (const v of inf.veggies) {
+          air[v.kind] = v.state === 'air' ? (air[v.kind] || 0) + 0.25 : 0;
+          eaten[v.kind] = v.state === 'eaten' ? (eaten[v.kind] || 0) + 0.25 : 0;
+          if (air[v.kind] > 1.5) problems.push(`${t} s: ${v.kind} preso no ar`);
+          if (eaten[v.kind] > L.VEGGIES.respawn + 1.5) problems.push(`${t} s: ${v.kind} não voltou depois de comido`);
+          if (v.state === 'held' && !v.holder) problems.push(`${t} s: ${v.kind} na boca de ninguém`);
+          if (v.state === 'ground' && !map.near(v.x, v.z, 0.45)) problems.push(`${t} s: ${v.kind} num limbo em (${v.x}, ${v.z})`);
+          seen.add(`legume:${v.state}`);
+        }
+        const b = inf.ball;
+        air.ball = b.air ? (air.ball || 0) + 0.25 : 0;
+        if (air.ball > 1.5) problems.push(`${t} s: bolinha presa no ar`);
+        if (!b.holder && !b.air && !map.near(b.x, b.z, 0.45)) problems.push(`${t} s: bolinha num limbo em (${b.x}, ${b.z})`);
+        if (inf.porcos.errors) problems.push(`${t} s: ${inf.porcos.errors} erro(s) nos porcos`);
+        for (const p of inf.porcos.pigs) seen.add(`porco:${p.state}`);
+      }
+      function run(sec) {
+        for (let i = 0, n = Math.round(sec * 60); i < n; i++) step();
+      }
+      while (h.time < 200 && problems.length < 8) {
+        // a bolinha não chega à caminha (isso terminaria a arena no meio da bagunça)
+        const holder = h.info().ball.holder;
+        if (holder && Math.hypot(h.ctrls[holder].x - L.DOG_BED.x, h.ctrls[holder].z - L.DOG_BED.z) < 2.4) h.teleport(holder, 3.0, 0.5);
+        actions[pick(bag)]();
+        acts++;
+        run(0.1 + rnd() * 0.6);
+      }
+    });
+    assert.ok(map.count > 1000, 'o mapa de alcance tem a arena toda');
+    assert.deepEqual(problems, []);
+    assert.deepEqual(errs, []);
+    assert.equal(h.info().state, 'playing', 'a arena seguiu jogável');
+    const inf = h.info().porcos;
+    assert.ok(acts > 150, `${acts} ações`);
+    assert.ok(inf.bumps > 5 && h.log('item:land').length > 5, `bagunça de verdade: ${inf.bumps} esbarrões, ${h.log('item:land').length} quedas, ${inf.knocks} derrubadas`);
+    for (const s of ['porco:chase', 'porco:eat', 'legume:ground', 'legume:held']) assert.ok(seen.has(s), `passou por ${s} (${[...seen].join(', ')})`);
+  } finally {
+    Math.random = random;
+    h?.releaseAll();
+  }
 });
 
 test('arena: a Rhaenyra não passa no vão da cerca (pula a cerca baixa); a Radhija passa', async () => {
