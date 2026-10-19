@@ -1,7 +1,30 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34, #35, #36 e #37 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #38 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Entregue: empurrão em pé da Rhaenyra (PR #38, squash `369b0ff`, deploy `39326965839`)
+
+- Pedido do usuário (2026-10-19): "Rhaenyra tem mania de ficar empurrando os outros, aí daria pra usar pra tirar
+  alguma coisa de uma árvore, ou de algum lugar alto, empurrar pra cair". Desenho aprovado: o mesmo **R1 / Shift /
+  Empurrar** segurado de frente para algo empurrável no alto (árvore, mesinha, estante); ela fica de pé nas traseiras,
+  apoia as patas da frente e empurra no ritmo; **3 empurrões** e o que está lá em cima cai do outro lado. Nada de
+  tecla nova (longe de C e R3); o botão de toque é o Empurrar que já existe (segurar). Usar numa fase é decisão do
+  usuário (a fase 10, #33, quer a árvore antes da piñata).
+- Retorno do usuário na primeira prévia: **tirar o empurrão na irmã**; o movimento parecia "sarrando, não empurrando"
+  (o quadril ia e voltava): agora o empurrão sai das patas da frente e dos ombros (armam e batem, tranco curto do peito),
+  quadril e traseiras parados; **rosnadinha** a cada empurrão (som `shoveGrowl` e boquinha franzida).
+- Referência real: vídeos privados `referencias/fotos/2026-10-19/video-2.mp4` e `video-3.mp4` (fora do Git).
+- Feito: controlador (`pickShoveSpot`, `startShove`, `stepShove`, `SHOVE_*` em `dogController.js`), núcleo
+  (`src/game/shove.js` ligado em `game.js`), empurrável (`src/game/mechanics/shoveTarget.js`), pose
+  (`src/dogs/shovePose.js` + bloco em `dogAnimation.js`), visuais (`src/world/shoveProps.js`), Arena do Empurrão
+  (`src/levels/_empurra/`, `?level=empurra&play`), sons (`soundsEmpurra.js`), folhinhas (`particles.leaves`), testes
+  (`test/empurrao.test.mjs`, inclusive quadril parado e tranco dos ombros no modelo real), suíte E2E `empurra`
+  (também com `?dogs=novo`) e capturas (`capture-empurra.mjs`). Docs: ARQUITETURA §6 (Empurrão em pé) e README.
+- Coordenação: a sessão dos modelos das dogs porta a pose na etapa 3; mandar a ela os campos do `anim` (`shoveK`,
+  `shoveCycle`, `shoveN`, `shoveGap`, `shoveY`, `shoveOver`) e os quadros de `shovePose.js` quando o PR entrar.
+- Próximo passo: CI e E2E no head novo, prévia ao usuário e aprovação explícita antes de integrar; avisar o
+  orquestrador ao integrar. Se o #36 entrar antes, atualizar com o main e revalidar.
 
 ## Entregue: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`)
 

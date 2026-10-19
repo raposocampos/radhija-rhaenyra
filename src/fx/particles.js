@@ -451,6 +451,7 @@ const CONFETTI = ['#F08A3C', '#7FA36B', '#FFF6E6', '#F27B6B', '#B9A3E3', '#F6C85
 const HEARTS = ['#F37C8A', '#F59AA6', '#EE6A6A', '#F7A9B4'];
 const WATER = ['#DDF2FF', '#C4E6FA', '#EAF7FF', '#B4DCF5'];
 const FEATHERS = ['#FFFFFF', '#F7F4EE', '#EFEBE3'];
+const LEAVES = ['#5E8B34', '#7FA645', '#A3C45A', '#C9B24E'];
 const EMBERS = ['#FFB347', '#FFD27A', '#FF9A3C', '#FFE6A8'];
 const FIREFLY = ['#E9FF8F', '#D4F76E', '#F4FFB8'];
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -701,6 +702,31 @@ export function createParticles(engine) {
     }
   }
 
+  /** Folhinhas soltando da copa sacudida: caem girando devagar (o empurrão na arvorezinha). */
+  function leaves(pos, opts = {}) {
+    const p = P(pos);
+    const n = opts.count ?? 5;
+    const sc = opts.size ?? 1;
+    const R = opts.radius ?? 0.35;
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * R;
+      spawn(soft, {
+        x: p.x + Math.cos(a) * r, y: p.y + rnd(-0.1, 0.15), z: p.z + Math.sin(a) * r,
+        vx: Math.cos(a) * rnd(0.1, 0.35), vy: rnd(0.05, 0.4), vz: Math.sin(a) * rnd(0.1, 0.35),
+        color: pick(LEAVES),
+        life: rnd(1.6, 2.4),
+        s0: rnd(0.08, 0.12) * sc,
+        alpha: 1,
+        rot: Math.random() * Math.PI * 2,
+        drag: 2.6,
+        grav: 1.1,
+        mode: MODE.feather,
+        tile: TILE.feather,
+      });
+    }
+  }
+
   /** Faíscas quentes (lanterna acendendo). */
   function sparks(pos, opts = {}) {
     const p = P(pos);
@@ -813,7 +839,7 @@ export function createParticles(engine) {
 
   return {
     dust, sparkle, burst, ring, update, clear,
-    splash, drops, feathers, sparks, fireflies,
+    splash, drops, feathers, leaves, sparks, fireflies,
     count: () => soft.alive + glow.alive,
     group,
   };

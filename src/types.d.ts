@@ -354,7 +354,56 @@ export interface DogController {
   wallTouched: boolean;
   /** O ponto alcançado neste quadro (o jogo emite wall:touch, chama puzzle.onWallTouch e zera). */
   wallHit: WallSpot | null;
+  /** Empurrão em pé: ponto em uso (null = fora dele) e etapa (de pé, empurrando, descendo). */
+  shove: ShoveSpot | null;
+  shoveStage: 'up' | 'push' | 'down' | null;
+  /** Tempo na etapa (s); no 'push', no ciclo de empurrão atual. */
+  shoveT: number;
+  /** 0..1 do ciclo de empurrão atual (o empurrão conta em SHOVE_HIT). */
+  shoveCycle: number;
+  /** Empurrões dados desde que ficou de pé. */
+  shoveN: number;
+  /** 0 nas quatro patas … 1 de pé (para a pose). */
+  shoveK: number;
+  /** Deslocamento lateral na face, escolhido ao começar (m). */
+  shoveLat: number;
+  shoveFrom: XZ;
+  /** Onde a dog deve estar neste quadro (steer calcula, integrate move com colisão). */
+  shoveGoalX: number;
+  shoveGoalZ: number;
+  /** O botão continua seguro (o jogo atualiza a cada quadro). */
+  shoveHeld: boolean;
+  /** O jogo pede para descer ao fim do ciclo. */
+  shoveStop: boolean;
+  /** Empurrou neste quadro (o jogo emite dog:shove, chama puzzle.onShove e zera). */
+  shoveHit: ShoveSpot | null;
 }
+
+/**
+ * Algo empurrável no alto (empurrão em pé da Rhaenyra). (x, z): pé da superfície no meio da face onde as patas da
+ * frente apoiam; (nx, nz): normal unitária, para o lado de onde a dog vem; y: altura das patas (m); w: meia largura da
+ * face (m; 0 = redonda, ela fica de frente para o meio); over: quanto além da face as patas apoiam (em cima de uma
+ * beirada, m); kind: o que é ('tree', 'table', 'shelf'…); look: para onde quem empurra olha (o item lá em cima).
+ */
+export interface ShoveSpot { id: string; x: number; z: number; nx: number; nz: number; y: number; w?: number; over?: number; kind?: string; look?: XYZ }
+/**
+ * Empurrável do layout (createShoveTarget): o ponto de apoio como em ShoveSpot, quantos empurrões até o item cair, a
+ * mola do balanço e o item lá em cima: from/edge = onde ele está e de onde sai do apoio (mundo), land = pontos do chão
+ * onde ele pode parar (o primeiro livre), r = raio no chão, center = altura do meio acima da origem dele, restY = altura
+ * do meio parado no chão, rB = raio da esfera que o contém, roll = rola (bola), bounce = restituição.
+ */
+export interface ShoveTargetCfg {
+  x: number; z: number; nx: number; nz: number; y: number; w?: number; over?: number;
+  kind?: 'tree' | 'table' | 'shelf';
+  pushes?: number;
+  sway?: { w?: number; zeta?: number; kick?: number; grow?: number; oneSided?: boolean };
+  item?: {
+    from: XYZ; edge?: XYZ; land: XZ[]; r: number;
+    restY?: number; center?: number; rB?: number; roll?: boolean; bounce?: number;
+  };
+}
+/** Visual de um empurrável (src/world/shoveProps.js): inclina para longe da dog (a = rad, va = rad/s). */
+export interface ShoveTargetProp extends PropBase { setSway(a: number, va: number): void }
 
 /**
  * Parede marcada para o impulso da Rhaenyra (botão ou alavanca no alto). (x, z): pé da parede, no meio das
@@ -552,6 +601,10 @@ export interface Puzzle {
   wallSpots?(): WallSpot[];
   /** O impulso na parede alcançou o alto do ponto `spot` (uma vez por impulso, no meio dele). */
   onWallTouch?(ctrl: DogController, spot: WallSpot): void;
+  /** Coisas empurráveis no alto onde o empurrar da Rhaenyra vira empurrão em pé (as que valem agora). */
+  shoveSpots?(): ShoveSpot[];
+  /** Um empurrão em pé chegou ao ponto `spot` (um por ciclo de empurrão). */
+  onShove?(ctrl: DogController, spot: ShoveSpot, ctrls: Record<DogName, DogController>): void;
   [k: string]: any;
 }
 
@@ -601,6 +654,17 @@ export interface PuloProps extends PlaceholderProps {
   /** Portinhola do armarinho (0 fechada … 1 levantada). */
   hatch: GateProp;
   lights: PropBase & { setOn(on: boolean): void };
+}
+
+/** Arena do Empurrão: os três empurráveis (src/world/shoveProps.js) e os itens lá em cima de cada um. */
+export interface EmpurraProps extends LevelProps {
+  item: PropBase & HighlightProp;
+  tree: ShoveTargetProp;
+  table: ShoveTargetProp;
+  shelf: ShoveTargetProp;
+  ball: PropBase;
+  duck: PropBase;
+  bear: PropBase;
 }
 
 /** Arena de desenvolvimento do bafo (não confundir a placa simples com a da fase 4). */
@@ -894,7 +958,7 @@ export interface PigeonPose {
 /** Ação de animação pedida a cada quadro (anim.action). */
 export type DogAction =
   | 'none' | 'sit' | 'push' | 'strain' | 'tug' | 'celebrate' | 'sniff' | 'dash' | 'turn' | 'shake' | 'startled' | 'jump'
-  | 'bafoAim' | 'bafo' | 'proud' | 'yuck' | 'lick' | 'licked' | 'slide';
+  | 'bafoAim' | 'bafo' | 'proud' | 'yuck' | 'lick' | 'licked' | 'slide' | 'shove';
 
 export interface DogAnim {
   /** Velocidade real (m/s). */
@@ -932,6 +996,17 @@ export interface DogAnim {
   wallPaws?: number;
   wallSide?: number;
   wallLat?: number;
+  /**
+   * Empurrão em pé: 0..1 de pé (0 = nas quatro patas), fase 0..1 do ciclo de empurrão (−1 = sem), distância do centro
+   * da dog à superfície (m), altura das patas (m) e quanto além da face elas apoiam (m).
+   */
+  shoveK?: number;
+  shoveCycle?: number;
+  /** Empurrões dados desde que ficou de pé (a traseira que se ajeita alterna). */
+  shoveN?: number;
+  shoveGap?: number;
+  shoveY?: number;
+  shoveOver?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
   /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */

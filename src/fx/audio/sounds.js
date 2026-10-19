@@ -1,4 +1,4 @@
-// Biblioteca completa de sons (v1 + v2 + bafo + v3 + expresso + lambe + parede + lavanderia + biblioteca + quintal + extras) e tabelas de mixagem. Para um som novo: escreva a
+// Biblioteca completa de sons (v1 + v2 + bafo + v3 + expresso + lambe + parede + lavanderia + biblioteca + quintal + extras + empurrão) e tabelas de mixagem. Para um som novo: escreva a
 // função em soundsV1.js/soundsV2.js (ou num arquivo novo) e acrescente aqui; createAudio().play(nome) já toca.
 import { SOUNDS, MIN_GAP, PITCH_VAR, VERB, UI_SOUNDS, LOW_PRIORITY } from './soundsV1.js';
 import { SOUNDS2, MIN_GAP_V2, PITCH_VAR_V2, VERB_V2 } from './soundsV2.js';
@@ -12,6 +12,7 @@ import { SOUNDS_BIBLIOTECA, MIN_GAP_BIBLIOTECA, PITCH_VAR_BIBLIOTECA, VERB_BIBLI
 import { SOUNDS_QUINTAL, MIN_GAP_QUINTAL, PITCH_VAR_QUINTAL, VERB_QUINTAL } from './soundsQuintal.js';
 import { SOUNDS_EXTRAS, MIN_GAP_EXTRAS, PITCH_VAR_EXTRAS, VERB_EXTRAS } from './soundsExtras.js';
 import { SOUNDS_PORCOS, MIN_GAP_PORCOS, PITCH_VAR_PORCOS, VERB_PORCOS } from './soundsPorcos.js';
+import { SOUNDS_EMPURRA, MIN_GAP_EMPURRA, PITCH_VAR_EMPURRA, VERB_EMPURRA } from './soundsEmpurra.js';
 
 Object.assign(SOUNDS, SOUNDS2);
 Object.assign(MIN_GAP, MIN_GAP_V2);
@@ -57,6 +58,10 @@ Object.assign(SOUNDS, SOUNDS_PORCOS);
 Object.assign(MIN_GAP, MIN_GAP_PORCOS);
 Object.assign(PITCH_VAR, PITCH_VAR_PORCOS);
 Object.assign(VERB, VERB_PORCOS);
+Object.assign(SOUNDS, SOUNDS_EMPURRA);
+Object.assign(MIN_GAP, MIN_GAP_EMPURRA);
+Object.assign(PITCH_VAR, PITCH_VAR_EMPURRA);
+Object.assign(VERB, VERB_EMPURRA);
 ['curtainIn', 'curtainOut', 'uiMove', 'uiBack', 'uiDenied'].forEach((n) => UI_SOUNDS.add(n));
 LOW_PRIORITY.add('uiMove');
 
