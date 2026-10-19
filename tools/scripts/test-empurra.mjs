@@ -17,6 +17,12 @@ const stanceOf = (key, back = 0) => ev(({ k, b }) => {
   return { x: T.x + T.nx * d, z: T.z + T.nz * d, nx: T.nx, nz: T.nz, land: T.item.land };
 }, { k: key, b: back });
 
+/** Vira a Rhaenyra de frente para o alvo sem andar (andar até ele podia fazê-la escorregar no tronco). */
+const faceIt = async (T) => {
+  await ev(({ nx, nz }) => { window.__game.game.debug.ctrls.rhaenyra.yaw = Math.atan2(-nx, -nz); }, { nx: T.nx, nz: T.nz });
+  await H.gsleep(120);
+};
+
 const pad = (down = []) => ev((d) => {
   const buttons = Array.from({ length: 17 }, (_, i) => ({ pressed: d.includes(i), value: d.includes(i) ? 1 : 0 }));
   window.__fakePads = [{ id: 'Controle falso', index: 0, connected: true, mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0], buttons }];
@@ -31,9 +37,9 @@ try {
   await page.keyboard.press('KeyF'); // a Radhija fica
   const tree = await stanceOf('arvorezinha', 0.3);
   await walkTo(tree.x, tree.z, { tol: 0.1 });
-  await H.hold(H.keysFor(-tree.nx, -tree.nz), 120); // de frente para o tronco
+  await faceIt(tree); // de frente para o tronco
   i = await H.gsleep(200);
-  check(i.prompt === 'Empurrar', 'prompt do empurrão de frente para a arvorezinha', String(i.prompt));
+  check(i.prompt === 'Empurrar', 'prompt do empurrão de frente para a arvorezinha', `${i.prompt}; em ${i.dogs.rhaenyra.x}, ${i.dogs.rhaenyra.z}`);
   await shot('empurra-antes.png');
 
   await clearLog();
@@ -75,7 +81,7 @@ try {
   await page.keyboard.press('KeyF');
   const table = await stanceOf('mesinha', 0.25);
   await walkTo(table.x, table.z, { tol: 0.1 });
-  await H.hold(H.keysFor(-table.nx, -table.nz), 120);
+  await faceIt(table);
   await clearLog();
   await pad([5]); // R1 / RB seguro
   i = await H.waitFor((s) => s.empurra.table.dropped, { timeout: 5000 });
@@ -108,7 +114,7 @@ try {
   await page.keyboard.press('KeyF');
   const tn = await stanceOf('arvorezinha', 0.3);
   await walkTo(tn.x, tn.z, { tol: 0.1 });
-  await H.hold(H.keysFor(-tn.nx, -tn.nz), 120);
+  await faceIt(tn);
   await clearLog();
   const recN = await H.record(() => {
     const d = window.__game.dogs.rhaenyra;
