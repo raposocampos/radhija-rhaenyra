@@ -316,19 +316,22 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   }
 
   /**
-   * A folha aberta da porteira está entre o porco e o ponto p? → um ponto para contornar a ponta dela (ou null).
-   * Quem chega pelo lado da dobradiça daria de cara na folha.
+   * A folha aberta da porteira (com a ponta "engordada" pelo raio do porco) fica entre o porco e o ponto p? → dois
+   * pontos para contornar a ponta dela, um do lado do porco e um do lado de p (ou null). Quem chega pelo lado da
+   * dobradiça daria de cara na folha.
    */
   function aroundLeaf(P, p) {
     if (gate.t < 0.25 || p.leaf) return null;
     const h = cfg.gate.hinge, tip = gate.tip();
-    const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
-    const cross = o(h.x, h.z, tip.x, tip.z, P.x, P.z) * o(h.x, h.z, tip.x, tip.z, p.x, p.z) < 0
-      && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, tip.x, tip.z) < 0;
-    const [qx, qz] = closestOn(tip.x, tip.z, { ax: P.x, az: P.z, bx: p.x, bz: p.z });
-    if (!cross && Math.hypot(tip.x - qx, tip.z - qz) > r + 0.05) return null;
     const L = Math.hypot(tip.x - h.x, tip.z - h.z) || 1;
-    return { x: tip.x + ((tip.x - h.x) / L) * (r + 0.18), z: tip.z + ((tip.z - h.z) / L) * (r + 0.18), leaf: true };
+    const ux = (tip.x - h.x) / L, uz = (tip.z - h.z) / L;
+    const ex = tip.x + ux * (r + 0.05), ez = tip.z + uz * (r + 0.05);
+    const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+    const sP = o(h.x, h.z, ex, ez, P.x, P.z), sp = o(h.x, h.z, ex, ez, p.x, p.z);
+    if (!(sP * sp < 0 && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, ex, ez) < 0)) return null;
+    const far = r + 0.22;
+    const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.14, z: tip.z + uz * far + ux * side * 0.14, leaf: true });
+    return [at(Math.sign(sP)), at(Math.sign(sp))];
   }
 
   /** Segue P.route; → true ao chegar no último ponto. Contorna a folha aberta da porteira; empacado, dá um passo de lado. */
@@ -338,8 +341,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (!p) return true;
     const w = aroundLeaf(P, p);
     if (w) {
-      P.route.unshift(w);
-      p = w;
+      P.route.unshift(...w);
+      p = w[0];
     }
     if (P.stuckT > 1.5) {
       const dx = p.x - P.x, dz = p.z - P.z;
