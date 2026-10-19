@@ -9,6 +9,7 @@ import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
+import { closeBrowser, openPage } from './lib/page-guard.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const OUT = 'shots/celular-revisao';
@@ -49,7 +50,7 @@ try {
 } catch (err) {
   errors.push(err.stack || err.message);
 } finally {
-  await browser?.close();
+  await closeBrowser(browser);
   await server?.close();
 }
 console.log(`\n${shots} capturas em ${OUT}`);
@@ -61,8 +62,9 @@ if (errors.length) {
 
 /** Todas as capturas de um aparelho, numa página própria. */
 async function captureDevice(dev, url) {
-    const page = await browser.newPage(dev.opts);
-    page.setDefaultTimeout(180000);
+    // redes de prazo (lib/page-guard.mjs): uma aba que trava ou cai encerra o passo em minutos, com o passo e o estado
+    const { page, guard } = await openPage(browser, dev.opts, { name: dev.id });
+    page.setDefaultTimeout(120000);
     page.on('pageerror', (e) => errors.push(`[${dev.id}] ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${dev.id}] ${m.text()}`); });
     if (dev.ios) {
@@ -80,8 +82,9 @@ async function captureDevice(dev, url) {
 
     /** Abre a página, espera o estado e congela o laço; o script avança e desenha. */
     const open = async (query, state) => {
+      guard.note(`abrir '${query}' até o estado ${state}`);
       await page.goto(`${url}${query}`);
-      await page.waitForFunction((s) => window.__game?.game?.state === s, state, { timeout: 180000 });
+      await page.waitForFunction((s) => window.__game?.game?.state === s, state, { timeout: 120000 });
       await page.waitForTimeout(1500);
       await page.evaluate(() => {
         window.__freezeReview = true;
@@ -115,13 +118,14 @@ async function captureDevice(dev, url) {
     const step = (n) => page.evaluate((k) => window.__step(k), n);
     const until = async (pred, max = 900) => {
       const ok = await page.evaluate(({ src, m }) => window.__stepUntil(src, m), { src: pred.toString(), m: max });
-      if (!ok) errors.push(`[${dev.id}] condição não alcançada: ${pred}`);
+      if (!ok) errors.push(`[${dev.id}] condição não alcançada: ${pred}; ${await guard.peek()}`);
     };
     const shot = async (name, wait = 700) => {
       await page.waitForTimeout(wait); // transições de CSS (tempo real)
       await page.evaluate(() => window.__render());
       await page.screenshot({ path: `${OUT}/${dev.id}-${name}.png`, timeout: 120000 });
       shots++;
+      guard.note(`captura ${dev.id}-${name}`);
       console.log(`  captura: ${OUT}/${dev.id}-${name}.png`);
     };
     const center = (sel) => page.evaluate((s) => {
