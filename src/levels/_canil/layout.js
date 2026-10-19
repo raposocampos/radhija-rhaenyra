@@ -31,12 +31,13 @@ export const SHOWCASE = {
 /** Paredes do estúdio (norte e laterais; o sul fica aberto para a câmera). */
 export const ROOM = { wallH: 1.35, sideH: 1.25, wall: 0.12 };
 
+/** Paredes finas no lugar das paredes desenhadas (e um rodapé invisível ao sul, junto da câmera). */
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
-  { id: 'limite-norte', shape: 'box', x: 0, z: -3.7, hx: 5, hz: 0.5 },
-  { id: 'limite-sul', shape: 'box', x: 0, z: 3.7, hx: 5, hz: 0.5 },
-  { id: 'limite-oeste', shape: 'box', x: -4.5, z: 0, hx: 0.5, hz: 4.2 },
-  { id: 'limite-leste', shape: 'box', x: 4.5, z: 0, hx: 0.5, hz: 4.2 },
+  { id: 'parede-norte', shape: 'box', x: 0, z: WORLD.bounds.minZ - ROOM.wall / 2, hx: 4.3, hz: ROOM.wall / 2 },
+  { id: 'limite-sul', shape: 'box', x: 0, z: WORLD.bounds.maxZ + 0.06, hx: 4.3, hz: 0.06 },
+  { id: 'parede-oeste', shape: 'box', x: WORLD.bounds.minX - ROOM.wall / 2, z: 0, hx: ROOM.wall / 2, hz: 3.4 },
+  { id: 'parede-leste', shape: 'box', x: WORLD.bounds.maxX + ROOM.wall / 2, z: 0, hx: ROOM.wall / 2, hz: 3.4 },
   ...SHOWCASE.spots.map((s, i) => ({ id: `tapete-${i + 1}`, shape: /** @type {'circle'} */ ('circle'), x: s.x, z: SHOWCASE.z, r: SHOWCASE.r })),
 ];
 

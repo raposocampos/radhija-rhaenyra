@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (modelos novos das dogs, etapa 1, em andamento). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
 
