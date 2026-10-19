@@ -394,8 +394,8 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   - voltinha (`poopPre`): ela fareja e anda um círculo pequeno de verdade (0,5 × o comprimento dela, de 0,8 a 1,3
     volta, terminando de perfil para a câmera), com o passo igual ao deslocamento e os apoios girando com o corpo na
     curva. `planCircle` só aceita um caminho sem colisor (`overlaps` do mundo), sem a irmã e com o chão livre onde o
-    cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada. Nunca gira
-    sem andar;
+    cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada (sem chão
+    livre por perto para o cocô, o C não começa). Nunca gira sem andar;
   - agachada (`poopK`, `POOP_TIME` s): agacha, faz força, solta o cocozinho de `src/world/poop.js` e cava com as
     traseiras; a irmã por perto vira a cara;
   - comemoração (`party`): o cocô brilha dourado (`poop.shine()`, com feixe de luz e estrelinha), toca o jingle

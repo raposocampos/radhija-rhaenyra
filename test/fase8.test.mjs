@@ -115,7 +115,7 @@ test('fase 8: partida completa (cesto → centrífuga → mantinha no cesto → 
   const vic = h.log('victory');
   assert.equal(vic.length, 1);
   assert.equal(vic[0].levelId, 'fase8');
-  assert.equal(vic[0].hasNext, false, 'a 8 é a última por enquanto');
+  assert.equal(vic[0].hasNext, true, 'depois da 8 vem a 9');
 });
 
 test('fase 8: andando, a Radhija só puxa a meia (dica); a Rhaenyra não solta; o varal sobe sozinho e dá para repetir', async () => {

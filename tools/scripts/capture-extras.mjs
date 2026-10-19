@@ -273,6 +273,14 @@ try {
     ], { dist: 1.25, h: 0.32, lookY: 0.12 });
   }
   await scene('fase8', 'pilha-de-roupa', 'radhija', [[0.24, 'deitando', 'front'], [0.42, 'de-costas', 'side'], [0.58, 'rolando', 'front']], { dist: 1.4, h: 0.8, lookY: 0.12 });
+  // a mesma rolagem no tapete persa da fase 9 (à noite, na frente da lareira)
+  for (const who of ['radhija', 'rhaenyra']) {
+    await scene('fase9', 'tapete', who, [
+      [0.16, `${who}-deitada`, 'front'], [0.3, `${who}-de-lado`, 'back'], [0.46, `${who}-de-costas`, 'front'],
+      [0.58, `${who}-esfrega`, 'back'], [0.83, `${who}-de-brucos`, 'front'],
+    ], { dist: 1.25, h: 0.32, lookY: 0.12 });
+  }
+  await scene('fase9', 'tapete', 'radhija', [[0.5, 'de-costas-cima', 'front']], { dist: 1.6, h: 1.0, lookY: 0.1 });
   await scene('fase1', 'poca-bebedouro', 'radhija', [[0.5, 'bebendo', 'side']]);
   await scene('fase1', 'lavanda', 'rhaenyra', [[0.35, 'cheirando', 'side'], [0.64, 'atchim', 'front']]);
   await scene('fase3', 'lago-3', 'rhaenyra', [[0.5, 'bebendo', 'side']]);

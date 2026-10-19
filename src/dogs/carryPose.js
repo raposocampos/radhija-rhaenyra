@@ -19,6 +19,10 @@ export const CARRY = {
   frisbee: { open: 0.42, pos: [0, -0.03, 0.01], rot: [0.85, 0, 0] },
   // meia: mordida pelo punho, de lado, pendurada para baixo e balançando (o pé fica embaixo do queixo)
   sock: { open: 0.3, pos: [0.012, -0.022, 0.01], rot: [0.15, 0, -0.1] },
+  // óculos: mordidos de leve pela ponte, atravessados na frente da boca, as lentes para a frente
+  glasses: { open: 0.2, pos: [0, -0.014, 0.018], rot: [0.12, 0, 0] },
+  // livro de capa dura: mordido pela borda de cima, pendurado na frente do peito com a capa para a frente
+  book: { open: 0.62, pos: [0, -0.03, 0.02], rot: [0.18, 0, 0] },
 };
 
 /**
@@ -63,6 +67,8 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
     if (/bear|ursinho/.test(tag)) return 'bear';
     if (/frisbee|disco/.test(tag)) return 'frisbee';
     if (/sock|meia/.test(tag)) return 'sock';
+    if (/glasses|oculos|óculos/.test(tag)) return 'glasses';
+    if (/book|livro/.test(tag)) return 'book';
     const b = localBox(o);
     if (b.isEmpty()) return 'carrot';
     const d = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].sort((a, c) => a - c);
@@ -90,6 +96,8 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         if (kind === 'frisbee') mouthSocket.position.add(_v2.set(0, 0, dz * 0.42).applyQuaternion(mouthSocket.quaternion));
         // meia: a boca segura o punho (topo), então ela pende abaixo da boca
         if (kind === 'sock') mouthSocket.position.add(_v2.set(0, -dy * 0.42, 0).applyQuaternion(mouthSocket.quaternion));
+        // livro: a boca segura a borda de cima, então ele pende abaixo da boca
+        if (kind === 'book') mouthSocket.position.add(_v2.set(0, -dy * 0.4, 0).applyQuaternion(mouthSocket.quaternion));
       }
     }
   }
@@ -104,7 +112,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         applyCarryPose(carryForced || (ch ? detectKind(ch) : 'carrot'), ch);
       }
     },
-    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | null (automático). */
+    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | null (automático). */
     setForced(kind) {
       carryForced = kind || null;
       carryChild = undefined; // reaplica no próximo sync

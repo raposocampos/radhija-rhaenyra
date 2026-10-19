@@ -1,7 +1,7 @@
 // Fase 6 (Expresso do Superbafo): teleporte prepara estações; ações do puzzle usam entrada real.
 // Fluxo: volta → pedal (lua) → o trem busca a lua no pórtico → pedal (estrela) → cancela fechada barra →
 // Rhaenyra fica na placa → as duas cargas descem até a bandeja → uma em cada boca até o foguete, que decola.
-// No fim, o menu da campanha: oito fases em linhas equilibradas e o save liberando a 6, a 7 e a 8 em ordem.
+// No fim, o menu da campanha: nove fases em linhas equilibradas e o save liberando a 6, a 7, a 8 e a 9 em ordem.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -17,7 +17,7 @@ const station = async (name, point) => {
   await H.sleep(200);
 };
 const blow = () => H.hold(['KeyR'], 450);
-const CAMPAIGN = 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8';
+const CAMPAIGN = 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8,fase9';
 const done = (id) => [id, { done: true, best: 95.5, treats: 1, total: 3, clears: 1 }];
 /** Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre Jogar → Fases e lê os cartões. */
 const menuWith = async (ids) => {
@@ -59,7 +59,7 @@ try {
   });
   check(state.levelId === 'fase6' && state.state === 'playing', 'link por id (?level=fase6) abre a fase 6');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
-  check(catalog.ids === CAMPAIGN && catalog.level === 5, 'o link usa a campanha (sexta de oito), sem catálogo de desenvolvimento', JSON.stringify(catalog));
+  check(catalog.ids === CAMPAIGN && catalog.level === 5, 'o link usa a campanha (sexta de nove), sem catálogo de desenvolvimento', JSON.stringify(catalog));
   check(state.stage === 'waiting' && state.expresso.route === 'loop', 'início com trilho circular e trem parado');
   check(state.expresso.barrier.open === 0 && state.expresso.place.moon === 'gantry', 'cancela fechada e lua presa no pórtico');
   await shot('01-oficina.png');
@@ -212,22 +212,22 @@ try {
   // ---------------------------------------------------------------- menu da campanha e save v1
   let menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5']);
   const nums = menu.cards.map((card) => card.num).join();
-  check(menu.state === 'title' && nums === '1,2,3,4,5,6,7,8', 'menu com as oito fases em ordem', nums);
-  check(rowsOf(menu.cards) === '4,4', 'cartões em duas linhas equilibradas (4 + 4)', rowsOf(menu.cards));
-  check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true,true', 'fase 5 concluída libera a 6; a 7 e a 8 continuam bloqueadas', JSON.stringify(menu.cards));
+  check(menu.state === 'title' && nums === '1,2,3,4,5,6,7,8,9', 'menu com as nove fases em ordem', nums);
+  check(rowsOf(menu.cards) === '5,4', 'cartões em duas linhas equilibradas (5 + 4)', rowsOf(menu.cards));
+  check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true,true,true', 'fase 5 concluída libera a 6; a 7, a 8 e a 9 continuam bloqueadas', JSON.stringify(menu.cards));
   check(menu.unchanged, 'abrir o menu não reescreve o save antigo (medalhas e conclusões preservadas)');
   await page.evaluate(() => document.fonts.ready);
-  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth)), 'nomes das oito fases inteiros nos cartões (sem reticências) em 1280 px');
-  await shot('00-menu-oito-fases.png');
+  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth && name.scrollHeight <= name.clientHeight + 1)), 'nomes das nove fases inteiros nos cartões (no máximo duas linhas, sem cortar) em 1280 px');
+  await shot('00-menu-nove-fases.png');
   let note = await lockedNote();
   check(note.clear, 'aviso de fase bloqueada acima das duas linhas, sem cobrir cartões', JSON.stringify(note));
   await shot('00b-aviso-fase-bloqueada.png');
-  // perto do modo compacto (761–800 px) os cartões encolhem e as linhas continuam 4 + 4
+  // perto do modo compacto (761–800 px) os cartões encolhem e as linhas continuam 5 + 4
   for (const width of [780, 1024]) {
     await page.setViewportSize({ width, height: 720 });
     await H.sleep(400);
     const cards = await layoutCards();
-    check(rowsOf(cards) === '4,4', `${width} px: cartões em 4 + 4`, rowsOf(cards));
+    check(rowsOf(cards) === '5,4', `${width} px: cartões em 5 + 4`, rowsOf(cards));
     note = await lockedNote();
     check(note.clear, `${width} px: aviso acima dos cartões`, JSON.stringify(note));
     if (width === 780) await shot('00c-menu-780px.png');
@@ -235,11 +235,13 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 });
   await H.sleep(300);
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4']);
-  check(menu.cards[5]?.locked === true && menu.cards[6]?.locked === true && menu.cards[7]?.locked === true, 'sem a fase 5 concluída, a 6, a 7 e a 8 ficam bloqueadas');
+  check(menu.cards[5]?.locked === true && menu.cards[6]?.locked === true && menu.cards[7]?.locked === true && menu.cards[8]?.locked === true, 'sem a fase 5 concluída, a 6, a 7, a 8 e a 9 ficam bloqueadas');
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6']);
   check(!menu.cards[6]?.locked && menu.cards[7]?.locked === true && menu.unchanged, 'fase 6 concluída libera a 7 (a 8 espera a 7)');
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7']);
-  check(menu.cards.every((card) => !card.locked) && menu.unchanged, 'fase 7 concluída libera a 8');
+  check(!menu.cards[7]?.locked && menu.cards[8]?.locked === true && menu.unchanged, 'fase 7 concluída libera a 8 (a 9 espera a 8)');
+  menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7', 'fase8']);
+  check(menu.cards.every((card) => !card.locked) && menu.unchanged, 'fase 8 concluída libera a 9');
   await ev(() => localStorage.removeItem('rr-progress-v1'));
 } catch (error) {
   check(false, `exceção: ${error.stack || error}`);

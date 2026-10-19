@@ -197,7 +197,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
   });
   /**
    * O chão livre mais perto de atrás dela (encostada em algo, o cocô não cai dentro dele): atrás, um pouco para os
-   * lados e, num cantinho apertado, em volta dela.
+   * lados e, num cantinho apertado, em volta dela. null: nenhum chão livre ali (o cocô nem começa).
    */
   function freePoopSpot(c, x, z, yaw) {
     for (const [back, side] of [[1.45, 0], [1.45, 0.6], [1.45, -0.6], [1.2, 0.9], [1.2, -0.9], [1.2, 0]]) {
@@ -210,7 +210,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
         if (!overlaps(spot.x, spot.z, 0.05, c.size)) return spot;
       }
     }
-    return poopSpot(c, x, z, yaw);
+    return null;
   }
   /**
    * A voltinha que cabe: um círculo pequeno (de 0,8 a 1,3 volta, terminando de perfil para a câmera); sem espaço, um
@@ -294,8 +294,10 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
   function tryPoop(c, { allTreats, free = true }) {
     if (S.used || S.poop || S.act || !allTreats || !free) return false;
     if (!grounded(c) || !still(c) || carries(c.name)) return false;
-    S.used = true;
     const plan = planCircle(c);
+    // sem a voltinha ela agacha onde está: precisa de chão livre por perto para o cocô
+    if (!plan && !freePoopSpot(c, c.x, c.z, c.yaw)) return false;
+    S.used = true;
     const walk = plan ? plan.prof.T : 0.5; // sem espaço nem para ajeitar a direção: fareja mais um pouquinho
     const pre = CIRCLE.sniff + walk + CIRCLE.settle;
     S.poop = {
@@ -380,7 +382,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     const back = c.r * 1.45;
     STRAIN_AT.forEach((k, i) => { if (once(P.marks, `s${i}`, p >= k)) emit('extra:strain', { name: P.who, x: c.x, z: c.z, n: i }); });
     if (once(P.marks, 'plop', p >= POOP_DROP)) {
-      const spot = freePoopSpot(c, P.x, P.z, P.yaw);
+      const spot = freePoopSpot(c, P.x, P.z, P.yaw) ?? poopSpot(c, P.x, P.z, P.yaw);
       P.px = spot.x;
       P.pz = spot.z;
       dropPoop(spot.x, spot.z);

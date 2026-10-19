@@ -177,8 +177,35 @@ export function sockIcon() {
 </svg>`;
 }
 
-/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock'). */
+/** Óculos redondos dourados de leitura. */
+export function glassesIcon() {
+  return `<svg class="ico ico-glasses" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M8 26 l-3 -4 M56 26 l3 -4" stroke="#C9A24A" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="20" cy="34" r="12" fill="#DFF1FF" fill-opacity=".55" stroke="${INK}" stroke-width="2.6"/>
+  <circle cx="44" cy="34" r="12" fill="#DFF1FF" fill-opacity=".55" stroke="${INK}" stroke-width="2.6"/>
+  <circle cx="20" cy="34" r="10" fill="none" stroke="#C9A24A" stroke-width="2"/>
+  <circle cx="44" cy="34" r="10" fill="none" stroke="#C9A24A" stroke-width="2"/>
+  <path d="M28 31 q4 -5 8 0" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M14 29 q3 -3 6 -2 M38 29 q3 -3 6 -2" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none"/>
+</svg>`;
+}
+
+/** Livro de histórias de capa vermelha com a lua dourada. */
+export function bookIcon() {
+  return `<svg class="ico ico-book" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M14 10 h32 c3 0 5 2 5 5 v36 c0 3 -2 5 -5 5 h-32 Z" fill="#F6ECD6" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M12 8 h31 c2.5 0 4 1.5 4 4 v38 c0 2.5 -1.5 4 -4 4 h-31 Z" fill="#9C2F2A" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <rect x="16" y="12" width="27" height="38" rx="2" fill="none" stroke="#E6C25A" stroke-width="2"/>
+  <path d="M33 22 a8 8 0 1 0 2 12 a6.5 6.5 0 1 1 -2 -12 Z" fill="#F6E3A0"/>
+  <path d="M22 20 l1 2 2 .3 -1.5 1.3 .4 2 -1.9 -1 -1.9 1 .4 -2 -1.5 -1.3 2 -.3 Z" fill="#F6E3A0"/>
+  <path d="M19 44 h21" stroke="#E6C25A" stroke-width="2.4" stroke-linecap="round"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book'). */
 export function itemIcon(item) {
+  if (item === 'glasses') return glassesIcon();
+  if (item === 'book') return bookIcon();
   if (item === 'ball') return ballIcon();
   if (item === 'frisbee') return frisbeeIcon();
   if (item === 'sock') return sockIcon();

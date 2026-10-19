@@ -69,7 +69,7 @@ try {
   });
   check(state.levelId === 'fase7' && state.stage === 'start', 'link por id (?level=fase7) abre a fase 7');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
-  check(catalog.ids === 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8' && catalog.level === 6, 'o link usa a campanha (sétima de oito), sem catálogo de desenvolvimento', JSON.stringify(catalog));
+  check(catalog.ids.startsWith('fase1,fase2,fase3,fase4,fase5,fase6,fase7,') && !/pulo|bafo|modelo/.test(catalog.ids) && catalog.level === 6, 'o link usa a campanha (a sétima fase), sem catálogo de desenvolvimento', JSON.stringify(catalog));
   check(lambe(state).place?.frisbee === 'top' && lambe(state).place?.ball === 'ground' && !lambe(state).gateOpen, 'frisbee no escorregador, bolinha no parquinho, portão fechado');
   await shot('01-pracinha.png');
 
