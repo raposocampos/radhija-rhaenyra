@@ -304,7 +304,7 @@ function pose(next = {}) {
   const n = Math.round((cfg.sim ?? 2) * 60);
   for (let i = 0; i < n; i++) step(1 / 60);
   draw();
-  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, bone: d.lowestBone ?? '' }));
+  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, tilt: d.tilt ?? 0, bone: d.lowestBone ?? '' }));
 }
 window.__dogs = { dogs, stats: dogs.map((d) => d.stats), genMs, renderer, scene, camera };
 window.__pose = pose;

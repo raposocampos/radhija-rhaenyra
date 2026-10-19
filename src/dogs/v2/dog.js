@@ -119,17 +119,51 @@ export function createDogV2(kind) {
   // contato com o chão: tronco, cabeça e patas (rabo e orelhas caem por cima do chão sem levantar o corpo)
   const contacts = groundContacts(design, BONE_INDEX_V2, skel2.rest, { skip: ['tail', 'ear'] });
 
+  const I2 = BONE_INDEX_V2;
+  const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
+  const _qx = new THREE.Quaternion();
+  const _X = new THREE.Vector3(1, 0, 0);
+  /** Posição do osso i no referencial do objeto (com o corpo como está agora). */
+  const toObject = (out, i) => out.copy(retarget.P2[i]).applyQuaternion(inner.quaternion).add(inner.position);
+  /** Meio de duas patas no referencial do objeto. */
+  const pair = (out, a, b) => toObject(out, a).add(toObject(_pc, b)).multiplyScalar(0.5);
+  /**
+   * Nada do corpo passa do chão. Se a pose afundaria (a garupa da Rhaenyra sentada, por exemplo), o corpo primeiro
+   * gira sobre as patas que estão apoiadas do outro lado (sentada: as da frente ficam no chão e a garupa sobe); o que
+   * ainda faltar, o corpo inteiro sobe.
+   */
+  function settle() {
+    let low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+    self.lowest = low;
+    self.lowestBone = bones[lowestPoint.bone]?.name ?? '';
+    self.tilt = 0;
+    self.lift = 0;
+    if (low >= -GROUND_TOLERANCE) return;
+    const lz = toObject(_pv, lowestPoint.bone).z;
+    const mid = toObject(_pc, I2.body).z;
+    const pivot = lz < mid ? pair(_pf, I2.FLp, I2.FRp) : pair(_ph, I2.HLp, I2.HRp);
+    const arm = Math.abs(lz - pivot.z);
+    if (pivot.y < 0.035 * s && arm > 0.08) {
+      const th = Math.atan2(-GROUND_TOLERANCE - low, arm) * (lz < pivot.z ? 1 : -1);
+      _qx.setFromAxisAngle(_X, th);
+      inner.position.sub(pivot).applyQuaternion(_qx).add(pivot);
+      inner.quaternion.premultiply(_qx);
+      self.tilt = th;
+      low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+    }
+    if (low < -GROUND_TOLERANCE) {
+      self.lift = -GROUND_TOLERANCE - low;
+      inner.position.y += self.lift;
+    }
+  }
+
   /** @param {number} dt @param {import('../../types').DogAnim} [anim] */
   const update = (dt, anim) => {
     animate(dt, anim);
     inner.position.copy(driverInner.position);
     inner.quaternion.copy(driverInner.quaternion);
     retarget.apply();
-    // nada do corpo passa do chão: se a pose afundou, o corpo sobe o que faltou
-    self.lowest = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
-    self.lowestBone = bones[lowestPoint.bone]?.name ?? '';
-    self.lift = self.lowest < -GROUND_TOLERANCE ? -GROUND_TOLERANCE - self.lowest : 0;
-    inner.position.y += self.lift;
+    settle();
     mudU.uTime.value = st.t;
   };
 
@@ -146,9 +180,13 @@ export function createDogV2(kind) {
     bones,
     skeleton,
     meshes: { body: bodyMesh, ears: earMesh, fur: furMesh },
-    /** Ponto mais baixo do corpo no último quadro (m, antes da correção do chão), o osso dele e a subida aplicada. */
+    /**
+     * Ponto mais baixo do corpo no último quadro (m, antes da correção do chão), o osso dele, o giro sobre as patas
+     * apoiadas (rad) e a subida do corpo inteiro (m) aplicados.
+     */
     lowest: 0,
     lowestBone: '',
+    tilt: 0,
     lift: 0,
     /** Esqueleto guia (atual, sem malha): testes e capturas comparam com ele. */
     driver: { rig: rig1, inner: driverInner },

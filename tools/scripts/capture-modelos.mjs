@@ -36,7 +36,7 @@ try {
       const res = await page.evaluate((c) => window.__pose(c), cfg);
       await page.screenshot({ path: `${OUT}/${name}.png` });
       shots++;
-      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}${r.lift ? ` subiu ${(r.lift * 1000).toFixed(0)} mm (${r.bone})` : ''}`))}`);
+      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}${r.tilt ? ` girou ${(r.tilt * 180 / Math.PI).toFixed(1)}°` : ''}${r.lift ? ` subiu ${(r.lift * 1000).toFixed(0)} mm` : ''}${r.tilt || r.lift ? ` (${r.bone})` : ''}`))}`);
     };
     for (const view of ['34', 'side', 'front', 'back', 'top', 'face', 'ear', 'hero']) await pose(`01-repouso-${view}`, { view, sim: 1.5 });
     const side = (extra) => ({ view: 'side', sim: 1.6, ...extra });

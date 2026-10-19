@@ -443,7 +443,8 @@ focinho mais comprido, orelhas mais longas na Rhaenyra, barriga recolhida) e a m
 (`buildGeometryFromDesign` em `dogModel.js`, com o índice de ossos do esqueleto novo). Na etapa 1 a pose ainda vem da
 animação atual: um esqueleto atual invisível é animado por `dogAnimation.js` e cada osso novo copia a pose do osso
 correspondente (`retarget.js`; os gomos novos dividem a curva entre as pontas). `contacts.js` calcula o ponto mais
-baixo do corpo com as formas do desenho e o corpo sobe se a pose afundaria no chão (`GROUND_TOLERANCE`). Para ver:
+baixo do corpo com as formas do desenho; se a pose afundaria no chão (`GROUND_TOLERANCE`), o corpo gira sobre as
+patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garupa sobe) e, se ainda faltar, sobe. Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).

@@ -160,32 +160,34 @@ for (const kind of KINDS) {
       let base = Infinity;
       let follow = 0;
       let lift = 0;
+      let tilt = 0;
       let liftBone = '';
       for (let f = 0; f <= N; f++) {
         const k = f / N;
         const pose = { speed: 0, turn: 0, action: 'none', ...anim(f / 60, k) };
         d.update(1 / 60, pose);
         a.update(1 / 60, pose);
-        if (d.lift > lift) {
-          lift = d.lift;
-          liftBone = d.lowestBone;
-        }
+        if (d.lift > lift) lift = d.lift;
+        if (Math.abs(d.tilt) > Math.abs(tilt)) tilt = d.tilt;
+        if ((d.lift || d.tilt) && !liftBone) liftBone = d.lowestBone;
         if (f % 6) continue;
         // o modelo atual na mesma pose (referência: ele não tem a correção do chão)
         base = Math.min(base, lowestByRegion(a, partsA)[0]);
         for (const b of d.bones) if (!Number.isFinite(b.quaternion.x + b.quaternion.w + b.position.x + b.position.y)) bad.push(`${name}: osso ${b.name} inválido`);
         const low = lowestByRegion(d, parts);
         worst = worst.map((x, i) => Math.min(x, low[i]));
-        // o osso novo e o atual no mesmo lugar (fora a subida do corpo quando a pose afundaria no chão)
+        // o osso novo e o atual no mesmo lugar (fora a subida do corpo quando a pose afundaria no chão; com o giro
+        // sobre as patas apoiadas, o corpo inteiro gira e a comparação não vale neste quadro)
+        if (d.tilt) continue;
         d.driver.inner.updateMatrixWorld(true);
-        const lift = d.object.children[0].position.y - d.driver.inner.position.y;
+        const rise = d.object.children[0].position.y - d.driver.inner.position.y;
         for (const [n2, n1] of FOLLOW) {
           byName(d.bones, n2).getWorldPosition(v);
           byName(d.driver.rig.bones, n1).getWorldPosition(w);
-          follow = Math.max(follow, Math.hypot(v.x - w.x, v.y - w.y - lift, v.z - w.z));
+          follow = Math.max(follow, Math.hypot(v.x - w.x, v.y - w.y - rise, v.z - w.z));
         }
       }
-      report.push(`${name}: corpo ${worst[0].toFixed(3)} (atual ${base.toFixed(3)}) rabo ${worst[1].toFixed(3)} orelha ${worst[2].toFixed(3)} subida ${(lift * 1000).toFixed(1)} mm${liftBone ? ` (${liftBone})` : ''} guia ${(follow * 1000).toFixed(2)} mm`);
+      report.push(`${name}: corpo ${worst[0].toFixed(3)} (atual ${base.toFixed(3)}) rabo ${worst[1].toFixed(3)} orelha ${worst[2].toFixed(3)} giro ${(tilt * 180 / Math.PI).toFixed(1)}° subida ${(lift * 1000).toFixed(1)} mm${liftBone ? ` (${liftBone})` : ''} guia ${(follow * 1000).toFixed(2)} mm`);
       if (follow > 1e-4) bad.push(`${name}: osso fora da guia (${(follow * 1000).toFixed(2)} mm)`);
       if (worst[0] < -0.012) bad.push(`${name}: o corpo passou do chão (${worst[0].toFixed(3)} m)`);
     }
@@ -208,6 +210,21 @@ test('modelo novo: em pé, as quatro patas no chão; pisadas ao trotar', () => {
     for (let i = 0; i < 120; i++) d.update(1 / 60, { speed: 2.0, action: 'none' });
     d.onFootstep = null;
     assert.ok(steps >= 6, `${kind}: trotando 2 s, ${steps} pisadas`);
+  }
+});
+
+test('modelo novo sentada: as patas da frente ficam no chão (se a garupa afundaria, o corpo gira sobre elas)', () => {
+  for (const kind of KINDS) {
+    const d = v2[kind];
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    for (let i = 0; i < 180; i++) d.update(1 / 60, { speed: 0, action: 'sit' });
+    d.object.updateMatrixWorld(true);
+    const s = kind === 'rhaenyra' ? 1.133 : 1;
+    for (const p of ['FLp', 'FRp']) {
+      const y = d.bones.find((b) => b.name === p).getWorldPosition(v).y;
+      assert.ok(y < 0.035 * s, `${kind}: ${p} no chão sentada (${y.toFixed(3)} m; giro ${(d.tilt * 180 / Math.PI).toFixed(1)}°, subida ${(d.lift * 1000).toFixed(0)} mm)`);
+    }
+    console.log(`[v2] ${kind} sentada: giro ${(d.tilt * 180 / Math.PI).toFixed(1)}°, subida ${(d.lift * 1000).toFixed(1)} mm, mais baixo ${d.lowestBone}`);
   }
 });
 
