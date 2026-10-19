@@ -116,7 +116,7 @@ export function buildSecret(root, layout) {
   photo.rotation.y = -Math.PI / 2;
   photo.position.x = -0.0125;
   frame.add(photo);
-  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.075), new THREE.MeshStandardMaterial({ map: plaqueTexture('Quando eram filhotes'), metalness: 0.4, roughness: 0.4 }));
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.075), new THREE.MeshStandardMaterial({ map: plaqueTexture('Raniri e Radidi'), metalness: 0.4, roughness: 0.4 }));
   plaque.rotation.y = -Math.PI / 2;
   plaque.position.set(-0.012, -P.h / 2 - fw - 0.08, 0);
   frame.add(plaque);

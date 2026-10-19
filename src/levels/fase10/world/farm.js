@@ -8,6 +8,8 @@ import { rng, rbox, stdMat, woodMat, foliageCluster, mergeGeometries } from '../
 import { plantMat, carrotTops } from '../../../world/plants.js';
 
 const TAU = Math.PI * 2;
+/** Abóbora no pé e na boca: o mesmo tamanho. */
+const PUMPKIN_SCALE = 1.25;
 
 /** Espiga de milho (palha verde aberta e os grãos amarelos), eixo longo em X, centrada. */
 export function createCorn() {
@@ -187,7 +189,7 @@ export function buildFarm(root, layout) {
   // abóboras com a rama
   F.pumpkins.forEach((p, i) => {
     const pk = createPumpkin();
-    pk.scale.setScalar(2.4);
+    pk.scale.setScalar(PUMPKIN_SCALE); // do mesmo tamanho da que elas levam na boca
     pk.position.set(p.x, 0.13, p.z);
     group.add(pk);
     const vine = new THREE.Mesh(foliageCluster([{ x: p.x - 0.25, y: 0.06, z: p.z + 0.1, r: 0.16, sy: 0.4 }, { x: p.x + 0.2, y: 0.05, z: p.z - 0.15, r: 0.13, sy: 0.4 }], { seed: 130 + i, dark: '#2c5226', mid: '#4a7f36', light: '#86b850', amp: 0.4 }), plantMat());
@@ -217,7 +219,13 @@ export function buildFarm(root, layout) {
   return {
     group, spots,
     /** Um legume novo para levar na boca. @param {'corn'|'carrot'|'pumpkin'} kind */
-    makeVeg(kind) { return kind === 'corn' ? createCorn() : kind === 'carrot' ? createCarrot() : createPumpkin(); },
+    makeVeg(kind) {
+      if (kind === 'corn') return createCorn();
+      if (kind === 'carrot') return createCarrot();
+      const pk = createPumpkin();
+      pk.scale.setScalar(PUMPKIN_SCALE);
+      return pk;
+    },
     update(dt, t) {
       crow.rotation.z = Math.sin(t * 0.7) * 0.02;
     },

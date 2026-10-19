@@ -267,7 +267,7 @@ export function createPuzzle(ctx) {
     // legumes: o que cada uma carrega, os largados no chão e os pés esperando rebrotar
     veg: { /** @type {Record<string, any>} */ held: { radhija: null, rhaenyra: null }, /** @type {any[]} */ floor: [], /** @type {Record<string, number>} */ regrow: {}, n: 0 },
     // o cantinho atrás do muro
-    secretReady: false, secretOpen: false, secretSeen: false, boardT: 0,
+    secretReady: false, secretOpen: false, secretSeen: false, secretInside: false, boardT: 0,
   });
   const S = fresh();
   let introDone = false;
@@ -1161,8 +1161,11 @@ export function createPuzzle(ctx) {
     if (ready && !S.secretReady) { S.secretReady = true; props.secretBoard.setLoose(true); }
     if (S.secretOpen) S.boardT = Math.min(1, S.boardT + dt / 0.8);
     props.secretBoard.setOpen(S.boardT);
-    if (S.secretOpen && !S.secretSeen && active.x > EAST_WALL.x + 0.3) {
+    // a cada entrada no cantinho, a câmera mostra o quadro (rearma quando a dog sai)
+    if (S.secretInside && active.x < EAST_WALL.x - 0.15) S.secretInside = false;
+    if (S.secretOpen && !S.secretInside && active.x > EAST_WALL.x + 0.3) {
       S.secretSeen = true;
+      S.secretInside = true;
       const P = SECRET.photo;
       // de fora, pela fresta da tábua aberta: o quadro inteiro, as luzinhas e a plaquinha (a dog lá dentro fica embaixo)
       cam?.focusShot(P.x, P.z, { hold: 5, inT: 1.0, outT: 0.8, target: { x: P.x, y: P.y - 0.06, z: P.z }, from: { x: EAST_WALL.x - 0.25, y: P.y + 0.16, z: P.z } });

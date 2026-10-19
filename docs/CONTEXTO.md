@@ -168,11 +168,27 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     `createCollectibles` respeitando a altura; `test/extras.test.mjs` aceita cinco na última fase).
   - Segredo novo, **nunca citar no jogo, menu ou README**: com todos os ossinhos e o extra usado (`ctx.extrasUsed`),
     a tábua do muro leste, atrás da casa na árvore, fica frouxa; E a empurra e, no cantinho do vizinho, o quadro
-    "Quando eram filhotes" com a foto real das duas (`public/img/quintal-quadro.jpg`, recortada e regravada sem
+    "Raniri e Radidi" (apelidos delas) com a foto real das duas (`public/img/quintal-quadro.jpg`, recortada e regravada sem
     metadados; exceção registrada no AGENTS.md). Sem texto na tela; `debugSet('secret')` para testes e capturas.
   - Testes: `test/fase10.test.mjs` refeito (partida completa com os cinco, botões, gavetas, piñata, legumes,
     tábua); `test/helpers/props.mjs` com as peças novas; E2E `quintal` e `capture-quintal.mjs` com as cenas novas.
-- Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar as capturas e entregar a prévia;
+- Prévia entregue em `55a811e` (CI ok, E2E `quintal` 48/48 e `todas` verdes, capturas revisadas). Terceira rodada
+  de retorno do usuário (2026-10-19). Feito: abóbora do pé do mesmo tamanho da que vai na boca; plaquinha do
+  cantinho "Raniri e Radidi"; o plano do quadro repete a cada entrada no cantinho. **Falta (em andamento):**
+  - Despensa: trocar as gavetas por **três caixotes** de alturas diferentes (escolha do usuário). A Rhaenyra puxa
+    cada um pela alça (E, andando para trás, num trilho reto) até a marca no chão, que fica verde quando ele trava
+    sozinho; a Radhija sobe de tampa em tampa até o pote, com agachadinha antes de cada pulo (a subida das gavetas
+    ficou feia e não dava para saber quando parar).
+  - Queda do galpão (depois da vela): agachar e preparar antes de pular para o chão.
+  - Funil do cano de brinquedo virado para o lado, na altura das dogs (hoje aponta para cima).
+  - Botões altos do galpão bem mais visíveis.
+  - Duas galinhas perto da horta, ciscando: fogem quando uma dog chega de frente; de costas não, só se assustadas
+    (latido), e aí saem batendo asas num voo curto.
+  - Animação de comer/beber nos potes de ração e água (extras da fase 10, E perto do pote).
+  - Piñata: etapa antes, a Rhaenyra derruba a piñata da árvore com o empurrão em pé (branch
+    `claude/empurrao-em-pe`, ainda sem PR); integrar depois que ele entrar no main.
+  - Cabeça atravessando paredes e móveis: é a etapa 4 do PR #37 (colisão do corpo); o pedido foi repassado à sessão.
+- Próximo passo da D: terminar a lista acima, CI e E2E `quintal` (e `todas`), revisar capturas e entregar a prévia;
   depois do PR #36 aprovado, trocar o marcador `pigs` pelo `createPigHerd` (os legumes distraem por um tempo
   generoso e eles voltam); depois do PR #35, a Rhaenyra na lama da horta fica suja e a Radhija a lambe (textos de
   controle R2/L2). Integrar só com a aprovação do usuário; squash com SHA esperado, deploy e aviso ao orquestrador.
