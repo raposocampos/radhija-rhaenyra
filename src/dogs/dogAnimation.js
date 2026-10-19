@@ -821,19 +821,22 @@ export function createDogAnimation(ctx) {
     const mo = st.mouthOpen;
     lip.scale.set(mouthW, 0.0022 * s + mo * 0.011 * s, 0.009 * s + mo * 0.004 * s);
     lip.position.set(0, -mo * 0.006 * s, 0);
-    // língua comprida do Lambe-Lambe: estica em dois gomos, desce até a irmã e enrola para cima na varrida
+    // língua comprida do Lambe-Lambe: estica em dois gomos, desce até a irmã e enrola para cima na varrida. Lambendo
+    // para cima (lUpN), ela sai mais curta e para a frente: lambidinhas no queixo, sem subir até a testa da irmã.
     const lt = lExt * w.lick;
     if (lickTongue) {
       lickTongue.root.visible = lt > 0.02;
       if (lt > 0.02) {
-        const L1 = lickTongue.length * (lSolo ? 0.42 : 0.55) * lt;
-        const L2 = lickTongue.length * (lSolo ? 0.38 : 0.5) * lt;
+        const short = 1 - 0.35 * lUpN;
+        const L1 = lickTongue.length * (lSolo ? 0.42 : 0.55 * short) * lt;
+        const L2 = lickTongue.length * (lSolo ? 0.38 : 0.5 * short) * lt;
         const wd = lickTongue.width * (0.8 + 0.2 * lt);
         lickTongue.base.scale.set(wd, 0.009 * s, Math.max(1e-4, L1));
         lickTongue.tipPivot.position.set(0, 0, L1 * 0.86);
         lickTongue.tip.scale.set(wd * 0.92, 0.008 * s, Math.max(1e-4, L2));
-        lickTongue.root.rotation.set(lSolo ? lerp(0.5, -1.1, lSweep) : lerp(1.05, 0.62, lt) - 0.3 * lSweep - 0.5 * lUpN, 0, lSolo ? 0 : lSide * 0.12 * lSweep);
-        lickTongue.tipPivot.rotation.x = -(lSolo ? 0.5 + 1.1 * lSweep : 0.12 + 0.55 * lSweep);
+        const down = lerp(lerp(1.05, 0.62, lt) - 0.3 * lSweep, lerp(0.8, 0.5, lt) - 0.15 * lSweep, lUpN);
+        lickTongue.root.rotation.set(lSolo ? lerp(0.5, -1.1, lSweep) : down, 0, lSolo ? 0 : lSide * 0.12 * lSweep);
+        lickTongue.tipPivot.rotation.x = -(lSolo ? 0.5 + 1.1 * lSweep : 0.12 + 0.55 * lSweep * (1 - 0.45 * lUpN));
       }
     }
     tongue.visible = (mo > 0.15 || xDrink > 0.05) && lt < 0.1;

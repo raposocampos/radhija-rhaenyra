@@ -138,11 +138,13 @@ test('Lambe-Lambe da Radhija (fase 1): ela encosta mais perto, estica o pescoço
   assert.equal(h.dogs.radhija.anim.action, 'lick');
   assert.equal(h.dogs.rhaenyra.anim.action, 'licked', 'a Rhaenyra fecha os olhos a cada lambida');
   assert.ok(h.dogs.rhaenyra.anim.lickPhase >= 0 && h.dogs.radhija.anim.lickPhase === h.dogs.rhaenyra.anim.lickPhase, 'as duas no mesmo ritmo');
-  assert.ok(h.dogs.radhija.anim.lickY > 0.4, `bochecha da irmã maior, acima da boca da Radhija (${h.dogs.radhija.anim.lickY})`);
+  // bochecha baixa da irmã maior: acima da boca da Radhija (~0,35 m), abaixo do olho da Rhaenyra (~0,44 m)
+  const ly = h.dogs.radhija.anim.lickY;
+  assert.ok(ly > 0.36 && ly < 0.42, `bochecha baixa da irmã maior (${ly})`);
   assert.equal(h.dogs.rhaenyra.anim.lickY, -1);
   assert.ok(h.dogs.rhaenyra.anim.lookAt && h.dogs.rhaenyra.anim.lookAt.y < 0.35, 'a Rhaenyra abaixa a cabeça para a irmã menor');
   const licks = h.log('dog:lick');
-  assert.ok(licks.length >= 2 && licks.every((l) => l.name === 'radhija' && l.target === 'rhaenyra' && l.y > 0.4), 'cada lambida chega na bochecha');
+  assert.ok(licks.length >= 2 && licks.every((l) => l.name === 'radhija' && l.target === 'rhaenyra' && l.y > 0.36), 'cada lambida chega na bochecha');
   // a Radhija, mais curta, para mais perto do ponto lambido do que a Rhaenyra pararia (0,56 m)
   const p = licks.at(-1);
   const d = Math.hypot(rad.x - p.x, rad.z - p.z);

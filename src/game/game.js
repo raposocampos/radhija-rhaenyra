@@ -221,10 +221,12 @@ export function createGame({ engine, dogs, levels, params }) {
     const z = front ? len * 0.55 : Math.max(-len * 0.33, Math.min(len * 0.37, lz));
     const side = Math.sign(lx);
     const head = sstep(len * 0.18, len * 0.38, z);
+    // a irmã menor (a Radhija na Rhaenyra) lambe a cabeça mais embaixo: queixo, canto da boca, bochecha baixa
+    const low = (A.cfg.visual?.headTop ?? 0.5) < (C.cfg.visual?.headTop ?? 0.5) - 0.02;
     // flanco (0,1 m do eixo, na altura do dorso) → bochecha (0,06 m, perto do centro da cabeça) → focinho
     const local = front
-      ? { x: 0, y: 0.38 * k, z }
-      : { x: side * (0.1 - 0.04 * head) * k, y: (C.cfg.visual?.shoulder ?? 0.3) * (0.95 + 0.33 * head), z };
+      ? { x: 0, y: (low ? 0.32 : 0.38) * k, z }
+      : { x: side * (0.1 - 0.04 * head) * k, y: (C.cfg.visual?.shoulder ?? 0.3) * (0.95 + (low ? 0.18 : 0.33) * head), z };
     const point = { x: C.x + cs * local.x + sn * local.z, y: local.y, z: C.z - sn * local.x + cs * local.z };
     let nx = A.x - point.x;
     let nz = A.z - point.z;
