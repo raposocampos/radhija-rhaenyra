@@ -178,6 +178,38 @@ function herd(cfgOver = {}, { effects = null, knockItem = null, carries = null }
   return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.ev === n) };
 }
 
+test('DIAGNÓSTICO TEMPORÁRIO: sementes em que os porcos não saem do cercado', () => {
+  const random = Math.random;
+  const bad = [];
+  const traces = [];
+  const f = (v) => +v.toFixed(2);
+  try {
+    for (let seed = 1; seed <= 400; seed++) {
+      Math.random = seeded(seed);
+      const h = herd();
+      h.run(4);
+      const before = h.pigs.pigs.map((P) => ({ i: P.i, x: f(P.x), z: f(P.z), act: P.idleAct, yaw: f(P.yaw) }));
+      h.pigs.setOpen(true);
+      const trace = [];
+      for (let k = 0; k < 9.2 * 60; k++) {
+        h.run(1 / 60);
+        if (k % 20 === 0) {
+          trace.push({ t: f(k / 60), g: f(h.pigs.gate.t), p: h.pigs.pigs.map((P) => `${P.i}:${P.state}@${f(P.x)},${f(P.z)} y${f(P.yaw)} s${f(P.stuckT)} r${P.route.map((q) => `${f(q.x)},${f(q.z)}${q.leaf ? 'L' : ''}`).join('>')}`) });
+        }
+      }
+      const inf = h.pigs.info();
+      if (inf.inPen > 0 || inf.pigs.some((p) => p.state === 'exit')) {
+        bad.push({ seed, inPen: inf.inPen, states: inf.pigs.map((p) => p.state) });
+        if (traces.length < 2) traces.push({ seed, before, trace });
+      }
+    }
+  } finally {
+    Math.random = random;
+  }
+  const P = herd().P;
+  assert.fail(JSON.stringify({ bad: bad.length, seeds: bad.slice(0, 30), door: P.door, gate: P.gate, pen: P.pen, traces }));
+});
+
 test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => {
   const h = herd();
   h.run(4);
