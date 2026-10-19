@@ -8,7 +8,7 @@ Os tipos de todas as APIs citadas aqui estão em [`src/types.d.ts`](../src/types
 
 Aventura 3D curta em fases, em Three.js r170 + Vite, JavaScript puro com ES modules. O jogador controla uma de
 duas cachorrinhas (a Radhija, pequena e rápida, que dá arrancadas e solta o superbafo; a Rhaenyra, grande e forte,
-que empurra, pula e limpa a irmã com o Lambe-Lambe) e troca entre elas; a outra vira
+que empurra e pula; as duas lambem a irmã com o Lambe-Lambe) e troca entre elas; a outra vira
 companheira e segue sozinha (ou espera, com o comando **Fica**). Cada fase é um puzzle cooperativo que termina
 levando um item até um objetivo.
 
@@ -256,7 +256,7 @@ E devolve um objeto com:
 | `reset()`, `jumpToStage?(etapa, {who})` | reiniciar; `?stage=` e testes |
 | `onBark?(ctrl)`, `endActions?()`, `info?()`, `dispose?()` | latido; fim da fase; depuração; descarte |
 | `speedScale?(ctrl)`, `canDash?(ctrl)`, `onDashBlocked?(ctrl)` | estado da dog que a fase controla (lama: metade da velocidade e sem arrancada) |
-| `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl, { blocked })` | efeito de cada lambida do Lambe-Lambe (declarar `onLick` também tira a dica genérica do botão) |
+| `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl, { blocked })` | efeito de cada lambida do Lambe-Lambe (as duas lambem: `ctrl` é quem lambeu, `lick.target` quem foi lambida; declarar `onLick` também tira a dica genérica de alcance) |
 | `onStageChange` (setter) | o núcleo registra um callback para reemitir o objetivo |
 
 Peças prontas:
@@ -326,8 +326,9 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Interagir / latir | E | ○ · B | Agir | `KeyE` |
 | Latir | — | □ · X | (Agir, sem nada perto) | `Bark` |
 | Fica / Vem (companheira) | F | △ · Y | Fica · Vem | `KeyF` |
-| Superbafo (Radhija): segurar mira, soltar sopra | R | L2 · LT | Bafo · Lamber | `bafo()` |
-| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar | `shift()` |
+| Superbafo (Radhija): segurar mira, soltar sopra | R | R2 · RT | Superbafo | `bafo()` |
+| Lambe-Lambe (as duas, perto da irmã): segurar | L | L2 · LT | Lamber | `lick()` |
+| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
 | Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
@@ -337,12 +338,14 @@ Xbox se o id do controle tiver "xbox"/"xinput", PlayStation nos demais casos (pa
 
 `src/game/input.js` traduz o controle para os mesmos códigos lógicos do teclado, então o jogo não sabe de onde veio
 o comando. Ao voltar de um menu para o jogo, os botões segurados ficam travados até serem soltos (`latchPad`):
-o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira latido e o L2 não vira bafo. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
+o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira latido e o R2 não vira bafo. Os menus da UI leem o controle à parte (`src/ui/menuNav.js`).
 
 **Toque** (`src/ui/touchControls.js` → `input.touch`): joystick à esquerda (flutuante: tocando fora do aro, ele vem
 para baixo do dedo; `touchStick` usa a mesma zona morta e curva do analógico) e botões à direita (`TOUCH_BUTTONS`):
-Agir, Pular, Bafo/Lamber (segurar), Arrancada/Empurrar (toque = arrancada, segurar = empurrar), Trocar e Fica/Vem,
-mais a pausa no canto. Os rótulos acompanham a dog ativa (`.rr[data-dog]`) e o Fica vira Vem. Multitoque por Pointer
+Agir no canto e, em volta, Pular, Arrancada/Empurrar (toque = arrancada, segurar = empurrar), Lamber (segurar) e
+Superbafo (segurar e soltar); acima, Trocar e Fica/Vem; a pausa no canto de cima. Os rótulos acompanham a dog ativa
+(`.rr[data-dog]`): Arrancada vira Empurrar, o Superbafo fica apagado com a Rhaenyra (apertar dá a dica) e o Fica vira
+Vem. O teste `toque` confere que nenhuma caixa de botão encosta em outra nem no HUD. Multitoque por Pointer
 Events: um dedo no joystick e outro nos botões; arrastar o dedo de um botão para outro troca. O dispositivo atual
 (`input.device`, evento `input:device`) é `keyboard`, `gamepad` ou `touch`: um dedo na tela (pointerType touch/pen)
 liga os controles de toque e as dicas passam a mostrar os ícones dos botões (`.k-touch` em `glyph()`); uma tecla ou o
@@ -372,19 +375,23 @@ Fora de um ponto marcado, ou de costas, é o pulo comum. Eventos: `dog:wallJump 
 Demonstração: a parede de treino da Arena do Pulo (`?level=pulo&play`).
 
 **Superbafo** (`game.js` + `src/game/mechanics/scent.js`): só quem tem `bafoSpeed` nas estatísticas (a Radhija).
-Segurando R/L2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
+Segurando R/R2 ela para e mira (gira com o analógico) e uma prévia no chão mostra o caminho provável da nuvem;
 soltando, "HÁÁÁ!": nasce uma nuvem na frente dela (`dog:bafo`). Depois ela fica toda orgulhosa; a Rhaenyra perto
 de uma nuvem vira a cara (`dog:yuck`). Mirar é cancelado ao pausar ou trocar de dog. Ver §5.1.
 
-**Lambe-Lambe** (`game.js`): o mesmo botão (R/L2) com a Rhaenyra, que tem `lickStroke`/`lickReach` nas estatísticas.
-Pertinho da irmã (até `lickReach`), ela escolhe o ponto do corpo da irmã mais perto (garupa, flanco, bochecha ou
-focinho), encosta (`lick:start`), vira para ele e lambe em ritmo enquanto o botão estiver seguro: cada lambida dura
-`lickStroke` s e chega à irmã no meio do ciclo (`dog:lick {target, x, y, z, stroke}` e `puzzle.onLick`). A irmã fica
-parada, vira a cabeça e reage a cada lambida (`action 'licked'`, no mesmo `lickPhase`). Soltar termina a lambida em
-curso (`lick:end`); trocar de dog, reiniciar ou sair encerram; pausar congela. Longe da irmã é só uma lambidinha no
-focinho (`dog:lick` sem alvo); com a boca cheia, não lambe. Numa fase que não declara `onLick`, a dica explica que o
-superbafo é da Radhija e que o R da Rhaenyra é o Lambe-Lambe. A lama da fase 7 é `createMud` (§4.5): o visual fica no
-modelo (`dog.setMud(k, pontosLimpos)`, `dog.setShine(k)`).
+**Lambe-Lambe** (`game.js`): L/L2 com qualquer das duas (as duas têm `lickStroke`/`lickReach` nas estatísticas; a
+Radhija lambe mais rapidinho). Pertinho da irmã (até `lickReach`), a dog ativa escolhe o ponto do corpo da irmã mais
+perto (garupa, flanco, bochecha ou focinho, nas medidas da irmã), encosta (`lick:start`; quem é menor para mais perto,
+`lickDist`), vira para ele e lambe em ritmo enquanto o botão estiver seguro: cada lambida dura `lickStroke` s e chega
+à irmã no meio do ciclo (`dog:lick {name, target, x, y, z, stroke}` e `puzzle.onLick(quemLambeu, lick)`). A irmã fica
+parada, vira a cabeça e reage a cada lambida (`action 'licked'`, no mesmo `lickPhase`); lambida pela irmã menor, a
+Rhaenyra abaixa a cabeça para ela. Com o ponto acima da boca (a Radhija na bochecha da Rhaenyra, `anim.lickY`), quem
+lambe ergue o peito e estica o pescoço para cima em vez de baixar a cabeça. Soltar termina a lambida em curso
+(`lick:end`); trocar de dog, reiniciar ou sair encerram; pausar congela. Lambendo não há pulo, arrancada nem
+superbafo, e mirando ou soprando não começa lambida. Longe da irmã é só uma lambidinha no focinho (`dog:lick` sem
+alvo; numa fase que não declara `onLick`, a dica ensina o alcance); com a boca cheia, não lambe. A lama da fase 7 é
+`createMud` (§4.5): só a lambida da Rhaenyra limpa a Radhija (a da Radhija na irmã é carinho, com dica para trocar).
+O visual fica no modelo (`dog.setMud(k, pontosLimpos)`, `dog.setShine(k)`).
 
 **Fica / Vem**: F alterna a companheira entre seguir e ficar sentada onde está. Quem vira ativa perde o "Fica";
 depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar tempo de apertar F.

@@ -3,29 +3,27 @@
 Última atualização: **2026-10-19, Claude** (porquinhos da fase 10, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (Claude)
+## Entregue: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (PR #35, squash `04d7dbe`, deploy `39306814728`)
 
-- Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
-  saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
-  distraírem. Ajuste do usuário: a comida distrai por um **tempo determinado e generoso** (configurável por
-  legume), não de vez; depois eles voltam a atrapalhar. Peças reutilizáveis, sem mexer em `src/levels/fase10/`: a
-  sessão da fase 10 (PR #33) integra depois que este PR entrar.
-- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`, atualizado por merge com o main `168bda6` (PR #34). Consultar o PR para SHA, CI, E2E e prévia; nada
-  rodou no PC além de `node --check`/`git diff --check`.
-- Feito: modelo `src/characters/pig.js` (SDF + esqueleto de 10 ossos, IK das patas, trava de chão, variantes de
-  manchinhas, gestos `oink`/`bump`/`shake`, ações `idle`/`walk`/`sniff`/`eat`/`alert`/`lie`/`sleep`); mecânica
-  `createPigHerd` + `pigPenLayout` em `src/game/mechanics/pigHerd.js` (cercado com porteira, soltos atrapalham com
-  colisor e esbarrão, `addFood`/`removeFood` com tempo de distração por legume, `recall`, `reset`, `info()`, eventos
-  `pig:*`); chiqueiro `src/world/pigPen.js`; legumes `src/world/veggies.js`; sons `src/fx/audio/soundsPorcos.js` e
-  o bloco `pig:*` do `feedback.js`; tipos `PigModel`/`VeggieProp`/`PorcosProps`; arena `src/levels/_porcos/`
-  (`?level=porcos&play`); testes `test/porcos.test.mjs`; suíte E2E `porcos` (`tools/scripts/test-porcos.mjs`) e
-  capturas `tools/scripts/capture-porcos.mjs` (`shots/porcos-revisao/`). API e receita de integração: ARQUITETURA §7
-  ("Porquinhos"), eventos em §8.
-- Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
-  esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
-  `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
+- Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
+  no L2". Tecla do Lambe-Lambe escolhida pelo usuário: **L** (o R continua sendo o superbafo). Controle: R1 = arrancada
+  ou empurrar, R2 = superbafo, L2 = Lambe-Lambe. Toque: botões separados Superbafo (só a Radhija; apagado com a
+  Rhaenyra, apertar dá a dica) e Lamber (as duas), num arco em volta do Agir.
+- Feito: `input.lick()` (L / L2 / botão `lick`) e `bafo()` no R / R2; `lickStroke`/`lickReach` também na Radhija
+  (0,38 s, mais rapidinho); núcleo genérico (`lickDist`: quem é menor para mais perto; lambendo não há arrancada nem
+  bafo, mirando não começa lambida; dica genérica só quando não alcança, numa fase sem `onLick`); pose de quem lambe
+  para cima (`anim.lickY` em `dogAnimation.js`: peito sobe, pescoço estica, língua para a frente) e a Rhaenyra lambida
+  abaixa a cabeça para a irmã menor. Fase 7: textos com (L); a lambida da Radhija na irmã é só carinho (dica para
+  trocar), a lama continua saindo só com a Rhaenyra. Ajuda (tabela de controles, glifos `R`→R2/Superbafo,
+  `L`→L2/Lamber, Shift→R1), README e ARQUITETURA §4/§6. Testes headless e as suítes E2E `lambe`, `toque`,
+  `controle`, `bafo` e `expresso`; capturas novas da Radhija lambendo (bochecha e flanco) em `capture-lambe.mjs`.
+- **Fase 10 (PR #33, outra sessão)**: não foi editada aqui. O `onLick` dela já recebe quem lambeu (`ctrl`) e
+  `lick.target`; hoje, com a Radhija lambendo a Rhaenyra, ela mostra a dica `alreadyClean` e o `onLickMiss` mostra
+  `lickFar` ("Chegue pertinho da Radhija…") também quando quem tenta é a Radhija, e os textos dela ainda dizem R.
+  A sessão da fase 10 ajusta depois deste PR (aviso a ela no merge).
+- Integrado ao main com a aprovação do usuário (squash `04d7dbe`, deploy `39306814728`). Não repetir merge/deploy do #35.
 
-## Em andamento: pombo mais bonito (Claude, PR #34)
+## Entregue: Pombo mais bonito (PR #34, squash `168bda6`, deploy `39303626593`)
 
 - Pedido do usuário: "melhorar o visual do modelo do pombo, pode ser mais bonito" (fases 4 e 10). Branch
   `claude/pombo-bonito` (worktree próprio), **PR #34**, base `eb1a148`; consultar o PR para SHA, CI, E2E e prévia.

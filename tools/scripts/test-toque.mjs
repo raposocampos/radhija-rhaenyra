@@ -279,7 +279,8 @@ try {
   i = await info();
   s = await uiState();
   check(i.activeDog === 'rhaenyra' && s.dog === 'rhaenyra', 'Trocar → Rhaenyra', `${i.activeDog}/${s.dog}`);
-  check(await label('bafo') === 'Lamber' && await label('dash') === 'Empurrar', 'botões viram Lamber e Empurrar', `${await label('bafo')} / ${await label('dash')}`);
+  const bafoDim = () => ev(() => Number(getComputedStyle(document.querySelector('.rr-tbtn--bafo')).opacity));
+  check(await label('dash') === 'Empurrar' && await label('lick') === 'Lamber' && await bafoDim() < 0.6, 'Arrancada vira Empurrar; Lamber continua; o Superbafo (só da Radhija) fica apagado', `${await label('dash')} / ${await label('lick')} / ${await bafoDim()}`);
   await stickWalkTo(2.6, -1.0);
   await stickWalkTo(3.5, -2.25, { tol: 0.15 });
   // encostar no carrinho sem Empurrar → dica com o ícone de toque
@@ -326,16 +327,34 @@ try {
   await tap('.rr-tbtn--stay');
   check((await info()).stay.radhija === false && await label('stay') === 'Fica', 'Vem: volta a seguir');
   await tap('.rr-tbtn--swap');
-  check((await info()).activeDog === 'radhija' && await label('bafo') === 'Bafo' && await label('dash') === 'Arrancada', 'de volta à Radhija: Bafo e Arrancada');
+  check((await info()).activeDog === 'radhija' && await label('bafo') === 'Superbafo' && await label('dash') === 'Arrancada' && await bafoDim() > 0.95, 'de volta à Radhija: Superbafo aceso e Arrancada');
   await stickWalkTo(3.0, -0.5);
   await clearLog();
   const bafo = await rect('.rr-tbtn--bafo');
   await finger.down(3, bafo.x, bafo.y);
   await sleep(700);
-  check((await info()).bafo.aiming, 'segurar Bafo: mira');
+  check((await info()).bafo.aiming, 'segurar Superbafo: mira');
   await finger.up(3);
   await sleep(250);
-  check((await logOf('dog:bafo')).length === 1, 'soltar Bafo: sopra');
+  check((await logOf('dog:bafo')).length === 1, 'soltar Superbafo: sopra');
+  // Lamber (as duas dogs): a Radhija lambe a irmã com o botão segurado (a irmã a oeste: a leste, perto de (3, −0,5),
+  // fica o bebedouro de pássaros, e com ele no meio a lambida não alcança)
+  await ev(() => {
+    const g = window.__game.game;
+    const r = g.debug.ctrls.radhija;
+    g.debug.teleport('rhaenyra', r.x - 0.9, r.z);
+    g.setStay('rhaenyra', true);
+  });
+  await sleep(300);
+  await clearLog();
+  const lickBtn = await rect('.rr-tbtn--lick');
+  await finger.down(3, lickBtn.x, lickBtn.y);
+  i = await waitFor((x) => x.lick.on && x.lick.stage === 'licking' && x.lick.strokes >= 1, { timeout: 3000 });
+  check(i.lick.by === 'radhija' && i.lick.target === 'rhaenyra' && (await logOf('dog:bafo')).length === 0, 'segurar Lamber: a Radhija lambe a irmã', JSON.stringify(i.lick));
+  await finger.up(3);
+  i = await waitFor((x) => !x.lick.on, { timeout: 2000 });
+  check(!i.lick.on, 'soltar Lamber: para de lamber');
+  await ev(() => window.__game.game.setStay('rhaenyra', false));
   // arrancada com o joystick segurado (o dedo da arrancada sobe antes)
   await sleep(1200);
   await finger.down(1, ring.x, ring.y);

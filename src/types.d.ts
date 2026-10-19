@@ -103,7 +103,7 @@ export interface DogStats {
   wallJumpTime?: number;
   wallReach?: number;
   wallBack?: number;
-  /** Só a Rhaenyra: Lambe-Lambe — duração de cada lambida (s) e distância máxima até a irmã para começar (m). */
+  /** Lambe-Lambe (as duas) — duração de cada lambida (s) e distância máxima até a irmã para começar (m). */
   lickStroke?: number;
   lickReach?: number;
   accel: number;
@@ -474,8 +474,9 @@ export interface InputLock {
   move?: { dx: number; dz: number; speed: number };
 }
 
-/** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick). */
+/** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick; quem lambeu é o ctrl recebido). */
 export interface LickInfo {
+  /** Quem foi lambida (a irmã de quem lambeu). */
   target: DogName;
   /** Número da lambida nesta sessão (1, 2…). */
   stroke: number;
@@ -530,12 +531,15 @@ export interface Puzzle {
   canDash?(ctrl: DogController): boolean;
   onDashBlocked?(ctrl: DogController): void;
   /**
-   * Lambe-Lambe: cada lambida que chega à irmã. Declarar este método diz ao núcleo que a fase dá um efeito às
-   * lambidas (e cuida das dicas). Devolva { stop: true } para encerrar depois desta lambida.
+   * Lambe-Lambe: cada lambida que chega à irmã. As duas dogs lambem: ctrl é quem lambeu e lick.target quem foi
+   * lambida. Declarar este método diz ao núcleo que a fase dá um efeito às lambidas (e cuida das dicas). Devolva
+   * { stop: true } para encerrar depois desta lambida.
    */
   onLick?(ctrl: DogController, lick: LickInfo): { stop?: boolean } | null | void;
-  /** R / L2 com a Rhaenyra longe da irmã, numa fase que declarou onLick (para a dica da fase). */
-  /** Lambe-Lambe sem alcançar a irmã; blocked = ela está perto, mas há algo no meio (cerca, portão fechado). */
+  /**
+   * L / L2 sem alcançar a irmã (ctrl é quem tentou), numa fase que declarou onLick (para a dica da fase);
+   * blocked = ela está perto, mas há algo no meio (cerca, portão fechado).
+   */
   onLickMiss?(ctrl: DogController, miss?: { blocked: boolean }): void;
   /** Paredes marcadas onde o pulo da Rhaenyra vira impulso na parede (as que valem agora). */
   wallSpots?(): WallSpot[];
@@ -841,6 +845,8 @@ export interface DogAnim {
   lickSide?: number;
   /** Lambidinha no próprio focinho (ninguém por perto). */
   lickSolo?: boolean;
+  /** Quem lambe: altura do ponto lambido na irmã (m; −1 = sem). Acima da boca, ela estica o pescoço. */
+  lickY?: number;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima). */
   slope?: number;
   /**
