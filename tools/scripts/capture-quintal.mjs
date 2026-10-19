@@ -332,11 +332,20 @@ try {
   await shot('27-radhija-na-lama', { pos: [7.9, 1.1, 2.8], look: [7.3, 0.25, 1.6] });
   await setup({ place: { radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, settle: 30 });
   await setup({ active: 'rhaenyra', place: { rhaenyra: { x: 8.9, z: 1.9, yaw: -Math.PI / 2 } }, stay: 'radhija', settle: 10 });
-  await keyDown('KeyR');
+  await keyDown('KeyL');
   await step(70);
   await shot('28-lambe-lambe', { pos: [8.6, 1.0, 3.0], look: [8.4, 0.35, 1.8] });
   await until((i) => i.quintal.mud.k === 0, 600);
-  await keyUp('KeyR');
+  await keyUp('KeyL');
+  // a Rhaenyra pisa na lama e a Radhija a lambe
+  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, settle: 50 });
+  await shot('28b-rhaenyra-na-lama', { pos: [7.9, 1.1, 2.9], look: [7.4, 0.3, 1.7] });
+  await setup({ active: 'radhija', place: { rhaenyra: { x: 8.6, z: 1.9, yaw: -Math.PI / 2 }, radhija: { x: 8.15, z: 1.95, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 10 });
+  await keyDown('KeyL');
+  await step(70);
+  await shot('28c-radhija-lambendo-a-rhaenyra', { pos: [8.4, 1.0, 3.0], look: [8.4, 0.35, 1.9] });
+  await until((i) => i.quintal.mudRh.k === 0, 700);
+  await keyUp('KeyL');
   await setup({ place: { rhaenyra: kick(L.SHED_BUTTONS[0]) }, settle: 10 });
   await tap('Space');
   await step(14);

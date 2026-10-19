@@ -219,7 +219,7 @@ try {
   state = await H.holdUntil(keysFor(0, 1), (s) => s.quintal.inHorta.rhaenyra && !s.dogs.rhaenyra.jumping, { timeout: 2000, during: () => page.keyboard.press('Space') });
   check(qt(state).inHorta.rhaenyra, 'a Rhaenyra pula a cerca baixa da horta');
   await walkTo(8.62, 1.75, { tol: 0.12 }); // pertinho da irmã
-  state = await H.holdUntil(['KeyR'], (s) => s.quintal.mud.k === 0, { timeout: 8000 });
+  state = await H.holdUntil(['KeyL'], (s) => s.quintal.mud.k === 0, { timeout: 8000 });
   check(qt(state).mud.k === 0, 'o Lambe-Lambe tira a lama', JSON.stringify(qt(state).mud));
   state = await wallJump(L.SHED_BUTTONS[0]);
   state = await waitFor((s) => s.quintal.doorOpen, { timeout: 2500 });

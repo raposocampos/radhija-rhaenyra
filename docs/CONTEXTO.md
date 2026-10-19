@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; pombo do PR #34 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 e #35 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
+## Entregue: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (PR #35, squash `04d7dbe`, deploy `39306814728`)
 
 - Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
   no L2". Tecla do Lambe-Lambe escolhida pelo usuário: **L** (o R continua sendo o superbafo). Controle: R1 = arrancada
@@ -225,6 +225,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - Duas **galinhas** (`src/characters/chicken.js`, `src/levels/fase10/chickens.js`, `CHICKENS`): ciscam do lado de fora
     da cerca oeste da horta; dog chegando de frente as faz correr; por trás não; latido, esbarrão ou arrancada as faz
     voar baixinho. Sons novos (cocoricó, alarme, asas, caixote travando, piñata, colheita) em `soundsQuintal.js`.
+  - Com o #35 no main: a lama da horta vale para as duas. A Rhaenyra que o jogador leva para a lama fica com as patas
+    escorregadias (sem impulso na parede: `wallSpots` vazio) até a Radhija lambê-la (L); a Radhija continua se sujando
+    no vão. `onLick`/`onLickMiss` seguem o modelo da fase 7 (as duas lambem). Nos testes, lamber é `KeyL`.
   - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (branch `claude/empurrao-em-pe`, sem PR) e
     a cabeça atravessando paredes (etapa 4 do PR #37; repassado à sessão dos modelos).
 - Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar capturas e entregar a prévia;

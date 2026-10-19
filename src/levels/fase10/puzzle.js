@@ -75,7 +75,9 @@ export const TEXT = {
     // vela
     hortaRh: 'A vela está no galpão, atrás da horta: pule a cerca baixa (Espaço)',
     hortaRad: 'A vela está no galpão: entre na horta pelo vão da tábua quebrada',
-    lickRh: 'A Radhija está enlameada: faça o Lambe-Lambe nela (R pertinho dela)',
+    lickRh: 'A Radhija está enlameada: faça o Lambe-Lambe nela (L pertinho dela)',
+    lickRad: 'A Rhaenyra está enlameada: faça o Lambe-Lambe nela (L pertinho dela)',
+    muddyRh: 'Patas enlameadas escorregam na parede: a Radhija limpa você com o Lambe-Lambe (Q)',
     muddyRad: 'Enlameada, sem arrancada: a Rhaenyra limpa você com o Lambe-Lambe (Q)',
     buttonsRh: 'A porta do galpão abre com um dos botões altos da parede dele: impulso nas patinhas (Espaço)',
     buttonsRad: 'Os botões do galpão são altos: a Rhaenyra alcança com o impulso (Q)',
@@ -131,8 +133,12 @@ export const TEXT = {
     mud: 'Lama! Agora a Radhija está lenta e sem arrancada.',
     clean: 'Limpinha de novo!',
     licking: 'Lambe-Lambe! Mais um pouco…',
-    alreadyClean: 'Ela já está limpinha.',
-    lickFar: 'Chegue pertinho da Radhija para o Lambe-Lambe.',
+    lovedLick: 'Lambe-Lambe de carinho! (Ela já está limpinha.)',
+    lickSwap: 'Quem está enlameada é você! A irmã lambe você (Q).',
+    lickFar: 'Chegue pertinho da irmã para o Lambe-Lambe (L).',
+    mudRh: 'Lama! Com as patas enlameadas, a Rhaenyra escorrega na parede: nada de impulso até a Radhija limpar (L).',
+    cleanRh: 'Patinhas limpas de novo!',
+    wallMud: 'Patas enlameadas escorregam na parede! A Radhija limpa você com o Lambe-Lambe (Q).',
     noDash: 'Enlameada, a Radhija não consegue dar arrancada.',
     doorOpen: 'A porta do galpão subiu!',
     doorButton: 'Esse botão abriu a porta do galpão!',
@@ -381,6 +387,11 @@ export function createPuzzle(ctx) {
     // o mesmo texto para qualquer enfeite (o objetivo não entrega a ordem: ela está no quadro)
     if (mine) return { text: fill(S.lookedPainting ? O.carryNext : O.carryCheck, mine), target: cakeAt, stage: st };
     const c = ctrls[activeName];
+    // a Rhaenyra enlameada: sem impulso na parede até a Radhija lambê-la
+    if (mud.muddy('rhaenyra')) {
+      const rh = ctrls.rhaenyra, rad = ctrls.radhija;
+      return activeName === 'radhija' ? { text: O.lickRad, target: at(rh.x, rh.z, 0.7), stage: st } : { text: O.muddyRh, target: at(rad.x, rad.z, 0.6), stage: st };
+    }
     // depois de errar a ordem, o quadro da sala vem primeiro (até alguém olhar de perto)
     if (S.wrong > 0 && !S.lookedPainting) return { text: O.lookPainting, target: at(PAINTING.x, PAINTING.z + 0.1, PAINTING.y), stage: st };
     const pending = THINGS.filter((t) => S.place[t] !== 'cake');
@@ -1244,13 +1255,18 @@ export function createPuzzle(ctx) {
       emit('pigeon:seen', { x: PIGEON.x, z: PIGEON.z });
     }
 
-    // lama no canteiro da horta (só a Radhija entra nela)
-    const rad = C.radhija;
-    if (rad.x > MUD.x0 && rad.x < MUD.x1 && rad.z > MUD.z0 && rad.z < MUD.z1 && !rad.jumpT) {
-      const first = !mud.muddy('radhija');
-      mud.soak('radhija', dt, rad);
-      if (first && mud.muddy('radhija')) hints.now('mud', 3.2, 0);
-    } else mud.leave('radhija');
+    // lama no canteiro da horta: a Radhija passa pelo vão e se suja; a Rhaenyra, se pisar ali, fica com as patas
+    // escorregadias (sem impulso na parede) até a irmã lambê-la
+    for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) {
+      const dc = C[n];
+      // a Rhaenyra só se suja quando é o jogador que a leva para a lama (seguindo a irmã, ela não escolheu)
+      const steps = n === 'radhija' || activeName === 'rhaenyra';
+      if (steps && dc.x > MUD.x0 && dc.x < MUD.x1 && dc.z > MUD.z0 && dc.z < MUD.z1 && !dc.jumpT && !(dc.y > 0.02)) {
+        const first = !mud.muddy(n);
+        mud.soak(n, dt, dc);
+        if (first && mud.muddy(n)) hints.now(n === 'radhija' ? 'mud' : 'mudRh', 3.6, 0);
+      } else mud.leave(n);
+    }
 
     // entregas no bolo
     for (const t of THINGS) {
@@ -1289,11 +1305,12 @@ export function createPuzzle(ctx) {
     else if (canBucket) hints.setPrompt('bucket');
     else if (nearPainting) hints.setPrompt('painting');
     else {
-      const wallReady = k === 'rhaenyra' && !airborne(active) && free && levers.some((b) => b.inReach(active, world));
+      const wallReady = k === 'rhaenyra' && !airborne(active) && free && !mud.muddy('rhaenyra') && levers.some((b) => b.inReach(active, world));
       hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
     }
     const nearLever = levers.some((b) => !b.on && Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 1.0);
     if (nearLever && k === 'radhija') hints.cond('wallRadhija', 3.4, 10);
+    if (k === 'rhaenyra' && mud.muddy('rhaenyra') && levers.some((b) => !b.on && b.inReach(active, world))) hints.cond('wallMud', 3.6, 8);
     if (!S.full && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.7) hints.cond(tap.on && crateOnHose() ? 'hoseBlocked' : 'poolDeep', 3.6, 12);
     if (S.full && !power() && !S.docked && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.8) hints.cond('boatFar', 3.6, 10);
     // a piñata em cima da roseira: parada, os espinhos não deixam chegar; balançando, quem bate é a Rhaenyra
@@ -1471,15 +1488,16 @@ export function createPuzzle(ctx) {
   }
 
   // ------------------------------------------------------------------ Lambe-Lambe
-  /** @param {import('../../types').DogController} c @param {import('../../types').LickInfo} lick */
+  /** As duas lambem: quem está enlameada fica limpa; a irmã limpinha só ganha carinho. @param {import('../../types').DogController} c @param {import('../../types').LickInfo} lick */
   function onLick(c, lick) {
-    if (lick.target !== 'radhija' || !mud.muddy('radhija')) {
-      hints.now('alreadyClean', 2.6, 6);
+    const t = lick.target;
+    if (!mud.muddy(t)) {
+      hints.now(mud.muddy(c.name) ? 'lickSwap' : 'lovedLick', 2.6, 6);
       return null;
     }
-    const res = mud.lick('radhija', lick);
+    const res = mud.lick(t, lick);
     if (res.cleaned) {
-      hints.now('clean', 3.2, 0);
+      hints.now(t === 'radhija' ? 'clean' : 'cleanRh', 3.2, 0);
       notifyStage();
       return { stop: true };
     }
@@ -1561,7 +1579,8 @@ export function createPuzzle(ctx) {
   return {
     S: hints.S, TEXT, stages: STAGES, objective, update, interact, reset, jumpToStage, modifyIntent, lockFor, onWallTouch,
     navFlags: () => ({ gateOpen: S.gateOpen, shedOpen: doorOpen() }),
-    wallSpots: () => levers.map((b) => b.spot),
+    // enlameada, a Rhaenyra escorrega na parede: sem impulso (o Espaço vira um pulinho comum)
+    wallSpots: () => (mud.muddy('rhaenyra') ? [] : levers.map((b) => b.spot)),
     onBark: (c) => {
       chickens.onBark(c);
       if (!S.gateOpen) goose.onBark(c);
@@ -1582,7 +1601,7 @@ export function createPuzzle(ctx) {
     canDash: (c) => mud.canDash(c.name),
     onDashBlocked: (c) => { if (mud.muddy(c.name)) hints.now('noDash', 3.4, 5); },
     onLick,
-    onLickMiss: (c, miss) => { if (mud.muddy('radhija')) hints.now('lickFar', 2.8, 4); void miss; },
+    onLickMiss: (c, miss) => { if (mud.muddy(other(c.name))) hints.now('lickFar', 2.8, 4); void miss; },
     /** Testes e capturas: põe o caixote num ponto (dentro dos limites), sem empurrão. */
     placeCrate(id, x, z) {
       if (id !== 'caixote') return;
@@ -1596,6 +1615,7 @@ export function createPuzzle(ctx) {
       if (key === 'gate') { S.gateOpen = !!value; if (value) gate.lock(); }
       if (key === 'pigeon') { S.pigeon = value ? 'gone' : 'asleep'; props.pigeon.object.visible = !value; }
       if (key === 'clean') mud.set('radhija', value ? 0 : 1);
+      if (key === 'cleanRh') mud.set('rhaenyra', value ? 0 : 1);
       if (key === 'doorButton') S.doorBtn = value ? 1 : 0;
       if (key === 'shed') { if (value) openShed(); }
       if (key === 'stairs') { S.crates.forEach((k) => { k.x = CR.x1; k.locked = !!value; if (!value) k.x = CR.x0; }); }
@@ -1612,7 +1632,7 @@ export function createPuzzle(ctx) {
         rope: { holder: handle.holder, pulled: +S.pulled.toFixed(3) }, bucket: { y: +S.bucketY.toFixed(3), riding: S.riding, tilt: +S.bucketTilt.toFixed(3) },
         deck: S.deck ? S.deck.phase : S.onDeck ? 'free' : null, onDeck: S.onDeck, deckAction: deckAction(ctrls.radhija),
         sawPigeon: S.sawPigeon, ramp: S.ramp ? S.ramp.phase : null, door: +S.doorT.toFixed(3), doorOpen: doorOpen(),
-        mud: mud.info('radhija'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
+        mud: mud.info('radhija'), mudRh: mud.info('rhaenyra'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
         shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, pigs: pigs.info(),
         crates: S.crates.map((k) => ({ x: +k.x.toFixed(3), locked: k.locked })), crateHold: S.crateHold ? S.crateHold.i : null,
         climb: S.climb ? S.climb.phase : null, stairs: stairsReady(),

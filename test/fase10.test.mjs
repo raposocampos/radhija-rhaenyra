@@ -297,9 +297,9 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enf
   h.hold(null);
   h.run(0.2);
   assert.equal(q(h).inHorta.rhaenyra, true, 'a Rhaenyra pulou a cerca baixa');
-  h.keyDown('KeyR');
+  h.keyDown('KeyL');
   const clean = h.run(6, { until: (i) => i.quintal.mud.k === 0 });
-  h.keyUp('KeyR');
+  h.keyUp('KeyL');
   assert.ok(clean, `o Lambe-Lambe limpou a Radhija ${JSON.stringify(q(h).mud)}`);
   // os dois botões altos do galpão (com ?botao=1, o primeiro abre a porta)
   assert.equal(h.info().objective, TEXT.objective.buttonsRh);
@@ -739,6 +739,44 @@ test('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o 
   assert.ok(q(h).chickens.every(inArea), `continuam na área ${JSON.stringify(q(h).chickens)}`);
   // ninguém tem texto
   assert.equal(h.log('hint').filter((x) => /galinha/i.test(x.text || '')).length, 0);
+});
+
+test('fase 10: a Rhaenyra que pisa na lama escorrega na parede (sem impulso) até a Radhija lambê-la (L)', async () => {
+  const h = await game('botao=1');
+  h.run(0.3);
+  puz(h).debugSet('gate');
+  as(h, 'rhaenyra');
+  h.clearLog();
+  put(h, 'rhaenyra', (L.MUD.x0 + L.MUD.x1) / 2, (L.MUD.z0 + L.MUD.z1) / 2, 0);
+  h.run(0.6);
+  assert.ok(q(h).mudRh.k > 0, `enlameada ${JSON.stringify(q(h).mudRh)}`);
+  assert.ok(hints(h).includes(TEXT.hint.mudRh));
+  assert.equal(h.info().objective, TEXT.objective.muddyRh);
+  // no botão do galpão: sem prompt de impulso; o Espaço vira um pulinho comum e o botão não afunda
+  const k = kickSpot(L.SHED_BUTTONS[0]);
+  put(h, 'rhaenyra', k.x, k.z, Math.atan2(-L.SHED_BUTTONS[0].nx, -L.SHED_BUTTONS[0].nz));
+  h.run(0.2);
+  assert.notEqual(h.info().prompt, TEXT.prompt.wall, 'enlameada, sem impulso');
+  assert.ok(hints(h).includes(TEXT.hint.wallMud));
+  h.tap('Space');
+  h.run(D + 0.2);
+  assert.equal(q(h).shed.open, false, 'o botão não foi apertado');
+  // a Radhija lambe a irmã (L): limpinha, o impulso volta
+  as(h, 'radhija');
+  assert.equal(h.info().objective, TEXT.objective.lickRad);
+  put(h, 'rhaenyra', k.x, k.z, Math.atan2(-L.SHED_BUTTONS[0].nx, -L.SHED_BUTTONS[0].nz));
+  const rh = h.ctrls.rhaenyra;
+  put(h, 'radhija', rh.x - 0.45, rh.z + 0.05, Math.PI / 2);
+  h.keyDown('KeyL');
+  const clean = h.run(8, { until: (i) => i.quintal.mudRh.k === 0 });
+  h.keyUp('KeyL');
+  assert.ok(clean, `a Radhija limpou a Rhaenyra com o Lambe-Lambe ${JSON.stringify(q(h).mudRh)}`);
+  assert.ok(hints(h).includes(TEXT.hint.cleanRh));
+  h.run(1.6); // limpinha, ela se sacode antes de voltar a pular
+  as(h, 'rhaenyra');
+  h.clearLog();
+  wallJump(h, L.SHED_BUTTONS[0]);
+  assert.ok(h.run(1.5, { until: (i) => i.quintal.doorOpen }), 'limpinha, o impulso abriu a porta');
 });
 
 test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', async () => {
