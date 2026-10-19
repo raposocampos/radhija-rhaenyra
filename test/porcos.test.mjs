@@ -189,6 +189,34 @@ function withSeed(seed, fn) {
   }
 }
 
+/** Igual a withSeed, para uma função assíncrona (Math.random volta só quando ela termina). */
+async function withSeedAsync(seed, fn) {
+  const random = Math.random;
+  Math.random = seeded(seed);
+  try {
+    return await fn();
+  } finally {
+    Math.random = random;
+  }
+}
+
+/**
+ * A dog chega a d m de (x, z), do lado oposto a (ax, az), virada para lá, e aperta E. Os outros porquinhos estão em
+ * volta dela e um esbarrão (susto de 0,3 s) pode engolir o E: ela tenta de novo, como quem joga (até 4 vezes).
+ * → true se `ok()` ficou verdadeiro.
+ */
+function pickFrom(h, name, { x, z, ax, az, d }, ok) {
+  for (let k = 0; k < 4; k++) {
+    const ux = x - ax, uz = z - az, ul = Math.hypot(ux, uz) || 1;
+    h.teleport(name, x + (ux / ul) * d, z + (uz / ul) * d, Math.atan2(-ux, -uz));
+    h.run(0.05);
+    h.tap('KeyE');
+    if (ok()) return true;
+    h.run(0.35);
+  }
+  return false;
+}
+
 /** Foto curta dos porcos (para a mensagem de um teste que falhou): estado, posição, vez na porteira e rota. */
 function snap(h) {
   const f = (v) => +v.toFixed(2);
@@ -528,54 +556,33 @@ test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e ele
   assert.ok(h.log('plate:press').length >= 1);
 });
 
-test('DIAGNÓSTICO TEMPORÁRIO: sementes em que o teste do legume na arena falha', async () => {
-  const random = Math.random;
+test('VARREDURA TEMPORÁRIA: legume e bolinha pegos de volta com o E repetido, 120 e 80 sementes', async () => {
   const bad = [];
-  const f = (v) => +v.toFixed(2);
-  const pigsOf = (h) => h.puzzle.pigs.pigs.map((P) => `${P.i}:${P.state}/${P.action}@${f(P.x)},${f(P.z)} d${P.dog || '-'}`).join(' | ');
-  try {
-    for (let seed = 1; seed <= 120; seed++) {
-      Math.random = seeded(seed);
-      const h = await arena();
-      const c = () => h.ctrls.radhija;
-      const dogS = () => `dog@${f(c().x)},${f(c().z)} y${f(c().yaw)}`;
-      const fail = (step, extra = {}) => bad.push({ seed, step, dog: dogS(), pigs: pigsOf(h), veg: h.info().veggies.find((v) => v.kind === 'corn'), log: h.log('pig:bump').length, ...extra });
-      h.puzzle.jumpToStage('pigsOut');
-      h.run(1);
-      const V = L.VEGGIES.corn;
-      h.teleport('radhija', V.x - 0.3, V.z, Math.PI / 2);
-      h.run(0.2);
-      h.tap('KeyE');
-      let veg = h.info().veggies.find((v) => v.kind === 'corn');
-      if (veg.holder !== 'radhija') { fail('pick1'); h.releaseAll(); continue; }
-      h.teleport('radhija', 2.6, 0.4, Math.PI / 2);
-      h.run(0.2);
-      h.clearLog();
-      h.tap('KeyE');
-      h.run(0.6);
-      veg = h.info().veggies.find((v) => v.kind === 'corn');
-      if (veg.state !== 'ground' || !veg.food || h.log('item:land').length !== 1) { fail('drop', { lands: h.log('item:land').length, knocks: h.log('pig:knock').length }); h.releaseAll(); continue; }
-      h.run(6);
-      if (h.log('pig:eat').length !== 1 || !(h.info().porcos.distracted >= 1) || !(h.info().veggies.find((v) => v.kind === 'corn').eaten > 0)) { fail('eat', { eats: h.log('pig:eat').length, smell: h.log('pig:smell').length }); h.releaseAll(); continue; }
-      const eater = h.puzzle.pigs.pigs.find((P) => P.state === 'eat');
-      if (!eater) { fail('eater'); h.releaseAll(); continue; }
-      const ux = veg.x - eater.x, uz = veg.z - eater.z, ul = Math.hypot(ux, uz) || 1;
-      const to = { x: veg.x + (ux / ul) * 0.42, z: veg.z + (uz / ul) * 0.42 };
-      const got = h.teleport('radhija', to.x, to.z, Math.atan2(-ux, -uz));
-      h.run(0.05);
-      h.clearLog();
-      h.tap('KeyE');
-      if (h.info().veggies.find((v) => v.kind === 'corn').holder !== 'radhija') { fail('pick2', { to, got, eater: eater.i }); h.releaseAll(); continue; }
-      if (!h.log('pig:done').some((e) => e.reason === 'taken')) fail('done');
-      h.releaseAll();
-    }
-  } finally {
-    Math.random = random;
+  for (let seed = 1; seed <= 120; seed++) {
+    const r = await withSeedAsync(seed, () => legumeCase());
+    if (r) bad.push({ seed, legume: r });
   }
-  assert.fail(JSON.stringify({ bad: bad.length, list: bad.slice(0, 12) }));
+  for (let seed = 1; seed <= 80; seed++) {
+    const r = await withSeedAsync(seed, () => bolinhaCase());
+    if (r) bad.push({ seed, bolinha: r });
+  }
+  assert.deepEqual(bad, []);
 });
 
-test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', async () => {
+/** O cenário do teste do legume (a varredura temporária usa o mesmo). → null, ou a mensagem do que falhou. */
+async function legumeCase() {
+  try {
+    await legumeSteps();
+    return null;
+  } catch (err) {
+    return String(err.message).slice(0, 300);
+  }
+}
+
+test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', () =>
+  withSeedAsync(58, legumeSteps)); // semente 58: um esbarrão engolia o E da Radhija ao pegar de volta
+
+async function legumeSteps() {
   const h = await arena();
   h.puzzle.jumpToStage('pigsOut');
   h.run(1);
@@ -604,14 +611,12 @@ test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho com
   // a Radhija pega o milho de volta (chegando pelo lado oposto ao do porquinho): ele reclama e volta a atrapalhar
   const eater = h.puzzle.pigs.pigs.find((P) => P.state === 'eat');
   assert.ok(eater, 'um porquinho comendo');
-  const ux = veg.x - eater.x, uz = veg.z - eater.z, ul = Math.hypot(ux, uz) || 1;
-  h.teleport('radhija', veg.x + (ux / ul) * 0.42, veg.z + (uz / ul) * 0.42, Math.atan2(-ux, -uz));
-  h.run(0.05);
   h.clearLog();
-  h.tap('KeyE');
-  assert.equal(h.info().veggies.find((v) => v.kind === 'corn').holder, 'radhija');
+  const corn = () => h.info().veggies.find((v) => v.kind === 'corn');
+  assert.ok(pickFrom(h, 'radhija', { x: veg.x, z: veg.z, ax: eater.x, az: eater.z, d: 0.42 }, () => corn().holder === 'radhija'), 'pegou o milho de volta');
   assert.ok(h.log('pig:done').some((e) => e.reason === 'taken'));
-});
+  h.releaseAll();
+}
 
 test('arena: o legume comido até o fim volta para o lugar; o sininho chama os porquinhos de volta', async () => {
   const h = await arena();
@@ -645,7 +650,19 @@ test('arena: o legume comido até o fim volta para o lugar; o sininho chama os p
   assert.equal(h.log('pig:home').length, 1);
 });
 
-test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', async () => {
+/** O cenário do teste da bolinha derrubada (a varredura temporária usa o mesmo). → null, ou o que falhou. */
+async function bolinhaCase() {
+  try {
+    await bolinhaSteps();
+    return null;
+  } catch (err) {
+    return String(err.message).slice(0, 300);
+  }
+}
+
+test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', () => withSeedAsync(1, bolinhaSteps));
+
+async function bolinhaSteps() {
   const h = await arena();
   h.puzzle.jumpToStage('carrying');
   assert.equal(h.info().ball.holder, 'radhija');
@@ -661,13 +678,10 @@ test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog
   assert.ok(h.info().objective.startsWith('Pegue a bolinha de volta'));
   // a dog pega de novo onde caiu (chegando pelo lado oposto ao porquinho mais perto)
   const P = [...h.puzzle.pigs.pigs].sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0];
-  const ux = b.x - P.x, uz = b.z - P.z, ul = Math.hypot(ux, uz) || 1;
-  h.teleport('radhija', b.x + (ux / ul) * 0.3, b.z + (uz / ul) * 0.3, Math.atan2(-ux, -uz));
-  h.run(0.05);
-  h.tap('KeyE');
-  assert.equal(h.info().ball.holder, 'radhija');
+  assert.ok(pickFrom(h, 'radhija', { x: b.x, z: b.z, ax: P.x, az: P.z, d: 0.3 }, () => h.info().ball.holder === 'radhija'), 'pegou a bolinha de novo');
   assert.equal(h.info().stage, 'carrying');
-});
+  h.releaseAll();
+}
 
 test('arena: a bolinha do chiqueiro na caminha termina a fase', async () => {
   const h = await arena();
