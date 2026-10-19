@@ -9,17 +9,20 @@
 //
 //  Beats do puzzle (a fase maior da demo antes da 10; entrega na mesinha ao lado da poltrona):
 //   ÓCULOS DO VOVÔ (na boca de quem pegar; a Radhija sobe): esquecidos na prateleira alta da estante leste.
-//     1. A escadinha de rodinhas está travada: a alavanca do freio fica no alto da divisória (impulso na parede).
+//     1. A escadinha de rodinhas está travada (trava vermelha na roda, ligada por um cabo à alavanca do freio no alto
+//        da divisória): impulso na parede solta a trava.
 //     2. O globo terrestre está no trilho, entre a escada e os óculos: a Rhaenyra o empurra para a frente da
 //        lareira e depois leva a escada pelo trilho até debaixo dos óculos (Shift).
-//     3. Destravada, a escada rola com peso em cima: só o peso da Rhaenyra parada no pé dela a segura (Fica). A
+//     3. Destravada, a escada rola com peso em cima: a Rhaenyra segura o pé dela (E no pé da escada, ou o Fica). A
 //        Radhija sobe os degraus largos (E), pega os óculos e desce. Sem ninguém segurando, a escada rola e ela
 //        desce de novo.
 //   LIVRO DE HISTÓRIAS (pesado: só a Rhaenyra carrega): no alto do armário do escritório, com o gato Bichano
 //     dormindo em cima. Latido não adianta e o superbafo daqui de baixo não chega lá em cima; a grade do aquecedor
 //     sopra bem ali.
-//     1. No jardim de inverno, o registro do duto fica no alto da parede (impulso na parede: abre).
-//     2. O ventilador está virado para as plantas: a Rhaenyra o empurra até a grade de baixo do duto.
+//     1. O jardim de inverno está sem luz: o disjuntor fica no alto da alvenaria (impulso na parede) e liga a
+//        energia (lanterna, varal de luzinhas e o ventilador).
+//     2. A Rhaenyra empurra o ventilador até a grade de baixo do duto e o vaso de rodinhas até o botão do chão:
+//        com o peso do vaso em cima, o registro da grade abre (as dogs são leves demais para o botão).
 //     3. A Radhija solta o superbafo no vento, na frente do ventilador: o duto leva o cheiro até a grade do escritório, o Bichano pula
 //        ofendido, derruba o livro e sai pela portinha de gato.
 //     4. A porta do escritório: impulso na maçaneta (do hall ou de dentro) destrava e ela abre, mas a mola fecha
@@ -145,16 +148,24 @@ export const DUCT = {
   y: 2.62, // altura do cano no alto da parede do fundo
 };
 /**
- * Registro do duto, no alto da alvenaria do jardim de inverno (impulso na parede): abre de vez.
+ * Disjuntor do jardim de inverno, no alto da alvenaria (impulso na parede): liga a energia de vez (a lanterna, o
+ * varal de luzinhas e o ventilador; sem energia o ventilador não sopra).
  * @type {import('../../types').WallButtonCfg}
  */
-export const DAMPER_LEVER = { x: 6.55, z: WORLD.bounds.minZ, nx: 0, nz: 1, top: 1.1, kind: 'lever', mode: 'once' };
+export const BREAKER = { x: 6.55, z: WORLD.bounds.minZ, nx: 0, nz: 1, top: 1.1, kind: 'lever', mode: 'once' };
+/**
+ * Vaso de terra num carrinho de rodinhas: só a Rhaenyra empurra, num trilho norte-sul junto às portas de vidro, até
+ * o botão do registro no chão (DAMPER_PLATE). Com o vaso parado em cima, o registro da grade de baixo abre; as dogs
+ * são leves demais para o botão.
+ */
+export const PLANTER = { start: { x: 5.0, z: 1.5 }, half: 0.26, height: 0.78, minX: 5.0, maxX: 5.0, minZ: -2.95, maxZ: 1.5, pushSpeed: 0.6 };
+export const DAMPER_PLATE = { x: 5.0, z: -2.95, hx: 0.3, hz: 0.3 };
 /**
  * Ventilador de chão (empurrável em X e Z) soprando sempre para o norte. Alinhado: |x − grade| < alignTol e a
  * grade dentro do alcance do vento.
  */
 export const FAN = {
-  start: { x: 6.75, z: 0.7 }, half: 0.3, height: 0.95, minX: 5.3, maxX: 6.75, minZ: -2.75, maxZ: 1.0, pushSpeed: 0.8,
+  start: { x: 6.75, z: 0.7 }, half: 0.3, height: 0.95, minX: 5.6, maxX: 6.75, minZ: -2.75, maxZ: 1.0, pushSpeed: 0.8,
   wind: { offset: 0.34, length: 2.9, halfWidth: 0.45, strength: 2.6, funnel: 2.2 }, alignTol: 0.2, alignZ: -0.4,
 };
 /**
@@ -162,7 +173,7 @@ export const FAN = {
  * fica atrás. Os limites do ventilador nunca o deixam encostar neles (sempre sobra um lado para empurrar).
  */
 export const POTS = [{ x: 7.45, z: -1.0, r: 0.34 }, { x: 7.45, z: -2.08, r: 0.34 }];
-export const WICKER_CHAIR = { x: 5.2, z: 2.05, r: 0.38 };
+export const WICKER_CHAIR = { x: 5.6, z: 2.6, r: 0.38 };
 export const PLANT_TABLE = { x: 7.35, z: 2.35, hx: 0.4, hz: 0.24, h: 0.62 };
 
 /** Parede fina ao longo de Z (x fixo), de z0 a z1. @returns {import('../../types').BoxCollider} */
@@ -217,7 +228,7 @@ export const NAV_NODES = {
   O_mid: { x: -5.9, z: 0.4 }, O_north: { x: -6.0, z: -1.95 }, O_door: { x: -4.95, z: 0.32 }, O_flap: { x: -4.85, z: 2.05 },
   H_door: { x: -3.85, z: 0.32 }, H_mid: { x: -3.0, z: 0.9 }, H_north: { x: -3.0, z: -1.95 }, H_flap: { x: -3.95, z: 2.05 },
   L_arch: { x: -0.9, z: 0.15 }, L_mid: { x: 1.4, z: 0.35 }, L_north: { x: 2.9, z: -1.9 }, L_east: { x: 3.7, z: 0.25 },
-  J_door: { x: 5.1, z: 0.25 }, J_mid: { x: 6.1, z: -0.5 }, J_north: { x: 6.0, z: -2.5 }, J_south: { x: 6.4, z: 1.9 },
+  J_door: { x: 5.55, z: 0.25 }, J_mid: { x: 6.1, z: -0.5 }, J_north: { x: 6.0, z: -2.5 }, J_south: { x: 6.4, z: 1.9 },
 };
 /** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
@@ -254,6 +265,8 @@ export const CAMERA = {
   offset: [1.3, 4.4, 4.8],
   lookHeight: 0.3,
   limits: { minX: -6.6, maxX: 6.6, minZ: -2.3, maxZ: 1.9 },
+  // no escritório o foco sobe e vai um pouco ao norte: o Bichano no alto do armário entra no quadro
+  zones: [{ minX: -8.0, maxX: WALL_EH.x, minZ: -3.6, maxZ: 3.0, lookY: 1.0, dz: -1.0, dx: -0.2 }],
   title: { center: { x: 1.1, z: -1.2 }, radius: 5.4, angle: 0.4, height: 2.3, look: { x: 1.0, y: 0.8, z: -1.9 } },
   celebrate: { pos: [GOAL.x + 0.9, 1.35, GOAL.z + 2.0], look: [GOAL.x + 0.25, 0.35, GOAL.z - 0.45] },
   victoryOffset: { pos: [1.1, 0.25, 0.7], look: [1.22, 0.14, 0] },
@@ -267,7 +280,7 @@ const LAYOUT = {
   WARDROBE, DESK, DESK_CHAIR, BOOK_FALL, CAT, HALL_BENCH, UMBRELLA_STAND, COAT_RACK, CONSOLE, SHELF_W, FIREPLACE,
   SHELF_E, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB, BRAKE_LEVER, ARMCHAIR, SIDE_TABLE, FOOTSTOOL, FLOOR_LAMP, RUG,
   STUDY_TABLE, STUDY_CHAIRS,
-  TABLE_SPOTS, DUCT, DAMPER_LEVER, FAN, POTS, WICKER_CHAIR, PLANT_TABLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
+  TABLE_SPOTS, DUCT, BREAKER, PLANTER, DAMPER_PLATE, FAN, POTS, WICKER_CHAIR, PLANT_TABLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
 export default LAYOUT;

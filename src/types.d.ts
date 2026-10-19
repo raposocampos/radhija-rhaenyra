@@ -148,6 +148,11 @@ export interface CameraConfig {
   };
   celebrate: { pos: Vec3Tuple; look: Vec3Tuple };
   victoryOffset?: { pos: Vec3Tuple; look: Vec3Tuple };
+  /**
+   * Zonas (retângulos do ponto de foco) onde o seguimento olha mais alto (lookY, em m acima de lookHeight) e
+   * deslocado (dx, dz): para mostrar algo no alto da parede do fundo. Entra e sai suave.
+   */
+  zones?: { minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
 }
 
 /**
@@ -767,8 +772,20 @@ export interface Fase9Props extends LevelProps {
   ladder: PropBase & HighlightProp & { setPos(x: number, z: number): void };
   /** Globo terrestre de rodinhas. */
   globe: PropBase & { setPos(x: number, z: number): void };
-  /** Ventilador de chão: setAligned(on) acende a luzinha do encaixe na grade do duto. */
-  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void };
+  /**
+   * Ventilador de chão: setAligned(on) = encaixado na grade do duto; setPower(on) = o disjuntor ligou a energia;
+   * setRunning(on) = o botão da base (com energia, a hélice gira e as fitinhas voam).
+   */
+  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void; setPower(on: boolean): void; setRunning(on: boolean): void };
+  /** Vaso de terra no carrinho de rodinhas (empurrável num trilho) e o botão do registro no chão (setPress 0..1). */
+  planter: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  plate: PropBase & { setPress(t: number): void };
+  /** Energia do jardim de inverno (lanterna, varal de luzinhas, conduíte com o pulso). */
+  power: { setOn(on: boolean): void };
+  /** Trava da roda da escadinha ligada por um cabo à alavanca do freio (solta: o pulso corre e ela abre). */
+  ladderBrake: { setReleased(on: boolean): void };
+  /** Aba da portinha de gato: setSwing(-1..1) (para que lado e quanto ela abre). */
+  flap: { setSwing(v: number): void };
   /** Porta do escritório: pivô na dobradiça, folha ao longo de -Z local. */
   door: GateProp;
   /** O gato Bichano. */
@@ -779,7 +796,7 @@ export interface Fase9Props extends LevelProps {
    */
   duct: PropBase & { setDamper(on: boolean): void; setPuffs(list: number[]): void; outletPuff(): void };
   brakeLever: WallButtonProp;
-  damperLever: WallButtonProp;
+  breaker: WallButtonProp;
   doorHandle: WallButtonProp;
   doorHandleIn: WallButtonProp;
   /** Mesinha ao lado da poltrona: spot(objeto) = onde ele fica (o puzzle prende ali). */

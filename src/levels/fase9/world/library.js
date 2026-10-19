@@ -5,6 +5,7 @@
 // com a luminária de banqueiro, livros, a xícara de chá, a lupa e as cadeiras.
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, stdMat, woodMat, contactShadow, shadowAll } from '../../../world/util.js';
+import { makeLink } from './links.js';
 
 const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
@@ -237,54 +238,78 @@ function buildLadder(root, L, laneZ) {
   const grp = new THREE.Group();
   grp.name = 'escadinha';
   const wood = woodMat('#7a4f2e', { key: 'f9-escada', rough: 0.5 });
-  const tread = woodMat('#8a5d38', { key: 'f9-degrau', rough: 0.55 });
+  const tread = woodMat('#93623a', { key: 'f9-degrau', rough: 0.5 });
   const brass = new THREE.MeshStandardMaterial({ color: '#c99a45', roughness: 0.3, metalness: 0.8, emissive: '#ffcf7a', emissiveIntensity: 0 });
   const half = L.half;
   const n = L.steps;
   const rise = L.top / n;
   const front = half, back = -half;
-  // degraus (do sul +Z para o norte −Z) e o patamar
+  const inner = half * 2 - 0.13;
+  // degraus vazados com o bico de latão (do sul +Z para o norte −Z) e o patamar de cima, com tapetinho
   for (let i = 1; i <= n; i++) {
     const isTop = i === n;
     const z1 = front - 0.04 - (i - 1) * ((2 * half - 0.42) / (n - 1));
-    const depth = isTop ? 0.36 : 0.2;
+    const depth = isTop ? 0.36 : 0.19;
     const zc = isTop ? back + 0.2 : z1 - depth / 2;
-    const tr = new THREE.Mesh(rbox(half * 2 - 0.12, 0.04, depth, 0.01), tread);
-    tr.position.set(0, i * rise - 0.02, zc);
+    const tr = new THREE.Mesh(rbox(inner, 0.036, depth, 0.01), tread);
+    tr.position.set(0, i * rise - 0.018, zc);
     grp.add(tr);
-    // espelho do degrau
-    const riser = new THREE.Mesh(rbox(half * 2 - 0.14, rise - 0.04, 0.02, 0.006), wood);
-    riser.position.set(0, i * rise - rise / 2 - 0.02, zc + depth / 2 - 0.012);
-    grp.add(riser);
+    const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, inner - 0.02, 8).rotateZ(Math.PI / 2), brass);
+    nose.position.set(0, i * rise - 0.012, zc + depth / 2 + 0.004);
+    grp.add(nose);
+    if (isTop) {
+      const mat = new THREE.Mesh(rbox(inner - 0.08, 0.008, depth - 0.08, 0.004), stdMat('#7a2a28', { roughness: 0.95 }));
+      mat.position.set(0, i * rise + 0.004, zc);
+      grp.add(mat);
+    }
   }
-  // laterais em degrau (vigas diagonais) e os montantes de trás que sobem até o trilho
+  // laterais: vigas diagonais grossas, travessas embaixo e os montantes de trás que sobem até o trilho do alto
+  const run = 2 * half - 0.3;
+  const len = Math.hypot(L.top, run);
   for (const sx of [-1, 1]) {
-    const x = sx * (half - 0.04);
-    const len = Math.hypot(L.top, 2 * half - 0.3);
-    const beam = new THREE.Mesh(rbox(0.04, 0.09, len, 0.01), wood);
+    const x = sx * (half - 0.035);
+    const beam = new THREE.Mesh(rbox(0.045, 0.1, len, 0.012), wood);
     beam.position.set(x, L.top / 2, 0.05);
-    beam.rotation.x = Math.atan2(L.top, 2 * half - 0.3);
+    beam.rotation.x = Math.atan2(L.top, run);
     grp.add(beam);
-    const post = new THREE.Mesh(rbox(0.045, 2.15, 0.045, 0.01), wood);
+    const post = new THREE.Mesh(rbox(0.05, 2.15, 0.05, 0.012), wood);
     post.position.set(x, 2.15 / 2, back + 0.03);
     grp.add(post);
-    // corrimão de latão
-    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, Math.hypot(0.62, 2 * half - 0.2), 8), brass);
-    rail.position.set(x, L.top / 2 + 0.55, 0.0);
-    rail.rotation.x = Math.atan2(2 * half - 0.2, 0.62) - Math.PI / 2 + 0.75;
+    const frontPost = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.62, 10), brass);
+    frontPost.position.set(x, rise + 0.31, front - 0.08);
+    grp.add(frontPost);
+    // corrimão de latão: do montante da frente até o de trás, acima do patamar
+    const a = new THREE.Vector3(x, rise + 0.62, front - 0.08);
+    const b = new THREE.Vector3(x, L.top + 0.62, back + 0.06);
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, a.distanceTo(b), 10), brass);
+    rail.position.copy(a).add(b).multiplyScalar(0.5);
+    rail.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
     grp.add(rail);
+    for (const k of [0.33, 0.66]) {
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 8), brass);
+      const pt = a.clone().lerp(b, k);
+      pin.position.set(x, pt.y - 0.15, pt.z);
+      grp.add(pin);
+    }
     // gancho no trilho do alto
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 12, Math.PI), brass);
     hook.position.set(x, 2.17, back + 0.0);
     hook.rotation.y = Math.PI / 2;
     grp.add(hook);
   }
-  // rodinhas
+  for (const y of [0.16, L.top * 0.55]) {
+    const brace = new THREE.Mesh(rbox(inner, 0.035, 0.03, 0.008), wood);
+    brace.position.set(0, y, back + 0.05);
+    grp.add(brace);
+  }
+  // rodízios com garfo de latão
   const wheelMat = stdMat('#2a2420', { roughness: 0.6 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 14).rotateZ(Math.PI / 2), wheelMat);
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.026, 16).rotateZ(Math.PI / 2), wheelMat);
     w.position.set(sx * (half - 0.06), 0.035, sz * (half - 0.08));
-    grp.add(w);
+    const fork = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.05), brass);
+    fork.position.set(sx * (half - 0.06), 0.075, sz * (half - 0.08));
+    grp.add(w, fork);
   }
   shadowAll(grp);
   const sh = contactShadow(half * 1.1, half * 1.1, 0.4);
@@ -302,6 +327,69 @@ function buildLadder(root, L, laneZ) {
     update(dt, t) {
       st.glow = ease(st.glow, st.hl ? 1 : 0, dt, 5);
       brass.emissiveIntensity = st.glow * (0.35 + 0.15 * Math.sin(t * 4));
+    },
+  };
+}
+
+/**
+ * Freio da escadinha: trava vermelha de ferro presa na roda sudeste (no lugar onde a escada começa), o cabo que vem
+ * da alavanca na divisória e o trilho de latão no chão por onde as rodas correm. setReleased(true): o pulso corre
+ * pelo cabo e a trava levanta e fica verde.
+ */
+function buildLadderBrake(root, L, lever, laneZ) {
+  const grp = new THREE.Group();
+  grp.name = 'freio-da-escadinha';
+  const brassRail = stdMat('#b8893c', { roughness: 0.35, metalness: 0.75 });
+  for (const sz of [-1, 1]) {
+    const x0 = L.minX - L.half - 0.05, x1 = L.maxX + L.half + 0.08;
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.008, 0.03), brassRail);
+    rail.position.set((x0 + x1) / 2, 0.004, laneZ + sz * (L.half - 0.08));
+    rail.receiveShadow = true;
+    grp.add(rail);
+  }
+  // a trava: base presa no chão e a garra que segura a roda (gira no pino do leste ao soltar)
+  const wheel = { x: L.start.x + (L.half - 0.06), z: laneZ + (L.half - 0.08) };
+  const base = new THREE.Mesh(rbox(0.07, 0.03, 0.1, 0.008), stdMat('#2a2624', { roughness: 0.6, metalness: 0.3 }));
+  base.position.set(wheel.x + 0.07, 0.015, wheel.z);
+  grp.add(base);
+  const pivot = new THREE.Group();
+  pivot.position.set(wheel.x + 0.085, 0.04, wheel.z);
+  const clawMat = new THREE.MeshStandardMaterial({ color: '#d8423a', roughness: 0.4, metalness: 0.3, emissive: '#ff3a2a', emissiveIntensity: 0.25 });
+  const claw = new THREE.Mesh(rbox(0.07, 0.05, 0.075, 0.01), clawMat);
+  claw.position.set(-0.04, 0.0, 0);
+  const tooth = new THREE.Mesh(rbox(0.02, 0.06, 0.06, 0.006), clawMat);
+  tooth.position.set(-0.075, -0.005, 0);
+  pivot.add(claw, tooth);
+  grp.add(pivot);
+  // o cabo: sai debaixo da alavanca, desce pela divisória (ao lado das patinhas), vai pelo rodapé e chega na trava
+  const wx = lever.x - 0.03; // na frente da divisória, do lado da biblioteca
+  const zOut = lever.z - 0.2;
+  const link = makeLink([
+    new THREE.Vector3(wx, lever.top - 0.15, lever.z - 0.14), new THREE.Vector3(wx, lever.top - 0.15, zOut),
+    new THREE.Vector3(wx, 0.03, zOut), new THREE.Vector3(wx, 0.03, wheel.z), new THREE.Vector3(wheel.x + 0.12, 0.03, wheel.z),
+  ], { radius: 0.011, color: '#7a2a22', glow: '#ffcf6a', clips: 6 });
+  grp.add(link.object);
+  shadowAll(grp);
+  root.add(grp);
+  const S = { released: false, k: 0 };
+  const RED = new THREE.Color('#ff3a2a'), GREEN = new THREE.Color('#5fe08a');
+  const RED_B = new THREE.Color('#d8423a'), GREEN_B = new THREE.Color('#4aa86a');
+  return {
+    setReleased(on) {
+      on = !!on;
+      if (on === S.released) return;
+      S.released = on;
+      if (on) link.pulse();
+      link.setOn(on);
+    },
+    update(dt) {
+      link.update(dt);
+      // a garra só abre quando o pulso chega
+      const target = S.released && link.arrived ? 1 : 0;
+      S.k = ease(S.k, target, dt, target ? 7 : 12);
+      pivot.rotation.z = -1.7 * S.k;
+      clawMat.emissive.copy(RED).lerp(GREEN, S.k);
+      clawMat.color.copy(RED_B).lerp(GREEN_B, S.k);
     },
   };
 }
@@ -639,7 +727,7 @@ function buildStudyTable(root, layout) {
 
 // ------------------------------------------------------------------ tudo junto
 export function buildLibrary({ root, layout }) {
-  const { SHELF_W, SHELF_E, FIREPLACE, LADDER, GLOBE, GLASSES, WORLD } = layout;
+  const { SHELF_W, SHELF_E, FIREPLACE, LADDER, GLOBE, GLASSES, WORLD, BRAKE_LEVER } = layout;
   const B = WORLD.bounds;
   buildBookcase(root, SHELF_W, { seed: 7 });
   const shelfE = buildBookcase(root, SHELF_E, { seed: 19, gap: { shelf: SHELF_YS.indexOf(1.7), x: GLASSES.x, w: 0.26 } });
@@ -654,15 +742,17 @@ export function buildLibrary({ root, layout }) {
   }
   const fire = buildFireplace(root, FIREPLACE, B, photoTexture());
   const ladder = buildLadder(root, LADDER, LADDER.start.z);
+  const brake = buildLadderBrake(root, LADDER, BRAKE_LEVER, LADDER.start.z);
   const globe = buildGlobe(root, GLOBE);
   const corner = buildReadingCorner(root, layout);
   const study = buildStudyTable(root, layout);
   return {
-    shelfE, fire, ladder, globe, corner, study,
+    shelfE, fire, ladder, globe, corner, study, brake,
     firePos: new THREE.Vector3((FIREPLACE.x0 + FIREPLACE.x1) / 2, 0.5, B.minZ + FIREPLACE.depth + 0.2),
     update(dt, t) {
       fire.update(dt, t);
       ladder.update(dt, t);
+      brake.update(dt);
       corner.update(dt, t);
     },
   };

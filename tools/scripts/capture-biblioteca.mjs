@@ -93,15 +93,20 @@ try {
   const L = await page.evaluate(() => {
     const l = window.__game.layout;
     return {
-      BRAKE: l.BRAKE_LEVER, DAMPER: l.DAMPER_LEVER, HANDLE: l.DOOR_HANDLE, LADDER: l.LADDER, GLOBE: l.GLOBE, HOLD: l.LADDER_HOLD,
+      BRAKE: l.BRAKE_LEVER, BREAKER: l.BREAKER, PLANTER: l.PLANTER, PLATE: l.DAMPER_PLATE, HANDLE: l.DOOR_HANDLE, LADDER: l.LADDER, GLOBE: l.GLOBE, HOLD: l.LADDER_HOLD,
       GLASSES: l.GLASSES, FAN: l.FAN, DUCT: l.DUCT, CAT: l.CAT, WARDROBE: l.WARDROBE, BOOK_FALL: l.BOOK_FALL, GOAL: l.GOAL,
       FIRE: l.FIREPLACE, WALL_EH: l.WALL_EH, DOOR: l.DOOR,
     };
   });
   const kick = (c) => ({ x: c.x + c.nx * 0.6 - c.nz * 0.14, z: c.z + c.nz * 0.6 + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
 
+  // 0. a apresentação com a câmera do jogo: os óculos lá no alto e o Bichano dormindo no armário
+  await step(75);
+  await shot('00a-apresentacao-oculos');
+  await step(170);
+  await shot('00b-apresentacao-gato');
+  await step(200);
   // 1. a casa com a câmera do jogo e de cima; cada cômodo de perto
-  await step(60);
   await shot('01-hall-camera-do-jogo');
   await shot('02-visao-geral', { pos: [0, 9.5, 8.8], look: [0, 0.3, -0.6] });
   await shot('03-biblioteca', { pos: [1.4, 1.7, 1.4], look: [1.6, 1.0, -3.0] });
@@ -111,6 +116,11 @@ try {
   await shot('07-hall', { pos: [-2.2, 1.5, 2.0], look: [-3.4, 0.9, -2.8] });
   await shot('08-jardim-de-inverno', { pos: [5.4, 1.6, 2.0], look: [6.6, 0.8, -2.0] });
   await shot('09-duto-no-alto', { pos: [1.0, 2.0, -0.8], look: [-1.0, 2.6, -3.5] });
+  await shot('09b-portinha-de-gato', { pos: [-3.3, 1.1, 2.9], look: [-4.4, 0.2, 2.05] });
+  await shot('09c-freio-travado', { pos: [4.1, 1.1, -1.1], look: [3.75, 0.25, -2.45] });
+  // o escritório com a câmera do jogo: o Bichano no alto do armário precisa aparecer
+  await setup({ active: 'radhija', place: { radhija: { x: -6.0, z: -1.0, yaw: Math.PI }, rhaenyra: { x: -3.6, z: 0.5, yaw: 2 } }, stay: 'rhaenyra', settle: 120 });
+  await shot('05b-escritorio-camera-do-jogo');
 
   // 2. impulso no freio da escadinha
   const kb = kick(L.BRAKE);
@@ -119,15 +129,17 @@ try {
   await until((i) => (i.dogs.rhaenyra.wall?.k ?? 0) >= 0.52, 120);
   await shot('10-impulso-no-freio', { pos: [L.BRAKE.x - 1.6, 1.3, L.BRAKE.z + 0.9], look: [L.BRAKE.x - 0.2, 0.9, L.BRAKE.z] });
   await until((i) => !i.dogs.rhaenyra.wall, 120);
+  await step(50);
+  await shot('10b-trava-solta', { pos: [4.1, 1.1, -1.1], look: [3.75, 0.25, -2.45] });
 
-  // 3. a escada debaixo dos óculos, a Rhaenyra segurando e a Radhija no alto
+  // 3. a escada debaixo dos óculos, a Rhaenyra segurando (E) e a Radhija no alto
   const hold = { x: L.LADDER.minX + L.HOLD.side, z: L.HOLD.z + 0.02 };
   await setup({
     crates: [['globo', L.GLOBE.minX, L.GLOBE.start.z], ['escadinha', L.LADDER.minX, L.LADDER.start.z]],
     place: { rhaenyra: { ...hold, yaw: -Math.PI / 2 }, radhija: { x: L.LADDER.minX, z: -1.98, yaw: Math.PI } },
   });
-  await tap('KeyQ'); // Radhija ativa
-  await tap('KeyF'); // Rhaenyra fica
+  await tap('KeyE'); // a Rhaenyra (ativa) segura a escada
+  await tap('KeyQ'); // Radhija ativa; a Rhaenyra continua segurando
   await step(10);
   await shot('11-escada-pronta', { pos: [L.LADDER.minX + 1.4, 1.2, -1.0], look: [L.LADDER.minX, 0.8, -2.7] });
   await tap('KeyE');
@@ -141,11 +153,27 @@ try {
   await shot('14-descendo-com-os-oculos', { pos: [L.LADDER.minX + 1.2, 1.1, -1.2], look: [L.LADDER.minX, 0.6, -2.6] });
   await until((i) => !i.biblioteca.climb, 200);
 
-  // 4. o duto: registro aberto, ventilador na grade e o superbafo no vento; o Bichano acorda, pula e o livro cai
-  await setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: kick(L.DAMPER) }, stay: 'radhija' });
+  // 4. o jardim de inverno: disjuntor (energia), botão do ventilador, ventilador na grade, vaso no botão do registro e o
+  //    superbafo no vento; o Bichano acorda, pula e o livro cai
+  const darkCam = { pos: [5.9, 1.9, -0.9], look: [6.3, 1.2, -3.4] };
+  await setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: kick(L.BREAKER) }, stay: 'radhija' });
+  await shot('14b-jardim-sem-luz', darkCam);
   await tap('Space');
-  await until((i) => !i.dogs.rhaenyra.wall && i.biblioteca.damper, 200);
-  await setup({ crates: [['ventilador', L.DUCT.inlet.x, L.FAN.alignZ - 0.25]] });
+  await until((i) => !i.dogs.rhaenyra.wall && i.biblioteca.power, 200);
+  await step(12);
+  await shot('14c-disjuntor-pulso', darkCam);
+  await step(60);
+  await shot('14d-jardim-com-luz', darkCam);
+  await setup({ active: 'radhija', place: { radhija: { x: L.FAN.start.x + 0.1, z: L.FAN.start.z + 0.5, yaw: Math.PI } } });
+  await tap('KeyE');
+  await step(60);
+  await shot('14e-ventilador-ligado', { pos: [L.FAN.start.x + 1.0, 1.2, L.FAN.start.z + 1.7], look: [L.FAN.start.x, 0.55, L.FAN.start.z] });
+  await setup({ crates: [['ventilador', L.DUCT.inlet.x, L.FAN.alignZ - 0.25], ['vaso', L.PLANTER.start.x, -1.2]] });
+  await shot('14f-vaso-a-caminho', { pos: [L.PLATE.x + 1.6, 1.6, L.PLATE.z + 2.4], look: [L.PLATE.x + 0.3, 0.3, L.PLATE.z - 0.2] });
+  await setup({ crates: [['vaso', L.PLATE.x, L.PLATE.z]] });
+  await step(50);
+  await shot('14g-vaso-no-botao', { pos: [L.PLATE.x + 1.6, 1.6, L.PLATE.z + 2.4], look: [L.PLATE.x + 0.3, 0.3, L.PLATE.z - 0.2] });
+  await shot('14h-registro-aberto', { pos: [L.DUCT.inlet.x + 0.6, 0.9, L.DUCT.inlet.z + 1.2], look: [L.DUCT.inlet.x, 0.25, L.DUCT.inlet.z - 0.2] });
   await step(5);
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });

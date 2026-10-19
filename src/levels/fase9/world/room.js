@@ -323,15 +323,54 @@ function buildWalls(layout, updaters) {
   const flapH = 0.26;
   const [fzc, flen] = zs(WALL_EH.catFlap.z0, WALL_EH.catFlap.z1);
   wallBox(grp, WALL_EH.x, flapH, fzc, T, C - flapH, flen, dSide);
-  // a portinha: moldura e a aba transparente que balança (o gato passa)
-  const flapFrame = new THREE.Mesh(rbox(0.04, flapH, flen + 0.04, 0.01), stdMat('#d9d2c2', { roughness: 0.5 }));
-  flapFrame.position.set(WALL_EH.x + T / 2 + 0.012, flapH / 2, fzc);
+  // a portinha: um buraco de verdade (forro escuro por dentro da parede), moldura de madeira em arco dos dois lados,
+  // a aba âmbar que balança quando alguém passa, a plaquinha com a patinha e um capacho de cada lado
+  const liner = stdMat('#1c1611', { roughness: 0.95 });
+  const ceil = new THREE.Mesh(new THREE.BoxGeometry(T - 0.012, 0.012, flen - 0.008), liner);
+  ceil.position.set(WALL_EH.x, flapH - 0.008, fzc);
+  grp.add(ceil);
+  for (const s of [-1, 1]) {
+    const sideLiner = new THREE.Mesh(new THREE.BoxGeometry(T - 0.012, flapH - 0.016, 0.012), liner);
+    sideLiner.position.set(WALL_EH.x, (flapH - 0.016) / 2, fzc + s * (flen / 2 - 0.008));
+    grp.add(sideLiner);
+  }
+  const trim = woodMat('#6b4630', { key: 'f9-portinha', rough: 0.45 });
+  const pawTex = pawPlaqueTexture();
+  for (const fs of [-1, 1]) {
+    const fx = WALL_EH.x + fs * (T / 2 + 0.012);
+    for (const s of [-1, 1]) {
+      const post = new THREE.Mesh(rbox(0.024, flapH + 0.02, 0.05, 0.008), trim);
+      post.position.set(fx, (flapH + 0.02) / 2, fzc + s * (flen / 2 + 0.025));
+      grp.add(post);
+    }
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(flen / 2 + 0.025, 0.02, 8, 24, Math.PI), trim);
+    arch.rotation.y = Math.PI / 2;
+    arch.position.set(fx, flapH + 0.02, fzc);
+    grp.add(arch);
+    const sill = new THREE.Mesh(rbox(0.05, 0.016, flen + 0.1, 0.006), stdMat('#c99a45', { roughness: 0.35, metalness: 0.7 }));
+    sill.position.set(WALL_EH.x + fs * (T / 2 + 0.02), 0.008, fzc);
+    grp.add(sill);
+    const plaque = new THREE.Mesh(new THREE.CircleGeometry(0.075, 24), new THREE.MeshStandardMaterial({ map: pawTex, roughness: 0.5 }));
+    plaque.scale.set(1, 0.78, 1);
+    plaque.rotation.y = fs * Math.PI / 2;
+    plaque.position.set(WALL_EH.x + fs * (T / 2 + 0.004), flapH + 0.36, fzc);
+    grp.add(plaque);
+    const mat = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.5).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: doormatTexture(), roughness: 0.95 }));
+    mat.position.set(WALL_EH.x + fs * (T / 2 + 0.22), 0.005, fzc);
+    mat.receiveShadow = true;
+    grp.add(mat);
+  }
   const flapPivot = new THREE.Group();
   flapPivot.position.set(WALL_EH.x, flapH - 0.02, fzc);
-  const flapLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.008, flapH - 0.05, flen - 0.04), new THREE.MeshBasicMaterial({ color: '#cfe3ea', transparent: true, opacity: 0.4, depthWrite: false }));
+  const flapLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.01, flapH - 0.05, flen - 0.06), new THREE.MeshStandardMaterial({ color: '#e8b45a', roughness: 0.3, transparent: true, opacity: 0.82, depthWrite: false }));
   flapLeaf.position.y = -(flapH - 0.05) / 2;
   flapPivot.add(flapLeaf);
-  grp.add(flapFrame, flapPivot);
+  grp.add(flapPivot);
+  const flap = { swing: 0, target: 0 };
+  updaters.push((dt) => {
+    flap.swing += (flap.target - flap.swing) * (1 - Math.exp(-dt * 10));
+    flapPivot.rotation.z = flap.swing * 1.1;
+  });
   // batentes da porta do escritório e o arco do hall
   const casing = stdMat('#f3ecdd', { roughness: 0.5 });
   for (const z of [WALL_EH.door.z0 - 0.02, WALL_EH.door.z1 + 0.02]) {
@@ -344,7 +383,7 @@ function buildWalls(layout, updaters) {
     c.position.set(WALL_HL.x, (C + 0.04) / 2, z);
     grp.add(c);
   }
-  // portas de vidro abertas para o jardim de inverno (folhas giradas encostadas na divisória)
+  // portas de vidro abertas para o jardim de inverno, encostadas na divisória (o trilho do vaso passa ao lado)
   // vidro só tingido (sem brilho especular): o reflexo do luar na folha transparente estourava em branco
   const glassMat = new THREE.MeshBasicMaterial({ color: '#cfe3ea', transparent: true, opacity: 0.16, depthWrite: false });
   const leafFrame = stdMat('#f2efe6', { roughness: 0.45 });
@@ -352,7 +391,7 @@ function buildWalls(layout, updaters) {
   for (const [hz, dir] of [[WALL_LJ.gap.z0, 1], [WALL_LJ.gap.z1, -1]]) {
     const leaf = new THREE.Group();
     leaf.position.set(WALL_LJ.x + T / 2, 0, hz);
-    leaf.rotation.y = dir * 1.35;
+    leaf.rotation.y = dir * Math.PI * 0.965;
     const pane = new THREE.Mesh(new THREE.PlaneGeometry(leafW - 0.06, C - 0.1), glassMat);
     pane.position.set(0, C / 2, dir * leafW / 2);
     pane.rotation.y = Math.PI / 2;
@@ -395,7 +434,7 @@ function buildWalls(layout, updaters) {
   skMesh.receiveShadow = true;
   grp.add(skMesh);
 
-  return { group: grp, flapPivot };
+  return { group: grp, flapPivot, setFlapSwing(v) { flap.target = Math.max(-1, Math.min(1, v)); } };
 }
 
 // ------------------------------------------------------------------ duto do aquecedor
@@ -443,7 +482,8 @@ function buildDuct(layout) {
   // grade de baixo (entrada) no jardim de inverno e grade alta (saída) do escritório
   const slatMat = new THREE.MeshStandardMaterial({ color: '#8a8378', roughness: 0.4, metalness: 0.6 });
   const darkMat = stdMat('#1e1a16', { roughness: 0.9 });
-  function grille(x, y, w, h) {
+  /** Grade na parede do fundo; `slats` recebe as palhetas (registro que abre). @param {THREE.Object3D[] | null} [slats] */
+  function grille(x, y, w, h, slats = null) {
     const g = new THREE.Group();
     const back = new THREE.Mesh(rbox(w, h, 0.04, 0.01), darkMat);
     const box = new THREE.Mesh(rbox(w + 0.04, h + 0.04, 0.03, 0.01), metal);
@@ -453,14 +493,26 @@ function buildDuct(layout) {
     for (let i = 0; i < n; i++) {
       const s = new THREE.Mesh(rbox(w - 0.02, 0.012, 0.03, 0.004), slatMat);
       s.position.set(0, -h / 2 + (i + 0.5) * (h / n), 0.012);
-      s.rotation.x = 0.5;
+      s.rotation.x = slats ? 1.5 : 0.5;
       g.add(s);
+      slats?.push(s);
     }
     g.position.set(x, y, B.minZ + 0.035);
     grp.add(g);
     return g;
   }
-  grille(inlet.x, 0.24, 0.42, 0.34);
+  // a grade de baixo é o registro: palhetas em pé (fechado) que deitam quando o botão do chão abre, e a lâmpada
+  const louvers = [];
+  grille(inlet.x, 0.24, 0.42, 0.34, louvers);
+  const lampMat = new THREE.MeshStandardMaterial({ color: '#5a2420', roughness: 0.3, emissive: '#ff3a2a', emissiveIntensity: 0.8 });
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 8), lampMat);
+  lamp.position.set(inlet.x + 0.26, 0.38, B.minZ + 0.03);
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 14).rotateX(Math.PI / 2), metal);
+  lampBase.position.set(inlet.x + 0.26, 0.38, B.minZ + 0.01);
+  grp.add(lamp, lampBase);
+  const damper = { open: false, k: 0 };
+  const RED = new THREE.Color('#ff3a2a');
+  const GREEN = new THREE.Color('#5fe08a');
   const outletGrille = grille(DUCT.outlet.x, outletY - 0.12, 0.34, 0.2);
 
   // baforadas: brilhinhos verdes que correm por fora do cano (u 0..1 da entrada à saída)
@@ -502,6 +554,7 @@ function buildDuct(layout) {
     group: grp,
     pointAt,
     outletGrille,
+    setDamper(on) { damper.open = !!on; },
     /** @param {number[]} list */
     setPuffs(list) {
       puffs.forEach((s, i) => {
@@ -515,6 +568,10 @@ function buildDuct(layout) {
     },
     outletPuff() { S.outT = 0; },
     update(dt) {
+      damper.k += ((damper.open ? 1 : 0) - damper.k) * (1 - Math.exp(-dt * 5));
+      for (const [i, s] of louvers.entries()) s.rotation.x = 1.5 - 1.3 * Math.min(1, Math.max(0, damper.k * 1.25 - i * 0.025));
+      lampMat.emissive.copy(RED).lerp(GREEN, damper.k);
+      lampMat.color.setRGB(0.35 * (1 - damper.k) + 0.2, 0.15 + 0.3 * damper.k, 0.13);
       if (S.outT < 0) return;
       S.outT += dt;
       const u = S.outT / 1.2;
@@ -531,6 +588,28 @@ function buildDuct(layout) {
   };
 }
 
+/** Plaquinha oval com a patinha (em cima da portinha de gato). */
+function pawPlaqueTexture() {
+  return canvasTexture(96, 96, (g, w, h) => {
+    g.fillStyle = '#f3e6c8'; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#6b4630'; g.lineWidth = 6; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 5, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#6b4630';
+    g.beginPath(); g.ellipse(w / 2, h / 2 + 12, 17, 14, 0, 0, Math.PI * 2); g.fill();
+    for (const [dx, dy] of [[-21, -6], [-8, -20], [8, -20], [21, -6]]) { g.beginPath(); g.ellipse(w / 2 + dx, h / 2 + dy, 7, 9, dx * 0.02, 0, Math.PI * 2); g.fill(); }
+  }, { repeat: false });
+}
+/** Capacho de fibra com borda e uma patinha. */
+function doormatTexture() {
+  return canvasTexture(96, 128, (g, w, h) => {
+    g.fillStyle = '#8a6a3c'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(${60 + (i % 40)},${40 + (i % 30)},20,0.25)`; g.fillRect((i * 37) % w, (i * 53) % h, 2, 3); }
+    g.strokeStyle = '#4a3420'; g.lineWidth = 8; g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = '#4a3420';
+    g.beginPath(); g.ellipse(w / 2, h / 2 + 10, 14, 12, 0, 0, Math.PI * 2); g.fill();
+    for (const [dx, dy] of [[-17, -5], [-6, -17], [6, -17], [17, -5]]) { g.beginPath(); g.ellipse(w / 2 + dx, h / 2 + dy, 6, 7, 0, 0, Math.PI * 2); g.fill(); }
+  }, { repeat: false });
+}
+
 export function buildRoom(layout) {
   const updaters = [];
   const floors = buildFloors(layout);
@@ -540,7 +619,7 @@ export function buildRoom(layout) {
   group.name = 'casa-do-vovo';
   group.add(floors, walls.group, duct.group);
   return {
-    group, walls: walls.group, duct, flapPivot: walls.flapPivot,
+    group, walls: walls.group, duct, flapPivot: walls.flapPivot, setFlapSwing: walls.setFlapSwing,
     update: (dt, t) => { for (const f of updaters) f(dt, t); duct.update(dt); },
   };
 }

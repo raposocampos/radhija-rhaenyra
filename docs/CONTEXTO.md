@@ -76,9 +76,20 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   porque com o teclado a frente segue a câmera, girada uns 15°, e o sopro escapava da faixa; a Radhija no vão mantém
   a porta aberta (a folha encostava nela e o vão ficava estreito demais para a Rhaenyra); `info().biblioteca.catAt`
   serve aos testes e capturas; no E2E, as condições do `holdUntil` rodam na página (dados de fora só pelo `arg`).
-- Próximo passo da C: conferir CI e E2E `biblioteca` no head do PR #29, revisar as capturas
-  (`shots/biblioteca-revisao/`), rodar o E2E `todas`, entregar a prévia e esperar a aprovação. Depois, apresentar o
-  desenho da fase 10 e esperar o ok.
+- Retorno do usuário na prévia (2026-10-18) e o que mudou: alavancas sem ligação visível (agora cabos/conduítes com
+  um pulso de luz: alavanca do freio → trava vermelha na roda da escadinha, que abre e fica verde; disjuntor →
+  conduíte, varal de luzinhas, lanterna e tomada do ventilador; botão do chão → haste até a grade, cujas palhetas
+  abrem com a lâmpada verde). O registro de parede virou **disjuntor** (impulso, liga a energia do jardim de
+  inverno), o ventilador ganhou **botão de liga** (E, só com energia) e o registro do duto abre com o **vaso de
+  rodinhas** empurrado até o **botão do chão** (as dogs são leves demais). **Segurar a escada com a própria dog:**
+  E no pé da escada (a Rhaenyra continua segurando depois da troca; andando, solta). Câmera: zonas em
+  `CAMERA.zones` (no escritório o olhar sobe e o Bichano no alto do armário aparece) e uma apresentação no início
+  (óculos e gato, uma vez por carregamento); "Zzz" no gato dormindo. Portinha de gato com buraco de verdade,
+  moldura em arco, aba âmbar que balança, plaquinha e capachos. Escadinha e ventilador remodelados. A animação de
+  rolar (tapete) e o cocô secreto ficaram com a sessão dos extras, num PR próprio.
+- Próximo passo da C: CI e E2E `biblioteca` (depois `todas`) no head novo do PR #29, revisar as capturas
+  (`shots/biblioteca-revisao/`), entregar a prévia e esperar a aprovação. Depois, apresentar o desenho da fase 10 e
+  esperar o ok.
 - **E entregue (extras escondidos, PR #28):** squash `d306983` no main, CI do main `39174689553`, deployment
   `7162054221` no ambiente `github-pages`; `version.json` de produção conferido em `d306983`. Não repetir
   merge/deploy. Resumo: extras escondidos nas fases, branch

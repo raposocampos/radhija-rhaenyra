@@ -1,7 +1,7 @@
 // Fase 9 (Biblioteca do Vovô) no navegador, com teclas reais: o impulso no freio da escadinha, o globo e a escada
-// empurrados com Shift, a Rhaenyra segurando com o Fica e a Radhija subindo (E) até os óculos; depois o registro, o
-// ventilador na grade e o superbafo no vento que acorda o Bichano e derruba o livro. A porta com mola e as regras de
-// cada passo estão em test/fase9.test.mjs (headless).
+// empurrados com Shift, a Rhaenyra segurando a escada (E) e a Radhija subindo (E) até os óculos; depois o disjuntor,
+// o botão do ventilador, o ventilador na grade, o vaso no botão do registro e o superbafo no vento que acorda o
+// Bichano e derruba o livro. A porta com mola e as regras de cada passo estão em test/fase9.test.mjs (headless).
 //   node tools/scripts/test-biblioteca.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -35,7 +35,7 @@ try {
   let state = await info();
   const L = await ev(() => {
     const l = window.__game.layout;
-    return { BRAKE: l.BRAKE_LEVER, DAMPER: l.DAMPER_LEVER, LADDER: l.LADDER, GLOBE: l.GLOBE, HOLD: l.LADDER_HOLD, FAN: l.FAN, DUCT: l.DUCT, GOAL: l.GOAL };
+    return { BRAKE: l.BRAKE_LEVER, BREAKER: l.BREAKER, PLANTER: l.PLANTER, LADDER: l.LADDER, GLOBE: l.GLOBE, HOLD: l.LADDER_HOLD, FAN: l.FAN, DUCT: l.DUCT, GOAL: l.GOAL };
   });
   check(state.levelId === 'fase9' && state.state === 'playing', 'link por id (?level=fase9) abre a fase 9');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
@@ -43,7 +43,7 @@ try {
   check(lib(state).glasses === 'shelf' && lib(state).book === 'wardrobe' && lib(state).cat === 'asleep', 'óculos na estante, livro no armário com o gato dormindo');
   await shot('01-biblioteca.png');
 
-  // ---- ÓCULOS: freio, globo, escada, segurar com o Fica e subir
+  // ---- ÓCULOS: freio, globo, escada, segurar (E) e subir
   await page.keyboard.press('KeyQ');
   await page.keyboard.press('KeyF'); // a Radhija espera no hall
   state = await wallJump(L.BRAKE, [[-2.2, 0.2], [-0.9, 0.15], [1.4, 0.35], [3.6, -1.0]]);
@@ -54,11 +54,13 @@ try {
   check(lib(state).atGlasses, 'escadinha empurrada pelo trilho até debaixo dos óculos', JSON.stringify(lib(state).ladder));
   const hx = L.LADDER.minX + L.HOLD.side;
   await walkPath([[hx + 0.2, -1.9], [hx + 0.05, L.HOLD.z + 0.05]], { tol: 0.1 });
-  // troca para a Radhija (que estava no hall com o Fica) e manda a Rhaenyra ficar no pé da escada antes que ela siga
+  await page.keyboard.press('KeyE');
+  state = await waitFor((s) => s.biblioteca.holding, { timeout: 1500 });
+  check(lib(state).holding && lib(state).held, 'E no pé da escada: a Rhaenyra segura a escadinha');
+  // troca para a Radhija (que estava no hall com o Fica): a Rhaenyra continua segurando
   await page.keyboard.press('KeyQ');
-  await page.keyboard.press('KeyF');
-  state = await waitFor((s) => s.biblioteca.held, { timeout: 1500 });
-  check(lib(state).held && state.stay.rhaenyra, 'a Rhaenyra parada no pé da escada (Fica) segura a escadinha');
+  state = await waitFor((s) => s.activeDog === 'radhija', { timeout: 1500 });
+  check(lib(state).held, 'depois da troca, a escada continua segura');
   await walkPath([[-0.9, 0.15], [1.4, 0.35], [L.LADDER.minX + 0.1, -1.5], [L.LADDER.minX, -1.98]], { tol: 0.1 });
   await H.hold(keysFor(0, -1), 150);
   await clearLog();
@@ -71,18 +73,26 @@ try {
   state = await waitFor((s) => s.biblioteca.glasses === 'table', { timeout: 3000 });
   check(lib(state).glasses === 'table', 'óculos na mesinha da poltrona');
 
-  // ---- LIVRO: registro, ventilador na grade, superbafo no vento
+  // ---- LIVRO: disjuntor, botão do ventilador, ventilador na grade, vaso no botão do registro, superbafo no vento
   await page.keyboard.press('KeyQ');
-  state = await wallJump(L.DAMPER, [[2.2, -0.6], [3.7, 0.25], [5.1, 0.25], [6.3, -1.5]]);
-  check(lib(state).damper, 'impulso no registro abre o duto');
-  state = await push((s) => lib(s).fan, L.FAN.half, -1, 0, (s, x) => s.biblioteca.fan.x < x + 0.08, { via: [[7.3, -0.3], [7.3, 0.7]], arg: L.DUCT.inlet.x });
+  state = await wallJump(L.BREAKER, [[2.2, -0.6], [3.7, 0.25], [5.55, 0.25], [6.3, -1.5]]);
+  check(lib(state).power, 'impulso no disjuntor liga a energia do jardim de inverno');
+  await walkPath([[6.6, -0.3], [7.45, 0.2], [7.45, 1.25], [7.0, 1.3]], { tol: 0.12 });
+  await page.keyboard.press('KeyE');
+  state = await waitFor((s) => s.biblioteca.fanOn, { timeout: 1500 });
+  check(lib(state).fanOn, 'E no botão da base liga o ventilador');
+  state = await push((s) => lib(s).fan, L.FAN.half, -1, 0, (s, x) => s.biblioteca.fan.x < x + 0.08, { via: [[7.45, 1.0], [7.45, 0.7]], arg: L.DUCT.inlet.x });
   check(Math.abs(lib(state).fan.x - L.DUCT.inlet.x) < L.FAN.alignTol, 'ventilador empurrado (Shift) até a linha da grade', JSON.stringify(lib(state).fan));
   state = await push((s) => lib(s).fan, L.FAN.half, 0, -1, (s) => s.biblioteca.aligned, { via: [[6.7, 1.3]] });
   check(lib(state).aligned, 'ventilador empurrado até a grade do duto', JSON.stringify(lib(state).fan));
+  state = await push((s) => lib(s).planter, L.PLANTER.half, 0, -1, (s) => s.biblioteca.damper, { via: [[6.6, 1.2], [5.6, 1.95], [L.PLANTER.start.x, 2.12]], timeout: 14000 });
+  check(lib(state).damper, 'o vaso de rodinhas no botão do chão abre o registro', JSON.stringify(lib(state).planter));
   await page.keyboard.press('KeyQ');
-  const f = lib(await info()).fan;
-  // contorna o ventilador pelo leste e fica na frente dele, no vento
-  await walkPath([[f.x + 0.8, f.z + 0.6], [f.x + 0.75, f.z - 0.75]], { tol: 0.12 });
+  state = await info();
+  const f = lib(state).fan;
+  // fica na frente do ventilador (pelo norte, ou contornando pelo leste), no vento
+  const r0 = state.dogs.radhija;
+  await walkPath(r0.z > f.z - 0.2 ? [[f.x + 0.85, f.z + 0.6], [f.x + 0.8, f.z - 0.75]] : [[f.x + 0.6, f.z - 1.3]], { tol: 0.12 });
   await walkTo(f.x + 0.12, f.z - 0.75, { tol: 0.08 });
   await H.hold(keysFor(0, -1), 250);
   await clearLog();
@@ -94,7 +104,7 @@ try {
   await shot('03-livro-caiu.png');
   await ev(() => window.__game.game.reset());
   state = await info();
-  check(lib(state).glasses === 'shelf' && lib(state).book === 'wardrobe' && lib(state).cat === 'asleep' && lib(state).braked, 'reinício devolve óculos, livro, gato e freio');
+  check(lib(state).glasses === 'shelf' && lib(state).book === 'wardrobe' && lib(state).cat === 'asleep' && lib(state).braked && !lib(state).power && !lib(state).damper, 'reinício devolve óculos, livro, gato, freio, energia e registro');
 } catch (e) {
   check(false, `exceção: ${e.stack || e}`);
 }

@@ -607,6 +607,17 @@ export function createFeedback(opts) {
   events.on('door:open', ({ x, z }) => sfx('doorCreak', x, z));
   events.on('door:close', ({ x, z }) => sfx('doorLatch', x, z));
   events.on('scent:duct', ({ x, z }) => sfx('ductWhoosh', x, z, { dur: 2.2 }));
+  events.on('power:on', ({ x, z }) => {
+    sfx('powerOn', x, z);
+    particles.sparks?.({ x, y: 1.05, z: z + 0.08 }, { count: 8 });
+  });
+  events.on('duct:open', ({ x, z }) => {
+    sfx('ductOpen', x, z);
+    particles.sparkle({ x, y: 0.3, z: z + 0.1 }, { count: 6, radius: 0.18, size: 0.6, rise: 0.3, color: '#9BE05A' });
+  });
+  events.on('duct:close', ({ x, z }) => sfx('ductClose', x, z));
+  events.on('fan:switch', ({ x, z, on }) => sfx('fanSwitch', x, z, { on }));
+  events.on('ladder:hold', ({ x, z }) => sfx('ladderHold', x, z));
   events.on('table:deliver', ({ x, z }) => {
     sfx('tableDeliver', x, z);
     particles.sparkle({ x, y: 0.7, z }, { count: 12, radius: 0.22, size: 0.9, rise: 0.9 });

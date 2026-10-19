@@ -1,20 +1,25 @@
 // Biblioteca do Vovô · puzzle. Tudo avança por dt (pausa congela a porta, o gato, a subida e o duto).
 //   ÓCULOS: na prateleira alta da estante leste. A Rhaenyra puxa a alavanca do freio da escadinha (impulso na
-//     parede), empurra o globo para a frente da lareira e a escadinha pelo trilho até debaixo dos óculos. Destravada,
-//     a escada rola com peso em cima: a Rhaenyra parada no pé dela com o Fica segura, e a Radhija sobe (E), pega os
-//     óculos e desce. Sem ninguém segurando, a escada rola e a Radhija desce de novo.
-//   LIVRO: no alto do armário do escritório, com o Bichano dormindo em cima. A Rhaenyra abre o registro do duto no
-//     jardim de inverno (impulso) e empurra o ventilador até a grade de baixo; o superbafo da Radhija no vento entra
-//     no duto e sai pela grade alta do escritório: o Bichano pula, derruba o livro e sai pela portinha de gato.
+//     parede; um cabo leva até a trava da roda), empurra o globo para a frente da lareira e a escadinha pelo trilho
+//     até debaixo dos óculos. Destravada, a escada rola com peso em cima: a Rhaenyra segura o pé dela (E no pé da
+//     escada, ou o Fica) e continua segurando quando o jogador troca; a Radhija sobe (E), pega os óculos e desce.
+//     Sem ninguém segurando, a escada rola e a Radhija desce de novo.
+//   LIVRO: no alto do armário do escritório, com o Bichano dormindo em cima. No jardim de inverno, a Rhaenyra liga
+//     o disjuntor (impulso: energia para a lanterna, as luzinhas e a tomada), liga o ventilador no botão da base (E),
+//     empurra o ventilador até a grade de baixo do duto e o vaso de rodinhas até o botão do chão (o peso abre o
+//     registro da grade). O superbafo da
+//     Radhija no vento entra no duto e sai pela grade alta do escritório: o Bichano pula, derruba o livro e sai pela
+//     portinha de gato.
 //     A porta do escritório abre com o impulso na maçaneta e a mola fecha de novo; com alguém no vão, ela espera.
 //     Com o livro (pesado, só a Rhaenyra carrega) na boca não dá impulso: presa lá dentro, ela larga o livro (E).
 //   Entrega: os dois objetos na mesinha ao lado da poltrona. Nenhuma ordem trava e tudo se refaz.
 import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
-import { createPushCrate, createWallButton, createHingedGate } from '../../game/mechanics/index.js';
+import { createPushCrate, createWallButton, createHingedGate, createPressurePlate } from '../../game/mechanics/index.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
   WALL_EH, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN, WARDROBE, BOOK_FALL, CAT, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB,
-  BRAKE_LEVER, TABLE_SPOTS, DUCT, DAMPER_LEVER, FAN, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_HL, WALL_LJ,
+  BRAKE_LEVER, TABLE_SPOTS, DUCT, BREAKER, PLANTER, DAMPER_PLATE, FAN, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_HL,
+  WALL_LJ,
 } from './layout.js';
 
 /**
@@ -32,15 +37,18 @@ export const TEXT = {
     globe: 'O globo está no trilho: empurre-o até a frente da lareira (segure Shift)',
     ladder: 'Empurre a escadinha pelo trilho até debaixo dos óculos (segure Shift)',
     pushRad: 'Só a Rhaenyra empurra: troque (Q)',
-    holdRh: 'Pare no pé da escadinha, mande a Rhaenyra ficar (F) e troque para a Radhija (Q)',
+    holdRh: 'Segure o pé da escadinha (E no pé dela) e troque para a Radhija (Q)',
     holdNow: 'A Rhaenyra segura a escadinha! Troque para a Radhija (Q) e suba',
     climbRad: 'A escadinha está firme: suba (E) e pegue os óculos',
     holdRad: 'A escadinha rola com peso em cima: a Rhaenyra precisa segurar o pé dela (Q)',
     carryGlasses: 'Leve os óculos até a mesinha da poltrona',
-    damperRh: 'O Bichano dorme em cima do livro. No jardim de inverno, abra o registro do duto (Espaço)',
-    damperRad: 'O Bichano dorme em cima do livro. A Rhaenyra abre o registro do duto no jardim de inverno (Q)',
+    powerRh: 'O Bichano dorme em cima do livro. O jardim de inverno está sem luz: ligue o disjuntor no alto da parede (Espaço)',
+    powerRad: 'O Bichano dorme em cima do livro. A Rhaenyra liga o disjuntor do jardim de inverno (Q)',
+    fanOn: 'Luz! Agora ligue o ventilador: o botão vermelho fica na base dele (E)',
     fanRh: 'Empurre o ventilador até a grade de baixo do duto (segure Shift)',
     fanRad: 'O ventilador é pesado: a Rhaenyra empurra até a grade do duto (Q)',
+    planterRh: 'O registro da grade abre com peso no botão do chão: empurre o vaso de rodinhas até lá (segure Shift)',
+    planterRad: 'O vaso de rodinhas é pesado: a Rhaenyra empurra até o botão do registro (Q)',
     blowRad: 'Solte o superbafo na frente do ventilador, no vento (segure R e solte)',
     blowRh: 'Vento no duto! Agora o superbafo da Radhija (Q)',
     cat: 'O Bichano acordou!',
@@ -59,7 +67,7 @@ export const TEXT = {
     globeWay: 'O globo está no caminho da escadinha: empurre-o para a frente da lareira.',
     shift: 'Segure Shift para empurrar.',
     heavy: 'Pesado demais para a Radhija: a Rhaenyra empurra (Q, segure Shift).',
-    roll: 'A escadinha rolou! Alguém pesado precisa segurar o pé dela (a Rhaenyra, com o Fica).',
+    roll: 'A escadinha rolou! Alguém pesado precisa segurar o pé dela (a Rhaenyra: E no pé da escada).',
     climbRh: 'A escadinha é estreita para a Rhaenyra: ela segura, a Radhija sobe.',
     farGlasses: 'Daqui de cima não alcança: a escadinha precisa ficar debaixo dos óculos.',
     gotGlasses: 'Pegou os óculos do vovô!',
@@ -67,9 +75,17 @@ export const TEXT = {
     catBark: 'O Bichano nem abriu o olho. Um latido não resolve…',
     catHigh: 'Daqui de baixo o cheiro não chega lá em cima. A grade do aquecedor sopra bem em cima do armário…',
     catSleep: 'Psiu! O Bichano dorme lá no alto, em cima do livro.',
-    damperOpen: 'O registro abriu: o duto vai até a grade do escritório.',
-    damperClosed: 'O registro do duto está fechado: abra com o impulso na parede.',
+    powerOn: 'Luz! O disjuntor ligou a energia do jardim de inverno: o ventilador já gira.',
+    noPower: 'Sem energia o ventilador não liga. O disjuntor fica no alto da parede de tijolos.',
+    fanOff: 'O ventilador está desligado: o botão vermelho fica na base dele (E).',
+    fanStarted: 'O ventilador ligou!',
+    fanStopped: 'Desligou o ventilador.',
+    damperOpen: 'O peso do vaso abriu o registro: a grade do duto está aberta até o escritório.',
+    damperClosed: 'O registro da grade está fechado: o botão do chão precisa do vaso de rodinhas em cima.',
+    plateLight: 'O botão do registro é duro: só o vaso de terra pesa o bastante. Empurre o vaso até aqui.',
     noWind: 'Sem vento, o cheiro não entra na grade. Traga o ventilador!',
+    holdTip: 'A Rhaenyra segura a escadinha. Troque para a Radhija (Q) e suba!',
+    letGo: 'A Rhaenyra soltou a escadinha.',
     aligned: 'O ventilador sopra direto na grade do duto!',
     duct: 'O cheiro foi pelo duto!',
     catWake: 'O Bichano acordou ofendido! Lá vai o livro…',
@@ -86,7 +102,10 @@ export const TEXT = {
     needBook: 'Falta o livro: o Bichano dorme em cima dele, no alto do armário do escritório.',
     needGlasses: 'Falta os óculos: estão no alto da estante, perto da escadinha.',
   },
-  prompt: { climb: 'Subir a escadinha', book: 'Pegar o livro', drop: 'Largar o livro', wall: 'Impulso na parede' },
+  prompt: {
+    climb: 'Subir a escadinha', book: 'Pegar o livro', drop: 'Largar o livro', wall: 'Impulso na parede',
+    hold: 'Segurar a escadinha', letGo: 'Soltar a escadinha', fan: 'Ligar o ventilador', fanOff: 'Desligar o ventilador',
+  },
 };
 
 const clamp01 = (k) => Math.min(1, Math.max(0, k));
@@ -104,14 +123,17 @@ export function createPuzzle(ctx) {
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
   const brake = createWallButton({ id: 'alavanca-freio', cfg: BRAKE_LEVER, emit, prop: props.brakeLever });
-  const damper = createWallButton({ id: 'registro-duto', cfg: DAMPER_LEVER, emit, prop: props.damperLever });
+  const breaker = createWallButton({ id: 'disjuntor', cfg: BREAKER, emit, prop: props.breaker });
   const handle = createWallButton({ id: 'macaneta', cfg: DOOR_HANDLE, emit, prop: props.doorHandle });
   const handleIn = createWallButton({ id: 'macaneta-dentro', cfg: DOOR_HANDLE_IN, emit, prop: props.doorHandleIn });
-  const levers = [brake, damper, handle, handleIn];
+  const levers = [brake, breaker, handle, handleIn];
   const ladder = createPushCrate({ id: 'escadinha', cfg: LADDER, world, emit, prop: props.ladder });
   const globe = createPushCrate({ id: 'globo', cfg: GLOBE, world, emit, prop: props.globe });
   const fan = createPushCrate({ id: 'ventilador', cfg: FAN, world, emit, prop: props.fan });
-  const crates = [ladder, globe, fan];
+  const planter = createPushCrate({ id: 'vaso', cfg: PLANTER, world, emit, prop: props.planter });
+  const crates = [ladder, globe, fan, planter];
+  // botão do registro no chão: só o vaso pesa o bastante (as dogs não contam)
+  const plate = createPressurePlate({ id: 'botao-registro', x: DAMPER_PLATE.x, z: DAMPER_PLATE.z, hx: DAMPER_PLATE.hx, hz: DAMPER_PLATE.hz, emit, prop: props.plate });
   const door = createHingedGate({ id: 'porta-escritorio', cfg: DOOR, world, prop: props.door, thickness: 0.05 });
   const glasses = createCarryItem({ obj: props.glasses.object, dogs, scene: root, name: 'glasses' });
   const book = createCarryItem({ obj: props.book.object, dogs, scene: root, name: 'book', carrier: 'large' });
@@ -129,8 +151,10 @@ export function createPuzzle(ctx) {
     climb: null,
     climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
     aligned: false, wasDoorOpen: false, doorHintT: 0, ductHint: false, wasAligned: false,
+    holdLadder: false, wasDamper: false, introT: 0, fanOn: false,
   });
   const S = fresh();
+  let introDone = false; // a apresentação (óculos e o Bichano) só uma vez por carregamento da fase
   /** @type {(stage: string) => void} */
   let onStageChange = () => {};
   let lastStage = /** @type {Stage} */ ('start');
@@ -167,8 +191,17 @@ export function createPuzzle(ctx) {
     return { x: ladder.x + side * LADDER_HOLD.side, z: LADDER_HOLD.z };
   }
   const inHoldZone = (c) => [-1, 1].some((s) => Math.hypot(c.x - (ladder.x + s * LADDER_HOLD.side), c.z - LADDER_HOLD.z) < LADDER_HOLD.r);
-  /** A escada está firme: travada no freio ou segura pela Rhaenyra parada (Fica) no pé dela. */
-  const held = () => inHoldZone(ctrls.rhaenyra) && ctx.isStaying('rhaenyra');
+  /** A escada está firme: travada no freio ou segura pela Rhaenyra no pé dela (E para segurar, ou o Fica). */
+  const held = () => inHoldZone(ctrls.rhaenyra) && (S.holdLadder || ctx.isStaying('rhaenyra'));
+  const damperOpen = () => plate.pressed;
+  const power = () => breaker.on;
+  function holdLadder(on) {
+    if (S.holdLadder === on) return;
+    S.holdLadder = on;
+    ctx.setStay?.('rhaenyra', on);
+    const c = ctrls.rhaenyra;
+    emit(on ? 'ladder:hold' : 'ladder:letGo', { name: 'rhaenyra', x: c.x, z: c.z });
+  }
   const steady = () => !brake.on || held();
 
   // ------------------------------------------------------------------ objetivo
@@ -188,8 +221,10 @@ export function createPuzzle(ctx) {
   function bookStep(name) {
     const O = TEXT.objective;
     if (S.cat === 'asleep') {
-      if (!damper.on) return { text: name === 'rhaenyra' ? O.damperRh : O.damperRad, target: damper.target(0.3) };
+      if (!power()) return { text: name === 'rhaenyra' ? O.powerRh : O.powerRad, target: breaker.target(0.3) };
+      if (!S.fanOn) return { text: O.fanOn, target: at(fan.x, fan.z + 0.12, 0.25) };
       if (!S.aligned) return { text: name === 'rhaenyra' ? O.fanRh : O.fanRad, target: at(fan.x, fan.z, 1.1) };
+      if (!damperOpen()) return { text: name === 'rhaenyra' ? O.planterRh : O.planterRad, target: at(planter.x, planter.z, 1.0) };
       return { text: name === 'radhija' ? O.blowRad : O.blowRh, target: at(fan.x, fan.z - FAN.half - 0.55, 0.5) };
     }
     if (S.cat === 'waking' || S.cat === 'jumping' || S.book === 'falling') return { text: O.cat, target: at(CAT.top.x, CAT.top.z, CAT.top.y + 0.4) };
@@ -372,7 +407,7 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ duto, ventilador e o Bichano
   const wind = scent.addWind({ id: 'ventilador', x: FAN.start.x, z: FAN.start.z - FAN.wind.offset, dirX: 0, dirZ: -1, ...FAN.wind });
-  const duct = scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => damper.on && S.aligned });
+  const duct = scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => damperOpen() && S.aligned && power() && S.fanOn });
   scent.addNose({
     id: 'bichano', x: CAT.top.x, z: CAT.top.z, r: CAT.smellR,
     onSmell: (cloud) => {
@@ -526,7 +561,47 @@ export function createPuzzle(ctx) {
     ladder.update(dt, { comp, pushSpeed: !brake.on || S.climb ? 0 : undefined });
     globe.update(dt, { comp });
     fan.update(dt, { comp });
+    planter.update(dt, { comp });
     stepClimb(dt);
+    // a Rhaenyra segura enquanto fica no pé da escada (se ela sair dali, soltou)
+    if (S.holdLadder && !inHoldZone(C.rhaenyra)) holdLadder(false);
+
+    // apresentação: os óculos lá no alto e o Bichano dormindo em cima do livro
+    if (!introDone && stage() === 'start') {
+      S.introT += dt;
+      if (S.introT >= 0.7 && S.introT - dt < 0.7) cam?.focusShot(GLASSES.x, GLASSES.z + 1.0, { hold: 1.5, inT: 0.7, outT: 0.6, target: { x: GLASSES.x, y: GLASSES.y - 0.2, z: GLASSES.z + 0.4 } });
+      if (S.introT >= 3.3 && S.introT - dt < 3.3) {
+        cam?.focusShot(CAT.top.x + 0.6, CAT.top.z + 1.4, { hold: 2.0, inT: 0.8, outT: 0.8, target: { x: CAT.top.x + 0.1, y: CAT.top.y - 0.5, z: CAT.top.z + 0.5 } });
+        introDone = true;
+      }
+    }
+
+    // energia do jardim de inverno: lanterna, luzinhas e o ventilador (sem energia ele não gira nem sopra)
+    props.power.setOn(power());
+    props.fan.setPower(power());
+    props.fan.setRunning(S.fanOn);
+    wind.enabled = power() && S.fanOn;
+    props.ladderBrake.setReleased(brake.on);
+    // a aba da portinha de gato balança quando alguém (dog ou gato) passa por ela
+    let swing = 0;
+    const fz0 = WALL_EH.catFlap.z0, fz1 = WALL_EH.catFlap.z1;
+    for (const p of [C.radhija, C.rhaenyra, { x: S.catX, z: S.catZ, vx: 1 }]) {
+      const dx = p.x - WALL_EH.x;
+      if (Math.abs(dx) < 0.32 && p.z > fz0 - 0.05 && p.z < fz1 + 0.05) {
+        const dir = Math.abs(p.vx || 0) > 0.05 ? Math.sign(p.vx) : -Math.sign(dx);
+        swing = dir * (1 - Math.abs(dx) / 0.32) * 0.9 + dir * 0.1;
+      }
+    }
+    props.flap.setSwing(swing);
+    // botão do registro: só o vaso de rodinhas pesa o bastante
+    plate.update(dt, { ctrls: {}, boxes: [{ id: 'vaso', x: planter.x, z: planter.z }] });
+    const onPlate = ['rhaenyra', 'radhija'].some((n) => Math.abs(C[n].x - DAMPER_PLATE.x) < DAMPER_PLATE.hx && Math.abs(C[n].z - DAMPER_PLATE.z) < DAMPER_PLATE.hz);
+    if (onPlate && !damperOpen()) hints.cond('plateLight', 3.8, 10);
+    if (damperOpen() !== S.wasDamper) {
+      S.wasDamper = damperOpen();
+      emit(S.wasDamper ? 'duct:open' : 'duct:close', { x: DUCT.inlet.x, z: DUCT.inlet.z });
+      if (S.wasDamper) hints.now('damperOpen', 3.4, 0);
+    }
 
     // vento do ventilador (sempre para o norte) e o encaixe na grade
     wind.x = fan.x;
@@ -538,7 +613,7 @@ export function createPuzzle(ctx) {
     }
     S.wasAligned = S.aligned;
     props.fan.setAligned(S.aligned);
-    props.duct.setDamper(damper.on);
+    props.duct.setDamper(damperOpen());
     // baforadas viajando no duto (o cenário desenha um brilho correndo pelo cano)
     const puffs = [];
     for (const cl of /** @type {any[]} */ (scent.clouds)) if (cl.state === 'duct' && cl.duct === duct) puffs.push(clamp01(cl.ductT / DUCT.travel));
@@ -546,7 +621,7 @@ export function createPuzzle(ctx) {
     if (puffs.length && !S.ductHint) { S.ductHint = true; hints.now('duct', 2.8, 0); }
     if (S.cat === 'asleep') {
       const nearInlet = scent.near(DUCT.inlet.x, DUCT.inlet.z, DUCT.inlet.r * 0.4);
-      if (nearInlet && !duct.active()) hints.cond(damper.on ? 'noWind' : 'damperClosed', 3.8, 6);
+      if (nearInlet && !duct.active()) hints.cond(!damperOpen() ? 'damperClosed' : !power() ? 'noPower' : !S.fanOn ? 'fanOff' : 'noWind', 3.8, 6);
     }
 
     stepCat(dt);
@@ -582,11 +657,16 @@ export function createPuzzle(ctx) {
     const wallReady = active.name === 'rhaenyra' && !airborne(active) && !book.holder && levers.some((b) => b.inReach(active, world));
     const canClimb = !S.climb && active.name === 'radhija' && nearClimb(active);
     const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && glasses.holder !== 'rhaenyra';
+    const canHold = active.name === 'rhaenyra' && !book.holder && !S.climb && inHoldZone(active) && brake.on;
+    const canFan = nearFanSwitch(active);
     if (canClimb) hints.setPrompt('climb');
+    else if (canHold) hints.setPrompt(S.holdLadder ? 'letGo' : 'hold');
+    else if (canFan) hints.setPrompt(S.fanOn ? 'fanOff' : 'fan');
     else if (canBook) hints.setPrompt('book');
     else if (book.holder === active.name && inOffice(active) && !open) hints.setPrompt('drop');
     else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
     props.ladder.setHighlight(brake.on && globeClear() && !ladderAtGlasses() && active.name === 'rhaenyra');
+    props.planter.setHighlight(power() && S.aligned && !damperOpen() && active.name === 'rhaenyra' && S.cat === 'asleep');
     props.glasses.setHighlight(S.glasses === 'shelf' && ladderAtGlasses() && brake.on);
     props.book.setHighlight(S.book === 'floor');
     props.table.setHighlight(!!glasses.holder || !!book.holder);
@@ -605,6 +685,10 @@ export function createPuzzle(ctx) {
     return null;
   }
 
+  /** Perto do botão de liga do ventilador (na base, lado sul)? */
+  function nearFanSwitch(c) {
+    return Math.hypot(c.x - fan.x, c.z - (fan.z + 0.12)) < 0.62;
+  }
   /** A Radhija está na frente dos degraus, de frente para a estante? */
   function nearClimb(c) {
     const fx = ladder.x;
@@ -614,6 +698,12 @@ export function createPuzzle(ctx) {
 
   /** Empurrar a escada, o globo e o ventilador (Shift encostada); a Radhija só faz força. */
   function modifyIntent(dt, c, intent, opts) {
+    if (S.holdLadder && c.name === 'rhaenyra') {
+      if (Math.hypot(intent.dx || 0, intent.dz || 0) * (intent.speed ?? 1) > 0.35) {
+        holdLadder(false);
+        hints.now('letGo', 2.2, 0);
+      } else return { intent: { dx: 0, dz: 0, speed: 0, faceX: ladder.x, faceZ: ladder.z }, action: 'push' };
+    }
     let out = null;
     for (const cr of crates) {
       const r = cr.modifyIntent(dt, c, intent, opts);
@@ -640,9 +730,23 @@ export function createPuzzle(ctx) {
       else takeBook(c);
       return true;
     }
+    if (c.name === 'rhaenyra' && !S.climb && brake.on && inHoldZone(c)) {
+      holdLadder(!S.holdLadder);
+      hints.now(S.holdLadder ? 'holdTip' : 'letGo', S.holdLadder ? 3.6 : 2.2, 0);
+      return true;
+    }
     if (!S.climb && nearClimb(c)) {
       if (c.name === 'rhaenyra') hints.now('climbRh', 3.6, 2);
       else startClimb(c);
+      return true;
+    }
+    if (nearFanSwitch(c) && !book.holder) {
+      if (!power()) hints.now('noPower', 3.4, 2);
+      else {
+        S.fanOn = !S.fanOn;
+        emit('fan:switch', { on: S.fanOn, x: fan.x, z: fan.z });
+        hints.now(S.fanOn ? 'fanStarted' : 'fanStopped', 2.2, 0);
+      }
       return true;
     }
     if (S.cat === 'asleep' && inOffice(c) && reach(c, WARDROBE.x, WARDROBE.z + WARDROBE.hz) < 0.9) {
@@ -663,9 +767,10 @@ export function createPuzzle(ctx) {
       brake.touch();
       hints.now('released', 3, 0);
     }
-    if (spot.id === damper.id && !damper.on) {
-      damper.touch();
-      hints.now('damperOpen', 3.2, 0);
+    if (spot.id === breaker.id && !breaker.on) {
+      breaker.touch();
+      emit('power:on', { x: BREAKER.x, z: BREAKER.z });
+      hints.now('powerOn', 3.4, 0);
     }
     if (spot.id === handle.id) handle.touch();
     if (spot.id === handleIn.id) handleIn.touch();
@@ -681,7 +786,9 @@ export function createPuzzle(ctx) {
     for (const b of levers) b.reset();
     for (const cr of crates) cr.reset();
     door.reset();
+    plate.reset();
     catCol.enabled = false;
+    if (S.holdLadder) ctx.setStay?.('rhaenyra', false);
     Object.assign(S, fresh());
     S.flapT = 0;
     lastStage = 'start';
@@ -696,8 +803,10 @@ export function createPuzzle(ctx) {
   }
   /** Livro com a Rhaenyra, no hall (o gato já na almofada, registro aberto, ventilador na grade). */
   function setupBook(x = WALL_EH.x + 0.9, z = 0.35) {
-    damper.setOn(true);
+    breaker.setOn(true);
+    S.fanOn = true;
     fan.setPos(DUCT.inlet.x, FAN.alignZ - 0.3);
+    planter.setPos(DAMPER_PLATE.x, DAMPER_PLATE.z);
     catToBed(false);
     props.book.setFall(1);
     place('rhaenyra', x, z, Math.PI / 2);
@@ -724,8 +833,8 @@ export function createPuzzle(ctx) {
     if (cl && name === 'radhija') {
       return { action: cl.action || 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: cl.slope || 0 };
     }
-    // a Rhaenyra firme no pé da escada enquanto a irmã sobe
-    if (cl && name === 'rhaenyra' && held()) return { action: 'push', faceX: ladder.x, faceZ: ladder.z };
+    // a Rhaenyra firme no pé da escada (segurando com o E, ou enquanto a irmã sobe)
+    if (name === 'rhaenyra' && ctx.activeDog !== 'rhaenyra' && (S.holdLadder || (cl && held()))) return { action: 'push', faceX: ladder.x, faceZ: ladder.z };
     return null;
   }
 
@@ -745,9 +854,9 @@ export function createPuzzle(ctx) {
     endActions() { S.climb = null; },
     /** Testes e capturas: põe a escada, o globo ou o ventilador num ponto (dentro dos limites), sem empurrão. */
     placeCrate(id, x, z) {
-      const cr = { escadinha: ladder, globo: globe, ventilador: fan }[id];
+      const cr = { escadinha: ladder, globo: globe, ventilador: fan, vaso: planter }[id];
       if (!cr) return;
-      const cfg = cr === ladder ? LADDER : cr === globe ? GLOBE : FAN;
+      const cfg = cr === ladder ? LADDER : cr === globe ? GLOBE : cr === planter ? PLANTER : FAN;
       cr.setPos(Math.min(cfg.maxX, Math.max(cfg.minX, x)), Math.min(cfg.maxZ, Math.max(cfg.minZ, z ?? cr.z)));
     },
     dispose() { S.disposed = true; },
@@ -755,10 +864,11 @@ export function createPuzzle(ctx) {
       biblioteca: {
         state: stage(), glasses: S.glasses, book: S.book, bookAt: { x: +S.bookX.toFixed(2), z: +S.bookZ.toFixed(2) }, cat: S.cat,
         catAt: { x: +S.catX.toFixed(2), z: +S.catZ.toFixed(2) },
-        braked: !brake.on, damper: damper.on, aligned: S.aligned, held: held(), atGlasses: ladderAtGlasses(), globeClear: globeClear(),
+        braked: !brake.on, power: power(), fanOn: S.fanOn, damper: damperOpen(), aligned: S.aligned, held: held(), holding: S.holdLadder,
+        atGlasses: ladderAtGlasses(), globeClear: globeClear(), planter: planter.info(),
         climb: S.climb ? { phase: S.climb.phase, y: +ctrls.radhija.y.toFixed(3) } : null,
         ladder: ladder.info(), globe: globe.info(), fan: fan.info(), door: { ...door.info(), open: doorOpen() },
-        levers: { brake: brake.info(), damper: damper.info(), handle: handle.info(), handleIn: handleIn.info() },
+        levers: { brake: brake.info(), breaker: breaker.info(), handle: handle.info(), handleIn: handleIn.info() },
       },
       glasses: { holder: glasses.holder },
       book: { holder: book.holder },
