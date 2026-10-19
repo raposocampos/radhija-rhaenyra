@@ -12,16 +12,19 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   pede alcance e passinhos de ajuste ao parar. Ritmo e pisadas continuam os do guia. Testes em
   `test/locomocao.test.mjs`; capturas novas (`32-andando`, `33-parando`, `34-curva`, `35-galope`) em
   `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
-- Ordem combinada com o orquestrador: pedir aprovação e integrar só depois de #41 → #42 → #33 (fila do main; #41 e
-  #42 já entraram, o branch foi atualizado com `f50db80`). PR #43 em rascunho.
+- Fila: o orquestrador liberou o #43 na frente do #33 (a fase 10 terá mais uma rodada; o `merge-tree` com ela está
+  limpo). Branch atualizado com o main `f50db80` (#41 e #42).
 - Também: alcance da pata (estica até 4%, tronco desce até 1 cm, passo extra ou arrasto lento quando longe demais),
   compasso que acelera em curva fechada (voltinha) e volta ao do guia, pisadas (som e pegada) no pouso de cada pata,
   esteira só com a velocidade pedida, e a locomoção sai na hora no empurrão em pé e na parede. Medido no CI
   `39341264410`: a pata apoiada escorrega até 0,5 mm por quadro no passo, trote e curva e até 0,74 mm na voltinha
   (antes, presa ao corpo, vários centímetros). Capturas revisadas (E2E `canil` `39341411128`): parando assenta em
   ~0,6 s; galope estica e recolhe.
-- Próximo passo: quando o #33 entrar, atualizar com o main, CI, E2E `todas`, prévia (`?dogs=novo`, `?level=canil`) e
-  pedir a aprovação do usuário; depois, etapa 3 (poses em camadas, inclusive a do empurrão).
+- O teste do modelo novo no empurrão (`test/empurrao.test.mjs`) comparava a subida/descida com o passo comum da
+  própria dog; como o passo novo afunda menos (−5,2 mm), a referência passou a ser a do passo do guia (−7,1 mm, #41).
+  A subida e a descida ainda são do guia: melhoram na etapa 3, quando o empurrão vier para as camadas do modelo novo.
+- Próximo passo: CI, E2E `todas`, prévia (`?dogs=novo`, `?level=canil`) e aprovação do usuário; depois, etapa 3
+  (poses em camadas, inclusive a do empurrão).
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 
@@ -118,15 +121,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
   alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
   volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
-- Em andamento, **PR #42** (branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`, atualizado com o main
-  `0bc887a`, PR #39 e #41): o teste "arena: E pega
+- Entregue, **PR #42** (squash `f50db80`, deploy `39338511759`; branch `claude/porcos-arena-estavel`): o teste "arena: E pega
   o legume…; pegar de volta tira dele" falhou 1 vez em 7. Diagnóstico no CI (120 sementes): 3 falhavam ao pegar o
   milho de volta, porque os outros porquinhos estavam em volta da Radhija e um esbarrão (susto de 0,3 s) engolia o E.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe em
-  `test/porcos.test.mjs` e no CONTEXTO. Integração na fila do orquestrador: #39 → #41 → #42 → #33; atualizar com o
-  main na vez dele, refazer o CI e pedir a aprovação do usuário.
+  `test/porcos.test.mjs` e no CONTEXTO.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 

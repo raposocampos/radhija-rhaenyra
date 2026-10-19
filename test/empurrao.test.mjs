@@ -520,8 +520,11 @@ test('modelo novo (?dogs=novo): subir, empurrar e descer não afundam mais que o
   const fmt = (w) => `${(w.low * 1000).toFixed(1)} mm (${w.bone}, ${w.name})`;
   assert.ok(worst.push.low > -0.0045, `de pé, empurrando: só as almofadinhas no chão (${fmt(worst.push)})`);
   for (const k of ['up', 'down']) {
-    // no main antes da correção a descida chegava a −12 mm (a pata de trás dobrava como num passo sem levantar o pé)
-    assert.ok(worst[k].low > walk - 0.003, `${k}: ${fmt(worst[k])}; o passo comum chega a ${(walk * 1000).toFixed(1)} mm`);
+    // no main antes da correção a descida chegava a −12 mm (a pata de trás dobrava como num passo sem levantar o pé).
+    // Referência: o passo comum com as patas do guia (−7,1 mm, medido no #41); com a locomoção própria do modelo novo
+    // (gait.js, etapa 2) o passo afunda menos, e a subida e a descida (ainda do guia) continuam valendo pelo do guia
+    const ref = Math.min(walk, -0.0071);
+    assert.ok(worst[k].low > ref - 0.003, `${k}: ${fmt(worst[k])}; o passo comum chega a ${(walk * 1000).toFixed(1)} mm (guia: −7,1 mm)`);
     assert.ok(worst[k].low > -0.0095, `${k}: ${fmt(worst[k])}`);
   }
 });
