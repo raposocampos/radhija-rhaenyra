@@ -5,7 +5,7 @@ import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { browserOptions } from './browser.mjs';
-import { attachHangProbe, bootTimeline } from './hang-probe.mjs';
+import { attachHangProbe, bootTimeline, cpuModel } from './hang-probe.mjs';
 
 export function parseArgs(argv = process.argv.slice(2)) {
   return Object.fromEntries(argv.reduce((acc, cur, i, arr) => {
@@ -119,6 +119,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       });
     });
     console.log('[e2e] CI sem GPU: desenho a cada 30 quadros, resolução 3D reduzida, sem sombras/bloom. Simulação e controles reais a cada quadro.');
+    console.log(`[e2e] CPU do runner: ${cpuModel()}`); // para cruzar travamentos com o hardware (hang-probe.mjs)
     page.setDefaultTimeout(120000);
   }
   if (initScript) await page.addInitScript(initScript);

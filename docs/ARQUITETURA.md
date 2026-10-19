@@ -620,6 +620,32 @@ esperas curtas seguidas, aba travada, aba que cai, navegação sem resposta e pr
 em segundos)
 estão em `tools/scripts/test-e2e-infra.mjs`, no job de infraestrutura do E2E manual.
 
+*Travamento no primeiro carregamento*: em cerca de 1% dos jobs, o PRIMEIRO boot de um navegador novo não termina: o
+`goto` volta, `window.__game` nunca aparece e a thread principal da aba para de responder (lavanderia no E2E
+`39160265826`, fase3 no `39164306879`, expresso no `39166156986` e no `39169122476`, `capture-lambe.mjs` no
+`39173570454`; fases 3, 6, 7 e 8, nunca num segundo `load()` da mesma aba). O `waitForFunction` não vence os
+próprios 120 s porque, no Playwright 1.49, ao vencer o prazo ele espera a limpeza `handle.evaluate(h => h.abort())`
+NA PÁGINA antes de rejeitar (`ProgressController.run` e `_waitForFunctionExpression`): com a aba parada, nem o erro
+de prazo chega. Por isso o problema é da aba, não do teste nem do Vite (com um módulo preso no Vite a aba fica ociosa
+e o prazo vence normalmente). Para achar a causa, a sonda `tools/scripts/lib/hang-probe.mjs` faz um retrato quando
+uma etapa do `load()` passa de 60 s, no `opMaxMs`, no teto de uma ida ao navegador e na queda da aba (e no boot dos
+scripts de captura, por `waitForBoot`): (1) a thread principal responde? Se não, um `Debugger.pause` numa sessão CDP
+própria, com o Debugger ligado desde a criação da página, devolve a PILHA se ela estiver rodando JavaScript; sem
+pausa, ela está presa fora do JavaScript (chamada nativa, como a GPU) ou morta; (2) cada processo do Chromium pelo
+`/proc` (tipo, estado, CPU em 1,5 s, memória e as threads que gastaram CPU, com o `wchan` onde esperam); (3) o que o
+navegador vê pelo CDP dele (processos, abas, estado do WebGL e da GPU); (4) memória e `dmesg` (OOM); (5) o console da
+página com os marcos do boot; (6) o fim do registro do próprio Chromium (`--enable-logging=stderr`, desviado por
+`tools/scripts/lib/browser-log.mjs` para `shots/diagnostico/navegador-*.log`, que vai no artefato do job). Os marcos
+`rr:boot:*` (`src/main.js`) e `rr:level:*` (`loadLevel`) são `performance.mark` (sem efeito no jogo); o harness
+imprime em cada `load()` uma linha `[boot]` com o tempo de cada etapa (html+módulos, motor, cachorras, interface,
+código da fase, cenário, puzzle, shaders, pronto) e, num travamento, o último marco no console diz onde parou. Cada
+suíte também imprime `[e2e] CPU do runner` (modelo, núcleos, AVX): os runners variam de hardware (o mesmo estresse
+leva de 430 a 720 s por lote) e um defeito do Chromium/SwiftShader preso a um tipo de CPU ou à carga apareceria
+assim. A suíte `carregamento` do E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as oito fases
+em rodízio, cada rodada com Vite e navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez,
+e lotes 4–7 com 36, três ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois,
+para confirmar uma correção.
+
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
 protocolo do navegador (`Input.dispatchTouchEvent`, com multitoque): perfil do celular, controles que aparecem com o

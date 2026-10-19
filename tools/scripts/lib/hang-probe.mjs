@@ -99,9 +99,38 @@ async function processSection(gapMs = 1500) {
   return lines;
 }
 
-// ---- Máquina: memória, carga e mensagens do kernel (OOM killer, segfault).
+/** Modelo da CPU do runner (os runners do GitHub variam de hardware; um defeito só num tipo de CPU apareceria assim). */
+export function cpuModel() {
+  let model = cpus()[0]?.model || '?';
+  let extra = '';
+  try {
+    const info = readFileSync('/proc/cpuinfo', 'utf8');
+    model = info.match(/^model name\s*:\s*(.+)$/m)?.[1] || model;
+    const flags = info.match(/^flags\s*:\s*(.+)$/m)?.[1].split(' ') || [];
+    extra = ['avx2', 'avx512f'].filter((f) => flags.includes(f)).join(' ');
+  } catch {}
+  return `${model.trim()} × ${cpus().length}${extra ? ` (${extra})` : ''}`;
+}
+/** Tempos agregados das CPUs (/proc/stat): para medir o roubo do hipervisor (steal) e a espera de disco. */
+function cpuTimes() {
+  try {
+    const f = readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1).map(Number);
+    return { total: f.reduce((a, b) => a + b, 0), idle: f[3], iowait: f[4], steal: f[7] || 0 };
+  } catch {
+    return null;
+  }
+}
+
+// ---- Máquina: CPU, memória, carga e mensagens do kernel (OOM killer, segfault).
 async function machineSection() {
   const lines = [];
+  const a = cpuTimes();
+  await new Promise((done) => setTimeout(done, 1500));
+  const b = cpuTimes();
+  if (a && b && b.total > a.total) {
+    const pct = (k) => `${Math.round(((b[k] - a[k]) / (b.total - a.total)) * 100)}%`;
+    lines.push(`  CPU: ${cpuModel()}; em 1,5 s: ocioso ${pct('idle')}, roubado pelo hipervisor ${pct('steal')}, espera de disco ${pct('iowait')}`);
+  } else lines.push(`  CPU: ${cpuModel()}`);
   const [l1, l5] = loadavg();
   let mem = '';
   try {

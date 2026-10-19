@@ -3,24 +3,27 @@
 // carregamento"). Cada rodada sobe um Vite novo e um navegador novo, como cada suíte e cada script de captura, abre
 // uma fase (em rodízio) e a abre de novo no mesmo navegador, para comparar o boot frio com o quente. Se a aba travar,
 // a sonda do harness (lib/hang-probe.mjs) imprime o diagnóstico e o processo reprova. No fim, os tempos por fase.
-// Roda no GitHub Actions: node tools/scripts/stress-boot.mjs [--rounds 25] [--offset 0] [--levels fase1,...,fase8]
+// --parallel N roda N rodadas ao mesmo tempo (disputa de CPU, como num runner sobrecarregado).
+// Roda no GitHub Actions: node tools/scripts/stress-boot.mjs [--rounds 25] [--offset 0] [--parallel 1] [--levels fase1,...]
 import { createHarness, parseArgs } from './lib/harness.mjs';
-import { bootTimeline } from './lib/hang-probe.mjs';
+import { bootTimeline, cpuModel } from './lib/hang-probe.mjs';
 import { createServer } from 'vite';
 
 if (!process.env.CI) throw new Error('Este estresse deve rodar no GitHub Actions, conforme AGENTS.md.');
 const args = parseArgs();
 const ROUNDS = Number(args.rounds) || 25;
 const OFFSET = Number(args.offset) || 0;
+const PARALLEL = Math.max(1, Number(args.parallel) || 1);
 const LEVELS = (typeof args.levels === 'string' ? args.levels : 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8').split(',');
+console.log(`[carregamento] ${ROUNDS} rodadas, ${PARALLEL} ao mesmo tempo; CPU: ${cpuModel()}`);
 
 const results = []; // { level, cold, ms, compile }
 let pass = 0;
 let fail = 0;
 const t0 = Date.now();
-for (let round = 0; round < ROUNDS; round++) {
-  const level = LEVELS[(OFFSET + round) % LEVELS.length];
-  console.log(`\n== rodada ${round + 1}/${ROUNDS}: ${level} (Vite e navegador novos) ==`);
+async function round(n) {
+  const level = LEVELS[(OFFSET + n) % LEVELS.length];
+  console.log(`\n== rodada ${n + 1}/${ROUNDS}: ${level} (Vite e navegador novos) ==`);
   const server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 }, logLevel: 'warn' });
   await server.listen();
   const H = await createHarness({ base: server.resolvedUrls.local[0], outDir: 'shots/carregamento' });
@@ -30,7 +33,7 @@ for (let round = 0; round < ROUNDS; round++) {
       await H.load(`?level=${level}&play`);
       const ms = Date.now() - start;
       const boot = await bootTimeline(H.page);
-      const at = (name) => boot.marks.find(([n]) => n === name)?.[1];
+      const at = (name) => boot.marks.find(([m]) => m === name)?.[1];
       results.push({ level, cold, ms, compile: (at('rr:level:compile') - at('rr:level:setup')) || 0 });
       const i = await H.info();
       H.check(i.state === 'playing' && i.levelId === level, `${level}: boot ${cold ? 'frio' : 'quente'} chegou ao jogo`, `${(ms / 1000).toFixed(1)} s`);
@@ -44,12 +47,16 @@ for (let round = 0; round < ROUNDS; round++) {
     await server.close();
   }
 }
+let next = 0;
+await Promise.all(Array.from({ length: PARALLEL }, async () => {
+  while (next < ROUNDS) await round(next++);
+}));
 
 const stat = (xs) => {
   const v = [...xs].sort((a, b) => a - b);
   return v.length ? `mediana ${(v[v.length >> 1] / 1000).toFixed(1)} s, máx ${(v[v.length - 1] / 1000).toFixed(1)} s` : '-';
 };
-console.log(`\n[carregamento] ${results.length} boots em ${Math.round((Date.now() - t0) / 1000)} s`);
+console.log(`\n[carregamento] ${results.length} boots em ${Math.round((Date.now() - t0) / 1000)} s; CPU: ${cpuModel()}`);
 for (const level of LEVELS) {
   const of = (cold) => results.filter((r) => r.level === level && r.cold === cold);
   if (!of(true).length) continue;

@@ -1,41 +1,40 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (tetos de relógio do E2E; extras escondidos, tarefa E). Ler primeiro
+Última atualização: **2026-10-18, Claude** (travamento no primeiro boot do E2E; tetos de relógio entregues). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: tetos de relógio no harness do E2E (Claude, 2026-10-18)
+## Em andamento: travamento no primeiro boot do E2E (Claude, 2026-10-18)
 
-- Motivo: no E2E manual `39160265826` (suíte lavanderia, 1ª tentativa) o log parou em `load('?level=fase8&play')`
-  e o job só caiu no timeout de 30 min, sem nenhum check: `page.evaluate` não tem prazo e as esperas contavam só
-  tempo de jogo. Refeita, a suíte passou 12/12 em 78 s; a causa do travamento não foi identificada.
-- Feito no branch `claude/e2e-teto-relogio`, **PR #27** (consultar o PR para SHA, CI e E2E):
-  `tools/scripts/lib/harness.mjs` ganhou `DEFAULT_LIMITS`/`HarnessAbort`: `simSec` 60 s sem mudar (contado entre
-  esperas) reprova com diagnóstico; prazo de 60 s em cada `page.evaluate`/teclado/mouse, com a página marcada como
-  travada; etapas do `load()` nomeadas; `close()` com prazo. O teto max(10 s, 8× o prazo) com o jogo andando só
-  encerra a espera com aviso, como antes: a 1ª versão reprovava ali e o E2E `39165419409` mostrou que fase1/fase3
-  passam por esse teto depois de `ui:restart` (0,03–0,06 s de jogo em 10 s). No E2E `39166156986` (head `78c076f`)
-  13 de 14 jobs passaram, mas `expresso` travou 30 min no primeiro `load('?level=fase6&play')` sem imprimir nada,
-  apesar dos prazos internos: a causa continua desconhecida (processo da suíte sem rodar ou prazo do Playwright
-  falhando). Por isso entraram duas redes: operação em curso além de 4 min encerra o processo da suíte
-  (`opMaxMs`), e o runner (`suite-runner.mjs`) encerra de fora uma suíte 5 min calada, com o sinal do harness por
-  IPC (o que estava em curso, se o processo parou de responder), carga, memória e processos. Provas em
-  `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`, `stuck`,
-  `mute`, `crash`). Docs: ARQUITETURA (seção do E2E) e ENTREGA.
-- E2E `39169122476` (head `0f3e940`): 13 de 14 jobs ok; `expresso` reprovou em 4,5 min (antes 30) com
-  "`load('?level=fase6&play'): esperar window.__game` sem retorno há 242 s": a página abriu, `window.__game` nunca
-  apareceu e o prazo de 120 s do `waitForFunction` não venceu, com o processo da suíte vivo. A prova `crash`
-  (E2E `39171716703`) reproduziu isso: com a aba derrubada por `chrome://crash` no meio da espera, o Playwright não
-  avisou a queda, a espera ficou pendente e a página parou de responder. Hipótese mais provável para os
-  travamentos reais: a aba cai no boot da fase. O harness ouve `crash`/`disconnected` (se vier o aviso) e o
-  `opMaxMs` caiu para 150 s. Contagem do `expresso`: sem este PR, 7 de 7 ok nas execuções recentes; com ele,
-  5 ok e 2 travamentos em 7. Não se achou mecanismo no código (nesse ponto o harness faz as mesmas chamadas da
-  1ª versão, que passou); a lavanderia travou antes do PR.
-- Branch atualizado com o main `d306983` (PRs #24, #26 e #28; só o CONTEXTO.md conflitou). Nenhum teste ou build
-  no PC (só `node --check` e `git diff --check`). Ordem pedida pelo usuário: o #28 integrou primeiro; agora CI e
-  E2E `todas` no head novo, entregar e integrar só com a aprovação dele, antes de retomar a fase 9.
-- No E2E `39173570454` (head `3ebcbaf`) as 14 suítes passaram, mas o passo seguinte do job `lambe`,
-  `capture-lambe.mjs` (fora do harness: `goto` + `waitForFunction` próprios), travou até o timeout do job: o
-  mesmo padrão do boot de fase nova, sem as redes do harness. Os scripts de captura ficam para uma entrega própria.
+- Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
+  fase no E2E. Branch `claude/e2e-travamento-boot` (worktree próprio, base `402635e`); consultar o PR para SHA, CI e
+  E2E. Nada rodou no PC além de `node --check`/`git diff --check`.
+- Achados: cinco casos, todos no PRIMEIRO boot de um navegador novo, nunca num segundo `load()` da mesma aba:
+  lavanderia (`39160265826`), fase3 (`39164306879`, achado agora nos logs), expresso (`39166156986`, `39169122476`) e
+  `capture-lambe.mjs` (`39173570454`). Nos 99 E2E dos dias 17–18 (≈960 passos de partida/captura), os cinco caíram
+  entre 19:46 e 22:48 UTC de 18/10 (≈1% dos ≈430 primeiros boots dessa janela; 0 dos ≈380 antes e dos ≈120 depois),
+  sempre com a mesma imagem do runner (`ubuntu24 20261012.334.1`). O `waitForFunction` não vence o prazo porque o
+  Playwright 1.49 espera uma limpeza na própria página antes de rejeitar: a thread principal da aba fica parada (ou a
+  aba morta). Logo, nem o teste nem o Vite são a causa direta. Boot normal no CI: 7–13 s (`[boot]`; shaders ≈0,1 s).
+- Feito: sonda `tools/scripts/lib/hang-probe.mjs` (pilha do JavaScript por `Debugger.pause`, processos e threads do
+  Chromium, GPU/alvos pelo CDP do navegador, CPU do runner e roubo do hipervisor, memória e `dmesg`, console com os
+  marcos do boot, registro do Chromium), ligada no harness (60 s, `opMaxMs`, teto das idas, queda) e no boot dos
+  scripts de captura (`waitForBoot`); `browser-log.mjs` + `--enable-logging=stderr` (registro em
+  `shots/diagnostico/`, no artefato); marcos `rr:boot:*`/`rr:level:*` (`performance.mark`) e linha `[boot]` por
+  `load()`; linha `[e2e] CPU do runner`; suíte `carregamento` do E2E manual (`stress-boot.mjs`, fora de `todas`).
+  Prova: o caso `hung` do job de infraestrutura confere a pilha lida pelo `Debugger.pause`. Docs: ARQUITETURA §10.
+- Estresse sem disputa de CPU (E2E `39183700978`, head `4d850e7`, 01:05 UTC de 19/10): 8 lotes, 200 boots frios e
+  200 quentes, nenhum travamento; boot frio 7,5–20 s, quente ≈1 s mais rápido; os lotes levaram 428–720 s (três
+  faixas: hardware diferente entre runners). Hipóteses abertas: defeito do Chromium/SwiftShader que depende do
+  hardware ou da carga do runner (a janela de 18/10 sugere isso), GPU em software presa no primeiro uso. Próximo
+  passo: estresse com disputa de CPU (lotes 4–7, três boots ao mesmo tempo) e, no próximo travamento real, ler o
+  `[diagnóstico]` do log, a linha `CPU do runner` e o `navegador-*.log` do artefato.
+
+## Entregue: tetos de relógio no harness do E2E (PR #27, squash `402635e`, deploy `39181809562`)
+
+`DEFAULT_LIMITS`/`HarnessAbort` no harness (jogo parado em 60 s, prazo em cada ida ao navegador, `opMaxMs` 150 s),
+vigia de silêncio no runner (5 min, com sinal por IPC) e provas em `test-e2e-infra.mjs`; ver ARQUITETURA §10.
+Aprovado no chat; CI do main `39181772265`, produção conferida em `402635e`. Os scripts de captura continuam sem
+essas redes (só ganharam a espera de boot com diagnóstico, no PR do travamento acima).
 
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 
