@@ -461,12 +461,10 @@ try {
   check(i.state === 'playing' && (await uiState()).touchOn, 'Começar (toque): partida com os controles');
 
   console.log('\n== PC (sem toque): nada muda ==');
-  const pc = await H.browser.newPage({ viewport: { width: 1280, height: 720 } });
-  pc.on('console', (m) => { if (m.type() === 'error') H.errors.push(`[pc console.error] ${m.text()}`); });
-  pc.on('pageerror', (e) => H.errors.push(`[pc pageerror] ${e.message}`));
-  pc.setDefaultTimeout(180000);
-  await pc.goto(BASE, { waitUntil: 'load', timeout: 180000 });
-  await pc.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
+  // páginas extras com as redes do harness (tetos de relógio, vigia e escuta de queda; erros do navegador reprovam)
+  const pc = await H.newPage({ viewport: { width: 1280, height: 720 } }, 'pc');
+  await pc.goto(BASE, { waitUntil: 'load', timeout: 120000 });
+  await pc.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   const pcq = await pc.evaluate(() => {
     const { engine, THREE, ui } = window.__game;
     const root = document.querySelector('.rr');
@@ -491,10 +489,7 @@ try {
   const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
   /** Página de iPhone: sem a API de tela cheia (como o Safari do iPhone), opcionalmente aberta pelo ícone (standalone). */
   const iphonePage = async ({ standalone = false } = {}) => {
-    const p = await H.browser.newPage({ viewport: PHONE, screen: PHONE, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA });
-    p.on('console', (m) => { if (m.type() === 'error') H.errors.push(`[iphone console.error] ${m.text()}`); });
-    p.on('pageerror', (e) => H.errors.push(`[iphone pageerror] ${e.message}`));
-    p.setDefaultTimeout(180000);
+    const p = await H.newPage({ viewport: PHONE, screen: PHONE, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA }, 'iphone');
     await p.addInitScript(({ app, ci }) => {
       Object.defineProperty(Document.prototype, 'fullscreenEnabled', { configurable: true, get: () => false });
       Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { configurable: true, get: () => false });
@@ -515,8 +510,8 @@ try {
         },
       });
     }, { app: standalone, ci: !!process.env.CI });
-    await p.goto(BASE, { waitUntil: 'load', timeout: 180000 });
-    await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
+    await p.goto(BASE, { waitUntil: 'load', timeout: 120000 });
+    await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
     await p.waitForTimeout(2500);
     return p;
   };
@@ -546,19 +541,24 @@ try {
   ios = await ip.evaluate(() => ({ tip: !!document.querySelector('.rr-ios-tip'), saved: localStorage.getItem('rr-dica-tela-inicial'), state: window.__game.game.state }));
   check(!ios.tip && ios.saved === '1' && ios.state === 'title', 'fechar a dica: some, fica salvo e não começa a partida', ios);
   await ip.reload({ waitUntil: 'load' });
-  await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 180000 });
+  await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
-  // a pausa mostra o passo a passo: Jogar → Fases → Continuar → Começar
-  for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
+  // a pausa mostra o passo a passo: Jogar → Fases → Continuar → Começar. Cada toque só quando o botão aparece: com o
+  // SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque caía
+  // em (0, 0) (o cartão de abertura não vinha).
+  const tapShown = async (sel) => {
+    await ip.waitForFunction((s) => (document.querySelector(s)?.getClientRects().length ?? 0) > 0, sel, { timeout: 30000 });
     const b = await center(ip, sel);
     await ip.touchscreen.tap(b.x, b.y);
+  };
+  for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
+    await tapShown(sel);
     await ip.waitForTimeout(400);
   }
   await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
   await ip.waitForTimeout(1200);
-  const start = await center(ip, '[data-action="start"]');
-  await ip.touchscreen.tap(start.x, start.y);
+  await tapShown('[data-action="start"]');
   await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');

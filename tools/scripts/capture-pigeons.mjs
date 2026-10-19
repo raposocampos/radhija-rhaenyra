@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
+import { closeBrowser, openPage } from './lib/page-guard.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -25,7 +26,8 @@ try {
   await server.listen();
   const url = server.resolvedUrls.local[0];
   browser = await chromium.launch(browserOptions());
-  const page = await browser.newPage({ viewport: { width: 1280, height: 1272 } });
+  // redes de prazo (lib/page-guard.mjs): uma aba que trava ou cai encerra o passo em minutos, com o passo e o estado
+  const { page, guard } = await openPage(browser, { viewport: { width: 1280, height: 1272 } }, { name: 'pombos' });
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(`${url}tools/pigeon-review.html`);
@@ -44,6 +46,7 @@ try {
   await page.evaluate(() => window.startPigeonMotionReview());
   mkdirSync('shots/pombos/voo', { recursive: true });
   for (let frame = 0; frame < 120; frame++) {
+    guard.note(`voo antes/depois, quadro ${frame}`);
     await page.evaluate((f) => window.pigeonMotionFrame(f), frame);
     await page.screenshot({ path: `shots/pombos/voo/frame-${String(frame).padStart(3, '0')}.png` });
   }
@@ -58,6 +61,7 @@ try {
     const raf = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = (fn) => raf((t) => { if (!window.__freezeReview) fn(t); });
   });
+  guard.note('cena real da fase 4');
   await page.goto(`${url}?level=4&play`);
   await page.waitForFunction(() => !!window.__game?.game, null, { timeout: 120000 });
   await page.evaluate(() => { window.__freezeReview = true; });
@@ -109,6 +113,7 @@ try {
   mkdirSync('shots/pombos/mecanismo', { recursive: true });
   const framing = [];
   for (let frame = 0; frame < 150; frame++) {
+    guard.note(`mecanismo da fase 4, quadro ${frame}`);
     const sample = await page.evaluate((f) => {
       const g = window.__game;
       for (let i = 0; i < 2; i++) g.game.update(1 / 60, 8 + (f * 2 + i) / 60);
@@ -148,7 +153,7 @@ try {
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
 } finally {
-  await browser?.close();
+  await closeBrowser(browser);
   await server?.close();
   unlinkSync(baselinePath);
   unlinkSync(motionBaselinePath);
