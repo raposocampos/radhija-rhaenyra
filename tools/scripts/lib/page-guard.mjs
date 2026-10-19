@@ -10,6 +10,9 @@
 // Uso nas capturas:  const { page, guard } = await openPage(browser, { viewport }, { name: 'lambe' });
 //                    guard.note('captura 01');  …  await closeBrowser(browser);
 // Nas suítes, H.newPage(opções, nome) abre a página extra já protegida (lib/harness.mjs).
+// Cada página protegida pode levar a sonda de travamento (hang-probe.mjs; openPage liga sozinho): aos 60 s de uma
+// operação em curso, no opMaxMs, no teto de uma ida ao navegador e na queda da aba, ela imprime o [diagnóstico].
+import { attachHangProbe } from './hang-probe.mjs';
 
 /** Tetos de RELÓGIO (ms). Ajuste por variável de ambiente ou pela opção `limits` (createHarness, guardPage). */
 export const DEFAULT_LIMITS = {
@@ -75,6 +78,7 @@ const ops = new Set(); // { what, at (Error da chamada), tag, since, told, max, 
 const guards = new Set();
 let beat = null;
 let watching = true;
+let halted = false; // uma operação venceu o opMaxMs: o processo está saindo, o vigia não volta
 let beatInfo = null; // dado extra do sinal: a última leitura do estado (harness)
 const labelOf = (op) => {
   if (op.label === undefined) {
@@ -93,24 +97,30 @@ function tick() {
   for (const op of ops) {
     const age = now - op.since;
     if (age >= op.max) {
-      stopWatch();
+      halted = true;
+      clearInterval(beat);
+      beat = null;
       op.overdue(age);
       return;
     }
     if (age >= 60000 && now - op.told >= 60000) {
+      // um boot normal leva ~10 s no CI: no primeiro minuto parado já sai um retrato (o segundo vem no opMaxMs)
+      if (!op.told) op.minute?.(age);
       op.told = now;
       console.log(`  [harness] ainda aguardando ${labelOf(op)} há ${secs(age)}`);
     }
   }
 }
 function startWatch() {
-  if (beat || !watching) return;
+  if (beat || !watching || halted) return;
   beat = setInterval(tick, 2000);
   beat.unref();
   tick(); // o runner sabe desde já que o harness existe
 }
-/** Para o vigia (fim do script: o fechamento do navegador tem prazo próprio). */
+/** Para o vigia (fim do script: o fechamento do navegador tem prazo próprio). Com outra página protegida ainda aberta
+ *  (várias suítes no mesmo processo, como stress-boot.mjs), não para: ela segue vigiada. Uma página nova religa. */
 export function stopWatch() {
+  if (guards.size) return;
   watching = false;
   clearInterval(beat);
   beat = null;
@@ -160,7 +170,7 @@ const callText = (name, args) => `${name}(${args.map(fmt).filter((x) => x !== nu
  * (cada HarnessAbort, para o fim reprovar mesmo se o script engolir a exceção), onOverdue(msg) (padrão: imprime e sai
  * com 1), onBeat() (dado extra do sinal para o runner).
  */
-export function guardPage(page, { name = null, limits: overrides = {}, context = null, onAbort = null, onOverdue = null, onBeat = null } = {}) {
+export function guardPage(page, { name = null, limits: overrides = {}, context = null, onAbort = null, onOverdue = null, onBeat = null, probe = null } = {}) {
   if (guarded.has(page)) return guarded.get(page);
   const limits = limitsFrom(overrides);
   const tag = name ? `[${name}] ` : '';
@@ -182,6 +192,13 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
     return e;
   }
   const lostWhy = () => joined(`${lost}.`, contextText());
+  // Diagnóstico da aba pela sonda (hang-probe.mjs), em fila; closeBrowser espera o que estiver em curso.
+  let diagnosis = Promise.resolve();
+  const diagnose = (reason) => {
+    if (!probe) return diagnosis;
+    diagnosis = diagnosis.then(() => probe.report(reason)).then((text) => console.log(text), (e) => console.log(`  [diagnóstico] falhou: ${e.message}`));
+    return diagnosis;
+  };
   // A aba (renderer) ou o navegador caiu e o Playwright avisou: toda operação em curso falha na hora, dizendo o motivo.
   // No CI, uma aba derrubada com chrome://crash NÃO gerou o aviso (prova "crash"): quem encerra é o opMaxMs.
   const markLost = (why) => {
@@ -189,6 +206,7 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
     lost = why;
     wedged = wedged || why;
     console.log(`  [harness] ${tag}${why}`);
+    diagnose(`${tag}${why}`);
     for (const stop of inflight) stop(LOST);
   };
   const onCrash = () => markLost('a aba do navegador caiu (crash do renderer)');
@@ -223,12 +241,14 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
   };
   function overdue(op, age) {
     // a página ainda responde? (sem aviso de queda: senão a operação já teria falhado na hora)
-    peek().then((state) => (onOverdue || exitOverdue)(overdueText(labelOf(op), age, contextText(), state)));
+    Promise.all([peek(), diagnose(`${labelOf(op)} sem retorno há ${secs(age)}`)])
+      .then(([state]) => (onOverdue || exitOverdue)(overdueText(labelOf(op), age, contextText(), state)));
   }
 
   /** Operação com prazo próprio (navegação, waitForFunction, captura): só o vigia (opMaxMs) e a queda da página. */
   async function during(what, run, at = new Error()) {
     const op = track(what, at, limits.opMaxMs);
+    op.minute = (age) => diagnose(`${labelOf(op)} sem retorno há ${secs(age)}`);
     try {
       return await race(Promise.resolve().then(run));
     } catch (e) {
@@ -256,6 +276,7 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
       if (e !== TIMEOUT) throw e;
       call.catch(() => {}); // a resposta tardia (ou o erro ao fechar o navegador) não vira rejeição solta
       wedged = `${tag}${what} ficou ${secs(ms)} sem resposta`;
+      await diagnose(`${tag}${what} sem resposta em ${secs(ms)}`);
       throw abort(what, siteOf(at), joined(`a página não respondeu em ${secs(ms)} (page.evaluate/entrada sem retorno: aba ou GPU travada?).`, contextText()));
     } finally {
       ops.delete(op);
@@ -320,23 +341,29 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
   };
 
   const g = {
-    page, browser, limits, raw, aborts, evaluate, during, guard, abort, peek, release,
+    page, browser, limits, raw, aborts, evaluate, during, guard, abort, peek, release, probe, diagnose,
+    get diagnosis() { return diagnosis; },
     note(text) { note = { text, at: Date.now() }; },
     get wedged() { return wedged; },
     get lost() { return lost; },
   };
   guarded.set(page, g);
   guards.add(g);
+  watching = true; // uma página nova volta a ser vigiada (outra rodada no mesmo processo)
   startWatch();
   return g;
 }
 
-/** Abre uma página já protegida (a abertura também fica sob o vigia). → { page, guard } */
+/** Abre uma página já protegida (a abertura também fica sob o vigia), com a sonda de travamento ligada antes da
+ *  primeira navegação (`probe: false` desliga). → { page, guard } */
 export async function openPage(browser, options = {}, guardOptions = {}) {
   const limits = limitsFrom(guardOptions.limits);
   const tag = guardOptions.name ? `[${guardOptions.name}] ` : '';
-  const page = await watched('browser.newPage()', () => browser.newPage(options), { tag, limits, onOverdue: guardOptions.onOverdue });
-  return { page, guard: guardPage(page, guardOptions) };
+  const watchOpts = { tag, limits, onOverdue: guardOptions.onOverdue };
+  const page = await watched('browser.newPage()', () => browser.newPage(options), watchOpts);
+  const probe = guardOptions.probe === false ? null
+    : guardOptions.probe || await watched('ligar a sonda de travamento', () => attachHangProbe(page), watchOpts);
+  return { page, guard: guardPage(page, { ...guardOptions, probe }) };
 }
 
 /** Fecha o navegador em até closeMs. Preso, reprova (report) e encerra o processo em 2 s: a conexão presa o seguraria.
@@ -344,7 +371,12 @@ export async function openPage(browser, options = {}, guardOptions = {}) {
 export async function closeBrowser(browser, { limits: overrides = {}, report = true } = {}) {
   if (!browser) return true;
   const { closeMs } = limitsFrom(overrides);
-  for (const g of [...guards]) if (g.browser === browser) g.release();
+  const mine = [...guards].filter((g) => g.browser === browser);
+  // um diagnóstico em curso (hang-probe.mjs) termina antes de o navegador fechar, em no máximo 30 s
+  let wait;
+  await Promise.race([Promise.all(mine.map((g) => g.diagnosis)), new Promise((done) => { wait = setTimeout(done, 30000); })]);
+  clearTimeout(wait);
+  for (const g of mine) g.release();
   let timer;
   const closed = await Promise.race([
     browser.close().then(() => true, () => true),

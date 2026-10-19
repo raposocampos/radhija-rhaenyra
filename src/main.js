@@ -19,8 +19,12 @@ const params = new URLSearchParams(location.search);
 
 // Garante que a tela de carregamento seja pintada antes da montagem procedural (que bloqueia ~2–4 s).
 const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
+// Marcos do boot (rr:boot:*, e rr:level:* no loadLevel): aparecem no painel de desempenho do navegador e o E2E mede
+// cada etapa por eles (tools/scripts/lib/hang-probe.mjs); num travamento, o último marco diz onde parou.
+const mark = (name) => globalThis.performance?.mark?.(`rr:boot:${name}`);
 
 async function boot() {
+  mark('start');
   await nextPaint();
 
   // ?level=2 (posição, 1-based) ou ?level=fase6 (id) abrem uma fase publicada. Outro id é de uma fase de
@@ -34,10 +38,12 @@ async function boot() {
   const LEVELS = dev ? dev.levels : ALL_LEVELS;
 
   const engine = createEngine(document.getElementById('app'), { params });
+  mark('engine');
   const dogs = {
     radhija: createDog('radhija'),
     rhaenyra: createDog('rhaenyra'),
   };
+  mark('dogs');
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
 
   const game = createGame({ engine, dogs, levels: LEVELS, params });
@@ -59,6 +65,7 @@ async function boot() {
 
   // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial.
   const lv = dev ? dev.index : published ?? 0;
+  mark('ui');
   await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.
@@ -109,6 +116,7 @@ async function boot() {
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout; },
   };
+  mark('ready');
 
   // Some com a tela de carregamento depois do primeiro quadro.
   requestAnimationFrame(() => {

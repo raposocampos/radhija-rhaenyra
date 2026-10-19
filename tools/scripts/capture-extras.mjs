@@ -5,6 +5,7 @@
 // Roda no GitHub Actions (E2E manual, suíte extras), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro (1/60 s); teclas reais chegam pelos ouvintes do jogo; teleporte só prepara as cenas.
 // Saída: shots/extras-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

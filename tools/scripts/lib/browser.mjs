@@ -23,6 +23,9 @@ export function browserOptions() {
       '--autoplay-policy=no-user-gesture-required',
       // Os runners Linux não têm GPU física; WebGL usa renderização por software.
       ...(process.env.CI ? ['--use-angle=swiftshader'] : []),
+      // Registro do próprio Chromium (queda/travamento da GPU, processos, OOM) no stderr do navegador, que o
+      // browser-log.mjs desvia para shots/diagnostico/ (ver hang-probe.mjs).
+      ...(process.env.CI || process.env.E2E_BROWSER_LOG ? ['--enable-logging=stderr'] : []),
     ],
   };
 }

@@ -3,6 +3,7 @@
 // O laço do jogo fica congelado e o script avança quadro a quadro (1/60 s): cada imagem mostra um instante exato
 // (impulso no botão, máquina chacoalhando, mantinha caindo, varal embaixo, arrancada na meia). Teclas reais chegam
 // pelos ouvintes do jogo; teleporte e etapas só preparam as cenas. Saída: shots/lavanderia-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

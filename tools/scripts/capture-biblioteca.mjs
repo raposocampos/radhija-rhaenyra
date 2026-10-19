@@ -3,6 +3,7 @@
 // avança quadro a quadro (1/60 s): cada imagem mostra um instante exato (impulso no freio, a Radhija no alto da escada,
 // o Bichano acordando e pulando, o livro caindo, a porta segura no vão). Teclas reais chegam pelos ouvintes do jogo;
 // teleporte, etapas e placeCrate só preparam as cenas. Saída: shots/biblioteca-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

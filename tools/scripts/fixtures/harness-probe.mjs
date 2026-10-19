@@ -1,5 +1,6 @@
 // Página mínima: prova a cadeia navegador → harness → processo da suíte → runner.
 // Só executada pelo teste de infraestrutura no GitHub; não integra o jogo.
+import '../lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
