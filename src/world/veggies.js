@@ -79,7 +79,7 @@ function leaf(len, width, thick, base, tip) {
 }
 
 // ---------------------------------------------------------------------------- milho
-const CORN = { len: 0.16, R: 0.027 };
+const CORN = { len: 0.22, R: 0.03 };
 function cornGeometries() {
   if (GEO.corn) return GEO.corn;
   const gap = lin('#c98a1e'), kern = lin('#ffd451'), kernHi = lin('#fff0a6');
@@ -111,7 +111,7 @@ function cornGeometries() {
   const husk = [];
   const green = lin('#93b552'), pale = lin('#dcd99a');
   for (let i = 0; i < 3; i++) {
-    const l = leaf(0.085, 0.024, 0.0035, green, pale);
+    const l = leaf(0.095, 0.026, 0.0035, green, pale);
     l.rotateX(-0.3); // abre para fora do eixo…
     l.rotateZ((i * TAU) / 3 + 0.4); // …cada folha para um lado
     l.rotateY(-Math.PI / 2); // +Z da folha vira −X: sai da base para trás
@@ -127,7 +127,7 @@ function cornGeometries() {
 }
 
 // ---------------------------------------------------------------------------- cenoura
-const CARROT = { len: 0.16, R: 0.025 };
+const CARROT = { len: 0.22, R: 0.029 };
 const carrotR = (u) => CARROT.R * Math.pow(1 - u, 0.9) * Math.sqrt(sstep(0, 0.07, u)) + 0.0012 * (1 - u);
 function carrotGeometries() {
   if (GEO.carrot) return GEO.carrot;
@@ -144,7 +144,7 @@ function carrotGeometries() {
   const fronds = [];
   const g1 = lin('#4f8f32'), g2 = lin('#8cc85a');
   for (let i = 0; i < 4; i++) {
-    const l = leaf(0.07 + (i % 2) * 0.015, 0.008, 0.0025, g1, g2);
+    const l = leaf(0.08 + (i % 2) * 0.018, 0.009, 0.0025, g1, g2);
     l.rotateX(-0.35 - (i % 2) * 0.2);
     l.rotateZ((i / 4) * TAU);
     fronds.push(l);

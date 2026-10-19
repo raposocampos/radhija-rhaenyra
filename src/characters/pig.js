@@ -205,7 +205,7 @@ function tint(g, c) {
 }
 
 /** Orelha caída: folha larga na base e pontuda, em concha (bordas para o lado de dentro, -Y). +Z = comprimento. */
-const EAR = { w: 0.05, th: 0.011, len: 0.095, cup: 0.32, curl: 0.014 };
+const EAR = { w: 0.056, th: 0.012, len: 0.106, cup: 0.32, curl: 0.016 };
 function earGeometry() {
   if (GEO.ear) return GEO.ear;
   const g = new THREE.SphereGeometry(1, 16, 10);
@@ -263,13 +263,13 @@ function tailGeometry() {
   const pts = [];
   for (let i = 0; i <= 24; i++) {
     const t = i / 24;
-    const R = 0.018 * (1 - 0.35 * t);
+    const R = 0.021 * (1 - 0.35 * t);
     const a = t * 1.7 * TAU;
-    pts.push(new THREE.Vector3(Math.cos(a) * R - 0.018, t * 0.05, Math.sin(a) * R));
+    pts.push(new THREE.Vector3(Math.cos(a) * R - 0.021, t * 0.055, Math.sin(a) * R));
   }
   const path = new THREE.CatmullRomCurve3(pts);
   const segs = 30, radial = 7;
-  const g = new THREE.TubeGeometry(path, segs, 0.0068, radial, false);
+  const g = new THREE.TubeGeometry(path, segs, 0.0088, radial, false);
   const p = g.attributes.position;
   const c = new THREE.Vector3(), v = new THREE.Vector3();
   for (let i = 0; i <= segs; i++) {
@@ -509,7 +509,7 @@ export function createPig({ variant = 0 } = {}) {
   const _q = new THREE.Quaternion();
   const _m = new THREE.Matrix4();
   const _down = new THREE.Vector3(0, -1, 0);
-  const TAIL_TIP = new THREE.Vector3(-0.018, 0.05, 0);
+  const TAIL_TIP = new THREE.Vector3(-0.021, 0.055, 0);
   const setE = (b, x, y, z) => b.quaternion.setFromEuler(_e.set(x, y, z, 'YXZ'));
   /** Envelope de um gesto: avança o tempo e devolve u (0..1) ou -1 se acabou.
    * @param {'oinkT' | 'bumpT' | 'shakeT'} key @param {number} dur @param {number} dt */
@@ -679,11 +679,12 @@ export function createPig({ variant = 0 } = {}) {
       // girando parado: dianteiras para um lado, traseiras para o outro (passinhos, nada de girar como pião)
       const ts = (1 - sstep(0.03, 0.22, v)) * clamp(st.turnS, -2.5, 2.5) * 0.022 * (swing ? 1 : -1) * (lg.front ? 1 : -1) * amp;
       // alvo no chão (espaço do porco, menos a trava) → espaço do tronco
-      tG.set(lg.x * (1 + 0.04 * nose) + ts, fy + 0.0015 - st.lift, lg.z + fz).applyMatrix4(_m);
+      // (4 mm acima: com a canela inclinada a sola arredondada do casco desce um pouco)
+      tG.set(lg.x * (1 + 0.04 * nose) + ts, fy + 0.004 - st.lift, lg.z + fz).applyMatrix4(_m);
       const hip = restPos[`${lg.key}U`];
       // deitado de bruços: dianteiras dobradas à frente, traseiras esticadas para trás; dormindo: soltas de lado
       tL.set(hip.x * 1.05, hip.y + (lg.front ? -0.09 : -0.085), hip.z + (lg.front ? 0.07 : -0.17));
-      tR.set(hip.x + lg.side * 0.012, hip.y - 0.163, hip.z + (lg.front ? 0.06 : -0.07));
+      tR.set(hip.x + lg.side * 0.02, hip.y - 0.13, hip.z + (lg.front ? 0.09 : -0.1)); // patinhas soltas, dobradas
       solveLeg(lg, tG.lerp(tL, down).lerp(tR, w.sleep));
     }
 
@@ -695,12 +696,12 @@ export function createPig({ variant = 0 } = {}) {
     const ay = clamp((vy - st.hvy) / Math.max(dt, 1e-3), -30, 30);
     st.hy1 = headY;
     st.hvy = vy;
-    const droop = lerp(0.38, 0.12, w.alert) + down * 0.12 + nose * 0.1;
+    const droop = lerp(0.5, 0.16, w.alert) + down * 0.12 + nose * 0.1;
     for (const e of ears) {
       const force = ay * 0.9 + shk * e.side * 70 + hic * 30 - oink * 8;
       e.v += (-140 * e.a - 9 * e.v + force) * dt;
       e.a = clamp(e.a + e.v * dt, -0.5, 0.75);
-      e.pivot.rotation.set(droop + e.a, e.side * 0.55, -e.side * 0.4, 'YXZ');
+      e.pivot.rotation.set(droop + e.a, e.side * 0.62, -e.side * 0.45, 'YXZ');
     }
     const wagF = lerp(lerp(4, 7, amp), 9.5, Math.max(w.eat, oink));
     const wagA = (0.2 + 0.3 * w.eat + 0.15 * amp) * (1 - w.sleep * 0.85);

@@ -58,6 +58,7 @@ export const PIG_DEFAULTS = {
   bumpCooldown: 1.2, // por dog
   smellR: 10, // até onde sente a comida no chão
   reach: 0.3, // do centro do porco ao focinho (onde a comida fica quando ele come)
+  nose: 0.37, // do centro do porco à ponta do focinho (encostar focinho com focinho na dog)
   distractTime: 30, // padrão de um legume sem cfg.foods[kind]
   eatTime: 16,
   foods: { corn: { time: 32, eat: 18 }, carrot: { time: 26, eat: 14 }, pumpkin: { time: 40, eat: 24 } },
@@ -195,6 +196,37 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     return Math.abs(d);
   }
 
+  // O corpo do porco é comprido: além do círculo de colisão, uma cápsula da garupa ao peito (para não encavalar
+  // nos outros porcos nem enfiar o focinho ou a garupa numa dog).
+  const SPINE = { back: 0.2, front: 0.22, r: 0.14 };
+  function spine(P) {
+    const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
+    return { ax: P.x - fx * SPINE.back, az: P.z - fz * SPINE.back, bx: P.x + fx * SPINE.front, bz: P.z + fz * SPINE.front };
+  }
+  function closestOn(px, pz, s) {
+    const abx = s.bx - s.ax, abz = s.bz - s.az;
+    const t = clamp(((px - s.ax) * abx + (pz - s.az) * abz) / (abx * abx + abz * abz || 1), 0, 1);
+    return [s.ax + abx * t, s.az + abz * t];
+  }
+  /** Distância entre duas cápsulas (pelas pontas: bom o bastante para corpos lado a lado). → { d, nx, nz } (de s2 para s1) */
+  function spineDist(s1, s2) {
+    let d = Infinity, nx = 0, nz = 0;
+    const test = (px, pz, s, sign) => {
+      const [qx, qz] = closestOn(px, pz, s);
+      const dd = Math.hypot(px - qx, pz - qz);
+      if (dd < d) { d = dd; nx = ((px - qx) / (dd || 1)) * sign; nz = ((pz - qz) / (dd || 1)) * sign; }
+    };
+    test(s1.ax, s1.az, s2, 1); test(s1.bx, s1.bz, s2, 1); test(s2.ax, s2.az, s1, -1); test(s2.bx, s2.bz, s1, -1);
+    return { d, nx, nz };
+  }
+  /** Quanto a dog ocupa na direção (px, pz) a partir do centro dela: a cabeça na frente, o corpo dos lados. */
+  function dogExtent(c, px, pz) {
+    const L = (c.cfg?.visual?.length ?? 0.6) * 0.42 + 0.06;
+    const dx = px - c.x, dz = pz - c.z, d = Math.hypot(dx, dz) || 1;
+    const front = Math.max(0, (dx * Math.sin(c.yaw) + dz * Math.cos(c.yaw)) / d);
+    return lerp(c.r * 0.75, L, front);
+  }
+
   /** Empurra o porco para fora das dogs (ele nunca as atravessa; quem empurra dog é só o esbarrão). */
   function avoidDogs(P, ctrls) {
     for (const n of Object.keys(ctrls || {})) {
@@ -202,14 +234,47 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       const dx = P.x - c.x, dz = P.z - c.z;
       const d = Math.hypot(dx, dz);
       const minD = r + c.r + 0.01;
-      if (d >= minD) continue;
-      const nx = d > 1e-4 ? dx / d : Math.sin(P.yaw + Math.PI), nz = d > 1e-4 ? dz / d : Math.cos(P.yaw + Math.PI);
-      P.x += nx * (minD - d);
-      P.z += nz * (minD - d);
+      if (d < minD) {
+        const nx = d > 1e-4 ? dx / d : Math.sin(P.yaw + Math.PI), nz = d > 1e-4 ? dz / d : Math.cos(P.yaw + Math.PI);
+        P.x += nx * (minD - d);
+        P.z += nz * (minD - d);
+      }
+      // a cápsula do corpo (focinho e garupa) também não entra na dog
+      const [qx, qz] = closestOn(c.x, c.z, spine(P));
+      const ds = Math.hypot(qx - c.x, qz - c.z);
+      const minS = SPINE.r + c.r + 0.01;
+      if (ds < minS && ds > 1e-4) {
+        P.x += ((qx - c.x) / ds) * (minS - ds);
+        P.z += ((qz - c.z) / ds) * (minS - ds);
+      }
     }
     const res = world.resolve(P.x, P.z, r, 'large', { ignore: P.ignore });
     P.x = res.x;
     P.z = res.z;
+  }
+
+  /** Corpos compridos lado a lado: separa as cápsulas dos porcos (quem come ou dorme quase não sai do lugar). */
+  function separatePigs() {
+    for (let i = 0; i < pigs.length; i++) {
+      for (let j = i + 1; j < pigs.length; j++) {
+        const P = pigs[i], Q = pigs[j];
+        if (Math.hypot(P.x - Q.x, P.z - Q.z) > 1.0) continue;
+        const s = spineDist(spine(P), spine(Q));
+        const min = SPINE.r * 2;
+        if (s.d >= min) continue;
+        const heavy = (X) => X.state === 'eat' || X.state === 'nap' ? 0.15 : 1;
+        const wP = heavy(P), wQ = heavy(Q), k = (min - s.d) * 0.7 / (wP + wQ);
+        for (const [X, w, sg] of [[P, wP, 1], [Q, wQ, -1]]) {
+          const res = world.resolve(X.x + s.nx * k * w * sg, X.z + s.nz * k * w * sg, r, 'large', { ignore: X.ignore });
+          X.x = res.x;
+          X.z = res.z;
+          if (inPen(X.x, X.z)) { X.x = clamp(X.x, pen.x0 + r, pen.x1 - r); X.z = clamp(X.z, pen.z0 + r, pen.z1 - r); }
+          else if (released(X)) Object.assign(X, clampArea(X.x, X.z));
+          X.col.x = X.x;
+          X.col.z = X.z;
+        }
+      }
+    }
   }
 
   /**
@@ -403,10 +468,11 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       const lead = r + c.r + cfg.lead + Math.min(sp, 2) * 0.12;
       g = clampArea(c.x + fx * lead + fz * P.slot * cfg.spread, c.z + fz * lead - fx * P.slot * cfg.spread);
     } else {
+      // focinho com focinho na frente dela; dos lados, o focinho encosta no corpo
       const a = P.slot * cfg.ring;
       const ca = Math.cos(a), sa = Math.sin(a);
       [fx, fz] = [fx * ca + fz * sa, fz * ca - fx * sa];
-      const lead = r + c.r + 0.02;
+      const lead = Math.max(r + c.r + 0.02, cfg.nose + dogExtent(c, c.x + fx, c.z + fz));
       g = clampArea(c.x + fx * lead, c.z + fz * lead);
     }
     const dDog = Math.hypot(c.x - P.x, c.z - P.z);
@@ -423,7 +489,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       P.action = outside ? 'alert' : 'idle';
     }
     // encostado e de frente: esbarrão de leve de tempos em tempos
-    const touching = dDog < r + c.r + 0.09;
+    const touching = dDog < Math.max(r + c.r, cfg.nose + dogExtent(c, P.x, P.z)) + 0.08;
     const facing = Math.abs(wrap(Math.atan2(c.x - P.x, c.z - P.z) - P.yaw)) < 1.1;
     if (touching && !outside) {
       if (P.speed < 0.3) P.action = 'sniff'; // cheirando a dog
@@ -612,14 +678,19 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (P.t > 2.3) finishDistraction(P, 'time');
   }
 
-  /** Entrar ou sair do cercado só pela porteira: se o próximo ponto está do outro lado da cerca, passa pela porta. */
+  /**
+   * Entrar ou sair do cercado só pela porteira: se o próximo ponto está do outro lado da cerca e o porco não está no
+   * corredor da porta (entre door.in e door.out), ele passa antes pelo ponto da porta do lado dele.
+   */
   function viaDoor(P) {
     const p = P.route[0];
     if (!p) return;
-    const inside = inPen(P.x, P.z), there = inPen(p.x, p.z);
-    if (inside === there) return;
+    const inside = inPen(P.x, P.z);
+    if (inside === inPen(p.x, p.z)) return;
+    const [qx, qz] = closestOn(P.x, P.z, { ax: door.in.x, az: door.in.z, bx: door.out.x, bz: door.out.z });
+    if (Math.hypot(P.x - qx, P.z - qz) < 0.45) return; // no corredor da porteira: segue direto
     const d = inside ? door.in : door.out;
-    if (Math.hypot(P.x - d.x, P.z - d.z) > 0.35 && (p.x !== d.x || p.z !== d.z)) P.route.unshift({ ...d });
+    if (p.x !== d.x || p.z !== d.z) P.route.unshift({ ...d });
   }
 
   function exit(P, dt, ctrls) {
@@ -782,6 +853,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       }
       syncModel(P, dt);
     }
+    separatePigs();
     if (S.recall && pigs.every((P) => P.state === 'pen' && inPen(P.x, P.z, -r * 0.5))) {
       S.recall = false;
       S.wantOpen = false;

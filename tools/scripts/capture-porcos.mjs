@@ -122,7 +122,7 @@ try {
   // ---------------------------------------------------------------- estúdio: um porquinho no gramado, cada pose
   const S = { x: -2.2, z: -1.2 };
   const cam = {
-    frente: (y = 0.22) => ({ pos: [S.x + 0.62, 0.48, S.z + 0.95], look: [S.x, y, S.z] }),
+    frente: (y = 0.2) => ({ pos: [S.x + 0.55, 0.66, S.z + 0.95], look: [S.x, y, S.z] }),
     lado: (y = 0.22) => ({ pos: [S.x + 1.25, 0.36, S.z + 0.05], look: [S.x, y, S.z] }),
     tras: () => ({ pos: [S.x - 0.55, 0.55, S.z - 1.05], look: [S.x, 0.24, S.z] }),
     cima: () => ({ pos: [S.x + 0.5, 1.35, S.z + 0.8], look: [S.x, 0.12, S.z] }),

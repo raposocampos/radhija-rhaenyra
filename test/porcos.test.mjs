@@ -142,7 +142,7 @@ function herd(cfgOver = {}, { effects = null } = {}) {
   const P = pigPenLayout(PEN);
   const world = createCollisionWorld({ WORLD: { bounds: { minX: -4, maxX: 4.5, minZ: -3.5, maxZ: 4 } }, STATIC_COLLIDERS: P.colliders });
   const log = [];
-  const emit = (name, p) => log.push({ name, ...p });
+  const emit = (name, p) => log.push({ ...p, ev: name }); // (o payload tem `name` da dog: o evento vai em `ev`)
   const cfg = { pen: P.pen, door: P.door, gate: P.gate, area: { minX: -0.5, maxX: 4.5, minZ: -3.5, maxZ: 4 }, ...cfgOver };
   const pigs = createPigHerd({ id: 'p', cfg, world, emit, effects });
   const dog = (name, x, z, r) => ({ name, x, z, r, size: name === 'rhaenyra' ? 'large' : 'small', vx: 0, vz: 0, yaw: 0, hits: [] });
@@ -150,7 +150,7 @@ function herd(cfgOver = {}, { effects = null } = {}) {
   const run = (sec, active = ctrls.radhija) => {
     for (let i = 0; i < Math.round(sec * 60); i++) pigs.update(1 / 60, { active, ctrls });
   };
-  return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.name === n) };
+  return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.ev === n) };
 }
 
 test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => {
