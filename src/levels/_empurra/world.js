@@ -71,12 +71,13 @@ export function buildEmpurraWorld({ root, layout }) {
   // itens presos lá em cima (filhos do que balança)
   const ball = tennisBall();
   tree.socket(TREE.ball.lx, TREE.ball.ly, TREE.ball.lz).add(ball);
+  // patinho e ursinho virados para a câmera (o sul), na beirada de trás
   const duck = createRubberDuck(0.2);
-  duck.rotation.y = 0.5;
+  duck.rotation.y = Math.PI + 0.35; // na mesinha (empurrada pelo leste) o sul é o −X dela; o bico do patinho é +X
   table.socket(TABLE.duck.lx, SHOVE_PROP_SIZE.table.h, TABLE.duck.lz).add(duck);
   const bear = createTeddyBear(0.26);
   bear.userData.sit?.();
-  bear.rotation.y = Math.PI;
+  bear.rotation.y = Math.PI / 2 - 0.3; // na estante (empurrada pelo oeste) o sul é o +X dela
   shelf.socket(SHELF.bear.lx, SHOVE_PROP_SIZE.shelf.h, SHELF.bear.lz).add(bear);
 
   buildBed(root, BED);

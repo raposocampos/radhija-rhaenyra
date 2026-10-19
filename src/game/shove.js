@@ -35,16 +35,25 @@ export function createShove({ emit }) {
   /** Reação da irmã: quem, há quanto tempo, para onde foi empurrada e por quem. */
   const R = { name: /** @type {import('../types').DogName | null} */ (null), t: 0, dx: 0, dz: 0, stay: false, byX: 0, byZ: 0, side: 0, fwd: 0 };
 
-  /** O ponto de apoio na irmã C para quem está em A: no lado do círculo dela virado para A, nas costas. */
+  /**
+   * O ponto de apoio na irmã C para quem está em A: no lado do círculo dela virado para A, as patas nas costas. Se ela
+   * estiver de frente para A, a cabeça dela passa do círculo: a superfície fica na frente da cabeça e as patas vão no
+   * alto da cabeça e no pescoço (assim uma não entra na outra).
+   */
   function sisterSpot(A, C) {
     const dx = A.x - C.x;
     const dz = A.z - C.z;
     const L = Math.hypot(dx, dz) || 1;
     const nx = dx / L;
     const nz = dz / L;
+    const facing = sstep(0.2, 0.8, Math.sin(C.yaw) * nx + Math.cos(C.yaw) * nz);
+    const head = (C.cfg.visual?.length ?? 0.6) * 0.42 - C.r; // quanto a cabeça passa do círculo, de frente
+    const back = (C.cfg.visual?.shoulder ?? 0.3) + 0.02;
+    const top = (C.cfg.visual?.headTop ?? 0.48) - 0.06;
+    const d = C.r + Math.max(0, head) * facing;
     Object.assign(sis, {
-      x: C.x + nx * C.r, z: C.z + nz * C.r, nx, nz,
-      y: (C.cfg.visual?.shoulder ?? 0.3) + 0.02, over: C.r * 0.6, sister: C.name,
+      x: C.x + nx * d, z: C.z + nz * d, nx, nz,
+      y: back + (top - back) * facing, over: C.r * 0.6 * (1 - facing) + 0.05 * facing, sister: C.name,
     });
     // olha para a cabeça da irmã
     const hl = (C.cfg.visual?.length ?? 0.6) * 0.42;
