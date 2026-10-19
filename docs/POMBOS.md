@@ -1,6 +1,7 @@
 # Referências e revisão dos pombos
 
-Pesquisa e implementação: Codex, 2026-10-17.
+Pesquisa e implementação: Codex, 2026-10-17. Redesenho visual: Claude, 2026-10-19
+(seção "Pombo mais bonito", abaixo).
 
 ## Direção visual
 
@@ -28,6 +29,55 @@ cabeça arredondada, olhos laterais âmbar e bico curto; verde e violeta graduai
 no pescoço; duas barras seguindo a superfície das asas; cauda em leque com
 penas arredondadas e faixa terminal escura; dedos delicados, incluindo o dedo
 traseiro. Sem novas texturas externas, shaders especiais ou dependências.
+
+## Pombo mais bonito (2026-10-19)
+
+Pedido do usuário: "melhorar o visual do modelo do pombo, pode ser mais bonito".
+O pombo aparece nas fases 4 e 10. O modelo foi refeito com a mesma API e os
+mesmos campos de `setPose`, e ganhou `peck()`, que é opcional.
+
+- **Proporções**: corpo em gota com peito cheio que avança embaixo, dorso
+  descendo até a cauda, pescoço grosso e curto inclinado para a frente e cabeça
+  arredondada com a testa descendo até o bico. Olho e cabeça um pouco maiores
+  que no natural, para ficar fofo.
+- **Pescoço furta-cor**: o violeta embaixo vira verde em cima (matiz por vértice)
+  e o matiz anda conforme a pena vira de lado para a câmera, no shader (`onBeforeCompile`
+  do material único, chave de programa fixa `pigeon-plumage-1`). A região fica
+  mais lisa e levemente metálica; o alto do peito continua o violeta.
+- **Cabeça**: bico escuro e fino, a ponta descendo de leve, com a **carúncula**
+  branca em dois gominhos; **olhos** com pele clara em volta, íris laranja que
+  brilha (emissão por vértice), pupila e dois reflexos.
+- **Asas**: coberteiras em folha curvada (abraça o corpo dobrada e arqueia
+  aberta) com as **duas barras escuras**, quatro secundárias e cinco primárias
+  em degrau com pontas escuras. Cada pena tem três formas (dobrada, batida de
+  força e recuperação) como alvos de morph; todas são rotações próprias, então
+  a interpolação não vira a pena do avesso.
+- **Cauda**: dez penas em leque com a **faixa escura na ponta**, coberteiras
+  claras em cima e escuras embaixo; o leque abre (morph) no voo, na frenagem,
+  no pouso e no susto.
+- **Pés rosados**: pernas curtas com "calças" de pena saindo da barriga, três
+  dedos para a frente, um para trás e unhas escuras.
+
+Poses: acordado, olha em volta com giros rápidos de cabeça e pisca; no
+cochilo encolhe o pescoço, afofa as penas, tomba a cabeça para um lado e
+encosta a barriga no apoio; com o latido, `peek()` abre **um olho só**;
+`peck()` dá um susto (penas afofadas, olhos arregalados), duas estocadas do
+pescoço e asas batendo no lugar, com os pés no apoio, e volta a cochilar se
+`asleep` continuar. No voo a cabeça fica estável e os pés recolhem para trás;
+na frenagem descem e avançam para o contato.
+
+Custo: **7 malhas e 1 material por pombo** (antes 13 malhas e 9 materiais),
+cerca de 7 mil triângulos (antes 4.740; limite do teste: 8 mil, e do script de
+captura, o dobro do main). Cor, brilho e furta-cor ficam em atributos de vértice
+(`color` e `pigeonFx`). Olhos fechados (um alvo por olho), asas e leque são
+alvos de morph; nada é recriado no update. As partes estáticas de cada malha são
+unidas por `Parts` (uma geometria por parte móvel). Não houve medição de FPS
+em aparelho real.
+
+Na fase 10 (PR #33), `treehouse.js` simula a bicada com `flying` ligado
+por meio segundo (o pombo paira com os pés recolhidos). Com este modelo,
+`pigeonModel.peck()` faz a bicada sem sair do apoio; a troca fica com a sessão
+da fase 10.
 
 ## Escopo e custo
 
@@ -90,15 +140,17 @@ o custo de submissão. Não foi medido FPS em hardware do usuário.
 Executar **E2E manual**, suíte `fase4`, no branch do PR. Além da partida normal,
 o workflow gera o artefato `capturas-fase4`, pasta `pombos/`:
 
-- `01-silhuetas.png`: antes/depois em três quartos, perfil, frente e vista alta.
-- `02-animacoes.png`: sono, espiada e dois extremos da batida de asas.
+- `01-silhuetas.png`: antes/depois em três quartos, perfil, frente, vista alta
+  e a cabeça de perto (olho, bico e carúncula).
+- `02-animacoes.png`: sono, espiada, bicada, dois extremos da batida de asas
+  e frenagem do pouso.
 - `03-fase4.png` e `04-cochilo-no-cenario.png`: fase real e detalhe no cenário,
   com resolução normal, sombras e pós-processamento do jogo.
 - `05-pombo-do-portao.png` e `06-pombal.png`: demais instâncias, tons e escalas.
 - `metrics.json`: SHAs da base e do head, contagens e erros do navegador.
-- `07-voo-antes-depois.mp4` e `08-sequencia-voo.png`: decolagem, batidas e pouso
-  em tempo simulado fixo; comparação com a prévia das pernas soltas (`a9b0906`)
-  com a revisão atual. O vídeo é codificado com FFmpeg apenas no runner.
+- `07-voo-antes-depois.mp4` e `08-sequencia-voo.png`: decolagem, batidas,
+  pouso, bicada e cochilo em tempo simulado fixo (6 s), pombo do main à esquerda
+  e o novo à direita. O vídeo é codificado com FFmpeg apenas no runner.
 - `09-camera-mecanismo.mp4` e `10-sequencia-mecanismo.png`: segundo voo,
   placa e abertura do portão com a câmera real do jogo; enquadramento validado
   pela projeção do pombo, placa e portão, eventos registrados em `metrics.json`.
@@ -110,6 +162,7 @@ A página de estudo em `tools/` não é uma entrada do build publicado. O modelo
 antigo é criado temporariamente no runner e removido no encerramento.
 
 No teste humano da prévia: abrir a fase 4, observar o cochilo, latir para o
-pombo espiar, usar superbafo para fazê-lo voar e conferir o pombo do portão e
-os dois sobre o pombal. A publicação em produção depende da aprovação da
+pombo espiar (um olho só), usar superbafo para fazê-lo voar e conferir o pombo
+do portão (voo e pouso na placa) e os dois sobre o pombal (olham em volta e
+piscam). A publicação em produção depende da aprovação da
 versão apresentada, conforme `AGENTS.md`.
