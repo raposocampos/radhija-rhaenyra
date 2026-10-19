@@ -4,6 +4,7 @@
 // onda, o chapéu caindo do bolo, o quadro de perto, a gansa, o cheiro subindo pelo cano, o balde, o escorregador, a
 // lama, a porta basculante, a rampa e o bolo pronto). Teclas reais chegam pelos ouvintes do jogo; teleporte, etapas e
 // atalhos de depuração só preparam as cenas. Saída: shots/quintal-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
