@@ -46,7 +46,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   root.className = 'rr';
   root.dataset.device = 'keyboard';
   root.dataset.pad = 'ps'; // desenho dos botões: 'ps' (padrão) ou 'xbox', conforme o controle conectado
-  root.dataset.dog = 'radhija'; // cachorrinha ativa: os botões de toque de bafo/arrancada mudam com ela
+  root.dataset.dog = 'radhija'; // cachorrinha ativa: a Arrancada vira Empurrar e o Superbafo apaga com a Rhaenyra
   // Celular ou tablet: layout compacto (ui.css, .rr[data-mobile]); no PC o atributo não existe e nada muda.
   const mobile = quality?.device && quality.device !== 'desktop' ? quality.device : null;
   if (mobile) root.dataset.mobile = mobile;

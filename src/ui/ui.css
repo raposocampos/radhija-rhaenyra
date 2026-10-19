@@ -1291,6 +1291,7 @@
 .rr-tg--act, .rr-tbtn--act { --c: 236, 124, 48; }
 .rr-tg--jump, .rr-tbtn--jump { --c: 104, 146, 88; }
 .rr-tg--bafo, .rr-tbtn--bafo { --c: 140, 118, 196; }
+.rr-tg--lick, .rr-tbtn--lick { --c: 212, 98, 128; }
 .rr-tg--dash, .rr-tbtn--dash { --c: 64, 140, 146; }
 .tg-r, .tg-h, .tg-fica, .tg-vem { display: contents; }
 .rr:not([data-dog="rhaenyra"]) .tg-h, .rr[data-dog="rhaenyra"] .tg-r { display: none; }
@@ -1428,10 +1429,14 @@
 .rr-tbtn--act { --d: 76; --x: 72; --y: 72; }
 .rr-tbtn--act .rr-tbtn__label { font-size: calc(12 * var(--s)); }
 .rr-tbtn--act.is-ready { animation: rr-tbtn-ready 1.2s ease-in-out infinite; }
-.rr-tbtn--jump { --d: 62; --x: 166; --y: 50; }
-.rr-tbtn--dash { --d: 58; --x: 152; --y: 140; }
-.rr-tbtn--dash .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
-.rr-tbtn--bafo { --d: 58; --x: 80; --y: 172; }
+/* Pular, Arrancada/Empurrar, Lamber e Superbafo num arco em volta do Agir; nem as caixas se encostam (E2E toque) */
+.rr-tbtn--jump { --d: 58; --x: 168; --y: 48; }
+.rr-tbtn--dash { --d: 56; --x: 166; --y: 118; }
+.rr-tbtn--lick { --d: 56; --x: 112; --y: 180; }
+.rr-tbtn--bafo { --d: 56; --x: 50; --y: 180; }
+.rr-tbtn--dash .rr-tbtn__label, .rr-tbtn--bafo .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
+/* o superbafo é só da Radhija: com a Rhaenyra, apagado (apertar dá a dica) */
+.rr[data-dog="rhaenyra"] .rr-tbtn--bafo { opacity: .45; }
 .rr-tbtn--swap { --d: 48; --x: 44; --y: 250; }
 .rr-tbtn--stay { --d: 48; --x: 106; --y: 250; }
 .rr-tbtn--swap .rr-tbtn__label, .rr-tbtn--stay .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }

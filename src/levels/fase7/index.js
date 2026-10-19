@@ -1,5 +1,6 @@
 // Fase 7 da campanha (levels/index.js). O link do tempo de protótipo, ?level=fase7&play, continua abrindo esta fase.
-// Apresenta o Lambe-Lambe da Rhaenyra (R / L2 perto da irmã) e a lama que deixa a Radhija lenta e sem arrancada.
+// Apresenta o Lambe-Lambe (L / L2 perto da irmã; as duas lambem, aqui é a Rhaenyra que limpa) e a lama que deixa a
+// Radhija lenta e sem arrancada.
 import layout from './layout.js';
 import extras from './extras.js';
 import lighting from './lighting.js';
