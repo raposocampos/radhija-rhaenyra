@@ -390,13 +390,26 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
 (`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
 - **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
   todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
-  boca. A sequência dura `POOP_TIME` s, e as poses vêm de `poopK` em `dogAnimation.js`: agacha, faz força, solta o
-  cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã por perto vira a cara.
+  boca. Três partes, com as poses em `dogAnimation.js`:
+  - voltinha (`poopPre`): ela fareja e anda um círculo pequeno de verdade (0,5 × o comprimento dela, de 0,8 a 1,3
+    volta, terminando de perfil para a câmera), com o passo igual ao deslocamento e os apoios girando com o corpo na
+    curva. `planCircle` só aceita um caminho sem colisor (`overlaps` do mundo), sem a irmã e com o chão livre onde o
+    cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada (sem chão
+    livre por perto para o cocô, o C não começa). Nunca gira sem andar;
+  - agachada (`poopK`, `POOP_TIME` s): corcunda, com a garupa a meia altura (baixa demais parece xixi); faz força,
+    solta o cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã no automático dá espaço o tempo todo (se
+    afasta andando até 1,45 m, com colisão, e espera; com o Fica, não sai do lugar) e vira a cara na hora;
+  - comemoração (`party`): o cocô brilha dourado (`poop.shine()`, com feixe de luz e estrelinha), toca o jingle
+    `extraSecret` e a câmera chega perto. Ela sai em zoomies (`planZoom`: dispara, faz a curva e freia de frente para
+    o cocô, só se couber) ou dá um pulinho virando meia volta; depois a reverência de brincadeira, dois pulinhos e
+    orgulhosa. A irmã até 6 m se espanta e manda coraçõezinhos (`cheer`).
+  Se algo que se mexe entrar no caminho, ela para ali. Eventos em `extras.js` (`extra:secret`, `extra:zoom`...).
 - **Animações do cenário**: `extras` na definição da fase (`src/levels/faseN/extras.js`, tipo `ExtraSpot`). Com o E
   perto e de frente para o ponto, quando a fase não usou o E, a dog bebe, come, cava, cheira e espirra, focinha a
   bola, rola, balança ou leva um esguicho. Valem sempre, com a boca vazia (com um objeto na boca não dá para comer,
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
-  7 e a bolinha da fase 6.
+  7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
+  as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
 - Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
 
@@ -642,12 +655,12 @@ com a aba caída) em `test-e2e-infra.mjs`.
 `handle.evaluate(h => h.abort())` NA PÁGINA antes de rejeitar (`ProgressController.run` e
 `_waitForFunctionExpression`), e com a aba parada nem o erro de prazo chega. No caso da fase 1 o prazo venceu e só a
 leitura seguinte ficou sem resposta, o padrão de quando o contexto da página foi destruído (recarga ou navegação) e a
-página nova travou. Hipótese em teste: o otimizador de dependências de um Vite frio (o cache `node_modules/.vite-test`
-é novo em cada job) manda `full-reload` no meio do boot mesmo com `hmr: false` (o WebSocket continua ativo); a saída
-do Vite das suítes era descartada. Agora `run-e2e.mjs` grava `shots/diagnostico/vite.log` e repete no log do job, com
-`[vite]`, as linhas do otimizador e os erros, e o harness avisa `[boot] ... a página RECARREGOU N×` quando a página
-navega mais de uma vez durante o `load()`. Nos logs das capturas (Vite no próprio processo, cache já quente) não há
-nenhuma mensagem do otimizador.
+página nova travou, como na prova `crash`. Uma hipótese testada e não confirmada: o otimizador de dependências de um
+Vite frio (o cache `node_modules/.vite-test` é novo em cada job) mandaria `full-reload` no meio do boot mesmo com
+`hmr: false` (o WebSocket continua ativo). Para medir, `run-e2e.mjs` grava `shots/diagnostico/vite.log` e repete no
+log do job, com `[vite]`, as linhas do otimizador e os erros, e o harness avisa `[boot] ... a página RECARREGOU N×`
+quando a página navega mais de uma vez durante o `load()`: nenhuma recarga nos primeiros boots frios do `todas`, nos
+100 boots do estresse com o cache apagado a cada rodada nem nos logs antigos.
 
 Para achar a causa, a sonda `tools/scripts/lib/hang-probe.mjs` faz um retrato quando uma operação em curso passa de
 60 s (uma etapa do `load()`, um `goto`/`waitForFunction` de captura), no `opMaxMs`, no teto de uma ida ao navegador e
@@ -665,8 +678,8 @@ imprime em cada `load()` uma linha `[boot]` com o tempo de cada etapa (html+mód
 código da fase, cenário, puzzle, shaders, pronto) e, num travamento, o último marco no console diz onde parou. Cada
 suíte também imprime `[e2e] CPU do runner` (modelo, núcleos, AVX): os runners variam de hardware (AMD EPYC 9V45,
 Intel Xeon Platinum 8573C e AMD EPYC 7763; o mesmo lote de estresse leva de 410 a 720 s). A suíte `carregamento` do
-E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as oito fases em rodízio, cada rodada com Vite e
-navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez, apagando o cache de dependências
+E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as fases da campanha em rodízio, cada rodada com
+Vite e navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez, apagando o cache de dependências
 do Vite a cada rodada (`--cold-deps`: otimizador frio, como na primeira suíte de cada job), e lotes 4–7 com 36, três
 ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois, para confirmar uma
 correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para (`stopWatch`) quando não

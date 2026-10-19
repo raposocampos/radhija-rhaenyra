@@ -19,7 +19,7 @@ const OFFSET = Number(args.offset) || 0;
 const PARALLEL = Math.max(1, Number(args.parallel) || 1);
 const COLD_DEPS = !!args['cold-deps'];
 if (COLD_DEPS && PARALLEL > 1) throw new Error('--cold-deps apaga o cache compartilhado: só com --parallel 1');
-const LEVELS = (typeof args.levels === 'string' ? args.levels : 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8').split(',');
+const LEVELS = (typeof args.levels === 'string' ? args.levels : 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8,fase9').split(',');
 console.log(`[carregamento] ${ROUNDS} rodadas, ${PARALLEL} ao mesmo tempo${COLD_DEPS ? ', cache do Vite apagado a cada rodada' : ''}; CPU: ${cpuModel()}`);
 
 const results = []; // { level, cold, ms, compile }

@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -148,6 +148,12 @@ export interface CameraConfig {
   };
   celebrate: { pos: Vec3Tuple; look: Vec3Tuple };
   victoryOffset?: { pos: Vec3Tuple; look: Vec3Tuple };
+  /**
+   * Zonas (retângulos do ponto de foco) onde o seguimento olha mais alto (lookY, em m acima de lookHeight) e
+   * deslocado (dx, dz): para mostrar algo no alto da parede do fundo. Entra e sai suave. Com `id`, a fase liga e
+   * desliga a zona com cam.setZone(id, on).
+   */
+  zones?: { id?: string; minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
 }
 
 /**
@@ -386,7 +392,7 @@ export interface MoveIntent {
 
 export interface ScentCloud { id: number; x: number; z: number; vx: number; vz: number; r: number; age: number; life: number; state: 'free' | 'duct' }
 /** Faixa de vento a partir de (x, z) na direção (dirX, dirZ). Mova/desligue mexendo no próprio objeto. */
-export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; enabled?: boolean }
+export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; funnel?: number; enabled?: boolean }
 export interface ScentDuct {
   id?: string;
   inlet: { x: number; z: number; r: number };
@@ -464,6 +470,8 @@ export interface InputLock {
   drive?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
   slope?: number;
+  /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
+  move?: { dx: number; dz: number; speed: number };
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick). */
@@ -752,6 +760,53 @@ export interface Fase8Props extends LevelProps {
   collectibles: CollectibleProp[];
   reset(): void;
 }
+export type Fase9Thing = 'glasses' | 'book';
+/** Pose do gato Bichano (src/world/cat.js): onde está, para onde olha e o que faz (k: progresso ou metros andados). */
+export interface CatPose { x: number; y?: number; z: number; yaw?: number; mode: 'sleep' | 'wake' | 'jump' | 'walk' | 'sit'; k?: number }
+export interface Fase9Props extends LevelProps {
+  /** Óculos do vovô (na prateleira alta da estante leste). */
+  glasses: ItemProp;
+  /**
+   * Livro de histórias: setFall(null = no alto do armário, debaixo do gato; 0..1 caindo; 1 = no chão);
+   * setLying(deitado: chão, armário, mesinha | de pé: na boca).
+   */
+  book: ItemProp & { setFall(k: number | null): void; setLying(on: boolean): void };
+  /** Escadinha de biblioteca com rodinhas (empurrável no trilho). */
+  ladder: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  /** Globo terrestre de rodinhas. */
+  globe: PropBase & { setPos(x: number, z: number): void };
+  /**
+   * Ventilador de chão: setAligned(on) = encaixado na grade do duto; setPower(on) = o disjuntor ligou a energia;
+   * setRunning(on) = o botão da base (com energia, a hélice gira e as fitinhas voam).
+   */
+  fan: PropBase & { setPos(x: number, z: number): void; setAligned(on: boolean): void; setPower(on: boolean): void; setRunning(on: boolean): void };
+  /** Vaso de terra no carrinho de rodinhas (empurrável num trilho) e o botão do registro no chão (setPress 0..1). */
+  planter: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  plate: PropBase & { setPress(t: number): void };
+  /** Energia do jardim de inverno (lanterna, varal de luzinhas, conduíte com o pulso). */
+  power: { setOn(on: boolean): void };
+  /** Trava da roda da escadinha ligada por um cabo à alavanca do freio (solta: o pulso corre e ela abre). */
+  ladderBrake: { setReleased(on: boolean): void };
+  /** Aba da portinha de gato: setSwing(-1..1) (para que lado e quanto ela abre). */
+  flap: { setSwing(v: number): void };
+  /** Porta do escritório: pivô na dobradiça, folha ao longo de -Z local. */
+  door: GateProp;
+  /** O gato Bichano. */
+  cat: PropBase & { setPose(p: CatPose): void };
+  /**
+   * Duto do aquecedor: setDamper(registro aberto), setPuffs(progresso 0..1 de cada baforada dentro do cano),
+   * outletPuff() = a baforada saindo pela grade do escritório em cima do gato.
+   */
+  duct: PropBase & { setDamper(on: boolean): void; setPuffs(list: number[]): void; outletPuff(): void };
+  brakeLever: WallButtonProp;
+  breaker: WallButtonProp;
+  doorHandle: WallButtonProp;
+  doorHandleIn: WallButtonProp;
+  /** Mesinha ao lado da poltrona: spot(objeto) = onde ele fica (o puzzle prende ali). */
+  table: PropBase & HighlightProp & { spot(thing: Fase9Thing): THREE.Object3D };
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
 export interface PigeonPose {
   x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean;
   /** Progresso 0..1 para desacelerar o pouso; null volta à animação livre. */
@@ -801,10 +856,31 @@ export interface DogAnim {
   wallLat?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
+  /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */
+  poopPre?: number;
+  /** Extras: pose da comemoração do segredo de quem fez o cocô (null = sem). */
+  party?: PoopPartyPose | null;
+  /** Extras: segundos desde que a irmã viu a comemoração (−1 = sem). */
+  cheer?: number;
   /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
   extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
 }
 
+/**
+ * Comemoração do segredo (src/game/extras.js → dogAnimation.js): glee = alegria (0..1), bow = reverência de
+ * brincadeira (0..1), hop = altura do pulinho (m), air = progresso no ar (0..1; −1 no chão), jump = peso da pose do pulo
+ * no ar (1 no pulinho virando, menos nos pulinhos de alegria), brace = freio dos zoomies (0..1), zoom = correndo os
+ * zoomies (0..1; os apoios giram com o corpo na curva).
+ */
+export interface PoopPartyPose {
+  glee: number;
+  bow: number;
+  hop: number;
+  air: number;
+  jump: number;
+  brace: number;
+  zoom: number;
+}
 /** Animações do cenário dos extras (as que têm pose própria em dogAnimation.js; swing e spurt usam ações). */
 export type ExtraKind = 'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll' | 'swing' | 'spurt';
 /**

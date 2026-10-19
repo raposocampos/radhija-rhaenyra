@@ -94,8 +94,8 @@ export function createCarryItem({ obj, dogs, scene, carrier = 'any', name = 'ite
     get holder() { return holder; },
     attach(dogName) {
       holder = dogName;
-      // pose da boca para o tipo do item (cenoura/bolinha/pantufa/patinho/ursinho/frisbee/meia), se o modelo suportar
-      if (['carrot', 'ball', 'slipper', 'duck', 'bear', 'frisbee', 'sock'].includes(name)) dogs[dogName]?.setCarryPose?.(name);
+      // pose da boca para o tipo do item (cenoura/bolinha/pantufa/patinho/ursinho/frisbee/meia/óculos/livro), se o modelo suportar
+      if (['carrot', 'ball', 'slipper', 'duck', 'bear', 'frisbee', 'sock', 'glasses', 'book'].includes(name)) dogs[dogName]?.setCarryPose?.(name);
       if (!obj) return;
       const dog = dogs[dogName];
       (dog.mouthSocket || dog.object).add(obj);
