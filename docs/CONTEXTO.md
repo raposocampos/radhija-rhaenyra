@@ -14,7 +14,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
 - Ordem combinada com o orquestrador: pedir aprovação e integrar só depois de #41 → #42 → #33 (fila do main; #41 e
   #42 já entraram, o branch foi atualizado com `f50db80`). PR #43 em rascunho.
-- Próximo passo: CI e capturas (E2E `canil`), revisar as tiras, ajustar e apresentar a prévia (`?dogs=novo`).
+- Também: alcance da pata (estica até 4%, tronco desce até 1 cm, passo extra ou arrasto lento quando longe demais),
+  compasso que acelera em curva fechada (voltinha) e volta ao do guia, pisadas (som e pegada) no pouso de cada pata,
+  esteira só com a velocidade pedida, e a locomoção sai na hora no empurrão em pé e na parede. Medido no CI
+  `39341264410`: a pata apoiada escorrega até 0,5 mm por quadro no passo, trote e curva e até 0,74 mm na voltinha
+  (antes, presa ao corpo, vários centímetros). Capturas revisadas (E2E `canil` `39341411128`): parando assenta em
+  ~0,6 s; galope estica e recolhe.
+- Próximo passo: quando o #33 entrar, atualizar com o main, CI, E2E `todas`, prévia (`?dogs=novo`, `?level=canil`) e
+  pedir a aprovação do usuário; depois, etapa 3 (poses em camadas, inclusive a do empurrão).
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 
