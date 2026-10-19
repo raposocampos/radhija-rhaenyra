@@ -405,7 +405,7 @@ function buildPaintingLights(group, PAINTING, zN, { glow, halo, canvasMat }) {
     bulbs.setMatrixAt(i, m4.compose(p, q, one));
     caps.setMatrixAt(i, m4.compose(p.setY(p.y + 0.026), q, one));
     bulbs.setColorAt(i, OFF);
-    order.push(Math.abs(curve.getUtoTmapping(u) - entry) / Math.max(entry, 1 - entry));
+    order.push(Math.abs(curve.getUtoTmapping(u, null) - entry) / Math.max(entry, 1 - entry));
   }
   bulbs.instanceMatrix.needsUpdate = caps.instanceMatrix.needsUpdate = true;
   g.add(bulbs, caps);
