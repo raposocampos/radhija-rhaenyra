@@ -1,5 +1,5 @@
 // Sandbox das cachorrinhas. Parâmetros de URL:
-//   dog=both|radhija|rhaenyra   view=34|side|front|back|top|face|game|hero
+//   dog=both|radhija|rhaenyra   view=34|side|front|back|top|face|ear|game|hero
 //   model=v1|v2|both (both: o atual e o novo lado a lado, cada um no seu quadro)
 //   action=none|dash|push|strain|tug|celebrate|sit|sniff|shake|startled|turn|bafoAim|bafo|proud|yuck|lick|licked|slide
 //   speed=<m/s>   turn=<rad/s>   move=1 (anda de verdade, câmera segue)   sim=<s> (simula s segundos e congela)
@@ -186,6 +186,9 @@ function placeCamera(tm, focusDogs) {
   const c = new THREE.Vector3();
   focusDogs.forEach((d) => c.add(d.object.position));
   c.divideScalar(focusDogs.length);
+  // no ar (pulo, impulso na parede) a câmera sobe junto com o corpo
+  const lift = focusDogs.reduce((m, d) => Math.max(m, d.object.children[0].position.y), 0);
+  c.y += lift * 0.85;
   const k = focusDogs.length > 1 ? 1.55 : 1;
   const big = focusDogs.some((d) => d.kind === 'rhaenyra') ? 1.1 : 1;
   let pos, look;
@@ -195,13 +198,15 @@ function placeCamera(tm, focusDogs) {
     case 'back': pos = [0.5, 0.65, -1.3 * k]; look = [0, 0.25, 0]; break;
     case 'top': pos = [0, 2.2 * k, 0.01]; look = [0, 0, 0]; break;
     case 'face': pos = [0.18, 0.44 * big, 0.62 * big]; look = [0, 0.37 * big, 0.2 * big]; break;
+    case 'ear': pos = [0.55 * big, 0.42 * big, 0.12 * big]; look = [0, 0.33 * big, 0.2 * big]; break;
     case 'hero': pos = [0.55 * k, 0.32, 1.25 * k]; look = [0, 0.3, 0]; break;
     case 'game': pos = CAMERA.offset.slice(); look = [0, CAMERA.lookHeight, 0]; break;
     default: pos = [0.95 * k * big, 0.58, 1.05 * k * big]; look = [0, 0.27, 0];
   }
   const p = new THREE.Vector3(...pos);
   if (cfg.orbit) p.applyAxisAngle(new THREE.Vector3(0, 1, 0), tm * 0.4);
-  const focus = cfg.view === 'face' ? focusDogs[0].object.position : c;
+  const focus = cfg.view === 'face' || cfg.view === 'ear' ? focusDogs[0].object.position : c;
+  if (cfg.wallk !== null) p.multiplyScalar(1.5);
   camera.position.copy(focus).add(p);
   target.copy(focus).add(new THREE.Vector3(...look));
   camera.lookAt(target);
@@ -266,6 +271,8 @@ function draw() {
   dogs.forEach((d, i) => {
     const col = i % cols, row = Math.floor(i / cols);
     const x = col * cw, y = H - (row + 1) * ch;
+    // só a dog do quadro (as outras ficariam no fundo, pequenininhas)
+    for (const o of dogs) o.object.visible = o === d;
     placeCamera(elapsed, [d]);
     camera.aspect = cw / ch;
     camera.updateProjectionMatrix();
@@ -274,6 +281,7 @@ function draw() {
     renderer.render(scene, camera);
     Object.assign(labels[i].style, { left: `${x + 10}px`, top: `${row * ch + 8}px` });
   });
+  for (const o of dogs) o.object.visible = true;
 }
 
 const info = document.getElementById('info');
@@ -290,11 +298,13 @@ function pose(next = {}) {
   for (const d of dogs) {
     d.object.position.copy(d.home);
     d.steps = 0;
+    // um quadro farejando zera o tempo parado (senão, depois de 5 s, ela senta sozinha)
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
   }
   const n = Math.round((cfg.sim ?? 2) * 60);
   for (let i = 0; i < n; i++) step(1 / 60);
   draw();
-  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null }));
+  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, bone: d.lowestBone ?? '' }));
 }
 window.__dogs = { dogs, stats: dogs.map((d) => d.stats), genMs, renderer, scene, camera };
 window.__pose = pose;

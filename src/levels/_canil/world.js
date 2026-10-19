@@ -6,25 +6,29 @@ import { createDisplay } from './display.js';
 /** Plaquinha com o nome, sempre de frente para a câmera. */
 function label(text, accent) {
   const c = document.createElement('canvas');
-  c.width = 512;
+  c.width = 768;
   c.height = 128;
   const g = c.getContext('2d');
+  g.font = 'bold 52px Nunito, system-ui, sans-serif';
+  // a placa se ajusta ao texto (centralizada no canvas)
+  const tw = Math.min(600, g.measureText(text).width || 420);
+  const w = tw + 140;
+  const x0 = (768 - w) / 2;
   g.fillStyle = 'rgba(255, 246, 230, 0.92)';
   g.beginPath();
-  g.roundRect?.(8, 14, 496, 100, 46);
+  g.roundRect?.(x0, 14, w, 100, 46);
   g.fill();
   g.fillStyle = accent;
   g.beginPath();
-  g.arc(64, 64, 22, 0, Math.PI * 2);
+  g.arc(x0 + 58, 64, 20, 0, Math.PI * 2);
   g.fill();
   g.fillStyle = '#4A3426';
-  g.font = 'bold 54px Nunito, system-ui, sans-serif';
   g.textBaseline = 'middle';
-  g.fillText(text, 104, 66);
+  g.fillText(text, x0 + 96, 66);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
-  sprite.scale.set(0.84, 0.21, 1);
+  sprite.scale.set(1.08, 0.18, 1);
   return sprite;
 }
 
@@ -104,7 +108,7 @@ export function buildCanilWorld({ root, layout }) {
     root.add(rug);
     const name = s.kind === 'radhija' ? 'Radhija' : 'Rhaenyra';
     const tag = label(`${name} · ${s.model === 'v2' ? 'nova' : 'atual'}`, accents[s.model]);
-    tag.position.set(s.x, s.kind === 'radhija' ? 0.82 : 0.92, SHOWCASE.z);
+    tag.position.set(s.x, s.kind === 'radhija' ? 0.7 : 0.8, SHOWCASE.z);
     tag.name = `plaquinha:${s.kind}:${s.model}`;
     root.add(tag);
   }

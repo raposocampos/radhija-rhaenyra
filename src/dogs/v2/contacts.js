@@ -48,6 +48,7 @@ const _a = new THREE.Vector3();
  */
 export function lowestPoint(contacts, P, Q, innerPos, innerQuat) {
   let low = Infinity;
+  lowestPoint.bone = -1;
   for (const k of contacts) {
     _c.copy(k.c).applyQuaternion(Q[k.i]).add(P[k.i]).applyQuaternion(innerQuat).add(innerPos);
     _q.multiplyQuaternions(innerQuat, Q[k.i]);
@@ -64,7 +65,12 @@ export function lowestPoint(contacts, P, Q, innerPos, innerQuat) {
       h2 += (k.r[a] * wy) ** 2;
     }
     const y = _c.y - Math.sqrt(h2);
-    if (y < low) low = y;
+    if (y < low) {
+      low = y;
+      lowestPoint.bone = k.i;
+    }
   }
   return low;
 }
+/** Osso da forma mais baixa na última chamada (diagnóstico). */
+lowestPoint.bone = -1;

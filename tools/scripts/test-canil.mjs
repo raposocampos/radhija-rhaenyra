@@ -60,6 +60,14 @@ try {
   await page.click('.canil-panel [data-toggle="skeleton"]');
   await page.click('.canil-panel [data-toggle="wet"]');
 
+  // Enquadramentos da vitrine
+  for (const cam of ['radhija', 'rhaenyra', 'vitrine']) {
+    await page.click(`.canil-panel [data-camera="${cam}"]`);
+    i = await H.gsleep(900);
+    if (cam !== 'vitrine') await shot(`03-camera-${cam}.png`);
+    check(i.canil?.camera === cam, `câmera da vitrine: ${cam}`, i.canil?.camera);
+  }
+
   // O painel não rouba o teclado: depois de um clique, Espaço ainda é o pulo da Rhaenyra.
   await page.click('.canil-panel [data-camera="livre"]');
   await clearLog();

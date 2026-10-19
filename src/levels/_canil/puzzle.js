@@ -17,24 +17,28 @@ export const TEXT = {
  */
 export function createPuzzle(ctx) {
   const { layout, props } = ctx;
-  const { SHOWCASE } = layout;
+  const { SHOWCASE, FRAMING } = layout;
   const display = props.display;
   display?.start?.();
 
-  const S = { stage: 'start', camera: /** @type {'vitrine' | 'livre'} */ ('vitrine'), camT: 0 };
+  /** Câmera: um dos enquadramentos da vitrine (FRAMING) ou 'livre' (segue a dog do jogador). */
+  const S = { stage: 'start', camera: /** @type {'vitrine' | 'radhija' | 'rhaenyra' | 'livre'} */ ('vitrine'), camT: 0 };
   /** @type {(stage: string) => void} */
   let onStageChange = () => {};
 
-  /** Mantém (ou solta) o enquadramento da vitrine. */
+  /** Mantém o enquadramento escolhido da vitrine (o plano de foco dura 2 min e é renovado antes de acabar). */
   function frameShowcase(instant = false) {
-    ctx.cam?.focusShot?.(0, SHOWCASE.z, { hold: 120, inT: instant ? 0.01 : 0.9, outT: 0.8, scale: 1.05, y: 0.3 });
+    const F = FRAMING[S.camera] || FRAMING.vitrine;
+    ctx.cam?.focusShot?.(F.x, SHOWCASE.z, { hold: 120, inT: instant ? 0.01 : 0.9, outT: 0.8, scale: F.scale, y: F.y });
     S.camT = 110;
   }
   function setCamera(mode) {
+    if (mode !== 'livre' && !FRAMING[mode]) return false;
     S.camera = mode;
-    if (mode === 'vitrine') frameShowcase();
-    else ctx.cam?.focusShot?.(0, SHOWCASE.z, { hold: 0, inT: 0.01, outT: 0.9, scale: 1.05, y: 0.3 });
+    if (mode === 'livre') ctx.cam?.focusShot?.(0, SHOWCASE.z, { hold: 0, inT: 0.01, outT: 0.9, scale: 1.05, y: 0.3 });
+    else frameShowcase();
     sync();
+    return true;
   }
 
   const panel = createPanel({
@@ -54,7 +58,7 @@ export function createPuzzle(ctx) {
   sync();
 
   function update(dt) {
-    if (S.camera === 'vitrine') {
+    if (S.camera !== 'livre') {
       S.camT -= dt;
       if (S.camT <= 0) frameShowcase(true);
     }

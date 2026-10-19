@@ -36,9 +36,9 @@ try {
       const res = await page.evaluate((c) => window.__pose(c), cfg);
       await page.screenshot({ path: `${OUT}/${name}.png` });
       shots++;
-      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}`))}`);
+      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}${r.lift ? ` subiu ${(r.lift * 1000).toFixed(0)} mm (${r.bone})` : ''}`))}`);
     };
-    for (const view of ['34', 'side', 'front', 'back', 'top', 'face', 'hero']) await pose(`01-repouso-${view}`, { view, sim: 1.5 });
+    for (const view of ['34', 'side', 'front', 'back', 'top', 'face', 'ear', 'hero']) await pose(`01-repouso-${view}`, { view, sim: 1.5 });
     const side = (extra) => ({ view: 'side', sim: 1.6, ...extra });
     await pose('02-passo', side({ speed: 0.7 }));
     await pose('03-trote', side({ speed: 1.9, sim: 1.3 }));
@@ -98,11 +98,13 @@ try {
     };
     await game('40-canil', '?level=canil&play', 150);
     await game('41-canil-trote-de-lado', '?level=canil&play', 120, 'G.game.puzzle.setPose("trote"); G.game.puzzle.setView("lado");');
-    await game('42-canil-sentadas', '?level=canil&play', 180, 'G.game.puzzle.setPose("sentada"); G.game.puzzle.setView("tres-quartos");');
-    await game('43-fase1-modelo-novo', '?level=1&play&dogs=novo', 120);
-    await game('44-fase5-modelo-novo', '?level=5&play&dogs=novo', 120);
-    await game('45-fase7-modelo-novo', '?level=7&play&dogs=novo', 120);
-    await game('46-fase9-modelo-novo', '?level=9&play&dogs=novo', 120);
+    await game('42-canil-radhijas-sentadas', '?level=canil&play', 180, 'G.game.puzzle.setPose("sentada"); G.game.puzzle.setView("tres-quartos"); G.game.puzzle.setCamera("radhija");');
+    await game('43-canil-rhaenyras-de-lado', '?level=canil&play', 150, 'G.game.puzzle.setView("lado"); G.game.puzzle.setCamera("rhaenyra");');
+    await game('44-canil-rhaenyras-frente', '?level=canil&play', 150, 'G.game.puzzle.setView("frente"); G.game.puzzle.setCamera("rhaenyra");');
+    await game('50-fase1-modelo-novo', '?level=1&play&dogs=novo', 120);
+    await game('51-fase5-modelo-novo', '?level=5&play&dogs=novo', 120);
+    await game('52-fase7-modelo-novo', '?level=7&play&dogs=novo', 120);
+    await game('53-fase9-modelo-novo', '?level=9&play&dogs=novo', 120);
   }
 
   if (errors.length) throw new Error(`erros no navegador:\n${errors.join('\n')}`);

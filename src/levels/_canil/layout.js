@@ -8,8 +8,9 @@ export const WORLD = { bounds: { minX: -4, maxX: 4, minZ: -3.2, maxZ: 3.2 } };
 
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
-  radhija: withStart('radhija', { x: -0.55, z: 1.9, yaw: Math.PI }),
-  rhaenyra: withStart('rhaenyra', { x: 0.55, z: 2.0, yaw: Math.PI }),
+  // de lado, fora do quadro da vitrine (a câmera dela fica entre a vitrine e o sul)
+  radhija: withStart('radhija', { x: -3.0, z: 1.8, yaw: 2.55 }),
+  rhaenyra: withStart('rhaenyra', { x: -3.35, z: 2.45, yaw: 2.55 }),
 };
 
 /**
@@ -26,6 +27,17 @@ export const SHOWCASE = {
     { kind: 'rhaenyra', model: 'v1', x: 0.6 },
     { kind: 'rhaenyra', model: 'v2', x: 1.8 },
   ],
+};
+
+/**
+ * Enquadramentos da vitrine (câmera.focusShot): ponto olhado (x, y) e distância (scale × CAMERA.offset). O ponto fica
+ * um pouco à direita do centro do grupo, para o painel (à direita da tela) não cobrir as dogs.
+ * @type {Record<'vitrine' | 'radhija' | 'rhaenyra', { x: number, y: number, scale: number }>}
+ */
+export const FRAMING = {
+  vitrine: { x: 0.58, y: 0.3, scale: 1.05 },
+  radhija: { x: -0.86, y: 0.26, scale: 0.62 },
+  rhaenyra: { x: 1.55, y: 0.28, scale: 0.66 },
 };
 
 /** Paredes do estúdio (norte e laterais; o sul fica aberto para a câmera). */
@@ -86,6 +98,6 @@ export const CAMERA = {
 
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = {
-  WORLD, DOGS, SHOWCASE, ROOM, STATIC_COLLIDERS, COLLECTIBLES, NAV_NODES, NAV_EDGES, GOAL, CAMERA,
+  WORLD, DOGS, SHOWCASE, FRAMING, ROOM, STATIC_COLLIDERS, COLLECTIBLES, NAV_NODES, NAV_EDGES, GOAL, CAMERA,
 };
 export default LAYOUT;

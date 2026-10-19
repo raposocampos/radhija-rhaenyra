@@ -127,7 +127,9 @@ export function createDogV2(kind) {
     retarget.apply();
     // nada do corpo passa do chão: se a pose afundou, o corpo sobe o que faltou
     self.lowest = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
-    if (self.lowest < -GROUND_TOLERANCE) inner.position.y += -GROUND_TOLERANCE - self.lowest;
+    self.lowestBone = bones[lowestPoint.bone]?.name ?? '';
+    self.lift = self.lowest < -GROUND_TOLERANCE ? -GROUND_TOLERANCE - self.lowest : 0;
+    inner.position.y += self.lift;
     mudU.uTime.value = st.t;
   };
 
@@ -144,8 +146,10 @@ export function createDogV2(kind) {
     bones,
     skeleton,
     meshes: { body: bodyMesh, ears: earMesh, fur: furMesh },
-    /** Ponto mais baixo do corpo no último quadro (m, antes da correção do chão). */
+    /** Ponto mais baixo do corpo no último quadro (m, antes da correção do chão), o osso dele e a subida aplicada. */
     lowest: 0,
+    lowestBone: '',
+    lift: 0,
     /** Esqueleto guia (atual, sem malha): testes e capturas comparam com ele. */
     driver: { rig: rig1, inner: driverInner },
     update,

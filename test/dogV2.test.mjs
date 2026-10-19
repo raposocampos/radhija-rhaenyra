@@ -147,16 +147,32 @@ for (const kind of KINDS) {
     const byName = (list, n) => list.find((b) => b.name === n);
     const report = [];
     const bad = [];
+    const a = v1[kind];
+    const partsA = regions(a);
     for (const [name, dur, anim] of CASES) {
-      // volta para a pose parada entre um caso e outro
-      for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+      // volta para a pose parada entre um caso e outro (um quadro farejando zera o tempo parado: sem sentar sozinha)
+      for (const dog of [d, a]) {
+        dog.update(1 / 60, { speed: 0, action: 'sniff' });
+        for (let i = 0; i < 30; i++) dog.update(1 / 60, { speed: 0, action: 'none' });
+      }
       const N = Math.max(12, Math.round(dur * 60));
       let worst = [Infinity, Infinity, Infinity];
+      let base = Infinity;
       let follow = 0;
+      let lift = 0;
+      let liftBone = '';
       for (let f = 0; f <= N; f++) {
         const k = f / N;
-        d.update(1 / 60, { speed: 0, turn: 0, action: 'none', ...anim(f / 60, k) });
+        const pose = { speed: 0, turn: 0, action: 'none', ...anim(f / 60, k) };
+        d.update(1 / 60, pose);
+        a.update(1 / 60, pose);
+        if (d.lift > lift) {
+          lift = d.lift;
+          liftBone = d.lowestBone;
+        }
         if (f % 6) continue;
+        // o modelo atual na mesma pose (referência: ele não tem a correção do chão)
+        base = Math.min(base, lowestByRegion(a, partsA)[0]);
         for (const b of d.bones) if (!Number.isFinite(b.quaternion.x + b.quaternion.w + b.position.x + b.position.y)) bad.push(`${name}: osso ${b.name} inválido`);
         const low = lowestByRegion(d, parts);
         worst = worst.map((x, i) => Math.min(x, low[i]));
@@ -169,7 +185,7 @@ for (const kind of KINDS) {
           follow = Math.max(follow, Math.hypot(v.x - w.x, v.y - w.y - lift, v.z - w.z));
         }
       }
-      report.push(`${name}: corpo ${worst[0].toFixed(3)} rabo ${worst[1].toFixed(3)} orelha ${worst[2].toFixed(3)} guia ${(follow * 1000).toFixed(2)} mm`);
+      report.push(`${name}: corpo ${worst[0].toFixed(3)} (atual ${base.toFixed(3)}) rabo ${worst[1].toFixed(3)} orelha ${worst[2].toFixed(3)} subida ${(lift * 1000).toFixed(1)} mm${liftBone ? ` (${liftBone})` : ''} guia ${(follow * 1000).toFixed(2)} mm`);
       if (follow > 1e-4) bad.push(`${name}: osso fora da guia (${(follow * 1000).toFixed(2)} mm)`);
       if (worst[0] < -0.012) bad.push(`${name}: o corpo passou do chão (${worst[0].toFixed(3)} m)`);
     }

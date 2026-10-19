@@ -1,5 +1,5 @@
-// CANIL DAS DOGS — painel da vitrine (só nesta fase de desenvolvimento): pose, vista, esqueleto, pelo molhado,
-// câmera e o link para jogar as fases com o modelo novo. Fica sob a interface do jogo (#ui, z-index 10): a pausa
+// CANIL DAS DOGS — painel da vitrine (só nesta fase de desenvolvimento): pose, vista, câmera (as quatro, só um par
+// ou seguindo a dog), esqueleto, pelo molhado e o link para jogar as fases com o modelo novo. Fica sob a interface do jogo (#ui, z-index 10): a pausa
 // e o cartão da fase cobrem o painel. Os botões não ficam com o foco do teclado (Espaço continua sendo o pulo).
 
 const CSS = `
@@ -23,7 +23,7 @@ const CSS = `
  * @param {{
  *   poses: { id: string, label: string }[], views: { id: string, label: string }[],
  *   onPose(id: string): void, onView(id: string): void, onSkeleton(on: boolean): void, onWet(on: boolean): void,
- *   onCamera(mode: 'vitrine' | 'livre'): void,
+ *   onCamera(mode: 'vitrine' | 'radhija' | 'rhaenyra' | 'livre'): void,
  * }} opts
  * → { el, sync(state), dispose() } ou null sem DOM (testes em Node)
  */
@@ -80,11 +80,15 @@ export function createPanel(opts) {
   section('Pose', opts.poses.map((p) => button(p.label, { pose: p.id }, () => opts.onPose(p.id))));
   section('Vista', opts.views.map((v) => button(v.label, { view: v.id }, () => opts.onView(v.id))));
   const state = { skeleton: false, wet: false, camera: 'vitrine' };
+  section('Câmera', [
+    button('As quatro', { camera: 'vitrine' }, () => opts.onCamera('vitrine')),
+    button('Só as Radhijas', { camera: 'radhija' }, () => opts.onCamera('radhija')),
+    button('Só as Rhaenyras', { camera: 'rhaenyra' }, () => opts.onCamera('rhaenyra')),
+    button('Seguir a dog', { camera: 'livre' }, () => opts.onCamera('livre')),
+  ]);
   section('Mostrar', [
     button('Esqueleto', { toggle: 'skeleton' }, () => opts.onSkeleton(!state.skeleton)),
     button('Pelo molhado', { toggle: 'wet' }, () => opts.onWet(!state.wet)),
-    button('Câmera na vitrine', { camera: 'vitrine' }, () => opts.onCamera('vitrine')),
-    button('Câmera na dog', { camera: 'livre' }, () => opts.onCamera('livre')),
   ]);
   const link = document.createElement('a');
   link.className = 'canil-link';
