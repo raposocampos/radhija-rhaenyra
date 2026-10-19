@@ -1045,6 +1045,50 @@ export function createFeedback(opts) {
   });
   events.on('goose:return', ({ x, z }) => sfx('gooseReturn', x, z));
 
+  // ---------- porquinhos (src/game/mechanics/pigHerd.js) ----------
+  const pigHead = (x, z) => ({ x, y: 0.56, z });
+  events.on('pig:gate', ({ x, z, open }) => sfx('pigGate', x, z, { open }));
+  events.on('pig:release', ({ x, z }) => {
+    particles.dust({ x, y: 0.03, z }, { count: 7, size: 0.9, alpha: 0.4, strength: 0.7 });
+    later(0.5, () => particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.8, alpha: 0.35, strength: 0.6 }));
+  });
+  events.on('pig:oink', ({ x, z, kind }) => {
+    sfx('pigOink', x, z, { kind });
+    if (kind === 'happy') particles.burst({ x, y: 0.5, z }, { kind: 'hearts', count: 2, size: 0.6 });
+    if (kind === 'grumpy') particles.dust({ x, y: 0.3, z }, { count: 2, size: 0.5, alpha: 0.3, strength: 0.4 });
+  });
+  events.on('pig:bump', ({ x, z }) => {
+    sfx('pigBump', x, z);
+    particles.burst({ x, y: 0.4, z }, { kind: 'stars', count: 5, size: 0.65, speed: 0.55 });
+    particles.dust({ x, y: 0.04, z }, { count: 4, size: 0.8, alpha: 0.4, strength: 0.6 });
+  });
+  events.on('pig:smell', ({ x, z }) => popIcon('alert', { at: pigHead(x, z), life: 1.0, size: 0.2 }));
+  events.on('pig:eat', ({ x, z }) => sfx('pigMunch', x, z));
+  events.on('pig:munch', ({ x, z }) => {
+    sfx('pigMunch', x, z, { volume: 0.75 });
+    particles.dust({ x, y: 0.05, z }, { count: 2, size: 0.4, alpha: 0.3, strength: 0.35, color: '#e9c46a' });
+  });
+  events.on('pig:snort', ({ x, z }) => sfx('pigSnort', x, z, { volume: 0.7 }));
+  events.on('pig:full', ({ x, z }) => {
+    sfx('pigFull', x, z);
+    particles.burst({ x, y: 0.5, z }, { kind: 'hearts', count: 3, size: 0.7 });
+  });
+  events.on('pig:snore', ({ x, z }) => sfx('pigSnore', x, z, { volume: 0.6 }));
+  events.on('pig:shake', ({ x, z }) => {
+    sfx('pigShake', x, z);
+    particles.dust({ x, y: 0.2, z }, { count: 6, size: 0.7, alpha: 0.35, strength: 0.9, color: '#a88a64' });
+  });
+  events.on('pig:done', ({ x, z }) => popIcon('alert', { at: pigHead(x, z), life: 0.9, size: 0.2 }));
+  events.on('pig:home', ({ x, z }) => particles.sparkle({ x, y: 0.5, z }, { count: 10, radius: 0.4, size: 0.8, rise: 0.6 }));
+  events.on('bell:ring', ({ x, z }) => {
+    sfx('bellRing', x, z);
+    particles.sparkle({ x, y: 0.85, z }, { count: 8, radius: 0.18, size: 0.7, rise: 0.4 });
+  });
+  events.on('veggie:drop', ({ x, z }) => {
+    sfx('veggieDrop', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.6, alpha: 0.35, strength: 0.4 });
+  });
+
   // ---------- comemoração e vitória ----------
   events.on('celebrate:start', ({ x, z }) => {
     audio.play('celebrate');
