@@ -1,10 +1,28 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (redes de prazo nas capturas e páginas extras do E2E). Ler primeiro
+Última atualização: **2026-10-19, Claude** (voltinha natural e recompensa do segredo). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: redes de prazo nas capturas e páginas extras do E2E (Claude, 2026-10-19)
+## Em andamento: voltinha natural e recompensa do segredo (Claude, 2026-10-19)
 
+- Pedido do usuário sobre o extra escondido da tarefa E (já em produção): a animação estava dura, ela girava 360°
+  parada antes de agachar; a girada precisa ser natural, e o segredo precisa de uma recompensa própria, gostosa de
+  ver. Mantidos: a pose aprovada da agachada (foto do usuário), C/R3, só com os 3 ossinhos e uma vez por tentativa.
+- Branch `claude/coco-natural` (worktree próprio), base `0bd48d0`, PR para o `main` (consultar o PR para SHA, CI, E2E
+  e prévia). Feito em `src/game/extras.js`: `planCircle` (a voltinha anda de verdade num círculo de 0,5 × o
+  comprimento da dog, 0,8–1,3 volta, terminando de perfil para a câmera, só por onde cabe; sem espaço encurta ou ela
+  fareja parada; nunca gira sem andar), `planZoom` e a comemoração (`extra:secret`: brilho dourado e jingle, câmera
+  de perto, zoomies ou pulinho virando, reverência com latidinho, dois pulinhos, orgulhosa; a irmã até 6 m se
+  espanta e manda coraçõezinhos). Poses (`poopPre`, `party`, `cheer`) em `dogAnimation.js`, com os apoios girando
+  com o corpo na curva. Brilho em `poop.js` (`shine`, `dispose`), sons em `soundsExtras.js`, efeitos em
+  `feedback.js`. Testes: `test/extras.test.mjs` (passo = deslocamento, sem atravessar nada, volta inteira e zoomies
+  no gramado da fase 1, sem espaço na beirada), suíte E2E `extras` e `capture-extras.mjs` (gramado e cozinha).
+- Nada rodou no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `extras` no head, revisar as
+  capturas (`shots/extras-revisao/`), ajustar e entregar a prévia. Merge só com a aprovação do usuário.
+
+## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0`)
+
+- Produção conferida em `0bd48d0` (`version.json`). Registro do trabalho abaixo.
 - Motivo: os `capture-*.mjs` e as páginas extras das suítes usavam o Playwright direto, sem as redes do PR #27. No
   E2E `39173570454` o `capture-lambe.mjs` travou até o timeout de 30 min do job (boot da fase 7, `goto` +
   `waitForFunction` de 180 s); no `39178028583` o `capture-celular.mjs` falhou com "condição não alcançada" e a
@@ -71,7 +89,7 @@
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
 - **Ordem atual (pedido do usuário, 2026-10-18):** A e B entregues; **E agora**, antes de C (fase 9) e D (fase 10).
-- **E (em andamento, Claude):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
+- **E (entregue, PR #28, squash `d306983`; o ajuste da voltinha e da recompensa está no topo):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
   `claude/animacoes-extras` (worktree próprio), base `42715b6`. Regras do usuário: o cocô com **C** no teclado e
   **R3** no controle, só depois dos 3 ossinhos e uma vez por fase (o reinício libera); a animação é o principal
   (agachada, traseiras dobradas, rabinho em pé, tremidinha, cara de concentração, cocô de desenho fofo e alívio

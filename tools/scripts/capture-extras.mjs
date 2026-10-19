@@ -1,5 +1,7 @@
 // Capturas de revisão dos extras escondidos (src/game/extras.js) em qualidade visual completa: a sequência do
-// cocô quadro a quadro (as duas dogs, de lado e por trás) e cada animação do cenário nas oito fases.
+// cocô quadro a quadro (as duas dogs: a voltinha, a agachada de lado, por trás e de frente, e a comemoração com o
+// brilho, os zoomies, a reverência, os pulinhos e a irmã), no gramado da fase 1 e na cozinha da fase 5, e cada
+// animação do cenário nas oito fases.
 // Roda no GitHub Actions (E2E manual, suíte extras), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro (1/60 s); teclas reais chegam pelos ouvintes do jogo; teleporte só prepara as cenas.
 // Saída: shots/extras-revisao/*.png.
@@ -110,26 +112,126 @@ try {
     }
   });
 
-  // 1. o cocô, quadro a quadro, com as duas dogs (cozinha da fase 5, com espaço em volta)
-  for (const name of ['radhija', 'rhaenyra']) {
-    await open('fase5');
-    await put(name, 0.2, 1.3, 2.4);
+  /** Câmera fixa olhando (x, z) de `dist` m na direção da câmera do jogo (o que o jogador vê, mais perto). */
+  const gameCam = () => page.evaluate(() => { const c = window.__game.engine.camera.position; return { x: c.x, z: c.z }; });
+  const toward = (at, cp, dist, h, lookY = 0.15) => {
+    const dx = cp.x - at.x;
+    const dz = cp.z - at.z;
+    const L = Math.hypot(dx, dz) || 1;
+    return { pos: [at.x + (dx / L) * dist, h, at.z + (dz / L) * dist], look: [at.x, lookY, at.z] };
+  };
+  /** Como o jogador vê (um quadro para a câmera do jogo voltar à pose dela). */
+  const shotGame = async (name) => {
+    await step(1);
+    await shot(name, null);
+  };
+  /** O lugar mais aberto da fase (grade, de 2,6 m livres em volta para baixo), para a volta inteira e os zoomies. */
+  const openSpot = () => page.evaluate(() => {
+    const w = window.__game.game.debug.world;
+    const b = w.bounds;
+    for (const r of [2.6, 2.4, 2.2, 2.0]) {
+      for (let z = b.minZ + r; z <= b.maxZ - r; z += 0.25) {
+        for (let x = b.minX + r; x <= b.maxX - r; x += 0.25) if (!w.overlaps(x, z, r, 'large')) return { x, z };
+      }
+    }
+    return null;
+  });
+  const plopAt = () => page.evaluate(() => window.__game.game.debug.events('extra:plop').at(-1)?.payload ?? null);
+
+  /**
+   * O cocô inteiro com a dog `name` em `at` (a irmã sentada ao lado, para reagir): a voltinha (de cima, de perto, os
+   * pés e como o jogador vê), a agachada (de lado, por trás e de frente) e a comemoração (o brilho de perto, os
+   * zoomies de longe, a reverência, os pulinhos, a irmã e o cocô no fim).
+   */
+  async function poopScene(level, name, at, tag, { sister = true, party = true } = {}) {
+    await open(level);
+    await put(name, at.x, at.z, at.yaw);
     await collectAll();
-    await put(name, 0.2, 1.3, 2.4);
+    await put(name, at.x, at.z, at.yaw);
+    const cp = await gameCam();
+    if (sister) {
+      // ao lado dela, de frente para a câmera, a ~2 m
+      await page.evaluate(({ n, at: a, cp: c }) => {
+        const g = window.__game.game;
+        const vx = a.x - c.x;
+        const vz = a.z - c.z;
+        const L = Math.hypot(vx, vz) || 1;
+        g.debug.teleport(n, a.x - (vz / L) * 1.9 - (vx / L) * 0.4, a.z + (vx / L) * 1.9 - (vz / L) * 0.4);
+        g.debug.ctrls[n].yaw = Math.atan2(c.x - a.x, c.z - a.z);
+        g.debug.setStay(n, true);
+        window.__step(40);
+      }, { n: name === 'radhija' ? 'rhaenyra' : 'radhija', at, cp });
+      await put(name, at.x, at.z, at.yaw);
+    }
+    await step(30);
+    const s0 = await dogAt(name);
     await tap('KeyC');
-    // a câmera acompanha a direção final (depois da voltinha ela volta para a mesma)
+    const wide = toward(s0, cp, 2.2, 1.4, 0.1);
+    for (const [k, label] of [[0.08, 'fareja'], [0.28, 'volta-a'], [0.45, 'volta-b'], [0.62, 'volta-c'], [0.8, 'volta-d'], [0.96, 'acomoda']]) {
+      await until(new Function('i', `const p = i.extras?.poop; return !p || p.phase !== 'pre' || (p.t + p.pre) / p.pre >= ${k}`));
+      await shot(`${tag}-1-${label}`, wide);
+      if (label === 'volta-b' || label === 'volta-c') {
+        const d = await dogAt(name);
+        await shot(`${tag}-1-${label}-perto`, around(d, 'side', 1.15, 0.5));
+        await shot(`${tag}-1-${label}-patas`, around(d, 'side', 0.8, 0.2, 0.08));
+      }
+      if (label === 'volta-b') await shotGame(`${tag}-1-${label}-jogo`);
+    }
+    // a agachada (como na versão aprovada)
+    await until((i) => i.extras?.poop?.phase === 'squat');
     const d = await dogAt(name);
-    const marks = [[-0.17, 'voltinha'], [0.08, 'agacha'], [0.24, 'forca-1'], [0.34, 'saindo'], [0.46, 'saiu'], [0.58, 'alivio'], [0.66, 'passinho'], [0.76, 'cava-1'], [0.84, 'cava-2'], [0.97, 'fim']];
-    for (const [k, label] of marks) {
-      await until(new Function('i', `return (i.extras?.poop?.k ?? 1) >= ${k}`));
-      await shot(`${name}-coco-${label}-lado`, around(d, 'side'));
-      if (['forca-1', 'saindo', 'saiu', 'cava-1', 'fim'].includes(label)) await shot(`${name}-coco-${label}-tras`, around(d, 'back', 1.2, 0.6));
-      if (['forca-1', 'alivio'].includes(label)) await shot(`${name}-coco-${label}-frente`, around(d, 'front', 1.05, 0.45, 0.3));
+    for (const [k, label] of [[0.08, 'agacha'], [0.24, 'forca'], [0.34, 'saindo'], [0.58, 'alivio'], [0.66, 'passinho'], [0.8, 'cava']]) {
+      await until(new Function('i', `return (i.extras?.poop?.k ?? 9) >= ${k}`));
+      await shot(`${tag}-2-${label}-lado`, around(d, 'side'));
+      if (['forca', 'saindo', 'cava'].includes(label)) await shot(`${tag}-2-${label}-tras`, around(d, 'back', 1.2, 0.6));
+      if (['forca', 'alivio'].includes(label)) await shot(`${tag}-2-${label}-frente`, around(d, 'front', 1.05, 0.45, 0.3));
+      if (label === 'forca') await shotGame(`${tag}-2-${label}-jogo`);
+    }
+    // a comemoração
+    await until((i) => (i.extras?.poop?.party ?? -1) >= 0);
+    const P = await page.evaluate(() => window.__game.game.debug.info().extras.poop);
+    const pp = await plopAt();
+    const far = toward(pp, cp, 3.0, 1.7, 0.15);
+    const sisName = name === 'radhija' ? 'rhaenyra' : 'radhija';
+    /** @type {[number, string, () => Promise<object | null> | object | null][]} */
+    const marks = [
+      [0.22, 'brilho-perto', () => toward(pp, cp, 0.75, 0.32, 0.12)],
+      [0.4, 'brilho', () => far],
+      [0.62, 'brilho-perto-2', () => toward(pp, cp, 0.6, 0.22, 0.1)],
+      [0.9, 'jogo', null],
+    ];
+    if (party) {
+      for (let s = 0.55; s < P.end; s += 0.3) marks.push([s, `festa-${s.toFixed(2)}`, () => far]);
+      const bow = P.end - 2.25 + 0.38;
+      const hop = P.end - 1.43 + 0.17;
+      marks.push([bow, 'reverencia', async () => around(await dogAt(name), 'side', 1.2, 0.45)]);
+      marks.push([bow + 0.02, 'reverencia-frente', async () => around(await dogAt(name), 'front', 1.1, 0.4, 0.2)]);
+      marks.push([hop, 'pulinho', async () => around(await dogAt(name), 'side', 1.25, 0.5)]);
+      marks.push([P.end - 0.35, 'orgulhosa', async () => around(await dogAt(name), 'front', 1.1, 0.45, 0.3)]);
+      if (P.cheer) {
+        marks.push([0.5, 'irma-uau', async () => around(await dogAt(sisName), 'front', 1.05, 0.45, 0.32)]);
+        marks.push([1.0, 'irma-coracoes', async () => around(await dogAt(sisName), 'front', 1.3, 0.55, 0.4)]);
+      }
+    }
+    marks.sort((a, b) => a[0] - b[0]);
+    for (const [s, label, cam] of marks) {
+      await until(new Function('i', `const p = i.extras?.poop; return !p || p.party >= ${s}`));
+      if (cam === null) await shotGame(`${tag}-3-${label}`);
+      else await shot(`${tag}-3-${label}`, await cam());
     }
     await until((i) => !i.extras?.poop);
     await step(40);
-    await shot(`${name}-coco-no-chao`, around(d, 'back', 0.9, 0.45, 0.06));
+    await shot(`${tag}-4-coco-no-chao`, toward(pp, cp, 0.55, 0.2, 0.06));
+    await step(100); // a estrelinha pisca de vez em quando
+    await shot(`${tag}-4-coco-depois`, toward(pp, cp, 0.55, 0.2, 0.06));
   }
+
+  // 1. o cocô com as duas dogs: no gramado aberto da fase 1 (volta inteira e zoomies) e na cozinha da fase 5
+  await open('fase1');
+  const lawn = await openSpot();
+  if (!lawn) throw new Error('a fase 1 não tem um lugar aberto para a volta inteira');
+  for (const name of ['radhija', 'rhaenyra']) await poopScene('fase1', name, { ...lawn, yaw: 0.4 }, `${name}-gramado`);
+  for (const name of ['radhija', 'rhaenyra']) await poopScene('fase5', name, { x: 0.2, z: 1.3, yaw: 2.4 }, `${name}-cozinha`, { sister: false, party: name === 'radhija' });
 
   /** E perto de um ponto do cenário e capturas nos momentos pedidos. */
   async function scene(level, id, who, marks, opts = {}) {

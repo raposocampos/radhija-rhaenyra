@@ -82,7 +82,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -766,6 +766,9 @@ export function createGame({ engine, dogs, levels, params }) {
       an.turn = c.yawRate;
       an.carrying = carries(n);
       an.poopK = extras ? extras.poopK(n) : -1;
+      an.poopPre = extras ? extras.poopPre(n) : -1;
+      an.party = extras ? extras.party(n) : null;
+      an.cheer = extras ? extras.cheer(n) : -1;
       an.extra = extras ? extras.extraAnim(n) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       an.jump = W ? 0 : c.y;
@@ -945,7 +948,15 @@ export function createGame({ engine, dogs, levels, params }) {
           };
         } else cam.configure(L);
         if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
-        if (!extras) extras = createExtras({ emit, ctrls, carries, camera: engine.camera, resolve: (x, z, r, size) => world.resolve(x, z, r, size) });
+        if (!extras) {
+          extras = createExtras({
+            emit, ctrls, carries, camera: engine.camera,
+            resolve: (x, z, r, size) => world.resolve(x, z, r, size),
+            overlaps: (x, z, r, size) => world.overlaps(x, z, r, size),
+            locked: (n) => !!puzzle?.lockFor(n),
+            focus: (x, z, opts) => cam.focusShot(x, z, opts),
+          });
+        }
         extras.setLevel({ spots: def.extras || [], root, hooks: built.extras || {} });
         for (const n of NAMES) setStay(n, false, { silent: true });
         puzzle = def.createPuzzle({

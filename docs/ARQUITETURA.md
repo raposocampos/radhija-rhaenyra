@@ -390,8 +390,19 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
 (`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
 - **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
   todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
-  boca. A sequência dura `POOP_TIME` s, e as poses vêm de `poopK` em `dogAnimation.js`: agacha, faz força, solta o
-  cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã por perto vira a cara.
+  boca. Três partes, com as poses em `dogAnimation.js`:
+  - voltinha (`poopPre`): ela fareja e anda um círculo pequeno de verdade (0,5 × o comprimento dela, de 0,8 a 1,3
+    volta, terminando de perfil para a câmera), com o passo igual ao deslocamento e os apoios girando com o corpo na
+    curva. `planCircle` só aceita um caminho sem colisor (`overlaps` do mundo), sem a irmã e com o chão livre onde o
+    cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada. Nunca gira
+    sem andar;
+  - agachada (`poopK`, `POOP_TIME` s): agacha, faz força, solta o cocozinho de `src/world/poop.js` e cava com as
+    traseiras; a irmã por perto vira a cara;
+  - comemoração (`party`): o cocô brilha dourado (`poop.shine()`, com feixe de luz e estrelinha), toca o jingle
+    `extraSecret` e a câmera chega perto. Ela sai em zoomies (`planZoom`: dispara, faz a curva e freia de frente para
+    o cocô, só se couber) ou dá um pulinho virando meia volta; depois a reverência de brincadeira, dois pulinhos e
+    orgulhosa. A irmã até 6 m se espanta e manda coraçõezinhos (`cheer`).
+  Se algo que se mexe entrar no caminho, ela para ali. Eventos em `extras.js` (`extra:secret`, `extra:zoom`...).
 - **Animações do cenário**: `extras` na definição da fase (`src/levels/faseN/extras.js`, tipo `ExtraSpot`). Com o E
   perto e de frente para o ponto, quando a fase não usou o E, a dog bebe, come, cava, cheira e espirra, focinha a
   bola, rola, balança ou leva um esguicho. Valem sempre, com a boca vazia (com um objeto na boca não dá para comer,

@@ -3,6 +3,9 @@
 // fumacinhas claras de cheiro. Base no chão (y = 0), ~11 cm de largura na escala 1. Tudo procedural.
 //   appear(dur): vai saindo de baixo para cima em `dur` s (a espiral se revela ao longo do tubo) e assenta com um
 //   balancinho; os olhinhos abrem no fim. update(dt): o balancinho e as fumacinhas.
+//   shine(): a recompensa do segredo. Acende uma luz dourada, sobe um feixe de luz, dá um pulinho feliz (olhinhos
+//   fechados de alegria e bochechas rosadas) e a estrelinha da ponta brilha; depois fica um calorzinho dourado e a
+//   estrelinha pisca de vez em quando. dispose(): tira da cena e libera geometrias e materiais.
 import * as THREE from 'three';
 
 const TAU = Math.PI * 2;
@@ -25,6 +28,35 @@ function spiral(u, out) {
   return out;
 }
 const tubeR = (u) => 0.024 * (1 - u) ** 0.55 + 0.004 * (1 - u) + 0.0025;
+const sstep = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/** Feixe de luz: cilindro aberto, mais largo em cima, que some para cima (alfa por vértice). */
+function beamGeometry(r0, r1, h) {
+  const g = new THREE.CylinderGeometry(r1, r0, h, 24, 8, true);
+  g.translate(0, h / 2, 0);
+  const p = g.attributes.position;
+  const col = new Float32Array(p.count * 4);
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i) / h;
+    col.set([1, 0.8, 0.4, (1 - y) ** 1.8 * Math.min(1, 0.25 + y * 6)], i * 4);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  return g;
+}
+/** Estrelinha de quatro pontas no plano XY. */
+function starGeometry(rOut, rIn) {
+  const sh = new THREE.Shape();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU + Math.PI / 2;
+    const r = i % 2 ? rIn : rOut;
+    if (i) sh.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    else sh.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  return new THREE.ShapeGeometry(sh);
+}
 
 /** @param {{ scale?: number }} [opts] */
 export function createPoop({ scale = 1 } = {}) {
@@ -123,6 +155,23 @@ export function createPoop({ scale = 1 } = {}) {
   smile.rotation.z = Math.PI;
   smile.position.set(0, -0.009, 0.002);
   face.add(smile);
+  // alegria (shine): olhinhos fechados em arco e bochechas rosadas
+  const arcMat = new THREE.MeshStandardMaterial({ color: '#140b07', roughness: 0.4 });
+  const arcs = [];
+  for (const sx of [-1, 1]) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.0058, 0.0017, 6, 14, Math.PI), arcMat);
+    arc.position.set(sx * 0.0125, 0.002, 0.002);
+    arc.scale.setScalar(0.001);
+    face.add(arc);
+    arcs.push(arc);
+  }
+  const blushMat = new THREE.MeshBasicMaterial({ color: '#ff8da1', transparent: true, opacity: 0, depthWrite: false });
+  for (const sx of [-1, 1]) {
+    const blush = new THREE.Mesh(new THREE.CircleGeometry(0.0062, 16), blushMat);
+    blush.position.set(sx * 0.0235, -0.006, 0.0015);
+    blush.scale.y = 0.7;
+    face.add(blush);
+  }
   body.add(face);
 
   // fumacinhas de cheiro: tubinhos ondulados claros que sobem e somem
@@ -138,9 +187,34 @@ export function createPoop({ scale = 1 } = {}) {
     root.add(holder);
     stinks.push({ holder, mat: smat, ph: i * 0.33 });
   }
-  root.scale.setScalar(scale);
 
-  const S = { t: -1, age: 0, dur: 0.6 };
+  // brilho do segredo: luz dourada no próprio cocô, feixe de luz e a estrelinha da ponta (com um halo)
+  const glowMats = [mat, base.material, tip.material];
+  for (const m of glowMats) {
+    m.emissive.set('#ffb12e');
+    m.emissiveIntensity = 0;
+  }
+  const beamMat = new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const beam = new THREE.Group();
+  beam.add(new THREE.Mesh(beamGeometry(0.05, 0.1, 0.95), beamMat), new THREE.Mesh(beamGeometry(0.13, 0.24, 0.7), beamMat));
+  beam.visible = false;
+  root.add(beam);
+  const glintMat = new THREE.MeshBasicMaterial({ color: '#fff3c2', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const haloMat = new THREE.MeshBasicMaterial({ color: '#ffcf5a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const glint = new THREE.Group();
+  glint.add(new THREE.Mesh(new THREE.CircleGeometry(0.026, 20), haloMat), new THREE.Mesh(starGeometry(0.045, 0.007), glintMat));
+  spiral(1, glint.position);
+  glint.position.x += 0.014;
+  glint.position.y += 0.026;
+  glint.position.z += 0.02;
+  glint.visible = false;
+  body.add(glint);
+  root.scale.setScalar(scale);
+  beam.scale.setScalar(1 / scale); // o feixe tem o mesmo tamanho com as duas dogs
+
+  const S = { t: -1, age: 0, dur: 0.6, shine: -1 };
   function update(dt) {
     if (S.t < 0) return;
     S.t += dt;
@@ -153,13 +227,24 @@ export function createPoop({ scale = 1 } = {}) {
     tip.visible = k >= 1;
     // depois de sair: assenta com um balancinho (mola amortecida) e respira devagar
     const u = Math.max(0, S.t - S.dur);
-    const wob = u < 0.9 ? Math.exp(-u * 6) * Math.sin(u * 24) : 0;
+    let wob = u < 0.9 ? Math.exp(-u * 6) * Math.sin(u * 24) : 0;
+    const happy = S.shine >= 0 ? stepShine(dt) : 0;
+    // pulinho do brilho: estica subindo e amassa no pouso (mola)
+    const jt = S.shine - 0.08;
+    const lw = jt - 0.42;
+    const jumping = S.shine >= 0 && jt > 0 && jt < 0.42;
+    if (jumping) wob -= Math.sin((Math.PI * jt) / 0.42) * 0.45;
+    if (S.shine >= 0 && lw > 0 && lw < 1) wob += Math.exp(-lw * 7) * Math.sin(lw * 26) * 1.1;
+    body.position.y = jumping ? Math.sin((Math.PI * jt) / 0.42) * 0.045 : 0;
     body.scale.set(1 + wob * 0.12, 1 - wob * 0.18, 1 + wob * 0.12);
     body.rotation.y = Math.sin(S.age * 1.3) * 0.06;
-    // olhinhos abrem um tempinho depois e piscam de vez em quando
+    // olhinhos abrem um tempinho depois e piscam de vez em quando (felizes: fechados em arco)
     const open = Math.min(1, Math.max(0, (u - 0.35) / 0.2));
     const blink = (S.age % 3.2) > 3.05 ? 0.15 : 1;
-    for (const e of eyes) e.scale.y = 1.2 * Math.max(0.05, open * blink);
+    for (const e of eyes) e.scale.y = 1.2 * Math.max(0.05, open * blink * (1 - happy));
+    for (const a of arcs) a.scale.setScalar(Math.max(0.001, happy));
+    smile.scale.set(1 + happy * 0.45, 1 + happy * 0.3, 1);
+    blushMat.opacity = happy * 0.6;
     face.visible = k >= 1;
     // fumacinhas: sobem em ciclos nos primeiros segundos e depois só de vez em quando
     for (const s of stinks) {
@@ -169,6 +254,38 @@ export function createPoop({ scale = 1 } = {}) {
       s.mat.opacity = Math.sin(Math.PI * cyc) * 0.5 * fade;
       s.holder.rotation.y = Math.sin(S.age * 2 + s.ph * TAU) * 0.4;
     }
+  }
+  /** O brilho, s desde shine(); devolve a alegria da carinha (0..1). */
+  function stepShine(dt) {
+    S.shine += dt;
+    const g = S.shine;
+    // luz dourada: acende rápido, fica e assenta num calorzinho
+    const glow = g < 0.12 ? g / 0.12 : g < 0.9 ? 1 - (g - 0.12) * 0.3 : Math.max(0.07, 0.77 * Math.exp(-(g - 0.9) * 1.3));
+    for (const m of glowMats) m.emissiveIntensity = glow * 0.85;
+    // feixe de luz: sobe, gira devagar e some
+    const bo = g < 0.18 ? g / 0.18 : Math.max(0, 1 - (g - 0.18) / 1.6);
+    beam.visible = bo > 0.003;
+    beamMat.opacity = bo * 0.85;
+    beam.rotation.y += dt * 0.8;
+    const grow = 0.55 + 0.45 * sstep(0, 0.3, g);
+    beam.scale.set((1 + g * 0.12) / scale, grow / scale, (1 + g * 0.12) / scale);
+    // estrelinha: abre grande girando, assenta e depois pisca a cada 2,4 s
+    let st = 0;
+    let so = 0;
+    if (g > 0.2 && g < 1.6) {
+      st = sstep(0.2, 0.36, g) * (1.4 - 0.4 * sstep(0.36, 0.6, g));
+      so = 1 - sstep(1.1, 1.6, g);
+    } else if (g >= 1.6) {
+      const c = (g - 1.6) % 2.4;
+      st = c < 0.36 ? Math.sin((Math.PI * c) / 0.36) * 0.75 : 0;
+      so = st > 0 ? 0.9 : 0;
+    }
+    glint.visible = st > 0.01;
+    glint.scale.setScalar(Math.max(0.001, st));
+    glint.rotation.z = g * 1.6;
+    glintMat.opacity = so;
+    haloMat.opacity = so * 0.45;
+    return sstep(0.05, 0.2, g) * (1 - sstep(3.2, 3.8, g));
   }
   return {
     object: root,
@@ -181,5 +298,18 @@ export function createPoop({ scale = 1 } = {}) {
       update(0);
     },
     update,
+    /** A recompensa do segredo (brilho dourado, feixe, pulinho e carinha feliz). */
+    shine() {
+      S.shine = 0;
+    },
+    /** Tira da cena e libera os recursos (o reinício limpa o chão). */
+    dispose() {
+      root.removeFromParent();
+      root.traverse((o) => {
+        const m = /** @type {any} */ (o);
+        m.geometry?.dispose();
+        if (m.material) for (const x of Array.isArray(m.material) ? m.material : [m.material]) x.dispose();
+      });
+    },
   };
 }
