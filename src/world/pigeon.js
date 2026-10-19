@@ -110,13 +110,16 @@ function featherShape() {
   return weldNormals(geo);
 }
 
-/** Coberteiras: folha larga com as bordas curvadas para dentro (abraça o corpo dobrada e arqueia aberta). */
+/**
+ * Coberteiras: folha larga em concha. Dobrada, a borda de cima (y < 0) curva forte em direção ao dorso e a de
+ * baixo encosta no flanco; aberta, a borda de trás arqueia para baixo.
+ */
 function panelShape() {
   const geo = new THREE.SphereGeometry(1, 12, 12).rotateX(Math.PI / 2);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const u = (p.getZ(i) + 1) / 2, y = p.getY(i);
-    p.setXYZ(i, p.getX(i) * 0.5 - 0.55 * y * y * (1 - 0.4 * u), y * 0.5 * (1 - 0.3 * u), u);
+    p.setXYZ(i, p.getX(i) * 0.5 - (y < 0 ? 1.4 : 0.12) * y * y * (1 - 0.4 * u), y * 0.5 * (1 - 0.3 * u), u);
   }
   geo.computeVertexNormals();
   return weldNormals(geo);
@@ -270,14 +273,15 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   // ---------------------------------------------------------------- tronco: peito cheio, dorso descendo à cauda
   const torso = new THREE.Mesh(new Parts().add(blob(24, 16, (x, y, z, o) => {
     const back = 1 - ss(z, -1, 0.25);
-    const ry = lerp(0.089 * (1 - 0.45 * back), 0.073 * (1 - 0.26 * back), ss(y, -0.35, 0.35));
-    o.set(x * 0.086 * (1 - 0.4 * back), y * ry + 0.028 * z,
-      z * (z > 0 ? 0.122 : 0.148) + 0.02 * Math.max(0, z) * Math.max(0, 0.35 - y));
+    const ry = lerp(0.084 * (1 - 0.45 * back), 0.07 * (1 - 0.26 * back), ss(y, -0.35, 0.35));
+    o.set(x * 0.083 * (1 - 0.4 * back), y * ry + 0.028 * z,
+      z * (z > 0 ? 0.128 : 0.158) + 0.02 * Math.max(0, z) * Math.max(0, 0.35 - y));
   }, (x, y, z) => tmp.copy(mantle)
     .lerp(belly, ss(-y, -0.1, 0.6))
     .lerp(rump, 0.8 * ss(-z, 0.55, 0.9) * ss(y, 0, 0.5))
-    .lerp(slate, ss(z, 0.45, 0.85) * ss(y, -0.55, 0.15)),
-  (x, y, z) => [0.85 * ss(z, 0.45, 0.85) * ss(y, -0.55, 0.15), 0, 0.78], true)).build(), mat);
+    .lerp(slate, 0.7 * ss(z, 0.62, 0.92) * ss(y, -0.2, 0.35)),
+  // só o alto do peito, emendando no pescoço, é furta-cor; o resto do peito é cinza
+  (x, y, z) => [0.6 * ss(z, 0.62, 0.92) * ss(y, -0.2, 0.35), 0, 0.78], true)).build(), mat);
   torso.name = 'tronco';
   torso.position.fromArray(TORSO);
 
@@ -315,19 +319,20 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
     new THREE.Vector3(sx, 0, 0), beakUp.clone().multiplyScalar(sy), beakDir.clone().multiplyScalar(sz)).setPosition(x, y, z);
   const beakC = C('#3a3337'), beakTip = C('#5b5054');
   headParts.add(beakGeo, { color: (x, y, z) => tmp.copy(beakC).lerp(beakTip, ss(z, 0.5, 1)), at: beakAt(0, 0.0105, 0.05, 0.0085, 0.0072, 0.032) });
-  // carúncula: dois gominhos brancos em cima da base do bico
+  // carúncula: um calombo branco em cima da base do bico (dois gominhos colados)
   const lobe = new THREE.SphereGeometry(1, 8, 6);
   for (const sx of [-1, 1]) {
-    headParts.add(lobe, { color: C('#f3efe9'), fx: [0, 0.06, 0], at: beakAt(sx * 0.0045, 0.017, 0.056, 0.006, 0.0048, 0.0095) });
+    headParts.add(lobe, { color: C('#ece7df'), fx: [0, 0.04, 0], at: beakAt(sx * 0.0026, 0.0172, 0.057, 0.0052, 0.0052, 0.0105) });
   }
   // olhos: pele clara em volta, íris laranja que brilha, pupila e dois reflexos; fechados viram um risquinho
   const eyeBall = new THREE.SphereGeometry(1, 10, 6), spark = new THREE.SphereGeometry(1, 6, 4);
-  const ringC = C('#d9d2cf'), pupilC = C('#100a0a'), white = C('#ffffff');
+  const ringC = C('#cfc9c8'), pupilC = C('#100a0a'), white = C('#ffffff');
   const irisIn = C('#ffbb3d'), irisOut = C('#e05a1c'), irisRim = C('#7a2410');
   for (const sx of [1, -1]) {
     const c = new THREE.Vector3(sx * 0.0366, 0.0245, 0.0268);
     const nrm = new THREE.Vector3(sx * 0.93, 0.195, 0.296).normalize();
-    const up = new THREE.Vector3(0, 1, 0).addScaledVector(nrm, -nrm.y).normalize();
+    c.addScaledVector(nrm, -0.0025); // meio embutido: o olho não salta da silhueta
+    const up =new THREE.Vector3(0, 1, 0).addScaledVector(nrm, -nrm.y).normalize();
     const side = new THREE.Vector3().crossVectors(up, nrm);
     const fwd = new THREE.Vector3(0, 0, 1).addScaledVector(nrm, -nrm.z).addScaledVector(up, -up.z).normalize();
     const eyeAt = (dn, du, df, sa, sb, sc) => new THREE.Matrix4().makeBasis(
@@ -335,13 +340,14 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
       .setPosition(c.clone().addScaledVector(nrm, dn).addScaledVector(up, du).addScaledVector(fwd, df));
     const states = (open, shut) => (sx > 0 ? [open, shut, null] : [open, null, shut]);
     const hidden = eyeAt(-0.005, 0, 0, 0.0003, 0.0003, 0.0003);
-    headParts.add(eyeBall, { color: ringC, at: states(eyeAt(-0.0015, 0, 0, 0.0148, 0.0148, 0.0055), eyeAt(0, 0, 0, 0.0148, 0.0148, 0.0032)) });
+    // fechado: a pele vira uma pálpebra pequena, quase rente, sob o risquinho escuro
+    headParts.add(eyeBall, { color: ringC, at: states(eyeAt(-0.0015, 0, 0, 0.0148, 0.0148, 0.0055), eyeAt(0.0012, 0, 0, 0.0105, 0.0105, 0.0022)) });
     headParts.add(eyeBall, {
       color: (x, y) => { const d = Math.hypot(x, y); return tmp.copy(irisIn).lerp(irisOut, ss(d, 0.35, 0.8)).lerp(irisRim, ss(d, 0.86, 1)); },
       fx: (x, y) => [0, 0.3 * (1 - ss(Math.hypot(x, y), 0.4, 0.9)), 0],
       at: states(eyeAt(0.0012, 0, 0, 0.0122, 0.0122, 0.0055), eyeAt(-0.004, 0, 0, 0.004, 0.004, 0.002)),
     });
-    headParts.add(eyeBall, { color: pupilC, at: states(eyeAt(0.0052, 0, 0, 0.0058, 0.0062, 0.0025), eyeAt(0.0034, -0.001, 0, 0.0125, 0.0016, 0.0018)) });
+    headParts.add(eyeBall, { color: pupilC, at: states(eyeAt(0.0052, 0, 0, 0.0058, 0.0062, 0.0025), eyeAt(0.0036, -0.0008, 0, 0.0125, 0.0015, 0.0016)) });
     headParts.add(spark, { color: white, fx: [0, 1.4, 0], at: states(eyeAt(0.0068, 0.0045, 0.0035, 0.0024, 0.0024, 0.0024), hidden) });
     headParts.add(spark, { color: white, fx: [0, 0.9, 0], at: states(eyeAt(0.0064, -0.0035, -0.004, 0.0011, 0.0011, 0.0011), hidden) });
   }
@@ -356,32 +362,35 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   const wingParts = new Parts(2);
   const S = (x, y, z) => [x - WING[0], y - WING[1], z - WING[2]]; // corpo → ombro
   wingParts.add(panelShape(), {
+    // as duas barras escuras atravessam a metade de trás da asa dobrada, de cima a baixo
     color: (x, y, u) => tmp.copy(wingC).lerp(barC,
-      Math.max(band(u + 0.1 * y, 0.6, 0.06), band(u + 0.1 * y, 0.82, 0.055)) * ss(y, -0.22, 0.08)),
+      Math.max(band(u + 0.12 * y, 0.58, 0.075), band(u + 0.12 * y, 0.8, 0.07)) * ss(y, -0.46, -0.3)),
     at: [
-      frame(S(0.082, 0.166, 0.07), [-0.093, -0.27, -1], [1, 0.45, 0], 0.026, 0.072, 0.155),
-      frame([0, 0, 0.004], [1, 0.02, -0.12], [0, 1, 0], 0.024, 0.072, 0.15),
-      frame([0, 0.004, 0], [1, 0.14, -0.5], [0, 1, 0.3], 0.024, 0.068, 0.13),
+      frame(S(0.088, 0.172, 0.078), [-0.15, -0.24, -1], [1, 0.22, 0], 0.03, 0.088, 0.172),
+      frame([0, 0, 0.004], [1, 0.02, -0.12], [0, 1, 0], 0.016, 0.084, 0.15),
+      frame([0, 0.004, 0], [1, 0.14, -0.5], [0, 1, 0.3], 0.016, 0.08, 0.13),
     ],
   });
   for (let i = 0; i < 4; i++) {
-    const len = 0.085 - 0.004 * i;
+    // secundárias: as pontas arredondadas aparecem em fila sob a borda das coberteiras
+    const len = 0.08 - 0.004 * i;
     wingParts.add(feather, {
-      color: (x, y, u) => tmp.copy(wingC).lerp(barC, band(u, 0.66, 0.12)).lerp(primC, 0.35 * ss(u, 0.85, 1)),
+      color: (x, y, u) => tmp.copy(wingC).lerp(primC, 0.45 * ss(u, 0.7, 1)),
       at: [
-        frame(S(0.085 - 0.007 * i, 0.142 - 0.003 * i, 0.032 - 0.026 * i), [-0.06 - 0.05 * i, -0.55, -1], [1, 0.3, 0], 0.006, 0.032, len),
-        frame([0.022 + 0.024 * i, -0.003, -0.012 + 0.002 * i], [0.1 + 0.06 * i, -0.04, -1], [0, 1, 0], 0.006, 0.032, len),
-        frame([0.018 + 0.02 * i, 0.003 + 0.004 * i, -0.012 - 0.012 * i], [0.22 + 0.06 * i, 0.08, -1], [0, 1, 0.15], 0.006, 0.032, len),
+        frame(S(0.086 - 0.006 * i, 0.136 - 0.002 * i, 0.03 - 0.027 * i), [-0.05 - 0.05 * i, -0.42, -1], [1, 0.15, 0], 0.006, 0.034, len),
+        frame([0.022 + 0.024 * i, -0.003, -0.012 + 0.002 * i], [0.1 + 0.06 * i, -0.04, -1], [0, 1, 0], 0.006, 0.034, len),
+        frame([0.018 + 0.02 * i, 0.003 + 0.004 * i, -0.012 - 0.012 * i], [0.22 + 0.06 * i, 0.08, -1], [0, 1, 0.15], 0.006, 0.034, len),
       ],
     });
   }
   for (let i = 0; i < 5; i++) {
-    const len = 0.15 - 0.012 * i, wid = 0.032 - 0.002 * i;
+    // primárias: dobradas, deitam sobre o traseiro e as pontas escuras cruzam por cima da cauda
+    const len = 0.13 - 0.009 * i, wid = 0.03 - 0.002 * i;
     const open = 0.06 + 0.21 * i, rec = 0.75 + 0.14 * i; // leque dos "dedos" e varrida para trás na recuperação
     wingParts.add(feather, {
-      color: (x, y, u) => tmp.copy(primC).lerp(tipC, ss(u, 0.55, 0.8)),
+      color: (x, y, u) => tmp.copy(primC).lerp(tipC, ss(u, 0.6, 0.95)),
       at: [
-        frame(S(0.072 - 0.004 * i, 0.138 + 0.003 * i, -0.004 - 0.012 * i), [-0.2 - 0.025 * i, -0.06 + 0.012 * i, -1], [1, 0.6, 0], 0.0065, wid, len),
+        frame(S(0.066 - 0.004 * i, 0.135 - 0.001 * i, -0.03 - 0.01 * i), [-0.25 - 0.02 * i, -0.05, -1], [1, 1, 0], 0.006, wid, len),
         frame([0.108 - 0.006 * i, 0.004 - 0.0008 * i, 0.002 - 0.011 * i], [Math.cos(open), 0.02, -Math.sin(open)], [0, 1, 0.05], 0.0065, wid, len),
         frame([0.085 - 0.005 * i, 0.026, -0.045 - 0.01 * i], [Math.cos(rec), 0.15, -Math.sin(rec)], [-0.35, 1, -0.25], 0.0065, wid, len),
       ],
@@ -402,10 +411,10 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
   for (let j = 0; j < 10; j++) {
     const o = j - 4.5, ao = Math.abs(o), lift = (4.5 - ao) * 0.0013, len = 0.104 - ao * 0.0024;
     tailParts.add(feather, {
-      color: (x, y, u) => tmp.copy(tailC).lerp(tipC, ss(u, 0.7, 0.8)),
+      color: (x, y, u) => tmp.copy(tailC).lerp(tipC, ss(u, 0.74, 0.84)),
       at: [
-        frame([o * 0.0042, 0.004 + lift, 0.004 - ao * 0.002], [o * 0.05, -0.19 - ao * 0.004, -1], [-o * 0.05, 1, 0.2], 0.007, 0.031, len),
-        frame([o * 0.0052, 0.004 + lift * 0.6, 0.004 - ao * 0.002], [o * 0.2, -0.16, -1], [-o * 0.02, 1, 0.16], 0.007, 0.031, len),
+        frame([o * 0.0045, 0.004 + lift, 0.004 - ao * 0.002], [o * 0.065, -0.19 - ao * 0.004, -1], [-o * 0.05, 1, 0.2], 0.007, 0.034, len),
+        frame([o * 0.0055, 0.004 + lift * 0.6, 0.004 - ao * 0.002], [o * 0.2, -0.16, -1], [-o * 0.02, 1, 0.16], 0.007, 0.034, len),
       ],
     });
   }
@@ -525,13 +534,13 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
       const breath = Math.sin(t * (1.5 + 1.4 * (1 - k)) + st.phase);
       const puff = 0.09 * k + 0.05 * fuss;
       torso.scale.set(1 + puff, 1 + 0.4 * puff + 0.012 * breath * (1 - air), 1 + 0.3 * puff);
-      neck.scale.set(1 + 0.8 * puff, 1 - 0.22 * k, 1 + 0.8 * puff);
+      neck.scale.set(1 + 0.8 * puff, 1 - 0.3 * k, 1 + 0.8 * puff);
 
       // Pescoço e cabeça: encolhidos no cochilo, estocada na bicada e cabeça estável (no nível) durante o voo.
-      neckPivot.position.set(NECK[0], NECK[1] - 0.02 * k, NECK[2] - 0.012 * k);
-      const neckPitch = -0.5 * k + 0.85 * lunge + 0.25 * air - 0.12 * fuss;
+      neckPivot.position.set(NECK[0], NECK[1] - 0.032 * k, NECK[2] - 0.016 * k);
+      const neckPitch = -0.35 * k + 0.85 * lunge + 0.25 * air - 0.12 * fuss;
       neckPivot.rotation.set(neckPitch, st.yaw * 0.35, 0);
-      head.rotation.set(0.4 * k + 0.45 * lunge + 0.1 * fuss - (neckPitch + body.rotation.x) * air * 0.9,
+      head.rotation.set(0.3 * k + 0.45 * lunge + 0.1 * fuss - (neckPitch + body.rotation.x) * air * 0.9,
         st.yaw * 0.65, st.tilt + 0.16 * k * st.sleepSide);
 
       // Mais energia ao decolar; descida firme e recuperação mais longa/flexível.
@@ -541,13 +550,13 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
       const arc = (1 - Math.cos(stroke * Math.PI)) / 2;
       const elevation = down ? 1.1 - 1.95 * arc : -0.85 + 1.95 * arc;
       const recover = down ? 0 : Math.sin(stroke * Math.PI) * 0.85;
-      const flick = fuss * (0.5 + 0.4 * Math.sin(t * 29 + st.phase));
+      const flick = fuss * (0.35 + 0.25 * Math.sin(t * 26 + st.phase));
       for (const { wing, sx } of wings) {
         const idle = 0.025 + 0.01 * breath;
         wing.position.x = sx * (WING[0] + 0.006 * k + 0.004 * fuss);
         wing.rotation.z = sx * (lerp(idle, elevation, air) + flick * (1 - air));
         wing.rotation.y = -sx * 0.12 * air * Math.sin(stroke * Math.PI);
-        wing.morphTargetInfluences[0] = air * (1 - recover) + 0.45 * fuss * (1 - air);
+        wing.morphTargetInfluences[0] = air * (1 - recover) + 0.8 * fuss * (1 - air);
         wing.morphTargetInfluences[1] = air * recover;
       }
 

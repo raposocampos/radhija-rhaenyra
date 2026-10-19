@@ -13,7 +13,8 @@ const head = (p) => p.object.getObjectByName('cabeca');
 const eyes = (p) => head(p).morphTargetInfluences;
 /** Menor altura (mundo) entre os vértices de uma malha, com os alvos de morph aplicados. */
 function lowest(mesh) {
-  mesh.updateMatrixWorld(true);
+  mesh.updateWorldMatrix(true, false); // os pais primeiro: o corpo sobe e desce
+
   const v = new THREE.Vector3();
   let y = Infinity;
   for (let i = 0; i < mesh.geometry.attributes.position.count; i++) {
