@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (porquinhos: porteira um de cada vez, PR #40). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (comemoração com voltinha andando, PR #39). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: comemoração sem giro parado (Claude, branch `claude/comemoracao-natural`)
@@ -19,12 +19,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   borda da caminha `GOAL.celebrateRim` nas fases 5 e 8 e na Arena dos Porquinhos); sem espaço, pulinhos no lugar
   (fase 5). As pisadas da voltinha levam a passada da animação (`onFootstep(i, v)`: som e pegadas). Interrompida
   por outra ação, ela volta ao lugar suave. Testes em `test/dogs.test.mjs` e `test/comemoracao.test.mjs`.
-- Branch atualizado com o main `369b0ff` (PR #38, empurrão em pé): a voltinha e o empurrão convivem em
-  `dogAnimation.js`/`game.js`.
+- Branch atualizado com o main `369b0ff` (PR #38, empurrão em pé: a voltinha e o empurrão convivem em
+  `dogAnimation.js`/`game.js`) e depois com `1cd6647` (PR #40). E2E `todas` verde em `2c5f328` (39327099995, 2ª
+  tentativa; a 1ª caiu no teste instável dos porquinhos, corrigido no #40). As 3 conversas da revisão foram
+  respondidas e resolvidas.
 - Próximo passo: CI e E2E `todas` no head novo, prévia, responder e resolver as 3 conversas e pedir nova aprovação.
 
 
-## Em andamento: empurrão em pé da Rhaenyra (Claude, branch `claude/empurrao-em-pe`, PR #38)
+## Entregue: empurrão em pé da Rhaenyra (PR #38, squash `369b0ff`, deploy `39326965839`)
 
 - Pedido do usuário (2026-10-19): "Rhaenyra tem mania de ficar empurrando os outros, aí daria pra usar pra tirar
   alguma coisa de uma árvore, ou de algum lugar alto, empurrar pra cair". Desenho aprovado: o mesmo **R1 / Shift /
@@ -44,10 +46,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (também com `?dogs=novo`) e capturas (`capture-empurra.mjs`). Docs: ARQUITETURA §6 (Empurrão em pé) e README.
 - Coordenação: a sessão dos modelos das dogs porta a pose na etapa 3; mandar a ela os campos do `anim` (`shoveK`,
   `shoveCycle`, `shoveN`, `shoveGap`, `shoveY`, `shoveOver`) e os quadros de `shovePose.js` quando o PR entrar.
-- Próximo passo: CI e E2E no head novo, prévia ao usuário e aprovação explícita antes de integrar; avisar o
-  orquestrador ao integrar. Se o #36 entrar antes, atualizar com o main e revalidar.
+- Integrado ao main e publicado. A correção seguinte do empurrão está no PR #41.
 
-## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40
+## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40 (squash `1cd6647`, deploy `39332428726`)
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
