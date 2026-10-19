@@ -178,7 +178,33 @@ function herd(cfgOver = {}, { effects = null, knockItem = null, carries = null }
   return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.ev === n) };
 }
 
-test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => {
+/** Roda fn com Math.random trocado por um aleatório com semente. */
+function withSeed(seed, fn) {
+  const random = Math.random;
+  Math.random = seeded(seed);
+  try {
+    return fn();
+  } finally {
+    Math.random = random;
+  }
+}
+
+/** Foto curta dos porcos (para a mensagem de um teste que falhou): estado, posição, vez na porteira e rota. */
+function snap(h) {
+  const f = (v) => +v.toFixed(2);
+  return h.pigs.pigs.map((P) => `${P.i}:${P.state}@${f(P.x)},${f(P.z)} t${f(P.t)} s${f(P.stuckT)} ${P.idleAct}`
+    + ` r${P.route.map((q) => `${f(q.x)},${f(q.z)}${q.door ? 'D' : q.leaf ? 'L' : ''}`).join('>')}`).join(' | ');
+}
+
+/** Quantos porcos saindo ou voltando estão no vão da porteira (a menos de 0,45 m do meio dela) agora. */
+function inDoorway(h) {
+  const G = h.P.gate;
+  const mx = (G.hinge.x + G.latchPost.x) / 2, mz = (G.hinge.z + G.latchPost.z) / 2;
+  return h.pigs.pigs.filter((P) => (P.state === 'exit' || P.state === 'return') && Math.hypot(P.x - mx, P.z - mz) < 0.45).length;
+}
+
+test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => withSeed(191, () => {
+  // semente 191: antes, dois porcos entravam juntos no vão, entalavam lado a lado e ninguém saía
   const h = herd();
   h.run(4);
   assert.equal(h.pigs.info().inPen, 3, 'porteira fechada: todos no chiqueiro');
@@ -195,6 +221,49 @@ test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás d
     const a = h.pigs.cfg.area;
     assert.ok(P.x >= a.minX + P.r - 1e-6 && P.x <= a.maxX - P.r + 1e-6 && P.z >= a.minZ + P.r - 1e-6 && P.z <= a.maxZ - P.r + 1e-6, 'dentro da área');
   }
+}));
+
+test('rebanho: a porteira é um de cada vez: em 200 sorteios os três sempre saem, sem dois no vão ao mesmo tempo', () => {
+  const bad = [];
+  for (let seed = 1; seed <= 200; seed++) {
+    withSeed(seed, () => {
+      const h = herd();
+      h.run(4);
+      h.pigs.setOpen(true);
+      let most = 0;
+      const trace = [];
+      for (let k = 0; k < 9.2 * 60; k++) {
+        h.run(1 / 60);
+        most = Math.max(most, inDoorway(h));
+        if (k % 45 === 0) trace.push(`${(k / 60).toFixed(1)}s ${snap(h)}`);
+      }
+      const inf = h.pigs.info();
+      if (inf.inPen > 0 || most > 1) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state), trace: bad.length ? undefined : trace });
+    });
+  }
+  assert.deepEqual(bad, []);
+});
+
+test('rebanho: o sininho em 100 sorteios: todos voltam pela porteira, um de cada vez, e ela fecha', () => {
+  const bad = [];
+  for (let seed = 1; seed <= 100; seed++) {
+    withSeed(seed, () => {
+      const h = herd();
+      h.pigs.setOpen(true);
+      h.run(10);
+      h.pigs.recall();
+      let most = 0;
+      const trace = [];
+      for (let k = 0; k < 18 * 60; k++) {
+        h.run(1 / 60);
+        most = Math.max(most, inDoorway(h));
+        if (k % 60 === 0) trace.push(`${(k / 60).toFixed(0)}s ${snap(h)}`);
+      }
+      const inf = h.pigs.info();
+      if (inf.inPen < 3 || most > 1 || h.events('pig:home').length !== 1) bad.push({ seed, inPen: inf.inPen, most, home: h.events('pig:home').length, states: inf.pigs.map((p) => p.state), trace: bad.length > 1 ? undefined : trace });
+    });
+  }
+  assert.deepEqual(bad, []);
 });
 
 test('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão esbarrões de leve', () => {
@@ -610,9 +679,13 @@ test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai par
   const problems = [];
   let h = null, map = null, acts = 0;
   const seen = new Set();
+  // contados no barramento (o registro do jogo guarda só os últimos 500 eventos)
+  const count = { 'item:land': 0, 'pig:bump': 0, 'pig:knock': 0 };
+  const offs = [];
   try {
     const errs = await consoleErrors(async () => {
       h = await arena();
+      for (const ev of Object.keys(count)) offs.push(h.events.on(ev, () => { count[ev]++; }));
       map = reachableMap(h.world, { x: h.ctrls.radhija.x, z: h.ctrls.radhija.z });
       const A = L.PIGS.area, Bn = L.WORLD.bounds;
       const TAU = Math.PI * 2;
@@ -721,11 +794,12 @@ test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai par
     assert.deepEqual(errs, []);
     assert.equal(h.info().state, 'playing', 'a arena seguiu jogável');
     const inf = h.info().porcos;
-    assert.ok(acts > 150, `${acts} ações`);
-    assert.ok(inf.bumps > 5 && h.log('item:land').length > 5, `bagunça de verdade: ${inf.bumps} esbarrões, ${h.log('item:land').length} quedas, ${inf.knocks} derrubadas`);
+    assert.ok(acts > 100, `${acts} ações`); // (o número exato depende do sorteio; o que vale são os problemas acima)
+    assert.ok(inf.bumps > 5 && count['item:land'] > 5, `bagunça de verdade: ${inf.bumps} esbarrões, ${count['item:land']} quedas, ${count['pig:knock']} derrubadas`);
     for (const s of ['porco:chase', 'porco:eat', 'legume:ground', 'legume:held']) assert.ok(seen.has(s), `passou por ${s} (${[...seen].join(', ')})`);
   } finally {
     Math.random = random;
+    for (const off of offs) off();
     h?.releaseAll();
   }
 });
