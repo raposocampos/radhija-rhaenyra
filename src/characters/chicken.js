@@ -128,6 +128,7 @@ export function createChicken({ variant = 0 } = {}) {
   const legs = [-1, 1].map((sx) => {
     const hip = new THREE.Group();
     hip.position.set(sx * 0.05, 0.13, 0);
+    /** @type {THREE.BufferGeometry[]} */
     const parts = [new THREE.CylinderGeometry(0.008, 0.01, 0.12, 8).translate(0, -0.06, 0)];
     for (const a of [-0.45, 0, 0.45]) parts.push(new THREE.CapsuleGeometry(0.0045, 0.04, 2, 6).rotateX(Math.PI / 2).rotateY(a).translate(Math.sin(a) * 0.022, -0.122, Math.cos(a) * 0.022));
     parts.push(new THREE.CapsuleGeometry(0.004, 0.018, 2, 6).rotateX(Math.PI / 2).translate(0, -0.12, -0.014));
