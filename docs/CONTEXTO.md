@@ -3,6 +3,38 @@
 Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Entregue: tetos de relógio no harness do E2E (PR #27, squash `402635e` no main)
+
+- Motivo: no E2E manual `39160265826` (suíte lavanderia, 1ª tentativa) o log parou em `load('?level=fase8&play')`
+  e o job só caiu no timeout de 30 min, sem nenhum check: `page.evaluate` não tem prazo e as esperas contavam só
+  tempo de jogo. Refeita, a suíte passou 12/12 em 78 s; a causa do travamento não foi identificada.
+- Feito no branch `claude/e2e-teto-relogio`, **PR #27** (consultar o PR para SHA, CI e E2E):
+  `tools/scripts/lib/harness.mjs` ganhou `DEFAULT_LIMITS`/`HarnessAbort`: `simSec` 60 s sem mudar (contado entre
+  esperas) reprova com diagnóstico; prazo de 60 s em cada `page.evaluate`/teclado/mouse, com a página marcada como
+  travada; etapas do `load()` nomeadas; `close()` com prazo. O teto max(10 s, 8× o prazo) com o jogo andando só
+  encerra a espera com aviso, como antes: a 1ª versão reprovava ali e o E2E `39165419409` mostrou que fase1/fase3
+  passam por esse teto depois de `ui:restart` (0,03–0,06 s de jogo em 10 s). No E2E `39166156986` (head `78c076f`)
+  13 de 14 jobs passaram, mas `expresso` travou 30 min no primeiro `load('?level=fase6&play')` sem imprimir nada,
+  apesar dos prazos internos: a causa continua desconhecida (processo da suíte sem rodar ou prazo do Playwright
+  falhando). Por isso entraram duas redes: operação em curso além de 4 min encerra o processo da suíte
+  (`opMaxMs`), e o runner (`suite-runner.mjs`) encerra de fora uma suíte 5 min calada, com o sinal do harness por
+  IPC (o que estava em curso, se o processo parou de responder), carga, memória e processos. Provas em
+  `tools/scripts/fixtures/harness-probe.mjs` e `test-e2e-infra.mjs` (`paced`, `slow`, `stalled`, `hung`, `stuck`,
+  `mute`, `crash`). Docs: ARQUITETURA (seção do E2E) e ENTREGA.
+- E2E `39169122476` (head `0f3e940`): 13 de 14 jobs ok; `expresso` reprovou em 4,5 min (antes 30) com
+  "`load('?level=fase6&play'): esperar window.__game` sem retorno há 242 s": a página abriu, `window.__game` nunca
+  apareceu e o prazo de 120 s do `waitForFunction` não venceu, com o processo da suíte vivo. A prova `crash`
+  (E2E `39171716703`) reproduziu isso: com a aba derrubada por `chrome://crash` no meio da espera, o Playwright não
+  avisou a queda, a espera ficou pendente e a página parou de responder. Hipótese mais provável para os
+  travamentos reais: a aba cai no boot da fase. O harness ouve `crash`/`disconnected` (se vier o aviso) e o
+  `opMaxMs` caiu para 150 s. Contagem do `expresso`: sem este PR, 7 de 7 ok nas execuções recentes; com ele,
+  5 ok e 2 travamentos em 7. Não se achou mecanismo no código (nesse ponto o harness faz as mesmas chamadas da
+  1ª versão, que passou); a lavanderia travou antes do PR.
+- Integrado ao main (squash `402635e`) depois do #28. Não repetir merge/deploy do #27.
+- No E2E `39173570454` (head `3ebcbaf`) as 14 suítes passaram, mas o passo seguinte do job `lambe`,
+  `capture-lambe.mjs` (fora do harness: `goto` + `waitForFunction` próprios), travou até o timeout do job: o
+  mesmo padrão do boot de fase nova, sem as redes do harness. Os scripts de captura ficam para uma entrega própria.
+
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 
 - Pedido do usuário: tela inicial só com **Jogar** e **Opções**; Jogar abre **Modo História** (visível, "Em breve")

@@ -12,8 +12,65 @@ export function parseArgs(argv = process.argv.slice(2)) {
   }, []));
 }
 
-/** device: opções extras da página do Playwright (ex.: celular: isMobile, hasTouch, deviceScaleFactor, screen). */
-export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 }, device = {} }) {
+/** Tetos de RELÓGIO (ms). As esperas continuam contando em tempo de jogo enquanto o jogo anda, mesmo devagar; estes
+ *  limites só existem para que uma aba travada ou um jogo parado reprove a suíte em até um minuto, com diagnóstico, em
+ *  vez de prender o job até o timeout do workflow. Ajuste por variável de ambiente ou por `createHarness({ limits })`. */
+export const DEFAULT_LIMITS = {
+  wallFactor: 8, // E2E_WALL_FACTOR: uma espera de `ms` de jogo termina (com aviso) em max(wallMinMs, wallFactor × ms)
+  wallMinMs: 10000, // E2E_WALL_MIN_MS
+  stallMs: 60000, // E2E_STALL_MS: simSec sem mudar por esse tempo de relógio = o jogo parou de avançar (reprova)
+  evalMs: 60000, // E2E_EVAL_MS: cada ida ao navegador (info(), page.evaluate, teclado, mouse)
+  closeMs: 30000, // E2E_CLOSE_MS: fechar o navegador no fim
+  // E2E_OP_MAX_MS: uma operação em curso (etapa do load(), captura, ida ao navegador) sem retorno por esse tempo, apesar
+  // dos prazos próprios (120 s do Playwright, evalMs), encerra o processo da suíte com diagnóstico. É o que pega a aba
+  // que caiu no CI: o Playwright não avisa a queda e deixa waitForFunction pendente para sempre.
+  opMaxMs: 150000,
+};
+const LIMIT_ENV = {
+  wallFactor: 'E2E_WALL_FACTOR', wallMinMs: 'E2E_WALL_MIN_MS', stallMs: 'E2E_STALL_MS', evalMs: 'E2E_EVAL_MS', closeMs: 'E2E_CLOSE_MS', opMaxMs: 'E2E_OP_MAX_MS',
+};
+// Rodando sob o runner (suite-runner.mjs), o processo da suíte tem um canal IPC para o sinal do harness. O canal não
+// pode segurar o processo aberto depois que a suíte termina.
+process.channel?.unref?.();
+function limitsFrom(overrides) {
+  const out = {};
+  for (const [key, name] of Object.entries(LIMIT_ENV)) {
+    const raw = overrides[key] ?? process.env[name];
+    const value = raw === undefined || raw === '' ? DEFAULT_LIMITS[key] : Number(raw);
+    if (!(value > 0)) throw new Error(`limite do harness inválido: ${key} (${name}) = ${raw}`);
+    out[key] = value;
+  }
+  return out;
+}
+
+/** Espera ou ida ao navegador que venceu o teto de relógio. A suíte não deve seguir: a página travou ou o jogo parou. */
+export class HarnessAbort extends Error {
+  constructor(message) {
+    super(`[harness] ${message}`);
+    this.name = 'HarnessAbort';
+  }
+}
+const secs = (ms) => `${+(ms / 1000).toFixed(1)} s`;
+const snippet = (fn) => String(fn).replace(/\s+/g, ' ').slice(0, 90);
+/** Linha da suíte que pediu a espera: o primeiro quadro da pilha fora deste arquivo. */
+function siteOf(err) {
+  for (const line of String(err.stack).split('\n').slice(1)) {
+    const m = line.match(/([^\s()]+):(\d+):\d+\)?\s*$/);
+    if (m && m[1] !== import.meta.url && !m[1].startsWith('node:')) return `${m[1].split(/[\\/]/).pop()}:${m[2]}`;
+  }
+  return null;
+}
+function describe(i) {
+  if (!i) return 'nenhuma';
+  const d = i.dogs?.[i.activeDog];
+  const dog = d ? ` ${i.activeDog}(${Number(d.x).toFixed(2)}, ${Number(d.z).toFixed(2)})` : '';
+  return `estado=${i.state} fase=${i.levelId ?? i.level} etapa=${i.stage} timeSec=${i.timeSec} simSec=${i.simSec}${dog}`;
+}
+
+/** device: opções extras da página do Playwright (ex.: celular: isMobile, hasTouch, deviceScaleFactor, screen).
+ *  limits: tetos de relógio (ver DEFAULT_LIMITS). */
+export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 }, device = {}, limits: limitOverrides = {} }) {
+  const limits = limitsFrom(limitOverrides);
   const OUT = resolve(outDir);
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch(browserOptions());
@@ -73,17 +130,158 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     return cond;
   }
   const sleep = (ms) => page.waitForTimeout(ms);
+
+  // ---- Teto de relógio em cada ida ao navegador. page.evaluate e a entrada do Playwright não têm prazo: com a aba
+  // (ou a GPU) travada, a promessa nunca volta e a suíte ficava parada até o timeout do workflow. Vencido o teto, a
+  // página fica marcada como travada e as idas seguintes falham na hora (o catch da suíte e o close() terminam rápido).
+  let wedged = null; // primeira operação sem resposta
+  let lastRead = null; // { i, at }: última leitura do estado que voltou (diagnóstico)
+  // { sim, at }: quando o simSec mudou pela última vez, entre TODAS as leituras (muitas esperas curtas seguidas, cada
+  // uma terminando no próprio teto, não escondem um jogo parado). Zerado a cada load().
+  let progress = null;
+  let capHits = 0; // esperas encerradas pelo teto de relógio (aviso, não falha)
+  const aborts = []; // mensagens dos HarnessAbort: o close() reprova as que a suíte não registrou
+  const lastReadText = () => (lastRead ? `Última leitura do estado, há ${secs(Date.now() - lastRead.at)}: ${describe(lastRead.i)}` : 'Nenhuma leitura do estado ainda.');
+  function abort(what, site, why) {
+    const e = new HarnessAbort(`${what}${site ? ` (${site})` : ''}: ${why}`);
+    aborts.push(e.message);
+    return e;
+  }
+  // ---- Operações em curso: o sinal do harness (a cada 2 s, pelo IPC do runner) diz o que a suíte espera e desde
+  // quando; o log ganha "ainda aguardando" a cada minuto; passado opMaxMs, o processo sai com diagnóstico (o prazo
+  // próprio da operação não funcionou). Se nem este relógio rodar (event loop bloqueado, máquina sem CPU), o runner
+  // vê o silêncio e o sinal parado, e encerra a suíte de fora.
+  // A aba (renderer) ou o navegador caiu e o Playwright avisou: toda operação em curso corre contra este sinal e falha
+  // na hora, dizendo o motivo. No CI, uma aba derrubada com chrome://crash NÃO gerou o aviso (prova "crash"): a espera
+  // ficou pendente e quem a encerrou foi o opMaxMs, dizendo que a página não respondia.
+  const LOST = Symbol('lost');
+  let lost = null;
+  let closing = false;
+  let signalLost;
+  const lostSignal = new Promise((_, fail) => { signalLost = fail; });
+  lostSignal.catch(() => {});
+  const markLost = (why) => {
+    if (lost || closing) return;
+    lost = why;
+    wedged = wedged || why;
+    console.log(`  [harness] ${why}`);
+    signalLost(LOST);
+  };
+  page.on('crash', () => markLost('a aba do navegador caiu (crash do renderer)'));
+  browser.on('disconnected', () => markLost('o navegador fechou ou caiu'));
+
+  const pending = new Set();
+  async function during(what, run) {
+    const site = new Error();
+    const op = { what, since: Date.now(), told: 0 };
+    pending.add(op);
+    try {
+      return await Promise.race([Promise.resolve().then(run), lostSignal]);
+    } catch (e) {
+      if (e === LOST) throw abort(what, siteOf(site), `${lost}. ${lastReadText()}`);
+      throw e;
+    } finally {
+      pending.delete(op);
+    }
+  }
+  const tick = () => {
+    const now = Date.now();
+    if (process.connected) {
+      try {
+        process.send({
+          e2eHeartbeat: true,
+          pending: [...pending].map((op) => ({ what: op.what, ms: now - op.since })),
+          lastRead: lastRead ? { ms: now - lastRead.at, text: describe(lastRead.i) } : null,
+        }, () => {});
+      } catch {}
+    }
+    for (const op of pending) {
+      const age = now - op.since;
+      if (age >= limits.opMaxMs) {
+        clearInterval(beat);
+        // a página ainda responde? (sem aviso de queda: senão a operação já teria falhado pelo lostSignal)
+        peek().then((state) => {
+          fail++;
+          const m = `[harness] ${op.what} sem retorno há ${secs(age)}, mesmo com os prazos (Playwright ou navegador travado; `
+            + `sem aviso de queda da aba). ${lastReadText()} Agora: ${state}`;
+          failures.push(m);
+          console.log(`  FALHOU ${m}`);
+          console.log(`\n${pass} ok, ${fail + errors.length} falha(s)`);
+          process.exit(1); // o Playwright encerra o navegador na saída
+        });
+        return;
+      }
+      if (age >= 60000 && now - op.told >= 60000) {
+        op.told = now;
+        console.log(`  [harness] ainda aguardando ${op.what} há ${secs(age)}`);
+      }
+    }
+  };
+  const beat = setInterval(tick, 2000);
+  beat.unref();
+  tick(); // o runner sabe desde já que o harness existe
+
+  const TIMEOUT = Symbol('timeout');
+  async function guard(what, start, ms = limits.evalMs) {
+    const site = new Error();
+    if (wedged) throw new HarnessAbort(`${what} não executado: a página já estava travada (${wedged})`);
+    const job = { what, since: Date.now(), told: 0 };
+    pending.add(job);
+    const op = Promise.resolve().then(start);
+    let timer;
+    try {
+      return await Promise.race([op, lostSignal, new Promise((_, fail) => { timer = setTimeout(fail, ms, TIMEOUT); })]);
+    } catch (e) {
+      if (e === LOST || (lost && e !== TIMEOUT)) {
+        op.catch(() => {});
+        throw abort(what, siteOf(site), `${lost}. ${lastReadText()}`);
+      }
+      if (e !== TIMEOUT) throw e;
+      op.catch(() => {}); // a resposta tardia (ou o erro ao fechar o navegador) não vira rejeição solta
+      wedged = `${what} ficou ${secs(ms)} sem resposta`;
+      throw abort(what, siteOf(site), `a página não respondeu em ${secs(ms)} (page.evaluate/entrada sem retorno: aba ou GPU travada?). ${lastReadText()}`);
+    } finally {
+      clearTimeout(timer);
+      pending.delete(job);
+    }
+  }
+  const rawEvaluate = page.evaluate.bind(page);
+  const evaluate = (what, fn, arg) => guard(what, () => rawEvaluate(fn, arg));
+  // As suítes também usam a página direto (ev, page.keyboard.*): o mesmo teto vale para elas.
+  page.evaluate = (fn, arg) => evaluate(`page.evaluate(${snippet(fn)})`, fn, arg);
+  for (const [name, obj, methods] of [['keyboard', page.keyboard, ['down', 'up', 'press']], ['mouse', page.mouse, ['move', 'down', 'up', 'click']], ['touchscreen', page.touchscreen, ['tap']]]) {
+    for (const m of methods) {
+      const raw = obj[m].bind(obj);
+      obj[m] = (...a) => guard(`${name}.${m}(${a.filter((x) => typeof x !== 'object').join(', ')})`, () => raw(...a), limits.evalMs + (a.at(-1)?.delay || 0));
+    }
+  }
+  // Sessões CDP desta página (os dedos reais da suíte toque: Input.dispatchTouchEvent): o mesmo teto em cada comando.
+  const context = page.context();
+  const rawCDPSession = context.newCDPSession.bind(context);
+  context.newCDPSession = async (target) => {
+    const session = await rawCDPSession(target);
+    if (target === page) {
+      const send = session.send.bind(session);
+      session.send = (method, params) => guard(`cdp.send(${method})`, () => send(method, params));
+    }
+    return session;
+  };
+
   // Razão tempo de jogo / relógio entre leituras seguidas (diagnóstico: < 1 = abaixo de 20 fps, máquina carregada).
   // Também a latência de cada leitura (ida e volta): alta = o próprio teste está sem CPU e as teclas chegam atrasadas.
   const pace = { sim: 0, real: 0, last: null, n: 0, lat: 0, maxLat: 0 };
-  const info = async () => {
+  /** Lê debug.info(); `what` nomeia a espera no diagnóstico; `withHold` traz também o estado do holdUntil (`__hold`). */
+  const read = async (what = 'info()', withHold = false) => {
     const t = Date.now();
-    const i = await page.evaluate(() => {
+    const i = await evaluate(what, (wh) => {
       const r = window.__game.game.debug.info();
       if (window.__walkGuard) r.walkTripped = window.__walkGuard.tripped; // ver walkTo
+      if (wh && window.__hold) r.__hold = { done: window.__hold.done, seen: window.__hold.seen.size, of: window.__hold.of };
       return r;
-    });
+    }, withHold);
     const now = Date.now();
+    lastRead = { i, at: now };
+    if (typeof i.simSec === 'number' && i.simSec !== progress?.sim) progress = { sim: i.simSec, at: now };
     pace.n++;
     pace.lat += now - t;
     pace.maxLat = Math.max(pace.maxLat, now - t);
@@ -94,10 +292,12 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     pace.last = { sim: i.simSec, real: now };
     return i;
   };
+  const info = () => read();
   const ev = (js, arg) => page.evaluate(js, arg);
   const shot = async (name) => {
+    if (wedged) throw new HarnessAbort(`shot(${name}) não executado: a página já estava travada (${wedged})`);
     if (process.env.CI) await page.evaluate(() => window.__e2eRender?.());
-    await page.screenshot({ path: resolve(OUT, name) });
+    await during(`shot(${name})`, () => page.screenshot({ path: resolve(OUT, name) }));
     console.log(`  captura: ${outDir.replace(/\\/g, '/')}/${name}`);
   };
   const logOf = (name) => page.evaluate((n) => window.__game.game.debug.events(n).map((e) => e.payload), name);
@@ -128,27 +328,57 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   /** Prazo em tempo de JOGO: vence quando passaram `ms` no relógio E `ms` simulados (debug.info().simSec). Sem carga
    *  as duas coisas andam juntas; sob carga (menos de 20 fps) o jogo anda mais devagar e o prazo espera por ele.
-   *  Teto de segurança: `slow`× o prazo em tempo real (a página travada não segura o teste para sempre). */
-  function deadline(ms, { slow = 8 } = {}) {
+   *  Tetos de RELÓGIO (`limits`):
+   *  - simSec `stallMs` sem mudar, contado entre as leituras de todas as esperas (ver `progress`): o jogo parou e a
+   *    suíte reprova (HarnessAbort com a espera, a linha da suíte e a última leitura);
+   *  - max(wallMinMs, wallFactor × ms) de relógio com o jogo andando: a espera termina, como sempre terminou, e sai um
+   *    aviso. Depois de reiniciar a fase, o SwiftShader recompila a cena e o jogo chega a andar 0,03 s em 10 s; a
+   *    partida segue normalmente depois. Até uma espera de 110 ms tolera um quadro pesado por software: o mínimo de
+   *    10 s não solta o botão antes de a página conseguir lê-lo.
+   *  over(i): o prazo de jogo (ou o teto) venceu? wall(i, extra): só os tetos (true = teto de relógio). */
+  function deadline(ms, what) {
+    const site = new Error();
     const t0 = Date.now();
+    const cap = Math.max(limits.wallMinMs, ms * limits.wallFactor);
     let s0 = null;
+    const stalled = (i, now, extra) => {
+      if (!progress || now - progress.at < limits.stallMs) return;
+      throw abort(what, siteOf(site), `o jogo parou de avançar: simSec ${progress.sim} sem mudar há ${secs(now - progress.at)}; `
+        + `prazo pedido ${secs(ms)} de jogo${extra}. Última leitura: ${describe(i)}`);
+    };
+    const capped = (i, now, extra) => {
+      if (now - t0 < cap) return false;
+      const played = typeof i?.simSec === 'number' && s0 !== null ? i.simSec - s0 : null;
+      const rate = played === null ? 'sem simSec' : `${played.toFixed(2)} s de jogo (ritmo ${(played / ((now - t0) / 1000)).toFixed(3)}×)`;
+      const at = siteOf(site);
+      capHits++;
+      console.log(`  [harness] aviso: ${what}${at ? ` (${at})` : ''} terminou pelo teto de relógio de ${secs(cap)}, `
+        + `com ${rate} dos ${secs(ms)} pedidos${extra}. Última leitura: ${describe(i)}`);
+      return true;
+    };
     return {
       t0,
       over(i) {
-        const real = Date.now() - t0;
-        // Até uma espera de 110 ms precisa tolerar a compilação/desenho de um quadro
-        // pesado por software; não solte o botão antes de a página conseguir lê-lo.
-        if (real >= Math.max(10000, ms * slow)) return true;
+        const now = Date.now();
         const sim = i?.simSec;
-        if (typeof sim !== 'number') return real >= ms;
+        if (typeof sim !== 'number') return now - t0 >= ms;
         if (s0 === null || sim < s0) s0 = sim; // primeira leitura (ou página recarregada)
-        return real >= ms && (sim - s0) * 1000 >= ms;
+        if (now - t0 >= ms && (sim - s0) * 1000 >= ms) return true;
+        stalled(i, now, '');
+        return capped(i, now, '');
+      },
+      wall(i, extra = '') {
+        const now = Date.now();
+        if (typeof i?.simSec === 'number' && (s0 === null || i.simSec < s0)) s0 = i.simSec;
+        stalled(i, now, extra);
+        return capped(i, now, extra);
       },
     };
   }
   /** Anda com a dog ativa até (x, z) segurando as teclas reais. */
   async function walkTo(x, z, { tol = 0.22, timeout = 15000, extra = [], stopIf = null } = {}) {
-    const dl = deadline(timeout);
+    const what = `walkTo(${x}, ${z})`;
+    const dl = deadline(timeout, what);
     // Trava dentro da página: com WASD segurado longe do alvo, solta as teclas NO QUADRO em que a dog entra na zona de
     // aproximação (0,6 m) ou passa a se afastar do alvo. Sob carga, a leitura seguinte (e o keyup) pode levar segundos
     // e a dog corria metros além do ponto.
@@ -186,40 +416,48 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       };
       requestAnimationFrame(loop);
     }, { x, z });
-    for (const k of extra) await page.keyboard.down(k);
+    const release = async () => {
+      await setKeys(new Set());
+      for (const k of extra) await page.keyboard.up(k);
+      await page.evaluate(() => { window.__walkGuard = null; });
+    };
     let last = null;
-    for (;;) {
-      const i = await info();
-      if (i.walkTripped) await setKeys(new Set()); // a trava soltou na página: solta as teclas reais também
-      if (dl.over(i)) break;
-      const d = i.dogs[i.activeDog];
-      last = d;
-      if (i.state !== 'playing') break;
-      if (stopIf && stopIf(i)) break;
-      const dx = x - d.x;
-      const dz = z - d.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist < tol) break;
-      if (dist < 0.6) {
-        // perto: toque curto que a própria página solta ao chegar (ou ao passar do alvo), sem depender da latência
-        await setKeys(new Set());
-        await holdUntil(keysFor(dx, dz), (s, a) => {
-          const p = s.dogs[s.activeDog];
-          const ex = a.x - p.x;
-          const ez = a.z - p.z;
-          return Math.hypot(ex, ez) < a.tol * 0.6 || ex * a.dx + ez * a.dz <= 0;
-        }, { timeout: 60, arg: { x, z, tol, dx, dz } });
-        await sleep(25);
-        continue;
+    try {
+      for (const k of extra) await page.keyboard.down(k);
+      for (;;) {
+        const i = await read(what);
+        if (i.walkTripped) await setKeys(new Set()); // a trava soltou na página: solta as teclas reais também
+        if (dl.over(i)) break;
+        const d = i.dogs[i.activeDog];
+        last = d;
+        if (i.state !== 'playing') break;
+        if (stopIf && stopIf(i)) break;
+        const dx = x - d.x;
+        const dz = z - d.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < tol) break;
+        if (dist < 0.6) {
+          // perto: toque curto que a própria página solta ao chegar (ou ao passar do alvo), sem depender da latência
+          await setKeys(new Set());
+          await holdUntil(keysFor(dx, dz), (s, a) => {
+            const p = s.dogs[s.activeDog];
+            const ex = a.x - p.x;
+            const ez = a.z - p.z;
+            return Math.hypot(ex, ez) < a.tol * 0.6 || ex * a.dx + ez * a.dz <= 0;
+          }, { timeout: 60, arg: { x, z, tol, dx, dz }, label: `${what}, aproximação final` });
+          await sleep(25);
+          continue;
+        }
+        await setKeys(new Set(keysFor(dx, dz)));
+        await sleep(45);
       }
-      await setKeys(new Set(keysFor(dx, dz)));
-      await sleep(45);
+    } catch (e) {
+      await release().catch(() => {}); // espera abortada: não deixa WASD segurado (com a página travada, falha na hora)
+      throw e;
     }
-    await setKeys(new Set());
-    for (const k of extra) await page.keyboard.up(k);
-    await page.evaluate(() => { window.__walkGuard = null; });
+    await release();
     await sleep(120);
-    const i = await info();
+    const i = await read(what);
     return i.dogs[i.activeDog] || last;
   }
   /** Percorre uma lista de pontos. */
@@ -231,25 +469,26 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   /** Segura as teclas por `ms` de tempo de JOGO, soltas pela própria página (ver holdUntil): sob carga, nem o relógio
    *  nem o keyup do teste servem de medida (a dog deslizava além da ponta da cerca-viva no cantinho da fase 3). */
   async function hold(keys, ms) {
-    await holdUntil(keys, () => false, { timeout: ms });
+    await holdUntil(keys, () => false, { timeout: ms, label: `hold([${keys}], ${ms} ms)` });
   }
   /** Segura as teclas (reais) até `pred(info(), arg)` virar verdade, conferida QUADRO A QUADRO dentro da página, que
    *  solta as teclas no mesmo quadro (keyup na janela, como o do teclado). Sob carga, o keyup do Playwright chega
    *  centenas de ms depois e o caixote/dog passava do ponto. `pred` é serializada (só pode usar `arg`).
-   *  Prazo em tempo de jogo (`timeout` ms). Devolve o info() do fim. */
-  async function holdUntil(keys, pred, { timeout = 8000, arg = null, during = null } = {}) {
+   *  Prazo em tempo de jogo (`timeout` ms), com os tetos de relógio do `deadline`. Devolve o info() do fim. */
+  async function holdUntil(keys, pred, { timeout = 8000, arg = null, during = null, label = null } = {}) {
+    const what = label || `holdUntil([${keys}], ${snippet(pred)}, ${timeout} ms)`;
     await page.evaluate(({ src, keys: ks, arg: a, ms }) => {
       const fn = new Function(`return (${src})`)();
       const g = window.__game.game;
-      const h = { done: false, ok: false, t0: null };
-      window.__hold = h;
       // o prazo e a condição só contam depois que os keydown reais chegaram à página
       const seen = new Set();
+      const h = { done: false, ok: false, t0: null, seen, of: new Set(ks).size };
+      window.__hold = h;
       const onDown = (e) => { if (ks.includes(e.code)) seen.add(e.code); };
       addEventListener('keydown', onDown);
       const loop = () => {
         const i = g.debug.info();
-        if (seen.size === ks.length) {
+        if (seen.size === h.of) {
           if (h.t0 === null) h.t0 = i.simSec;
           let ok = false;
           try { ok = !!fn(i, a); } catch {}
@@ -265,38 +504,75 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       };
       requestAnimationFrame(loop);
     }, { src: pred.toString(), keys, arg, ms: timeout });
-    for (const k of keys) await page.keyboard.down(k);
-    if (during) await during(); // ex.: um toque de Shift (arrancada) com as teclas seguradas
-    await page.waitForFunction(() => window.__hold.done, null, { polling: 30, timeout: Math.max(5000, timeout * 8) }).catch(() => {});
-    for (const k of [...keys].reverse()) await page.keyboard.up(k);
+    const release = async () => { for (const k of [...keys].reverse()) await page.keyboard.up(k); };
+    try {
+      for (const k of keys) await page.keyboard.down(k);
+      if (during) await during(); // ex.: um toque de Shift (arrancada) com as teclas seguradas
+      // a página solta as teclas sozinha; aqui só se espera ela terminar, com os tetos de relógio
+      const dl = deadline(timeout, what);
+      for (;;) {
+        const i = await read(what, true);
+        const h = i.__hold;
+        if (!h || h.done) break;
+        if (dl.wall(i, `; teclas que chegaram à página: ${h.seen} de ${h.of}`)) break;
+        await sleep(30);
+      }
+    } catch (e) {
+      await release().catch(() => {});
+      throw e;
+    }
+    await release();
     return info();
   }
   async function press(key, after = 120) {
     await page.keyboard.press(key);
     await (process.env.CI ? gsleep : sleep)(after);
   }
+  /** Estado do jogo agora, para o diagnóstico de uma etapa que venceu: no máximo 5 s, sem marcar a página como travada. */
+  async function peek() {
+    let timer;
+    const reading = rawEvaluate(() => window.__game?.game?.debug?.info?.() ?? null)
+      .then((i) => (i ? `estado agora: ${describe(i)}` : 'window.__game ainda não existe'), (e) => `a leitura do estado falhou: ${String(e.message).split('\n')[0]}`);
+    reading.finally(() => clearTimeout(timer)).catch(() => {});
+    return Promise.race([reading, new Promise((done) => { timer = setTimeout(done, 5000, 'a página não respondeu à leitura do estado em 5 s'); })]);
+  }
   async function load(query) {
-    await page.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 });
-    await page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 });
+    const what = `load('${query}')`;
+    progress = null; // página nova: o tempo sem leituras durante a navegação não conta como jogo parado
+    const step = async (stage, run) => {
+      const site = new Error();
+      try {
+        return await during(`${what}: ${stage}`, run);
+      } catch (e) {
+        if (e instanceof HarnessAbort) throw e;
+        const state = await peek(); // dá tempo de o aviso de queda da aba chegar, se o erro veio dela
+        if (lost) throw abort(`${what}: ${stage}`, siteOf(site), `${lost}. ${lastReadText()}`);
+        throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${state}`);
+      }
+    };
+    await step('abrir a página', () => page.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
+    await step('esperar window.__game', () => page.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
+    await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
     await readBasis();
     await (process.env.CI ? gsleep : sleep)(1500);
   }
   /** Espera `pred(info())` virar verdade; o prazo conta em tempo de JOGO (ver `deadline`). Devolve o último info(). */
   async function waitFor(pred, { timeout = 10000, step = 80 } = {}) {
-    const dl = deadline(timeout);
-    let i = await info();
+    const what = `waitFor(${snippet(pred)}, ${timeout} ms)`;
+    const dl = deadline(timeout, what);
+    let i = await read(what);
     while (!pred(i) && !dl.over(i)) {
       await sleep(step);
-      i = await info();
+      i = await read(what);
     }
     return i;
   }
   /** Espera `ms` de tempo de JOGO (o quadro limita dt a 1/20 s: abaixo de 20 fps o jogo anda mais devagar que o relógio). */
   async function gsleep(ms) {
-    const dl = deadline(ms);
+    const what = `gsleep(${ms} ms)`;
+    const dl = deadline(ms, what);
     for (;;) {
-      const i = await info();
+      const i = await read(what);
       if (dl.over(i)) return i;
       await sleep(Math.min(40, Math.max(10, ms - (Date.now() - dl.t0))));
     }
@@ -321,10 +597,30 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     };
   }
   async function close() {
-    await browser.close();
+    clearInterval(beat);
+    closing = true; // o 'disconnected' do fechamento não é queda
+    let timer;
+    const closed = await Promise.race([
+      browser.close().then(() => true),
+      new Promise((done) => { timer = setTimeout(done, limits.closeMs, false); }),
+    ]);
+    clearTimeout(timer);
+    if (!closed) {
+      aborts.push(`[harness] o navegador não fechou em ${secs(limits.closeMs)}`);
+      // a conexão presa seguraria o processo da suíte; o Playwright encerra o navegador filho na saída
+      setTimeout(() => process.exit(process.exitCode || 1), 2000).unref();
+    }
     if (pace.real > 0) {
       console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps); `
         + `leitura do estado: ${Math.round(pace.lat / pace.n)} ms em média, ${pace.maxLat} ms no pior caso`);
+    }
+    if (capHits) console.log(`esperas encerradas pelo teto de relógio: ${capHits} (avisos [harness] acima; o jogo andava devagar)`);
+    // Uma espera abortada reprova mesmo que a suíte tenha engolido a exceção.
+    for (const m of aborts) {
+      if (failures.some((f) => f.includes(m))) continue;
+      fail++;
+      failures.push(m);
+      console.log(`  FALHOU ${m}`);
     }
     // Erros do navegador são falhas mesmo quando todas as asserções da partida passaram.
     // Mantém o contrato numérico de close(), usado pelos processos das nove suítes.
@@ -336,7 +632,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
 
   return {
-    browser, page, errors, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, record, close, keysFor, readBasis,
+    browser, page, errors, limits, check, sleep, gsleep, info, ev, shot, logOf, clearLog, walkTo, walkPath, hold, holdUntil, press, load, waitFor, record, close, keysFor, readBasis,
     // As suítes antigas também esperam o tempo simulado no runner sem GPU.
     ...(process.env.CI ? { sleep: gsleep } : {}),
     get pass() { return pass; },
