@@ -425,6 +425,39 @@ export function stubBafoProps(root, layout) {
   return level('bafo', props);
 }
 
+/** Arena dos Porquinhos: o item do cenário provisório (a bolinha), o botão, o sininho, a porteira e os três legumes.
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubPorcosProps(root, layout) {
+  const obj = object(root, 'item');
+  obj.position.set(layout.BALL.x, 0.07, layout.BALL.z);
+  /** @param {import('../../src/types').VeggieKind} kind */
+  const veg = (kind) => {
+    const o = object(root, `legume-${kind}`);
+    const p = layout.VEGGIES[kind];
+    o.position.set(p.x, 0.03, p.z);
+    let eaten = 0;
+    return checked(`porcos.veggies.${kind}`, {
+      object: o, home: o.position.clone(), kind, carry: kind === 'pumpkin' ? 'ball' : 'carrot', groundY: 0.03,
+      get eaten() { return eaten; },
+      setEaten(k) { eaten = k; o.visible = k < 0.999; },
+      reset() { eaten = 0; o.visible = true; },
+      setHighlight(on) {},
+    });
+  };
+  const veggies = { corn: veg('corn'), carrot: veg('carrot'), pumpkin: veg('pumpkin') };
+  /** @satisfies {import('../../src/types').PorcosProps} */
+  const props = {
+    item: checked('porcos.item', { object: obj, setHighlight(on) {} }),
+    button: press(root, 'porcos.button'),
+    bell: checked('porcos.bell', { object: object(root, 'porcos.bell'), ring() {}, update(dt) {} }),
+    penGate: gate(root, 'porcos.penGate'),
+    veggies,
+    collectibles: [],
+    reset() { for (const v of Object.values(veggies)) v.reset(); },
+  };
+  return checked('porcos', props, ['ball', 'plate', 'gate', 'update', 'fireflies']);
+}
+
 /** @param {string} id @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubProps(id, root, layout) {
   switch (id) {
@@ -441,6 +474,7 @@ export function stubProps(id, root, layout) {
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);
     case 'canil': return stubCanilProps(root);
+    case 'porcos': return stubPorcosProps(root, layout);
     default: throw new Error(`Fase sem fábrica explícita de props: ${id}`);
   }
 }
