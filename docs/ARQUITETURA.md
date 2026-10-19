@@ -38,7 +38,7 @@ src/game/                  NÚCLEO genérico
   dogController.js         movimento de uma dog (aceleração, giro, arrancada, pulo, colisão)
   cameraRig.js             câmera de seguimento, planos de foco, tela inicial e comemoração
   puzzleKit.js             peças para puzzles: dicas, prompts, colecionáveis, item carregado, entrega
-  mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa…)
+  mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa, porcos…)
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
 src/levels/                as fases
   index.js                 registro das fases, em ordem (LEVELS: fase1…fase7) e publishedLevelIndex (?level= por
@@ -54,6 +54,7 @@ src/levels/                as fases
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
   _canil/                  Canil das Dogs: vitrine que compara o modelo atual das dogs com o novo (src/dogs/v2/),
                            com painel de poses e vistas (display.js, panel.js)
+  _porcos/                 Arena dos Porquinhos (?level=porcos): o chiqueiro, os porcos e os legumes da fase 10
   fase6/                   Expresso do Superbafo: track.js descreve o trilho uma vez só, para o
                            movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
   fase7/                   Lambe-Lambe na Pracinha: túnel de lama, trinco por dentro, Lambe-Lambe e
@@ -61,11 +62,13 @@ src/levels/                as fases
   dev.js                   fases de desenvolvimento (fora do menu: as arenas e os protótipos de fases novas),
                            abertas por ?level=<id> (devCatalog); só baixado quando o id não é de uma fase publicada
 src/world/                 cenário da fase 1 + utilitários de modelagem (util.js, plants.js, sky.js…) e peças
-                           compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo)
+                           compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo),
+                           veggies.js (milho, cenoura e aboborinha que os porcos comem), pigPen.js (o chiqueiro)
 src/dogs/                  as cachorrinhas (ver §7)
   config.js                atributos globais das personagens; withStart cria a configuração de cada layout
   v2/                      modelo novo das dogs, em teste (esqueleto de 38 ossos; ?dogs=novo e ?level=canil)
 src/characters/goose.js    a Dona Gansa
+src/characters/pig.js      os porquinhos (fase 10)
 src/ui/                    interface em DOM (ver §9)
 src/fx/                    áudio sintetizado, partículas e feedback (ver §9)
 test/                      testes rápidos em Node (npm test)
@@ -267,8 +270,9 @@ Peças prontas:
   (portão com dobradiça que não esmaga ninguém ao fechar), `createPushCrate` (caixote em 2 eixos com `onLimit`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
-  entrada, pelo molhado) e `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
-  o Lambe-Lambe; liga `speedScale`/`canDash`/`onLick` do puzzle).
+  entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
+  o Lambe-Lambe; liga `speedScale`/`canDash`/`onLick` do puzzle) e `createPigHerd` + `pigPenLayout` (porquinhos num
+  chiqueiro com porteira: soltos, atrapalham as dogs; comida no chão distrai por um tempo; ver §7, "Porquinhos").
 
 **Comemoração**: ao entregar, as duas dogs vão para `GOAL.celebrate`. Uma dog longe e fora do quadro reaparece
 num dos `GOAL.entryPoints` (fora da câmera) e chega andando; se não chegar a tempo, termina o trajeto durante a
@@ -490,6 +494,65 @@ guia, chão e orçamento), suíte E2E `canil` e capturas `tools/scripts/capture-
 **Dona Gansa** (`createGoose()` em `src/characters/goose.js`, tipo `GooseModel`): modelo e animação; o comportamento
 está em `src/game/mechanics/gooseNpc.js`.
 
+**Porquinhos** (personagem da fase 10; arena de teste `?level=porcos&play`, em `src/levels/_porcos/`).
+
+- Modelo: `createPig({ variant })` em `src/characters/pig.js` (tipo `PigModel`). Pipeline da gansa e das dogs (SDF →
+  Surface Nets → SkinnedMesh): tronco, cabeça com bochechas e as quatro patas com cascos numa malha com 10 ossos;
+  orelhas caídas (com mola), focinho com narinas, rabinho em saca-rolha e olhos são peças rígidas. Dois materiais
+  para todos (pele com cor por vértice; olhos), sete malhas por porco; a malha é gerada uma vez e as variantes 0, 1
+  e 2 só trocam as manchinhas (atributo de cor). `update(dt, { speed, turn, action, lookAt })`: a marcha passa de
+  passo a trote pela velocidade; girando parado ele dá passinhos; `action` `idle`, `walk`, `sniff` (fuça o chão),
+  `eat`, `alert`, `lie` (de bruços) e `sleep` (tomba de lado, olhos fechados, "Zzz"). Gestos de uma vez: `oink()`
+  (o corpo dá dois trancos), `bump()` (esbarrão de cabeça) e `shake()` (sacudida). Pés por IK de duas partes; uma
+  trava de chão levanta o focinho (em pé) e ergue o corpo (deitado) se algum ponto encostar abaixo do chão:
+  `lowestY()` informa o ponto mais baixo do último quadro (testado em todas as poses).
+- Comportamento: `createPigHerd({ id, cfg, world, root, emit, effects, createPig, gateProp })` em
+  `src/game/mechanics/pigHerd.js` (padrões em `PIG_DEFAULTS`). Presos no cercado até `setOpen(true)`; soltos, saem um
+  atrás do outro e ficam na `cfg.area` (a horta). Atrapalham a dog que chega perto (a ativa primeiro): andando, se
+  põem à frente dela, lado a lado; parada, chegam encostados, cheiram e dão um esbarrão de leve (`effects.knock`,
+  0,32 m, com recarga por dog). Cada porco é um colisor dinâmico (círculo) que bloqueia as duas dogs; eles nunca
+  atravessam as dogs nem uns aos outros. Cansam depois de `boredAfter` s e fuçam um pouco. Quem leva algo na boca
+  (`update(dt, { active, ctrls, carries })`, `carries(nome)`) é o alvo preferido: vão atrás dela de mais longe, mais
+  rápido, sem cansar, esbarram mais e o esbarrão derruba o objeto: a fase passa `knockItem(nome, { pig, dirX, dirZ,
+  x, z })` → true se derrubou (ela faz o objeto voar e cair; `cfg.knockChance`, e `cfg.knockGrace` s sem derrubar logo
+  depois de pegar). Evento `pig:knock`.
+  Comida: `addFood({ x, z, kind, time?, eat?, onProgress?(k), onDone?() })`: o porco livre mais perto trota até ela,
+  come (`eat` s; `onProgress` vai de 0 a 1 para a fase encolher o legume), deita e cochila ao lado até completar
+  `time` s de distração (contados da 1ª mordida), acorda se sacudindo e volta a atrapalhar (`pig:done`). Padrões
+  por legume em `cfg.foods` (milho 32/18 s, cenoura 26/14 s, abóbora 40/24 s; outros tipos: `distractTime` 30 e
+  `eatTime` 16); `time: Infinity` distrai de vez. `removeFood(f)` (a dog pegou de volta) devolve o porco às dogs.
+  Comida fora da área é ignorada. `recall()` leva todos para casa (a porteira fecha quando o último entra; com uma
+  dog dentro do chiqueiro, espera ela sair) e `reset()` volta ao começo; `onBark(c)` faz os de perto pararem e
+  olharem (latido não resolve). `info()`: `open`, `gateT`, `released`, `pigs[i] { state, action, x, z, dog, food,
+  distracted, left (s que faltam) }`, `distracted`, `pestering`, `free`, `inPen`, `nextBack` (o menor tempo até um
+  voltar), `foods` e `errors`. Rede de segurança: cada porco roda num passo protegido; um erro sai no console (uma
+  vez por porco), o porco volta a passear e o jogo segue (`errors` conta; deve ser 0). Para testes e capturas:
+  `place(i, x, z, yaw, state)` e `releaseNow()`.
+- Chiqueiro: `pigPenLayout(PEN)` (puro JS) devolve `{ pen, door, gate, colliders }` para o layout: as quatro cercas
+  fora do miolo (a da porteira com o vão), o cfg da porteira (`createHingedGate`, abre para fora) e os pontos logo
+  dentro e logo fora dela. `PEN = { x0, x1, z0, z1, t?, h?, door: { side: 'n' | 's' | 'e' | 'w', a, b }, swing?,
+  trough?, mud? }`. O cenário é `buildPigPen(PEN, pigPenLayout(PEN))` em `src/world/pigPen.js`
+  (`{ group, gate, update }`).
+- Legumes: `createVeggie('corn' | 'carrot' | 'pumpkin')` em `src/world/veggies.js` (tipo `VeggieProp`, um material
+  para todos): `object` (eixo comprido em X; `userData.carryKind` dá a pose da boca: milho e cenoura atravessados,
+  abóbora como a bolinha), `groundY`, `setEaten(k)` (a ponta some aos poucos; em 1, some) e `reset()`.
+- Integração numa fase (receita):
+  1. Layout: `const PEN_LAYOUT = pigPenLayout(PEN)`; `PIGS` = `pen`, `door` e `gate` de `PEN_LAYOUT` + `area` (e,
+     se quiser, `homes`, `foods`…); `STATIC_COLLIDERS` recebe `...PEN_LAYOUT.colliders`.
+  2. Cenário: `buildPigPen` (a `gate` vai nos props, como `penGate`) e os legumes com `createVeggie`.
+  3. Puzzle: `effects = createDogEffects({ world, dogs })`; `pigs = createPigHerd({ id: 'porco', cfg: PIGS, world,
+     root, emit, effects, createPig, gateProp: props.penGate, knockItem })`. No `update`: `effects.update(dt, ctrls)`
+     e `pigs.update(dt, { active, ctrls, carries })`; `lockFor: (n) => effects.lockFor(n)`; `onBark: (c) => pigs.onBark(c)`;
+     na comemoração, `pigs.animate(dt)` (em `updateAlways`); `reset` chama `pigs.reset()`.
+  4. A fase decide quando abrir (`pigs.setOpen(true)` num botão, numa alavanca…) e transforma o legume largado em
+     comida (`pigs.addFood(...)` com `onProgress: (k) => veg.setEaten(k)`); pegar de volta é `pigs.removeFood(f)`.
+     O `knockItem` da fase larga o que a dog levava com um arco (legume derrubado na horta vira comida; a bolinha fica
+     no chão até a dog pegar de novo). O ponto de queda precisa ser alcançável: a arena usa `landingFor` (sem
+     atravessar nada alto no caminho, fora dos colisores, com lugar para a dog chegar; senão, aos pés dela). A arena (`src/levels/_porcos/puzzle.js`) mostra tudo isso: pegar e largar com
+     E, o arco do legume caindo, a bolinha derrubada e a volta do legume comido.
+  5. Sons e efeitos: o feedback já trata os eventos `pig:*` (§8); a fase emite `item:land {kind}` quando o que a dog
+     levava cai no chão.
+
 ## 8. Eventos
 
 Barramento em `src/core/events.js`. O emissor do jogo vem de `createGameEvents`
@@ -522,7 +585,13 @@ Quem emite e quem ouve:
   `sprinkler:hit`/`sprinkler:off`, `valve:turn`, `crate:move`/`crate:sink`, `lantern:on`/`lantern:off`,
   `wall:touch {id, y}`, `wall:button {id, kind, on, y}`, `wall:tick {id, left}`, `wall:timeout {id}` (impulso na parede),
   `hatch:open`/`hatch:close` (portinhola da parede de treino),
-  `goose:alert`/`goose:honk`/`goose:charge`/`goose:hit`/`goose:lured`/`goose:return`; fase 1: `rope:tug`, `cart:move`,
+  `goose:alert`/`goose:honk`/`goose:charge`/`goose:hit`/`goose:lured`/`goose:return`; porquinhos (`createPigHerd`):
+  `pig:gate {open}`, `pig:release {count}`, `pig:oink {pig, kind}` (`idle`, `pester`, `grumpy`, `alert`, `happy`),
+  `pig:bump {pig, name}`, `pig:smell {pig, food}`, `pig:eat {pig, food, kind, time}`, `pig:munch`, `pig:full`,
+  `pig:sleep`, `pig:wake`, `pig:shake`, `pig:snort`/`pig:snore` (só som), `pig:done {pig, food, reason}` (`time`,
+  `taken` ou `recall`: voltou a atrapalhar), `pig:knock {pig, name}` (derrubou o que a dog levava) e `pig:home`;
+  `item:land {kind}` (o que a dog levava caiu no chão; a fase emite); Arena dos
+  Porquinhos: `bell:ring`; fase 1: `rope:tug`, `cart:move`,
   `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando);
   fase 6: `expresso:route {route, signX, signZ}` (pulo no pedal virou a agulha), `expresso:sneeze` (o nariz sentiu o
   cheiro: "ah... ah..."), `expresso:atchim {x, y, z, dirX, dirZ}` (o espirro e o tranco de ré; vibra),

@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, canil, empurra, recursos, carregamento]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, canil, empurra, recursos, carregamento]
 
 permissions:
   contents: read
@@ -140,7 +140,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","canil","empurra"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","canil","empurra"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -168,6 +168,9 @@ jobs:
       - name: Capturas do impulso na parede para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'pulo'
         run: node tools/scripts/capture-parede.mjs
+      - name: Capturas dos porquinhos para revisão (qualidade visual completa)
+        if: always() && matrix.suite == 'porcos'
+        run: node tools/scripts/capture-porcos.mjs
       - name: Capturas da lavanderia (fase 8) para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'lavanderia'
         run: node tools/scripts/capture-lavanderia.mjs

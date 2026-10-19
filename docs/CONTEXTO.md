@@ -26,7 +26,43 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI e E2E no head novo, prévia ao usuário e aprovação explícita antes de integrar; avisar o
   orquestrador ao integrar. Se o #36 entrar antes, atualizar com o main e revalidar.
 
-## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
+## Em andamento: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (Claude)
+
+- Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
+  saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
+  distraírem. Ajuste do usuário: a comida distrai por um **tempo determinado e generoso** (configurável por
+  legume), não de vez; depois eles voltam a atrapalhar. Peças reutilizáveis, sem mexer em `src/levels/fase10/`: a
+  sessão da fase 10 (PR #33) integra depois que este PR entrar.
+- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`, atualizado por merge com o main `168bda6` (PR #34),
+  `04d7dbe` (PR #35) e `e9e61fb` (PR #37). Consultar o PR para SHA, CI, E2E e prévia; nada
+  rodou no PC além de `node --check`/`git diff --check`.
+- Feito: modelo `src/characters/pig.js` (SDF + esqueleto de 10 ossos, IK das patas, trava de chão, variantes de
+  manchinhas, gestos `oink`/`bump`/`shake`, ações `idle`/`walk`/`sniff`/`eat`/`alert`/`lie`/`sleep`); mecânica
+  `createPigHerd` + `pigPenLayout` em `src/game/mechanics/pigHerd.js` (cercado com porteira, soltos atrapalham com
+  colisor e esbarrão, `addFood`/`removeFood` com tempo de distração por legume, `recall`, `reset`, `info()`, eventos
+  `pig:*`); chiqueiro `src/world/pigPen.js`; legumes `src/world/veggies.js`; sons `src/fx/audio/soundsPorcos.js` e
+  o bloco `pig:*` do `feedback.js`; tipos `PigModel`/`VeggieProp`/`PorcosProps`; arena `src/levels/_porcos/`
+  (`?level=porcos&play`); testes `test/porcos.test.mjs`; suíte E2E `porcos` (`tools/scripts/test-porcos.mjs`) e
+  capturas `tools/scripts/capture-porcos.mjs` (`shots/porcos-revisao/`). API e receita de integração: ARQUITETURA §7
+  ("Porquinhos"), eventos em §8.
+- Retorno do usuário na prévia (2026-10-19): "ficou divertido, mas os porcos precisam atrapalhar mais: quando a dog
+  estiver com o objeto na boca, eles derrubam". Feito: `carries(nome)` no `update` e `knockItem(nome, hit)` da fase
+  (quem leva algo é o alvo preferido, de mais longe, mais rápido e sem cansar; o esbarrão derruba com
+  `knockChance` 0,85 depois de `knockGrace` 1,5 s; evento `pig:knock`); na arena, legume derrubado na horta vira
+  comida e a bolinha fica no chão até a dog pegar de novo (`item:land` no lugar de `veggie:drop`).
+- Segundo retorno (2026-10-19): "cuidado pro objeto não cair em um limbo, e quando o porco voltou a ação após comer
+  o legume, a prévia travou". Causa do travamento: ao fim da distração o porco voltava a passear com o destino
+  apagado e o passeio de antes ainda ativo (`goal` nulo lido no `roam`; sem dog por perto, a exceção parava o
+  laço do jogo). Corrigido em `finishDistraction`, mais uma rede de segurança no `update` (cada porco num passo
+  protegido; erro no console e `info().errors`). Limbo: `landingFor` na arena (o que cai não atravessa parede alta
+  nem fica onde a dog não chega) e a porteira não fecha com uma dog dentro do chiqueiro. Testes novos: o caso que
+  travava, a rede de segurança, a dog no chiqueiro e uma bagunça longa com semente (200 s de jogo, ações
+  aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
+- Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
+  esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
+  `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
+
+## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 
 - Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
   sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +
@@ -62,13 +98,10 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   patas dobradas pedalando, se esfrega; o corpo fica apoiado no chão pelo ponto mais baixo).
 - Pedido registrado para a **etapa 4** (retorno da prévia da fase 10, vale para todas as fases): a cabeça das dogs
   ainda atravessa algumas paredes e móveis, porque passa do círculo único de colisão quando a dog anda de frente.
-- Próximo passo: CI e E2E (`canil` e `todas`) no head atualizado com o main, revisar `shots/modelos/` (rolagem e
-  pulo com as orelhas), entregar a prévia e esperar a aprovação. Ordem de integração recomendada pelo orquestrador:
-  #35, #36, este (#37) e a fase 10; quem entra por último resolve os conflitos mantendo os dois lados.
+- Etapa 1 integrada ao main com a aprovação do usuário (squash `e9e61fb`, deploy `39312448427`). Não repetir
+  merge/deploy do #37; as etapas 2 a 5 seguem em PRs próprios.
 
-## Em andamento: pombo mais bonito (Claude, PR #34)
-
-## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
+## Entregue: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (PR #35, squash `04d7dbe`, deploy `39306814728`)
 
 - Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
   no L2". Tecla do Lambe-Lambe escolhida pelo usuário: **L** (o R continua sendo o superbafo). Controle: R1 = arrancada
@@ -86,9 +119,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `lick.target`; hoje, com a Radhija lambendo a Rhaenyra, ela mostra a dica `alreadyClean` e o `onLickMiss` mostra
   `lickFar` ("Chegue pertinho da Radhija…") também quando quem tenta é a Radhija, e os textos dela ainda dizem R.
   A sessão da fase 10 ajusta depois deste PR (aviso a ela no merge).
-- Próximo passo: CI e E2E (`lambe`, `toque`, `controle`, `bafo`, `expresso`, `menu`) no head do PR, revisar as
-  capturas do Lambe-Lambe (`shots/lambe-revisao/10b-*`, `10c-*`) e do celular, entregar a prévia e aguardar a
-  aprovação. Consultar o PR para SHA, CI, E2E e prévia.
+- Integrado ao main com a aprovação do usuário (squash `04d7dbe`, deploy `39306814728`). Não repetir merge/deploy do #35.
 
 ## Entregue: Pombo mais bonito (PR #34, squash `168bda6`, deploy `39303626593`)
 
