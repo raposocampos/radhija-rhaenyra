@@ -236,9 +236,11 @@ test('modelo novo: o item vai na boca (bolinha), à frente da cabeça e perto de
       ball.name = 'ball';
       d.mouthSocket.clear();
       d.mouthSocket.add(ball);
-      // as duas no mesmo estado: os testes de antes deixaram cada uma numa pose
+      // as duas no mesmo estado (os testes de antes deixaram cada uma numa pose) e olhando para o mesmo ponto à frente
+      // (parada, cada uma olharia em volta ao acaso)
+      const ahead = { x: 0, y: 0.3, z: 4 };
       d.update(1 / 60, { speed: 0, action: 'sniff' });
-      for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', carrying: true });
+      for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', carrying: true, lookAt: ahead });
       assert.equal(d.carryKind, 'ball');
       d.object.updateMatrixWorld(true);
       pos[label] = d.mouthSocket.getWorldPosition(new THREE.Vector3());
