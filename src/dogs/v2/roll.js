@@ -84,7 +84,9 @@ export function createRollOverlay({ skel2, cfg }) {
     // patas: da frente dobradas junto do peito, de trás abertas em "sapinho"; esfregando, pedalam
     const lw = w * fold;
     const pedal = (ph) => Math.sin(t * 7.5 + ph) * rub;
-    for (const [s, sg, ph] of [['L', 1, 0], ['R', -1, Math.PI]]) {
+    /** @type {[string, number, number][]} lado, sinal (abrir para fora) e fase da pedalada */
+    const legs = [['L', 1, 0], ['R', -1, Math.PI]];
+    for (const [s, sg, ph] of legs) {
       toward(B(`F${s}u`), -1.1 + 0.3 * pedal(ph), 0, 0.15 * sg, lw);
       toward(B(`F${s}l`), 1.8, 0, 0, lw);
       toward(B(`F${s}c`), 0.9, 0, 0, lw);
