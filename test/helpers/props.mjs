@@ -383,16 +383,26 @@ export function stubFase10Props(root, layout) {
   const hat = item(root, 'hat', { x: layout.BOAT.start.x, z: layout.BOAT.start.z });
   const ribbon = item(root, 'ribbon', { x: layout.RIBBON.x, z: layout.RIBBON.z });
   const candle = item(root, 'candle', { x: layout.CANDLE.x, z: layout.CANDLE.z });
+  const cookie = item(root, 'cookie', { x: layout.DRAWERS.x, z: layout.DRAWERS.z });
+  const star = item(root, 'star', { x: layout.ROSE_BUSH.x, z: layout.ROSE_BUSH.z + layout.ROSE_BUSH.r + 0.4 });
   const handle = object(root, 'rope-handle');
   handle.position.set(layout.ROPE.rest.x, 0, layout.ROPE.rest.z);
   const cakeObj = object(root, 'cake');
-  const tierSpots = [0, 1, 2].map((i) => object(cakeObj, `tier-${i}`));
-  const things = { hat, ribbon, candle };
+  const tierSpots = [0, 1, 2, 3, 4].map((i) => object(cakeObj, `tier-${i}`));
+  const things = { hat, ribbon, candle, cookie, star };
+  const link = (name) => checked(name, { on: false, pulses: 0, pulse() { this.pulses++; }, setOn(on) { this.on = on; }, update(dt) {} });
+  const spots = [
+    ...layout.PLANTATION.corn.map((c, i) => ({ id: `milho-${i + 1}`, kind: 'corn', x: c.x, z: c.z1 + 0.32 })),
+    { id: 'cenouras', kind: 'carrot', x: layout.PLANTATION.carrots.x, z: layout.PLANTATION.carrots.z + layout.PLANTATION.carrots.hz + 0.3 },
+    ...layout.PLANTATION.pumpkins.map((p, i) => ({ id: `abobora-${i + 1}`, kind: 'pumpkin', x: p.x, z: p.z })),
+  ].map((sp) => ({ ...sp, ready: true, setReady(on) { this.ready = on; } }));
   /** @satisfies {import('../../src/types').Fase10Props} */
   const props = {
     hat: Object.assign(hat, { onBoat: true, setOnBoat(on) { this.onBoat = on; } }),
     ribbon,
     candle,
+    cookie,
+    star: Object.assign(star, { shown: false, setShown(on) { this.shown = on; } }),
     cake: checked('fase10.cake', {
       object: cakeObj, placed: /** @type {string[]} */ ([]), lit: false, rejected: 0,
       setHighlight(on) {},
@@ -413,13 +423,24 @@ export function stubFase10Props(root, layout) {
     tube: checked('fase10.tube', { object: object(root, 'tube'), puffs: [], outs: 0, setPuffs(list) { this.puffs = list; }, outletPuff() { this.outs++; } }),
     bucket: checked('fase10.bucket', { object: object(root, 'bucket'), y: 0, tilt: 1, setY(y) { this.y = y; }, setTilt(k) { this.tilt = k; } }),
     rope: checked('fase10.rope', { handle, pulled: 0, setPull(pulled, holder) { this.pulled = pulled; } }),
-    plate: press(root, 'fase10.plate'),
     shedDoor: gate(root, 'fase10.shedDoor'),
+    shedButtons: [wallButton(root, 'fase10.shedButton1'), wallButton(root, 'fase10.shedButton2')],
+    shedLinks: { door: link('fase10.shedLinks.door'), gate: link('fase10.shedLinks.gate') },
+    styGate: gate(root, 'fase10.styGate'),
+    drawers: checked('fase10.drawers', { list: [0, 0, 0].map(() => ({ ext: 0, fallen: false })), setDrawer(i, ext, fallen) { this.list[i] = { ext, fallen }; } }),
+    pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),
+    farm: { spots, makeVeg(kind) { const o = new THREE.Group(); o.name = `veg:${kind}`; return o; } },
+    secretBoard: checked('fase10.secretBoard', { open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),
     breaker: wallButton(root, 'fase10.breaker'),
     tap: wallButton(root, 'fase10.tap'),
     collectibles: [],
     reset() {
-      for (const it of [hat, ribbon, candle]) { root.add(it.object); it.object.position.copy(it.home); }
+      for (const it of [hat, ribbon, candle, cookie, star]) { root.add(it.object); it.object.position.copy(it.home); }
+      props.star.setShown(false);
+      props.pinata.reset();
+      props.secretBoard.setOpen(0);
+      props.secretBoard.setLoose(false);
+      for (const sp of spots) sp.setReady(true);
       props.hat.setOnBoat(true);
       props.cake.placed.length = 0;
       props.cake.lit = false;

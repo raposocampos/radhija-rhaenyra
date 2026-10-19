@@ -75,18 +75,23 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    rodinhas até o botão do chão, que abre o registro. O superbafo da Radhija vai pelo vento e pelo duto até o gato,
    que acorda, pula e derruba o livro. A porta do escritório tem mola: a Radhija fica no vão enquanto a Rhaenyra busca
    o livro, e os dois vão para a mesinha da poltrona.
-10. **Festa no Quintal**: o aniversário de 3 anos das duas, num fim de tarde que vira noite, com a casa, a varanda
-   com o quintal e o fundo do quintal. O bolo de três andares espera três enfeites, de baixo para cima, na ordem do
-   quadro "Festa do ano passado", na sala; fora de ordem, o enfeite balança e cai ao lado da mesa. O chapeuzinho está
-   num barquinho no meio da piscininha vazia: a Rhaenyra tira o caixote de cima da mangueira, abre a torneira no alto
-   da parede com o impulso, a piscininha enche e, com o disjuntor da cozinha ligado (acendem as luzinhas em volta do
-   quadro e depois as da festa), o ventilador leva o barquinho até a borda. O laço está na casa na árvore, com um
-   pombo dormindo em cima dele: um latido de longe distrai a Dona Gansa e a outra puxa a cordinha do portão; o
-   superbafo da Radhija sobe pelo cano de brinquedo e espanta o pombo; a Radhija entra no balde e a Rhaenyra puxa a
-   corda (ela segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo
-   escorregador (ou volta para o balde). A vela do 3 está no galpão, atrás da horta: a Radhija passa pelo vão da cerca e cai na
-   lama, a Rhaenyra pula a cerca e a limpa com o Lambe-Lambe; com a Rhaenyra na placa, a porta basculante sobe (ela
-   fica lá na troca), e a Radhija sobe a rampa com uma arrancada até a vela.
+10. **Festa no Quintal**: o aniversário de 3 anos das duas, num fim de tarde que vira noite, com a casa, a varanda,
+   o quintal e o fundo do quintal. O bolo espera cinco enfeites, de baixo para cima, na ordem do quadro "Festa do ano
+   passado", na sala; fora de ordem, o enfeite balança e cai ao lado da mesa. O chapeuzinho está num barquinho no
+   meio da piscininha vazia: a Rhaenyra tira o caixote de cima da mangueira, abre a torneira no alto da parede com o
+   impulso, a piscininha enche e, com o disjuntor da cozinha ligado (acendem as luzinhas em volta do quadro e depois
+   as da festa), o ventilador leva o barquinho até a borda. O laço está na casa na árvore, com um pombo dormindo em
+   cima dele: um latido de longe distrai a Dona Gansa e a outra puxa a cordinha do portão; o superbafo da Radhija
+   sobe pelo cano de brinquedo e espanta o pombo; a Radhija entra no balde deitado e a Rhaenyra puxa a corda (ela
+   segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo escorregador. O
+   biscoito de osso de glacê está em cima do gaveteiro da despensa: a Rhaenyra puxa as gavetas com a boca até elas
+   virarem uma escadinha (a de baixo bem para fora, cada uma mais para dentro; puxada demais, a gaveta cai) e a
+   Radhija sobe por elas. A vela do 3 está no galpão, atrás da horta: a Radhija passa pelo vão da cerca e cai na lama,
+   a Rhaenyra pula a cerca e a limpa com o Lambe-Lambe; dos dois botões altos na parede do galpão, um abre a porta
+   basculante e o outro, o chiqueiro (sorteado a cada partida); a Radhija sobe a rampa com uma arrancada até a vela.
+   Os legumes do campinho (milho, cenoura e abóbora) podem ser colhidos e largados no chão. A estrela está dentro da
+   piñata pendurada na mangueira, em cima da roseira: o superbafo a faz balançar para fora dos espinhos e a Rhaenyra
+   pula e bate nela quando ela passa por cima; três batidas e ela abre. São cinco ossinhos nesta fase.
 
 Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).

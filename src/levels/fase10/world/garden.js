@@ -1,16 +1,14 @@
 // FASE 10 · Fundo do quintal, lado sul: a HORTA cercada (ripas baixas e rústicas; no oeste, o vão da tábua quebrada,
 // com uma ripa pendurada torta e outra caída na grama), canteiros de alface e cenoura, o pé de tomate no tutor, os
 // girassóis junto da cerca, o regador; e o GALPÃO de ferramentas em corte (tábuas verde-sálvia, a faixa do corte em
-// cima), com a porta basculante (sobe girando pela dobradiça de cima e entra no galpão), a placa de pressão na
-// frente dela (tábua com molas e a patinha pintada) ligada à porta por um cabo que corre pelo chão e sobe a parede até
-// a roldana da porta, a bancada com morsa e o painel de ferramentas, latas de tinta, a vassoura, a lâmpada pendurada,
-// a rampa de tábua com travessinhas e a prateleira alta onde fica a vela.
-// API: buildGarden(root, layout) → { group, plate: PressProp, door: { setOpen(t) }, bulbPos, seeThrough, update(dt, t) }
+// cima), com a porta basculante (sobe girando pela dobradiça de cima e entra no galpão; o cabo da caixinha de força
+// chega na roldana dela), a bancada com morsa e o painel de ferramentas, latas de tinta, a vassoura, a lâmpada
+// pendurada, a rampa de tábua com travessinhas e a prateleira alta onde fica a vela.
+// API: buildGarden(root, layout) → { group, door: { setOpen(t) }, bulbPos, seeThrough, update(dt, t) }
 import * as THREE from 'three';
 import { picketGeometry } from '../../../world/fence.js';
 import { rng, rbox, canvasTexture, stdMat, woodMat, foliageCluster, contactShadow, mergeGeometries, brassMat, ironMat } from '../../../world/util.js';
 import { plantMat, lettuce, carrotTops } from '../../../world/plants.js';
-import { makeLink } from '../../../world/links.js';
 
 const TAU = Math.PI * 2;
 const POCHE = '#3b2a20';
@@ -42,20 +40,6 @@ function pegboardTexture() {
     g.fillRect(200, 40, 34, 8); g.fillRect(212, 48, 8, 46); // pá de jardim
   }, { repeat: false });
 }
-/** Placa de pressão: tábua clara com a patinha grande pintada. */
-function plateTexture() {
-  return canvasTexture(128, 128, (g, w, h) => {
-    const r = rng(9);
-    for (let j = 0; j < 4; j++) {
-      const t = 0.88 + r() * 0.15;
-      g.fillStyle = `rgb(${(214 * t) | 0},${(178 * t) | 0},${(124 * t) | 0})`;
-      g.fillRect(0, j * 32 + 1, w, 30);
-    }
-    g.fillStyle = '#c94a5a';
-    g.beginPath(); g.ellipse(64, 76, 20, 17, 0, 0, TAU); g.fill();
-    for (let t = 0; t < 4; t++) { g.beginPath(); g.ellipse(36 + t * 19, 46 - (t === 1 || t === 2 ? 9 : 0), 8, 10, 0, 0, TAU); g.fill(); }
-  }, { repeat: false });
-}
 /** Porta basculante: tábuas em diagonal com moldura. */
 function doorTexture() {
   return canvasTexture(128, 128, (g, w, h) => {
@@ -70,7 +54,7 @@ function doorTexture() {
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildGarden(root, layout) {
-  const { HORTA, VEG_BEDS, SHED, PLATE, WORKBENCH, RAMP, CANDLE } = layout;
+  const { HORTA, VEG_BEDS, SHED, STY, WORKBENCH, RAMP, CANDLE } = layout;
   const group = new THREE.Group();
   group.name = 'horta-e-galpao';
   const seeThrough = [];
@@ -99,7 +83,7 @@ export function buildGarden(root, layout) {
   run(HORTA.x0, HORTA.z0, HORTA.x0, HORTA.gap.z0, -Math.PI / 2); // oeste, até o vão
   run(HORTA.x0, HORTA.gap.z1, HORTA.x0, HORTA.z1 + 0.2, -Math.PI / 2);
   run(HORTA.x1, HORTA.z0, HORTA.x1, SHED.z0, Math.PI / 2);
-  run(HORTA.x1, SHED.z1, HORTA.x1, HORTA.z1 + 0.2, Math.PI / 2);
+  run(HORTA.x1, SHED.z1, HORTA.x1, STY.z0, Math.PI / 2);
   const pkMesh = new THREE.InstancedMesh(pk, rustic, pickets.length);
   pickets.forEach((m, i) => pkMesh.setMatrixAt(i, m));
   pkMesh.castShadow = true;
@@ -107,7 +91,7 @@ export function buildGarden(root, layout) {
   group.add(pkMesh);
   // travessa e mourões
   const rails = [];
-  for (const [x0, z0, x1, z1] of [[HORTA.x0, HORTA.z0, HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.z0, HORTA.x0, HORTA.gap.z0], [HORTA.x0, HORTA.gap.z1, HORTA.x0, HORTA.z1 + 0.2], [HORTA.x1, HORTA.z0, HORTA.x1, SHED.z0], [HORTA.x1, SHED.z1, HORTA.x1, HORTA.z1 + 0.2]]) {
+  for (const [x0, z0, x1, z1] of [[HORTA.x0, HORTA.z0, HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.z0, HORTA.x0, HORTA.gap.z0], [HORTA.x0, HORTA.gap.z1, HORTA.x0, HORTA.z1 + 0.2], [HORTA.x1, HORTA.z0, HORTA.x1, SHED.z0], [HORTA.x1, SHED.z1, HORTA.x1, STY.z0]]) {
     const len = Math.hypot(x1 - x0, z1 - z0);
     const g = new THREE.BoxGeometry(0.035, 0.05, len);
     g.rotateY(Math.atan2(x1 - x0, z1 - z0));
@@ -117,7 +101,7 @@ export function buildGarden(root, layout) {
   const railMesh = new THREE.Mesh(mergeGeometries(rails), postMat);
   railMesh.castShadow = true;
   group.add(railMesh);
-  for (const [x, z] of [[HORTA.x0, HORTA.z0], [HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.gap.z0 - 0.03], [HORTA.x0, HORTA.gap.z1 + 0.03], [HORTA.x0, 3.2], [(HORTA.x0 + HORTA.x1) / 2, HORTA.z0]]) {
+  for (const [x, z] of [[HORTA.x0, HORTA.z0], [HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.gap.z0 - 0.03], [HORTA.x0, HORTA.gap.z1 + 0.03], [HORTA.x0, 3.2], [HORTA.x0, 5.0], [(HORTA.x0 + HORTA.x1) / 2, HORTA.z0]]) {
     const p = new THREE.Mesh(rbox(0.07, fh + 0.1, 0.07, 0.01), postMat);
     p.position.set(x, (fh + 0.1) / 2, z);
     p.castShadow = true;
@@ -436,51 +420,15 @@ export function buildGarden(root, layout) {
   door.position.set(SHED.x0, dH, (SHED.door.z0 + SHED.door.z1) / 2);
   group.add(door);
 
-  // ================================================================ placa de pressão e o cabo até a porta
-  const plate = new THREE.Group();
-  plate.name = 'placa-de-pressao';
-  const frame = new THREE.Mesh(rbox(PLATE.hx * 2 + 0.08, 0.05, PLATE.hz * 2 + 0.08, 0.01), stdMat('#5a4a3a', { roughness: 0.7 }));
-  frame.position.y = 0.025;
-  const top = new THREE.Mesh(rbox(PLATE.hx * 2, 0.04, PLATE.hz * 2, 0.01), new THREE.MeshStandardMaterial({ map: plateTexture(), roughness: 0.75 }));
-  top.position.y = 0.07;
-  const springs = [];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const s = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.004, 4, 10).rotateX(Math.PI / 2), ironMat());
-    s.position.set(sx * (PLATE.hx - 0.05), 0.05, sz * (PLATE.hz - 0.05));
-    plate.add(s);
-    springs.push(s);
-  }
-  plate.add(frame, top);
-  plate.position.set(PLATE.x, 0, PLATE.z);
-  plate.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  group.add(plate);
-  const cable = makeLink([
-    new THREE.Vector3(PLATE.x + PLATE.hx + 0.04, 0.03, PLATE.z),
-    new THREE.Vector3(SHED.x0 - T / 2 - 0.02, 0.025, PLATE.z),
-    new THREE.Vector3(SHED.x0 - T / 2 - 0.02, 0.025, SHED.door.z0 - 0.08),
-    new THREE.Vector3(SHED.x0 - T / 2 - 0.02, SHED.door.h + 0.06, SHED.door.z0 - 0.08),
-    new THREE.Vector3(SHED.x0 - T / 2 - 0.02, SHED.door.h + 0.06, SHED.door.z0 + 0.12),
-  ], { radius: 0.007, color: '#3a3634', glow: '#ffd36a', clips: 4, metal: true });
-  group.add(cable.object);
+  // ================================================================ a roldana da porta (o cabo vem da caixinha de força, sty.js)
   const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 14).rotateZ(Math.PI / 2), stdMat('#c9483c', { roughness: 0.5 }));
-  pulley.position.set(SHED.x0 - T / 2 - 0.03, SHED.door.h + 0.06, SHED.door.z0 + 0.14);
+  pulley.position.set(SHED.x0 - T / 2 - 0.03, SHED.door.h + 0.06, SHED.door.z1 - 0.14);
   group.add(pulley);
 
-  const st = { press: 0, open: 0, wasDown: false };
+  const st = { open: 0 };
   root.add(group);
   return {
     group, bulbPos, seeThrough,
-    plate: {
-      object: plate,
-      setPress(t) {
-        if (t > 0.5 && !st.wasDown) cable.pulse();
-        st.wasDown = t > 0.5;
-        st.press = t;
-        top.position.y = 0.07 - 0.03 * t;
-        for (const s of springs) s.scale.y = 1 - 0.6 * t;
-        cable.setOn(t > 0.5);
-      },
-    },
     door: {
       object: door,
       setOpen(t) {
@@ -491,7 +439,6 @@ export function buildGarden(root, layout) {
       },
     },
     update(dt, t) {
-      cable.update(dt);
       heads.forEach((h, i) => { h.rotation.z = Math.sin(t * 0.8 + i) * 0.06; });
     },
   };

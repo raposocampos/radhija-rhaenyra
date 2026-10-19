@@ -359,18 +359,24 @@ export function buildPorch(root, layout) {
   band.position.y = tierY[0] + CAKE.tiers[0].h * 0.45;
   band.visible = false;
   cakeGroup.add(band);
-  // lugares dos enfeites: o laço na frente do andar de baixo, a vela no anel do meio e o chapéu no topo
-  const spots = [0, 1, 2].map((i) => {
+  // lugares dos cinco enfeites, de baixo para cima: o laço na frente do andar de baixo, o biscoito na beirada dele, a
+  // vela no anel do meio, o chapéu no topo e a estrela na ponta do chapéu
+  const spots = [0, 1, 2, 3, 4].map(() => {
     const o = new THREE.Object3D();
     cakeGroup.add(o);
     return o;
   });
   spots[0].position.set(0, tierY[0] + CAKE.tiers[0].h * 0.5, CAKE.tiers[0].r + 0.012);
-  spots[1].position.set(0.05, tierY[1] + CAKE.tiers[1].h + 0.002, (CAKE.tiers[1].r + CAKE.tiers[2].r) / 2);
-  spots[2].position.set(0, tierY[2] + CAKE.tiers[2].h + 0.002, 0);
+  spots[1].position.set(-0.04, tierY[0] + CAKE.tiers[0].h + 0.003, (CAKE.tiers[0].r + CAKE.tiers[1].r) / 2);
+  spots[1].rotation.y = 0.15;
+  spots[2].position.set(0.05, tierY[1] + CAKE.tiers[1].h + 0.002, (CAKE.tiers[1].r + CAKE.tiers[2].r) / 2);
+  spots[3].position.set(0, tierY[2] + CAKE.tiers[2].h + 0.002, 0);
+  spots[4].position.set(0, tierY[2] + CAKE.tiers[2].h + 0.16, 0);
+  /** O andar do bolo de cada enfeite (pela ordem). */
+  const TIER_OF = [0, 0, 1, 2, 2];
   /** Ponto de tentativa num andar (de onde o enfeite errado balança e cai). */
-  const trySpot = (tier) => {
-    const i = Math.min(2, tier);
+  const trySpot = (slot) => {
+    const i = TIER_OF[Math.min(4, slot)];
     const t = CAKE.tiers[i];
     const inner = i < 2 ? CAKE.tiers[i + 1].r : 0;
     return new THREE.Vector3(0, tierY[i] + t.h + 0.002, i < 2 ? (t.r + inner) / 2 : 0);
@@ -547,7 +553,7 @@ export function buildPorch(root, layout) {
     spots,
     /** Prende o enfeite no lugar do andar (sem animação: chegou pela boca da dog). */
     place(thing, tier, obj) {
-      const spot = spots[Math.min(2, tier)];
+      const spot = spots[Math.min(4, tier)];
       if (!obj) return;
       spot.add(obj);
       obj.position.set(0, 0, 0);

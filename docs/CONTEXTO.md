@@ -147,8 +147,35 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - FPS: o usuário notou FPS baixo com a GTX 1650 "inativa" (o Windows rodava o navegador na placa integrada; o jogo
     já pede `high-performance`). Na fase 10 a grama era metade dos triângulos do cenário (~250 mil de ~555 mil):
     tufos mais leves e malha um pouco mais aberta (~126 mil); peças com menos de ~9 cm não fazem sombra.
-- Próximo passo da D: com CI e E2E (`quintal` e `todas`) verdes no head final e as capturas revisadas, entregar a
-  prévia nova e esperar a aprovação; integrar com squash e SHA esperado, liberar o deploy e avisar o orquestrador.
+- Segunda rodada de retorno (2026-10-19), com sessões paralelas para o que não é da fase: pombo mais bonito
+  (PR #34), Lambe-Lambe também na Radhija com superbafo no R2 e Lambe-Lambe no L2 (PR #35), porcos (PR #36,
+  `createPigHerd` em `src/game/mechanics/pigHerd.js`) e modelos das dogs com rig (PR #37). No branch da D (consultar o
+  PR #33 para SHA, CI e E2E):
+  - Já validado antes: balde começa deitado (a Radhija entra pela boca), a Rhaenyra anda normal com a corda, o
+    escorregador saiu da cerca, a rampa do galpão não vira de ponta-cabeça, potes de ração e água à vista,
+    colisões de móveis revistas.
+  - Desenho novo aprovado ("Pode ser assim"): **cinco enfeites**, `CAKE_ORDER` laço → biscoito de osso de glacê →
+    vela do 3 → chapéu → estrela; o quadro da sala mostra os cinco. **Despensa** nova ao sul da cozinha com o
+    **gaveteiro** (`DRAWERS`): a Rhaenyra puxa cada gaveta com a boca (E, andando para trás; `modifyIntent`) até virar
+    degrau (a de baixo 0,34–0,5 m para fora, cada uma ao menos 10 cm mais para dentro; puxada além de 0,55 m cai e E
+    encaixa); a Radhija sobe (E, `stepClimb`) e pega o biscoito. **Piñata** da estrela pendurada na mangueira, em
+    cima da roseira (`PINATA`, pêndulo): o superbafo balança, a Rhaenyra pula e bate quando ela passa por cima, três
+    batidas abrem e a estrela cai fora da roseira. **Horta e galpão maiores**, **chiqueiro** ao sul do galpão e
+    **dois botões altos** na parede do galpão: um abre a porta, o outro a porteira (sorteado; `?botao=1|2` fixa).
+    **Campinho** (milho, cenouras, abóboras) no quintal vazio: E colhe, E larga; o pé rebrota em 6 s. A placa de
+    pressão saiu. Os porcos ainda são um marcador em `puzzle.js` (`pigs`, nada sai do chiqueiro) até o PR #36.
+  - **Cinco ossinhos** na fase 10 (um no deque, `y` por ossinho em `COLLECTIBLES`, com `treats.js` e
+    `createCollectibles` respeitando a altura; `test/extras.test.mjs` aceita cinco na última fase).
+  - Segredo novo, **nunca citar no jogo, menu ou README**: com todos os ossinhos e o extra usado (`ctx.extrasUsed`),
+    a tábua do muro leste, atrás da casa na árvore, fica frouxa; E a empurra e, no cantinho do vizinho, o quadro
+    "Quando eram filhotes" com a foto real das duas (`public/img/quintal-quadro.jpg`, recortada e regravada sem
+    metadados; exceção registrada no AGENTS.md). Sem texto na tela; `debugSet('secret')` para testes e capturas.
+  - Testes: `test/fase10.test.mjs` refeito (partida completa com os cinco, botões, gavetas, piñata, legumes,
+    tábua); `test/helpers/props.mjs` com as peças novas; E2E `quintal` e `capture-quintal.mjs` com as cenas novas.
+- Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar as capturas e entregar a prévia;
+  depois do PR #36 aprovado, trocar o marcador `pigs` pelo `createPigHerd` (os legumes distraem por um tempo
+  generoso e eles voltam); depois do PR #35, a Rhaenyra na lama da horta fica suja e a Radhija a lambe (textos de
+  controle R2/L2). Integrar só com a aprovação do usuário; squash com SHA esperado, deploy e aviso ao orquestrador.
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,

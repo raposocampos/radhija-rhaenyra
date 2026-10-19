@@ -28,6 +28,7 @@ function collectAll(h) {
       const before = h.info().collected;
       if (name !== h.info().activeDog) h.tap('KeyQ');
       h.teleport(name, c.x, c.z);
+      if (c.y) h.ctrls[name].y = c.y; // um ossinho lá em cima (no deque): na altura dele
       h.run(0.2);
       if (h.info().collected > before) break;
     }
@@ -35,6 +36,7 @@ function collectAll(h) {
   for (const n of ['radhija', 'rhaenyra']) {
     const st = h.layout.DOGS[n].start;
     h.teleport(n, st.x, st.z, st.yaw);
+    h.ctrls[n].y = 0;
   }
   h.run(1.2); // seca, assenta e para
   return h.info().collected;
@@ -94,8 +96,9 @@ function openSpot(h, size) {
 }
 
 for (const [i, def] of LEVELS.entries()) {
-  test(`extras · ${def.id}: três ossinhos, o cocô só depois deles e uma vez por tentativa`, async () => {
-    assert.equal(def.layout.COLLECTIBLES.length, 3, 'a fase tem 3 ossinhos');
+  test(`extras · ${def.id}: os ossinhos, o cocô só depois deles e uma vez por tentativa`, async () => {
+    const N = def.layout.COLLECTIBLES.length;
+    assert.equal(N, def.id === 'fase10' ? 5 : 3, 'três ossinhos por fase (cinco na última)');
     assert.ok((def.extras || []).length >= 1, 'a fase tem pelo menos uma animação do cenário');
     const h = await createHeadlessGame({ level: i + 1 });
     h.run(0.3);
@@ -105,7 +108,7 @@ for (const [i, def] of LEVELS.entries()) {
     h.run(0.3);
     assert.equal(h.log('extra:start').length, 0, 'antes dos ossinhos o C não faz nada');
     assert.equal(ex(h).used, false);
-    assert.equal(collectAll(h), 3, 'pegou os 3 ossinhos');
+    assert.equal(collectAll(h), N, `pegou os ${N} ossinhos`);
     const who = h.info().activeDog;
     const c = h.ctrls[who];
     h.clearLog();

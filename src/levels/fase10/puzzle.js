@@ -1,39 +1,42 @@
-// Festa no Quintal · puzzle. Tudo avança por dt (pausa congela a água, o balde, o pombo, a gansa e as subidas).
-//   BOLO: três enfeites, de baixo para cima, na ordem do quadro da sala (CAKE_ORDER: laço, vela do 3, chapéu). Quem
-//     chega na mesa com um enfeite na boca o põe no próximo andar; fora de ordem, ele balança e cai ao lado da mesa.
+// Festa no Quintal · puzzle. Tudo avança por dt (pausa congela a água, o balde, o pombo, a gansa, a piñata e as subidas).
+//   BOLO: cinco enfeites, de baixo para cima, na ordem do quadro da sala (CAKE_ORDER: laço, biscoito de osso, vela do 3,
+//     chapéu e estrela). Quem chega na mesa com um enfeite na boca o põe no próximo lugar; fora de ordem, ele balança e
+//     cai ao lado da mesa.
 //   CHAPÉU: barquinho no meio da piscininha vazia. Caixote fora da mangueira + torneira aberta (impulso) = a água sobe
-//     (nível da água) e o barquinho boia; com energia (disjuntor da cozinha, impulso) o ventilador o leva até a borda.
-//   LAÇO: portãozinho com trava (a cordinha, guardada pela Dona Gansa: latido de longe atrai, a outra puxa); pombo
-//     dormindo em cima do laço, no corrimão da casa na árvore (só o superbafo pelo cano de brinquedo; com ele lá, não
-//     dá para subir); elevador de balde: a Radhija no balde, a Rhaenyra puxa a corda andando para trás (segura quando o
-//     jogador troca); lá em cima a Radhija anda pelo deque (corrimão, tronco e casinha seguram), desamarra o laço (E)
-//     e desce pelo escorregador (E) ou volta para o balde.
-//   VELA DO 3: a Rhaenyra pula a cerca baixa da horta; a Radhija entra pelo vão e cai na lama (lenta, sem arrancada):
-//     Lambe-Lambe. A porta basculante do galpão sobe com a Rhaenyra na placa (ela fica lá quando o jogador troca) e não
-//     desce com alguém dentro. A vela está na prateleira alta: só com uma arrancada a Radhija sobe a rampa de tábua.
-//   Nada trava: o enfeite errado volta para o chão, o balde desce sozinho, a rampa e o deque devolvem a Radhija.
+//     e o barquinho boia; com energia (disjuntor da cozinha, impulso) o ventilador o leva até a borda.
+//   LAÇO: portãozinho (latido distrai a Dona Gansa, a outra puxa a cordinha); pombo dormindo em cima do laço (superbafo
+//     pelo cano); balde deitado (a Radhija entra, a Rhaenyra puxa a corda); no deque a Radhija desamarra e escorrega.
+//   BISCOITO: no pote em cima do gaveteiro da despensa. A Rhaenyra puxa as gavetas (E, andando para trás) até virarem
+//     degraus; puxada demais, a gaveta cai (E encaixa de volta). A Radhija sobe por elas (E) e pega o biscoito.
+//   VELA DO 3: horta (a Rhaenyra pula a cerca; a Radhija pelo vão e na lama: Lambe-Lambe); dois botões altos no galpão
+//     (impulso): um abre a porta e o outro o chiqueiro (sorteado); os porcos soltos atrapalham e os legumes do campinho
+//     os distraem por um tempo; lá dentro, a rampa só com arrancada.
+//   ESTRELA: dentro da piñata, em cima da roseira. O superbafo a faz balançar para fora; a Rhaenyra pula e bate quando
+//     ela passa por cima; três batidas e ela abre.
+//   Nada trava: o enfeite errado volta para o chão, o balde desce sozinho, a gaveta caída volta, o legume rebrota.
 import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
 import {
-  createDogEffects, createPushCrate, createWallButton, createHingedGate, createPressurePlate, createGooseNPC, createMud,
+  createDogEffects, createPushCrate, createWallButton, createHingedGate, createGooseNPC, createMud,
 } from '../../game/mechanics/index.js';
 import { createGoose } from '../../characters/goose.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
-  PLATE, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R,
+  RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R, PANTRY, DRAWERS, PLANTATION, ROSE_BUSH,
+  PINATA, SHED_BUTTONS, STY, SECRET, EAST_WALL,
 } from './layout.js';
 
 /**
- * @typedef {'start'|'cake1'|'cake2'|'done'} Stage
- * @typedef {'hat'|'ribbon'|'candle'} Thing
+ * @typedef {'start'|'cake1'|'cake2'|'cake3'|'cake4'|'done'} Stage
+ * @typedef {'hat'|'ribbon'|'candle'|'cookie'|'star'} Thing
  * @typedef {'home'|'carried'|'floor'|'cake'} Place
  */
 /** @type {Stage[]} */
-export const STAGES = ['start', 'cake1', 'cake2', 'done'];
+export const STAGES = ['start', 'cake1', 'cake2', 'cake3', 'cake4', 'done'];
 /** @type {Thing[]} */
-const THINGS = ['hat', 'ribbon', 'candle'];
-const NOUN = { hat: 'o chapeuzinho', ribbon: 'o laço', candle: 'a vela do 3' };
+const THINGS = ['hat', 'ribbon', 'candle', 'cookie', 'star'];
+const NOUN = { hat: 'o chapeuzinho', ribbon: 'o laço', candle: 'a vela do 3', cookie: 'o biscoito de osso', star: 'a estrela' };
 
 export const TEXT = {
   objective: {
@@ -71,9 +74,20 @@ export const TEXT = {
     hortaRad: 'A vela está no galpão: entre na horta pelo vão da tábua quebrada',
     lickRh: 'A Radhija está enlameada: faça o Lambe-Lambe nela (R pertinho dela)',
     muddyRad: 'Enlameada, sem arrancada: a Rhaenyra limpa você com o Lambe-Lambe (Q)',
-    plateRh: 'Pise na placa na frente do galpão: a porta sobe com o seu peso',
-    plateRad: 'A porta do galpão sobe com o peso da Rhaenyra na placa (Q)',
-    stayPlateRh: 'A porta está aberta: troque para a Radhija (Q), você fica na placa',
+    buttonsRh: 'A porta do galpão abre com um dos botões altos da parede dele: impulso nas patinhas (Espaço)',
+    buttonsRad: 'Os botões do galpão são altos: a Rhaenyra alcança com o impulso (Q)',
+    pigsRh: 'Os porcos fugiram e atrapalham: traga legumes do campinho e largue perto deles (E)',
+    pigsRad: 'Os porcos fugiram e atrapalham: traga legumes do campinho e largue perto deles (E)',
+    // biscoito
+    cookieRh: 'O biscoito de osso está em cima do gaveteiro da despensa: puxe as gavetas (E e ande para trás) até virarem degraus',
+    cookieRad: 'O biscoito está em cima do gaveteiro da despensa: a Rhaenyra puxa as gavetas (Q) e você sobe por elas',
+    climbRad: 'As gavetas viraram degraus: suba por elas até o pote (E na frente do gaveteiro)',
+    climbRh: 'As gavetas viraram degraus: troque para a Radhija (Q), ela sobe por elas',
+    drawerFallenRh: 'Uma gaveta caiu: encaixe de volta (E nela)',
+    // estrela
+    starRad: 'A estrela está na piñata, em cima da roseira: solte o superbafo nela para ela balançar (segure R e solte)',
+    starRh: 'A estrela está na piñata, em cima da roseira: quando ela balançar para fora, pule e bata nela (Espaço)',
+    starSwingRh: 'A piñata está balançando: pule e bata nela quando ela passar por cima de você (Espaço)',
     rampRad: 'A vela está no alto: suba a rampa de tábua com uma arrancada (segure Shift)',
     rampRh: 'A Radhija sobe a rampa com uma arrancada (Q)',
   },
@@ -118,9 +132,28 @@ export const TEXT = {
     alreadyClean: 'Ela já está limpinha.',
     lickFar: 'Chegue pertinho da Radhija para o Lambe-Lambe.',
     noDash: 'Enlameada, a Radhija não consegue dar arrancada.',
-    plateLight: 'A Radhija é leve demais para a placa: a porta só sobe com o peso da Rhaenyra.',
-    plateStay: 'A Rhaenyra fica na placa segurando a porta aberta.',
     doorOpen: 'A porta do galpão subiu!',
+    doorButton: 'Esse botão abriu a porta do galpão!',
+    styButton: 'Ops! Esse botão abriu o chiqueiro: os porcos fugiram!',
+    pigsBlock: 'Os porcos não deixam passar! Legumes do campinho distraem eles por um tempo.',
+    pigsEat: 'Os porcos foram comer: aproveita!',
+    pigsBack: 'Acabou a comida: os porcos voltaram a atrapalhar.',
+    vegPick: 'Pegou um legume: leve até os porcos e largue perto deles (E).',
+    drawerPull: 'Ande para trás com o puxador na boca: a gaveta desliza. E de novo solta.',
+    drawerFall: 'Puxou demais: a gaveta caiu! Encaixe de volta (E nela).',
+    drawerHeavy: 'As gavetas aguentam só a Radhija: a Rhaenyra puxa e a irmã sobe.',
+    step0: 'A gaveta de baixo precisa sair bem para fora: ela é o primeiro degrau.',
+    step1Low: 'A gaveta do meio precisa sair um pouco para virar degrau.',
+    step1High: 'A gaveta do meio saiu demais: tem que ficar mais para dentro que a de baixo, como uma escada.',
+    step2Low: 'A gaveta de cima precisa sair só um pouquinho.',
+    step2High: 'A gaveta de cima saiu demais: tem que ficar mais para dentro que a do meio.',
+    gotCookie: 'Pegou o biscoito de osso!',
+    gotStar: 'Pegou a estrela!',
+    pinataSwing: 'A piñata balançou! A Rhaenyra bate quando ela passar por cima dela.',
+    pinataHit: 'Pá! Mais uma…',
+    pinataOpen: 'A piñata abriu: caíram balas e a estrela!',
+    pinataThorns: 'A roseira tem espinhos, e a piñata está bem em cima dela. Um vento forte a faria balançar…',
+    pinataJumpRad: 'Alto demais para a Radhija: a Rhaenyra pula e bate na piñata (Q).',
     rampSlip: 'Andando, a tábua é íngreme demais: a Radhija escorrega. Uma arrancada leva lá em cima!',
     rampMud: 'Enlameada, sem arrancada, a Radhija escorrega na tábua. Primeiro o Lambe-Lambe!',
     rampRh: 'A tábua é estreita demais para a Rhaenyra.',
@@ -134,6 +167,8 @@ export const TEXT = {
     hat: 'Pegar o chapeuzinho', pick: 'Pegar', drop: 'Largar', cord: 'Puxar a cordinha', rope: 'Pegar a corda',
     ropeDrop: 'Soltar a corda', bucket: 'Entrar no balde', bucketOut: 'Sair do balde', painting: 'Olhar o quadro',
     wall: 'Impulso na parede', untie: 'Desamarrar o laço', slide: 'Escorregar', bucketBack: 'Voltar para o balde',
+    drawerGrab: 'Puxar a gaveta', drawerRelease: 'Soltar a gaveta', drawerFix: 'Encaixar a gaveta', climb: 'Subir pelas gavetas',
+    pickVeg: 'Colher', dropVeg: 'Largar', board: 'Empurrar a tábua',
   },
 };
 
@@ -167,28 +202,43 @@ export function createPuzzle(ctx) {
   const mud = createMud({ dogs, emit, effects, licksToClean: MUD.licksToClean, slow: MUD.slow });
   const breaker = createWallButton({ id: 'disjuntor', cfg: BREAKER, emit, prop: props.breaker });
   const tap = createWallButton({ id: 'torneira', cfg: TAP, emit, prop: props.tap });
-  const levers = [breaker, tap];
+  const shedButtons = SHED_BUTTONS.map((cfg, i) => createWallButton({ id: `botao-galpao-${i + 1}`, cfg, emit, prop: props.shedButtons[i] }));
+  const levers = [breaker, tap, ...shedButtons];
   const crate = createPushCrate({ id: 'caixote', cfg: CRATE, world, emit, prop: props.crate });
   const gate = createHingedGate({ id: 'portaozinho', cfg: GATE, world, prop: props.gate, thickness: 0.06 });
-  const plate = createPressurePlate({ id: 'placa-galpao', x: PLATE.x, z: PLATE.z, hx: PLATE.hx, hz: PLATE.hz, requires: 'large', emit, prop: props.plate });
   const goose = createGooseNPC({ cfg: GOOSE, world, nav: ctx.nav, root, emit, effects, createGoose });
   const items = {
     hat: createCarryItem({ obj: props.hat.object, dogs, scene: root, name: 'hat' }),
     ribbon: createCarryItem({ obj: props.ribbon.object, dogs, scene: root, name: 'ribbon' }),
     candle: createCarryItem({ obj: props.candle.object, dogs, scene: root, name: 'candle' }),
+    cookie: createCarryItem({ obj: props.cookie.object, dogs, scene: root, name: 'cookie' }),
+    star: createCarryItem({ obj: props.star.object, dogs, scene: root, name: 'star' }),
   };
   const handle = createCarryItem({ obj: props.rope.handle, dogs, scene: root, name: 'rope', carrier: 'large' });
   // a porta basculante fechada é uma parede; o balde no chão é sólido para a Rhaenyra
   const doorCol = world.addDynamic({ id: 'porta-do-galpao', kind: 'gate', shape: 'box', x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, hx: SHED.t / 2, hz: (SHED.door.z1 - SHED.door.z0) / 2 });
   const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'circle', x: BUCKET.x, z: BUCKET.z, r: BUCKET.r, blocks: 'large' });
+  // as gavetas para fora (e as caídas) ocupam a frente do gaveteiro; a porteira fechada; a tábua do muro
+  const D_FRONT = DRAWERS.z + DRAWERS.hz;
+  const drawersCol = world.addDynamic({ id: 'gavetas', kind: 'prop', shape: 'box', x: DRAWERS.x, z: D_FRONT + 0.1, hx: DRAWERS.hx - 0.05, hz: 0.1 });
+  const styGateCol = world.addDynamic({ id: 'porteira', kind: 'gate', shape: 'box', x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2, hx: 0.05, hz: (STY.gate.z1 - STY.gate.z0) / 2 });
+  const boardCol = world.addDynamic({ id: 'tabua-solta', kind: 'gate', shape: 'box', x: EAST_WALL.x, z: (SECRET.board.z0 + SECRET.board.z1) / 2, hx: 0.07, hz: (SECRET.board.z1 - SECRET.board.z0) / 2 });
+  /** Os porcos (o personagem e o comportamento chegam no PR dos porcos): por enquanto, nenhum sai do chiqueiro. */
+  const pigs = { release() {}, addFood(f) { void f; return null; }, update(dt, C) { void dt; void C; }, reset() {}, info: () => ({ out: false }), get pestering() { return false; } };
+  /** Qual botão do galpão abre a porta (o outro abre o chiqueiro): ?botao=1|2 fixa; sem isso, sorteia a cada partida. */
+  const pickDoorButton = () => {
+    const q = ctx.params?.get?.('botao');
+    if (q === '1' || q === '2') return Number(q) - 1;
+    return Math.random() < 0.5 ? 0 : 1;
+  };
   const fresh = () => ({
     done: false, disposed: false, objKey: '',
-    /** @type {Record<Thing, Place>} */ place: { hat: /** @type {Place} */ ('home'), ribbon: /** @type {Place} */ ('home'), candle: /** @type {Place} */ ('home') },
-    /** @type {Record<Thing, { x: number, z: number }>} */ floor: { hat: { x: 0, z: 0 }, ribbon: { x: 0, z: 0 }, candle: { x: 0, z: 0 } },
+    /** @type {Record<Thing, Place>} */ place: { hat: /** @type {Place} */ ('home'), ribbon: /** @type {Place} */ ('home'), candle: /** @type {Place} */ ('home'), cookie: /** @type {Place} */ ('home'), star: /** @type {Place} */ ('home') },
+    /** @type {Record<Thing, { x: number, z: number }>} */ floor: { hat: { x: 0, z: 0 }, ribbon: { x: 0, z: 0 }, candle: { x: 0, z: 0 }, cookie: { x: 0, z: 0 }, star: { x: 0, z: 0 } },
     /** @type {Thing[]} */ cake: [],
     wrong: 0, lookedPainting: false,
     /** quem pegou o enfeite perto da mesa só entrega depois de se afastar */
-    /** @type {Record<Thing, boolean>} */ rearm: { hat: false, ribbon: false, candle: false },
+    /** @type {Record<Thing, boolean>} */ rearm: { hat: false, ribbon: false, candle: false, cookie: false, star: false },
     /** @type {null | { thing: Thing, t: number, tier: number, x: number, z: number }} */ reject: null,
     water: 0, flowing: false, wasFlowing: false, full: false, flowT: 0, boatX: BOAT.start.x, boatZ: BOAT.start.z, docked: false,
     cordT: -1, /** @type {string | null} */ cordWho: null, gateOpen: false,
@@ -206,6 +256,18 @@ export function createPuzzle(ctx) {
     doorT: 0, wasDoor: false, dashRecent: { radhija: 0, rhaenyra: 0 }, slipCd: 0,
     introT: 0, /** @type {import('../../types').DogName} */ prevActive: /** @type {import('../../types').DogName} */ ('radhija'),
     scriptDt: 1 / 60, wasPower: false, /** @type {string} */ powerStage: 'off',
+    // galpão: qual botão abre a porta, a porta e o chiqueiro abertos
+    doorBtn: pickDoorButton(), shedOpen: false, styOpen: false,
+    // gaveteiro: quanto cada gaveta está para fora, a que a Rhaenyra segura e a subida da Radhija
+    drawers: DRAWERS.y.map(() => ({ ext: 0, fallen: false })),
+    /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ drawerHold: null,
+    /** @type {null | { path: { x: number, y: number, z: number }[], i: number, t: number, phase: string, reason: string | null, grabbed: boolean, action?: string, slope?: number }} */ climb: null,
+    // piñata: ângulos e velocidades do balanço, batidas
+    pin: { ax: 0, az: 0, vx: 0, vz: 0, hits: 0, broken: false, cd: 0, swingHint: false, /** @type {Set<number>} */ used: new Set() },
+    // legumes: o que cada uma carrega, os largados no chão e os pés esperando rebrotar
+    veg: { /** @type {Record<string, any>} */ held: { radhija: null, rhaenyra: null }, /** @type {any[]} */ floor: [], /** @type {Record<string, number>} */ regrow: {}, n: 0 },
+    // o cantinho atrás do muro
+    secretReady: false, secretOpen: false, secretSeen: false, boardT: 0,
   });
   const S = fresh();
   let introDone = false;
@@ -220,12 +282,13 @@ export function createPuzzle(ctx) {
   const inShed = (c) => c.x > SHED.x0 + 0.05 && c.x < SHED.x1 && c.z > SHED.z0 && c.z < SHED.z1;
   const inBack = (c) => c.x > BACK_FENCE.x;
   const inHouse = (c) => c.x < HOUSE.x1 && c.z < HOUSE.zS;
-  const onPlate = (c) => Math.abs(c.x - PLATE.x) < PLATE.hx && Math.abs(c.z - PLATE.z) < PLATE.hz;
+  const inPantry = (c) => c.x > PANTRY.x0 && c.x < PANTRY.x1 && c.z > PANTRY.zN && c.z < PANTRY.zS;
+  const nearPinata = (c) => Math.hypot(c.x - ROSE_BUSH.x, c.z - ROSE_BUSH.z) < 3.2;
   const inDoorway = (c) => Math.abs(c.x - SHED.x0) < 0.4 && c.z > SHED.door.z0 - 0.05 && c.z < SHED.door.z1 + 0.05;
   const doorOpen = () => S.doorT > 0.7;
   const nextThing = () => /** @type {Thing | undefined} */ (CAKE_ORDER[S.cake.length]);
   const carriedBy = (name) => THINGS.find((t) => items[t].holder === name) || null;
-  const mouthFree = (name) => !carriedBy(name) && handle.holder !== name;
+  const mouthFree = (name) => !carriedBy(name) && handle.holder !== name && !S.veg.held[name] && S.drawerHold?.who !== name;
   const pigeonAround = () => S.pigeon === 'asleep';
   /** A gansa de guarda: perto da cordinha e sem nada que a distraia (latido). */
   const guarding = () => !S.gateOpen && goose.state !== 'lured' && goose.state !== 'curious' && Math.hypot(goose.x - CORD.x, goose.z - CORD.z) < 2.3;
@@ -233,8 +296,8 @@ export function createPuzzle(ctx) {
   // ------------------------------------------------------------------ etapa
   /** @returns {Stage} */
   function stage() {
-    if (S.done || S.cake.length >= 3) return 'done';
-    return S.cake.length === 2 ? 'cake2' : S.cake.length === 1 ? 'cake1' : 'start';
+    if (S.done || S.cake.length >= CAKE_ORDER.length) return 'done';
+    return S.cake.length ? /** @type {Stage} */ (`cake${S.cake.length}`) : 'start';
   }
   function notifyStage() {
     const st = stage();
@@ -279,9 +342,31 @@ export function createPuzzle(ctx) {
     if (!S.gateOpen) return ribbonStep(name);
     if (!inHorta(rad) && !inShed(rad)) return name === 'radhija' ? { text: O.hortaRad, target: at(HORTA.x0, (HORTA.gap.z0 + HORTA.gap.z1) / 2, 0.3) } : { text: O.hortaRh, target: at((HORTA.x0 + HORTA.x1) / 2, HORTA.z0, 0.5) };
     if (mud.muddy('radhija')) return name === 'rhaenyra' ? { text: inHorta(rh) ? O.lickRh : O.hortaRh, target: inHorta(rh) ? at(rad.x, rad.z, 0.6) : at((HORTA.x0 + HORTA.x1) / 2, HORTA.z0, 0.5) } : { text: O.muddyRad, target: at(rh.x, rh.z, 0.9) };
-    if (!doorOpen() && !inShed(rad)) return name === 'rhaenyra' ? { text: inHorta(rh) ? O.plateRh : O.hortaRh, target: at(PLATE.x, PLATE.z, 0.2) } : { text: O.plateRad, target: at(PLATE.x, PLATE.z, 0.2) };
-    if (name === 'rhaenyra') return onPlate(rh) ? { text: O.stayPlateRh, target: at(CANDLE.x, CANDLE.z, CANDLE.y + 0.3) } : { text: O.rampRh, target: at(CANDLE.x, CANDLE.z, CANDLE.y + 0.3) };
+    if (!S.shedOpen) {
+      const btn = shedButtons.find((b) => !b.on) || shedButtons[0];
+      return name === 'rhaenyra' ? { text: inHorta(rh) ? O.buttonsRh : O.hortaRh, target: btn.target(0.3) } : { text: O.buttonsRad, target: btn.target(0.3) };
+    }
+    if (pigs.pestering) return { text: name === 'rhaenyra' ? O.pigsRh : O.pigsRad, target: at((PLANTATION.x0 + PLANTATION.x1) / 2, PLANTATION.z0, 0.6) };
+    if (name === 'rhaenyra') return { text: O.rampRh, target: at(CANDLE.x, CANDLE.z, CANDLE.y + 0.3) };
     return { text: O.rampRad, target: at(RAMP.x0, RAMP.z, 0.3) };
+  }
+  function cookieStep(name) {
+    const O = TEXT.objective;
+    if (S.place.cookie === 'floor') return { text: fill(O.pickFloor, 'cookie'), target: at(S.floor.cookie.x, S.floor.cookie.z, 0.3) };
+    const cab = at(DRAWERS.x, D_FRONT + 0.2, DRAWERS.top + 0.3);
+    const fallen = S.drawers.findIndex((d) => d.fallen);
+    if (fallen >= 0) return { text: name === 'rhaenyra' ? O.drawerFallenRh : O.cookieRad, target: at(DRAWERS.x, D_FRONT + 0.45, 0.4) };
+    if (stairsReady()) return { text: name === 'radhija' ? O.climbRad : O.climbRh, target: cab };
+    const next = nextDrawer();
+    return name === 'rhaenyra' ? { text: O.cookieRh, target: at(DRAWERS.x, D_FRONT + S.drawers[next].ext + 0.05, DRAWERS.y[next] - 0.1) } : { text: O.cookieRad, target: cab };
+  }
+  function starStep(name) {
+    const O = TEXT.objective;
+    if (S.place.star === 'floor') return { text: fill(O.pickFloor, 'star'), target: at(S.floor.star.x, S.floor.star.z, 0.3) };
+    const p = pinataPos();
+    const swinging = Math.hypot(S.pin.ax, S.pin.az) > 0.12;
+    if (name === 'radhija') return { text: O.starRad, target: at(p.x, p.z, p.y + 0.2) };
+    return { text: swinging ? O.starSwingRh : O.starRh, target: at(p.x, p.z, p.y + 0.2) };
   }
   /** @param {import('../../types').DogName} activeName */
   function objective(activeName) {
@@ -312,10 +397,12 @@ export function createPuzzle(ctx) {
     // pelo lugar: no fundo, o laço (ao norte) ou a vela (ao sul); no resto, o chapéu
     let pick = homeLeft[0];
     if (inBack(c)) pick = homeLeft.includes('candle') && (c.z > -0.6 || !homeLeft.includes('ribbon')) ? 'candle' : homeLeft.includes('ribbon') ? 'ribbon' : homeLeft[0];
+    else if ((inHouse(c) || inPantry(c)) && homeLeft.includes('cookie')) pick = 'cookie';
+    else if (nearPinata(c) && homeLeft.includes('star')) pick = 'star';
     else if (homeLeft.includes('hat')) pick = 'hat';
     // a Radhija no balde ou lá no deque: o objetivo continua sendo o laço (para as duas)
     if ((S.riding || S.onDeck || S.deck) && homeLeft.includes('ribbon')) pick = 'ribbon';
-    const step = pick === 'hat' ? hatStep(activeName) : pick === 'ribbon' ? ribbonStep(activeName) : candleStep(activeName);
+    const step = pick === 'hat' ? hatStep(activeName) : pick === 'ribbon' ? ribbonStep(activeName) : pick === 'cookie' ? cookieStep(activeName) : pick === 'star' ? starStep(activeName) : candleStep(activeName);
     return { ...step, stage: st };
   }
 
@@ -327,7 +414,7 @@ export function createPuzzle(ctx) {
     S.place[thing] = 'carried';
     S.rearm[thing] = Math.hypot(c.x - GOAL.x, c.z - GOAL.z) < GOAL.r + 0.25;
     emit('item:pickup', { name: c.name, item: thing, x: c.x, z: c.z });
-    hints.now(thing === 'hat' ? 'gotHat' : thing === 'ribbon' ? 'gotRibbon' : 'gotCandle', 2.8, 0);
+    hints.now({ hat: 'gotHat', ribbon: 'gotRibbon', candle: 'gotCandle', cookie: 'gotCookie', star: 'gotStar' }[thing], 2.8, 0);
     notifyStage();
   }
   function dropThing(thing, c) {
@@ -350,7 +437,7 @@ export function createPuzzle(ctx) {
       S.cake.push(thing);
       S.place[thing] = 'cake';
       emit('cake:place', { item: thing, tier, x: CAKE.x, z: CAKE.z });
-      hints.now(S.cake.length >= 3 ? 'cakeDone' : 'rightOrder', 3.2, 0);
+      hints.now(S.cake.length >= CAKE_ORDER.length ? 'cakeDone' : 'rightOrder', 3.2, 0);
       notifyStage();
       return;
     }
@@ -680,6 +767,7 @@ export function createPuzzle(ctx) {
     S.ramp = null;
     S.hop = null;
     S.onDeck = false;
+    S.climb = null;
     emit('script:end', { name: c.name, x: c.x, z: c.z });
     notifyStage();
   }
@@ -756,9 +844,9 @@ export function createPuzzle(ctx) {
     }
   }
   function stepShed(dt, C) {
-    // com alguém lá dentro ou no vão, a porta não desce
-    const anyInside = inShed(C.radhija) || inShed(C.rhaenyra) || inDoorway(C.radhija) || inDoorway(C.rhaenyra);
-    const target = plate.pressed || anyInside ? 1 : 0;
+    void C;
+    // a porta sobe de vez quando o botão certo é apertado
+    const target = S.shedOpen ? 1 : 0;
     S.doorT += Math.sign(target - S.doorT) * Math.min(Math.abs(target - S.doorT), dt / 0.85);
     doorCol.enabled = S.doorT < 0.6;
     props.shedDoor.setOpen(S.doorT);
@@ -767,6 +855,311 @@ export function createPuzzle(ctx) {
       emit(open ? 'shed:open' : 'shed:close', { x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2 });
       if (open) hints.now('doorOpen', 2.6, 0);
       S.wasDoor = open;
+    }
+  }
+
+  // ------------------------------------------------------------------ galpão: os dois botões (porta | chiqueiro)
+  function openShed() {
+    if (S.shedOpen) return;
+    S.shedOpen = true;
+    props.shedLinks.door.pulse();
+    props.shedLinks.door.setOn(true);
+    emit('shed:button', { x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, door: true });
+    hints.now('doorButton', 3, 0);
+  }
+  function openSty() {
+    if (S.styOpen) return;
+    S.styOpen = true;
+    props.shedLinks.gate.pulse();
+    props.shedLinks.gate.setOn(true);
+    styGateCol.enabled = false;
+    pigs.release();
+    emit('shed:button', { x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2, door: false });
+    emit('sty:open', { x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2 });
+    hints.now('styButton', 4, 0);
+    cam?.focusShot(STY.x0 - 0.6, (STY.gate.z0 + STY.gate.z1) / 2, { hold: 1.6, inT: 0.6, outT: 0.6, scale: 0.6, target: { x: STY.x0, y: 0.4, z: (STY.gate.z0 + STY.gate.z1) / 2 } });
+  }
+
+  // ------------------------------------------------------------------ biscoito: o gaveteiro (gavetas viram degraus)
+  /** A gaveta i forma o degrau certo (a de baixo bem para fora, cada uma mais para dentro que a de baixo dela)? */
+  function stepOk(i) {
+    const d = S.drawers, St = DRAWERS.steps[i];
+    if (d[i].fallen) return false;
+    if (i === 0) return d[0].ext >= St.min && d[0].ext <= St.max;
+    return d[i].ext >= St.min && d[i].ext <= d[i - 1].ext - St.below;
+  }
+  const stairsReady = () => DRAWERS.y.every((_, i) => stepOk(i));
+  /** A gaveta que a Rhaenyra pega: a primeira (de baixo) que ainda não é degrau; tudo certo, a de cima. */
+  const nextDrawer = () => {
+    const i = DRAWERS.y.findIndex((_, k) => !stepOk(k));
+    return i < 0 ? DRAWERS.y.length - 1 : i;
+  };
+  /** O que a dog faz no gaveteiro com E (ou null). */
+  function drawerAction(c) {
+    if (S.place.cookie !== 'home' && !S.drawerHold) return null;
+    if (S.drawerHold?.who === c.name) return 'drawerRelease';
+    if (S.climb || S.hop || S.riding || S.onDeck || S.deck) return null;
+    const front = c.z > D_FRONT && c.z < D_FRONT + 1.15 && Math.abs(c.x - DRAWERS.x) < DRAWERS.hx + 0.25;
+    if (!front) return null;
+    if (c.name === 'rhaenyra') {
+      if (!mouthFree(c.name)) return null;
+      return S.drawers.some((d) => d.fallen) ? 'drawerFix' : 'drawerGrab';
+    }
+    return mouthFree(c.name) && S.place.cookie === 'home' ? 'climb' : null;
+  }
+  function doDrawer(c, act) {
+    if (act === 'drawerRelease') {
+      S.drawerHold = null;
+      emit('drawer:release', { x: c.x, z: c.z });
+      return true;
+    }
+    if (act === 'drawerFix') {
+      const i = S.drawers.findIndex((d) => d.fallen);
+      S.drawers[i] = { ext: 0, fallen: false };
+      emit('drawer:fix', { x: DRAWERS.x, z: D_FRONT });
+      return true;
+    }
+    if (act === 'drawerGrab') {
+      const i = nextDrawer();
+      // ela fica onde está (a gaveta começa a vir com ela): g é a distância do puxador até ela
+      S.drawerHold = { i, who: c.name, g: Math.max(0.3, c.z - D_FRONT - S.drawers[i].ext) };
+      emit('drawer:grab', { x: DRAWERS.x, z: D_FRONT, i });
+      hints.now('drawerPull', 3.6, 6);
+      return true;
+    }
+    // a Radhija sobe: o caminho é o dos degraus certos, de baixo para cima, até o tampo
+    const path = [];
+    let reason = null;
+    for (let i = 0; i < DRAWERS.y.length; i++) {
+      if (!stepOk(i)) {
+        const d = S.drawers[i];
+        reason = i === 0 ? 'step0' : d.ext < DRAWERS.steps[i].min ? `step${i}Low` : `step${i}High`;
+        break;
+      }
+      path.push({ x: DRAWERS.x, y: DRAWERS.y[i], z: D_FRONT + S.drawers[i].ext * 0.55 });
+    }
+    if (!reason) path.push({ x: DRAWERS.x + 0.12, y: DRAWERS.top, z: DRAWERS.z + 0.08 });
+    if (c.size === 'large') { hints.now('drawerHeavy', 3.4, 4); return true; }
+    S.climb = { path: [{ x: c.x, y: 0, z: c.z }, ...path], i: 0, t: 0, phase: path.length ? 'up' : 'fail', reason, grabbed: false };
+    emit('drawer:climb', { x: DRAWERS.x, z: D_FRONT });
+    return true;
+  }
+  function stepDrawers(dt) {
+    void dt;
+    const h = S.drawerHold;
+    if (h) {
+      const c = ctrls[h.who];
+      const ext = Math.max(0, c.z - D_FRONT - h.g);
+      const d = S.drawers[h.i];
+      if (ext > DRAWERS.fall) {
+        // puxou demais: a gaveta escapa e cai no chão
+        d.ext = 0;
+        d.fallen = true;
+        S.drawerHold = null;
+        emit('drawer:fall', { x: DRAWERS.x, z: D_FRONT + 0.4, i: h.i });
+        hints.now('drawerFall', 3.6, 0);
+      } else d.ext = Math.min(DRAWERS.max + 0.05, ext);
+    }
+    // colisor da frente: o quanto as gavetas avançam (e as caídas no chão)
+    const maxExt = Math.max(0, ...S.drawers.map((d) => (d.fallen ? 0.62 : d.ext)));
+    drawersCol.enabled = maxExt > 0.04;
+    drawersCol.z = D_FRONT + maxExt / 2;
+    drawersCol.hz = Math.max(0.02, maxExt / 2);
+    S.drawers.forEach((d, i) => props.drawers.setDrawer(i, d.ext, d.fallen));
+  }
+  /** A subida (e a descida) da Radhija pelas gavetas. */
+  function stepClimb(dt) {
+    const cl = S.climb;
+    if (!cl) return;
+    const c = ctrls.radhija;
+    cl.t += dt;
+    const HOP = 0.36;
+    if (cl.phase === 'up') {
+      const a = cl.path[cl.i], b = cl.path[cl.i + 1];
+      const u = clamp01(cl.t / HOP);
+      const p = hopArc(a, b, u, 0.12);
+      pose(cl, c, p.x, p.y, p.z, NORTH, 1.2, 'jump');
+      if (u >= 1) {
+        cl.i++;
+        cl.t = 0;
+        if (cl.i >= cl.path.length - 1) cl.phase = cl.reason ? 'fail' : 'grab';
+      }
+    } else if (cl.phase === 'grab') {
+      const last = cl.path[cl.path.length - 1];
+      const u = clamp01(cl.t / 0.6);
+      pose(cl, c, last.x, last.y, last.z, NORTH, 0, 'sniff');
+      if (!cl.grabbed && u >= 0.5) {
+        cl.grabbed = true;
+        if (S.place.cookie === 'home') take('cookie', c);
+      }
+      if (u >= 1) Object.assign(cl, { phase: 'down', t: 0 });
+    } else if (cl.phase === 'fail') {
+      const last = cl.path[cl.path.length - 1];
+      const u = clamp01(cl.t / 0.5);
+      pose(cl, c, last.x, last.y, last.z, NORTH, 0, 'startled');
+      if (cl.t < dt * 1.5 && cl.reason) hints.now(cl.reason, 4.2, 0);
+      if (u >= 1) Object.assign(cl, { phase: 'down', t: 0 });
+    } else if (cl.phase === 'down') {
+      // um pulo só, de volta para o chão na frente do gaveteiro
+      const last = cl.path[cl.path.length - 1];
+      const floor = { x: DRAWERS.x + 0.1, y: 0, z: D_FRONT + Math.max(0.55, S.drawers[0].ext + 0.45) };
+      const u = clamp01(cl.t / 0.55);
+      const p = hopArc(last, floor, u, 0.18);
+      pose(cl, c, p.x, p.y, p.z, 0, 1.2, 'jump');
+      if (u >= 1) finishScript(c);
+    }
+  }
+
+  // ------------------------------------------------------------------ estrela: a piñata (pêndulo)
+  const OMEGA2 = 9.8 / PINATA.L;
+  /** Onde está o gancho (fim da corda) da piñata. */
+  function pinataPos() {
+    const P = PINATA.pivot;
+    return { x: P.x + PINATA.L * Math.sin(S.pin.ax), y: P.y - PINATA.L * Math.cos(S.pin.ax) * Math.cos(S.pin.az), z: P.z + PINATA.L * Math.sin(S.pin.az) };
+  }
+  function stepPinata(dt, C) {
+    const pn = S.pin;
+    pn.cd = Math.max(0, pn.cd - dt);
+    if (!pn.broken) {
+      // pêndulo amortecido nos dois eixos
+      pn.vx += (-OMEGA2 * Math.sin(pn.ax) - PINATA.damp * pn.vx) * dt;
+      pn.vz += (-OMEGA2 * Math.sin(pn.az) - PINATA.damp * pn.vz) * dt;
+      pn.ax = Math.max(-1.1, Math.min(1.1, pn.ax + pn.vx * dt));
+      pn.az = Math.max(-1.1, Math.min(1.1, pn.az + pn.vz * dt));
+      const p = pinataPos();
+      // o superbafo empurra (cada nuvem uma vez)
+      /** @type {any[]} */
+      const clouds = scent.clouds;
+      for (const cl of clouds) {
+        if (cl.state === 'duct' || pn.used.has(cl.id)) continue;
+        if (Math.hypot(cl.x - p.x, cl.z - p.z) > 0.95) continue;
+        pn.used.add(cl.id);
+        const L = Math.hypot(cl.vx, cl.vz) || 1;
+        pn.vx += (cl.vx / L) * PINATA.kick;
+        pn.vz += (cl.vz / L) * PINATA.kick;
+        emit('pinata:swing', { x: p.x, z: p.z });
+        if (!pn.swingHint) { pn.swingHint = true; hints.now('pinataSwing', 3.4, 0); }
+      }
+      // a Rhaenyra no ar, embaixo dela e no alcance: bate
+      const rh = C.rhaenyra;
+      const bottom = p.y - PINATA.size * 1.05;
+      if (rh.jumpT > 0 && pn.cd <= 0 && Math.hypot(rh.x - p.x, rh.z - p.z) < PINATA.hitR && bottom <= PINATA.reach) {
+        pn.cd = 0.6;
+        pn.hits++;
+        const dx = p.x - rh.x, dz = p.z - rh.z, L = Math.hypot(dx, dz) || 1;
+        pn.vx += (dx / L) * 1.0;
+        pn.vz += (dz / L) * 1.0;
+        props.pinata.setCracks(pn.hits);
+        emit('pinata:hit', { x: p.x, z: p.z, hits: pn.hits });
+        if (pn.hits >= PINATA.hits) {
+          pn.broken = true;
+          props.pinata.burst();
+          // a estrela cai no gramado do lado de quem bateu (fora da roseira)
+          const ox = rh.x - ROSE_BUSH.x, oz = rh.z - ROSE_BUSH.z, oL = Math.hypot(ox, oz) || 1;
+          const sx = ROSE_BUSH.x + (ox / oL) * (ROSE_BUSH.r + 0.4), sz = ROSE_BUSH.z + (oz / oL) * (ROSE_BUSH.r + 0.4);
+          const res = world.resolve(sx, sz, 0.1, 'small');
+          props.star.setShown?.(true);
+          items.star.drop(res.x, res.z, 0);
+          S.place.star = 'floor';
+          S.floor.star = { x: res.x, z: res.z };
+          emit('pinata:burst', { x: p.x, z: p.z });
+          hints.now('pinataOpen', 3.6, 0);
+          notifyStage();
+        } else hints.now('pinataHit', 1.6, 0);
+      }
+    }
+    const p = pinataPos();
+    props.pinata.setPos(p.x, p.y, p.z, pn.ax, pn.az);
+  }
+
+  // ------------------------------------------------------------------ legumes do campinho (para os porcos)
+  /** O pé de legume pronto mais perto (ou null). */
+  function vegSpot(c) {
+    let best = null, bd = PLANTATION.pickR;
+    for (const sp of props.farm.spots) {
+      if ((S.veg.regrow[sp.id] ?? 0) > 0) continue;
+      const d = reach(c, sp.x, sp.z);
+      if (d < bd) { bd = d; best = sp; }
+    }
+    return best;
+  }
+  /** Um legume largado no chão, perto (ou null). */
+  function vegNear(c) {
+    return S.veg.floor.find((v) => !v.eaten && reach(c, v.x, v.z) < 0.5) || null;
+  }
+  function vegAction(c) {
+    if (S.veg.held[c.name]) return 'dropVeg';
+    if (!mouthFree(c.name) || S.climb || S.hop || S.riding || S.onDeck) return null;
+    if (vegNear(c)) return 'pickVeg';
+    return vegSpot(c) ? 'pickVeg' : null;
+  }
+  function doVeg(c, act) {
+    if (act === 'dropVeg') { dropVeg(c); return true; }
+    const near = vegNear(c);
+    if (near) {
+      S.veg.floor = S.veg.floor.filter((v) => v !== near);
+      near.it.attach(c.name);
+      S.veg.held[c.name] = near;
+      return true;
+    }
+    const sp = vegSpot(c);
+    if (!sp) return false;
+    const obj = props.farm.makeVeg(sp.kind);
+    obj.position.set(sp.x, 0.05, sp.z);
+    root.add(obj);
+    const it = createCarryItem({ obj, dogs, scene: root, name: 'veg' });
+    it.attach(c.name);
+    S.veg.held[c.name] = { it, obj, kind: sp.kind, id: ++S.veg.n, x: 0, z: 0, eaten: false };
+    sp.setReady(false);
+    S.veg.regrow[sp.id] = PLANTATION.regrow;
+    emit('veg:pick', { name: c.name, kind: sp.kind, x: c.x, z: c.z });
+    hints.now('vegPick', 3.4, 8);
+    return true;
+  }
+  function dropVeg(c) {
+    const v = S.veg.held[c.name];
+    if (!v) return;
+    const x = c.x + Math.sin(c.yaw) * 0.32, z = c.z + Math.cos(c.yaw) * 0.32;
+    const res = world.resolve(x, z, 0.1, 'small');
+    v.it.drop(res.x, res.z, 0);
+    v.x = res.x;
+    v.z = res.z;
+    S.veg.held[c.name] = null;
+    S.veg.floor.push(v);
+    emit('veg:drop', { name: c.name, kind: v.kind, x: res.x, z: res.z });
+    // os porcos (se estiverem soltos) vêm comer
+    pigs.addFood({ x: res.x, z: res.z, kind: v.kind, onDone: () => { v.eaten = true; v.obj.parent?.remove(v.obj); S.veg.floor = S.veg.floor.filter((f) => f !== v); } });
+  }
+  function stepVeg(dt, C) {
+    void C;
+    for (const sp of props.farm.spots) {
+      const left = S.veg.regrow[sp.id] ?? 0;
+      if (left <= 0) continue;
+      S.veg.regrow[sp.id] = left - dt;
+      if (left - dt <= 0) sp.setReady(true);
+    }
+  }
+
+  // ------------------------------------------------------------------ o cantinho atrás do muro
+  const BOARD_AT = { x: EAST_WALL.x - 0.35, z: (SECRET.board.z0 + SECRET.board.z1) / 2 };
+  function boardAction(c) {
+    return S.secretReady && !S.secretOpen && reach(c, BOARD_AT.x, BOARD_AT.z) < 0.5;
+  }
+  function openBoard() {
+    S.secretOpen = true;
+    boardCol.enabled = false;
+    emit('secret:board', { x: EAST_WALL.x, z: BOARD_AT.z });
+  }
+  function stepSecret(dt, active) {
+    const ready = cols.count >= cols.total && !!ctx.extrasUsed?.();
+    if (ready && !S.secretReady) { S.secretReady = true; props.secretBoard.setLoose(true); }
+    if (S.secretOpen) S.boardT = Math.min(1, S.boardT + dt / 0.8);
+    props.secretBoard.setOpen(S.boardT);
+    if (S.secretOpen && !S.secretSeen && active.x > EAST_WALL.x + 0.3) {
+      S.secretSeen = true;
+      const P = SECRET.photo;
+      cam?.focusShot(P.x, P.z, { hold: 5, inT: 1.0, outT: 0.8, target: { x: P.x, y: P.y, z: P.z }, from: { x: SECRET.nook.x0 + 0.2, y: 0.95, z: P.z + 0.02 } });
+      emit('secret:photo', { x: P.x - 0.4, z: P.z });
     }
   }
 
@@ -795,10 +1188,8 @@ export function createPuzzle(ctx) {
     // a Rhaenyra que estava na placa fica lá quando o jogador troca para a irmã
     const activeName = /** @type {import('../../types').DogName} */ (active.name);
     if (activeName !== S.prevActive) {
-      if (S.prevActive === 'rhaenyra' && onPlate(C.rhaenyra) && !handle.holder) {
-        ctx.setStay?.('rhaenyra', true);
-        hints.now('plateStay', 2.8, 0);
-      }
+      // trocando, quem segurava a gaveta solta
+      if (S.drawerHold && S.drawerHold.who !== activeName) S.drawerHold = null;
       S.prevActive = activeName;
     }
 
@@ -811,9 +1202,13 @@ export function createPuzzle(ctx) {
     if (S.onDeck && !S.deck) confineDeck(C.radhija);
     stepRamp(dt);
     stepReject(dt);
-    plate.update(dt, { ctrls: C });
+    stepDrawers(dt);
+    stepClimb(dt);
+    stepPinata(dt, C);
+    stepVeg(dt, C);
+    stepSecret(dt, active);
+    pigs.update(dt, C);
     gate.update(dt, { ctrls: C });
-    if (onPlate(C.radhija) && !plate.pressed && inHorta(C.radhija)) hints.cond('plateLight', 3.4, 10);
     stepShed(dt, C);
     if (!S.ramp && active.name === 'radhija' && inShed(active)) tryRamp(active);
     if (!S.ramp && active.name === 'rhaenyra' && inShed(active)) tryRamp(active);
@@ -862,8 +1257,13 @@ export function createPuzzle(ctx) {
     const canRope = k === 'rhaenyra' && free && !handle.holder && reach(active, ROPE.rest.x, ROPE.rest.z) < ROPE.grabR && S.bucketY < 0.05;
     const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(active, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
     const nearPainting = inHouse(active) && Math.hypot(active.x - PAINTING.x, active.z - (PAINTING.z + 0.95)) < 1.0;
+    const drawerDo = !up ? drawerAction(active) : null;
+    const vegDo = !up && !drawerDo ? vegAction(active) : null;
     if (handle.holder === k) hints.setPrompt('ropeDrop');
     else if (up) hints.setPrompt(deckDo);
+    else if (drawerDo) hints.setPrompt(drawerDo);
+    else if (vegDo) hints.setPrompt(vegDo);
+    else if (boardAction(active)) hints.setPrompt('board');
     else if (S.riding && k === 'radhija' && S.pulled < 0.05) hints.setPrompt('bucketOut');
     else if (canHat) hints.setPrompt('hat');
     else if (nearFloor && free) hints.setPrompt('pick');
@@ -879,10 +1279,18 @@ export function createPuzzle(ctx) {
     if (nearLever && k === 'radhija') hints.cond('wallRadhija', 3.4, 10);
     if (!S.full && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.7) hints.cond(tap.on && crateOnHose() ? 'hoseBlocked' : 'poolDeep', 3.6, 12);
     if (S.full && !power() && !S.docked && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.8) hints.cond('boatFar', 3.6, 10);
+    // a piñata em cima da roseira: parada, os espinhos não deixam chegar; balançando, quem bate é a Rhaenyra
+    if (!S.pin.broken && Math.hypot(active.x - ROSE_BUSH.x, active.z - ROSE_BUSH.z) < ROSE_BUSH.r + 0.9) {
+      const swinging = Math.hypot(S.pin.ax, S.pin.az) > 0.12;
+      if (swinging && k === 'radhija') hints.cond('pinataJumpRad', 3.4, 10);
+      else if (!swinging) hints.cond('pinataThorns', 3.6, 12);
+    }
     if (S.place.hat === 'home' && S.docked) props.hat.setHighlight(true);
     props.crate.setHighlight?.(crateOnHose() && k === 'rhaenyra');
     props.ribbon.setHighlight(S.place.ribbon === 'home' && !pigeonAround());
     props.candle.setHighlight(S.place.candle === 'home' && (inShed(ctrls.radhija) || doorOpen()));
+    props.cookie.setHighlight(S.place.cookie === 'home' && stairsReady());
+    props.star.setHighlight(S.place.star === 'floor');
     props.cake.setHighlight(THINGS.some((t) => items[t].holder));
     if (!S.wasPower && power()) emit('power:on', { x: BREAKER.x, z: BREAKER.z });
     S.wasPower = power();
@@ -913,7 +1321,7 @@ export function createPuzzle(ctx) {
     const key = `${o.stage}|${o.text}`;
     if (key !== S.objKey) { S.objKey = key; onStageChange(o.stage); }
     notifyStage();
-    if (!S.done && S.cake.length >= 3 && !S.reject) {
+    if (!S.done && S.cake.length >= CAKE_ORDER.length && !S.reject) {
       S.done = true;
       props.cake.light();
       emit('cake:lit', { x: CAKE.x, z: CAKE.z });
@@ -925,6 +1333,15 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ entrada
   function modifyIntent(dt, c, intent, opts) {
+    // a Rhaenyra com o puxador da gaveta na boca: anda só para a frente e para trás, de frente para o gaveteiro
+    if (S.drawerHold && S.drawerHold.who === c.name) {
+      const want = intent.speed > 1e-3 ? (intent.dz || 0) : 0;
+      const v = Math.max(-1, Math.min(1, want)) * DRAWERS.pullSpeed;
+      const minZ = D_FRONT + S.drawerHold.g;
+      c.z = Math.max(minZ, Math.min(PANTRY.zS - 0.35, c.z + v * dt));
+      c.x += (DRAWERS.x - c.x) * Math.min(1, dt * 6);
+      return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x, faceZ: c.z - 1 }, action: Math.abs(v) > 0.05 ? 'tug' : null };
+    }
     // dentro do balde (a Radhija ativa): fica sentada; a câmera e a troca continuam valendo
     if (S.riding && c.name === 'radhija') return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw) }, action: 'sit' };
     // a Rhaenyra com a corda na boca: anda normalmente (as patas continuam) e não passa do comprimento da corda;
@@ -979,10 +1396,18 @@ export function createPuzzle(ctx) {
       }
       return true;
     }
+    // gaveteiro: a Rhaenyra puxa, solta e encaixa; a Radhija sobe pelos degraus
+    const dr = drawerAction(c);
+    if (dr) return doDrawer(c, dr);
+    // legumes: colher e largar
+    const vg = vegAction(c);
+    if (vg) return doVeg(c, vg);
+    if (S.veg.held[c.name]) { dropVeg(c); return true; }
     if (carried) {
       if (!deliveredAt(GOAL, c, c)) dropThing(carried, c);
       return true;
     }
+    if (boardAction(c)) { openBoard(); return true; }
     const nearFloor = THINGS.find((t) => S.place[t] === 'floor' && !S.reject && reach(c, S.floor[t].x, S.floor[t].z) < 0.55);
     if (nearFloor) { take(nearFloor, c); return true; }
     if (S.place.hat === 'home' && S.docked && Math.hypot(c.x - BOAT.dock.x, c.z - BOAT.dock.z) < BOAT.grabR) { take('hat', c); return true; }
@@ -1021,6 +1446,11 @@ export function createPuzzle(ctx) {
   function onWallTouch(c, spot) {
     if (spot.id === breaker.id && !breaker.on) breaker.touch();
     if (spot.id === tap.id && !tap.on) tap.touch();
+    shedButtons.forEach((b, i) => {
+      if (spot.id !== b.id || b.on) return;
+      b.touch();
+      if (i === S.doorBtn) openShed(); else openSty();
+    });
   }
 
   // ------------------------------------------------------------------ Lambe-Lambe
@@ -1045,8 +1475,8 @@ export function createPuzzle(ctx) {
     const fx = effects.lockFor(name);
     if (fx) return fx;
     const c = ctrls[name];
-    if (name === 'radhija' && (S.deck || S.ramp || S.hop)) {
-      const sq = /** @type {any} */ (S.deck || S.ramp || S.hop);
+    if (name === 'radhija' && (S.deck || S.ramp || S.hop || S.climb)) {
+      const sq = /** @type {any} */ (S.deck || S.ramp || S.hop || S.climb);
       return { action: sq.action || 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: sq.slope || 0 };
     }
     // no balde, como companheira: sentada (a Radhija ativa usa o modifyIntent, para a troca continuar valendo)
@@ -1071,18 +1501,24 @@ export function createPuzzle(ctx) {
     for (const b of levers) b.reset();
     crate.reset();
     gate.reset();
-    plate.reset();
     goose.reset();
+    pigs.reset();
+    for (const v of S.veg.floor) v.obj.parent?.remove(v.obj);
+    for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) { const h = S.veg.held[n]; if (h) { h.it.returnHome(); h.obj.parent?.remove(h.obj); } }
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) ctrls[n].y = 0;
     Object.assign(S, fresh());
     doorCol.enabled = true;
     bucketCol.enabled = true;
+    styGateCol.enabled = true;
+    boardCol.enabled = true;
+    drawersCol.enabled = false;
     props.pigeon.object.visible = true;
     lastStage = 'start';
   }
   /** Põe um enfeite no bolo (depuração e testes). @param {Thing} thing */
   function forceOnCake(thing) {
     const tier = S.cake.length;
+    if (thing === 'star') props.star.setShown?.(true);
     props.cake.place(thing, tier);
     S.cake.push(thing);
     S.place[thing] = 'cake';
@@ -1091,11 +1527,13 @@ export function createPuzzle(ctx) {
   function jumpToStage(st, { who } = {}) {
     if (!STAGES.includes(/** @type {Stage} */ (st))) return null;
     reset();
-    const order = { start: 0, cake1: 1, cake2: 2, done: 3 }[st];
+    const order = STAGES.indexOf(/** @type {Stage} */ (st));
     for (let i = 0; i < order; i++) forceOnCake(CAKE_ORDER[i]);
-    if (order >= 1) { S.gateOpen = true; gate.lock(); S.pigeon = 'gone'; props.pigeon.object.visible = false; }
-    if (order >= 2) { S.doorT = 1; }
-    if (order >= 3) { breaker.setOn(true); tap.setOn(true); S.water = 1; S.full = true; }
+    const placed = (t) => S.cake.includes(t);
+    if (placed('ribbon')) { S.gateOpen = true; gate.lock(); S.pigeon = 'gone'; props.pigeon.object.visible = false; }
+    if (placed('candle')) { S.shedOpen = true; S.doorT = 1; }
+    if (placed('hat')) { breaker.setOn(true); tap.setOn(true); S.water = 1; S.full = true; }
+    if (placed('star')) { S.pin.broken = true; props.pinata.burst(); }
     place('radhija', GOAL.celebrate.radhija.x, GOAL.celebrate.radhija.z + 0.6, NORTH);
     place('rhaenyra', GOAL.celebrate.rhaenyra.x, GOAL.celebrate.rhaenyra.z + 0.6, NORTH);
     notifyStage();
@@ -1119,7 +1557,7 @@ export function createPuzzle(ctx) {
     },
     setPrompt: (kind) => hints.setPrompt(kind),
     endActions() {
-      if (S.deck || S.ramp || S.hop || S.riding || S.onDeck) { S.riding = false; finishScript(ctrls.radhija); }
+      if (S.deck || S.ramp || S.hop || S.riding || S.onDeck || S.climb) { S.riding = false; finishScript(ctrls.radhija); }
     },
     speedScale: (c) => mud.speedScale(c.name),
     canDash: (c) => mud.canDash(c.name),
@@ -1139,6 +1577,10 @@ export function createPuzzle(ctx) {
       if (key === 'gate') { S.gateOpen = !!value; if (value) gate.lock(); }
       if (key === 'pigeon') { S.pigeon = value ? 'gone' : 'asleep'; props.pigeon.object.visible = !value; }
       if (key === 'clean') mud.set('radhija', value ? 0 : 1);
+      if (key === 'doorButton') S.doorBtn = value ? 1 : 0;
+      if (key === 'shed') { if (value) openShed(); }
+      if (key === 'stairs') { S.drawers.forEach((d, i) => { d.ext = [0.42, 0.28, 0.14][i]; d.fallen = false; }); }
+      if (key === 'secret') { S.secretReady = !!value; props.secretBoard.setLoose(!!value); }
     },
     dispose() { S.disposed = true; },
     info: () => ({
@@ -1151,15 +1593,22 @@ export function createPuzzle(ctx) {
         rope: { holder: handle.holder, pulled: +S.pulled.toFixed(3) }, bucket: { y: +S.bucketY.toFixed(3), riding: S.riding, tilt: +S.bucketTilt.toFixed(3) },
         deck: S.deck ? S.deck.phase : S.onDeck ? 'free' : null, onDeck: S.onDeck, deckAction: deckAction(ctrls.radhija),
         sawPigeon: S.sawPigeon, ramp: S.ramp ? S.ramp.phase : null, door: +S.doorT.toFixed(3), doorOpen: doorOpen(),
-        plate: plate.pressed, mud: mud.info('radhija'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
+        mud: mud.info('radhija'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
+        shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, pigs: pigs.info(),
+        drawers: S.drawers.map((d) => ({ ext: +d.ext.toFixed(3), fallen: d.fallen })), drawerHold: S.drawerHold ? S.drawerHold.i : null,
+        climb: S.climb ? S.climb.phase : null, stairs: stairsReady(),
+        pinata: { ax: +S.pin.ax.toFixed(3), az: +S.pin.az.toFixed(3), hits: S.pin.hits, broken: S.pin.broken, ...(() => { const p = pinataPos(); return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }; })() },
+        veg: { held: { radhija: S.veg.held.radhija?.kind ?? null, rhaenyra: S.veg.held.rhaenyra?.kind ?? null }, floor: S.veg.floor.length },
+        secret: { ready: S.secretReady, open: S.secretOpen, seen: S.secretSeen },
         levers: { breaker: breaker.info(), tap: tap.info() },
       },
       hat: { holder: items.hat.holder }, ribbon: { holder: items.ribbon.holder }, candle: { holder: items.candle.holder },
+      cookie: { holder: items.cookie.holder }, star: { holder: items.star.holder },
       objective: objective(ctx.activeDog).text,
     }),
     get stage() { return stage(); },
     get carrier() { return THINGS.map((t) => items[t].holder).find(Boolean) || null; },
-    carries: (name) => !!carriedBy(name) || handle.holder === name,
+    carries: (name) => !!carriedBy(name) || handle.holder === name || !!S.veg.held[name] || S.drawerHold?.who === name,
     get collected() { return cols.count; }, get total() { return cols.total; },
     set onStageChange(fn) { onStageChange = fn; },
   };

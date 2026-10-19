@@ -8,7 +8,12 @@
 //   yard.js       piscininha (água que sobe), barquinho, mangueira e torneira, caixote, ventilador, vasos, canteiro
 //   fences.js     cerca do fundo com o portãozinho e a cordinha, muro do terreno, cerca viva e a vizinhança
 //   treehouse.js  árvore, deque, casinha, roldana e balde, corda, cano de brinquedo, pombo e escorregador
-//   garden.js     horta (vão da tábua quebrada, canteiros, girassóis) e o galpão (porta basculante, placa, rampa)
+//   garden.js     horta (vão da tábua quebrada, canteiros, girassóis) e o galpão (porta basculante, rampa)
+//   pantry.js     a despensa (gaveteiro de três gavetas e o pote de biscoitos, prateleiras, sacos)
+//   farm.js       o campinho de milho, cenouras e abóboras (legumes para os porcos) e o espantalho
+//   pinata.js     a mangueira grande, a roseira e a piñata da estrela (balança, racha e abre)
+//   sty.js        o chiqueiro (porteira, casinha, cocho) e a caixinha de força dos botões do galpão
+//   secret.js     o cantinho atrás do muro leste
 //   props.js      os três enfeites, as alavancas, o conduíte de energia, os ossinhos e as luzes
 // Luz: o sol baixo do preset (com sombra) + cinco PointLights quentes sem sombra (o lampião acende com a festa).
 import { shared } from '../../../world/util.js';
@@ -19,6 +24,11 @@ import { buildYard } from './yard.js';
 import { buildFences } from './fences.js';
 import { buildTreehouse } from './treehouse.js';
 import { buildGarden } from './garden.js';
+import { buildPantry } from './pantry.js';
+import { buildFarm } from './farm.js';
+import { buildPinata } from './pinata.js';
+import { buildSty } from './sty.js';
+import { buildSecret } from './secret.js';
 import { buildProps } from './props.js';
 
 /**
@@ -54,15 +64,20 @@ export function buildWorld({ root, layout }) {
   const fences = T('fences', () => buildFences(root, layout));
   const treehouse = T('treehouse', () => buildTreehouse(root, layout));
   const garden = T('garden', () => buildGarden(root, layout));
-  const P = T('props', () => buildProps({ root, layout, house, porch, yard, fences, treehouse, garden }));
+  const pantry = T('pantry', () => buildPantry(root, layout));
+  const farm = T('farm', () => buildFarm(root, layout));
+  const pinata = T('pinata', () => buildPinata(root, layout));
+  const sty = T('sty', () => buildSty(root, layout));
+  const secret = T('secret', () => buildSecret(root, layout));
+  const P = T('props', () => buildProps({ root, layout, house, porch, yard, fences, treehouse, garden, pantry, farm, pinata, sty, secret }));
   if (typeof window !== 'undefined') window.__f10Timings = timings;
   trimTinyShadows(root);
   P.props.reset();
   return {
     props: P.props,
-    env: { ground, house, porch, yard, fences, treehouse, garden, timings },
+    env: { ground, house, porch, yard, fences, treehouse, garden, pantry, farm, pinata, sty, secret, timings },
     // o que pode ficar entre a câmera e as dogs (o núcleo aplica o "ver através")
-    seeThrough: [house.walls, ...yard.seeThrough, ...fences.seeThrough, ...treehouse.seeThrough, ...garden.seeThrough],
+    seeThrough: [house.walls, pantry.walls, ...yard.seeThrough, ...fences.seeThrough, ...treehouse.seeThrough, ...garden.seeThrough],
     update(dt, t) {
       shared.time.value = t;
       ground.update(dt, t);
@@ -72,6 +87,11 @@ export function buildWorld({ root, layout }) {
       fences.update(dt);
       treehouse.update(dt, t);
       garden.update(dt, t);
+      pantry.update(dt);
+      farm.update(dt, t);
+      pinata.update(dt, t);
+      sty.update(dt);
+      secret.update(dt, t);
       P.props.update(dt, t);
     },
     dispose() {},

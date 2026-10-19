@@ -184,12 +184,68 @@ export function createNumberCandle() {
   return { object: g, flame, stars, starMat };
 }
 
+/** Biscoito de osso com glacê rosa e confeitos (deitado, eixo longo em X). */
+export function createCookie() {
+  const g = new THREE.Group();
+  g.name = 'cookie';
+  g.userData.carryKind = 'ribbon';
+  // osso: a barra do meio e as quatro bolotas (biscoito dourado) com o glacê rosa por cima
+  const dough = stdMat('#d9a05a', { roughness: 0.75 });
+  const glaze = new THREE.MeshPhysicalMaterial({ color: '#ff8fc4', roughness: 0.3, clearcoat: 0.6, emissive: '#000000' });
+  const bar = new THREE.Mesh(rbox(0.12, 0.016, 0.034, 0.006), dough);
+  bar.position.y = 0.008;
+  const barIce = new THREE.Mesh(rbox(0.11, 0.006, 0.026, 0.003), glaze);
+  barIce.position.y = 0.018;
+  g.add(bar, barIce);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const lobe = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.016, 14), dough);
+    lobe.position.set(sx * 0.064, 0.008, sz * 0.017);
+    const ice = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.006, 14), glaze);
+    ice.position.set(sx * 0.064, 0.0185, sz * 0.017);
+    g.add(lobe, ice);
+  }
+  const sprC = ['#fff6ea', '#7cc4e8', '#f6c453', '#9bd57a'];
+  for (let i = 0; i < 9; i++) {
+    const sp = new THREE.Mesh(new THREE.CapsuleGeometry(0.002, 0.008, 2, 4), stdMat(sprC[i % 4], { roughness: 0.4 }));
+    sp.position.set(-0.05 + (i % 5) * 0.025, 0.024, (i % 2 ? 0.006 : -0.008));
+    sp.rotation.set(Math.PI / 2, 0, i * 0.9);
+    g.add(sp);
+  }
+  g.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.userData.carryKind = 'ribbon'; } });
+  return g;
+}
+
+/** Estrela dourada de topo de bolo (cintilante, com a varetinha para espetar), em pé no plano XY. */
+export function createStarTopper() {
+  const g = new THREE.Group();
+  g.name = 'star';
+  g.userData.carryKind = 'candle';
+  const sh = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 2 + (i / 10) * TAU;
+    const rr = i % 2 ? 0.032 : 0.075;
+    if (i === 0) sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); else sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.016, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 2 });
+  geo.translate(0, 0.11, -0.008);
+  const gold = new THREE.MeshStandardMaterial({ color: '#ffd24d', metalness: 0.75, roughness: 0.25, emissive: '#ffb020', emissiveIntensity: 0.2 });
+  const star = new THREE.Mesh(geo, gold);
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.06, 6), stdMat('#c8ccd0', { metalness: 0.9, roughness: 0.3 }));
+  rod.position.y = 0.03;
+  const gem = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshPhysicalMaterial({ color: '#ff8fc4', roughness: 0.1, clearcoat: 1, emissive: '#000000' }));
+  gem.position.set(0, 0.11, 0.012);
+  g.add(star, rod, gem);
+  g.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.userData.carryKind = 'candle'; } });
+  return { object: g, gold };
+}
+
 /**
  * @param {{ root: THREE.Object3D, layout: import('../../../types').LevelLayout, house: any, porch: any, yard: any,
- *   fences: any, treehouse: any, garden: any }} args
+ *   fences: any, treehouse: any, garden: any, pantry: any, farm: any, pinata: any, sty: any, secret: any }} args
  */
-export function buildProps({ root, layout, house, porch, yard, fences, treehouse, garden }) {
-  const { BREAKER, TAP, RIBBON, CANDLE, BOAT, POOL, COLLECTIBLES, WALL_LK, WALLS, HOUSE, PERGOLA_POSTS } = layout;
+export function buildProps({ root, layout, house, porch, yard, fences, treehouse, garden, pantry, farm, pinata, sty, secret }) {
+  const { BREAKER, TAP, RIBBON, CANDLE, BOAT, POOL, COLLECTIBLES, WALL_LK, WALLS, HOUSE, PERGOLA_POSTS, SHED_BUTTONS, ROSE_BUSH } = layout;
 
   // ---- os três enfeites
   const hat = createPartyHat();
@@ -211,7 +267,24 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   candle.rotation.y = -Math.PI / 2 + 0.35; // de frente para quem sobe a rampa (e para a câmera)
   root.add(candle);
   const candleHome = candle.position.clone();
-  const mats = { hat: emissiveMats(hat), ribbon: emissiveMats(ribbon), candle: emissiveMats(candle).filter((m) => m !== candleKit.starMat) };
+  // o biscoito de osso de glacê (na frente do pote, em cima do gaveteiro da despensa)
+  const cookie = createCookie();
+  pantry.cookieSpot.updateWorldMatrix(true, false);
+  pantry.cookieSpot.getWorldPosition(cookie.position);
+  cookie.rotation.y = 0.4;
+  root.add(cookie);
+  const cookieHome = cookie.position.clone();
+  // a estrela (escondida dentro da piñata até ela abrir; aí cai no gramado do lado de quem bateu)
+  const starKit = createStarTopper();
+  const star = starKit.object;
+  star.position.set(ROSE_BUSH.x, 0.02, ROSE_BUSH.z + ROSE_BUSH.r + 0.4);
+  star.visible = false;
+  root.add(star);
+  const starHome = star.position.clone();
+  const mats = {
+    hat: emissiveMats(hat), ribbon: emissiveMats(ribbon), candle: emissiveMats(candle).filter((m) => m !== candleKit.starMat),
+    cookie: emissiveMats(cookie), star: emissiveMats(star).filter((m) => m !== starKit.gold),
+  };
 
   // ---- alavancas no alto das paredes (patinhas pintadas)
   const place = (prop, cfg) => {
@@ -222,6 +295,8 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   };
   const breaker = place(buildWallButton({ kind: 'lever', top: BREAKER.top, color: '#f2c14e', plate: '#d8dcd6', trim: '#2a2624', name: 'disjuntor' }), BREAKER);
   const tap = place(buildWallButton({ kind: 'button', top: TAP.top, color: '#4aa8e0', plate: '#f4ecdc', trim: '#c87a4a', name: 'botao-torneira' }), TAP);
+  // os dois botões altos do galpão: iguais (qual abre o quê é sorteado)
+  const shedButtons = SHED_BUTTONS.map((cfg, i) => place(buildWallButton({ kind: 'button', top: cfg.top, color: '#f6c453', plate: '#e8d2a8', trim: '#5a3a2a', name: `botao-galpao-${i + 1}` }), cfg));
   const treats = buildTreats(root, COLLECTIBLES, { glow: 0.24 });
 
   // ---- conduíte da energia: disjuntor → (divisória) → parede do fundo → atravessa a parede leste → pergolado
@@ -289,13 +364,14 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   addLight(garden.bulbPos, '#ffe0a8', 1.0, 3.8);
 
   const st = {
-    hlHat: false, hlRibbon: false, hlCandle: false, glow: { hat: 0, ribbon: 0, candle: 0 },
+    hlHat: false, hlRibbon: false, hlCandle: false, hlCookie: false, hlStar: false, glow: { hat: 0, ribbon: 0, candle: 0, cookie: 0, star: 0 },
     hatOnBoat: true, power: false, powerT: -1, lightsOn: false, fanWant: false, fanOn: false, tapOn: false,
     lit: false, litT: 0, lampI: 0,
     /** @type {'off' | 'house' | 'painting' | 'porch' | 'on'} */ stage: 'off', stageT: 0,
   };
   const goStage = (sg) => { st.stage = sg; st.stageT = 0; };
   const boatPos = new THREE.Vector3();
+  const THING_OBJ = { hat, ribbon, candle, cookie, star };
   /** O chapéu acompanha o barquinho (no convés) enquanto ninguém o pega. */
   function hatOnBoatPose() {
     if (!st.hatOnBoat || hat.parent !== root) return;
@@ -314,17 +390,24 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     },
     ribbon: { object: ribbon, home: ribbonHome, setHighlight(on) { st.hlRibbon = !!on; } },
     candle: { object: candle, home: candleHome, setHighlight(on) { st.hlCandle = !!on; } },
+    cookie: { object: cookie, home: cookieHome, setHighlight(on) { st.hlCookie = !!on; } },
+    star: {
+      object: star, home: starHome,
+      setHighlight(on) { st.hlStar = !!on; },
+      /** Aparece quando a piñata abre. */
+      setShown(on) { star.visible = !!on; },
+    },
     cake: {
       object: porch.cake.object,
       setHighlight: porch.cake.setHighlight,
       place(thing, tier) {
-        const obj = thing === 'hat' ? hat : thing === 'ribbon' ? ribbon : candle;
+        const obj = THING_OBJ[thing];
         porch.cake.place(thing, tier, obj);
         if (thing === 'ribbon') tie.visible = false;
         if (thing === 'candle') obj.rotation.y = 0.3;
       },
       reject(thing, tier, k, x, z) {
-        const obj = thing === 'hat' ? hat : thing === 'ribbon' ? ribbon : candle;
+        const obj = THING_OBJ[thing];
         porch.cake.reject(thing, tier, k, x, z, obj);
       },
       light() {
@@ -364,8 +447,15 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     bucket: treehouse.bucket,
     rope: treehouse.rope,
     tube: treehouse.tube,
-    plate: garden.plate,
     shedDoor: garden.door,
+    shedButtons,
+    /** Os cabos da caixinha de força do galpão (pulso até a porta ou até a porteira). */
+    shedLinks: sty.links,
+    styGate: sty.gate,
+    drawers: pantry.drawers,
+    pinata: pinata.pinata,
+    farm: { spots: farm.spots, makeVeg: farm.makeVeg },
+    secretBoard: secret.board,
     breaker,
     tap: {
       object: tap.object,
@@ -421,7 +511,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       // chapéu no barco
       hatOnBoatPose();
       // brilho de destaque dos enfeites
-      for (const [key, on] of /** @type {[('hat'|'ribbon'|'candle'), boolean][]} */ ([['hat', st.hlHat], ['ribbon', st.hlRibbon], ['candle', st.hlCandle]])) {
+      for (const [key, on] of /** @type {[('hat'|'ribbon'|'candle'|'cookie'|'star'), boolean][]} */ ([['hat', st.hlHat], ['ribbon', st.hlRibbon], ['candle', st.hlCandle], ['cookie', st.hlCookie], ['star', st.hlStar]])) {
         st.glow[key] = ease(st.glow[key], on ? 1 : 0, dt, 5);
         const k = st.glow[key] * (0.35 + 0.25 * Math.sin(t * 4.5));
         for (const m of mats[key]) { m.emissive.setRGB(1, 0.85, 0.5); m.emissiveIntensity = k; }
@@ -461,8 +551,17 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       yard.crate.setHighlight(false);
       fences.gate.setOpen(0);
       fences.cord.reset();
-      garden.plate.setPress(0);
       garden.door.setOpen(0);
+      sty.gate.setOpen(0);
+      for (const b of shedButtons) b.setOn?.(false);
+      for (let i = 0; i < 3; i++) pantry.drawers.setDrawer(i, 0, false);
+      pinata.pinata.reset();
+      star.visible = false;
+      star.rotation.set(0, 0, 0);
+      cookie.rotation.set(0, 0.4, 0);
+      for (const sp of farm.spots) sp.setReady(true);
+      secret.board.setOpen(0);
+      secret.board.setLoose(false);
       treehouse.bucket.setY(0);
       treehouse.rope.setPull(0, null);
       treehouse.tube.setPuffs([]);

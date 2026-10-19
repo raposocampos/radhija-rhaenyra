@@ -121,7 +121,8 @@ export interface DogStats {
  */
 export type NavEdge = [string, string] | [string, string, { requires?: string | string[] }];
 
-export interface Collectible { id: string; x: number; z: number; hint?: string }
+/** Ossinho escondido: y = altura do chão onde ele fica (deque, prateleira), 0 se omitido. */
+export interface Collectible { id: string; x: number; z: number; y?: number; hint?: string }
 
 export interface Goal {
   x: number;
@@ -452,6 +453,8 @@ export interface PuzzleContext<P extends LevelProps = LevelProps> {
   isStaying(name: DogName): boolean;
   setStay(name: DogName, on: boolean): void;
   brains: Record<DogName, any>;
+  /** A animação escondida (extras) desta fase já aconteceu? */
+  extrasUsed?(): boolean;
 }
 
 export interface Objective {
@@ -807,7 +810,7 @@ export interface Fase9Props extends LevelProps {
   collectibles: CollectibleProp[];
   reset(): void;
 }
-export type Fase10Thing = 'hat' | 'ribbon' | 'candle';
+export type Fase10Thing = 'hat' | 'ribbon' | 'candle' | 'cookie' | 'star';
 export interface Fase10Props extends LevelProps {
   /** Chapeuzinho de festa: no barquinho (setOnBoat: acompanha o barco) até alguém pegar. */
   hat: ItemProp & { setOnBoat(on: boolean): void };
@@ -815,7 +818,11 @@ export interface Fase10Props extends LevelProps {
   ribbon: ItemProp;
   /** Vela do número 3 (com estrelinhas) na prateleira alta do galpão. */
   candle: ItemProp;
-  /** Bolo de três andares: place(enfeite, andar) prende no lugar; reject(…, k 0..1, x, z) balança e cai; light() acende a vela. */
+  /** Biscoito de osso de glacê, em cima do gaveteiro da despensa. */
+  cookie: ItemProp;
+  /** Estrela de topo de bolo, escondida na piñata (setShown: aparece quando ela abre). */
+  star: ItemProp & { setShown?(on: boolean): void };
+  /** Bolo de cinco enfeites: place(enfeite, andar) prende no lugar; reject(…, k 0..1, x, z) balança e cai; light() acende a vela. */
   cake: PropBase & HighlightProp & {
     place(thing: Fase10Thing, tier: number): void;
     reject(thing: Fase10Thing, tier: number, k: number, x: number, z: number): void;
@@ -845,9 +852,22 @@ export interface Fase10Props extends LevelProps {
   bucket: PropBase & { setY(y: number): void; setTilt?(k: number): void };
   /** Corda da roldana: handle = a ponta (vai na boca da Rhaenyra); setPull(metros puxados, quem segura). */
   rope: { handle: THREE.Object3D; setPull(pulled: number, holder: DogModel | null): void };
-  /** Placa de pressão na frente do galpão e a porta basculante (0 fechada … 1 aberta). */
-  plate: PressProp;
+  /** A porta basculante do galpão (0 fechada … 1 aberta). */
   shedDoor: GateProp;
+  /** Os dois botões altos na parede do galpão (um abre a porta, o outro o chiqueiro: sorteado). */
+  shedButtons: WallButtonProp[];
+  /** Os fios da caixinha de força: pulse() corre a luz pelo fio; setOn deixa aceso. */
+  shedLinks: { door: { pulse(): void; setOn(on: boolean): void }; gate: { pulse(): void; setOn(on: boolean): void } };
+  /** A porteira do chiqueiro (0 fechada … 1 aberta). */
+  styGate: GateProp;
+  /** O gaveteiro da despensa: setDrawer(i, quanto para fora em m, caída no chão). */
+  drawers: { setDrawer(i: number, ext: number, fallen: boolean): void; handleAt?(i: number): THREE.Vector3 };
+  /** A piñata em cima da roseira: setPos(gancho e inclinações), setCracks(batidas), burst() abre, reset(). */
+  pinata: { setPos(x: number, y: number, z: number, tiltX: number, tiltZ: number): void; setCracks(n: number): void; burst(): void; reset(): void };
+  /** O campinho: os pés de legume (setReady: com ou sem legume) e makeVeg(tipo) cria o legume para carregar. */
+  farm: { spots: { id: string; kind: string; x: number; z: number; setReady(on: boolean): void }[]; makeVeg(kind: string): THREE.Object3D };
+  /** A tábua solta do muro leste (0 fechada … 1 aberta); setLoose: frouxa, balançando de leve. */
+  secretBoard: { object: THREE.Object3D; setOpen(t: number): void; setLoose(on: boolean): void };
   breaker: WallButtonProp;
   tap: WallButtonProp;
   collectibles: CollectibleProp[];

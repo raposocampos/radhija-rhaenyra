@@ -159,7 +159,7 @@ export function paintingTexture() {
     g.beginPath(); g.moveTo(tx - 130, ty); g.lineTo(tx + 130, ty); g.lineTo(tx + 142, h * 0.95); g.lineTo(tx - 142, h * 0.95); g.closePath(); g.fill();
     g.fillStyle = 'rgba(242,122,138,0.5)';
     for (let x = tx - 140; x < tx + 140; x += 20) { g.beginPath(); g.arc(x + 10, h * 0.95, 10, 0, Math.PI); g.fill(); }
-    // o bolo de três andares (de baixo para cima: laço, vela do 2, chapeuzinho)
+    // o bolo de três andares (de baixo para cima: laço, biscoito de osso, vela do 2, chapeuzinho e a estrela)
     const tier = (cx, by, tw, th, col) => {
       g.fillStyle = col;
       g.fillRect(cx - tw / 2, by - th, tw, th);
@@ -193,6 +193,14 @@ export function paintingTexture() {
     g.beginPath(); g.moveTo(lx - 4, ly + 4); g.lineTo(lx - 14, ly + 26); g.lineTo(lx - 4, ly + 22); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(lx + 4, ly + 4); g.lineTo(lx + 14, ly + 26); g.lineTo(lx + 4, ly + 22); g.closePath(); g.fill();
     g.fillStyle = '#b83a6e'; g.beginPath(); g.arc(lx, ly, 6, 0, TAU); g.fill();
+    // biscoito de osso com glacê rosa na beirada do andar de baixo, à esquerda do andar do meio
+    const kx = tx - 50, ky = b0 - 56;
+    g.fillStyle = '#d9a05a';
+    g.fillRect(kx - 13, ky - 4, 26, 8);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) { g.beginPath(); g.arc(kx + sx * 14, ky + sy * 4, 5.5, 0, TAU); g.fill(); }
+    g.fillStyle = '#ff8fc4';
+    g.fillRect(kx - 11, ky - 2.5, 22, 5);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) { g.beginPath(); g.arc(kx + sx * 14, ky + sy * 4, 3.6, 0, TAU); g.fill(); }
     // vela do 2 no anel do andar do meio, ao lado do andar de cima (com a chaminha)
     const cx2 = tx + 48, cy2 = b0 - 96 + 5;
     g.fillStyle = '#3a2a20'; g.fillRect(cx2 - 1.5, cy2 - 2, 3, 6); // o espeto entrando no bolo
@@ -212,7 +220,16 @@ export function paintingTexture() {
     g.fillStyle = '#fff1d9';
     g.beginPath(); g.moveTo(hx - 15, hy - 18); g.lineTo(hx + 15, hy - 18); g.lineTo(hx + 11, hy - 28); g.lineTo(hx - 11, hy - 28); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(hx - 7, hy - 40); g.lineTo(hx + 7, hy - 40); g.lineTo(hx + 4, hy - 48); g.lineTo(hx - 4, hy - 48); g.closePath(); g.fill();
-    g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(hx, hy - 60, 7, 0, TAU); g.fill();
+    // a estrela dourada espetada na ponta do chapéu (no lugar do pompom)
+    g.fillStyle = '#ffcf33';
+    g.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + (k / 10) * TAU, rr = k % 2 ? 5.5 : 13;
+      const x = hx + Math.cos(a) * rr, y = hy - 66 + Math.sin(a) * rr;
+      if (k === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath(); g.fill();
+    g.strokeStyle = '#e09a1a'; g.lineWidth = 1.5; g.stroke();
     // as duas, sentadinhas dos lados do bolo (a Rhaenyra branca à esquerda, a Radhija bege à direita)
     const dog = (x, y, s, body, ear, flip) => {
       g.save(); g.translate(x, y); g.scale(flip ? -s : s, s);
@@ -503,7 +520,8 @@ export function buildHouse(root, layout) {
   walls.add(tile);
   // oeste (alta) e frente (cortada baixa)
   wallBox(walls, xW - T / 2, 0, (zN + zS) / 2 - T / 4, T, 2.2, zS - zN + T / 2, faceMats(facade, { 0: mintFor(zS - zN, 2.2) }));
-  wallBox(walls, (xW + xE) / 2, 0, zS, xE - xW + T, WALLS.frontH, T, faceMats(facade, { 5: mintFor(xE - xW, WALLS.frontH), 4: facade }));
+  // a frente da sala (a da cozinha virou a parede da despensa, em pantry.js)
+  wallBox(walls, (xW - T / 2 + xL) / 2, 0, zS, xL - xW + T / 2, WALLS.frontH, T, faceMats(facade, { 5: mintFor(xL - xW, WALLS.frontH), 4: facade }));
   // divisória sala | cozinha (cortada) com o arco largo
   const divMat = faceMats(butter, { 1: mintFor(zS - zN, WALLS.cutH), 0: butter });
   wallBox(walls, xL, 0, (zN + WALL_LK.gap.z0) / 2, T, WALLS.cutH, WALL_LK.gap.z0 - zN, divMat);
@@ -620,7 +638,11 @@ export function buildHouse(root, layout) {
   };
   skirting((xL + xE) / 2, zN + 0.012, xE - xL - T, 0.024);
   skirting(xW + 0.012, (zN + zS) / 2, 0.024, zS - zN - T);
-  skirting((xW + xE) / 2, zS - T / 2 - 0.012, xE - xW - T, 0.024);
+  // rodapé da frente: sala inteira; na cozinha, dos dois lados da porta da despensa
+  const PD = layout.PANTRY.door;
+  skirting((xW + xL - T / 2) / 2, zS - T / 2 - 0.012, xL - T / 2 - xW, 0.024);
+  skirting((xL + T / 2 + PD.x0) / 2, zS - T / 2 - 0.012, PD.x0 - xL - T / 2, 0.024);
+  skirting((PD.x1 + xE - T / 2) / 2, zS - T / 2 - 0.012, xE - T / 2 - PD.x1, 0.024);
 
   // ================================================================ SALA
   // ---- sofá de veludo rosa-antigo (encosto para o sul) com almofadas e a saia até o chão

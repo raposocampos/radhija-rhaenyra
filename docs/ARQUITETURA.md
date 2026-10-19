@@ -410,7 +410,8 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
   as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
-- Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
+- Uma fase nova precisa de três ossinhos (a fase 10, a última, tem cinco) e de pelo menos um ponto em `extras`
+  (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
 
 ## 7. Personagens

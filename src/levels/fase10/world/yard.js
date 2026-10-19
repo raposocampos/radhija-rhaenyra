@@ -507,7 +507,7 @@ export function buildYard(root, layout) {
   const napkin = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.2), new THREE.MeshStandardMaterial({ map: picTex, roughness: 1 }));
   napkin.position.y = 0.205;
   basket.add(bk, bkH, napkin);
-  basket.position.set(-0.45, 0, -0.15);
+  basket.position.set(-0.45, 0.008, -0.15); // em cima da toalha
   basket.rotation.y = 0.4;
   pic.add(basket);
   const tball = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), new THREE.MeshPhysicalMaterial({ color: '#d8f25a', roughness: 0.7, sheen: 1 }));

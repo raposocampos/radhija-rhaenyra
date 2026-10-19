@@ -2,8 +2,9 @@
 // Roda no GitHub Actions (E2E manual, suíte quintal), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro (1/60 s): cada imagem mostra um instante exato (a água subindo, as luzinhas do quadro e da
 // festa acendendo em onda, o chapéu caindo do bolo, o quadro de perto, a gansa, o pombo em cima do laço, o cheiro
-// subindo pelo cano, o balde, o deque, o escorregador, a lama, a porta basculante, a rampa e o bolo pronto). Teclas reais chegam pelos ouvintes do jogo; teleporte, etapas e
-// atalhos de depuração só preparam as cenas. Saída: shots/quintal-revisao/*.png.
+// subindo pelo cano, o balde, o deque, o escorregador, as gavetas da despensa, a lama, os botões do galpão e o
+// chiqueiro, a rampa, o campinho, a piñata e o bolo pronto). Teclas reais chegam pelos ouvintes do jogo; teleporte,
+// etapas e atalhos de depuração só preparam as cenas. Saída: shots/quintal-revisao/*.png.
 import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
@@ -31,7 +32,7 @@ try {
     const raf = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = (fn) => raf((t) => { if (!window.__freezeReview) fn(t); });
   });
-  await page.goto(`${url}?level=fase10&play`);
+  await page.goto(`${url}?level=fase10&play&botao=1`);
   await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
   await page.evaluate(() => {
     window.__freezeReview = true;
@@ -101,8 +102,10 @@ try {
     return {
       TAP: l.TAP, BREAKER: l.BREAKER, CRATE: l.CRATE, BOAT: l.BOAT, POOL: l.POOL, GOAL: l.GOAL, CAKE: l.CAKE, PAINTING: l.PAINTING,
       CORD: l.CORD, GATE: l.GATE, TUBE: l.TUBE, PIGEON: l.PIGEON, BUCKET: l.BUCKET, ROPE: l.ROPE, DECK: l.DECK, SLIDE: l.SLIDE,
-      HORTA: l.HORTA, MUD: l.MUD, PLATE: l.PLATE, SHED: l.SHED, RAMP: l.RAMP, CANDLE: l.CANDLE, FAN: l.FAN, TREE: l.TREE,
+      HORTA: l.HORTA, MUD: l.MUD, SHED: l.SHED, RAMP: l.RAMP, CANDLE: l.CANDLE, FAN: l.FAN, TREE: l.TREE,
       DECK_PATH: l.DECK_PATH, HUT: l.HUT, SOFA: l.SOFA, COLLECTIBLES: l.COLLECTIBLES, HOUSE: l.HOUSE,
+      DRAWERS: l.DRAWERS, PANTRY: l.PANTRY, PLANTATION: l.PLANTATION, ROSE_BUSH: l.ROSE_BUSH, STY: l.STY,
+      SHED_BUTTONS: l.SHED_BUTTONS, SECRET: l.SECRET, EAST_WALL: l.EAST_WALL, DOG_BOWLS: l.DOG_BOWLS,
     };
   });
   const kick = (c) => ({ x: c.x + c.nx * 0.6 - c.nz * 0.14, z: c.z + c.nz * 0.6 + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
@@ -120,6 +123,14 @@ try {
   await shot('02-visao-geral', { pos: [0, 13.5, 10.5], look: [0, 0.3, -1.0] });
   await shot('02b-visao-casa-e-varanda', { pos: [-4.5, 7.0, 6.0], look: [-5.0, 0.4, -2.6] });
   await shot('02c-visao-fundo', { pos: [8.5, 7.5, 5.5], look: [8.4, 0.6, -1.2] });
+  await shot('02d-visao-campinho-e-despensa', { pos: [-8.0, 8.0, 9.5], look: [-8.0, 0.3, 2.6] });
+  await shot('02e-visao-horta-galpao-chiqueiro', { pos: [9.0, 8.5, 10.0], look: [9.6, 0.3, 3.4] });
+  await shot('02f-roseira-e-mangueira', { pos: [1.6, 2.0, 7.4], look: [1.8, 1.3, 4.4] });
+  await shot('03b-potes-de-racao-e-agua', { pos: [L.DOG_BOWLS.x + 0.9, 1.1, L.DOG_BOWLS.z + 1.4], look: [L.DOG_BOWLS.x, 0.1, L.DOG_BOWLS.z] });
+  await shot('04c-despensa', { pos: [L.PANTRY.x0 + 0.6, 1.55, L.PANTRY.zS - 0.25], look: [L.DRAWERS.x, 0.6, L.DRAWERS.z] });
+  await shot('04d-gaveteiro-e-biscoito', { pos: [L.DRAWERS.x - 0.3, 1.25, L.DRAWERS.z + 1.3], look: [L.DRAWERS.x, 0.75, L.DRAWERS.z] });
+  await shot('10e-campinho-milho-cenouras-aboboras', { pos: [-8.6, 1.7, 7.2], look: [-10.0, 0.4, 4.3] });
+  await shot('10f-botoes-do-galpao-e-chiqueiro', { pos: [7.4, 1.7, 4.6], look: [9.6, 0.8, 2.6] });
   await shot('03-quadro-de-perto', { pos: [L.PAINTING.x, L.PAINTING.y - 0.05, L.PAINTING.z + 1.5], look: [L.PAINTING.x, L.PAINTING.y, L.PAINTING.z] });
   await shot('04-sala', { pos: [-8.8, 1.6, 0.9], look: [-10.4, 0.8, -3.4] });
   await shot('05-cozinha', { pos: [-5.6, 1.6, 0.6], look: [-7.0, 0.9, -4.0] });
@@ -307,7 +318,7 @@ try {
   await step(20);
   await shot('26b-no-gramado-com-o-laco-camera-do-jogo');
 
-  // 6. VELA: a lama, o Lambe-Lambe, a placa e a porta, a rampa
+  // 6. VELA: a lama, o Lambe-Lambe, o botão alto e a porta, a rampa
   await setup({ stage: 'cake1', active: 'radhija', place: { radhija: { x: L.MUD.x0 + 0.5, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: Math.PI / 2 }, rhaenyra: { x: 8.4, z: 2.0, yaw: -Math.PI / 2 } }, settle: 60 });
   await shot('27-radhija-na-lama', { pos: [7.9, 1.1, 2.8], look: [7.3, 0.25, 1.6] });
   await setup({ place: { radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, settle: 30 });
@@ -317,8 +328,13 @@ try {
   await shot('28-lambe-lambe', { pos: [8.6, 1.0, 3.0], look: [8.4, 0.35, 1.8] });
   await until((i) => i.quintal.mud.k === 0, 600);
   await keyUp('KeyR');
-  await setup({ place: { rhaenyra: { x: L.PLATE.x, z: L.PLATE.z, yaw: Math.PI / 2 } }, settle: 70 });
-  await shot('29-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });
+  await setup({ place: { rhaenyra: kick(L.SHED_BUTTONS[0]) }, settle: 10 });
+  await tap('Space');
+  await step(14);
+  await shot('29-impulso-no-botao-do-galpao', { pos: [8.0, 1.5, 2.6], look: [9.4, 0.9, 1.05] });
+  await until((i) => i.quintal.doorOpen, 200);
+  await step(40);
+  await shot('29b-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });
   await setup({ active: 'radhija', place: { radhija: { x: 9.8, z: L.RAMP.z - 0.05, yaw: Math.PI / 2 } }, settle: 10 });
   await tap('ShiftLeft');
   await until((i) => i.quintal.ramp === 'up', 60);
@@ -329,8 +345,100 @@ try {
   await shot('30b-pegando-a-vela', { pos: [10.9, 1.7, 4.1], look: [11.4, 1.1, 3.05] });
   await until((i) => !i.quintal.ramp, 300);
 
+  // 6b. o outro botão abre o chiqueiro (com ?botao=1, o segundo)
+  await setup({ active: 'rhaenyra', place: { rhaenyra: kick(L.SHED_BUTTONS[1]) }, settle: 10 });
+  await tap('Space');
+  await until((i) => i.quintal.shed.sty, 120);
+  await step(50);
+  await shot('29c-porteira-do-chiqueiro-aberta', { pos: [8.0, 1.5, 6.3], look: [9.7, 0.4, 5.0] });
+
+  // 6c. BISCOITO: as gavetas viram escadinha e a Radhija sobe
+  await setup({ stage: 'cake1', active: 'rhaenyra', place: { rhaenyra: { x: L.DRAWERS.x, z: L.DRAWERS.z + L.DRAWERS.hz + 0.45, yaw: Math.PI } }, settle: 20 });
+  await tap('KeyE');
+  await keyDown('KeyS');
+  await step(14);
+  await shot('34-puxando-a-gaveta', { pos: [L.DRAWERS.x + 0.9, 1.1, L.DRAWERS.z + 1.6], look: [L.DRAWERS.x, 0.4, L.DRAWERS.z + 0.4] });
+  await keyUp('KeyS');
+  await tap('KeyE');
+  await setup({ set: [['stairs', true]], place: { rhaenyra: { x: L.DRAWERS.x - 0.9, z: L.DRAWERS.z + 1.5, yaw: Math.PI } }, settle: 10 });
+  await shot('34b-escadinha-de-gavetas', { pos: [L.DRAWERS.x + 0.8, 1.2, L.DRAWERS.z + 1.4], look: [L.DRAWERS.x, 0.5, L.DRAWERS.z] });
+  await setup({ active: 'radhija', place: { radhija: { x: L.DRAWERS.x + 0.22, z: L.DRAWERS.z + L.DRAWERS.hz + 0.6, yaw: Math.PI } }, settle: 10 });
+  await tap('KeyE');
+  await until((i) => i.quintal.climb === 'up', 30);
+  await step(40);
+  await shot('34c-subindo-pelas-gavetas', { pos: [L.DRAWERS.x + 0.9, 1.3, L.DRAWERS.z + 1.4], look: [L.DRAWERS.x, 0.6, L.DRAWERS.z + 0.2] });
+  await until((i) => i.quintal.climb === 'grab', 200);
+  await step(20);
+  await shot('34d-pegando-o-biscoito', { pos: [L.DRAWERS.x + 0.8, 1.5, L.DRAWERS.z + 1.1], look: [L.DRAWERS.x, 1.0, L.DRAWERS.z] });
+  await until((i) => !i.quintal.climb, 200);
+  await step(10);
+  await shot('34e-com-o-biscoito-camera-do-jogo');
+
+  // 6d. os legumes do campinho
+  const car = L.PLANTATION.carrots;
+  await setup({ active: 'radhija', place: { radhija: { x: car.x, z: car.z + car.hz + 0.35, yaw: Math.PI } }, settle: 10 });
+  await tap('KeyE');
+  await step(20);
+  await shot('35-colhendo-cenoura', { pos: [car.x + 0.9, 1.0, car.z + 1.5], look: [car.x, 0.3, car.z + 0.3] });
+  await tap('KeyE');
+  await step(30);
+  await shot('35b-cenoura-no-chao', { pos: [car.x + 0.9, 1.0, car.z + 1.5], look: [car.x, 0.2, car.z + 0.5] });
+
+  // 6e. ESTRELA: o superbafo balança a piñata; a Rhaenyra pula e bate três vezes
+  const R = L.ROSE_BUSH;
+  await setup({ stage: 'cake4', active: 'radhija', place: { radhija: { x: R.x - 1.5, z: R.z, yaw: Math.PI / 2 }, rhaenyra: { x: R.x + 0.98, z: R.z, yaw: -Math.PI / 2 } }, stay: 'rhaenyra', settle: 20 });
+  await keyDown('KeyR');
+  await step(18);
+  await keyUp('KeyR');
+  await until((i) => Math.abs(i.quintal.pinata.ax) > 0.4, 120);
+  await shot('36-pinata-balancando', { pos: [R.x, 1.6, R.z + 3.0], look: [R.x + 0.3, 1.1, R.z] });
+  const broke = await page.evaluate(({ rx, rz }) => {
+    const g = window.__game.game;
+    const q = () => g.debug.info().quintal;
+    if (g.activeDog !== 'rhaenyra') window.__tap('KeyQ');
+    let blows = 0;
+    for (let k = 0; k < 3600 && !q().pinata.broken; k++) {
+      const p = q().pinata;
+      const c = g.debug.ctrls.rhaenyra;
+      if (!c.jumpT && Math.hypot(p.x - c.x, p.z - c.z) < 0.5) { window.__tap('Space'); continue; }
+      if (Math.hypot(p.ax, p.az) < 0.06 && !c.jumpT && blows < 12) {
+        blows++;
+        window.__tap('KeyQ');
+        g.debug.teleport('radhija', rx - 1.5, rz);
+        g.debug.ctrls.radhija.yaw = Math.PI / 2;
+        window.__key('KeyR', true);
+        window.__step(18);
+        window.__key('KeyR', false);
+        window.__step(6);
+        window.__tap('KeyQ');
+        g.debug.teleport('rhaenyra', rx + 0.98, rz);
+        g.debug.ctrls.rhaenyra.yaw = -Math.PI / 2;
+      }
+      window.__step(1);
+    }
+    return q().pinata.broken;
+  }, { rx: R.x, rz: R.z });
+  if (!broke) throw new Error(`a piñata não abriu; ${await guard.peek()}`);
+  await step(12);
+  await shot('36b-pinata-abrindo', { pos: [R.x, 1.6, R.z + 3.0], look: [R.x + 0.3, 0.9, R.z] });
+  await step(80);
+  await shot('36c-estrela-no-gramado', { pos: [R.x + 2.0, 1.2, R.z + 1.6], look: [R.x + 0.8, 0.2, R.z] });
+
+  // 6f. o cantinho atrás do muro (atalho de depuração: pronto)
+  const S2 = L.SECRET, bz = (S2.board.z0 + S2.board.z1) / 2;
+  await setup({ stage: 'start', set: [['secret', true]], active: 'radhija', place: { radhija: { x: L.EAST_WALL.x - 0.35, z: bz, yaw: Math.PI / 2 } }, settle: 30 });
+  await shot('37-tabua-frouxa', { pos: [L.EAST_WALL.x - 1.4, 1.2, bz + 1.2], look: [L.EAST_WALL.x, 0.7, bz] });
+  await tap('KeyE');
+  await step(60);
+  await shot('37b-tabua-aberta', { pos: [L.EAST_WALL.x - 1.4, 1.2, bz + 1.2], look: [L.EAST_WALL.x, 0.7, bz] });
+  await setup({ place: { radhija: { x: S2.photo.x - 0.6, z: S2.photo.z, yaw: Math.PI / 2 } }, settle: 2 });
+  await until((i) => i.quintal.secret.seen, 60);
+  await step(90);
+  await shot('37c-cantinho-camera-do-jogo');
+  await shot('37d-quadro-das-filhotes', { pos: [S2.photo.x - 0.75, S2.photo.y + 0.05, S2.photo.z], look: [S2.photo.x, S2.photo.y, S2.photo.z] });
+
   // 7. o bolo na ordem do quadro e a comemoração
-  await setup({ stage: 'cake2', settle: 30 });
+  await setup({ stage: 'cake4', settle: 30 });
   await shot('31-bolo-quase-pronto', cakeCam);
   await setup({ stage: 'done', settle: 2 });
   await step(90);

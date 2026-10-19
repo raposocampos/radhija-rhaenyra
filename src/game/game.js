@@ -972,6 +972,8 @@ export function createGame({ engine, dogs, levels, params }) {
           isStaying: (n) => stay[n],
           setStay: (n, on) => setStay(n, on),
           brains,
+          // a animação escondida desta fase já aconteceu? (as fases podem guardar algo para depois dela)
+          extrasUsed: () => !!extras?.info().used,
         });
         puzzle.onStageChange = () => {
           if (state === 'playing') emitObjective();

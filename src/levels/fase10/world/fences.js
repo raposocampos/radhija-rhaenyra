@@ -236,14 +236,19 @@ export function buildFences(root, layout) {
   const north = new THREE.Mesh(new THREE.BoxGeometry(northLen, wallH, 0.08), new THREE.MeshStandardMaterial({ map: tN, roughness: 0.9 }));
   north.position.set(HOUSE.x1 + 0.1 + northLen / 2, wallH / 2, B.minZ - 0.12);
   north.receiveShadow = true;
-  const eastLen = B.maxZ - B.minZ + 1.0;
-  const tE = boardTex.clone(); tE.needsUpdate = true; tE.repeat.set(eastLen / 1.6, 1);
-  const east = new THREE.Mesh(new THREE.BoxGeometry(0.08, wallH, eastLen), new THREE.MeshStandardMaterial({ map: tE, roughness: 0.9 }));
-  east.position.set(12.3, wallH / 2, (B.minZ + B.maxZ + 1.0) / 2 - 0.12);
-  east.receiveShadow = true;
-  tall.add(north, east);
+  // muro leste em dois trechos: a fresta da tábua solta fica entre eles (a tábua é do cantinho, secret.js)
+  const EW = layout.EAST_WALL, SB = layout.SECRET.board;
+  const eastParts = [[B.minZ - 0.12, SB.z0 - 0.006], [SB.z1 + 0.006, B.maxZ + 0.88]].map(([z0, z1]) => {
+    const len = z1 - z0;
+    const tE = boardTex.clone(); tE.needsUpdate = true; tE.repeat.set(len / 1.6, 1);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(EW.t, wallH, len), new THREE.MeshStandardMaterial({ map: tE, roughness: 0.9 }));
+    m.position.set(EW.x, wallH / 2, (z0 + z1) / 2);
+    m.receiveShadow = true;
+    return m;
+  });
+  tall.add(north, ...eastParts);
   const capGeo = [];
-  for (const [x, z, w, d] of [[north.position.x, north.position.z, northLen + 0.1, 0.14], [east.position.x, east.position.z, 0.14, eastLen]]) {
+  for (const [x, z, w, d] of [[north.position.x, north.position.z, northLen + 0.1, 0.14], ...eastParts.map((m) => [m.position.x, m.position.z, 0.14, /** @type {THREE.BoxGeometry} */ (m.geometry).parameters.depth])]) {
     const g = new THREE.BoxGeometry(w, 0.05, d);
     g.translate(x, wallH + 0.025, z);
     capGeo.push(g);

@@ -30,8 +30,10 @@ const LAWN = {
 };
 
 function inside(layout, x, z) {
-  const { HOUSE, PORCH, HORTA, SHED } = layout;
-  if (x < HOUSE.x1 + 0.12 && z < HOUSE.zS + 0.12) return 'house';
+  const { HOUSE, PORCH, HORTA, SHED, PANTRY, STY } = layout;
+  if (x < HOUSE.x1 + 0.12 && x > HOUSE.x0 - 0.12 && z < HOUSE.zS + 0.12) return 'house';
+  if (x > PANTRY.x0 - 0.12 && x < PANTRY.x1 + 0.12 && z < PANTRY.zS + 0.12 && z > HOUSE.zS - 0.1) return 'house';
+  if (x > STY.x0 - 0.05 && x < STY.x1 + 0.05 && z > STY.z0 - 0.05 && z < STY.z1 + 0.05) return 'shed';
   if (x > PORCH.x0 - 0.05 && x < PORCH.x1 + 0.05 && z < PORCH.z1 + 0.05) return 'porch';
   if (x > SHED.x0 - 0.05 && x < SHED.x1 + 0.05 && z > SHED.z0 - 0.05 && z < SHED.z1 + 0.05) return 'shed';
   if (x > HORTA.x0 && x < HORTA.x1 && z > HORTA.z0 && z < HORTA.z1) return 'horta';

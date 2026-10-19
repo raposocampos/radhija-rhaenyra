@@ -1,38 +1,36 @@
 // =====================================================================
 //  FASE 10 · Festa no Quintal — LAYOUT (fonte única de verdade para coordenadas).
 //  O aniversário de 3 anos da Radhija e da Rhaenyra, num fim de tarde que vira noite. Três cenários ligados, de
-//  oeste para leste: a CASA em corte (sala, onde as dogs começam, com o quadro "Festa do ano passado", e cozinha, com
-//  o disjuntor das luzes da festa), a VARANDA com o bolo de três andares e o QUINTAL (piscininha, gramado, a Dona
-//  Gansa guardando o portãozinho) e, atrás da cerca, o FUNDO DO QUINTAL (casa na árvore com o elevador de balde, a
-//  horta cercada com lama e o galpão de ferramentas).
+//  oeste para leste: a CASA em corte (sala, onde as dogs começam, com o quadro "Festa do ano passado"; cozinha, com o
+//  disjuntor das luzes da festa; e a despensa), a VARANDA com o bolo de três andares e o QUINTAL (piscininha, gramado,
+//  o campinho de milho e legumes, a piñata na roseira e a Dona Gansa guardando o portãozinho) e, atrás da cerca, o
+//  FUNDO DO QUINTAL (casa na árvore com o elevador de balde, a horta cercada com lama, o galpão e o chiqueiro).
 //  Convenções das outras fases: metros, Y para cima, Norte = -Z (fundo), câmera ao sul.
 //
-//  O bolo espera três enfeites, de baixo para cima, na ordem do quadro da sala: o LAÇO no andar de baixo, a VELA do
-//  número 3 no do meio e o CHAPEUZINHO no topo. Fora de ordem, o enfeite balança e cai ao lado da mesa (pega de novo).
-//   CHAPEUZINHO (num barquinho no meio da piscininha vazia, de borda alta):
-//     1. O caixote de brinquedos esmaga a mangueira: a Rhaenyra empurra o caixote (Shift).
-//     2. A torneira fica no alto da parede da casa: impulso na parede. A água corre e enche a piscininha
-//        (nível da água): o barquinho sobe.
-//     3. Sem energia o ventilador não sopra: o disjuntor da cozinha (impulso) acende as luzes da festa e liga a
-//        tomada. O vento leva o barquinho até a borda leste, onde dá para pegar o chapéu.
-//   LAÇO (amarrado no corrimão da casa na árvore, com o pombo cochilando em cima dele):
-//     1. O portãozinho do fundo tem trava: a cordinha fica do lado da Dona Gansa, que guarda o portão. Um latido de
-//        longe atrai a gansa; a outra dog puxa a cordinha (E) e o portão abre de vez.
-//     2. O pombo não liga para latido nem deixa ninguém subir: o superbafo da Radhija no funil do cano de brinquedo
-//        sobe até a boca do cano, do lado dele, e ele voa embora.
-//     3. Elevador de balde (roldana): a Radhija entra no balde (E); a Rhaenyra pega a ponta da corda na boca (E) e
-//        puxa andando para trás. Ela segura a corda enquanto o jogador troca. Lá em cima a Radhija anda pelo deque,
-//        desamarra o laço (E) e desce pelo escorregador (E) ou volta para o balde.
-//   VELA DO 3 (na prateleira alta do galpão de ferramentas, atrás da horta):
-//     1. A horta é cercada: a Rhaenyra pula a cerca baixa; a Radhija passa pelo vão da tábua quebrada e cai na lama
-//        do canteiro (lenta e sem arrancada). A Rhaenyra limpa a irmã com o Lambe-Lambe.
-//     2. A porta basculante do galpão sobe com o peso da Rhaenyra na placa (ela fica lá quando o jogador troca); com
-//        alguém lá dentro, ela não desce.
-//     3. Lá dentro, a vela está no alto: a Radhija sobe a rampa de tábua com uma arrancada e pega a vela.
+//  O bolo espera cinco enfeites, de baixo para cima, na ordem do quadro da sala: o LAÇO, o BISCOITO DE OSSO, a VELA
+//  do número 3, o CHAPEUZINHO e a ESTRELA. Fora de ordem, o enfeite balança e cai ao lado da mesa (pega de novo).
+//   CHAPEUZINHO (num barquinho no meio da piscininha vazia): o caixote esmaga a mangueira (a Rhaenyra empurra); a
+//     torneira no alto da parede (impulso) enche a piscininha; o disjuntor da cozinha (impulso) acende as luzinhas do
+//     quadro e depois as da festa e liga o ventilador, que leva o barquinho até a borda.
+//   LAÇO (no corrimão da casa na árvore, com o pombo dormindo em cima): latido de longe distrai a Dona Gansa e a outra
+//     puxa a cordinha do portão; o superbafo pelo cano de brinquedo espanta o pombo; o balde deitado: a Radhija entra,
+//     a Rhaenyra puxa a corda; lá em cima a Radhija anda pelo deque, desamarra o laço e escorrega (ou volta no balde).
+//   BISCOITO DE OSSO (no pote em cima do gaveteiro da despensa): a Rhaenyra puxa as gavetas (E e andando para trás)
+//     até virarem degraus, a de baixo mais para fora; a Radhija sobe por elas (E) e pega o biscoito. Aberta demais, a
+//     gaveta cai no chão (a Rhaenyra a encaixa de volta com E).
+//   VELA DO 3 (na prateleira alta do galpão): a Rhaenyra pula a cerca baixa da horta; a Radhija passa pelo vão e cai na
+//     lama (Lambe-Lambe). Na parede do galpão há dois botões altos (impulso): um, sorteado a cada partida, abre a porta
+//     do galpão e o outro solta os três porcos do chiqueiro, que atrapalham; legumes do campinho, largados perto deles,
+//     os distraem por um tempo. Lá dentro, a Radhija sobe a rampa com uma arrancada.
+//   ESTRELA (dentro da piñata pendurada sobre a roseira): o superbafo faz a piñata balançar para fora da roseira; a
+//     Rhaenyra pula e bate nela quando ela passa por cima; três batidas e ela abre.
 // =====================================================================
 import { withStart } from '../../dogs/config.js';
 
-export const WORLD = { bounds: { minX: -12.0, maxX: 12.0, minZ: -6.0, maxZ: 4.4 } };
+/** O terreno: o leste passa do muro (um cantinho escondido do outro lado) e o sul cresce para a horta e o chiqueiro. */
+export const WORLD = { bounds: { minX: -12.0, maxX: 13.4, minZ: -6.0, maxZ: 6.6 } };
+/** O muro de madeira alto do leste (centro em x, espessura): limita o quintal do fundo. */
+export const EAST_WALL = { x: 12.3, t: 0.08 };
 
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
 export const DOGS = {
@@ -79,6 +77,20 @@ export const DOG_BOWLS = { x: -6.4, z: -5.05 };
  * @type {import('../../types').WallButtonCfg}
  */
 export const BREAKER = { x: WALL_LK.x + WALLS.t / 2, z: -4.55, nx: 1, nz: 0, top: 1.1, kind: 'lever', mode: 'once' };
+// despensa (cômodo novo, ao sul da cozinha, com a porta na parede da frente da cozinha)
+/** A despensa: do muro da divisória até a parede leste, da frente da cozinha até a sua própria parede da frente. */
+export const PANTRY = { x0: WALL_LK.x, x1: HOUSE.x1, zN: HOUSE.zS, zS: 2.2, door: { x0: -7.75, x1: -6.95 } };
+/**
+ * O gaveteiro encostado na parede da cozinha (de frente para o sul): três gavetas empilhadas (alturas do tampo de cada
+ * uma: y), que viram degraus quando puxadas na medida (`steps`: a de baixo mais para fora). O pote de biscoitos fica
+ * no tampo (top). Mais de `fall` metros para fora, a gaveta cai.
+ */
+export const DRAWERS = {
+  x: -5.45, z: HOUSE.zS + WALLS.t / 2 + 0.23, hx: 0.45, hz: 0.23, top: 1.0, y: [0.32, 0.6, 0.88], max: 0.5, fall: 0.55,
+  steps: [{ min: 0.34, max: 0.5 }, { min: 0.2, below: 0.1 }, { min: 0.07, below: 0.1 }], pullSpeed: 0.9,
+};
+/** As prateleiras da despensa (latas, potes e sacos) na parede leste. */
+export const PANTRY_SHELF = { x: PANTRY.x1 - WALLS.t / 2 - 0.2, z: 1.15, hx: 0.2, hz: 0.75, h: 1.6 };
 
 // ---------------------------------------------------------------------------------------------- varanda
 export const PORCH = { x0: HOUSE.x1 + WALLS.t / 2, x1: -0.35, z0: WORLD.bounds.minZ, z1: -2.6 };
@@ -87,7 +99,7 @@ export const PERGOLA_POSTS = [{ x: -4.2, z: -5.8 }, { x: -0.55, z: -5.8 }, { x: 
 export const CAKE_TABLE = { x: -2.4, z: -4.45, hx: 0.75, hz: 0.46, h: 0.78 };
 export const CAKE = { x: CAKE_TABLE.x, z: CAKE_TABLE.z - 0.05, base: CAKE_TABLE.h, tiers: [{ r: 0.3, h: 0.18 }, { r: 0.22, h: 0.15 }, { r: 0.15, h: 0.13 }] };
 /** A ordem certa dos enfeites (de baixo para cima), como no quadro da sala. */
-export const CAKE_ORDER = /** @type {const} */ (['ribbon', 'candle', 'hat']);
+export const CAKE_ORDER = /** @type {const} */ (['ribbon', 'cookie', 'candle', 'hat', 'star']);
 /** Onde um enfeite fora de ordem cai (no chão da varanda, ao lado da mesa). */
 export const CAKE_REJECT = { x: CAKE_TABLE.x + 1.25, z: CAKE_TABLE.z + 1.15 };
 export const GIFTS = { x: -1.15, z: -5.35, hx: 0.42, hz: 0.32 };
@@ -116,7 +128,27 @@ export const OUTLET = { x: HOUSE.x1 + WALLS.t / 2 + 0.02, y: 0.48, z: -0.62 };
 export const PLANTERS = [{ x: 1.7, z: -5.42, r: 0.3 }, { x: 2.72, z: -5.42, r: 0.3 }];
 export const LITTLE_TREE = { x: 3.4, z: -3.6, r: 0.22 };
 export const FLOWER_BED = { x: 0.9, z: -2.05, hx: 0.75, hz: 0.28 };
-export const PICNIC = { x: -6.9, z: 2.3, hx: 0.85, hz: 0.6 };
+export const PICNIC = { x: -6.3, z: 4.6, hx: 0.85, hz: 0.6 };
+/**
+ * O campinho de milho e legumes (no canto sudoeste do quintal): fileiras de milho (corredores de 42 cm: só a Radhija
+ * passa entre elas), o canteiro de cenouras e as abóboras. E perto de um pé pega um legume (para distrair os porcos);
+ * cada pé volta a dar depois de `regrow` segundos.
+ */
+export const PLANTATION = {
+  x0: -11.7, x1: -8.3, z0: 2.9, z1: 6.2,
+  corn: [{ x: -11.3, z0: 3.3, z1: 5.9 }, { x: -10.52, z0: 3.3, z1: 5.9 }, { x: -9.74, z0: 3.3, z1: 5.9 }], cornHx: 0.18,
+  carrots: { x: -8.95, z: 3.55, hx: 0.42, hz: 0.24 }, pumpkins: [{ x: -8.85, z: 4.75 }, { x: -9.0, z: 5.55 }],
+  regrow: 6, pickR: 0.6,
+};
+/** A roseira (com espinhos: ninguém entra) e a mangueira grande, de cujo galho pende a piñata da estrela. */
+export const ROSE_BUSH = { x: 1.6, z: 4.4, r: 0.6, h: 0.55 };
+export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
+/**
+ * A piñata: presa no galho (pivot) por uma corda de comprimento L, parada em cima da roseira. O superbafo dá
+ * impulso; ela balança como um pêndulo. A Rhaenyra, no ar (pulo), acerta quando passa por baixo dela e o fundo da
+ * piñata está ao alcance (reach). hits batidas abrem a piñata.
+ */
+export const PINATA = { pivot: { x: ROSE_BUSH.x, y: 2.75, z: ROSE_BUSH.z }, L: 1.62, size: 0.42, damp: 0.25, kick: 1.6, hitR: 0.42, reach: 1.1, hits: 3 };
 
 // ---------------------------------------------------------------------------------------------- cerca e gansa
 /** Cerca de ripas entre o quintal e o fundo (x fixo) com o portãozinho. */
@@ -183,27 +215,45 @@ export const SLIDE = { x: 9.4, z0: DECK.z1, z1: -1.95, top: DECK.h, halfWidth: 0
 /** Lá em cima: onde a Radhija chega do balde (e volta para ele), onde ela desamarra o laço e a boca do escorregador. */
 export const DECK_PATH = { arrive: { x: BUCKET.x, z: DECK.z1 - 0.3 }, ribbon: { x: RIBBON.x, z: DECK.z1 - 0.3 }, slideTop: { x: SLIDE.x, z: DECK.z1 - 0.23 } };
 
-// ---------------------------------------------------------------------------------------------- fundo: horta e galpão
+// ---------------------------------------------------------------------------------------------- fundo: horta, galpão e chiqueiro
 /** Horta cercada (cerca baixa: a Rhaenyra pula) com o vão da tábua quebrada (só a Radhija) e a lama do canteiro. */
-export const HORTA = { x0: 6.8, x1: 9.4, z0: 0.4, z1: WORLD.bounds.maxZ, fenceH: 0.42, gap: { z0: 1.35, z1: 1.75 } };
-export const MUD = { x0: 6.86, x1: 7.78, z0: 1.0, z1: 2.15, licksToClean: 5, slow: 0.5 };
-export const VEG_BEDS = [{ x: 8.05, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 7.75, z: 3.6, hx: 0.6, hz: 0.28 }];
+export const HORTA = { x0: 6.8, x1: 9.6, z0: 0.4, z1: WORLD.bounds.maxZ, fenceH: 0.42, gap: { z0: 1.35, z1: 1.75 } };
+export const MUD = { x0: 6.86, x1: 7.9, z0: 1.0, z1: 2.3, licksToClean: 5, slow: 0.5 };
+export const VEG_BEDS = [{ x: 8.2, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 7.85, z: 6.05, hx: 0.6, hz: 0.28 }];
 /** O pé de tomate no tutor (perto da cerca norte) e o regador encostado no canteiro, dentro da horta. */
 export const TOMATO = { x: 7.35, z: 0.62, r: 0.22 };
-export const WATERING_CAN = { x: 8.45, z: 3.2, r: 0.17 };
+export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
 /** Galpão de ferramentas (paredes cortadas, sem telhado) com a porta basculante no oeste. */
-export const SHED = { x0: 9.4, x1: 11.9, z0: 0.6, z1: 3.4, wallH: 1.45, t: 0.15, door: { z0: 1.55, z1: 2.45, h: 1.25 } };
+export const SHED = { x0: 9.6, x1: 12.05, z0: 0.6, z1: 3.6, wallH: 1.45, t: 0.15, door: { z0: 1.7, z1: 2.6, h: 1.25 } };
 /**
- * A placa de pressão ao lado da porta, mais para o norte (só a Rhaenyra pesa o bastante): com ela parada ali, a
- * Radhija ainda passa pela porta. Um cabo corre da placa até a roldana da porta.
+ * Os dois botões altos na parede oeste do galpão (impulso da Rhaenyra): um abre a porta do galpão e o outro a
+ * porteira do chiqueiro. Qual é qual é sorteado a cada partida (os fios vão juntos para a caixinha de força).
+ * @type {import('../../types').WallButtonCfg[]}
  */
-export const PLATE = { x: 8.95, z: 1.0, hx: 0.3, hz: 0.3 };
-export const WORKBENCH = { x: 10.65, z: 0.92, hx: 0.9, hz: 0.25, h: 0.9 };
+export const SHED_BUTTONS = [
+  { x: SHED.x0 - SHED.t / 2, z: 1.05, nx: -1, nz: 0, top: 1.1, kind: 'button', mode: 'once' },
+  { x: SHED.x0 - SHED.t / 2, z: 3.2, nx: -1, nz: 0, top: 1.1, kind: 'button', mode: 'once' },
+];
+export const WORKBENCH = { x: 10.85, z: 0.92, hx: 0.9, hz: 0.25, h: 0.9 };
 /** Rampa de tábua ao longo da parede sul do galpão, subindo para o leste até a prateleira alta com a vela. */
-export const RAMP = { z: 3.08, x0: 9.95, x1: 11.25, top: 1.0, halfWidth: 0.2 };
-export const RAMP_ENTRY = { minX: 9.6, maxX: 10.25, minZ: RAMP.z - 0.36, maxZ: RAMP.z + 0.36 };
+export const RAMP = { z: 3.25, x0: 10.15, x1: 11.45, top: 1.0, halfWidth: 0.2 };
+export const RAMP_ENTRY = { minX: 9.8, maxX: 10.45, minZ: RAMP.z - 0.36, maxZ: RAMP.z + 0.36 };
 export const RAMP_TIMES = { climb: 0.85, grab: 0.5, turn: 0.4, down: 0.6, slip: 0.9 };
-export const CANDLE = { x: 11.55, y: RAMP.top + 0.02, z: RAMP.z };
+export const CANDLE = { x: 11.75, y: RAMP.top + 0.02, z: RAMP.z };
+/**
+ * O chiqueiro ao sul do galpão: cerca de tábuas (os porcos não pulam), a casinha deles, o cocho e a lama; a porteira
+ * abre para a horta (oeste). Os porcos soltos andam pela horta.
+ */
+export const STY = { x0: 9.6, x1: 12.05, z0: 3.95, z1: 6.45, fenceH: 0.62, gate: { z0: 4.75, z1: 5.55 }, home: { x: 11.0, z: 5.3 } };
+/** Onde os porcos podem andar soltos (a horta) e de onde eles saem (na frente da porteira). */
+export const PIGS = { count: 3, roam: { minX: HORTA.x0 + 0.25, maxX: HORTA.x1 - 0.25, minZ: HORTA.z0 + 0.3, maxZ: HORTA.z1 - 0.25 }, out: { x: STY.x0 - 0.45, z: (STY.gate.z0 + STY.gate.z1) / 2 } };
+
+// ---------------------------------------------------------------------------------------------- o cantinho escondido
+/**
+ * Atrás da casa na árvore, uma tábua do muro leste está solta (só cede depois de tudo achado na fase): do outro lado,
+ * o cantinho com o quadro. Fica fora da vista da câmera.
+ */
+export const SECRET = { board: { z0: -5.15, z1: -4.55 }, nook: { x0: EAST_WALL.x + EAST_WALL.t / 2, x1: 13.35, z0: -5.7, z1: -4.0 }, photo: { x: 13.338, y: 0.78, z: -4.85, w: 0.42, h: 0.52 } };
 
 // ---------------------------------------------------------------------------------------------- colisores
 const T = WALLS.t;
@@ -217,9 +267,17 @@ const thin = 0.06;
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   // casa
-  wallX('casa-frente', HOUSE.zS, HOUSE.x0, HOUSE.x1 + T / 2),
+  wallX('casa-frente', HOUSE.zS, HOUSE.x0, WALL_LK.x),
   wallZ('casa-leste-norte', HOUSE.x1, B.minZ, PORCH_DOOR.z0),
   wallZ('casa-leste-sul', HOUSE.x1, PORCH_DOOR.z1, HOUSE.zS),
+  // despensa (a frente da cozinha vira a parede de dentro, com a porta)
+  wallX('despensa-porta-oeste', HOUSE.zS, WALL_LK.x, PANTRY.door.x0),
+  wallX('despensa-porta-leste', HOUSE.zS, PANTRY.door.x1, HOUSE.x1 + T / 2),
+  wallZ('despensa-oeste', PANTRY.x0, HOUSE.zS, PANTRY.zS + T / 2),
+  wallZ('despensa-leste', PANTRY.x1, HOUSE.zS, PANTRY.zS + T / 2),
+  wallX('despensa-frente', PANTRY.zS, PANTRY.x0 - T / 2, PANTRY.x1 + T / 2),
+  { id: 'gaveteiro', shape: 'box', x: DRAWERS.x, z: DRAWERS.z, hx: DRAWERS.hx, hz: DRAWERS.hz },
+  { id: 'prateleiras-da-despensa', shape: 'box', x: PANTRY_SHELF.x, z: PANTRY_SHELF.z, hx: PANTRY_SHELF.hx, hz: PANTRY_SHELF.hz },
   wallZ('divisoria-norte', WALL_LK.x, B.minZ, WALL_LK.gap.z0),
   wallZ('divisoria-sul', WALL_LK.x, WALL_LK.gap.z1, HOUSE.zS),
   // sala (atrás do sofá, no vão até a parede da frente, só a Radhija passa)
@@ -244,6 +302,12 @@ export const STATIC_COLLIDERS = [
   // quintal
   { id: 'piscininha', shape: 'circle', x: POOL.x, z: POOL.z, r: POOL.r + 0.02 },
   { id: 'cesta-do-piquenique', shape: 'circle', x: PICNIC.x - 0.45, z: PICNIC.z - 0.15, r: 0.2 },
+  // campinho: fileiras de milho (corredores só para a Radhija) e as abóboras
+  ...PLANTATION.corn.map((c, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `milho-${i + 1}`, shape: 'box', x: c.x, z: (c.z0 + c.z1) / 2, hx: PLANTATION.cornHx, hz: (c.z1 - c.z0) / 2 })),
+  ...PLANTATION.pumpkins.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `abobora-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.22 })),
+  // a piñata: a roseira embaixo e a mangueira
+  { id: 'roseira', shape: 'circle', x: ROSE_BUSH.x, z: ROSE_BUSH.z, r: ROSE_BUSH.r },
+  { id: 'mangueira-grande', shape: 'circle', x: MANGO_TREE.x, z: MANGO_TREE.z, r: MANGO_TREE.r },
   { id: 'ventilador', shape: 'circle', x: FAN.x, z: FAN.z, r: FAN.r },
   ...PLANTERS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
   { id: 'arvorezinha', shape: 'circle', x: LITTLE_TREE.x, z: LITTLE_TREE.z, r: LITTLE_TREE.r },
@@ -255,6 +319,11 @@ export const STATIC_COLLIDERS = [
   { id: 'tronco', shape: 'circle', x: TREE.x, z: TREE.z, r: TREE.r },
   ...DECK_POSTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `poste-deque-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.08 })),
   { id: 'funil', shape: 'circle', x: TUBE.inlet.x, z: TUBE.inlet.z - 0.12, r: 0.12 },
+  // o muro leste e o cantinho do outro lado (a tábua solta é dinâmica)
+  wallZ('muro-leste-norte', EAST_WALL.x, B.minZ, SECRET.board.z0, { hx: 0.07 }),
+  wallZ('muro-leste-sul', EAST_WALL.x, SECRET.board.z1, B.maxZ, { hx: 0.07 }),
+  { id: 'atras-do-muro-norte', shape: 'box', x: (SECRET.nook.x0 + B.maxX) / 2, z: (B.minZ + SECRET.nook.z0) / 2, hx: (B.maxX - SECRET.nook.x0) / 2, hz: (SECRET.nook.z0 - B.minZ) / 2 },
+  { id: 'atras-do-muro-sul', shape: 'box', x: (SECRET.nook.x0 + B.maxX) / 2, z: (SECRET.nook.z1 + B.maxZ) / 2, hx: (B.maxX - SECRET.nook.x0) / 2, hz: (B.maxZ - SECRET.nook.z1) / 2 },
   { id: 'escorregador', shape: 'box', x: SLIDE.x, z: (SLIDE.z0 + SLIDE.z1 + SLIDE.tongue) / 2, hx: SLIDE.halfWidth + 0.03, hz: (SLIDE.z1 + SLIDE.tongue - SLIDE.z0) / 2 },
   // horta (cerca baixa: pula; o vão da tábua quebrada só deixa a Radhija)
   wallX('horta-norte', HORTA.z0, HORTA.x0, HORTA.x1, { hz: thin, jumpable: true, height: HORTA.fenceH }),
@@ -262,7 +331,7 @@ export const STATIC_COLLIDERS = [
   wallZ('horta-vao', HORTA.x0, HORTA.gap.z0, HORTA.gap.z1, { hx: thin, blocks: 'large' }),
   wallZ('horta-oeste-sul', HORTA.x0, HORTA.gap.z1, HORTA.z1, { hx: thin, jumpable: true, height: HORTA.fenceH }),
   wallZ('horta-leste-norte', HORTA.x1, HORTA.z0, SHED.z0, { hx: thin, jumpable: true, height: HORTA.fenceH }),
-  wallZ('horta-leste-sul', HORTA.x1, SHED.z1, HORTA.z1, { hx: thin, jumpable: true, height: HORTA.fenceH }),
+  wallZ('horta-leste-meio', HORTA.x1, SHED.z1, STY.z0, { hx: thin, jumpable: true, height: HORTA.fenceH }),
   ...VEG_BEDS.map((b, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `canteiro-${i + 1}`, shape: 'box', x: b.x, z: b.z, hx: b.hx, hz: b.hz })),
   { id: 'tomateiro', shape: 'circle', x: TOMATO.x, z: TOMATO.z, r: TOMATO.r },
   { id: 'regador', shape: 'circle', x: WATERING_CAN.x, z: WATERING_CAN.z, r: WATERING_CAN.r },
@@ -276,26 +345,36 @@ export const STATIC_COLLIDERS = [
   { id: 'vassoura', shape: 'circle', x: SHED.x1 - 0.16, z: SHED.z0 + 0.95, r: 0.12 },
   { id: 'rampa', shape: 'box', x: (RAMP.x0 + 0.22 + RAMP.x1) / 2, z: RAMP.z, hx: (RAMP.x1 - RAMP.x0 - 0.22) / 2, hz: RAMP.halfWidth },
   { id: 'prateleira-da-vela', shape: 'box', x: (RAMP.x1 + SHED.x1) / 2, z: RAMP.z, hx: (SHED.x1 - RAMP.x1) / 2, hz: 0.24 },
+  // chiqueiro (a porteira é dinâmica; a casinha dos porcos no canto)
+  wallX('chiqueiro-norte', STY.z0, STY.x0, STY.x1, { hz: thin }),
+  wallX('chiqueiro-sul', STY.z1, STY.x0, STY.x1, { hz: thin }),
+  wallZ('chiqueiro-oeste-norte', STY.x0, STY.z0, STY.gate.z0, { hx: thin }),
+  wallZ('chiqueiro-oeste-sul', STY.x0, STY.gate.z1, STY.z1, { hx: thin }),
+  wallZ('chiqueiro-leste', STY.x1, STY.z0, STY.z1, { hx: thin }),
+  { id: 'casinha-dos-porcos', shape: 'box', x: STY.x1 - 0.45, z: STY.z1 - 0.45, hx: 0.38, hz: 0.38 },
 ];
 
 export const NAV_NODES = {
   L_mid: { x: -10.0, z: -3.3 }, L_arch: { x: -8.3, z: -2.5 }, K_mid: { x: -6.6, z: -3.7 }, K_door: { x: -4.5, z: -4.22 },
-  P_mid: { x: -2.4, z: -3.3 }, P_east: { x: -0.2, z: -3.4 }, Y_north: { x: -1.5, z: -1.6 }, Y_west: { x: -6.5, z: 1.6 },
+  K_south: { x: -7.35, z: -1.0 }, D_mid: { x: -7.35, z: 0.9 },
+  P_mid: { x: -2.4, z: -3.3 }, P_east: { x: -0.2, z: -3.4 }, Y_north: { x: -1.5, z: -1.6 }, Y_west: { x: -6.5, z: 3.0 },
   Y_mid: { x: 0.6, z: 0.4 }, Y_south: { x: -1.2, z: 3.1 }, Y_east: { x: 3.4, z: 2.6 }, Y_gate: { x: 4.7, z: 0.2 },
+  Y_farm: { x: -8.0, z: 4.6 }, Y_pinata: { x: 0.3, z: 5.3 },
   B_gate: { x: 6.1, z: 0.2 }, B_tree: { x: 8.4, z: -1.6 }, B_north: { x: 6.1, z: -2.25 }, B_east: { x: 10.8, z: -0.4 },
   B_land: { x: 11.2, z: -3.2 },
-  B_gap: { x: 6.35, z: 1.55 }, H_mud: { x: 7.4, z: 1.6 }, H_mid: { x: 8.3, z: 2.1 }, S_in: { x: 10.4, z: 2.0 },
+  B_gap: { x: 6.35, z: 1.55 }, H_mud: { x: 7.4, z: 1.6 }, H_mid: { x: 8.4, z: 2.4 }, H_south: { x: 8.6, z: 4.6 }, S_in: { x: 10.6, z: 2.15 },
 };
 /** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
   ['L_mid', 'L_arch'], ['L_arch', 'K_mid'], ['K_mid', 'K_door'], ['K_door', 'P_mid'], ['P_mid', 'P_east'],
-  ['P_mid', 'Y_north'], ['Y_north', 'Y_mid'], ['Y_north', 'Y_west'], ['Y_west', 'Y_south'],
-  ['Y_mid', 'Y_south'], ['Y_mid', 'Y_east'], ['Y_mid', 'Y_gate'], ['Y_east', 'Y_gate'],
+  ['L_arch', 'K_south'], ['K_south', 'D_mid'],
+  ['P_mid', 'Y_north'], ['Y_north', 'Y_mid'], ['Y_west', 'Y_south'], ['Y_west', 'Y_farm'],
+  ['Y_mid', 'Y_south'], ['Y_mid', 'Y_east'], ['Y_mid', 'Y_gate'], ['Y_east', 'Y_gate'], ['Y_south', 'Y_pinata'],
   ['Y_gate', 'B_gate', { requires: 'gateOpen' }],
   ['B_gate', 'B_north'], ['B_gate', 'B_tree'], ['B_north', 'B_tree'], ['B_tree', 'B_east'], ['B_gate', 'B_east'],
   ['B_east', 'B_land'],
   // a horta: a Radhija pelo vão da tábua quebrada; a Rhaenyra só pulando a cerca (a companheira não pula: espera fora)
-  ['B_gate', 'B_gap'], ['B_gap', 'H_mud', { requires: 'small' }], ['H_mud', 'H_mid'], ['B_gate', 'H_mid', { requires: 'jump' }],
+  ['B_gate', 'B_gap'], ['B_gap', 'H_mud', { requires: 'small' }], ['H_mud', 'H_mid'], ['H_mid', 'H_south'], ['B_gate', 'H_mid', { requires: 'jump' }],
   ['H_mid', 'S_in', { requires: 'shedOpen' }],
 ];
 
@@ -303,7 +382,9 @@ export const NAV_EDGES = [
 export const COLLECTIBLES = [
   { id: 'sofa', x: SOFA.x - 0.3, z: (SOFA.z + SOFA.hz + HOUSE.zS - WALLS.t / 2) / 2 }, // atrás do sofá (só a Radhija)
   { id: 'vasos', x: (PLANTERS[0].x + PLANTERS[1].x) / 2, z: -5.78 }, // atrás dos vasos grandes (só a Radhija)
-  { id: 'horta', x: 9.0, z: 4.0 }, // no canto da horta, atrás do canteiro (pelo vão ou pulando a cerca)
+  { id: 'horta', x: 9.2, z: 6.3 }, // no canto sul da horta, atrás do canteiro (pelo vão ou pulando a cerca)
+  { id: 'deque', x: 7.05, z: -5.3, y: DECK.h }, // lá em cima, entre a luneta e o tronco (só pelo balde)
+  { id: 'milharal', x: (PLANTATION.corn[0].x + PLANTATION.corn[1].x) / 2, z: 4.95 }, // num corredor do milho (só a Radhija)
 ];
 export const COLLECTIBLE_PICKUP_R = 0.42;
 
@@ -322,7 +403,7 @@ export const CAMERA = {
   fov: 38,
   offset: [1.3, 4.4, 4.8],
   lookHeight: 0.3,
-  limits: { minX: -10.6, maxX: 10.6, minZ: -4.4, maxZ: 3.0 },
+  limits: { minX: -10.6, maxX: 10.6, minZ: -4.4, maxZ: 5.0 },
   zones: [
     // a Radhija andando no deque (a fase liga só enquanto ela está lá em cima): o olhar sobe até o deque
     { id: 'deque', minX: DECK.x0 - 0.4, maxX: DECK.x1 + 0.4, minZ: -6.0, maxZ: DECK.z1 + 0.5, lookY: 1.75, dz: -0.3 },
@@ -339,12 +420,14 @@ export const CAMERA = {
 
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = {
-  WORLD, DOGS, WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR, FLOOR_LAMP,
-  RUG, DOG_BEDS, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PORCH, PERGOLA_POSTS, CAKE_TABLE, CAKE,
-  CAKE_ORDER, CAKE_REJECT, GIFTS, PORCH_BENCH, PORCH_POTS, POOL, BOAT, TAP, HOSE, CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC,
+  WORLD, EAST_WALL, DOGS, WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR,
+  FLOOR_LAMP, RUG, DOG_BEDS, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PANTRY, DRAWERS, PANTRY_SHELF,
+  PORCH, PERGOLA_POSTS, CAKE_TABLE, CAKE, CAKE_ORDER, CAKE_REJECT, GIFTS, PORCH_BENCH, PORCH_POTS, POOL, BOAT, TAP, HOSE,
+  CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, PLATE, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
+  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, PIGS, SECRET,
+  STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
 export default LAYOUT;
