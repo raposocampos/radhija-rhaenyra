@@ -88,6 +88,7 @@ try {
   state = await push((s) => lib(s).planter, L.PLANTER.half, 0, -1, (s) => s.biblioteca.damper, { via: [[6.6, 1.2], [5.6, 1.95], [L.PLANTER.start.x, 2.12]], timeout: 14000 });
   check(lib(state).damper, 'o vaso de rodinhas no botão do chão abre o registro', JSON.stringify(lib(state).planter));
   await page.keyboard.press('KeyQ');
+  await page.keyboard.press('KeyF'); // a Rhaenyra fica perto do vaso (seguindo, ela parava na frente do sopro)
   state = await info();
   const f = lib(state).fan;
   // fica na frente do ventilador (pelo norte, ou contornando pelo leste), no vento

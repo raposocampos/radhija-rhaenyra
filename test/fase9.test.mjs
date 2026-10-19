@@ -129,6 +129,7 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   assert.ok(push(h, planterOf, L.PLANTER.half, [0, -1], (i) => i.biblioteca.damper, [[6.6, 1.2], [5.6, 1.95], [L.PLANTER.start.x, 2.12]], 14), 'o vaso no botão do chão abre o registro');
   assert.equal(h.log('duct:open').length, 1);
   as(h, 'radhija');
+  h.tap('KeyF'); // a Rhaenyra fica perto do vaso, longe do vento
   const f = fanOf(h);
   // fica na frente do ventilador (pelo norte, ou contornando pelo leste), no vento, de frente para a grade do duto
   const r0 = h.ctrls.radhija;
@@ -151,6 +152,7 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   assert.ok(h.run(5, { until: (i) => i.biblioteca.book === 'floor' }), 'o livro caiu no chão do escritório');
   assert.ok(h.run(10, { until: (i) => i.biblioteca.cat === 'bed' }), 'o Bichano saiu pela portinha e foi para a almofada');
   assert.equal(h.info().stage, 'carrying');
+  h.tap('KeyF'); // a Rhaenyra volta a seguir
 
   // PORTA: a Radhija perto do vão, a Rhaenyra abre, a Radhija segura (Fica) e a Rhaenyra traz o livro
   h.walkPath([[5.55, 0.25], [3.7, 0.25], [1.4, 0.35], [-0.9, 0.15], [-2.5, 0.1], [-4.05, 0.1]], { tol: 0.15 });

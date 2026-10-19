@@ -287,7 +287,8 @@ function buildGarland(B, hooksX, y) {
   }
   const wire = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 3, 0.004, 4, false), wireMat);
   g.add(wire);
-  const bulbMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.25, emissive: '#ffffff', emissiveIntensity: 0.9 });
+  // sem luz própria: a cor de cada instância é o brilho (apagada = vidro escuro; acesa = cor quente, que o bloom pega)
+  const bulbMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   const inst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.018, 10, 8).scale(1, 1.3, 1), bulbMat, bulbs.length);
   const m = new THREE.Matrix4();
   bulbs.forEach((p, i) => { m.makeTranslation(p.x, p.y, p.z); inst.setMatrixAt(i, m); });

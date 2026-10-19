@@ -667,7 +667,8 @@ export function createPuzzle(ctx) {
     else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
     props.ladder.setHighlight(brake.on && globeClear() && !ladderAtGlasses() && active.name === 'rhaenyra');
     props.planter.setHighlight(power() && S.aligned && !damperOpen() && active.name === 'rhaenyra' && S.cat === 'asleep');
-    props.glasses.setHighlight(S.glasses === 'shelf' && ladderAtGlasses() && brake.on);
+    const introGlasses = !introDone && S.introT > 0.6 && S.introT < 3.3;
+    props.glasses.setHighlight(S.glasses === 'shelf' && ((ladderAtGlasses() && brake.on) || introGlasses));
     props.book.setHighlight(S.book === 'floor');
     props.table.setHighlight(!!glasses.holder || !!book.holder);
     cols.update(active);
