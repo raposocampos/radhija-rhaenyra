@@ -5,6 +5,7 @@
 // aviso de girar o celular e a fase 4.
 // Roda no GitHub Actions (E2E manual, suíte toque), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro e desenha só na hora da captura (SwiftShader é lento). Saída: shots/celular-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

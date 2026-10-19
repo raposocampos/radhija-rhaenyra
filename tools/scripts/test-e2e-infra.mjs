@@ -81,7 +81,14 @@ for (const [kind, label, diagnosis] of [
     assert.ok(sec < 45, `levou ${sec} s\n${result.stdout}`);
     assert.match(result.stdout, /FALHOU exceção: \[harness\] /);
     assert.match(result.stdout, diagnosis);
-    if (kind === 'hung') assert.match(result.stdout, /ok +com a página travada, a ida seguinte ao navegador falha na hora/);
+    if (kind === 'hung') {
+      assert.match(result.stdout, /ok +com a página travada, a ida seguinte ao navegador falha na hora/);
+      // a sonda (hang-probe.mjs) lê a pilha do laço infinito pelo Debugger.pause, com a thread principal ocupada
+      assert.match(result.stdout, /\[diagnóstico\] info\(\) sem resposta em 2 s/);
+      assert.match(result.stdout, /JavaScript da aba: a thread principal está RODANDO JAVASCRIPT \(pausada para ler a pilha/);
+      assert.match(result.stdout, /processos do Chromium \(CPU medida em/);
+      assert.match(result.stdout, /\[diagnóstico\] fim/);
+    }
     assert.match(result.stdout, new RegExp(`FALHOU ${kind}`));
   });
 }
@@ -115,6 +122,7 @@ test('infra E2E: aba que cai no meio do load() reprova em segundos, com o motivo
     String.raw`FALHOU \[harness\] load\('\?sem-jogo'\): esperar window\.__game \(harness-probe\.mjs:\d+\) sem retorno há [\d.]+ s, .*Agora: (a página não respondeu à leitura do estado em 5 s|a leitura do estado falhou)`,
   ].join('|')), out);
   assert.ok(sec < 25, `levou ${sec} s (o prazo de 120 s do Playwright não pode ser o que encerra)\n${out}`);
+  assert.match(result.stdout, /\[diagnóstico\] [\s\S]*\[diagnóstico\] fim/, out);
   assert.match(result.stdout, /FALHOU crash/, out);
 });
 
@@ -135,6 +143,7 @@ test('infra E2E: página extra da suíte que cai no meio da espera reprova em se
   assert.match(result.stdout, /\[extra console\.error\] EXTRA_CONSOLE_INJETADO/, out);
   assert.match(result.stdout, /1 ok, 2 falha\(s\)/, out);
   assert.ok(sec < 25, `levou ${sec} s\n${out}`);
+  assert.match(result.stdout, /\[diagnóstico\] \[extra\] [\s\S]*\[diagnóstico\] fim/, out); // a sonda também na página extra
   assert.match(result.stdout, /FALHOU extra/, out);
 });
 
@@ -150,6 +159,7 @@ test('infra E2E: script de captura com a aba caída sai em segundos, com a esper
     String.raw`FALHOU \[harness\] \[captura\] page\.waitForFunction\(.*\) \(harness-probe\.mjs:\d+\) sem retorno há [\d.]+ s, mesmo com os prazos .*Último passo: captura 01-prova, há [\d.]+ s\. Agora: ${STATE_NOW}`,
   ].join('|')), out);
   assert.doesNotMatch(out, /a espera terminou sem o jogo/);
+  assert.match(out, /\[diagnóstico\] \[captura\] [\s\S]*\[diagnóstico\] fim/, out); // a sonda vem pelo openPage
   assert.ok(sec < 25, `levou ${sec} s (o prazo de 120 s do Playwright não pode ser o que encerra)\n${out}`);
 });
 

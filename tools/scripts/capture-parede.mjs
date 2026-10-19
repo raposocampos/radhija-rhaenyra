@@ -3,6 +3,7 @@
 // O laço do jogo fica congelado e o script avança quadro a quadro (1/60 s): cada imagem mostra um instante exato
 // do impulso (agachada, saltando, traseiras nas patinhas, pata no botão, descendo). Teclas reais chegam pelos
 // ouvintes do jogo. Saída: shots/parede-revisao/*.png. Erros do navegador reprovam o passo.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

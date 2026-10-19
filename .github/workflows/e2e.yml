@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, recursos]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, recursos, carregamento]
 
 permissions:
   contents: read
@@ -95,8 +95,45 @@ jobs:
           path: shots/resources*/
           if-no-files-found: error
           retention-days: 7
+  # Estresse do primeiro boot (fora de "todas"): cada rodada sobe Vite e navegador novos e abre uma fase frio e
+  # quente. Lotes 0–3: 25 rodadas, uma por vez, com o cache de dependências do Vite apagado a cada rodada (otimizador
+  # frio, como na primeira suíte de cada job); lotes 4–7: 36 rodadas, três ao mesmo tempo (disputa de CPU). Reproduz
+  # o travamento intermitente do primeiro carregamento com a sonda de diagnóstico (tools/scripts/lib/hang-probe.mjs);
+  # serve também para confirmar uma correção. Ver docs/ARQUITETURA.md §10.
+  carregamento:
+    if: inputs.suite == 'carregamento'
+    name: Carregamentos repetidos — lote ${{ matrix.lote }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        lote: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Abrir fases em navegadores novos (boot frio e quente)
+        run: node tools/scripts/stress-boot.mjs --offset ${{ matrix.lote }} --rounds ${{ matrix.lote >= 4 && 36 || 25 }} --parallel ${{ matrix.lote >= 4 && 3 || 1 }} ${{ matrix.lote < 4 && '--cold-deps' || '' }}
+      - name: Guardar diagnóstico e registro do navegador
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carregamento-${{ matrix.lote }}
+          path: shots/
+          if-no-files-found: ignore
+          retention-days: 7
   partidas:
-    if: inputs.suite != 'recursos'
+    if: inputs.suite != 'recursos' && inputs.suite != 'carregamento'
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30

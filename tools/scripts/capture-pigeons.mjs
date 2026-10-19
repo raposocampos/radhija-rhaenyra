@@ -1,5 +1,6 @@
 // Capturas na nuvem: mesmo enquadramento/iluminação/tempo para base e head.
 // Não usa a redução de qualidade visual do harness de partidas.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { createServer } from 'vite';

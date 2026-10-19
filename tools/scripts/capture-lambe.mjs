@@ -3,6 +3,7 @@
 // O laço do jogo fica congelado e o script avança quadro a quadro (1/60 s): cada imagem mostra o instante
 // exato da animação (língua para fora, varrida, descida). Teclas reais chegam pelos ouvintes do jogo.
 // Saída: shots/lambe-revisao/*.png. Erros do navegador reprovam o passo.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';

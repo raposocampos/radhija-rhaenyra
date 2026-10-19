@@ -3,35 +3,14 @@
 Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash 415bd67, deploy 39202538581)
+## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 
-- Pedido do usuário sobre os extras da tarefa E (já em produção): a animação do cocô estava dura (girava 360°
-  parada antes de agachar) e precisava de uma recompensa própria; a de rolar (pilha de roupa da fase 8, tapete da
-  fase 9 do PR #29) estava dura e atravessava o chão. Mantidos: a pose aprovada da agachada, C/R3, só com os 3
-  ossinhos e uma vez por tentativa; nada no jogo nem no README cita o segredo.
-- Branch `claude/coco-natural` (worktree próprio), base `0bd48d0`, atualizado por merge com o main `efa779c` (fase 9,
-  PR #29), **PR #32** (consultar o PR para SHA, CI, E2E e prévia). Fila do orquestrador: o #32 entra agora (depois
-  do #29) e o #31 por último; avisar o orquestrador quando o #32 for integrado.
-- Feito: `src/game/extras.js` (`planCircle`: voltinha andando de verdade num círculo de 0,5 × o comprimento da dog,
-  0,8–1,3 volta, terminando de perfil para a câmera, só por onde cabe; `planZoom` e a comemoração com `extra:secret`,
-  brilho dourado, jingle, câmera de perto, zoomies ou pulinho virando, reverência, pulinhos, orgulhosa e a irmã com
-  espanto e coraçõezinhos). `src/dogs/dogAnimation.js`: poses `poopPre`/`party`/`cheer` (apoios girando com o corpo
-  na curva) e a rolagem nova (deita, tomba, de costas se esfregando com as patinhas pedalando, volta e levanta), com a
-  altura pelo contato real (`lowestY`: elipsoides do desenho do modelo presos aos ossos). `dog.js` passa o desenho à
-  animação. `poop.js` (`shine`, `dispose`), sons e efeitos.
-- Testes: `test/extras.test.mjs` (todas as fases; volta inteira e zoomies no gramado da fase 1; beirada sem espaço; rolar
-  no modelo real sem passar do chão), suíte E2E `extras` e `capture-extras.mjs` (gramado, cozinha e a rolagem das duas
-  dogs na fase 8). No `4f8399a`: E2E `extras` 39190600335 verde e capturas revisadas (voltinha, agachada e reverência
-  boas; ajustados depois: o lado dos zoomies, para ela terminar de frente para a câmera sem tapar o cocô, e o feixe
-  transparente na altura do cocô). Nada rodou no PC (só `node --check` e `git diff --check`).
-- No `5c5decc`: E2E `extras` 39192211894 verde e capturas da rolagem (fase 8, as duas dogs) e da comemoração
-  revisadas: de costas encostada no chão, de bruços como esfinge, zoomies terminando de frente com o cocô à vista.
-- No `0f2f2e4` (merge do main `efa779c`): CI 39194265843, E2E `todas` 39194285887 verdes e a rolagem no tapete da fase
-  9 conferida. Retorno do usuário na prévia (2026-10-19): ficou ótimo, mas a agachada parecia xixi (garupa baixa
-  demais) e a irmã no automático chegava perto e esbarrava. Ajustado: corcunda com a garupa a ~64% da altura em pé
-  (testado no modelo real) e a irmã dá espaço (se afasta andando até 1,45 m e espera; `InputLock.move` no núcleo).
-- Próximo passo: CI e E2E `todas` no head novo, revisar as capturas da agachada e da irmã, entregar a prévia.
-  Merge só com a aprovação explícita do usuário.
+- Extras da tarefa E: voltinha andando antes da agachada (`planCircle` em `src/game/extras.js`), comemoração própria
+  do segredo (`extra:secret`, `planZoom`: brilho, jingle, câmera de perto, zoomies ou pulinhos, a irmã espantada),
+  agachada com corcunda (garupa a ~64% da altura em pé), a irmã dá espaço (`InputLock.move`) e a rolagem nova com a
+  altura pelo contato real (`lowestY` em `dogAnimation.js`). Testes em `test/extras.test.mjs`, suíte E2E `extras` e
+  `capture-extras.mjs`. Integrado com a aprovação do usuário; não repetir merge/deploy do #32. Nada no jogo nem no
+  README cita o segredo.
 
 ## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0` no main)
 
@@ -67,6 +46,33 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `waitForFunction` de 120 s sem vencer; a prova `crash` reproduz (aba derrubada no meio da espera: o Playwright
   1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
   `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
+
+## Entregue: diagnóstico do travamento no primeiro boot (PR #31, squash `eb1a148`, deploy `39205091379`)
+
+- Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
+  fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado por merge com o main `0bd48d0` (PR #30) e
+  depois `415bd67` (PRs #29 e #32); consultar o PR para SHA, CI, E2E e prévia. Nada rodou no PC além de
+  `node --check`/`git diff --check`.
+- Casos: seis, todos no PRIMEIRO boot de um navegador novo, nunca num segundo `load()` da mesma aba: lavanderia
+  (`39160265826`), fase3 (`39164306879`), expresso (`39166156986`, `39169122476`), `capture-lambe.mjs`
+  (`39173570454`) e lambe com a fase 1 (`39183733885`). Cerca de 1% dos primeiros boots dos jobs normais; os
+  estresses do #31 somaram 688 boots frios sem nenhum travamento (`39183700978`, `39184838127`, `39188214029`), em
+  AMD EPYC 9V45/9V74/7763 e Intel Xeon 8573C.
+- Provado: em quatro casos o `waitForFunction` nem venceu o prazo porque o Playwright 1.49 espera uma limpeza na
+  própria página antes de rejeitar: a thread principal da aba estava parada ou a aba morta. No caso da fase 1 o prazo
+  venceu e só a leitura seguinte não voltou, como na prova `crash` (aba morta sem aviso do Playwright).
+- Descartado (por ora): recarga pelo otimizador do Vite (`full-reload` mesmo com `hmr: false`). Nenhuma linha
+  `[vite]` nem `RECARREGOU` nos 15 primeiros boots frios do `todas` `39188211856`, nos 100 boots com o cache apagado
+  (`--cold-deps`) nem nos 953 logs antigos. Causa raiz ainda não identificada.
+- Feito: sonda `tools/scripts/lib/hang-probe.mjs` (pilha do JavaScript por `Debugger.pause`, processos e threads do
+  Chromium, GPU/alvos pelo CDP do navegador, CPU do runner e roubo do hipervisor, memória e `dmesg`, console com os
+  marcos do boot e as navegações, registro do Chromium), ligada no `page-guard.mjs` (60 s, `opMaxMs`, teto das idas,
+  queda; `openPage` liga sozinho: harness, páginas extras e capturas); `browser-log.mjs` + `--enable-logging=stderr`
+  e `vite.log` em `shots/diagnostico/` (artefato); marcos `rr:boot:*`/`rr:level:*` e linhas `[boot]`/`RECARREGOU`;
+  `[e2e] CPU do runner`; suíte `carregamento` (`stress-boot.mjs`, fases da campanha, `--cold-deps`, `--parallel`).
+  Provas `hung`, `crash`, `extra` e `capture` conferem o `[diagnóstico]`. Docs: ARQUITETURA §10.
+- Próximo passo: entregar a prévia do head atualizado (CI e `todas` no PR) e integrar só com a aprovação do usuário.
+  No próximo travamento real, ler o `[diagnóstico]` do log e o `navegador-*.log` do artefato.
 
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 

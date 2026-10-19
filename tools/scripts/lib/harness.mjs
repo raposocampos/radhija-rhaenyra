@@ -1,9 +1,11 @@
 // Utilitários das partidas automatizadas (Playwright + Chrome do sistema) com TECLAS REAIS.
 // Malha fechada: lê a posição por debug.info() e segura WASD (8 direções relativas à câmera).
+import './browser-log.mjs'; // antes do playwright-core: o registro do Chromium vai para shots/diagnostico/
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { browserOptions } from './browser.mjs';
+import { attachHangProbe, bootTimeline, cpuModel } from './hang-probe.mjs';
 import { HarnessAbort, closeBrowser, describe, guardPage, limitsFrom, openPage, secs, siteOf, snippet, stopWatch } from './page-guard.mjs';
 
 export function parseArgs(argv = process.argv.slice(2)) {
@@ -25,6 +27,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch(browserOptions());
   const page = await browser.newPage({ viewport, ...device });
+  // Sonda de travamento (hang-probe.mjs): pilha do JavaScript, processos do Chromium, memória, console e registro do
+  // navegador quando a página para de responder. Antes de qualquer navegação (marcos do boot e Debugger ligado).
+  const probe = await attachHangProbe(page);
   const errors = [];
   let pass = 0;
   let fail = 0;
@@ -52,7 +57,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     process.exit(1); // o Playwright encerra o navegador na saída
   };
   const G = guardPage(page, {
-    limits, context: lastReadText, onAbort, onOverdue,
+    limits, context: lastReadText, onAbort, onOverdue, probe,
     onBeat: () => (lastRead ? { ms: Date.now() - lastRead.at, text: describe(lastRead.i) } : null),
   });
   const { during, evaluate, peek, abort } = G;
@@ -96,6 +101,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       });
     });
     console.log('[e2e] CI sem GPU: desenho a cada 30 quadros, resolução 3D reduzida, sem sombras/bloom. Simulação e controles reais a cada quadro.');
+    console.log(`[e2e] CPU do runner: ${cpuModel()}`); // para cruzar travamentos com o hardware (hang-probe.mjs)
     page.setDefaultTimeout(120000);
   }
   if (initScript) await page.addInitScript(initScript);
@@ -383,6 +389,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function load(query) {
     const what = `load('${query}')`;
+    const t0 = Date.now();
     progress = null; // página nova: o tempo sem leituras durante a navegação não conta como jogo parado
     const step = async (stage, run) => {
       const site = new Error();
@@ -395,9 +402,22 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${state}`);
       }
     };
-    await step('abrir a página', () => G.raw.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
-    await step('esperar window.__game', () => G.raw.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
-    await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => G.raw.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+    // Navegações da página principal durante o boot: mais de uma = a página recarregou no meio dele (o otimizador de
+    // dependências de um Vite frio manda "full-reload" mesmo com hmr: false; ver run-e2e.mjs).
+    let navs = 0;
+    const onNav = (frame) => { if (frame === page.mainFrame()) navs++; };
+    page.on('framenavigated', onNav);
+    try {
+      await step('abrir a página', () => G.raw.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
+      await step('esperar window.__game', () => G.raw.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
+      await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => G.raw.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+    } finally {
+      page.off('framenavigated', onNav);
+      if (navs > 1) console.log(`  [boot] ${what}: a página RECARREGOU ${navs - 1}× durante o boot (${navs} navegações)`);
+    }
+    // tempos do boot pelos marcos rr:* (dados para comparar fases e execuções; um travamento mostra o último marco)
+    const boot = await bootTimeline(page).catch(() => null);
+    console.log(`  [boot] ${what}: ${secs(Date.now() - t0)} até o jogo${boot?.text ? `; ${boot.text}` : ''}`);
     await readBasis();
     await (process.env.CI ? gsleep : sleep)(1500);
   }
@@ -442,9 +462,10 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     };
   }
   async function close() {
-    stopWatch();
-    // o 'disconnected' do fechamento não é queda; preso, closeBrowser encerra o processo da suíte em 2 s
+    // o 'disconnected' do fechamento não é queda; preso, closeBrowser encerra o processo da suíte em 2 s. Antes de
+    // fechar, ele espera um diagnóstico em curso (hang-probe.mjs).
     if (!await closeBrowser(browser, { limits, report: false })) aborts.push(`[harness] o navegador não fechou em ${secs(limits.closeMs)}`);
+    stopWatch(); // depois de fechar: outra suíte no mesmo processo (stress-boot.mjs) segue vigiada
     if (pace.real > 0) {
       console.log(`\nritmo do jogo: ${(pace.sim / pace.real).toFixed(2)}× o relógio (abaixo de 1 = menos de 20 fps); `
         + `leitura do estado: ${Math.round(pace.lat / pace.n)} ms em média, ${pace.maxLat} ms no pior caso`);
