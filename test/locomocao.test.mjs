@@ -222,3 +222,25 @@ test('locomoção nova: galopando, nada inválido e as patas não afundam no ch�
     assert.ok(low > -0.005, `${kind}: pata abaixo do chão no galope (${low.toFixed(3)} m)`);
   }
 });
+
+test('locomoção nova: a pisada (som e pegada) sai no pouso da pata, também na voltinha', () => {
+  for (const kind of KINDS) {
+    for (const [name, opts] of [['trote', { speed: 1.6, secs: 1.5 }], ['voltinha', { speed: 0, secs: 2.0, action: 'celebrate', move: false }]]) {
+      const d = fresh(kind);
+      const bad = [];
+      let n = 0;
+      d.onFootstep = (i, v) => {
+        n++;
+        const L = d.locomotion.legs[i];
+        d.object.updateMatrixWorld(true);
+        const y = bone(d, PAWS[i]).getWorldPosition(new THREE.Vector3()).y;
+        if (L.swing || y > 0.035) bad.push(`${PAWS[i]} no ar (${(y * 100).toFixed(1)} cm)`);
+        if (!(v > 0.2)) bad.push(`${PAWS[i]} sem passada (${v})`);
+      };
+      walk(d, opts);
+      d.onFootstep = null;
+      assert.ok(n >= 6, `${kind} ${name}: pisadas (${n})`);
+      assert.deepEqual(bad.slice(0, 4), [], `${kind} ${name}`);
+    }
+  }
+});

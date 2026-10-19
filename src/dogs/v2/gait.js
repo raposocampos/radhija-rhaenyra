@@ -7,8 +7,10 @@
 //     pulso dobra (a "botinha" vira para trás) e estica de novo antes de pousar;
 //   · a escápula acompanha a pata da frente (o ombro vai para a frente e para trás com ela);
 //   · ao parar, cada pata que ficou fora do lugar dá um passinho de ajuste, uma de cada vez.
-// O ritmo (fase, apoio/balanço, passo/trote/galope) é o do guia (dogAnimation.js, "passada"): o corpo (sobe e desce,
-// balanço) e as pisadas (sons, pegadas) continuam no compasso das patas. As outras poses (sentar, pular, empurrar,
+// O ritmo (fase, apoio/balanço, passo/trote/galope) é o do guia (dogAnimation.js, "passada"), e o corpo (sobe e
+// desce, balanço) fica no compasso das patas; numa curva bem fechada (a voltinha da comemoração) as patas aceleram o
+// passo para continuar plantadas e depois voltam ao compasso do guia. As pisadas (sons, pegadas) saem daqui, no pouso
+// de cada pata. As outras poses (sentar, pular, empurrar,
 // extras...) seguem do guia: aqui o peso cai a zero e as patas voltam à pose dele.
 import * as THREE from 'three';
 
@@ -76,9 +78,10 @@ const CHAINS = [
 
 /**
  * @param {{ skel2: { bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> },
- *           retarget: { P2: THREE.Vector3[], Q2: THREE.Quaternion[] }, s: number }} opts
+ *           retarget: { P2: THREE.Vector3[], Q2: THREE.Quaternion[] }, s: number,
+ *           onStep?: (foot: number, speed: number) => void }} opts
  */
-export function createGait({ skel2, retarget, s }) {
+export function createGait({ skel2, retarget, s, onStep = null }) {
   const { bones, rest, parentIdx, index: I } = skel2;
   const { P2, Q2 } = retarget;
   const V = () => new THREE.Vector3();
@@ -166,6 +169,8 @@ export function createGait({ skel2, retarget, s }) {
   let still = 0; // s parada
   let drop = 0; // quanto o tronco desceu para as patas alcançarem o chão (m)
   let staticN = 0; // quadros seguidos parada no mundo
+  let ph = 0; // fase das patas: a do guia; mais rápida numa curva fechada (e volta ao compasso dele depois)
+  let lastG = -1; // fase do guia no quadro anterior
   const MAX_DROP = 0.01 * s, MAX_STRETCH = 1.04;
   /** Leva um ponto parado no chão do referencial do corpo do quadro anterior para o de agora. */
   const carry = (p, lx, lz, dy) => {
@@ -246,6 +251,10 @@ export function createGait({ skel2, retarget, s }) {
     const gate = locomotionGate(st, A, s);
     weight += (gate - weight) * (1 - Math.exp(-(gate > weight ? 10 : hardGate(A) ? 45 : 14) * dt));
     if (gate < 0.02 && weight < 0.02) weight = 0;
+    if (weight < 0.02 || teleport || lastG < 0) {
+      ph = st.phase;
+      lastG = st.phase;
+    }
     if (weight < 0.02) {
       // as patas estão na pose do guia (sentada, no ar...): a locomoção recomeça de onde elas estiverem
       resetFeet(true);
@@ -260,8 +269,19 @@ export function createGait({ skel2, retarget, s }) {
     still = moving ? 0 : still + dt;
     const fast = clamp(mv.v / 1.8, 0, 1);
     const dash = st.w.dash;
-    const swingDur = (1 - R.beta) / R.f;
-    const stanceDur = R.beta / R.f;
+    // compasso: o do guia; numa curva fechada a pata de fora anda bem mais que o corpo e, para a passada caber no
+    // alcance dela, o compasso acelera (só pela curva: em linha reta, no trote e no galope, é sempre o do guia)
+    const reach = 0.18 * s;
+    const fStraight = (Math.abs(mv.v) * R.beta) / reach;
+    const fCurve = ((Math.abs(mv.v) + Math.abs(mv.w) * 0.2 * s) * R.beta) / reach;
+    const boost = clamp(fCurve / Math.max(fStraight, R.f), 1, 2.2);
+    ph = fract(ph + fract(st.phase - lastG) * boost);
+    lastG = st.phase;
+    if (boost < 1.02) ph = fract(ph + (fract(st.phase - ph + 0.5) - 0.5) * (1 - Math.exp(-4 * dt)));
+    const f = R.f * boost;
+    const swingDur = (1 - R.beta) / f;
+    const stanceDur = R.beta / f;
+    const stepSpeed = Math.max(Math.abs(mv.v), Math.abs(mv.w) * 0.2 * s);
 
     const lifting = () => legs.reduce((n, l) => n + (l.swing ? 1 : 0), 0);
     for (let li = 0; li < 4; li++) {
@@ -272,7 +292,7 @@ export function createGait({ skel2, retarget, s }) {
         carry(leg.from, lx, lz, dyaw);
       }
       if (!leg.swing) leg.stanceT += dt;
-      const p = fract(st.phase + R.off[li]);
+      const p = fract(ph + R.off[li]);
       const phSwing = p >= R.beta;
       const edge = phSwing && !leg.phSwing;
       leg.phSwing = phSwing;
@@ -297,6 +317,8 @@ export function createGait({ skel2, retarget, s }) {
         leg.foot.lerpVectors(leg.from, T, sstep(0, 1, leg.u));
         leg.foot.y = leg.neutral.y + leg.lift * Math.sin(Math.PI * leg.u);
         if (leg.u >= 1) {
+          // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
+          if (onStep && weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) onStep(li, leg.settle ? 0.1 : stepSpeed);
           leg.swing = false;
           leg.timed = false;
           leg.settle = false;
@@ -323,7 +345,7 @@ export function createGait({ skel2, retarget, s }) {
     let need = 0;
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
-      const stanceK = leg.swing ? 0 : clamp(fract(st.phase + R.off[li]) / R.beta, 0, 1); // 0 = pousou, 1 = decolando
+      const stanceK = leg.swing ? 0 : clamp(fract(ph + R.off[li]) / R.beta, 0, 1); // 0 = pousou, 1 = decolando
       leg.stanceK = leg.swing ? -1 : stanceK;
       const su = leg.swing ? leg.u : 0;
       const flex = leg.swing ? sstep(0, 0.28, su) * (1 - sstep(0.55, 0.92, su)) : 0;
@@ -425,6 +447,7 @@ export function createGait({ skel2, retarget, s }) {
     /** Esquece o movimento anterior (a dog foi posta em outro lugar): as patas voltam para debaixo do corpo. */
     reset() {
       prev.ok = false;
+      lastG = -1;
       mv.v = 0;
       mv.w = 0;
     },

@@ -120,7 +120,10 @@ export function createDogV2(kind) {
   const rig1 = createDogRig(design1, driverInner);
   const { st, update: animate } = createDogAnimation({
     object, inner: driverInner, cfg, s, rig: rig1, face, carry, furMat, shadow, shadowBase, markerAnchor, design: design1, fur: P1.fur,
-    onFootstep: (i, v) => self.onFootstep?.(i, v),
+    // andando com a locomoção própria (gait.js), as pisadas saem de lá, no pouso de cada pata
+    onFootstep: (i, v) => {
+      if (self.gait <= 0.5) self.onFootstep?.(i, v);
+    },
   });
   const retarget = createRetarget({ rig1, design1, design2: design, skel2 });
   // contato com o chão: tronco, cabeça e patas (rabo e orelhas caem por cima do chão sem levantar o corpo)
@@ -130,7 +133,7 @@ export function createDogV2(kind) {
   // rolar de costas: pose própria do modelo novo por cima da do guia (roll.js)
   const roll = createRollOverlay({ skel2, cfg });
   // andar, trotar, galopar e girar: patas próprias, plantadas no chão, no ritmo do guia (gait.js)
-  const gait = createGait({ skel2, retarget, s });
+  const gait = createGait({ skel2, retarget, s, onStep: (i, v) => self.onFootstep?.(i, v) });
 
   const I2 = BONE_INDEX_V2;
   const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
