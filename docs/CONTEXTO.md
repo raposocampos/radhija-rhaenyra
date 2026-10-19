@@ -1,7 +1,43 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (travamento no primeiro boot do E2E; #27 e #30 entregues). Ler primeiro
+Última atualização: **2026-10-19, Claude** (redes de prazo nas capturas e páginas extras do E2E). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: redes de prazo nas capturas e páginas extras do E2E (Claude, 2026-10-19)
+
+- Motivo: os `capture-*.mjs` e as páginas extras das suítes usavam o Playwright direto, sem as redes do PR #27. No
+  E2E `39173570454` o `capture-lambe.mjs` travou até o timeout de 30 min do job (boot da fase 7, `goto` +
+  `waitForFunction` de 180 s); no `39178028583` o `capture-celular.mjs` falhou com "condição não alcançada" e a
+  página de iPhone da suíte `toque` estourou um `waitForFunction` de 60 s, as duas sem o estado no log.
+- Feito no branch `claude/e2e-redes-capturas`, **PR #30**, base `402635e` (consultar o PR para SHA, CI e E2E):
+  `tools/scripts/lib/page-guard.mjs` (`guardPage`, `openPage`, `closeBrowser`) com o teto de relógio, o vigia
+  `opMaxMs` e a escuta de queda extraídos do harness. O harness passa a usá-lo (mensagens preservadas; as do vigia
+  ganharam a linha do script), imprime o resumo completo ao sair pelo vigia e ganha `H.newPage(opções, nome)`. As
+  seis capturas e as páginas de PC/iPhone da suíte `toque` estão protegidas; prazos de 180 s para 120 s; último
+  passo (`guard.note`) e estado do jogo nos diagnósticos e nas "condições não alcançadas". Na página de iPhone, cada
+  toque do menu espera o botão aparecer (com a tela seguinte ainda escondida, o toque caía em (0, 0)). Provas novas
+  `extra` e `capture` em `test-e2e-infra.mjs`. Docs: ARQUITETURA (seção do E2E) e ENTREGA.
+- O PR #29 (fase 9, aberto) cria `capture-biblioteca.mjs` no formato antigo: quem integrar por último aplica
+  `openPage`/`closeBrowser` e os prazos de 120 s nele, como nas outras capturas.
+- E2E no 1º commit `1446c1c`: `toque` `39183736380` ok (96/96, PC e iPhones por `H.newPage`; `capture-celular`
+  com 40 capturas sem erro); em `lambe` `39183733885`, infraestrutura 13/13 (as provas `extra` e `capture` em
+  ~11,5 s cada) e `capture-lambe` com as 16 capturas, mas a partida `lambe` caiu no travamento de boot já conhecido:
+  `load('?level=1&play&dog=rhaenyra')`, `window.__game` nunca apareceu, o prazo de 120 s venceu e a página não
+  respondeu à leitura do estado. Reprovou em 126 s com o diagnóstico (antes, 30 min).
+- Nenhum teste, build ou E2E no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `todas` no head
+  do PR, entregar a prévia e integrar só com a aprovação do usuário. O travamento de boot (causa raiz) é outra
+  entrega.
+
+## Entregue: tetos de relógio no harness (PR #27, squash `402635e`, deploy `39181809562`)
+
+- Esperas em tempo de jogo com tetos de relógio, 60 s por ida ao navegador, `opMaxMs` de 150 s, escuta de
+  `crash`/`disconnected` e, no runner, o vigia de 5 min de silêncio (ARQUITETURA, seção do E2E). Aprovado pelo
+  usuário; head aprovado `428535b`, CI do main `39181772265`, produção conferida em `402635e`. Não repetir
+  merge/deploy do #27.
+- Achados: nos travamentos reais (lavanderia, `expresso`) a página abre e `window.__game` nunca aparece, com o
+  `waitForFunction` de 120 s sem vencer; a prova `crash` reproduz (aba derrubada no meio da espera: o Playwright
+  1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
+  `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
 ## Em andamento: travamento no primeiro boot do E2E (Claude, PR #31)
 
@@ -28,31 +64,12 @@
   `browser-log.mjs` + `--enable-logging=stderr` (`shots/diagnostico/`, no artefato); marcos `rr:boot:*`/`rr:level:*`
   e linha `[boot]`; `[e2e] CPU do runner`; suíte `carregamento` (`stress-boot.mjs`). Provas `hung`, `crash`, `extra`
   e `capture` conferem o `[diagnóstico]`. Docs: ARQUITETURA §10.
+- O `capture-biblioteca.mjs` do PR #29 precisa, ao juntar com o #31, de `import './lib/browser-log.mjs'` antes do
+  `playwright-core` (a sonda vem pelo `openPage` do #30).
 - Próximo passo: CI, E2E `todas` e `carregamento` no head novo; ler as linhas `[vite]`/`RECARREGOU` dos jobs (a
   hipótese do Vite se confirma se a recarga aparecer nos boots frios e, sobretudo, junto de um travamento); entregar
   a prévia e integrar só com a aprovação do usuário. Se confirmada, a correção provável é aquecer o otimizador antes
   da 1ª suíte (ou `optimizeDeps.include`/`server.ws: false` no `vite.nohmr.config.mjs`), validada pelo estresse.
-
-## Entregue: redes de prazo nas capturas e páginas extras (PR #30, squash `0bd48d0`, deploy `39187314090`)
-
-- `tools/scripts/lib/page-guard.mjs` (`guardPage`, `openPage`, `closeBrowser`): teto de relógio, vigia `opMaxMs` e
-  escuta de queda extraídos do harness e aplicados às seis capturas e às páginas extras das suítes
-  (`H.newPage(opções, nome)`, PC e iPhones da `toque`); prazos das capturas de 180 s para 120 s; último passo
-  (`guard.note`) e estado do jogo nos diagnósticos. Provas `extra` e `capture` em `test-e2e-infra.mjs`. Integrado
-  com a aprovação do usuário; `version.json` de produção em `0bd48d0`. Não repetir merge/deploy do #30.
-- O PR #29 (fase 9, aberto) cria `capture-biblioteca.mjs` no formato antigo: quem integrar por último aplica
-  `openPage`/`closeBrowser` (e, com o #31, o `import './lib/browser-log.mjs'` antes do `playwright-core`).
-
-## Entregue: tetos de relógio no harness (PR #27, squash `402635e`, deploy `39181809562`)
-
-- Esperas em tempo de jogo com tetos de relógio, 60 s por ida ao navegador, `opMaxMs` de 150 s, escuta de
-  `crash`/`disconnected` e, no runner, o vigia de 5 min de silêncio (ARQUITETURA, seção do E2E). Aprovado pelo
-  usuário; head aprovado `428535b`, CI do main `39181772265`, produção conferida em `402635e`. Não repetir
-  merge/deploy do #27.
-- Achados: nos travamentos reais (lavanderia, `expresso`) a página abre e `window.__game` nunca aparece, com o
-  `waitForFunction` de 120 s sem vencer; a prova `crash` reproduz (aba derrubada no meio da espera: o Playwright
-  1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
-  `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 
