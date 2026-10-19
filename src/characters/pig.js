@@ -36,8 +36,8 @@ const cone = (a, ra, b, rb, bone) => ({ t: 2, a, b, ra, rb, bone });
 const BONES = ['body', 'head', 'flU', 'flL', 'frU', 'frL', 'hlU', 'hlL', 'hrU', 'hrL'];
 /** @type {Record<string, number>} */
 const PARENT = { body: -1, head: 0, flU: 0, flL: 2, frU: 0, frL: 4, hlU: 0, hlL: 6, hrU: 0, hrL: 8 };
-/** Coxa e canela (m): do quadril (HIP_Y) à sola do casco (y = 0) com a pata esticada. */
-const L1 = 0.1, L2 = 0.1, HIP_Y = 0.2;
+/** Coxa e canela (m): do quadril (HIP_Y) à sola do casco (y = 0) com a pata esticada. HOOF_R: raio da sola. */
+const L1 = 0.1, L2 = 0.1, HIP_Y = 0.2, HOOF_R = 0.017;
 /** Patas: +X é a esquerda do porco (ele olha para +Z). Ordem: dianteira esq./dir., traseira esq./dir. */
 const LEGS = [
   { key: 'fl', side: 1, front: true, x: 0.078, z: 0.13 },
@@ -84,7 +84,7 @@ function design() {
       return [
         cone([l.x, HIP_Y + 0.02, l.z], l.front ? 0.045 : 0.056, [l.x, HIP_Y - L1, l.z], 0.03, U), // coxa (pernil atrás)
         cone([l.x, HIP_Y - L1, l.z], 0.03, [l.x, 0.034, l.z + 0.006], 0.024, Lo), // canela
-        cone([l.x, 0.036, l.z + 0.006], 0.025, [l.x, 0.017, l.z], 0.017, Lo), // casco (sola no fim da canela)
+        cone([l.x, 0.036, l.z + 0.006], 0.025, [l.x, HOOF_R, l.z], HOOF_R, Lo), // casco (sola no fim da canela)
       ];
     }),
   };
@@ -506,7 +506,7 @@ export function createPig({ variant = 0 } = {}) {
   const _e = new THREE.Euler();
   const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _k = new THREE.Vector3(), _p = new THREE.Vector3();
   const tG = new THREE.Vector3(), tL = new THREE.Vector3(), tR = new THREE.Vector3();
-  const _q = new THREE.Quaternion();
+  const _q = new THREE.Quaternion(), _qi = new THREE.Quaternion();
   const _m = new THREE.Matrix4();
   const _down = new THREE.Vector3(0, -1, 0);
   const TAIL_TIP = new THREE.Vector3(-0.021, 0.055, 0);
@@ -662,6 +662,7 @@ export function createPig({ variant = 0 } = {}) {
     // ---------------- patas
     B.body.updateMatrix();
     _m.copy(B.body.matrix).invert();
+    _qi.copy(B.body.quaternion).invert();
     for (let i = 0; i < 4; i++) {
       const lg = LEGS[i];
       const off = lerp(OFF_WALK[i], OFF_TROT[i], trot);
@@ -686,6 +687,13 @@ export function createPig({ variant = 0 } = {}) {
       tL.set(hip.x * 1.05, hip.y + (lg.front ? -0.09 : -0.085), hip.z + (lg.front ? 0.07 : -0.17));
       tR.set(hip.x + lg.side * 0.02, hip.y - 0.13, hip.z + (lg.front ? 0.09 : -0.1)); // patinhas soltas, dobradas
       solveLeg(lg, tG.lerp(tL, down).lerp(tR, w.sleep));
+      // em pé, com a canela inclinada a sola arredondada do casco desce: sobe o alvo o tanto que ela desceu e
+      // resolve de novo (a pata continua no chão, sem afundar)
+      if (up > 0.5) {
+        const cosT = -_v3.copy(_p).sub(_k).normalize().applyQuaternion(B.body.quaternion).y;
+        const dip = HOOF_R * (1 - clamp(cosT, 0, 1));
+        if (dip > 0.0005) solveLeg(lg, tG.add(_v2.set(0, dip, 0).applyQuaternion(_qi)));
+      }
     }
 
     // ---------------- orelhas (mola: ficam para trás quando a cabeça sobe/desce) e rabinho
