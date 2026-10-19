@@ -96,13 +96,15 @@ try {
   const setup = (o) => page.evaluate((opts) => {
     const g = window.__game.game;
     if (opts.stage) g.debug.setStage(opts.stage, opts.active);
-    if (opts.active && g.activeDog !== opts.active) window.__tap('KeyQ');
+    // a troca (Q) espera a dog sair de um susto (esbarrão): tenta de novo por até ~3 s
+    for (let k = 0; opts.active && g.activeDog !== opts.active && k < 45; k++) { window.__tap('KeyQ'); window.__step(4); }
     for (const [name, p] of Object.entries(opts.place || {})) {
       g.debug.teleport(name, p.x, p.z);
       g.debug.ctrls[name].yaw = p.yaw;
     }
     for (const [name, kind] of Object.entries(opts.give || {})) g.puzzle.give(kind, name);
     window.__step(opts.settle ?? 20);
+    if (opts.active && g.activeDog !== opts.active) throw new Error(`a troca para ${opts.active} não aconteceu`);
   }, o);
   const pigsAt = () => page.evaluate(() => window.__game.game.puzzle.pigs.pigs.map((P) => ({ x: P.x, z: P.z, yaw: P.yaw, state: P.state, action: P.action })));
   const L = await page.evaluate(() => {
