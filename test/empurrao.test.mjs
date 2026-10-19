@@ -503,16 +503,18 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
         if (v.y < minY) { minY = v.y; worst = `${b.name} (${c.shoveStage}, k ${c.shoveK.toFixed(2)})`; }
         const pen = into(v);
         if (b.name === 'FLp' || b.name === 'FRp') continue;
+        // a cabeça tem focinho e pelo além dos ossos: pede mais folga
+        const gap = /^(head|jaw|ear)/.test(b.name) ? 0.04 : 0.01;
         if (K.trunkR) {
           // o tronco: nenhum osso dentro dele (até 1 m de altura)
           const dAx = Math.hypot(v.x - S.x + S.nx * K.trunkR, v.z - S.z + S.nz * K.trunkR);
-          assert.ok(v.y > 1 || dAx > K.trunkR + 0.01, `${K.name}: ${b.name} dentro do tronco (${dAx.toFixed(3)} m do eixo)`);
+          assert.ok(v.y > 1 || dAx > K.trunkR + gap, `${K.name}: ${b.name} dentro do tronco (${dAx.toFixed(3)} m do eixo, ${c.shoveStage})`);
         } else if (S.kind === 'sister') {
           // a irmã: nada abaixo das costas dela no lado de lá da face (as patas da frente apoiam em cima)
           assert.ok(pen < 0.02 || v.y > S.y - 0.02, `${K.name}: ${b.name} entrou na irmã (${pen.toFixed(3)} m, y ${v.y.toFixed(3)})`);
         } else {
           // mesinha e estante: além da face, só acima do tampo
-          assert.ok(pen < 0.005 || v.y > S.y + 0.01, `${K.name}: ${b.name} atravessou a frente (${pen.toFixed(3)} m, y ${v.y.toFixed(3)})`);
+          assert.ok(pen < 0.005 - gap || v.y > S.y + 0.01, `${K.name}: ${b.name} atravessou a frente (${pen.toFixed(3)} m, y ${v.y.toFixed(3)}, ${c.shoveStage})`);
         }
       }
       if (c.shoveStage === 'push' && c.shoveCycle > 0.45 && c.shoveCycle < 0.6) {

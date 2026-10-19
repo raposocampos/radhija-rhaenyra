@@ -351,6 +351,7 @@ export function buildLowShelf({ seed = 7 } = {}) {
   // livros nas duas prateleiras
   const r = rng(seed);
   const colors = ['#c0543f', '#3f6f8f', '#e0b04f', '#5c8a4f', '#8a5a9a', '#d9d0bf', '#2f4f5f'];
+  let books = 0;
   // (na de cima, a direita fica para o vasinho)
   for (const [y0, y1, xMax] of [[0.06, 0.33, w / 2 - side - 0.05], [0.35, h - 0.03, w * 0.3 - 0.09]]) {
     let x = -w / 2 + side + 0.02;
@@ -361,7 +362,8 @@ export function buildLowShelf({ seed = 7 } = {}) {
       const bd = d * (0.6 + r() * 0.2);
       const lean = x > xMax - 0.07 && r() < 0.5 ? 0.18 : 0;
       const book = new THREE.Mesh(rbox(bw, bh, bd, 0.004), stdMat(colors[Math.floor(r() * colors.length)], { roughness: 0.7 }));
-      book.position.set(x + bw / 2, y0 + 0.001 + bh / 2, -d / 2 + 0.015 + bd / 2);
+      // o fundo de cada livro recua um pouquinho diferente do vizinho (nada no mesmo plano: sem z-fighting)
+      book.position.set(x + bw / 2, y0 + 0.001 + bh / 2, -d / 2 + 0.015 + (books++ % 3) * 0.004 + bd / 2);
       book.rotation.z = -lean;
       if (lean) book.position.y -= bh * 0.02;
       body.add(book);

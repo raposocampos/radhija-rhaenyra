@@ -100,7 +100,7 @@ export const NAV_NODES = {
   east: { x: 2.0, z: -0.4 },
   NE: { x: 3.8, z: -2.6 },
   south: { x: 0.4, z: 2.8 },
-  S_shelf: { x: 2.6, z: 2.3 },
+  S_shelf: { x: 3.0, z: 2.4 },
   E_shelf: { x: 3.4, z: 0.9 },
 };
 /** @type {import('../../types').NavEdge[]} */

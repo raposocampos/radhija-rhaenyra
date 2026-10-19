@@ -56,6 +56,8 @@ const SHOVE_FACING = 0.5;
 const SHOVE_LAT_SLACK = 0.16;
 /** O empurrão só conta com a dog a até isto do ponto de apoio (algo no caminho, ou a irmã se afastou). */
 const SHOVE_TOUCH_REACH = 0.1;
+/** Quanto ela recua ao voltar às quatro patas (m). */
+export const SHOVE_BACK = 0.16;
 
 /**
  * @param {import('../types').DogName} name
@@ -361,11 +363,12 @@ function stepShove(c, dt) {
   c.shoveT += dt;
   const release = !c.shoveHeld || c.shoveStop;
   if (c.shoveStage === 'up') {
+    // ergue primeiro e chega perto já de pé, nas traseiras (o focinho não encosta na coisa)
     const p = Math.min(1, c.shoveT / SHOVE_UP);
-    const e = sstep(0, 0.72, p);
+    const e = sstep(0.2, 1, p);
     c.shoveGoalX = c.shoveFrom.x + (K.x - c.shoveFrom.x) * e;
     c.shoveGoalZ = c.shoveFrom.z + (K.z - c.shoveFrom.z) * e;
-    c.shoveK = sstep(0.1, 1, p);
+    c.shoveK = sstep(0, 0.75, p);
     if (p >= 1) {
       c.shoveStage = 'push';
       c.shoveT = 0;
@@ -394,9 +397,9 @@ function stepShove(c, dt) {
     }
   } else {
     const p = Math.min(1, c.shoveT / SHOVE_DOWN);
-    c.shoveK = 1 - sstep(0, 1, p);
-    // as patas da frente voltam ao chão um pouquinho atrás de onde estavam
-    const back = 0.05 * sstep(0.15, 0.9, p);
+    c.shoveK = 1 - sstep(0.05, 1, p);
+    // recua enquanto desce: nas quatro patas a cabeça fica bem à frente do círculo de colisão, longe da coisa
+    const back = SHOVE_BACK * sstep(0, 0.7, p);
     c.shoveGoalX = c.shoveFrom.x + S.nx * back;
     c.shoveGoalZ = c.shoveFrom.z + S.nz * back;
     if (p >= 1) endShove(c);
