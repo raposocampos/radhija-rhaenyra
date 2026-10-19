@@ -425,6 +425,39 @@ export function stubBafoProps(root, layout) {
   return level('bafo', props);
 }
 
+/**
+ * Arena do Empurrão: os três empurráveis (inclinam por setSway) com o item lá em cima como filho (o prop fica na
+ * origem, então o item fica no ponto do layout; quando cai, a mecânica o leva para a raiz da cena).
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout
+ */
+export function stubEmpurraProps(root, layout) {
+  const T = layout.SHOVE_TARGETS;
+  const holder = (name, at) => {
+    const obj = object(root, name);
+    const it = new THREE.Group();
+    it.name = `prop:${name}:item`;
+    it.position.set(at.x, at.y, at.z);
+    obj.add(it);
+    return { prop: checked(`empurra.${name}`, { object: obj, setSway(a, va) { obj.userData.sway = a; } }), item: it };
+  };
+  const tree = holder('tree', T.arvorezinha.item.from);
+  const table = holder('table', T.mesinha.item.from);
+  const shelf = holder('shelf', T.estante.item.from);
+  /** @satisfies {import('../../src/types').EmpurraProps} */
+  const props = {
+    item: checked('empurra.item', { object: object(root, 'item'), setHighlight(on) {} }),
+    tree: tree.prop,
+    table: table.prop,
+    shelf: shelf.prop,
+    ball: checked('empurra.ball', { object: tree.item }),
+    duck: checked('empurra.duck', { object: table.item }),
+    bear: checked('empurra.bear', { object: shelf.item }),
+    collectibles: [],
+    reset() {},
+  };
+  return checked('empurra', props, ['update', 'fireflies']);
+}
+
 /** @param {string} id @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubProps(id, root, layout) {
   switch (id) {
@@ -440,6 +473,7 @@ export function stubProps(id, root, layout) {
     case 'modelo': return stubPlaceholderProps(root, layout);
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);
+    case 'empurra': return stubEmpurraProps(root, layout);
     default: throw new Error(`Fase sem fábrica explícita de props: ${id}`);
   }
 }
