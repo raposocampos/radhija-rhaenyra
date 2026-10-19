@@ -337,11 +337,12 @@ try {
   await finger.up(3);
   await sleep(250);
   check((await logOf('dog:bafo')).length === 1, 'soltar Superbafo: sopra');
-  // Lamber (as duas dogs): a Radhija lambe a irmã com o botão segurado
+  // Lamber (as duas dogs): a Radhija lambe a irmã com o botão segurado (a irmã a oeste: a leste, perto de (3, −0,5),
+  // fica o bebedouro de pássaros, e com ele no meio a lambida não alcança)
   await ev(() => {
     const g = window.__game.game;
     const r = g.debug.ctrls.radhija;
-    g.debug.teleport('rhaenyra', r.x + 0.9, r.z);
+    g.debug.teleport('rhaenyra', r.x - 0.9, r.z);
     g.setStay('rhaenyra', true);
   });
   await sleep(300);
