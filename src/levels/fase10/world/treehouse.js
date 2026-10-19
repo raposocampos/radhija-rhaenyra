@@ -146,18 +146,26 @@ export function buildTreehouse(root, layout) {
   const deck = new THREE.Group();
   deck.name = 'deque';
   const dw = DECK.x1 - DECK.x0, dd = DECK.z1 - DECK.z0;
-  // tábuas (com o buraco do tronco: as tábuas que cruzam o tronco param nele)
+  // tábuas (com o buraco do tronco: cada tábua para no contorno do tronco, na altura do deque) e o colar em volta
   const boards = [];
   const bw = 0.14;
+  const tc = trunkCurve.getPoint(top / 4.4);
+  const holeR = TREE.r * (1 - 0.5 * (top / 4.4)) + 0.035;
   for (let z = DECK.z0 + bw / 2; z < DECK.z1; z += bw) {
-    const hitsTrunk = Math.abs(z - TREE.z) < TREE.r + 0.05;
-    const segsX = hitsTrunk ? [[DECK.x0, TREE.x - TREE.r - 0.05], [TREE.x + TREE.r + 0.05, DECK.x1]] : [[DECK.x0, DECK.x1]];
+    const dz = Math.max(0, Math.abs(z - tc.z) - bw / 2);
+    const half = dz < holeR ? Math.sqrt(holeR * holeR - dz * dz) : 0;
+    const segsX = half > 0 ? [[DECK.x0, tc.x - half], [tc.x + half, DECK.x1]] : [[DECK.x0, DECK.x1]];
     for (const [a, b] of segsX) {
       const g = new THREE.BoxGeometry(b - a - 0.01, 0.04, bw - 0.012);
       g.translate((a + b) / 2, top - 0.02, z);
       boards.push(g);
     }
   }
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(holeR + 0.012, 0.032, 8, 32).rotateX(Math.PI / 2), darkWood);
+  collar.position.set(tc.x, top + 0.006, tc.z);
+  collar.scale.y = 0.55;
+  collar.receiveShadow = true;
+  deck.add(collar);
   const boardMesh = new THREE.Mesh(mergeGeometries(boards), deckWood);
   boardMesh.castShadow = true;
   boardMesh.receiveShadow = true;

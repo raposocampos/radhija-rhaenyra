@@ -130,8 +130,8 @@ try {
   await shot('07b-torneira-mangueira-caixote', { pos: [-2.4, 1.5, 0.9], look: [-3.9, 0.5, -0.9] });
   await shot('07c-ventilador-e-tomada', { pos: [-2.4, 1.2, 2.4], look: [-3.6, 0.5, 0.4] });
   await shot('08-portaozinho-e-cordinha', { pos: [3.6, 1.4, 1.6], look: [L.CORD.x, 0.5, L.CORD.z] });
-  await shot('04b-sofa-e-o-vao-atras', { pos: [-9.0, 1.5, 0.9], look: [-10.2, 0.25, -0.8] });
-  await shot('08b-portao-aberto-encostado', { pos: [6.9, 1.6, 2.6], look: [5.6, 0.4, 0.6] });
+  await shot('04b-sofa-e-o-vao-atras', { pos: [-9.7, 2.6, 0.7], look: [-10.3, 0.1, -0.7] });
+  await shot('08b-portao-fechado-do-fundo', { pos: [6.9, 1.6, 2.6], look: [5.6, 0.4, 0.6] });
   await shot('09-casa-na-arvore', { pos: [8.6, 3.4, 1.2], look: [8.2, 1.9, -4.4] });
   await shot('09b-pombo-em-cima-do-laco', { pos: [8.95, 2.75, -2.45], look: [L.PIGEON.x, L.PIGEON.y - 0.05, L.PIGEON.z] });
   await shot('09c-funil-e-cano', { pos: [7.1, 1.4, -1.0], look: [8.1, 0.9, -3.3] });
@@ -230,6 +230,7 @@ try {
   await shot('20-puxando-a-cordinha', { pos: [L.CORD.x - 1.4, 1.2, L.CORD.z + 1.3], look: [L.CORD.x, 0.6, L.CORD.z] });
   await step(50);
   await shot('20b-portao-aberto', { pos: [3.8, 1.6, 2.0], look: [5.6, 0.5, 0.1] });
+  await shot('20b2-portao-aberto-encostado', { pos: [6.9, 1.6, 2.6], look: [5.6, 0.4, 0.6] });
   // com o pombo lá em cima: o balde chega, ele acorda e bate as asas em cima do laço (ela fica no balde)
   await setup({ active: 'radhija', place: { radhija: { x: L.BUCKET.x, z: L.BUCKET.z + 0.7, yaw: Math.PI } }, settle: 10 });
   await tap('KeyE');
@@ -237,7 +238,7 @@ try {
   await setup({ active: 'rhaenyra', place: { rhaenyra: { x: L.ROPE.rest.x, z: L.ROPE.rest.z + 0.5, yaw: Math.PI } }, settle: 10 });
   await tap('KeyE');
   await keyDown('KeyS');
-  await until((i) => i.quintal.bucket.y >= L.BUCKET.top - 0.02, 500);
+  await until((i) => i.quintal.bucket.y >= window.__game.layout.BUCKET.top - 0.02, 500);
   await keyUp('KeyS');
   await step(14);
   await shot('20c-pombo-nao-deixa-subir', { pos: [6.3, 3.3, -0.6], look: [7.8, 2.3, -3.6] });
