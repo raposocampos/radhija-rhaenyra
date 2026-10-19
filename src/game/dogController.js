@@ -8,6 +8,11 @@
 // fase oferece em puzzle.wallSpots), o pulo vira um movimento roteirizado de cfg.wallJumpTime s: avança até a
 // parede, sobe apoiando as patas, alcança o alto (wallHit, uma vez, em WALL_TOUCH) e volta ao chão um pouco
 // afastada. A pose é da animação (dogAnimation.js, wallK); aqui ficam posição, giro e tempo.
+// Empurrão em pé (só dogs 'large', a Rhaenyra): segurando o empurrar de frente para algo empurrável no alto (ShoveSpot
+// que a fase oferece em puzzle.shoveSpots), ela chega ao ponto e fica de pé nas traseiras apoiando as patas
+// da frente (SHOVE_UP s), empurra em ciclos de SHOVE_CYCLE s enquanto o botão estiver seguro (cada empurrão conta em
+// SHOVE_HIT do ciclo: shoveHit, uma vez por ciclo) e volta às quatro patas (SHOVE_DOWN s). Soltar o botão termina o
+// ciclo em curso (o primeiro empurrão sempre acontece). A pose é da animação (shoveK, shoveCycle).
 
 export const TAU = Math.PI * 2;
 export const wrapAngle = (a) => {
@@ -35,6 +40,24 @@ export const WALL_GAP = 0.03;
 const WALL_FACING = 0.34;
 /** O toque no alto só vale com a dog a até isto do ponto de impulso (algo no caminho a segurou longe). */
 const WALL_TOUCH_REACH = 0.12;
+
+// Empurrão em pé (s): ficar de pé, cada ciclo de empurrão (o empurrão conta em SHOVE_HIT do ciclo) e descer.
+export const SHOVE_UP = 0.46;
+export const SHOVE_CYCLE = 0.66;
+export const SHOVE_HIT = 0.42;
+export const SHOVE_DOWN = 0.42;
+/** Folga entre o círculo de colisão e a superfície empurrada (m). */
+export const SHOVE_GAP = 0.04;
+/** Começa com a dog a até isto do ponto de apoio (m). */
+export const SHOVE_REACH = 0.4;
+/** De frente: cosseno mínimo entre a direção (analógico ou corpo) e a superfície (60°). */
+const SHOVE_FACING = 0.5;
+/** Quanto ela pode estar além da largura da face (m) e ainda começar (ela se alinha no caminho). */
+const SHOVE_LAT_SLACK = 0.16;
+/** O empurrão só conta com a dog a até isto do ponto de apoio (algo no caminho a segurou longe). */
+const SHOVE_TOUCH_REACH = 0.1;
+/** Quanto ela recua ao voltar às quatro patas (m). */
+export const SHOVE_BACK = 0.16;
 
 /**
  * @param {import('../types').DogName} name
@@ -80,6 +103,19 @@ export function createController(name, cfg) {
     wallGoalZ: 0,
     wallTouched: false,
     wallHit: null, // alcançou o alto neste quadro (o jogo emite wall:touch e zera)
+    shove: null, // empurrão em pé: ponto em uso (null = fora dele)
+    shoveStage: null, // 'up' | 'push' | 'down'
+    shoveT: 0, // tempo na etapa (no 'push', no ciclo atual)
+    shoveCycle: 0, // 0..1 do ciclo de empurrão atual
+    shoveN: 0, // empurrões dados desde que ficou de pé
+    shoveK: 0, // 0 nas quatro patas … 1 de pé (para a pose)
+    shoveLat: 0, // deslocamento lateral na face, escolhido ao começar (m)
+    shoveFrom: { x: 0, z: 0 },
+    shoveGoalX: 0,
+    shoveGoalZ: 0,
+    shoveHeld: false, // o botão continua seguro (o jogo atualiza a cada quadro)
+    shoveStop: false, // o jogo pede para descer ao fim do ciclo
+    shoveHit: null, // empurrou neste quadro (o jogo emite dog:shove e zera)
   };
 }
 
@@ -107,18 +143,22 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.wallDur = 0;
   c.wallTouched = false;
   c.wallHit = null;
+  endShove(c);
 }
 
 /** No ar: pulo comum ou impulso na parede. */
 export const airborne = (c) => c.jumpT > 0 || c.wallDur > 0;
 
+/** No empurrão em pé (de pé, subindo ou descendo). */
+export const shoving = (c) => !!c.shove;
+
 export function canDash(c) {
-  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0 && !airborne(c);
+  return c.cfg.dashSpeed && c.dashT <= 0 && c.dashCd <= 0 && !airborne(c) && !c.shove;
 }
 
 /** A dog pode pular agora? (só quem tem cfg.jumpHeight; no chão, fora da arrancada e sem recarga) */
 export function canJump(c) {
-  return !!c.cfg.jumpHeight && !airborne(c) && c.jumpCd <= 0 && c.dashT <= 0;
+  return !!c.cfg.jumpHeight && !airborne(c) && c.jumpCd <= 0 && c.dashT <= 0 && !c.shove;
 }
 
 /**
@@ -227,6 +267,146 @@ function stepWallJump(c, dt) {
 }
 
 /**
+ * Onde a dog de raio r fica para o empurrão em pé: encostada na superfície do ponto `spot` (a SHOVE_GAP m), com o
+ * deslocamento lateral `lat` na face (de quem olha para a superfície, + = esquerda; limitado a ±spot.w).
+ * @param {import('../types').ShoveSpot} spot @param {number} r @param {number} [lat]
+ */
+export function shoveStance(spot, r, lat = 0) {
+  const d = r + SHOVE_GAP;
+  const w = spot.w ?? 0;
+  const l = Math.max(-w, Math.min(w, lat));
+  return { x: spot.x + spot.nx * d - spot.nz * l, z: spot.z + spot.nz * d + spot.nx * l };
+}
+
+/** Deslocamento lateral de (x, z) na face do ponto `spot` (de quem olha para a superfície, + = esquerda). */
+const shoveLatOf = (spot, x, z) => (x - spot.x) * -spot.nz + (z - spot.z) * spot.nx;
+
+/**
+ * O ponto que vale para um empurrão em pé agora (ou null): só dogs 'large', no chão e fora de outro empurrão; do lado
+ * de cá da superfície, a até SHOVE_REACH m de onde ficaria, sem passar muito da largura da face, de frente para ela —
+ * pela direção do analógico (dx, dz) ou, parada, pela frente do corpo — e, com `world`, nada no caminho até lá.
+ * Com dois ao alcance, o mais perto.
+ * @param {import('../types').DogController} c @param {import('../types').ShoveSpot[] | null | undefined} spots
+ * @param {number} [dx] @param {number} [dz] @param {import('../types').CollisionWorld | null} [world]
+ */
+export function pickShoveSpot(c, spots, dx = 0, dz = 0, world = null) {
+  if (c.size !== 'large' || airborne(c) || c.shove || c.dashT > 0 || !spots?.length) return null;
+  const moving = Math.hypot(dx, dz) > 1e-4;
+  const fx = moving ? dx : Math.sin(c.yaw);
+  const fz = moving ? dz : Math.cos(c.yaw);
+  const L = Math.hypot(fx, fz) || 1;
+  let best = null;
+  let bestD = Infinity;
+  for (const s of spots) {
+    const front = (c.x - s.x) * s.nx + (c.z - s.z) * s.nz;
+    if (front < c.r * 0.5) continue;
+    const lat = shoveLatOf(s, c.x, c.z);
+    if (Math.abs(lat) > (s.w ?? 0) + SHOVE_LAT_SLACK) continue;
+    const K = shoveStance(s, c.r, lat);
+    const d = Math.hypot(c.x - K.x, c.z - K.z);
+    if (d > SHOVE_REACH) continue;
+    if (-(fx * s.nx + fz * s.nz) / L < SHOVE_FACING) continue;
+    if (world && d > 0.02 && !world.segmentClear(c.x, c.z, K.x, K.z, c.r * 0.9, c.size)) continue;
+    if (d < bestD) {
+      best = s;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** Começa o empurrão em pé no ponto `spot` (veja pickShoveSpot). */
+export function startShove(c, spot) {
+  c.shove = spot;
+  c.shoveStage = 'up';
+  c.shoveT = 0;
+  c.shoveCycle = 0;
+  c.shoveN = 0;
+  c.shoveK = 0;
+  c.shoveLat = Math.max(-(spot.w ?? 0), Math.min(spot.w ?? 0, shoveLatOf(spot, c.x, c.z)));
+  c.shoveFrom = { x: c.x, z: c.z };
+  c.shoveGoalX = c.x;
+  c.shoveGoalZ = c.z;
+  c.shoveHeld = true;
+  c.shoveStop = false;
+  c.shoveHit = null;
+  c.jumpT = 0;
+  c.dashT = 0;
+  c.v = 0;
+  c.y = 0;
+  c.pivoting = false;
+}
+
+/** Sai do empurrão em pé na hora (reiniciar, trocar de fase); a pose volta pela animação. */
+export function endShove(c) {
+  c.shove = null;
+  c.shoveStage = null;
+  c.shoveT = 0;
+  c.shoveCycle = 0;
+  c.shoveN = 0;
+  c.shoveK = 0;
+  c.shoveHeld = false;
+  c.shoveStop = false;
+  c.shoveHit = null;
+}
+
+/** Um quadro do empurrão em pé: etapa, posição-alvo, giro e o empurrão de cada ciclo. */
+function stepShove(c, dt) {
+  const S = c.shove;
+  const K = shoveStance(S, c.r, c.shoveLat);
+  // de frente para a superfície
+  const want = Math.atan2(-S.nx, -S.nz);
+  const maxTurn = c.cfg.turnSpeed * 1.6 * dt;
+  c.yaw = wrapAngle(c.yaw + Math.max(-maxTurn, Math.min(maxTurn, wrapAngle(want - c.yaw))));
+  c.v = 0;
+  c.y = 0;
+  c.shoveT += dt;
+  const release = !c.shoveHeld || c.shoveStop;
+  if (c.shoveStage === 'up') {
+    // ergue primeiro e chega perto já de pé, nas traseiras (o focinho não encosta na coisa)
+    const p = Math.min(1, c.shoveT / SHOVE_UP);
+    const e = sstep(0.2, 1, p);
+    c.shoveGoalX = c.shoveFrom.x + (K.x - c.shoveFrom.x) * e;
+    c.shoveGoalZ = c.shoveFrom.z + (K.z - c.shoveFrom.z) * e;
+    c.shoveK = sstep(0, 0.75, p);
+    if (p >= 1) {
+      c.shoveStage = 'push';
+      c.shoveT = 0;
+      c.shoveCycle = 0;
+    }
+  } else if (c.shoveStage === 'push') {
+    c.shoveGoalX = K.x;
+    c.shoveGoalZ = K.z;
+    c.shoveK = 1;
+    const prev = c.shoveCycle;
+    c.shoveCycle = Math.min(1, c.shoveT / SHOVE_CYCLE);
+    if (prev < SHOVE_HIT && c.shoveCycle >= SHOVE_HIT) {
+      c.shoveN++;
+      // só empurra quem está encostada (algo no caminho a segurou longe: sem empurrão)
+      if (Math.hypot(c.x - K.x, c.z - K.z) < SHOVE_TOUCH_REACH) c.shoveHit = S;
+    }
+    // soltou antes do empurrão (depois do primeiro): desce já; senão termina o ciclo e desce
+    const down = release && ((c.shoveN >= 1 && c.shoveCycle < SHOVE_HIT) || c.shoveCycle >= 1);
+    if (down) {
+      c.shoveStage = 'down';
+      c.shoveT = 0;
+      c.shoveFrom = { x: c.x, z: c.z };
+    } else if (c.shoveCycle >= 1) {
+      c.shoveT -= SHOVE_CYCLE;
+      c.shoveCycle = c.shoveT / SHOVE_CYCLE;
+    }
+  } else {
+    const p = Math.min(1, c.shoveT / SHOVE_DOWN);
+    c.shoveK = 1 - sstep(0.05, 1, p);
+    // recua enquanto desce: nas quatro patas a cabeça fica bem à frente do círculo de colisão, longe da coisa
+    const back = SHOVE_BACK * sstep(0, 0.7, p);
+    c.shoveGoalX = c.shoveFrom.x + S.nx * back;
+    c.shoveGoalZ = c.shoveFrom.z + S.nz * back;
+    if (p >= 1) endShove(c);
+  }
+}
+
+/**
  * Pula na direção (dx, dz) da entrada (com impulso mínimo cfg.jumpSpeed) ou, sem entrada, para a frente
  * com a velocidade atual (parada = pulo no lugar).
  */
@@ -279,6 +459,10 @@ export function steer(c, dt, intent) {
   if (c.wallDur > 0) {
     // Impulso na parede: roteirizado (a entrada não muda nada até voltar ao chão).
     stepWallJump(c, dt);
+    c.pivoting = false;
+  } else if (c.shove) {
+    // Empurrão em pé: roteirizado (o analógico não move; o botão seguro decide quantos empurrões).
+    stepShove(c, dt);
     c.pivoting = false;
   } else if (c.jumpT > 0) {
     // No ar: velocidade horizontal constante, pouco controle de direção; o corpo acompanha o pulo.
@@ -371,7 +555,8 @@ export function steer(c, dt, intent) {
 
 /** Move a dog pelo mundo (com sub-passos) e mede a velocidade real. → { hits, bump } */
 export function integrate(c, dt, world, opts = {}) {
-  if (c.wallDur > 0) return integrateWall(c, dt, world);
+  if (c.wallDur > 0) return integrateScripted(c, dt, world, c.wallGoalX, c.wallGoalZ);
+  if (c.shove) return integrateScripted(c, dt, world, c.shoveGoalX, c.shoveGoalZ, true);
   let dirX;
   let dirZ;
   const airborne = c.jumpT > 0;
@@ -435,11 +620,15 @@ export function integrate(c, dt, world, opts = {}) {
   return { hits: res.hits, bump };
 }
 
-/** Impulso na parede: leva a dog até a posição-alvo do quadro, com colisão (nunca atravessa a parede). */
-function integrateWall(c, dt, world) {
+/**
+ * Movimento roteirizado (impulso na parede, empurrão em pé): leva a dog até a posição-alvo do quadro, com colisão
+ * (nunca atravessa a parede nem o que ela empurra). steps: a velocidade da animação acompanha o deslocamento (os
+ * passinhos das traseiras no empurrão em pé); sem isso ela some aos poucos (o impulso é um salto).
+ */
+function integrateScripted(c, dt, world, goalX, goalZ, steps = false) {
   const px = c.x;
   const pz = c.z;
-  const res = world.move(c.x, c.z, c.wallGoalX - c.x, c.wallGoalZ - c.z, c.r, c.size);
+  const res = world.move(c.x, c.z, goalX - c.x, goalZ - c.z, c.r, c.size);
   if (Number.isFinite(res.x) && Number.isFinite(res.z)) {
     c.x = res.x;
     c.z = res.z;
@@ -447,7 +636,8 @@ function integrateWall(c, dt, world) {
   const idt = 1 / Math.max(dt, 1e-4);
   c.vx = (c.x - px) * idt;
   c.vz = (c.z - pz) * idt;
-  c.animSpeed *= Math.exp(-dt * 12);
+  if (steps) c.animSpeed += (Math.hypot(c.vx, c.vz) - c.animSpeed) * (1 - Math.exp(-dt * 18));
+  else c.animSpeed *= Math.exp(-dt * 12);
   if (c.animSpeed < 0.01) c.animSpeed = 0;
   c.stillT = 0;
   c.prevHitIds = new Set(res.hits.map((h) => h.id));

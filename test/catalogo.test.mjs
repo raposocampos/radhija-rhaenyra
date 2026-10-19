@@ -23,7 +23,7 @@ test('campanha: as nove fases em ordem, numeradas 1…9, com cenário sob demand
 test('catálogo: nenhum id repetido entre a campanha e as fases de desenvolvimento', () => {
   const all = ids([...LEVELS, ...DEV_LEVELS]);
   assert.equal(new Set(all).size, all.length, all.join(', '));
-  assert.deepEqual(ids(DEV_LEVELS), ['pulo', 'bafo', 'modelo', 'canil', 'porcos'], 'só as arenas ficam no catálogo de desenvolvimento');
+  assert.deepEqual(ids(DEV_LEVELS), ['pulo', 'bafo', 'modelo', 'canil', 'porcos', 'empurra'], 'só as arenas ficam no catálogo de desenvolvimento');
 });
 
 test('links: ?level= por posição e por id abrem a fase publicada; outro id fica para o catálogo de desenvolvimento', () => {
@@ -43,7 +43,7 @@ test('links: ?level= por posição e por id abrem a fase publicada; outro id fic
   assert.equal(publishedLevelIndex(LEVELS, null), 0);
   assert.equal(publishedLevelIndex(LEVELS, 'fase1'), 0);
   // ids que não são da campanha: o main.js consulta levels/dev.js
-  for (const id of ['pulo', 'bafo', 'modelo', 'porcos', 'nada']) assert.equal(publishedLevelIndex(LEVELS, id), null, id);
+  for (const id of ['pulo', 'bafo', 'modelo', 'porcos', 'empurra', 'nada']) assert.equal(publishedLevelIndex(LEVELS, id), null, id);
   // fases promovidas não estão mais no catálogo de desenvolvimento (o menu da partida fica sem unlockAll)
   assert.equal(devCatalog(LEVELS, 'fase6'), null);
   assert.equal(devCatalog(LEVELS, 'fase7'), null);
@@ -60,7 +60,7 @@ test('links: o main.js resolve a fase publicada antes de baixar o catálogo de d
 
 test('arenas: entram sozinhas no fim da campanha; protótipos futuros entram juntos e em ordem', () => {
   const published = ids(LEVELS);
-  for (const id of ['pulo', 'bafo', 'modelo', 'porcos']) {
+  for (const id of ['pulo', 'bafo', 'modelo', 'porcos', 'empurra']) {
     const catalog = devCatalog(LEVELS, id);
     assert.deepEqual(ids(catalog.levels), [...published, id], `${id}: arena entra sozinha no fim`);
     assert.equal(catalog.index, published.length);
