@@ -161,7 +161,8 @@ try {
   T = await ready('arvorezinha');
   await key('ShiftLeft', true);
   await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.25; }, 120);
-  const face = { pos: [T.x + T.nx * 0.55 - T.nz * 0.35, 0.95, T.z + T.nz * 0.55 + T.nx * 0.35], look: [T.x + T.nx * 0.22, 0.7, T.z + T.nz * 0.22] };
+  // de lado e um pouco à frente da cara (rente à face do tronco, afastada para o lado), olhando a cabeça dela
+  const face = { pos: [T.x + T.nx * 0.06 - T.nz * 0.55, 0.8, T.z + T.nz * 0.06 + T.nx * 0.55], look: [T.x + T.nx * 0.2, 0.7, T.z + T.nz * 0.2] };
   await shot('40-armando-perto', face);
   await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.45; }, 120);
   await shot('41-rosnadinha-perto', face);
