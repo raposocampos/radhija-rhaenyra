@@ -676,9 +676,10 @@
 
 /* Tela inicial: seleção de fases ------------------------------------------ */
 .rr-levels {
-  /* --per-row cartões por linha (até cinco; mais fases, linhas equilibradas: 7 → 4 + 3), vindo da UI.
-     Largura pela quantidade na linha, larga o bastante para "Lambe-Lambe na Pracinha"; perto do modo
-     compacto (761–800 px) os cartões encolhem para a linha caber em vez de quebrar em 3 + 3 + 1. */
+  /* --per-row cartões por linha (até cinco; mais fases, linhas equilibradas: 9 → 5 + 4), vindo da UI.
+     Largura pela quantidade na linha; com cinco por linha, nomes longos ("Lambe-Lambe na Pracinha") quebram
+     em duas linhas. Perto do modo compacto (761–800 px) os cartões encolhem para a linha caber em vez de
+     quebrar em 3 + 3 + 1. */
   --gap: 12px;
   --card: min(clamp(184px, calc((100vw - 112px) / var(--per-row, 5)), 288px),
     calc((100vw - 33px - (var(--per-row, 5) - 1) * var(--gap)) / var(--per-row, 5)));
@@ -759,7 +760,7 @@
 .rr-lvcard__lock .ico { width: 11px; height: 11px; }
 .rr-lvcard__body { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .rr-lvcard__eyebrow { font: 600 10.5px/1 'Fredoka', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--carrot-lo); }
-.rr-lvcard__name { font: 600 15.5px/1.15 'Fredoka', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rr-lvcard__name { font: 600 15.5px/1.15 'Fredoka', sans-serif; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: break-word; }
 .rr-lvcard__stats { display: flex; gap: 9px; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--choco-a); }
 .rr-lvcard__stat { display: inline-flex; align-items: center; gap: 3px; }
 .rr-lvcard__stat .ico { width: 13px; height: 13px; }

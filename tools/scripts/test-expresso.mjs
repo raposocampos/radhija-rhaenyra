@@ -217,7 +217,7 @@ try {
   check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true,true,true', 'fase 5 concluída libera a 6; a 7, a 8 e a 9 continuam bloqueadas', JSON.stringify(menu.cards));
   check(menu.unchanged, 'abrir o menu não reescreve o save antigo (medalhas e conclusões preservadas)');
   await page.evaluate(() => document.fonts.ready);
-  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth)), 'nomes das nove fases inteiros nos cartões (sem reticências) em 1280 px');
+  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth && name.scrollHeight <= name.clientHeight + 1)), 'nomes das nove fases inteiros nos cartões (no máximo duas linhas, sem cortar) em 1280 px');
   await shot('00-menu-nove-fases.png');
   let note = await lockedNote();
   check(note.clear, 'aviso de fase bloqueada acima das duas linhas, sem cobrir cartões', JSON.stringify(note));

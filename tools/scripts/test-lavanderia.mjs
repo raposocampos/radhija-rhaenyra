@@ -37,7 +37,7 @@ try {
   });
   check(state.levelId === 'fase8' && state.state === 'playing', 'link por id (?level=fase8) abre a fase 8');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
-  check(catalog.ids.endsWith('fase7,fase8') && catalog.level === 7, 'na campanha, depois da fase 7', JSON.stringify(catalog));
+  check(catalog.ids.split(',').indexOf('fase8') === 7 && catalog.level === 7, 'na campanha, depois da fase 7', JSON.stringify(catalog));
   check(lav(state).sock === 'rack' && lav(state).blanket === 'machine', 'meia no varal e mantinha em cima da máquina');
   await shot('01-lavanderia.png');
 
