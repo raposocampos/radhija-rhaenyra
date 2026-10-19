@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (porquinhos da fase 10, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (porquinhos: porteira um de cada vez, PR #40). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (Claude)
+## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
@@ -35,9 +35,15 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   nem fica onde a dog não chega) e a porteira não fecha com uma dog dentro do chiqueiro. Testes novos: o caso que
   travava, a rede de segurança, a dog no chiqueiro e uma bagunça longa com semente (200 s de jogo, ações
   aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
-- Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
-  esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
-  `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
+- Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
+  do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
+- Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`): o teste "presos no
+  cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou um bug
+  real: 3 de 400 vezes dois porcos entravam juntos no vão da porteira, entalavam lado a lado e ninguém saía. Agora a
+  porteira passa um de cada vez (`doorTurn`/`waitDoor` no `follow`; a vez passa quando quem a tem deixa os pontos da
+  porta para trás) e a saída que não deu certo em 12 s tenta de novo. Testes: o caso com a semente 191 (antes
+  travava), 200 sorteios de saída e 100 de volta com o sininho, sem dois porcos no vão ao mesmo tempo.
+  Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 

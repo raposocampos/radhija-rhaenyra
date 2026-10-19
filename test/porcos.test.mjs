@@ -178,39 +178,26 @@ function herd(cfgOver = {}, { effects = null, knockItem = null, carries = null }
   return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.ev === n) };
 }
 
-test('DIAGNÓSTICO TEMPORÁRIO: sementes em que os porcos não saem do cercado', () => {
+/** Roda fn com Math.random trocado por um aleatório com semente. */
+function withSeed(seed, fn) {
   const random = Math.random;
-  const bad = [];
-  const traces = [];
-  const f = (v) => +v.toFixed(2);
+  Math.random = seeded(seed);
   try {
-    for (let seed = 1; seed <= 400; seed++) {
-      Math.random = seeded(seed);
-      const h = herd();
-      h.run(4);
-      const before = h.pigs.pigs.map((P) => ({ i: P.i, x: f(P.x), z: f(P.z), act: P.idleAct, yaw: f(P.yaw) }));
-      h.pigs.setOpen(true);
-      const trace = [];
-      for (let k = 0; k < 9.2 * 60; k++) {
-        h.run(1 / 60);
-        if (k % 20 === 0) {
-          trace.push({ t: f(k / 60), g: f(h.pigs.gate.t), p: h.pigs.pigs.map((P) => `${P.i}:${P.state}@${f(P.x)},${f(P.z)} y${f(P.yaw)} s${f(P.stuckT)} r${P.route.map((q) => `${f(q.x)},${f(q.z)}${q.leaf ? 'L' : ''}`).join('>')}`) });
-        }
-      }
-      const inf = h.pigs.info();
-      if (inf.inPen > 0 || inf.pigs.some((p) => p.state === 'exit')) {
-        bad.push({ seed, inPen: inf.inPen, states: inf.pigs.map((p) => p.state) });
-        if (traces.length < 2) traces.push({ seed, before, trace });
-      }
-    }
+    return fn();
   } finally {
     Math.random = random;
   }
-  const P = herd().P;
-  assert.fail(JSON.stringify({ bad: bad.length, seeds: bad.slice(0, 30), door: P.door, gate: P.gate, pen: P.pen, traces }));
-});
+}
 
-test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => {
+/** Quantos porcos estão no vão da porteira (a menos de 0,3 m do meio dela) agora. */
+function inDoorway(h) {
+  const G = h.P.gate;
+  const mx = (G.hinge.x + G.latchPost.x) / 2, mz = (G.hinge.z + G.latchPost.z) / 2;
+  return h.pigs.pigs.filter((P) => Math.hypot(P.x - mx, P.z - mz) < 0.3).length;
+}
+
+test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => withSeed(191, () => {
+  // semente 191: antes, dois porcos entravam juntos no vão, entalavam lado a lado e ninguém saía
   const h = herd();
   h.run(4);
   assert.equal(h.pigs.info().inPen, 3, 'porteira fechada: todos no chiqueiro');
@@ -227,6 +214,45 @@ test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás d
     const a = h.pigs.cfg.area;
     assert.ok(P.x >= a.minX + P.r - 1e-6 && P.x <= a.maxX - P.r + 1e-6 && P.z >= a.minZ + P.r - 1e-6 && P.z <= a.maxZ - P.r + 1e-6, 'dentro da área');
   }
+}));
+
+test('rebanho: a porteira é um de cada vez: em 200 sorteios os três sempre saem, sem dois no vão ao mesmo tempo', () => {
+  const bad = [];
+  for (let seed = 1; seed <= 200; seed++) {
+    withSeed(seed, () => {
+      const h = herd();
+      h.run(4);
+      h.pigs.setOpen(true);
+      let most = 0;
+      for (let k = 0; k < 9.2 * 60; k++) {
+        h.run(1 / 60);
+        most = Math.max(most, inDoorway(h));
+      }
+      const inf = h.pigs.info();
+      if (inf.inPen > 0 || most > 1 || inf.pigs.some((p) => p.state === 'exit')) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state) });
+    });
+  }
+  assert.deepEqual(bad, []);
+});
+
+test('rebanho: o sininho em 100 sorteios: todos voltam pela porteira, um de cada vez, e ela fecha', () => {
+  const bad = [];
+  for (let seed = 1; seed <= 100; seed++) {
+    withSeed(seed, () => {
+      const h = herd();
+      h.pigs.setOpen(true);
+      h.run(10);
+      h.pigs.recall();
+      let most = 0;
+      for (let k = 0; k < 18 * 60; k++) {
+        h.run(1 / 60);
+        most = Math.max(most, inDoorway(h));
+      }
+      const inf = h.pigs.info();
+      if (inf.inPen < 3 || most > 1 || h.events('pig:home').length !== 1) bad.push({ seed, inPen: inf.inPen, most, home: h.events('pig:home').length, states: inf.pigs.map((p) => p.state) });
+    });
+  }
+  assert.deepEqual(bad, []);
 });
 
 test('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão esbarrões de leve', () => {
