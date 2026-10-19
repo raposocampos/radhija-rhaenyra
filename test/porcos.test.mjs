@@ -189,6 +189,13 @@ function withSeed(seed, fn) {
   }
 }
 
+/** Foto curta dos porcos (para a mensagem de um teste que falhou): estado, posição, vez na porteira e rota. */
+function snap(h) {
+  const f = (v) => +v.toFixed(2);
+  return h.pigs.pigs.map((P) => `${P.i}:${P.state}@${f(P.x)},${f(P.z)} t${f(P.t)} s${f(P.stuckT)} ${P.idleAct}`
+    + ` r${P.route.map((q) => `${f(q.x)},${f(q.z)}${q.door ? 'D' : q.leaf ? 'L' : ''}`).join('>')}`).join(' | ');
+}
+
 /** Quantos porcos estão no vão da porteira (a menos de 0,3 m do meio dela) agora. */
 function inDoorway(h) {
   const G = h.P.gate;
@@ -224,12 +231,14 @@ test('rebanho: a porteira é um de cada vez: em 200 sorteios os três sempre sae
       h.run(4);
       h.pigs.setOpen(true);
       let most = 0;
+      const trace = [];
       for (let k = 0; k < 9.2 * 60; k++) {
         h.run(1 / 60);
         most = Math.max(most, inDoorway(h));
+        if (k % 45 === 0) trace.push(`${(k / 60).toFixed(1)}s ${snap(h)}`);
       }
       const inf = h.pigs.info();
-      if (inf.inPen > 0 || most > 1 || inf.pigs.some((p) => p.state === 'exit')) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state) });
+      if (inf.inPen > 0 || most > 1 || inf.pigs.some((p) => p.state === 'exit')) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state), trace: bad.length ? undefined : trace });
     });
   }
   assert.deepEqual(bad, []);
@@ -244,12 +253,14 @@ test('rebanho: o sininho em 100 sorteios: todos voltam pela porteira, um de cada
       h.run(10);
       h.pigs.recall();
       let most = 0;
+      const trace = [];
       for (let k = 0; k < 18 * 60; k++) {
         h.run(1 / 60);
         most = Math.max(most, inDoorway(h));
+        if (k % 60 === 0) trace.push(`${(k / 60).toFixed(0)}s ${snap(h)}`);
       }
       const inf = h.pigs.info();
-      if (inf.inPen < 3 || most > 1 || h.events('pig:home').length !== 1) bad.push({ seed, inPen: inf.inPen, most, home: h.events('pig:home').length, states: inf.pigs.map((p) => p.state) });
+      if (inf.inPen < 3 || most > 1 || h.events('pig:home').length !== 1) bad.push({ seed, inPen: inf.inPen, most, home: h.events('pig:home').length, states: inf.pigs.map((p) => p.state), trace: bad.length > 1 ? undefined : trace });
     });
   }
   assert.deepEqual(bad, []);
