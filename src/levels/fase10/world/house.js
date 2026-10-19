@@ -543,7 +543,7 @@ export function buildHouse(root, layout) {
     arm.position.set(s * (SOFA.hx - 0.08), SOFA.legs + 0.16, 0);
     sofa.add(arm);
   }
-  for (const [x, c] of [[-0.45, '#f6e3a8'], [0.42, '#a8cfc0']]) {
+  for (const [x, c] of /** @type {[number, string][]} */ ([[-0.45, '#f6e3a8'], [0.42, '#a8cfc0']])) {
     const pil = new THREE.Mesh(rbox(0.3, 0.28, 0.1, 0.05), stdMat(c, { roughness: 0.9 }));
     pil.position.set(x, SOFA.legs + 0.3, SOFA.hz - 0.2);
     pil.rotation.set(0.25, x * 0.3, x * 0.2);
@@ -630,7 +630,7 @@ export function buildHouse(root, layout) {
   }
   // em cima: porta-retratos das duas (pequenos), um vaso de lavanda e um balãozinho amarrado
   const frameG = rbox(0.14, 0.18, 0.02, 0.006);
-  for (const [x, col] of [[-0.6, '#efcf9e'], [-0.42, '#f6f1e8']]) {
+  for (const [x, col] of /** @type {[number, string][]} */ ([[-0.6, '#efcf9e'], [-0.42, '#f6f1e8']])) {
     const fr = new THREE.Mesh(frameG, stdMat('#f6f1e6', { roughness: 0.5 }));
     fr.position.set(x, SIDEBOARD.h + 0.09, -0.05);
     fr.rotation.set(-0.15, 0.2, 0);
@@ -795,7 +795,7 @@ export function buildHouse(root, layout) {
     g.fillStyle = '#fffaf0'; g.font = 'bold 20px "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(name, w / 2, h / 2 + 1);
   }, { repeat: false });
-  for (const [x, z, col, name, rr] of [[-11.45, -3.75, '#e8a0a8', 'Radhija', 0.3], [-11.35, -4.55, '#8fc0d8', 'Rhaenyra', 0.36]]) {
+  for (const [x, z, col, name, rr] of /** @type {[number, number, string, string, number][]} */ ([[-11.45, -3.75, '#e8a0a8', 'Radhija', 0.3], [-11.35, -4.55, '#8fc0d8', 'Rhaenyra', 0.36]])) {
     const bed = new THREE.Group();
     const rim2 = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.07, 10, 28).rotateX(Math.PI / 2), stdMat(col, { roughness: 0.95 }));
     rim2.position.y = 0.07;
@@ -944,7 +944,7 @@ export function buildHouse(root, layout) {
   drawing.position.set(0.04, 0.85, FRIDGE.hz + 0.004);
   drawing.rotation.z = 0.06;
   fridge.add(drawing);
-  for (const [x, y, c] of [[0.13, 0.98, '#e8554a'], [-0.06, 0.74, '#f2c14e'], [0.16, 1.5, '#7cc4e8'], [-0.1, 1.62, '#9bd57a']]) {
+  for (const [x, y, c] of /** @type {[number, number, string][]} */ ([[0.13, 0.98, '#e8554a'], [-0.06, 0.74, '#f2c14e'], [0.16, 1.5, '#7cc4e8'], [-0.1, 1.62, '#9bd57a']])) {
     const mg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.012, 12).rotateX(Math.PI / 2), stdMat(c, { roughness: 0.4 }));
     mg.position.set(x, y, FRIDGE.hz + 0.008);
     fridge.add(mg);
@@ -1031,7 +1031,7 @@ export function buildHouse(root, layout) {
     g.fillStyle = '#fffaf0'; g.font = 'bold 18px "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(txt, w / 2, h / 2 + 1);
   }, { repeat: false });
-  for (const [dx, col, name] of [[-0.15, '#e8a0a8', 'RADHIJA'], [0.15, '#8fc0d8', 'RHAENYRA']]) {
+  for (const [dx, col, name] of /** @type {[number, string, string][]} */ ([[-0.15, '#e8a0a8', 'RADHIJA'], [0.15, '#8fc0d8', 'RHAENYRA']])) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.085, 0.06, 20, 1, true), bowlMat(col));
     b.material.side = THREE.DoubleSide;
     b.position.set(DOG_BOWLS.x + dx, FLOOR_Y + 0.04, DOG_BOWLS.z);

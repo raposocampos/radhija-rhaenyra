@@ -434,7 +434,7 @@ export function buildPorch(root, layout) {
     leg.position.set(sx * (PORCH_BENCH.hx - 0.06), PORCH_BENCH.h / 2, 0);
     bench.add(leg);
   }
-  for (const [x, c] of [[-0.3, '#9bd57a'], [0.22, '#f6c453']]) {
+  for (const [x, c] of /** @type {[number, string][]} */ ([[-0.3, '#9bd57a'], [0.22, '#f6c453']])) {
     const pil = new THREE.Mesh(rbox(0.3, 0.26, 0.1, 0.05), stdMat(c, { roughness: 1 }));
     pil.position.set(x, PORCH_BENCH.h + 0.17, -PORCH_BENCH.hz + 0.08);
     pil.rotation.set(-0.25, x * 0.4, x * 0.3);

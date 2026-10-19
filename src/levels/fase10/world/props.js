@@ -99,6 +99,7 @@ export function createNumberCandle() {
   const sh = new THREE.Shape();
   // contorno do 3 (duas barrigas abertas à esquerda), em metros
   const S = 0.11;
+  /** @type {(x: number, y: number) => [number, number]} */
   const P = (x, y) => [x * S, y * S];
   sh.moveTo(...P(-0.42, 0.62));
   sh.bezierCurveTo(...P(-0.3, 1.02), ...P(0.5, 1.02), ...P(0.5, 0.6));

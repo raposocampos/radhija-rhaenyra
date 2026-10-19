@@ -792,7 +792,9 @@ export function createPuzzle(ctx) {
     if (k === 'radhija' && active.hits?.some((h) => typeof h.id === 'string' && h.id.startsWith('horta-') && h.id !== 'horta-vao')) hints.cond('fenceRad', 3.4, 10);
     if (k === 'rhaenyra' && active.hits?.some((h) => h.id === 'horta-vao')) hints.cond('gapRh', 3.4, 10);
     // as baforadas de cheiro subindo pelo cano de brinquedo
-    props.tube?.setPuffs(scent.clouds.filter((cl) => cl.state === 'duct' && cl.duct === tube).map((cl) => cl.ductT / cl.duct.travel));
+    /** @type {any[]} */
+    const clouds = scent.clouds;
+    props.tube?.setPuffs(clouds.filter((cl) => cl.state === 'duct' && cl.duct === tube).map((cl) => cl.ductT / cl.duct.travel));
     // o balde subindo e o deque: a câmera recua e olha mais alto (quem puxa e quem sobe ficam à vista)
     cam?.setZone?.('balde', (S.riding && S.bucketY > 0.05) || !!S.deck);
 

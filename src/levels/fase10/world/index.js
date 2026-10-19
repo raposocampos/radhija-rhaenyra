@@ -50,7 +50,7 @@ export function buildWorld({ root, layout }) {
       house.update(dt, t);
       porch.update(dt, t);
       yard.update(dt, t);
-      fences.update(dt, t);
+      fences.update(dt);
       treehouse.update(dt, t);
       garden.update(dt, t);
       P.props.update(dt, t);

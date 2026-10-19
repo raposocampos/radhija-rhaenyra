@@ -991,6 +991,7 @@ declare global {
     __f5Timings?: any;
     __f6Timings?: any;
     __f7Timings?: any;
+    __f10Timings?: any;
     __envTimings?: any;
     webkitAudioContext?: typeof AudioContext;
   }
