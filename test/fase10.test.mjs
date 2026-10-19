@@ -863,6 +863,38 @@ test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da bo
   assert.deepEqual([q(h).pigs.inPen, q(h).pigs.open, q(h).shed.sty], [3, false, false]);
 });
 
+test('fase 10: com algo na boca a Radhija não sobe a rampa nem pega a vela (a boca já está ocupada)', async () => {
+  const h = await game('botao=1');
+  h.run(0.3);
+  puz(h).debugSet('gate');
+  puz(h).debugSet('shed');
+  puz(h).debugSet('water');
+  puz(h).debugSet('power');
+  assert.ok(h.run(5, { until: (i) => i.quintal.boat.docked }));
+  as(h, 'radhija');
+  put(h, 'radhija', L.BOAT.dock.x + 0.65, L.BOAT.dock.z, -Math.PI / 2);
+  h.tap('KeyE');
+  assert.equal(h.info().hat.holder, 'radhija', 'com o chapéu na boca');
+  h.run(1.0);
+  put(h, 'radhija', 9.85, L.RAMP.z, Math.PI / 2);
+  h.clearLog();
+  h.tap('ShiftLeft');
+  h.run(1.5);
+  assert.equal(q(h).ramp, null, 'nem sobe a rampa');
+  assert.equal(q(h).place.candle, 'home', 'a vela continua lá em cima');
+  assert.equal(h.info().candle.holder, null);
+  assert.equal(h.info().hat.holder, 'radhija', 'o chapéu continua na boca');
+  assert.ok(hints(h).includes(TEXT.hint.mouthFull));
+  // larga o chapéu: aí sobe e pega a vela
+  h.tap('KeyE');
+  h.run(0.3);
+  assert.equal(h.info().hat.holder, null);
+  put(h, 'radhija', 9.85, L.RAMP.z, Math.PI / 2);
+  h.run(1.0);
+  h.tap('ShiftLeft');
+  assert.ok(h.run(4, { until: (i) => i.candle.holder === 'radhija' && !i.quintal.ramp }), 'com a boca livre, pegou a vela');
+});
+
 test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', async () => {
   const h = await game();
   h.run(0.3);

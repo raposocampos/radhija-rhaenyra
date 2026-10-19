@@ -435,7 +435,9 @@ export function createPuzzle(ctx) {
   }
 
   // ------------------------------------------------------------------ itens e bolo
+  /** Põe o enfeite na boca de c; com a boca ocupada (outro enfeite, legume, corda ou alça), recusa. → true se pegou. */
   function take(thing, c) {
+    if (!mouthFree(c.name)) { hints.now('mouthFull', 2.6, 2); return false; }
     if (thing === 'hat') props.hat.setOnBoat(false);
     items[thing].attach(c.name);
     props[thing].setHighlight(false);
@@ -708,7 +710,7 @@ export function createPuzzle(ctx) {
       pose(sq, c, sq.x0 + (R.x - sq.x0) * k, top, sq.z0 + (R.z - sq.z0) * k, sq.yaw0 + wrap(0 - sq.yaw0) * k, 0.4, u > 0.25 ? 'tug' : 'sniff');
       if (!sq.grabbed && u >= 0.55) {
         sq.grabbed = true;
-        if (S.place.ribbon === 'home') take('ribbon', c);
+        if (S.place.ribbon === 'home' && mouthFree(c.name)) take('ribbon', c);
       }
       if (u >= 1) {
         S.deck = null;
@@ -814,6 +816,8 @@ export function createPuzzle(ctx) {
       if (pushing) hints.cond('rampRh', 3, 8);
       return;
     }
+    // com algo na boca, a vela não cabe: ela nem sobe
+    if (dashing && !mouthFree(c.name)) { hints.now('mouthFull', 2.8, 2); S.slipCd = 0.6; return; }
     if (dashing && mud.canDash('radhija')) {
       S.ramp = { phase: 'up', t: 0, x0: c.x, z0: c.z, yaw0: c.yaw, grabbed: false };
       emit('slide:climb', { name: c.name, x: c.x, z: RAMP.z });
@@ -847,7 +851,7 @@ export function createPuzzle(ctx) {
       pose(sq, c, topX, RAMP.top, RAMP.z, EAST, 0, 'sniff');
       if (!sq.grabbed && u >= 0.5) {
         sq.grabbed = true;
-        if (S.place.candle === 'home') take('candle', c);
+        if (S.place.candle === 'home' && mouthFree(c.name)) take('candle', c);
       }
       if (u >= 1) Object.assign(sq, { phase: 'turn', t: 0 });
     } else if (sq.phase === 'turn') {
@@ -1028,7 +1032,7 @@ export function createPuzzle(ctx) {
       pose(cl, c, last.x, last.y, last.z, NORTH, 0, 'sniff');
       if (!cl.grabbed && u >= 0.5) {
         cl.grabbed = true;
-        if (S.place.cookie === 'home') take('cookie', c);
+        if (S.place.cookie === 'home' && mouthFree(c.name)) take('cookie', c);
       }
       if (u >= 1) Object.assign(cl, { phase: 'turn', t: 0 });
     } else if (cl.phase === 'turn') {
