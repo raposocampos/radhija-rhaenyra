@@ -39,9 +39,11 @@ async function boot() {
 
   const engine = createEngine(document.getElementById('app'), { params });
   mark('engine');
+  // ?dogs=novo: as duas dogs com o modelo novo (src/dogs/v2/, em teste; baixado só neste caso)
+  const makeDog = params.get('dogs') === 'novo' ? (await import('./dogs/v2/dog.js')).createDogV2 : createDog;
   const dogs = {
-    radhija: createDog('radhija'),
-    rhaenyra: createDog('rhaenyra'),
+    radhija: makeDog('radhija'),
+    rhaenyra: makeDog('rhaenyra'),
   };
   mark('dogs');
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);

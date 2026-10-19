@@ -1,7 +1,30 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-19, Claude** (modelos novos das dogs, etapa 1, em andamento). Ler primeiro
+[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
+
+- Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
+  sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +
+  proporções pelas fotos + bancada (atual × novo); **2** andar novo (passo, trote, galope, pata que rola, peso, giro
+  andando, pata que acha o chão); **3** todas as poses e extras num sistema de camadas (mesma API `update(dt, anim)`);
+  **4** colisão do corpo (dois círculos alinhados ao corpo e a cabeça que desvia, sem mudar os vãos dos puzzles);
+  **5** troca nas 10 fases, E2E `todas`, capturas e cascas de pelo por perfil (só celular; o PC não muda).
+- Referências PRIVADAS (nunca no Git, nas prévias nem em artefatos públicos): `referencias/fotos/2026-10-19/`
+  (8 fotos e 3 vídeos; quadros com `python -I` + OpenCV). A Radhija é a menor, creme-dourada; a Rhaenyra, a maior,
+  branca. Vídeo 3: andando, trotando, correndo e em pé no piso; a Rhaenyra empurra as pessoas em pé nas patas de trás
+  (a mecânica do empurrão em pé está numa sessão própria, "Empurrão em pé da Rhaenyra").
+- Etapa 1 (branch `claude/modelos-dogs-7b2d26`, worktree próprio): `src/dogs/v2/` (`skeleton.js` 38 ossos,
+  `design.js`, `retarget.js` — o esqueleto atual, invisível, guia o novo —, `contacts.js` — nada passa do chão —,
+  `materials.js`, `dog.js` com a API de `createDog`); `dogModel.js` ganhou `buildGeometryFromDesign` (mesmo resultado
+  para o modelo atual); `?dogs=novo` no `main.js`; fase de desenvolvimento `?level=canil` (`src/levels/_canil/`,
+  vitrine + painel); sandbox `dogs.html?model=both`; `test/dogV2.test.mjs`; suíte E2E `canil` e
+  `capture-modelos.mjs`. Docs: ARQUITETURA §2, §7 e §10, README (protótipos).
+- Coordenação: não editar `game.js`, `input.js` nem `dogAnimation.js` até o PR #35 (Lambe-Lambe nas duas) entrar no
+  main; a etapa 3 porta a pose nova do Lambe-Lambe e a do empurrão em pé.
+- Próximo passo: CI e E2E `canil` no head do PR, revisar `shots/modelos/` (artefato `capturas-canil`), ajustar as
+  proporções se preciso, entregar a prévia (`?level=canil&play` e `?level=1&play&dogs=novo`) e esperar a aprovação.
 
 ## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 

@@ -253,8 +253,9 @@ function sstep(a, b, x) {
   return t * t * (3 - 2 * t);
 }
 
-// atributos por vértice: skin (4 ossos), cor, comprimento do pelo
-function vertexAttributes(mesh, groups, design, P, sdfFn) {
+// atributos por vértice: skin (4 ossos), cor, comprimento do pelo. boneIndex: nome do osso → índice (o modelo novo,
+// src/dogs/v2/, passa o próprio esqueleto).
+function vertexAttributes(mesh, groups, design, P, sdfFn, boneIndex = BONE_INDEX) {
   const prims = groups.flatMap((g) => g.prims);
   const nv = mesh.positions.length / 3;
   const skinIndex = new Uint16Array(nv * 4);
@@ -271,7 +272,7 @@ function vertexAttributes(mesh, groups, design, P, sdfFn) {
   const furOf = { head: P.fur.head, muzzle: P.fur.muzzle, ear: P.fur.ear, tail: P.fur.tail, boot: P.fur.boot, mane: P.fur.mane };
   const { eyeL, eyeR, nose, noseR, mouth } = design.face;
   const eyeRgt = [-eyeL[0], eyeL[1], eyeL[2]];
-  const boneW = new Float32Array(BONE_NAMES.length);
+  const boneW = new Float32Array(Object.keys(boneIndex).length);
   const d = new Float32Array(prims.length);
 
   for (let v = 0; v < nv; v++) {
@@ -285,7 +286,7 @@ function vertexAttributes(mesh, groups, design, P, sdfFn) {
       const p = prims[i];
       // tw: transição mais macia (garupa ↔ coxa) — evita o vinco quando a perna dobra
       const w = Math.exp(-(d[i] - dmin) / (tau * (p.tw || 1)));
-      boneW[BONE_INDEX[p.bone]] += w;
+      boneW[boneIndex[p.bone]] += w;
       const wc = Math.exp(-(d[i] - dmin) / tauC);
       const rc = regColor[p.reg] || C.body;
       col[0] += rc[0] * wc; col[1] += rc[1] * wc; col[2] += rc[2] * wc;
@@ -320,7 +321,7 @@ function vertexAttributes(mesh, groups, design, P, sdfFn) {
       col = mix3(col, C.belly, sstep(-0.2, -0.8, ny) * 0.8);
     }
     if (reg === 'ear') {
-      const t = sstep(0.2, -0.6, (y - design.bones.earL1[1]) / (0.06 * s));
+      const t = sstep(0.2, -0.6, (y - (design.earMidY ?? design.bones.earL1[1])) / (0.06 * s));
       col = mix3(col, C.earTip, t * 0.8);
     }
     // manchinha de lágrima sob os olhos
@@ -422,9 +423,18 @@ const cache = new Map();
 
 export function buildDogGeometry(kind, { shells = 10 } = {}) {
   if (cache.has(kind)) return cache.get(kind);
-  const t0 = performance.now();
   const P = DOG_PARAMS[kind];
-  const design = buildDesign(P);
+  const result = buildGeometryFromDesign(buildDesign(P), P, { shells });
+  cache.set(kind, result);
+  return result;
+}
+
+/**
+ * Malhas de um desenho (corpo, orelhas e cascas de pelo) com os pesos do esqueleto `boneIndex` (nome → índice).
+ * Usado pelo modelo atual (buildDogGeometry) e pelo modelo novo (src/dogs/v2/).
+ */
+export function buildGeometryFromDesign(design, P, { shells = 10, boneIndex = BONE_INDEX } = {}) {
+  const t0 = performance.now();
   const s = P.s;
 
   const bodySDF = compileSDF(design.bodyGroups);
@@ -435,15 +445,15 @@ export function buildDogGeometry(kind, { shells = 10 } = {}) {
   const cell = 0.0098 * s;
   const body = surfaceNets(bodySDF, bb, cell, { smoothIters: 2, project: 1 });
   const ears = surfaceNets(earSDF, eb, cell * 0.85, { smoothIters: 2, project: 1 });
-  const bodyA = vertexAttributes(body, design.bodyGroups, design, P, bodySDF);
-  const earA = vertexAttributes(ears, design.earGroups, design, P, earSDF);
+  const bodyA = vertexAttributes(body, design.bodyGroups, design, P, bodySDF, boneIndex);
+  const earA = vertexAttributes(ears, design.earGroups, design, P, earSDF, boneIndex);
 
   // malha grossa para as cascas de pelo
   const cCell = cell * 1.9;
   const bodyC = surfaceNets(bodySDF, bb, cCell, { smoothIters: 1, project: 1 });
   const earC = surfaceNets(earSDF, eb, cell * 1.35, { smoothIters: 1, project: 1 });
-  const bodyCA = vertexAttributes(bodyC, design.bodyGroups, design, P, bodySDF);
-  const earCA = vertexAttributes(earC, design.earGroups, design, P, earSDF);
+  const bodyCA = vertexAttributes(bodyC, design.bodyGroups, design, P, bodySDF, boneIndex);
+  const earCA = vertexAttributes(earC, design.earGroups, design, P, earSDF, boneIndex);
 
   const result = {
     P,
@@ -460,7 +470,6 @@ export function buildDogGeometry(kind, { shells = 10 } = {}) {
     ears: ears.indices.length / 3,
     fur: result.furGeo.index.count / 3,
   };
-  cache.set(kind, result);
   return result;
 }
 
