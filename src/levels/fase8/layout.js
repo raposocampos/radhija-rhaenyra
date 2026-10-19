@@ -118,7 +118,8 @@ export const COLLECTIBLE_PICKUP_R = 0.42;
 /** @type {import('../../types').Goal} */
 export const GOAL = {
   x: DOG_BED.x, z: DOG_BED.z, r: 0.9,
-  celebrate: { radhija: { x: 3.95, z: 1.5 }, rhaenyra: { x: 4.6, z: 2.0 } },
+  celebrate: { radhija: { x: 3.95, z: 1.5 }, rhaenyra: { x: 4.6, z: 2.0 } }, // dentro da caminha
+  celebrateRim: { x: DOG_BED.x, z: DOG_BED.z, r: DOG_BED.r - 0.1, tube: 0.11 }, // a borda (world/props.js buildDogBed)
   entryPoints: [{ x: 4.95, z: -0.6 }, { x: 2.4, z: 2.55 }],
 };
 
