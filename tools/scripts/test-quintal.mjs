@@ -55,6 +55,15 @@ try {
     };
   });
   check(state.levelId === 'fase10' && state.state === 'playing', 'link por id (?level=fase10) abre a fase 10');
+  // ritmo do jogo logo no começo (o cenário é o maior da demo): muito lento, reprova já, com o número no log
+  {
+    const a = await info();
+    await H.sleep(6000);
+    const b = await info();
+    const pace = (b.simSec - a.simSec) / 6;
+    console.log(`  ritmo inicial do jogo: ${pace.toFixed(2)}× o relógio`);
+    if (pace < 0.12) throw new Error(`ritmo do jogo muito baixo (${pace.toFixed(2)}×): o cenário está pesado demais para o CI`);
+  }
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
   check(catalog.ids.endsWith('fase9,fase10') && catalog.level === 9, 'na campanha, a última, depois da fase 9', JSON.stringify(catalog));
   check(qt(state).stage === 'start' && qt(state).crateOnHose && !qt(state).power, 'o bolo vazio, o caixote em cima da mangueira, sem energia');

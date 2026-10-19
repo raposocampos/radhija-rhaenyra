@@ -271,7 +271,7 @@ function tuftGeometry(blades, seed) {
  * @param {{ name?: string, tall?: boolean, layout?: import('../../../types').LevelLayout }} [opts]
  */
 export function tuftMesh(list, { name = 'grama', tall = false, layout = null } = {}) {
-  const geo = tuftGeometry(tall ? 9 : 6, tall ? 5 : 3);
+  const geo = tuftGeometry(tall ? 8 : 5, tall ? 5 : 3);
   const im = new THREE.InstancedMesh(geo, grassMat(), Math.max(1, list.length));
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3();
   const c = new THREE.Color();
@@ -297,7 +297,10 @@ export function tuftMesh(list, { name = 'grama', tall = false, layout = null } =
   return im;
 }
 
-/** Gramado denso: tufos baixos por toda parte, altos junto às cercas, aos troncos e às bordas. */
+/**
+ * Gramado: tufos baixos por toda parte, altos junto às cercas, aos troncos e às bordas. O quintal é grande (24 × 10 m):
+ * a malha é mais aberta que a da pracinha e só cobre a área de jogo com uma margem curta, para caber no celular.
+ */
 function grassTufts(root, layout) {
   const B = layout.WORLD.bounds;
   const { POOL, HOSE, BACK_FENCE, HORTA } = layout;
@@ -317,9 +320,9 @@ function grassTufts(root, layout) {
   };
   const r = rng(101);
   const low = [], tall = [];
-  const step = 0.13;
-  for (let z = B.minZ - 1.4; z < B.maxZ + 1.6; z += step) {
-    for (let x = B.minX - 1.0; x < B.maxX + 1.2; x += step) {
+  const step = 0.155;
+  for (let z = B.minZ - 0.3; z < B.maxZ + 1.0; z += step) {
+    for (let x = B.minX - 0.4; x < B.maxX + 0.4; x += step) {
       const px = x + (r() - 0.5) * step * 1.3, pz = z + (r() - 0.5) * step * 1.3;
       if (inside(layout, px, pz)) continue;
       if (Math.hypot(px - POOL.x, pz - POOL.z) < POOL.r + 0.12) continue;

@@ -516,13 +516,17 @@ export function buildPorch(root, layout) {
     gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.3)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
   }, { repeat: false });
-  const halos = bulbPts.map((b, i) => {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: bulbCols[i % bulbCols.length], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-    sp.position.copy(b.p);
-    sp.scale.setScalar(0.22);
-    group.add(sp);
-    return sp;
-  });
+  // as auréolas: um só desenho (pontos aditivos; a cor de cada um é o brilho, preto = apagado)
+  const haloGeo = new THREE.BufferGeometry().setFromPoints(bulbPts.map((b) => b.p));
+  const haloCol = new Float32Array(bulbPts.length * 3);
+  haloGeo.setAttribute('color', new THREE.BufferAttribute(haloCol, 3));
+  const halos = new THREE.Points(haloGeo, new THREE.PointsMaterial({
+    map: haloTex, size: 0.24, sizeAttenuation: true, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  halos.frustumCulled = false;
+  halos.renderOrder = 4;
+  group.add(halos);
+  const haloTint = bulbPts.map((_, i) => new THREE.Color(bulbCols[i % bulbCols.length]));
 
   const st = { on: false, onT: -1, hl: false, hlK: 0, lit: false, litT: 0, rejectT: 0 };
   const total = dist;
@@ -607,9 +611,13 @@ export function buildPorch(root, layout) {
         cc.set(k > 0 ? bulbCols[i % bulbCols.length] : '#8a8478');
         if (k > 0) cc.multiplyScalar(1 + k * 1.6);
         bulbs.setColorAt(i, cc);
-        halos[i].material.opacity = Math.min(1, k * 0.75);
+        const a = Math.min(1, k * 0.75);
+        haloCol[i * 3] = haloTint[i].r * a;
+        haloCol[i * 3 + 1] = haloTint[i].g * a;
+        haloCol[i * 3 + 2] = haloTint[i].b * a;
       });
       bulbs.instanceColor.needsUpdate = true;
+      haloGeo.attributes.color.needsUpdate = true;
       paperMat.emissiveIntensity += ((st.on ? 0.9 : 0.05) - paperMat.emissiveIntensity) * (1 - Math.exp(-dt * 3));
       // destaque do bolo
       st.hlK += ((st.hl ? 1 : 0) - st.hlK) * (1 - Math.exp(-dt * 5));
