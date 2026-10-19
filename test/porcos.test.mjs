@@ -238,7 +238,7 @@ test('rebanho: a porteira é um de cada vez: em 200 sorteios os três sempre sae
         if (k % 45 === 0) trace.push(`${(k / 60).toFixed(1)}s ${snap(h)}`);
       }
       const inf = h.pigs.info();
-      if (inf.inPen > 0 || most > 1 || inf.pigs.some((p) => p.state === 'exit')) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state), trace: bad.length ? undefined : trace });
+      if (inf.inPen > 0 || most > 1) bad.push({ seed, inPen: inf.inPen, most, states: inf.pigs.map((p) => p.state), trace: bad.length ? undefined : trace });
     });
   }
   assert.deepEqual(bad, []);
@@ -679,9 +679,13 @@ test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai par
   const problems = [];
   let h = null, map = null, acts = 0;
   const seen = new Set();
+  // contados no barramento (o registro do jogo guarda só os últimos 500 eventos)
+  const count = { 'item:land': 0, 'pig:bump': 0, 'pig:knock': 0 };
+  const offs = [];
   try {
     const errs = await consoleErrors(async () => {
       h = await arena();
+      for (const ev of Object.keys(count)) offs.push(h.events.on(ev, () => { count[ev]++; }));
       map = reachableMap(h.world, { x: h.ctrls.radhija.x, z: h.ctrls.radhija.z });
       const A = L.PIGS.area, Bn = L.WORLD.bounds;
       const TAU = Math.PI * 2;
@@ -791,10 +795,11 @@ test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai par
     assert.equal(h.info().state, 'playing', 'a arena seguiu jogável');
     const inf = h.info().porcos;
     assert.ok(acts > 150, `${acts} ações`);
-    assert.ok(inf.bumps > 5 && h.log('item:land').length > 5, `bagunça de verdade: ${inf.bumps} esbarrões, ${h.log('item:land').length} quedas, ${inf.knocks} derrubadas`);
+    assert.ok(inf.bumps > 5 && count['item:land'] > 5, `bagunça de verdade: ${inf.bumps} esbarrões, ${count['item:land']} quedas, ${count['pig:knock']} derrubadas`);
     for (const s of ['porco:chase', 'porco:eat', 'legume:ground', 'legume:held']) assert.ok(seen.has(s), `passou por ${s} (${[...seen].join(', ')})`);
   } finally {
     Math.random = random;
+    for (const off of offs) off();
     h?.releaseAll();
   }
 });

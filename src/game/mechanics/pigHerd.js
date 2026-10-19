@@ -339,13 +339,17 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const ux = (tip.x - h.x) / L, uz = (tip.z - h.z) / L;
     const ex = tip.x + ux * (r + 0.05), ez = tip.z + uz * (r + 0.05);
     const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+    const crosses = (bx, bz) => o(h.x, h.z, ex, ez, P.x, P.z) * o(h.x, h.z, ex, ez, bx, bz) < 0
+      && o(P.x, P.z, bx, bz, h.x, h.z) * o(P.x, P.z, bx, bz, ex, ez) < 0;
+    if (!crosses(p.x, p.z)) return null;
     const sP = o(h.x, h.z, ex, ez, P.x, P.z), sp = o(h.x, h.z, ex, ez, p.x, p.z);
-    if (!(sP * sp < 0 && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, ex, ez) < 0)) return null;
     // os dois pontos bem separados (0,64 m): parado entre dois pontos próximos, o porco "chegava" nos dois sem andar e
     // ficava trocando de um para o outro sem sair do lugar
     const far = r + 0.22;
     const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.32, z: tip.z + uz * far + ux * side * 0.32, leaf: true });
-    return [at(Math.sign(sP)), at(Math.sign(sp))];
+    const near = at(Math.sign(sP)), other = at(Math.sign(sp));
+    // já atrás da ponta (dá para ir direto ao ponto do outro lado sem cruzar a folha): não volta ao do seu lado
+    return crosses(other.x, other.z) ? [near, other] : [other];
   }
 
   // A porteira é estreita: um porco de cada vez (dois lado a lado entalavam no vão e ficavam se empurrando sem sair).
@@ -409,6 +413,22 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (S.doorPig !== P.i && wantsDoor(P)) {
       waitDoor(P, dt, ctrls);
       return false;
+    }
+    // 2,5 s sem chegar mais perto do ponto (dois porcos se empurrando focinho com focinho, por exemplo: cada um anda
+    // um pouco e o outro devolve) também é estar empacado
+    if (P.wp !== p) {
+      P.wp = p;
+      P.wpD = Infinity;
+      P.wpT = 0;
+    }
+    const dp = Math.hypot(p.x - P.x, p.z - P.z);
+    if (dp < P.wpD - 0.05) {
+      P.wpD = dp;
+      P.wpT = 0;
+    } else if ((P.wpT += dt) > 2.5) {
+      P.stuckT = 2;
+      P.wpT = 0;
+      P.wpD = Infinity;
     }
     if (P.stuckT > 1.5) {
       const dx = p.x - P.x, dz = p.z - P.z;
