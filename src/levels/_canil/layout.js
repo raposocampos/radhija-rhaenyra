@@ -35,7 +35,7 @@ export const SHOWCASE = {
  * @type {Record<'vitrine' | 'radhija' | 'rhaenyra', { x: number, y: number, scale: number }>}
  */
 export const FRAMING = {
-  vitrine: { x: 0.58, y: 0.3, scale: 1.05 },
+  vitrine: { x: 0.8, y: 0.32, scale: 1.45 },
   radhija: { x: -0.86, y: 0.26, scale: 0.62 },
   rhaenyra: { x: 1.55, y: 0.28, scale: 0.66 },
 };
