@@ -5,8 +5,8 @@
 import * as THREE from 'three';
 
 /** Mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico) e gravidade extra (m/s²). */
-const FREQ = [4.2, 3.0, 2.3];
-const ZETA = 0.32;
+const FREQ = [5.6, 4.3, 3.4];
+const ZETA = 0.4;
 const GRAVITY = 1.6;
 /** Folga da ponta da orelha acima do chão (m). */
 const FLOOR_PAD = 0.012;

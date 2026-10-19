@@ -88,9 +88,9 @@ export function createRollOverlay({ skel2, cfg }) {
     const legs = [['L', 1, 0], ['R', -1, Math.PI]];
     for (const [s, sg, ph] of legs) {
       toward(B(`F${s}u`), -1.1 + 0.3 * pedal(ph), 0, 0.15 * sg, lw);
-      toward(B(`F${s}l`), 1.8, 0, 0, lw);
-      toward(B(`F${s}c`), 0.9, 0, 0, lw);
-      toward(B(`F${s}p`), 0.3, 0, 0, lw);
+      toward(B(`F${s}l`), 2.25, 0, 0, lw);
+      toward(B(`F${s}c`), 1.15, 0, 0, lw);
+      toward(B(`F${s}p`), 0.45, 0, 0, lw);
       toward(B(`H${s}u`), -0.9 + 0.35 * pedal(ph + Math.PI / 2), 0, 0.42 * sg, lw);
       toward(B(`H${s}l`), 1.2, 0, 0, lw);
       toward(B(`H${s}m`), -0.7, 0, 0, lw);

@@ -326,7 +326,7 @@ test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca 
     for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } });
     const back = tipInHead().distanceTo(rest);
     console.log(`[v2] ${kind}: orelha balançou ${(swing * 1000).toFixed(1)} mm no pulo e voltou a ${(back * 1000).toFixed(1)} mm`);
-    assert.ok(swing > 0.008, `${kind}: a orelha reage ao pulo (${(swing * 1000).toFixed(1)} mm)`);
+    assert.ok(swing > 0.008 && swing < 0.09, `${kind}: a orelha reage ao pulo sem virar do avesso (${(swing * 1000).toFixed(1)} mm)`);
     assert.ok(back < 0.006, `${kind}: a orelha volta ao lugar (${(back * 1000).toFixed(1)} mm)`);
     // rolando, as orelhas ficam sobre o chão
     let low = Infinity;
