@@ -121,7 +121,9 @@ try {
   await H.holdUntil(H.keysFor(-t2.nx, -t2.nz), () => false, { timeout: 900, during: () => page.keyboard.press('ShiftLeft') });
   i = await H.gsleep(300);
   check(!i.dogs.radhija.shove && (await logOf('dog:rear')).length === 0, 'a Radhija não fica de pé');
-  check((await logOf('hint')).some((h) => /Só a Rhaenyra fica de pé/.test(h.text)), 'dica: só a Rhaenyra fica de pé');
+  const hints = await logOf('hint');
+  check(hints.some((h) => /Só a Rhaenyra fica de pé/.test(h.text)), 'dica: só a Rhaenyra fica de pé',
+    `em ${i.dogs.radhija.x}, ${i.dogs.radhija.z}; arrancadas ${(await logOf('dog:dash')).length}; dicas ${JSON.stringify(hints.map((h) => h.text))}`);
 } catch (e) {
   check(false, `exceção: ${e.message}`);
 }

@@ -78,6 +78,15 @@ export function createPuzzle(ctx) {
     }
     return best;
   }
+  /** A dog está de frente para um empurrável, a até `reach` m da superfície dele? */
+  function facingSpot(c, reach) {
+    const fx = Math.sin(c.yaw);
+    const fz = Math.cos(c.yaw);
+    return list.some(({ spot: S }) => {
+      const front = (c.x - S.x) * S.nx + (c.z - S.z) * S.nz;
+      return front > 0 && front < reach && Math.abs((c.x - S.x) * -S.nz + (c.z - S.z) * S.nx) < (S.w ?? 0) + 0.3 && -(fx * S.nx + fz * S.nz) > 0.5;
+    });
+  }
   /** O que a dog leva na boca (chave) ou null. */
   const holding = (name) => Object.keys(items).find((k) => items[k].carry.holder === name) || null;
 
@@ -129,10 +138,11 @@ export function createPuzzle(ctx) {
     for (const t of list) t.update(dt);
     if (S.stage === 'start' && targets.tree.landed) setStage('ball');
 
-    // dicas: a Radhija esbarrando num empurrável; a Rhaenyra encostada sem segurar o empurrar
+    // dicas: a Radhija esbarrando num empurrável (ou dando a arrancada de frente para um, pertinho); a Rhaenyra
+    // encostada sem segurar o empurrar
     const touching = active.hits?.some((h) => byId[h.id]);
     S.bumpT = touching && !shoving(active) ? S.bumpT + dt : 0;
-    if (touching && active.name === 'radhija') hints.cond('radhija', 3.4, 8);
+    if (active.name === 'radhija' && (touching || (active.dashT > 0 && facingSpot(active, 0.95)))) hints.cond('radhija', 3.4, 8);
     else if (S.bumpT > 0.8 && active.name === 'rhaenyra') hints.cond('how', 3.6, 10);
     if (active.shove && active.shove.kind === 'sister' && active.shoveN >= 1) hints.cond('sister', 2.8, 20);
 
