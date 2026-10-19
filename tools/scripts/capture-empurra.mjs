@@ -131,10 +131,12 @@ try {
   await step(10);
   await shot('10-bolinha-caindo', { pos: [T.x + 0.4, 1.35, T.z + 1.9], look: [T.x + 0.2, 0.6, T.z + 0.2] });
   await key('ShiftLeft', false);
+  // descendo: no meio da descida (ainda meio de pé), antes de voltar às quatro patas
+  await until((i) => { const s = i.dogs.rhaenyra.shove; return !!s && s.stage === 'down' && s.k <= 0.55; }, 120);
+  await shot('12-descendo-lado', V.side);
   await until((i) => i.empurra.tree.landed && !i.dogs.rhaenyra.shove, 200);
   await step(10);
   await shot('11-bolinha-no-chao');
-  await shot('12-descendo-lado', V.side);
   await page.evaluate(() => { window.__game.game.reset(); window.__step(5); });
 
   // 2. a mesinha (patas em cima do tampo) e a estante (o tampo mais alto)
@@ -161,8 +163,14 @@ try {
   T = await ready('arvorezinha');
   await key('ShiftLeft', true);
   await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.25; }, 120);
-  // de lado e um pouco à frente da cara (rente à face do tronco, afastada para o lado), olhando a cabeça dela
-  const face = { pos: [T.x + T.nx * 0.06 - T.nz * 0.55, 0.8, T.z + T.nz * 0.06 + T.nx * 0.55], look: [T.x + T.nx * 0.2, 0.7, T.z + T.nz * 0.2] };
+  // de perfil, na altura da cabeça dela e um pouco acima (ela olha para cima, para a bolinha): a boca aparece
+  const head = await page.evaluate(() => {
+    const b = window.__game.dogs.rhaenyra.bones.find((x) => x.name === 'head');
+    b.updateWorldMatrix(true, false);
+    const e = b.matrixWorld.elements;
+    return [e[12], e[13], e[14]];
+  });
+  const face = { pos: [head[0] - T.nz * 0.42 - T.nx * 0.04, head[1] + 0.1, head[2] + T.nx * 0.42 - T.nz * 0.04], look: [head[0] - T.nx * 0.05, head[1], head[2] - T.nz * 0.05] };
   await shot('40-armando-perto', face);
   await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.45; }, 120);
   await shot('41-rosnadinha-perto', face);
