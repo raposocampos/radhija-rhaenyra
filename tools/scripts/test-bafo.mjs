@@ -1,4 +1,4 @@
-// Superbafo da Radhija no navegador: teclas reais e controle (L2), prévia e nuvem desenhadas na cena,
+// Superbafo da Radhija no navegador: teclas reais e controle (R2), prévia e nuvem desenhadas na cena,
 // e a cadeia da Arena do Bafo (?level=bafo). A lógica completa está em test/bafo.test.mjs e
 // test/arena-bafo.test.mjs.
 //   node tools/scripts/test-bafo.mjs [--url http://127.0.0.1:5176/]
@@ -34,18 +34,18 @@ try {
   check(!(await sceneVisible('mira-do-bafo')), 'a prévia some depois do sopro');
   await shot('bafo-nuvem.png');
 
-  // L2 do controle
+  // R2 do controle (o L2 é o Lambe-Lambe)
   await ev(() => {
     window.__fakePads = [{ id: 'Controle falso (DualSense)', index: 0, connected: true, mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) }];
   });
   await sleep(1200);
   await clearLog();
-  await ev(() => { const p = window.__fakePads[0]; p.buttons[6] = { pressed: true, value: 1 }; p.timestamp = performance.now(); });
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[7] = { pressed: true, value: 1 }; p.timestamp = performance.now(); });
   await sleep(350);
-  check((await info()).bafo.aiming, 'L2 segurado: mira');
-  await ev(() => { const p = window.__fakePads[0]; p.buttons[6] = { pressed: false, value: 0 }; p.timestamp = performance.now(); });
+  check((await info()).bafo.aiming, 'R2 segurado: mira');
+  await ev(() => { const p = window.__fakePads[0]; p.buttons[7] = { pressed: false, value: 0 }; p.timestamp = performance.now(); });
   await sleep(200);
-  check((await logOf('dog:bafo')).length === 1, 'soltar L2: sopra');
+  check((await logOf('dog:bafo')).length === 1, 'soltar R2: sopra');
   check((await ev(() => document.querySelector('.rr')?.dataset.pad)) === 'ps', 'botões desenhados no estilo PlayStation');
   await ev(() => { window.__fakePads = []; });
 
