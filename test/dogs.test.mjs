@@ -134,3 +134,59 @@ test('comemoração: mandada sentar no meio da voltinha, ela termina a volta (se
     assert.ok(backAt > 0.3 && backAt < 1.0, `${kind}: terminou a voltinha no lugar dela (${backAt.toFixed(2)} s)`);
   }
 });
+
+test('comemoração: o tamanho da voltinha segue o espaço (celebrateLoop); sem espaço, pulinhos no lugar até a reverência', () => {
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const res = {};
+    for (const loop of [1, 0.5, 0]) {
+      const d = createDog(kind);
+      const inner = d.object.children[0];
+      for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+      let far = 0, hopsMid = 0, maxTurn = 0;
+      for (let f = 0; f < Math.round(2.1 * 60); f++) {
+        d.update(1 / 60, { speed: 0, action: 'celebrate', celebrateSide: 1, celebrateLoop: loop });
+        far = Math.max(far, Math.hypot(inner.position.x, inner.position.z));
+        maxTurn = Math.max(maxTurn, Math.abs(inner.rotation.y));
+        if (f / 60 > 1.0 && f / 60 < 2.0) hopsMid = Math.max(hopsMid, inner.position.y);
+      }
+      res[loop] = { far, hopsMid, maxTurn };
+    }
+    assert.ok(res[0.5].far > res[1].far * 0.4 && res[0.5].far < res[1].far * 0.6, `${kind}: voltinha pela metade (${res[0.5].far.toFixed(2)} × ${res[1].far.toFixed(2)} m)`);
+    assert.ok(res[0.5].maxTurn > 5.5, `${kind}: a voltinha menor também dá a volta inteira`);
+    assert.ok(res[0].far < 0.005 && res[0].maxTurn < 0.05, `${kind}: sem espaço, não sai do lugar nem gira (${res[0].far.toFixed(3)} m, ${res[0].maxTurn.toFixed(2)} rad)`);
+    assert.ok(res[0].hopsMid > 0.03, `${kind}: sem espaço, segue nos pulinhos (${res[0].hopsMid.toFixed(3)} m)`);
+  }
+});
+
+test('comemoração: interrompida no meio da voltinha por outra ação, ela volta ao lugar sem salto', () => {
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const d = createDog(kind);
+    const inner = d.object.children[0];
+    for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    for (let f = 0; f < Math.round(1.4 * 60); f++) d.update(1 / 60, { speed: 0, action: 'celebrate', celebrateSide: -1 });
+    assert.ok(Math.hypot(inner.position.x, inner.position.z) > 0.15, `${kind}: estava no meio da voltinha`);
+    let jump = 0;
+    let px = inner.position.x, pz = inner.position.z;
+    for (let f = 0; f < 90; f++) {
+      d.update(1 / 60, { speed: 0, action: 'shake' });
+      jump = Math.max(jump, Math.hypot(inner.position.x - px, inner.position.z - pz));
+      px = inner.position.x;
+      pz = inner.position.z;
+    }
+    assert.ok(jump < 0.06, `${kind}: sem salto de lugar (${(jump * 100).toFixed(1)} cm num quadro)`);
+    assert.ok(Math.hypot(inner.position.x, inner.position.z) < 0.01, `${kind}: de volta ao lugar dela`);
+  }
+});
+
+test('comemoração: as pisadas da voltinha levam a passada da animação (som e pegadas no jogo)', () => {
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const d = createDog(kind);
+    const speeds = [];
+    d.onFootstep = (_i, v) => speeds.push(v);
+    for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    for (let f = 0; f < Math.round(2.1 * 60); f++) d.update(1 / 60, { speed: 0, action: 'celebrate', celebrateSide: 1 });
+    d.onFootstep = null;
+    // o jogo descarta pisada com passada < 0,4 m/s (src/fx/feedback.js)
+    assert.ok(speeds.filter((v) => v >= 0.4).length >= 3, `${kind}: pisadas com passada (${speeds.map((v) => v.toFixed(2)).join(', ')})`);
+  }
+});

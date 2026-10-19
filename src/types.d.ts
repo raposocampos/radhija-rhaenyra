@@ -132,6 +132,11 @@ export interface Goal {
   celebrate: Record<DogName, XZ>;
   /** Pontos fora de quadro de onde uma dog distante reaparece andando para a comemoração. */
   entryPoints?: XZ[];
+  /**
+   * Borda alta de caminha perto do lugar da comemoração (raio do meio da borda e meia espessura, m): a voltinha não
+   * passa por cima dela; sem espaço, a dog comemora com pulinhos no lugar.
+   */
+  celebrateRim?: { x: number; z: number; r: number; tube?: number };
 }
 
 export interface CameraConfig {
@@ -870,6 +875,8 @@ export interface DogAnim {
   cheer?: number;
   /** Comemoração: lado da voltinha andando (+1 = esquerda da dog, −1 = direita), longe da irmã. */
   celebrateSide?: number;
+  /** Comemoração: quanto da voltinha cabe ali (0..1 do raio; 0 = só pulinhos no lugar). Padrão 1. */
+  celebrateLoop?: number;
   /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
   extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
 }
@@ -931,8 +938,8 @@ export interface DogModel {
   mouthSocket: THREE.Object3D;
   /** Âncora do marcador sobre a cabeça. */
   markerAnchor: THREE.Object3D;
-  /** Chamado a cada pisada (índice da pata 0..3). */
-  onFootstep: ((foot: number) => void) | null;
+  /** Chamado a cada pisada (índice da pata 0..3; speed = passada da animação, m/s). */
+  onFootstep: ((foot: number, speed?: number) => void) | null;
   update(dt: number, anim?: DogAnim): void;
   triggerBark(): void;
   /** Força a pose de boca ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee') ou null para detectar pelo item. */

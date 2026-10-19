@@ -16,6 +16,8 @@ import { applySeeThroughTo } from '../world/seeThrough.js';
 import { createScentField } from './mechanics/scent.js';
 import { createScentView } from '../fx/scentView.js';
 import { createExtras } from './extras.js';
+import { planCelebrateLoop } from './celebrateLoop.js';
+import { DOG_PARAMS } from '../dogs/dogModel.js';
 
 const NAMES = ['radhija', 'rhaenyra'];
 const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
@@ -87,7 +89,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, celebrateLoop: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -122,11 +124,13 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- passos ----------
   const steps = { radhija: { seen: false, acc: 0 }, rhaenyra: { seen: false, acc: 0 } };
   for (const n of NAMES) {
-    dogs[n].onFootstep = (i) => {
+    dogs[n].onFootstep = (i, v = 0) => {
       steps[n].seen = true;
       if (state !== 'playing' && state !== 'celebrating') return;
       const c = ctrls?.[n];
-      if (c) emit('dog:step', { name: n, x: c.x, z: c.z, speed: c.animSpeed, foot: i });
+      // na voltinha da comemoração ela anda com o controle parado no lugar: vale a passada da animação
+      const speed = state === 'celebrating' ? Math.max(c?.animSpeed || 0, v) : c?.animSpeed;
+      if (c) emit('dog:step', { name: n, x: c.x, z: c.z, speed, foot: i });
     };
   }
 
@@ -691,7 +695,7 @@ export function createGame({ engine, dogs, levels, params }) {
     cam.setMode('celebrate', { dur: 1.5 });
     puzzle.endActions?.();
     for (const n of NAMES) {
-      cel[n] = { arrived: false, moved: false };
+      cel[n] = { arrived: false, moved: false, loop: null };
       resetBrain(brains[n]);
     }
     // Câmera virtual na pose final (para aproximar dogs distantes fora do quadro)
@@ -699,6 +703,20 @@ export function createGame({ engine, dogs, levels, params }) {
     celebCam.lookAt(...L.CAMERA.celebrate.look);
     celebCam.updateMatrixWorld(true);
     celebCam.updateProjectionMatrix();
+  }
+
+  /** A voltinha da comemoração do lado e do tamanho que cabem ali, com a dog olhando para yaw (celebrateLoop.js). */
+  function setCelebrateLoop(n, yaw) {
+    if (!cel[n].loop) {
+      const c = ctrls[n];
+      const o = n === 'radhija' ? 'rhaenyra' : 'radhija';
+      cel[n].loop = planCelebrateLoop({
+        x: c.x, z: c.z, r: c.r, size: c.size, s: DOG_PARAMS[n]?.s ?? 1, yaw,
+        sister: { ...L.GOAL.celebrate[o], r: ctrls[o].r }, rim: L.GOAL.celebrateRim, overlaps: world.overlaps,
+      });
+    }
+    anims[n].celebrateSide = cel[n].loop.side;
+    anims[n].celebrateLoop = cel[n].loop.loop;
   }
 
   function updateCelebrating(dt) {
@@ -730,14 +748,12 @@ export function createGame({ engine, dogs, levels, params }) {
       if (st.arrived) {
         const cp = celebCam.position;
         intent = { dx: 0, dz: 0, speed: 0, faceX: cp.x + (n === 'radhija' ? -0.6 : 0.6), faceZ: cp.z };
+        // a voltinha (do lado longe da irmã e do tamanho que cabe), já virada para onde ela vai olhar
+        setCelebrateLoop(n, Math.atan2(intent.faceX - c.x, intent.faceZ - c.z));
       }
       steer(c, dt, intent);
       integrate(c, dt, world);
       anims[n].action = st.arrived ? 'celebrate' : 'none';
-      // a voltinha da comemoração vai para o lado de fora, longe da irmã (o x local da dog é a esquerda dela)
-      const sis = G.celebrate[n === 'radhija' ? 'rhaenyra' : 'radhija'];
-      const away = (spot.x - sis.x) * Math.cos(c.yaw) - (spot.z - sis.z) * Math.sin(c.yaw);
-      anims[n].celebrateSide = away < 0 ? -1 : 1;
       setLook(n, st.arrived ? { x: celebCam.position.x, y: 1.0, z: celebCam.position.z } : null);
     }
     if (celebrateT >= CELEBRATE_DUR) {
@@ -764,7 +780,10 @@ export function createGame({ engine, dogs, levels, params }) {
       const late = state === 'victory' && cel[n]?.arrived === false && L?.GOAL?.celebrate?.[n];
       if (late) {
         const gi = gotoIntent(brains[n], c, L.GOAL.celebrate[n], navCtx(), dt, 0.12);
-        if (gi.arrived || victoryT > 8) cel[n].arrived = true;
+        if (gi.arrived || victoryT > 8) {
+          cel[n].arrived = true;
+          setCelebrateLoop(n, c.yaw);
+        }
         steer(c, dt, gi);
       } else steer(c, dt, { dx: 0, dz: 0, speed: 0 });
       integrate(c, dt, world);

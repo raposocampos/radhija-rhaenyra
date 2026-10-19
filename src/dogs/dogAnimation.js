@@ -11,7 +11,8 @@
 //   à esquerda do botão, m), poopK (0..1 da sequência do cocô; −1 sem), poopPre (0..1 da voltinha antes dela; −1 sem),
 //   party (comemoração do segredo: { glee, bow, hop (m), air (0..1 no ar; −1 no chão), jump, brace, zoom }; null sem),
 //   cheer (s desde que a irmã viu a comemoração; −1 sem), celebrateSide (±1: para que lado ela dá a voltinha da
-//   comemoração, longe da irmã; + = esquerda dela), extra ({ kind, k (0..1), t (s) }: animação do cenário —
+//   comemoração, longe da irmã; + = esquerda dela), celebrateLoop (tamanho da voltinha que cabe ali, 0..1 do raio;
+//   0 = sem espaço: só pulinhos; padrão 1), extra ({ kind, k (0..1), t (s) }: animação do cenário —
 //   'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll'; null sem) }). Os extras ficam em src/game/extras.js.
 import * as THREE from 'three';
 
@@ -91,6 +92,16 @@ export const POOP_KICKS = Object.freeze({ from: 0.73, to: 0.93, n: 5 });
 const CEL_CYCLE = 3.2;
 const CEL_CIRCLE = [0.8, 2.1];
 const CEL_R = 0.2;
+/** Menor voltinha que ainda parece andar (fração de CEL_R); abaixo disso ela só dá pulinhos no lugar. */
+export const CEL_LOOP_MIN = 0.4;
+/**
+ * Onde o corpo passa na voltinha da comemoração, no referencial da dog (x = esquerda, z = frente; m), com o rumo phi
+ * (0 → ±2π). side: ±1 (+ = esquerda); loop: tamanho 0..1. O jogo usa para ver se o círculo cabe no cenário.
+ */
+export function celebrateLoopAt(s, side, loop, phi) {
+  const R = CEL_R * s * loop;
+  return { x: R * side * (1 - Math.cos(phi)), z: R * Math.sin(Math.abs(phi)) };
+}
 /** A irmã vendo a comemoração (s): olhos arregalados e orelhas em pé ("uau!"), depois alegria. */
 const CHEER_WOW = [[0, 0], [0.07, 1], [0.5, 1], [0.78, 0]];
 /** Patada de cavar: puxa a pata para trás rápido e devolve. */
@@ -175,6 +186,11 @@ function createAnimState() {
     blink: 0,
     bark: -1,
     celT: 0,
+    circling: false, // no meio da voltinha da comemoração
+    celLoop: 1, // tamanho da voltinha em andamento (0..1)
+    circX: 0, // onde o corpo está na voltinha (m, referencial da dog)
+    circZ: 0,
+    circW: 0,
     hop: 0,
     spin: 0,
     wagPhase: 0,
@@ -199,7 +215,7 @@ function createAnimState() {
 
 /**
  * ctx: { object, inner, cfg (stats da dog no layout), s (escala), rig (dogRig.js), face (dogFace.js),
- *        carry (carryPose.js), furMat, shadow, shadowBase, markerAnchor, onFootstep(i) }
+ *        carry (carryPose.js), furMat, shadow, shadowBase, markerAnchor, onFootstep(i, v) (pata, passada m/s) }
  * → { st (estado), update(dt, anim) }
  */
 export function createDogAnimation(ctx) {
@@ -321,17 +337,21 @@ export function createDogAnimation(ctx) {
     // volta, chega de frente no lugar dela e só então muda de pose
     if (st.circling && action !== 'celebrate' && (action === 'sit' || action === 'none') && (A.speed || 0) < 0.05) action = 'celebrate';
     // comemoração: na voltinha, a passada e a curva vêm do próprio círculo (velocidade e giro de verdade)
+    // celebrateLoop: o jogo diz quanto da voltinha cabe ali (móveis, paredes, a borda da caminha); sem espaço, pulinhos
     let circ = null;
+    const loop = clamp(A.celebrateLoop ?? 1, 0, 1);
     if (action === 'celebrate') {
       const c = ((action !== st.prevAction ? 0 : st.celT) + dt) % CEL_CYCLE; // a comemoração recomeça do zero
-      if (c >= CEL_CIRCLE[0] && c < CEL_CIRCLE[1]) {
+      // o tamanho vale para a volta inteira: decidido quando ela começa
+      if (!st.circling) st.celLoop = loop;
+      if (c >= CEL_CIRCLE[0] && c < CEL_CIRCLE[1] && st.celLoop >= CEL_LOOP_MIN) {
         const T = CEL_CIRCLE[1] - CEL_CIRCLE[0];
         const u = (c - CEL_CIRCLE[0]) / T;
         const dir = A.celebrateSide < 0 ? -1 : 1;
-        const R = CEL_R * s;
         const phi = dir * TAU * (u * u * (3 - 2 * u)); // rumo (rad): começa e termina de frente, devagar nas pontas
         const om = (dir * TAU * 6 * u * (1 - u)) / T; // rad/s
-        circ = { phi, om, v: R * Math.abs(om), x: R * dir * (1 - Math.cos(phi)), z: R * dir * Math.sin(phi) };
+        const p = celebrateLoopAt(s, dir, st.celLoop, phi);
+        circ = { phi, om, v: CEL_R * s * st.celLoop * Math.abs(om), x: p.x, z: p.z };
       }
     }
     st.circling = !!circ;
@@ -380,7 +400,7 @@ export function createDogAnimation(ctx) {
     const glee = PY ? PY.glee : 0;
     const pBrace = PY ? PY.brace : 0;
     const pAir = PY && PY.air >= 0 ? PY.air : -1;
-    st.circW = damp(st.circW || 0, circ ? 1 : 0, 10);
+    st.circW = damp(st.circW, circ ? 1 : 0, 10);
     const curveW = Math.max(w.pre, PY ? PY.zoom : 0, st.circW); // apoios girando com o corpo na curva
     const ct = A.cheer ?? -1;
     const wow = ct >= 0 ? keyed(CHEER_WOW, ct) : 0;
@@ -483,7 +503,8 @@ export function createDogAnimation(ctx) {
     if (action === 'celebrate') {
       st.celT += dt;
       const c = st.celT % CEL_CYCLE;
-      if (c < CEL_CIRCLE[0]) {
+      // sem espaço para a voltinha (na caminha, encostada num móvel), os pulinhos seguem até a reverência
+      if (c < (st.celLoop >= CEL_LOOP_MIN ? CEL_CIRCLE[0] : CEL_CIRCLE[1])) {
         const u = (c % 0.4) / 0.4;
         hopTarget = Math.sin(Math.PI * u) * 0.075 * s;
       } else if (c >= CEL_CIRCLE[1]) {
@@ -526,8 +547,16 @@ export function createDogAnimation(ctx) {
     const xBack = xKind === 'roll' ? sstep(1.3, 2.5, rollA) : 0; // de costas (patinhas para o ar)
     inner.rotation.z = rollA;
     inner.position.x = 0;
-    // voltinha da comemoração: o corpo anda o círculo em volta do lugar dela
-    const circX = circ ? circ.x : 0, circZ = circ ? circ.z : 0;
+    // voltinha da comemoração: o corpo anda o círculo em volta do lugar dela; se algo a interrompe no meio (outra
+    // ação, a dog volta a andar), ela volta ao lugar suave em vez de pular para lá
+    if (circ) {
+      st.circX = circ.x;
+      st.circZ = circ.z;
+    } else {
+      st.circX = Math.abs(st.circX) < 1e-4 ? 0 : damp(st.circX, 0, 5);
+      st.circZ = Math.abs(st.circZ) < 1e-4 ? 0 : damp(st.circZ, 0, 5);
+    }
+    const circX = st.circX, circZ = st.circZ;
     inner.position.x += circX;
     inner.position.z += circZ;
     if (rollA !== 0) {
@@ -649,7 +678,7 @@ export function createDogAnimation(ctx) {
       fy *= gaitAmp;
       curl *= gaitAmp;
       // pisada
-      if (leg.swing && !swing && v > 0.2 && gaitAmp > 0.3) onFootstep(li);
+      if (leg.swing && !swing && v > 0.2 && gaitAmp > 0.3) onFootstep(li, v); // v: a passada (a voltinha anda parada no lugar)
       leg.swing = swing;
       void swingU;
 

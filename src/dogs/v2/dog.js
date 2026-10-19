@@ -118,7 +118,7 @@ export function createDogV2(kind) {
   const rig1 = createDogRig(design1, driverInner);
   const { st, update: animate } = createDogAnimation({
     object, inner: driverInner, cfg, s, rig: rig1, face, carry, furMat, shadow, shadowBase, markerAnchor, design: design1, fur: P1.fur,
-    onFootstep: (i) => self.onFootstep?.(i),
+    onFootstep: (i, v) => self.onFootstep?.(i, v),
   });
   const retarget = createRetarget({ rig1, design1, design2: design, skel2 });
   // contato com o chão: tronco, cabeça e patas (rabo e orelhas caem por cima do chão sem levantar o corpo)

@@ -13,7 +13,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `test/dogs.test.mjs`.
 - Retorno na prévia: "no fim das fases ... o loop corta no meio e ela fica sentada": a voltinha em andamento
   termina antes de sentar ou parar (teste novo). Ordem combinada: entra depois do #38 (empurrão em pé).
-- Próximo passo: CI e E2E `todas` no head atualizado com o main, prévia e aprovação.
+- O usuário aprovou a versão `2b3fdf0`, mas o merge ficou bloqueado por 3 observações da revisão automática (a
+  proteção do `main` exige conversas resolvidas). Corrigido depois da aprovação (pede CI, prévia e aprovação novas):
+  a voltinha é só visual, então `src/game/celebrateLoop.js` escolhe lado e tamanho que cabem (colisores, irmã e a
+  borda da caminha `GOAL.celebrateRim` nas fases 5 e 8 e na Arena dos Porquinhos); sem espaço, pulinhos no lugar
+  (fase 5). As pisadas da voltinha levam a passada da animação (`onFootstep(i, v)`: som e pegadas). Interrompida
+  por outra ação, ela volta ao lugar suave. Testes em `test/dogs.test.mjs` e `test/comemoracao.test.mjs`.
+- Próximo passo: CI e E2E `todas` no head novo, prévia, responder e resolver as 3 conversas e pedir nova aprovação.
 
 
 ## Em andamento: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (Claude)

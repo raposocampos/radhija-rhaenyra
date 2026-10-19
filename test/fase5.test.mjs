@@ -107,6 +107,11 @@ test('fase 5: partida completa (portãozinho → trava → barricada → caixa d
   const vic = h.log('victory');
   assert.equal(vic[0].levelId, 'fase5');
   assert.equal(vic[0].hasNext, true); // depois dela vem a fase 6
+  // as duas comemoram dentro da caminha: a voltinha passaria por cima da borda, então ficam nos pulinhos
+  h.run(2);
+  const di = h.info().dogs.radhija, spot = L.GOAL.celebrate.radhija;
+  assert.ok(Math.hypot(di.x - spot.x, di.z - spot.z) < 0.6, 'a Radhija comemora no lugar dela, na caminha');
+  assert.equal(h.dogs.radhija.anim.celebrateLoop, 0, 'na caminha, sem voltinha (pulinhos)');
 
   h.events.emit('ui:restart', {});
   h.run(0.3);

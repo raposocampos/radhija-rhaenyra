@@ -153,6 +153,7 @@ export const NAV_EDGES = [
 export const GOAL = {
   x: DOG_BED.x, z: DOG_BED.z, r: 0.85,
   celebrate: { radhija: { x: -4.98, z: 2.32 }, rhaenyra: { x: -5.5, z: 2.48 } }, // as duas dentro da caminha
+  celebrateRim: { x: DOG_BED.x, z: DOG_BED.z, r: DOG_BED.r - 0.1, tube: 0.11 }, // a borda (world/props.js buildDogBed)
   entryPoints: [{ x: -3.9, z: 0.4 }, { x: -5.8, z: -0.4 }, { x: -2.6, z: 0.5 }],
 };
 
