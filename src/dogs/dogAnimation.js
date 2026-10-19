@@ -359,7 +359,7 @@ export function createDogAnimation(ctx) {
       toInner(_wallV, leg.foot0.x + leg.side * 0.014 * s, leg.foot0.y, C.hz + 0.03 * s);
       T.lerp(_wallV, C.sk);
     }
-    const floor = leg.foot0.y * 0.9;
+    const floor = leg.foot0.y;
     if (objY(T) < floor) {
       // abaixo do chão: sobe o alvo (no referencial do objeto) até a altura do apoio
       const a = st.slope + st.wallTheta + st.shoveTheta;
@@ -743,7 +743,9 @@ export function createDogAnimation(ctx) {
       }
       fz *= gaitAmp;
       fy *= gaitAmp;
-      curl *= gaitAmp;
+      // de pé no empurrão o passo some duas vezes (na amplitude e no alvo de pé, que não levanta o pé): a dobra da pata
+      // some junto, senão a ponta da pata entra no chão enquanto ela sobe e desce
+      curl *= gaitAmp * (1 - sk);
       // pisada
       if (leg.swing && !swing && v > 0.2 && gaitAmp > 0.3) onFootstep(li, v); // v: a passada (a voltinha anda parada no lugar)
       leg.swing = swing;
