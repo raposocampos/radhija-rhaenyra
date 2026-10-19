@@ -111,6 +111,26 @@ try {
   check(minD > 0.3, 'nenhuma dentro da outra', `${minD.toFixed(2)} m`);
   check((await logOf('dog:huff')).length === 1, '"hmpf"');
 
+  // o modelo novo das dogs (?dogs=novo): a mesma pose, guiada pela animação atual, sem nada abaixo do chão
+  console.log('\n== Modelo novo das dogs (?dogs=novo) ==');
+  await load('?level=empurra&play&dog=rhaenyra&dogs=novo');
+  await page.keyboard.press('KeyF');
+  const tn = await stanceOf('arvorezinha', 0.3);
+  await walkTo(tn.x, tn.z, { tol: 0.1 });
+  await H.hold(H.keysFor(-tn.nx, -tn.nz), 120);
+  await clearLog();
+  const recN = await H.record(() => {
+    const d = window.__game.dogs.rhaenyra;
+    return { model: d.model ?? 'atual', rx: d.object.children[0].rotation.x, low: d.lowest ?? 0 };
+  });
+  i = await H.holdUntil(['ShiftLeft'], (s) => s.empurra.tree.dropped, { timeout: 4000, label: 'Shift até a bolinha cair (modelo novo)' });
+  await H.waitFor((s) => !s.dogs.rhaenyra.shove, { timeout: 4000 });
+  const fn = await recN.stop();
+  check(fn[0]?.model === 'v2', 'o modelo novo está carregado', String(fn[0]?.model));
+  check(i.empurra.tree.dropped && (await logOf('dog:shove')).length === 3, 'com o modelo novo, três empurrões derrubam a bolinha');
+  check(Math.max(...fn.map((f) => -f.rx)) > 0.6, 'o modelo novo fica de pé', Math.max(...fn.map((f) => -f.rx)).toFixed(2));
+  check(Math.min(...fn.map((f) => f.low)) > -0.01, 'modelo novo: nada abaixo do chão', Math.min(...fn.map((f) => f.low)).toFixed(3));
+
   // a Radhija: Shift é a arrancada, não fica de pé
   console.log('\n== A Radhija não fica de pé ==');
   await load('?level=empurra&play&dog=radhija');

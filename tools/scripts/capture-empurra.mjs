@@ -29,9 +29,13 @@ try {
     const raf = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = (fn) => raf((t) => { if (!window.__freezeReview) fn(t); });
   });
-  await page.goto(`${url}?level=empurra&play&dog=rhaenyra`);
-  await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
-  await page.evaluate(() => {
+  /** Abre a arena (query) e congela o laço: daqui em diante o script avança quadro a quadro. */
+  const boot = async (query) => {
+    await page.goto(`${url}${query}`);
+    await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
+    await page.evaluate(setup);
+  };
+  const setup = () => {
     window.__freezeReview = true;
     document.getElementById('loading')?.remove();
     const G = window.__game;
@@ -63,7 +67,8 @@ try {
       G.engine.renderer.getContext().finish();
     };
     window.__key = (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code }));
-  });
+  };
+  await boot('?level=empurra&play&dog=rhaenyra');
   const step = (n) => page.evaluate((k) => window.__step(k), n);
   const until = async (pred, max = 600) => {
     const ok = await page.evaluate(({ src, max: m }) => window.__stepUntil(src, m), { src: pred.toString(), max });
@@ -173,6 +178,17 @@ try {
   await until((i) => (i.shove?.t ?? 0) >= 0.9, 120);
   await shot('42-irma-hmpf', sideS);
   await shot('43-irma-hmpf-perto', { pos: [-1.0 + 0.6, 0.6, -0.9 + 0.9], look: [-1.0, 0.35, -0.85] });
+
+  // 4. o modelo novo das dogs (?dogs=novo, src/dogs/v2/): a mesma pose, guiada pela animação atual
+  await boot('?level=empurra&play&dog=rhaenyra&dogs=novo');
+  T = await ready('arvorezinha');
+  V = views(T, 0.55);
+  await key('ShiftLeft', true);
+  await until((i) => (i.dogs.rhaenyra.shove?.k ?? 0) >= 0.99, 120);
+  await shot('50-modelo-novo-de-pe-lado', V.side);
+  await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.44; }, 120);
+  await shot('51-modelo-novo-empurrao-frente', V.front);
+  await key('ShiftLeft', false);
 
   if (errors.length) throw new Error(`erros no navegador:\n${errors.join('\n')}`);
   console.log(`\n${shots} capturas de revisão; sem erros de console`);
