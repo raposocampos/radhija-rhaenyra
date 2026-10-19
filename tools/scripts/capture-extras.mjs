@@ -158,7 +158,7 @@ try {
         const L = Math.hypot(vx, vz) || 1;
         g.debug.teleport(n, a.x - (vz / L) * 1.9 - (vx / L) * 0.4, a.z + (vx / L) * 1.9 - (vz / L) * 0.4);
         g.debug.ctrls[n].yaw = Math.atan2(c.x - a.x, c.z - a.z);
-        g.debug.setStay(n, true);
+        g.setStay(n, true);
         window.__step(40);
       }, { n: name === 'radhija' ? 'rhaenyra' : 'radhija', at, cp });
       await put(name, at.x, at.z, at.yaw);

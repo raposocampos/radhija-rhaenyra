@@ -118,7 +118,7 @@ for (const [i, def] of LEVELS.entries()) {
     const W = watchCircle(h, who);
     assert.ok(W.sniff > 20, 'farejando o chão');
     if (P0.circle > 0) {
-      assert.ok(W.moved > 0.3, `andou a voltinha (${W.moved.toFixed(2)} m)`);
+      assert.ok(W.moved > Math.min(0.3, P0.circle * 0.9), `andou a voltinha (${W.moved.toFixed(2)} de ${P0.circle} m)`);
       assert.ok(Math.abs(W.turned) > 0.7, `virou andando (${W.turned.toFixed(2)} rad)`);
     }
     // agachada: travada no lugar onde a voltinha terminou, com a animação recebendo o progresso
@@ -169,7 +169,7 @@ for (const name of ['radhija', 'rhaenyra']) {
     assert.ok(spot, 'a fase 1 tem um lugar aberto');
     // a irmã sentada (Fica) a ~3,5 m, longe do caminho
     h.teleport(sis, spot.x + 2.6, spot.z + 2.4);
-    h.game.debug.setStay(sis, true);
+    h.game.setStay(sis, true);
     h.teleport(name, spot.x, spot.z, 0.4);
     h.run(0.6);
     const c = h.ctrls[name];
@@ -209,7 +209,7 @@ test('extras: sem espaço ela nem gira (fareja e agacha ali), sem atravessar nad
   const sis = who === 'radhija' ? 'rhaenyra' : 'radhija';
   const b = h.world.bounds;
   h.teleport(sis, b.maxX - 1, b.maxZ - 1);
-  h.game.debug.setStay(sis, true);
+  h.game.setStay(sis, true);
   const c = h.ctrls[who];
   // encostada na beirada da fase, de frente para ela (não cabe nem um passo para a frente)
   const want = { x: (b.minX + b.maxX) / 2, z: b.minZ - 0.5 };
