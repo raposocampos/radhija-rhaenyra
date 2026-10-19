@@ -520,6 +520,37 @@ export function createFeedback(opts) {
     sfx('extraScratch', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.7, alpha: 0.5, dir: { x: dirX, z: dirZ }, strength: 1.1, spread: 0.05, color: '#8A6A48' });
   });
+  // a recompensa do segredo: jingle, chuva de brilhos dourados sobre o cocô, anéis no chão e a dog brilhando
+  events.on('extra:secret', ({ name, x, y = 0.08, z }) => {
+    sfx('extraSecret', x, z);
+    particles.sparkle({ x, y: y + 0.05, z }, { count: 18, radius: 0.2, size: 1.05, rise: 1.2, height: 1.4 });
+    particles.burst({ x, y: y + 0.1, z }, { kind: 'stars', count: 9, size: 0.75, speed: 0.55 });
+    particles.ring({ x, y: 0, z }, { radius: 0.95, from: 0.12, life: 0.9, color: '#FFD36B', opacity: 0.7, width: 0.09 });
+    later(0.18, () => particles.ring({ x, y: 0, z }, { radius: 0.6, from: 0.08, life: 0.75, color: '#FFF0B8', opacity: 0.5, width: 0.07 }));
+    for (let i = 1; i <= 7; i++) later(0.24 * i, () => particles.sparkle({ x, y: y + 0.12, z }, { count: 3, radius: 0.12, size: 0.8, rise: 0.9, alpha: 0.85 }));
+    if (name in shine) shine[name] = time;
+  });
+  events.on('extra:zoom', ({ name, dur = 1.4 }) => trails.push({ name, until: time + dur * 0.85, next: time + 0.045 }));
+  events.on('extra:skid', ({ x, z, dirX = 0, dirZ = 0 }) => {
+    sfx('extraSkid', x, z);
+    particles.dust({ x: x + dirX * 0.12, y: 0.03, z: z + dirZ * 0.12 }, { count: 7, size: 0.85, alpha: 0.45, dir: { x: dirX, z: dirZ }, strength: 0.9, spread: 0.1 });
+  });
+  events.on('extra:yip', ({ name, x, z }) => {
+    sfx('extraYip', x, z, { name });
+    const h = headPos(name, _fxv) || { x, y: 0.5, z };
+    particles.sparkle({ x: h.x, y: h.y + 0.1, z: h.z }, { count: 5, radius: 0.12, size: 0.7, rise: 0.6 });
+  });
+  events.on('extra:bounce', ({ x, z }) => {
+    sfx('extraPat', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.6, alpha: 0.3, strength: 0.35 });
+  });
+  events.on('extra:cheer', ({ name, x, z }) => {
+    sfx('extraAww', x, z, { name });
+    const h = headPos(name, _fxv) || { x, y: 0.55, z };
+    const at = { x: h.x, y: h.y + 0.12, z: h.z };
+    particles.burst(at, { kind: 'hearts', count: 5, size: 0.85 });
+    later(0.45, () => particles.burst({ ...at, y: at.y + 0.03 }, { kind: 'hearts', count: 3, size: 0.7 }));
+  });
   events.on('extra:lap', ({ x, z, color = '#8fc8e8' }) => {
     sfx('extraLap', x, z);
     particles.splash({ x, y: 0.05, z }, { count: 2, size: 0.45, strength: 0.25, mist: 0, color });

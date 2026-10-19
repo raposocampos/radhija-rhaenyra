@@ -470,6 +470,8 @@ export interface InputLock {
   drive?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
   slope?: number;
+  /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
+  move?: { dx: number; dz: number; speed: number };
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick). */
@@ -854,10 +856,31 @@ export interface DogAnim {
   wallLat?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
+  /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */
+  poopPre?: number;
+  /** Extras: pose da comemoração do segredo de quem fez o cocô (null = sem). */
+  party?: PoopPartyPose | null;
+  /** Extras: segundos desde que a irmã viu a comemoração (−1 = sem). */
+  cheer?: number;
   /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
   extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
 }
 
+/**
+ * Comemoração do segredo (src/game/extras.js → dogAnimation.js): glee = alegria (0..1), bow = reverência de
+ * brincadeira (0..1), hop = altura do pulinho (m), air = progresso no ar (0..1; −1 no chão), jump = peso da pose do pulo
+ * no ar (1 no pulinho virando, menos nos pulinhos de alegria), brace = freio dos zoomies (0..1), zoom = correndo os
+ * zoomies (0..1; os apoios giram com o corpo na curva).
+ */
+export interface PoopPartyPose {
+  glee: number;
+  bow: number;
+  hop: number;
+  air: number;
+  jump: number;
+  brace: number;
+  zoom: number;
+}
 /** Animações do cenário dos extras (as que têm pose própria em dogAnimation.js; swing e spurt usam ações). */
 export type ExtraKind = 'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll' | 'swing' | 'spurt';
 /**
