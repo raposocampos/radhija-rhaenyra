@@ -62,9 +62,12 @@ export function createDogV2(kind) {
   const wetU = { value: 0 };
   const mudU = createMudUniforms();
   const skinMat = createSkinMaterial({ bodyColor: P.colors.body, wetU, mudU });
+  // orelha: lâmina fina; desenhada dos dois lados para nunca deixar ver o que está atrás dela
+  const earMat = createSkinMaterial({ bodyColor: P.colors.body, wetU, mudU });
+  earMat.side = THREE.DoubleSide;
   const furMat = createFurMaterial({ strandFreq: P.strandFreq / s, gravity: 0.32, mud: mudU });
   const bodyMesh = new THREE.SkinnedMesh(G.bodyGeo, skinMat);
-  const earMesh = new THREE.SkinnedMesh(G.earGeo, skinMat);
+  const earMesh = new THREE.SkinnedMesh(G.earGeo, earMat);
   const furMesh = new THREE.SkinnedMesh(G.furGeo, furMat);
   for (const m of [bodyMesh, earMesh, furMesh]) {
     m.bind(skeleton);
@@ -202,8 +205,10 @@ export function createDogV2(kind) {
       st.wet = clamp(k || 0, 0, 1);
       wetU.value = st.wet;
       furMat.userData.uniforms.uWet.value = st.wet;
-      skinMat.roughness = lerp(0.8, 0.42, st.wet);
-      skinMat.sheen = lerp(1.0, 0.35, st.wet);
+      for (const m of [skinMat, earMat]) {
+        m.roughness = lerp(0.8, 0.42, st.wet);
+        m.sheen = lerp(1.0, 0.35, st.wet);
+      }
       furMat.roughness = lerp(0.92, 0.5, st.wet);
     },
     setMud(k, clean = []) {

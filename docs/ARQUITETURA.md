@@ -439,7 +439,8 @@ Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → Ski
 **Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
 esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,
 orelhas em três gomos e rabo em cinco; os nomes antigos continuam valendo), desenho revisto pelas fotos (`design.js`:
-focinho mais comprido, orelhas mais longas na Rhaenyra, barriga recolhida) e a mesma malha procedural
+focinho mais comprido, orelhas mais longas na Rhaenyra e mais grossas nas duas, cabeça da Rhaenyra quase do
+tamanho da da Radhija, barriga recolhida; as orelhas são desenhadas dos dois lados) e a mesma malha procedural
 (`buildGeometryFromDesign` em `dogModel.js`, com o índice de ossos do esqueleto novo). Na etapa 1 a pose ainda vem da
 animação atual: um esqueleto atual invisível é animado por `dogAnimation.js` e cada osso novo copia a pose do osso
 correspondente (`retarget.js`; os gomos novos dividem a curva entre as pontas). `contacts.js` calcula o ponto mais

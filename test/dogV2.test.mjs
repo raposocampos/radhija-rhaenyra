@@ -42,13 +42,49 @@ test('modelo novo: as juntas que já existiam ficam no mesmo lugar do modelo atu
   for (const kind of KINDS) {
     const a = buildDesign(DOG_PARAMS[kind]).bones;
     const b = buildDesignV2(paramsV2(kind)).bones;
-    for (const n of ['body', 'hips', 'chest', 'neck', 'head', 'jaw', 'FLu', 'FLl', 'HLu', 'HLl', 'HLm', 'HLp', 'earL0', 'tail0']) {
+    // (a orelha nasce na cabeça, que na Rhaenyra nova é menor: a base dela muda de lugar)
+    for (const n of ['body', 'hips', 'chest', 'neck', 'head', 'jaw', 'FLu', 'FLl', 'HLu', 'HLl', 'HLm', 'HLp', 'tail0']) {
       const d = Math.hypot(a[n][0] - b[n][0], a[n][1] - b[n][1], a[n][2] - b[n][2]);
       assert.ok(d < 1e-6, `${kind}: ${n} mudou ${d}`);
     }
     // o pulso novo fica onde era a "pata" (pulso) do atual
     const d = Math.hypot(...a.FLp.map((x, i) => x - b.FLc[i]));
     assert.ok(d < 1e-6, `${kind}: pulso`);
+  }
+});
+
+test('modelo novo: a cabeça da Rhaenyra (com o cabelo) fica quase do tamanho da da Radhija', () => {
+  /** Altura e largura da cabeça (vértices do corpo presos sobretudo à cabeça), em repouso. */
+  const head = (d) => {
+    const m = d.meshes.body;
+    const hi = d.bones.findIndex((b) => b.name === 'head');
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex;
+    const box = new THREE.Box3();
+    for (let i = 0; i < pos.count; i++) if (si.getComponent(i, 0) === hi) box.expandByPoint(v.fromBufferAttribute(pos, i));
+    return box.getSize(new THREE.Vector3());
+  };
+  const a = head(v2.radhija), b = head(v2.rhaenyra);
+  const rh = Math.max(b.x / a.x, b.y / a.y);
+  console.log(`[v2] cabeça: Radhija ${a.x.toFixed(3)} × ${a.y.toFixed(3)} m, Rhaenyra ${b.x.toFixed(3)} × ${b.y.toFixed(3)} m (${(rh * 100).toFixed(0)}%)`);
+  assert.ok(rh < 1.1, `cabeça da Rhaenyra ${(rh * 100).toFixed(0)}% da da Radhija`);
+});
+
+test('modelo novo: malha das orelhas fechada (sem buracos: cada aresta é de dois triângulos)', () => {
+  for (const kind of KINDS) {
+    const g = v2[kind].meshes.ears.geometry;
+    const idx = g.index.array;
+    const edges = new Map();
+    for (let t = 0; t < idx.length; t += 3) {
+      for (let k = 0; k < 3; k++) {
+        const a = idx[t + k], b = idx[t + ((k + 1) % 3)];
+        const key = a < b ? `${a}_${b}` : `${b}_${a}`;
+        edges.set(key, (edges.get(key) || 0) + 1);
+      }
+    }
+    let open = 0;
+    for (const n of edges.values()) if (n !== 2) open++;
+    console.log(`[v2] ${kind}: orelhas com ${edges.size} arestas, ${open} abertas`);
+    assert.ok(open <= edges.size * 0.002, `${kind}: ${open} arestas abertas nas orelhas`);
   }
 });
 
@@ -138,7 +174,7 @@ function lowestByRegion(d, parts) {
   return low;
 }
 
-const FOLLOW = [['body', 'body'], ['chest', 'chest'], ['hips', 'hips'], ['head', 'head'], ['FLu', 'FLu'], ['FLc', 'FLp'], ['FRc', 'FRp'], ['HLp', 'HLp'], ['HRp', 'HRp'], ['tail0', 'tail0'], ['earL0', 'earL0']];
+const FOLLOW = [['body', 'body'], ['chest', 'chest'], ['hips', 'hips'], ['head', 'head'], ['FLu', 'FLu'], ['FLc', 'FLp'], ['FRc', 'FRp'], ['HLp', 'HLp'], ['HRp', 'HRp'], ['tail0', 'tail0']];
 
 for (const kind of KINDS) {
   test(`${kind} nova: segue o esqueleto atual em todas as ações, sem NaN, e nada do corpo passa do chão`, () => {

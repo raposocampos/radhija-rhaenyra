@@ -2,24 +2,31 @@
 // SDF presas a eles, na mesma base procedural do modelo atual (dogModel.js → buildDesign). As juntas que já existiam
 // ficam no mesmo lugar (o esqueleto atual guia o novo, retarget.js); muda o que as fotos pediram:
 //   · focinho um pouco mais comprido e afinando (no atual ele quase some no pelo da cabeça);
-//   · orelhas da Rhaenyra mais compridas e largas, com franja (descem até a linha do queixo);
-//   · cabeça da Rhaenyra um pouco menos volumosa, para o focinho aparecer;
+//   · orelhas da Rhaenyra mais compridas e largas, com franja (descem até a linha do queixo), e mais grossas nas duas;
+//   · cabeça da Rhaenyra quase do tamanho da da Radhija (ela é maior, a cabeça não), com o cabelo menos volumoso;
 //   · pescoço um pouco mais grosso e a barriga mais recolhida perto da garupa (corpo tosado, peito fundo);
 //   · gomos novos: coluna e pescoço em dois, escápula, pulso separado da pata, orelha em três e rabo em cinco.
 import * as THREE from 'three';
 import { DOG_PARAMS } from '../dogModel.js';
 
-/** Ajustes do modelo novo sobre os parâmetros do atual (DOG_PARAMS). */
+/**
+ * Ajustes do modelo novo sobre os parâmetros do atual (DOG_PARAMS). hs = escala da cabeça: a Rhaenyra é maior, mas a
+ * cabeça dela (com o cabelo) é quase do tamanho da da Radhija (retorno do usuário, 2026-10-19). earSx = quanto a
+ * orelha é achatada (menos = mais grossa: a malha não fura nem deixa ver o outro lado).
+ */
 export const V2_TWEAKS = Object.freeze({
-  radhija: Object.freeze({ muzzle: 1.15, muzzleW: 0.94, earLen: 1.06, earW: 1.0, mane: 1.0, neck: 1.06, tuck: 1, earFur: 0.034 }),
-  rhaenyra: Object.freeze({ muzzle: 1.3, muzzleW: 0.94, earLen: 1.3, earW: 1.12, mane: 1.18, neck: 1.06, tuck: 1, earFur: 0.044 }),
+  radhija: Object.freeze({ hs: 1.0, muzzle: 1.15, muzzleW: 0.94, earLen: 1.06, earW: 1.0, earSx: 1.9, mane: 1.0, headFur: 0.022, neck: 1.06, tuck: 1, earFur: 0.034 }),
+  rhaenyra: Object.freeze({ hs: 0.9, muzzle: 1.3, muzzleW: 0.94, earLen: 1.3, earW: 1.1, earSx: 1.9, mane: 1.0, headFur: 0.023, neck: 1.06, tuck: 1, earFur: 0.042 }),
 });
 
-/** Parâmetros do modelo novo: os do atual com os ajustes de V2_TWEAKS (em `v2`). */
+/** Parâmetros do modelo novo: os do atual com os ajustes de V2_TWEAKS (em `v2`); hsBone = escala da cabeça do atual. */
 export function paramsV2(kind) {
   const base = DOG_PARAMS[kind];
   const t = V2_TWEAKS[kind];
-  return { ...base, muzzle: t.muzzle, earLen: t.earLen, mane: t.mane, fur: { ...base.fur, ear: t.earFur }, v2: t };
+  return {
+    ...base, hs: t.hs, hsBone: base.hs, muzzle: t.muzzle, earLen: t.earLen, mane: t.mane,
+    fur: { ...base.fur, head: t.headFur, ear: t.earFur }, v2: t,
+  };
 }
 
 const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
@@ -66,6 +73,9 @@ export function buildDesignV2(P) {
   const hs = P.hs;
   const Hc = F(0, 0.388, 0.248);
   const H = (x, y, z) => [Hc[0] + x * hs * s, Hc[1] + y * hs * s, Hc[2] + z * hs * s];
+  // as juntas da cabeça e da mandíbula ficam onde estão no modelo atual (o esqueleto atual guia o novo)
+  const hsB = P.hsBone ?? hs;
+  const HB = (x, y, z) => [Hc[0] + x * hsB * s, Hc[1] + y * hsB * s, Hc[2] + z * hsB * s];
   const ml = P.muzzle;
   const S = (v) => v * s;
   const SH = (v) => v * s * hs;
@@ -111,8 +121,8 @@ export function buildDesignV2(P) {
     hips: B(0, 0.25, -0.12),
     chest: F(0, 0.25, 0.1),
     neck: F(0, 0.285, 0.17),
-    head: H(0, -0.028, -0.018),
-    jaw: H(0, -0.04, 0.03),
+    head: HB(0, -0.028, -0.018),
+    jaw: HB(0, -0.04, 0.03),
     scapL: pt.scapTopL, FLu: pt.shoulderL, FLl: pt.elbowL, FLc: pt.wristL, FLp: pt.pawFL,
     HLu: pt.hipL, HLl: pt.stifleL, HLm: pt.hockL, HLp: pt.pawJL,
   };
@@ -216,7 +226,7 @@ export function buildDesignV2(P) {
     return {
       k: SH(0.02), join: 0,
       disp: { amp: SH(0.0055), freq: [95 / s, 26 / s, 95 / s], oct: 2, seed: 5 + side, band: S(0.02) },
-      prims: [0, 1, 2].map((k) => cone(m(ear.pts[k]), ear.rs[k], m(ear.pts[k + 1]), ear.rs[k + 1], `ear${n}${k}`, 'ear', 'ear', 2.4)),
+      prims: [0, 1, 2].map((k) => cone(m(ear.pts[k]), ear.rs[k], m(ear.pts[k + 1]), ear.rs[k + 1], `ear${n}${k}`, 'ear', 'ear', T.earSx)),
     };
   };
   const earGroups = [earGroup(1), earGroup(-1)];
