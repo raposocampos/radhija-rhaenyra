@@ -117,6 +117,7 @@ export const NAV_EDGES = [
 export const GOAL = {
   x: DOG_BED.x, z: DOG_BED.z, r: 0.9,
   celebrate: { radhija: { x: -4.3, z: 3.0 }, rhaenyra: { x: -5.15, z: 3.0 } },
+  celebrateRim: { x: DOG_BED.x, z: DOG_BED.z, r: DOG_BED.r, tube: 0.09 }, // a borda da caminha (world.js dogBed)
   entryPoints: [{ x: -3.6, z: 3.4 }, { x: -4.7, z: 2.2 }],
 };
 
