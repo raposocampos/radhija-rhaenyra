@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { createPigeon } from '../../src/world/pigeon.js';
-import { createPigeon as before } from '../../src/world/.pigeon-motion-baseline.js';
+import { createPigeon as before } from '../../src/world/.pigeon-baseline.js';
 
 // Sequência determinística para vídeo/filmstrip no runner, sem depender do FPS do SwiftShader.
+// 180 quadros a 30 fps: 0–0,6 s parado · 0,6–2,4 s decolagem, voo e pouso · 4 s bicada (só o modelo novo) ·
+// 5 s cochilo.
 window.startPigeonMotionReview = () => {
-  document.querySelector('h1').textContent = 'Decolagem · voo · pouso';
-  document.querySelector('header p').textContent = 'Animação anterior à esquerda · nova à direita';
+  document.querySelector('h1').textContent = 'Decolagem · voo · pouso · bicada · cochilo';
+  document.querySelector('header p').textContent = 'Pombo do main à esquerda · novo à direita';
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(1280, 600); renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
   renderer.setScissorTest(true);
@@ -26,7 +29,8 @@ window.startPigeonMotionReview = () => {
     const t = frame / 30, k = THREE.MathUtils.clamp((t - 0.6) / 1.8, 0, 1);
     const flying = t >= 0.6 && t < 2.4;
     for (const [i, { scene, p, camera }] of models.entries()) {
-      p.setPose({ flying, flightProgress: k, y: Math.sin(k * Math.PI) * 0.18, yaw: 0 });
+      if (frame === 120) p.peck?.();
+      p.setPose({ flying, flightProgress: k, y: Math.sin(k * Math.PI) * 0.18, yaw: 0, asleep: frame >= 150 });
       // Duas atualizações por quadro: simulação de 60 Hz, vídeo de 30 fps.
       p.update(1 / 60, t); p.update(1 / 60, t + 1 / 60);
       renderer.setViewport(i * 640, 0, 640, 600); renderer.setScissor(i * 640, 0, 640, 600);
