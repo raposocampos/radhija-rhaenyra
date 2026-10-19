@@ -150,31 +150,40 @@ try {
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] });
-  // DIAGNÓSTICO TEMPORÁRIO: esconde um grupo por vez para achar o borrão branco
+  // DIAGNÓSTICO TEMPORÁRIO: esconde cada filho (e neto) da fase e mede o branco no canto da captura 15
   {
     const cam15 = { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] };
-    const hide = (pred, on) => page.evaluate(({ src, on: v }) => {
-      const fn = new Function(`return (${src})`)();
+    console.log('DIAG brancura ' + JSON.stringify(await page.evaluate((cam) => {
+      const G = window.__game;
+      const root = G.engine.scene.children.find((o) => o.name === 'fase:fase9');
       const list = [];
-      window.__game.engine.scene.traverse((o) => { if (fn(o)) list.push(o); });
-      for (const o of list) o.visible = v;
-      return list.map((o) => o.name || o.type).slice(0, 8);
-    }, { src: pred.toString(), on });
-    console.log('DIAG fx ' + JSON.stringify(await page.evaluate(() => window.__game.engine.scene.children
-      .filter((o) => o.isSprite || (o.isMesh && !o.name))
-      .map((o) => { const m = o.material; return { t: o.type, p: o.position.toArray().map((v) => +v.toFixed(2)), s: o.scale.toArray().map((v) => +v.toFixed(2)), mt: m.type, op: m.opacity, dt: m.depthTest, bl: m.blending, c: m.color?.getHexString?.(), map: !!m.map, ro: o.renderOrder }; }))));
-    const tries = [
-      ['15g-sem-sprites', (o) => o.isSprite && o.parent?.type === 'Scene'],
-      ['15h-sem-malhas-fx', (o) => o.isMesh && !o.name && o.parent?.type === 'Scene'],
-      ['15i-sem-luzes', (o) => (o.isHemisphereLight || o.isDirectionalLight)],
-      ['15j-sem-particulas', (o) => o.name === 'fx-particles'],
-    ];
-    for (const [name, pred] of tries) {
-      console.log('DIAG ' + name + ' ' + JSON.stringify(await hide(pred, false)));
-      await shot(name, cam15);
-      await hide(pred, true);
-    }
-    console.log('DIAG cena ' + JSON.stringify(await page.evaluate(() => window.__game.engine.scene.children.map((o) => `${o.type}:${o.name}:${o.visible}`))));
+      root.traverse((o) => { if (o.parent === root || o.parent?.parent === root || o.parent?.parent?.parent === root) list.push(o); });
+      const c = G.engine.renderer.domElement;
+      const g = document.createElement('canvas');
+      g.width = c.width; g.height = c.height;
+      const x = g.getContext('2d');
+      const measure = () => {
+        window.__render(cam);
+        x.drawImage(c, 0, 0);
+        const d = x.getImageData(Math.round(c.width * 0.08), Math.round(c.height * 0.14), 1, 1).data;
+        return d[0] + d[1] + d[2];
+      };
+      const base = measure();
+      const out = [['(todos)', base]];
+      for (const o of list) {
+        if (!o.visible) continue;
+        o.visible = false;
+        const v = measure();
+        o.visible = true;
+        if (Math.abs(v - base) > 30) {
+          const chain = [];
+          for (let q = o; q && q !== root; q = q.parent) chain.push(`${q.type}:${q.name}`);
+          const m = o.material;
+          out.push([chain.join('<'), v, m ? { t: m.type, c: m.color?.getHexString?.(), r: m.roughness, mt: m.metalness, e: m.emissive?.getHexString?.(), env: m.envMapIntensity, tr: m.transparent } : null]);
+        }
+      }
+      return out;
+    }, cam15)));
   }
   await keyDown('KeyR');
   await step(18);
