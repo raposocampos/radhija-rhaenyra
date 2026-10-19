@@ -10,7 +10,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   distraírem. Ajuste do usuário: a comida distrai por um **tempo determinado e generoso** (configurável por
   legume), não de vez; depois eles voltam a atrapalhar. Peças reutilizáveis, sem mexer em `src/levels/fase10/`: a
   sessão da fase 10 (PR #33) integra depois que este PR entrar.
-- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`. Consultar o PR para SHA, CI, E2E e prévia; nada
+- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`, atualizado por merge com o main `168bda6` (PR #34). Consultar o PR para SHA, CI, E2E e prévia; nada
   rodou no PC além de `node --check`/`git diff --check`.
 - Feito: modelo `src/characters/pig.js` (SDF + esqueleto de 10 ossos, IK das patas, trava de chão, variantes de
   manchinhas, gestos `oink`/`bump`/`shake`, ações `idle`/`walk`/`sniff`/`eat`/`alert`/`lie`/`sleep`); mecânica
@@ -24,6 +24,21 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
   esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
   `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
+
+## Em andamento: pombo mais bonito (Claude, PR #34)
+
+- Pedido do usuário: "melhorar o visual do modelo do pombo, pode ser mais bonito" (fases 4 e 10). Branch
+  `claude/pombo-bonito` (worktree próprio), **PR #34**, base `eb1a148`; consultar o PR para SHA, CI, E2E e prévia.
+  Nada rodou no PC além de `node --check`/`git diff --check`.
+- Feito: `src/world/pigeon.js` refeito (proporções, pescoço furta-cor no shader, carúncula, olhos com brilho, asas
+  com barras e primárias em degrau, cauda em leque com faixa escura, pés rosados com unhas; olha em volta, pisca,
+  cochila afofado, espia com um olho, `peck()` novo). 7 malhas e 1 material por pombo. API e campos de `setPose`
+  mantidos. Testes em `test/pigeon.test.mjs`; capturas (`capture-pigeons.mjs`, suíte E2E `fase4`) comparam com
+  o pombo do main, com cabeça de perto, bicada e pouso. Decisões em [POMBOS.md](POMBOS.md).
+- Fase 10 (PR #33, outra sessão): `treehouse.js` pode trocar a bicada simulada com `flying` por
+  `pigeonModel.peck()`; anotado no PR #34. Não editar `src/levels/fase10/**` nem `src/game/game.js` neste PR.
+- Próximo passo: CI e E2E `fase4` verdes no head atual, revisar `shots/pombos/` do artefato `capturas-fase4`,
+  entregar a prévia e aguardar a aprovação do usuário antes de integrar.
 
 ## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 

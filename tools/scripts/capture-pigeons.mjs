@@ -12,13 +12,10 @@ if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const head = git('rev-parse', 'HEAD');
 const base = git('merge-base', 'HEAD', 'origin/main');
+// Antes = o pombo do main (ancestral comum), nas fotos e no vídeo do voo.
 const baselinePath = 'src/world/.pigeon-baseline.js';
-// Última prévia: reproduz as pernas soltas relatadas pelo usuário.
-const motionBase = 'a9b090606d5e646d8a8ed4cf70c8be1bf5c36947';
-const motionBaselinePath = 'src/world/.pigeon-motion-baseline.js';
 // wx evita sobrescrever qualquer arquivo que não pertença a esta execução.
 writeFileSync(baselinePath, git('show', `${base}:src/world/pigeon.js`), { flag: 'wx' });
-writeFileSync(motionBaselinePath, git('show', `${motionBase}:src/world/pigeon.js`), { flag: 'wx' });
 mkdirSync('shots/pombos', { recursive: true });
 let server, browser;
 const errors = [];
@@ -37,16 +34,18 @@ try {
   await page.screenshot({ path: 'shots/pombos/01-silhuetas.png', fullPage: true });
   const stats = await page.evaluate(() => window.reviewPigeons(true));
   await page.screenshot({ path: 'shots/pombos/02-animacoes.png', fullPage: true });
-  // Limite explícito: não dobrar triângulos, nem aumentar os meshes do personagem.
+  // Limite explícito: não dobrar triângulos, nem aumentar as malhas ou os materiais do personagem.
   const old = stats.find((s) => s.label === 'Antes');
   const next = stats.find((s) => s.label === 'Depois');
-  if (next.meshes > old.meshes || next.triangles > old.triangles * 2) throw new Error('Orçamento geométrico excedido.');
+  if (next.meshes > old.meshes || next.triangles > old.triangles * 2 || next.materials > old.materials) {
+    throw new Error('Orçamento geométrico excedido.');
+  }
 
   await page.setViewportSize({ width: 1280, height: 672 });
   await page.waitForFunction(() => !!window.startPigeonMotionReview);
   await page.evaluate(() => window.startPigeonMotionReview());
   mkdirSync('shots/pombos/voo', { recursive: true });
-  for (let frame = 0; frame < 120; frame++) {
+  for (let frame = 0; frame < 180; frame++) {
     guard.note(`voo antes/depois, quadro ${frame}`);
     await page.evaluate((f) => window.pigeonMotionFrame(f), frame);
     await page.screenshot({ path: `shots/pombos/voo/frame-${String(frame).padStart(3, '0')}.png` });
@@ -54,7 +53,7 @@ try {
   execFileSync('ffmpeg', ['-y', '-framerate', '30', '-i', 'shots/pombos/voo/frame-%03d.png',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'shots/pombos/07-voo-antes-depois.mp4'], { stdio: 'pipe' });
   execFileSync('ffmpeg', ['-y', '-i', 'shots/pombos/07-voo-antes-depois.mp4',
-    '-vf', 'fps=3,scale=640:-1,tile=3x4', '-frames:v', '1', 'shots/pombos/08-sequencia-voo.png'], { stdio: 'pipe' });
+    '-vf', 'fps=2,scale=640:-1,tile=3x4', '-frames:v', '1', 'shots/pombos/08-sequencia-voo.png'], { stdio: 'pipe' });
 
   // Cena real: congela apenas depois do boot; desenha com sombras e pós-processamento normais.
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -150,12 +149,11 @@ try {
     g.engine.render(0, 10.5);
   });
   await page.screenshot({ path: 'shots/pombos/11-mecanismo-vertical.png' });
-  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, motionBase, head, stats, framing, events, errors }, null, 2));
+  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, head, stats, framing, events, errors }, null, 2));
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
 } finally {
   await closeBrowser(browser);
   await server?.close();
   unlinkSync(baselinePath);
-  unlinkSync(motionBaselinePath);
 }
