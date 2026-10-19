@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #41 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #42 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`)
+## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 
 - Achado do orquestrador (2026-10-19): a verificação "modelo novo: nada abaixo do chão" da suíte `empurra` falhou no
   E2E do #40 (`39327090192`: −0,011 e −0,010; o limite é −0,010). O `lowest` do modelo novo é o ponto mais baixo ANTES
@@ -87,7 +87,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
 - Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
   do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
-- Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`, atualizado com o main `369b0ff`, PR #38): o teste "presos no
+- Entregue, **PR #40** (squash `1cd6647`, deploy `39332428726`; branch `claude/porcos-teste-estavel`): o teste "presos no
   cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou bugs
   reais no caminho dos porcos, corrigidos em `pigHerd.js`: (1) dois porcos entravam juntos no vão da porteira,
   entalavam lado a lado e ninguém saía: agora passa um de cada vez (`assignDoor`/`waitDoor`: a vez é de quem está mais
@@ -98,7 +98,15 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
   alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
   volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
-  Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
+- Entregue (PR #42, squash `f50db80`, deploy `39338511759`; branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`, atualizado com o main
+  `0bc887a`, PR #39 e #41): o teste "arena: E pega
+  o legume…; pegar de volta tira dele" falhou 1 vez em 7. Diagnóstico no CI (120 sementes): 3 falhavam ao pegar o
+  milho de volta, porque os outros porquinhos estavam em volta da Radhija e um esbarrão (susto de 0,3 s) engolia o E.
+  É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
+  joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
+  Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe em
+  `test/porcos.test.mjs` e no CONTEXTO. Integração na fila do orquestrador: #39 → #41 → #42 → #33; atualizar com o
+  main na vez dele, refazer o CI e pedir a aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`); etapas 2 a 5 em andamento
 
@@ -218,7 +226,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
   `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
-## Entregue: diagnóstico do travamento no primeiro boot (PR #31, squash `eb1a148`, deploy `39205091379`)
+## Entregue: travamento no primeiro boot do E2E (PR #31, squash `eb1a148`)
 
 - Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
   fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado por merge com o main `0bd48d0` (PR #30) e
@@ -447,7 +455,7 @@ celular (`.rr[data-mobile]`), perfis de qualidade por aparelho com governador de
 alta, sem mudança), manifest e ícones. Squash `1fbc631` no main, publicado pelo deploy `39151418291` (liberado com
 a aprovação do chat); `version.json` e HTTP 200 conferidos. Detalhes em ARQUITETURA §6, §9 e §10.
 
-## Em andamento: tela cheia no iPhone (branch `claude/iphone-tela-cheia`)
+## Entregue: tela cheia no iPhone (PR #25, squash `ccfaf4a`)
 
 - Retorno do usuário (2026-10-18): no iPhone 13 rodou bem, mas não abriu em tela cheia e a barra de endereço
   atrapalha. O Safari do iPhone não deixa uma página ocupar a tela inteira; o caminho é o app da tela inicial.
