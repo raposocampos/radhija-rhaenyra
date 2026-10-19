@@ -253,7 +253,8 @@ function buildWalls(layout, updaters) {
     }
     wallBox(grp, (a + b) / 2, H - 0.18, zN, b - a, 0.18, T, brick);
   }
-  updaters.push((dt) => { rainTex.offset.y -= dt * 0.22; });
+  // a chuva desce: com o offset crescendo, cada ponto do vidro mostra o que estava acima dele
+  updaters.push((dt) => { rainTex.offset.y += dt * 0.45; });
 
   // ---- porta da frente (fechada): almofadas, vitral com a chuva e a maçaneta
   const doorMat = woodMat('#5a3a24', { key: 'f9-porta-frente', rough: 0.6 });
