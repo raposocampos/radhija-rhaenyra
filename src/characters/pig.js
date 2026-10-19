@@ -55,7 +55,7 @@ for (const l of LEGS) {
   BONE_POS[`${l.key}L`] = [l.x, HIP_Y - L1, l.z];
 }
 const HEAD_C = [0, 0.29, 0.255]; // centro do crânio (para achar a superfície dos olhos)
-const CELL = 0.0115;
+const CELL = 0.0125;
 const GEO = {}; // geometrias e materiais compartilhados por todos os porcos (vivem com a aplicação)
 
 function design() {
@@ -348,18 +348,38 @@ function zzzTexture() {
   }, { repeat: false })));
 }
 
-/** Pontos da pele para a trava de chão (rest pose + 2 ossos), escolhidos uma vez. */
+/**
+ * Pontos para a trava de chão, escolhidos uma vez: da pele (rest pose + 2 ossos), separados pelo osso principal
+ * (cabeça densa: é ela que chega perto do chão fuçando; tronco; canelas), e das peças rígidas (focinho e orelhas).
+ */
 function groundSamples() {
   if (GEO.samples) return GEO.samples;
   const B = bodyBase();
   const P = B.position.array, SI = B.skinIndex.array, SW = B.skinWeight.array;
-  const stride = Math.max(1, Math.floor(B.nv / 170));
-  const out = [];
+  const head = BONES.indexOf('head');
+  const shins = new Set(['flL', 'frL', 'hlL', 'hrL'].map((n) => BONES.indexOf(n)));
+  const out = { head: [], body: [], shin: [], snout: [], ear: [] };
   for (let v = 0; v < B.nv; v++) {
+    const main = SW[v * 4] >= SW[v * 4 + 1] ? SI[v * 4] : SI[v * 4 + 1];
     const y = P[v * 3 + 1];
-    if (v % stride !== 0 && !(y < 0.06 && v % 3 === 0)) continue;
-    out.push({ x: P[v * 3], y, z: P[v * 3 + 2], b0: SI[v * 4], w0: SW[v * 4], b1: SI[v * 4 + 1], w1: SW[v * 4 + 1] });
+    const list = main === head ? out.head : shins.has(main) ? out.shin : out.body;
+    const stride = main === head ? 3 : shins.has(main) ? 5 : y < 0.13 ? 4 : 12;
+    if (v % stride !== 0) continue;
+    list.push({ x: P[v * 3], y, z: P[v * 3 + 2], b0: SI[v * 4], w0: SW[v * 4], b1: SI[v * 4 + 1], w1: SW[v * 4 + 1] });
   }
+  // focinho: a borda do disco (sem repetir os vértices da malha não indexada)
+  const seen = new Set();
+  const sp = snoutGeometry().attributes.position;
+  for (let i = 0; i < sp.count; i++) {
+    const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i);
+    if (Math.hypot(x, y) < 0.028) continue;
+    const key = Math.round(x * 1000) + ',' + Math.round(y * 1000) + ',' + Math.round(z * 1000);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.snout.push(new THREE.Vector3(x, y, z));
+  }
+  const ep = earGeometry().attributes.position;
+  for (let i = 0; i < ep.count; i += 2) out.ear.push(new THREE.Vector3(ep.getX(i), ep.getY(i), ep.getZ(i)));
   return (GEO.samples = out);
 }
 
@@ -482,8 +502,6 @@ export function createPig({ variant = 0 } = {}) {
   const OFF_WALK = [0.25, 0.75, 0, 0.5];
   const OFF_TROT = [0, 0.5, 0.5, 0];
   const samples = groundSamples();
-  const headIdx = BONES.indexOf('head');
-  const shinIdx = new Set(['flL', 'frL', 'hlL', 'hrL'].map((n) => BONES.indexOf(n)));
   const BM = bones.map(() => new THREE.Matrix4());
   const _e = new THREE.Euler();
   const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _k = new THREE.Vector3(), _p = new THREE.Vector3();
@@ -491,8 +509,6 @@ export function createPig({ variant = 0 } = {}) {
   const _q = new THREE.Quaternion();
   const _m = new THREE.Matrix4();
   const _down = new THREE.Vector3(0, -1, 0);
-  const EAR_TIP = new THREE.Vector3(0, -0.012, EAR.len * 0.95);
-  const SNOUT_LOW = [new THREE.Vector3(0, -0.044, 0.02), new THREE.Vector3(0.03, -0.034, 0.02), new THREE.Vector3(-0.03, -0.034, 0.02)];
   const TAIL_TIP = new THREE.Vector3(-0.018, 0.05, 0);
   const setE = (b, x, y, z) => b.quaternion.setFromEuler(_e.set(x, y, z, 'YXZ'));
   /** Envelope de um gesto: avança o tempo e devolve u (0..1) ou -1 se acabou.
@@ -526,20 +542,34 @@ export function createPig({ variant = 0 } = {}) {
     Lo.quaternion.setFromUnitVectors(_down, _v3.copy(foot).sub(knee).normalize().applyQuaternion(_q));
   }
 
-  /** Mais baixo (y do mundo) entre os pontos da pele: só os da cabeça (head) ou todos (fora as canelas plantadas). */
-  function lowest(headOnly, shins) {
-    for (let b = 0; b < bones.length; b++) BM[b].multiplyMatrices(bones[b].matrixWorld, skeleton.boneInverses[b]);
+  /** y do mundo mais baixo de uma lista de pontos da pele (BM já calculadas). */
+  function lowestSkin(list) {
     let m = Infinity;
-    for (const s of samples) {
-      const main = s.w0 >= s.w1 ? s.b0 : s.b1;
-      if (headOnly ? main !== headIdx : (!shins && shinIdx.has(main))) continue;
+    for (const s of list) {
       const e0 = BM[s.b0].elements, e1 = BM[s.b1].elements;
       const y = s.w0 * (e0[1] * s.x + e0[5] * s.y + e0[9] * s.z + e0[13]) + s.w1 * (e1[1] * s.x + e1[5] * s.y + e1[9] * s.z + e1[13]);
       if (y < m) m = y;
     }
-    for (const p of SNOUT_LOW) m = Math.min(m, _v.copy(p).applyMatrix4(snout.matrixWorld).y);
-    for (const e of ears) m = Math.min(m, _v.copy(EAR_TIP).applyMatrix4(/** @type {THREE.Mesh} */ (e.pivot.children[0]).matrixWorld).y);
-    if (!headOnly) m = Math.min(m, _v.copy(TAIL_TIP).applyMatrix4(tail.matrixWorld).y);
+    return m;
+  }
+  /** y do mundo mais baixo de pontos de uma peça rígida. */
+  function lowestRigid(list, mw) {
+    const e = mw.elements;
+    let m = Infinity;
+    for (const p of list) {
+      const y = e[1] * p.x + e[5] * p.y + e[9] * p.z + e[13];
+      if (y < m) m = y;
+    }
+    return m;
+  }
+  /** Mais baixo (y do mundo): só a cabeça (pele, focinho e orelhas) ou tudo (as canelas só deitado: em pé, plantadas). */
+  function lowest(headOnly, shins) {
+    for (let b = 0; b < bones.length; b++) BM[b].multiplyMatrices(bones[b].matrixWorld, skeleton.boneInverses[b]);
+    let m = Math.min(lowestSkin(samples.head), lowestRigid(samples.snout, snout.matrixWorld));
+    for (const e of ears) m = Math.min(m, lowestRigid(samples.ear, /** @type {THREE.Mesh} */ (e.pivot.children[0]).matrixWorld));
+    if (headOnly) return m;
+    m = Math.min(m, lowestSkin(samples.body), _v.copy(TAIL_TIP).applyMatrix4(tail.matrixWorld).y);
+    if (shins) m = Math.min(m, lowestSkin(samples.shin));
     return m;
   }
 
@@ -690,23 +720,33 @@ export function createPig({ variant = 0 } = {}) {
     const wide = 1 + w.alert * 0.1;
     for (const e of eyes) e.scale.set(wide, wide * Math.max(0.08, open), wide);
 
-    // ---------------- trava de chão: em pé, a cabeça não entra no chão (levanta o focinho); o resto ergue o corpo
+    // ---------------- trava de chão: em pé, a cabeça não entra no chão (levanta o focinho); o resto ergue o corpo.
+    // Só quando alguma parte pode chegar perto do chão (fuçando, comendo, deitando, nos gestos): andando, nada desce.
+    const guard = down > 0.01 || nose > 0.01 || st.headFix > 0 || st.lift > 0 || shakeEnv > 0 || ub >= 0 || uo >= 0;
+    if (!guard) {
+      st.minY = 0;
+      inner.position.y = 0;
+    }
     object.updateMatrixWorld(true);
     const ground = object.matrixWorld.elements[13];
     let fix = 0;
-    for (let it = 0; it < 2 && up > 0.5; it++) {
+    for (let it = 0; it < 2 && up > 0.5 && guard; it++) {
       const mh = lowest(true, false) - ground;
       if (mh >= 0.004) break;
       fix += (0.004 - mh) / 0.17;
       setE(B.head, headPitch - fix, headYaw, headRoll);
       B.head.updateMatrixWorld(true);
     }
-    st.headFix = clamp(st.headFix + fix - st.headFix * Math.min(1, dt * (up > 0.5 ? 3 : 8)), 0, 1.2);
-    const m = lowest(false, down > 0.5) - ground;
-    const was = st.lift;
-    st.lift = Math.max(0, was - m);
-    inner.position.y = st.lift;
-    st.minY = m + (st.lift - was); // depois da trava: o ponto mais baixo no chão ou acima dele
+    if (guard) {
+      st.headFix = clamp(st.headFix + fix - st.headFix * Math.min(1, dt * (up > 0.5 ? 3 : 8)), 0, 1.2);
+      if (st.headFix < 1e-4) st.headFix = 0;
+      const m = lowest(false, down > 0.5) - ground;
+      const was = st.lift;
+      st.lift = Math.max(0, was - m);
+      if (st.lift < 1e-4) st.lift = 0;
+      inner.position.y = st.lift;
+      st.minY = m + (st.lift - was); // depois da trava: o ponto mais baixo no chão ou acima dele
+    }
 
     // sombra e "Zzz" subindo da cabeça de quem dorme
     shadow.position.set(B.body.position.x, 0.004, B.body.position.z - 0.02);

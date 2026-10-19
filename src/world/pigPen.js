@@ -127,7 +127,7 @@ export function buildPigPen(PEN, L) {
     m.position.set(0, y, -0.012);
     return m;
   });
-  const latch = new THREE.Mesh(rbox(0.05, 0.03, 0.09, 0.006), ironMat);
+  const latch = new THREE.Mesh(rbox(0.064, 0.03, 0.09, 0.006), ironMat); // mais largo que o montante (faces fora do plano dele)
   latch.position.set(0, leafH * 0.52, -leafL + 0.02);
   pivot.add(leaf, ...hinges, latch);
   group.add(pivot);

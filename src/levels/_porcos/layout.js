@@ -96,12 +96,12 @@ export const NAV_NODES = {
   W_north: { x: -0.4, z: -2.2 },
   W_gap: { x: 0.05, z: 1.07 },
   E_gap: { x: 1.15, z: 1.07 },
-  E_mid: { x: 2.8, z: 0.35 },
+  E_mid: { x: 2.95, z: 0.35 },
   E_button: { x: 3.0, z: -1.25 },
   E_pen: { x: 4.78, z: -1.85 },
   E_in: { x: 4.78, z: -2.95 },
   E_north: { x: 1.3, z: -2.2 },
-  E_south: { x: 3.1, z: 3.6 },
+  E_south: { x: 3.35, z: 3.7 },
 };
 /** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [

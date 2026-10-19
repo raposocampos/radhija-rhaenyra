@@ -51,7 +51,8 @@ export const PIG_DEFAULTS = {
   boredAfter: 12, // depois de tanto tempo atrapalhando, cansa…
   boredFor: [3.5, 5.5], // …e fuça o chão esse tanto antes de voltar
   lead: 0.14, // quanto à frente da dog ele quer ficar (além dos dois raios)
-  spread: 0.44, // lado a lado, quando mais de um atrapalha a mesma dog
+  spread: 0.5, // lado a lado na frente da dog que anda (mais que o diâmetro de um porco)
+  ring: 0.95, // em volta da dog parada: rad entre um porco e o próximo (no arco da frente)
   bumpEvery: [1.4, 2.8], // encostado, esbarra a cada (s)
   bumpDist: 0.32, // empurrão (m)
   bumpCooldown: 1.2, // por dog
@@ -160,7 +161,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       stuckT: 0, bumpT: 0, bumpWait: rand(cfg.bumpEvery), bumpPending: -1, bumpDog: null,
       oinkT: rand(cfg.oinkEvery) * (0.5 + i * 0.3), grumpyCd: 0, alertT: 0,
       idleT: 0.5 + i, idleAct: 'idle', pesterT: 0, boredT: 0, exitAt: 0, left: 0, phase: '', munchT: 0,
-      action: 'idle', lookAt: null, barkFrom: null, fxT: 1 + i,
+      action: 'idle', lookAt: null, barkFrom: null, fxT: 1 + i, side: 0,
     };
   });
   const byCol = new Map(pigs.map((P) => [P.id, P]));
@@ -257,8 +258,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (P.stuckT > 1.5) {
       const dx = p.x - P.x, dz = p.z - P.z;
       const L = Math.hypot(dx, dz) || 1;
-      const s = P.i % 2 ? 1 : -1;
-      P.route.unshift({ x: P.x - (dz / L) * 0.6 * s + (dx / L) * 0.1, z: P.z + (dx / L) * 0.6 * s + (dz / L) * 0.1 });
+      P.side = -(P.side || (P.i % 2 ? -1 : 1)); // cada vez para um lado (não vai se arrastando ao longo da cerca)
+      P.route.unshift({ x: P.x - (dz / L) * 0.6 * P.side + (dx / L) * 0.1, z: P.z + (dx / L) * 0.6 * P.side + (dz / L) * 0.1 });
       P.stuckT = 0;
       return false;
     }
@@ -371,13 +372,13 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     return null;
   }
 
-  /** Lado a lado: cada dog com os seus porcos em fila (offsets laterais). */
+  /** Cada dog com os seus porcos: P.slot = −1, 0, 1… (lado a lado na frente dela, ou num arco em volta). */
   function assignSlots() {
     /** @type {Record<string, any[]>} */
     const groups = {};
     for (const P of pigs) if (P.state === 'chase' && P.dog) (groups[P.dog] ||= []).push(P);
     for (const list of Object.values(groups)) {
-      list.forEach((P, k) => { P.slot = (k - (list.length - 1) / 2) * cfg.spread; });
+      list.forEach((P, k) => { P.slot = k - (list.length - 1) / 2; });
     }
   }
 
@@ -393,12 +394,21 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       setState(P, 'roam', { dog: null, goal: null, pesterT: 0, boredT: far ? 0.5 : rand(cfg.boredFor), idleAct: 'sniff', idleT: 0 });
       return;
     }
-    // ponto desejado: à frente da dog, na direção em que ela anda (ou olha), lado a lado com os outros porcos
+    // ponto desejado: andando, à frente da dog (na direção em que ela anda), lado a lado com os outros porcos;
+    // parada, encostado nela, num arco em volta da frente (cheiram e dão o esbarrão)
     const sp = Math.hypot(c.vx || 0, c.vz || 0);
-    const fx = sp > 0.3 ? c.vx / sp : Math.sin(c.yaw), fz = sp > 0.3 ? c.vz / sp : Math.cos(c.yaw);
-    // andando, ele se põe à frente dela; parada, chega encostado (cheira e dá o esbarrão)
-    const lead = r + c.r + (sp > 0.3 ? cfg.lead + Math.min(sp, 2) * 0.12 : 0.02);
-    const g = clampArea(c.x + fx * lead + fz * P.slot, c.z + fz * lead - fx * P.slot);
+    let fx = sp > 0.3 ? c.vx / sp : Math.sin(c.yaw), fz = sp > 0.3 ? c.vz / sp : Math.cos(c.yaw);
+    let g;
+    if (sp > 0.3) {
+      const lead = r + c.r + cfg.lead + Math.min(sp, 2) * 0.12;
+      g = clampArea(c.x + fx * lead + fz * P.slot * cfg.spread, c.z + fz * lead - fx * P.slot * cfg.spread);
+    } else {
+      const a = P.slot * cfg.ring;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      [fx, fz] = [fx * ca + fz * sa, fz * ca - fx * sa];
+      const lead = r + c.r + 0.02;
+      g = clampArea(c.x + fx * lead, c.z + fz * lead);
+    }
     const dDog = Math.hypot(c.x - P.x, c.z - P.z);
     const dGoal = Math.hypot(g.x - P.x, g.z - P.z);
     const outside = offArea(c.x, c.z) > 0.25;
@@ -488,7 +498,10 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       const roll = Math.random();
       if (P.idleAct !== 'go' && roll < 0.55) {
         P.idleAct = 'go';
-        P.goal = { x: lerp(pen.x0 + r + 0.05, pen.x1 - r - 0.05, Math.random()), z: lerp(pen.z0 + r + 0.05, pen.z1 - r - 0.05, Math.random()) };
+        for (let k = 0; k < 6; k++) {
+          P.goal = { x: lerp(pen.x0 + r + 0.05, pen.x1 - r - 0.05, Math.random()), z: lerp(pen.z0 + r + 0.05, pen.z1 - r - 0.05, Math.random()) };
+          if (Math.hypot(P.goal.x - door.in.x, P.goal.z - door.in.z) > 0.6) break; // longe da porta
+        }
         P.idleT = 6;
       } else {
         P.idleAct = roll < 0.8 ? 'sniff' : roll < 0.93 ? 'idle' : 'sleep';
@@ -599,7 +612,18 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (P.t > 2.3) finishDistraction(P, 'time');
   }
 
+  /** Entrar ou sair do cercado só pela porteira: se o próximo ponto está do outro lado da cerca, passa pela porta. */
+  function viaDoor(P) {
+    const p = P.route[0];
+    if (!p) return;
+    const inside = inPen(P.x, P.z), there = inPen(p.x, p.z);
+    if (inside === there) return;
+    const d = inside ? door.in : door.out;
+    if (Math.hypot(P.x - d.x, P.z - d.z) > 0.35 && (p.x !== d.x || p.z !== d.z)) P.route.unshift({ ...d });
+  }
+
   function exit(P, dt, ctrls) {
+    viaDoor(P);
     P.action = 'walk';
     if (follow(P, cfg.trotSpeed, dt, ctrls, 'none') || P.t > 12) {
       setState(P, 'roam', { idleAct: 'sniff', idleT: 0.6 + Math.random(), boredT: 0 });
@@ -607,6 +631,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   }
 
   function goHome(P, dt, ctrls) {
+    viaDoor(P);
     P.action = 'walk';
     if (follow(P, cfg.trotSpeed, dt, ctrls, inPen(P.x, P.z) ? 'pen' : 'none') || (P.t > 20 && inPen(P.x, P.z))) {
       setState(P, 'pen', { idleAct: 'idle', idleT: 1 + Math.random() * 2 });
