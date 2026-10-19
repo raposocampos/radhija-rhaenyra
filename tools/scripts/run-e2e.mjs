@@ -2,7 +2,7 @@
 // Sobe um servidor Vite SEM HMR numa porta livre, roda as partidas Playwright em sequência e derruba o
 // servidor no fim (inclusive em erro ou Ctrl+C). No Windows, matar o shell não mata o node filho do
 // Vite: por isso o Vite é iniciado direto pelo node (sem npx/cmd) e encerrado com `taskkill /T /F`.
-//   node tools/scripts/run-e2e.mjs [--only fase1,fase2,fase3,fase4,fase5,controle,regressoes,pulo,bafo,expresso,lambe,toque,lavanderia,menu,extras,biblioteca] [--port 5190] [--url http://...]
+//   node tools/scripts/run-e2e.mjs [--only fase1,fase2,fase3,fase4,fase5,controle,regressoes,pulo,bafo,expresso,lambe,toque,lavanderia,menu,extras,biblioteca,canil] [--port 5190] [--url http://...]
 // Com --url, usa um servidor já rodando (não sobe nem derruba nada).
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream, mkdirSync } from 'node:fs';
@@ -30,6 +30,7 @@ const SUITES = [
   { id: 'menu', script: 'tools/scripts/test-menu.mjs' },
   { id: 'extras', script: 'tools/scripts/test-extras.mjs' },
   { id: 'biblioteca', script: 'tools/scripts/test-biblioteca.mjs' },
+  { id: 'canil', script: 'tools/scripts/test-canil.mjs' },
 ];
 
 const args = parseArgs();

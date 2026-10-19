@@ -1,11 +1,18 @@
 // Sandbox das cachorrinhas. Parâmetros de URL:
-//   dog=both|radhija|rhaenyra   view=34|side|front|back|top|face|game|hero
-//   action=none|dash|push|strain|tug|celebrate|sit|sniff   speed=<m/s>   turn=<rad/s>
-//   move=1 (anda de verdade, câmera segue)   sim=<s> (simula s segundos com dt fixo e congela)
+//   dog=both|radhija|rhaenyra   view=34|side|front|back|top|face|ear|game|hero
+//   model=v1|v2|both (both: o atual e o novo lado a lado, cada um no seu quadro)
+//   action=none|dash|push|strain|tug|celebrate|sit|sniff|shake|startled|turn|bafoAim|bafo|proud|yuck|lick|licked|slide
+//   speed=<m/s>   turn=<rad/s>   move=1 (anda de verdade, câmera segue)   sim=<s> (simula s segundos e congela)
 //   orbit=1   carry=1|carrot|ball|slipper   bark=<s> (late no instante s)   look=1 (olha para a câmera)   yaw=<graus>
-//   wet=<0..1>   action=shake|startled|turn (novas)   then=<ação depois de 'at' s>  at=<s>
+//   wet=<0..1>   then=<ação depois de 'at' s>  at=<s>
+//   extra=drink|eat|dig|sneeze|nudge|roll  xk=<0..1> (progresso fixo; sem ele, repete a cada xdur s)
+//   lick=1 (fase da lambida em ciclo)   airk=<0..1> + jumph=<m> (no ar)   slope=<rad>   poop=<0..1>
+//   wallk=<0..1> (impulso na parede, com a parede a 0,45 m à frente)   hop=1 (pula a cada 1 s: física das orelhas)
+// window.__pose({ ...mesmos campos }) refaz a pose sem remontar as dogs (capturas em série, tools/scripts).
 import * as THREE from 'three';
 import { createDog, createPlushCarrot } from '../src/dogs/dog.js';
+import { createDogV2 } from '../src/dogs/v2/dog.js';
+import { SUN, CAMERA } from '../src/levels/fase1/layout.js';
 
 // itens de teste (o jogo usa os do cenário): bolinha de tênis r≈0,065 e pantufa felpuda ≈0,24 m
 function testBall(r = 0.065) {
@@ -34,28 +41,46 @@ function testSlipper(len = 0.24) {
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }
-import { SUN, CAMERA } from '../src/levels/fase1/layout.js';
 
 const q = new URLSearchParams(location.search);
-const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);
+/** Configuração da pose (URL no começo; window.__pose troca). */
+const cfg = {};
+function readConfig(src) {
+  const get = (k, d) => (src[k] !== undefined && src[k] !== null && src[k] !== '' ? src[k] : d);
+  const num = (k, d) => Number(get(k, d));
+  Object.assign(cfg, {
+    view: get('view', '34'),
+    action: get('action', 'none'),
+    speed: num('speed', 0),
+    turn: num('turn', 0),
+    move: String(get('move', '')) === '1',
+    sim: src.sim !== undefined && src.sim !== null && src.sim !== '' ? Number(src.sim) : null,
+    orbit: String(get('orbit', '')) === '1',
+    carryKind: String(get('carry', '')),
+    wet: num('wet', 0),
+    thenAction: get('then', null),
+    thenAt: num('at', 0),
+    barkAt: src.bark !== undefined && src.bark !== null && src.bark !== '' ? Number(src.bark) : null,
+    look: String(get('look', '')) === '1',
+    yawDeg: num('yaw', 0),
+    extra: get('extra', ''),
+    xk: src.xk !== undefined && src.xk !== null && src.xk !== '' ? Number(src.xk) : null,
+    xdur: num('xdur', 3),
+    lick: String(get('lick', '')) === '1',
+    airk: src.airk !== undefined && src.airk !== null && src.airk !== '' ? Number(src.airk) : null,
+    jumph: num('jumph', 0.3),
+    slope: num('slope', 0),
+    poop: src.poop !== undefined && src.poop !== null && src.poop !== '' ? Number(src.poop) : null,
+    wallk: src.wallk !== undefined && src.wallk !== null && src.wallk !== '' ? Number(src.wallk) : null,
+    hop: String(get('hop', '')) === '1',
+  });
+  cfg.carry = !!cfg.carryKind && cfg.carryKind !== '0';
+}
+readConfig(Object.fromEntries(q));
 const which = q.get('dog') || 'both';
-const view = q.get('view') || '34';
-const action = q.get('action') || 'none';
-const speed = num('speed', 0);
-const turn = num('turn', 0);
-const move = q.get('move') === '1';
-const sim = q.has('sim') ? num('sim', 0) : null;
-const orbit = q.get('orbit') === '1';
-const carryKind = q.get('carry') || '';
-const carry = !!carryKind && carryKind !== '0';
-const wet = num('wet', 0);
-const thenAction = q.get('then');
-const thenAt = num('at', 0);
-const barkAt = q.has('bark') ? num('bark', 0) : null;
-const look = q.get('look') === '1';
-const yawDeg = num('yaw', 0);
+const modelParam = q.get('model') || 'v1';
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -68,7 +93,7 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#e9c7a0');
 scene.fog = new THREE.Fog('#e9c7a0', 8, 30);
-const camera = new THREE.PerspectiveCamera(view === 'game' ? CAMERA.fov : 30, innerWidth / innerHeight, 0.02, 100);
+const camera = new THREE.PerspectiveCamera(cfg.view === 'game' ? CAMERA.fov : 30, innerWidth / innerHeight, 0.02, 100);
 
 scene.add(new THREE.HemisphereLight('#bcd3f0', '#7a6a40', 1.05));
 const sun = new THREE.DirectionalLight(SUN.color, SUN.intensity);
@@ -111,50 +136,85 @@ function grassTexture() {
   return t;
 }
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(60, 60).rotateX(-Math.PI / 2),
+  new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2),
   new THREE.MeshStandardMaterial({ map: grassTexture(), roughness: 1 }),
 );
 ground.receiveShadow = true;
 scene.add(ground);
 
-// cachorrinhas
+// cachorrinhas: no modo de comparação (model=both) cada uma fica longe das outras e ganha o próprio quadro
 const t0 = performance.now();
-const list = which === 'both' ? ['radhija', 'rhaenyra'] : [which];
-const dogs = list.map((k) => createDog(k));
+const kinds = which === 'both' ? ['radhija', 'rhaenyra'] : [which];
+const models = modelParam === 'both' ? ['v1', 'v2'] : [modelParam === 'v2' ? 'v2' : 'v1'];
+const compare = models.length > 1;
+const dogs = [];
+for (const k of kinds) for (const m of models) {
+  const d = m === 'v2' ? createDogV2(k) : createDog(k);
+  d.modelLabel = m === 'v2' ? 'nova' : 'atual';
+  dogs.push(d);
+}
 const genMs = performance.now() - t0;
-const spread = dogs.length > 1 ? 0.36 : 0;
+const spread = !compare && dogs.length > 1 ? 0.36 : 0;
 dogs.forEach((d, i) => {
-  d.object.position.x = dogs.length > 1 ? (i === 0 ? -spread : spread) : 0;
-  d.object.rotation.y = THREE.MathUtils.degToRad(yawDeg);
+  d.home = new THREE.Vector3(compare ? i * 8 : dogs.length > 1 ? (i === 0 ? -spread : spread) : 0, 0, 0);
+  d.object.position.copy(d.home);
+  d.object.rotation.y = THREE.MathUtils.degToRad(cfg.yawDeg);
   scene.add(d.object);
   d.steps = 0;
   d.onFootstep = () => d.steps++;
-  if (carry) d.mouthSocket.add(carryKind === 'ball' ? testBall() : carryKind === 'slipper' ? testSlipper() : createPlushCarrot(0.28));
-  if (wet) d.setWet(wet);
+  d.object.updateMatrixWorld(true);
+  d.bodyRestY = d.bones.find((b) => b.name === 'body').getWorldPosition(new THREE.Vector3()).y;
+});
+function applyItems() {
+  for (const d of dogs) {
+    d.mouthSocket.clear();
+    if (cfg.carry) d.mouthSocket.add(cfg.carryKind === 'ball' ? testBall() : cfg.carryKind === 'slipper' ? testSlipper() : createPlushCarrot(0.28));
+    d.setWet(cfg.wet);
+  }
+}
+applyItems();
+
+// legendas dos quadros
+const labels = dogs.map((d) => {
+  const el = document.createElement('div');
+  el.className = 'cell-label';
+  el.textContent = `${d.kind === 'radhija' ? 'Radhija' : 'Rhaenyra'} · ${d.modelLabel}`;
+  el.style.display = compare ? 'block' : 'none';
+  document.body.appendChild(el);
+  return el;
 });
 
 const target = new THREE.Vector3();
-function placeCamera(tm) {
+function placeCamera(tm, focusDogs) {
   const c = new THREE.Vector3();
-  dogs.forEach((d) => c.add(d.object.position));
-  c.divideScalar(dogs.length);
-  const k = dogs.length > 1 ? 1.55 : 1;
-  const big = dogs.some((d) => d.kind === 'rhaenyra') ? 1.1 : 1;
+  focusDogs.forEach((d) => c.add(d.object.position));
+  c.divideScalar(focusDogs.length);
+  // no ar (pulo, impulso na parede) a câmera sobe junto com o meio do corpo (o osso 'body'; rolando, ele fica embaixo)
+  const _b = new THREE.Vector3();
+  const lift = focusDogs.reduce((m, d) => {
+    const body = d.bones.find((b) => b.name === 'body');
+    body.updateWorldMatrix(true, false);
+    return Math.max(m, body.getWorldPosition(_b).y - d.object.position.y - (d.bodyRestY ?? 0));
+  }, 0);
+  c.y += lift * 0.85;
+  const k = focusDogs.length > 1 ? 1.55 : 1;
+  const big = focusDogs.some((d) => d.kind === 'rhaenyra') ? 1.1 : 1;
   let pos, look;
-  switch (view) {
+  switch (cfg.view) {
     case 'side': pos = [1.35 * k * big, 0.32, 0.0]; look = [0, 0.25, 0]; break;
     case 'front': pos = [0, 0.38, 1.45 * k * big]; look = [0, 0.27, 0]; break;
     case 'back': pos = [0.5, 0.65, -1.3 * k]; look = [0, 0.25, 0]; break;
     case 'top': pos = [0, 2.2 * k, 0.01]; look = [0, 0, 0]; break;
     case 'face': pos = [0.18, 0.44 * big, 0.62 * big]; look = [0, 0.37 * big, 0.2 * big]; break;
+    case 'ear': pos = [0.55 * big, 0.42 * big, 0.12 * big]; look = [0, 0.33 * big, 0.2 * big]; break;
     case 'hero': pos = [0.55 * k, 0.32, 1.25 * k]; look = [0, 0.3, 0]; break;
     case 'game': pos = CAMERA.offset.slice(); look = [0, CAMERA.lookHeight, 0]; break;
     default: pos = [0.95 * k * big, 0.58, 1.05 * k * big]; look = [0, 0.27, 0];
   }
   const p = new THREE.Vector3(...pos);
-  if (orbit) p.applyAxisAngle(new THREE.Vector3(0, 1, 0), tm * 0.4);
-  if (view === 'face' && dogs.length > 1) p.x += 0; // face foca a primeira
-  const focus = view === 'face' ? dogs[0].object.position : c;
+  if (cfg.orbit) p.applyAxisAngle(new THREE.Vector3(0, 1, 0), tm * 0.4);
+  const focus = cfg.view === 'face' || cfg.view === 'ear' ? focusDogs[0].object.position : c;
+  if (cfg.wallk !== null) p.multiplyScalar(1.5);
   camera.position.copy(focus).add(p);
   target.copy(focus).add(new THREE.Vector3(...look));
   camera.lookAt(target);
@@ -162,56 +222,124 @@ function placeCamera(tm) {
   sun.position.copy(focus).add(new THREE.Vector3(...SUN.direction).multiplyScalar(10));
 }
 
+/** Pose pedida no instante t (s). */
+function animAt(t) {
+  const act = cfg.thenAction && t >= cfg.thenAt ? cfg.thenAction : cfg.action;
+  /** @type {any} */
+  const a = { speed: cfg.speed, turn: cfg.turn, action: act, carrying: cfg.carry, lookAt: cfg.look ? camera.position : null, slope: cfg.slope };
+  if (cfg.extra) {
+    const k = cfg.xk !== null ? cfg.xk : (t % cfg.xdur) / cfg.xdur;
+    a.extra = { kind: cfg.extra, k, t: cfg.xk !== null ? t : t % cfg.xdur };
+  }
+  if (cfg.lick) {
+    a.lickPhase = (t % 0.44) / 0.44;
+    a.lickSide = Math.floor(t / 0.44) % 2 ? -1 : 1;
+  }
+  if (cfg.airk !== null) {
+    a.airK = cfg.airk;
+    a.jump = 4 * cfg.jumph * cfg.airk * (1 - cfg.airk);
+  }
+  if (cfg.poop !== null) a.poopK = cfg.poop;
+  if (cfg.hop) {
+    // pulo de verdade a cada 1 s (0,5 s no ar, 0,4 m): as orelhas reagem à física
+    const u = t % 1;
+    if (u < 0.5) {
+      a.airK = u / 0.5;
+      a.jump = 4 * 0.4 * a.airK * (1 - a.airK);
+    }
+  }
+  if (cfg.wallk !== null) Object.assign(a, { action: 'wallJump', wallK: cfg.wallk, wallGap: 0.45, wallTop: 1.1, wallOut: 0.05, wallPaws: 1.03, wallSide: 0.165, wallLat: 0.14 });
+  return a;
+}
+
 let elapsed = 0;
 let barked = false;
 function step(dt) {
   elapsed += dt;
   for (const d of dogs) {
-    if (move && speed > 0) {
+    if (cfg.move && cfg.speed > 0) {
       const yaw = d.object.rotation.y;
-      d.object.position.x += Math.sin(yaw) * speed * dt;
-      d.object.position.z += Math.cos(yaw) * speed * dt;
-      if (turn) d.object.rotation.y += turn * dt;
+      d.object.position.x += Math.sin(yaw) * cfg.speed * dt;
+      d.object.position.z += Math.cos(yaw) * cfg.speed * dt;
+      if (cfg.turn) d.object.rotation.y += cfg.turn * dt;
     }
-    if (barkAt !== null && !barked && elapsed >= barkAt) d.triggerBark();
-    d.update(dt, {
-      speed,
-      turn,
-      action: thenAction && elapsed >= thenAt ? thenAction : action,
-      carrying: carry,
-      lookAt: look ? camera.position : null,
-    });
+    if (cfg.barkAt !== null && !barked && elapsed >= cfg.barkAt) d.triggerBark();
+    d.update(dt, animAt(elapsed));
   }
-  if (barkAt !== null && elapsed >= barkAt) barked = true;
+  if (cfg.barkAt !== null && elapsed >= cfg.barkAt) barked = true;
+}
+
+/** Desenha: um quadro só (normal) ou um por dog (comparação, colunas = modelos). */
+function draw() {
+  const W = innerWidth, H = innerHeight;
+  if (!compare) {
+    placeCamera(elapsed, dogs);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, W, H);
+    camera.aspect = W / H;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    return;
+  }
+  const cols = models.length, rows = kinds.length;
+  const cw = Math.floor(W / cols), ch = Math.floor(H / rows);
+  renderer.setScissorTest(true);
+  dogs.forEach((d, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = col * cw, y = H - (row + 1) * ch;
+    // só a dog do quadro (as outras ficariam no fundo, pequenininhas)
+    for (const o of dogs) o.object.visible = o === d;
+    placeCamera(elapsed, [d]);
+    camera.aspect = cw / ch;
+    camera.updateProjectionMatrix();
+    renderer.setViewport(x, y, cw, ch);
+    renderer.setScissor(x, y, cw, ch);
+    renderer.render(scene, camera);
+    Object.assign(labels[i].style, { left: `${x + 10}px`, top: `${row * ch + 8}px` });
+  });
+  for (const o of dogs) o.object.visible = true;
 }
 
 const info = document.getElementById('info');
-const statTxt = dogs.map((d) => `${d.kind}: ${d.stats.ms.toFixed(0)}ms tris ${JSON.stringify(d.stats.tris)}`).join(' | ');
+const statTxt = dogs.map((d) => `${d.kind}/${d.modelLabel}: ${d.stats.ms.toFixed(0)}ms tris ${JSON.stringify(d.stats.tris)}`).join(' | ');
 info.textContent = `${statTxt} | total ${genMs.toFixed(0)}ms`;
-window.__dogs = { dogs, stats: dogs.map((d) => d.stats), genMs, renderer, scene, camera };
 
-if (sim !== null) {
-  const n = Math.round(sim * 60);
-  placeCamera(0);
-  for (let i = 0; i < n; i++) {
-    step(1 / 60);
-    placeCamera(elapsed);
+/** Refaz a pose sem remontar as dogs: volta ao lugar, simula `sim` s (padrão 2) e desenha. */
+function pose(next = {}) {
+  readConfig(next);
+  if (next.yaw !== undefined) for (const d of dogs) d.object.rotation.y = THREE.MathUtils.degToRad(cfg.yawDeg);
+  applyItems();
+  elapsed = 0;
+  barked = false;
+  for (const d of dogs) {
+    d.object.position.copy(d.home);
+    d.steps = 0;
+    // um quadro farejando zera o tempo parado (senão, depois de 5 s, ela senta sozinha)
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
   }
-  renderer.render(scene, camera);
+  const n = Math.round((cfg.sim ?? 2) * 60);
+  for (let i = 0; i < n; i++) step(1 / 60);
+  draw();
+  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, tilt: d.tilt ?? 0, bone: d.lowestBone ?? '' }));
+}
+window.__dogs = { dogs, stats: dogs.map((d) => d.stats), genMs, renderer, scene, camera };
+window.__pose = pose;
+
+if (cfg.sim !== null) {
+  pose(Object.fromEntries(q));
   window.__ready = true;
 } else {
   const clock = new THREE.Clock();
   const loop = () => {
     const dt = Math.min(clock.getDelta(), 1 / 20);
     step(dt);
-    placeCamera(elapsed);
-    renderer.render(scene, camera);
+    draw();
     requestAnimationFrame(loop);
   };
   loop();
+  window.__ready = true;
 }
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
+  draw();
 });

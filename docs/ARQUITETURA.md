@@ -52,6 +52,8 @@ src/levels/                as fases
   _modelo/                 modelo de fase completo e testado (não registrado): ponto de partida das fases novas
   _pulo/                   Arena do Pulo: fase de desenvolvimento para testar o pulo da Rhaenyra
   _bafo/                   Arena do Bafo: primeiro puzzle do superbafo ("o pombo e o portão"), cenário provisório
+  _canil/                  Canil das Dogs: vitrine que compara o modelo atual das dogs com o novo (src/dogs/v2/),
+                           com painel de poses e vistas (display.js, panel.js)
   fase6/                   Expresso do Superbafo: track.js descreve o trilho uma vez só, para o
                            movimento do trem (puzzle.js) e para os trilhos visíveis (world/railway.js)
   fase7/                   Lambe-Lambe na Pracinha: túnel de lama, trinco por dentro, Lambe-Lambe e
@@ -62,6 +64,7 @@ src/world/                 cenário da fase 1 + utilitários de modelagem (util.
                            compartilhadas: toys.js (patinho, ursinho, frisbee), treats.js (ossinhos), pigeon.js (pombo)
 src/dogs/                  as cachorrinhas (ver §7)
   config.js                atributos globais das personagens; withStart cria a configuração de cada layout
+  v2/                      modelo novo das dogs, em teste (esqueleto de 38 ossos; ?dogs=novo e ?level=canil)
 src/characters/goose.js    a Dona Gansa
 src/ui/                    interface em DOM (ver §9)
 src/fx/                    áudio sintetizado, partículas e feedback (ver §9)
@@ -440,6 +443,23 @@ Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → Ski
 `dogRig.js` monta o esqueleto e a IK das pernas; `dogFace.js`, o rosto; `carryPose.js`, o item na boca;
 `dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá).
 
+**Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
+esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,
+orelhas em três gomos e rabo em cinco; os nomes antigos continuam valendo), desenho revisto pelas fotos (`design.js`:
+focinho mais comprido, orelhas mais longas na Rhaenyra e mais grossas nas duas, cabeça da Rhaenyra quase do
+tamanho da da Radhija, barriga recolhida; as orelhas são desenhadas dos dois lados) e a mesma malha procedural
+(`buildGeometryFromDesign` em `dogModel.js`, com o índice de ossos do esqueleto novo). Na etapa 1 a pose ainda vem da
+animação atual: um esqueleto atual invisível é animado por `dogAnimation.js` e cada osso novo copia a pose do osso
+correspondente (`retarget.js`; os gomos novos dividem a curva entre as pontas). `contacts.js` calcula o ponto mais
+baixo do corpo com as formas do desenho; se a pose afundaria no chão (`GROUND_TOLERANCE`), o corpo gira sobre as
+patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garupa sobe) e, se ainda faltar, sobe.
+Por cima da pose do guia, o modelo novo já tem: a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
+pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
+física (`physics.js`: correntinha de três gomos com mola, inércia, gravidade e chão; a pose do guia é o descanso). Para ver:
+`?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
+`?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
+guia, chão e orçamento), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).
+
 **Dona Gansa** (`createGoose()` em `src/characters/goose.js`, tipo `GooseModel`): modelo e animação; o comportamento
 está em `src/game/mechanics/gooseNpc.js`.
 
@@ -713,7 +733,8 @@ No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:cha
 
 **Parâmetros de URL**: `?level=2` ou `?level=fase2` (fase inicial, pela posição ou pelo id; os links por id das
 fases 6 e 7, do tempo de protótipo, continuam valendo), `?level=pulo` (fase de desenvolvimento pelo id, ver
-`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?stage=<etapa>`
+`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?dogs=novo` (modelo novo das dogs, §7),
+`?stage=<etapa>`
 (se o puzzle suportar), `?debug` (colisores e grafo), `?cam=x,y,z&look=x,y,z` (câmera fixa), `?nopost`
 (sem pós-processamento).
 

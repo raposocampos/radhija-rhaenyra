@@ -3,6 +3,48 @@
 Última atualização: **2026-10-19, Claude** (pombo mais bonito, PR #34, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
+
+- Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
+  sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +
+  proporções pelas fotos + bancada (atual × novo); **2** andar novo (passo, trote, galope, pata que rola, peso, giro
+  andando, pata que acha o chão); **3** todas as poses e extras num sistema de camadas (mesma API `update(dt, anim)`);
+  **4** colisão do corpo (dois círculos alinhados ao corpo e a cabeça que desvia, sem mudar os vãos dos puzzles);
+  **5** troca nas 10 fases, E2E `todas`, capturas e cascas de pelo por perfil (só celular; o PC não muda).
+- Referências PRIVADAS (nunca no Git, nas prévias nem em artefatos públicos): `referencias/fotos/2026-10-19/`
+  (8 fotos e 3 vídeos; quadros com `python -I` + OpenCV). A Radhija é a menor, creme-dourada; a Rhaenyra, a maior,
+  branca. Vídeo 3: andando, trotando, correndo e em pé no piso; a Rhaenyra empurra as pessoas em pé nas patas de trás
+  (a mecânica do empurrão em pé está numa sessão própria, "Empurrão em pé da Rhaenyra").
+- Etapa 1 (branch `claude/modelos-dogs-7b2d26`, worktree próprio): `src/dogs/v2/` (`skeleton.js` 38 ossos,
+  `design.js`, `retarget.js` — o esqueleto atual, invisível, guia o novo —, `contacts.js` — nada passa do chão —,
+  `materials.js`, `dog.js` com a API de `createDog`); `dogModel.js` ganhou `buildGeometryFromDesign` (mesmo resultado
+  para o modelo atual); `?dogs=novo` no `main.js`; fase de desenvolvimento `?level=canil` (`src/levels/_canil/`,
+  vitrine + painel); sandbox `dogs.html?model=both`; `test/dogV2.test.mjs`; suíte E2E `canil` e
+  `capture-modelos.mjs`. Docs: ARQUITETURA §2, §7 e §10, README (protótipos).
+- Coordenação: não editar `game.js`, `input.js` nem `dogAnimation.js` até o PR #35 (Lambe-Lambe nas duas) entrar no
+  main; a etapa 3 porta a pose nova do Lambe-Lambe e a do empurrão em pé.
+- PR **#37**. Validações: CI verde em `2ba0d64`; E2E `canil` 20/20 em `9280799` (`39290933885`) e 23/23 em
+  `2507d8d` (`39292942399`), sem erros de console, 45–48 capturas revisadas. Depois disso: o corpo gira sobre as
+  patas apoiadas antes de subir (a Rhaenyra sentada do modelo atual afunda 2 cm; a nova gira ~5° sobre as patas da
+  frente), a vitrine volta ao enquadramento no início da fase e o teste da boca ficou determinístico. Consultar o PR
+  para o CI e o E2E do head atual.
+- Achados: o modelo novo segue o guia com 0,00 mm em todas as ações; triângulos até 111% do atual (pelo da
+  Rhaenyra, orelhas maiores); a montagem leva o mesmo tempo. Pendente para as próximas etapas: a franja das orelhas
+  longas deixa a pele da orelha aparecer perto do pescoço em close (cascas de pelo com gravidade).
+- Retornos do usuário nas prévias (2026-10-19), já atendidos no PR: orelhas "vazando o outro lado" (a grade da malha
+  cortava a beirada da orelha achatada: `groupsBounds` com `exact` só no modelo novo, orelha mais grossa e desenhada
+  dos dois lados); cabeça da Rhaenyra grande demais (agora ~103% da da Radhija); orelhas dela grandes demais
+  (menores); orelhas com física no pulo (`src/dogs/v2/physics.js`: correntinha com mola, inércia, gravidade e chão);
+  rolagem "nada natural" (`src/dogs/v2/roll.js`: pose própria por cima do guia, tomba pelo ombro, de costas em "C",
+  patas dobradas pedalando, se esfrega; o corpo fica apoiado no chão pelo ponto mais baixo).
+- Pedido registrado para a **etapa 4** (retorno da prévia da fase 10, vale para todas as fases): a cabeça das dogs
+  ainda atravessa algumas paredes e móveis, porque passa do círculo único de colisão quando a dog anda de frente.
+- Próximo passo: CI e E2E (`canil` e `todas`) no head atualizado com o main, revisar `shots/modelos/` (rolagem e
+  pulo com as orelhas), entregar a prévia e esperar a aprovação. Ordem de integração recomendada pelo orquestrador:
+  #35, #36, este (#37) e a fase 10; quem entra por último resolve os conflitos mantendo os dois lados.
+
+## Em andamento: pombo mais bonito (Claude, PR #34)
+
 ## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
 
 - Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
