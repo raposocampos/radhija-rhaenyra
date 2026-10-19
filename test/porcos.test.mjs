@@ -196,11 +196,11 @@ function snap(h) {
     + ` r${P.route.map((q) => `${f(q.x)},${f(q.z)}${q.door ? 'D' : q.leaf ? 'L' : ''}`).join('>')}`).join(' | ');
 }
 
-/** Quantos porcos estão no vão da porteira (a menos de 0,3 m do meio dela) agora. */
+/** Quantos porcos saindo ou voltando estão no vão da porteira (a menos de 0,45 m do meio dela) agora. */
 function inDoorway(h) {
   const G = h.P.gate;
   const mx = (G.hinge.x + G.latchPost.x) / 2, mz = (G.hinge.z + G.latchPost.z) / 2;
-  return h.pigs.pigs.filter((P) => Math.hypot(P.x - mx, P.z - mz) < 0.3).length;
+  return h.pigs.pigs.filter((P) => (P.state === 'exit' || P.state === 'return') && Math.hypot(P.x - mx, P.z - mz) < 0.45).length;
 }
 
 test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => withSeed(191, () => {
