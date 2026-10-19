@@ -1,7 +1,8 @@
 // Empurrão em pé da Rhaenyra: escolha do ponto (pickShoveSpot), o roteiro do controlador (fica de pé, empurra em
 // ciclos enquanto o botão está seguro, desce; nunca atravessa o que empurra), o empurrável (createShoveTarget: balança,
-// solta o item no terceiro empurrão, a queda termina num ponto livre sem passar do chão), a irmã (passinhos para trás,
-// "hmpf", no Fica não sai do lugar), a Arena do Empurrão inteira com as teclas e o cenário real.
+// solta o item no terceiro empurrão, a queda termina num ponto livre sem passar do chão), a irmã (não é empurrada), a
+// Arena do Empurrão inteira com as teclas, o cenário real e a pose no modelo real (o empurrão sai dos ombros e das patas
+// da frente; o quadril fica parado).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -11,7 +12,6 @@ import {
   SHOVE_UP, SHOVE_CYCLE, SHOVE_HIT, SHOVE_DOWN, SHOVE_REACH, SHOVE_GAP,
 } from '../src/game/dogController.js';
 import { createShoveTarget, fallPath, SHOVE_SLIDE } from '../src/game/mechanics/shoveTarget.js';
-import { createShove, REACT_STEP, REACT_DUR, SISTER_SPOT } from '../src/game/shove.js';
 import { withStart } from '../src/dogs/config.js';
 import { LEVELS } from '../src/levels/index.js';
 import empurra from '../src/levels/_empurra/index.js';
@@ -196,7 +196,7 @@ test('empurrável: balança mais a cada empurrão; no terceiro o item cai, quica
   assert.equal(tgt.landed, true, 'parou no chão');
   assert.equal(ball.parent, root, 'mora na raiz da cena');
   assert.ok(minY >= 0.072 - 1e-6, `nunca passou do chão (${minY})`);
-  assert.deepEqual(tgt.itemAt && { x: +tgt.itemAt.x.toFixed(3), z: +tgt.itemAt.z.toFixed(3) }, { x: -0.6, z: -0.5 }, 'o primeiro ponto tinha uma pedra; o segundo, a irmã: o terceiro');
+  assert.deepEqual(tgt.itemAt && { x: +tgt.itemAt.x.toFixed(3), z: +tgt.itemAt.z.toFixed(3) }, { x: -0.6, z: -0.5 }, 'o primeiro ponto tinha uma pedra; o segundo, a Radhija: o terceiro');
   const names = log.map(([n]) => n);
   assert.equal(names.filter((n) => n === 'shove:hit').length, 3);
   assert.equal(names.filter((n) => n === 'shove:drop').length, 1);
@@ -247,70 +247,6 @@ test('empurrável: a mesa só tomba para longe e o item escorrega até a beirada
   assert.ok(Math.abs(duck.position.x) < 1e-6 && Math.abs(duck.position.z + 0.6) < 1e-6, 'no ponto');
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(duck.quaternion);
   assert.ok(up.y > 0.999, 'assentou de pé');
-});
-
-test('irmã: o ponto acompanha a irmã até as patas chegarem; o empurrão faz ela dar passinhos para trás e bufar', () => {
-  const log = [];
-  const sh = createShove({ emit: (n, p) => log.push([n, p]) });
-  const world = createCollisionWorld({ WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } }, STATIC_COLLIDERS: [] });
-  const A = rhaenyra(0, 0.62, Math.PI); // olhando para a irmã (norte)
-  const C = radhija(0, 0, Math.PI / 2); // de lado para a Rhaenyra
-  assert.equal(sh.frame(A, C, { held: true, world, sisterFree: false }), false, 'sem a irmã liberada, nada');
-  assert.equal(sh.frame(A, C, { held: true, world, sisterFree: true }), true, 'de pé na irmã');
-  assert.equal(A.shove.id, SISTER_SPOT);
-  assert.equal(A.shove.sister, 'radhija');
-  assert.ok(Math.abs(A.shove.y - (C.cfg.visual.shoulder + 0.02)) < 1e-9, 'patas nas costas dela');
-  const ctrls = { radhija: C, rhaenyra: A };
-  let hit = false;
-  for (let i = 0; i < 200 && A.shove; i++) {
-    sh.frame(A, C, { held: true, world, sisterFree: true });
-    steer(A, DT, { dx: 0, dz: 0, speed: 0 });
-    integrate(A, DT, world);
-    if (A.shoveHit) {
-      hit = true;
-      sh.hit(A, C, { stay: {}, ctrls });
-    }
-    sh.update(DT);
-    const lock = sh.lockFor(C);
-    const intent = lock ? { dx: lock.move?.dx ?? 0, dz: lock.move?.dz ?? 0, speed: lock.move?.speed ?? 0, faceX: lock.faceX, faceZ: lock.faceZ } : { dx: 0, dz: 0, speed: 0 };
-    steer(C, DT, intent);
-    integrate(C, DT, world);
-    assert.ok(Math.hypot(A.x - C.x, A.z - C.z) > A.r + C.r - 0.06, `quadro ${i}: uma dentro da outra`);
-  }
-  assert.ok(hit, 'empurrou');
-  assert.equal(log.filter(([n]) => n === 'dog:shoved').length, 1, 'um empurrão: ela saiu e a Rhaenyra desceu');
-  assert.equal(A.shove, null, 'desceu sozinha (a irmã saiu do lugar)');
-  assert.ok(C.z < -0.18, `a irmã se afastou uns passinhos (z = ${C.z.toFixed(2)})`);
-  assert.ok(log.some(([n]) => n === 'dog:huff'), '"hmpf"');
-  // no "hmpf" ela para sem girar o corpo (olha para trás só com a cabeça)
-  while (sh.lockFor(C) && sh.lockFor(C).move) { sh.update(DT); const l = sh.lockFor(C); steer(C, DT, { dx: l.move?.dx ?? 0, dz: l.move?.dz ?? 0, speed: l.move?.speed ?? 0, faceX: l.faceX, faceZ: l.faceZ }); integrate(C, DT, world); }
-  const yaw0 = C.yaw;
-  for (let i = 0; i < Math.round(REACT_DUR / DT); i++) {
-    sh.update(DT);
-    const lock = sh.lockFor(C);
-    steer(C, DT, lock ? { dx: 0, dz: 0, speed: 0, faceX: lock.faceX, faceZ: lock.faceZ } : { dx: 0, dz: 0, speed: 0 });
-    integrate(C, DT, world);
-    if (lock) assert.ok(sh.lookFor('radhija'), 'olha para a Rhaenyra');
-  }
-  assert.ok(Math.abs(C.yaw - yaw0) < 0.12, `não girou parada (${(C.yaw - yaw0).toFixed(2)} rad)`);
-  assert.equal(sh.lockFor(C), null, 'a reação acabou');
-});
-
-test('irmã no Fica: o empurrão não tira ela do lugar, só o tranco e o "hmpf"', () => {
-  const sh = createShove({ emit: () => {} });
-  const A = rhaenyra(0, 0.62, Math.PI);
-  const C = radhija(0, 0, Math.PI / 2);
-  sh.frame(A, C, { held: true, sisterFree: true });
-  A.shoveHit = A.shove;
-  sh.hit(A, C, { stay: { radhija: true } });
-  assert.equal(sh.lockFor(C), null, 'sem trava: continua sentada');
-  sh.update(0.05);
-  assert.ok(sh.shovedFor('radhija')?.k > 0, 'tranco');
-  sh.update(REACT_STEP);
-  assert.ok(sh.huffFor('radhija') > 0.5, '"hmpf"');
-  assert.ok(sh.lookFor('radhija'), 'olha para a Rhaenyra');
-  sh.update(REACT_DUR);
-  assert.equal(sh.huffFor('radhija'), 0);
 });
 
 test('Arena do Empurrão: segurando Shift de frente para a arvorezinha, três empurrões derrubam a bolinha; ela leva para casa', async () => {
@@ -386,31 +322,20 @@ test('Arena do Empurrão: a Radhija não fica de pé (Shift é a arrancada) e ga
   }
 });
 
-test('Arena do Empurrão: segurando Shift de frente para a irmã, ela é empurrada e se afasta (sem ninguém dentro de ninguém)', async () => {
+test('Arena do Empurrão: de frente para a irmã, segurar Shift não faz a Rhaenyra ficar de pé', async () => {
   const h = await arena();
   h.teleport('radhija', -1.0, -0.4, Math.PI / 2);
-  h.game.setStay('radhija', false);
+  h.game.setStay('radhija', true);
   h.teleport('rhaenyra', -1.0, 0.25, Math.PI);
   h.run(0.05);
   h.clearLog();
   h.hold(null, ['ShiftLeft']);
-  const R = h.ctrls.radhija;
-  const A = h.ctrls.rhaenyra;
-  let minZ = R.z;
-  const z0 = R.z;
-  for (let i = 0; i < Math.round((SHOVE_UP + SHOVE_CYCLE + 0.3) / DT); i++) {
-    h.step();
-    minZ = Math.min(minZ, R.z);
-    assert.ok(Math.hypot(A.x - R.x, A.z - R.z) > A.r + R.r - 0.06, `quadro ${i}: uma dentro da outra`);
-  }
+  h.run(SHOVE_UP + SHOVE_CYCLE * 2);
   h.hold(null);
-  h.run(REACT_DUR, { until: () => { minZ = Math.min(minZ, R.z); return false; } });
-  assert.equal(h.log('dog:shoved').length, 1, 'empurrou a irmã');
-  assert.ok(minZ < z0 - 0.15, `a irmã se afastou (de ${z0.toFixed(2)} até ${minZ.toFixed(2)})`);
-  assert.equal(h.info().dogs.rhaenyra.shove, null, 'a Rhaenyra desceu');
-  assert.ok(h.log('dog:huff').length === 1, '"hmpf"');
+  assert.equal(h.log('dog:rear').length, 0, 'não ficou de pé');
+  assert.equal(h.log('dog:shove').length, 0, 'não empurrou');
+  assert.equal(h.info().dogs.rhaenyra.shove, null);
 });
-
 test('Arena do Empurrão: reiniciar devolve tudo para cima; ?stage=carrying começa com a bolinha na boca', async () => {
   const h = await arena();
   h.puzzle.jumpToStage('carrying');
@@ -467,7 +392,6 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
     { name: 'tronco', spot: { ...SPOT, y: SHOVE_PROP_SIZE.tree.paws, over: 0, w: 0, kind: 'tree' }, trunkR: treeTrunkRadius(SHOVE_PROP_SIZE.tree.paws) },
     { name: 'mesinha', spot: { ...SPOT, y: SHOVE_PROP_SIZE.table.h, over: 0.05, w: 0.22, kind: 'table' } },
     { name: 'estante', spot: { ...SPOT, y: SHOVE_PROP_SIZE.shelf.h, over: 0.04, w: 0.28, kind: 'shelf' } },
-    { name: 'irmã', spot: { ...SPOT, y: 0.32, over: 0.1, w: 0, kind: 'sister' } },
   ];
   for (const K of cases) {
     const d = createDog('rhaenyra');
@@ -492,6 +416,7 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
     let minY = Infinity;
     let worst = '';
     const paws = [];
+    const beat = []; // quadril e ombro ao longo dos ciclos de empurrão
     for (let i = 0; i < 220 && c.shove; i++) {
       c.shoveHeld = i < 150;
       steer(c, DT, { dx: 0, dz: 0, speed: 0 });
@@ -509,13 +434,15 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
           // o tronco: nenhum osso dentro dele (até 1 m de altura)
           const dAx = Math.hypot(v.x - S.x + S.nx * K.trunkR, v.z - S.z + S.nz * K.trunkR);
           assert.ok(v.y > 1 || dAx > K.trunkR + gap, `${K.name}: ${b.name} dentro do tronco (${dAx.toFixed(3)} m do eixo, ${c.shoveStage})`);
-        } else if (S.kind === 'sister') {
-          // a irmã: nada abaixo das costas dela no lado de lá da face (as patas da frente apoiam em cima)
-          assert.ok(pen < 0.02 || v.y > S.y - 0.02, `${K.name}: ${b.name} entrou na irmã (${pen.toFixed(3)} m, y ${v.y.toFixed(3)})`);
         } else {
           // mesinha e estante: além da face, só acima do tampo
           assert.ok(pen < 0.005 - gap || v.y > S.y + 0.01, `${K.name}: ${b.name} atravessou a frente (${pen.toFixed(3)} m, y ${v.y.toFixed(3)}, ${c.shoveStage})`);
         }
+      }
+      if (c.shoveStage === 'push' && c.shoveN >= 1) {
+        const hip = d.bones.find((b) => b.name === 'HLu').getWorldPosition(new THREE.Vector3());
+        const sh = d.bones.find((b) => b.name === 'FLu').getWorldPosition(new THREE.Vector3());
+        beat.push({ hip, fwd: -into(sh) });
       }
       if (c.shoveStage === 'push' && c.shoveCycle > 0.45 && c.shoveCycle < 0.6) {
         const p = (n) => d.bones.find((b) => b.name === n).getWorldPosition(new THREE.Vector3());
@@ -524,6 +451,12 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
     }
     assert.ok(minY > -0.006, `${K.name}: ${worst} abaixo do chão (${minY.toFixed(3)})`);
     assert.ok(paws.length > 3, `${K.name}: empurrou`);
+    // o empurrão não vem da pelve: o quadril fica parado; os ombros dão o tranco para a frente
+    const range = (vals) => Math.max(...vals) - Math.min(...vals);
+    const hipMove = Math.max(range(beat.map((b) => b.hip.y)), range(beat.map((b) => b.hip.z)), range(beat.map((b) => b.hip.x)));
+    assert.ok(hipMove < 0.006, `${K.name}: o quadril vai e volta ${(hipMove * 100).toFixed(1)} cm no empurrão`);
+    const jolt = range(beat.map((b) => b.fwd));
+    assert.ok(jolt > 0.012, `${K.name}: os ombros dão o tranco (${(jolt * 100).toFixed(1)} cm)`);
     for (const P of paws) {
       for (const f of [P.FL, P.FR]) {
         const pen = into(f);
@@ -539,22 +472,5 @@ test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, 
       assert.ok(P.hip.y > 0.17 && P.hip.y < 0.33, `${K.name}: quadril a ${P.hip.y.toFixed(3)} m`);
     }
     for (const b of d.bones) assert.ok(Number.isFinite(b.quaternion.x + b.position.y), `${K.name}: osso ${b.name} inválido`);
-  }
-});
-
-test('irmã empurrada no modelo real: tranco e "hmpf" sem NaN e sem atravessar o chão', async () => {
-  installBrowserStubs();
-  const { createDog } = await import('../src/dogs/dog.js');
-  const d = createDog('radhija');
-  const v = new THREE.Vector3();
-  for (let i = 0; i < 120; i++) {
-    const t = i * DT;
-    const k = t < 0.3 ? Math.sin((t / 0.3) * Math.PI) : 0;
-    d.update(DT, { speed: 0, action: 'none', shoved: k > 0 ? { k, side: 1, fwd: -0.3 } : null, huff: t > 0.6 ? Math.min(1, (t - 0.6) / 0.2) : 0, lookAt: { x: 0.6, y: 0.45, z: 0.4 } });
-    d.object.updateMatrixWorld(true);
-    for (const b of d.bones) {
-      assert.ok(Number.isFinite(b.quaternion.x + b.position.y), `osso ${b.name} inválido`);
-      assert.ok(b.getWorldPosition(v).y > -0.006, `${b.name} abaixo do chão`);
-    }
   }
 });

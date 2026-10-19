@@ -1,6 +1,6 @@
 // Sons do empurrão em pé da Rhaenyra e do que cai lá de cima. Cada som: (G, dest, t, p, opts) → duração (s).
-// Entram na biblioteca em ./sounds.js; o feedback toca nos eventos dog:rear, dog:shove, shove:*, dog:shoved e dog:huff.
-import { mtof, nz, tone, fm, squeak, boing } from './synth.js';
+// Entram na biblioteca em ./sounds.js; o feedback toca nos eventos dog:rear, dog:shove (tum e rosnadinha) e shove:*.
+import { mtof, nz, tone, fm, squeak, boing, osc, flt, gn, env } from './synth.js';
 
 export const SOUNDS_EMPURRA = {
   // ficar de pé: "hup" curtinho e as patas da frente apoiando
@@ -10,13 +10,9 @@ export const SOUNDS_EMPURRA = {
     nz(G, o, { t: t + 0.36, a: 0.002, d: 0.05, peak: 0.07, type: 'lowpass', f: 1100 * p, q: 0.8, buf: G.pink });
     return 0.45;
   },
-  // cada empurrão: um tum no que ela empurra (opts.kind: tronco abafado, madeira oca, a irmã fofinha)
+  // cada empurrão: um tum no que ela empurra (opts.kind: tronco abafado, madeira oca)
   shoveThump(G, o, t, p, opts = {}) {
     const k = opts.kind;
-    if (k === 'sister') {
-      nz(G, o, { t, a: 0.01, d: 0.1, peak: 0.08, type: 'lowpass', f: 650 * p, q: 0.7, buf: G.pink });
-      return 0.15;
-    }
     const wood = k === 'table' || k === 'shelf';
     tone(G, o, { type: 'sine', f: (wood ? 190 : 120) * p, to: (wood ? 120 : 70) * p, t, a: 0.003, d: wood ? 0.12 : 0.16, peak: 0.16 });
     nz(G, o, { t, a: 0.002, d: wood ? 0.05 : 0.08, peak: wood ? 0.12 : 0.08, type: 'bandpass', f: (wood ? 1300 : 600) * p, q: wood ? 2.2 : 1 });
@@ -63,26 +59,37 @@ export const SOUNDS_EMPURRA = {
     tone(G, o, { type: 'sine', f: 240 * p, to: 160 * p, t, a: 0.002, d: 0.06, peak: 0.06 * k });
     return 0.12;
   },
-  // a irmã empurrada: "ip!" surpreso (mais grave na Rhaenyra)
-  shovedYip(G, o, t, p, opts = {}) {
-    const r = opts.name === 'rhaenyra' ? 0.78 : 1;
-    tone(G, o, { type: 'triangle', f: 760 * p * r, to: 1080 * p * r, glideT: 0.05, t, a: 0.008, d: 0.08, peak: 0.07, filt: { type: 'lowpass', f: 3200, q: 0.8 } });
-    return 0.15;
-  },
-  // "hmpf": duas bufadas pelo nariz, a segunda mais longa
-  huff(G, o, t, p) {
-    nz(G, o, { t, a: 0.01, d: 0.07, peak: 0.07, type: 'bandpass', f: 1100 * p, to: 700 * p, toT: 0.08, q: 1.6, buf: G.pink });
-    nz(G, o, { t: t + 0.13, a: 0.015, hold: 0.04, d: 0.16, peak: 0.08, type: 'bandpass', f: 1000 * p, to: 560 * p, toT: 0.2, q: 1.4, buf: G.pink });
-    tone(G, o, { type: 'sine', f: 210 * p, to: 160 * p, t: t + 0.13, a: 0.02, d: 0.14, peak: 0.025 });
-    return 0.4;
+  // rosnadinha a cada empurrão: "grrr" curto e grave, áspero (tremor rápido no volume) e com a boca quase fechada
+  // (filtro que abre e fecha), mais um sopro rouco por cima
+  shoveGrowl(G, o, t, p) {
+    const d = 0.3;
+    const end = t + d + 0.08;
+    const s = osc(G, 'sawtooth', 128 * p, t, end);
+    s.frequency.linearRampToValueAtTime(110 * p, t + d);
+    const lp = flt(G, 'lowpass', 400 * p, 2.2);
+    lp.frequency.linearRampToValueAtTime(720 * p, t + 0.08);
+    lp.frequency.linearRampToValueAtTime(420 * p, t + d);
+    const g = gn(G, 0);
+    env(g.gain, t, { a: 0.03, hold: d - 0.13, d: 0.1, peak: 0.065 });
+    // aspereza: o volume treme ~27 vezes por segundo, só enquanto ela rosna
+    const lfo = osc(G, 'sine', 27, t, end);
+    const lg = gn(G, 0);
+    env(lg.gain, t, { a: 0.03, hold: d - 0.13, d: 0.1, peak: 0.03 });
+    lfo.connect(lg);
+    lg.connect(g.gain);
+    s.connect(lp);
+    lp.connect(g);
+    g.connect(o);
+    nz(G, o, { t, a: 0.03, hold: d - 0.14, d: 0.1, peak: 0.022, type: 'bandpass', f: 480 * p, q: 1.4, buf: G.pink });
+    return d + 0.1;
   },
 };
 export const MIN_GAP_EMPURRA = {
-  shoveRear: 0.3, shoveThump: 0.12, leafRustle: 0.25, shoveRelease: 0.2, shoveBounce: 0.05, shoveSettle: 0.1, shovedYip: 0.3, huff: 0.4,
+  shoveRear: 0.3, shoveThump: 0.12, leafRustle: 0.25, shoveRelease: 0.2, shoveBounce: 0.05, shoveSettle: 0.1, shoveGrowl: 0.3,
 };
 export const PITCH_VAR_EMPURRA = {
-  shoveRear: 0.05, shoveThump: 0.06, leafRustle: 0.08, shoveRelease: 0.05, shoveBounce: 0.05, shoveSettle: 0.08, shovedYip: 0.04, huff: 0.05,
+  shoveRear: 0.05, shoveThump: 0.06, leafRustle: 0.08, shoveRelease: 0.05, shoveBounce: 0.05, shoveSettle: 0.08, shoveGrowl: 0.04,
 };
 export const VERB_EMPURRA = {
-  shoveRear: 0.04, shoveThump: 0.08, leafRustle: 0.06, shoveRelease: 0.08, shoveBounce: 0.06, shoveSettle: 0.06, shovedYip: 0.05, huff: 0.03,
+  shoveRear: 0.04, shoveThump: 0.08, leafRustle: 0.06, shoveRelease: 0.08, shoveBounce: 0.06, shoveSettle: 0.06, shoveGrowl: 0.04,
 };

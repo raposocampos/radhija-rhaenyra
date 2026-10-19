@@ -2,7 +2,6 @@
 // Quintal para treinar o empurrão em pé da Rhaenyra (segurar Shift · R1 de frente para algo empurrável no alto):
 // a arvorezinha com a bolinha presa nos galhos (o objetivo: derrubar e levar para casa), a mesinha com o patinho na
 // beirada de trás e a estante baixa com o ursinho em cima. Três empurrões e o que está lá em cima cai do outro lado.
-// A irmã também pode ser empurrada (ela dá uns passinhos para trás, indignada).
 // Metros, Y para cima, Norte = -Z, câmera ao sul (mesmas convenções das fases).
 import { withStart } from '../../dogs/config.js';
 import { SHOVE_PROP_SIZE, treeTrunkRadius } from '../../world/shoveProps.js';

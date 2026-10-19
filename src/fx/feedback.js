@@ -509,9 +509,12 @@ export function createFeedback(opts) {
     sfx('shoveRear', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.75, alpha: 0.32, strength: 0.45 });
   });
-  events.on('dog:shove', ({ kind, x, y = 0.45, z }) => {
+  events.on('dog:shove', ({ name, kind, x, y = 0.45, z }) => {
     sfx('shoveThump', x, z, { kind });
-    if (kind !== 'sister') particles.dust({ x, y: Math.max(0.05, y - 0.05), z }, { count: 2, size: 0.45, alpha: 0.22, strength: 0.25, spread: 0.06 });
+    // a rosnadinha sai de quem empurra
+    const p = dogPos(name);
+    sfx('shoveGrowl', p ? p.x : x, p ? p.z : z);
+    particles.dust({ x, y: Math.max(0.05, y - 0.05), z }, { count: 2, size: 0.45, alpha: 0.22, strength: 0.25, spread: 0.06 });
   });
   events.on('shove:hit', ({ kind, n = 1, x, z }) => {
     if (kind !== 'tree') return;
@@ -529,15 +532,6 @@ export function createFeedback(opts) {
   events.on('shove:settle', ({ x, z, k }) => sfx('shoveSettle', x, z, { k }));
   events.on('shove:land', ({ x, z }) => {
     particles.ring({ x, y: 0, z }, { radius: 0.28, from: 0.06, life: 0.5, color: '#FFE3A6', opacity: 0.4, width: 0.05 });
-  });
-  events.on('dog:shoved', ({ name, x, z }) => {
-    sfx('shovedYip', x, z, { name });
-    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.6, alpha: 0.3, strength: 0.4 });
-  });
-  events.on('dog:huff', ({ name }) => {
-    const p = dogPos(name);
-    if (p) sfx('huff', p.x, p.z);
-    else audio.play('huff');
   });
   // extras escondidos (src/game/extras.js): o cocô e as animações do cenário
   events.on('extra:strain', ({ x, z, n = 0 }) => sfx('extraStrain', x, z, { n }));

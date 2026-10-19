@@ -1,6 +1,7 @@
 // Empurrão em pé da Rhaenyra no navegador (Arena do Empurrão, ?level=empurra): teclas e controle reais, renderização
 // real. A lógica completa está em test/empurrao.test.mjs; aqui, a integração com a página (Shift e R1 seguros, a pose
-// de pé no modelo, eventos, a bolinha que cai e a entrega), o patinho da mesinha pelo controle e a irmã empurrada.
+// de pé no modelo, eventos, a bolinha que cai e a entrega), o patinho da mesinha pelo controle, a irmã (não é
+// empurrada), o modelo novo das dogs e a dica da Radhija.
 //   node tools/scripts/test-empurra.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -87,9 +88,8 @@ try {
   await shot('empurra-patinho.png');
   await ev(() => { window.__fakePads = []; });
 
-  // a irmã: empurrada, ela se afasta e bufa
-  console.log('\n== Empurrando a irmã ==');
-  await page.keyboard.press('KeyF'); // a Radhija volta a seguir
+  // a irmã não é empurrada: segurar Shift de frente para ela não faz a Rhaenyra ficar de pé
+  console.log('\n== De frente para a irmã ==');
   await ev(() => {
     const g = window.__game.game;
     g.debug.teleport('radhija', -1.0, -0.4);
@@ -99,17 +99,8 @@ try {
   });
   await sleep(100);
   await clearLog();
-  const z0 = (await info()).dogs.radhija.z;
-  const recS = await H.record((g) => ({ z: g.debug.ctrls.radhija.z, d: Math.hypot(g.debug.ctrls.radhija.x - g.debug.ctrls.rhaenyra.x, g.debug.ctrls.radhija.z - g.debug.ctrls.rhaenyra.z) }));
-  i = await H.holdUntil(['ShiftLeft'], (s) => s.shove?.reacting === 'radhija', { timeout: 3000, label: 'Shift até empurrar a irmã' });
-  await H.waitFor((s) => !s.shove, { timeout: 4000 });
-  const fs = await recS.stop();
-  const minZ = Math.min(...fs.map((f) => f.z));
-  const minD = Math.min(...fs.map((f) => f.d));
-  check((await logOf('dog:shoved')).length === 1, 'empurrou a irmã uma vez');
-  check(minZ < z0 - 0.15, 'a irmã se afastou uns passinhos', `${z0.toFixed(2)} → ${minZ.toFixed(2)}`);
-  check(minD > 0.3, 'nenhuma dentro da outra', `${minD.toFixed(2)} m`);
-  check((await logOf('dog:huff')).length === 1, '"hmpf"');
+  i = await H.holdUntil(['ShiftLeft'], () => false, { timeout: 1600, label: 'Shift de frente para a irmã' });
+  check(!i.dogs.rhaenyra.shove && (await logOf('dog:rear')).length === 0 && (await logOf('dog:shove')).length === 0, 'de frente para a irmã, a Rhaenyra não fica de pé');
 
   // o modelo novo das dogs (?dogs=novo): a mesma pose, guiada pela animação atual, sem nada abaixo do chão
   console.log('\n== Modelo novo das dogs (?dogs=novo) ==');

@@ -1,7 +1,7 @@
 // ARENA DO EMPURRÃO (fase de desenvolvimento) — PUZZLE.
 // A Rhaenyra segura o empurrar (Shift · R1) de frente para a arvorezinha, fica de pé e empurra: no terceiro empurrão a
 // bolinha cai dos galhos; ela pega e leva para a caminha. A mesinha (patinho) e a estante (ursinho) são para treinar:
-// o brinquedo que cai pode ser levado na boca (E pega; E de novo larga). A irmã também pode ser empurrada.
+// o brinquedo que cai pode ser levado na boca (E pega; E de novo larga).
 import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
 import { createShoveTarget } from '../../game/mechanics/shoveTarget.js';
 import { pickShoveSpot, shoveStance, shoving } from '../../game/dogController.js';
@@ -19,7 +19,6 @@ export const TEXT = {
     radhija: 'Só a Rhaenyra fica de pé e empurra! (Q)',
     how: 'Segure Shift de frente para a arvorezinha: a Rhaenyra fica de pé e empurra.',
     more: 'Continue segurando: mais um empurrão!',
-    sister: 'Empurrar a irmã? Ela não gostou nada…',
     mouthFull: 'Ela já está com algo na boca: aperte E para largar.',
   },
   prompt: { shove: 'Empurrar', ball: 'Pegar a bolinha', duck: 'Pegar o patinho', bear: 'Pegar o ursinho', drop: 'Largar' },
@@ -144,7 +143,6 @@ export function createPuzzle(ctx) {
     S.bumpT = touching && !shoving(active) ? S.bumpT + dt : 0;
     if (active.name === 'radhija' && (touching || (active.dashT > 0 && facingSpot(active, 0.95)))) hints.cond('radhija', 3.4, 8);
     else if (S.bumpT > 0.8 && active.name === 'rhaenyra') hints.cond('how', 3.6, 10);
-    if (active.shove && active.shove.kind === 'sister' && active.shoveN >= 1) hints.cond('sister', 2.8, 20);
 
     // prompt: empurrar quando dá; pegar/largar perto de um item
     const near = !holding(active.name) ? itemNear(active) : null;

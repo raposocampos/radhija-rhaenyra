@@ -1,7 +1,7 @@
 // Capturas de revisão do empurrão em pé em qualidade visual completa (sombras, bloom, resolução 1).
 // Roda no GitHub Actions (E2E manual, suíte empurra), depois da partida; não usa a redução gráfica do harness.
 // O laço do jogo fica congelado e o script avança quadro a quadro (1/60 s): cada imagem mostra um instante exato
-// (ficando de pé, empurrando, a bolinha caindo, o patinho, o ursinho, a irmã empurrada). Teclas reais chegam pelos
+// (ficando de pé, empurrando, a bolinha caindo, o patinho, o ursinho, a rosnadinha, o modelo novo). Teclas reais chegam pelos
 // ouvintes do jogo. Saída: shots/empurra-revisao/*.png. Erros do navegador reprovam o passo.
 import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
@@ -157,27 +157,17 @@ try {
     await page.evaluate(() => { window.__game.game.reset(); window.__step(5); });
   }
 
-  // 3. a irmã: patas nas costas dela, o empurrão e o "hmpf"
-  await page.evaluate(() => {
-    const g = window.__game.game;
-    g.setStay('radhija', false);
-    g.debug.teleport('radhija', -1.0, -0.4);
-    g.debug.ctrls.radhija.yaw = Math.PI / 2;
-    g.debug.teleport('rhaenyra', -1.0, 0.25);
-    g.debug.ctrls.rhaenyra.yaw = Math.PI;
-    window.__step(2);
-  });
-  const sideS = { pos: [0.7, 0.75, -0.1], look: [-1.0, 0.35, -0.1] };
+  // 3. a rosnadinha de perto (boquinha franzida no empurrão) e o tranco dos ombros
+  T = await ready('arvorezinha');
   await key('ShiftLeft', true);
-  await until((i) => (i.dogs.rhaenyra.shove?.k ?? 0) >= 0.99, 120);
-  await shot('40-irma-patas-nas-costas', sideS);
-  await until((i) => i.shove?.reacting === 'radhija', 120);
-  await step(6);
-  await shot('41-irma-empurrada', sideS);
+  await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.25; }, 120);
+  const face = { pos: [T.x + T.nx * 0.55 - T.nz * 0.35, 0.95, T.z + T.nz * 0.55 + T.nx * 0.35], look: [T.x + T.nx * 0.22, 0.7, T.z + T.nz * 0.22] };
+  await shot('40-armando-perto', face);
+  await until((i) => { const s = i.dogs.rhaenyra.shove; return s && s.stage === 'push' && s.n === 1 && s.cycle >= 0.45; }, 120);
+  await shot('41-rosnadinha-perto', face);
   await key('ShiftLeft', false);
-  await until((i) => (i.shove?.t ?? 0) >= 0.9, 120);
-  await shot('42-irma-hmpf', sideS);
-  await shot('43-irma-hmpf-perto', { pos: [-1.0 + 0.6, 0.6, -0.9 + 0.9], look: [-1.0, 0.35, -0.85] });
+  await until((i) => !i.dogs.rhaenyra.shove, 120);
+  await page.evaluate(() => { window.__game.game.reset(); window.__step(5); });
 
   // 4. o modelo novo das dogs (?dogs=novo, src/dogs/v2/): a mesma pose, guiada pela animação atual
   await boot('?level=empurra&play&dog=rhaenyra&dogs=novo');

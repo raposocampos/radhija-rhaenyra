@@ -9,7 +9,7 @@
 // parede, sobe apoiando as patas, alcança o alto (wallHit, uma vez, em WALL_TOUCH) e volta ao chão um pouco
 // afastada. A pose é da animação (dogAnimation.js, wallK); aqui ficam posição, giro e tempo.
 // Empurrão em pé (só dogs 'large', a Rhaenyra): segurando o empurrar de frente para algo empurrável no alto (ShoveSpot
-// que a fase oferece em puzzle.shoveSpots, ou a irmã), ela chega ao ponto e fica de pé nas traseiras apoiando as patas
+// que a fase oferece em puzzle.shoveSpots), ela chega ao ponto e fica de pé nas traseiras apoiando as patas
 // da frente (SHOVE_UP s), empurra em ciclos de SHOVE_CYCLE s enquanto o botão estiver seguro (cada empurrão conta em
 // SHOVE_HIT do ciclo: shoveHit, uma vez por ciclo) e volta às quatro patas (SHOVE_DOWN s). Soltar o botão termina o
 // ciclo em curso (o primeiro empurrão sempre acontece). A pose é da animação (shoveK, shoveCycle).
@@ -54,7 +54,7 @@ export const SHOVE_REACH = 0.4;
 const SHOVE_FACING = 0.5;
 /** Quanto ela pode estar além da largura da face (m) e ainda começar (ela se alinha no caminho). */
 const SHOVE_LAT_SLACK = 0.16;
-/** O empurrão só conta com a dog a até isto do ponto de apoio (algo no caminho, ou a irmã se afastou). */
+/** O empurrão só conta com a dog a até isto do ponto de apoio (algo no caminho a segurou longe). */
 const SHOVE_TOUCH_REACH = 0.1;
 /** Quanto ela recua ao voltar às quatro patas (m). */
 export const SHOVE_BACK = 0.16;
@@ -114,7 +114,7 @@ export function createController(name, cfg) {
     shoveGoalX: 0,
     shoveGoalZ: 0,
     shoveHeld: false, // o botão continua seguro (o jogo atualiza a cada quadro)
-    shoveStop: false, // o jogo pede para descer ao fim do ciclo (a irmã se afastou…)
+    shoveStop: false, // o jogo pede para descer ao fim do ciclo
     shoveHit: null, // empurrou neste quadro (o jogo emite dog:shove e zera)
   };
 }
@@ -382,7 +382,7 @@ function stepShove(c, dt) {
     c.shoveCycle = Math.min(1, c.shoveT / SHOVE_CYCLE);
     if (prev < SHOVE_HIT && c.shoveCycle >= SHOVE_HIT) {
       c.shoveN++;
-      // só empurra quem está encostada (algo no caminho a segurou longe, ou a irmã já saiu: sem empurrão)
+      // só empurra quem está encostada (algo no caminho a segurou longe: sem empurrão)
       if (Math.hypot(c.x - K.x, c.z - K.z) < SHOVE_TOUCH_REACH) c.shoveHit = S;
     }
     // soltou antes do empurrão (depois do primeiro): desce já; senão termina o ciclo e desce

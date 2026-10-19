@@ -88,7 +88,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, shoved: null, huff: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -119,8 +119,8 @@ export function createGame({ engine, dogs, levels, params }) {
     hintCd: 0, dist: LICK_DIST, spot: { x: 0, z: 0 }, point: { x: 0, y: 0.3, z: 0 }, local: { x: 0, y: 0.3, z: 0 },
   };
   const yuck = { radhija: { t: 0, cd: 0 }, rhaenyra: { t: 0, cd: 0 } }; // "eca!" perto de uma nuvem
-  // Empurrão em pé (só a Rhaenyra, Shift · R1 seguro de frente para algo empurrável no alto ou para a irmã):
-  // escolha do alvo, cada empurrão e a reação da irmã (src/game/shove.js); o roteiro é do controlador.
+  // Empurrão em pé (só a Rhaenyra, Shift · R1 seguro de frente para algo empurrável no alto): escolha do alvo e cada
+  // empurrão (src/game/shove.js); o roteiro é do controlador.
   const shove = createShove({ emit });
 
   // ---------- passos ----------
@@ -187,10 +187,7 @@ export function createGame({ engine, dogs, levels, params }) {
     // A pausa congela a lambida (nada avança); as outras telas a encerram.
     if (s !== 'playing' && s !== 'paused') cancelLick();
     // Fora da partida (comemoração, vitória…), quem está de pé termina o empurrão em curso e desce.
-    if (s !== 'playing' && s !== 'paused') {
-      shove.cancel();
-      for (const n of NAMES) if (ctrls?.[n]) ctrls[n].shoveHeld = false;
-    }
+    if (s !== 'playing' && s !== 'paused') for (const n of NAMES) if (ctrls?.[n]) ctrls[n].shoveHeld = false;
   }
 
   function cancelBafo() {
@@ -544,11 +541,10 @@ export function createGame({ engine, dogs, levels, params }) {
           emit('dog:dash', { name: A.name, x: A.x, z: A.z, dirX: A.dashDx, dirZ: A.dashDz });
         }
       }
-      // Empurrão em pé: segurando o empurrar de frente para algo empurrável no alto (puzzle.shoveSpots) ou para a irmã
-      // (livre de travas e da lambida), a Rhaenyra fica de pé e empurra no ritmo enquanto o botão estiver seguro.
+      // Empurrão em pé: segurando o empurrar de frente para algo empurrável no alto (puzzle.shoveSpots), a Rhaenyra
+      // fica de pé e empurra no ritmo enquanto o botão estiver seguro (lambendo, não começa).
       standing = shove.frame(A, C, {
         held: shift && !lick.on, dx: Lm > 1e-4 ? dx : 0, dz: Lm > 1e-4 ? dz : 0, spots: puzzle.shoveSpots?.(), world,
-        sisterFree: !lick.on && !extras.busy(compName) && !extras.lockFor(compName) && !puzzle.lockFor(compName),
       });
       // Pulo (Espaço / ✕): só quem tem pulo, fora da postura de empurrar. Quem não pula ganha a dica.
       // De frente para uma parede marcada que a fase oferece (puzzle.wallSpots), vira impulso na parede.
@@ -640,9 +636,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
     world.setCompanionMode?.(true);
-    // a irmã empurrada (src/game/shove.js) também vem como trava: uns passinhos para longe e o "hmpf", parada
-    shove.update(dt);
-    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName) || shove.lockFor(C);
+    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName);
     locks[compName] = compLock;
     const licked = lick.on && lick.target === compName;
     let ci;
@@ -679,7 +673,7 @@ export function createGame({ engine, dogs, levels, params }) {
     world.setCompanionMode?.(false);
     if (!stay[compName] && !compLock && !licked) separate(C, A, dt);
     anims[compName].action = ci.action;
-    setLook(compName, shove.lookFor(compName) || ci.lookAt);
+    setLook(compName, ci.lookAt);
     // Fase da lambida para as duas animações (a língua e o "ai, que bom" ficam no mesmo ritmo).
     const lp = lick.on && lick.stage === 'licking' ? Math.min(lick.phase, 0.999) : -1;
     anims[activeDog].lickPhase = lick.on ? lp : -1;
@@ -841,11 +835,9 @@ export function createGame({ engine, dogs, levels, params }) {
         an.shoveOver = SV.over ?? 0;
         an.action = 'shove'; // também como companheira (trocou de dog no meio do empurrão)
       }
-      an.shoved = shove.shovedFor(n);
-      an.huff = shove.huffFor(n);
       if (c.shoveHit) {
-        // As patas empurraram (um por ciclo; ativa ou companheira): o puzzle ou a irmã.
-        shove.hit(c, ctrls[other(n)], { puzzle, stay, ctrls, playing: state === 'playing' });
+        // As patas empurraram (um por ciclo; ativa ou companheira): o tum, a rosnadinha e o puzzle.
+        shove.hit(c, { puzzle, ctrls, playing: state === 'playing' });
       }
       an.slope = state === 'playing' || state === 'paused' ? locks[n]?.slope ?? 0 : 0;
       if (c.wallHit) {
@@ -928,7 +920,6 @@ export function createGame({ engine, dogs, levels, params }) {
     scent.reset();
     cancelBafo();
     cancelLick();
-    shove.cancel();
     activeDog = initialDog;
     placeStart();
     playTime = 0;
@@ -1006,7 +997,6 @@ export function createGame({ engine, dogs, levels, params }) {
         scent = createScentField({ world, emit, view: createScentView(root) });
         cancelBafo();
         cancelLick();
-        shove.cancel();
         locks.radhija = locks.rhaenyra = null;
         if (!cam) {
           cam = createCameraRig(engine.camera, L);
@@ -1199,7 +1189,6 @@ export function createGame({ engine, dogs, levels, params }) {
       bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent?.info() ?? null,
       lick: { on: lick.on, by: lick.on ? lick.by : null, stage: lick.on ? lick.stage : null, solo: lick.solo, target: lick.target, strokes: lick.strokes, phase: lick.on ? +lick.phase.toFixed(3) : null },
       extras: extras?.info() ?? null,
-      shove: shove.info(),
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam?.mode ?? null, shot: cam?.shotActive ?? false },
     };
   }

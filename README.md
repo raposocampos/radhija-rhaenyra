@@ -29,7 +29,7 @@ Depois, abra `http://127.0.0.1:5173/`.
 | Superbafo (Radhija): segure para mirar, solte para soprar | R | R2 · RT | Superbafo |
 | Lambe-Lambe (as duas, perto da irmã): segure para lamber | L | L2 · LT | Lamber |
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar |
-| Empurrão em pé (Rhaenyra, de frente para uma árvore, mesinha, estante ou a irmã): segure | Shift | R1 · RB | Empurrar (segurar) |
+| Empurrão em pé (Rhaenyra, de frente para uma árvore, mesinha ou estante): segure | Shift | R1 · RB | Empurrar (segurar) |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar |
 | Pausar | Esc | Options · Start | botão no canto |
 
