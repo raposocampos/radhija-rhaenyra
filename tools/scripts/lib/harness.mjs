@@ -1,9 +1,11 @@
 // Utilitários das partidas automatizadas (Playwright + Chrome do sistema) com TECLAS REAIS.
 // Malha fechada: lê a posição por debug.info() e segura WASD (8 direções relativas à câmera).
+import './browser-log.mjs'; // antes do playwright-core: o registro do Chromium vai para shots/diagnostico/
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { browserOptions } from './browser.mjs';
+import { attachHangProbe, bootTimeline } from './hang-probe.mjs';
 
 export function parseArgs(argv = process.argv.slice(2)) {
   return Object.fromEntries(argv.reduce((acc, cur, i, arr) => {
@@ -75,6 +77,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch(browserOptions());
   const page = await browser.newPage({ viewport, ...device });
+  // Sonda de travamento (hang-probe.mjs): pilha do JavaScript, processos do Chromium, memória, console e registro do
+  // navegador quando a página para de responder. Antes de qualquer navegação (marcos do boot e Debugger ligado).
+  const probe = await attachHangProbe(page);
   // Isola os testes de controles REAIS conectados ao Windows (o Chrome headless enxerga XInput):
   // navigator.getGamepads devolve só o controle falso do teste (window.__fakePads), se houver.
   await page.addInitScript(() => {
@@ -160,11 +165,18 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   let signalLost;
   const lostSignal = new Promise((_, fail) => { signalLost = fail; });
   lostSignal.catch(() => {});
+  // Diagnóstico da aba (hang-probe.mjs), em fila: o close() espera o que estiver em curso antes de fechar o navegador.
+  let diagnosis = Promise.resolve();
+  const diagnose = (reason) => {
+    diagnosis = diagnosis.then(() => probe.report(reason)).then((text) => console.log(text), (e) => console.log(`  [diagnóstico] falhou: ${e.message}`));
+    return diagnosis;
+  };
   const markLost = (why) => {
     if (lost || closing) return;
     lost = why;
     wedged = wedged || why;
     console.log(`  [harness] ${why}`);
+    diagnose(why);
     signalLost(LOST);
   };
   page.on('crash', () => markLost('a aba do navegador caiu (crash do renderer)'));
@@ -173,7 +185,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   const pending = new Set();
   async function during(what, run) {
     const site = new Error();
-    const op = { what, since: Date.now(), told: 0 };
+    const op = { what, since: Date.now(), told: 0, diagnose: true };
     pending.add(op);
     try {
       return await Promise.race([Promise.resolve().then(run), lostSignal]);
@@ -200,7 +212,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       if (age >= limits.opMaxMs) {
         clearInterval(beat);
         // a página ainda responde? (sem aviso de queda: senão a operação já teria falhado pelo lostSignal)
-        peek().then((state) => {
+        Promise.all([peek(), diagnose(`${op.what} sem retorno há ${secs(age)}`)]).then(([state]) => {
           fail++;
           const m = `[harness] ${op.what} sem retorno há ${secs(age)}, mesmo com os prazos (Playwright ou navegador travado; `
             + `sem aviso de queda da aba). ${lastReadText()} Agora: ${state}`;
@@ -212,6 +224,8 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         return;
       }
       if (age >= 60000 && now - op.told >= 60000) {
+        // um boot normal leva ~10 s no CI: no primeiro minuto parado, já tira o retrato (o segundo vem no opMaxMs)
+        if (!op.told && op.diagnose) diagnose(`${op.what} sem retorno há ${secs(age)}`);
         op.told = now;
         console.log(`  [harness] ainda aguardando ${op.what} há ${secs(age)}`);
       }
@@ -239,6 +253,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       if (e !== TIMEOUT) throw e;
       op.catch(() => {}); // a resposta tardia (ou o erro ao fechar o navegador) não vira rejeição solta
       wedged = `${what} ficou ${secs(ms)} sem resposta`;
+      await diagnose(`${what} sem resposta em ${secs(ms)}`);
       throw abort(what, siteOf(site), `a página não respondeu em ${secs(ms)} (page.evaluate/entrada sem retorno: aba ou GPU travada?). ${lastReadText()}`);
     } finally {
       clearTimeout(timer);
@@ -538,6 +553,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function load(query) {
     const what = `load('${query}')`;
+    const t0 = Date.now();
     progress = null; // página nova: o tempo sem leituras durante a navegação não conta como jogo parado
     const step = async (stage, run) => {
       const site = new Error();
@@ -553,6 +569,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
     await step('abrir a página', () => page.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
     await step('esperar window.__game', () => page.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
     await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => page.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+    // tempos do boot pelos marcos rr:* (dados para comparar fases e execuções; um travamento mostra o último marco)
+    const boot = await bootTimeline(page).catch(() => null);
+    console.log(`  [boot] ${what}: ${secs(Date.now() - t0)} até o jogo${boot?.text ? `; ${boot.text}` : ''}`);
     await readBasis();
     await (process.env.CI ? gsleep : sleep)(1500);
   }
@@ -598,6 +617,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   }
   async function close() {
     clearInterval(beat);
+    await Promise.race([diagnosis, new Promise((done) => { setTimeout(done, 30000).unref(); })]);
     closing = true; // o 'disconnected' do fechamento não é queda
     let timer;
     const closed = await Promise.race([

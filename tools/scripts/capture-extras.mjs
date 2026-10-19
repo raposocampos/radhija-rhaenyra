@@ -3,10 +3,12 @@
 // Roda no GitHub Actions (E2E manual, suíte extras), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro (1/60 s); teclas reais chegam pelos ouvintes do jogo; teleporte só prepara as cenas.
 // Saída: shots/extras-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
+import { attachHangProbe, waitForBoot } from './lib/hang-probe.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const OUT = 'shots/extras-revisao';
@@ -20,6 +22,7 @@ try {
   const url = server.resolvedUrls.local[0];
   browser = await chromium.launch(browserOptions());
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const probe = await attachHangProbe(page); // diagnóstico se a aba travar no boot (hang-probe.mjs)
   page.setDefaultTimeout(180000);
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -32,7 +35,7 @@ try {
   async function open(level) {
     await page.evaluate(() => { window.__freezeReview = false; }).catch(() => {});
     await page.goto(`${url}?level=${level}&play`);
-    await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 180000 });
+    await waitForBoot(page, probe, () => window.__game?.game?.state === 'playing', null, { timeout: 180000, what: `boot de ${level}` });
     await page.evaluate(() => {
       window.__freezeReview = true;
       document.getElementById('loading')?.remove();

@@ -1,10 +1,12 @@
 // Capturas na nuvem: mesmo enquadramento/iluminação/tempo para base e head.
 // Não usa a redução de qualidade visual do harness de partidas.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
+import { attachHangProbe, waitForBoot } from './lib/hang-probe.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -26,10 +28,11 @@ try {
   const url = server.resolvedUrls.local[0];
   browser = await chromium.launch(browserOptions());
   const page = await browser.newPage({ viewport: { width: 1280, height: 1272 } });
+  const probe = await attachHangProbe(page); // diagnóstico se a aba travar no boot (hang-probe.mjs)
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(`${url}tools/pigeon-review.html`);
-  await page.waitForFunction(() => !!window.reviewPigeons, null, { timeout: 120000 });
+  await waitForBoot(page, probe, () => !!window.reviewPigeons, null, { timeout: 120000, what: 'boot da revisão dos pombos' });
   await page.evaluate(() => window.reviewPigeons());
   await page.screenshot({ path: 'shots/pombos/01-silhuetas.png', fullPage: true });
   const stats = await page.evaluate(() => window.reviewPigeons(true));
@@ -59,7 +62,7 @@ try {
     window.requestAnimationFrame = (fn) => raf((t) => { if (!window.__freezeReview) fn(t); });
   });
   await page.goto(`${url}?level=4&play`);
-  await page.waitForFunction(() => !!window.__game?.game, null, { timeout: 120000 });
+  await waitForBoot(page, probe, () => !!window.__game?.game, null, { timeout: 120000, what: 'boot da fase 4' });
   await page.evaluate(() => { window.__freezeReview = true; });
   await page.evaluate(() => {
     const g = window.__game;

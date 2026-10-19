@@ -24,6 +24,8 @@ const PUSH_STANCE_SPEED = 1.2;
 const FADE_MS = 420; // tempo para a UI cobrir a tela antes de montar a próxima fase
 const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+/** Marco de desempenho do carregamento de fase (rr:level:*; ver os marcos do boot em src/main.js). */
+const markLoad = (name) => globalThis.performance?.mark?.(`rr:level:${name}`);
 const FOLLOW_HOLD = 0.6; // s que a nova companheira espera (olhando) antes de seguir, após uma troca
 const STAY_SOFT_PEN = 0.1; // penetração máxima da líder numa companheira em "Fica" (obstáculo macio)
 // Lambe-Lambe: a Rhaenyra para a LICK_DIST m do ponto lambido (a cabeça dela encosta na irmã), chega lá em
@@ -913,6 +915,7 @@ export function createGame({ engine, dogs, levels, params }) {
         /** @type {import('../types').LevelDef} */
         const nextDef = { ...baseDef, ...lazy };
         await nextPaint();
+        markLoad('code');
 
         // Devolve o item carregado à fase velha e esvazia as bocas (as dogs sobrevivem entre fases).
         previousUntouched = false;
@@ -927,6 +930,7 @@ export function createGame({ engine, dogs, levels, params }) {
         resources = createResourceScope(root);
         engine.scene.add(root);
         built = def.build({ engine, root, layout: L, params });
+        markLoad('build');
         applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
 
         world = createCollisionWorld(L);
@@ -972,7 +976,9 @@ export function createGame({ engine, dogs, levels, params }) {
         const a = ctrls[activeDog];
         cam.snapFollow(a.x, a.z);
         applyDogs(0.016);
+        markLoad('setup');
         engine.renderer.compile?.(engine.scene, engine.camera);
+        markLoad('compile');
 
         const target = mode === 'play' ? 'playing' : mode === 'title' ? 'title' : 'intro';
         state = 'loading';
@@ -980,6 +986,7 @@ export function createGame({ engine, dogs, levels, params }) {
         if (target === 'title' || target === 'intro') cam.setMode('title', { instant: true });
         emit('level:loaded', levelInfo());
         if (target === 'playing') setState('playing');
+        markLoad('loaded');
         return true;
       } catch (error) {
         const canReturn = hadLevel && previousUntouched;

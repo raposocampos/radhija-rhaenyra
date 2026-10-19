@@ -5,10 +5,12 @@
 // aviso de girar o celular e a fase 4.
 // Roda no GitHub Actions (E2E manual, suíte toque), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro e desenha só na hora da captura (SwiftShader é lento). Saída: shots/celular-revisao/*.png.
+import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
+import { attachHangProbe, waitForBoot } from './lib/hang-probe.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const OUT = 'shots/celular-revisao';
@@ -62,6 +64,7 @@ if (errors.length) {
 /** Todas as capturas de um aparelho, numa página própria. */
 async function captureDevice(dev, url) {
     const page = await browser.newPage(dev.opts);
+    const probe = await attachHangProbe(page); // diagnóstico se a aba travar no boot (hang-probe.mjs)
     page.setDefaultTimeout(180000);
     page.on('pageerror', (e) => errors.push(`[${dev.id}] ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${dev.id}] ${m.text()}`); });
@@ -81,7 +84,7 @@ async function captureDevice(dev, url) {
     /** Abre a página, espera o estado e congela o laço; o script avança e desenha. */
     const open = async (query, state) => {
       await page.goto(`${url}${query}`);
-      await page.waitForFunction((s) => window.__game?.game?.state === s, state, { timeout: 180000 });
+      await waitForBoot(page, probe, (s) => window.__game?.game?.state === s, state, { timeout: 180000, what: `boot de ${query} (${dev.id})` });
       await page.waitForTimeout(1500);
       await page.evaluate(() => {
         window.__freezeReview = true;
