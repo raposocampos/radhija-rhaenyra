@@ -528,6 +528,53 @@ test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e ele
   assert.ok(h.log('plate:press').length >= 1);
 });
 
+test('DIAGNÓSTICO TEMPORÁRIO: sementes em que o teste do legume na arena falha', async () => {
+  const random = Math.random;
+  const bad = [];
+  const f = (v) => +v.toFixed(2);
+  const pigsOf = (h) => h.puzzle.pigs.pigs.map((P) => `${P.i}:${P.state}/${P.action}@${f(P.x)},${f(P.z)} d${P.dog || '-'}`).join(' | ');
+  try {
+    for (let seed = 1; seed <= 120; seed++) {
+      Math.random = seeded(seed);
+      const h = await arena();
+      const c = () => h.ctrls.radhija;
+      const dogS = () => `dog@${f(c().x)},${f(c().z)} y${f(c().yaw)}`;
+      const fail = (step, extra = {}) => bad.push({ seed, step, dog: dogS(), pigs: pigsOf(h), veg: h.info().veggies.find((v) => v.kind === 'corn'), log: h.log('pig:bump').length, ...extra });
+      h.puzzle.jumpToStage('pigsOut');
+      h.run(1);
+      const V = L.VEGGIES.corn;
+      h.teleport('radhija', V.x - 0.3, V.z, Math.PI / 2);
+      h.run(0.2);
+      h.tap('KeyE');
+      let veg = h.info().veggies.find((v) => v.kind === 'corn');
+      if (veg.holder !== 'radhija') { fail('pick1'); h.releaseAll(); continue; }
+      h.teleport('radhija', 2.6, 0.4, Math.PI / 2);
+      h.run(0.2);
+      h.clearLog();
+      h.tap('KeyE');
+      h.run(0.6);
+      veg = h.info().veggies.find((v) => v.kind === 'corn');
+      if (veg.state !== 'ground' || !veg.food || h.log('item:land').length !== 1) { fail('drop', { lands: h.log('item:land').length, knocks: h.log('pig:knock').length }); h.releaseAll(); continue; }
+      h.run(6);
+      if (h.log('pig:eat').length !== 1 || !(h.info().porcos.distracted >= 1) || !(h.info().veggies.find((v) => v.kind === 'corn').eaten > 0)) { fail('eat', { eats: h.log('pig:eat').length, smell: h.log('pig:smell').length }); h.releaseAll(); continue; }
+      const eater = h.puzzle.pigs.pigs.find((P) => P.state === 'eat');
+      if (!eater) { fail('eater'); h.releaseAll(); continue; }
+      const ux = veg.x - eater.x, uz = veg.z - eater.z, ul = Math.hypot(ux, uz) || 1;
+      const to = { x: veg.x + (ux / ul) * 0.42, z: veg.z + (uz / ul) * 0.42 };
+      const got = h.teleport('radhija', to.x, to.z, Math.atan2(-ux, -uz));
+      h.run(0.05);
+      h.clearLog();
+      h.tap('KeyE');
+      if (h.info().veggies.find((v) => v.kind === 'corn').holder !== 'radhija') { fail('pick2', { to, got, eater: eater.i }); h.releaseAll(); continue; }
+      if (!h.log('pig:done').some((e) => e.reason === 'taken')) fail('done');
+      h.releaseAll();
+    }
+  } finally {
+    Math.random = random;
+  }
+  assert.fail(JSON.stringify({ bad: bad.length, list: bad.slice(0, 12) }));
+});
+
 test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', async () => {
   const h = await arena();
   h.puzzle.jumpToStage('pigsOut');
