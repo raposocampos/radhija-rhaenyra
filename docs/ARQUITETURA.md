@@ -488,12 +488,18 @@ animação atual: um esqueleto atual invisível é animado por `dogAnimation.js`
 correspondente (`retarget.js`; os gomos novos dividem a curva entre as pontas). `contacts.js` calcula o ponto mais
 baixo do corpo com as formas do desenho; se a pose afundaria no chão (`GROUND_TOLERANCE`), o corpo gira sobre as
 patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garupa sobe) e, se ainda faltar, sobe.
-Por cima da pose do guia, o modelo novo já tem: a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
+Por cima da pose do guia, o modelo novo já tem: a locomoção própria (`gait.js`, etapa 2: andando, trotando,
+galopando ou girando, a pata apoiada fica plantada no chão do mundo (mede o quanto o corpo andou e girou; parada no
+mundo com velocidade, como no sandbox, vale a velocidade da animação), o balanço pousa onde a pata vai estar no meio
+do próximo apoio, o pulso e o jarrete rolam no fim do apoio e dobram no balanço, a escápula acompanha a pata, o
+tronco desce um pouco quando a passada pede alcance e, ao parar, cada pata fora do lugar dá um passinho; o ritmo é o
+do guia, e as poses com as patas (sentar, pular, empurrar, extras, pulinhos e reverência da comemoração) ficam com
+ele: `locomotionGate`), a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
 pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
 física (`physics.js`: correntinha de três gomos com mola, inércia, gravidade e chão; a pose do guia é o descanso). Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
-guia, chão e orçamento), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).
+guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).
 
 **Dona Gansa** (`createGoose()` em `src/characters/goose.js`, tipo `GooseModel`): modelo e animação; o comportamento
 está em `src/game/mechanics/gooseNpc.js`.

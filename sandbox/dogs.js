@@ -3,6 +3,7 @@
 //   model=v1|v2|both (both: o atual e o novo lado a lado, cada um no seu quadro)
 //   action=none|dash|push|strain|tug|celebrate|sit|sniff|shake|startled|turn|bafoAim|bafo|proud|yuck|lick|licked|slide
 //   speed=<m/s>   turn=<rad/s>   move=1 (anda de verdade, câmera segue)   sim=<s> (simula s segundos e congela)
+//   stop=<s> (para de andar no instante s: as patas assentam)
 //   orbit=1   carry=1|carrot|ball|slipper   bark=<s> (late no instante s)   look=1 (olha para a câmera)   yaw=<graus>
 //   wet=<0..1>   then=<ação depois de 'at' s>  at=<s>
 //   extra=drink|eat|dig|sneeze|nudge|roll  xk=<0..1> (progresso fixo; sem ele, repete a cada xdur s)
@@ -73,6 +74,7 @@ function readConfig(src) {
     poop: src.poop !== undefined && src.poop !== null && src.poop !== '' ? Number(src.poop) : null,
     wallk: src.wallk !== undefined && src.wallk !== null && src.wallk !== '' ? Number(src.wallk) : null,
     hop: String(get('hop', '')) === '1',
+    stopAt: src.stop !== undefined && src.stop !== null && src.stop !== '' ? Number(src.stop) : null,
   });
   cfg.carry = !!cfg.carryKind && cfg.carryKind !== '0';
 }
@@ -226,7 +228,8 @@ function placeCamera(tm, focusDogs) {
 function animAt(t) {
   const act = cfg.thenAction && t >= cfg.thenAt ? cfg.thenAction : cfg.action;
   /** @type {any} */
-  const a = { speed: cfg.speed, turn: cfg.turn, action: act, carrying: cfg.carry, lookAt: cfg.look ? camera.position : null, slope: cfg.slope };
+  const stopped = cfg.stopAt !== null && t >= cfg.stopAt;
+  const a = { speed: stopped ? 0 : cfg.speed, turn: stopped ? 0 : cfg.turn, action: act, carrying: cfg.carry, lookAt: cfg.look ? camera.position : null, slope: cfg.slope };
   if (cfg.extra) {
     const k = cfg.xk !== null ? cfg.xk : (t % cfg.xdur) / cfg.xdur;
     a.extra = { kind: cfg.extra, k, t: cfg.xk !== null ? t : t % cfg.xdur };
@@ -256,15 +259,16 @@ let elapsed = 0;
 let barked = false;
 function step(dt) {
   elapsed += dt;
+  const a = animAt(elapsed);
   for (const d of dogs) {
-    if (cfg.move && cfg.speed > 0) {
+    if (cfg.move && a.speed > 0) {
       const yaw = d.object.rotation.y;
-      d.object.position.x += Math.sin(yaw) * cfg.speed * dt;
-      d.object.position.z += Math.cos(yaw) * cfg.speed * dt;
-      if (cfg.turn) d.object.rotation.y += cfg.turn * dt;
+      d.object.position.x += Math.sin(yaw) * a.speed * dt;
+      d.object.position.z += Math.cos(yaw) * a.speed * dt;
+      if (a.turn) d.object.rotation.y += a.turn * dt;
     }
     if (cfg.barkAt !== null && !barked && elapsed >= cfg.barkAt) d.triggerBark();
-    d.update(dt, animAt(elapsed));
+    d.update(dt, a);
   }
   if (cfg.barkAt !== null && elapsed >= cfg.barkAt) barked = true;
 }
@@ -307,12 +311,14 @@ info.textContent = `${statTxt} | total ${genMs.toFixed(0)}ms`;
 /** Refaz a pose sem remontar as dogs: volta ao lugar, simula `sim` s (padrão 2) e desenha. */
 function pose(next = {}) {
   readConfig(next);
-  if (next.yaw !== undefined) for (const d of dogs) d.object.rotation.y = THREE.MathUtils.degToRad(cfg.yawDeg);
+  // volta ao lugar e ao rumo do começo (uma pose andando em curva não deixa a próxima virada)
+  for (const d of dogs) d.object.rotation.y = THREE.MathUtils.degToRad(cfg.yawDeg);
   applyItems();
   elapsed = 0;
   barked = false;
   for (const d of dogs) {
     d.object.position.copy(d.home);
+    d.locomotion?.reset(); // modelo novo: as patas voltam para debaixo do corpo (não "andou" até a casa)
     d.steps = 0;
     // um quadro farejando zera o tempo parado (senão, depois de 5 s, ela senta sozinha)
     d.update(1 / 60, { speed: 0, action: 'sniff' });

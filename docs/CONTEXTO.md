@@ -3,6 +3,18 @@
 Última atualização: **2026-10-19, Claude** (comemoração com voltinha andando, PR #39). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: modelos novos das dogs, etapa 2 de 5: locomoção (Claude, branch `claude/locomocao-dogs`)
+
+- Plano aprovado pelo usuário (etapas 1–5; a 1 entrou no #37). Etapa 2: locomoção própria do modelo novo em
+  `src/dogs/v2/gait.js`, por cima da pose do guia (sem mexer em `dogAnimation.js`, a pedido do orquestrador): pata
+  apoiada plantada no chão do mundo (sem patinar ao arrancar, frear, virar e na voltinha), balanço que prevê onde a
+  pata vai pousar, pulso e jarrete que rolam e dobram, escápula acompanhando a pata, tronco que desce quando a passada
+  pede alcance e passinhos de ajuste ao parar. Ritmo e pisadas continuam os do guia. Testes em
+  `test/locomocao.test.mjs`; capturas novas (`32-andando`, `33-parando`, `34-curva`, `35-galope`) em
+  `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
+- Ordem combinada com o orquestrador: pedir aprovação e integrar só depois de #41 → #42 → #33 (fila do main).
+- Próximo passo: CI e capturas (E2E `canil`), revisar as tiras, ajustar e apresentar a prévia (`?dogs=novo`).
+
 ## Em andamento: comemoração sem giro parado (Claude, branch `claude/comemoracao-natural`)
 
 - Pedido do usuário (2026-10-19): na comemoração as dogs "giram um 360 sem andar, estranho, não fica natural".
