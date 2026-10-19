@@ -605,7 +605,9 @@ export function createGame({ engine, dogs, levels, params }) {
     const licked = lick.on && lick.target === compName;
     let ci;
     if (compLock) {
-      ci = { dx: 0, dz: 0, speed: 0, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
+      // uma trava pode pedir um passo (compLock.move: a irmã dando espaço no cocô), com colisão normal
+      const mv = compLock.move;
+      ci = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
       resetBrain(brains[compName]);
     } else if (licked) {
       // Recebendo o Lambe-Lambe: para onde está, vira a cabeça um pouco para a irmã (sem esconder o lugar
@@ -954,6 +956,7 @@ export function createGame({ engine, dogs, levels, params }) {
             resolve: (x, z, r, size) => world.resolve(x, z, r, size),
             overlaps: (x, z, r, size) => world.overlaps(x, z, r, size),
             locked: (n) => !!puzzle?.lockFor(n),
+            staying: (n) => !!stay[n],
             focus: (x, z, opts) => cam.focusShot(x, z, opts),
           });
         }

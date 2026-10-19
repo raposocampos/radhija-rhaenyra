@@ -396,8 +396,9 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
     curva. `planCircle` só aceita um caminho sem colisor (`overlaps` do mundo), sem a irmã e com o chão livre onde o
     cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada (sem chão
     livre por perto para o cocô, o C não começa). Nunca gira sem andar;
-  - agachada (`poopK`, `POOP_TIME` s): agacha, faz força, solta o cocozinho de `src/world/poop.js` e cava com as
-    traseiras; a irmã por perto vira a cara;
+  - agachada (`poopK`, `POOP_TIME` s): corcunda, com a garupa a meia altura (baixa demais parece xixi); faz força,
+    solta o cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã no automático dá espaço o tempo todo (se
+    afasta andando até 1,45 m, com colisão, e espera; com o Fica, não sai do lugar) e vira a cara na hora;
   - comemoração (`party`): o cocô brilha dourado (`poop.shine()`, com feixe de luz e estrelinha), toca o jingle
     `extraSecret` e a câmera chega perto. Ela sai em zoomies (`planZoom`: dispara, faz a curva e freia de frente para
     o cocô, só se couber) ou dá um pulinho virando meia volta; depois a reverência de brincadeira, dois pulinhos e

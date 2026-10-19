@@ -26,7 +26,11 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   transparente na altura do cocô). Nada rodou no PC (só `node --check` e `git diff --check`).
 - No `5c5decc`: E2E `extras` 39192211894 verde e capturas da rolagem (fase 8, as duas dogs) e da comemoração
   revisadas: de costas encostada no chão, de bruços como esfinge, zoomies terminando de frente com o cocô à vista.
-- Próximo passo: CI e E2E `todas` no head atualizado, conferir a rolagem no tapete da fase 9, entregar a prévia.
+- No `0f2f2e4` (merge do main `efa779c`): CI 39194265843, E2E `todas` 39194285887 verdes e a rolagem no tapete da fase
+  9 conferida. Retorno do usuário na prévia (2026-10-19): ficou ótimo, mas a agachada parecia xixi (garupa baixa
+  demais) e a irmã no automático chegava perto e esbarrava. Ajustado: corcunda com a garupa a ~64% da altura em pé
+  (testado no modelo real) e a irmã dá espaço (se afasta andando até 1,45 m e espera; `InputLock.move` no núcleo).
+- Próximo passo: CI e E2E `todas` no head novo, revisar as capturas da agachada e da irmã, entregar a prévia.
   Merge só com a aprovação explícita do usuário.
 
 ## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0` no main)

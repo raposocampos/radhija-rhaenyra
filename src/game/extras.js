@@ -35,6 +35,8 @@ export const POOP_PRE = 4.2;
 export const PARTY = Object.freeze({ beat: 0.15, turn: 0.62, bow: 0.82, hop: 0.34, hops: 2, proud: 0.75, cheer: 6 });
 /** Teto da comemoração (s). */
 export const PARTY_MAX = 5.2;
+/** A irmã dá espaço durante o cocô: se está mais perto que isto (m), se afasta andando (m/s) e espera. */
+const SPACE = Object.freeze({ r: 1.45, speed: 0.95 });
 /** Zoomies: velocidade (m/s) e raios da curva (m) que ela tenta, do maior para o menor. */
 const ZOOM = Object.freeze({ small: { v: 3.0, R: [0.55, 0.45] }, large: { v: 2.7, R: [0.62, 0.5] } });
 /** Tempo que o cocô leva para sair (s), a partir de POOP_DROP. */
@@ -139,12 +141,13 @@ function profileTurn(yaw, side, view, a, b) {
  *   carries: (name: import('../types').DogName) => boolean, camera?: { position: { x: number, z: number } } | null,
  *   resolve?: (x: number, z: number, r: number, size: import('../types').DogSize) => { x: number, z: number },
  *   overlaps?: (x: number, z: number, r: number, size: import('../types').DogSize) => boolean,
- *   locked?: (name: import('../types').DogName) => boolean,
+ *   locked?: (name: import('../types').DogName) => boolean, staying?: (name: import('../types').DogName) => boolean,
  *   focus?: (x: number, z: number, opts: any) => void }} opts
  *   overlaps: o círculo encosta num colisor (a voltinha e os zoomies só vão por onde cabe); locked: a fase está
- *   movendo a dog (pose roteirizada): a irmã não para para reagir; focus: plano de câmera de perto (o brilho do cocô).
+ *   movendo a dog (pose roteirizada): a irmã não para para reagir; staying: com o Fica, a irmã não sai do lugar;
+ *   focus: plano de câmera de perto (o brilho do cocô).
  */
-export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x, z) => ({ x, z }), overlaps = () => false, locked = () => false, focus = () => {} }) {
+export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x, z) => ({ x, z }), overlaps = () => false, locked = () => false, staying = () => false, focus = () => {} }) {
   /** @type {ExtraSpot[]} */
   let spots = [];
   /** @type {import('three').Object3D | null} */
@@ -539,7 +542,11 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     poop.appear(POOP_OUT);
     S.poops.push(poop);
   }
-  /** Trava da dog que está no cocô e da irmã (vira a cara na hora; depois vê a comemoração). */
+  /**
+   * Trava da dog que está no cocô e da irmã. A irmã dá espaço o tempo todo: perto demais, se afasta andando (com
+   * colisão, pelo núcleo) até SPACE.r e espera ali, sem seguir a outra; na hora do cocô vira a cara; na comemoração
+   * para e olha.
+   */
   function poopLock(name) {
     const P = S.poop;
     if (!P) return null;
@@ -549,26 +556,32 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
       return { action, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
     }
     P.cheerOn = false;
-    if (name !== other(P.who)) return null;
+    if (name !== other(P.who) || locked(name)) return null;
+    const w = ctrls[P.who];
+    if (P.party && P.cheer >= 0) {
+      // vê a irmã comemorar: para, vira para ela e acompanha
+      P.cheerOn = true;
+      return { action: 'none', faceX: w.x, faceZ: w.z };
+    }
+    const ax = c.x - w.x;
+    const az = c.z - w.z;
+    const dw = Math.hypot(ax, az) || 1e-6;
+    // perto demais: se afasta andando (na comemoração ela já está longe e só espera; com o Fica, não sai do lugar)
+    const move = !P.party && !staying(name) && dw < SPACE.r ? { dx: ax / dw, dz: az / dw, speed: SPACE.speed } : undefined;
     const p = P.t / POOP_TIME;
     const d = Math.hypot(c.x - P.x, c.z - P.z);
-    if (P.phase === 'squat' && p > YUCK.from && p < YUCK.to && d < YUCK.r && !locked(name)) {
+    if (P.phase === 'squat' && p > YUCK.from && p < YUCK.to && d < YUCK.r) {
       if (!P.marks.has('yuck')) {
         P.marks.add('yuck');
         emit('dog:yuck', { name, x: c.x, z: c.z });
       }
-      const ax = c.x - P.px;
-      const az = c.z - P.pz;
-      const L = Math.hypot(ax, az) || 1;
-      return { action: 'yuck', faceX: c.x + (ax / L) * 2, faceZ: c.z + (az / L) * 2 };
+      const bx = c.x - P.px;
+      const bz = c.z - P.pz;
+      const L = Math.hypot(bx, bz) || 1;
+      return { action: 'yuck', faceX: c.x + (bx / L) * 2, faceZ: c.z + (bz / L) * 2, move };
     }
-    if (P.party && P.cheer >= 0 && !locked(name)) {
-      // vê a irmã comemorar: vira para ela e acompanha
-      P.cheerOn = true;
-      const w = ctrls[P.who];
-      return { action: 'none', faceX: w.x, faceZ: w.z };
-    }
-    return null;
+    // espera onde está, olhando para a frente (ela se afastou: fica de costas, dando privacidade)
+    return { action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), move };
   }
 
   // ------------------------------------------------------------------ animações do cenário

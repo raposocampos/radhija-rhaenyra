@@ -470,6 +470,8 @@ export interface InputLock {
   drive?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
   slope?: number;
+  /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
+  move?: { dx: number; dz: number; speed: number };
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick). */

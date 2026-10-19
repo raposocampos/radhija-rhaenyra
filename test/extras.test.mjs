@@ -419,3 +419,57 @@ test('rolar no modelo real: em nenhum ângulo o corpo, a cabeça, as orelhas ou 
     assert.ok(Math.abs(inner.rotation.z) < 1e-6 && Math.abs(inner.position.x) < 1e-6, `${kind}: depois de rolar, volta ao normal`);
   }
 });
+
+test('extras: a irmã no automático dá espaço durante o cocô e nunca esbarra', async () => {
+  const h = await createHeadlessGame({ level: 1 });
+  h.run(0.3);
+  collectAll(h);
+  const a = h.info().activeDog;
+  const b = a === 'radhija' ? 'rhaenyra' : 'radhija';
+  const spot = openSpot(h, 'large');
+  assert.ok(spot, 'a fase 1 tem um lugar aberto');
+  h.teleport(a, spot.x, spot.z, 0.4);
+  h.teleport(b, spot.x + 0.55, spot.z + 0.1);
+  h.run(0.2);
+  const A = h.ctrls[a];
+  const B = h.ctrls[b];
+  h.clearLog();
+  h.tap('KeyC');
+  assert.ok(ex(h).poop, 'começa');
+  let closest = Infinity;
+  let atSquat = null;
+  let partyMin = Infinity;
+  for (let n = 0; n < FULL * 60 && ex(h).poop; n++) {
+    h.step();
+    const d = Math.hypot(A.x - B.x, A.z - B.z);
+    closest = Math.min(closest, d);
+    const P = ex(h).poop;
+    if (P?.phase === 'squat' && atSquat === null && P.t > POOP_TIME * 0.3) atSquat = d;
+    if (P?.phase === 'party') partyMin = Math.min(partyMin, d);
+  }
+  assert.ok(closest > A.r + B.r + 0.02, `não esbarram (${closest.toFixed(2)} m no mais perto)`);
+  assert.ok(atSquat > 1.3, `na agachada ela já está longe (${atSquat?.toFixed(2)} m)`);
+  assert.ok(partyMin > 1.0, `na comemoração ela não vem para cima (${partyMin.toFixed(2)} m)`);
+  assert.equal(h.log('extra:cheer').length, 1, 'e comemora junto, de longe');
+});
+
+test('agachada no modelo real: garupa a meia altura (não parece xixi), corcunda e as patas no chão', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  const v = new THREE.Vector3();
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const d = createDog(kind);
+    const bone = (n) => d.bones.find((b) => b.name === n);
+    const y = (n) => { d.object.updateMatrixWorld(true); return bone(n).getWorldPosition(v).y; };
+    for (let i = 0; i < 40; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    const hip0 = (y('HLu') + y('HRu')) / 2;
+    const back0 = y('body');
+    for (let i = 0; i < 60; i++) d.update(1 / 60, { speed: 0, action: 'none', poopK: 0.35 });
+    const hip = (y('HLu') + y('HRu')) / 2;
+    const k = hip / hip0;
+    assert.ok(k > 0.55 && k < 0.85, `${kind}: garupa a ${(k * 100).toFixed(0)}% da altura em pé`);
+    // corcunda: o meio das costas fica bem acima da garupa
+    assert.ok(y('body') - hip > (back0 - hip0) + 0.03, `${kind}: costas curvadas (meio ${y('body').toFixed(3)} × garupa ${hip.toFixed(3)})`);
+    for (const p of ['FLp', 'FRp', 'HLp', 'HRp']) assert.ok(y(p) < 0.06 && y(p) > -0.01, `${kind}: ${p} no chão (${y(p).toFixed(3)})`);
+  }
+});
