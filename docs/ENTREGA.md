@@ -56,6 +56,9 @@ reprovar em segundos, com diagnóstico, e um jogo lento que anda mantém o prazo
 em tempo de jogo (tetos de relógio do harness, ver ARQUITETURA). Uma suíte
 que trave fora do alcance desses prazos é encerrada pelo runner após 5 min sem
 saída, com diagnóstico da máquina, em vez de esperar o timeout de 30 min do job.
+As páginas extras das suítes e os scripts de captura (`capture-*.mjs`, fora do
+runner) usam as mesmas redes (`lib/page-guard.mjs`): uma aba travada ou caída
+neles também reprova em poucos minutos, com o passo e o estado no log.
 Selecionar uma partida individual não roda esse job adicional.
 
 O mesmo job gera o manifest do build e executa `test-load-recovery.mjs`:

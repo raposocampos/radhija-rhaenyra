@@ -2,12 +2,15 @@
 // Só executada pelo teste de infraestrutura no GitHub; não integra o jogo.
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
+import { browserOptions } from '../lib/browser.mjs';
 import { createHarness, parseArgs } from '../lib/harness.mjs';
+import { closeBrowser, openPage } from '../lib/page-guard.mjs';
 import { runSuites } from '../lib/suite-runner.mjs';
 
 const args = parseArgs();
 const kind = args.case;
-if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung', 'stuck', 'mute', 'crash'].includes(kind)) throw new Error('caso inválido');
+if (!['clean', 'console', 'exception', 'assertion', 'paced', 'stalled', 'slow', 'hung', 'stuck', 'mute', 'crash', 'extra', 'capture'].includes(kind)) throw new Error('caso inválido');
 
 // Tetos de relógio curtos só nas provas de travamento (os padrões são de dezenas de segundos).
 const LIMITS = {
@@ -16,7 +19,15 @@ const LIMITS = {
   hung: { evalMs: 2000, closeMs: 10000 },
   stuck: { opMaxMs: 3000 }, // a navegação tem 120 s de prazo; aqui o harness desiste antes, como se o prazo falhasse
   crash: { opMaxMs: 5000 }, // sem o aviso de queda do Playwright, é o opMaxMs que encerra a espera pendente
+  extra: { opMaxMs: 5000 },
+  capture: { opMaxMs: 5000 },
 };
+/** Derruba a aba no meio de uma espera (chrome://crash), como os testes do próprio Playwright fazem. A chamada vai pelo
+ *  método original da página, fora das redes: a prova é a espera que fica pendente. */
+const crashSoon = (page) => setTimeout(() => {
+  console.log('  [prova] derrubando a aba (chrome://crash)');
+  Object.getPrototypeOf(page).goto.call(page, 'chrome://crash').catch(() => {});
+}, 1500);
 
 if (args.runner) {
   process.exitCode = await runSuites([{
@@ -24,9 +35,9 @@ if (args.runner) {
   }], 'about:blank', process.cwd(), { silenceMs: kind === 'mute' ? 8000 : undefined });
 } else {
   let base = 'about:blank';
-  if (kind === 'stuck' || kind === 'crash') {
-    // stuck: aceita a conexão e nunca responde (page.goto fica em curso); crash: página sem jogo (load() fica
-    // esperando window.__game, como no boot que travou no CI)
+  if (['stuck', 'crash', 'extra', 'capture'].includes(kind)) {
+    // stuck: aceita a conexão e nunca responde (page.goto fica em curso); crash, extra e capture: página sem jogo (a
+    // espera por window.__game fica pendente, como no boot que travou no CI)
     const server = createServer(kind === 'stuck' ? () => {} : (req, res) => {
       res.writeHead(200, { 'content-type': 'text/html' });
       res.end('<!doctype html><title>Sem jogo</title><p>sem window.__game</p>');
@@ -35,6 +46,32 @@ if (args.runner) {
     server.unref();
     base = `http://127.0.0.1:${server.address().port}/`;
   }
+  if (kind === 'capture') await captureProbe(base);
+  else await harnessProbe(base);
+}
+
+/** Script de captura (como capture-*.mjs no CI): sem harness nem runner, só as redes de page-guard.mjs. A aba cai no
+ *  meio da espera pelo jogo: o processo sai em segundos dizendo a espera, a linha, o último passo e o estado. */
+async function captureProbe(base) {
+  const browser = await chromium.launch(browserOptions());
+  try {
+    const { page, guard } = await openPage(browser, {}, { name: 'captura', limits: LIMITS.capture });
+    await page.setContent('<!doctype html><title>Prova da captura</title><p>Pronto</p>');
+    await page.screenshot({ path: 'shots/infra/captura-prova.png' });
+    guard.note('captura 01-prova');
+    await page.goto(base);
+    crashSoon(page);
+    await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
+    console.log('a espera terminou sem o jogo');
+  } catch (error) {
+    console.error(error.stack || error);
+    process.exitCode = 1;
+  } finally {
+    await closeBrowser(browser);
+  }
+}
+
+async function harnessProbe(base) {
   const H = await createHarness({ base, outDir: 'shots/infra', limits: LIMITS[kind] });
   /** Jogo de mentira: debug.info() com o simSec andando `rate`× o relógio (0 = parado). */
   const fakeGame = (rate) => H.page.evaluate((r) => {
@@ -93,12 +130,17 @@ if (args.runner) {
     } else if (kind === 'stuck') {
       await H.load('?trava'); // o sinal do harness encerra o processo em opMaxMs
     } else if (kind === 'crash') {
-      // derruba a aba (renderer) no meio da espera por window.__game, como os testes do próprio Playwright fazem
-      setTimeout(() => {
-        console.log('  [prova] derrubando a aba (chrome://crash)');
-        H.page.goto('chrome://crash').catch(() => {});
-      }, 1500);
+      crashSoon(H.page); // no meio da espera por window.__game
       await H.load('?sem-jogo');
+    } else if (kind === 'extra') {
+      // página extra da suíte (outro aparelho): os erros do navegador nela reprovam a suíte; a aba cai no meio da espera
+      const extra = await H.newPage({ viewport: { width: 640, height: 360 } }, 'extra');
+      await extra.goto(base);
+      const logged = extra.waitForEvent('console', { predicate: (message) => message.type() === 'error', timeout: 5000 });
+      await extra.evaluate(() => console.error('EXTRA_CONSOLE_INJETADO'));
+      await logged;
+      crashSoon(extra);
+      await extra.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
     } else if (kind === 'mute') {
       for (;;); // o próprio processo da suíte trava (event loop bloqueado): só o runner, de fora, pode encerrá-lo
     }
