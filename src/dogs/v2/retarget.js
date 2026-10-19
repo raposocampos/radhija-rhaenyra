@@ -108,6 +108,21 @@ export function createRetarget({ rig1, design1, design2, skel2 }) {
     }
   }
 
-  /** Posições e rotações dos ossos novos no referencial do corpo (inner), do último apply(). */
-  return { apply, P2, Q2, map };
+  /** Recalcula P2/Q2 a partir das rotações locais atuais dos ossos novos (depois de uma pose própria do modelo novo). */
+  function refresh() {
+    const b2 = skel2.bones;
+    for (let j = 0; j < n2; j++) {
+      const p = skel2.parentIdx[j];
+      if (p < 0) {
+        P2[j].copy(b2[j].position);
+        Q2[j].copy(b2[j].quaternion);
+      } else {
+        Q2[j].multiplyQuaternions(Q2[p], b2[j].quaternion);
+        P2[j].copy(b2[j].position).applyQuaternion(Q2[p]).add(P2[p]);
+      }
+    }
+  }
+
+  /** Posições e rotações dos ossos novos no referencial do corpo (inner), do último apply()/refresh(). */
+  return { apply, refresh, P2, Q2, map };
 }

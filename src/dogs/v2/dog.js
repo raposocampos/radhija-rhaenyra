@@ -20,6 +20,7 @@ import { buildDesignV2, paramsV2 } from './design.js';
 import { createSkinMaterial } from './materials.js';
 import { createRetarget } from './retarget.js';
 import { groundContacts, lowestPoint } from './contacts.js';
+import { createEarPhysics } from './physics.js';
 
 /**
  * Quanto as formas de contato podem passar do chão antes de o corpo ser levantado (m). As formas já levam a folga da
@@ -121,6 +122,8 @@ export function createDogV2(kind) {
   const retarget = createRetarget({ rig1, design1, design2: design, skel2 });
   // contato com o chão: tronco, cabeça e patas (rabo e orelhas caem por cima do chão sem levantar o corpo)
   const contacts = groundContacts(design, BONE_INDEX_V2, skel2.rest, { skip: ['tail', 'ear'] });
+  // orelhas com física (mola, inércia, gravidade e chão): reagem ao pulo, às curvas e ao rolar
+  const earPhysics = createEarPhysics({ skel2, design });
 
   const I2 = BONE_INDEX_V2;
   const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
@@ -167,6 +170,7 @@ export function createDogV2(kind) {
     inner.quaternion.copy(driverInner.quaternion);
     retarget.apply();
     settle();
+    earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
   };
 

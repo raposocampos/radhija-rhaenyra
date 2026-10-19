@@ -16,7 +16,7 @@ import { DOG_PARAMS } from '../dogModel.js';
  */
 export const V2_TWEAKS = Object.freeze({
   radhija: Object.freeze({ hs: 1.0, muzzle: 1.15, muzzleW: 0.94, earLen: 1.06, earW: 1.0, earSx: 1.9, mane: 1.0, headFur: 0.022, neck: 1.06, tuck: 1, earFur: 0.034 }),
-  rhaenyra: Object.freeze({ hs: 0.9, muzzle: 1.3, muzzleW: 0.94, earLen: 1.3, earW: 1.1, earSx: 1.9, mane: 1.0, headFur: 0.023, neck: 1.06, tuck: 1, earFur: 0.042 }),
+  rhaenyra: Object.freeze({ hs: 0.9, muzzle: 1.3, muzzleW: 0.94, earLen: 1.12, earW: 1.0, earSx: 1.9, mane: 1.0, headFur: 0.023, neck: 1.06, tuck: 1, earFur: 0.038 }),
 });
 
 /** Parâmetros do modelo novo: os do atual com os ajustes de V2_TWEAKS (em `v2`); hsBone = escala da cabeça do atual. */
