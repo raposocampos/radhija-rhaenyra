@@ -41,7 +41,7 @@ function starGeometry(R, r, depth) {
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildPinata(root, layout) {
-  const { ROSE_BUSH, MANGO_TREE, PINATA } = layout;
+  const { ROSE_BUSH, MANGO_TREE, PINATA, MANGO_SHOVE } = layout;
   const group = new THREE.Group();
   group.name = 'pinata-e-mangueira';
   const r = rng(61);
@@ -101,6 +101,30 @@ export function buildPinata(root, layout) {
   crownSway.add(crownIn);
   crownIn.add(crown, leaves);
   tree.add(crownSway);
+  // o tufo de folhas e galhinhos no galho, onde a piñata fica enroscada no começo (com voltas da corda)
+  const TG = MANGO_SHOVE.tangled;
+  const tuftBlobs = [];
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * TAU + r() * 0.6;
+    tuftBlobs.push({ x: TG.x + Math.cos(a) * 0.3, y: TG.y + 0.12 + r() * 0.22, z: TG.z + Math.sin(a) * 0.26, r: 0.2 + r() * 0.08 });
+  }
+  const tuftGeo = foliageCluster(tuftBlobs, { detail: 2, amp: 0.32, freq: 2.4, seed: 67, dark: '#22401a', mid: '#3f6c2c', light: '#86ad4e' });
+  const tuft = new THREE.Mesh(tuftGeo, crownMat());
+  const tuftLeaves = leafSkin(tuftGeo, { count: 140, size: 0.1, seed: 67, material: crownMat() });
+  crownIn.add(tuft, tuftLeaves);
+  const twigMat = bark;
+  for (let k = 0; k < 4; k++) {
+    const tw = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.016, 0.42, 5), twigMat);
+    tw.position.set(TG.x + (r() - 0.5) * 0.3, TG.y + 0.18, TG.z + (r() - 0.5) * 0.25);
+    tw.rotation.set((r() - 0.5) * 1.6, r() * TAU, (r() - 0.5) * 1.6);
+    crownIn.add(tw);
+  }
+  for (let k = 0; k < 3; k++) {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.075 + k * 0.012, 0.007, 5, 18), stdMat('#c8a070', { roughness: 0.9 }));
+    loop.position.set(TG.x + 0.05 * k, TG.y + 0.42 + k * 0.03, TG.z);
+    loop.rotation.set(0.6 + k * 0.3, k * 0.8, 0.4);
+    crownIn.add(loop);
+  }
   const mangoG = new THREE.SphereGeometry(0.06, 10, 8);
   mangoG.scale(0.85, 1.2, 0.85);
   const mangoMat = stdMat('#f2a03a', { roughness: 0.5 });

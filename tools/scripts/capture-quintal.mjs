@@ -439,7 +439,7 @@ try {
 
   // 6d2. a piñata enroscada no alto da mangueira: a Rhaenyra empurra o tronco de pé e ela desce em cima da roseira
   const MS = L.MANGO_SHOVE;
-  const treeCam = { pos: [MS.x - 2.6, 1.9, MS.z - 2.4], look: [MS.x - 0.9, 1.4, MS.z - 0.4] };
+  const treeCam = { pos: [MS.x - 3.4, 2.5, MS.z - 3.2], look: [MS.x - 1.2, 1.7, MS.z - 0.9] };
   await setup({ stage: 'cake4', active: 'rhaenyra', place: { rhaenyra: { x: MS.x, z: MS.z - 0.55, yaw: 0 }, radhija: { x: MS.x - 2.2, z: MS.z - 1.6, yaw: 1 } }, stay: 'radhija', settle: 20 });
   await shot('36a0-pinata-enroscada', treeCam);
   const toTrunk = await page.evaluate(() => window.__keysFor(0, 1));
