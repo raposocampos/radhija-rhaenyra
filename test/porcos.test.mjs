@@ -137,18 +137,18 @@ test('chiqueiro: porteira fechada sobre o vão, abre para fora; as cercas não c
 
 // ---------------------------------------------------------------------------------------------- mecânica pura
 /** Rebanho num mundo de teste (sem modelos: rápido), com dogs falsas. */
-function herd(cfgOver = {}, { effects = null } = {}) {
+function herd(cfgOver = {}, { effects = null, knockItem = null, carries = null } = {}) {
   const PEN = { x0: 2, x1: 4, z0: -3, z1: -1, door: { side: 's', a: 2.6, b: 3.4 } };
   const P = pigPenLayout(PEN);
   const world = createCollisionWorld({ WORLD: { bounds: { minX: -4, maxX: 4.5, minZ: -3.5, maxZ: 4 } }, STATIC_COLLIDERS: P.colliders });
   const log = [];
   const emit = (name, p) => log.push({ ...p, ev: name }); // (o payload tem `name` da dog: o evento vai em `ev`)
   const cfg = { pen: P.pen, door: P.door, gate: P.gate, area: { minX: -0.5, maxX: 4.5, minZ: -3.5, maxZ: 4 }, ...cfgOver };
-  const pigs = createPigHerd({ id: 'p', cfg, world, emit, effects });
+  const pigs = createPigHerd({ id: 'p', cfg, world, emit, effects, knockItem });
   const dog = (name, x, z, r) => ({ name, x, z, r, size: name === 'rhaenyra' ? 'large' : 'small', vx: 0, vz: 0, yaw: 0, hits: [] });
   const ctrls = { radhija: dog('radhija', -3, 3, 0.17), rhaenyra: dog('rhaenyra', -3.5, 3.5, 0.22) };
   const run = (sec, active = ctrls.radhija) => {
-    for (let i = 0; i < Math.round(sec * 60); i++) pigs.update(1 / 60, { active, ctrls });
+    for (let i = 0; i < Math.round(sec * 60); i++) pigs.update(1 / 60, { active, ctrls, carries });
   };
   return { pigs, world, ctrls, run, log, P, events: (n) => log.filter((e) => e.ev === n) };
 }
@@ -199,6 +199,29 @@ test('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão e
   h.run(1.5);
   const ahead = h.pigs.pigs.filter((P) => P.state === 'chase' && (P.x - c.x) > 0.2);
   assert.ok(ahead.length >= 1, 'com a dog andando, eles se põem à frente');
+});
+
+test('rebanho: quem leva algo na boca é o alvo; o esbarrão derruba o objeto (depois do tempo de graça)', () => {
+  const knocks = [];
+  const effects = { busy: () => false, knock: () => {} };
+  let holding = true;
+  const h = herd({}, { effects, carries: (n) => n === 'rhaenyra' && holding, knockItem: (name, hit) => { knocks.push({ name, ...hit }); return true; } });
+  h.pigs.releaseNow();
+  Object.assign(h.ctrls.radhija, { x: 1.0, z: 1.0 }); // a ativa, mais perto…
+  Object.assign(h.ctrls.rhaenyra, { x: 2.6, z: 2.4 }); // …mas quem leva algo na boca é a Rhaenyra
+  h.run(1.4);
+  assert.equal(knocks.length, 0, 'logo depois de pegar, não derrubam');
+  assert.ok(h.pigs.info().pigs.filter((p) => p.state === 'chase').every((p) => p.dog === 'rhaenyra'), 'todos atrás de quem leva algo');
+  h.run(6);
+  assert.ok(knocks.length >= 1, `derrubaram: ${knocks.length}`);
+  assert.ok(knocks.every((k) => k.name === 'rhaenyra' && Math.abs(Math.hypot(k.dirX, k.dirZ) - 1) < 1e-6));
+  assert.equal(h.events('pig:knock').length, knocks.length);
+  assert.equal(h.pigs.info().knocks, knocks.length);
+  // de boca vazia, só esbarram
+  holding = false;
+  const n = knocks.length;
+  h.run(5);
+  assert.equal(knocks.length, n, 'sem nada na boca, nada a derrubar');
 });
 
 test('rebanho: comida no chão distrai o porco mais perto por um tempo; depois ele volta a atrapalhar (pig:done)', () => {
@@ -363,7 +386,7 @@ test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho com
   veg = h.info().veggies.find((v) => v.kind === 'corn');
   assert.equal(veg.state, 'ground');
   assert.ok(veg.food, 'virou comida dos porcos');
-  assert.equal(h.log('veggie:drop').length, 1);
+  assert.equal(h.log('item:land').length, 1);
   h.run(6);
   assert.equal(h.log('pig:eat').length, 1, 'um porquinho foi comer');
   assert.ok(h.info().porcos.distracted >= 1);
@@ -412,6 +435,30 @@ test('arena: o legume comido até o fim volta para o lugar; o sininho chama os p
   assert.equal(h.log('pig:home').length, 1);
 });
 
+test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', async () => {
+  const h = await arena();
+  h.puzzle.jumpToStage('carrying');
+  assert.equal(h.info().ball.holder, 'radhija');
+  h.teleport('radhija', 3.0, -0.6, 0); // na horta, perto dos porquinhos
+  for (let i = 0; i < 60 * 15 && !h.log('pig:knock').length; i++) h.step();
+  assert.equal(h.log('pig:knock').length, 1, 'derrubaram a bolinha');
+  h.run(0.6);
+  const b = h.info().ball;
+  assert.equal(b.holder, null);
+  assert.equal(b.air, false);
+  assert.equal(h.info().stage, 'pigsOut', 'sem a bolinha, volta a etapa de pegar');
+  assert.equal(h.log('item:land').filter((e) => e.kind === 'ball').length, 1);
+  assert.ok(h.info().objective.startsWith('Pegue a bolinha de volta'));
+  // a dog pega de novo onde caiu (chegando pelo lado oposto ao porquinho mais perto)
+  const P = [...h.puzzle.pigs.pigs].sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0];
+  const ux = b.x - P.x, uz = b.z - P.z, ul = Math.hypot(ux, uz) || 1;
+  h.teleport('radhija', b.x + (ux / ul) * 0.3, b.z + (uz / ul) * 0.3, Math.atan2(-ux, -uz));
+  h.run(0.05);
+  h.tap('KeyE');
+  assert.equal(h.info().ball.holder, 'radhija');
+  assert.equal(h.info().stage, 'carrying');
+});
+
 test('arena: a bolinha do chiqueiro na caminha termina a fase', async () => {
   const h = await arena();
   h.puzzle.jumpToStage('carrying');
@@ -441,10 +488,10 @@ test('arena: a Rhaenyra não passa no vão da cerca (pula a cerca baixa); a Radh
 
 test('sons e efeitos: todo evento dos porquinhos tem som ou efeito no feedback, e os sons existem', () => {
   const fb = readFileSync(new URL('../src/fx/feedback.js', import.meta.url), 'utf8');
-  for (const ev of ['pig:gate', 'pig:release', 'pig:oink', 'pig:bump', 'pig:smell', 'pig:eat', 'pig:munch', 'pig:full', 'pig:snort', 'pig:snore', 'pig:shake', 'pig:done', 'pig:home', 'veggie:drop', 'bell:ring']) {
+  for (const ev of ['pig:gate', 'pig:release', 'pig:oink', 'pig:bump', 'pig:smell', 'pig:eat', 'pig:munch', 'pig:full', 'pig:snort', 'pig:snore', 'pig:shake', 'pig:done', 'pig:knock', 'pig:home', 'item:land', 'bell:ring']) {
     assert.ok(fb.includes(`events.on('${ev}'`), `feedback ouve ${ev}`);
   }
-  for (const s of ['pigOink', 'pigSnort', 'pigMunch', 'pigBump', 'pigFull', 'pigSnore', 'pigShake', 'pigGate', 'veggieDrop', 'bellRing']) {
+  for (const s of ['pigOink', 'pigSnort', 'pigMunch', 'pigBump', 'pigFull', 'pigSnore', 'pigShake', 'pigGate', 'pigKnock', 'veggieDrop', 'bellRing']) {
     assert.ok(SOUND_NAMES.includes(s), `som ${s}`);
   }
   const src = readFileSync(new URL('../src/game/mechanics/pigHerd.js', import.meta.url), 'utf8');

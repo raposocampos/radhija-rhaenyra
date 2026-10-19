@@ -1079,12 +1079,17 @@ export function createFeedback(opts) {
     particles.dust({ x, y: 0.2, z }, { count: 6, size: 0.7, alpha: 0.35, strength: 0.9, color: '#a88a64' });
   });
   events.on('pig:done', ({ x, z }) => popIcon('alert', { at: pigHead(x, z), life: 0.9, size: 0.2 }));
+  events.on('pig:knock', ({ x, z, name }) => {
+    sfx('pigKnock', x, z);
+    particles.burst({ x, y: 0.45, z }, { kind: 'stars', count: 7, size: 0.75, speed: 0.7 });
+    if (name) popIcon('alert', { follow: name, life: 1.1, size: 0.22 });
+  });
   events.on('pig:home', ({ x, z }) => particles.sparkle({ x, y: 0.5, z }, { count: 10, radius: 0.4, size: 0.8, rise: 0.6 }));
   events.on('bell:ring', ({ x, z }) => {
     sfx('bellRing', x, z);
     particles.sparkle({ x, y: 0.85, z }, { count: 8, radius: 0.18, size: 0.7, rise: 0.4 });
   });
-  events.on('veggie:drop', ({ x, z }) => {
+  events.on('item:land', ({ x, z }) => {
     sfx('veggieDrop', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.6, alpha: 0.35, strength: 0.4 });
   });

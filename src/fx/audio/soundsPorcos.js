@@ -1,8 +1,8 @@
 // Sons dos porquinhos (fase 10 e a arena ?level=porcos). Cada som: (G, dest, t, p, opts) → duração (s).
-// Entram na biblioteca em ./sounds.js; o feedback toca nos eventos pig:* e veggie:drop. Tudo de uma vez só.
+// Entram na biblioteca em ./sounds.js; o feedback toca nos eventos pig:* e item:land. Tudo de uma vez só.
 //   pigOink (opts.kind: 'idle' | 'pester' | 'grumpy' | 'alert' | 'happy') · pigSnort (fuçando) · pigMunch (comendo)
 //   pigBump (esbarrão) · pigFull (satisfeito) · pigSnore (cochilo) · pigShake (orelhas batendo) · pigGate (porteira)
-//   · veggieDrop (legume no chão) · bellRing (o sininho da arena)
+//   · veggieDrop (algo que a dog levava caiu no chão: item:land) · pigKnock (derrubou o que a dog levava) · bellRing (o sininho da arena)
 import { osc, gn, flt, env, nz, tone, rnd } from './synth.js';
 
 /**
@@ -126,6 +126,13 @@ export const SOUNDS_PORCOS = {
     nz(G, o, { t: clack + 0.02, a: 0.001, d: 0.03, peak: 0.06, type: 'bandpass', f: 2100 * p, q: 3 });
     return 0.7;
   },
+  // derrubou o que a dog levava: "pof" de pulo e um gritinho contente
+  pigKnock(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 420 * p, to: 900 * p, t, a: 0.003, d: 0.12, peak: 0.12 });
+    nz(G, o, { t, a: 0.002, d: 0.05, peak: 0.08, type: 'bandpass', f: 1800 * p, q: 1.2 });
+    grunt(G, o, t + 0.08, p * 1.3, { d: 0.1, peak: 0.18, up: 1.6, end: 1.1 });
+    return 0.35;
+  },
   // sininho de chamar os porquinhos: "blim-blim" de latão
   bellRing(G, o, t, p) {
     for (let i = 0; i < 3; i++) {
@@ -146,13 +153,13 @@ export const SOUNDS_PORCOS = {
 };
 export const MIN_GAP_PORCOS = {
   pigOink: 0.22, pigSnort: 0.5, pigMunch: 0.3, pigBump: 0.25, pigFull: 0.4, pigSnore: 0.9, pigShake: 0.5, pigGate: 0.4, veggieDrop: 0.12,
-  bellRing: 0.5,
+  bellRing: 0.5, pigKnock: 0.3,
 };
 export const PITCH_VAR_PORCOS = {
   pigOink: 0.07, pigSnort: 0.06, pigMunch: 0.08, pigBump: 0.05, pigFull: 0.04, pigSnore: 0.05, pigShake: 0.05, pigGate: 0.04, veggieDrop: 0.08,
-  bellRing: 0.01,
+  bellRing: 0.01, pigKnock: 0.05,
 };
 export const VERB_PORCOS = {
   pigOink: 0.1, pigSnort: 0.05, pigMunch: 0.04, pigBump: 0.06, pigFull: 0.08, pigSnore: 0.05, pigShake: 0.05, pigGate: 0.12, veggieDrop: 0.05,
-  bellRing: 0.3,
+  bellRing: 0.3, pigKnock: 0.08,
 };

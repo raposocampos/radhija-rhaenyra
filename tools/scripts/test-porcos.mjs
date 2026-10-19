@@ -2,7 +2,8 @@
 // A lógica completa está em test/porcos.test.mjs (headless); aqui, a integração com a página: os modelos montados
 // no navegador, a Radhija entrando na horta pelo vão e pisando no botão, a porteira abrindo e os porquinhos saindo e
 // indo atrás dela, o milho pego (E) do outro lado e largado (E) na horta, um porquinho comendo, o sininho (E) e todos
-// de volta ao chiqueiro. Com os porcos soltos, as idas longas são teleporte (eles atrapalham de propósito).
+// de volta ao chiqueiro; e a cenoura derrubada da boca (quem leva algo é o alvo preferido deles). Com os porcos
+// soltos, as idas longas são teleporte (eles atrapalham de propósito).
 //   node tools/scripts/test-porcos.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -59,7 +60,7 @@ try {
   await press('KeyE');
   i = await waitFor((s) => veg(s, 'corn').state === 'ground', { timeout: 2500 });
   check(veg(i, 'corn').state === 'ground' && !!veg(i, 'corn').food, 'E largou o milho no chão da horta', JSON.stringify(veg(i, 'corn')));
-  check((await logOf('veggie:drop')).length === 1, 'veggie:drop');
+  check((await logOf('item:land')).length === 1, 'item:land');
   i = await waitFor((s) => s.porcos.pigs.some((p) => p.state === 'eat'), { timeout: 12000 });
   const eater = i.porcos.pigs.find((p) => p.state === 'eat');
   check(!!eater && eater.distracted && eater.left > 20, 'um porquinho foi comer (distraído por um bom tempo)', JSON.stringify(eater));
@@ -68,6 +69,19 @@ try {
   await shot('04-comendo.png');
   i = await info();
   check(veg(i, 'corn').eaten > 0, 'o milho vai sumindo', String(veg(i, 'corn').eaten));
+
+  // com algo na boca, eles derrubam: a cenoura cai no chão (e, na horta, vira comida)
+  await tp('radhija', L.VEG.carrot.x + 0.5, L.VEG.carrot.z, -Math.PI / 2);
+  await H.gsleep(300);
+  await press('KeyE');
+  i = await info();
+  check(veg(i, 'carrot').holder === 'radhija', 'E pegou a cenoura', JSON.stringify(veg(i, 'carrot')));
+  await tp('radhija', 3.0, -0.6, 0);
+  await clearLog();
+  i = await waitFor((s) => s.porcos.knocks > 0, { timeout: 15000 });
+  check(i.porcos.knocks > 0 && (await logOf('pig:knock')).length >= 1, 'um porquinho derrubou a cenoura da boca', JSON.stringify(i.porcos.pigs.map((p) => `${p.state}:${p.dog}`)));
+  i = await waitFor((s) => veg(s, 'carrot').state !== 'air', { timeout: 2000 });
+  check(veg(i, 'carrot').holder === null && veg(i, 'carrot').state !== 'held', 'a cenoura caiu no chão', JSON.stringify(veg(i, 'carrot')));
 
   // o sininho chama todos de volta (a porteira fecha quando o último entra)
   await tp('radhija', L.BELL.x + 0.05, L.BELL.z + 0.6, Math.PI);

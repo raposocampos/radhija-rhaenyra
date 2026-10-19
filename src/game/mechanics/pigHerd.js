@@ -6,12 +6,16 @@
 // (pig:done). recall() leva todos de volta ao cercado (a porteira fecha quando o último entra); reset() volta ao começo.
 //
 //   const pigs = createPigHerd({ id, cfg, world, root, emit, effects, createPig, gateProp });
-//   pigs.update(dt, { active, ctrls })   // por quadro em 'playing' (effects.update e effects.lockFor ficam com a fase)
+//   pigs.update(dt, { active, ctrls, carries })   // por quadro em 'playing' (effects.update e lockFor ficam com a fase);
+//                                        // carries(nome) → a dog leva algo na boca? (eles vão atrás dela e derrubam)
 //   pigs.animate(dt)                     // só anima (comemoração)
 //   pigs.setOpen(true | false)           // porteira (a fase decide: botão, alavanca…)
 //   const f = pigs.addFood({ x, z, kind: 'corn' | 'carrot' | 'pumpkin' | …, time?, eat?, onProgress?(k), onDone?() })
 //   pigs.removeFood(f | f.id)            // alguém pegou a comida de volta: o porco volta a atrapalhar
 //   pigs.recall() · pigs.reset() · pigs.onBark(ctrl) · pigs.info() · pigs.pigs · pigs.gate (createHingedGate)
+// Quem leva algo na boca é o alvo preferido: eles correm mais atrás dela, esbarram mais e o esbarrão DERRUBA o objeto:
+// a fase passa knockItem(nome, { pig, dirX, dirZ, x, z }) → true se derrubou (ela faz o objeto voar e cair; ver a
+// arena). Logo depois de pegar, cfg.knockGrace s sem derrubar. Evento pig:knock {pig, name, x, z}.
 // Comida: time = segundos de distração (a partir da 1ª mordida; Infinity = de vez), eat = quanto disso é comendo
 // (o resto ele cochila ao lado). Sem time/eat, vale cfg.foods[kind] e depois cfg.distractTime / cfg.eatTime.
 // onProgress(k 0..1) acompanha quanto já foi comido (a fase encolhe o legume); onDone() quando acabou de comer.
@@ -25,7 +29,7 @@
 // Eventos (todos com x, z): pig:gate {open} · pig:release {count} · pig:oink {pig, kind: 'idle'|'pester'|'grumpy'|
 //   'alert'|'happy'} · pig:bump {pig, name} · pig:smell {pig, food} · pig:eat {pig, food, kind, time} · pig:munch {pig}
 //   · pig:full {pig, food} · pig:sleep {pig} · pig:wake {pig} · pig:shake {pig} · pig:snort / pig:snore {pig} (só som)
-//   · pig:done {pig, food, reason:
+//   · pig:knock {pig, name} (derrubou o que a dog levava) · pig:done {pig, food, reason:
 //   'time'|'taken'|'recall'} (acabou a distração) · pig:home (todos no cercado).
 import { createHingedGate } from './hingedGate.js';
 
@@ -46,9 +50,9 @@ export const PIG_DEFAULTS = {
   trotSpeed: 1.2, // indo a algum lugar (sair do cercado, ir comer)
   chaseSpeed: 1.55, // atrás de uma dog (elas andam a 2,0–2,4 m/s: dá para despistar, mas eles alcançam)
   turnRate: 4.5, // rad/s
-  noticeR: 3.6, // vê uma dog (perto da área) a esta distância
+  noticeR: 4, // vê uma dog (perto da área) a esta distância
   loseR: 6.5, // desiste se ela ficar mais longe
-  boredAfter: 12, // depois de tanto tempo atrapalhando, cansa…
+  boredAfter: 16, // depois de tanto tempo atrapalhando, cansa… (atrás de quem leva algo na boca, não cansa)
   boredFor: [3.5, 5.5], // …e fuça o chão esse tanto antes de voltar
   lead: 0.14, // quanto à frente da dog ele quer ficar (além dos dois raios)
   spread: 0.5, // lado a lado na frente da dog que anda (mais que o diâmetro de um porco)
@@ -56,6 +60,11 @@ export const PIG_DEFAULTS = {
   bumpEvery: [1.4, 2.8], // encostado, esbarra a cada (s)
   bumpDist: 0.32, // empurrão (m)
   bumpCooldown: 1.2, // por dog
+  // quem leva algo na boca: vão atrás dela primeiro (até noticeR · 1,4), mais rápido, e o esbarrão derruba o objeto
+  chaseCarrier: 1.85,
+  bumpEveryCarrying: [0.45, 0.95],
+  knockChance: 0.85,
+  knockGrace: 1.5, // s depois de pegar, sem derrubar
   smellR: 10, // até onde sente a comida no chão
   reach: 0.3, // do centro do porco ao focinho (onde a comida fica quando ele come)
   nose: 0.37, // do centro do porco à ponta do focinho (encostar focinho com focinho na dog)
@@ -121,9 +130,10 @@ export function pigPenLayout(PEN, id = 'chiqueiro') {
  *   id?: string, cfg: any, world: import('../../types').CollisionWorld, root?: import('three').Object3D | null,
  *   emit?: import('../../types').GameEmit, effects?: any, createPig?: ((opts: { variant: number }) => import('../../types').PigModel) | null,
  *   gateProp?: import('../../types').GateProp | null,
+ *   knockItem?: ((name: string, hit: { pig: number, dirX: number, dirZ: number, x: number, z: number }) => boolean) | null,
  * }} args
  */
-export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null, emit = null, effects = null, createPig = null, gateProp = null }) {
+export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null, emit = null, effects = null, createPig = null, gateProp = null, knockItem = null }) {
   const cfg = { ...PIG_DEFAULTS, ...userCfg, foods: { ...PIG_DEFAULTS.foods, ...(userCfg.foods || {}) } };
   const { pen, door, area } = cfg;
   const r = cfg.radius;
@@ -168,8 +178,9 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   const byCol = new Map(pigs.map((P) => [P.id, P]));
 
   const S = {
-    t: 0, wantOpen: false, released: false, recall: false, bumps: 0, nextFood: 1, eaten: 0, done: 0,
+    t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, nextFood: 1, eaten: 0, done: 0,
     /** @type {Record<string, number>} */ dogCd: {},
+    /** há quanto tempo cada dog leva algo na boca (s; 0 = boca vazia) @type {Record<string, number>} */ carryT: {},
   };
   /** @type {any[]} */
   const foods = [];
@@ -450,7 +461,13 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   }
 
   // ---------------------------------------------------------------------------- dogs
+  const carrying = (n) => (S.carryT[n] || 0) > 0;
   function pickDog(P, active, ctrls) {
+    // quem leva algo na boca chama atenção de longe (e mesmo cansados eles vão)
+    for (const n of Object.keys(ctrls || {})) {
+      const c = ctrls[n];
+      if (carrying(n) && Math.hypot(c.x - P.x, c.z - P.z) < cfg.noticeR * 1.4 && offArea(c.x, c.z) < 0.9) return n;
+    }
     if (P.boredT > 0) return null;
     const names = Object.keys(ctrls || {});
     names.sort((a, b) => (a === active?.name ? -1 : b === active?.name ? 1 : 0));
@@ -472,11 +489,16 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   }
 
   function chase(P, dt, active, ctrls) {
-    P.pesterT += dt;
-    // a dog ativa chegou perto: passa a atrapalhar ela (quem joga sente)
+    // a dog ativa chegou perto: passa a atrapalhar ela (quem joga sente); quem leva algo na boca vem antes de tudo
     if (active && P.dog !== active.name && Math.hypot(active.x - P.x, active.z - P.z) < cfg.noticeR * 0.8 && offArea(active.x, active.z) < 0.9) {
       P.dog = active.name;
     }
+    if (!carrying(P.dog)) {
+      const k = Object.keys(ctrls || {}).find((n) => carrying(n) && Math.hypot(ctrls[n].x - P.x, ctrls[n].z - P.z) < cfg.noticeR * 1.4 && offArea(ctrls[n].x, ctrls[n].z) < 0.9);
+      if (k) P.dog = k;
+    }
+    const target = carrying(P.dog);
+    if (!target) P.pesterT += dt;
     const c = ctrls?.[P.dog];
     const far = !c || Math.hypot(c.x - P.x, c.z - P.z) > cfg.loseR;
     if (far || P.pesterT > cfg.boredAfter) {
@@ -504,7 +526,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const outside = offArea(c.x, c.z) > 0.25;
     P.lookAt = { x: c.x, y: 0.3, z: c.z };
     if (dGoal > 0.14) {
-      const speed = dGoal > 1 ? cfg.chaseSpeed : lerp(cfg.walkSpeed, cfg.chaseSpeed, dGoal);
+      const top = target ? cfg.chaseCarrier : cfg.chaseSpeed;
+      const speed = dGoal > 1 ? top : lerp(cfg.walkSpeed, top, dGoal);
       walkTo(P, g.x, g.z, speed, dt, ctrls, { arrive: 0.1 });
       P.action = 'walk';
     } else {
@@ -519,13 +542,15 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       if (P.speed < 0.3) P.action = 'sniff'; // cheirando a dog
       P.bumpT += dt;
       const canPush = !(c.jumpT > 0) && !(c.wallDur > 0) && !effects?.busy?.(c.name); // no ar ou num impulso, não
-      if (facing && canPush && P.bumpT > P.bumpWait && P.bumpPending < 0 && !(S.dogCd[c.name] > 0)) {
+      // (atrás de quem leva algo na boca, vale até de lado ou de garupa: o que importa é derrubar)
+      const wait = target ? Math.min(P.bumpWait, cfg.bumpEveryCarrying[1]) : P.bumpWait;
+      if ((facing || target) && canPush && P.bumpT > wait && P.bumpPending < 0 && !(S.dogCd[c.name] > (target ? cfg.bumpCooldown * 0.5 : 0))) {
         P.model?.bump?.();
         P.bumpPending = 0.2; // o tranco sai no meio do gesto
         P.bumpDog = c.name;
         S.dogCd[c.name] = cfg.bumpCooldown;
         P.bumpT = 0;
-        P.bumpWait = rand(cfg.bumpEvery);
+        P.bumpWait = rand(target ? cfg.bumpEveryCarrying : cfg.bumpEvery);
       }
     } else P.bumpT = Math.max(0, P.bumpT - dt * 0.5);
     if (P.oinkT <= 0) oink(P, outside ? 'alert' : 'pester');
@@ -535,10 +560,19 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const c = ctrls?.[P.bumpDog];
     P.bumpPending = -1;
     if (!c) return;
-    if (Math.hypot(c.x - P.x, c.z - P.z) > r + c.r + 0.18) return; // a dog saiu a tempo
-    effects?.knock?.(c, c.x - P.x, c.z - P.z, cfg.bumpDist, { dur: 0.3, action: 'startled', face: { x: P.x, z: P.z } });
+    const dx = c.x - P.x, dz = c.z - P.z, d = Math.hypot(dx, dz) || 1;
+    if (d > Math.max(r + c.r, cfg.nose + dogExtent(c, P.x, P.z)) + 0.2) return; // a dog saiu a tempo
+    effects?.knock?.(c, dx, dz, cfg.bumpDist, { dur: 0.3, action: 'startled', face: { x: P.x, z: P.z } });
     S.bumps++;
     fire('pig:bump', { pig: P.i, name: c.name, x: c.x, z: c.z });
+    // levava algo na boca (há mais de knockGrace s): o tranco derruba
+    if ((S.carryT[c.name] || 0) > cfg.knockGrace && Math.random() < cfg.knockChance
+      && knockItem?.(c.name, { pig: P.i, dirX: dx / d, dirZ: dz / d, x: c.x, z: c.z })) {
+      S.knocks++;
+      S.carryT[c.name] = 0;
+      oink(P, 'happy');
+      fire('pig:knock', { pig: P.i, name: c.name, x: c.x, z: c.z });
+    }
   }
 
   /** Uma dog trombou num porco (contato do integrate): ele reclama e, se estava à toa, vai atrás dela. */
@@ -773,7 +807,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
 
   function reset() {
     foods.length = 0;
-    Object.assign(S, { t: 0, wantOpen: false, released: false, recall: false, bumps: 0, dogCd: {}, eaten: 0, done: 0 });
+    Object.assign(S, { t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, dogCd: {}, carryT: {}, eaten: 0, done: 0 });
     gate.reset();
     for (const P of pigs) {
       const h = homes[P.i];
@@ -809,9 +843,10 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     P.model.update(dt, { speed: P.speed, turn: P.yawRate, action: P.action, lookAt: P.lookAt });
   }
 
-  /** @param {number} dt @param {{ active?: import('../../types').DogController | null, ctrls?: Record<string, import('../../types').DogController> }} [ctx] */
-  function update(dt, { active = null, ctrls = {} } = {}) {
+  /** @param {number} dt @param {{ active?: import('../../types').DogController | null, ctrls?: Record<string, import('../../types').DogController>, carries?: ((name: string) => boolean) | null }} [ctx] */
+  function update(dt, { active = null, ctrls = {}, carries = null } = {}) {
     S.t += dt;
+    for (const n of Object.keys(ctrls)) S.carryT[n] = carries?.(n) ? (S.carryT[n] || 0) + dt : 0;
     for (const n of Object.keys(S.dogCd)) S.dogCd[n] = Math.max(0, S.dogCd[n] - dt);
     // porteira (quem está no vão segura a folha aberta: dogs e porcos)
     for (const n of Object.keys(ctrls)) blockers[n] = ctrls[n];
@@ -900,7 +935,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
   const round = (v) => +v.toFixed(2);
   function info() {
     return {
-      open: gate.target > 0.5, gateT: round(gate.t), released: S.released, recall: S.recall, bumps: S.bumps, eaten: S.eaten,
+      open: gate.target > 0.5, gateT: round(gate.t), released: S.released, recall: S.recall, bumps: S.bumps, knocks: S.knocks, eaten: S.eaten,
       pigs: pigs.map((P) => ({
         state: P.state, action: P.action, x: round(P.x), z: round(P.z), dog: P.dog, food: P.food?.id ?? null,
         distracted: distracted(P), left: P.state === 'toFood' ? round(P.food?.time ?? 0) : round(Math.max(0, P.left)),

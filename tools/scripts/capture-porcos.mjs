@@ -215,8 +215,14 @@ try {
   p = await pigsAt();
   const w = p.find((q) => q.state === 'wake') || n;
   await shot('40-acordou-se-sacudindo', { pos: [w.x + 0.9, 0.65, w.z + 0.9], look: [w.x, 0.2, w.z] });
+  // a Rhaenyra com a abóbora na horta: o esbarrão derruba
+  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: 2.7, z: -0.5, yaw: 0.3 } }, settle: 4 });
+  await until((_, g) => g.debug.events('pig:knock').length > 0, 900);
+  await step(9);
+  const kn = await page.evaluate(() => { const c = window.__game.game.debug.ctrls.rhaenyra; return { x: c.x, z: c.z }; });
+  await shot('40b-derrubou-a-abobora', { pos: [kn.x + 1.1, 0.9, kn.z + 1.5], look: [kn.x, 0.25, kn.z] });
   // o sininho: todos de volta
-  await setup({ place: { radhija: { x: L.BELL.x + 0.05, z: L.BELL.z + 0.6, yaw: Math.PI } }, settle: 10 });
+  await setup({ active: 'radhija', place: { radhija: { x: L.BELL.x + 0.05, z: L.BELL.z + 0.6, yaw: Math.PI } }, settle: 10 });
   await tap('KeyE');
   await step(20);
   await shot('41-sininho', { pos: [L.BELL.x + 0.9, 1.1, L.BELL.z + 1.6], look: [L.BELL.x, 0.7, L.BELL.z] });

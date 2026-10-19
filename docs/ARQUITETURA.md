@@ -464,7 +464,11 @@ está em `src/game/mechanics/gooseNpc.js`.
   atrás do outro e ficam na `cfg.area` (a horta). Atrapalham a dog que chega perto (a ativa primeiro): andando, se
   põem à frente dela, lado a lado; parada, chegam encostados, cheiram e dão um esbarrão de leve (`effects.knock`,
   0,32 m, com recarga por dog). Cada porco é um colisor dinâmico (círculo) que bloqueia as duas dogs; eles nunca
-  atravessam as dogs nem uns aos outros. Cansam depois de `boredAfter` s e fuçam um pouco.
+  atravessam as dogs nem uns aos outros. Cansam depois de `boredAfter` s e fuçam um pouco. Quem leva algo na boca
+  (`update(dt, { active, ctrls, carries })`, `carries(nome)`) é o alvo preferido: vão atrás dela de mais longe, mais
+  rápido, sem cansar, esbarram mais e o esbarrão derruba o objeto: a fase passa `knockItem(nome, { pig, dirX, dirZ,
+  x, z })` → true se derrubou (ela faz o objeto voar e cair; `cfg.knockChance`, e `cfg.knockGrace` s sem derrubar logo
+  depois de pegar). Evento `pig:knock`.
   Comida: `addFood({ x, z, kind, time?, eat?, onProgress?(k), onDone?() })`: o porco livre mais perto trota até ela,
   come (`eat` s; `onProgress` vai de 0 a 1 para a fase encolher o legume), deita e cochila ao lado até completar
   `time` s de distração (contados da 1ª mordida), acorda se sacudindo e volta a atrapalhar (`pig:done`). Padrões
@@ -488,14 +492,16 @@ está em `src/game/mechanics/gooseNpc.js`.
      se quiser, `homes`, `foods`…); `STATIC_COLLIDERS` recebe `...PEN_LAYOUT.colliders`.
   2. Cenário: `buildPigPen` (a `gate` vai nos props, como `penGate`) e os legumes com `createVeggie`.
   3. Puzzle: `effects = createDogEffects({ world, dogs })`; `pigs = createPigHerd({ id: 'porco', cfg: PIGS, world,
-     root, emit, effects, createPig, gateProp: props.penGate })`. No `update`: `effects.update(dt, ctrls)` e
-     `pigs.update(dt, { active, ctrls })`; `lockFor: (n) => effects.lockFor(n)`; `onBark: (c) => pigs.onBark(c)`;
+     root, emit, effects, createPig, gateProp: props.penGate, knockItem })`. No `update`: `effects.update(dt, ctrls)`
+     e `pigs.update(dt, { active, ctrls, carries })`; `lockFor: (n) => effects.lockFor(n)`; `onBark: (c) => pigs.onBark(c)`;
      na comemoração, `pigs.animate(dt)` (em `updateAlways`); `reset` chama `pigs.reset()`.
   4. A fase decide quando abrir (`pigs.setOpen(true)` num botão, numa alavanca…) e transforma o legume largado em
      comida (`pigs.addFood(...)` com `onProgress: (k) => veg.setEaten(k)`); pegar de volta é `pigs.removeFood(f)`.
-     A arena (`src/levels/_porcos/puzzle.js`) mostra o pegar e largar com E, o arco do legume caindo e a volta do
-     legume comido.
-  5. Sons e efeitos: o feedback já trata os eventos `pig:*` (§8); a fase emite `veggie:drop` quando o legume cai.
+     O `knockItem` da fase larga o que a dog levava com um arco (legume derrubado na horta vira comida; a bolinha fica
+     no chão até a dog pegar de novo). A arena (`src/levels/_porcos/puzzle.js`) mostra tudo isso: pegar e largar com
+     E, o arco do legume caindo, a bolinha derrubada e a volta do legume comido.
+  5. Sons e efeitos: o feedback já trata os eventos `pig:*` (§8); a fase emite `item:land {kind}` quando o que a dog
+     levava cai no chão.
 
 ## 8. Eventos
 
@@ -533,7 +539,8 @@ Quem emite e quem ouve:
   `pig:gate {open}`, `pig:release {count}`, `pig:oink {pig, kind}` (`idle`, `pester`, `grumpy`, `alert`, `happy`),
   `pig:bump {pig, name}`, `pig:smell {pig, food}`, `pig:eat {pig, food, kind, time}`, `pig:munch`, `pig:full`,
   `pig:sleep`, `pig:wake`, `pig:shake`, `pig:snort`/`pig:snore` (só som), `pig:done {pig, food, reason}` (`time`,
-  `taken` ou `recall`: voltou a atrapalhar) e `pig:home`; legumes: `veggie:drop {kind}` (a fase emite); Arena dos
+  `taken` ou `recall`: voltou a atrapalhar), `pig:knock {pig, name}` (derrubou o que a dog levava) e `pig:home`;
+  `item:land {kind}` (o que a dog levava caiu no chão; a fase emite); Arena dos
   Porquinhos: `bell:ring`; fase 1: `rope:tug`, `cart:move`,
   `carrot:revealed`, `carrot:pickup`; fase 5: `latch:start` (trava do portãozinho), `box:collapse` (caixa desmontando);
   fase 6: `expresso:route {route, signX, signZ}` (pulo no pedal virou a agulha), `expresso:sneeze` (o nariz sentiu o

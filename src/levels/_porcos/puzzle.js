@@ -2,8 +2,10 @@
 // Pise no botão: a porteira abre e os três porquinhos saem para atrapalhar. A bolinha está no chiqueiro, atrás deles.
 // Os legumes (milho, cenoura, aboborinha) estão do outro lado: E pega, E de novo larga (joga no chão à frente). Na
 // horta, o porquinho livre mais perto vai comer e fica distraído por um tempo (come, cochila e volta a atrapalhar).
-// Pegar o legume de volta tira dele a comida. Comido, o legume volta para o lugar. O sininho (E) chama todos de
-// volta ao chiqueiro (a porteira fecha; o botão abre de novo). A bolinha na caminha termina a arena.
+// Pegar o legume de volta tira dele a comida. Comido, o legume volta para o lugar. Quem leva algo na boca é o alvo
+// preferido: o esbarrão derruba o legume (que vira comida, se cair na horta) ou a bolinha (que fica no chão até a dog
+// pegar de novo). O sininho (E) chama todos de volta ao chiqueiro (a porteira fecha; o botão abre de novo). A
+// bolinha na caminha termina a arena.
 import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
 import { createDogEffects, createPressurePlate, createPigHerd } from '../../game/mechanics/index.js';
 import { createPig } from '../../characters/pig.js';
@@ -18,6 +20,7 @@ export const TEXT = {
     startRad: 'Entre na horta pelo vão da cerca e pise no botão do chiqueiro',
     closed: 'Pise no botão: a porteira do chiqueiro abre',
     ball: 'Pegue a bolinha no chiqueiro (E)',
+    ballBack: 'Pegue a bolinha de volta (E)',
     pigs: 'Os porquinhos não deixam passar! Traga um legume do outro lado (E) e largue perto deles (E)',
     drop: 'Largue o legume perto dos porquinhos (E)',
     carrying: 'Leve a bolinha para a caminha',
@@ -31,6 +34,7 @@ export const TEXT = {
     home: 'Todos de volta ao chiqueiro.',
     rhGap: 'A Rhaenyra não passa no vão… mas pula a cerca baixa! (Espaço)',
     outside: 'Fora da horta os porquinhos não comem: largue o legume lá dentro.',
+    knocked: 'Derrubou! Eles derrubam o que você leva na boca: distraia os porquinhos com legumes antes.',
   },
   prompt: { veg: 'Pegar o legume', drop: 'Largar o legume', ball: 'Pegar a bolinha', bell: 'Tocar o sininho' },
 };
@@ -47,7 +51,11 @@ export function createPuzzle(ctx) {
   const A = PIGS.area;
   const inArea = (x, z) => x > A.minX && x < A.maxX && z > A.minZ && z < A.maxZ;
 
-  const S = { stage: 'start', objKey: '', pestMode: false, pestT: 0, calmT: 0, bumps: 0 };
+  const S = {
+    stage: 'start', objKey: '', pestMode: false, pestT: 0, calmT: 0, bumps: 0,
+    /** onde a bolinha está no chão (derrubada, fica onde caiu) e o voo dela */ ballAt: { x: BALL.x, z: BALL.z },
+    /** @type {any} */ ballToss: null,
+  };
   const effects = createDogEffects({ world, dogs });
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
@@ -61,7 +69,7 @@ export function createPuzzle(ctx) {
     else if (name === 'pig:home') hints.now('home');
     else if (name === 'pig:bump') S.bumps++;
   };
-  const pigs = createPigHerd({ id: 'porco', cfg: PIGS, world, root, emit: pigEmit, effects, createPig, gateProp: props.penGate });
+  const pigs = createPigHerd({ id: 'porco', cfg: PIGS, world, root, emit: pigEmit, effects, createPig, gateProp: props.penGate, knockItem });
 
   const veg = VEG_KINDS.map((kind) => {
     const prop = props.veggies?.[kind] || null;
@@ -91,7 +99,7 @@ export function createPuzzle(ctx) {
   const carries = (name) => ball.holder === name || !!vegOf(name);
   const nearBell = (c) => Math.hypot(c.x - BELL.x, c.z - BELL.z) < BELL.reach + c.r;
   const nearVeg = (c) => veg.find((v) => (v.state === 'home' || v.state === 'ground') && reach(c, v.x, v.z) < VEGGIES.pickupR) || null;
-  const nearBall = (c) => !ball.holder && S.stage !== 'start' && reach(c, BALL.x, BALL.z) < BALL.pickupR;
+  const nearBall = (c) => !ball.holder && !S.ballToss && S.stage !== 'start' && reach(c, S.ballAt.x, S.ballAt.z) < BALL.pickupR;
 
   function pickVeg(v, c) {
     if (v.food) {
@@ -106,11 +114,11 @@ export function createPuzzle(ctx) {
     emit('item:pickup', { name: c.name, item: v.kind, x: c.x, z: c.z });
   }
 
-  /** Larga (joga) o legume no chão à frente da dog: um arco curto; na horta, vira comida dos porcos ao cair. */
-  function tossVeg(v, c) {
+  /** Larga (joga) o legume no chão à frente da dog (ou até `to`): um arco curto; na horta, vira comida dos porcos ao cair. */
+  function tossVeg(v, c, to = null) {
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
     const sx = c.x + fx * (c.r + 0.12), sz = c.z + fz * (c.r + 0.12);
-    const land = world.resolve(c.x + fx * (c.r + VEGGIES.toss), c.z + fz * (c.r + VEGGIES.toss), 0.07, 'small');
+    const land = to || world.resolve(c.x + fx * (c.r + VEGGIES.toss), c.z + fz * (c.r + VEGGIES.toss), 0.07, 'small');
     v.item.drop(sx, sz, 0.3);
     v.holder = null;
     v.state = 'air';
@@ -128,7 +136,7 @@ export function createPuzzle(ctx) {
       o.position.set(T.tx, v.groundY, T.tz);
       o.rotation.set(0, o.rotation.y, 0);
     }
-    emit('veggie:drop', { x: T.tx, z: T.tz, kind: v.kind });
+    emit('item:land', { x: T.tx, z: T.tz, kind: v.kind });
     if (!inArea(T.tx, T.tz)) {
       if (S.stage !== 'start') hints.now('outside', 3, 8);
       return;
@@ -177,6 +185,44 @@ export function createPuzzle(ctx) {
     setStage('carrying');
   }
 
+  /**
+   * O porquinho derrubou o que a dog levava (createPigHerd knockItem): o objeto voa para o lado em que ela foi
+   * empurrada e cai no chão. → true se ela levava algo.
+   */
+  function knockItem(name, { dirX, dirZ }) {
+    const c = ctx.ctrls[name];
+    const side = Math.random() < 0.5 ? -1 : 1, dist = 0.55 + Math.random() * 0.3;
+    const ux = dirX * 0.8 - dirZ * side * 0.6, uz = dirZ * 0.8 + dirX * side * 0.6;
+    const ul = Math.hypot(ux, uz) || 1;
+    const land = world.resolve(c.x + (ux / ul) * dist, c.z + (uz / ul) * dist, 0.07, 'small');
+    const v = vegOf(name);
+    let hit = false;
+    if (v) { tossVeg(v, c, land); hit = true; }
+    else if (ball.holder === name) {
+      const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+      const sx = c.x + fx * (c.r + 0.12), sz = c.z + fz * (c.r + 0.12);
+      ball.drop(sx, sz, 0.3);
+      S.ballToss = { t: 0, dur: 0.38, sx, sz, sy: 0.3, tx: land.x, tz: land.z };
+      setStage('pigsOut');
+      hit = true;
+    }
+    if (hit) hints.now('knocked', 4, 10);
+    return hit;
+  }
+
+  function updateBall(dt) {
+    const T = S.ballToss;
+    if (!T) return;
+    T.t += dt;
+    const u = Math.min(1, T.t / T.dur);
+    const o = props.item?.object;
+    if (o) o.position.set(T.sx + (T.tx - T.sx) * u, T.sy + (0.07 - T.sy) * u * u + Math.sin(Math.PI * u) * 0.16, T.sz + (T.tz - T.sz) * u);
+    if (u < 1) return;
+    S.ballToss = null;
+    S.ballAt = { x: T.tx, z: T.tz };
+    emit('item:land', { x: T.tx, z: T.tz, kind: 'ball' });
+  }
+
   function ringBell() {
     props.bell?.ring();
     emit('bell:ring', { x: BELL.x, z: BELL.z });
@@ -201,7 +247,9 @@ export function createPuzzle(ctx) {
         }
         return { text: O.drop, target: best ? at(best.x, best.z, 0.75) : at(BALL.x, BALL.z, 0.6), stage: S.stage };
       }
-      if (!pigs.open) return { text: O.closed, target: at(BUTTON.x, BUTTON.z, 0.4), stage: S.stage };
+      const moved = Math.hypot(S.ballAt.x - BALL.x, S.ballAt.z - BALL.z) > 0.05; // derrubada fora do lugar
+      if (!pigs.open && !moved) return { text: O.closed, target: at(BUTTON.x, BUTTON.z, 0.4), stage: S.stage };
+      if (moved) return { text: O.ballBack, target: at(S.ballAt.x, S.ballAt.z, 0.6), stage: S.stage }; // derrubada
       if (S.pestMode) {
         const h = veg.find((x) => x.state === 'home' || x.state === 'ground') || veg[0];
         return { text: O.pigs, target: at(h.x, h.z, 0.55), stage: S.stage };
@@ -223,8 +271,9 @@ export function createPuzzle(ctx) {
         hints.now('out', 3);
       }
     }
-    pigs.update(dt, { active, ctrls });
+    pigs.update(dt, { active, ctrls, carries });
     updateVeg(dt);
+    updateBall(dt);
 
     // dica dos legumes quando os porquinhos estão atrapalhando de verdade (com histerese, para o objetivo não piscar)
     const pest = pestering();
@@ -281,7 +330,7 @@ export function createPuzzle(ctx) {
       v.prop?.reset();
       Object.assign(v, { state: 'home', x: v.home.x, z: v.home.z, food: null, toss: null, respawnT: 0, holder: null });
     }
-    Object.assign(S, { stage: 'start', objKey: '', pestMode: false, pestT: 0, calmT: 0, bumps: 0 });
+    Object.assign(S, { stage: 'start', objKey: '', pestMode: false, pestT: 0, calmT: 0, bumps: 0, ballAt: { x: BALL.x, z: BALL.z }, ballToss: null });
   }
 
   /** @param {string} st @param {{ who?: DogName }} [opts] */
@@ -309,7 +358,7 @@ export function createPuzzle(ctx) {
     lookTarget(c) {
       const v = vegOf(c.name) ? null : nearVeg(c);
       if (v) return { x: v.x, y: 0.05, z: v.z };
-      if (nearBall(c)) return { x: BALL.x, y: 0.08, z: BALL.z };
+      if (nearBall(c)) return { x: S.ballAt.x, y: 0.08, z: S.ballAt.z };
       return null;
     },
     navFlags: () => ({ penOpen: pigs.gate.t > 0.9 }),
@@ -328,7 +377,7 @@ export function createPuzzle(ctx) {
       porcos: pigs.info(),
       veggies: veg.map((v) => ({ kind: v.kind, state: v.state, x: +v.x.toFixed(2), z: +v.z.toFixed(2), holder: v.holder, eaten: +(v.prop?.eaten ?? 0).toFixed(2), food: v.food?.id ?? null })),
       button: button.info(),
-      ball: { holder: ball.holder },
+      ball: { holder: ball.holder, x: +S.ballAt.x.toFixed(2), z: +S.ballAt.z.toFixed(2), air: !!S.ballToss },
       objective: objective(ctx.activeDog).text,
     }),
     set onStageChange(fn) { onStageChange = fn; },
