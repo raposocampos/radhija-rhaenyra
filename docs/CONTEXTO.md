@@ -3,6 +3,36 @@
 Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (Claude, 2026-10-19)
+
+- Pedido do usuário sobre os extras da tarefa E (já em produção): a animação do cocô estava dura (girava 360°
+  parada antes de agachar) e precisava de uma recompensa própria; a de rolar (pilha de roupa da fase 8, tapete da
+  fase 9 do PR #29) estava dura e atravessava o chão. Mantidos: a pose aprovada da agachada, C/R3, só com os 3
+  ossinhos e uma vez por tentativa; nada no jogo nem no README cita o segredo.
+- Branch `claude/coco-natural` (worktree próprio), base `0bd48d0`, atualizado por merge com o main `efa779c` (fase 9,
+  PR #29), **PR #32** (consultar o PR para SHA, CI, E2E e prévia). Fila do orquestrador: o #32 entra agora (depois
+  do #29) e o #31 por último; avisar o orquestrador quando o #32 for integrado.
+- Feito: `src/game/extras.js` (`planCircle`: voltinha andando de verdade num círculo de 0,5 × o comprimento da dog,
+  0,8–1,3 volta, terminando de perfil para a câmera, só por onde cabe; `planZoom` e a comemoração com `extra:secret`,
+  brilho dourado, jingle, câmera de perto, zoomies ou pulinho virando, reverência, pulinhos, orgulhosa e a irmã com
+  espanto e coraçõezinhos). `src/dogs/dogAnimation.js`: poses `poopPre`/`party`/`cheer` (apoios girando com o corpo
+  na curva) e a rolagem nova (deita, tomba, de costas se esfregando com as patinhas pedalando, volta e levanta), com a
+  altura pelo contato real (`lowestY`: elipsoides do desenho do modelo presos aos ossos). `dog.js` passa o desenho à
+  animação. `poop.js` (`shine`, `dispose`), sons e efeitos.
+- Testes: `test/extras.test.mjs` (todas as fases; volta inteira e zoomies no gramado da fase 1; beirada sem espaço; rolar
+  no modelo real sem passar do chão), suíte E2E `extras` e `capture-extras.mjs` (gramado, cozinha e a rolagem das duas
+  dogs na fase 8). No `4f8399a`: E2E `extras` 39190600335 verde e capturas revisadas (voltinha, agachada e reverência
+  boas; ajustados depois: o lado dos zoomies, para ela terminar de frente para a câmera sem tapar o cocô, e o feixe
+  transparente na altura do cocô). Nada rodou no PC (só `node --check` e `git diff --check`).
+- No `5c5decc`: E2E `extras` 39192211894 verde e capturas da rolagem (fase 8, as duas dogs) e da comemoração
+  revisadas: de costas encostada no chão, de bruços como esfinge, zoomies terminando de frente com o cocô à vista.
+- No `0f2f2e4` (merge do main `efa779c`): CI 39194265843, E2E `todas` 39194285887 verdes e a rolagem no tapete da fase
+  9 conferida. Retorno do usuário na prévia (2026-10-19): ficou ótimo, mas a agachada parecia xixi (garupa baixa
+  demais) e a irmã no automático chegava perto e esbarrava. Ajustado: corcunda com a garupa a ~64% da altura em pé
+  (testado no modelo real) e a irmã dá espaço (se afasta andando até 1,45 m e espera; `InputLock.move` no núcleo).
+- Próximo passo: CI e E2E `todas` no head novo, revisar as capturas da agachada e da irmã, entregar a prévia.
+  Merge só com a aprovação explícita do usuário.
+
 ## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0` no main)
 
 - Motivo: os `capture-*.mjs` e as páginas extras das suítes usavam o Playwright direto, sem as redes do PR #27. No

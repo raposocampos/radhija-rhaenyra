@@ -390,13 +390,26 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
 (`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
 - **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
   todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
-  boca. A sequência dura `POOP_TIME` s, e as poses vêm de `poopK` em `dogAnimation.js`: agacha, faz força, solta o
-  cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã por perto vira a cara.
+  boca. Três partes, com as poses em `dogAnimation.js`:
+  - voltinha (`poopPre`): ela fareja e anda um círculo pequeno de verdade (0,5 × o comprimento dela, de 0,8 a 1,3
+    volta, terminando de perfil para a câmera), com o passo igual ao deslocamento e os apoios girando com o corpo na
+    curva. `planCircle` só aceita um caminho sem colisor (`overlaps` do mundo), sem a irmã e com o chão livre onde o
+    cocô cai; sem espaço, o raio diminui, a volta vira meia volta ou um quarto, ou ela só fareja parada (sem chão
+    livre por perto para o cocô, o C não começa). Nunca gira sem andar;
+  - agachada (`poopK`, `POOP_TIME` s): corcunda, com a garupa a meia altura (baixa demais parece xixi); faz força,
+    solta o cocozinho de `src/world/poop.js` e cava com as traseiras. A irmã no automático dá espaço o tempo todo (se
+    afasta andando até 1,45 m, com colisão, e espera; com o Fica, não sai do lugar) e vira a cara na hora;
+  - comemoração (`party`): o cocô brilha dourado (`poop.shine()`, com feixe de luz e estrelinha), toca o jingle
+    `extraSecret` e a câmera chega perto. Ela sai em zoomies (`planZoom`: dispara, faz a curva e freia de frente para
+    o cocô, só se couber) ou dá um pulinho virando meia volta; depois a reverência de brincadeira, dois pulinhos e
+    orgulhosa. A irmã até 6 m se espanta e manda coraçõezinhos (`cheer`).
+  Se algo que se mexe entrar no caminho, ela para ali. Eventos em `extras.js` (`extra:secret`, `extra:zoom`...).
 - **Animações do cenário**: `extras` na definição da fase (`src/levels/faseN/extras.js`, tipo `ExtraSpot`). Com o E
   perto e de frente para o ponto, quando a fase não usou o E, a dog bebe, come, cava, cheira e espirra, focinha a
   bola, rola, balança ou leva um esguicho. Valem sempre, com a boca vazia (com um objeto na boca não dá para comer,
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
-  7 e a bolinha da fase 6.
+  7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
+  as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
 - Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
 
