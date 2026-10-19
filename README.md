@@ -26,9 +26,9 @@ Depois, abra `http://127.0.0.1:5173/`.
 | Interagir / latir | E | ○ · B | Agir |
 | Latir | — | □ · X | Agir (sem nada perto) |
 | Fica / Vem (companheira) | F | △ · Y | Fica · Vem |
-| Superbafo (Radhija): segure para mirar, solte para soprar | R | L2 · LT | Bafo |
-| Lambe-Lambe (Rhaenyra, perto da irmã): segure para lamber | R | L2 · LT | Lamber |
-| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 ou R2 · RB ou RT | Arrancada · Empurrar |
+| Superbafo (Radhija): segure para mirar, solte para soprar | R | R2 · RT | Superbafo |
+| Lambe-Lambe (as duas, perto da irmã): segure para lamber | L | L2 · LT | Lamber |
+| Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar |
 | Pausar | Esc | Options · Start | botão no canto |
 

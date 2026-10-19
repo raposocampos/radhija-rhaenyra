@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TOUCH_BUTTONS, TOUCH_DEADZONE, touchStick, shapeStick } from '../src/game/input.js';
+import { CONTROLS, glyph, richText } from '../src/ui/markup.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const touch = (h) => h.game.input.touch;
@@ -39,11 +40,29 @@ test('mapeamento dos botões de toque = os códigos do teclado e do controle', (
     act: { code: 'KeyE' },
     jump: { code: 'Jump' },
     bafo: { hold: 'bafo' },
+    lick: { hold: 'lick' },
     dash: { code: 'TouchShift', hold: 'shift' },
     swap: { code: 'KeyQ' },
     stay: { code: 'KeyF' },
     pause: { code: 'Escape' },
   });
+});
+
+test('ajuda e dicas: superbafo em R · R2 · Superbafo, Lambe-Lambe em L · L2 · Lamber, arrancada em Shift · R1', () => {
+  const row = (start) => CONTROLS.find(([label]) => label.startsWith(start));
+  assert.deepEqual(row('Superbafo').slice(1), ['R', ['RT'], ['wind']]);
+  assert.deepEqual(row('Lambe-Lambe').slice(1), ['L', ['LT'], ['lick']]);
+  assert.deepEqual(row('Correr').slice(1), ['Shift', ['RB'], ['dashOnly', 'push']]);
+  assert.ok(!row('Lambe-Lambe')[0].includes('Rhaenyra'), 'as duas lambem');
+  const r = glyph('R');
+  assert.ok(r.includes('aria-label="R2 / RT"') && r.includes('aria-label="Superbafo"') && !r.includes('L2 / LT'), 'R: R2 e o botão Superbafo');
+  const l = glyph('L');
+  assert.ok(l.includes('aria-label="L2 / LT"') && l.includes('aria-label="Lamber"') && l.includes('>L</kbd>'), 'L: L2 e o botão Lamber');
+  const s = glyph('Shift');
+  assert.ok(s.includes('aria-label="R1 / RB"') && !s.includes('R2 / RT'), 'Shift: só o R1');
+  const hint = richText('Continue lambendo (segure L).');
+  assert.ok(hint.includes('aria-label="L2 / LT"') && hint.includes('rr-aside'), 'o "(segure L)" vira a tecla desenhada');
+  assert.ok(richText('Pegue (L)').includes('aria-label="Lamber"'));
 });
 
 test('joystick virtual: zona morta, direção e velocidade proporcional como o analógico', () => {
@@ -144,7 +163,7 @@ test('botões: Agir late, Trocar, Fica/Vem, Pular, Arrancada e pausa', async () 
   assert.equal(h.log('dog:bark').length, 1, 'o Agir apertado na pausa não vazou');
 });
 
-test('segurar Bafo mira e soltar sopra (Radhija); com a Rhaenyra o mesmo botão lambe', async () => {
+test('segurar Superbafo mira e soltar sopra (Radhija); com a Rhaenyra ele só dá a dica', async () => {
   const h = await createHeadlessGame({ level: 1 });
   h.teleport('radhija', -2.0, -1.0, Math.PI / 2);
   h.run(0.3);
@@ -157,23 +176,47 @@ test('segurar Bafo mira e soltar sopra (Radhija); com a Rhaenyra o mesmo botão 
   h.run(0.1);
   assert.equal(h.log('dog:bafo').length, 1, 'soltou: sopra');
 
-  // Lambe-Lambe: a mesma montagem de test/fase7.test.mjs, com o botão de toque no lugar do R
   const g = await createHeadlessGame({ level: 1, query: 'dog=rhaenyra' });
   const rh = g.ctrls.rhaenyra;
   g.teleport('radhija', rh.x + 0.9, rh.z, -Math.PI / 2);
   g.game.setStay('radhija', true);
   g.run(0.3);
   g.clearLog();
-  checkLick(g);
+  touch(g).press('bafo');
+  g.run(0.6);
+  touch(g).release('bafo');
+  g.run(0.2);
+  assert.equal(g.log('dog:bafo').length + g.log('lick:start').length, 0, 'a Rhaenyra nem sopra nem lambe');
+  assert.ok(g.log('hint').some((x) => x.text.startsWith('Só a Radhija tem o superbafo')), 'dica');
 });
 
-function checkLick(h) {
-  touch(h).press('bafo');
+test('segurar Lamber: as duas lambem a irmã (sem superbafo)', async () => {
+  // a mesma montagem de test/fase7.test.mjs, com o botão de toque no lugar do L
+  const g = await createHeadlessGame({ level: 1, query: 'dog=rhaenyra' });
+  const rh = g.ctrls.rhaenyra;
+  g.teleport('radhija', rh.x + 0.9, rh.z, -Math.PI / 2);
+  g.game.setStay('radhija', true);
+  g.run(0.3);
+  g.clearLog();
+  checkLick(g, 'rhaenyra');
+
+  const h = await createHeadlessGame({ level: 1 });
+  const rad = h.ctrls.radhija;
+  h.teleport('rhaenyra', rad.x + 0.9, rad.z, -Math.PI / 2);
+  h.game.setStay('rhaenyra', true);
+  h.run(0.3);
+  h.clearLog();
+  checkLick(h, 'radhija');
+});
+
+function checkLick(h, by) {
+  touch(h).press('lick');
   h.run(1.0);
   assert.equal(h.info().lick.on, true, 'Lamber');
+  assert.equal(h.info().lick.by, by);
   assert.ok(h.log('dog:lick').length >= 1);
-  assert.equal(h.log('dog:bafo').length, 0);
-  touch(h).release('bafo');
+  assert.equal(h.log('dog:bafo').length + h.log('bafo:aim').length, 0);
+  touch(h).release('lick');
   h.run(0.6);
   assert.equal(h.info().lick.on, false, 'soltou: para de lamber');
 }
@@ -194,11 +237,12 @@ test('soltar tudo: dedos fora da tela, janela sem foco ou fim da partida', async
   const h = await createHeadlessGame({ level: 1 });
   const inp = h.game.input;
   touch(h).press('bafo');
+  touch(h).press('lick');
   touch(h).press('dash');
   touch(h).stick(0.5, 0.5, 0.7);
-  assert.ok(inp.bafo() && inp.shift() && inp.axis().m > 0);
+  assert.ok(inp.bafo() && inp.lick() && inp.shift() && inp.axis().m > 0);
   touch(h).releaseAll();
-  assert.ok(!inp.bafo() && !inp.shift() && inp.axis().m === 0);
+  assert.ok(!inp.bafo() && !inp.lick() && !inp.shift() && inp.axis().m === 0);
   touch(h).press('bafo');
   touch(h).stick(0, 1, 1);
   globalThis.dispatchEvent(new Event('blur'));

@@ -3,7 +3,29 @@
 Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; pombo do PR #34 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: pombo mais bonito (Claude, PR #34)
+## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
+
+- Pedido do usuário: "colocando a mecânica de lamber também na Radhija, aí o superbafo vai pro R2 e o Lambe-Lambe fica
+  no L2". Tecla do Lambe-Lambe escolhida pelo usuário: **L** (o R continua sendo o superbafo). Controle: R1 = arrancada
+  ou empurrar, R2 = superbafo, L2 = Lambe-Lambe. Toque: botões separados Superbafo (só a Radhija; apagado com a
+  Rhaenyra, apertar dá a dica) e Lamber (as duas), num arco em volta do Agir.
+- Feito: `input.lick()` (L / L2 / botão `lick`) e `bafo()` no R / R2; `lickStroke`/`lickReach` também na Radhija
+  (0,38 s, mais rapidinho); núcleo genérico (`lickDist`: quem é menor para mais perto; lambendo não há arrancada nem
+  bafo, mirando não começa lambida; dica genérica só quando não alcança, numa fase sem `onLick`); pose de quem lambe
+  para cima (`anim.lickY` em `dogAnimation.js`: peito sobe, pescoço estica, língua para a frente) e a Rhaenyra lambida
+  abaixa a cabeça para a irmã menor. Fase 7: textos com (L); a lambida da Radhija na irmã é só carinho (dica para
+  trocar), a lama continua saindo só com a Rhaenyra. Ajuda (tabela de controles, glifos `R`→R2/Superbafo,
+  `L`→L2/Lamber, Shift→R1), README e ARQUITETURA §4/§6. Testes headless e as suítes E2E `lambe`, `toque`,
+  `controle`, `bafo` e `expresso`; capturas novas da Radhija lambendo (bochecha e flanco) em `capture-lambe.mjs`.
+- **Fase 10 (PR #33, outra sessão)**: não foi editada aqui. O `onLick` dela já recebe quem lambeu (`ctrl`) e
+  `lick.target`; hoje, com a Radhija lambendo a Rhaenyra, ela mostra a dica `alreadyClean` e o `onLickMiss` mostra
+  `lickFar` ("Chegue pertinho da Radhija…") também quando quem tenta é a Radhija, e os textos dela ainda dizem R.
+  A sessão da fase 10 ajusta depois deste PR (aviso a ela no merge).
+- Próximo passo: CI e E2E (`lambe`, `toque`, `controle`, `bafo`, `expresso`, `menu`) no head do PR, revisar as
+  capturas do Lambe-Lambe (`shots/lambe-revisao/10b-*`, `10c-*`) e do celular, entregar a prévia e aguardar a
+  aprovação. Consultar o PR para SHA, CI, E2E e prévia.
+
+## Entregue: Pombo mais bonito (PR #34, squash `168bda6`, deploy `39303626593`)
 
 - Pedido do usuário: "melhorar o visual do modelo do pombo, pode ser mais bonito" (fases 4 e 10). Branch
   `claude/pombo-bonito` (worktree próprio), **PR #34**, base `eb1a148`; consultar o PR para SHA, CI, E2E e prévia.

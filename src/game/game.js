@@ -28,14 +28,17 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 const markLoad = (name) => globalThis.performance?.mark?.(`rr:level:${name}`);
 const FOLLOW_HOLD = 0.6; // s que a nova companheira espera (olhando) antes de seguir, após uma troca
 const STAY_SOFT_PEN = 0.1; // penetração máxima da líder numa companheira em "Fica" (obstáculo macio)
-// Lambe-Lambe: a Rhaenyra para a LICK_DIST m do ponto lambido (a cabeça dela encosta na irmã), chega lá em
-// até LICK_APPROACH s e desiste se a irmã ficar a mais de LICK_GIVEUP m desse lugar.
+// Lambe-Lambe (as duas dogs): quem lambe para a LICK_DIST m do ponto lambido (a cabeça encosta na irmã; a medida é
+// a da Rhaenyra e diminui com o comprimento de quem lambe, ver lickDist), chega lá em até LICK_APPROACH s e
+// desiste se a irmã ficar a mais de LICK_GIVEUP m desse lugar.
 const LICK_DIST = 0.56;
 const LICK_APPROACH = 0.8;
 const LICK_GIVEUP = 0.7;
 const LICK_SOLO = 0.3; // cada lambidinha no próprio focinho (ninguém por perto)
 const LICK_LOS_R = 0.05; // linha entre as duas: cerca, portão fechado ou parede no meio impedem a lambida
-const LICK_HINT = 'Só a Radhija tem o superbafo! Com a Rhaenyra, o mesmo botão (R) faz o Lambe-Lambe: chegue pertinho da irmã.';
+const LICK_HINT = 'Lambe-Lambe: chegue pertinho da irmã e segure (L).';
+/** Distância de quem lambe até o ponto lambido: a Radhija, mais curta, chega mais perto. */
+const lickDist = (c) => LICK_DIST * Math.min(1, (c.cfg.visual?.length ?? 0.72) / 0.72);
 const sstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -84,7 +87,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const anims = {};
   const lookVecs = {};
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -106,13 +109,13 @@ export function createGame({ engine, dogs, levels, params }) {
   let loadingPromise = null;
   let loadFailure = null;
   const cel = { radhija: {}, rhaenyra: {} };
-  // Superbafo (só quem tem cfg.bafoSpeed, a Radhija): segurar mira, soltar sopra.
+  // Superbafo (só quem tem cfg.bafoSpeed, a Radhija; R / R2): segurar mira, soltar sopra.
   const bafo = { held: false, aiming: false, cd: 0, blowT: 0, proudT: 0, hintCd: 0 };
-  // Lambe-Lambe (só quem tem cfg.lickStroke, a Rhaenyra), no mesmo botão: perto da irmã, segurar lambe em
-  // ritmo. stage 'approach' (encosta) → 'licking' (phase 0..1 por lambida; o contato é em 0,5).
+  // Lambe-Lambe (quem tem cfg.lickStroke: as duas; L / L2): perto da irmã, segurar lambe em ritmo.
+  // stage 'approach' (encosta) → 'licking' (phase 0..1 por lambida; o contato é em 0,5).
   const lick = {
-    on: false, stage: 'approach', t: 0, phase: 0, strokes: 0, release: false, stop: false, solo: false, by: null, target: null,
-    hintCd: 0, spot: { x: 0, z: 0 }, point: { x: 0, y: 0.3, z: 0 }, local: { x: 0, y: 0.3, z: 0 },
+    on: false, held: false, stage: 'approach', t: 0, phase: 0, strokes: 0, release: false, stop: false, solo: false, by: null, target: null,
+    hintCd: 0, dist: LICK_DIST, spot: { x: 0, z: 0 }, point: { x: 0, y: 0.3, z: 0 }, local: { x: 0, y: 0.3, z: 0 },
   };
   const yuck = { radhija: { t: 0, cd: 0 }, rhaenyra: { t: 0, cd: 0 } }; // "eca!" perto de uma nuvem
 
@@ -193,15 +196,18 @@ export function createGame({ engine, dogs, levels, params }) {
     lick.on = false;
     lick.solo = false;
     lick.target = null;
-    for (const n of NAMES) anims[n].lickPhase = -1;
+    for (const n of NAMES) {
+      anims[n].lickPhase = -1;
+      anims[n].lickY = -1;
+    }
   }
 
   /**
-   * Onde a Rhaenyra lambe a irmã: o ponto do corpo dela mais perto da Rhaenyra (da garupa à bochecha, ou o
-   * focinho se ela estiver bem na frente), no referencial da irmã (local) e no mundo (point), e o lugar
-   * onde a Rhaenyra para (spot), a LICK_DIST m desse ponto, do lado em que ela já está.
+   * Onde a dog A lambe a irmã C: o ponto do corpo de C mais perto de A (da garupa à bochecha, ou o focinho se A
+   * estiver bem na frente), no referencial de C (local) e no mundo (point), e o lugar onde A para (spot), a `dist` m
+   * desse ponto, do lado em que ela já está. As medidas seguem o tamanho de C (a Radhija é a referência).
    */
-  function lickContact(A, C) {
+  function lickContact(A, C, dist) {
     const cs = Math.cos(C.yaw);
     const sn = Math.sin(C.yaw);
     const ox = A.x - C.x;
@@ -215,10 +221,12 @@ export function createGame({ engine, dogs, levels, params }) {
     const z = front ? len * 0.55 : Math.max(-len * 0.33, Math.min(len * 0.37, lz));
     const side = Math.sign(lx);
     const head = sstep(len * 0.18, len * 0.38, z);
+    // a irmã menor (a Radhija na Rhaenyra) lambe a cabeça mais embaixo: queixo, canto da boca, bochecha baixa
+    const low = (A.cfg.visual?.headTop ?? 0.5) < (C.cfg.visual?.headTop ?? 0.5) - 0.02;
     // flanco (0,1 m do eixo, na altura do dorso) → bochecha (0,06 m, perto do centro da cabeça) → focinho
     const local = front
-      ? { x: 0, y: 0.38 * k, z }
-      : { x: side * (0.1 - 0.04 * head) * k, y: (C.cfg.visual?.shoulder ?? 0.3) * (0.95 + 0.33 * head), z };
+      ? { x: 0, y: (low ? 0.32 : 0.38) * k, z }
+      : { x: side * (0.1 - 0.04 * head) * k, y: (C.cfg.visual?.shoulder ?? 0.3) * (0.95 + (low ? 0.18 : 0.33) * head), z };
     const point = { x: C.x + cs * local.x + sn * local.z, y: local.y, z: C.z - sn * local.x + cs * local.z };
     let nx = A.x - point.x;
     let nz = A.z - point.z;
@@ -228,14 +236,14 @@ export function createGame({ engine, dogs, levels, params }) {
       nz = -sn * side;
       d = 1;
     }
-    const spot = world.resolve(point.x + (nx / d) * LICK_DIST, point.z + (nz / d) * LICK_DIST, A.r, A.size);
+    const spot = world.resolve(point.x + (nx / d) * dist, point.z + (nz / d) * dist, A.r, A.size);
     return { local, point, spot: { x: spot.x, z: spot.z } };
   }
 
   /** Nada entre as duas (cerca, portão fechado, parede): uma linha fina de uma à outra está livre. */
   const lickClear = (A, C) => world.segmentClear(A.x, A.z, C.x, C.z, LICK_LOS_R, A.size);
 
-  /** R / L2 com a Rhaenyra: começa o Lambe-Lambe (ou a lambidinha no focinho, sem ninguém por perto). */
+  /** L / L2 (as duas dogs): começa o Lambe-Lambe (ou a lambidinha no focinho, sem ninguém por perto). */
   function startLick(A, C) {
     const declared = typeof puzzle.onLick === 'function';
     const reach = A.cfg.lickReach ?? 1.5;
@@ -250,16 +258,18 @@ export function createGame({ engine, dogs, levels, params }) {
       }
       return;
     }
-    if (!declared && lick.hintCd <= 0) {
-      lick.hintCd = 6;
-      emit('hint', { text: LICK_HINT, duration: 3.2 });
-    }
     if (!canLick) {
+      // fases sem efeito de lambida: a dica do núcleo ensina o alcance; as outras dão a própria (onLickMiss)
       if (declared) puzzle.onLickMiss?.(A, { blocked });
+      else if (lick.hintCd <= 0) {
+        lick.hintCd = 6;
+        emit('hint', { text: LICK_HINT, duration: 3.2 });
+      }
       Object.assign(lick, { on: true, solo: true, stage: 'licking', t: 0, phase: 0, strokes: 0, release: true, stop: false, by: A.name, target: null });
       return;
     }
-    const c = lickContact(A, C);
+    lick.dist = lickDist(A);
+    const c = lickContact(A, C, lick.dist);
     Object.assign(lick, { on: true, solo: false, stage: 'approach', t: 0, phase: 0, strokes: 0, release: false, stop: false, by: A.name, target: C.name });
     lick.local = c.local;
     lick.point = c.point;
@@ -268,7 +278,7 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   /**
-   * Um quadro do Lambe-Lambe (a Rhaenyra é a dog ativa). Devolve a intenção dela, ou null se acabou.
+   * Um quadro do Lambe-Lambe (A, a dog ativa, lambe C). Devolve a intenção de A, ou null se acabou.
    * Cada lambida chega à irmã no meio do ciclo: emite dog:lick e avisa a fase (puzzle.onLick).
    */
   function stepLick(A, C, dt, held) {
@@ -277,7 +287,8 @@ export function createGame({ engine, dogs, levels, params }) {
     if (lick.solo) {
       const before = lick.phase;
       lick.phase += dt / LICK_SOLO;
-      if (before < 0.5 && lick.phase >= 0.5) emit('dog:lick', { name: A.name, target: null, x: A.x, y: 0.45, z: A.z, stroke: lick.strokes + 1 });
+      const nose = Math.min(0.45, (A.cfg.visual?.headTop ?? 0.56) * 0.82);
+      if (before < 0.5 && lick.phase >= 0.5) emit('dog:lick', { name: A.name, target: null, x: A.x, y: nose, z: A.z, stroke: lick.strokes + 1 });
       if (lick.phase >= 1) {
         lick.strokes++;
         lick.phase -= 1;
@@ -289,7 +300,7 @@ export function createGame({ engine, dogs, levels, params }) {
       return { dx: 0, dz: 0, speed: 0 };
     }
     // A irmã ocupada (sacudindo, empurrada…), longe demais, ou a boca ficou ocupada (pegou um objeto): encerra.
-    if (puzzle.lockFor(C.name) || Math.hypot(C.x - lick.spot.x, C.z - lick.spot.z) > LICK_DIST + LICK_GIVEUP || carries(A.name)) {
+    if (puzzle.lockFor(C.name) || Math.hypot(C.x - lick.spot.x, C.z - lick.spot.z) > lick.dist + LICK_GIVEUP || carries(A.name)) {
       cancelLick();
       return null;
     }
@@ -303,11 +314,11 @@ export function createGame({ engine, dogs, levels, params }) {
       const dz = lick.spot.z - A.z;
       const d = Math.hypot(dx, dz);
       // já na distância certa do ponto (qualquer ângulo), só vira e lambe; senão vai até o lugar dela
-      const radial = Math.abs(Math.hypot(A.x - lick.point.x, A.z - lick.point.z) - LICK_DIST);
+      const radial = Math.abs(Math.hypot(A.x - lick.point.x, A.z - lick.point.z) - lick.dist);
       if (d > 0.05 && radial > 0.06 && lick.t < LICK_APPROACH) {
         return { dx: dx / d, dz: dz / d, speed: Math.min(A.cfg.walkSpeed * 0.8, Math.max(0.35, d * 5)) };
       }
-      if (Math.hypot(A.x - lick.point.x, A.z - lick.point.z) > LICK_DIST + 0.35) {
+      if (Math.hypot(A.x - lick.point.x, A.z - lick.point.z) > lick.dist + 0.35) {
         cancelLick();
         return null;
       }
@@ -512,7 +523,8 @@ export function createGame({ engine, dogs, levels, params }) {
         action = 'push';
         speed = Math.min(speed, PUSH_STANCE_SPEED);
       }
-      if (A.cfg.dashSpeed && input.consumeShift()) {
+      // lambendo, a arrancada não sai (o toque é consumido)
+      if (A.cfg.dashSpeed && input.consumeShift() && !lick.on) {
         if (puzzle.canDash?.(A) === false) {
           emit('dog:dashBlocked', { name: A.name, x: A.x, z: A.z });
           puzzle.onDashBlocked?.(A);
@@ -543,12 +555,14 @@ export function createGame({ engine, dogs, levels, params }) {
       if (pr.intent) intent = pr.intent;
       if (pr.action) action = pr.action;
     }
-    // Superbafo (R / L2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
+    // Superbafo (R / R2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
+    // Lambendo, o bafo não começa (e mirando ou soprando, a lambida também não).
     const bafoHeld = input.bafo();
+    const lickHeld = input.lick();
     bafo.cd = Math.max(0, bafo.cd - dt);
     bafo.hintCd = Math.max(0, bafo.hintCd - dt);
     if (A.cfg.bafoSpeed && !lock) {
-      if (bafoHeld && !bafo.held && !bafo.aiming && bafo.cd <= 0 && !(A.jumpT > 0) && A.dashT <= 0) {
+      if (bafoHeld && !bafo.held && !bafo.aiming && bafo.cd <= 0 && !(A.jumpT > 0) && A.dashT <= 0 && !lick.on) {
         bafo.aiming = true;
         bafo.proudT = 0;
         emit('bafo:aim', { name: A.name, x: A.x, z: A.z });
@@ -561,16 +575,16 @@ export function createGame({ engine, dogs, levels, params }) {
         scent.showPreview(scent.preview(bafoShot(A)));
         if (!bafoHeld) blow(A);
       }
-    } else if (bafoHeld && !bafo.held && !A.cfg.bafoSpeed && !A.cfg.lickStroke && bafo.hintCd <= 0) {
+    } else if (bafoHeld && !bafo.held && !A.cfg.bafoSpeed && bafo.hintCd <= 0) {
       bafo.hintCd = 6;
       emit('hint', { text: 'Só a Radhija tem o superbafo! (Q)', duration: 2.6 });
     }
-    // Lambe-Lambe (R / L2 com a Rhaenyra, o mesmo botão): pertinho da irmã, segurar lambe em ritmo.
+    // Lambe-Lambe (L / L2, as duas dogs): pertinho da irmã, segurar lambe em ritmo.
     lick.hintCd = Math.max(0, lick.hintCd - dt);
     if (A.cfg.lickStroke && !lock) {
-      if (bafoHeld && !bafo.held && !lick.on && !airborne(A)) startLick(A, C);
+      if (lickHeld && !lick.held && !lick.on && !airborne(A) && A.dashT <= 0 && !bafo.aiming && !(bafo.blowT > 0)) startLick(A, C);
       if (lick.on) {
-        const li = stepLick(A, C, dt, bafoHeld);
+        const li = stepLick(A, C, dt, lickHeld);
         if (li) {
           intent = li;
           action = 'lick';
@@ -578,6 +592,7 @@ export function createGame({ engine, dogs, levels, params }) {
       }
     } else if (lick.on) cancelLick();
     bafo.held = bafoHeld;
+    lick.held = lickHeld;
     if (bafo.blowT > 0) {
       bafo.blowT -= dt;
       intent = { dx: 0, dz: 0, speed: 0 };
@@ -613,12 +628,13 @@ export function createGame({ engine, dogs, levels, params }) {
       resetBrain(brains[compName]);
     } else if (licked) {
       // Recebendo o Lambe-Lambe: para onde está, vira a cabeça um pouco para a irmã (sem esconder o lugar
-      // lambido) e fecha os olhos a cada lambida.
+      // lambido) e fecha os olhos a cada lambida. Lambida pela irmã menor, a Rhaenyra abaixa a cabeça para ela.
       const hx = A.x + Math.sin(A.yaw) * 0.4;
       const hz = A.z + Math.cos(A.yaw) * 0.4;
       const fx = C.x + Math.sin(C.yaw) * 0.7;
       const fz = C.z + Math.cos(C.yaw) * 0.7;
-      ci = { dx: 0, dz: 0, speed: 0, action: lick.stage === 'licking' ? 'licked' : 'none', lookAt: { x: fx + (hx - fx) * 0.4, y: 0.4, z: fz + (hz - fz) * 0.4 } };
+      const lookY = A.size === 'small' && C.size !== 'small' ? 0.3 : 0.4;
+      ci = { dx: 0, dz: 0, speed: 0, action: lick.stage === 'licking' ? 'licked' : 'none', lookAt: { x: fx + (hx - fx) * 0.4, y: lookY, z: fz + (hz - fz) * 0.4 } };
       resetBrain(brains[compName]);
     } else if (stay[compName]) {
       ci = stayIntent(brains[compName], C, A, dt);
@@ -646,6 +662,9 @@ export function createGame({ engine, dogs, levels, params }) {
     anims[activeDog].lickSide = anims[compName].lickSide = lick.strokes % 2 ? 1 : -1;
     anims[activeDog].lickSolo = lick.on && lick.solo;
     anims[compName].lickSolo = false;
+    // altura do ponto lambido (a Radhija estica o pescoço para a bochecha da irmã maior)
+    anims[activeDog].lickY = lick.on && !lick.solo ? lick.point.y : -1;
+    anims[compName].lickY = -1;
 
     // Interações (E: interagir ou latir · X do controle: latir sempre)
     if (input.consume('KeyE') && !lock) {
@@ -1135,7 +1154,7 @@ export function createGame({ engine, dogs, levels, params }) {
       timeSec: +playTime.toFixed(2), simSec: +simTime.toFixed(3), prompt: puzzle?.S?.prompt ?? null,
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
       bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent?.info() ?? null,
-      lick: { on: lick.on, stage: lick.on ? lick.stage : null, solo: lick.solo, target: lick.target, strokes: lick.strokes, phase: lick.on ? +lick.phase.toFixed(3) : null },
+      lick: { on: lick.on, by: lick.on ? lick.by : null, stage: lick.on ? lick.stage : null, solo: lick.solo, target: lick.target, strokes: lick.strokes, phase: lick.on ? +lick.phase.toFixed(3) : null },
       extras: extras?.info() ?? null,
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam?.mode ?? null, shot: cam?.shotActive ?? false },
     };

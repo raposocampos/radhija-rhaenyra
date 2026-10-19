@@ -50,18 +50,17 @@ export const PAD_BTN = {
   DPad: '<span class="rr-pad rr-pad--dpad" aria-label="Direcional"><i></i></span>',
 };
 const KEY_TO_PAD = {
-  E: ['B'], Enter: ['A'], Q: ['LB'], F: ['Y'], Shift: ['RB'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['A'], R: ['LT'],
+  E: ['B'], Enter: ['A'], Q: ['LB'], F: ['Y'], Shift: ['RB'], Esc: ['Start'], X: ['X'], WASD: ['LS'], Espaço: ['A'], R: ['RT'], L: ['LT'],
 };
-// Botões de toque desenhados como os da tela (src/ui/touchControls.js). O de bafo e o de arrancada mudam com a
-// cachorrinha ativa (.rr[data-dog]): tg-r = Radhija (bafo, arrancada), tg-h = Rhaenyra (lamber, empurrar).
+// Botões de toque desenhados como os da tela (src/ui/touchControls.js). O de arrancada muda com a cachorrinha ativa
+// (.rr[data-dog]): tg-r = Radhija (arrancada), tg-h = Rhaenyra (empurrar).
 const tbtn = (cls, label, icon) => `<span class="rr-tg rr-tg--${cls}" aria-label="${label}">${icon}</span>`;
 const byDog = (r, h) => `<span class="tg-r">${r}</span><span class="tg-h">${h}</span>`;
 export const TOUCH_BTN = {
   act: tbtn('act', 'Agir', pawIcon()),
   jump: tbtn('jump', 'Pular', jumpIcon()),
-  bafo: tbtn('bafo', 'Bafo ou Lamber', byDog(windIcon(), lickIcon())),
-  wind: tbtn('bafo', 'Bafo', windIcon()),
-  lick: tbtn('bafo', 'Lamber', lickIcon()),
+  wind: tbtn('bafo', 'Superbafo', windIcon()),
+  lick: tbtn('lick', 'Lamber', lickIcon()),
   dash: tbtn('dash', 'Arrancada ou Empurrar', byDog(dashIcon(), pushIcon())),
   dashOnly: tbtn('dash', 'Arrancada', dashIcon()),
   push: tbtn('dash', 'Empurrar', pushIcon()),
@@ -71,7 +70,7 @@ export const TOUCH_BTN = {
   stick: tbtn('stick', 'Joystick', stickIcon()),
 };
 const KEY_TO_TOUCH = {
-  E: ['act'], Enter: [], Q: ['swap'], F: ['stay'], Shift: ['dash'], Esc: ['pause'], X: ['act'], WASD: ['stick'], Espaço: ['jump'], R: ['bafo'],
+  E: ['act'], Enter: [], Q: ['swap'], F: ['stay'], Shift: ['dash'], Esc: ['pause'], X: ['act'], WASD: ['stick'], Espaço: ['jump'], R: ['wind'], L: ['lick'],
 };
 /** Tecla lógica → tecla desenhada + botão do controle e botão de toque equivalentes (pad/touch trocam os padrões). */
 /** @param {string} k @param {{ pad?: string[], touch?: string[] }} [opts] */
@@ -91,8 +90,8 @@ export function richText(text) {
   return safe.replace(/\(([^)]{1,24})\)|\bShift\b/g, (m, inner) => {
     if (inner === undefined) return glyph('Shift');
     const t = inner.trim();
-    if (/^(E|Q|F|R|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
-    if (/\b(E|Q|F|R|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F|R)\b/g, (k) => glyph(k))}</span>`;
+    if (/^(E|Q|F|R|L|Shift|Esc|Enter|Espaço)$/.test(t)) return glyph(t);
+    if (/\b(E|Q|F|R|L|Shift|Esc)\b/.test(t)) return `<span class="rr-aside">${t.replace(/\b(Shift|Esc|E|Q|F|R|L)\b/g, (k) => glyph(k))}</span>`;
     return m;
   });
 }
@@ -139,9 +138,9 @@ export const CONTROLS = [
   ['Interagir · latir', 'E', ['B'], ['act']],
   ['Latir', null, ['X'], []],
   ['Pular · impulso na parede (Rhaenyra)', 'Space', ['A'], ['jump']],
-  ['Superbafo (Radhija): segure e solte', 'R', ['LT'], ['wind']],
-  ['Lambe-Lambe (Rhaenyra): segure perto da irmã', 'R', ['LT'], ['lick']],
-  ['Correr · empurrar (segure)', 'Shift', ['RB', 'RT'], ['dashOnly', 'push']],
+  ['Superbafo (Radhija): segure e solte', 'R', ['RT'], ['wind']],
+  ['Lambe-Lambe: segure perto da irmã', 'L', ['LT'], ['lick']],
+  ['Correr · empurrar (segure)', 'Shift', ['RB'], ['dashOnly', 'push']],
   ['Trocar de cachorrinha', 'Q', ['LB'], ['swap']],
   ['Fica · Vem (companheira)', 'F', ['Y'], ['stay']],
   ['Pausar', 'Esc', ['Start'], ['pause']],
