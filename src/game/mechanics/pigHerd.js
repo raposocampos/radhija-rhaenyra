@@ -341,8 +341,10 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
     const sP = o(h.x, h.z, ex, ez, P.x, P.z), sp = o(h.x, h.z, ex, ez, p.x, p.z);
     if (!(sP * sp < 0 && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, ex, ez) < 0)) return null;
+    // os dois pontos bem separados (0,64 m): parado entre dois pontos próximos, o porco "chegava" nos dois sem andar e
+    // ficava trocando de um para o outro sem sair do lugar
     const far = r + 0.22;
-    const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.14, z: tip.z + uz * far + ux * side * 0.14, leaf: true });
+    const at = (side) => ({ x: tip.x + ux * far - uz * side * 0.32, z: tip.z + uz * far + ux * side * 0.32, leaf: true });
     return [at(Math.sign(sP)), at(Math.sign(sp))];
   }
 
@@ -829,6 +831,9 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const home = homes[P.i];
     if (arrived || (inside && (Math.hypot(P.x - home.x, P.z - home.z) < 0.5 || P.homeT > 3)) || (P.t > 20 && inPen(P.x, P.z))) {
       setState(P, 'pen', { idleAct: 'idle', idleT: 1 + Math.random() * 2 });
+    } else if (P.t > 20) {
+      // ainda fora depois de 20 s: refaz a rota do zero
+      setState(P, 'return', { route: [{ ...door.out, door: true }, { ...door.in, door: true }, { x: home.x, z: home.z }] });
     }
   }
 
