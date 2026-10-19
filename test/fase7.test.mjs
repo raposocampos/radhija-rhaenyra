@@ -196,14 +196,20 @@ test('Lambe-Lambe: longe da irmã é só uma lambidinha no focinho (com a dica);
   assert.ok(licks.length >= 1 && licks.every((l) => l.target === null), 'lambidinha sem alvo');
   assert.equal(info(h).lick.on, false);
   assert.ok(hints(h).some((t) => t.startsWith('Lambe-Lambe: chegue pertinho da irmã')), 'a dica ensina o alcance');
-  // a Radhija ainda sopra com R e faz a própria lambidinha com L
+  // a Radhija ainda sopra com R e faz a própria lambidinha com L (a irmã fica longe, em Fica)
   h.tap('KeyQ');
+  h.game.setStay('rhaenyra', true);
   h.run(0.9);
   h.keyDown('KeyR');
   h.run(0.2);
   h.keyUp('KeyR');
   h.step();
   assert.equal(h.log('dog:bafo').length, 1, 'superbafo intacto');
+  // soprando ("HÁÁÁ!", 0,45 s) a lambida não começa: o L vem depois do sopro
+  h.tap('KeyL');
+  h.run(0.2);
+  assert.equal(info(h).lick.on, false, 'soprando, sem lambida');
+  h.run(0.5);
   h.clearLog();
   h.tap('KeyL');
   h.run(0.8);

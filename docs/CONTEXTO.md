@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (Lambe-Lambe também na Radhija, em andamento). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
 
@@ -25,10 +25,6 @@
   capturas do Lambe-Lambe (`shots/lambe-revisao/10b-*`, `10c-*`) e do celular, entregar a prévia e aguardar a
   aprovação. Consultar o PR para SHA, CI, E2E e prévia.
 
-## Entregue: diagnóstico do travamento no primeiro boot do E2E (PR #31, squash `eb1a148`)
-
-- Integrado ao main depois dos PRs #29 e #32; conferir o deploy no GitHub. Detalhes na seção "Registro:
-  travamento no primeiro boot" abaixo. Não repetir merge/deploy do #31.
 
 ## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 
@@ -74,7 +70,7 @@
   1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
   `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
-## Registro: travamento no primeiro boot do E2E (Claude, PR #31, integrado em `eb1a148`)
+## Em andamento: travamento no primeiro boot do E2E (Claude, PR #31)
 
 - Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
   fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado por merge com o main `0bd48d0` (PR #30) e
