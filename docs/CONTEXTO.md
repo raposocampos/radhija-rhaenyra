@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (porquinhos: porteira um de cada vez, PR #40). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (porquinhos: testes da arena estáveis, PR #42). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: empurrão em pé da Rhaenyra (Claude, branch `claude/empurrao-em-pe`, PR #38)
@@ -60,7 +60,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
 - Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
   do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
-- Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`, atualizado com o main `369b0ff`, PR #38): o teste "presos no
+- Entregue, **PR #40** (squash `1cd6647`, deploy `39332428726`; branch `claude/porcos-teste-estavel`): o teste "presos no
   cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou bugs
   reais no caminho dos porcos, corrigidos em `pigHerd.js`: (1) dois porcos entravam juntos no vão da porteira,
   entalavam lado a lado e ninguém saía: agora passa um de cada vez (`assignDoor`/`waitDoor`: a vez é de quem está mais
@@ -71,7 +71,14 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
   alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
   volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
-  Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
+- Em andamento, **PR #42** (branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`): o teste "arena: E pega
+  o legume…; pegar de volta tira dele" falhou 1 vez em 7. Diagnóstico no CI (120 sementes): 3 falhavam ao pegar o
+  milho de volta, porque os outros porquinhos estavam em volta da Radhija e um esbarrão (susto de 0,3 s) engolia o E.
+  É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
+  joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
+  Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe em
+  `test/porcos.test.mjs` e no CONTEXTO. Integração na fila do orquestrador: #39 → #41 → #42 → #33; atualizar com o
+  main na vez dele, refazer o CI e pedir a aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 

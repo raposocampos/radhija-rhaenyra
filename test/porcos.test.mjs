@@ -556,29 +556,6 @@ test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e ele
   assert.ok(h.log('plate:press').length >= 1);
 });
 
-test('VARREDURA TEMPORÁRIA: legume e bolinha pegos de volta com o E repetido, 120 e 80 sementes', async () => {
-  const bad = [];
-  for (let seed = 1; seed <= 120; seed++) {
-    const r = await withSeedAsync(seed, () => legumeCase());
-    if (r) bad.push({ seed, legume: r });
-  }
-  for (let seed = 1; seed <= 80; seed++) {
-    const r = await withSeedAsync(seed, () => bolinhaCase());
-    if (r) bad.push({ seed, bolinha: r });
-  }
-  assert.deepEqual(bad, []);
-});
-
-/** O cenário do teste do legume (a varredura temporária usa o mesmo). → null, ou a mensagem do que falhou. */
-async function legumeCase() {
-  try {
-    await legumeSteps();
-    return null;
-  } catch (err) {
-    return String(err.message).slice(0, 300);
-  }
-}
-
 test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', () =>
   withSeedAsync(58, legumeSteps)); // semente 58: um esbarrão engolia o E da Radhija ao pegar de volta
 
@@ -649,16 +626,6 @@ test('arena: o legume comido até o fim volta para o lugar; o sininho chama os p
   assert.equal(h.info().porcos.inPen, 3, JSON.stringify(h.info().porcos.pigs));
   assert.equal(h.log('pig:home').length, 1);
 });
-
-/** O cenário do teste da bolinha derrubada (a varredura temporária usa o mesmo). → null, ou o que falhou. */
-async function bolinhaCase() {
-  try {
-    await bolinhaSteps();
-    return null;
-  } catch (err) {
-    return String(err.message).slice(0, 300);
-  }
-}
 
 test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', () => withSeedAsync(1, bolinhaSteps));
 
