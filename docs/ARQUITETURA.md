@@ -637,30 +637,40 @@ com a aba caída) em `test-e2e-infra.mjs`.
 *Travamento no primeiro carregamento*: em cerca de 1% dos jobs, o PRIMEIRO boot de um navegador novo não termina: o
 `goto` volta, `window.__game` nunca aparece e a thread principal da aba para de responder (lavanderia no E2E
 `39160265826`, fase3 no `39164306879`, expresso no `39166156986` e no `39169122476`, `capture-lambe.mjs` no
-`39173570454`; fases 3, 6, 7 e 8, nunca num segundo `load()` da mesma aba). O `waitForFunction` não vence os
-próprios 120 s porque, no Playwright 1.49, ao vencer o prazo ele espera a limpeza `handle.evaluate(h => h.abort())`
-NA PÁGINA antes de rejeitar (`ProgressController.run` e `_waitForFunctionExpression`): com a aba parada, nem o erro
-de prazo chega. Por isso o problema é da aba, não do teste nem do Vite (com um módulo preso no Vite a aba fica ociosa
-e o prazo vence normalmente). Para achar a causa, a sonda `tools/scripts/lib/hang-probe.mjs` faz um retrato quando
-uma operação em curso passa de 60 s (uma etapa do `load()`, um `goto`/`waitForFunction` de captura), no `opMaxMs`,
-no teto de uma ida ao navegador e na queda da aba, em toda página protegida pelo `page-guard.mjs` (a do harness, as
-extras e as das capturas: `openPage` liga a sonda sozinho; o `closeBrowser` espera o diagnóstico terminar): (1) a thread principal responde? Se não, um `Debugger.pause` numa sessão CDP
-própria, com o Debugger ligado desde a criação da página, devolve a PILHA se ela estiver rodando JavaScript; sem
-pausa, ela está presa fora do JavaScript (chamada nativa, como a GPU) ou morta; (2) cada processo do Chromium pelo
-`/proc` (tipo, estado, CPU em 1,5 s, memória e as threads que gastaram CPU, com o `wchan` onde esperam); (3) o que o
-navegador vê pelo CDP dele (processos, abas, estado do WebGL e da GPU); (4) memória e `dmesg` (OOM); (5) o console da
-página com os marcos do boot; (6) o fim do registro do próprio Chromium (`--enable-logging=stderr`, desviado por
+`39173570454`, lambe com a fase 1 no `39183733885`; nunca num segundo `load()` da mesma aba). Em quatro casos o
+`waitForFunction` nem venceu os próprios 120 s: no Playwright 1.49, ao vencer o prazo ele espera a limpeza
+`handle.evaluate(h => h.abort())` NA PÁGINA antes de rejeitar (`ProgressController.run` e
+`_waitForFunctionExpression`), e com a aba parada nem o erro de prazo chega. No caso da fase 1 o prazo venceu e só a
+leitura seguinte ficou sem resposta, o padrão de quando o contexto da página foi destruído (recarga ou navegação) e a
+página nova travou. Hipótese em teste: o otimizador de dependências de um Vite frio (o cache `node_modules/.vite-test`
+é novo em cada job) manda `full-reload` no meio do boot mesmo com `hmr: false` (o WebSocket continua ativo); a saída
+do Vite das suítes era descartada. Agora `run-e2e.mjs` grava `shots/diagnostico/vite.log` e repete no log do job, com
+`[vite]`, as linhas do otimizador e os erros, e o harness avisa `[boot] ... a página RECARREGOU N×` quando a página
+navega mais de uma vez durante o `load()`. Nos logs das capturas (Vite no próprio processo, cache já quente) não há
+nenhuma mensagem do otimizador.
+
+Para achar a causa, a sonda `tools/scripts/lib/hang-probe.mjs` faz um retrato quando uma operação em curso passa de
+60 s (uma etapa do `load()`, um `goto`/`waitForFunction` de captura), no `opMaxMs`, no teto de uma ida ao navegador e
+na queda da aba, em toda página protegida pelo `page-guard.mjs` (a do harness, as extras e as das capturas: `openPage`
+liga a sonda sozinho; o `closeBrowser` espera o diagnóstico terminar): (1) a thread principal responde? Se não, um
+`Debugger.pause` numa sessão CDP própria, com o Debugger ligado desde a criação da página, devolve a PILHA se ela
+estiver rodando JavaScript; sem pausa, ela está presa fora do JavaScript (chamada nativa, como a GPU) ou morta;
+(2) cada processo do Chromium pelo `/proc` (tipo, estado, CPU em 1,5 s, memória e as threads que gastaram CPU, com o
+`wchan` onde esperam); (3) o que o navegador vê pelo CDP dele (processos, abas, estado do WebGL e da GPU); (4) CPU do
+runner, roubo do hipervisor, memória e `dmesg` (OOM); (5) o console da página com os marcos do boot e as navegações;
+(6) o fim do registro do próprio Chromium (`--enable-logging=stderr`, desviado por
 `tools/scripts/lib/browser-log.mjs` para `shots/diagnostico/navegador-*.log`, que vai no artefato do job). Os marcos
 `rr:boot:*` (`src/main.js`) e `rr:level:*` (`loadLevel`) são `performance.mark` (sem efeito no jogo); o harness
 imprime em cada `load()` uma linha `[boot]` com o tempo de cada etapa (html+módulos, motor, cachorras, interface,
 código da fase, cenário, puzzle, shaders, pronto) e, num travamento, o último marco no console diz onde parou. Cada
-suíte também imprime `[e2e] CPU do runner` (modelo, núcleos, AVX): os runners variam de hardware (o mesmo estresse
-leva de 430 a 720 s por lote) e um defeito do Chromium/SwiftShader preso a um tipo de CPU ou à carga apareceria
-assim. A suíte `carregamento` do E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as oito fases
-em rodízio, cada rodada com Vite e navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez,
-e lotes 4–7 com 36, três ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois,
-para confirmar uma correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para
-(`stopWatch`) quando não resta página protegida aberta, e uma página nova o religa.
+suíte também imprime `[e2e] CPU do runner` (modelo, núcleos, AVX): os runners variam de hardware (AMD EPYC 9V45,
+Intel Xeon Platinum 8573C e AMD EPYC 7763; o mesmo lote de estresse leva de 410 a 720 s). A suíte `carregamento` do
+E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as oito fases em rodízio, cada rodada com Vite e
+navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez, apagando o cache de dependências
+do Vite a cada rodada (`--cold-deps`: otimizador frio, como na primeira suíte de cada job), e lotes 4–7 com 36, três
+ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois, para confirmar uma
+correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para (`stopWatch`) quando não
+resta página protegida aberta, e uma página nova o religa.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo

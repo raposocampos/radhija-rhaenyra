@@ -5,6 +5,7 @@
 //   node tools/scripts/run-e2e.mjs [--only fase1,fase2,fase3,fase4,fase5,controle,regressoes,pulo,bafo,expresso,lambe,toque,lavanderia,menu,extras] [--port 5190] [--url http://...]
 // Com --url, usa um servidor já rodando (não sobe nem derruba nada).
 import { spawn, spawnSync } from 'node:child_process';
+import { createWriteStream, mkdirSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,8 +85,22 @@ async function startServer(port) {
     windowsHide: true,
   });
   let out = '';
-  server.stdout.on('data', (d) => { out += d; });
-  server.stderr.on('data', (d) => { out += d; });
+  // Registro do Vite em shots/diagnostico/vite.log (artefato do job). O otimizador de dependências de um Vite frio
+  // (cache novo no CI) manda "full-reload" no meio do boot mesmo com hmr: false: essas linhas e os erros também vão
+  // para o log do job com o prefixo [vite], para cruzar com a linha [boot] "RECARREGOU" e com os travamentos.
+  mkdirSync(resolve(ROOT, 'shots/diagnostico'), { recursive: true });
+  const log = createWriteStream(resolve(ROOT, 'shots/diagnostico/vite.log'), { flags: 'a' });
+  const onData = (d) => {
+    out += d;
+    for (const raw of String(d).split('\n')) {
+      const line = raw.replace(/\x1b\[[0-9;]*m/g, '').trimEnd();
+      if (!line) continue;
+      log.write(`${new Date().toISOString()} ${line}\n`);
+      if (/optimiz|reload|error|dependenc/i.test(line)) console.log(`[vite] ${line.trim()}`);
+    }
+  };
+  server.stdout.on('data', onData);
+  server.stderr.on('data', onData);
   const url = `http://127.0.0.1:${port}/`;
   const t0 = Date.now();
   while (Date.now() - t0 < 60000) {

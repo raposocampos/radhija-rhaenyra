@@ -3,31 +3,35 @@
 Última atualização: **2026-10-19, Claude** (travamento no primeiro boot do E2E; #27 e #30 entregues). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: travamento no primeiro boot do E2E (Claude, 2026-10-18)
+## Em andamento: travamento no primeiro boot do E2E (Claude, PR #31)
 
 - Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
-  fase no E2E. Branch `claude/e2e-travamento-boot` (worktree próprio, base `402635e`); consultar o PR para SHA, CI e
-  E2E. Nada rodou no PC além de `node --check`/`git diff --check`.
-- Achados: cinco casos, todos no PRIMEIRO boot de um navegador novo, nunca num segundo `load()` da mesma aba:
-  lavanderia (`39160265826`), fase3 (`39164306879`, achado agora nos logs), expresso (`39166156986`, `39169122476`) e
-  `capture-lambe.mjs` (`39173570454`). Nos 99 E2E dos dias 17–18 (≈960 passos de partida/captura), os cinco caíram
-  entre 19:46 e 22:48 UTC de 18/10 (≈1% dos ≈430 primeiros boots dessa janela; 0 dos ≈380 antes e dos ≈120 depois),
-  sempre com a mesma imagem do runner (`ubuntu24 20261012.334.1`). O `waitForFunction` não vence o prazo porque o
-  Playwright 1.49 espera uma limpeza na própria página antes de rejeitar: a thread principal da aba fica parada (ou a
-  aba morta). Logo, nem o teste nem o Vite são a causa direta. Boot normal no CI: 7–13 s (`[boot]`; shaders ≈0,1 s).
+  fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado com o main `0bd48d0` (PR #30) por merge;
+  consultar o PR para SHA, CI, E2E e prévia. Nada rodou no PC além de `node --check`/`git diff --check`.
+- Casos: seis, todos no PRIMEIRO boot de um navegador novo, nunca num segundo `load()` da mesma aba: lavanderia
+  (`39160265826`), fase3 (`39164306879`), expresso (`39166156986`, `39169122476`), `capture-lambe.mjs`
+  (`39173570454`) e, no E2E do #30, lambe com a fase 1 (`39183733885`, 01:06 UTC de 19/10). Cerca de 1% dos primeiros
+  boots dos jobs normais; os estresses do #31 somaram 444 boots frios sem nenhum travamento (`39183700978`, sem
+  disputa, e `39184838127`, com três boots ao mesmo tempo), nas três CPUs vistas nos runners (AMD EPYC 9V45, Intel
+  Xeon 8573C, AMD EPYC 7763).
+- Provado: em quatro casos o `waitForFunction` nem venceu o prazo porque o Playwright 1.49 espera uma limpeza na
+  própria página antes de rejeitar; logo a thread principal da aba estava parada (ou a aba morta). No caso da fase 1
+  o prazo venceu e só a leitura seguinte não voltou: padrão de contexto destruído (recarga) com a página nova travada.
+- Hipótese em teste: o otimizador de dependências de um Vite frio (cache novo em cada job; o estresse usava cache
+  quente depois da 1ª rodada) manda `full-reload` no meio do boot mesmo com `hmr: false`. A saída do Vite das suítes
+  era descartada; nos logs das capturas (cache quente) não há mensagem do otimizador. Instrumentado: `vite.log` +
+  linhas `[vite]` no log, aviso `[boot] ... RECARREGOU N×` e estresse `--cold-deps` (lotes 0–3).
 - Feito: sonda `tools/scripts/lib/hang-probe.mjs` (pilha do JavaScript por `Debugger.pause`, processos e threads do
   Chromium, GPU/alvos pelo CDP do navegador, CPU do runner e roubo do hipervisor, memória e `dmesg`, console com os
-  marcos do boot, registro do Chromium), ligada no harness (60 s, `opMaxMs`, teto das idas, queda) e no boot dos
-  scripts de captura (`waitForBoot`); `browser-log.mjs` + `--enable-logging=stderr` (registro em
-  `shots/diagnostico/`, no artefato); marcos `rr:boot:*`/`rr:level:*` (`performance.mark`) e linha `[boot]` por
-  `load()`; linha `[e2e] CPU do runner`; suíte `carregamento` do E2E manual (`stress-boot.mjs`, fora de `todas`).
-  Prova: o caso `hung` do job de infraestrutura confere a pilha lida pelo `Debugger.pause`. Docs: ARQUITETURA §10.
-- Estresse sem disputa de CPU (E2E `39183700978`, head `4d850e7`, 01:05 UTC de 19/10): 8 lotes, 200 boots frios e
-  200 quentes, nenhum travamento; boot frio 7,5–20 s, quente ≈1 s mais rápido; os lotes levaram 428–720 s (três
-  faixas: hardware diferente entre runners). Hipóteses abertas: defeito do Chromium/SwiftShader que depende do
-  hardware ou da carga do runner (a janela de 18/10 sugere isso), GPU em software presa no primeiro uso. Próximo
-  passo: estresse com disputa de CPU (lotes 4–7, três boots ao mesmo tempo) e, no próximo travamento real, ler o
-  `[diagnóstico]` do log, a linha `CPU do runner` e o `navegador-*.log` do artefato.
+  marcos do boot e as navegações, registro do Chromium), ligada no `page-guard.mjs` do #30 (60 s, `opMaxMs`, teto
+  das idas, queda; `openPage` liga sozinho, então vale para harness, páginas extras e capturas);
+  `browser-log.mjs` + `--enable-logging=stderr` (`shots/diagnostico/`, no artefato); marcos `rr:boot:*`/`rr:level:*`
+  e linha `[boot]`; `[e2e] CPU do runner`; suíte `carregamento` (`stress-boot.mjs`). Provas `hung`, `crash`, `extra`
+  e `capture` conferem o `[diagnóstico]`. Docs: ARQUITETURA §10.
+- Próximo passo: CI, E2E `todas` e `carregamento` no head novo; ler as linhas `[vite]`/`RECARREGOU` dos jobs (a
+  hipótese do Vite se confirma se a recarga aparecer nos boots frios e, sobretudo, junto de um travamento); entregar
+  a prévia e integrar só com a aprovação do usuário. Se confirmada, a correção provável é aquecer o otimizador antes
+  da 1ª suíte (ou `optimizeDeps.include`/`server.ws: false` no `vite.nohmr.config.mjs`), validada pelo estresse.
 
 ## Entregue: redes de prazo nas capturas e páginas extras (PR #30, squash `0bd48d0`, deploy `39187314090`)
 

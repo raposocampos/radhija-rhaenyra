@@ -3,9 +3,12 @@
 // carregamento"). Cada rodada sobe um Vite novo e um navegador novo, como cada suíte e cada script de captura, abre
 // uma fase (em rodízio) e a abre de novo no mesmo navegador, para comparar o boot frio com o quente. Se a aba travar,
 // a sonda do harness (lib/hang-probe.mjs) imprime o diagnóstico e o processo reprova. No fim, os tempos por fase.
-// --parallel N roda N rodadas ao mesmo tempo (disputa de CPU, como num runner sobrecarregado).
-// Roda no GitHub Actions: node tools/scripts/stress-boot.mjs [--rounds 25] [--offset 0] [--parallel 1] [--levels fase1,...]
+// --parallel N roda N rodadas ao mesmo tempo (disputa de CPU, como num runner sobrecarregado). --cold-deps apaga o
+// cache de dependências do Vite antes de cada rodada: cada boot frio pega o otimizador frio, como a primeira suíte de
+// cada job do E2E (o otimizador pode mandar "full-reload" no meio do boot; a linha [boot] diz "RECARREGOU").
+// Roda no GitHub Actions: node tools/scripts/stress-boot.mjs [--rounds 25] [--offset 0] [--parallel 1] [--cold-deps]
 import { createHarness, parseArgs } from './lib/harness.mjs';
+import { rmSync } from 'node:fs';
 import { bootTimeline, cpuModel } from './lib/hang-probe.mjs';
 import { createServer } from 'vite';
 
@@ -14,8 +17,10 @@ const args = parseArgs();
 const ROUNDS = Number(args.rounds) || 25;
 const OFFSET = Number(args.offset) || 0;
 const PARALLEL = Math.max(1, Number(args.parallel) || 1);
+const COLD_DEPS = !!args['cold-deps'];
+if (COLD_DEPS && PARALLEL > 1) throw new Error('--cold-deps apaga o cache compartilhado: só com --parallel 1');
 const LEVELS = (typeof args.levels === 'string' ? args.levels : 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8').split(',');
-console.log(`[carregamento] ${ROUNDS} rodadas, ${PARALLEL} ao mesmo tempo; CPU: ${cpuModel()}`);
+console.log(`[carregamento] ${ROUNDS} rodadas, ${PARALLEL} ao mesmo tempo${COLD_DEPS ? ', cache do Vite apagado a cada rodada' : ''}; CPU: ${cpuModel()}`);
 
 const results = []; // { level, cold, ms, compile }
 let pass = 0;
@@ -24,7 +29,9 @@ const t0 = Date.now();
 async function round(n) {
   const level = LEVELS[(OFFSET + n) % LEVELS.length];
   console.log(`\n== rodada ${n + 1}/${ROUNDS}: ${level} (Vite e navegador novos) ==`);
-  const server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 }, logLevel: 'warn' });
+  if (COLD_DEPS) rmSync('node_modules/.vite-test', { recursive: true, force: true }); // cacheDir de vite.nohmr.config.mjs
+  // nível de log padrão: o otimizador de dependências aparece no log ("new dependencies optimized", "reloading")
+  const server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 } });
   await server.listen();
   const H = await createHarness({ base: server.resolvedUrls.local[0], outDir: 'shots/carregamento' });
   try {

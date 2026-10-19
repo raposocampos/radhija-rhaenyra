@@ -402,9 +402,19 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
         throw abort(what, siteOf(site), `${stage}: ${String(e.message).split('\n')[0]}; ${state}`);
       }
     };
-    await step('abrir a página', () => G.raw.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
-    await step('esperar window.__game', () => G.raw.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
-    await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => G.raw.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+    // Navegações da página principal durante o boot: mais de uma = a página recarregou no meio dele (o otimizador de
+    // dependências de um Vite frio manda "full-reload" mesmo com hmr: false; ver run-e2e.mjs).
+    let navs = 0;
+    const onNav = (frame) => { if (frame === page.mainFrame()) navs++; };
+    page.on('framenavigated', onNav);
+    try {
+      await step('abrir a página', () => G.raw.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
+      await step('esperar window.__game', () => G.raw.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
+      await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => G.raw.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+    } finally {
+      page.off('framenavigated', onNav);
+      if (navs > 1) console.log(`  [boot] ${what}: a página RECARREGOU ${navs - 1}× durante o boot (${navs} navegações)`);
+    }
     // tempos do boot pelos marcos rr:* (dados para comparar fases e execuções; um travamento mostra o último marco)
     const boot = await bootTimeline(page).catch(() => null);
     console.log(`  [boot] ${what}: ${secs(Date.now() - t0)} até o jogo${boot?.text ? `; ${boot.text}` : ''}`);
