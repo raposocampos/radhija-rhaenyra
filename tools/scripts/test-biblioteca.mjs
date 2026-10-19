@@ -98,7 +98,10 @@ try {
   await clearLog();
   await H.hold(['KeyR'], 350);
   state = await waitFor((s) => s.biblioteca.cat !== 'asleep', { timeout: 8000 });
-  check(lib(state).cat !== 'asleep' && (await logOf('scent:duct')).length >= 1, 'o superbafo no vento passa pelo duto e acorda o Bichano');
+  const why = { power: lib(state).power, fanOn: lib(state).fanOn, aligned: lib(state).aligned, damper: lib(state).damper, fan: lib(state).fan,
+    planter: lib(state).planter, rad: state.dogs.radhija, bafo: await logOf('dog:bafo'), spawn: await logOf('scent:spawn'),
+    duct: await logOf('scent:duct'), fade: await logOf('scent:fade'), hints: (await logOf('hint')).map((x) => x.text) };
+  check(lib(state).cat !== 'asleep' && (await logOf('scent:duct')).length >= 1, 'o superbafo no vento passa pelo duto e acorda o Bichano', JSON.stringify(why));
   state = await waitFor((s) => s.biblioteca.book === 'floor', { timeout: 6000 });
   check(lib(state).book === 'floor', 'o Bichano pula e derruba o livro no escritório');
   await shot('03-livro-caiu.png');
