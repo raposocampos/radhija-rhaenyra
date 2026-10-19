@@ -1167,6 +1167,31 @@ export function createPuzzle(ctx) {
     });
   }
   /**
+   * Onde o objeto derrubado cai (como na Arena dos Porquinhos): na direção do empurrão ou perto dela, sempre num lugar
+   * que a dog alcança (nunca atrás de cerca, dentro de móvel ou do chiqueiro).
+   */
+  function landingFor(c, ux, uz, dist) {
+    const ignore = new Set(pigs.pigs.map((P) => P.id));
+    const fits = (x, z) => {
+      if (!world.overlaps(x, z, 0.17, 'small', { ignore })) return true;
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        if (!world.overlaps(x + Math.sin(a) * 0.3, z + Math.cos(a) * 0.3, 0.17, 'small', { ignore })) return true;
+      }
+      return false;
+    };
+    const tries = [1, 0.75, 0.5, 0.3].map((k) => [ux, uz, dist * k]);
+    for (const a of [0.9, -0.9, 1.8, -1.8, Math.PI]) {
+      const ca = Math.cos(a), sa = Math.sin(a);
+      tries.push([ux * ca + uz * sa, uz * ca - ux * sa, 0.45]);
+    }
+    for (const [x, z, d] of tries) {
+      const p = world.resolve(c.x + x * d, c.z + z * d, 0.07, 'small', { ignore });
+      if (world.segmentClear(c.x, c.z, p.x, p.z, 0.06, 'small', { ignore, airborne: true }) && fits(p.x, p.z)) return p;
+    }
+    return { x: c.x, z: c.z };
+  }
+  /**
    * O porquinho esbarrou em quem leva algo na boca (createPigHerd knockItem): o enfeite ou o legume voa um pouco para
    * o lado do empurrão e cai no chão (o legume vira comida). → true se ela levava algo.
    */
@@ -1177,7 +1202,7 @@ export function createPuzzle(ctx) {
     if (!thing && !v) return false;
     const side = Math.random() < 0.5 ? -1 : 1;
     const ux = dirX * 0.8 - dirZ * side * 0.6, uz = dirZ * 0.8 + dirX * side * 0.6, ul = Math.hypot(ux, uz) || 1;
-    const res = world.resolve(c.x + (ux / ul) * (c.r + 0.35), c.z + (uz / ul) * (c.r + 0.35), 0.1, 'small');
+    const res = landingFor(c, ux / ul, uz / ul, c.r + 0.35);
     if (v) {
       v.it.drop(res.x, res.z, 0);
       v.x = res.x;

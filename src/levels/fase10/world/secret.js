@@ -1,7 +1,8 @@
 // FASE 10 · O cantinho do outro lado do muro leste, atrás da casa na árvore: a tábua solta do muro (dobradiça no
 // norte; abre para o leste) e, lá dentro, sob o telheiro do vizinho, o quadro com a foto das duas filhotes (com as
 // luzinhas em volta, a plaquinha e os primeiros brinquedos delas no tapetinho). Fica fora da vista da câmera.
-// API: buildSecret(root, layout) → { group, board: { object, setOpen(t), setLoose(on) }, photoAt, update(dt, t) }
+// O cantinho é um nicho da largura exata da fresta (sem cantos para ficar presa) e a tábua abre para fora.
+// API: buildSecret(root, layout) → { group, board: { object, setOpen(t), setLoose(on) }, photoAt, seeThrough, update(dt, t) }
 import * as THREE from 'three';
 import { rbox, canvasTexture, stdMat, woodMat, brassMat } from '../../../world/util.js';
 
@@ -80,7 +81,7 @@ export function buildSecret(root, layout) {
   roof.rotation.z = -0.12;
   nook.add(roof);
   // tapetinho redondo e os brinquedos de filhote (o ossinho rosa e a bolinha)
-  const rug = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.01, 28), stdMat('#f3c6d4', { roughness: 1 }));
+  const rug = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.01, 28), stdMat('#f3c6d4', { roughness: 1 }));
   rug.position.set((N.x0 + N.x1) / 2 + 0.05, 0.006, SECRET.photo.z);
   rug.scale.z = 0.8;
   nook.add(rug);
@@ -92,10 +93,10 @@ export function buildSecret(root, layout) {
     knob.position.set(s * 0.085, 0, t * 0.018);
     toyBone.add(knob);
   }
-  toyBone.position.set(SECRET.photo.x - 0.42, 0.04, SECRET.photo.z + 0.28);
+  toyBone.position.set(SECRET.photo.x - 0.42, 0.04, SECRET.photo.z + 0.16);
   toyBone.rotation.y = 0.6;
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.05, 14, 10), stdMat('#7cc4e8', { roughness: 0.45 }));
-  ball.position.set(SECRET.photo.x - 0.5, 0.05, SECRET.photo.z - 0.32);
+  ball.position.set(SECRET.photo.x - 0.55, 0.05, SECRET.photo.z - 0.17);
   nook.add(toyBone, ball);
   nook.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(nook);
@@ -127,7 +128,7 @@ export function buildSecret(root, layout) {
   const bm = new THREE.Matrix4(), bc = new THREE.Color();
   for (let i = 0; i < nb; i++) {
     const u = i / (nb - 1);
-    const z = (u - 0.5) * (P.w + 0.24);
+    const z = (u - 0.5) * (P.w + 0.06);
     const y = P.h / 2 + fw + 0.07 + Math.sin(Math.PI * u) * 0.05 - 0.04 * Math.cos(TAU * u * 2);
     bulbAt.push(new THREE.Vector3(-0.03, y, z));
     bulbs.setMatrixAt(i, bm.makeTranslation(-0.03, y, z));
@@ -157,19 +158,21 @@ export function buildSecret(root, layout) {
   return {
     group,
     photoAt: new THREE.Vector3(P.x, P.y, P.z),
+    /** As paredes e o telheiro do nicho: com a dog lá dentro, a câmera vê através. */
+    seeThrough: [nook, pivot],
     board: {
       object: pivot,
-      /** 0 fechada … 1 aberta (para dentro do cantinho). */
+      /** 0 fechada … 1 aberta (para fora, para o quintal: o nicho fica livre). */
       setOpen(t) {
         st.open = Math.max(0, Math.min(1, t));
-        pivot.rotation.y = st.open * 1.45;
+        pivot.rotation.y = -st.open * 1.45;
       },
       /** Depois de tudo achado, a tábua fica frouxa (balança de leve com o vento). */
       setLoose(on) { st.loose = !!on; },
     },
     update(dt, t) {
       st.wob = ease(st.wob, st.loose && st.open < 0.01 ? 1 : 0, dt, 2);
-      pivot.rotation.y = st.open * 1.45 + st.wob * 0.035 * (0.6 + 0.4 * Math.sin(t * 1.7));
+      pivot.rotation.y = -st.open * 1.45 + st.wob * 0.035 * (0.6 + 0.4 * Math.sin(t * 1.7));
       bulbAt.forEach((v, i) => {
         const k = 0.85 + 0.15 * Math.sin(t * 2.4 + i);
         bulbs.setMatrixAt(i, bm.makeScale(k, k, k).setPosition(v));

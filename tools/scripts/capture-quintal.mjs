@@ -136,7 +136,7 @@ try {
   await shot('03b-potes-de-racao-e-agua', { pos: [L.DOG_BOWLS.x + 0.9, 1.1, L.DOG_BOWLS.z + 1.4], look: [L.DOG_BOWLS.x, 0.1, L.DOG_BOWLS.z] });
   await shot('04c-despensa', { pos: [L.PANTRY.x0 + 0.6, 1.55, L.PANTRY.zS - 0.25], look: [L.CUPBOARD.x, 0.6, L.CUPBOARD.z + 0.5] });
   await shot('04d-armario-caixotes-e-marcas', { pos: [L.CUPBOARD.x + 0.75, 1.4, L.CUPBOARD.z + 1.85], look: [L.CUPBOARD.x - 0.4, 0.35, L.CUPBOARD.z + 0.55] });
-  await shot('04e-galinhas-perto-da-horta', { pos: [(L.CHICKENS.area.minX + L.CHICKENS.area.maxX) / 2 + 0.3, 1.8, L.CHICKENS.area.maxZ + 1.3], look: [(L.CHICKENS.area.minX + L.CHICKENS.area.maxX) / 2, 0.2, (L.CHICKENS.area.minZ + L.CHICKENS.area.maxZ) / 2] });
+  await shot('04e-galinhas-no-campinho', { pos: [(L.CHICKENS.area.minX + L.CHICKENS.area.maxX) / 2 + 0.6, 3.0, L.CHICKENS.area.maxZ + 0.9], look: [(L.CHICKENS.area.minX + L.CHICKENS.area.maxX) / 2, 0.15, (L.CHICKENS.area.minZ + L.CHICKENS.area.maxZ) / 2] });
   await shot('10e-campinho-milho-cenouras-aboboras', { pos: [-8.6, 1.7, 7.2], look: [-10.0, 0.4, 4.3] });
   await shot('10f-botoes-do-galpao-e-chiqueiro', { pos: [7.4, 1.7, 4.6], look: [9.6, 0.8, 2.6] });
   await shot('03-quadro-de-perto', { pos: [L.PAINTING.x, L.PAINTING.y - 0.05, L.PAINTING.z + 1.5], look: [L.PAINTING.x, L.PAINTING.y, L.PAINTING.z] });
@@ -413,7 +413,7 @@ try {
 
   // 6c2. as galinhas: de frente uma foge correndo; o latido faz as duas voarem
   const CH = L.CHICKENS, hen0 = CH.start[0];
-  const henCam = { pos: [(CH.area.minX + CH.area.maxX) / 2 + 0.3, 1.8, CH.area.maxZ + 1.3], look: [(CH.area.minX + CH.area.maxX) / 2, 0.2, (CH.area.minZ + CH.area.maxZ) / 2] };
+  const henCam = { pos: [(CH.area.minX + CH.area.maxX) / 2 + 0.6, 3.0, CH.area.maxZ + 0.9], look: [(CH.area.minX + CH.area.maxX) / 2, 0.15, (CH.area.minZ + CH.area.maxZ) / 2] };
   await setup({ stage: 'start', active: 'radhija', place: { radhija: { x: 2.0, z: 2.0, yaw: 0 } }, settle: 120 });
   await shot('38-galinhas-ciscando', henCam);
   const hp = await page.evaluate(() => window.__game.game.debug.info().quintal.chickens[0]);

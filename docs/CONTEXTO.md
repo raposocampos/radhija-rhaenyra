@@ -3,7 +3,7 @@
 Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34, #35, #36 e #37 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Entregue: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (PR #36, squash `1a8fde5`)
+## Entregue: os porquinhos (personagem novo da fase 10) e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`)
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
@@ -305,6 +305,12 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     porteira com o mesmo ângulo do colisor, `STY.swing`). O botão errado do galpão abre o chiqueiro e eles saem para
     a horta; atrapalham, derrubam o enfeite ou o legume da boca (`knockItem`) e o legume no chão vira comida por um
     tempo (`feedPigs`; pegar de volta chama `removeFood`). `debugSet('pigsOut')` solta já fora (testes e capturas).
+  - Retorno do usuário na prévia de `cefe748`: os botões quase não apareciam (ficavam na parede oeste do galpão, vista
+    de lado pela câmera): agora estão num painel de madeira virado para o sul (`BUTTON_BOARD`), encostado no galpão,
+    com os fios pela frestinha entre os dois. No cantinho secreto ela ficava presa (sala maior que a fresta e fora da
+    vista): o nicho agora tem a largura da fresta, a tábua abre para fora e o muro leste e o nicho entram no "ver
+    através". As galinhas foram para o campinho (milho e legumes) e ganharam modelo arredondado (cores por vértice,
+    crista serrilhada, asas em penas) e animação (cabeça parada que dá o tranco, ciscar, planar, piscar, arrepiar).
   - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (PR #38, esperando aprovação) e
     a cabeça atravessando paredes (etapa 4 do PR #37; repassado à sessão dos modelos).
 - Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar capturas e entregar a prévia;

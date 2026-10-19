@@ -315,9 +315,9 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     // a plaquinha "?" logo acima do botão (abaixo do topo da parede; as patinhas pintadas ficam livres embaixo) e a
     // lampadinha do lado dela
     const board = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.16), askMat);
-    board.position.set(0, cfg.top + 0.235, 0.006);
+    board.position.set(0, cfg.top + 0.22, 0.006);
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
-    lamp.position.set(0.16, cfg.top + 0.235, 0.032);
+    lamp.position.set(0.15, cfg.top + 0.22, 0.032);
     const holder = new THREE.Group();
     holder.add(board, lamp);
     holder.position.set(cfg.x, 0, cfg.z);

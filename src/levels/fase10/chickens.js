@@ -1,4 +1,4 @@
-// FASE 10 · As galinhas do quintal, perto da horta (NPCs de ambientação, inofensivas): ciscam, bicam o chão e andam à
+// FASE 10 · As galinhas do campinho, no milharal e nos legumes (NPCs de ambientação, inofensivas): ciscam, bicam o chão e andam à
 // toa. Uma dog chegando DE FRENTE (no campo de visão dela) a faz sair correndo; chegando por trás, ela nem liga. Um
 // latido perto (ou esbarrar nela, ou uma arrancada do lado) assusta de verdade: ela sai batendo as asas num voo curto
 // e pousa mais longe. Nunca saem da área delas (cfg.area).
@@ -94,6 +94,7 @@ export function createChickenFlock({ cfg, world, root = null, emit = null, creat
     H.peck = 0;
     H.flap = 0;
     H.y = 0;
+    H.scratch = false;
     if (H.state === 'idle') {
       H.speed = 0;
       if (H.t >= H.dur) {
@@ -106,9 +107,10 @@ export function createChickenFlock({ cfg, world, root = null, emit = null, creat
       }
     } else if (H.state === 'peck') {
       H.speed = 0;
-      // bicadas rápidas, com pausas (ciscando)
+      // primeiro cisca (raspa a terra com as patas), depois bica rápido, com pausas
+      H.scratch = H.t < H.dur * 0.4;
       const k = (H.t * 2.6) % 1;
-      H.peck = k < 0.35 ? Math.sin((k / 0.35) * Math.PI) : 0;
+      H.peck = H.scratch ? 0 : k < 0.35 ? Math.sin((k / 0.35) * Math.PI) : 0;
       if (H.t >= H.dur) setState(H, 'idle', 0.6 + rnd() * 1.6);
     } else if (H.state === 'wander') {
       if (walk(H, dt, cfg.walk, 5) < 0.05 || H.t >= H.dur) setState(H, rnd() < 0.6 ? 'peck' : 'idle', 1 + rnd() * 1.2);
@@ -145,7 +147,7 @@ export function createChickenFlock({ cfg, world, root = null, emit = null, creat
     H.col.x = H.x;
     H.col.z = H.z;
     H.model?.setPose(H.x, H.y, H.z, H.yaw);
-    H.model?.animate(dt, { speed: H.speed, peck: H.peck, flap: H.flap, alarm: H.state === 'flee' || H.cool > cfg.calm * 0.5 });
+    H.model?.animate(dt, { speed: H.speed, peck: H.peck, flap: H.flap, alarm: H.state === 'flee' || H.cool > cfg.calm * 0.5, scratch: H.scratch, air: H.state === 'glide' ? 1 : 0 });
   }
 
   return {

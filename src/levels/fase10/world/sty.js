@@ -1,6 +1,7 @@
 // FASE 10 · O chiqueiro ao sul do galpão: cerca de tábuas largas (os porcos não pulam), a porteira para a horta (abre
 // girando para fora), a casinha dos porcos com telhado de zinco, o cocho de madeira com lavagem, a poça de lama e a
-// placa "Chiqueiro"; e, na parede do galpão, a caixinha de força onde os fios dos dois botões altos se juntam, com um
+// placa "Chiqueiro"; o painel de madeira dos dois botões altos (virado para o sul) e, na parede do galpão, a caixinha
+// de força onde os fios deles se juntam, com um
 // cabo para a roldana da porta e outro, pelo chão, até a trava da porteira (qual botão vai para onde é sorteado).
 // API: buildSty(root, layout) → { group, gate: GateProp (setOpen 0..1), links: { door, gate } (pulso), update(dt) }
 import * as THREE from 'three';
@@ -9,7 +10,7 @@ import { makeLink } from '../../../world/links.js';
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildSty(root, layout) {
-  const { STY, SHED, SHED_BUTTONS } = layout;
+  const { STY, SHED, SHED_BUTTONS, BUTTON_BOARD } = layout;
   const group = new THREE.Group();
   group.name = 'chiqueiro';
   const r = rng(81);
@@ -118,30 +119,55 @@ export function buildSty(root, layout) {
   gate.position.set(STY.x0, 0, STY.gate.z0);
   group.add(gate);
 
+  // ---------------- o painel dos botões (tábuas, dois pés de mourão e uma plaquinha "Força") virado para o sul
+  const B = BUTTON_BOARD;
+  const bw = B.x1 - B.x0;
+  const board = new THREE.Group();
+  board.name = 'painel-dos-botoes';
+  const boardMat = woodMat('#c8a070', { key: 'f10-painel', vertical: true, rough: 0.85 });
+  const boardFace = new THREE.Mesh(rbox(bw, B.h, B.t, 0.01), boardMat);
+  boardFace.position.set((B.x0 + B.x1) / 2, B.h / 2, B.z);
+  board.add(boardFace);
+  for (const x of [B.x0 + 0.05, B.x1 - 0.05]) {
+    const leg = new THREE.Mesh(rbox(0.07, B.h + 0.05, 0.07, 0.01), postMat);
+    leg.position.set(x, (B.h + 0.05) / 2, B.z - B.t / 2 - 0.035);
+    board.add(leg);
+  }
+  const trim = new THREE.Mesh(rbox(bw + 0.04, 0.05, B.t + 0.03, 0.01), postMat);
+  trim.position.set((B.x0 + B.x1) / 2, B.h + 0.02, B.z);
+  board.add(trim);
+  board.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  group.add(board);
+
   // ---------------- a caixinha de força na parede do galpão e os fios (botões → caixinha → porta | porteira)
   const xw = SHED.x0 - SHED.t / 2 - 0.02;
-  const boxZ = (SHED_BUTTONS[0].z + SHED_BUTTONS[1].z) / 2 + 0.55;
+  const boxZ = B.z + 0.32;
   const jbox = new THREE.Mesh(rbox(0.05, 0.2, 0.16, 0.01), stdMat('#d8dcd6', { roughness: 0.5 }));
   jbox.position.set(xw - 0.005, 0.82, boxZ);
   group.add(jbox);
   const cableOpts = { radius: 0.007, color: '#3a3634', glow: '#ffd36a', metal: true };
-  for (const b of SHED_BUTTONS) {
+  const zf = B.z + B.t / 2 + 0.01;
+  // de cada botão: desce pela frente do painel, corre até a frestinha junto do galpão e sobe até a caixinha
+  SHED_BUTTONS.forEach((b, i) => {
+    const y = 0.26 + i * 0.06;
     const lk = makeLink([
-      new THREE.Vector3(xw, b.top - 0.12, b.z),
-      new THREE.Vector3(xw, 0.82, b.z),
-      new THREE.Vector3(xw, 0.82, boxZ + (b.z < boxZ ? -0.1 : 0.1)),
+      new THREE.Vector3(b.x, b.top - 0.13, zf),
+      new THREE.Vector3(b.x, y, zf),
+      new THREE.Vector3(B.x1 + 0.02, y, zf),
+      new THREE.Vector3(xw, y, boxZ - 0.06),
+      new THREE.Vector3(xw, 0.72, boxZ - 0.06),
     ], { ...cableOpts, clips: 2 });
     group.add(lk.object);
-  }
-  // da caixinha até a roldana da porta (por cima) e até a trava da porteira (pelo chão)
+  });
+  // da caixinha até a roldana da porta (pela frestinha entre o painel e o galpão) e até a trava da porteira (pelo chão)
   const toDoor = makeLink([
     new THREE.Vector3(xw, 0.92, boxZ),
     new THREE.Vector3(xw, SHED.door.h + 0.06, boxZ),
     new THREE.Vector3(xw, SHED.door.h + 0.06, SHED.door.z1 - 0.12),
   ], { ...cableOpts, clips: 2 });
   const toGate = makeLink([
-    new THREE.Vector3(xw, 0.72, boxZ),
-    new THREE.Vector3(xw, 0.025, boxZ),
+    new THREE.Vector3(xw, 0.72, boxZ + 0.04),
+    new THREE.Vector3(xw, 0.025, boxZ + 0.04),
     new THREE.Vector3(xw, 0.025, STY.z0 - 0.08),
     new THREE.Vector3(STY.x0 - 0.06, 0.025, STY.z0 - 0.08),
     new THREE.Vector3(STY.x0 - 0.06, 0.025, STY.gate.z1 - 0.06),

@@ -247,6 +247,8 @@ export function buildFences(root, layout) {
     return m;
   });
   tall.add(north, ...eastParts);
+  // o muro leste deixa ver a dog lá dentro do cantinho (e quem anda colada nele)
+  seeThrough.push(...eastParts);
   const capGeo = [];
   for (const [x, z, w, d] of [[north.position.x, north.position.z, northLen + 0.1, 0.14], ...eastParts.map((m) => [m.position.x, m.position.z, 0.14, /** @type {THREE.BoxGeometry} */ (m.geometry).parameters.depth])]) {
     const g = new THREE.BoxGeometry(w, 0.05, d);

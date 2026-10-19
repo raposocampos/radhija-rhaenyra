@@ -237,13 +237,18 @@ export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
 /** Galpão de ferramentas (paredes cortadas, sem telhado) com a porta basculante no oeste. */
 export const SHED = { x0: 9.6, x1: 12.05, z0: 0.6, z1: 3.6, wallH: 1.45, t: 0.15, door: { z0: 1.7, z1: 2.6, h: 1.25 } };
 /**
- * Os dois botões altos na parede oeste do galpão (impulso da Rhaenyra): um abre a porta do galpão e o outro a
- * porteira do chiqueiro. Qual é qual é sorteado a cada partida (os fios vão juntos para a caixinha de força).
+ * O painel de madeira dos botões, na horta, encostado no canto sudoeste do galpão e virado para o sul (de frente
+ * para a câmera); entre ele e a parede do galpão fica uma frestinha por onde passam os fios.
+ */
+export const BUTTON_BOARD = { x0: 8.72, x1: SHED.x0 - SHED.t / 2 - 0.06, z: 3.1, t: 0.06, h: 1.4 };
+/**
+ * Os dois botões altos no painel (impulso da Rhaenyra): um abre a porta do galpão e o outro a porteira do chiqueiro.
+ * Qual é qual é sorteado a cada partida (os fios vão juntos para a caixinha de força na parede do galpão).
  * @type {import('../../types').WallButtonCfg[]}
  */
 export const SHED_BUTTONS = [
-  { x: SHED.x0 - SHED.t / 2, z: 1.05, nx: -1, nz: 0, top: 1.1, kind: 'button', mode: 'once' },
-  { x: SHED.x0 - SHED.t / 2, z: 3.2, nx: -1, nz: 0, top: 1.1, kind: 'button', mode: 'once' },
+  { x: 8.96, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
+  { x: 9.3, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
 ];
 export const WORKBENCH = { x: 10.85, z: 0.92, hx: 0.9, hz: 0.25, h: 0.9 };
 /** Rampa de tábua ao longo da parede sul do galpão, subindo para o leste até a prateleira alta com a vela. */
@@ -260,12 +265,12 @@ export const STY = { x0: 9.6, x1: 12.05, z0: 3.95, z1: 6.45, fenceH: 0.62, gate:
 export const STY_PEN = pigPenLayout({ x0: STY.x0 + 0.04, x1: STY.x1 - 0.04, z0: STY.z0 + 0.04, z1: STY.z1 - 0.04, t: 0.08, h: STY.fenceH, door: { side: 'w', a: STY.gate.z0, b: STY.gate.z1 }, swing: STY.swing }, 'chiqueiro');
 /** Onde os porcos podem andar soltos (a horta) e de onde eles saem (na frente da porteira). */
 /**
- * Duas galinhas ciscando no quintal, do lado de fora da cerca oeste da horta (ambientação, inofensivas): fogem de quem
- * chega de frente (seeR m, dentro de seeAngle rad do bico); latido a menos de scareR m as faz sair num voo curto.
+ * Duas galinhas ciscando no campinho, entre o milho e os legumes (ambientação, inofensivas): fogem de quem chega de
+ * frente (seeR m, dentro de seeAngle rad do bico); latido a menos de scareR m as faz sair num voo curto.
  */
 export const CHICKENS = {
-  r: 0.12, area: { minX: 4.6, maxX: 6.45, minZ: 2.5, maxZ: 6.2 },
-  start: [{ x: 5.3, z: 3.5, yaw: 2.4 }, { x: 5.9, z: 5.1, yaw: -1.2 }],
+  r: 0.12, area: { minX: -11.85, maxX: -7.85, minZ: 2.55, maxZ: 6.45 },
+  start: [{ x: -10.13, z: 4.2, yaw: 2.4 }, { x: -8.4, z: 4.4, yaw: -1.2 }],
   seeR: 1.4, seeAngle: 1.3, scareR: 3.2, walk: 0.3, run: 1.7, calm: 2.5, glideDist: 2.0, glideTime: 1.0, glideHeight: 0.45,
 };
 /** Os três porquinhos (cfg do createPigHerd; o resto vem de PIG_DEFAULTS): soltos, ficam na horta. */
@@ -281,7 +286,7 @@ export const PIGS = {
  * Atrás da casa na árvore, uma tábua do muro leste está solta (só cede depois de tudo achado na fase): do outro lado,
  * o cantinho com o quadro. Fica fora da vista da câmera.
  */
-export const SECRET = { board: { z0: -5.15, z1: -4.55 }, nook: { x0: EAST_WALL.x + EAST_WALL.t / 2, x1: 13.35, z0: -5.7, z1: -4.0 }, photo: { x: 13.338, y: 0.95, z: -4.85, w: 0.42, h: 0.52 } };
+export const SECRET = { board: { z0: -5.15, z1: -4.55 }, nook: { x0: EAST_WALL.x + EAST_WALL.t / 2, x1: 13.35, z0: -5.15, z1: -4.55 }, photo: { x: 13.338, y: 0.95, z: -4.85, w: 0.42, h: 0.52 } };
 
 // ---------------------------------------------------------------------------------------------- colisores
 const T = WALLS.t;
@@ -380,6 +385,7 @@ export const STATIC_COLLIDERS = [
   wallZ('chiqueiro-oeste-sul', STY.x0, STY.gate.z1, STY.z1, { hx: thin }),
   wallZ('chiqueiro-leste', STY.x1, STY.z0, STY.z1, { hx: thin }),
   { id: 'casinha-dos-porcos', shape: 'box', x: STY.x1 - 0.45, z: STY.z1 - 0.45, hx: 0.38, hz: 0.38 },
+  { id: 'painel-dos-botoes', shape: 'box', x: (BUTTON_BOARD.x0 + BUTTON_BOARD.x1) / 2, z: BUTTON_BOARD.z - 0.035, hx: (BUTTON_BOARD.x1 - BUTTON_BOARD.x0) / 2, hz: BUTTON_BOARD.t / 2 + 0.035 },
 ];
 
 export const NAV_NODES = {
@@ -454,7 +460,7 @@ const LAYOUT = {
   CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
+  VEG_BEDS, TOMATO, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
