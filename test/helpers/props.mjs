@@ -430,7 +430,7 @@ export function stubFase10Props(root, layout) {
     drawers: checked('fase10.drawers', { list: [0, 0, 0].map(() => ({ ext: 0, fallen: false })), setDrawer(i, ext, fallen) { this.list[i] = { ext, fallen }; } }),
     pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),
     farm: { spots, makeVeg(kind) { const o = new THREE.Group(); o.name = `veg:${kind}`; return o; } },
-    secretBoard: checked('fase10.secretBoard', { open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),
+    secretBoard: checked('fase10.secretBoard', { object: object(root, 'tabua-solta'), open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),
     breaker: wallButton(root, 'fase10.breaker'),
     tap: wallButton(root, 'fase10.tap'),
     collectibles: [],
