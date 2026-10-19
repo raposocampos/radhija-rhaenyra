@@ -119,7 +119,9 @@ function panelShape() {
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const u = (p.getZ(i) + 1) / 2, y = p.getY(i);
-    p.setXYZ(i, p.getX(i) * 0.5 - (y < 0 ? 1.4 : 0.12) * y * y * (1 - 0.4 * u), y * 0.5 * (1 - 0.3 * u), u);
+    // mais fina no ombro: dobrada, a frente não salta da silhueta vista de frente
+    const thin = 0.55 + 0.45 * ss(u, 0, 0.35);
+    p.setXYZ(i, p.getX(i) * 0.5 * thin - (y < 0 ? 1.4 : 0.12) * y * y * (1 - 0.4 * u), y * 0.5 * (1 - 0.3 * u), u);
   }
   geo.computeVertexNormals();
   return weldNormals(geo);
@@ -340,8 +342,8 @@ export function createPigeon({ seed = 1, tint = '#8f96a6', scale = 1 } = {}) {
       .setPosition(c.clone().addScaledVector(nrm, dn).addScaledVector(up, du).addScaledVector(fwd, df));
     const states = (open, shut) => (sx > 0 ? [open, shut, null] : [open, null, shut]);
     const hidden = eyeAt(-0.005, 0, 0, 0.0003, 0.0003, 0.0003);
-    // fechado: a pele vira uma pálpebra pequena, quase rente, sob o risquinho escuro
-    headParts.add(eyeBall, { color: ringC, at: states(eyeAt(-0.0015, 0, 0, 0.0148, 0.0148, 0.0055), eyeAt(0.0012, 0, 0, 0.0105, 0.0105, 0.0022)) });
+    // fechado: só o risquinho escuro fica para fora; pele, íris e reflexos entram na cabeça
+    headParts.add(eyeBall, { color: ringC, at: states(eyeAt(-0.0015, 0, 0, 0.0148, 0.0148, 0.0055), eyeAt(-0.004, 0, 0, 0.008, 0.008, 0.002)) });
     headParts.add(eyeBall, {
       color: (x, y) => { const d = Math.hypot(x, y); return tmp.copy(irisIn).lerp(irisOut, ss(d, 0.35, 0.8)).lerp(irisRim, ss(d, 0.86, 1)); },
       fx: (x, y) => [0, 0.3 * (1 - ss(Math.hypot(x, y), 0.4, 0.9)), 0],
