@@ -23,8 +23,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `capture-modelos.mjs`. Docs: ARQUITETURA §2, §7 e §10, README (protótipos).
 - Coordenação: não editar `game.js`, `input.js` nem `dogAnimation.js` até o PR #35 (Lambe-Lambe nas duas) entrar no
   main; a etapa 3 porta a pose nova do Lambe-Lambe e a do empurrão em pé.
-- Próximo passo: CI e E2E `canil` no head do PR, revisar `shots/modelos/` (artefato `capturas-canil`), ajustar as
-  proporções se preciso, entregar a prévia (`?level=canil&play` e `?level=1&play&dogs=novo`) e esperar a aprovação.
+- PR **#37**. Validações: CI verde em `2ba0d64`; E2E `canil` 20/20 em `9280799` (`39290933885`) e 23/23 em
+  `2507d8d` (`39292942399`), sem erros de console, 45–48 capturas revisadas. Depois disso: o corpo gira sobre as
+  patas apoiadas antes de subir (a Rhaenyra sentada do modelo atual afunda 2 cm; a nova gira ~5° sobre as patas da
+  frente), a vitrine volta ao enquadramento no início da fase e o teste da boca ficou determinístico. Consultar o PR
+  para o CI e o E2E do head atual.
+- Achados: o modelo novo segue o guia com 0,00 mm em todas as ações; triângulos até 111% do atual (pelo da
+  Rhaenyra, orelhas maiores); a montagem leva o mesmo tempo. Pendente para as próximas etapas: a franja das orelhas
+  longas deixa a pele da orelha aparecer perto do pescoço em close (cascas de pelo com gravidade).
+- Próximo passo: entregar a prévia (`?level=canil&play` e `?level=1&play&dogs=novo`) e esperar a aprovação; a
+  integração segue a ordem combinada com o orquestrador (#33 e #35 antes; conflitos de lista com o #36).
 
 ## Entregue: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (PR #32, squash `415bd67`, deploy `39202538581`)
 
