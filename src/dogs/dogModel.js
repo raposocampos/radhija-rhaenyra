@@ -433,14 +433,15 @@ export function buildDogGeometry(kind, { shells = 10 } = {}) {
  * Malhas de um desenho (corpo, orelhas e cascas de pelo) com os pesos do esqueleto `boneIndex` (nome → índice).
  * Usado pelo modelo atual (buildDogGeometry) e pelo modelo novo (src/dogs/v2/).
  */
-export function buildGeometryFromDesign(design, P, { shells = 10, boneIndex = BONE_INDEX } = {}) {
+export function buildGeometryFromDesign(design, P, { shells = 10, boneIndex = BONE_INDEX, exactBounds = false } = {}) {
   const t0 = performance.now();
   const s = P.s;
 
   const bodySDF = compileSDF(design.bodyGroups);
   const earSDF = compileSDF(design.earGroups);
-  const bb = groupsBounds(design.bodyGroups, 0.03 * s);
-  const eb = groupsBounds(design.earGroups, 0.02 * s);
+  // exactBounds (modelo novo): a grade cobre a orelha achatada inteira (sdf.js, groupsBounds)
+  const bb = groupsBounds(design.bodyGroups, 0.03 * s, { exact: exactBounds });
+  const eb = groupsBounds(design.earGroups, 0.02 * s, { exact: exactBounds });
 
   const cell = 0.0098 * s;
   const body = surfaceNets(bodySDF, bb, cell, { smoothIters: 2, project: 1 });

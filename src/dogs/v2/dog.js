@@ -33,7 +33,7 @@ export function buildDogGeometryV2(kind, { shells = 10 } = {}) {
   if (cache.has(kind)) return cache.get(kind);
   const P = paramsV2(kind);
   const design = buildDesignV2(P);
-  const G = buildGeometryFromDesign(design, P, { shells, boneIndex: BONE_INDEX_V2 });
+  const G = buildGeometryFromDesign(design, P, { shells, boneIndex: BONE_INDEX_V2, exactBounds: true });
   for (const g of [G.bodyGeo, G.earGeo, G.furGeo]) shareResource(g);
   cache.set(kind, G);
   return G;
