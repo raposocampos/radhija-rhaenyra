@@ -104,6 +104,9 @@ Protótipos fora do menu (fases de desenvolvimento):
 - **Arena do Bafo**: `http://127.0.0.1:5173/?level=bafo&play`. O protótipo do puzzle do superbafo que virou a fase 4: a Rhaenyra
   encaixa o ventilador, a Radhija sopra no corredor, o vento leva o cheiro pelo duto, o pombo foge para o poleiro da
   placa e o portão abre.
+- **Canil das Dogs**: `http://127.0.0.1:5173/?level=canil&play`. Vitrine com a Radhija e a Rhaenyra no modelo atual e no
+  novo (em teste), lado a lado, com um painel de poses e vistas. Para jogar qualquer fase com o modelo novo, acrescente
+  `&dogs=novo` ao endereço (por exemplo, `?level=1&play&dogs=novo`).
 
 ## Estrutura
 

@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, recursos, carregamento]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, recursos, carregamento]
 
 permissions:
   contents: read
@@ -140,7 +140,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -183,6 +183,9 @@ jobs:
       - name: Capturas do Lambe-Lambe para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'lambe'
         run: node tools/scripts/capture-lambe.mjs
+      - name: Capturas dos modelos das dogs (atual × novo) para revisão (qualidade visual completa)
+        if: always() && matrix.suite == 'canil'
+        run: node tools/scripts/capture-modelos.mjs
       - name: Capturas do celular e do PC para revisão (qualidade de cada aparelho)
         if: always() && matrix.suite == 'toque'
         run: node tools/scripts/capture-celular.mjs

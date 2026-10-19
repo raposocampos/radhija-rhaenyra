@@ -24,7 +24,7 @@ test('campanha: as dez fases em ordem, numeradas 1…10, com cenário sob demand
 test('catálogo: nenhum id repetido entre a campanha e as fases de desenvolvimento', () => {
   const all = ids([...LEVELS, ...DEV_LEVELS]);
   assert.equal(new Set(all).size, all.length, all.join(', '));
-  assert.deepEqual(ids(DEV_LEVELS), ['pulo', 'bafo', 'modelo'], 'só as arenas ficam no catálogo de desenvolvimento');
+  assert.deepEqual(ids(DEV_LEVELS), ['pulo', 'bafo', 'modelo', 'canil'], 'só as arenas ficam no catálogo de desenvolvimento');
 });
 
 test('links: ?level= por posição e por id abrem a fase publicada; outro id fica para o catálogo de desenvolvimento', () => {
