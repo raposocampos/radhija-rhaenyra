@@ -1,6 +1,6 @@
 // Controle (Gamepad API) por simulação: um navigator.getGamepads falso (window.__fakePads) com
 // mapeamento "standard" (posições PlayStation: ✕=A, ○=B, □=X, △=Y, L1=LB, R1=RB, L2=LT, R2=RT).
-// Testa analógico proporcional + zona morta, D-pad, ✕/○/□/△/L1/R1/R2/Options,
+// Testa analógico proporcional + zona morta, D-pad, ✕/○/□/△/L1/R1 (arrancada)/R2 (superbafo)/L2 (Lambe-Lambe)/Options,
 // vibração, input:device, trava ao voltar do menu, desconexão e pollMenuPad().
 //   node tools/scripts/test-gamepad.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
@@ -8,7 +8,7 @@ import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
 const H = await createHarness({ base: BASE, outDir: 'shots/mecanica' });
-const { check, sleep, info, ev, shot, logOf, clearLog, load, page } = H;
+const { check, sleep, info, ev, shot, logOf, clearLog, load, page, waitFor } = H;
 const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 
 const connect = () => ev(() => {
@@ -143,13 +143,15 @@ try {
   i = await info();
   check(i.activeDog === 'radhija', 'L1 troca de volta para a Radhija');
 
-  // R2 e R1 = arrancada (borda) — e vibração
+  // R1 = arrancada (borda) — e vibração
   await clearLog();
   await open();
   await axes(0, 1);
   await sleep(250);
-  await tap(B.RT);
-  await sleep(900);
+  await btn(B.RB, true);
+  await sleep(500); // segurado: a arrancada não repete
+  await btn(B.RB, false);
+  await sleep(500);
   await axes(0, 0);
   await open();
   await axes(0, 1);
@@ -157,9 +159,37 @@ try {
   await tap(B.RB);
   await axes(0, 0);
   await sleep(300);
-  check((await logOf('dog:dash')).length === 2, 'R2 e R1: arrancada (borda, não repete segurando)', `${(await logOf('dog:dash')).length}`);
+  check((await logOf('dog:dash')).length === 2, 'R1: arrancada (borda, não repete segurando)', `${(await logOf('dog:dash')).length}`);
   const rum = await ev(() => window.__rumbles);
   check(rum.length >= 2 && rum.every((r) => r.type === 'dual-rumble' && r.duration <= 300 && r.strongMagnitude <= 0.6), 'vibração dual-rumble curta e suave na arrancada', JSON.stringify(rum[0] || {}));
+
+  // R2 = superbafo (segurar mira, soltar sopra); não é mais arrancada
+  await sleep(900);
+  await clearLog();
+  await btn(B.RT, true);
+  await sleep(350);
+  i = await info();
+  check(i.bafo.aiming && (await logOf('dog:dash')).length === 0, 'R2 segurado: mira o superbafo (sem arrancada)', JSON.stringify(i.bafo));
+  await btn(B.RT, false);
+  await sleep(250);
+  check((await logOf('dog:bafo')).length === 1, 'soltar R2: sopra');
+
+  // L2 = Lambe-Lambe (as duas dogs): perto da irmã, segurar lambe
+  await sleep(900);
+  await ev(() => {
+    const g = window.__game.game;
+    const r = g.debug.ctrls.radhija;
+    g.debug.teleport('rhaenyra', r.x + 0.9, r.z);
+    g.setStay('rhaenyra', true);
+  });
+  await sleep(300);
+  await clearLog();
+  await btn(B.LT, true);
+  i = await waitFor((x) => x.lick.on && x.lick.stage === 'licking' && x.lick.strokes >= 1, { timeout: 3000 });
+  await btn(B.LT, false);
+  check(i.lick.by === 'radhija' && i.lick.target === 'rhaenyra' && (await logOf('dog:bafo')).length === 0, 'L2 com a Radhija: Lambe-Lambe na irmã (sem superbafo)', JSON.stringify(i.lick));
+  await waitFor((x) => !x.lick.on, { timeout: 2000 });
+  await tap(B.Y); // Vem
 
   // Segurar R1 com a Rhaenyra = empurrar (postura)
   await tap(B.LB);

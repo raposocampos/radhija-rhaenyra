@@ -1,5 +1,6 @@
-// Controles de toque: joystick virtual à esquerda e botões à direita (Agir, Pular, Bafo/Lamber, Arrancada/Empurrar,
-// Trocar, Fica/Vem), mais a pausa no canto. Só aparecem durante a partida e depois de um toque na tela (dispositivo
+// Controles de toque: joystick virtual à esquerda e botões à direita (Agir no meio; em volta Pular, Arrancada/Empurrar,
+// Lamber e Superbafo; acima Trocar e Fica/Vem), mais a pausa no canto. O Superbafo é só da Radhija: com a Rhaenyra ele
+// fica apagado (apertar dá a dica). Só aparecem durante a partida e depois de um toque na tela (dispositivo
 // 'touch'); teclado ou controle os escondem (a UI chama setActive). Cada botão vira a mesma entrada lógica do teclado
 // e do controle por input.touch (TOUCH_BUTTONS em src/game/input.js).
 // Multitoque por Pointer Events: um dedo no joystick e outros nos botões; arrastar o dedo de um botão para outro
@@ -22,8 +23,9 @@ function markup() {
   <div class="rr-touch__pad">
     ${button('act', pawIcon(), 'Agir')}
     ${button('jump', jumpIcon(), 'Pular')}
-    ${button('bafo', byDog(windIcon(), lickIcon()), byDog('Bafo', 'Lamber'))}
     ${button('dash', byDog(dashIcon(), pushIcon()), byDog('Arrancada', 'Empurrar'))}
+    ${button('lick', lickIcon(), 'Lamber')}
+    ${button('bafo', windIcon(), 'Superbafo')}
     ${button('swap', swapIcon(), 'Trocar')}
     ${button('stay', `<span class="tg-fica">${stayIcon()}</span><span class="tg-vem">${followIcon()}</span>`, '<span class="tg-fica">Fica</span><span class="tg-vem">Vem</span>')}
   </div>

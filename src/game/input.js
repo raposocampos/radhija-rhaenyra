@@ -6,12 +6,13 @@
 // Mapeamento por posição (PlayStation / Xbox):
 //   ✕/A → 'Jump' (pular; teclado Espaço) · ○/B → 'KeyE' (interagir/latir) · □/X → 'Bark' (latir sempre)
 //   △/Y → 'KeyF' (Fica/Vem) · L1/LB → 'KeyQ' (trocar) · Options/Start → 'Escape' (pausar)
-//   R1/RB ou R2/RT → Shift (segurar = empurrar; borda = arrancada)
-//   L2/LT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
+//   R1/RB → Shift (segurar = empurrar; borda = arrancada)
+//   R2/RT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
+//   L2/LT → lick() (segurar = Lambe-Lambe, as duas dogs; teclado L)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
-// Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Bafo/Lamber → bafo() (segurar) · Arrancada/Empurrar →
-//   Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' · Pausa → 'Escape';
-//   joystick virtual (touchStick) → axis().
+// Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Superbafo → bafo() (segurar) · Lamber → lick() (segurar) ·
+//   Arrancada/Empurrar → Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' ·
+//   Pausa → 'Escape'; joystick virtual (touchStick) → axis().
 // Dispositivo atual ('keyboard' | 'gamepad' | 'touch'): tecla, controle ou dedo na tela (pointerType touch/pen).
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -30,7 +31,7 @@ const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Spa
 export const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, LS: 10, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, HOME: 16 };
 export const PAD_DEADZONE = 0.18;
 
-/** Botões → código lógico (borda). R1/R2 viram Shift e L2 o bafo (tratados à parte). */
+/** Botões → código lógico (borda). R1 vira Shift, R2 o bafo e L2 o Lambe-Lambe (tratados à parte). */
 const PAD_EDGE_CODES = [
   [PAD.A, 'Jump'],
   [PAD.B, 'KeyE'],
@@ -73,13 +74,15 @@ export function shapeStick(rx, ry, dead = PAD_DEADZONE) {
 // ---------- toque ----------
 /**
  * Botões da tela de toque → entrada lógica (os mesmos códigos do teclado e do controle).
- * code: borda consumida pelo jogo (consume); hold: enquanto o dedo está no botão ('bafo' → bafo(), 'shift' → shift()).
- * @type {Record<string, { code?: string, hold?: 'bafo' | 'shift' }>}
+ * code: borda consumida pelo jogo (consume); hold: enquanto o dedo está no botão ('bafo' → bafo(), 'lick' → lick(),
+ * 'shift' → shift()).
+ * @type {Record<string, { code?: string, hold?: 'bafo' | 'lick' | 'shift' }>}
  */
 export const TOUCH_BUTTONS = {
   act: { code: 'KeyE' }, // Agir: interagir ou latir
   jump: { code: 'Jump' }, // Pular (Rhaenyra)
-  bafo: { hold: 'bafo' }, // Bafo (Radhija) / Lamber (Rhaenyra): segurar e soltar
+  bafo: { hold: 'bafo' }, // Superbafo (Radhija): segurar mira, soltar sopra
+  lick: { hold: 'lick' }, // Lamber (as duas): segurar perto da irmã
   dash: { code: TOUCH_SHIFT, hold: 'shift' }, // Arrancada (Radhija, toque) / Empurrar (Rhaenyra, segurar)
   swap: { code: 'KeyQ' }, // Trocar de cachorrinha
   stay: { code: 'KeyF' }, // Fica / Vem (companheira)
@@ -185,6 +188,7 @@ export function createInput({ onDevice } = {}) {
     dpad: { x: 0, y: 0 },
     shiftHeld: false,
     bafo: false,
+    lick: false,
     rtHeld: false,
     ltHeld: false,
     connected: false,
@@ -215,6 +219,7 @@ export function createInput({ onDevice } = {}) {
       pad.dpad = { x: 0, y: 0 };
       pad.shiftHeld = false;
       pad.bafo = false;
+      pad.lick = false;
       pad.connected = false;
       pad.last = null;
       if (device === 'gamepad') setDevice('keyboard');
@@ -233,6 +238,7 @@ export function createInput({ onDevice } = {}) {
         pad.dpad = { x: 0, y: 0 };
         pad.shiftHeld = false;
         pad.bafo = false;
+        pad.lick = false;
       }
       return;
     }
@@ -251,8 +257,9 @@ export function createInput({ onDevice } = {}) {
     for (const [i, code] of PAD_EDGE_CODES) {
       if (edge(i)) { pressed.add(code); activity = true; }
     }
-    const shiftNow = isDown(PAD.RB) || isDown(PAD.RT);
-    pad.bafo = isDown(PAD.LT);
+    const shiftNow = isDown(PAD.RB);
+    pad.bafo = isDown(PAD.RT);
+    pad.lick = isDown(PAD.LT);
     if (shiftNow && !pad.shiftHeld) { pressed.add(PAD_SHIFT); activity = true; }
     pad.shiftHeld = shiftNow;
     pad.stick = g.stick;
@@ -283,8 +290,10 @@ export function createInput({ onDevice } = {}) {
       return hit;
     },
     shift: () => any(SHIFT) || pad.shiftHeld || touchHeld('shift'),
-    /** Superbafo / Lambe-Lambe: segurando (teclado R, L2/LT ou o botão de toque). */
+    /** Superbafo: segurando (teclado R, R2/RT ou o botão de toque Superbafo). */
     bafo: () => down.has('KeyR') || pad.bafo || touchHeld('bafo'),
+    /** Lambe-Lambe: segurando (teclado L, L2/LT ou o botão de toque Lamber). */
+    lick: () => down.has('KeyL') || pad.lick || touchHeld('lick'),
     consumeShift() {
       let hit = false;
       for (const c of SHIFT) if (pressed.delete(c)) hit = true;
@@ -313,6 +322,7 @@ export function createInput({ onDevice } = {}) {
       if (g.rt > 0.35) pad.latched.add(PAD.RT);
       if (g.lt > 0.35) pad.latched.add(PAD.LT);
       pad.bafo = false;
+      pad.lick = false;
       for (const [, code] of PAD_EDGE_CODES) if (code !== 'Escape') pressed.delete(code);
       pad.shiftHeld = false;
       pressed.delete(PAD_SHIFT);
@@ -325,7 +335,7 @@ export function createInput({ onDevice } = {}) {
     },
     /**
      * Controles de toque (src/ui/touchControls.js): press/release de um botão de TOUCH_BUTTONS e o joystick virtual
-     * (stick(x, y, m), já com touchStick). Apertar gera a borda do código; segurar conta para bafo()/shift().
+     * (stick(x, y, m), já com touchStick). Apertar gera a borda do código; segurar conta para bafo()/lick()/shift().
      */
     touch: {
       /** @param {string} id */

@@ -98,7 +98,7 @@ try {
   state = await waitFor((i) => i.expresso.route === 'moon', { timeout: 3000 });
   check(state.expresso.route === 'moon' && state.expresso.routeChanges === 1, 'pouso pelo controle leva a agulha à lua, uma única vez');
   check((await H.logOf('dog:jump')).length === 1 && (await H.logOf('dog:land')).length === 1, 'pulo e pouso reais confirmados');
-  check(await page.locator('.rr-objective__text .k-pad [aria-label="L2 / LT"]').isVisible(), 'dica do superbafo mostra L2/LT quando o controle está ativo');
+  check(await page.locator('.rr-objective__text .k-pad [aria-label="R2 / RT"]').isVisible(), 'dica do superbafo mostra R2/RT quando o controle está ativo');
   await ev(() => { window.__fakePads = []; });
   await H.sleep(700);
   check((await info()).expresso.routeChanges === 1, 'permanecer no pedal não repete a troca');

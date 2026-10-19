@@ -18,10 +18,13 @@ export const DOG_CONFIG = Object.freeze({
     dashSpeed: 6.0,
     dashTime: 0.3,
     dashCooldown: 0.8,
-    // Superbafo (R / L2): nuvem soprada a ~2,6 m/s que dura ~5 s (ver src/game/mechanics/scent.js).
+    // Superbafo (R / R2): nuvem soprada a ~2,6 m/s que dura ~5 s (ver src/game/mechanics/scent.js).
     bafoSpeed: 2.6,
     bafoLife: 5,
     bafoCooldown: 0.8,
+    // Lambe-Lambe (L / L2), como a irmã: lambidinhas mais rápidas, esticando o pescoço até ela (é a menor).
+    lickStroke: 0.38,
+    lickReach: 1.5,
     accel: 16,
     decel: 20,
     turnSpeed: 13, // rad/s máx. de giro do corpo
@@ -45,8 +48,8 @@ export const DOG_CONFIG = Object.freeze({
     wallJumpTime: 1.05,
     wallReach: 0.8,
     wallBack: 0.32,
-    // Lambe-Lambe (R / L2, o mesmo botão do superbafo): pertinho da irmã (até lickReach m), segurar lambe
-    // em ritmo, uma lambida a cada lickStroke s. O efeito de cada lambida é decidido pela fase (puzzle.onLick).
+    // Lambe-Lambe (L / L2, as duas dogs): pertinho da irmã (até lickReach m), segurar lambe em ritmo, uma
+    // lambida a cada lickStroke s. O efeito de cada lambida é decidido pela fase (puzzle.onLick).
     lickStroke: 0.44,
     lickReach: 1.5,
     accel: 12,

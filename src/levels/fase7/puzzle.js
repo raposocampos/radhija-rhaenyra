@@ -2,8 +2,9 @@
 //   1. Só a Radhija cabe no túnel de manilha do morrinho, e o fundo dele tem lama: ela entra no parquinho
 //      enlameada (anda a metade e fica sem arrancada).
 //   2. O trinco do portão fica do lado de dentro: a Radhija destrava (E) e a Rhaenyra pode entrar.
-//   3. Lambe-Lambe (R com a Rhaenyra, pertinho da irmã): cada lambida tira uma placa de lama; na última a
-//      Radhija sacode as gotinhas, o pelo brilha e a arrancada volta.
+//   3. Lambe-Lambe (L com a Rhaenyra, pertinho da irmã): cada lambida tira uma placa de lama; na última a
+//      Radhija sacode as gotinhas, o pelo brilha e a arrancada volta. A Radhija também lambe, mas a lama é dela:
+//      a lambida dela na irmã é só carinho (dica para trocar).
 //   4. O frisbee está no alto do escorregador: só uma arrancada sobe a rampa. Andando, enlameada ou com a
 //      Rhaenyra, a dog escorrega de volta (a dica diz por quê). Lá em cima a Radhija pega o frisbee, vira e
 //      desce de barriga.
@@ -31,9 +32,9 @@ export const TEXT = {
     tunnelRh: 'A Rhaenyra não cabe no túnel: troque para a Radhija (Q)',
     latch: 'O trinco do portão fica do lado de dentro: destrave com a Radhija (E)',
     latchRh: 'A Radhija está no parquinho: troque (Q) e destrave o portão por dentro',
-    lickRh: 'Chegue pertinho da Radhija e faça o Lambe-Lambe (segure R)',
+    lickRh: 'Chegue pertinho da Radhija e faça o Lambe-Lambe (segure L)',
     comeIn: 'Portão aberto! Entre no parquinho com a Rhaenyra para limpar a Radhija',
-    muddyRad: 'Enlameada, a Radhija fica lenta e sem arrancada: troque para a Rhaenyra (Q) e faça o Lambe-Lambe (R)',
+    muddyRad: 'Enlameada, a Radhija fica lenta e sem arrancada: troque para a Rhaenyra (Q) e faça o Lambe-Lambe (L)',
     climb: 'Suba o escorregador com uma arrancada (Shift) e pegue o frisbee',
     climbRh: 'Só a arrancada da Radhija sobe o escorregador: troque para ela (Q)',
     climbFull: 'Leve a bolinha ao piquenique antes: com a boca cheia não dá para pegar o frisbee',
@@ -47,15 +48,17 @@ export const TEXT = {
   hint: {
     tooBig: 'A Rhaenyra é grande demais para o túnel… a Radhija cabe!',
     soaked: 'Que lamaçal! A Radhija ficou lenta e sem arrancada.',
-    noDash: 'Com tanta lama, nada de arrancada! A Rhaenyra pode limpar a irmã com o Lambe-Lambe (R).',
+    noDash: 'Com tanta lama, nada de arrancada! A Rhaenyra pode limpar a irmã com o Lambe-Lambe (L).',
     latchOutside: 'O trinco do portão fica do lado de dentro…',
     gateOpen: 'Portão destravado! Agora a Rhaenyra pode entrar.',
-    licking: 'Isso! Continue lambendo (segure R).',
+    licking: 'Isso! Continue lambendo (segure L).',
     clean: 'Limpinha! A arrancada da Radhija voltou.',
     alreadyClean: 'A Radhija já está limpinha! (mas adorou o carinho)',
-    lickFar: 'Chegue pertinho da Radhija para o Lambe-Lambe (R).',
+    lovedRh: 'A Rhaenyra adorou o carinho!',
+    muddyLick: 'A Rhaenyra adorou! Mas quem está enlameada é a Radhija: troque (Q) e lamba com a Rhaenyra (L).',
+    lickFar: 'Chegue pertinho da Radhija para o Lambe-Lambe (L).',
     lickFence: 'Tem cerca no meio! A Radhija abre o portão por dentro.',
-    slipMud: 'Com as patas enlameadas ela escorrega! Peça um Lambe-Lambe para a Rhaenyra (R).',
+    slipMud: 'Com as patas enlameadas ela escorrega! Peça um Lambe-Lambe para a Rhaenyra (L).',
     slipWalk: 'Escorrega! Só com uma arrancada (Shift) dá para subir.',
     slipRh: 'Pesada e sem arrancada, a Rhaenyra escorrega. A Radhija sobe correndo!',
     mouthFull: 'Com a bolinha na boca não deu para pegar o frisbee. Leve a bolinha ao piquenique antes!',
@@ -431,7 +434,13 @@ export function createPuzzle(ctx) {
   // ------------------------------------------------------------------ Lambe-Lambe (efeito desta fase)
   /** @param {import('../../types').DogController} c @param {import('../../types').LickInfo} lick */
   function onLick(c, lick) {
-    if (lick.target !== 'radhija' || !mud.muddy('radhija')) {
+    // a Radhija lambendo a irmã: só carinho (a lama é dela; só a Rhaenyra a limpa)
+    if (lick.target !== 'radhija') {
+      if (mud.muddy('radhija')) hints.now('muddyLick', 3.4, 6);
+      else hints.now('lovedRh', 2.4, 6);
+      return null;
+    }
+    if (!mud.muddy('radhija')) {
       hints.now('alreadyClean', 2.6, 6);
       return null;
     }
@@ -520,7 +529,8 @@ export function createPuzzle(ctx) {
     canDash: (c) => mud.canDash(c.name),
     onDashBlocked: (c) => { if (mud.muddy(c.name)) hints.now('noDash', 3.6, 5); },
     onLick,
-    onLickMiss: (c, miss) => { if (mud.muddy('radhija')) hints.now(miss?.blocked ? 'lickFence' : 'lickFar', 2.8, 4); },
+    // dicas de alcance só para a Rhaenyra (quem limpa); a lambidinha da Radhija no focinho não pede dica
+    onLickMiss: (c, miss) => { if (c.name === 'rhaenyra' && mud.muddy('radhija')) hints.now(miss?.blocked ? 'lickFence' : 'lickFar', 2.8, 4); },
     onBark: (c) => { if (!S.gateOpen && !insidePark(c) && reach(c, LATCH.x, FENCE.south) < 0.9) hints.now('latchOutside'); },
     setPrompt: (kind) => hints.setPrompt(kind),
     endActions() { S.slide = null; },

@@ -1,5 +1,5 @@
 // Superbafo da Radhija: sistema de cheiro (nuvens, vento, dutos, narizes) e a integração no jogo
-// (R / L2: segurar mira, soltar sopra; reações das dogs).
+// (R / R2: segurar mira, soltar sopra; reações das dogs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createScentField } from '../src/game/mechanics/scent.js';
@@ -107,22 +107,51 @@ test('superbafo: segurar R mira (parada, prévia), soltar sopra uma nuvem na fre
   assert.ok(h.log('dog:bafo').length >= 1);
 });
 
-test('superbafo: L2 do controle mira e sopra; L2 segurado no menu não vaza', async () => {
+test('superbafo: R2 do controle mira e sopra; R2 segurado no menu não vaza; R2 não é arrancada', async () => {
   const h = await createHeadlessGame({ level: 1 });
-  const l2 = (on) => h.setPad(h.pad({ down: on ? [PAD.LT] : [] }));
-  l2(false);
+  const r2 = (on) => h.setPad(h.pad({ down: on ? [PAD.RT] : [] }));
+  r2(false);
   h.run(0.2);
-  l2(true);
+  r2(true);
   h.run(0.4);
-  assert.ok(h.info().bafo.aiming, 'L2 mira');
-  l2(false);
+  assert.ok(h.info().bafo.aiming, 'R2 mira');
+  assert.equal(h.log('dog:dash').length, 0, 'R2 não arranca');
+  r2(false);
   h.run(0.2);
-  assert.equal(h.log('dog:bafo').length, 1, 'soltar L2 sopra');
+  assert.equal(h.log('dog:bafo').length, 1, 'soltar R2 sopra');
   h.tap('Escape');
-  l2(true);
+  r2(true);
   h.events.emit('ui:resume', {});
   h.run(0.5);
-  assert.ok(!h.info().bafo.aiming, 'L2 do menu travado até soltar');
+  assert.ok(!h.info().bafo.aiming, 'R2 do menu travado até soltar');
+  h.setPad(null);
+});
+
+test('controle: L2 é o Lambe-Lambe (não mira o bafo) e R1 é a arrancada', async () => {
+  const h = await createHeadlessGame({ level: 1 });
+  const rad = h.ctrls.radhija;
+  h.teleport('rhaenyra', rad.x + 0.9, rad.z, -Math.PI / 2);
+  h.game.setStay('rhaenyra', true);
+  h.setPad(h.pad({ down: [] }));
+  h.run(0.3);
+  h.clearLog();
+  h.setPad(h.pad({ down: [PAD.LT] }));
+  h.run(1.0);
+  assert.equal(h.info().bafo.aiming, false, 'L2 não mira');
+  assert.equal(h.log('lick:start').length, 1, 'L2 lambe a irmã');
+  assert.equal(h.info().lick.by, 'radhija');
+  h.setPad(h.pad({ down: [] }));
+  h.run(0.8);
+  assert.equal(h.info().lick.on, false);
+  h.game.setStay('rhaenyra', false);
+  h.teleport('radhija', -2.0, -0.2, Math.PI / 2);
+  h.run(0.9);
+  h.clearLog();
+  h.setPad(h.pad({ down: [PAD.RB] }));
+  h.run(0.2);
+  h.setPad(h.pad({ down: [] }));
+  h.run(0.2);
+  assert.equal(h.log('dog:dash').length, 1, 'R1 arranca');
   h.setPad(null);
 });
 
