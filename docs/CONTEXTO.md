@@ -10,8 +10,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   distraírem. Ajuste do usuário: a comida distrai por um **tempo determinado e generoso** (configurável por
   legume), não de vez; depois eles voltam a atrapalhar. Peças reutilizáveis, sem mexer em `src/levels/fase10/`: a
   sessão da fase 10 (PR #33) integra depois que este PR entrar.
-- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`, atualizado por merge com o main `168bda6` (PR #34)
-  e `04d7dbe` (PR #35). Consultar o PR para SHA, CI, E2E e prévia; nada
+- Branch `claude/porcos-81f6fa` (worktree próprio), base `eb1a148`, atualizado por merge com o main `168bda6` (PR #34),
+  `04d7dbe` (PR #35) e `e9e61fb` (PR #37). Consultar o PR para SHA, CI, E2E e prévia; nada
   rodou no PC além de `node --check`/`git diff --check`.
 - Feito: modelo `src/characters/pig.js` (SDF + esqueleto de 10 ossos, IK das patas, trava de chão, variantes de
   manchinhas, gestos `oink`/`bump`/`shake`, ações `idle`/`walk`/`sniff`/`eat`/`alert`/`lie`/`sleep`); mecânica
@@ -39,7 +39,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
   `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
 
-## Em andamento: modelos novos das dogs, com rig e animações fluidas (Claude, etapa 1 de 5)
+## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 
 - Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
   sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +
@@ -75,9 +75,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   patas dobradas pedalando, se esfrega; o corpo fica apoiado no chão pelo ponto mais baixo).
 - Pedido registrado para a **etapa 4** (retorno da prévia da fase 10, vale para todas as fases): a cabeça das dogs
   ainda atravessa algumas paredes e móveis, porque passa do círculo único de colisão quando a dog anda de frente.
-- Próximo passo: CI e E2E (`canil` e `todas`) no head atualizado com o main, revisar `shots/modelos/` (rolagem e
-  pulo com as orelhas), entregar a prévia e esperar a aprovação. Ordem de integração recomendada pelo orquestrador:
-  #35, #36, este (#37) e a fase 10; quem entra por último resolve os conflitos mantendo os dois lados.
+- Etapa 1 integrada ao main com a aprovação do usuário (squash `e9e61fb`, deploy `39312448427`). Não repetir
+  merge/deploy do #37; as etapas 2 a 5 seguem em PRs próprios.
 
 ## Entregue: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (PR #35, squash `04d7dbe`, deploy `39306814728`)
 
