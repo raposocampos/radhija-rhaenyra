@@ -37,6 +37,7 @@ src/game/                  NÚCLEO genérico
   companion.js             IA da companheira (seguir, esperar, ir até um ponto)
   dogController.js         movimento de uma dog (aceleração, giro, arrancada, pulo, colisão)
   cameraRig.js             câmera de seguimento, planos de foco, tela inicial e comemoração
+  celebrateLoop.js         lado e tamanho da voltinha da comemoração que cabem no cenário
   puzzleKit.js             peças para puzzles: dicas, prompts, colecionáveis, item carregado, entrega
   mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa, porcos…)
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
@@ -199,7 +200,7 @@ Campos que o núcleo usa (cada fase acrescenta os seus, como portões e placas):
 | `STATIC_COLLIDERS` | colisores fixos (§5) |
 | `NAV_NODES`, `NAV_EDGES` | grafo da companheira (§5) |
 | `COLLECTIBLES`, `COLLECTIBLE_PICKUP_R` | petiscos opcionais (contam na vitória) |
-| `GOAL` | objetivo: `{x, z, r}`, lugar da comemoração de cada dog e `entryPoints` (§4.5) |
+| `GOAL` | objetivo: `{x, z, r}`, lugar da comemoração de cada dog, `entryPoints` (§4.5) e `celebrateRim` (borda alta de caminha que a voltinha não cruza) |
 | `CAMERA` | `offset` (também define a base do WASD), `fov`, `limits`, plano da tela inicial (`title`), plano da comemoração e da vitória |
 
 ### 4.3 Iluminação (`lighting.js`, tipo `LightingPreset`)
@@ -276,7 +277,10 @@ Peças prontas:
 
 **Comemoração**: ao entregar, as duas dogs vão para `GOAL.celebrate`. Uma dog longe e fora do quadro reaparece
 num dos `GOAL.entryPoints` (fora da câmera) e chega andando; se não chegar a tempo, termina o trajeto durante a
-vitória e só então comemora. Nunca comemora parada no meio do caminho.
+vitória e só então comemora. Nunca comemora parada no meio do caminho. A comemoração (pulinhos, voltinha andando,
+reverência) anda a voltinha só no visual, com o controle parado; ao chegar, `celebrateLoop.js` escolhe o lado (longe
+da irmã) e o tamanho que cabem sem encostar em colisor nem na irmã e sem passar por cima da borda de uma caminha
+(`GOAL.celebrateRim`). Sem espaço (as duas dentro da caminha da fase 5), ela fica nos pulinhos.
 
 ## 5. Colisão e navegação
 

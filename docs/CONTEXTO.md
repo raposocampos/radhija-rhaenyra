@@ -1,32 +1,59 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #38 e #40 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #41 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`)
+
+- Achado do orquestrador (2026-10-19): a verificação "modelo novo: nada abaixo do chão" da suíte `empurra` falhou no
+  E2E do #40 (`39327090192`: −0,011 e −0,010; o limite é −0,010). O `lowest` do modelo novo é o ponto mais baixo ANTES
+  da correção do chão (`src/dogs/v2/dog.js`, `settle`: acima de 4 mm ele gira/levanta o corpo); na tela nada passa de
+  4 mm, mas o corpo dava um pulinho de até ~8 mm.
+- Causa: ao subir e descer, a passada volta aos poucos e a dobra da pata do passo (`curl`) não diminuía junto com a
+  subida do pé (o alvo de pé não levanta a pata): a ponta da pata de trás entrava no chão. Medido no modelo novo (Node,
+  13 fases): antes −11,7 mm na descida; com a correção −7,3 a −8,6 mm, o mesmo nível do passo comum dele (−7,1 mm ao
+  andar e parar). De pé, empurrando: −4,0 mm (só as almofadinhas). Sem a passada na descida sumiria de vez, mas as
+  traseiras deslizariam 16 cm (mudaria o visual aprovado); não foi feito.
+- Feito: `curl *= gaitAmp * (1 − sk)` e o alvo da pata não passa da altura de apoio (`dogAnimation.js`, sem mexer na
+  comemoração do #39; `git merge-tree` com `claude/comemoracao-natural` sem conflito); teste novo com o modelo novo em
+  `test/empurrao.test.mjs`; capturas: a descida no meio dela e o close da rosnadinha de perfil.
+- **PR #41.** Atualizado com o main `9715ee8` (PRs #40 e #39): conferir no PR o CI, o E2E `empurra` e a prévia do
+  head atual. Próximo passo: aprovação do usuário e integração; depois vêm o #42 e o #33.
+
+## Entregue: comemoração sem giro parado (PR #39, squash `9715ee8`, deploy `39336319071`)
+
+- Pedido do usuário (2026-10-19): na comemoração as dogs "giram um 360 sem andar, estranho, não fica natural".
+- Feito: em `dogAnimation.js` o ciclo da comemoração (3,2 s) virou pulinhos → **voltinha andando** num círculo de
+  ~20 cm (rumo, velocidade e giro vêm do círculo: as patas pisam, o corpo inclina e curva, a cabeça olha para onde
+  vai) → reverência. O giro de 360° do corpo parado saiu. `game.js` manda `anim.celebrateSide` (a voltinha vai para o
+  lado de fora, longe da irmã). Vale para o modelo atual e para o novo (que copia a pose). Teste em
+  `test/dogs.test.mjs`.
+- Retorno na prévia: "no fim das fases ... o loop corta no meio e ela fica sentada": a voltinha em andamento
+  termina antes de sentar ou parar (teste novo). Ordem combinada: entra depois do #38 (empurrão em pé).
+- O usuário aprovou a versão `2b3fdf0`, mas o merge ficou bloqueado por 3 observações da revisão automática (a
+  proteção do `main` exige conversas resolvidas). Corrigido depois da aprovação (pede CI, prévia e aprovação novas):
+  a voltinha é só visual, então `src/game/celebrateLoop.js` escolhe lado e tamanho que cabem (colisores, irmã e a
+  borda da caminha `GOAL.celebrateRim` nas fases 5 e 8 e na Arena dos Porquinhos); sem espaço, pulinhos no lugar
+  (fase 5). As pisadas da voltinha levam a passada da animação (`onFootstep(i, v)`: som e pegadas). Interrompida
+  por outra ação, ela volta ao lugar suave. Testes em `test/dogs.test.mjs` e `test/comemoracao.test.mjs`.
+- Branch atualizado com o main `369b0ff` (PR #38, empurrão em pé: a voltinha e o empurrão convivem em
+  `dogAnimation.js`/`game.js`) e depois com `1cd6647` (PR #40). E2E `todas` verde em `2c5f328` (39327099995, 2ª
+  tentativa; a 1ª caiu no teste instável dos porquinhos, corrigido no #40). As 3 conversas da revisão foram
+  respondidas e resolvidas.
+- Integrado ao main e publicado (squash `9715ee8`, deploy `39336319071`). Não repetir merge/deploy do #39.
 
 ## Entregue: empurrão em pé da Rhaenyra (PR #38, squash `369b0ff`, deploy `39326965839`)
 
-- Pedido do usuário (2026-10-19): "Rhaenyra tem mania de ficar empurrando os outros, aí daria pra usar pra tirar
-  alguma coisa de uma árvore, ou de algum lugar alto, empurrar pra cair". Desenho aprovado: o mesmo **R1 / Shift /
-  Empurrar** segurado de frente para algo empurrável no alto (árvore, mesinha, estante); ela fica de pé nas traseiras,
-  apoia as patas da frente e empurra no ritmo; **3 empurrões** e o que está lá em cima cai do outro lado. Nada de
-  tecla nova (longe de C e R3); o botão de toque é o Empurrar que já existe (segurar). Usar numa fase é decisão do
-  usuário (a fase 10, #33, quer a árvore antes da piñata).
-- Retorno do usuário na primeira prévia: **tirar o empurrão na irmã**; o movimento parecia "sarrando, não empurrando"
-  (o quadril ia e voltava): agora o empurrão sai das patas da frente e dos ombros (armam e batem, tranco curto do peito),
-  quadril e traseiras parados; **rosnadinha** a cada empurrão (som `shoveGrowl` e boquinha franzida).
-- Referência real: vídeos privados `referencias/fotos/2026-10-19/video-2.mp4` e `video-3.mp4` (fora do Git).
-- Feito: controlador (`pickShoveSpot`, `startShove`, `stepShove`, `SHOVE_*` em `dogController.js`), núcleo
-  (`src/game/shove.js` ligado em `game.js`), empurrável (`src/game/mechanics/shoveTarget.js`), pose
-  (`src/dogs/shovePose.js` + bloco em `dogAnimation.js`), visuais (`src/world/shoveProps.js`), Arena do Empurrão
-  (`src/levels/_empurra/`, `?level=empurra&play`), sons (`soundsEmpurra.js`), folhinhas (`particles.leaves`), testes
-  (`test/empurrao.test.mjs`, inclusive quadril parado e tranco dos ombros no modelo real), suíte E2E `empurra`
-  (também com `?dogs=novo`) e capturas (`capture-empurra.mjs`). Docs: ARQUITETURA §6 (Empurrão em pé) e README.
-- Coordenação: a sessão dos modelos das dogs porta a pose na etapa 3; mandar a ela os campos do `anim` (`shoveK`,
-  `shoveCycle`, `shoveN`, `shoveGap`, `shoveY`, `shoveOver`) e os quadros de `shovePose.js` quando o PR entrar.
-- Próximo passo: CI e E2E no head novo, prévia ao usuário e aprovação explícita antes de integrar; avisar o
-  orquestrador ao integrar. Se o #36 entrar antes, atualizar com o main e revalidar.
+- Pedido do usuário (2026-10-19): a mania da Rhaenyra de empurrar, para derrubar coisas do alto. Segurar **R1 / Shift /
+  Empurrar** de frente para algo empurrável no alto (árvore, mesinha, estante): ela fica de pé, empurra pelos ombros e
+  patas da frente (quadril parado), rosna a cada empurrão; **3 empurrões** e o item cai do outro lado. A irmã não é
+  empurrada (retorno do usuário). Arena: `?level=empurra&play`. Peças para fases: `createShoveTarget`,
+  `src/world/shoveProps.js`, `puzzle.shoveSpots`/`onShove` (ARQUITETURA §6). A fase 10 (#33) usa a árvore.
+- Aprovado no chat e integrado (head `07dc74a`, base `1a8fde5`); CI do main `39326868737`; produção conferida em
+  `369b0ff`. Não repetir merge/deploy do #38. Campos do `anim` e quadros da pose enviados à sessão dos modelos.
+- A correção seguinte do empurrão (pés no chão no modelo novo) está no PR #41.
 
-## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40
+## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40 (squash `1cd6647`, deploy `39332428726`)
 
 - Pedido do usuário (pela sessão da fase 10): na horta, um chiqueiro com três porcos; um botão abre a porteira, eles
   saem e atrapalham as dogs, e só se resolve pegando legumes do outro lado e largando no chão para eles se
