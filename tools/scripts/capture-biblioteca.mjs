@@ -182,6 +182,7 @@ try {
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   // de cima e de trás do ventilador, como a câmera do jogo (rente ao chão, a captura pegava um clarão branco do luar)
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.2, 2.4, fanAt.z + 2.0], look: [fanAt.x, 0.4, fanAt.z - 1.4] });
+  await shot('15b-fio-do-ventilador', { pos: [fanAt.x + 0.4, 4.4, fanAt.z + 1.9], look: [fanAt.x + 0.2, 0, fanAt.z - 1.5] });
   await keyDown('KeyR');
   await step(18);
   await keyUp('KeyR');
@@ -206,6 +207,9 @@ try {
   await until((i) => i.biblioteca.cat === 'bed', 900);
   await step(200);
   await shot('22-bichano-na-almofada', { pos: [-1.8, 0.9, 1.6], look: [L.CAT.bed.x, 0.1, L.CAT.bed.z] });
+  // o gato desceu: no escritório a câmera do jogo volta ao enquadramento normal
+  await setup({ active: 'radhija', place: { radhija: { x: -6.0, z: -1.0, yaw: Math.PI } }, settle: 150 });
+  await shot('22b-escritorio-depois-do-gato');
 
   // 5. a porta: impulso na maçaneta e a Radhija segurando o vão
   const kd = kick(L.HANDLE);

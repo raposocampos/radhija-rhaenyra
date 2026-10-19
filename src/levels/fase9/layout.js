@@ -265,8 +265,9 @@ export const CAMERA = {
   offset: [1.3, 4.4, 4.8],
   lookHeight: 0.3,
   limits: { minX: -6.6, maxX: 6.6, minZ: -2.3, maxZ: 1.9 },
-  // no escritório o foco sobe e vai um pouco ao norte: o Bichano no alto do armário entra no quadro
-  zones: [{ minX: -8.0, maxX: WALL_EH.x, minZ: -3.6, maxZ: 3.0, lookY: 1.0, dz: -1.0, dx: -0.2 }],
+  // no escritório o foco sobe e vai um pouco ao norte enquanto o Bichano está no alto do armário (o puzzle desliga a
+  // zona quando ele desce)
+  zones: [{ id: 'gato-no-armario', minX: -8.0, maxX: WALL_EH.x, minZ: -3.6, maxZ: 3.0, lookY: 1.0, dz: -1.0, dx: -0.2 }],
   title: { center: { x: 1.1, z: -1.2 }, radius: 5.4, angle: 0.4, height: 2.3, look: { x: 1.0, y: 0.8, z: -1.9 } },
   celebrate: { pos: [GOAL.x + 0.9, 1.35, GOAL.z + 2.0], look: [GOAL.x + 0.25, 0.35, GOAL.z - 0.45] },
   victoryOffset: { pos: [1.1, 0.25, 0.7], look: [1.22, 0.14, 0] },

@@ -177,8 +177,8 @@ function buildFan(F) {
   const C_GRN = new THREE.Color('#5fe08a');
   return {
     object: holder,
-    /** Ponto do fio na base (lado leste). */
-    plugPoint: () => new THREE.Vector3(holder.position.x + 0.2, 0.02, holder.position.z + 0.08),
+    /** Ponto do fio na base (lado oeste). */
+    plugPoint: () => new THREE.Vector3(holder.position.x - 0.2, 0.02, holder.position.z + 0.08),
     setPos(x, z) { holder.position.set(x, 0, z); },
     setAligned(on) { st.aligned = !!on; },
     setPower(on) { st.power = !!on; },
@@ -449,12 +449,18 @@ function ventIconTexture() {
   }, { repeat: false });
 }
 
-/** Fio do ventilador até a tomada: deitado no chão, refeito quando o ventilador anda. */
-function buildFanCord(outletAt) {
+/**
+ * Fio do ventilador até a tomada, deitado no chão e sempre à mostra: sai da base pelo oeste (longe dos vasos grandes e
+ * das folhas da samambaia, que o escondiam), corre para o norte, segue o pé da parede e sobe até a tomada. Refeito
+ * quando o ventilador anda.
+ */
+function buildFanCord(outletAt, minX) {
   const mat = stdMat('#efe9dc', { roughness: 0.55 });
   const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
   mesh.name = 'fio-do-ventilador';
   mesh.receiveShadow = true;
+  const R = 0.009;
+  const FLOOR = R + 0.004; // nunca encosta nem afunda no chão
   let last = null;
   return {
     object: mesh,
@@ -462,11 +468,22 @@ function buildFanCord(outletAt) {
     follow(plug) {
       if (last && last.distanceTo(plug) < 0.02) return;
       last = plug.clone();
-      const wallFoot = new THREE.Vector3(outletAt.x, 0.012, outletAt.z + 0.03);
-      const mid = new THREE.Vector3((plug.x + wallFoot.x) / 2 + 0.35, 0.012, (plug.z + wallFoot.z) / 2);
-      const curve = new THREE.CatmullRomCurve3([plug, new THREE.Vector3(plug.x + 0.12, 0.012, plug.z), mid, wallFoot, new THREE.Vector3(outletAt.x, outletAt.y - 0.06, outletAt.z + 0.02)]);
+      const cx = Math.max(minX, plug.x - 0.12); // nunca por baixo do vaso de rodinhas
+      const wallZ = outletAt.z + 0.05;
+      const pts = [
+        new THREE.Vector3(plug.x, 0.02, plug.z), new THREE.Vector3(cx, FLOOR, plug.z - 0.04),
+        new THREE.Vector3(cx, FLOOR, wallZ + 0.3), new THREE.Vector3(cx + 0.15, FLOOR, wallZ + 0.03),
+        new THREE.Vector3(outletAt.x - 0.15, FLOOR, wallZ), new THREE.Vector3(outletAt.x, FLOOR + 0.01, wallZ - 0.01),
+        new THREE.Vector3(outletAt.x, outletAt.y - 0.065, outletAt.z + 0.02),
+      ];
+      // curva suave amostrada; os pontos ficam acima do chão (a interpolação podia passar por baixo)
+      const smoothCurve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+      const samples = smoothCurve.getSpacedPoints(48).map((p) => (p.y < FLOOR ? p.setY(FLOOR) : p));
+      /** @type {THREE.CurvePath<THREE.Vector3>} */
+      const path = new THREE.CurvePath();
+      for (let i = 0; i < samples.length - 1; i++) path.add(new THREE.LineCurve3(samples[i], samples[i + 1]));
       mesh.geometry.dispose();
-      mesh.geometry = new THREE.TubeGeometry(curve, 40, 0.008, 5, false);
+      mesh.geometry = new THREE.TubeGeometry(path, samples.length - 1, R, 6, false);
     },
   };
 }
@@ -561,7 +578,7 @@ export function buildConservatory({ root, layout }) {
   const conduitEast = makeLink([new THREE.Vector3(BREAKER.x, 2.9, wallZ), new THREE.Vector3(7.95, 2.9, wallZ)], { radius: 0.014, color: '#8f948f', glow: '#ffd36a', clips: 2, clipColor: '#6a6e6a', metal: true });
   const conduitDown = makeLink([breakerBox.boxSide, new THREE.Vector3(BREAKER.x + 0.23, breakerBox.boxSide.y, wallZ), new THREE.Vector3(BREAKER.x + 0.23, breakerBox.outletAt.y + 0.07, wallZ)], { radius: 0.012, color: '#8f948f', glow: '#ffd36a', clips: 2, clipColor: '#6a6e6a', metal: true });
   root.add(conduitUp.object, conduitEast.object, conduitDown.object);
-  const fanCord = buildFanCord(breakerBox.outletAt);
+  const fanCord = buildFanCord(breakerBox.outletAt, PLANTER.minX + PLANTER.half + 0.12);
   root.add(fanCord.object);
   fanCord.follow(fan.plugPoint());
 

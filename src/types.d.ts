@@ -150,9 +150,10 @@ export interface CameraConfig {
   victoryOffset?: { pos: Vec3Tuple; look: Vec3Tuple };
   /**
    * Zonas (retângulos do ponto de foco) onde o seguimento olha mais alto (lookY, em m acima de lookHeight) e
-   * deslocado (dx, dz): para mostrar algo no alto da parede do fundo. Entra e sai suave.
+   * deslocado (dx, dz): para mostrar algo no alto da parede do fundo. Entra e sai suave. Com `id`, a fase liga e
+   * desliga a zona com cam.setZone(id, on).
    */
-  zones?: { minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
+  zones?: { id?: string; minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
 }
 
 /**

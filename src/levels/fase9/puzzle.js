@@ -626,6 +626,8 @@ export function createPuzzle(ctx) {
 
     stepCat(dt);
     stepBookFall(dt);
+    // a câmera do escritório olha para o alto do armário só enquanto o Bichano está lá em cima
+    cam?.setZone?.('gato-no-armario', S.cat === 'asleep' || S.cat === 'waking' || S.cat === 'jumping');
 
     // porta do escritório: a maçaneta (de fora ou de dentro) abre; a mola fecha e espera quem estiver no vão
     // a Radhija no vão é o calço: com a porta aberta, a mola só fecha depois que ela sai (senão a folha encostava nela e
