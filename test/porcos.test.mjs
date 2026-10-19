@@ -285,29 +285,39 @@ test('rebanho: comida no chão distrai o porco mais perto por um tempo; depois e
 });
 
 test('rebanho: acabou a distração sem dog por perto: o porco volta a passear (o caso que travava a prévia)', async () => {
-  const h = herd({ foods: { corn: { time: 5, eat: 2 } } });
-  h.pigs.releaseNow();
-  h.run(2); // as dogs estão fora da área: eles só passeiam
-  // todos no meio de um passeio quando o legume cai (antes, ao voltar, o passeio ficava sem destino e o jogo parava)
-  for (const P of h.pigs.pigs) Object.assign(P, { state: 'roam', idleAct: 'go', goal: { x: P.x + 0.4, z: P.z + 0.4 }, idleT: 7 });
-  const P0 = h.pigs.pigs[0];
-  h.pigs.addFood({ x: P0.x, z: Math.min(P0.z + 0.8, 3.5), kind: 'corn' });
-  let P = null, x0 = 0, z0 = 0;
-  const errs = await consoleErrors(() => {
-    h.run(0.05);
-    P = h.pigs.pigs[h.events('pig:smell')[0].pig];
-    assert.equal(P.state, 'toFood');
-    h.run(11);
-    assert.equal(h.events('pig:done').length, 1, 'comeu, cochilou e acordou');
-    assert.equal(h.events('pig:done')[0].reason, 'time');
-    x0 = P.x;
-    z0 = P.z;
-    h.run(6);
-  });
-  assert.deepEqual(errs, []);
-  assert.equal(h.pigs.info().errors, 0);
-  assert.equal(P.state, 'roam');
-  assert.ok(Math.hypot(P.x - x0, P.z - z0) > 0.1, 'voltou a passear');
+  // determinístico: semente fixa e os três porcos em lugares conhecidos, longe uns dos outros
+  const random = Math.random;
+  Math.random = seeded(36);
+  try {
+    const h = herd({ foods: { corn: { time: 5, eat: 2 } } });
+    h.pigs.releaseNow();
+    const spots = [[1.0, 1.0], [3.6, 2.8], [-0.1, 3.2]];
+    spots.forEach(([x, z], i) => h.pigs.place(i, x, z, 0, 'roam'));
+    // todos no meio de um passeio quando o legume cai (antes, ao voltar, o passeio ficava sem destino e o jogo parava);
+    // as dogs estão fora da área: ninguém para correr atrás
+    for (const P of h.pigs.pigs) Object.assign(P, { idleAct: 'go', goal: { x: P.x + 0.4, z: P.z - 0.4 }, idleT: 7 });
+    h.pigs.addFood({ x: 1.0, z: 1.8, kind: 'corn' }); // 0,8 m do porco 0; os outros, bem mais longe
+    const P = h.pigs.pigs[0];
+    let x0 = 0, z0 = 0;
+    const errs = await consoleErrors(() => {
+      h.run(0.05);
+      assert.equal(h.events('pig:smell')[0].pig, 0, 'o porco mais perto vai comer');
+      assert.equal(P.state, 'toFood');
+      assert.equal(P.idleAct, 'go', 'o passeio de antes continua marcado (o caso que travava)');
+      h.run(11);
+      assert.equal(h.events('pig:done').length, 1, 'comeu, cochilou e acordou');
+      assert.equal(h.events('pig:done')[0].reason, 'time');
+      x0 = P.x;
+      z0 = P.z;
+      h.run(6);
+    });
+    assert.deepEqual(errs, []);
+    assert.equal(h.pigs.info().errors, 0);
+    assert.equal(P.state, 'roam');
+    assert.ok(Math.hypot(P.x - x0, P.z - z0) > 0.1, 'voltou a passear');
+  } finally {
+    Math.random = random;
+  }
 });
 
 test('rebanho: um erro num porco não trava o jogo: sai no console uma vez por porco e os outros seguem', async () => {
