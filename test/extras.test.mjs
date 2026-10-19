@@ -76,7 +76,7 @@ function watchParty(h, who) {
     h.step();
     if (ex(h).poop?.phase !== 'party') continue;
     assert.ok(!hitsStatic(h, c.x, c.z, c.r * 0.98, c.size), `a comemoração não atravessa nada (${c.x.toFixed(2)}, ${c.z.toFixed(2)})`);
-    assert.ok(Math.hypot(c.x - plop.x, c.z - plop.z) > c.r + 0.05, 'não pisa no cocô');
+    assert.ok(Math.hypot(c.x - plop.x, c.z - plop.z) > c.r * 1.15, 'não pisa no cocô');
     if (c.animSpeed > 1.5) fast++;
   }
   return fast;

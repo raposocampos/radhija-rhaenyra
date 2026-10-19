@@ -190,8 +190,19 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     }
     return true;
   }
-  /** Onde o cocô cai com a dog em (x, z) olhando para yaw: atrás dela. */
-  const poopSpot = (c, x, z, yaw) => ({ x: x - Math.sin(yaw) * c.r * 1.45, z: z - Math.cos(yaw) * c.r * 1.45 });
+  /** Onde o cocô cai com a dog em (x, z) olhando para yaw: atrás dela (back × raio; side: para o lado, × raio). */
+  const poopSpot = (c, x, z, yaw, back = 1.45, side = 0) => ({
+    x: x - Math.sin(yaw) * c.r * back + Math.cos(yaw) * c.r * side,
+    z: z - Math.cos(yaw) * c.r * back - Math.sin(yaw) * c.r * side,
+  });
+  /** O chão livre mais perto de atrás dela (encostada em algo, o cocô não cai dentro dele). */
+  function freePoopSpot(c, x, z, yaw) {
+    for (const [back, side] of [[1.45, 0], [1.45, 0.6], [1.45, -0.6], [1.2, 0.9], [1.2, -0.9], [1.2, 0]]) {
+      const spot = poopSpot(c, x, z, yaw, back, side);
+      if (!overlaps(spot.x, spot.z, 0.05, c.size)) return spot;
+    }
+    return poopSpot(c, x, z, yaw);
+  }
   /**
    * A voltinha que cabe: um círculo pequeno (de 0,8 a 1,3 volta, terminando de perfil para a câmera); sem espaço, um
    * raio menor, meia volta ou só um quarto de volta para ajeitar a direção. → { path, side, prof } ou null (nem isso
@@ -360,7 +371,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
     const back = c.r * 1.45;
     STRAIN_AT.forEach((k, i) => { if (once(P.marks, `s${i}`, p >= k)) emit('extra:strain', { name: P.who, x: c.x, z: c.z, n: i }); });
     if (once(P.marks, 'plop', p >= POOP_DROP)) {
-      const spot = poopSpot(c, P.x, P.z, P.yaw);
+      const spot = freePoopSpot(c, P.x, P.z, P.yaw);
       P.px = spot.x;
       P.pz = spot.z;
       dropPoop(spot.x, spot.z);
