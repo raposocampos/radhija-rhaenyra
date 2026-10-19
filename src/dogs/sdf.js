@@ -181,8 +181,10 @@ export function compileSDF(groups) {
   return sdf;
 }
 
-// Caixa envolvente das primitivas dos grupos
-export function groupsBounds(groups, margin) {
+// Caixa envolvente das primitivas dos grupos. Sem `exact`, o cone achatado (sx) entra com o raio dividido por sx em
+// todos os eixos, como sempre foi no modelo atual; com `exact` (modelo novo), com o raio inteiro (o achatamento é só
+// em x): a beirada larga de uma orelha não fica fora da grade e a malha sai fechada.
+export function groupsBounds(groups, margin, { exact = false } = {}) {
   const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
   const ext = (c, r) => {
     for (let i = 0; i < 3; i++) {
@@ -195,7 +197,7 @@ export function groupsBounds(groups, margin) {
       if (p.t === 0) ext(p.c, p.r);
       else if (p.t === 1) ext(p.c, Math.max(...p.r));
       else {
-        const sx = p.sx ? 1 / p.sx : 1;
+        const sx = exact ? 1 : p.sx ? 1 / p.sx : 1;
         ext(p.a, p.ra * sx);
         ext(p.b, p.rb * sx);
       }

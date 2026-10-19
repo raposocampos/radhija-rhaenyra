@@ -473,7 +473,34 @@ export function stubProps(id, root, layout) {
     case 'modelo': return stubPlaceholderProps(root, layout);
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);
+    case 'canil': return stubCanilProps(root);
     case 'porcos': return stubPorcosProps(root, layout);
     default: throw new Error(`Fase sem fábrica explícita de props: ${id}`);
   }
+}
+
+/** Canil das Dogs: a vitrine sem os modelos (pose, vista e câmera ficam só no estado).
+ * @param {THREE.Group} root */
+export function stubCanilProps(root) {
+  const S = { pose: 'parada', view: 'girando', skeleton: false, wet: false };
+  const display = checked('canil.display', {
+    object: object(root, 'vitrine'),
+    poses: [{ id: 'parada', label: 'Parada' }, { id: 'trote', label: 'Trote' }],
+    views: [{ id: 'girando', label: 'Girando' }, { id: 'lado', label: 'De lado' }],
+    start() {},
+    /** @param {string} id */
+    setPose(id) { S.pose = id; return true; },
+    /** @param {string} id */
+    setView(id) { S.view = id; return true; },
+    /** @param {boolean} on */
+    setSkeleton(on) { S.skeleton = on; },
+    /** @param {boolean} on */
+    setWet(on) { S.wet = on; },
+    /** @param {number} dt */
+    update(dt) {},
+    reset() { Object.assign(S, { pose: 'parada', view: 'girando', skeleton: false, wet: false }); },
+    info() { return { ...S, dogs: [] }; },
+  });
+  const props = { display, collectibles: [], reset() { display.reset(); } };
+  return level('canil', props);
 }
