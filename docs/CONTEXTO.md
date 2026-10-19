@@ -133,6 +133,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     frente dele). Ao ligar o disjuntor, o pulso sobe até a parede do fundo, acende as luzinhas novas em volta do
     quadro (ramal do conduíte; a câmera mostra) e só depois segue para a varanda (a câmera vai para as luzinhas da
     festa). Etapas em `props.power.stage` (`house` → `painting` → `porch` → `on`), `info().quintal.powerStage`.
+    `cam.focusShot` ganhou `from` opcional (de onde a câmera olha; sem ele, nada muda nas outras fases).
   - Portão: pendurado atrás dos mourões e abrindo 162°, encostado na cerca. Antes a folha aberta formava um bolsão
     com a cerca da horta e a Radhija, voltando do galpão pelo vão, ficava presa.
   - Casa na árvore ampliada (deque 3,4 × 2,35 m, tronco no canto de trás, casinha nos fundos, luneta, baú,

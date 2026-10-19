@@ -872,8 +872,8 @@ export function createPuzzle(ctx) {
       if (pstage === 'painting') {
         cam?.focusShot(PAINTING.x + 0.25, PAINTING.z + 2.0, { hold: 2.1, inT: 0.7, outT: 0.6, scale: 0.5, target: { x: PAINTING.x, y: PAINTING.y + 0.05, z: PAINTING.z + 0.05 } });
       } else if (pstage === 'porch') {
-        // de baixo do pergolado, na frente da varanda: o bolo e as luzinhas acendendo em cima
-        cam?.focusShot(-2.4, -4.0, { hold: 2.0, inT: 0.9, outT: 0.8, scale: 0.38, target: { x: -2.4, y: 1.15, z: -4.0 } });
+        // do quintal, baixinho (por baixo das vigas do pergolado): a varanda, o bolo e as luzinhas acendendo
+        cam?.focusShot(-2.0, -3.6, { hold: 2.0, inT: 0.9, outT: 0.8, target: { x: -2.0, y: 1.6, z: -3.6 }, from: { x: 0.6, y: 3.2, z: 1.2 } });
       } else if (pstage === 'on') hints.now('powerOn', 3, 0);
       S.powerStage = pstage;
     }

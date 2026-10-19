@@ -79,7 +79,7 @@ export function createCameraRig(camera, layout) {
   let switchT = 0; // após trocar de dog, seguimento mais macio
 
   // Plano de foco curto
-  let shot = null; // { point: Vector3, t, inT, hold, outT, scale }
+  let shot = null; // { point: Vector3, target?, from?, t, inT, hold, outT, scale }
 
   // Transição entre modos
   let mode = 'title';
@@ -126,7 +126,8 @@ export function createCameraRig(camera, layout) {
       else w = 1 - smoother((s.t - s.inT - s.hold) / s.outT);
       const point = s.target || s.point;
       shotLook.set(point.x, point.y, point.z);
-      shotPos.copy(offset).multiplyScalar(s.scale).add(shotLook);
+      if (s.from) shotPos.set(s.from.x, s.from.y, s.from.z);
+      else shotPos.copy(offset).multiplyScalar(s.scale).add(shotLook);
       // Entrar de onde a câmera está, inclusive ao substituir outro plano.
       if (s.t < s.inT) { outPos.copy(s.fromPos); outLook.copy(s.fromLook); }
       outPos.lerp(shotPos, w);
@@ -161,9 +162,10 @@ export function createCameraRig(camera, layout) {
     apply();
   }
 
+  /** `from` (opcional): de onde a câmera olha (sem ele, do lado de sempre, a `scale` do afastamento normal). */
   function focusShot(x, z, { hold = 1.2, inT = 0.55, outT = 0.7, scale = 0.8,
-    y = lookHeight + 0.1, target = null } = {}) {
-    shot = { point: new THREE.Vector3(x, y, z), target, t: 0, inT, hold, outT, scale,
+    y = lookHeight + 0.1, target = null, from = null } = {}) {
+    shot = { point: new THREE.Vector3(x, y, z), target, from, t: 0, inT, hold, outT, scale,
       fromPos: pos.clone(), fromLook: look.clone() };
   }
 
