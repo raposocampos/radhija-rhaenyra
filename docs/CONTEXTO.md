@@ -1,7 +1,28 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (pombo mais bonito, PR #34, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (empurrão em pé da Rhaenyra, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: empurrão em pé da Rhaenyra (Claude, branch `claude/empurrao-em-pe`)
+
+- Pedido do usuário (2026-10-19): "Rhaenyra tem mania de ficar empurrando os outros, aí daria pra usar pra tirar
+  alguma coisa de uma árvore, ou de algum lugar alto, empurrar pra cair". Desenho aprovado: o mesmo **R1 / Shift /
+  Empurrar** segurado de frente para algo empurrável no alto (árvore, mesinha, estante) ou para a irmã; ela fica de pé
+  nas traseiras, apoia as patas da frente e empurra no ritmo; **3 empurrões** e o que está lá em cima cai do outro
+  lado; **pode empurrar a irmã** (ela se afasta uns passinhos e bufa). Nada de tecla nova (longe de C e R3); o botão
+  de toque é o Empurrar que já existe (segurar). Usar numa fase é decisão do usuário, depois da arena.
+- Referência real: vídeos privados `referencias/fotos/2026-10-19/video-2.mp4` e `video-3.mp4` (fora do Git): de pé
+  com o corpo a ~50–60°, patas da frente esticadas na perna da pessoa, rabo para fora, cabeça erguida.
+- Feito: controlador (`pickShoveSpot`, `startShove`, `stepShove`, `SHOVE_*` em `dogController.js`), núcleo
+  (`src/game/shove.js` ligado em `game.js`: alvo, botão seguro, `puzzle.onShove`, reação da irmã), empurrável
+  (`src/game/mechanics/shoveTarget.js`), pose (`src/dogs/shovePose.js` + bloco em `dogAnimation.js`), visuais
+  (`src/world/shoveProps.js`), Arena do Empurrão (`src/levels/_empurra/`, `?level=empurra&play`), sons
+  (`soundsEmpurra.js`), folhinhas (`particles.leaves`), testes (`test/empurrao.test.mjs`), suíte E2E `empurra`
+  (`test-empurra.mjs`) e capturas (`capture-empurra.mjs`). Docs: ARQUITETURA §6 (Empurrão em pé) e README.
+- Coordenação: a sessão dos modelos das dogs (esqueleto v2, PR #37) porta a pose depois deste PR; mandar a ela os
+  campos do `anim` (`shoveK`, `shoveCycle`, `shoveN`, `shoveGap`, `shoveY`, `shoveOver`, `shoved`, `huff`) e as
+  funções `shoveStand`/`shoveBeat` quando o PR entrar.
+- Próximo passo: PR com CI, E2E `empurra` e capturas revisadas; prévia ao usuário e aprovação antes de integrar.
 
 ## Em andamento: Lambe-Lambe nas duas dogs, superbafo no R2 e Lambe-Lambe no L2 (Claude, branch `claude/lambe-radhija`)
 

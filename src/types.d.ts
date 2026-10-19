@@ -382,9 +382,10 @@ export interface DogController {
  * Algo empurrável no alto (empurrão em pé da Rhaenyra) ou a irmã. (x, z): pé da superfície no meio da face onde as patas
  * da frente apoiam; (nx, nz): normal unitária, para o lado de onde a dog vem; y: altura das patas (m); w: meia largura
  * da face (m; 0 = redonda, ela fica de frente para o meio); over: quanto além da face as patas apoiam (em cima de uma
- * beirada ou das costas da irmã, m); kind: o que é ('tree', 'table', 'shelf', 'sister'…); sister: quem, se for a irmã.
+ * beirada ou das costas da irmã, m); kind: o que é ('tree', 'table', 'shelf', 'sister'…); sister: quem, se for a irmã;
+ * look: para onde quem empurra olha (o item lá em cima, a cabeça da irmã).
  */
-export interface ShoveSpot { id: string; x: number; z: number; nx: number; nz: number; y: number; w?: number; over?: number; kind?: string; sister?: DogName | null }
+export interface ShoveSpot { id: string; x: number; z: number; nx: number; nz: number; y: number; w?: number; over?: number; kind?: string; sister?: DogName | null; look?: XYZ }
 /**
  * Empurrável do layout (createShoveTarget): o ponto de apoio como em ShoveSpot, quantos empurrões até o item cair, a
  * mola do balanço e o item lá em cima: from/edge = onde ele está e de onde sai do apoio (mundo), land = pontos do chão
@@ -930,6 +931,8 @@ export interface DogAnim {
    */
   shoveK?: number;
   shoveCycle?: number;
+  /** Empurrões dados desde que ficou de pé (a traseira que se ajeita alterna). */
+  shoveN?: number;
   shoveGap?: number;
   shoveY?: number;
   shoveOver?: number;

@@ -29,7 +29,7 @@ const sstep = (a, b, x) => {
  */
 export function createShove({ emit }) {
   /** @type {import('../types').ShoveSpot} */
-  const sis = { id: SISTER_SPOT, x: 0, z: 0, nx: 0, nz: 1, y: 0.32, w: 0, over: 0.1, kind: 'sister', sister: null };
+  const sis = { id: SISTER_SPOT, x: 0, z: 0, nx: 0, nz: 1, y: 0.32, w: 0, over: 0.1, kind: 'sister', sister: null, look: { x: 0, y: 0.4, z: 0 } };
   /** Onde estava a irmã quando as patas chegaram (para saber se ela saiu). */
   const sisAt = { x: 0, z: 0, set: false };
   /** Reação da irmã: quem, há quanto tempo, para onde foi empurrada e por quem. */
@@ -46,6 +46,11 @@ export function createShove({ emit }) {
       x: C.x + nx * C.r, z: C.z + nz * C.r, nx, nz,
       y: (C.cfg.visual?.shoulder ?? 0.3) + 0.02, over: C.r * 0.6, sister: C.name,
     });
+    // olha para a cabeça da irmã
+    const hl = (C.cfg.visual?.length ?? 0.6) * 0.42;
+    sis.look.x = C.x + Math.sin(C.yaw) * hl;
+    sis.look.y = C.cfg.visual?.headTop ?? 0.45;
+    sis.look.z = C.z + Math.cos(C.yaw) * hl;
     return sis;
   }
 

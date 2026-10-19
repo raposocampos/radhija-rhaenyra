@@ -15,7 +15,7 @@ import { createShove, REACT_STEP, REACT_DUR, SISTER_SPOT } from '../src/game/sho
 import { withStart } from '../src/dogs/config.js';
 import { LEVELS } from '../src/levels/index.js';
 import empurra from '../src/levels/_empurra/index.js';
-import { createHeadlessGame } from './helpers/headless.mjs';
+import { createHeadlessGame, installBrowserStubs } from './helpers/headless.mjs';
 import { buildLevelWorld } from './helpers/worldBuild.mjs';
 
 const DT = 1 / 60;
@@ -455,5 +455,104 @@ test('Arena do Empurrão (cenário real): os itens estão onde o layout diz e o 
   const world = createCollisionWorld(L);
   for (const S of Object.values(T)) {
     for (const p of S.item.land) assert.ok(!world.overlaps(p.x, p.z, S.item.r + 0.02, 'small'), `pouso livre em ${p.x}, ${p.z}`);
+  }
+});
+
+test('pose de pé no modelo real: patas da frente no apoio, traseiras no chão, nada atravessa o chão nem o que ela empurra', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  const { SHOVE_PROP_SIZE, treeTrunkRadius } = await import('../src/world/shoveProps.js');
+  const v = new THREE.Vector3();
+  const cases = [
+    { name: 'tronco', spot: { ...SPOT, y: SHOVE_PROP_SIZE.tree.paws, over: 0, w: 0, kind: 'tree' }, trunkR: treeTrunkRadius(SHOVE_PROP_SIZE.tree.paws) },
+    { name: 'mesinha', spot: { ...SPOT, y: SHOVE_PROP_SIZE.table.h, over: 0.05, w: 0.22, kind: 'table' } },
+    { name: 'estante', spot: { ...SPOT, y: SHOVE_PROP_SIZE.shelf.h, over: 0.04, w: 0.28, kind: 'shelf' } },
+    { name: 'irmã', spot: { ...SPOT, y: 0.32, over: 0.1, w: 0, kind: 'sister' } },
+  ];
+  for (const K of cases) {
+    const d = createDog('rhaenyra');
+    const world = createCollisionWorld({ WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } }, STATIC_COLLIDERS: [] });
+    const c = rhaenyra(0, -1.5, Math.PI);
+    const S = K.spot;
+    const sync = () => {
+      const on = !!c.shove;
+      d.object.position.set(c.x, 0, c.z);
+      d.object.rotation.y = c.yaw;
+      // o mesmo que o núcleo manda (game.js → applyDogs)
+      d.update(DT, {
+        speed: c.animSpeed, action: on ? 'shove' : 'none', shoveK: on ? c.shoveK : 0,
+        shoveCycle: on && c.shoveStage === 'push' ? c.shoveCycle : -1, shoveN: c.shoveN,
+        shoveGap: c.r + SHOVE_GAP, shoveY: S.y, shoveOver: S.over,
+      });
+      d.object.updateMatrixWorld(true);
+    };
+    for (let i = 0; i < 30; i++) sync();
+    startShove(c, S);
+    const into = (p) => (S.z - p.z) * S.nz + (S.x - p.x) * S.nx; // + = além da face (dentro da coisa)
+    let minY = Infinity;
+    let worst = '';
+    const paws = [];
+    for (let i = 0; i < 220 && c.shove; i++) {
+      c.shoveHeld = i < 150;
+      steer(c, DT, { dx: 0, dz: 0, speed: 0 });
+      integrate(c, DT, world);
+      c.shoveHit = null;
+      sync();
+      for (const b of d.bones) {
+        b.getWorldPosition(v);
+        if (v.y < minY) { minY = v.y; worst = `${b.name} (${c.shoveStage}, k ${c.shoveK.toFixed(2)})`; }
+        const pen = into(v);
+        if (b.name === 'FLp' || b.name === 'FRp') continue;
+        if (K.trunkR) {
+          // o tronco: nenhum osso dentro dele (até 1 m de altura)
+          const dAx = Math.hypot(v.x - S.x + S.nx * K.trunkR, v.z - S.z + S.nz * K.trunkR);
+          assert.ok(v.y > 1 || dAx > K.trunkR + 0.01, `${K.name}: ${b.name} dentro do tronco (${dAx.toFixed(3)} m do eixo)`);
+        } else if (S.kind === 'sister') {
+          // a irmã: nada abaixo das costas dela no lado de lá da face (as patas da frente apoiam em cima)
+          assert.ok(pen < 0.02 || v.y > S.y - 0.02, `${K.name}: ${b.name} entrou na irmã (${pen.toFixed(3)} m, y ${v.y.toFixed(3)})`);
+        } else {
+          // mesinha e estante: além da face, só acima do tampo
+          assert.ok(pen < 0.005 || v.y > S.y + 0.01, `${K.name}: ${b.name} atravessou a frente (${pen.toFixed(3)} m, y ${v.y.toFixed(3)})`);
+        }
+      }
+      if (c.shoveStage === 'push' && c.shoveCycle > 0.45 && c.shoveCycle < 0.6) {
+        const p = (n) => d.bones.find((b) => b.name === n).getWorldPosition(new THREE.Vector3());
+        paws.push({ FL: p('FLp'), FR: p('FRp'), HL: p('HLp'), HR: p('HRp'), hip: p('HLu') });
+      }
+    }
+    assert.ok(minY > -0.006, `${K.name}: ${worst} abaixo do chão (${minY.toFixed(3)})`);
+    assert.ok(paws.length > 3, `${K.name}: empurrou`);
+    for (const P of paws) {
+      for (const f of [P.FL, P.FR]) {
+        const pen = into(f);
+        if (S.over > 0) {
+          assert.ok(f.y > S.y + 0.015 && f.y < S.y + 0.1, `${K.name}: pata da frente em cima (${f.y.toFixed(3)} m; apoio ${S.y})`);
+          assert.ok(pen > -0.02 && pen < S.over + 0.06, `${K.name}: pata sobre a beirada (${pen.toFixed(3)} m além da face)`);
+        } else {
+          assert.ok(Math.abs(f.y - S.y) < 0.07, `${K.name}: pata na altura do apoio (${f.y.toFixed(3)} m; apoio ${S.y})`);
+          assert.ok(pen < -0.005 && pen > -0.075, `${K.name}: pata encostada na face sem atravessar (${pen.toFixed(3)} m)`);
+        }
+      }
+      for (const f of [P.HL, P.HR]) assert.ok(f.y > -0.005 && f.y < 0.07, `${K.name}: traseira no chão (${f.y.toFixed(3)})`);
+      assert.ok(P.hip.y > 0.17 && P.hip.y < 0.33, `${K.name}: quadril a ${P.hip.y.toFixed(3)} m`);
+    }
+    for (const b of d.bones) assert.ok(Number.isFinite(b.quaternion.x + b.position.y), `${K.name}: osso ${b.name} inválido`);
+  }
+});
+
+test('irmã empurrada no modelo real: tranco e "hmpf" sem NaN e sem atravessar o chão', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  const d = createDog('radhija');
+  const v = new THREE.Vector3();
+  for (let i = 0; i < 120; i++) {
+    const t = i * DT;
+    const k = t < 0.3 ? Math.sin((t / 0.3) * Math.PI) : 0;
+    d.update(DT, { speed: 0, action: 'none', shoved: k > 0 ? { k, side: 1, fwd: -0.3 } : null, huff: t > 0.6 ? Math.min(1, (t - 0.6) / 0.2) : 0, lookAt: { x: 0.6, y: 0.45, z: 0.4 } });
+    d.object.updateMatrixWorld(true);
+    for (const b of d.bones) {
+      assert.ok(Number.isFinite(b.quaternion.x + b.position.y), `osso ${b.name} inválido`);
+      assert.ok(b.getWorldPosition(v).y > -0.006, `${b.name} abaixo do chão`);
+    }
   }
 });

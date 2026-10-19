@@ -58,10 +58,10 @@ export function shoveBeat(cycle, n = 0) {
  */
 export function shoveStand({ hip, shoulder, lf, y, gap, over = 0, s = 1, lunge = 0 }) {
   const top = over > 0.005;
-  // alvo da IK = punho: em cima de uma beirada, ~3 cm acima do tampo e um pouco antes de onde a almofadinha apoia;
-  // na face, a almofadinha fica ~3 cm além do punho, rumo à superfície
-  const wy = y + (top ? 0.028 * s : 0);
-  const wz = top ? gap + over - 0.012 * s : gap - 0.03 * s;
+  // alvo da IK = a articulação da pata (no chão, ~4,5 cm acima dele): em cima de uma beirada, a essa altura do tampo,
+  // com a almofadinha apoiada logo à frente; na face, a almofadinha (pata virada para cima) fica ~3,5 cm além dela
+  const wy = y + (top ? 0.045 * s : 0);
+  const wz = top ? gap + over - 0.015 * s : gap - 0.035 * s;
   const yu = y / s;
   const hy = (0.235 + clamp((yu - 0.45) * 0.25, 0, 0.04)) * s + lunge * 0.004 * s;
   const vy = shoulder.y - hip.y;

@@ -228,7 +228,7 @@ export function createPuzzle(ctx) {
       empurra: {
         tree: targets.tree.info(), table: targets.table.info(), shelf: targets.shelf.info(),
         holder: Object.fromEntries(Object.entries(items).map(([k, it]) => [k, it.carry.holder])),
-        stance: shoveStance(SHOVE_TARGETS.arvorezinha, ctx.ctrls.rhaenyra.r),
+        stance: shoveStance(targets.tree.spot, ctx.ctrls.rhaenyra.r),
       },
     }),
     set onStageChange(fn) { onStageChange = fn; },

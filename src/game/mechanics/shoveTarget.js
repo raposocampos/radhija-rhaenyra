@@ -104,7 +104,7 @@ export function createShoveTarget({ id, cfg, emit, world = null, root = null, pr
   const pushes = cfg.pushes ?? 3;
   const sway = { ...SHOVE_SWAY[kind], ...(cfg.sway || {}) };
   /** @type {import('../../types').ShoveSpot} */
-  const spot = { id, x: cfg.x, z: cfg.z, nx: cfg.nx, nz: cfg.nz, y: cfg.y, w: cfg.w ?? 0, over: cfg.over ?? 0, kind };
+  const spot = { id, x: cfg.x, z: cfg.z, nx: cfg.nx, nz: cfg.nz, y: cfg.y, w: cfg.w ?? 0, over: cfg.over ?? 0, kind, look: { x: cfg.x, y: cfg.y + 0.3, z: cfg.z } };
   const IC = cfg.item || null;
   const restY = IC ? IC.restY ?? IC.r : 0;
   const center = IC?.center ?? 0;
@@ -204,6 +204,12 @@ export function createShoveTarget({ id, cfg, emit, world = null, root = null, pr
     }
     if (Math.abs(S.a) < 1e-5 && Math.abs(S.va) < 1e-4) { S.a = 0; S.va = 0; }
     prop?.setSway(S.a, S.va);
+    // quem empurra olha para o item lá em cima (depois que ele cai, para o alto da coisa)
+    if (item && !S.dropped) item.getWorldPosition(_c);
+    else _c.set(cfg.x - cfg.nx * 0.1, cfg.y + 0.35, cfg.z - cfg.nz * 0.1);
+    spot.look.x = _c.x;
+    spot.look.y = _c.y;
+    spot.look.z = _c.z;
     if (!item) return;
     if (S.phase === 'rest') {
       // escorregando aos pouquinhos (só mesa/estante, que têm beirada) e um tremidinho com o balanço
