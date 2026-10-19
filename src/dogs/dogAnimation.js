@@ -316,7 +316,10 @@ export function createDogAnimation(ctx) {
     dt = Math.min(Math.max(dt || 0, 0), 0.05);
     const A = anim || {};
     carry.sync();
-    const action = A.action || 'none';
+    let action = A.action || 'none';
+    // a voltinha da comemoração nunca é cortada no meio: pedida para parar ou sentar (o fim da vitória), ela termina a
+    // volta, chega de frente no lugar dela e só então muda de pose
+    if (st.circling && action !== 'celebrate' && (action === 'sit' || action === 'none') && (A.speed || 0) < 0.05) action = 'celebrate';
     // comemoração: na voltinha, a passada e a curva vêm do próprio círculo (velocidade e giro de verdade)
     let circ = null;
     if (action === 'celebrate') {
@@ -331,6 +334,7 @@ export function createDogAnimation(ctx) {
         circ = { phi, om, v: R * Math.abs(om), x: R * dir * (1 - Math.cos(phi)), z: R * dir * Math.sin(phi) };
       }
     }
+    st.circling = !!circ;
     const speedIn = Math.max(0, A.speed || 0, circ ? circ.v : 0);
     const turn = circ ? circ.om : A.turn || 0;
     st.t += dt;

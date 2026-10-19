@@ -104,3 +104,33 @@ test('comemoração: a volta é andando (o corpo percorre um círculo e as patas
     }
   }
 });
+
+test('comemoração: mandada sentar no meio da voltinha, ela termina a volta (sem corte brusco) e depois senta', () => {
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const d = createDog(kind);
+    const inner = d.object.children[0];
+    for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    // começa a comemorar e, no meio da voltinha (1,4 s), o jogo manda sentar (o fim da vitória)
+    for (let f = 0; f < Math.round(1.4 * 60); f++) d.update(1 / 60, { speed: 0, action: 'celebrate', celebrateSide: 1 });
+    assert.ok(Math.hypot(inner.position.x, inner.position.z) > 0.15, `${kind}: estava no meio da voltinha`);
+    let jump = 0;
+    let spinJump = 0;
+    let px = inner.position.x, pz = inner.position.z, py = inner.rotation.y;
+    let backAt = -1;
+    for (let f = 0; f < 120; f++) {
+      d.update(1 / 60, { speed: 0, action: 'sit' });
+      jump = Math.max(jump, Math.hypot(inner.position.x - px, inner.position.z - pz));
+      let dy = Math.abs(inner.rotation.y - py) % (2 * Math.PI);
+      dy = Math.min(dy, 2 * Math.PI - dy);
+      spinJump = Math.max(spinJump, dy);
+      px = inner.position.x;
+      pz = inner.position.z;
+      py = inner.rotation.y;
+      if (backAt < 0 && Math.hypot(inner.position.x, inner.position.z) < 0.005) backAt = f / 60;
+    }
+    // a 1,4 m/s, um quadro anda ~2,5 cm; um corte voltaria tudo (~0,4 m) de uma vez
+    assert.ok(jump < 0.04, `${kind}: sem salto de lugar ao mandar sentar (${(jump * 100).toFixed(1)} cm num quadro)`);
+    assert.ok(spinJump < 0.2, `${kind}: sem virar de uma vez (${spinJump.toFixed(2)} rad num quadro)`);
+    assert.ok(backAt > 0.3 && backAt < 1.0, `${kind}: terminou a voltinha no lugar dela (${backAt.toFixed(2)} s)`);
+  }
+});
