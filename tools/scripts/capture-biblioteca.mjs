@@ -150,26 +150,46 @@ try {
   const fanAt = await page.evaluate(() => window.__game.game.debug.info().biblioteca.fan);
   await setup({ active: 'radhija', place: { radhija: { x: fanAt.x + 0.12, z: fanAt.z - 0.75, yaw: Math.PI } } });
   await shot('15-ventilador-na-grade', { pos: [fanAt.x + 1.6, 1.3, fanAt.z + 1.4], look: [fanAt.x, 0.6, fanAt.z - 1.2] });
-  // DIAGNÓSTICO TEMPORÁRIO: objetos visíveis perto da câmera da captura 15
+  // DIAGNÓSTICO TEMPORÁRIO: partículas e objetos grandes/transparentes perto da câmera da captura 15
   console.log('DIAG ' + JSON.stringify(await page.evaluate(() => {
     const G = window.__game;
-    const cam = G.engine.camera;
-    const cp = cam.position;
-    const out = [];
+    const cp = G.engine.camera.position;
+    const out = { points: [], big: [] };
     G.engine.scene.traverse((o) => {
-      if (!o.visible || !(o.isMesh || o.isSprite || o.isPoints)) return;
-      let v = true;
-      for (let p = o.parent; p; p = p.parent) if (!p.visible) { v = false; break; }
-      if (!v) return;
+      if (!o.visible) return;
+      if (o.isPoints) {
+        const a = o.geometry.attributes;
+        const P = a.position.array;
+        const n = a.position.count;
+        for (let i = 0; i < n; i++) {
+          const al = a.aAlpha ? a.aAlpha.array[i] : 1;
+          if (al <= 0.001) continue;
+          const d = Math.hypot(P[i * 3] - cp.x, P[i * 3 + 1] - cp.y, P[i * 3 + 2] - cp.z);
+          if (d > 3.5) continue;
+          out.points.push({ d: +d.toFixed(2), p: [+P[i * 3].toFixed(2), +P[i * 3 + 1].toFixed(2), +P[i * 3 + 2].toFixed(2)], size: a.aSize?.array[i], alpha: +al.toFixed(2), tile: a.aTile?.array[i], col: a.aColor ? [a.aColor.array[i * 3], a.aColor.array[i * 3 + 1], a.aColor.array[i * 3 + 2]].map((v) => +v.toFixed(2)) : null, bl: o.material.blending });
+        }
+        return;
+      }
+      if (!(o.isMesh || o.isSprite)) return;
+      const g = o.geometry;
+      if (!g) return;
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      const bs = g.boundingSphere;
       const e = o.matrixWorld.elements;
-      const d = Math.hypot(e[12] - cp.x, e[13] - cp.y, e[14] - cp.z);
-      if (d > 2.6) return;
-      const chain = [];
-      for (let p = o; p && chain.length < 5; p = p.parent) chain.push(p.name || p.type);
+      const sc = Math.max(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10]));
+      const cx = e[0] * bs.center.x + e[4] * bs.center.y + e[8] * bs.center.z + e[12];
+      const cy = e[1] * bs.center.x + e[5] * bs.center.y + e[9] * bs.center.z + e[13];
+      const cz = e[2] * bs.center.x + e[6] * bs.center.y + e[10] * bs.center.z + e[14];
+      const d = Math.hypot(cx - cp.x, cy - cp.y, cz - cp.z) - bs.radius * sc;
       const m = Array.isArray(o.material) ? o.material[0] : o.material;
-      out.push({ d: +d.toFixed(2), at: [+e[12].toFixed(2), +e[13].toFixed(2), +e[14].toFixed(2)], s: +Math.hypot(e[0], e[1], e[2]).toFixed(2), chain: chain.join('<'), mat: m?.type, color: m?.color?.getHexString?.(), op: m?.opacity, tr: m?.transparent, bl: m?.blending });
+      if (d > 1.2 || !(m?.transparent || m?.blending !== 1 || m?.depthTest === false)) return;
+      const chain = [];
+      for (let q = o; q && chain.length < 5; q = q.parent) chain.push(q.name || q.type);
+      out.big.push({ d: +d.toFixed(2), c: [+cx.toFixed(2), +cy.toFixed(2), +cz.toFixed(2)], r: +(bs.radius * sc).toFixed(2), chain: chain.join('<'), mat: m?.type, color: m?.color?.getHexString?.(), op: m?.opacity, bl: m?.blending, dt: m?.depthTest });
     });
-    return out.sort((x, y) => x.d - y.d).slice(0, 40);
+    out.points.sort((x, y) => x.d - y.d);
+    out.points = out.points.slice(0, 25);
+    return out;
   })));
   await keyDown('KeyR');
   await step(18);
