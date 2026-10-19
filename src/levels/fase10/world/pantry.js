@@ -84,8 +84,9 @@ export function buildPantry(root, layout) {
     walls.add(j);
   }
 
-  // ---------------- prateleiras de latas e potes (parede leste)
+  // ---------------- prateleiras de latas e potes (parede oeste, de frente para o gaveteiro)
   const S = PANTRY_SHELF;
+  const face = S.x < (PANTRY.x0 + PANTRY.x1) / 2 ? 1 : -1; // para onde as prateleiras abrem (+X ou −X)
   const shelf = new THREE.Group();
   const shelfWood = woodMat('#c79a62', { key: 'f10-despensa-prateleira' });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -110,8 +111,8 @@ export function buildPantry(root, layout) {
       // um rótulo por prateleira (o pote da ponta)
       if (k === 1) {
         const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), new THREE.MeshStandardMaterial({ map: labelTex(txt, bg, ink), roughness: 0.8 }));
-        lab.rotation.y = -Math.PI / 2;
-        lab.position.set(x - 0.066, y + 0.015 + h / 2, z);
+        lab.rotation.y = face * Math.PI / 2;
+        lab.position.set(x + face * 0.066, y + 0.015 + h / 2, z);
         shelf.add(lab);
       }
     }

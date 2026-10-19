@@ -138,7 +138,7 @@ export function buildGarden(root, layout) {
     const n = Math.round(b.hx * 2 / 0.22);
     for (let k = 0; k < n; k++) {
       const x = -b.hx + 0.12 + k * ((b.hx * 2 - 0.24) / Math.max(1, n - 1));
-      const plant = i === 0 ? new THREE.Mesh(lettuce({ r: 0.1, seed: 80 + k }), plantMat()) : new THREE.Mesh(carrotTops({ seed: 90 + k, height: 0.2 }), plantMat());
+      const plant = i % 2 === 0 ? new THREE.Mesh(lettuce({ r: 0.1, seed: 80 + 7 * i + k }), plantMat()) : new THREE.Mesh(carrotTops({ seed: 90 + k, height: 0.2 }), plantMat());
       plant.position.set(x, H - 0.02, (k % 2 ? 0.05 : -0.05));
       bed.add(plant);
     }

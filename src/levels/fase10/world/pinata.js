@@ -114,21 +114,47 @@ export function buildPinata(root, layout) {
   // ================================================================ a roseira (espinhos: ninguém entra)
   const bush = new THREE.Group();
   const bushBlobs = [];
-  for (let k = 0; k < 7; k++) {
-    const a = (k / 7) * TAU + r() * 0.5, d = r() * ROSE_BUSH.r * 0.55;
-    bushBlobs.push({ x: Math.cos(a) * d, y: 0.24 + r() * 0.18, z: Math.sin(a) * d, r: 0.26 + r() * 0.1, sy: 0.85 });
+  for (let k = 0; k < 9; k++) {
+    const a = (k / 9) * TAU + r() * 0.5, d = (k === 0 ? 0 : 0.25 + r() * 0.3) * ROSE_BUSH.r;
+    bushBlobs.push({ x: Math.cos(a) * d, y: 0.22 + r() * 0.2, z: Math.sin(a) * d, r: 0.22 + r() * 0.1, sy: 0.9 });
   }
-  const bushGeo = foliageCluster(bushBlobs, { detail: 2, amp: 0.3, freq: 2.2, seed: 65, dark: '#1f3a18', mid: '#36602a', light: '#6f9a45' });
+  const bushGeo = foliageCluster(bushBlobs, { detail: 2, amp: 0.38, freq: 3.1, seed: 65, dark: '#2a4a22', mid: '#4c7a34', light: '#8cbf5a' });
   bush.add(new THREE.Mesh(bushGeo, plantMat()));
-  const roseG = new THREE.SphereGeometry(0.045, 8, 6);
+  // as rosas na superfície da folhagem, viradas para fora (miolo fechado e cinco pétalas abrindo), rosa e vermelhas
+  const paint = (g, hex) => {
+    const geo = g.index ? g.toNonIndexed() : g;
+    geo.deleteAttribute('uv');
+    const c = new THREE.Color(hex), n = geo.attributes.position.count, arr = new Float32Array(n * 3);
+    for (let k = 0; k < n; k++) arr.set([c.r, c.g, c.b], k * 3);
+    geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    return geo;
+  };
+  const rose = (petal, bud) => {
+    const parts = [paint(new THREE.SphereGeometry(0.024, 8, 6).scale(1, 0.85, 1).translate(0, 0.014, 0), bud)];
+    for (let k = 0; k < 5; k++) {
+      const g = new THREE.SphereGeometry(0.03, 8, 5).scale(1, 0.42, 0.78).translate(0.026, 0.004, 0).rotateZ(0.55).rotateY((k / 5) * TAU + 0.3);
+      parts.push(paint(g, petal));
+    }
+    return mergeGeometries(parts);
+  };
+  const roseKinds = [rose('#f07aa0', '#d8456f'), rose('#e0405f', '#a8203a')];
   const roses = [];
-  for (let k = 0; k < 22; k++) {
-    const a = r() * TAU, d = 0.15 + r() * (ROSE_BUSH.r - 0.15);
-    const g = roseG.clone();
-    g.translate(Math.cos(a) * d, 0.3 + r() * 0.26, Math.sin(a) * d);
+  const up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), at = new THREE.Vector3(), qr = new THREE.Quaternion();
+  // em vértices da própria folhagem (bem na superfície), virados para fora, longe uns dos outros e nunca embaixo
+  const fp = bushGeo.attributes.position, fn = bushGeo.attributes.normal;
+  const placed = [];
+  for (let tries = 0; tries < 900 && roses.length < 30; tries++) {
+    const i = Math.floor(r() * fp.count);
+    dir.fromBufferAttribute(fn, i);
+    at.fromBufferAttribute(fp, i);
+    if (dir.y < 0.05 || at.y < 0.28 || placed.some((p) => p.distanceTo(at) < 0.11)) continue;
+    placed.push(at.clone());
+    const g = roseKinds[roses.length % 2].clone();
+    g.applyQuaternion(qr.setFromUnitVectors(up, dir.normalize()));
+    g.translate(at.x - dir.x * 0.006, at.y - dir.y * 0.006, at.z - dir.z * 0.006);
     roses.push(g);
   }
-  bush.add(new THREE.Mesh(mergeGeometries(roses), stdMat('#e8406a', { roughness: 0.55 })));
+  bush.add(new THREE.Mesh(mergeGeometries(roses), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55 })));
   bush.position.set(ROSE_BUSH.x, 0, ROSE_BUSH.z);
   bush.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(bush);

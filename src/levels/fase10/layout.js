@@ -90,7 +90,7 @@ export const DRAWERS = {
   steps: [{ min: 0.34, max: 0.5 }, { min: 0.2, below: 0.1 }, { min: 0.07, below: 0.1 }], pullSpeed: 0.9,
 };
 /** As prateleiras da despensa (latas, potes e sacos) na parede leste. */
-export const PANTRY_SHELF = { x: PANTRY.x1 - WALLS.t / 2 - 0.2, z: 1.15, hx: 0.2, hz: 0.75, h: 1.6 };
+export const PANTRY_SHELF = { x: PANTRY.x0 + WALLS.t / 2 + 0.2, z: 0.62, hx: 0.2, hz: 0.6, h: 1.6 };
 
 // ---------------------------------------------------------------------------------------------- varanda
 export const PORCH = { x0: HOUSE.x1 + WALLS.t / 2, x1: -0.35, z0: WORLD.bounds.minZ, z1: -2.6 };
@@ -219,7 +219,10 @@ export const DECK_PATH = { arrive: { x: BUCKET.x, z: DECK.z1 - 0.3 }, ribbon: { 
 /** Horta cercada (cerca baixa: a Rhaenyra pula) com o vão da tábua quebrada (só a Radhija) e a lama do canteiro. */
 export const HORTA = { x0: 6.8, x1: 9.6, z0: 0.4, z1: WORLD.bounds.maxZ, fenceH: 0.42, gap: { z0: 1.35, z1: 1.75 } };
 export const MUD = { x0: 6.86, x1: 7.9, z0: 1.0, z1: 2.3, licksToClean: 5, slow: 0.5 };
-export const VEG_BEDS = [{ x: 8.2, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 7.85, z: 6.05, hx: 0.6, hz: 0.28 }];
+export const VEG_BEDS = [
+  { x: 8.2, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 7.85, z: 6.05, hx: 0.6, hz: 0.28 },
+  { x: 7.55, z: 3.55, hx: 0.5, hz: 0.2 }, { x: 7.55, z: 4.75, hx: 0.5, hz: 0.2 },
+];
 /** O pé de tomate no tutor (perto da cerca norte) e o regador encostado no canteiro, dentro da horta. */
 export const TOMATO = { x: 7.35, z: 0.62, r: 0.22 };
 export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
@@ -253,7 +256,7 @@ export const PIGS = { count: 3, roam: { minX: HORTA.x0 + 0.25, maxX: HORTA.x1 - 
  * Atrás da casa na árvore, uma tábua do muro leste está solta (só cede depois de tudo achado na fase): do outro lado,
  * o cantinho com o quadro. Fica fora da vista da câmera.
  */
-export const SECRET = { board: { z0: -5.15, z1: -4.55 }, nook: { x0: EAST_WALL.x + EAST_WALL.t / 2, x1: 13.35, z0: -5.7, z1: -4.0 }, photo: { x: 13.338, y: 0.78, z: -4.85, w: 0.42, h: 0.52 } };
+export const SECRET = { board: { z0: -5.15, z1: -4.55 }, nook: { x0: EAST_WALL.x + EAST_WALL.t / 2, x1: 13.35, z0: -5.7, z1: -4.0 }, photo: { x: 13.338, y: 0.95, z: -4.85, w: 0.42, h: 0.52 } };
 
 // ---------------------------------------------------------------------------------------------- colisores
 const T = WALLS.t;

@@ -85,26 +85,66 @@ export function buildFarm(root, layout) {
   group.add(soil);
 
   // ---------------- milho: pés altos com folhas compridas e espigas (instanciados por fileira)
-  const stalkG = new THREE.CylinderGeometry(0.014, 0.02, 1.25, 6);
-  stalkG.translate(0, 0.625, 0);
-  const leafShape = new THREE.Shape();
-  leafShape.moveTo(0, 0); leafShape.quadraticCurveTo(0.2, 0.06, 0.42, -0.04); leafShape.quadraticCurveTo(0.2, 0.01, 0, 0.025);
-  const leafG = new THREE.ShapeGeometry(leafShape);
-  const leaves = [];
-  for (let k = 0; k < 6; k++) {
-    const g = leafG.clone();
-    g.rotateY((k / 6) * TAU + 0.4);
-    g.rotateZ(0);
-    g.translate(0, 0.35 + k * 0.14, 0);
-    leaves.push(g);
+  // um pé só (cores por vértice): caule, folhas em fita que sobem e caem, a espiga na palha e o pendão no alto
+  const paint = (g, hex) => {
+    const geo = g.index ? g.toNonIndexed() : g;
+    geo.deleteAttribute('uv');
+    const col = new THREE.Color(hex);
+    const n = geo.attributes.position.count;
+    const arr = new Float32Array(n * 3);
+    for (let k = 0; k < n; k++) arr.set([col.r, col.g, col.b], k * 3);
+    geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    return geo;
+  };
+  /** Folha em fita (no plano XZ ao longo de +X): sobe, arqueia e cai na ponta. */
+  const ribbon = (len, rise, droop, w, segs = 8) => {
+    const pos = [], idx = [];
+    for (let k = 0; k <= segs; k++) {
+      const t = k / segs;
+      const half = w * Math.pow(1 - t, 0.6) * Math.min(1, 0.35 + t * 5);
+      const x = t * len, y = rise * Math.sin(t * Math.PI * 0.85) - droop * t * t;
+      pos.push(x, y, -half, x, y, half);
+      if (k < segs) idx.push(k * 2, k * 2 + 1, k * 2 + 2, k * 2 + 1, k * 2 + 3, k * 2 + 2);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  };
+  const parts = [];
+  const stalkG = new THREE.CylinderGeometry(0.012, 0.022, 1.3, 6);
+  stalkG.translate(0, 0.65, 0);
+  parts.push(paint(stalkG, '#6f9a3a'));
+  // folhas alternadas (duas fileiras, como no milho de verdade), mais compridas embaixo
+  for (let k = 0; k < 7; k++) {
+    const len = 0.5 - k * 0.035;
+    const g = ribbon(len, 0.16 + k * 0.01, 0.34 - k * 0.02, 0.032);
+    g.rotateY((k % 2 ? Math.PI : 0) + (k - 3) * 0.28);
+    g.translate(0, 0.28 + k * 0.13, 0);
+    parts.push(paint(g, k % 2 ? '#5f8f34' : '#7aa845'));
   }
-  const stalkLeaves = mergeGeometries(leaves);
-  const tassel = new THREE.ConeGeometry(0.05, 0.16, 6);
-  tassel.translate(0, 1.33, 0);
-  const cornPlant = mergeGeometries([stalkG.toNonIndexed(), stalkLeaves.index ? stalkLeaves.toNonIndexed() : stalkLeaves, tassel.toNonIndexed()]);
+  // a espiga na palha, encostada no caule, com o cabelo do milho
+  const husk = new THREE.CapsuleGeometry(0.03, 0.12, 3, 6);
+  husk.rotateZ(-0.35);
+  husk.translate(0.035, 0.66, 0);
+  parts.push(paint(husk, '#9cbf5a'));
+  const silk = new THREE.ConeGeometry(0.018, 0.06, 5);
+  silk.rotateZ(-0.35);
+  silk.translate(0.065, 0.76, 0);
+  parts.push(paint(silk, '#c98f4a'));
+  // o pendão: raminhos finos abrindo em leque no topo
+  for (let k = 0; k < 6; k++) {
+    const g = new THREE.CylinderGeometry(0.004, 0.006, k === 0 ? 0.22 : 0.17, 3);
+    g.translate(0, (k === 0 ? 0.22 : 0.17) / 2, 0);
+    if (k > 0) { g.rotateZ(0.55); g.rotateY((k / 5) * TAU); }
+    g.translate(0, 1.28, 0);
+    parts.push(paint(g, '#d8c27a'));
+  }
+  const cornPlant = mergeGeometries(parts);
   const stalkPos = [];
   for (const c of F.corn) for (let z = c.z0 + 0.12; z <= c.z1 - 0.1; z += 0.26) stalkPos.push([c.x + (r() - 0.5) * 0.06, z + (r() - 0.5) * 0.05, r()]);
-  const cornMesh = new THREE.InstancedMesh(cornPlant, stdMat('#6f9a3a', { roughness: 0.8, side: THREE.DoubleSide }), stalkPos.length);
+  const cornMesh = new THREE.InstancedMesh(cornPlant, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), stalkPos.length);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pv = new THREE.Vector3(), e = new THREE.Euler();
   stalkPos.forEach(([x, z, k], i) => {
     e.set((k - 0.5) * 0.06, k * TAU, (k - 0.5) * 0.08);

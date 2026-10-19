@@ -257,7 +257,7 @@ export function createPuzzle(ctx) {
     introT: 0, /** @type {import('../../types').DogName} */ prevActive: /** @type {import('../../types').DogName} */ ('radhija'),
     scriptDt: 1 / 60, wasPower: false, /** @type {string} */ powerStage: 'off',
     // galpão: qual botão abre a porta, a porta e o chiqueiro abertos
-    doorBtn: pickDoorButton(), shedOpen: false, styOpen: false,
+    doorBtn: pickDoorButton(), shedOpen: false, styOpen: false, styT: 0,
     // gaveteiro: quanto cada gaveta está para fora, a que a Rhaenyra segura e a subida da Radhija
     drawers: DRAWERS.y.map(() => ({ ext: 0, fallen: false })),
     /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ drawerHold: null,
@@ -850,6 +850,10 @@ export function createPuzzle(ctx) {
     S.doorT += Math.sign(target - S.doorT) * Math.min(Math.abs(target - S.doorT), dt / 0.85);
     doorCol.enabled = S.doorT < 0.6;
     props.shedDoor.setOpen(S.doorT);
+    // a porteira do chiqueiro gira para fora quando o botão dela é apertado
+    const sty = S.styOpen ? 1 : 0;
+    S.styT += Math.sign(sty - S.styT) * Math.min(Math.abs(sty - S.styT), dt / 0.9);
+    props.styGate.setOpen(smooth(S.styT));
     const open = doorOpen();
     if (open !== S.wasDoor) {
       emit(open ? 'shed:open' : 'shed:close', { x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2 });
@@ -899,7 +903,9 @@ export function createPuzzle(ctx) {
     if (S.place.cookie !== 'home' && !S.drawerHold) return null;
     if (S.drawerHold?.who === c.name) return 'drawerRelease';
     if (S.climb || S.hop || S.riding || S.onDeck || S.deck) return null;
-    const front = c.z > D_FRONT && c.z < D_FRONT + 1.15 && Math.abs(c.x - DRAWERS.x) < DRAWERS.hx + 0.25;
+    // na frente do gaveteiro: a Rhaenyra de qualquer ponto da despensa (ela recua puxando); a Radhija mais perto
+    const far = c.name === 'rhaenyra' ? PANTRY.zS - D_FRONT : 1.0;
+    const front = c.z > D_FRONT && c.z < D_FRONT + far && Math.abs(c.x - DRAWERS.x) < DRAWERS.hx + 0.25;
     if (!front) return null;
     if (c.name === 'rhaenyra') {
       if (!mouthFree(c.name)) return null;
@@ -1158,7 +1164,8 @@ export function createPuzzle(ctx) {
     if (S.secretOpen && !S.secretSeen && active.x > EAST_WALL.x + 0.3) {
       S.secretSeen = true;
       const P = SECRET.photo;
-      cam?.focusShot(P.x, P.z, { hold: 5, inT: 1.0, outT: 0.8, target: { x: P.x, y: P.y, z: P.z }, from: { x: SECRET.nook.x0 + 0.2, y: 0.95, z: P.z + 0.02 } });
+      // de fora, pela fresta da tábua aberta: o quadro inteiro, as luzinhas e a plaquinha (a dog lá dentro fica embaixo)
+      cam?.focusShot(P.x, P.z, { hold: 5, inT: 1.0, outT: 0.8, target: { x: P.x, y: P.y - 0.06, z: P.z }, from: { x: EAST_WALL.x - 0.25, y: P.y + 0.16, z: P.z } });
       emit('secret:photo', { x: P.x - 0.4, z: P.z });
     }
   }
