@@ -84,12 +84,13 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    cima dele: um latido de longe distrai a Dona Gansa e a outra puxa a cordinha do portão; o superbafo da Radhija
    sobe pelo cano de brinquedo e espanta o pombo; a Radhija entra no balde deitado e a Rhaenyra puxa a corda (ela
    segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo escorregador. O
-   biscoito de osso de glacê está em cima do gaveteiro da despensa: a Rhaenyra puxa as gavetas com a boca até elas
-   virarem uma escadinha (a de baixo bem para fora, cada uma mais para dentro; puxada demais, a gaveta cai) e a
-   Radhija sobe por elas. A vela do 3 está no galpão, atrás da horta: a Radhija passa pelo vão da cerca e cai na lama,
+   biscoito de osso de glacê está em cima do armário alto da despensa: a Rhaenyra puxa três caixotes pela alça, com a
+   boca, até as marcas do chão (lá eles travam sozinhos e a marca fica verde); em fila, do mais alto ao mais baixo, eles
+   viram uma escadinha e a Radhija sobe por eles. A vela do 3 está no galpão, atrás da horta: a Radhija passa pelo vão da cerca e cai na lama,
    a Rhaenyra pula a cerca e a limpa com o Lambe-Lambe; dos dois botões altos na parede do galpão, um abre a porta
    basculante e o outro, o chiqueiro (sorteado a cada partida); a Radhija sobe a rampa com uma arrancada até a vela.
-   Os legumes do campinho (milho, cenoura e abóbora) podem ser colhidos e largados no chão. A estrela está dentro da
+   Os legumes do campinho (milho, cenoura e abóbora) podem ser colhidos e largados no chão. Duas galinhas ciscam perto
+   da horta: fogem de quem chega de frente e saem voando com um latido. A estrela está dentro da
    piñata pendurada na mangueira, em cima da roseira: o superbafo a faz balançar para fora dos espinhos e a Rhaenyra
    pula e bate nela quando ela passa por cima; três batidas e ela abre. São cinco ossinhos nesta fase.
 

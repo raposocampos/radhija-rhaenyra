@@ -2,7 +2,7 @@
 // a outro): o caixote empurrado para fora da mangueira, o impulso na torneira e no disjuntor, o chapeuzinho no
 // barquinho, o chapéu fora de ordem caindo da mesa e o quadro da sala; o latido que distrai a gansa e a cordinha do
 // portão, o superbafo pelo cano de brinquedo, o balde com a Rhaenyra puxando a corda, o deque (E desamarra o laço, E
-// escorrega); as gavetas da despensa (a Rhaenyra puxa, a Radhija sobe e pega o biscoito); a lama, o Lambe-Lambe, o
+// escorrega); os caixotes da despensa (a Rhaenyra puxa até as marcas, a Radhija sobe e pega o biscoito); a lama, o Lambe-Lambe, o
 // botão alto do galpão (com ?botao=1, o primeiro abre a porta) e a arrancada na rampa; a piñata (superbafo e as
 // batidas da Rhaenyra); e o bolo completo na ordem do quadro. As regras de cada passo estão em test/fase10.test.mjs.
 //   node tools/scripts/test-quintal.mjs [--url http://127.0.0.1:5176/]
@@ -36,17 +36,17 @@ async function wallJump(cfg) {
   await waitFor((s) => !!s.dogs.rhaenyra.wall, { timeout: 1500 });
   return waitFor((s) => !s.dogs.rhaenyra.wall, { timeout: 3000 });
 }
-/** A Rhaenyra (ativa, na frente do gaveteiro): E pega a próxima gaveta, anda para trás até `ext`, E solta. */
-async function pullDrawer(i, ext, D_FRONT, L) {
+/** A Rhaenyra pega a alça do caixote i (no começo do trilho) e anda para trás até ele travar na marca do chão. */
+async function pullCrate(i, L) {
+  const CR = L.PANTRY_CRATES;
+  const st0 = await info();
+  await put('rhaenyra', qt(st0).crates[i].x + CR.hx + 0.33, CR.list[i].z, -Math.PI / 2);
   await page.keyboard.press('KeyE');
-  let state = await waitFor((s) => s.quintal.drawerHold === i, { timeout: 1500, arg: i });
-  check(qt(state).drawerHold === i, `E: a Rhaenyra pega a gaveta ${i + 1} pelo puxador`);
-  state = await H.holdUntil(keysFor(0, 1), (s, a) => s.quintal.drawers[a.i].ext >= a.ext, { timeout: 4000, arg: { i, ext } });
-  await H.gsleep(120);
-  await page.keyboard.press('KeyE');
-  state = await waitFor((s) => s.quintal.drawerHold === null, { timeout: 1500 });
-  check(qt(state).drawers[i].ext >= ext - 0.02 && !qt(state).drawers[i].fallen, `andando para trás, a gaveta ${i + 1} sai (${qt(state).drawers[i].ext} m)`);
-  void D_FRONT; void L;
+  let state = await waitFor((s) => s.quintal.crateHold === i, { timeout: 1500 });
+  check(qt(state).crateHold === i, `E: a Rhaenyra pega o caixote ${i + 1} pela alça`);
+  state = await H.holdUntil(keysFor(1, 0), (s, a) => s.quintal.crates[a].locked, { timeout: 5000, arg: i });
+  state = await waitFor((s) => s.quintal.crates[i].locked && s.quintal.crateHold === null, { timeout: 1500 });
+  check(qt(state).crates[i].locked, `andando para trás, o caixote ${i + 1} chega na marca e trava sozinho`, JSON.stringify(qt(state).crates[i]));
   return state;
 }
 /** Leva o enfeite da dog ativa até a mesa do bolo (pela frente da mesa). */
@@ -66,7 +66,7 @@ try {
     return {
       TAP: l.TAP, BREAKER: l.BREAKER, CRATE: l.CRATE, BOAT: l.BOAT, GOAL: l.GOAL, PAINTING: l.PAINTING, CORD: l.CORD,
       TUBE: l.TUBE, BUCKET: l.BUCKET, ROPE: l.ROPE, HORTA: l.HORTA, RAMP: l.RAMP, DECK: l.DECK,
-      DECK_PATH: l.DECK_PATH, DRAWERS: l.DRAWERS, SHED_BUTTONS: l.SHED_BUTTONS, ROSE_BUSH: l.ROSE_BUSH,
+      DECK_PATH: l.DECK_PATH, PANTRY_CRATES: l.PANTRY_CRATES, SHED_BUTTONS: l.SHED_BUTTONS, ROSE_BUSH: l.ROSE_BUSH, CHICKENS: l.CHICKENS,
     };
   });
   check(state.levelId === 'fase10' && state.state === 'playing', 'link por id (?level=fase10) abre a fase 10');
@@ -178,22 +178,35 @@ try {
   state = await toCake(L);
   check(qt(state).cake.join() === 'ribbon', 'o laço no andar de baixo', JSON.stringify(qt(state).cake));
 
-  // ---- BISCOITO: as gavetas viram degraus (a de baixo bem para fora, cada uma mais para dentro); a Radhija sobe
-  const D_FRONT = L.DRAWERS.z + L.DRAWERS.hz;
+  // ---- BISCOITO: os três caixotes até as marcas do chão (viram escadinha); a Radhija sobe por eles
   await as('rhaenyra');
-  await put('rhaenyra', L.DRAWERS.x, D_FRONT + 0.45, Math.PI);
-  await pullDrawer(0, 0.4, D_FRONT, L);
-  await pullDrawer(1, 0.25, D_FRONT, L);
-  state = await pullDrawer(2, 0.12, D_FRONT, L);
-  check(qt(state).stairs, 'as três gavetas viraram uma escadinha', JSON.stringify(qt(state).drawers));
-  await shot('09-gavetas.png');
+  await pullCrate(0, L);
+  await pullCrate(1, L);
+  state = await pullCrate(2, L);
+  check(qt(state).stairs, 'os três caixotes viraram uma escadinha', JSON.stringify(qt(state).crates));
+  await shot('09-caixotes.png');
   await as('radhija');
-  await put('radhija', L.DRAWERS.x + 0.22, D_FRONT + 0.6, Math.PI);
+  const CR = L.PANTRY_CRATES;
+  await put('radhija', CR.x1, CR.list[2].z + CR.hz + 0.3, Math.PI);
   await page.keyboard.press('KeyE');
-  state = await waitFor((s) => s.cookie?.holder === 'radhija' && !s.quintal.climb, { timeout: 6000 });
-  check(state.cookie?.holder === 'radhija' && state.dogs.radhija.y < 0.01, 'E: a Radhija sobe pelas gavetas, pega o biscoito e desce', JSON.stringify({ climb: qt(state).climb, rad: state.dogs.radhija }));
+  state = await waitFor((s) => s.cookie?.holder === 'radhija' && !s.quintal.climb, { timeout: 12000 });
+  check(state.cookie?.holder === 'radhija' && state.dogs.radhija.y < 0.01, 'E: a Radhija sobe pelos caixotes, pega o biscoito e desce', JSON.stringify({ climb: qt(state).climb, rad: state.dogs.radhija }));
   state = await toCake(L);
   check(qt(state).cake.join() === 'ribbon,cookie', 'o biscoito no segundo andar', JSON.stringify(qt(state).cake));
+
+  // ---- as galinhas do quintal: o latido as faz voar
+  {
+    const A = L.CHICKENS.area;
+    await as('radhija');
+    await put('radhija', (A.minX + A.maxX) / 2 - 1.2, (A.minZ + A.maxZ) / 2, Math.PI / 2);
+    await clearLog();
+    await page.keyboard.press('KeyE');
+    state = await waitFor((s) => s.quintal.chickens.some((k) => k.state === 'glide'), { timeout: 1500 });
+    check(qt(state).chickens.some((k) => k.state === 'glide'), 'o latido assusta as galinhas: voo curto', JSON.stringify(qt(state).chickens));
+    await H.gsleep(450);
+    await shot('09b-galinhas-voando.png');
+    state = await waitFor((s) => s.quintal.chickens.every((k) => k.state !== 'glide'), { timeout: 4000 });
+  }
 
   // ---- VELA: lama, Lambe-Lambe, botão do galpão e rampa
   await put('radhija', L.HORTA.x0 - 0.5, 1.55, Math.PI / 2);
@@ -283,7 +296,7 @@ try {
   check(state.state === 'victory' && vic.length === 1 && vic[0].hasNext === false, 'vitória da última fase (sem "Próxima fase")', JSON.stringify(vic[0] || {}));
   await ev(() => window.__game.game.reset());
   state = await info();
-  check(qt(state).cake.length === 0 && !qt(state).gateOpen && qt(state).water === 0 && qt(state).pigeon === 'asleep' && !qt(state).shed.open && !qt(state).pinata.broken && !qt(state).stairs, 'reinício devolve bolo, portão, água, pombo, galpão, piñata e gavetas');
+  check(qt(state).cake.length === 0 && !qt(state).gateOpen && qt(state).water === 0 && qt(state).pigeon === 'asleep' && !qt(state).shed.open && !qt(state).pinata.broken && !qt(state).stairs, 'reinício devolve bolo, portão, água, pombo, galpão, piñata e caixotes');
 } catch (e) {
   check(false, `exceção: ${e.stack || e}`);
 }

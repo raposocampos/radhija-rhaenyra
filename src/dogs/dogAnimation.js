@@ -9,6 +9,7 @@
 //   botão, m), wallPaws/wallSide (altura e afastamento das patinhas dianteiras pintadas, m), wallLat (quanto ela está
 //   à esquerda do botão, m), poopK (0..1 da sequência do cocô; −1 sem), poopPre (0..1 da voltinha antes dela; −1 sem),
 //   party (comemoração do segredo: { glee, bow, hop (m), air (0..1 no ar; −1 no chão), jump, brace, zoom }; null sem),
+//   crouch (0..1: agachadinho de preparo antes de um pulinho roteirizado),
 //   cheer (s desde que a irmã viu a comemoração; −1 sem), extra ({ kind, k (0..1), t (s) }: animação do cenário —
 //   'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll'; null sem) }). Os extras ficam em src/game/extras.js.
 import * as THREE from 'three';
@@ -382,7 +383,7 @@ export function createDogAnimation(ctx) {
     wallCtx.side = A.wallSide || 0.165;
     wallCtx.lat = A.wallLat ?? 0;
     st.landT += dt;
-    const land = st.landT < 0.5 ? Math.exp(-st.landT * 9) * sstep(0, 0.04, st.landT) : 0;
+    const land = Math.max(st.landT < 0.5 ? Math.exp(-st.landT * 9) * sstep(0, 0.04, st.landT) : 0, clamp(A.crouch || 0, 0, 1));
     // superbafo: aim = enche o peito mirando; blow = "HÁÁÁ!"; proud = toda orgulhosa; yuck = vira a cara
     w.aim = damp(w.aim, action === 'bafoAim' ? 1 : 0, 9);
     w.blow = damp(w.blow, action === 'bafo' ? 1 : 0, 20);

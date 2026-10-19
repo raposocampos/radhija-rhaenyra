@@ -697,6 +697,34 @@ export function createFeedback(opts) {
     sfx('cakeFall', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.6, alpha: 0.3, strength: 0.4 });
   });
+  // despensa (caixotes), piñata, campinho e as galinhas do quintal
+  events.on('crate:grab', ({ x, z }) => sfx('ropeCreak', x, z, { volume: 0.7 }));
+  events.on('crate:lock', ({ x, z }) => {
+    sfx('crateClick', x, z);
+    particles.ring({ x, y: 0.03, z }, { radius: 0.4, from: 0.1, life: 0.6, color: '#9be08a', opacity: 0.6, width: 0.05 });
+    particles.sparkle({ x, y: 0.2, z }, { count: 8, radius: 0.25, size: 0.7, rise: 0.4, color: '#c8f5b0' });
+  });
+  events.on('pinata:hit', ({ x, z }) => {
+    sfx('pinataThump', x, z);
+    particles.burst({ x, y: 1.1, z }, { kind: 'stars', count: 5, size: 0.6, speed: 0.6 });
+  });
+  events.on('pinata:burst', ({ x, z }) => sfx('partyHorn', x, z));
+  events.on('veg:pick', ({ x, z }) => {
+    sfx('pluck', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.5, alpha: 0.3, strength: 0.4 });
+  });
+  events.on('veg:drop', ({ x, z }) => sfx('itemDrop', x, z));
+  events.on('chicken:cluck', ({ x, z }) => sfx('cluck', x, z, { volume: 0.7 }));
+  events.on('chicken:alarm', ({ x, z }) => {
+    sfx('chickenAlarm', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.55, alpha: 0.3, strength: 0.5 });
+  });
+  events.on('chicken:flap', ({ x, z }) => {
+    sfx('wingFlap', x, z);
+    sfx('chickenAlarm', x, z, { volume: 0.8 });
+    particles.feathers({ x, y: 0.3, z }, { count: 5, size: 0.6 });
+  });
+  events.on('chicken:land', ({ x, z }) => particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.5, alpha: 0.28, strength: 0.4 }));
   events.on('cake:lit', ({ x, z }) => {
     sfx('partyHorn', x, z);
     const y = (L().CAKE?.base ?? 0.8) + 0.55;

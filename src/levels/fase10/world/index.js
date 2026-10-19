@@ -9,7 +9,7 @@
 //   fences.js     cerca do fundo com o portãozinho e a cordinha, muro do terreno, cerca viva e a vizinhança
 //   treehouse.js  árvore, deque, casinha, roldana e balde, corda, cano de brinquedo, pombo e escorregador
 //   garden.js     horta (vão da tábua quebrada, canteiros, girassóis) e o galpão (porta basculante, rampa)
-//   pantry.js     a despensa (gaveteiro de três gavetas e o pote de biscoitos, prateleiras, sacos)
+//   pantry.js     a despensa (armário alto com o pote de biscoitos, três caixotes que viram escadinha, prateleiras, sacos)
 //   farm.js       o campinho de milho, cenouras e abóboras (legumes para os porcos) e o espantalho
 //   pinata.js     a mangueira grande, a roseira e a piñata da estrela (balança, racha e abre)
 //   sty.js        o chiqueiro (porteira, casinha, cocho) e a caixinha de força dos botões do galpão

@@ -15,9 +15,9 @@
 //   LAÇO (no corrimão da casa na árvore, com o pombo dormindo em cima): latido de longe distrai a Dona Gansa e a outra
 //     puxa a cordinha do portão; o superbafo pelo cano de brinquedo espanta o pombo; o balde deitado: a Radhija entra,
 //     a Rhaenyra puxa a corda; lá em cima a Radhija anda pelo deque, desamarra o laço e escorrega (ou volta no balde).
-//   BISCOITO DE OSSO (no pote em cima do gaveteiro da despensa): a Rhaenyra puxa as gavetas (E e andando para trás)
-//     até virarem degraus, a de baixo mais para fora; a Radhija sobe por elas (E) e pega o biscoito. Aberta demais, a
-//     gaveta cai no chão (a Rhaenyra a encaixa de volta com E).
+//   BISCOITO DE OSSO (no pote em cima do armário alto da despensa): a Rhaenyra puxa três caixotes pela alça (E e
+//     andando para trás) até as marcas do chão, onde eles travam sozinhos (a marca fica verde); em fila, do mais alto ao
+//     mais baixo, eles viram a escadinha, e a Radhija sobe por eles (E) e pega o biscoito.
 //   VELA DO 3 (na prateleira alta do galpão): a Rhaenyra pula a cerca baixa da horta; a Radhija passa pelo vão e cai na
 //     lama (Lambe-Lambe). Na parede do galpão há dois botões altos (impulso): um, sorteado a cada partida, abre a porta
 //     do galpão e o outro solta os três porcos do chiqueiro, que atrapalham; legumes do campinho, largados perto deles,
@@ -81,15 +81,22 @@ export const BREAKER = { x: WALL_LK.x + WALLS.t / 2, z: -4.55, nx: 1, nz: 0, top
 /** A despensa: do muro da divisória até a parede leste, da frente da cozinha até a sua própria parede da frente. */
 export const PANTRY = { x0: WALL_LK.x, x1: HOUSE.x1, zN: HOUSE.zS, zS: 2.2, door: { x0: -7.75, x1: -6.95 } };
 /**
- * O gaveteiro encostado na parede da cozinha (de frente para o sul): três gavetas empilhadas (alturas do tampo de cada
- * uma: y), que viram degraus quando puxadas na medida (`steps`: a de baixo mais para fora). O pote de biscoitos fica
- * no tampo (top). Mais de `fall` metros para fora, a gaveta cai.
+ * O armário alto encostado na parede da cozinha (de frente para o sul), com o pote de biscoitos em cima (top), e os três
+ * caixotes de mantimentos de alturas diferentes que a Rhaenyra puxa pela alça (no lado leste) ao longo de um trilho
+ * reto, do oeste (x0) até a marca no chão (x1), onde travam sozinhos: em fila na frente do armário, do mais alto (junto
+ * dele) ao mais baixo, eles viram a escadinha da Radhija.
  */
-export const DRAWERS = {
-  x: -5.45, z: HOUSE.zS + WALLS.t / 2 + 0.23, hx: 0.45, hz: 0.23, top: 1.0, y: [0.32, 0.6, 0.88], max: 0.5, fall: 0.55,
-  steps: [{ min: 0.34, max: 0.5 }, { min: 0.2, below: 0.1 }, { min: 0.07, below: 0.1 }], pullSpeed: 0.9,
+export const CUPBOARD = { x: -5.5, z: HOUSE.zS + WALLS.t / 2 + 0.23, hx: 0.45, hz: 0.23, top: 1.0 };
+const CUP_FRONT = CUPBOARD.z + CUPBOARD.hz;
+export const PANTRY_CRATES = {
+  hx: 0.26, hz: 0.18, x0: -6.5, x1: CUPBOARD.x, pullSpeed: 0.85, grabR: 0.55,
+  list: [
+    { id: 'alto', label: 'Ração', h: 0.76, z: CUP_FRONT + 0.19 },
+    { id: 'medio', label: 'Batatas', h: 0.52, z: CUP_FRONT + 0.61 },
+    { id: 'baixo', label: 'Maçãs', h: 0.28, z: CUP_FRONT + 1.03 },
+  ],
 };
-/** As prateleiras da despensa (latas, potes e sacos) na parede leste. */
+/** As prateleiras da despensa (latas, potes e sacos) na parede oeste. */
 export const PANTRY_SHELF = { x: PANTRY.x0 + WALLS.t / 2 + 0.2, z: 0.62, hx: 0.2, hz: 0.6, h: 1.6 };
 
 // ---------------------------------------------------------------------------------------------- varanda
@@ -195,7 +202,7 @@ export const DECK_PROPS = { telescope: { x: 6.85, z: -5.6, r: 0.2 }, chest: { x:
 export const RIBBON = { x: 8.6, y: DECK.h + 0.34, z: DECK.z1 + 0.02 };
 export const PIGEON = { x: RIBBON.x, y: DECK.h + DECK_RAIL.h + 0.01, z: DECK.z1 - DECK_RAIL.inset, smellR: 0.55 };
 /** Cano de brinquedo: funil no chão (entrada do cheiro), sobe pelo poste do meio e a boca fica do lado do pombo. */
-export const TUBE = { inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.62, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
+export const TUBE = { inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.3, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
 /**
  * Elevador de balde na frente do deque (a câmera vê subir), com a roldana em cima. O balde de lata grande fica
  * DEITADO no chão, com a boca para o sul: a Radhija entra andando e se deita lá dentro; a corda primeiro levanta o
@@ -249,6 +256,15 @@ export const CANDLE = { x: 11.75, y: RAMP.top + 0.02, z: RAMP.z };
  */
 export const STY = { x0: 9.6, x1: 12.05, z0: 3.95, z1: 6.45, fenceH: 0.62, gate: { z0: 4.75, z1: 5.55 }, home: { x: 11.0, z: 5.3 } };
 /** Onde os porcos podem andar soltos (a horta) e de onde eles saem (na frente da porteira). */
+/**
+ * Duas galinhas ciscando no quintal, do lado de fora da cerca oeste da horta (ambientação, inofensivas): fogem de quem
+ * chega de frente (seeR m, dentro de seeAngle rad do bico); latido a menos de scareR m as faz sair num voo curto.
+ */
+export const CHICKENS = {
+  r: 0.12, area: { minX: 4.6, maxX: 6.45, minZ: 2.5, maxZ: 6.2 },
+  start: [{ x: 5.3, z: 3.5, yaw: 2.4 }, { x: 5.9, z: 5.1, yaw: -1.2 }],
+  seeR: 1.4, seeAngle: 1.3, scareR: 3.2, walk: 0.3, run: 1.7, calm: 2.5, glideDist: 2.0, glideTime: 1.0, glideHeight: 0.45,
+};
 export const PIGS = { count: 3, roam: { minX: HORTA.x0 + 0.25, maxX: HORTA.x1 - 0.25, minZ: HORTA.z0 + 0.3, maxZ: HORTA.z1 - 0.25 }, out: { x: STY.x0 - 0.45, z: (STY.gate.z0 + STY.gate.z1) / 2 } };
 
 // ---------------------------------------------------------------------------------------------- o cantinho escondido
@@ -279,7 +295,7 @@ export const STATIC_COLLIDERS = [
   wallZ('despensa-oeste', PANTRY.x0, HOUSE.zS, PANTRY.zS + T / 2),
   wallZ('despensa-leste', PANTRY.x1, HOUSE.zS, PANTRY.zS + T / 2),
   wallX('despensa-frente', PANTRY.zS, PANTRY.x0 - T / 2, PANTRY.x1 + T / 2),
-  { id: 'gaveteiro', shape: 'box', x: DRAWERS.x, z: DRAWERS.z, hx: DRAWERS.hx, hz: DRAWERS.hz },
+  { id: 'armario-da-despensa', shape: 'box', x: CUPBOARD.x, z: CUPBOARD.z, hx: CUPBOARD.hx, hz: CUPBOARD.hz },
   { id: 'prateleiras-da-despensa', shape: 'box', x: PANTRY_SHELF.x, z: PANTRY_SHELF.z, hx: PANTRY_SHELF.hx, hz: PANTRY_SHELF.hz },
   wallZ('divisoria-norte', WALL_LK.x, B.minZ, WALL_LK.gap.z0),
   wallZ('divisoria-sul', WALL_LK.x, WALL_LK.gap.z1, HOUSE.zS),
@@ -321,7 +337,7 @@ export const STATIC_COLLIDERS = [
   // casa na árvore
   { id: 'tronco', shape: 'circle', x: TREE.x, z: TREE.z, r: TREE.r },
   ...DECK_POSTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `poste-deque-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.08 })),
-  { id: 'funil', shape: 'circle', x: TUBE.inlet.x, z: TUBE.inlet.z - 0.12, r: 0.12 },
+  { id: 'funil', shape: 'box', x: TUBE.inlet.x, z: TUBE.inlet.z - 0.03, hx: 0.21, hz: 0.15 },
   // o muro leste e o cantinho do outro lado (a tábua solta é dinâmica)
   wallZ('muro-leste-norte', EAST_WALL.x, B.minZ, SECRET.board.z0, { hx: 0.07 }),
   wallZ('muro-leste-sul', EAST_WALL.x, SECRET.board.z1, B.maxZ, { hx: 0.07 }),
@@ -424,12 +440,12 @@ export const CAMERA = {
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = {
   WORLD, EAST_WALL, DOGS, WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR,
-  FLOOR_LAMP, RUG, DOG_BEDS, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PANTRY, DRAWERS, PANTRY_SHELF,
+  FLOOR_LAMP, RUG, DOG_BEDS, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PANTRY, CUPBOARD, PANTRY_CRATES, PANTRY_SHELF,
   PORCH, PERGOLA_POSTS, CAKE_TABLE, CAKE, CAKE_ORDER, CAKE_REJECT, GIFTS, PORCH_BENCH, PORCH_POTS, POOL, BOAT, TAP, HOSE,
   CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, PIGS, SECRET,
+  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, PIGS, CHICKENS, SECRET,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };

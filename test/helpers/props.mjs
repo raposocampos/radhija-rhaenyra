@@ -383,7 +383,7 @@ export function stubFase10Props(root, layout) {
   const hat = item(root, 'hat', { x: layout.BOAT.start.x, z: layout.BOAT.start.z });
   const ribbon = item(root, 'ribbon', { x: layout.RIBBON.x, z: layout.RIBBON.z });
   const candle = item(root, 'candle', { x: layout.CANDLE.x, z: layout.CANDLE.z });
-  const cookie = item(root, 'cookie', { x: layout.DRAWERS.x, z: layout.DRAWERS.z });
+  const cookie = item(root, 'cookie', { x: layout.CUPBOARD.x, z: layout.CUPBOARD.z });
   const star = item(root, 'star', { x: layout.ROSE_BUSH.x, z: layout.ROSE_BUSH.z + layout.ROSE_BUSH.r + 0.4 });
   const handle = object(root, 'rope-handle');
   handle.position.set(layout.ROPE.rest.x, 0, layout.ROPE.rest.z);
@@ -427,7 +427,7 @@ export function stubFase10Props(root, layout) {
     shedButtons: [wallButton(root, 'fase10.shedButton1'), wallButton(root, 'fase10.shedButton2')],
     shedLinks: { door: link('fase10.shedLinks.door'), gate: link('fase10.shedLinks.gate') },
     styGate: gate(root, 'fase10.styGate'),
-    drawers: checked('fase10.drawers', { list: [0, 0, 0].map(() => ({ ext: 0, fallen: false })), setDrawer(i, ext, fallen) { this.list[i] = { ext, fallen }; } }),
+    crates: checked('fase10.crates', { list: layout.PANTRY_CRATES.list.map(() => ({ x: layout.PANTRY_CRATES.x0, locked: false })), setCrate(i, x, locked) { this.list[i] = { x, locked }; } }),
     pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),
     farm: { spots, makeVeg(kind) { const o = new THREE.Group(); o.name = `veg:${kind}`; return o; } },
     secretBoard: checked('fase10.secretBoard', { object: object(root, 'tabua-solta'), open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),

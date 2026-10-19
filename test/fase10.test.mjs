@@ -3,10 +3,10 @@
 // torneira no alto da parede, a piscininha enchendo e o ventilador ligado pelo disjuntor da cozinha); o laço na casa na
 // árvore (a Dona Gansa guardando a cordinha do portão, o superbafo pelo cano de brinquedo até o pombo, o elevador de
 // balde com a Rhaenyra puxando a corda, o deque onde a Radhija anda livre, desamarra o laço e escorrega); o biscoito
-// em cima do gaveteiro da despensa (a Rhaenyra puxa as gavetas até virarem degraus, a Radhija sobe); a vela do 3 no
+// em cima do armário da despensa (a Rhaenyra puxa três caixotes até as marcas do chão, a Radhija sobe); a vela do 3 no
 // galpão (a lama da horta, o Lambe-Lambe, os dois botões altos sorteados: porta ou chiqueiro, e a rampa só com
 // arrancada); a estrela na piñata em cima da roseira (o superbafo balança, a Rhaenyra pula e bate); os legumes do
-// campinho; e as regras de cada passo. Headless.
+// campinho; as galinhas do quintal; e as regras de cada passo. Headless.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
@@ -26,8 +26,9 @@ const hints = (h) => h.log('hint').map((x) => x.text);
 const NOUN = { hat: 'o chapeuzinho', ribbon: 'o laço', candle: 'a vela do 3', cookie: 'o biscoito de osso', star: 'a estrela' };
 const fill = (s, item) => s.replace('{item}', NOUN[item]);
 const GOAL_IN = { x: L.GOAL.x, z: L.GOAL.z + 1.0 };
-/** A frente do gaveteiro da despensa (onde as gavetas saem). */
-const D_FRONT = L.DRAWERS.z + L.DRAWERS.hz;
+/** Os caixotes da despensa e o pé da escadinha (na frente do caixote baixo). */
+const CR = L.PANTRY_CRATES;
+const FOOT = { x: CR.x1, z: CR.list[2].z + CR.hz + 0.3 };
 
 /** Fica ativa a dog `name` (Q se precisar). */
 function as(h, name) {
@@ -65,27 +66,32 @@ function bafo(h) {
   h.run(0.3);
   h.keyUp('KeyR');
 }
-/** A Rhaenyra (ativa, na frente do gaveteiro) pega a próxima gaveta, anda para trás até `ext` e solta. */
-function pullDrawer(h, i, ext) {
-  assert.equal(h.info().prompt, TEXT.prompt.drawerGrab, `prompt da gaveta ${i}`);
+/** A Rhaenyra (ativa) pega a alça do caixote i (no começo do trilho) e anda para trás até ele travar na marca. */
+function pullCrate(h, i) {
+  put(h, 'rhaenyra', q(h).crates[i].x + CR.hx + 0.03 + 0.3, CR.list[i].z, -Math.PI / 2);
+  assert.equal(h.info().prompt, TEXT.prompt.crateGrab, `prompt do caixote ${i}`);
   h.tap('KeyE');
-  assert.equal(q(h).drawerHold, i, `segurando a gaveta ${i}`);
-  h.hold([0, 1]);
-  assert.ok(h.run(3, { until: (s) => s.quintal.drawers[i].ext >= ext || s.quintal.drawers[i].fallen }), `puxou a gaveta ${i}`);
+  assert.equal(q(h).crateHold, i, `segurando o caixote ${i}`);
+  h.hold([1, 0]);
+  assert.ok(h.run(4, { until: (s) => s.quintal.crates[i].locked }), `o caixote ${i} chegou na marca ${JSON.stringify(q(h).crates[i])}`);
   h.hold(null);
-  h.run(0.1);
-  if (q(h).drawerHold === null) return;
-  assert.equal(h.info().prompt, TEXT.prompt.drawerRelease);
-  h.tap('KeyE');
-  assert.equal(q(h).drawerHold, null, 'soltou a gaveta');
+  assert.equal(q(h).crateHold, null, 'na marca, ela solta a alça sozinha');
+  assert.equal(q(h).crates[i].x, CR.x1);
 }
-/** A Radhija (ativa) na frente do gaveteiro: E para subir; espera a subida (e a descida) terminar. */
-function climbDrawers(h) {
-  put(h, 'radhija', L.DRAWERS.x + 0.22, D_FRONT + 0.6, Math.PI);
+/** A Radhija (ativa) no pé da escadinha: E para subir; espera a subida (e a descida) terminar. */
+function climbCrates(h) {
+  put(h, 'radhija', FOOT.x, FOOT.z, Math.PI);
   assert.equal(h.info().prompt, TEXT.prompt.climb, 'prompt da subida');
   h.tap('KeyE');
   assert.ok(h.run(0.2, { until: (s) => s.quintal.climb }), 'começou a subir');
-  assert.ok(h.run(5, { until: (s) => !s.quintal.climb }), 'terminou a subida');
+  const seen = { air: false, crouch: false };
+  assert.ok(h.run(12, { until: (s) => {
+    const an = h.dogs.radhija.anim;
+    if (an.airK >= 0) seen.air = true;
+    if (an.crouch > 0.6) seen.crouch = true;
+    return !s.quintal.climb;
+  } }), 'terminou a subida');
+  return seen;
 }
 /** A estrela: a Radhija sopra a piñata do oeste; a Rhaenyra, do leste, pula quando ela passa por cima. */
 function breakPinata(h) {
@@ -256,20 +262,20 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enf
   assert.deepEqual(q(h).cake, ['ribbon']);
   assert.equal(h.info().stage, 'cake1');
 
-  // ---- BISCOITO: a Rhaenyra puxa as gavetas (a de baixo bem para fora, cada uma mais para dentro); a Radhija sobe
+  // ---- BISCOITO: a Rhaenyra puxa os três caixotes até as marcas (eles travam sozinhos); a Radhija sobe por eles
   as(h, 'rhaenyra');
-  put(h, 'rhaenyra', L.DRAWERS.x, D_FRONT + 0.45, Math.PI);
+  put(h, 'rhaenyra', q(h).crates[0].x + CR.hx + 0.33, CR.list[0].z, -Math.PI / 2);
   assert.equal(h.info().objective, TEXT.objective.cookieRh);
   h.clearLog();
-  pullDrawer(h, 0, 0.4);
-  pullDrawer(h, 1, 0.25);
-  pullDrawer(h, 2, 0.12);
-  assert.equal(q(h).stairs, true, `as gavetas viraram degraus ${JSON.stringify(q(h).drawers)}`);
-  assert.equal(h.log('drawer:fall').length, 0);
+  for (const i of [0, 1, 2]) pullCrate(h, i);
+  assert.equal(q(h).stairs, true, `os caixotes viraram uma escadinha ${JSON.stringify(q(h).crates)}`);
+  assert.equal(h.log('crate:lock').length, 3);
+  assert.ok(hints(h).includes(TEXT.hint.cratesDone));
   assert.equal(h.info().objective, TEXT.objective.climbRh);
   as(h, 'radhija');
   assert.equal(h.info().objective, TEXT.objective.climbRad);
-  climbDrawers(h);
+  const seen = climbCrates(h);
+  assert.ok(seen.air && seen.crouch, `pulinhos com a pose de pulo e a agachadinha antes ${JSON.stringify(seen)}`);
   assert.equal(h.info().cookie.holder, 'radhija', 'pegou o biscoito lá em cima');
   assert.equal(h.ctrls.radhija.y, 0, 'de volta ao chão');
   h.clearLog();
@@ -613,43 +619,49 @@ test('fase 10: o botão da porta é sorteado a cada partida (sem ?botao=)', asyn
   assert.deepEqual([...seen].sort(), [0, 1], 'os dois botões aparecem');
 });
 
-test('fase 10: gavetas — puxada demais cai e encaixa de volta; degrau errado, a Radhija desce sem o biscoito', async () => {
+test('fase 10: caixotes — a Radhija não puxa e só sobe com os três na marca; solto no meio, o caixote fica onde parou', async () => {
   const h = await game();
   h.run(0.3);
-  // a Radhija sozinha não puxa: ela tenta subir e a gaveta de baixo ainda não é degrau
+  // a Radhija na alça: pesado demais; no pé da escadinha sem os caixotes: ainda não
   as(h, 'radhija');
   h.clearLog();
-  climbDrawers(h);
-  assert.ok(hints(h).includes(TEXT.hint.step0), 'a de baixo precisa sair bem para fora');
-  assert.equal(h.info().cookie.holder, null);
-  // a Rhaenyra puxa demais: a gaveta cai; E encaixa de volta
+  put(h, 'radhija', CR.x0 + CR.hx + 0.03 + 0.25, CR.list[1].z, -Math.PI / 2);
+  h.tap('KeyE');
+  assert.equal(q(h).crateHold, null);
+  assert.ok(hints(h).includes(TEXT.hint.crateHeavy), 'a Radhija não puxa');
+  put(h, 'radhija', FOOT.x, FOOT.z, Math.PI);
+  assert.equal(h.info().prompt, TEXT.prompt.climb);
+  h.tap('KeyE');
+  h.run(0.2);
+  assert.equal(q(h).climb, null, 'sem a escadinha, ela não sobe');
+  assert.ok(hints(h).includes(TEXT.hint.cratesNotReady));
+  // a Rhaenyra puxa o do meio até a metade e solta: ele fica ali; pega de novo e leva até a marca
   as(h, 'rhaenyra');
-  put(h, 'rhaenyra', L.DRAWERS.x, D_FRONT + 0.45, Math.PI);
-  h.clearLog();
+  put(h, 'rhaenyra', CR.x0 + CR.hx + 0.33, CR.list[1].z, -Math.PI / 2);
   h.tap('KeyE');
-  h.hold([0, 1]);
-  assert.ok(h.run(3, { until: (s) => s.quintal.drawers[0].fallen }), 'puxada demais, a gaveta caiu');
+  h.hold([1, 0]);
+  assert.ok(h.run(3, { until: (s) => s.quintal.crates[1].x > (CR.x0 + CR.x1) / 2 }));
   h.hold(null);
-  assert.equal(q(h).drawerHold, null, 'caiu e ela soltou');
-  assert.equal(h.log('drawer:fall').length, 1);
-  assert.ok(hints(h).includes(TEXT.hint.drawerFall));
-  assert.equal(h.info().objective, TEXT.objective.drawerFallenRh);
-  put(h, 'rhaenyra', L.DRAWERS.x, D_FRONT + 0.95, Math.PI);
-  assert.equal(h.info().prompt, TEXT.prompt.drawerFix);
+  assert.equal(h.info().prompt, TEXT.prompt.crateRelease);
   h.tap('KeyE');
-  assert.deepEqual(q(h).drawers[0], { ext: 0, fallen: false }, 'encaixou de volta');
-  // a de baixo certa e a do meio para fora demais (quase igual à de baixo): não serve de degrau
-  put(h, 'rhaenyra', L.DRAWERS.x, D_FRONT + 0.45, Math.PI);
-  pullDrawer(h, 0, 0.4);
-  pullDrawer(h, 1, 0.36);
-  assert.equal(q(h).stairs, false);
-  put(h, 'rhaenyra', L.DRAWERS.x - 0.9, D_FRONT + 1.3, Math.PI);
-  as(h, 'radhija');
-  h.clearLog();
-  climbDrawers(h);
-  assert.ok(hints(h).includes(TEXT.hint.step1High), 'a do meio tem de ficar mais para dentro');
-  assert.equal(h.info().cookie.holder, null, 'sem o biscoito');
-  assert.equal(h.ctrls.radhija.y, 0, 'desceu');
+  h.run(0.3);
+  const mid = q(h).crates[1];
+  assert.ok(mid.x > CR.x0 + 0.1 && mid.x < CR.x1 - 0.1 && !mid.locked, `solto no meio do trilho ${JSON.stringify(mid)}`);
+  assert.equal(h.info().prompt, TEXT.prompt.crateGrab, 'a alça continua ao alcance');
+  h.tap('KeyE');
+  h.hold([1, 0]);
+  assert.ok(h.run(3, { until: (s) => s.quintal.crates[1].locked }), 'travou na marca');
+  h.hold(null);
+  // andando para a frente (para o caixote), ele não volta
+  const x = q(h).crates[1].x;
+  h.hold([-1, 0]);
+  h.run(0.6);
+  h.hold(null);
+  assert.equal(q(h).crates[1].x, x, 'travado, não sai da marca');
+  // a Rhaenyra não sobe a escadinha
+  puz(h).debugSet('stairs');
+  put(h, 'rhaenyra', FOOT.x, FOOT.z, Math.PI);
+  assert.notEqual(h.info().prompt, TEXT.prompt.climb);
 });
 
 test('fase 10: a piñata parada em cima da roseira; legumes do campinho (colher, largar, pegar do chão, rebrotar)', async () => {
@@ -686,6 +698,47 @@ test('fase 10: a piñata parada em cima da roseira; legumes do campinho (colher,
   assert.ok(h.run(L.PLANTATION.regrow + 0.5, { until: () => spot.ready }), 'o pé rebrotou');
   h.tap('KeyE');
   assert.equal(q(h).veg.held.radhija, null, 'E larga o legume');
+});
+
+test('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o latido as faz voar e elas não saem da área', async () => {
+  const h = await game();
+  h.run(0.3);
+  const hen = () => q(h).chickens[0];
+  const A = L.CHICKENS.area;
+  const inArea = (c) => c.x >= A.minX - 1e-3 && c.x <= A.maxX + 1e-3 && c.z >= A.minZ - 1e-3 && c.z <= A.maxZ + 1e-3;
+  as(h, 'radhija');
+  // por trás: chega a 1 m, nas costas dela, e ela continua ciscando
+  let c0 = hen();
+  const yaw0 = L.CHICKENS.start[0].yaw;
+  put(h, 'radhija', c0.x - Math.sin(yaw0) * 1.0, c0.z - Math.cos(yaw0) * 1.0, yaw0);
+  h.clearLog();
+  h.run(0.6);
+  assert.ok(!['flee', 'glide'].includes(hen().state), `por trás ela nem liga (${hen().state})`);
+  assert.equal(h.log('chicken:alarm').length, 0);
+  // de frente: a 1 m, na frente do bico, ela foge correndo
+  h.events.emit('ui:restart', {});
+  h.run(0.2);
+  c0 = hen();
+  put(h, 'radhija', c0.x + Math.sin(yaw0) * 1.0, c0.z + Math.cos(yaw0) * 1.0, yaw0 + Math.PI);
+  assert.ok(h.run(0.6, { until: () => hen().state === 'flee' }), `de frente, ela foge (${hen().state})`);
+  assert.ok(h.log('chicken:alarm').length >= 1);
+  const d0 = Math.hypot(hen().x - h.ctrls.radhija.x, hen().z - h.ctrls.radhija.z);
+  h.run(1.0);
+  const d1 = Math.hypot(hen().x - h.ctrls.radhija.x, hen().z - h.ctrls.radhija.z);
+  assert.ok(d1 > d0 + 0.3, `correu para longe (${d0.toFixed(2)} → ${d1.toFixed(2)} m)`);
+  // o latido (E sem nada por perto) faz as duas voarem; pousam dentro da área
+  h.events.emit('ui:restart', {});
+  h.run(0.2);
+  put(h, 'radhija', (A.minX + A.maxX) / 2 - 1.2, (A.minZ + A.maxZ) / 2, Math.PI / 2);
+  h.clearLog();
+  h.tap('KeyE');
+  assert.ok(h.log('chicken:flap').length >= 1, 'latido: voo curto');
+  let maxY = 0;
+  assert.ok(h.run(2.5, { until: (s) => { maxY = Math.max(maxY, ...s.quintal.chickens.map((k) => k.y)); return s.quintal.chickens.every((k) => k.state !== 'glide'); } }), 'pousaram');
+  assert.ok(maxY > 0.25, `subiram batendo as asas (${maxY.toFixed(2)} m)`);
+  assert.ok(q(h).chickens.every(inArea), `continuam na área ${JSON.stringify(q(h).chickens)}`);
+  // ninguém tem texto
+  assert.equal(h.log('hint').filter((x) => /galinha/i.test(x.text || '')).length, 0);
 });
 
 test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', async () => {
@@ -777,6 +830,7 @@ test('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=done', a
   assert.deepEqual([s.stage, s.water, s.tap, s.power, s.gateOpen, s.pigeon, s.doorOpen, s.cake.length], ['start', 0, false, false, false, 'asleep', false, 0]);
   assert.deepEqual(s.place, { hat: 'home', ribbon: 'home', candle: 'home', cookie: 'home', star: 'home' });
   assert.deepEqual([s.shed.open, s.shed.sty, s.stairs, s.pinata.hits, s.secret.ready], [false, false, false, 0, false]);
+  assert.ok(s.crates.every((k) => k.x === CR.x0 && !k.locked), 'os caixotes voltam para o começo do trilho');
   assert.ok(Math.abs(s.crate.x - L.CRATE.start.x) < 1e-3 && Math.abs(s.crate.z - L.CRATE.start.z) < 1e-3);
   h.game.debug.setStage('done');
   assert.ok(h.run(10, { until: (st) => st.state === 'victory' }), 'stage=done termina a fase');

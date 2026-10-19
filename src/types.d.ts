@@ -473,6 +473,10 @@ export interface InputLock {
   drive?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
   slope?: number;
+  /** Pulinho roteirizado: fase no ar (0..1; −1 no chão), para a pose de pulo e o agachadinho do pouso. */
+  airK?: number;
+  /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
+  crouch?: number;
   /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
   move?: { dx: number; dz: number; speed: number };
 }
@@ -818,7 +822,7 @@ export interface Fase10Props extends LevelProps {
   ribbon: ItemProp;
   /** Vela do número 3 (com estrelinhas) na prateleira alta do galpão. */
   candle: ItemProp;
-  /** Biscoito de osso de glacê, em cima do gaveteiro da despensa. */
+  /** Biscoito de osso de glacê, em cima do armário alto da despensa. */
   cookie: ItemProp;
   /** Estrela de topo de bolo, escondida na piñata (setShown: aparece quando ela abre). */
   star: ItemProp & { setShown?(on: boolean): void };
@@ -860,8 +864,8 @@ export interface Fase10Props extends LevelProps {
   shedLinks: { door: { pulse(): void; setOn(on: boolean): void }; gate: { pulse(): void; setOn(on: boolean): void } };
   /** A porteira do chiqueiro (0 fechada … 1 aberta). */
   styGate: GateProp;
-  /** O gaveteiro da despensa: setDrawer(i, quanto para fora em m, caída no chão). */
-  drawers: { setDrawer(i: number, ext: number, fallen: boolean): void; handleAt?(i: number): THREE.Vector3 };
+  /** Os caixotes da despensa: setCrate(i, x ao longo do trilho, travado na marca do chão). */
+  crates: { setCrate(i: number, x: number, locked: boolean): void };
   /** A piñata em cima da roseira: setPos(gancho e inclinações), setCracks(batidas), burst() abre, reset(). */
   pinata: { setPos(x: number, y: number, z: number, tiltX: number, tiltZ: number): void; setCracks(n: number): void; burst(): void; reset(): void };
   /** O campinho: os pés de legume (setReady: com ou sem legume) e makeVeg(tipo) cria o legume para carregar. */
@@ -901,6 +905,8 @@ export interface DogAnim {
   jump?: number;
   /** Progresso do pulo 0..1 (decolagem → pouso); −1 = no chão. */
   airK?: number;
+  /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
+  crouch?: number;
   /** Lambe-Lambe: fase da lambida atual 0..1 (contato em 0,5) para quem lambe e para quem é lambida; −1 = sem. */
   lickPhase?: number;
   /** Lado da lambida (±1, alterna a cada uma: a cabeça balança). */

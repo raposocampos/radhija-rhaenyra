@@ -135,19 +135,59 @@ export const SOUNDS_QUINTAL = {
     nz(G, o, { t, a: 0.002, d: 0.07, peak: 0.06, type: 'lowpass', f: 700 * p, q: 0.9, buf: G.pink });
     return 0.12;
   },
+  // galinha ciscando: "cóc… cóc" (dois toques curtos e nasais)
+  cluck(G, o, t, p) {
+    for (const [dt, f0] of [[0, 560], [0.13, 640]]) {
+      tone(G, o, { type: 'square', f: f0 * p, to: f0 * 0.78 * p, glideT: 0.06, t: t + dt, a: 0.004, d: 0.06, peak: 0.022, filt: { type: 'bandpass', f: 1300 * p, q: 1.6 } });
+      nz(G, o, { t: t + dt, a: 0.002, d: 0.04, peak: 0.018, type: 'bandpass', f: 2200 * p, q: 2 });
+    }
+    return 0.3;
+  },
+  // galinha assustada: "có-có-có-CÓÓ!" correndo
+  chickenAlarm(G, o, t, p) {
+    for (let i = 0; i < 3; i++) tone(G, o, { type: 'square', f: 640 * p, to: 520 * p, glideT: 0.05, t: t + i * 0.09, a: 0.003, d: 0.05, peak: 0.024, filt: { type: 'bandpass', f: 1400 * p, q: 1.5 } });
+    tone(G, o, { type: 'square', f: 720 * p, to: 980 * p, glideT: 0.12, t: t + 0.3, a: 0.01, hold: 0.06, d: 0.16, peak: 0.03, filt: { type: 'bandpass', f: 1600 * p, q: 1.2 } });
+    return 0.6;
+  },
+  // o bater de asas do voo curto
+  wingFlap(G, o, t, p) {
+    void p;
+    return flaps(G, o, t, 7, 13, 0.13);
+  },
+  // o caixote travando na marca do chão: "toc" de madeira e um plim
+  crateClick(G, o, t, p) {
+    nz(G, o, { t, a: 0.002, d: 0.05, peak: 0.08, type: 'bandpass', f: 1100 * p, q: 2.2 });
+    marimba(G, o, mtof(84) * p, t + 0.04, 0.045, 0.35);
+    return 0.4;
+  },
+  // batida na piñata: papelão grosso
+  pinataThump(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 150 * p, to: 90 * p, glideT: 0.12, t, a: 0.003, d: 0.14, peak: 0.12 });
+    nz(G, o, { t, a: 0.002, d: 0.09, peak: 0.06, type: 'bandpass', f: 900 * p, q: 0.8, buf: G.pink });
+    return 0.25;
+  },
+  // colheu um legume: a terra soltando
+  pluck(G, o, t, p) {
+    nz(G, o, { t, a: 0.004, d: 0.08, peak: 0.05, type: 'lowpass', f: 900 * p, q: 0.8, buf: G.pink });
+    boing(G, o, t + 0.03, p, 330, 0.03, 0.18);
+    return 0.25;
+  },
 };
 export const MIN_GAP_QUINTAL = {
   pickupHat: 0.3, pickupRibbon: 0.3, pickupCandle: 0.3, waterGush: 0.5, waterStart: 0.4, waterStop: 0.4, waterFull: 0.6,
   boatDock: 0.4, pulleyCreak: 0.32, bucketClank: 0.25, deckThump: 0.15, ropeCreak: 0.25, pigeonPeck: 0.5, cakePlace: 0.3,
   cakeWrong: 0.4, cakeFall: 0.2, partyHorn: 1, shedOpen: 0.5, shedClose: 0.5, paintingChime: 0.8, itemDrop: 0.15,
+  cluck: 0.5, chickenAlarm: 0.6, wingFlap: 0.4, crateClick: 0.2, pinataThump: 0.2, pluck: 0.2,
 };
 export const PITCH_VAR_QUINTAL = {
   pickupHat: 0.02, pickupRibbon: 0.02, pickupCandle: 0.02, waterGush: 0.05, waterStart: 0.03, waterStop: 0.03, waterFull: 0.01,
   boatDock: 0.04, pulleyCreak: 0.06, bucketClank: 0.04, deckThump: 0.06, ropeCreak: 0.05, pigeonPeck: 0.05, cakePlace: 0.01,
   cakeWrong: 0.03, cakeFall: 0.05, partyHorn: 0.01, shedOpen: 0.03, shedClose: 0.03, paintingChime: 0.01, itemDrop: 0.05,
+  cluck: 0.08, chickenAlarm: 0.06, wingFlap: 0.06, crateClick: 0.03, pinataThump: 0.06, pluck: 0.06,
 };
 export const VERB_QUINTAL = {
   pickupHat: 0.15, pickupRibbon: 0.15, pickupCandle: 0.15, waterGush: 0.06, waterStart: 0.06, waterStop: 0.05, waterFull: 0.18,
   boatDock: 0.08, pulleyCreak: 0.08, bucketClank: 0.12, deckThump: 0.06, ropeCreak: 0.05, pigeonPeck: 0.06, cakePlace: 0.2,
   cakeWrong: 0.1, cakeFall: 0.05, partyHorn: 0.22, shedOpen: 0.1, shedClose: 0.1, paintingChime: 0.25, itemDrop: 0.05,
+  cluck: 0.05, chickenAlarm: 0.05, wingFlap: 0.04, crateClick: 0.08, pinataThump: 0.05, pluck: 0.04,
 };

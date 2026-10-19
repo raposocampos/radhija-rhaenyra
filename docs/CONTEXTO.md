@@ -188,22 +188,24 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - Testes: `test/fase10.test.mjs` refeito (partida completa com os cinco, botões, gavetas, piñata, legumes,
     tábua); `test/helpers/props.mjs` com as peças novas; E2E `quintal` e `capture-quintal.mjs` com as cenas novas.
 - Prévia entregue em `55a811e` (CI ok, E2E `quintal` 48/48 e `todas` verdes, capturas revisadas). Terceira rodada
-  de retorno do usuário (2026-10-19). Feito: abóbora do pé do mesmo tamanho da que vai na boca; plaquinha do
-  cantinho "Raniri e Radidi"; o plano do quadro repete a cada entrada no cantinho. **Falta (em andamento):**
-  - Despensa: trocar as gavetas por **três caixotes** de alturas diferentes (escolha do usuário). A Rhaenyra puxa
-    cada um pela alça (E, andando para trás, num trilho reto) até a marca no chão, que fica verde quando ele trava
-    sozinho; a Radhija sobe de tampa em tampa até o pote, com agachadinha antes de cada pulo (a subida das gavetas
-    ficou feia e não dava para saber quando parar).
-  - Queda do galpão (depois da vela): agachar e preparar antes de pular para o chão.
-  - Funil do cano de brinquedo virado para o lado, na altura das dogs (hoje aponta para cima).
-  - Botões altos do galpão bem mais visíveis.
-  - Duas galinhas perto da horta, ciscando: fogem quando uma dog chega de frente; de costas não, só se assustadas
-    (latido), e aí saem batendo asas num voo curto.
-  - Animação de comer/beber nos potes de ração e água (extras da fase 10, E perto do pote).
-  - Piñata: etapa antes, a Rhaenyra derruba a piñata da árvore com o empurrão em pé (branch
-    `claude/empurrao-em-pe`, ainda sem PR); integrar depois que ele entrar no main.
-  - Cabeça atravessando paredes e móveis: é a etapa 4 do PR #37 (colisão do corpo); o pedido foi repassado à sessão.
-- Próximo passo da D: terminar a lista acima, CI e E2E `quintal` (e `todas`), revisar capturas e entregar a prévia;
+  de retorno do usuário (2026-10-19), feita no branch (consultar o PR #33 para SHA, CI e E2E):
+  - Abóbora do pé do tamanho da que vai na boca; plaquinha do cantinho "Raniri e Radidi"; o plano do quadro repete a
+    cada entrada.
+  - Despensa: no lugar das gavetas, o armário alto (`CUPBOARD`) e **três caixotes** (`PANTRY_CRATES`, escolha do
+    usuário). A Rhaenyra pega a alça (E) e anda para trás num trilho reto; na marca do chão o caixote trava sozinho e
+    a marca fica verde (sem "puxar demais"). Com os três travados, a Radhija sobe pelo pé da escadinha (E).
+  - Pulinhos roteirizados com preparo: `InputLock.airK` (pose de pulo) e `InputLock.crouch` (agachadinha), lidos em
+    `game.js` e em `dogAnimation.js` (duas linhas; o resto é da fase). Usados na escadinha e na descida da prateleira
+    do galpão (agacha na beirada antes de pular).
+  - Funil do cano deitado, de boca para o sul, na altura do focinho; botões do galpão com placa branca, borda
+    vermelha, plaquinha "?" e lampadinha que pisca até serem apertados; animação de comer no pote de ração (e de
+    beber no de água) nos extras; dois canteiros a mais na horta; roseira com rosas; milho com folhas em fita.
+  - Duas **galinhas** (`src/characters/chicken.js`, `src/levels/fase10/chickens.js`, `CHICKENS`): ciscam do lado de fora
+    da cerca oeste da horta; dog chegando de frente as faz correr; por trás não; latido, esbarrão ou arrancada as faz
+    voar baixinho. Sons novos (cocoricó, alarme, asas, caixote travando, piñata, colheita) em `soundsQuintal.js`.
+  - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (branch `claude/empurrao-em-pe`, sem PR) e
+    a cabeça atravessando paredes (etapa 4 do PR #37; repassado à sessão dos modelos).
+- Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar capturas e entregar a prévia;
   depois do PR #36 aprovado, trocar o marcador `pigs` pelo `createPigHerd` (os legumes distraem por um tempo
   generoso e eles voltam); depois do PR #35, a Rhaenyra na lama da horta fica suja e a Radhija a lambe (textos de
   controle R2/L2). Integrar só com a aprovação do usuário; squash com SHA esperado, deploy e aviso ao orquestrador.

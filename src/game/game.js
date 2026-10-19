@@ -776,7 +776,8 @@ export function createGame({ engine, dogs, levels, params }) {
       an.extra = extras ? extras.extraAnim(n) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       an.jump = W ? 0 : c.y;
-      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
+      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : locks[n]?.airK ?? -1;
+      an.crouch = locks[n]?.crouch ?? 0;
       an.wallK = W ? Math.min(1, c.wallT / c.wallDur) : -1;
       an.wallGap = W ? (c.x - W.x) * W.nx + (c.z - W.z) * W.nz : 0;
       an.wallTop = W ? W.top : 0;

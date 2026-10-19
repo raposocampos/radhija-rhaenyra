@@ -1,8 +1,8 @@
 // FASE 10 · A despensa, o cômodo novo ao sul da cozinha (em corte, como o resto da casa): piso de lajotinhas, a parede
 // da frente da cozinha com a porta, paredes baixas, as prateleiras de latas, potes e pacotes, os sacos de farinha, a
-// cestinha de batatas e o GAVETEIRO de madeira com três gavetas que deslizam para fora (viram degraus), o pote de vidro
-// com os biscoitos de osso de glacê em cima e o puxador de argola de cada gaveta.
-// API: buildPantry(root, layout) → { group, walls (ver através), drawers: { setDrawer(i, ext, fallen), handleAt(i) },
+// cestinha de batatas, o ARMÁRIO alto com o pote de vidro dos biscoitos de osso em cima e os três CAIXOTES de
+// mantimentos (alturas diferentes, alça de corda no lado leste) que deslizam pelo trilho pontilhado até a marca no chão.
+// API: buildPantry(root, layout) → { group, walls (ver através), crates: { setCrate(i, x, locked) },
 //   cookieSpot (Object3D no pote), update(dt, t) }
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, stdMat, woodMat, plasterMat, brassMat, paint, mergeGeometries } from '../../../world/util.js';
@@ -33,7 +33,7 @@ function labelTex(txt, bg, ink) {
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildPantry(root, layout) {
-  const { PANTRY, DRAWERS, PANTRY_SHELF, WALLS } = layout;
+  const { PANTRY, CUPBOARD, PANTRY_CRATES, PANTRY_SHELF, WALLS } = layout;
   const group = new THREE.Group();
   group.name = 'despensa';
   const walls = new THREE.Group();
@@ -139,49 +139,28 @@ export function buildPantry(root, layout) {
     group.add(pot);
   }
 
-  // ---------------- o gaveteiro (corpo, três gavetas que deslizam e o pote de biscoitos em cima)
-  const D = DRAWERS;
+  // ---------------- o armário alto (portas fechadas, tampo) com o pote de biscoitos em cima
+  const D = CUPBOARD;
   const cab = new THREE.Group();
-  const cabWood = woodMat('#e8d2a8', { key: 'f10-gaveteiro' });
+  const cabWood = woodMat('#e8d2a8', { key: 'f10-armario' });
   const dw = D.hx * 2, dd = D.hz * 2;
-  // carcaça aberta na frente: laterais, fundo, tampo e base
+  const body = new THREE.Mesh(rbox(dw, D.top - 0.04, dd, 0.012), cabWood);
+  body.position.y = (D.top - 0.04) / 2;
+  const topP = new THREE.Mesh(rbox(dw + 0.04, 0.04, dd + 0.03, 0.01), woodMat('#c79a62', { key: 'f10-armario-tampo' }));
+  topP.position.set(0, D.top - 0.02, 0.008);
+  cab.add(body, topP);
+  // duas portas (azul-claro, com almofada e puxador de latão)
+  const doorMat = woodMat('#8fc0d8', { key: 'f10-armario-porta', rough: 0.6 });
+  const panelMat = woodMat('#a9d0e2', { key: 'f10-armario-almofada', rough: 0.6 });
   for (const sx of [-1, 1]) {
-    // as laterais terminam por dentro do tampo
-    const side = new THREE.Mesh(rbox(0.04, D.top - 0.03, dd, 0.008), cabWood);
-    side.position.set(sx * (D.hx - 0.02), (D.top - 0.03) / 2, 0);
-    cab.add(side);
+    const door = new THREE.Mesh(rbox(D.hx - 0.04, D.top - 0.16, 0.02, 0.008), doorMat);
+    door.position.set(sx * (D.hx / 2), (D.top - 0.04) / 2 + 0.03, D.hz + 0.004);
+    const panel = new THREE.Mesh(rbox(D.hx - 0.14, D.top - 0.36, 0.012, 0.006), panelMat);
+    panel.position.set(sx * (D.hx / 2), (D.top - 0.04) / 2 + 0.03, D.hz + 0.016);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), brassMat());
+    knob.position.set(sx * 0.045, (D.top - 0.04) / 2 + 0.03, D.hz + 0.024);
+    cab.add(door, panel, knob);
   }
-  const backP = new THREE.Mesh(new THREE.BoxGeometry(dw - 0.08, D.top - 0.04, 0.02), cabWood);
-  backP.position.set(0, D.top / 2, -D.hz + 0.012);
-  const topP = new THREE.Mesh(rbox(dw + 0.03, 0.04, dd + 0.02, 0.01), woodMat('#c79a62', { key: 'f10-gaveteiro-tampo' }));
-  topP.position.set(0, D.top - 0.02, 0.005);
-  const baseP = new THREE.Mesh(rbox(dw - 0.06, 0.06, dd - 0.02, 0.008), cabWood);
-  baseP.position.set(0, 0.03, 0);
-  cab.add(backP, topP, baseP);
-  // as gavetas: caixa com a frente pintada e o puxador de argola
-  const drawerFrontMat = woodMat('#8fc0d8', { key: 'f10-gaveta', rough: 0.6 });
-  const fronts = ['#8fc0d8', '#f6c453', '#f27a8a'];
-  const drawerObjs = D.y.map((yTop, i) => {
-    const h = 0.24;
-    const dr = new THREE.Group();
-    const front = new THREE.Mesh(rbox(dw - 0.1, h - 0.02, 0.03, 0.008), i === 0 ? drawerFrontMat : woodMat(fronts[i], { key: `f10-gaveta-${i}`, rough: 0.6 }));
-    front.position.set(0, -h / 2, D.hz - 0.015);
-    const tray = new THREE.Mesh(new THREE.BoxGeometry(dw - 0.14, 0.02, dd - 0.06), cabWood);
-    tray.position.set(0, -h + 0.03, 0);
-    const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.02, h - 0.06, dd - 0.06), cabWood);
-    sideL.position.set(-(dw - 0.14) / 2, -h / 2, 0);
-    const sideR = sideL.clone();
-    sideR.position.x = (dw - 0.14) / 2;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16), brassMat());
-    ring.position.set(0, -h / 2 - 0.02, D.hz + 0.012);
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), brassMat());
-    knob.position.set(0, -h / 2 + 0.012, D.hz + 0.006);
-    dr.add(front, tray, sideL, sideR, ring, knob);
-    dr.position.set(0, yTop, 0);
-    dr.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    cab.add(dr);
-    return dr;
-  });
   // o pote de vidro com os biscoitos de osso (o de glacê rosa é o do bolo) em cima
   const jar = new THREE.Group();
   const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.24, 18, 1, true), new THREE.MeshPhysicalMaterial({ color: '#dff0f4', roughness: 0.05, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }));
@@ -196,11 +175,11 @@ export function buildPantry(root, layout) {
     jar.add(b);
   }
   jar.add(glass, lid);
-  jar.position.set(-0.18, D.top, -0.04);
+  jar.position.set(-0.2, D.top, -0.04);
   cab.add(jar);
   // o lugar do biscoito do bolo (na frente do pote, encostado nele)
   const cookieSpot = new THREE.Object3D();
-  cookieSpot.position.set(0.05, D.top + 0.035, 0.06);
+  cookieSpot.position.set(0.08, D.top + 0.035, 0.05);
   cab.add(cookieSpot);
   // etiqueta "Biscoitos" no pote
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.05), new THREE.MeshStandardMaterial({ map: labelTex('Biscoitos', '#fffaf0', '#c94a5a'), roughness: 0.8 }));
@@ -210,28 +189,85 @@ export function buildPantry(root, layout) {
   cab.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh && o !== glass) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(cab);
 
-  const st = drawerObjs.map(() => ({ ext: 0, fallen: false, fall: 0 }));
+  // ---------------- os três caixotes de mantimentos (tampa fechada para pisar, ripas, rótulo e a alça de corda)
+  const C = PANTRY_CRATES;
+  const crateWood = woodMat('#c8955a', { key: 'f10-caixote', rough: 0.85 });
+  const slatWood = woodMat('#9a6a3e', { key: 'f10-caixote-ripa', rough: 0.9 });
+  const ropeMat = stdMat('#d8c49a', { roughness: 0.95 });
+  const labelInk = ['#c94a5a', '#7a4a2a', '#4a7a2a'];
+  const crates = C.list.map((cr, i) => {
+    const g = new THREE.Group();
+    g.name = `caixote-${cr.id}`;
+    const w = C.hx * 2, d = C.hz * 2;
+    const bodyC = new THREE.Mesh(rbox(w, cr.h - 0.03, d, 0.012), crateWood);
+    bodyC.position.y = (cr.h - 0.03) / 2;
+    const lidC = new THREE.Mesh(rbox(w + 0.02, 0.03, d + 0.02, 0.008), slatWood);
+    lidC.position.y = cr.h - 0.015;
+    g.add(bodyC, lidC);
+    // ripas horizontais nas quatro faces
+    const nSl = Math.max(1, Math.round((cr.h - 0.06) / 0.16));
+    for (let k = 0; k < nSl; k++) {
+      const y = 0.06 + (k + 0.5) * ((cr.h - 0.09) / nSl);
+      for (const [sx, sz, lw, ld] of [[0, d / 2 + 0.006, w - 0.02, 0.012], [0, -d / 2 - 0.006, w - 0.02, 0.012], [w / 2 + 0.006, 0, 0.012, d - 0.02], [-w / 2 - 0.006, 0, 0.012, d - 0.02]]) {
+        const sl = new THREE.Mesh(new THREE.BoxGeometry(lw, 0.05, ld), slatWood);
+        sl.position.set(sx, y, sz);
+        g.add(sl);
+      }
+    }
+    // o rótulo virado para o sul (para a câmera)
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.1), new THREE.MeshStandardMaterial({ map: labelTex(cr.label, '#fffaf0', labelInk[i]), roughness: 0.8 }));
+    lab.position.set(0, Math.min(cr.h - 0.08, 0.2), d / 2 + 0.014);
+    g.add(lab);
+    // a alça de corda no lado leste (meia argola grossa, na altura da boca da Rhaenyra)
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 6, 14, Math.PI), ropeMat);
+    loop.rotation.set(0, Math.PI / 2, -Math.PI / 2);
+    loop.position.set(w / 2 + 0.012, Math.min(0.2, cr.h - 0.06), 0);
+    g.add(loop);
+    g.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.position.set(C.x0, FLOOR_Y, cr.z);
+    group.add(g);
+    return g;
+  });
+  // marcas no chão (contorno do lugar de cada caixote) e o trilho pontilhado do começo até elas
+  const markMats = C.list.map(() => new THREE.MeshStandardMaterial({ color: '#f6efe0', emissive: '#000000', roughness: 0.6 }));
+  C.list.forEach((cr, i) => {
+    const w = C.hx * 2 + 0.06, d = C.hz * 2 + 0.06, t = 0.025;
+    const parts = [[0, d / 2, w, t], [0, -d / 2, w, t], [w / 2, 0, t, d], [-w / 2, 0, t, d]].map(([x, z, lw, ld]) => {
+      const p = new THREE.PlaneGeometry(lw, ld).rotateX(-Math.PI / 2);
+      p.translate(C.x1 + x, FLOOR_Y + 0.003, cr.z + z);
+      return p;
+    });
+    for (let x = C.x0 + C.hx + 0.12; x < C.x1 - C.hx - 0.08; x += 0.12) {
+      const p = new THREE.CircleGeometry(0.018, 8).rotateX(-Math.PI / 2);
+      p.translate(x, FLOOR_Y + 0.003, cr.z);
+      parts.push(p);
+    }
+    const mark = new THREE.Mesh(mergeGeometries(parts.map((p) => { p.deleteAttribute('uv'); return p.index ? p.toNonIndexed() : p; })), markMats[i]);
+    mark.receiveShadow = true;
+    group.add(mark);
+  });
+  const crateSt = C.list.map(() => ({ x: C.x0, locked: false, flash: 0 }));
   root.add(group);
   return {
     group, walls, cookieSpot,
-    drawers: {
-      /** Quanto a gaveta i está para fora (m) e se ela caiu no chão (aí fica deitada na frente do gaveteiro). */
-      setDrawer(i, ext, fallen = false) {
-        const s = st[i];
-        s.ext = ext;
-        s.fallen = fallen;
+    crates: {
+      /** Onde está o caixote i (x, ao longo do trilho) e se ele já travou na marca (a marca fica verde). */
+      setCrate(i, x, locked) {
+        const c = crateSt[i];
+        if (locked && !c.locked) c.flash = 1;
+        c.x = x;
+        c.locked = !!locked;
       },
-      /** Onde fica o puxador da gaveta i (para a Rhaenyra). @param {number} i */
-      handleAt(i) { return new THREE.Vector3(D.x, D.y[i] - 0.14, D.z + D.hz + st[i].ext + 0.02); },
     },
     update(dt) {
-      drawerObjs.forEach((dr, i) => {
-        const s = st[i];
-        s.fall += ((s.fallen ? 1 : 0) - s.fall) * (1 - Math.exp(-dt * 8));
-        // caída: na frente do gaveteiro, no chão, um pouco torta
-        const k = s.fall;
-        dr.position.set(0.08 * k, D.y[i] * (1 - k) + 0.24 * k, s.ext * (1 - k) + (D.hz + 0.35 + i * 0.05) * k);
-        dr.rotation.set(0.35 * k, 0.25 * k * (i % 2 ? 1 : -1), 0);
+      crates.forEach((g, i) => {
+        const c = crateSt[i];
+        g.position.x = c.x;
+        c.flash = Math.max(0, c.flash - dt * 1.6);
+        const m = markMats[i];
+        m.color.set(c.locked ? '#7ad66a' : '#f6efe0');
+        m.emissive.set(c.locked ? '#2f8a2a' : '#000000');
+        m.emissiveIntensity = c.locked ? 0.35 + c.flash * 1.2 : 0;
       });
     },
   };

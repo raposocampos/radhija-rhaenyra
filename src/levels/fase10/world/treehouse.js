@@ -496,21 +496,28 @@ export function buildTreehouse(root, layout) {
   // ================================================================ cano de brinquedo: funil no chão → boca do lado do pombo
   const tubeGroup = new THREE.Group();
   tubeGroup.name = 'cano-de-brinquedo';
+  // o funil deitado, de boca para o sul, na altura do focinho das dogs (é ali que a Radhija sopra)
   const funnelPos = new THREE.Vector3(TUBE.inlet.x, TUBE.funnelY, TUBE.inlet.z);
-  const funnel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.05, 0.22, 24, 1, true), new THREE.MeshPhysicalMaterial({ color: '#ff9a3c', roughness: 0.35, clearcoat: 0.6, side: THREE.DoubleSide }));
+  const funnel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.05, 0.22, 24, 1, true).rotateX(Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: '#ff9a3c', roughness: 0.35, clearcoat: 0.6, side: THREE.DoubleSide }));
   funnel.position.copy(funnelPos);
-  const funnelRim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.014, 8, 24).rotateX(Math.PI / 2), stdMat('#f6c453', { roughness: 0.4 }));
-  funnelRim.position.set(funnelPos.x, funnelPos.y + 0.11, funnelPos.z);
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, TUBE.funnelY - 0.1, 8), stdMat('#7cc4e8', { roughness: 0.4 }));
-  stand.position.set(funnelPos.x, (TUBE.funnelY - 0.1) / 2, funnelPos.z - 0.12);
-  tubeGroup.add(funnel, funnelRim, stand);
+  const funnelRim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.016, 8, 24), stdMat('#f6c453', { roughness: 0.4 }));
+  funnelRim.position.set(funnelPos.x, funnelPos.y, funnelPos.z + 0.11);
+  // dois pezinhos em V segurando o funil
+  const legMat = stdMat('#7cc4e8', { roughness: 0.4 });
+  for (const s of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, TUBE.funnelY + 0.02, 8), legMat);
+    leg.position.set(funnelPos.x + s * 0.08, TUBE.funnelY / 2 - 0.02, funnelPos.z - 0.02);
+    leg.rotation.z = s * 0.28;
+    tubeGroup.add(leg);
+  }
+  tubeGroup.add(funnel, funnelRim);
   // o caminho do cano: desce do funil, corre até o poste do deque, sobe e curva até o corrimão
   // o poste do meio da frente (o cano sobe por ele até o corrimão, do lado do pombo)
   const post = DECK_POSTS.reduce((best, p) => (p.z > -4.5 && Math.abs(p.x - TUBE.inlet.x) < Math.abs(best.x - TUBE.inlet.x) ? p : best), DECK_POSTS[2]);
   const mouth = new THREE.Vector3(PIGEON.x - 0.26, PIGEON.y + 0.08, PIGEON.z + 0.12);
   const tubePts = [
-    new THREE.Vector3(funnelPos.x, funnelPos.y - 0.1, funnelPos.z),
-    new THREE.Vector3(funnelPos.x, 0.18, funnelPos.z - 0.12),
+    new THREE.Vector3(funnelPos.x, funnelPos.y, funnelPos.z - 0.12),
+    new THREE.Vector3(funnelPos.x, 0.16, funnelPos.z - 0.34),
     new THREE.Vector3((funnelPos.x + post.x) / 2, 0.12, (funnelPos.z + post.z) / 2 + 0.1),
     new THREE.Vector3(post.x - 0.1, 0.14, post.z + 0.12),
     new THREE.Vector3(post.x - 0.1, 1.2, post.z + 0.12),
@@ -558,14 +565,19 @@ export function buildTreehouse(root, layout) {
   });
   const tubeGlow = new THREE.Mesh(tube(tubeCurve, 80, 0.043, 10), new THREE.MeshBasicMaterial({ color: '#a8e07a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   tubeGroup.add(tubeGlow);
-  // plaquinha no funil: "fale aqui" (um nariz desenhado)
+  // plaquinha do funil: "fale aqui"
+  const woodMatTag = stdMat('#c8a070', { roughness: 0.8 });
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.1), new THREE.MeshStandardMaterial({ map: canvasTexture(96, 56, (g, w, h) => {
     g.fillStyle = '#fffaf0'; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#f27a8a'; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4);
     g.fillStyle = '#5a3a2a'; g.font = 'bold 15px "Trebuchet MS", sans-serif'; g.textAlign = 'center';
     g.fillText('FALE', w / 2, 22); g.fillText('AQUI', w / 2, 40);
   }, { repeat: false }), roughness: 0.8 }));
-  tag.position.set(funnelPos.x, TUBE.funnelY - 0.28, funnelPos.z + 0.035);
+  // num palitinho fincado do lado do funil, virada para quem chega
+  const pick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), woodMatTag);
+  pick.position.set(funnelPos.x + 0.32, 0.25, funnelPos.z + 0.05);
+  tubeGroup.add(pick);
+  tag.position.set(funnelPos.x + 0.32, 0.52, funnelPos.z + 0.058);
   tubeGroup.add(tag);
   group.add(tubeGroup);
 

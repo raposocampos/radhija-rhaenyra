@@ -267,7 +267,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   candle.rotation.y = -Math.PI / 2 + 0.35; // de frente para quem sobe a rampa (e para a câmera)
   root.add(candle);
   const candleHome = candle.position.clone();
-  // o biscoito de osso de glacê (na frente do pote, em cima do gaveteiro da despensa)
+  // o biscoito de osso de glacê (na frente do pote, em cima do armário alto da despensa)
   const cookie = createCookie();
   pantry.cookieSpot.updateWorldMatrix(true, false);
   pantry.cookieSpot.getWorldPosition(cookie.position);
@@ -296,7 +296,35 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   const breaker = place(buildWallButton({ kind: 'lever', top: BREAKER.top, color: '#f2c14e', plate: '#d8dcd6', trim: '#2a2624', name: 'disjuntor' }), BREAKER);
   const tap = place(buildWallButton({ kind: 'button', top: TAP.top, color: '#4aa8e0', plate: '#f4ecdc', trim: '#c87a4a', name: 'botao-torneira' }), TAP);
   // os dois botões altos do galpão: iguais (qual abre o quê é sorteado)
-  const shedButtons = SHED_BUTTONS.map((cfg, i) => place(buildWallButton({ kind: 'button', top: cfg.top, color: '#f6c453', plate: '#e8d2a8', trim: '#5a3a2a', name: `botao-galpao-${i + 1}` }), cfg));
+  // (bem à vista: botão amarelo em placa branca com borda vermelha, num quadro azul com "?" e uma lampadinha que pisca
+  // até alguém apertar)
+  const shedButtons = SHED_BUTTONS.map((cfg, i) => place(buildWallButton({ kind: 'button', top: cfg.top, color: '#ffd400', plate: '#fffaf0', trim: '#e23d3d', name: `botao-galpao-${i + 1}` }), cfg));
+  const askTex = canvasTexture(128, 96, (g, w, h) => {
+    g.fillStyle = '#2f7fd8'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#fffaf0'; g.lineWidth = 8; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#ffd400'; g.font = 'bold 66px "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('?', w / 2, h / 2 + 4);
+  }, { repeat: false });
+  const askMat = new THREE.MeshStandardMaterial({ map: askTex, roughness: 0.6 });
+  const shedOn = SHED_BUTTONS.map(() => false);
+  shedButtons.forEach((b, i) => {
+    const setOn = b.setOn.bind(b);
+    b.setOn = (on) => { shedOn[i] = !!on; setOn(on); };
+  });
+  const shedLamps = SHED_BUTTONS.map((cfg) => {
+    // a plaquinha "?" logo acima do botão (abaixo do topo da parede; as patinhas pintadas ficam livres embaixo) e a
+    // lampadinha do lado dela
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.16), askMat);
+    board.position.set(0, cfg.top + 0.235, 0.006);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
+    lamp.position.set(0.16, cfg.top + 0.235, 0.032);
+    const holder = new THREE.Group();
+    holder.add(board, lamp);
+    holder.position.set(cfg.x, 0, cfg.z);
+    holder.rotation.y = wallButtonYaw(cfg.nx, cfg.nz);
+    root.add(holder);
+    return lamp;
+  });
   const treats = buildTreats(root, COLLECTIBLES, { glow: 0.24 });
 
   // ---- conduíte da energia: disjuntor → (divisória) → parede do fundo → atravessa a parede leste → pergolado
@@ -452,7 +480,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     /** Os cabos da caixinha de força do galpão (pulso até a porta ou até a porteira). */
     shedLinks: sty.links,
     styGate: sty.gate,
-    drawers: pantry.drawers,
+    crates: pantry.crates,
     pinata: pinata.pinata,
     farm: { spots: farm.spots, makeVeg: farm.makeVeg },
     secretBoard: secret.board,
@@ -472,6 +500,11 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     fireflies: true,
     update(dt, t) {
       treats.update(dt, t);
+      // a lampadinha de cada botão do galpão pisca até ele ser apertado
+      shedLamps.forEach((lamp, i) => {
+        const on = shedOn[i];
+        /** @type {THREE.MeshStandardMaterial} */ (lamp.material).emissiveIntensity = on ? 0.15 : 0.5 + 0.9 * (0.5 + 0.5 * Math.sin(t * 5 + i * 1.7));
+      });
       for (const b of [breaker, tap]) b.update?.(dt, t);
       conduitUp.update(dt);
       conduitPainting.update(dt);
@@ -554,7 +587,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       garden.door.setOpen(0);
       sty.gate.setOpen(0);
       for (const b of shedButtons) b.setOn?.(false);
-      for (let i = 0; i < 3; i++) pantry.drawers.setDrawer(i, 0, false);
+      layout.PANTRY_CRATES.list.forEach((_, i) => pantry.crates.setCrate(i, layout.PANTRY_CRATES.x0, false));
       pinata.pinata.reset();
       star.visible = false;
       star.rotation.set(0, 0, 0);
