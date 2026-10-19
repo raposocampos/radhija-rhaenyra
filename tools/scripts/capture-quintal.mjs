@@ -338,7 +338,7 @@ try {
   await until((i) => i.quintal.mud.k === 0, 600);
   await keyUp('KeyL');
   // a Rhaenyra pisa na lama e a Radhija a lambe
-  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, settle: 50 });
+  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, stay: 'radhija', settle: 50 });
   await shot('28b-rhaenyra-na-lama', { pos: [7.9, 1.1, 2.9], look: [7.4, 0.3, 1.7] });
   await setup({ active: 'radhija', place: { rhaenyra: { x: 8.6, z: 1.9, yaw: -Math.PI / 2 }, radhija: { x: 8.15, z: 1.95, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 10 });
   await keyDown('KeyL');
@@ -354,7 +354,7 @@ try {
   await until((i) => i.quintal.doorOpen, 200);
   await step(40);
   await shot('29b-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });
-  await setup({ active: 'radhija', place: { radhija: { x: 9.8, z: L.RAMP.z - 0.05, yaw: Math.PI / 2 } }, settle: 10 });
+  await setup({ active: 'radhija', set: [['clean', true]], place: { radhija: { x: 9.8, z: L.RAMP.z - 0.05, yaw: Math.PI / 2 } }, settle: 10 });
   await tap('ShiftLeft');
   await until((i) => i.quintal.ramp === 'up', 60);
   await step(18);
