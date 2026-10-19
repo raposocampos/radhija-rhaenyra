@@ -315,11 +315,32 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     return false;
   }
 
-  /** Segue P.route; → true ao chegar no último ponto. Empacado, dá um passo de lado e tenta de novo. */
+  /**
+   * A folha aberta da porteira está entre o porco e o ponto p? → um ponto para contornar a ponta dela (ou null).
+   * Quem chega pelo lado da dobradiça daria de cara na folha.
+   */
+  function aroundLeaf(P, p) {
+    if (gate.t < 0.25 || p.leaf) return null;
+    const h = cfg.gate.hinge, tip = gate.tip();
+    const o = (ax, az, bx, bz, cx, cz) => (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+    const cross = o(h.x, h.z, tip.x, tip.z, P.x, P.z) * o(h.x, h.z, tip.x, tip.z, p.x, p.z) < 0
+      && o(P.x, P.z, p.x, p.z, h.x, h.z) * o(P.x, P.z, p.x, p.z, tip.x, tip.z) < 0;
+    const [qx, qz] = closestOn(tip.x, tip.z, { ax: P.x, az: P.z, bx: p.x, bz: p.z });
+    if (!cross && Math.hypot(tip.x - qx, tip.z - qz) > r + 0.05) return null;
+    const L = Math.hypot(tip.x - h.x, tip.z - h.z) || 1;
+    return { x: tip.x + ((tip.x - h.x) / L) * (r + 0.18), z: tip.z + ((tip.z - h.z) / L) * (r + 0.18), leaf: true };
+  }
+
+  /** Segue P.route; → true ao chegar no último ponto. Contorna a folha aberta da porteira; empacado, dá um passo de lado. */
   function follow(P, speed, dt, ctrls, limit) {
     while (P.route.length > 1 && Math.hypot(P.route[0].x - P.x, P.route[0].z - P.z) < 0.22) P.route.shift();
-    const p = P.route[0];
+    let p = P.route[0];
     if (!p) return true;
+    const w = aroundLeaf(P, p);
+    if (w) {
+      P.route.unshift(w);
+      p = w;
+    }
     if (P.stuckT > 1.5) {
       const dx = p.x - P.x, dz = p.z - P.z;
       const L = Math.hypot(dx, dz) || 1;
