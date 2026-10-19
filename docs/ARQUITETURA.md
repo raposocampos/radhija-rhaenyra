@@ -620,6 +620,20 @@ esperas curtas seguidas, aba travada, aba que cai, navegação sem resposta e pr
 em segundos)
 estão em `tools/scripts/test-e2e-infra.mjs`, no job de infraestrutura do E2E manual.
 
+*As mesmas redes em qualquer página* (`tools/scripts/lib/page-guard.mjs`): o teto de relógio, a escuta de queda e o
+vigia das operações em curso saíram do harness para `guardPage(page)`, que o harness usa na página dele. Valem também
+para as páginas extras das suítes, abertas com `H.newPage(opções, nome)` (o PC e os iPhones da suíte `toque`), e para
+os scripts de captura (`capture-*.mjs`), que rodam sem harness e sem runner: `openPage(browser, opções, { name })`
+devolve a página protegida, `guard.note('captura …')` marca o último passo e `closeBrowser(browser)` fecha com prazo.
+Na página protegida, `evaluate`, teclado, mouse, toque, `setViewportSize`, `addInitScript` e os comandos CDP têm 60 s;
+`goto`, `reload`, `waitForFunction`, `waitForSelector`, `screenshot`, `click` e `close` ficam sob o vigia: em curso por
+150 s, encerram o processo dizendo a operação, a linha do script, o último passo e o estado do jogo (antes, o
+`capture-lambe.mjs` travou até o timeout de 30 min do job no E2E `39173570454`). Um prazo do Playwright que vence
+(`waitForFunction` etc.) também leva a linha e o estado do jogo na mensagem, e as "condições não alcançadas" das
+capturas trazem o estado. Os prazos das capturas e das páginas extras passaram de 180 s para 120 s, abaixo do vigia.
+Provas `extra` (página extra que cai no meio da espera, com um erro de console nela) e `capture` (script de captura
+com a aba caída) em `test-e2e-infra.mjs`.
+
 *Travamento no primeiro carregamento*: em cerca de 1% dos jobs, o PRIMEIRO boot de um navegador novo não termina: o
 `goto` volta, `window.__game` nunca aparece e a thread principal da aba para de responder (lavanderia no E2E
 `39160265826`, fase3 no `39164306879`, expresso no `39166156986` e no `39169122476`, `capture-lambe.mjs` no
@@ -628,8 +642,9 @@ próprios 120 s porque, no Playwright 1.49, ao vencer o prazo ele espera a limpe
 NA PÁGINA antes de rejeitar (`ProgressController.run` e `_waitForFunctionExpression`): com a aba parada, nem o erro
 de prazo chega. Por isso o problema é da aba, não do teste nem do Vite (com um módulo preso no Vite a aba fica ociosa
 e o prazo vence normalmente). Para achar a causa, a sonda `tools/scripts/lib/hang-probe.mjs` faz um retrato quando
-uma etapa do `load()` passa de 60 s, no `opMaxMs`, no teto de uma ida ao navegador e na queda da aba (e no boot dos
-scripts de captura, por `waitForBoot`): (1) a thread principal responde? Se não, um `Debugger.pause` numa sessão CDP
+uma operação em curso passa de 60 s (uma etapa do `load()`, um `goto`/`waitForFunction` de captura), no `opMaxMs`,
+no teto de uma ida ao navegador e na queda da aba, em toda página protegida pelo `page-guard.mjs` (a do harness, as
+extras e as das capturas: `openPage` liga a sonda sozinho; o `closeBrowser` espera o diagnóstico terminar): (1) a thread principal responde? Se não, um `Debugger.pause` numa sessão CDP
 própria, com o Debugger ligado desde a criação da página, devolve a PILHA se ela estiver rodando JavaScript; sem
 pausa, ela está presa fora do JavaScript (chamada nativa, como a GPU) ou morta; (2) cada processo do Chromium pelo
 `/proc` (tipo, estado, CPU em 1,5 s, memória e as threads que gastaram CPU, com o `wchan` onde esperam); (3) o que o
@@ -644,7 +659,8 @@ leva de 430 a 720 s por lote) e um defeito do Chromium/SwiftShader preso a um ti
 assim. A suíte `carregamento` do E2E manual (fora de `todas`; `tools/scripts/stress-boot.mjs`) abre as oito fases
 em rodízio, cada rodada com Vite e navegador novos, um boot frio e um quente: lotes 0–3 com 25 rodadas, uma por vez,
 e lotes 4–7 com 36, três ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois,
-para confirmar uma correção.
+para confirmar uma correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para
+(`stopWatch`) quando não resta página protegida aberta, e uma página nova o religa.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo

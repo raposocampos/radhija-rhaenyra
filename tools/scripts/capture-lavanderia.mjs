@@ -8,7 +8,7 @@ import { mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
 import { browserOptions } from './lib/browser.mjs';
-import { attachHangProbe, waitForBoot } from './lib/hang-probe.mjs';
+import { closeBrowser, openPage } from './lib/page-guard.mjs';
 
 if (!process.env.CI) throw new Error('Esta revisão deve rodar no GitHub Actions, conforme AGENTS.md.');
 const OUT = 'shots/lavanderia-revisao';
@@ -21,9 +21,9 @@ try {
   await server.listen();
   const url = server.resolvedUrls.local[0];
   browser = await chromium.launch(browserOptions());
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-  const probe = await attachHangProbe(page); // diagnóstico se a aba travar no boot (hang-probe.mjs)
-  page.setDefaultTimeout(180000);
+  // redes de prazo (lib/page-guard.mjs): uma aba que trava ou cai encerra o passo em minutos, com o passo e o estado
+  const { page, guard } = await openPage(browser, { viewport: { width: 1280, height: 720 } }, { name: 'lavanderia' });
+  page.setDefaultTimeout(120000);
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.addInitScript(() => {
@@ -31,7 +31,7 @@ try {
     window.requestAnimationFrame = (fn) => raf((t) => { if (!window.__freezeReview) fn(t); });
   });
   await page.goto(`${url}?level=fase8&play`);
-  await waitForBoot(page, probe, () => window.__game?.game?.state === 'playing', null, { timeout: 180000 });
+  await page.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
   await page.evaluate(() => {
     window.__freezeReview = true;
     document.getElementById('loading')?.remove();
@@ -68,7 +68,7 @@ try {
   const step = (n) => page.evaluate((k) => window.__step(k), n);
   const until = async (pred, max = 600) => {
     const ok = await page.evaluate(({ src, max: m }) => window.__stepUntil(src, m), { src: pred.toString(), max });
-    if (!ok) throw new Error(`condição não alcançada: ${pred}`);
+    if (!ok) throw new Error(`condição não alcançada: ${pred}; ${await guard.peek()}`);
   };
   const key = (code) => page.evaluate((c) => { window.__key(c, true); window.__step(1); window.__key(c, false); window.__step(1); }, code);
   const keyDown = (code) => page.evaluate((c) => window.__key(c, true), code);
@@ -77,6 +77,7 @@ try {
     await page.evaluate((c) => window.__render(c), cam);
     await page.screenshot({ path: `${OUT}/${name}.png`, style: '#ui, #loading { display: none !important; }' });
     shots++;
+    guard.note(`captura ${name}`);
     console.log(`  captura: ${OUT}/${name}.png`);
   };
   /** Etapa, dog ativa e posições (teleporte só no preparo). */
@@ -159,6 +160,6 @@ try {
   console.error(error.stack || error);
   process.exitCode = 1;
 } finally {
-  await browser?.close();
+  await closeBrowser(browser);
   await server?.close();
 }

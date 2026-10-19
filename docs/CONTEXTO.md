@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (travamento no primeiro boot do E2E; tetos de relógio entregues). Ler primeiro
+Última atualização: **2026-10-19, Claude** (travamento no primeiro boot do E2E; #27 e #30 entregues). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: travamento no primeiro boot do E2E (Claude, 2026-10-18)
@@ -29,12 +29,26 @@
   passo: estresse com disputa de CPU (lotes 4–7, três boots ao mesmo tempo) e, no próximo travamento real, ler o
   `[diagnóstico]` do log, a linha `CPU do runner` e o `navegador-*.log` do artefato.
 
-## Entregue: tetos de relógio no harness do E2E (PR #27, squash `402635e`, deploy `39181809562`)
+## Entregue: redes de prazo nas capturas e páginas extras (PR #30, squash `0bd48d0`, deploy `39187314090`)
 
-`DEFAULT_LIMITS`/`HarnessAbort` no harness (jogo parado em 60 s, prazo em cada ida ao navegador, `opMaxMs` 150 s),
-vigia de silêncio no runner (5 min, com sinal por IPC) e provas em `test-e2e-infra.mjs`; ver ARQUITETURA §10.
-Aprovado no chat; CI do main `39181772265`, produção conferida em `402635e`. Os scripts de captura continuam sem
-essas redes (só ganharam a espera de boot com diagnóstico, no PR do travamento acima).
+- `tools/scripts/lib/page-guard.mjs` (`guardPage`, `openPage`, `closeBrowser`): teto de relógio, vigia `opMaxMs` e
+  escuta de queda extraídos do harness e aplicados às seis capturas e às páginas extras das suítes
+  (`H.newPage(opções, nome)`, PC e iPhones da `toque`); prazos das capturas de 180 s para 120 s; último passo
+  (`guard.note`) e estado do jogo nos diagnósticos. Provas `extra` e `capture` em `test-e2e-infra.mjs`. Integrado
+  com a aprovação do usuário; `version.json` de produção em `0bd48d0`. Não repetir merge/deploy do #30.
+- O PR #29 (fase 9, aberto) cria `capture-biblioteca.mjs` no formato antigo: quem integrar por último aplica
+  `openPage`/`closeBrowser` (e, com o #31, o `import './lib/browser-log.mjs'` antes do `playwright-core`).
+
+## Entregue: tetos de relógio no harness (PR #27, squash `402635e`, deploy `39181809562`)
+
+- Esperas em tempo de jogo com tetos de relógio, 60 s por ida ao navegador, `opMaxMs` de 150 s, escuta de
+  `crash`/`disconnected` e, no runner, o vigia de 5 min de silêncio (ARQUITETURA, seção do E2E). Aprovado pelo
+  usuário; head aprovado `428535b`, CI do main `39181772265`, produção conferida em `402635e`. Não repetir
+  merge/deploy do #27.
+- Achados: nos travamentos reais (lavanderia, `expresso`) a página abre e `window.__game` nunca aparece, com o
+  `waitForFunction` de 120 s sem vencer; a prova `crash` reproduz (aba derrubada no meio da espera: o Playwright
+  1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
+  `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
 ## Entregue: menu principal, Opções e modo sem dicas (PR #26, squash `1cc73d0` no main)
 

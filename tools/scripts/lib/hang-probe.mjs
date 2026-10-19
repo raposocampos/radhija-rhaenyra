@@ -276,16 +276,3 @@ export async function bootTimeline(page) {
   }
   return { total: prev / 1000, text: parts.join(' · '), marks };
 }
-
-/**
- * Espera do boot com prazo próprio, para os scripts de captura (fora do harness): o waitForFunction do Playwright não
- * vence o prazo com a aba travada. Vencido o prazo, imprime o diagnóstico da sonda e rejeita.
- */
-export async function waitForBoot(page, probe, fn, arg = null, { timeout = 180000, what = 'boot do jogo' } = {}) {
-  const wait = page.waitForFunction(fn, arg, { timeout });
-  const res = await within(wait, timeout + 5000, what);
-  if (res.ok) return res.value;
-  if (!/sem resposta/.test(res.error)) throw new Error(`${what}: ${res.error}`);
-  console.log(await probe.report(`${what} sem retorno em ${secs(timeout + 5000)}`));
-  throw new Error(`${what}: a página não respondeu em ${secs(timeout + 5000)} (diagnóstico acima)`);
-}
