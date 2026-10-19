@@ -1,9 +1,11 @@
-// FASE 10 · A casa na árvore no fundo do quintal: a árvore grande (tronco com casca e raízes, galhos e a copa alta), o
-// deque sobre quatro postes com o corrimão (aberto no canto do balde e na boca do escorregador), a casinha com janela
-// redonda, telhado vermelho, bandeirinha e a placa "Clubinho R & R", a lanterna, o braço da roldana com o balde de
-// lata (sobe e desce), a corda da roldana até a argola no chão e a ponta com o pegador de madeira, o cano de brinquedo
-// colorido do funil (no chão) até a boca de trompete do lado do pombo (as baforadas de cheiro sobem por dentro), o
-// pombo cochilando no corrimão e o escorregador amarelo do deque até o gramado.
+// FASE 10 · A casa na árvore no fundo do quintal: a árvore grande (tronco com casca e raízes atravessando o canto de
+// trás do deque, galhos e a copa alta), o deque largo sobre seis postes com o corrimão (aberto na frente, onde o balde
+// chega, e no lado leste, na boca do escorregador) e as bandeirinhas presas nele, a casinha "Clubinho R & R" nos
+// fundos com janela redonda, telhado vermelho, bandeirinha e lanterna, a luneta no canto e o baú de brinquedos, o
+// braço da roldana com o balde de lata (sobe e desce na frente do deque), a corda da roldana até a argola no chão e a
+// ponta com o pegador de madeira, o cano de brinquedo colorido do funil (no chão) até a boca de trompete do lado do
+// pombo (as baforadas de cheiro sobem por dentro), o pombo cochilando no corrimão em cima do laço e o escorregador
+// amarelo do deque até o gramado.
 // API: buildTreehouse(root, layout) → { group, bucket, rope, tube, pigeon, lanternPos, seeThrough, update(dt, t) }
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, stdMat, woodMat, foliageCluster, leafSkin, contactShadow, mergeGeometries, brassMat } from '../../../world/util.js';
@@ -50,7 +52,7 @@ const tube = (curve, segs, radius, radial = 10) => new THREE.TubeGeometry(curve,
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildTreehouse(root, layout) {
-  const { TREE, DECK, DECK_POSTS, PIGEON, TUBE, BUCKET, ROPE, SLIDE, RIBBON } = layout;
+  const { TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, PIGEON, TUBE, BUCKET, ROPE, SLIDE, RIBBON } = layout;
   const group = new THREE.Group();
   group.name = 'casa-na-arvore';
   const seeThrough = [];
@@ -189,8 +191,9 @@ export function buildTreehouse(root, layout) {
     brace.rotation.z = -sx * 0.6;
     deck.add(brace);
   }
-  // corrimão: frente (sul) até antes do canto do balde; leste com a boca do escorregador; oeste e fundo inteiros
-  const railH = PIGEON.y - top - 0.01;
+  // corrimão: frente (sul) aberta onde o balde chega; leste com a boca do escorregador (a casinha fecha o canto de
+  // trás); oeste inteiro; fundo até a casinha
+  const railH = DECK_RAIL.h;
   const railMat = woodMat('#c48a58', { key: 'f10-corrimao' });
   const rails = [];
   const balusters = [];
@@ -209,24 +212,48 @@ export function buildTreehouse(root, layout) {
       balusters.push(b);
     }
   };
-  const zF = DECK.z1 - 0.03, xE = DECK.x1 - 0.03, xW = DECK.x0 + 0.03, zB = DECK.z0 + 0.03;
-  railRun(xW, zF, 9.15, zF);
-  railRun(xW, zB, xE, zB);
+  const ri = DECK_RAIL.inset;
+  const zF = DECK.z1 - ri, xE = DECK.x1 - ri, xW = DECK.x0 + ri, zB = DECK.z0 + ri;
+  const gapW = BUCKET.r + 0.03;
+  railRun(xW, zF, BUCKET.x - gapW, zF);
+  railRun(BUCKET.x + gapW, zF, xE, zF);
+  railRun(xW, zB, HUT.x0, zB);
   railRun(xW, zB, xW, zF);
-  railRun(xE, zB, xE, SLIDE.z - SLIDE.halfWidth - 0.04);
-  railRun(xE, SLIDE.z + SLIDE.halfWidth + 0.04, xE, -4.62);
+  railRun(xE, HUT.z1, xE, SLIDE.z - SLIDE.halfWidth - 0.04);
+  railRun(xE, SLIDE.z + SLIDE.halfWidth + 0.04, xE, zF);
   const railMesh = new THREE.Mesh(mergeGeometries(rails), railMat);
   const balMesh = new THREE.Mesh(mergeGeometries(balusters), railMat);
   railMesh.castShadow = balMesh.castShadow = true;
   deck.add(railMesh, balMesh);
+  // bandeirinhas presas no corrimão da frente (penduradas para fora), menos no laço e na abertura do balde
+  const flagShape = new THREE.Shape();
+  flagShape.moveTo(-0.055, 0); flagShape.lineTo(0.055, 0); flagShape.lineTo(0, -0.13); flagShape.closePath();
+  const flagGeo = new THREE.ShapeGeometry(flagShape);
+  const flagXs = [];
+  for (let x = xW + 0.12; x < xE - 0.06; x += 0.15) {
+    // fora da abertura do balde e do trecho do cano e do laço
+    if (Math.abs(x - BUCKET.x) < gapW + 0.07 || (x > TUBE.inlet.x - 0.48 && x < RIBBON.x + 0.2)) continue;
+    flagXs.push(x);
+  }
+  const flags = new THREE.InstancedMesh(flagGeo, stdMat('#ffffff', { roughness: 0.75, side: THREE.DoubleSide }), flagXs.length);
+  const fm = new THREE.Matrix4(), fq = new THREE.Quaternion(), fs = new THREE.Vector3(1, 1, 1), fp = new THREE.Vector3(), fe = new THREE.Euler();
+  const flagCols = ['#f27a8a', '#f6c453', '#7cc4e8', '#9bd57a', '#c9a0f0'].map((c) => new THREE.Color(c));
+  flagXs.forEach((x, i) => {
+    fp.set(x, top + railH - 0.03, zF + 0.035);
+    fe.set(-0.12, 0, (i % 2 ? 1 : -1) * 0.05);
+    flags.setMatrixAt(i, fm.compose(fp, fq.setFromEuler(fe), fs));
+    flags.setColorAt(i, flagCols[i % flagCols.length]);
+  });
+  flags.name = 'bandeirinhas-do-deque';
+  deck.add(flags);
   group.add(deck);
   seeThrough.push(deck);
 
   // ================================================================ casinha
   const hut = new THREE.Group();
   hut.name = 'casinha';
-  const hx0 = DECK.x0 + 0.1, hx1 = 8.9, hz0 = DECK.z0 + 0.06, hz1 = -5.1;
-  const hw = hx1 - hx0, hd = hz1 - hz0, wallH = 1.0;
+  const hx0 = HUT.x0, hx1 = HUT.x1, hz0 = HUT.z0, hz1 = HUT.z1;
+  const hw = hx1 - hx0, hd = hz1 - hz0, wallH = HUT.wallH;
   const paintBlue = woodMat('#8fc0d8', { key: 'f10-casinha', vertical: true, rough: 0.7 });
   const trim = stdMat('#fffaf0', { roughness: 0.6 });
   const back = new THREE.Mesh(new THREE.BoxGeometry(hw, wallH, 0.05), paintBlue);
@@ -238,7 +265,7 @@ export function buildTreehouse(root, layout) {
     hut.add(side);
   }
   // frente com a porta (abertura) e a janela redonda
-  const doorW = 0.42, doorX = hx0 + hw * 0.62;
+  const doorW = HUT.door.w, doorX = HUT.door.x;
   for (const [a, b] of [[hx0, doorX - doorW / 2], [doorX + doorW / 2, hx1]]) {
     const f = new THREE.Mesh(new THREE.BoxGeometry(b - a, wallH, 0.05), paintBlue);
     f.position.set((a + b) / 2, top + wallH / 2, hz1);
@@ -250,7 +277,7 @@ export function buildTreehouse(root, layout) {
   const doorFrame = new THREE.Mesh(new THREE.TorusGeometry(doorW / 2, 0.025, 6, 20, Math.PI), trim);
   doorFrame.position.set(doorX, top + 0.72 - 0.21, hz1 + 0.03);
   hut.add(doorFrame);
-  const winX = hx0 + hw * 0.22;
+  const winX = hx0 + (doorX - doorW / 2 - hx0) * 0.5;
   const win = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), new THREE.MeshBasicMaterial({ color: '#ffd38a' }));
   win.position.set(winX, top + 0.58, hz1 + 0.028);
   const winRim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.022, 8, 24), trim);
@@ -286,11 +313,11 @@ export function buildTreehouse(root, layout) {
   const pennant = new THREE.Mesh(pennantGeo, stdMat('#f6c453', { side: THREE.DoubleSide }));
   pennant.position.set(hx1 - 0.15, top + wallH + 0.86, (hz0 + hz1) / 2);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.23), new THREE.MeshStandardMaterial({ map: clubSignTexture(), roughness: 0.8 }));
-  sign.position.set(hx0 + hw * 0.3, top + 0.86, hz1 + 0.03);
+  sign.position.set((hx0 + hx1) / 2, top + 0.88, hz1 + 0.03);
   sign.rotation.z = -0.04;
   hut.add(pole, pennant, sign);
   // lanterna pendurada no beiral
-  const lanternPos = new THREE.Vector3(hx1 + 0.12, top + 0.78, hz1 + 0.2);
+  const lanternPos = new THREE.Vector3(hx0 - 0.1, top + 0.8, hz1 + 0.16);
   const lantern = new THREE.Group();
   const lGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.14, 10), new THREE.MeshBasicMaterial({ color: '#ffd8a0' }));
   const lCap = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.07, 10), stdMat('#2d2a28', { metalness: 0.5 }));
@@ -304,8 +331,52 @@ export function buildTreehouse(root, layout) {
   group.add(hut);
   seeThrough.push(hut);
 
+  // ================================================================ no deque: a luneta no canto e o baú de brinquedos
+  const extras = new THREE.Group();
+  extras.name = 'deque-brinquedos';
+  const brass = brassMat();
+  const T0 = DECK_PROPS.telescope;
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * TAU + 0.5;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 6), darkWood);
+    leg.position.set(T0.x + Math.cos(a) * 0.1, top + 0.29, T0.z + Math.sin(a) * 0.1);
+    leg.rotation.set(-Math.sin(a) * 0.3, 0, Math.cos(a) * 0.3);
+    extras.add(leg);
+  }
+  const scope = new THREE.Group();
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.46, 14).rotateX(Math.PI / 2), brass);
+  const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.1, 10).rotateX(Math.PI / 2), stdMat('#2d2a28', { metalness: 0.5 }));
+  eye.position.z = 0.27;
+  const lensRim = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.008, 6, 14), brass);
+  lensRim.position.z = -0.23;
+  scope.add(barrel, eye, lensRim);
+  scope.position.set(T0.x, top + 0.62, T0.z);
+  scope.rotation.set(0.45, -0.6, 0);
+  extras.add(scope);
+  const C0 = DECK_PROPS.chest;
+  const chestW = 0.46, chestD = 0.34, chestH = 0.3;
+  const chestBox = new THREE.Mesh(rbox(chestW, chestH, chestD, 0.02), woodMat('#e8a33c', { key: 'f10-bau' }));
+  chestBox.position.set(C0.x, top + chestH / 2, C0.z);
+  const lid = new THREE.Mesh(rbox(chestW + 0.02, 0.05, chestD + 0.02, 0.015), woodMat('#c9483c', { key: 'f10-bau-tampa' }));
+  lid.position.set(C0.x, top + chestH + 0.06, C0.z - chestD / 2 - 0.02);
+  lid.rotation.x = -1.1;
+  lid.position.y += 0.1;
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.08, 14, 10), stdMat('#7cc4e8', { roughness: 0.4 }));
+  ball.position.set(C0.x - 0.1, top + chestH + 0.02, C0.z + 0.02);
+  const bear = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), stdMat('#b07a4c', { roughness: 0.9 }));
+  bear.position.set(C0.x + 0.1, top + chestH + 0.03, C0.z);
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), stdMat('#b07a4c', { roughness: 0.9 }));
+    ear.position.set(C0.x + 0.1 + s * 0.05, top + chestH + 0.09, C0.z);
+    extras.add(ear);
+  }
+  extras.add(chestBox, lid, ball, bear);
+  extras.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
+  group.add(extras);
+
   // ================================================================ braço da roldana, a roldana e o balde
-  const armBase = new THREE.Vector3(DECK.x1 - 0.1, top, DECK.z1 - 0.1);
+  // o poste do braço fica no deque, ao lado da abertura do corrimão; o braço sai por cima do balde
+  const armBase = new THREE.Vector3(BUCKET.x + gapW + 0.1, top, DECK.z1 - 0.12);
   const armPost = new THREE.Mesh(rbox(0.1, 1.0, 0.1, 0.012), darkWood);
   armPost.position.set(armBase.x, top + 0.5, armBase.z);
   armPost.castShadow = true;
@@ -400,6 +471,9 @@ export function buildTreehouse(root, layout) {
   handle.rotation.y = 0.4;
   group.add(handle);
   const _hp = new THREE.Vector3();
+  // a corda sai da roldana do lado da argola
+  const toRing = new THREE.Vector3(ringPos.x - pulleyPos.x, 0, ringPos.z - pulleyPos.z).normalize();
+  const pOut = new THREE.Vector3(pulleyPos.x + toRing.x * 0.07, pulleyPos.y - 0.02, pulleyPos.z + toRing.z * 0.07);
   /** Estica um cilindro entre dois pontos. */
   function stretch(m, a, b) {
     m.position.copy(a).add(b).multiplyScalar(0.5);
@@ -420,12 +494,13 @@ export function buildTreehouse(root, layout) {
   stand.position.set(funnelPos.x, (TUBE.funnelY - 0.1) / 2, funnelPos.z - 0.12);
   tubeGroup.add(funnel, funnelRim, stand);
   // o caminho do cano: desce do funil, corre até o poste do deque, sobe e curva até o corrimão
-  const post = DECK_POSTS.find((p) => p.x < 8 && p.z > -5) || DECK_POSTS[2];
+  // o poste do meio da frente (o cano sobe por ele até o corrimão, do lado do pombo)
+  const post = DECK_POSTS.reduce((best, p) => (p.z > -4.5 && Math.abs(p.x - TUBE.inlet.x) < Math.abs(best.x - TUBE.inlet.x) ? p : best), DECK_POSTS[2]);
   const mouth = new THREE.Vector3(PIGEON.x - 0.26, PIGEON.y + 0.08, PIGEON.z + 0.12);
   const tubePts = [
     new THREE.Vector3(funnelPos.x, funnelPos.y - 0.1, funnelPos.z),
     new THREE.Vector3(funnelPos.x, 0.18, funnelPos.z - 0.12),
-    new THREE.Vector3(funnelPos.x + 0.3, 0.12, funnelPos.z - 0.55),
+    new THREE.Vector3((funnelPos.x + post.x) / 2, 0.12, (funnelPos.z + post.z) / 2 + 0.1),
     new THREE.Vector3(post.x - 0.1, 0.14, post.z + 0.12),
     new THREE.Vector3(post.x - 0.1, 1.2, post.z + 0.12),
     new THREE.Vector3(post.x - 0.1, top - 0.1, post.z + 0.12),
@@ -561,7 +636,6 @@ export function buildTreehouse(root, layout) {
     const bucketTop = new THREE.Vector3(BUCKET.x, by + 0.34 + BUCKET.r * 0.95, BUCKET.z);
     stretch(ropeV, new THREE.Vector3(pulleyPos.x, pulleyPos.y - 0.06, pulleyPos.z), bucketTop);
     // roldana → argola
-    const pOut = new THREE.Vector3(pulleyPos.x - 0.06, pulleyPos.y - 0.02, pulleyPos.z - 0.01);
     stretch(ropeD, pOut, ringPos);
     // argola → ponta (no chão ou na boca)
     handle.getWorldPosition(_hp);

@@ -15,14 +15,14 @@
 //        (nível da água): o barquinho sobe.
 //     3. Sem energia o ventilador não sopra: o disjuntor da cozinha (impulso) acende as luzes da festa e liga a
 //        tomada. O vento leva o barquinho até a borda leste, onde dá para pegar o chapéu.
-//   LAÇO (amarrado no corrimão da casa na árvore, com o pombo cochilando do lado):
+//   LAÇO (amarrado no corrimão da casa na árvore, com o pombo cochilando em cima dele):
 //     1. O portãozinho do fundo tem trava: a cordinha fica do lado da Dona Gansa, que guarda o portão. Um latido de
 //        longe atrai a gansa; a outra dog puxa a cordinha (E) e o portão abre de vez.
-//     2. O pombo não liga para latido: o superbafo da Radhija no funil do cano de brinquedo sobe até a casa na árvore
-//        e ele voa embora.
+//     2. O pombo não liga para latido nem deixa ninguém subir: o superbafo da Radhija no funil do cano de brinquedo
+//        sobe até a boca do cano, do lado dele, e ele voa embora.
 //     3. Elevador de balde (roldana): a Radhija entra no balde (E); a Rhaenyra pega a ponta da corda na boca (E) e
-//        puxa andando para trás. Ela segura a corda enquanto o jogador troca. Lá em cima a Radhija desamarra o laço e
-//        desce pelo escorregador.
+//        puxa andando para trás. Ela segura a corda enquanto o jogador troca. Lá em cima a Radhija anda pelo deque,
+//        desamarra o laço (E) e desce pelo escorregador (E) ou volta para o balde.
 //   VELA DO 3 (na prateleira alta do galpão de ferramentas, atrás da horta):
 //     1. A horta é cercada: a Rhaenyra pula a cerca baixa; a Radhija passa pelo vão da tábua quebrada e cai na lama
 //        do canteiro (lenta e sem arrancada). A Rhaenyra limpa a irmã com o Lambe-Lambe.
@@ -51,7 +51,11 @@ export const WALL_LK = { x: -8.3, gap: { z0: -3.4, z1: -1.6 } };
 export const PORCH_DOOR = { z0: -4.75, z1: -3.7 };
 
 // sala
-export const SOFA = { x: -10.0, z: -1.15, hx: 0.95, hz: 0.38, h: 0.42, legs: 0.16 };
+/**
+ * O sofá (com saia até o chão: ninguém passa por baixo), encosto para o sul. Entre o encosto e a parede da frente fica
+ * um vão de 42 cm (como entre os vasos grandes): só a Radhija cabe, e é lá que caiu um ossinho.
+ */
+export const SOFA = { x: -10.0, z: -1.2, hx: 0.95, hz: 0.38, h: 0.42, legs: 0.16 };
 export const COFFEE_TABLE = { x: -10.0, z: -2.35, hx: 0.48, hz: 0.28, h: 0.36 };
 export const SIDEBOARD = { x: -10.3, z: -5.78, hx: 0.85, hz: 0.22, h: 0.62 };
 /** O quadro da festa do ano passado: na parede do fundo, em cima do aparador (centro, altura e tamanho). */
@@ -112,9 +116,13 @@ export const PICNIC = { x: -6.9, z: 2.3, hx: 0.85, hz: 0.6 };
 // ---------------------------------------------------------------------------------------------- cerca e gansa
 /** Cerca de ripas entre o quintal e o fundo (x fixo) com o portãozinho. */
 export const BACK_FENCE = { x: 5.4, h: 0.95, gate: { z0: -0.4, z1: 0.8 } };
+/**
+ * O portãozinho fica pendurado na face de trás dos mourões (dobradiça 10 cm a leste da linha da cerca) e abre para o
+ * fundo quase até encostar na cerca (162°): aberto, não forma bolsão com a cerca da horta.
+ */
 export const GATE = {
-  hinge: { x: BACK_FENCE.x, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x, z: BACK_FENCE.gate.z0 },
-  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: -Math.PI / 2 * 0.92, openTime: 1.0, closeTime: 1.0,
+  hinge: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z0 },
+  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: -Math.PI * 0.9, openTime: 1.2, closeTime: 1.0,
 };
 /** A cordinha da trava, pendurada no mourão do lado do quintal (E puxa). */
 export const CORD = { x: BACK_FENCE.x - 0.12, z: BACK_FENCE.gate.z0 - 0.16, top: 1.0, reach: 0.62 };
@@ -135,25 +143,35 @@ export const GOOSE = {
 };
 
 // ---------------------------------------------------------------------------------------------- fundo: casa na árvore
-export const TREE = { x: 8.3, z: -4.4, r: 0.42 };
-/** Deque da casa na árvore (altura h) e os postes. */
-export const DECK = { x0: 7.1, x1: 9.7, z0: -5.9, z1: -3.95, h: 2.05 };
-export const DECK_POSTS = [{ x: 7.2, z: -5.8 }, { x: 9.6, z: -5.8 }, { x: 7.2, z: -4.05 }, { x: 9.6, z: -4.05 }];
-/** O laço amarrado no corrimão da frente e o pombo cochilando do lado. */
-export const RIBBON = { x: 8.35, y: DECK.h + 0.34, z: DECK.z1 + 0.02 };
-export const PIGEON = { x: 7.75, y: DECK.h + 0.43, z: DECK.z1 - 0.01, smellR: 0.55 };
-/** Cano de brinquedo: funil no chão (entrada do cheiro) e a boca lá em cima, do lado do pombo. */
-export const TUBE = { inlet: { x: 6.5, z: -3.12, r: 0.42 }, funnelY: 0.62, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
-/** Elevador de balde: o balde no chão (com a roldana em cima), a argola da corda no pé da árvore e o puxador. */
-export const BUCKET = { x: 10.05, z: -3.55, r: 0.24, top: DECK.h, pulleyY: 2.85, rise: 1.0, fall: 0.9, enterR: 0.6 };
+/** A árvore grande: o tronco atravessa o canto de trás do deque (lá em cima também é obstáculo). */
+export const TREE = { x: 7.55, z: -4.95, r: 0.42 };
+/** Deque da casa na árvore (altura h): a Radhija anda nele livre, entre o corrimão, o tronco e a casinha. */
+export const DECK = { x0: 6.5, x1: 9.9, z0: -5.95, z1: -3.6, h: 2.05 };
+export const DECK_POSTS = [{ x: 6.6, z: -5.85 }, { x: 9.8, z: -5.85 }, { x: 6.6, z: -3.7 }, { x: 9.8, z: -3.7 }, { x: 8.05, z: -3.7 }, { x: 8.3, z: -5.85 }];
+/** Corrimão do deque (altura e recuo da borda): a Radhija não passa dele, só pelas aberturas do balde e do escorregador. */
+export const DECK_RAIL = { h: 0.42, inset: 0.03 };
+/** A casinha (Clubinho R & R) nos fundos do deque, à direita, com a porta virada para a frente. */
+export const HUT = { x0: 8.55, x1: 9.85, z0: -5.92, z1: -4.85, wallH: 1.0, door: { x: 9.3, w: 0.42 } };
+/** Coisas em cima do deque (só valem lá em cima): a luneta no canto e o baú de brinquedos ao lado da casinha. */
+export const DECK_PROPS = { telescope: { x: 6.85, z: -5.6, r: 0.2 }, chest: { x: 8.22, z: -5.62, r: 0.26 } };
+/** O laço amarrado no corrimão da frente e o pombo cochilando em cima dele, no corrimão. */
+export const RIBBON = { x: 8.6, y: DECK.h + 0.34, z: DECK.z1 + 0.02 };
+export const PIGEON = { x: RIBBON.x, y: DECK.h + DECK_RAIL.h + 0.01, z: DECK.z1 - DECK_RAIL.inset, smellR: 0.55 };
+/** Cano de brinquedo: funil no chão (entrada do cheiro), sobe pelo poste do meio e a boca fica do lado do pombo. */
+export const TUBE = { inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.62, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
+/** Elevador de balde na frente do deque (a câmera vê subir): o balde no chão com a roldana em cima. */
+export const BUCKET = { x: 6.95, z: -3.12, r: 0.24, top: DECK.h, pulleyY: 2.85, rise: 1.0, fall: 0.9, enterR: 0.6 };
 /**
- * A corda desce da roldana (em cima do balde) até a argola num espeto no chão, na frente da árvore; a ponta solta
- * fica no chão ao lado (rest). Quem segura a ponta e se afasta da argola mais que `slack` levanta o balde.
+ * A corda desce da roldana (em cima do balde) até a argola num espeto no chão, ao lado; a ponta solta fica no chão
+ * (rest). Quem segura a ponta e se afasta da argola mais que `slack` levanta o balde (andando para o portão).
  */
-export const ROPE = { ring: { x: 8.72, y: 0.12, z: -3.62 }, rest: { x: 8.75, z: -3.36 }, slack: 0.55, maxPull: DECK.h, grabR: 0.55 };
-/** Lá em cima: onde a Radhija pisa no deque, o laço, e o escorregador até o chão. */
-export const DECK_PATH = { arrive: { x: 9.5, z: -4.25 }, ribbon: { x: RIBBON.x + 0.05, z: -4.22 }, slideTop: { x: 9.62, z: -5.2 } };
-export const SLIDE = { z: -5.2, x0: 9.7, x1: 11.35, top: DECK.h, halfWidth: 0.24, land: { x: 11.65, z: -5.2 } };
+export const ROPE = { ring: { x: 6.42, y: 0.12, z: -2.9 }, rest: { x: 6.55, z: -2.58 }, slack: 0.55, maxPull: DECK.h, grabR: 0.55 };
+/**
+ * Lá em cima: onde a Radhija chega do balde (e volta para ele), onde ela fica para desamarrar o laço e a boca do
+ * escorregador (no lado leste, descendo para o leste até o gramado).
+ */
+export const DECK_PATH = { arrive: { x: BUCKET.x, z: DECK.z1 - 0.3 }, ribbon: { x: RIBBON.x, z: DECK.z1 - 0.3 }, slideTop: { x: DECK.x1 - 0.22, z: -4.25 } };
+export const SLIDE = { z: -4.25, x0: DECK.x1, x1: 11.35, top: DECK.h, halfWidth: 0.24, land: { x: 11.65, z: -4.25 } };
 
 // ---------------------------------------------------------------------------------------------- fundo: horta e galpão
 /** Horta cercada (cerca baixa: a Rhaenyra pula) com o vão da tábua quebrada (só a Radhija) e a lama do canteiro. */
@@ -191,11 +209,8 @@ export const STATIC_COLLIDERS = [
   wallZ('casa-leste-sul', HOUSE.x1, PORCH_DOOR.z1, HOUSE.zS),
   wallZ('divisoria-norte', WALL_LK.x, B.minZ, WALL_LK.gap.z0),
   wallZ('divisoria-sul', WALL_LK.x, WALL_LK.gap.z1, HOUSE.zS),
-  // sala (debaixo do sofá só a Radhija passa)
-  ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => /** @type {import('../../types').CircleCollider} */ ({
-    id: `pe-do-sofa-${i + 1}`, shape: 'circle', x: SOFA.x + sx * (SOFA.hx - 0.06), z: SOFA.z + sz * (SOFA.hz - 0.06), r: 0.04,
-  })),
-  { id: 'sofa', shape: 'box', x: SOFA.x, z: SOFA.z, hx: SOFA.hx, hz: SOFA.hz, blocks: 'large' },
+  // sala (atrás do sofá, no vão até a parede da frente, só a Radhija passa)
+  { id: 'sofa', shape: 'box', x: SOFA.x, z: SOFA.z, hx: SOFA.hx, hz: SOFA.hz },
   { id: 'mesa-de-centro', shape: 'box', x: COFFEE_TABLE.x, z: COFFEE_TABLE.z, hx: COFFEE_TABLE.hx, hz: COFFEE_TABLE.hz, jumpable: true, height: COFFEE_TABLE.h },
   { id: 'aparador', shape: 'box', x: SIDEBOARD.x, z: SIDEBOARD.z, hx: SIDEBOARD.hx, hz: SIDEBOARD.hz },
   { id: 'estante', shape: 'box', x: BOOKSHELF.x, z: BOOKSHELF.z, hx: BOOKSHELF.hx, hz: BOOKSHELF.hz },
@@ -248,7 +263,8 @@ export const NAV_NODES = {
   L_mid: { x: -10.0, z: -3.3 }, L_arch: { x: -8.3, z: -2.5 }, K_mid: { x: -6.6, z: -3.7 }, K_door: { x: -4.5, z: -4.22 },
   P_mid: { x: -2.4, z: -3.3 }, P_east: { x: -0.2, z: -3.4 }, Y_north: { x: -1.5, z: -1.6 }, Y_west: { x: -6.5, z: 1.6 },
   Y_mid: { x: 0.6, z: 0.4 }, Y_south: { x: -1.2, z: 3.1 }, Y_east: { x: 3.4, z: 2.6 }, Y_gate: { x: 4.7, z: 0.2 },
-  B_gate: { x: 6.1, z: 0.2 }, B_tree: { x: 8.6, z: -2.3 }, B_north: { x: 6.3, z: -2.6 }, B_east: { x: 10.8, z: -0.4 },
+  B_gate: { x: 6.1, z: 0.2 }, B_tree: { x: 8.6, z: -2.0 }, B_north: { x: 6.1, z: -2.25 }, B_east: { x: 10.8, z: -0.4 },
+  B_land: { x: 11.2, z: -3.2 },
   B_gap: { x: 6.35, z: 1.55 }, H_mud: { x: 7.4, z: 1.6 }, H_mid: { x: 8.3, z: 2.1 }, S_in: { x: 10.4, z: 2.0 },
 };
 /** @type {import('../../types').NavEdge[]} */
@@ -258,6 +274,7 @@ export const NAV_EDGES = [
   ['Y_mid', 'Y_south'], ['Y_mid', 'Y_east'], ['Y_mid', 'Y_gate'], ['Y_east', 'Y_gate'],
   ['Y_gate', 'B_gate', { requires: 'gateOpen' }],
   ['B_gate', 'B_north'], ['B_gate', 'B_tree'], ['B_north', 'B_tree'], ['B_tree', 'B_east'], ['B_gate', 'B_east'],
+  ['B_tree', 'B_land'], ['B_east', 'B_land'],
   // a horta: a Radhija pelo vão da tábua quebrada; a Rhaenyra só pulando a cerca (a companheira não pula: espera fora)
   ['B_gate', 'B_gap'], ['B_gap', 'H_mud', { requires: 'small' }], ['H_mud', 'H_mid'], ['B_gate', 'H_mid', { requires: 'jump' }],
   ['H_mid', 'S_in', { requires: 'shedOpen' }],
@@ -265,7 +282,7 @@ export const NAV_EDGES = [
 
 /** @type {import('../../types').Collectible[]} */
 export const COLLECTIBLES = [
-  { id: 'sofa', x: SOFA.x - 0.3, z: SOFA.z + 0.05 }, // debaixo do sofá (só a Radhija)
+  { id: 'sofa', x: SOFA.x - 0.3, z: (SOFA.z + SOFA.hz + HOUSE.zS - WALLS.t / 2) / 2 }, // atrás do sofá (só a Radhija)
   { id: 'vasos', x: (PLANTERS[0].x + PLANTERS[1].x) / 2, z: -5.78 }, // atrás dos vasos grandes (só a Radhija)
   { id: 'horta', x: 9.0, z: 4.0 }, // no canto da horta, atrás do canteiro (pelo vão ou pulando a cerca)
 ];
@@ -288,13 +305,13 @@ export const CAMERA = {
   lookHeight: 0.3,
   limits: { minX: -10.6, maxX: 10.6, minZ: -4.4, maxZ: 3.0 },
   zones: [
-    // o balde subindo e o deque (a fase liga só durante a subida): a câmera recua e olha alto, quem puxa a corda e
-    // quem sobe ficam no quadro
+    // a Radhija andando no deque (a fase liga só enquanto ela está lá em cima): o olhar sobe até o deque
+    { id: 'deque', minX: DECK.x0 - 0.4, maxX: DECK.x1 + 0.4, minZ: -6.0, maxZ: DECK.z1 + 0.5, lookY: 1.75, dz: -0.3 },
+    // o balde subindo (a fase liga só durante a subida): a câmera recua e olha alto, quem puxa a corda e quem sobe
+    // ficam no quadro
     { id: 'balde', minX: 5.6, maxX: 12.4, minZ: -6.0, maxZ: 2.4, lookY: 1.0, dz: -1.2 },
-    // na sala o olhar sobe para o quadro da parede do fundo
-    { id: 'quadro', minX: -12.0, maxX: WALL_LK.x, minZ: -6.0, maxZ: HOUSE.zS, lookY: 0.8, dz: -0.8 },
     // perto da árvore o olhar sobe para a casa na árvore
-    { id: 'casa-na-arvore', minX: 6.4, maxX: 11.5, minZ: -6.0, maxZ: -1.2, lookY: 1.2, dz: -0.8 },
+    { id: 'casa-na-arvore', minX: 6.0, maxX: 11.5, minZ: -6.0, maxZ: -1.6, lookY: 1.2, dz: -0.8 },
   ],
   title: { center: { x: -1.6, z: -2.2 }, radius: 6.2, angle: 0.5, height: 2.6, look: { x: -2.4, y: 0.95, z: -4.4 } },
   celebrate: { pos: [GOAL.x + 1.05, 1.45, GOAL.z + 2.3], look: [GOAL.x, 0.75, GOAL.z] },
@@ -306,7 +323,8 @@ const LAYOUT = {
   WORLD, DOGS, WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR, FLOOR_LAMP,
   RUG, COUNTER, FRIDGE, KITCHEN_TABLE, KITCHEN_CHAIRS, DOG_BOWLS, BREAKER, PORCH, PERGOLA_POSTS, CAKE_TABLE, CAKE, CAKE_ORDER,
   CAKE_REJECT, GIFTS, PORCH_BENCH, POOL, BOAT, TAP, HOSE, CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC,
-  BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, RIBBON, PIGEON, TUBE, BUCKET, ROPE, DECK_PATH, SLIDE, HORTA, MUD,
+  BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
+  DECK_PATH, SLIDE, HORTA, MUD,
   VEG_BEDS, SHED, PLATE, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };

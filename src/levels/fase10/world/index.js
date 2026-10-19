@@ -22,6 +22,24 @@ import { buildGarden } from './garden.js';
 import { buildProps } from './props.js';
 
 /**
+ * Peças minúsculas (pregos, contas, confeitos, botões…) não fazem sombra: a sombra delas mal aparece e cada uma é mais
+ * um desenho na passada de sombra, que repete o cenário inteiro. Os enfeites (que vão na boca) mantêm a sombra.
+ * @param {import('three').Object3D} root
+ */
+function trimTinyShadows(root) {
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    const m = /** @type {import('three').Mesh} */ (o);
+    if (!m.isMesh || !m.castShadow || /** @type {any} */ (m).isInstancedMesh || m.userData.carryKind) return;
+    const g = m.geometry;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    const e = m.matrixWorld.elements;
+    const scale = Math.sqrt(Math.max(e[0] * e[0] + e[1] * e[1] + e[2] * e[2], e[4] * e[4] + e[5] * e[5] + e[6] * e[6], e[8] * e[8] + e[9] * e[9] + e[10] * e[10]));
+    if ((g.boundingSphere?.radius ?? 1) * scale < 0.045) m.castShadow = false;
+  });
+}
+
+/**
  * @param {import('../../../types').LevelBuildArgs} args
  * @returns {import('../../../types').LevelBuild<import('../../../types').Fase10Props>}
  */
@@ -38,6 +56,7 @@ export function buildWorld({ root, layout }) {
   const garden = T('garden', () => buildGarden(root, layout));
   const P = T('props', () => buildProps({ root, layout, house, porch, yard, fences, treehouse, garden }));
   if (typeof window !== 'undefined') window.__f10Timings = timings;
+  trimTinyShadows(root);
   P.props.reset();
   return {
     props: P.props,

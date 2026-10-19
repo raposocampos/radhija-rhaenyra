@@ -743,6 +743,7 @@ export function createFeedback(opts) {
     particles.feathers({ x, y, z }, { count: 6, size: 0.8 });
   });
   events.on('pigeon:land', ({ x, z }) => sfx('pigeonCoo', x, z));
+  events.on('pigeon:seen', ({ x, z }) => later(0.9, () => sfx('pigeonCoo', x, z)));
   events.on('pigeon:shrug', ({ x, z }) => sfx('pigeonShrug', x, z));
   events.on('fan:aligned', ({ x, z }) => sfx('latch', x, z));
   // fase 5: trava do portãozinho e caixa de almofadas desmontando

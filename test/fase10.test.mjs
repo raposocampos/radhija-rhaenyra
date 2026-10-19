@@ -2,8 +2,9 @@
 // vela no meio e chapéu no topo); o chapeuzinho no barquinho (caixote fora da mangueira, torneira no alto da parede,
 // a piscininha enchendo e o ventilador ligado pelo disjuntor da cozinha); o laço na casa na árvore (a Dona Gansa
 // guardando a cordinha do portão, o superbafo pelo cano de brinquedo até o pombo, o elevador de balde com a Rhaenyra
-// puxando a corda e o escorregador); a vela do 3 no galpão (a lama da horta, o Lambe-Lambe, a placa que segura a
-// porta e fica com a Rhaenyra na troca, a rampa só com arrancada); e as regras de cada passo. Headless.
+// puxando a corda, o deque onde a Radhija anda livre, desamarra o laço e escolhe o escorregador ou o balde); a vela
+// do 3 no galpão (a lama da horta, o Lambe-Lambe, a placa que segura a porta e fica com a Rhaenyra na troca, a rampa
+// só com arrancada); e as regras de cada passo. Headless.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
@@ -154,7 +155,7 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e o bolo na or
   assert.ok(h.log('scent:duct').length >= 1, 'entrou no cano');
   assert.equal(h.log('pigeon:flee').length, 1);
 
-  // ---- o balde: a Radhija entra, a Rhaenyra puxa a corda e ela sobe, pega o laço e desce pelo escorregador
+  // ---- o balde: a Radhija entra, a Rhaenyra puxa a corda e ela sobe até o deque
   put(h, 'radhija', L.BUCKET.x, L.BUCKET.z + 0.7, Math.PI);
   assert.equal(h.info().prompt, TEXT.prompt.bucket);
   h.tap('KeyE');
@@ -164,11 +165,30 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e o bolo na or
   assert.equal(h.info().prompt, TEXT.prompt.rope);
   h.tap('KeyE');
   assert.equal(q(h).rope.holder, 'rhaenyra', 'a Rhaenyra pegou a corda');
-  h.walkTo(L.ROPE.rest.x, -0.6, { tol: 0.1, timeout: 10, until: (i) => !!i.quintal.deck });
-  assert.ok(q(h).deck, `o balde chegou lá em cima ${JSON.stringify(q(h).bucket)}`);
-  assert.ok(h.run(9, { until: (i) => i.ribbon.holder === 'radhija' && !i.quintal.deck }), 'desamarrou o laço e desceu pelo escorregador');
+  h.walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 2.9, { tol: 0.1, timeout: 10, until: (i) => i.quintal.onDeck });
+  assert.ok(h.run(1.5, { until: (i) => i.quintal.onDeck }), `o balde chegou lá em cima e ela pulou para o deque ${JSON.stringify(q(h).bucket)}`);
+  assert.equal(h.ctrls.radhija.y, L.DECK.h, 'no alto do deque');
+  // ---- lá em cima quem anda é o jogador: o corrimão segura, E desamarra o laço, E escorrega
+  as(h, 'radhija');
+  h.hold([0, 1]);
+  h.run(0.8);
+  h.hold(null);
+  assert.ok(h.ctrls.radhija.z < L.DECK.z1 - 0.15 && h.ctrls.radhija.y === L.DECK.h, 'o corrimão da frente segura');
+  assert.equal(h.info().objective, TEXT.objective.untieRad);
+  h.walkTo(L.DECK_PATH.ribbon.x, L.DECK_PATH.ribbon.z, { tol: 0.1 });
+  assert.equal(h.info().prompt, TEXT.prompt.untie, 'prompt do laço');
+  h.tap('KeyE');
+  assert.ok(h.run(1.5, { until: (i) => i.ribbon.holder === 'radhija' && i.quintal.deck === 'free' }), 'desamarrou o laço e continua no deque');
+  assert.equal(h.info().objective, TEXT.objective.slideRad, 'com o laço, o objetivo é descer');
+  h.walkTo(L.DECK_PATH.slideTop.x, L.DECK_PATH.slideTop.z, { tol: 0.1 });
+  assert.equal(h.info().prompt, TEXT.prompt.slide, 'prompt do escorregador');
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: (i) => !i.quintal.deck && !i.quintal.onDeck }), 'desceu pelo escorregador');
   assert.equal(h.ctrls.radhija.y, 0, 'de volta ao chão');
+  assert.equal(h.info().ribbon.holder, 'radhija', 'com o laço na boca');
   assert.ok(h.log('slide:down').length >= 1);
+  as(h, 'rhaenyra');
+  h.run(0.1);
   assert.equal(h.info().prompt, TEXT.prompt.ropeDrop);
   h.tap('KeyE');
   assert.equal(q(h).rope.holder, null, 'soltou a corda');
@@ -297,7 +317,9 @@ test('fase 10: o pombo não sai com latido nem com superbafo direto; pelo cano, 
   const h = await game();
   h.run(0.3);
   puz(h).debugSet('gate');
-  put(h, 'radhija', L.PIGEON.x, L.PIGEON.z + 0.55, Math.PI);
+  put(h, 'radhija', L.PIGEON.x + 0.2, L.PIGEON.z + 0.55, Math.PI);
+  assert.equal(q(h).sawPigeon, true, 'no fundo do quintal, a câmera mostra o pombo dormindo em cima do laço');
+  assert.ok(hints(h).includes(TEXT.hint.pigeonSeen));
   h.clearLog();
   h.tap('KeyE');
   assert.ok(hints(h).includes(TEXT.hint.pigeonBark), 'latido não adianta');
@@ -341,7 +363,7 @@ test('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; c
   put(h, 'rhaenyra', L.ROPE.rest.x, L.ROPE.rest.z + 0.5, Math.PI);
   h.tap('KeyE');
   assert.equal(q(h).rope.holder, 'rhaenyra');
-  h.walkTo(L.ROPE.rest.x, -2.0, { tol: 0.08 });
+  h.walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 1.6, { tol: 0.08 });
   const y = q(h).bucket.y;
   assert.ok(y > 0.6 && y < 1.6, `o balde subiu até a metade (${y})`);
   // trocando, ela continua segurando
@@ -354,7 +376,7 @@ test('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; c
   assert.equal(q(h).rope.holder, null, 'soltou');
   assert.ok(h.run(3, { until: (i) => i.quintal.bucket.y === 0 }), 'solto, o balde desce');
   assert.equal(q(h).bucket.riding, true, 'com a Radhija dentro');
-  // com o pombo lá em cima: ela sobe, ele bica, ela volta para o balde
+  // com o pombo lá em cima: o balde chega, o pombo acorda, bate as asas e ela não sai do balde
   h.walkTo(L.ROPE.rest.x, L.ROPE.rest.z + 0.5, { tol: 0.08 });
   h.hold([0, -1]);
   h.run(0.08);
@@ -363,12 +385,68 @@ test('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; c
   h.tap('KeyE');
   assert.equal(q(h).rope.holder, 'rhaenyra');
   h.clearLog();
-  h.walkTo(L.ROPE.rest.x, -0.6, { tol: 0.1, timeout: 10, until: (i) => !!i.quintal.deck });
-  assert.ok(h.run(6, { until: (i) => !i.quintal.deck }), 'a sequência do deque terminou');
-  assert.equal(h.log('pigeon:peck').length, 1, 'o pombo bicou');
+  h.walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 2.9, { tol: 0.1, timeout: 10, until: (i) => i.quintal.bucket.y >= L.BUCKET.top - 0.02 });
+  h.run(1.5);
+  assert.equal(h.log('pigeon:peck').length, 1, 'o pombo acordou e bateu as asas');
   assert.ok(hints(h).includes(TEXT.hint.pigeonDeck));
-  assert.equal(q(h).bucket.riding, true, 'ela voltou para o balde');
+  assert.equal(q(h).bucket.riding, true, 'ela ficou no balde');
+  assert.equal(q(h).onDeck, false, 'sem pular para o deque');
   assert.equal(h.info().ribbon.holder, null, 'sem o laço');
+});
+
+test('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', async () => {
+  const h = await game();
+  h.run(0.3);
+  puz(h).debugSet('gate');
+  puz(h).debugSet('pigeon');
+  put(h, 'radhija', L.BUCKET.x, L.BUCKET.z + 0.7, Math.PI);
+  h.tap('KeyE');
+  assert.ok(h.run(1, { until: (i) => i.quintal.bucket.riding }), 'no balde');
+  as(h, 'rhaenyra');
+  put(h, 'rhaenyra', L.ROPE.rest.x, L.ROPE.rest.z + 0.5, Math.PI);
+  h.tap('KeyE');
+  h.clearLog();
+  h.walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 2.9, { tol: 0.1, timeout: 10, until: (i) => i.quintal.onDeck });
+  assert.ok(h.run(1.5, { until: (i) => i.quintal.onDeck }), 'pulou para o deque');
+  assert.ok(hints(h).includes(TEXT.hint.deckArrive), 'dica de chegada no deque');
+  assert.equal(h.info().objective, TEXT.objective.upRh, 'a Rhaenyra ativa: trocar para a Radhija');
+  // como companheira lá em cima, ela espera (não segue a irmã)
+  const rad = h.ctrls.radhija;
+  const w = { x: rad.x, z: rad.z };
+  h.run(1);
+  assert.ok(Math.hypot(rad.x - w.x, rad.z - w.z) < 1e-3 && rad.y === L.DECK.h, 'espera no deque');
+  as(h, 'radhija');
+  // o tronco segura
+  h.walkTo(L.TREE.x, L.TREE.z, { tol: 0.05, timeout: 2 });
+  assert.ok(Math.hypot(rad.x - L.TREE.x, rad.z - L.TREE.z) >= L.TREE.r + rad.r - 0.03, `não atravessa o tronco (${rad.x.toFixed(2)}, ${rad.z.toFixed(2)})`);
+  assert.equal(rad.y, L.DECK.h);
+  // a casinha segura
+  h.walkTo(L.DECK_PATH.slideTop.x, L.DECK_PATH.slideTop.z, { tol: 0.1 });
+  h.walkTo((L.HUT.x0 + L.HUT.x1) / 2, L.HUT.z0 + 0.2, { tol: 0.05, timeout: 2 });
+  assert.ok(rad.z >= L.HUT.z1 + rad.r - 0.03 || rad.x <= L.HUT.x0 - rad.r + 0.03, `não entra na casinha (${rad.x.toFixed(2)}, ${rad.z.toFixed(2)})`);
+  // o corrimão do oeste segura
+  h.walkTo(L.DECK_PATH.arrive.x, L.DECK_PATH.arrive.z, { tol: 0.08 });
+  h.hold([-1, 0]);
+  h.run(1);
+  h.hold(null);
+  assert.ok(rad.x > L.DECK.x0 + 0.15 && rad.x < L.DECK.x0 + 0.3 && rad.y === L.DECK.h, `o corrimão do oeste segura (${rad.x.toFixed(2)})`);
+  // de volta para o balde (lá em cima, com a Rhaenyra segurando a corda)
+  h.walkTo(L.DECK_PATH.arrive.x, L.DECK_PATH.arrive.z, { tol: 0.08 });
+  assert.equal(h.info().prompt, TEXT.prompt.bucketBack);
+  h.tap('KeyE');
+  assert.ok(h.run(1, { until: (i) => i.quintal.bucket.riding && !i.quintal.onDeck }), 'voltou para o balde');
+  h.run(1);
+  assert.equal(q(h).onDeck, false, 'não pula de novo para o deque sozinha');
+  // a Rhaenyra solta: o balde desce com ela; E e ela sai
+  as(h, 'rhaenyra');
+  h.tap('KeyE');
+  assert.ok(h.run(4, { until: (i) => i.quintal.bucket.y === 0 }), 'o balde desceu');
+  as(h, 'radhija');
+  h.tap('KeyE');
+  assert.ok(h.run(1, { until: (i) => !i.quintal.bucket.riding && !i.quintal.deck }), 'saiu do balde');
+  assert.equal(rad.y, 0);
+  assert.equal(h.info().ribbon.holder, null, 'o laço ficou lá em cima');
+  assert.equal(q(h).place.ribbon, 'home');
 });
 
 test('fase 10: lama sem arrancada; placa só com a Rhaenyra (e ela fica na troca); a rampa só com arrancada', async () => {

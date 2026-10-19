@@ -1,9 +1,9 @@
 // Fase 10 (Festa no Quintal) no navegador, com teclas reais nas ações (teleporte só para levar as duas de um cenário
 // a outro): o caixote empurrado para fora da mangueira, o impulso na torneira e no disjuntor, o chapeuzinho no
 // barquinho, o chapéu fora de ordem caindo da mesa e o quadro da sala; o latido que distrai a gansa e a cordinha do
-// portão, o superbafo pelo cano de brinquedo, o balde com a Rhaenyra puxando a corda; a lama, o Lambe-Lambe, a placa
-// do galpão (a Rhaenyra fica na troca) e a arrancada na rampa; e o bolo completo na ordem do quadro. As regras de cada
-// passo estão em test/fase10.test.mjs (headless).
+// portão, o superbafo pelo cano de brinquedo, o balde com a Rhaenyra puxando a corda, o deque (E desamarra o laço, E
+// escorrega); a lama, o Lambe-Lambe, a placa do galpão (a Rhaenyra fica na troca) e a arrancada na rampa; e o bolo
+// completo na ordem do quadro. As regras de cada passo estão em test/fase10.test.mjs (headless).
 //   node tools/scripts/test-quintal.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -51,7 +51,8 @@ try {
     const l = window.__game.layout;
     return {
       TAP: l.TAP, BREAKER: l.BREAKER, CRATE: l.CRATE, BOAT: l.BOAT, GOAL: l.GOAL, PAINTING: l.PAINTING, CORD: l.CORD,
-      TUBE: l.TUBE, BUCKET: l.BUCKET, ROPE: l.ROPE, HORTA: l.HORTA, PLATE: l.PLATE, RAMP: l.RAMP,
+      TUBE: l.TUBE, BUCKET: l.BUCKET, ROPE: l.ROPE, HORTA: l.HORTA, PLATE: l.PLATE, RAMP: l.RAMP, DECK: l.DECK,
+      DECK_PATH: l.DECK_PATH,
     };
   });
   check(state.levelId === 'fase10' && state.state === 'playing', 'link por id (?level=fase10) abre a fase 10');
@@ -84,6 +85,10 @@ try {
   check(qt(state).full && !qt(state).boat.docked, 'a piscininha enche; sem vento, o barquinho fica no meio');
   state = await wallJump(L.BREAKER);
   check(qt(state).power, 'impulso no disjuntor da cozinha liga as luzes da festa');
+  state = await waitFor((s) => s.quintal.powerStage === 'painting', { timeout: 3000 });
+  check(qt(state).powerStage === 'painting', 'a energia chega primeiro nas luzinhas em volta do quadro');
+  state = await waitFor((s) => s.quintal.powerStage === 'on', { timeout: 6000 });
+  check(qt(state).powerStage === 'on', 'depois segue para as luzinhas da festa na varanda');
   state = await waitFor((s) => s.quintal.boat.docked, { timeout: 6000 });
   check(qt(state).boat.docked, 'o ventilador leva o barquinho até a borda');
   await as('radhija');
@@ -133,12 +138,24 @@ try {
   await page.keyboard.press('KeyE');
   state = await waitFor((s) => s.quintal.rope.holder === 'rhaenyra', { timeout: 1500 });
   check(qt(state).rope.holder === 'rhaenyra', 'E: a Rhaenyra pega a corda');
-  await walkTo(L.ROPE.rest.x, -0.6, { tol: 0.12, timeout: 12000, stopIf: (s) => !!s.quintal.deck });
+  await walkTo(L.ROPE.ring.x, L.ROPE.ring.z + 2.9, { tol: 0.12, timeout: 12000, stopIf: (s) => !!s.quintal.deck || s.quintal.onDeck });
+  state = await waitFor((s) => s.quintal.onDeck, { timeout: 4000 });
+  check(qt(state).onDeck, 'andando para longe do balde, ele sobe e a Radhija pula para o deque', JSON.stringify(qt(state).bucket));
+  await shot('06-no-deque.png');
+  // lá em cima quem anda é o jogador: até o laço (E desamarra) e até a boca do escorregador (E escorrega)
+  await as('radhija');
+  await walkTo(L.DECK_PATH.ribbon.x, L.DECK_PATH.ribbon.z, { tol: 0.12 });
   state = await info();
-  check(!!qt(state).deck, 'andando para longe da árvore, o balde sobe até o deque', JSON.stringify(qt(state).bucket));
-  await shot('06-balde-la-em-cima.png');
-  state = await waitFor((s) => s.ribbon?.holder === 'radhija' && !s.quintal.deck, { timeout: 12000 });
-  check(state.ribbon?.holder === 'radhija', 'lá em cima ela desamarra o laço e desce pelo escorregador');
+  check(qt(state).deckAction === 'untie' && state.dogs.radhija.y > L.DECK.h - 0.01, 'no deque, perto do laço (prompt de desamarrar)', JSON.stringify({ rad: state.dogs.radhija, act: qt(state).deckAction }));
+  await page.keyboard.press('KeyE');
+  state = await waitFor((s) => s.ribbon?.holder === 'radhija' && s.quintal.deck === 'free', { timeout: 3000 });
+  check(state.ribbon?.holder === 'radhija', 'E: lá em cima ela desamarra o laço');
+  await walkTo(L.DECK_PATH.slideTop.x, L.DECK_PATH.slideTop.z, { tol: 0.12 });
+  await page.keyboard.press('KeyE');
+  state = await waitFor((s) => !s.quintal.deck && !s.quintal.onDeck, { timeout: 5000 });
+  check(state.ribbon?.holder === 'radhija' && state.dogs.radhija.y < 0.01, 'E na boca do escorregador: desce com o laço', JSON.stringify(state.dogs.radhija));
+  await as('rhaenyra');
+  await H.gsleep(150);
   await page.keyboard.press('KeyE'); // solta a corda (espera antes do Q: no mesmo quadro, o E iria para a Radhija)
   state = await waitFor((s) => s.quintal.rope.holder === null, { timeout: 1500 });
   check(qt(state).rope.holder === null, 'E: a Rhaenyra solta a corda (o balde desce)');

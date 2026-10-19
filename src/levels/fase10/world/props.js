@@ -12,6 +12,8 @@ import { makeLink } from '../../../world/links.js';
 
 const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
+/** Quanto tempo o quadro fica aceso sozinho (o pulso só segue para a varanda depois), em segundos. */
+export const POWER_PAINTING_HOLD = 2.0;
 
 /** Materiais com emissivo de um objeto (para o brilho de destaque). */
 function emissiveMats(obj) {
@@ -228,17 +230,34 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   const xE = HOUSE.x1 - WALLS.t / 2 - 0.02;
   const xOut = HOUSE.x1 + WALLS.t / 2 + 0.02;
   const P0 = porch.lights.start;
-  const conduitMain = makeLink([
+  // o conduíte sobe do disjuntor até a parede do fundo (J) e ali se divide: um ramal vai para o oeste até as luzinhas
+  // do quadro da sala e o outro atravessa a parede leste até o pergolado
+  const J = new THREE.Vector3(xL + 0.02, 2.5, zN);
+  const conduitUp = makeLink([
     new THREE.Vector3(xL, BREAKER.top + 0.08, BREAKER.z),
     new THREE.Vector3(xL, WALLS.cutH - 0.03, BREAKER.z),
     new THREE.Vector3(xL, WALLS.cutH - 0.03, zN + 0.02),
-    new THREE.Vector3(xL + 0.02, 2.5, zN),
+    J,
+  ], { radius: 0.014, color: '#f4f1ea', glow: '#ffd36a', clips: 3 });
+  const PS = house.paintingLights.start;
+  const conduitPainting = makeLink([
+    J,
+    new THREE.Vector3(PS.x, 2.5, zN),
+    new THREE.Vector3(PS.x, PS.y + 0.06, zN),
+    new THREE.Vector3(PS.x, PS.y, PS.z),
+  ], { radius: 0.011, color: '#f4f1ea', glow: '#ffd36a', clips: 2 });
+  const conduitMain = makeLink([
+    J,
     new THREE.Vector3(xE, 2.5, zN),
     new THREE.Vector3(xOut, 2.5, zN + 0.02),
     new THREE.Vector3(PERGOLA_POSTS[0].x - 0.06, 2.5, PERGOLA_POSTS[0].z),
     new THREE.Vector3(P0.x - 0.04, P0.y + 0.02, P0.z),
-  ], { radius: 0.014, color: '#f4f1ea', glow: '#ffd36a', clips: 8 });
-  root.add(conduitMain.object);
+  ], { radius: 0.014, color: '#f4f1ea', glow: '#ffd36a', clips: 5 });
+  root.add(conduitUp.object, conduitPainting.object, conduitMain.object);
+  // caixinha de derivação na parede do fundo, onde o conduíte se divide
+  const jbox0 = new THREE.Mesh(rbox(0.1, 0.1, 0.05, 0.01), stdMat('#f4f1ea', { roughness: 0.5 }));
+  jbox0.position.set(J.x, J.y, layout.WORLD.bounds.minZ + 0.024);
+  root.add(jbox0);
   // ramal da fachada: desce por baixo do beiral até a tomada do ventilador
   const outlet = yard.outletPos;
   const conduitOutlet = makeLink([
@@ -273,7 +292,9 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     hlHat: false, hlRibbon: false, hlCandle: false, glow: { hat: 0, ribbon: 0, candle: 0 },
     hatOnBoat: true, power: false, powerT: -1, lightsOn: false, fanWant: false, fanOn: false, tapOn: false,
     lit: false, litT: 0, lampI: 0,
+    /** @type {'off' | 'house' | 'painting' | 'porch' | 'on'} */ stage: 'off', stageT: 0,
   };
+  const goStage = (sg) => { st.stage = sg; st.stageT = 0; };
   const boatPos = new THREE.Vector3();
   /** O chapéu acompanha o barquinho (no convés) enquanto ninguém o pega. */
   function hatOnBoatPose() {
@@ -325,11 +346,16 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       setPower(on) { st.fanWant = !!on; },
     },
     power: {
+      /** Onde a energia está: 'house' subindo o conduíte, 'painting' acendendo o quadro, 'porch' indo para a varanda. */
+      get stage() { return st.stage; },
       setOn(on) {
-        if (on && !st.power) { st.powerT = 0; conduitMain.pulse(); }
-        if (!on) { st.powerT = -1; st.lightsOn = false; porch.lights.setOn(false); }
+        if (on && !st.power) { st.powerT = 0; goStage('house'); conduitUp.pulse(); }
+        if (!on) {
+          st.powerT = -1; st.lightsOn = false; goStage('off'); porch.lights.setOn(false); house.paintingLights.setOn(false);
+          conduitPainting.setOn(false); conduitMain.setOn(false);
+        }
         st.power = !!on;
-        conduitMain.setOn(!!on);
+        conduitUp.setOn(!!on);
       },
     },
     gate: fences.gate,
@@ -357,12 +383,28 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     update(dt, t) {
       treats.update(dt, t);
       for (const b of [breaker, tap]) b.update?.(dt, t);
+      conduitUp.update(dt);
+      conduitPainting.update(dt);
       conduitMain.update(dt);
       conduitOutlet.update(dt);
-      // energia: o pulso chega no pergolado → luzinhas em onda; e desce a fachada → a tomada liga o ventilador
+      // energia: o pulso sobe até a parede do fundo → ramal do quadro (as luzinhas dele acendem primeiro) → depois o
+      // pulso segue para o pergolado → luzinhas da varanda em onda; e desce a fachada → a tomada liga o ventilador
       if (st.powerT >= 0) {
         st.powerT += dt;
-        if (!st.lightsOn && conduitMain.arrived && st.powerT > 0.2) {
+        st.stageT += dt;
+        if (st.stage === 'house' && conduitUp.arrived && st.powerT > 0.2) {
+          goStage('painting');
+          conduitPainting.pulse();
+          conduitPainting.setOn(true);
+        } else if (st.stage === 'painting') {
+          if (conduitPainting.arrived) house.paintingLights.setOn(true);
+          if (st.stageT > POWER_PAINTING_HOLD) {
+            goStage('porch');
+            conduitMain.pulse();
+            conduitMain.setOn(true);
+          }
+        } else if (st.stage === 'porch' && conduitMain.arrived && st.stageT > 0.1) {
+          goStage('on');
           st.lightsOn = true;
           porch.lights.setOn(true);
           conduitOutlet.pulse();
@@ -397,6 +439,10 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       st.hlHat = st.hlRibbon = st.hlCandle = false;
       st.power = false; st.powerT = -1; st.lightsOn = false; st.fanWant = false; st.fanOn = false; st.tapOn = false;
       st.lit = false;
+      goStage('off');
+      house.paintingLights.setOn(false);
+      conduitUp.setOn(false);
+      conduitPainting.setOn(false);
       candleKit.flame.visible = false;
       candleKit.starMat.emissiveIntensity = 0.25;
       candle.rotation.set(0, -Math.PI / 2 + 0.35, 0);

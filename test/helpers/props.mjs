@@ -406,7 +406,7 @@ export function stubFase10Props(root, layout) {
     boat: checked('fase10.boat', { object: object(root, 'boat'), setPos(x, z, y, drifting) { this.object.position.set(x, y, z); } }),
     crate: checked('fase10.crate', { object: object(root, 'crate'), setPos(x, z) { this.object.position.set(x, 0, z); }, setHighlight(on) {} }),
     fan: checked('fase10.fan', { object: object(root, 'fan'), power: false, setPower(on) { this.power = on; } }),
-    power: checked('fase10.power', { on: false, setOn(on) { this.on = on; } }),
+    power: checked('fase10.power', { on: false, stage: 'off', setOn(on) { this.on = on; this.stage = on ? 'on' : 'off'; } }),
     gate: gate(root, 'fase10.gate'),
     cord: checked('fase10.cord', { tug: 0, setTug(k) { this.tug = k; } }),
     pigeon: checked('fase10.pigeon', { object: object(root, 'pigeon'), pose: null, pecks: 0, setPose(p) { this.pose = { ...p }; }, peck() { this.pecks++; } }),

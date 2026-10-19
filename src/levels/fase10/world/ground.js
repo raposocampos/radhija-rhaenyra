@@ -14,7 +14,7 @@ const MW = 384, MH = 208;
 export const STONES = [
   [-2.3, -2.25], [-1.85, -1.7], [-0.95, -1.35], [-0.05, -1.05], [0.85, -0.7], [1.75, -0.45], [2.65, -0.2], [3.5, 0.0],
   [4.35, 0.12], [4.95, 0.18],
-  [5.85, 0.16], [6.45, -0.25], [6.95, -0.85], [7.35, -1.5], [7.8, -2.1], [8.35, -2.6],
+  [5.85, 0.16], [6.45, -0.25], [6.95, -0.85], [7.35, -1.5], [7.75, -2.05], [8.0, -2.42],
   [6.5, 0.55], [6.2, 1.2],
 ];
 const stoneField = (x, z) => {
@@ -230,8 +230,11 @@ const grassMat = () => mat('f10-grass-blades', () => {
   return m;
 });
 
-/** Tufo de lâminas curvas achatadas (altura 1, escalado por instância), com o atributo aH (0 na base … 1 na ponta). */
-function tuftGeometry(blades, seed) {
+/**
+ * Tufo de lâminas curvas achatadas (altura 1, escalado por instância), com o atributo aH (0 na base … 1 na ponta).
+ * `segs` trechos por lâmina (a grama baixa usa 2: de cima, a curva não aparece e o quintal é grande).
+ */
+function tuftGeometry(blades, seed, segs = 3) {
   const r = rng(seed);
   const pos = [], hs = [], nor = [], idx = [];
   let base = 0;
@@ -241,7 +244,6 @@ function tuftGeometry(blades, seed) {
     const lean = 0.25 + r() * 0.5, h = 0.6 + r() * 0.4, wdt = 0.014 + r() * 0.01;
     const fa = a + (r() - 0.5) * 1.2;
     const fx = Math.cos(fa + Math.PI / 2), fz = Math.sin(fa + Math.PI / 2);
-    const segs = 3;
     for (let k = 0; k <= segs; k++) {
       const t = k / segs;
       const bend = lean * t * t;
@@ -271,7 +273,8 @@ function tuftGeometry(blades, seed) {
  * @param {{ name?: string, tall?: boolean, layout?: import('../../../types').LevelLayout }} [opts]
  */
 export function tuftMesh(list, { name = 'grama', tall = false, layout = null } = {}) {
-  const geo = tuftGeometry(tall ? 8 : 5, tall ? 5 : 3);
+  // poucas lâminas por tufo (o quintal é o maior cenário da demo: a grama era metade dos triângulos da fase)
+  const geo = tuftGeometry(tall ? 6 : 4, tall ? 5 : 3, tall ? 3 : 2);
   const im = new THREE.InstancedMesh(geo, grassMat(), Math.max(1, list.length));
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3();
   const c = new THREE.Color();
@@ -303,7 +306,7 @@ export function tuftMesh(list, { name = 'grama', tall = false, layout = null } =
  */
 function grassTufts(root, layout) {
   const B = layout.WORLD.bounds;
-  const { POOL, HOSE, BACK_FENCE, HORTA } = layout;
+  const { POOL, HOSE, BACK_FENCE, HORTA, BUCKET } = layout;
   const solid = layout.STATIC_COLLIDERS.filter((c) => c.shape === 'circle' || (c.shape === 'box' && c.hx < 1.0 && c.hz < 1.0));
   const near = (x, z, pad) => solid.some((c) => (c.shape === 'circle'
     ? Math.hypot(x - c.x, z - c.z) < c.r + pad
@@ -320,12 +323,13 @@ function grassTufts(root, layout) {
   };
   const r = rng(101);
   const low = [], tall = [];
-  const step = 0.155;
+  const step = 0.17;
   for (let z = B.minZ - 0.3; z < B.maxZ + 1.0; z += step) {
     for (let x = B.minX - 0.4; x < B.maxX + 0.4; x += step) {
       const px = x + (r() - 0.5) * step * 1.3, pz = z + (r() - 0.5) * step * 1.3;
       if (inside(layout, px, pz)) continue;
       if (Math.hypot(px - POOL.x, pz - POOL.z) < POOL.r + 0.12) continue;
+      if (Math.hypot(px - BUCKET.x, pz - BUCKET.z) < BUCKET.r + 0.06) continue; // nada brotando dentro do balde
       if (stoneField(px, pz) > 0.35 || hoseD(px, pz) < 0.05) continue;
       if (near(px, pz, 0.02)) continue;
       const fence = Math.abs(px - BACK_FENCE.x) < 0.2 || Math.abs(px - HORTA.x0) < 0.16 && pz > HORTA.z0 || Math.abs(pz - HORTA.z0) < 0.16 && px > HORTA.x0 && px < HORTA.x1;

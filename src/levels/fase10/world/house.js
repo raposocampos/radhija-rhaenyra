@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { rng, rbox, canvasTexture, plasterMat, stdMat, woodMat, mergeGeometries, paint, contactShadow, terracottaMat, potProfile, soilDisc, foliageCluster, glazeMat, brassMat } from '../../../world/util.js';
 import { plantMat, geranium, lavender } from '../../../world/plants.js';
 
+const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
+
 const POCHE = '#3b2a20';
 const TAU = Math.PI * 2;
 const FLOOR_Y = 0.012;
@@ -349,6 +351,96 @@ function pottedPlant(r, h, color, seed, kind = 'fern') {
 
 // ------------------------------------------------------------------ casa
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
+/**
+ * Luzinhas em volta do quadro: um fio de lâmpadas que sobe pela direita, faz gomos por cima (passando sobre a
+ * arandela) e desce pela esquerda. Apagadas até o disjuntor; o ramal do conduíte chega no canto de cima à direita
+ * (`start`) e elas acendem em onda a partir dali, junto com a arandela, o halo na parede e o brilho da tela.
+ * @param {THREE.Group} group
+ * @param {{ x: number, y: number, z: number, w: number, h: number }} PAINTING
+ * @param {number} zN face de dentro da parede do fundo
+ * @param {{ glow: THREE.Mesh, halo: THREE.Mesh, canvasMat: THREE.MeshStandardMaterial }} parts
+ */
+function buildPaintingLights(group, PAINTING, zN, { glow, halo, canvasMat }) {
+  const g = new THREE.Group();
+  g.name = 'luzinhas-do-quadro';
+  const sx = PAINTING.w / 2 + 0.17, top = PAINTING.h / 2 + 0.19, bot = -PAINTING.h / 2 - 0.03;
+  const V = (x, y) => new THREE.Vector3(x, y, 0);
+  const pts = [V(sx, bot), V(sx + 0.012, (bot + top) / 2), V(sx, top)];
+  const gomos = 4;
+  for (let i = 1; i <= gomos; i++) {
+    const x0 = sx - (2 * sx * (i - 1)) / gomos, x1 = sx - (2 * sx * i) / gomos;
+    pts.push(V((x0 + x1) / 2, top - 0.06), V(x1, top));
+  }
+  pts.push(V(-sx - 0.012, (bot + top) / 2), V(-sx, bot));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  const wire = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.004, 5, false), stdMat('#3d5a2e', { roughness: 0.6 }));
+  wire.position.z = 0.012;
+  g.add(wire);
+  // pregos nos cantos e nos topos dos gomos
+  const nailG = new THREE.CylinderGeometry(0.006, 0.006, 0.02, 6).rotateX(Math.PI / 2);
+  const nailM = brassMat();
+  for (const p of [pts[0], pts[2], ...pts.slice(3, 3 + gomos * 2).filter((_, k) => k % 2 === 1), pts[pts.length - 1]]) {
+    const nl = new THREE.Mesh(nailG, nailM);
+    nl.position.set(p.x, p.y, 0.012);
+    g.add(nl);
+  }
+  // as lâmpadas (cores quentes alternadas), penduradas um pouco abaixo do fio
+  const N = 26;
+  const entry = 2 / (pts.length - 1); // o canto de cima à direita, onde o ramal chega
+  const bulbG = new THREE.SphereGeometry(0.019, 10, 8);
+  bulbG.scale(1, 1.3, 1);
+  const bulbs = new THREE.InstancedMesh(bulbG, new THREE.MeshBasicMaterial({ color: '#ffffff' }), N);
+  bulbs.name = 'lampadas-do-quadro';
+  const capG = new THREE.CylinderGeometry(0.009, 0.009, 0.014, 8);
+  const caps = new THREE.InstancedMesh(capG, stdMat('#3d5a2e', { roughness: 0.6 }), N);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+  const OFF = new THREE.Color('#9a8c70');
+  const ON = ['#ffd36a', '#ff9ec8', '#fff1b0', '#9bdcff'].map((c) => new THREE.Color(c).multiplyScalar(1.7));
+  const order = [];
+  for (let i = 0; i < N; i++) {
+    const u = (i + 0.5) / N;
+    curve.getPointAt(u, p);
+    p.y -= 0.024;
+    p.z = 0.03;
+    bulbs.setMatrixAt(i, m4.compose(p, q, one));
+    caps.setMatrixAt(i, m4.compose(p.setY(p.y + 0.026), q, one));
+    bulbs.setColorAt(i, OFF);
+    order.push(Math.abs(curve.getUtoTmapping(u) - entry) / Math.max(entry, 1 - entry));
+  }
+  bulbs.instanceMatrix.needsUpdate = caps.instanceMatrix.needsUpdate = true;
+  g.add(bulbs, caps);
+  g.position.set(PAINTING.x, PAINTING.y, zN + 0.004);
+  group.add(g);
+  const start = new THREE.Vector3(PAINTING.x + sx, PAINTING.y + top + 0.01, zN + 0.016);
+  const lampOff = new THREE.Color('#5a4a36'), lampOn = new THREE.Color('#fff0c8');
+  const glowMat = /** @type {THREE.MeshBasicMaterial} */ (glow.material);
+  const haloMat = /** @type {THREE.MeshBasicMaterial} */ (halo.material);
+  const c = new THREE.Color();
+  const st = { on: false, k: 0, level: 0, dirty: true };
+  return {
+    start,
+    get lit() { return st.on && st.k > 1.2; },
+    setOn(on) {
+      if (!!on !== st.on) { st.on = !!on; st.k = 0; st.dirty = true; }
+    },
+    update(dt, t) {
+      st.k += dt;
+      st.level = ease(st.level, st.on ? 1 : 0, dt, 2.4);
+      if (!st.on && !st.dirty && st.level < 0.001) return;
+      for (let i = 0; i < N; i++) {
+        const b = st.on ? Math.max(0, Math.min(1, (st.k * 1.4 - order[i]) * 5)) : 0;
+        const tw = 0.86 + 0.14 * Math.sin(t * 3.1 + i * 1.7);
+        bulbs.setColorAt(i, c.copy(OFF).lerp(ON[i % ON.length], b * tw));
+      }
+      if (bulbs.instanceColor) bulbs.instanceColor.needsUpdate = true;
+      glowMat.color.copy(lampOff).lerp(lampOn, st.level);
+      haloMat.opacity = st.level;
+      canvasMat.emissiveIntensity = 0.12 + 0.16 * st.level;
+      st.dirty = false;
+    },
+  };
+}
+
 export function buildHouse(root, layout) {
   const {
     WALLS, HOUSE, WALL_LK, PORCH_DOOR, SOFA, COFFEE_TABLE, SIDEBOARD, PAINTING, BOOKSHELF, ARMCHAIR, FLOOR_LAMP, RUG,
@@ -531,7 +623,7 @@ export function buildHouse(root, layout) {
   skirting((xW + xE) / 2, zS - T / 2 - 0.012, xE - xW - T, 0.024);
 
   // ================================================================ SALA
-  // ---- sofá de veludo rosa-antigo (encosto para o sul) com almofadas e as pernas torneadas
+  // ---- sofá de veludo rosa-antigo (encosto para o sul) com almofadas e a saia até o chão
   const velvet = new THREE.MeshPhysicalMaterial({ color: '#c97f86', roughness: 0.85, sheen: 1, sheenColor: new THREE.Color('#ffd0d4'), sheenRoughness: 0.5 });
   const sofa = new THREE.Group();
   sofa.name = 'sofa';
@@ -552,10 +644,15 @@ export function buildHouse(root, layout) {
     pil.rotation.set(0.25, x * 0.3, x * 0.2);
     sofa.add(pil);
   }
+  // saia de veludo até o chão (ninguém passa por baixo) e pezinhos torneados aparecendo nos cantos
+  const skirt = new THREE.Mesh(rbox(SOFA.hx * 2 - 0.04, 0.178, SOFA.hz * 2 - 0.04, 0.03), velvet);
+  skirt.position.set(0, 0.101, 0);
+  sofa.add(skirt);
   const legMat = woodMat('#5a3a22', { key: 'f10-perna-escura' });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.018, SOFA.legs, 8), legMat);
-    leg.position.set(sx * (SOFA.hx - 0.06), SOFA.legs / 2, sz * (SOFA.hz - 0.06));
+    const leg = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 6), legMat);
+    leg.scale.y = 0.6;
+    leg.position.set(sx * (SOFA.hx - 0.03), 0.018, sz * (SOFA.hz - 0.03));
     sofa.add(leg);
   }
   sofa.position.set(SOFA.x, FLOOR_Y, SOFA.z);
@@ -685,7 +782,7 @@ export function buildHouse(root, layout) {
   arm.position.set(0, 0, 0.07);
   const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.32, 16, 1, true).rotateZ(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#c99a45', metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide }));
   shade.position.set(0, -0.02, 0.14);
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.02), new THREE.MeshBasicMaterial({ color: '#fff0c8' }));
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.02), new THREE.MeshBasicMaterial({ color: '#5a4a36' }));
   glow.position.set(0, -0.045, 0.14);
   glow.rotation.x = -Math.PI / 2;
   picLamp.add(arm, shade, glow);
@@ -703,7 +800,9 @@ export function buildHouse(root, layout) {
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   }));
   halo.position.set(PAINTING.x, PAINTING.y + 0.05, zN + 0.008);
+  halo.material.opacity = 0;
   group.add(halo);
+  const paintingLights = buildPaintingLights(group, PAINTING, zN, { glow, halo, canvasMat });
 
   // ---- estante de livros no canto
   const shelf = new THREE.Group();
@@ -1063,8 +1162,9 @@ export function buildHouse(root, layout) {
 
   root.add(group);
   return {
-    group, walls, painting, lampPos, pendantPos, panelPos, balloon: three,
+    group, walls, painting, paintingLights, lampPos, pendantPos, panelPos, balloon: three,
     update(dt, t) {
+      paintingLights.update(dt, t);
       three.position.y = 1.35 + Math.sin(t * 1.1) * 0.03;
       three.rotation.y = Math.sin(t * 0.6) * 0.35;
       three.rotation.z = Math.sin(t * 0.8 + 1) * 0.06;

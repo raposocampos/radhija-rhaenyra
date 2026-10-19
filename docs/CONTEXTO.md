@@ -127,9 +127,27 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   das luzinhas num desenho só e o ritmo medido logo no início, a suíte `quintal` roda em ~2 min (32/32) e as 66
   capturas foram revisadas (ajustados: a vela do 2 no anel do meio do quadro, o brilho do bolo aceso, o laço e a
   estante). No E2E, o E e o Q no mesmo quadro levavam o E para a outra dog: esperar o efeito do E antes do Q.
-- Próximo passo da D: com CI e E2E (`quintal` e `todas`) verdes no head final, entregar a prévia e esperar a
-  aprovação; integrar com squash e SHA esperado, liberar o deploy e avisar o orquestrador (o #31 entra na ordem da
-  aprovação; conflito previsto só no `e2e.yml`, mantendo as duas mudanças).
+- Retorno do usuário na prévia do #33 (2026-10-19), "melhore esses pontos iniciais, depois acrescentamos mais
+  coisas", e o que mudou no branch (consultar o PR para SHA, CI e E2E):
+  - Câmera e quadro: sem plano automático do quadro (saíram a zona `quadro` e o plano da apresentação; fica o E na
+    frente dele). Ao ligar o disjuntor, o pulso sobe até a parede do fundo, acende as luzinhas novas em volta do
+    quadro (ramal do conduíte; a câmera mostra) e só depois segue para a varanda (a câmera vai para as luzinhas da
+    festa). Etapas em `props.power.stage` (`house` → `painting` → `porch` → `on`), `info().quintal.powerStage`.
+  - Portão: pendurado atrás dos mourões e abrindo 162°, encostado na cerca. Antes a folha aberta formava um bolsão
+    com a cerca da horta e a Radhija, voltando do galpão pelo vão, ficava presa.
+  - Casa na árvore ampliada (deque 3,4 × 2,35 m, tronco no canto de trás, casinha nos fundos, luneta, baú,
+    bandeirinhas; balde na frente do deque, escorregador a leste). O pombo dorme no corrimão em cima do laço: plano de
+    câmera e dica na primeira vez no fundo do quintal; com ele lá, o balde chega e ele bate as asas (ela fica no
+    balde). Lá em cima a Radhija anda livre (`confineDeck`: corrimão, tronco, casinha, luneta e baú seguram), E
+    desamarra o laço, E na boca do escorregador desce, E na abertura volta para o balde. O roteiro antigo atravessava
+    o tronco.
+  - Sofá com saia até o chão: o ossinho fica no vão de 42 cm atrás do encosto (só a Radhija). Antes ela passava por
+    baixo de um vão de 16 cm e atravessava o assento.
+  - FPS: o usuário notou FPS baixo com a GTX 1650 "inativa" (o Windows rodava o navegador na placa integrada; o jogo
+    já pede `high-performance`). Na fase 10 a grama era metade dos triângulos do cenário (~250 mil de ~555 mil):
+    tufos mais leves e malha um pouco mais aberta (~126 mil); peças com menos de ~9 cm não fazem sombra.
+- Próximo passo da D: com CI e E2E (`quintal` e `todas`) verdes no head final e as capturas revisadas, entregar a
+  prévia nova e esperar a aprovação; integrar com squash e SHA esperado, liberar o deploy e avisar o orquestrador.
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,

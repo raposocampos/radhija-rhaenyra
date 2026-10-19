@@ -829,8 +829,11 @@ export interface Fase10Props extends LevelProps {
   crate: PropBase & HighlightProp & { setPos(x: number, z: number): void };
   /** Ventilador do quintal: setPower(on) gira a hélice e as fitinhas voam. */
   fan: PropBase & { setPower(on: boolean): void };
-  /** Energia da festa (luzinhas da varanda e do quintal, tomada do ventilador, cabo com o pulso). */
-  power: { setOn(on: boolean): void };
+  /**
+   * Energia da festa: o pulso sobe do disjuntor ('house'), acende as luzinhas do quadro ('painting'), segue para a
+   * varanda ('porch') e acende as luzinhas da festa e a tomada do ventilador ('on').
+   */
+  power: { setOn(on: boolean): void; readonly stage: 'off' | 'house' | 'painting' | 'porch' | 'on' };
   /** Portãozinho do fundo (dobradiça) e a cordinha da trava (setTug 0..1). */
   gate: GateProp;
   cord: { setTug(k: number): void };

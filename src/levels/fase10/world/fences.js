@@ -159,16 +159,24 @@ export function buildFences(root, layout) {
     hg.position.set(0.0, y, -0.02);
     leaf.add(hg);
   }
-  const boltBody = new THREE.Mesh(rbox(0.03, 0.05, 0.16, 0.006), iron);
-  boltBody.position.set(-0.035, ph - 0.36, -gl + 0.12);
+  // o ferrolho fica do lado do quintal e a lingueta entra no mourão da trava (a folha pende na face de trás dele)
+  const boltX = BACK_FENCE.x + 0.042 - GATE.hinge.x;
+  const boltBody = new THREE.Mesh(rbox(0.04, 0.05, 0.16, 0.006), iron);
+  boltBody.position.set(-0.052, ph - 0.36, -gl + 0.12);
   const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.14, 8).rotateX(Math.PI / 2), brassMat());
-  bolt.position.set(-0.035, ph - 0.36, -gl + 0.02);
+  bolt.position.set(boltX, ph - 0.36, -gl + 0.02);
   leaf.add(boltBody, bolt);
   gate.add(leaf);
   gate.position.set(GATE.hinge.x, 0, GATE.hinge.z);
   gate.rotation.y = GATE.closedYaw;
   group.add(gate);
   seeThrough.push(gate);
+  // as chapas das dobradiças: do mourão até o pino da folha
+  for (const y of [0.3, ph - 0.25]) {
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(GATE.hinge.x - fx - 0.03, 0.035, 0.02), iron);
+    strap.position.set((fx + 0.045 + GATE.hinge.x) / 2, y, GATE.hinge.z + 0.005);
+    group.add(strap);
+  }
 
   // ================================================================ a cordinha: do puxador (no lado do quintal) sobe pelo mourão até o ferrolho
   const postTop = new THREE.Vector3(fx - 0.05, ph + 0.15, BACK_FENCE.gate.z0 - 0.05);
@@ -176,7 +184,7 @@ export function buildFences(root, layout) {
   pulley.position.copy(postTop);
   pulley.rotation.y = Math.PI / 2;
   group.add(pulley);
-  const boltWorld = new THREE.Vector3(fx - 0.06, ph - 0.36, BACK_FENCE.gate.z0 + 0.02);
+  const boltWorld = new THREE.Vector3(fx + 0.042, ph - 0.36, BACK_FENCE.gate.z0 + 0.02);
   const cordUpper = makeLink([
     new THREE.Vector3(postTop.x, postTop.y + 0.02, postTop.z),
     new THREE.Vector3(postTop.x, postTop.y, postTop.z + 0.05),
