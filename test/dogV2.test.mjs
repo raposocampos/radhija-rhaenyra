@@ -236,7 +236,9 @@ test('modelo novo: o item vai na boca (bolinha), à frente da cabeça e perto de
       ball.name = 'ball';
       d.mouthSocket.clear();
       d.mouthSocket.add(ball);
-      for (let i = 0; i < 40; i++) d.update(1 / 60, { speed: 0, action: 'none', carrying: true });
+      // as duas no mesmo estado: os testes de antes deixaram cada uma numa pose
+      d.update(1 / 60, { speed: 0, action: 'sniff' });
+      for (let i = 0; i < 150; i++) d.update(1 / 60, { speed: 0, action: 'none', carrying: true });
       assert.equal(d.carryKind, 'ball');
       d.object.updateMatrixWorld(true);
       pos[label] = d.mouthSocket.getWorldPosition(new THREE.Vector3());

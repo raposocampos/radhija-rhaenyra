@@ -59,8 +59,9 @@ export function createPuzzle(ctx) {
 
   function update(dt) {
     if (S.camera !== 'livre') {
+      // o núcleo solta o plano ao começar a fase e ao reiniciar (câmera atrás da dog): a vitrine volta na hora
       S.camT -= dt;
-      if (S.camT <= 0) frameShowcase(true);
+      if (S.camT <= 0 || ctx.cam?.shotActive === false) frameShowcase(true);
     }
     return null;
   }

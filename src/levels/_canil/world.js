@@ -28,7 +28,7 @@ function label(text, accent) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
-  sprite.scale.set(1.08, 0.18, 1);
+  sprite.scale.set(0.8, 0.133, 1);
   return sprite;
 }
 
@@ -108,7 +108,7 @@ export function buildCanilWorld({ root, layout }) {
     root.add(rug);
     const name = s.kind === 'radhija' ? 'Radhija' : 'Rhaenyra';
     const tag = label(`${name} · ${s.model === 'v2' ? 'nova' : 'atual'}`, accents[s.model]);
-    tag.position.set(s.x, s.kind === 'radhija' ? 0.7 : 0.8, SHOWCASE.z);
+    tag.position.set(s.x, s.kind === 'radhija' ? 0.62 : 0.72, SHOWCASE.z);
     tag.name = `plaquinha:${s.kind}:${s.model}`;
     root.add(tag);
   }
