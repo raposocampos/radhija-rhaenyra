@@ -306,9 +306,9 @@ test('fase 9: sem energia o ventilador não liga; o botão do registro só abre 
   wallJump(h, L.BREAKER);
   assert.equal(lib(h).power, true, 'energia ligada');
   // a Rhaenyra em cima do botão do registro: leve demais, não abre
+  h.clearLog();
   h.walkTo(L.DAMPER_PLATE.x, L.DAMPER_PLATE.z + 0.05, { tol: 0.1 });
   h.hold(null);
-  h.clearLog();
   h.run(0.4);
   assert.equal(lib(h).damper, false, 'a Rhaenyra não pesa o bastante');
   assert.ok(h.log('hint').some((x) => x.text === TEXT.hint.plateLight), 'dica do vaso');

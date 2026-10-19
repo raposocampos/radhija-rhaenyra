@@ -217,21 +217,21 @@ function buildBreakerBox(cfg, B) {
   pivot.position.set(cfg.x - 0.2, cy, zW + depth + 0.004);
   const door = new THREE.Mesh(rbox(0.3, 0.44, 0.014, 0.008), steel);
   door.position.x = 0.15;
-  const vents = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.08), new THREE.MeshStandardMaterial({ map: ventTexture(), roughness: 0.6, transparent: true }));
-  vents.position.set(0.15, -0.12, 0.0085);
+  const vents = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.08), new THREE.MeshStandardMaterial({ map: ventTexture(), roughness: 0.6, transparent: true, depthWrite: false }));
+  vents.position.set(0.15, -0.12, 0.0095);
   pivot.add(door, vents);
   pivot.rotation.y = -2.0;
   g.add(pivot);
   // placa amarela com o raio, acima da caixa
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.13), new THREE.MeshBasicMaterial({ map: boltTexture(), transparent: true }));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.13), new THREE.MeshBasicMaterial({ map: boltTexture(), transparent: true, depthWrite: false }));
   sign.position.set(cfg.x, cy + 0.34, zW + 0.006);
   g.add(sign);
   // tomada na base da alvenaria (de onde sai o fio do ventilador)
   const outlet = new THREE.Mesh(rbox(0.1, 0.13, 0.03, 0.01), new THREE.MeshStandardMaterial({ color: '#efe9dc', roughness: 0.4 }));
   const outletAt = new THREE.Vector3(cfg.x + 0.23, 0.2, zW + 0.017);
   outlet.position.copy(outletAt);
-  const holes = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.06), new THREE.MeshBasicMaterial({ map: socketTexture(), transparent: true }));
-  holes.position.set(outletAt.x, outletAt.y, zW + 0.033);
+  const holes = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.06), new THREE.MeshBasicMaterial({ map: socketTexture(), transparent: true, depthWrite: false }));
+  holes.position.set(outletAt.x, outletAt.y, zW + 0.036);
   g.add(outlet, holes);
   shadowAll(g);
   return { group: g, outletAt, boxTop: new THREE.Vector3(cfg.x, cy + 0.25, zW + 0.02), boxSide: new THREE.Vector3(cfg.x + 0.2, cy - 0.1, zW + 0.02) };
@@ -416,8 +416,8 @@ function buildPlate(P) {
   const capMat = new THREE.MeshStandardMaterial({ color: '#c99a45', roughness: 0.3, metalness: 0.85, emissive: '#5fe08a', emissiveIntensity: 0 });
   const cap = new THREE.Mesh(new THREE.CylinderGeometry(P.hx - 0.07, P.hx - 0.06, 0.03, 32), capMat);
   cap.position.y = 0.035;
-  const icon = new THREE.Mesh(new THREE.CircleGeometry(P.hx - 0.1, 28).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: ventIconTexture(), roughness: 0.4, metalness: 0.3, transparent: true }));
-  icon.position.y = 0.0505;
+  const icon = new THREE.Mesh(new THREE.CircleGeometry(P.hx - 0.1, 28).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: ventIconTexture(), roughness: 0.4, metalness: 0.3, transparent: true, depthWrite: false }));
+  icon.position.y = 0.053;
   g.add(ring, cap, icon);
   shadowAll(g);
   return {
@@ -426,7 +426,7 @@ function buildPlate(P) {
     rodStart: new THREE.Vector3(P.x + P.hx + 0.01, 0.018, P.z),
     setPress(t) {
       cap.position.y = 0.035 - 0.016 * t;
-      icon.position.y = 0.0505 - 0.016 * t;
+      icon.position.y = 0.053 - 0.016 * t;
       capMat.emissiveIntensity = 0.35 * t;
     },
   };
