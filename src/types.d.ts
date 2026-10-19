@@ -1034,6 +1034,45 @@ export interface GooseModel {
   [k: string]: any;
 }
 
+/** Porquinho (createPig em src/characters/pig.js; a mecânica é createPigHerd em src/game/mechanics/pigHerd.js). */
+export interface PigModel {
+  object: THREE.Group;
+  radius: number;
+  update(dt: number, anim: { speed?: number; turn?: number; action?: 'idle' | 'walk' | 'sniff' | 'eat' | 'alert' | 'lie' | 'sleep' | string; lookAt?: THREE.Vector3 | XYZ | null }): void;
+  /** Gestos de uma vez: o "oinc" com o corpo, o esbarrão de cabeça e a sacudida. */
+  oink(): void;
+  bump(): void;
+  shake(): void;
+  /** Ponto mais baixo (m acima do chão) no último update, depois da trava de chão. */
+  lowestY(): number;
+  [k: string]: any;
+}
+export type VeggieKind = 'corn' | 'carrot' | 'pumpkin';
+/** Legume que a dog carrega e larga para distrair os porquinhos (createVeggie em src/world/veggies.js). */
+export interface VeggieProp extends ItemProp {
+  kind: VeggieKind;
+  /** Pose da boca: 'carrot' (atravessado) ou 'ball' (a abóbora). */
+  carry: string;
+  /** Altura do centro quando está no chão. */
+  groundY: number;
+  /** Quanto já foi comido (0..1). */
+  readonly eaten: number;
+  setEaten(k: number): void;
+  reset(): void;
+}
+/** Arena dos Porquinhos (?level=porcos): o cenário provisório, o chiqueiro, o botão, o sininho e os legumes. */
+export interface PorcosProps extends PlaceholderProps {
+  /** Botão de pisar que abre a porteira. */
+  button: PressProp;
+  /** Sininho que chama os porquinhos de volta. */
+  bell: PropBase & { ring(): void; update?(dt: number): void };
+  /** Porteira do chiqueiro (src/world/pigPen.js). */
+  penGate: GateProp;
+  veggies: Record<VeggieKind, VeggieProp>;
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
+
 // =====================================================================================================
 // Ganchos globais de teste/depuração
 // =====================================================================================================

@@ -5,15 +5,16 @@ import pulo from './_pulo/index.js';
 import bafo from './_bafo/index.js';
 import modelo from './_modelo/index.js';
 import canil from './_canil/index.js';
+import porcos from './_porcos/index.js';
 
 // Cada definição valida o contrato concreto antes de entrar neste catálogo heterogêneo.
 /** @type {import('../types').LevelDef[]} */
-export const DEV_LEVELS = [pulo, bafo, modelo, canil];
+export const DEV_LEVELS = [pulo, bafo, modelo, canil, porcos];
 
 /**
  * Catálogo de uma partida aberta por ?level=<id> de desenvolvimento. As fases novas ainda em protótipo (as
  * de número depois da última publicada, como foram a fase6 e a fase7) entram juntas e em ordem depois das
- * publicadas, para o menu da prévia mostrar a sequência inteira; uma arena (pulo, bafo, modelo, canil) entra sozinha.
+ * publicadas, para o menu da prévia mostrar a sequência inteira; uma arena (pulo, bafo, modelo, canil, porcos) entra sozinha.
  * → { levels, index } com o índice da fase pedida, ou null se o id não existe.
  * @param {import('../types').LevelDef[]} published @param {string} id
  * @param {import('../types').LevelDef[]} [dev] catálogo de desenvolvimento (os testes passam protótipos de exemplo)

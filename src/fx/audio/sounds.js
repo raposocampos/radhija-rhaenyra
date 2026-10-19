@@ -11,6 +11,7 @@ import { SOUNDS_LAVANDERIA, MIN_GAP_LAVANDERIA, PITCH_VAR_LAVANDERIA, VERB_LAVAN
 import { SOUNDS_BIBLIOTECA, MIN_GAP_BIBLIOTECA, PITCH_VAR_BIBLIOTECA, VERB_BIBLIOTECA } from './soundsBiblioteca.js';
 import { SOUNDS_QUINTAL, MIN_GAP_QUINTAL, PITCH_VAR_QUINTAL, VERB_QUINTAL } from './soundsQuintal.js';
 import { SOUNDS_EXTRAS, MIN_GAP_EXTRAS, PITCH_VAR_EXTRAS, VERB_EXTRAS } from './soundsExtras.js';
+import { SOUNDS_PORCOS, MIN_GAP_PORCOS, PITCH_VAR_PORCOS, VERB_PORCOS } from './soundsPorcos.js';
 
 Object.assign(SOUNDS, SOUNDS2);
 Object.assign(MIN_GAP, MIN_GAP_V2);
@@ -52,6 +53,10 @@ Object.assign(SOUNDS, SOUNDS_EXTRAS);
 Object.assign(MIN_GAP, MIN_GAP_EXTRAS);
 Object.assign(PITCH_VAR, PITCH_VAR_EXTRAS);
 Object.assign(VERB, VERB_EXTRAS);
+Object.assign(SOUNDS, SOUNDS_PORCOS);
+Object.assign(MIN_GAP, MIN_GAP_PORCOS);
+Object.assign(PITCH_VAR, PITCH_VAR_PORCOS);
+Object.assign(VERB, VERB_PORCOS);
 ['curtainIn', 'curtainOut', 'uiMove', 'uiBack', 'uiDenied'].forEach((n) => UI_SOUNDS.add(n));
 LOW_PRIORITY.add('uiMove');
 
