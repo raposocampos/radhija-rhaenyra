@@ -363,7 +363,8 @@ function groundSamples() {
     const main = SW[v * 4] >= SW[v * 4 + 1] ? SI[v * 4] : SI[v * 4 + 1];
     const y = P[v * 3 + 1];
     const list = main === head ? out.head : shins.has(main) ? out.shin : out.body;
-    const stride = main === head ? 3 : shins.has(main) ? 5 : y < 0.13 ? 4 : 12;
+    // (deitado de lado, o flanco vira a parte de baixo: também denso)
+    const stride = main === head ? 3 : shins.has(main) ? 5 : y < 0.13 || Math.abs(P[v * 3]) > 0.1 ? 4 : 12;
     if (v % stride !== 0) continue;
     list.push({ x: P[v * 3], y, z: P[v * 3 + 2], b0: SI[v * 4], w0: SW[v * 4], b1: SI[v * 4 + 1], w1: SW[v * 4 + 1] });
   }
@@ -751,7 +752,8 @@ export function createPig({ variant = 0 } = {}) {
       if (st.headFix < 1e-4) st.headFix = 0;
       const m = lowest(false, down > 0.5) - ground;
       const was = st.lift;
-      st.lift = Math.max(0, was - m);
+      // deitado, 4 mm de folga: entre os pontos amostrados a pele pode descer um pouco mais
+      st.lift = Math.max(0, was - m + (down > 0.5 ? 0.004 : 0));
       if (st.lift < 1e-4) st.lift = 0;
       inner.position.y = st.lift;
       st.minY = m + (st.lift - was); // depois da trava: o ponto mais baixo no chão ou acima dele
