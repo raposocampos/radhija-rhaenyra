@@ -221,7 +221,7 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
   /**
    * Zoomies: ela dispara para a frente (o cocô fica para trás), faz a curva e volta correndo, freando de frente para o
    * cocô. O caminho precisa caber (sem colisor, sem a irmã e sem passar por cima do cocô). Entre os que cabem, o que
-   * passa mais perto da câmera. → { path, side, prof } ou null.
+   * termina com ela de frente para a câmera. → { path, side, prof } ou null.
    */
   function planZoom(c, P) {
     const Z = c.size === 'large' ? ZOOM.large : ZOOM.small;
@@ -255,13 +255,14 @@ export function createExtras({ emit, ctrls, carries, camera = null, resolve = (x
         if (L3 < 0.1) continue;
         const path = buildPath(c.x, c.z, c.yaw, [...segs(La), { len: L3, k0: 0, k1: 0 }]);
         if (!pathFits(c, path, 0.03, poop)) continue;
-        const m = path.s.length >> 1;
-        const d = camera ? Math.hypot(path.x[m] - camera.position.x, path.z[m] - camera.position.z) : 0;
-        found.push({ path, side, d, prof: speedProfile(path.len, Z.v, 0.16, 0.26) });
+        // no fim ela fica de frente para a câmera, com o cocô à vista entre as duas (de costas, ela o esconderia)
+        const end = lastOf(path);
+        const face = camera ? Math.cos(end.yaw - Math.atan2(camera.position.x - end.x, camera.position.z - end.z)) : 0;
+        found.push({ path, side, face, prof: speedProfile(path.len, Z.v, 0.16, 0.26) });
       }
       if (found.length) break;
     }
-    found.sort((p, q) => p.d - q.d);
+    found.sort((p, q) => q.face - p.face);
     return found[0] || null;
   }
 

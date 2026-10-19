@@ -33,7 +33,8 @@ const sstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Feixe de luz: cilindro aberto, mais largo em cima, que some para cima (alfa por vértice). */
+/** Feixe de luz: cilindro aberto, mais largo em cima, que some para cima (alfa por vértice) e é transparente embaixo,
+ * na altura do cocô (ele aparece dentro da luz). */
 function beamGeometry(r0, r1, h) {
   const g = new THREE.CylinderGeometry(r1, r0, h, 24, 8, true);
   g.translate(0, h / 2, 0);
@@ -41,7 +42,7 @@ function beamGeometry(r0, r1, h) {
   const col = new Float32Array(p.count * 4);
   for (let i = 0; i < p.count; i++) {
     const y = p.getY(i) / h;
-    col.set([1, 0.8, 0.4, (1 - y) ** 1.8 * Math.min(1, 0.25 + y * 6)], i * 4);
+    col.set([1, 0.8, 0.4, (1 - y) ** 1.8 * sstep(0.07, 0.34, y)], i * 4);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 4));
   return g;
@@ -265,7 +266,7 @@ export function createPoop({ scale = 1 } = {}) {
     // feixe de luz: sobe, gira devagar e some
     const bo = g < 0.18 ? g / 0.18 : Math.max(0, 1 - (g - 0.18) / 1.6);
     beam.visible = bo > 0.003;
-    beamMat.opacity = bo * 0.85;
+    beamMat.opacity = bo * 0.75;
     beam.rotation.y += dt * 0.8;
     const grow = 0.55 + 0.45 * sstep(0, 0.3, g);
     beam.scale.set((1 + g * 0.12) / scale, grow / scale, (1 + g * 0.12) / scale);

@@ -1,28 +1,34 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (voltinha natural e recompensa do segredo). Ler primeiro
+Última atualização: **2026-10-19, Claude** (redes de prazo nas capturas e páginas extras do E2E). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: voltinha natural e recompensa do segredo (Claude, 2026-10-19)
+## Em andamento: voltinha natural, recompensa do segredo e rolar sem atravessar o chão (Claude, 2026-10-19)
 
-- Pedido do usuário sobre o extra escondido da tarefa E (já em produção): a animação estava dura, ela girava 360°
-  parada antes de agachar; a girada precisa ser natural, e o segredo precisa de uma recompensa própria, gostosa de
-  ver. Mantidos: a pose aprovada da agachada (foto do usuário), C/R3, só com os 3 ossinhos e uma vez por tentativa.
-- Branch `claude/coco-natural` (worktree próprio), base `0bd48d0`, PR para o `main` (consultar o PR para SHA, CI, E2E
-  e prévia). Feito em `src/game/extras.js`: `planCircle` (a voltinha anda de verdade num círculo de 0,5 × o
-  comprimento da dog, 0,8–1,3 volta, terminando de perfil para a câmera, só por onde cabe; sem espaço encurta ou ela
-  fareja parada; nunca gira sem andar), `planZoom` e a comemoração (`extra:secret`: brilho dourado e jingle, câmera
-  de perto, zoomies ou pulinho virando, reverência com latidinho, dois pulinhos, orgulhosa; a irmã até 6 m se
-  espanta e manda coraçõezinhos). Poses (`poopPre`, `party`, `cheer`) em `dogAnimation.js`, com os apoios girando
-  com o corpo na curva. Brilho em `poop.js` (`shine`, `dispose`), sons em `soundsExtras.js`, efeitos em
-  `feedback.js`. Testes: `test/extras.test.mjs` (passo = deslocamento, sem atravessar nada, volta inteira e zoomies
-  no gramado da fase 1, sem espaço na beirada), suíte E2E `extras` e `capture-extras.mjs` (gramado e cozinha).
-- Nada rodou no PC (só `node --check` e `git diff --check`). Próximo passo: CI e E2E `extras` no head, revisar as
-  capturas (`shots/extras-revisao/`), ajustar e entregar a prévia. Merge só com a aprovação do usuário.
+- Pedido do usuário sobre os extras da tarefa E (já em produção): a animação do cocô estava dura (girava 360°
+  parada antes de agachar) e precisava de uma recompensa própria; a de rolar (pilha de roupa da fase 8, tapete da
+  fase 9 do PR #29) estava dura e atravessava o chão. Mantidos: a pose aprovada da agachada, C/R3, só com os 3
+  ossinhos e uma vez por tentativa; nada no jogo nem no README cita o segredo.
+- Branch `claude/coco-natural` (worktree próprio), base `0bd48d0`, **PR #32** (consultar o PR para SHA, CI, E2E e
+  prévia). Fila combinada pelo orquestrador: #29 (fase 9) → #32 → #31; antes da aprovação final, atualizar com o main
+  que já tiver o #29 e rodar CI/E2E/prévia de novo.
+- Feito: `src/game/extras.js` (`planCircle`: voltinha andando de verdade num círculo de 0,5 × o comprimento da dog,
+  0,8–1,3 volta, terminando de perfil para a câmera, só por onde cabe; `planZoom` e a comemoração com `extra:secret`,
+  brilho dourado, jingle, câmera de perto, zoomies ou pulinho virando, reverência, pulinhos, orgulhosa e a irmã com
+  espanto e coraçõezinhos). `src/dogs/dogAnimation.js`: poses `poopPre`/`party`/`cheer` (apoios girando com o corpo
+  na curva) e a rolagem nova (deita, tomba, de costas se esfregando com as patinhas pedalando, volta e levanta), com a
+  altura pelo contato real (`lowestY`: elipsoides do desenho do modelo presos aos ossos). `dog.js` passa o desenho à
+  animação. `poop.js` (`shine`, `dispose`), sons e efeitos.
+- Testes: `test/extras.test.mjs` (oito fases; volta inteira e zoomies no gramado da fase 1; beirada sem espaço; rolar
+  no modelo real sem passar do chão), suíte E2E `extras` e `capture-extras.mjs` (gramado, cozinha e a rolagem das duas
+  dogs na fase 8). No `4f8399a`: E2E `extras` 39190600335 verde e capturas revisadas (voltinha, agachada e reverência
+  boas; ajustados depois: o lado dos zoomies, para ela terminar de frente para a câmera sem tapar o cocô, e o feixe
+  transparente na altura do cocô). Nada rodou no PC (só `node --check` e `git diff --check`).
+- Próximo passo: CI e E2E `extras` no head novo, revisar as capturas da rolagem e da comemoração, entregar a prévia.
+  Merge só com a aprovação do usuário, na vez do #32.
 
-## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0`)
+## Em andamento: redes de prazo nas capturas e páginas extras do E2E (Claude, 2026-10-19)
 
-- Produção conferida em `0bd48d0` (`version.json`). Registro do trabalho abaixo.
 - Motivo: os `capture-*.mjs` e as páginas extras das suítes usavam o Playwright direto, sem as redes do PR #27. No
   E2E `39173570454` o `capture-lambe.mjs` travou até o timeout de 30 min do job (boot da fase 7, `goto` +
   `waitForFunction` de 180 s); no `39178028583` o `capture-celular.mjs` falhou com "condição não alcançada" e a
@@ -89,7 +95,7 @@
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
 - **Ordem atual (pedido do usuário, 2026-10-18):** A e B entregues; **E agora**, antes de C (fase 9) e D (fase 10).
-- **E (entregue, PR #28, squash `d306983`; o ajuste da voltinha e da recompensa está no topo):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
+- **E (em andamento, Claude):** extras escondidos nas fases (as 9 e 10 ganham quando forem criadas), branch
   `claude/animacoes-extras` (worktree próprio), base `42715b6`. Regras do usuário: o cocô com **C** no teclado e
   **R3** no controle, só depois dos 3 ossinhos e uma vez por fase (o reinício libera); a animação é o principal
   (agachada, traseiras dobradas, rabinho em pé, tremidinha, cara de concentração, cocô de desenho fofo e alívio

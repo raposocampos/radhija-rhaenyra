@@ -208,7 +208,7 @@ try {
       marks.push([bow + 0.02, 'reverencia-frente', async () => around(await dogAt(name), 'front', 1.1, 0.4, 0.2)]);
       marks.push([hop, 'pulinho', async () => around(await dogAt(name), 'side', 1.25, 0.5)]);
       marks.push([P.end - 0.35, 'orgulhosa', async () => around(await dogAt(name), 'front', 1.1, 0.45, 0.3)]);
-      if (P.cheer) {
+      if (sister) {
         marks.push([0.5, 'irma-uau', async () => around(await dogAt(sisName), 'front', 1.05, 0.45, 0.32)]);
         marks.push([1.0, 'irma-coracoes', async () => around(await dogAt(sisName), 'front', 1.3, 0.55, 0.4)]);
       }
@@ -264,7 +264,15 @@ try {
   await scene('fase5', 'agua', 'rhaenyra', [[0.5, 'bebendo', 'front']]);
   await scene('fase7', 'balanco-1', 'radhija', [[0.06, 'pulando', 'front'], [0.45, 'balancando', 'front'], [0.62, 'balancando-2', 'side']], { dist: 1.8, h: 0.9, lookY: 0.45 });
   await scene('fase7', 'areia-sul', 'rhaenyra', [[0.12, 'pulando', 'side'], [0.4, 'cavando', 'side'], [0.6, 'cavando-2', 'front']]);
-  await scene('fase8', 'pilha-de-roupa', 'radhija', [[0.24, 'deitando', 'front'], [0.38, 'de-costas', 'side'], [0.6, 'rolando', 'front']], { dist: 1.4, h: 0.8, lookY: 0.12 });
+  // rolar: as duas dogs, quadro a quadro, com a câmera baixa (o contato com o chão aparece) e de cima
+  for (const who of ['radhija', 'rhaenyra']) {
+    await scene('fase8', 'pilha-de-roupa', who, [
+      [0.08, `${who}-deita`, 'side'], [0.16, `${who}-deitada`, 'front'], [0.22, `${who}-tomba`, 'side'], [0.3, `${who}-de-lado`, 'side'],
+      [0.4, `${who}-de-costas`, 'side'], [0.48, `${who}-esfrega`, 'front'], [0.56, `${who}-esfrega-2`, 'side'], [0.64, `${who}-esfrega-3`, 'back'],
+      [0.74, `${who}-volta`, 'side'], [0.83, `${who}-de-brucos`, 'front'], [0.92, `${who}-levanta`, 'side'],
+    ], { dist: 1.25, h: 0.32, lookY: 0.12 });
+  }
+  await scene('fase8', 'pilha-de-roupa', 'radhija', [[0.24, 'deitando', 'front'], [0.42, 'de-costas', 'side'], [0.58, 'rolando', 'front']], { dist: 1.4, h: 0.8, lookY: 0.12 });
   await scene('fase1', 'poca-bebedouro', 'radhija', [[0.5, 'bebendo', 'side']]);
   await scene('fase1', 'lavanda', 'rhaenyra', [[0.35, 'cheirando', 'side'], [0.64, 'atchim', 'front']]);
   await scene('fase3', 'lago-3', 'rhaenyra', [[0.5, 'bebendo', 'side']]);

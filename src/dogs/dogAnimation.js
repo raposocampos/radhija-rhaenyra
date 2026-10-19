@@ -92,9 +92,51 @@ export const SNEEZE_AT = 0.63;
 /** Focinhada (p da animação 'nudge'). */
 const NUDGE_LUNGE = [[0, 0], [0.32, 0], [0.42, 1], [0.52, 0], [1, 0]];
 export const NUDGE_AT = 0.42;
-/** Rolar de costas (p da animação 'roll'): deita de lado, rola de costas balançando, volta e levanta. */
-const ROLL_ANGLE = [[0, 0], [0.12, 0.2], [0.24, 1.45], [0.36, 2.55], [0.48, 1.95], [0.6, 2.65], [0.72, 1.5], [0.84, 0.15], [1, 0]];
-const ROLL_DROP = [[0, 0], [0.14, 0.2], [0.26, 1], [0.74, 1], [0.86, 0.15], [1, 0]];
+/**
+ * Rolar de costas (p da animação 'roll'): deita (as patas dobram e o corpo desce até o chão), tomba de lado, vira de
+ * costas e se esfrega balançando de um lado para o outro com as patinhas para o ar, volta de lado, fica deitada de
+ * bruços e levanta. ROLL_ANGLE é o giro em torno do comprimento do corpo (rad); a altura vem do contato com o chão
+ * (lowestY, nas formas do modelo com a pose do quadro): nada passa do chão em nenhum ângulo.
+ */
+const ROLL_ANGLE = [[0, 0], [0.14, 0], [0.22, 0.55], [0.3, 1.55], [0.4, 2.75], [0.66, 2.75], [0.74, 1.6], [0.82, 0.45], [0.88, 0], [1, 0]];
+/** Deitada (0..1): as patas dobram e o corpo encosta no chão. */
+const ROLL_DOWN = [[0, 0], [0.03, 0], [0.15, 1], [0.86, 1], [0.97, 0], [1, 0]];
+/** Esfregando as costas (0..1): balança de um lado para o outro e serpenteia a coluna. */
+const ROLL_RUB = [[0, 0], [0.38, 0], [0.45, 1], [0.62, 1], [0.69, 0], [1, 0]];
+
+/**
+ * Partes do corpo como elipsoides presos aos ossos, tirados do desenho do modelo (dogModel.js) com metade do pelo e a
+ * folga da união suave (até k/4 além das formas, na costura): { i (osso), c (centro no osso), r [x, y, z], ax (eixos
+ * no osso) | null }.
+ */
+function bodyContacts(design, fur, BI, rest) {
+  const out = [];
+  if (!design) return out;
+  let pad = 0.004;
+  const add = (bone, c, r, ax = null) => {
+    const i = BI[bone];
+    if (i === undefined) return;
+    const R = rest[i];
+    out.push({ i, c: new THREE.Vector3(c[0] - R.x, c[1] - R.y, c[2] - R.z), r: r.map((v) => v + pad), ax });
+  };
+  for (const g of [...(design.bodyGroups || []), ...(design.earGroups || [])]) {
+    pad = 0.004 + Math.max(g.k || 0, g.join || 0) * 0.25;
+    for (const p of g.prims) {
+      const f = p.fur ? (fur?.[p.fur] || 0) * 0.5 : 0;
+      if (p.t === 0) add(p.bone, p.c, [p.r + f, p.r + f, p.r + f]);
+      else if (p.t === 1) add(p.bone, p.c, [p.r[0] + f, p.r[1] + f, p.r[2] + f], p.m ? [p.m.slice(0, 3), p.m.slice(3, 6), p.m.slice(6, 9)] : null);
+      else if (p.t === 2) {
+        // cone arredondado: o casco convexo das duas esferas das pontas (achatado em x por sx)
+        const k = 1 / (p.sx || 1);
+        add(p.bone, p.a, [p.ra * k + f, p.ra + f, p.ra + f]);
+        add(p.bone, p.b, [p.rb * k + f, p.rb + f, p.rb + f]);
+      }
+    }
+  }
+  pad = 0.004;
+  if (design.face?.nose) add('head', design.face.nose, [design.face.noseR, design.face.noseR, design.face.noseR]);
+  return out;
+}
 /** Cavando com as patas da frente: patadas por segundo. */
 export const DIG_RATE = 3.2;
 
@@ -153,6 +195,30 @@ function createAnimState() {
 export function createDogAnimation(ctx) {
   const { object, inner, cfg, s, rig, face, carry, furMat, shadow, shadowBase, markerAnchor, onFootstep } = ctx;
   const { bones, BI, nB, rest, restOff, Lq, Wq, Wp, posOff, fk, setWorld, basisQuat, solve2 } = rig;
+  const contacts = bodyContacts(ctx.design, ctx.fur, BI, rest);
+  const _bm = bones.map(() => new THREE.Matrix4());
+  /** O ponto mais baixo do corpo (y no referencial do objeto) com a pose deste quadro (rolar). */
+  function lowestY() {
+    inner.updateMatrix();
+    for (let i = 0; i < nB; i++) {
+      bones[i].updateMatrix();
+      const p = rig.parentIdx[i];
+      _bm[i].multiplyMatrices(p < 0 ? inner.matrix : _bm[p], bones[i].matrix);
+    }
+    let low = Infinity;
+    for (const k of contacts) {
+      const e = _bm[k.i].elements;
+      const y = e[1] * k.c.x + e[5] * k.c.y + e[9] * k.c.z + e[13];
+      let h2 = 0;
+      for (let a = 0; a < 3; a++) {
+        const v = k.ax ? k.ax[a] : null;
+        const wy = v ? e[1] * v[0] + e[5] * v[1] + e[9] * v[2] : e[1 + 4 * a];
+        h2 += (k.r[a] * wy) ** 2;
+      }
+      low = Math.min(low, y - Math.sqrt(h2));
+    }
+    return low;
+  }
   const LEGS = rig.legs;
   const { eyes, lip, tongue, mouthW, lickTongue } = face;
   const st = createAnimState();
@@ -363,7 +429,8 @@ export function createDogAnimation(ctx) {
     const xDrink = xKind === 'drink' ? xEnv : 0;
     const xEat = xKind === 'eat' ? xEnv : 0;
     const xDig = xKind === 'dig' ? xEnv : 0;
-    const xRoll = xKind === 'roll' ? keyed(ROLL_DROP, xk) : 0;
+    const xRoll = xKind === 'roll' ? keyed(ROLL_DOWN, xk) : 0;
+    const xRub = xKind === 'roll' ? keyed(ROLL_RUB, xk) : 0;
     const xNudge = xKind === 'nudge' ? keyed(NUDGE_LUNGE, xk) : 0;
     const sneezeP = xKind === 'sneeze' ? keyed(SNEEZE_PITCH, xk) : 0;
     const sneezeO = xKind === 'sneeze' ? keyed(SNEEZE_OPEN, xk) : 0;
@@ -419,14 +486,16 @@ export function createDogAnimation(ctx) {
     }
     inner.rotation.x = -st.slope - st.wallTheta; // rampa (escorregador) ou parede: o corpo inteiro inclina, as patas acompanham
     inner.position.y = st.hop + jumpY + wallLiftY;
-    const rollA = xKind === 'roll' ? keyed(ROLL_ANGLE, xk) + Math.sin(xt * 9) * 0.12 * xRoll : 0;
+    // rolar: de costas, balança de um lado para o outro se esfregando
+    const rollA = xKind === 'roll' ? keyed(ROLL_ANGLE, xk) + Math.sin(xt * 5.4) * 0.24 * xRub : 0;
+    const xBack = xKind === 'roll' ? sstep(1.3, 2.5, rollA) : 0; // de costas (patinhas para o ar)
     inner.rotation.z = rollA;
     inner.position.x = 0;
     if (rollA !== 0) {
-      // girar em torno de (0, hc): posição = pivô − R·pivô; depois desce até o lado/as costas encostarem no chão
+      // gira em torno do meio do tronco (0, hc), que fica no lugar; a altura vem do contato com o chão (no fim)
       const hc = cfg.visual.shoulder * 0.72;
       inner.position.x = hc * Math.sin(rollA);
-      inner.position.y += hc - hc * Math.cos(rollA) - (hc - 0.1 * s) * xRoll;
+      inner.position.y += hc - hc * Math.cos(rollA);
     }
 
     // latido
@@ -508,9 +577,9 @@ export function createDogAnimation(ctx) {
 
     // coluna: curva na direção da curva, flexão no galope, rebolado na comemoração
     const spineYaw = clamp(st.turnS * 0.07, -0.25, 0.25) + w.pre * clamp(st.turnS * 0.045, -0.14, 0.14); // na voltinha, bem curvada
-    const wiggle = w.bow * Math.sin(t * 14) * 0.18;
+    const wiggle = w.bow * Math.sin(t * 14) * 0.18 + xRub * Math.sin(xt * 6.4) * 0.2; // de costas, serpenteia
     const flex = w.dash * Math.sin(sp2 - 0.4) * 0.12;
-    qE(Lq[BI.chest], -flex + squat * 0.42, spineYaw + shk(1.5) * 0.12, shk(1.5) * 0.3);
+    qE(Lq[BI.chest], -flex + squat * 0.42, spineYaw + shk(1.5) * 0.12 - xRub * Math.sin(xt * 6.4) * 0.12, shk(1.5) * 0.3);
     const wallFlex = wallOn ? sstep(0.34, 0.42, wp) * (1 - sstep(0.5, 0.6, wp)) * 0.22 : 0; // garupa encolhe no impulso
     qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex - squat * 0.56 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
     posOff[BI.chest].set(0, 0, w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
@@ -596,10 +665,29 @@ export function createDogAnimation(ctx) {
           T.y += scratchK * kz * 0.05 * s;
         }
       }
-      // rolando de costas: patas encolhidas para a barriga, pedalando no ar
+      // rolando: deitada de bruços, o corpo desce até ~13 cm (na escala) e as patas dobram até essa altura (as da
+      // frente esticadas à frente, como uma esfinge; as traseiras debaixo da barriga); de costas ficam encolhidas
+      // para o ar, pedalando em rodinhas (as diagonais juntas)
       if (xRoll > 0) {
-        T.y += xRoll * (leg.front ? 0.05 : 0.04) * s;
-        T.z += xRoll * Math.sin(xt * 8 + li * 1.7) * 0.03 * s;
+        const lie = xRoll * (1 - xBack);
+        const air = xRoll * xBack;
+        const floorB = 0.13 * s;
+        if (leg.front) {
+          T.y = lerp(T.y, floorB + 0.035 * s, lie);
+          T.z += lie * 0.07 * s;
+          T.y = lerp(T.y, 0.14 * s, air);
+          T.z -= air * 0.015 * s;
+        } else {
+          T.y = lerp(T.y, floorB + 0.022 * s, lie);
+          T.z += lie * 0.05 * s;
+          T.x += leg.side * lie * 0.025 * s;
+          T.y = lerp(T.y, 0.13 * s, air);
+          T.z += air * 0.04 * s;
+          T.x += leg.side * air * 0.035 * s;
+        }
+        const ph = xt * 7.2 + [0, Math.PI, Math.PI * 0.5, Math.PI * 1.5][li];
+        T.z += xBack * Math.sin(ph) * 0.03 * s;
+        T.y += xBack * Math.cos(ph) * 0.02 * s;
       }
       // pulinho: patas encolhidas
       const tuck = st.hop * 0.55 + (w.dash * Math.max(0, Math.sin(sp2 - 2.4)) * 0.015 * s);
@@ -639,7 +727,7 @@ export function createDogAnimation(ctx) {
       } else {
         // metatarso: vertical em pé, deitado para a frente sentado, flexiona no balanço
         const kickCurl = scratchK > 0 && kickLeg === li - 2 ? kickShape(kickU) * scratchK * 0.35 : 0;
-        const ang = curl * 0.45 - sstep(0, 1, w.sit) * 1.38 - squat * 1.1 + kickCurl;
+        const ang = curl * 0.45 - sstep(0, 1, w.sit) * 1.38 - squat * 1.1 + kickCurl - xRoll * 0.9;
         _v.copy(leg.m0).applyAxisAngle(_X, ang);
         _H.copy(T).sub(_v); // jarrete = pata - metatarso
         const Mdir = _d.copy(_v); // cópia temporária
@@ -698,7 +786,7 @@ export function createDogAnimation(ctx) {
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
     const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
       + lk * (0.14 + 0.3 * lIn - 0.1 * lSweep * lExt) - ls * 0.1 - lr * 0.09 - w.slide * 0.2 + wEnv * st.wallTheta * 0.22
-      + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 - xRoll * 0.25 - wow * 0.18;
+      + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 + xRoll * 0.3 * (1 - xBack) + xBack * 1.2 - wow * 0.18;
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
     const lickYaw = lk * lSide * 0.08 * lSweep - lr * lSide * 0.1;
     // impulso: no alto, a cabeça vira para a direita, olhando a pata no botão
@@ -707,9 +795,9 @@ export function createDogAnimation(ctx) {
     setWorld(BI.neck, _q);
     const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12
       + lk * (0.28 * lIn - 0.32 * lSweep * lExt) - ls * (0.18 + 0.25 * lSweep * lExt) - lr * 0.34 - w.slide * 0.12 + wEnv * st.wallTheta * 0.18
-      + squat * 0.02 + (xDrink + xEat) * 0.85 + xEat * chew * 0.07 + xDig * 0.45 + sniffX * 0.35 + sneezeP + xNudge * 0.5 - xRoll * 0.3 - wow * 0.1;
+      + squat * 0.02 + (xDrink + xEat) * 0.85 + xEat * chew * 0.07 + xDig * 0.45 + sniffX * 0.35 + sneezeP + xNudge * 0.5 - xRoll * 0.15 * (1 - xBack) + xBack * 0.5 - wow * 0.1;
     const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 + w.proud * 0.12
-      + lk * lSide * 0.2 * (0.35 + 0.65 * lExt) + ls * lSide * 0.08 - lr * lSide * 0.3 + wTouch * 0.24 + reliefK * 0.16 + xRoll * 0.3
+      + lk * lSide * 0.2 * (0.35 + 0.65 * lExt) + ls * lSide * 0.08 - lr * lSide * 0.3 + wTouch * 0.24 + reliefK * 0.16 + xRoll * 0.15 + xRub * Math.sin(xt * 6.4 + 0.8) * 0.25
       + glee * Math.sin(t * 3.4) * 0.1 + glad * Math.sin(t * 2.6) * 0.14;
     qE(_q, headPitch, st.lookYaw + shake + shk(0) * 0.35 + lickYaw + wallYaw * 0.6, headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
     setWorld(BI.head, _q);
@@ -784,12 +872,13 @@ export function createDogAnimation(ctx) {
     // ---------------- cauda
     const happy = Math.max(celHappy, w.carry * 0.7, barkEnv, w.proud * 0.9, w.lick * 0.95, w.licked * 0.75, wEnv * 0.5, wTouch, happyX);
     const wagFreqT = lerp(lerp(2.0, 3.2, st.move), 7, happy) * (1 - w.sit * 0.5) * (1 - actionsBusy * 0.5 * (1 - w.pre));
-    const wagAmpT = lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) * (1 - squat * 0.95) + w.bow * 0.2;
+    const wagAmpT = lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) * (1 - squat * 0.95) * (1 - xRoll * 0.6) + w.bow * 0.2;
     st.wagFreq = damp(st.wagFreq, wagFreqT, 3);
     st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
     st.wagPhase += st.wagFreq * dt * TAU;
     const raiseT = w.sit * -0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3 + w.proud * 0.35 + w.aim * 0.15 - w.yuck * 0.2
-      + w.slide * 0.25 - st.mud * 0.35 + wEnv * 0.35 + squat * 0.05 + scratchK * 0.3 + xDig * 0.3 + w.pre * 0.12 + glee * 0.15 + wow * 0.25 + glad * 0.12;
+      + w.slide * 0.25 - st.mud * 0.35 + wEnv * 0.35 + squat * 0.05 + scratchK * 0.3 + xDig * 0.3 + w.pre * 0.12 + glee * 0.15 + wow * 0.25 + glad * 0.12
+      - xRoll * 0.75; // rolando: o rabo vai para o lado da barriga (de costas, fica para o ar)
     st.tailRaise = damp(st.tailRaise, raiseT, 4);
     for (let k = 0; k < 4; k++) {
       const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);
@@ -822,6 +911,13 @@ export function createDogAnimation(ctx) {
     for (let i = 0; i < nB; i++) {
       bones[i].quaternion.copy(Lq[i]);
       if (i > 0) bones[i].position.copy(restOff[i]).add(posOff[i]);
+    }
+
+    // rolar: o ponto mais baixo do corpo (tronco, cabeça, orelhas, patas e rabo) encosta no chão, ou no monte
+    // (jumpY), em qualquer ângulo; entra e sai suave nas pontas, em pé, onde as patas já estão no chão
+    if (xKind === 'roll' && contacts.length) {
+      const cw = sstep(0, 0.03, xk) * (1 - sstep(0.97, 1, xk));
+      inner.position.y += (jumpY - lowestY()) * cw;
     }
 
     // pelo: vento nas pontas durante a arrancada

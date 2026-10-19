@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { createHeadlessGame } from './helpers/headless.mjs';
+import * as THREE from 'three';
+import { createHeadlessGame, installBrowserStubs } from './helpers/headless.mjs';
 import { LEVELS } from '../src/levels/index.js';
 import { POOP_PRE, POOP_TIME, PARTY_MAX, EXTRA_TIME } from '../src/game/extras.js';
 import { PAD } from '../src/game/input.js';
@@ -211,12 +212,19 @@ test('extras: sem espaço ela nem gira (fareja e agacha ali), sem atravessar nad
   h.teleport(sis, b.maxX - 1, b.maxZ - 1);
   h.game.setStay(sis, true);
   const c = h.ctrls[who];
-  // encostada na beirada da fase, de frente para ela (não cabe nem um passo para a frente)
-  const want = { x: (b.minX + b.maxX) / 2, z: b.minZ - 0.5 };
+  // encostada na beirada da fase, de frente para ela (não cabe nem um passo para a frente), num ponto em que ela
+  // cabe parada (sem ficar espremida entre a beirada e algum colisor)
+  let want = null;
+  for (let x = b.minX + 1; x < b.maxX - 1 && !want; x += 0.4) {
+    const p = h.teleport(who, x, b.minZ - 0.5);
+    if (!hitsStatic(h, p.x, p.z, c.r * 0.98, c.size) && p.z - b.minZ < c.r + 0.01) want = { x, z: b.minZ - 0.5 };
+  }
+  assert.ok(want, 'um ponto livre na beirada');
   const p = h.teleport(who, want.x, want.z);
   h.ctrls[who].yaw = Math.atan2(want.x - p.x, want.z - p.z);
   h.run(0.4);
   h.ctrls[who].yaw = Math.atan2(want.x - c.x, want.z - c.z);
+  assert.ok(!hitsStatic(h, c.x, c.z, c.r * 0.98, c.size), 'parada num lugar livre');
   h.clearLog();
   h.tap('KeyC');
   assert.ok(ex(h).poop, 'começa mesmo sem espaço');
@@ -354,5 +362,59 @@ test('extras: nada no jogo nem no README cita o segredo', () => {
   for (const f of readdirSync('src/ui')) if (/\.(js|css)$/.test(f)) texts.push(readFileSync(`src/ui/${f}`, 'utf8'));
   for (const t of texts) {
     assert.doesNotMatch(t, /KeyC|\bR3\b|\bcoc[ôo](?![a-z])|poop/i, 'sem menção ao segredo na UI ou no README');
+  }
+});
+
+test('rolar no modelo real: em nenhum ângulo o corpo, a cabeça, as orelhas ou as patas passam do chão; deitada, encosta', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  const v = new THREE.Vector3();
+  const dur = EXTRA_TIME.roll;
+  for (const kind of ['radhija', 'rhaenyra']) {
+    const d = createDog(kind);
+    // pele do corpo e das orelhas (o pelo são cascas por cima, no shader)
+    const skins = [];
+    d.object.traverse((o) => { if (o.isSkinnedMesh && !o.material.userData?.uniforms?.uWind) skins.push(o); });
+    assert.equal(skins.length, 2, 'corpo e orelhas');
+    const [body] = skins.sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count);
+    /** y mais baixo dos vértices (de 3 em 3) das malhas pedidas, com a pose do quadro. */
+    const lowest = (meshes) => {
+      d.object.updateMatrixWorld(true);
+      let low = Infinity;
+      for (const m of meshes) {
+        const n = m.geometry.attributes.position.count;
+        for (let i = 0; i < n; i += 3) {
+          m.getVertexPosition(i, v).applyMatrix4(m.matrixWorld);
+          if (v.y < low) low = v.y;
+        }
+      }
+      return low;
+    };
+    for (let i = 0; i < 40; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    assert.ok(lowest(skins) > -0.012, `${kind}: em pé, no chão`);
+    const N = Math.round(dur * 60);
+    let worst = Infinity;
+    let worstK = 0;
+    let gap = 0;
+    let backGap = 0;
+    for (let f = 0; f <= N; f++) {
+      const k = f / N;
+      d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k, t: k * dur, h: 0 } });
+      if (f % 4) continue;
+      const y = lowest(skins);
+      if (y < worst) {
+        worst = y;
+        worstK = k;
+      }
+      if (k > 0.18 && k < 0.82) gap = Math.max(gap, y);
+      if (k > 0.45 && k < 0.6) backGap = Math.max(backGap, lowest([body]));
+    }
+    assert.ok(worst > -0.012, `${kind}: nada atravessa o chão (${worst.toFixed(3)} m em ${(worstK * 100).toFixed(0)}%)`);
+    // a folga que sobra é o pelo (as cascas por cima da pele, que encostam de verdade) e a margem da união suave
+    assert.ok(gap < 0.035, `${kind}: deitada, encosta no chão (folga ${gap.toFixed(3)} m)`);
+    assert.ok(backGap < 0.045, `${kind}: de costas, o corpo fica no chão, não em cima das orelhas (folga ${backGap.toFixed(3)} m)`);
+    for (let i = 0; i < 30; i++) d.update(1 / 60, { speed: 0, action: 'none' });
+    const inner = d.object.children.find((o) => o.isGroup || o.type === 'Group') || d.object.children[0];
+    assert.ok(Math.abs(inner.rotation.z) < 1e-6 && Math.abs(inner.position.x) < 1e-6, `${kind}: depois de rolar, volta ao normal`);
   }
 });
