@@ -162,6 +162,8 @@ dogs.forEach((d, i) => {
   scene.add(d.object);
   d.steps = 0;
   d.onFootstep = () => d.steps++;
+  d.object.updateMatrixWorld(true);
+  d.bodyRestY = d.bones.find((b) => b.name === 'body').getWorldPosition(new THREE.Vector3()).y;
 });
 function applyItems() {
   for (const d of dogs) {
@@ -187,8 +189,13 @@ function placeCamera(tm, focusDogs) {
   const c = new THREE.Vector3();
   focusDogs.forEach((d) => c.add(d.object.position));
   c.divideScalar(focusDogs.length);
-  // no ar (pulo, impulso na parede) a câmera sobe junto com o corpo
-  const lift = focusDogs.reduce((m, d) => Math.max(m, d.object.children[0].position.y), 0);
+  // no ar (pulo, impulso na parede) a câmera sobe junto com o meio do corpo (o osso 'body'; rolando, ele fica embaixo)
+  const _b = new THREE.Vector3();
+  const lift = focusDogs.reduce((m, d) => {
+    const body = d.bones.find((b) => b.name === 'body');
+    body.updateWorldMatrix(true, false);
+    return Math.max(m, body.getWorldPosition(_b).y - d.object.position.y - (d.bodyRestY ?? 0));
+  }, 0);
   c.y += lift * 0.85;
   const k = focusDogs.length > 1 ? 1.55 : 1;
   const big = focusDogs.some((d) => d.kind === 'rhaenyra') ? 1.1 : 1;
