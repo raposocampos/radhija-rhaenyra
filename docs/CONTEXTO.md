@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (comemoração com voltinha andando, PR #39). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (porquinhos: testes da arena estáveis, PR #42). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 2 de 5: locomoção (Claude, branch `claude/locomocao-dogs`)
@@ -12,10 +12,28 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   pede alcance e passinhos de ajuste ao parar. Ritmo e pisadas continuam os do guia. Testes em
   `test/locomocao.test.mjs`; capturas novas (`32-andando`, `33-parando`, `34-curva`, `35-galope`) em
   `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
-- Ordem combinada com o orquestrador: pedir aprovação e integrar só depois de #41 → #42 → #33 (fila do main).
+- Ordem combinada com o orquestrador: pedir aprovação e integrar só depois de #41 → #42 → #33 (fila do main; #41 e
+  #42 já entraram, o branch foi atualizado com `f50db80`). PR #43 em rascunho.
 - Próximo passo: CI e capturas (E2E `canil`), revisar as tiras, ajustar e apresentar a prévia (`?dogs=novo`).
 
-## Em andamento: comemoração sem giro parado (Claude, branch `claude/comemoracao-natural`)
+## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
+
+- Achado do orquestrador (2026-10-19): a verificação "modelo novo: nada abaixo do chão" da suíte `empurra` falhou no
+  E2E do #40 (`39327090192`: −0,011 e −0,010; o limite é −0,010). O `lowest` do modelo novo é o ponto mais baixo ANTES
+  da correção do chão (`src/dogs/v2/dog.js`, `settle`: acima de 4 mm ele gira/levanta o corpo); na tela nada passa de
+  4 mm, mas o corpo dava um pulinho de até ~8 mm.
+- Causa: ao subir e descer, a passada volta aos poucos e a dobra da pata do passo (`curl`) não diminuía junto com a
+  subida do pé (o alvo de pé não levanta a pata): a ponta da pata de trás entrava no chão. Medido no modelo novo (Node,
+  13 fases): antes −11,7 mm na descida; com a correção −7,3 a −8,6 mm, o mesmo nível do passo comum dele (−7,1 mm ao
+  andar e parar). De pé, empurrando: −4,0 mm (só as almofadinhas). Sem a passada na descida sumiria de vez, mas as
+  traseiras deslizariam 16 cm (mudaria o visual aprovado); não foi feito.
+- Feito: `curl *= gaitAmp * (1 − sk)` e o alvo da pata não passa da altura de apoio (`dogAnimation.js`, sem mexer na
+  comemoração do #39; `git merge-tree` com `claude/comemoracao-natural` sem conflito); teste novo com o modelo novo em
+  `test/empurrao.test.mjs`; capturas: a descida no meio dela e o close da rosnadinha de perfil.
+- **PR #41.** Atualizado com o main `9715ee8` (PRs #40 e #39): conferir no PR o CI, o E2E `empurra` e a prévia do
+  head atual. Próximo passo: aprovação do usuário e integração; depois vêm o #42 e o #33.
+
+## Entregue: comemoração sem giro parado (PR #39, squash `9715ee8`, deploy `39336319071`)
 
 - Pedido do usuário (2026-10-19): na comemoração as dogs "giram um 360 sem andar, estranho, não fica natural".
 - Feito: em `dogAnimation.js` o ciclo da comemoração (3,2 s) virou pulinhos → **voltinha andando** num círculo de
@@ -35,30 +53,18 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `dogAnimation.js`/`game.js`) e depois com `1cd6647` (PR #40). E2E `todas` verde em `2c5f328` (39327099995, 2ª
   tentativa; a 1ª caiu no teste instável dos porquinhos, corrigido no #40). As 3 conversas da revisão foram
   respondidas e resolvidas.
-- Próximo passo: CI e E2E `todas` no head novo, prévia, responder e resolver as 3 conversas e pedir nova aprovação.
-
+- Integrado ao main e publicado (squash `9715ee8`, deploy `39336319071`). Não repetir merge/deploy do #39.
 
 ## Entregue: empurrão em pé da Rhaenyra (PR #38, squash `369b0ff`, deploy `39326965839`)
 
-- Pedido do usuário (2026-10-19): "Rhaenyra tem mania de ficar empurrando os outros, aí daria pra usar pra tirar
-  alguma coisa de uma árvore, ou de algum lugar alto, empurrar pra cair". Desenho aprovado: o mesmo **R1 / Shift /
-  Empurrar** segurado de frente para algo empurrável no alto (árvore, mesinha, estante); ela fica de pé nas traseiras,
-  apoia as patas da frente e empurra no ritmo; **3 empurrões** e o que está lá em cima cai do outro lado. Nada de
-  tecla nova (longe de C e R3); o botão de toque é o Empurrar que já existe (segurar). Usar numa fase é decisão do
-  usuário (a fase 10, #33, quer a árvore antes da piñata).
-- Retorno do usuário na primeira prévia: **tirar o empurrão na irmã**; o movimento parecia "sarrando, não empurrando"
-  (o quadril ia e voltava): agora o empurrão sai das patas da frente e dos ombros (armam e batem, tranco curto do peito),
-  quadril e traseiras parados; **rosnadinha** a cada empurrão (som `shoveGrowl` e boquinha franzida).
-- Referência real: vídeos privados `referencias/fotos/2026-10-19/video-2.mp4` e `video-3.mp4` (fora do Git).
-- Feito: controlador (`pickShoveSpot`, `startShove`, `stepShove`, `SHOVE_*` em `dogController.js`), núcleo
-  (`src/game/shove.js` ligado em `game.js`), empurrável (`src/game/mechanics/shoveTarget.js`), pose
-  (`src/dogs/shovePose.js` + bloco em `dogAnimation.js`), visuais (`src/world/shoveProps.js`), Arena do Empurrão
-  (`src/levels/_empurra/`, `?level=empurra&play`), sons (`soundsEmpurra.js`), folhinhas (`particles.leaves`), testes
-  (`test/empurrao.test.mjs`, inclusive quadril parado e tranco dos ombros no modelo real), suíte E2E `empurra`
-  (também com `?dogs=novo`) e capturas (`capture-empurra.mjs`). Docs: ARQUITETURA §6 (Empurrão em pé) e README.
-- Coordenação: a sessão dos modelos das dogs porta a pose na etapa 3; mandar a ela os campos do `anim` (`shoveK`,
-  `shoveCycle`, `shoveN`, `shoveGap`, `shoveY`, `shoveOver`) e os quadros de `shovePose.js` quando o PR entrar.
-- Integrado ao main e publicado. A correção seguinte do empurrão está no PR #41.
+- Pedido do usuário (2026-10-19): a mania da Rhaenyra de empurrar, para derrubar coisas do alto. Segurar **R1 / Shift /
+  Empurrar** de frente para algo empurrável no alto (árvore, mesinha, estante): ela fica de pé, empurra pelos ombros e
+  patas da frente (quadril parado), rosna a cada empurrão; **3 empurrões** e o item cai do outro lado. A irmã não é
+  empurrada (retorno do usuário). Arena: `?level=empurra&play`. Peças para fases: `createShoveTarget`,
+  `src/world/shoveProps.js`, `puzzle.shoveSpots`/`onShove` (ARQUITETURA §6). A fase 10 (#33) usa a árvore.
+- Aprovado no chat e integrado (head `07dc74a`, base `1a8fde5`); CI do main `39326868737`; produção conferida em
+  `369b0ff`. Não repetir merge/deploy do #38. Campos do `anim` e quadros da pose enviados à sessão dos modelos.
+- A correção seguinte do empurrão (pés no chão no modelo novo) está no PR #41.
 
 ## Entregue: os porquinhos e a Arena dos Porquinhos (PR #36, squash `1a8fde5`, deploy `39320045323`); ajuste no PR #40 (squash `1cd6647`, deploy `39332428726`)
 
@@ -94,7 +100,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   aleatórias, conferindo que nada trava e que legumes e bolinha no chão seguem ao alcance).
 - Integrado ao main com a aprovação do usuário (squash `1a8fde5`, deploy `39320045323`). Não repetir merge/deploy
   do #36. A sessão da fase 10 (PR #33) integra a partir daqui: API e receita em ARQUITETURA §7 "Porquinhos".
-- Em andamento, **PR #40** (branch `claude/porcos-teste-estavel`, a partir do main `1a8fde5`, atualizado com o main `369b0ff`, PR #38): o teste "presos no
+- Entregue, **PR #40** (squash `1cd6647`, deploy `39332428726`; branch `claude/porcos-teste-estavel`): o teste "presos no
   cercado…; saem um atrás do outro" falhou de vez em quando no CI. Um diagnóstico no CI (400 sementes) mostrou bugs
   reais no caminho dos porcos, corrigidos em `pigHerd.js`: (1) dois porcos entravam juntos no vão da porteira,
   entalavam lado a lado e ninguém saía: agora passa um de cada vez (`assignDoor`/`waitDoor`: a vez é de quem está mais
@@ -105,7 +111,15 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
   alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
   volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
-  Próximo passo: CI e E2E verdes no head do PR, prévia e aprovação do usuário.
+- Em andamento, **PR #42** (branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`, atualizado com o main
+  `0bc887a`, PR #39 e #41): o teste "arena: E pega
+  o legume…; pegar de volta tira dele" falhou 1 vez em 7. Diagnóstico no CI (120 sementes): 3 falhavam ao pegar o
+  milho de volta, porque os outros porquinhos estavam em volta da Radhija e um esbarrão (susto de 0,3 s) engolia o E.
+  É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
+  joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
+  Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe em
+  `test/porcos.test.mjs` e no CONTEXTO. Integração na fila do orquestrador: #39 → #41 → #42 → #33; atualizar com o
+  main na vez dele, refazer o CI e pedir a aprovação do usuário.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 
@@ -225,7 +239,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   1.49 não avisa a queda). Hipótese: a aba cai no boot de uma fase (SwiftShader?); a causa raiz não foi investigada.
   `expresso` com o #27: 2 travamentos em 9, os dois antes das redes de queda e `opMaxMs`; sem mecanismo achado.
 
-## Em andamento: travamento no primeiro boot do E2E (Claude, PR #31)
+## Entregue: travamento no primeiro boot do E2E (PR #31, squash `eb1a148`)
 
 - Pedido (sessão aberta pela do PR #27): achar a causa dos travamentos intermitentes do primeiro carregamento de uma
   fase no E2E. Branch `claude/e2e-travamento-boot`, **PR #31**, atualizado por merge com o main `0bd48d0` (PR #30) e
@@ -353,7 +367,7 @@ celular (`.rr[data-mobile]`), perfis de qualidade por aparelho com governador de
 alta, sem mudança), manifest e ícones. Squash `1fbc631` no main, publicado pelo deploy `39151418291` (liberado com
 a aprovação do chat); `version.json` e HTTP 200 conferidos. Detalhes em ARQUITETURA §6, §9 e §10.
 
-## Em andamento: tela cheia no iPhone (branch `claude/iphone-tela-cheia`)
+## Entregue: tela cheia no iPhone (PR #25, squash `ccfaf4a`)
 
 - Retorno do usuário (2026-10-18): no iPhone 13 rodou bem, mas não abriu em tela cheia e a barra de endereço
   atrapalha. O Safari do iPhone não deixa uma página ocupar a tela inteira; o caminho é o app da tela inicial.
