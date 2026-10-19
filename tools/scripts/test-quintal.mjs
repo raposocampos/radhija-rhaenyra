@@ -235,6 +235,14 @@ try {
   state = await toCake(L);
   check(qt(state).cake.join() === 'ribbon,cookie,candle', 'a vela no terceiro andar', JSON.stringify(qt(state).cake));
 
+  // ---- o outro botão do galpão solta os porquinhos na horta
+  await as('rhaenyra');
+  state = await wallJump(L.SHED_BUTTONS[1]);
+  state = await waitFor((s) => s.quintal.pigs.released && s.quintal.pigs.inPen === 0, { timeout: 12000 });
+  check(qt(state).shed.sty && qt(state).pigs.inPen === 0, 'o outro botão abre o chiqueiro e os três porquinhos saem para a horta', JSON.stringify(qt(state).pigs.pigs));
+  await H.gsleep(800);
+  await shot('09c-porquinhos-soltos.png');
+
   // ---- o chapéu do chão no quarto andar
   const hat = qt(state).floor.hat;
   await walkTo(hat.x, hat.z + 0.32, { tol: 0.1 });

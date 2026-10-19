@@ -6,7 +6,7 @@
 // em cima do armário da despensa (a Rhaenyra puxa três caixotes até as marcas do chão, a Radhija sobe); a vela do 3 no
 // galpão (a lama da horta, o Lambe-Lambe, os dois botões altos sorteados: porta ou chiqueiro, e a rampa só com
 // arrancada); a estrela na piñata em cima da roseira (o superbafo balança, a Rhaenyra pula e bate); os legumes do
-// campinho; as galinhas do quintal; e as regras de cada passo. Headless.
+// campinho; os porquinhos do chiqueiro; as galinhas do quintal; e as regras de cada passo. Headless.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
@@ -777,6 +777,46 @@ test('fase 10: a Rhaenyra que pisa na lama escorrega na parede (sem impulso) at�
   h.clearLog();
   wallJump(h, L.SHED_BUTTONS[0]);
   assert.ok(h.run(1.5, { until: (i) => i.quintal.doorOpen }), 'limpinha, o impulso abriu a porta');
+});
+
+test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da boca, comem por um tempo e voltam a atrapalhar', async () => {
+  const h = await game('botao=2'); // com ?botao=2, o primeiro botão abre o chiqueiro
+  h.run(0.3);
+  puz(h).debugSet('gate');
+  as(h, 'rhaenyra');
+  h.clearLog();
+  wallJump(h, L.SHED_BUTTONS[0]);
+  assert.equal(q(h).shed.sty, true, 'o botão errado abriu o chiqueiro');
+  assert.ok(h.run(10, { until: (i) => i.quintal.pigs.released && i.quintal.pigs.inPen === 0 }), `os três saíram ${JSON.stringify(q(h).pigs.pigs)}`);
+  assert.ok(h.log('pig:release').length >= 1);
+  assert.ok(hints(h).includes(TEXT.hint.pigsBlock));
+  // a Radhija colhe uma cenoura e entra na horta com ela na boca: os porquinhos vão atrás e derrubam
+  as(h, 'radhija');
+  const C = L.PLANTATION.carrots;
+  put(h, 'radhija', C.x, C.z + C.hz + 0.35, Math.PI);
+  h.tap('KeyE');
+  assert.equal(q(h).veg.held.radhija, 'carrot');
+  put(h, 'rhaenyra', 5.5, 0.6, 0);
+  h.tap('KeyQ');
+  h.tap('KeyF'); // a Rhaenyra espera fora da horta
+  h.tap('KeyQ');
+  const P0 = q(h).pigs.pigs[0];
+  put(h, 'radhija', P0.x - 0.7, P0.z, Math.PI / 2);
+  h.clearLog();
+  assert.ok(h.run(25, { until: (i) => i.quintal.veg.held.radhija === null }), `um porquinho derrubou a cenoura ${JSON.stringify(q(h).pigs)}`);
+  assert.ok(h.log('pig:knock').length >= 1);
+  assert.ok(hints(h).includes(TEXT.hint.pigKnock));
+  // a cenoura no chão vira comida: um porco come e cochila (distraído) e depois volta
+  assert.ok(h.run(10, { until: () => h.log('pig:eat').length >= 1 }), 'um porco foi comer');
+  assert.ok(q(h).pigs.distracted >= 1);
+  assert.ok(hints(h).includes(TEXT.hint.pigsEat));
+  assert.ok(h.run(45, { until: () => h.log('pig:done').length >= 1 }), 'acabou a distração');
+  assert.ok(h.run(2, { until: (i) => i.quintal.pigs.distracted === 0 }), 'voltou a atrapalhar');
+  assert.ok(hints(h).includes(TEXT.hint.pigsBack));
+  // reinício: todos de volta ao chiqueiro, porteira fechada
+  h.events.emit('ui:restart', {});
+  h.run(0.2);
+  assert.deepEqual([q(h).pigs.inPen, q(h).pigs.open, q(h).shed.sty], [3, false, false]);
 });
 
 test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', async () => {

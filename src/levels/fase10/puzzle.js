@@ -17,17 +17,18 @@
 //   Nada trava: o enfeite errado volta para o chão, o balde desce sozinho, o caixote solto fica onde parou, o legume rebrota.
 import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
 import {
-  createDogEffects, createPushCrate, createWallButton, createHingedGate, createGooseNPC, createMud,
+  createDogEffects, createPushCrate, createWallButton, createHingedGate, createGooseNPC, createMud, createPigHerd,
 } from '../../game/mechanics/index.js';
 import { createGoose } from '../../characters/goose.js';
 import { createChicken } from '../../characters/chicken.js';
+import { createPig } from '../../characters/pig.js';
 import { createChickenFlock } from './chickens.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
   RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R, PANTRY, CUPBOARD, PANTRY_CRATES, PLANTATION, ROSE_BUSH,
-  PINATA, SHED_BUTTONS, STY, SECRET, EAST_WALL, CHICKENS,
+  PINATA, SHED_BUTTONS, STY, SECRET, EAST_WALL, CHICKENS, PIGS,
 } from './layout.js';
 
 /**
@@ -146,6 +147,7 @@ export const TEXT = {
     pigsBlock: 'Os porcos não deixam passar! Legumes do campinho distraem eles por um tempo.',
     pigsEat: 'Os porcos foram comer: aproveita!',
     pigsBack: 'Acabou a comida: os porcos voltaram a atrapalhar.',
+    pigKnock: 'Ops! O porquinho esbarrou e derrubou o que estava na boca. Legumes no chão distraem eles!',
     vegPick: 'Pegou um legume: leve até os porcos e largue perto deles (E).',
     cratePull: 'Ande para trás com a alça na boca: o caixote vem junto e trava sozinho na marca do chão.',
     crateLock: 'Encaixou na marca! Agora o próximo caixote.',
@@ -230,10 +232,16 @@ export function createPuzzle(ctx) {
   const crateCols = CR.list.map((cr) => world.addDynamic({ id: `caixote-${cr.id}`, kind: 'prop', shape: 'box', x: CR.x0, z: cr.z, hx: CR.hx, hz: CR.hz }));
   /** O pé da escadinha: na frente (ao sul) do caixote baixo. */
   const STAIR_FOOT = { x: CR.x1, z: CR.list[2].z + CR.hz + 0.3 };
-  const styGateCol = world.addDynamic({ id: 'porteira', kind: 'gate', shape: 'box', x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2, hx: 0.05, hz: (STY.gate.z1 - STY.gate.z0) / 2 });
   const boardCol = world.addDynamic({ id: 'tabua-solta', kind: 'gate', shape: 'box', x: EAST_WALL.x, z: (SECRET.board.z0 + SECRET.board.z1) / 2, hx: 0.07, hz: (SECRET.board.z1 - SECRET.board.z0) / 2 });
-  /** Os porcos (o personagem e o comportamento chegam no PR dos porcos): por enquanto, nenhum sai do chiqueiro. */
-  const pigs = { release() {}, addFood(f) { void f; return null; }, update(dt, C) { void dt; void C; }, reset() {}, info: () => ({ out: false }), get pestering() { return false; } };
+  /** Os três porquinhos do chiqueiro (createPigHerd): a porteira deles (com colisor) abre pelo botão errado do galpão. */
+  const pigEmit = (name, p) => {
+    emit(name, p);
+    if (name === 'pig:release') hints.now('pigsBlock', 4.2, 0);
+    else if (name === 'pig:eat') hints.now('pigsEat', 3, 8);
+    else if (name === 'pig:done' && p?.reason === 'time') hints.now('pigsBack', 3.6, 8);
+  };
+  const pigs = createPigHerd({ id: 'porco', cfg: PIGS, world, root, emit: pigEmit, effects, createPig, gateProp: props.styGate, knockItem });
+  const pigsPester = () => pigs.pigs.some((P) => P.state === 'chase');
   /** Qual botão do galpão abre a porta (o outro abre o chiqueiro): ?botao=1|2 fixa; sem isso, sorteia a cada partida. */
   const pickDoorButton = () => {
     const q = ctx.params?.get?.('botao');
@@ -266,7 +274,7 @@ export function createPuzzle(ctx) {
     introT: 0, /** @type {import('../../types').DogName} */ prevActive: /** @type {import('../../types').DogName} */ ('radhija'),
     scriptDt: 1 / 60, wasPower: false, /** @type {string} */ powerStage: 'off',
     // galpão: qual botão abre a porta, a porta e o chiqueiro abertos
-    doorBtn: pickDoorButton(), shedOpen: false, styOpen: false, styT: 0,
+    doorBtn: pickDoorButton(), shedOpen: false, styOpen: false,
     // despensa: onde está cada caixote no trilho (e se travou), o que a Rhaenyra puxa e a subida da Radhija
     crates: CR.list.map(() => ({ x: CR.x0, locked: false })),
     /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ crateHold: null,
@@ -355,7 +363,7 @@ export function createPuzzle(ctx) {
       const btn = shedButtons.find((b) => !b.on) || shedButtons[0];
       return name === 'rhaenyra' ? { text: inHorta(rh) ? O.buttonsRh : O.hortaRh, target: btn.target(0.3) } : { text: O.buttonsRad, target: btn.target(0.3) };
     }
-    if (pigs.pestering) return { text: name === 'rhaenyra' ? O.pigsRh : O.pigsRad, target: at((PLANTATION.x0 + PLANTATION.x1) / 2, PLANTATION.z0, 0.6) };
+    if (pigsPester()) return { text: name === 'rhaenyra' ? O.pigsRh : O.pigsRad, target: at((PLANTATION.x0 + PLANTATION.x1) / 2, PLANTATION.z0, 0.6) };
     if (name === 'rhaenyra') return { text: O.rampRh, target: at(CANDLE.x, CANDLE.z, CANDLE.y + 0.3) };
     return { text: O.rampRad, target: at(RAMP.x0, RAMP.z, 0.3) };
   }
@@ -867,10 +875,6 @@ export function createPuzzle(ctx) {
     S.doorT += Math.sign(target - S.doorT) * Math.min(Math.abs(target - S.doorT), dt / 0.85);
     doorCol.enabled = S.doorT < 0.6;
     props.shedDoor.setOpen(S.doorT);
-    // a porteira do chiqueiro gira para fora quando o botão dela é apertado
-    const sty = S.styOpen ? 1 : 0;
-    S.styT += Math.sign(sty - S.styT) * Math.min(Math.abs(sty - S.styT), dt / 0.9);
-    props.styGate.setOpen(smooth(S.styT));
     const open = doorOpen();
     if (open !== S.wasDoor) {
       emit(open ? 'shed:open' : 'shed:close', { x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2 });
@@ -893,8 +897,7 @@ export function createPuzzle(ctx) {
     S.styOpen = true;
     props.shedLinks.gate.pulse();
     props.shedLinks.gate.setOn(true);
-    styGateCol.enabled = false;
-    pigs.release();
+    pigs.setOpen(true);
     emit('shed:button', { x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2, door: false });
     emit('sty:open', { x: STY.x0, z: (STY.gate.z0 + STY.gate.z1) / 2 });
     hints.now('styButton', 4, 0);
@@ -1120,6 +1123,7 @@ export function createPuzzle(ctx) {
     if (act === 'dropVeg') { dropVeg(c); return true; }
     const near = vegNear(c);
     if (near) {
+      if (near.food) { pigs.removeFood(near.food); near.food = null; }
       S.veg.floor = S.veg.floor.filter((v) => v !== near);
       near.it.attach(c.name);
       S.veg.held[c.name] = near;
@@ -1151,7 +1155,45 @@ export function createPuzzle(ctx) {
     S.veg.floor.push(v);
     emit('veg:drop', { name: c.name, kind: v.kind, x: res.x, z: res.z });
     // os porcos (se estiverem soltos) vêm comer
-    pigs.addFood({ x: res.x, z: res.z, kind: v.kind, onDone: () => { v.eaten = true; v.obj.parent?.remove(v.obj); S.veg.floor = S.veg.floor.filter((f) => f !== v); } });
+    feedPigs(v);
+  }
+  /** O legume no chão vira comida dos porquinhos soltos (eles comem por um tempo; o legume encolhe enquanto isso). */
+  function feedPigs(v) {
+    const s0 = v.obj.scale.x;
+    v.food = pigs.addFood({
+      x: v.x, z: v.z, kind: v.kind,
+      onProgress: (k) => v.obj.scale.setScalar(s0 * Math.max(0.15, 1 - k * 0.85)),
+      onDone: () => { v.eaten = true; v.obj.parent?.remove(v.obj); S.veg.floor = S.veg.floor.filter((f) => f !== v); },
+    });
+  }
+  /**
+   * O porquinho esbarrou em quem leva algo na boca (createPigHerd knockItem): o enfeite ou o legume voa um pouco para
+   * o lado do empurrão e cai no chão (o legume vira comida). → true se ela levava algo.
+   */
+  function knockItem(name, { dirX, dirZ }) {
+    const c = ctrls[name];
+    const thing = carriedBy(name);
+    const v = S.veg.held[name];
+    if (!thing && !v) return false;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const ux = dirX * 0.8 - dirZ * side * 0.6, uz = dirZ * 0.8 + dirX * side * 0.6, ul = Math.hypot(ux, uz) || 1;
+    const res = world.resolve(c.x + (ux / ul) * (c.r + 0.35), c.z + (uz / ul) * (c.r + 0.35), 0.1, 'small');
+    if (v) {
+      v.it.drop(res.x, res.z, 0);
+      v.x = res.x;
+      v.z = res.z;
+      S.veg.held[name] = null;
+      S.veg.floor.push(v);
+      feedPigs(v);
+    } else {
+      items[thing].drop(res.x, res.z, 0);
+      S.place[thing] = 'floor';
+      S.floor[thing] = { x: res.x, z: res.z };
+      emit('item:drop', { name, item: thing, x: res.x, z: res.z });
+      notifyStage();
+    }
+    hints.now('pigKnock', 3.6, 8);
+    return true;
   }
   function stepVeg(dt, C) {
     void C;
@@ -1234,7 +1276,7 @@ export function createPuzzle(ctx) {
     stepPinata(dt, C);
     stepVeg(dt, C);
     stepSecret(dt, active);
-    pigs.update(dt, C);
+    pigs.update(dt, { active, ctrls: C, carries: (n) => !!carriedBy(n) || !!S.veg.held[n] });
     chickens.update(dt, { ctrls: C });
     gate.update(dt, { ctrls: C });
     stepShed(dt, C);
@@ -1545,7 +1587,6 @@ export function createPuzzle(ctx) {
     Object.assign(S, fresh());
     doorCol.enabled = true;
     bucketCol.enabled = true;
-    styGateCol.enabled = true;
     boardCol.enabled = true;
     crateCols.forEach((col) => { col.x = CR.x0; });
     props.pigeon.object.visible = true;
@@ -1583,6 +1624,7 @@ export function createPuzzle(ctx) {
     wallSpots: () => (mud.muddy('rhaenyra') ? [] : levers.map((b) => b.spot)),
     onBark: (c) => {
       chickens.onBark(c);
+      pigs.onBark(c);
       if (!S.gateOpen) goose.onBark(c);
       if (pigeonAround() && Math.hypot(c.x - PIGEON.x, c.z - PIGEON.z) < 3.4) hints.now('pigeonBark', 3, 5);
     },
@@ -1618,6 +1660,7 @@ export function createPuzzle(ctx) {
       if (key === 'cleanRh') mud.set('rhaenyra', value ? 0 : 1);
       if (key === 'doorButton') S.doorBtn = value ? 1 : 0;
       if (key === 'shed') { if (value) openShed(); }
+      if (key === 'pigsOut') { openSty(); pigs.releaseNow(); }
       if (key === 'stairs') { S.crates.forEach((k) => { k.x = CR.x1; k.locked = !!value; if (!value) k.x = CR.x0; }); }
       if (key === 'secret') { S.secretReady = !!value; props.secretBoard.setLoose(!!value); }
     },

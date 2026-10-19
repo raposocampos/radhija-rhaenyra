@@ -157,8 +157,8 @@ export function buildSty(root, layout) {
       object: gate,
       setOpen(t) {
         st.open = Math.max(0, Math.min(1, t));
-        // gira para fora (para o oeste, a horta): a folha vai de +Z para −X
-        gate.rotation.y = -st.open * (Math.PI / 2) * 0.95;
+        // gira para fora (para o oeste, a horta), no mesmo ângulo do colisor dos porquinhos (STY.swing)
+        gate.rotation.y = -st.open * STY.swing;
       },
     },
     links: { door: toDoor, gate: toGate },

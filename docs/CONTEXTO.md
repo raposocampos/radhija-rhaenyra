@@ -301,7 +301,11 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - Com o #35 no main: a lama da horta vale para as duas. A Rhaenyra que o jogador leva para a lama fica com as patas
     escorregadias (sem impulso na parede: `wallSpots` vazio) até a Radhija lambê-la (L); a Radhija continua se sujando
     no vão. `onLick`/`onLickMiss` seguem o modelo da fase 7 (as duas lambem). Nos testes, lamber é `KeyL`.
-  - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (branch `claude/empurrao-em-pe`, sem PR) e
+  - Com o #36 no main: os porquinhos ligados (`createPigHerd` no puzzle, `PIGS` com `STY_PEN = pigPenLayout(...)`,
+    porteira com o mesmo ângulo do colisor, `STY.swing`). O botão errado do galpão abre o chiqueiro e eles saem para
+    a horta; atrapalham, derrubam o enfeite ou o legume da boca (`knockItem`) e o legume no chão vira comida por um
+    tempo (`feedPigs`; pegar de volta chama `removeFood`). `debugSet('pigsOut')` solta já fora (testes e capturas).
+  - Ainda falta: a etapa antes da piñata com o empurrão em pé da Rhaenyra (PR #38, esperando aprovação) e
     a cabeça atravessando paredes (etapa 4 do PR #37; repassado à sessão dos modelos).
 - Próximo passo da D: CI e E2E `quintal` (e `todas`) no head novo, revisar capturas e entregar a prévia;
   depois do PR #36 aprovado, trocar o marcador `pigs` pelo `createPigHerd` (os legumes distraem por um tempo

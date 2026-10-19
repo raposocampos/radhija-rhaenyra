@@ -375,6 +375,9 @@ try {
   await until((i) => i.quintal.shed.sty, 120);
   await step(50);
   await shot('29c-porteira-do-chiqueiro-aberta', { pos: [8.0, 1.5, 6.3], look: [9.7, 0.4, 5.0] });
+  await step(300);
+  await shot('29d-porquinhos-soltos-na-horta', { pos: [7.4, 2.6, 6.9], look: [8.4, 0.2, 3.6] });
+  await shot('29e-porquinhos-de-perto', { pos: [8.9, 1.0, 5.6], look: [8.3, 0.25, 4.2] });
 
   // 6c. BISCOITO: a Rhaenyra puxa os caixotes até as marcas e a Radhija sobe por eles
   const CR = L.PANTRY_CRATES;

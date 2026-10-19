@@ -26,6 +26,7 @@
 //     Rhaenyra pula e bate nela quando ela passa por cima; três batidas e ela abre.
 // =====================================================================
 import { withStart } from '../../dogs/config.js';
+import { pigPenLayout } from '../../game/mechanics/pigHerd.js';
 
 /** O terreno: o leste passa do muro (um cantinho escondido do outro lado) e o sul cresce para a horta e o chiqueiro. */
 export const WORLD = { bounds: { minX: -12.0, maxX: 13.4, minZ: -6.0, maxZ: 6.6 } };
@@ -254,7 +255,9 @@ export const CANDLE = { x: 11.75, y: RAMP.top + 0.02, z: RAMP.z };
  * O chiqueiro ao sul do galpão: cerca de tábuas (os porcos não pulam), a casinha deles, o cocho e a lama; a porteira
  * abre para a horta (oeste). Os porcos soltos andam pela horta.
  */
-export const STY = { x0: 9.6, x1: 12.05, z0: 3.95, z1: 6.45, fenceH: 0.62, gate: { z0: 4.75, z1: 5.55 }, home: { x: 11.0, z: 5.3 } };
+export const STY = { x0: 9.6, x1: 12.05, z0: 3.95, z1: 6.45, fenceH: 0.62, gate: { z0: 4.75, z1: 5.55 }, swing: 1.6, home: { x: 11.0, z: 5.3 } };
+/** O chiqueiro no formato do createPigHerd: miolo, porteira (dobradiça no norte da abertura, abre para a horta). */
+export const STY_PEN = pigPenLayout({ x0: STY.x0 + 0.04, x1: STY.x1 - 0.04, z0: STY.z0 + 0.04, z1: STY.z1 - 0.04, t: 0.08, h: STY.fenceH, door: { side: 'w', a: STY.gate.z0, b: STY.gate.z1 }, swing: STY.swing }, 'chiqueiro');
 /** Onde os porcos podem andar soltos (a horta) e de onde eles saem (na frente da porteira). */
 /**
  * Duas galinhas ciscando no quintal, do lado de fora da cerca oeste da horta (ambientação, inofensivas): fogem de quem
@@ -265,7 +268,13 @@ export const CHICKENS = {
   start: [{ x: 5.3, z: 3.5, yaw: 2.4 }, { x: 5.9, z: 5.1, yaw: -1.2 }],
   seeR: 1.4, seeAngle: 1.3, scareR: 3.2, walk: 0.3, run: 1.7, calm: 2.5, glideDist: 2.0, glideTime: 1.0, glideHeight: 0.45,
 };
-export const PIGS = { count: 3, roam: { minX: HORTA.x0 + 0.25, maxX: HORTA.x1 - 0.25, minZ: HORTA.z0 + 0.3, maxZ: HORTA.z1 - 0.25 }, out: { x: STY.x0 - 0.45, z: (STY.gate.z0 + STY.gate.z1) / 2 } };
+/** Os três porquinhos (cfg do createPigHerd; o resto vem de PIG_DEFAULTS): soltos, ficam na horta. */
+export const PIGS = {
+  count: 3,
+  pen: STY_PEN.pen, door: STY_PEN.door, gate: STY_PEN.gate,
+  area: { minX: HORTA.x0 + 0.25, maxX: HORTA.x1 - 0.25, minZ: HORTA.z0 + 0.3, maxZ: HORTA.z1 - 0.25 },
+  homes: [{ x: 10.2, z: 4.7, yaw: 0.6 }, { x: 10.55, z: 5.7, yaw: -2.5 }, { x: 11.05, z: 5.0, yaw: 2.2 }],
+};
 
 // ---------------------------------------------------------------------------------------------- o cantinho escondido
 /**
@@ -445,7 +454,7 @@ const LAYOUT = {
   CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, PIGS, CHICKENS, SECRET,
+  VEG_BEDS, TOMATO, WATERING_CAN, SHED, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
