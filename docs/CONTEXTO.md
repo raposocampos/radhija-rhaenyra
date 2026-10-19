@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-18, Claude** (fase 9, tarefa C, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: redes de prazo nas capturas e páginas extras do E2E (PR #30, squash `0bd48d0` no main)
@@ -68,9 +68,28 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **Ordem atual:** A, B e E entregues; **C (fase 9) em andamento**; depois D (fase 10).
-- **C (em andamento, Claude): fase 9 "Biblioteca do Vovô"**, branch `claude/fase9-biblioteca` (worktree próprio),
-  **PR #29**, já com o main `d306983`. Feito: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
+- **Ordem atual:** A, B, C e E entregues; **D (fase 10) em andamento**.
+- **D (em andamento, Claude): fase 10 "Festa no Quintal"**, branch `claude/fase10-quintal` (worktree próprio), base
+  `efa779c`. Desenho aprovado pelo usuário em 2026-10-19 ("grande, complexa e a mais bonita"), com o pedido de que
+  as duas fizeram **3 anos** (faixa "Feliz 3 anos", vela do número 3; o quadro mostra a festa de 2 anos). Três
+  cenários: a casa em corte (sala com o quadro "Festa do ano passado", cozinha com o disjuntor), a varanda com o bolo
+  e o quintal (piscininha, a Dona Gansa no portão) e o fundo (casa na árvore, horta com lama, galpão). Ordem do bolo,
+  de baixo para cima: laço, vela do 3, chapéu (`CAKE_ORDER`); fora de ordem o enfeite cai ao lado da mesa e o objetivo
+  manda olhar o quadro (o texto não entrega a ordem). Chapéu: caixote fora da mangueira, torneira (impulso), água
+  sobe, disjuntor (impulso) liga luzinhas e ventilador, o barquinho vai até a borda. Laço: latido distrai a gansa (de
+  guarda, ela não deixa puxar a cordinha), cordinha abre o portão, superbafo pelo cano de brinquedo (duto) espanta o
+  pombo, a Radhija no balde e a Rhaenyra puxando a corda (segura na troca; a câmera recua pela zona `balde`), o deque
+  roteirizado e o escorregador. Vela: vão da horta e lama, Lambe-Lambe, placa (só a Rhaenyra; fica lá na troca) que
+  segura a porta basculante, rampa só com arrancada. Ligações visíveis com pulso de luz: conduíte do disjuntor até o
+  pergolado e a tomada, cano da torneira, cabo da placa à porta, cordinha até o ferrolho (`src/world/links.js`,
+  movido da fase 9). Itens novos `hat`, `ribbon`, `candle` e `rope` (pose, ícones, nomes, sons). Feito no branch:
+  `src/levels/fase10/` (layout, puzzle, world/), `soundsQuintal.js`, eventos no feedback, catálogo com dez fases
+  (menu 5 + 5; a 9 oferece "Próxima fase"), `test/fase10.test.mjs`, suíte E2E `quintal` e `capture-quintal.mjs`.
+  Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC.
+- Próximo passo da D: CI e E2E `quintal` (depois `todas`) no PR, revisar as capturas (`shots/quintal-revisao/`),
+  corrigir o que o CI apontar (z-fighting, navegação, contratos) e entregar a prévia; esperar a aprovação.
+- **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
+  (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,
   poltrona, mesa de estudos, duto no alto, ventilador, vasos, chuva nas vidraças), o gato (`src/world/cat.js`), os
   itens óculos e livro (`src/world/toys.js`, `carryPose.js`, ícones), sons (`soundsBiblioteca.js`), o puzzle
@@ -90,9 +109,6 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (óculos e gato, uma vez por carregamento); "Zzz" no gato dormindo. Portinha de gato com buraco de verdade,
   moldura em arco, aba âmbar que balança, plaquinha e capachos. Escadinha e ventilador remodelados. A animação de
   rolar (tapete) e o cocô secreto ficaram com a sessão dos extras, num PR próprio.
-- Próximo passo da C: CI e E2E `biblioteca` (depois `todas`) no head novo do PR #29, revisar as capturas
-  (`shots/biblioteca-revisao/`), entregar a prévia e esperar a aprovação. Depois, apresentar o desenho da fase 10 e
-  esperar o ok.
 - **E entregue (extras escondidos, PR #28):** squash `d306983` no main, CI do main `39174689553`, deployment
   `7162054221` no ambiente `github-pages`; `version.json` de produção conferido em `d306983`. Não repetir
   merge/deploy. Resumo: extras escondidos nas fases, branch
@@ -122,8 +138,6 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   solta o cheiro, o Bichano pula, derruba o livro e sai pela portinha; impulso na maçaneta (alavanca alta) abre a
   porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro. Na versão construída,
   o ventilador fica no jardim de inverno e o impulso é no registro do duto (alavanca na parede de tijolos).
-- **D (rascunho):** fase 10 "Festa no Quintal": laço, chapéu e vela estrela na torre de presentes; o quadro "Festa
-  do ano passado" na varanda mostra a ordem de baixo para cima (ordem errada: a peça balança e cai na grama).
 
 ## Entregue: impulso na parede (PR #23)
 

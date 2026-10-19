@@ -202,8 +202,49 @@ export function bookIcon() {
 </svg>`;
 }
 
-/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book'). */
+/** Chapeuzinho de festa: cone listrado de rosa e creme, bolinhas douradas, pompom e o elástico. */
+export function hatIcon() {
+  return `<svg class="ico ico-hat" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M15 52 Q 32 60 49 52" fill="none" stroke="#E8A93C" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M32 9 L 49 51 Q 32 57 15 51 Z" fill="#FF8FC4" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M28.6 17.4 L 35.4 17.4 L 38.6 25.2 L 25.4 25.2 Z M 22.2 33 L 41.8 33 L 45 40.8 L 19 40.8 Z" fill="#FFF1D9"/>
+  <g fill="#F5C543"><circle cx="31" cy="30" r="1.8"/><circle cx="36.5" cy="45" r="1.8"/><circle cx="25" cy="46" r="1.6"/><circle cx="33.5" cy="21.5" r="1.3"/></g>
+  <path d="M32 9 L 49 51 Q 32 57 15 51 Z" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle cx="32" cy="9" r="5.2" fill="#FFE27A" stroke="${INK}" stroke-width="2.4"/>
+  <path d="M29.6 7.2 q1.4 -1.6 3.2 -1" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+</svg>`;
+}
+
+/** Laço de cetim rosa com as pontas caídas e o nó no meio. */
+export function ribbonIcon() {
+  return `<svg class="ico ico-ribbon" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M29 34 L 20 56 L 26 53 L 29 59 L 33 37 Z M35 34 L 44 56 L 38 53 L 35 59 L 31 37 Z" fill="#E0568E" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M30 31 C 20 18, 6 20, 8 31 C 9 41, 22 42, 30 35 Z" fill="#F78DB8" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M34 31 C 44 18, 58 20, 56 31 C 55 41, 42 42, 34 35 Z" fill="#F78DB8" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M14 29 C 17 25, 22 25, 25 29 M50 29 C 47 25, 42 25, 39 29" fill="none" stroke="#FFD0E3" stroke-width="2" stroke-linecap="round"/>
+  <rect x="27" y="27" width="10" height="11" rx="3.5" fill="#E0568E" stroke="${INK}" stroke-width="2.4"/>
+</svg>`;
+}
+
+/** Vela do número 3: o 3 rosa com bolinhas, o pavio aceso e duas estrelinhas. */
+export function candleIcon() {
+  return `<svg class="ico ico-candle" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M32 4 C 36 9, 36 13, 32 15 C 28 13, 28 9, 32 4 Z" fill="#FFB63D" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M32 8.5 C 33.6 10.5, 33.6 12, 32 13 C 30.4 12, 30.4 10.5, 32 8.5 Z" fill="#FFF3B0"/>
+  <path d="M32 15 v4" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M20 26 C 21 18, 43 16, 44 26 C 45 32, 40 35, 36 36.5 C 41 38, 46 41, 45 48 C 44 59, 20 59, 19 50 L 27 48.5 C 28 52, 37 52, 37 47.5 C 37 43, 32 41.5, 28.5 41.5 L 28.5 33 C 32 33, 36.5 31.5, 36.5 28 C 36.5 23.5, 28.5 23.5, 27.5 27.5 Z"
+        fill="#FF8FC4" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+  <g fill="#FFF1D9"><circle cx="24.5" cy="24" r="1.7"/><circle cx="40.5" cy="27" r="1.7"/><circle cx="41" cy="47" r="1.7"/><circle cx="25" cy="53" r="1.5"/><circle cx="32" cy="38" r="1.4"/></g>
+  <path d="M10 20 l1.4 3 3.2 .4 -2.4 2.2 .7 3.2 -2.9 -1.6 -2.9 1.6 .7 -3.2 -2.4 -2.2 3.2 -.4 Z" fill="#FFD94D" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M54 36 l1 2.2 2.4 .3 -1.8 1.6 .5 2.4 -2.1 -1.2 -2.1 1.2 .5 -2.4 -1.8 -1.6 2.4 -.3 Z" fill="#FFD94D" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>
+</svg>`;
+}
+
+/** Ícone do item da fase ('carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle'). */
 export function itemIcon(item) {
+  if (item === 'hat') return hatIcon();
+  if (item === 'ribbon') return ribbonIcon();
+  if (item === 'candle') return candleIcon();
   if (item === 'glasses') return glassesIcon();
   if (item === 'book') return bookIcon();
   if (item === 'ball') return ballIcon();

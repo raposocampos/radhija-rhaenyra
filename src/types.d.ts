@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle' | 'rope';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -802,6 +802,49 @@ export interface Fase9Props extends LevelProps {
   doorHandleIn: WallButtonProp;
   /** Mesinha ao lado da poltrona: spot(objeto) = onde ele fica (o puzzle prende ali). */
   table: PropBase & HighlightProp & { spot(thing: Fase9Thing): THREE.Object3D };
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
+export type Fase10Thing = 'hat' | 'ribbon' | 'candle';
+export interface Fase10Props extends LevelProps {
+  /** Chapeuzinho de festa: no barquinho (setOnBoat: acompanha o barco) até alguém pegar. */
+  hat: ItemProp & { setOnBoat(on: boolean): void };
+  /** Laço de cetim amarrado no corrimão da casa na árvore. */
+  ribbon: ItemProp;
+  /** Vela do número 3 (com estrelinhas) na prateleira alta do galpão. */
+  candle: ItemProp;
+  /** Bolo de três andares: place(enfeite, andar) prende no lugar; reject(…, k 0..1, x, z) balança e cai; light() acende a vela. */
+  cake: PropBase & HighlightProp & {
+    place(thing: Fase10Thing, tier: number): void;
+    reject(thing: Fase10Thing, tier: number, k: number, x: number, z: number): void;
+    light(): void;
+  };
+  /** Piscininha: setLevel(k 0..1, altura da água), setFlow(água correndo, mangueira esmagada com a torneira aberta). */
+  pool: { setLevel(k: number, y: number): void; setFlow(on: boolean, blocked: boolean): void };
+  /** Barquinho: posição, altura (na água) e se o vento o está levando. */
+  boat: PropBase & { setPos(x: number, z: number, y: number, drifting: boolean): void };
+  /** Caixote de brinquedos (empurrável) em cima da mangueira. */
+  crate: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  /** Ventilador do quintal: setPower(on) gira a hélice e as fitinhas voam. */
+  fan: PropBase & { setPower(on: boolean): void };
+  /** Energia da festa (luzinhas da varanda e do quintal, tomada do ventilador, cabo com o pulso). */
+  power: { setOn(on: boolean): void };
+  /** Portãozinho do fundo (dobradiça) e a cordinha da trava (setTug 0..1). */
+  gate: GateProp;
+  cord: { setTug(k: number): void };
+  /** Pombo cochilando no corrimão da casa na árvore. peck() = bica e bate as asas em quem chega perto do laço. */
+  pigeon: PropBase & { setPose(p: PigeonPose): void; peck?(): void };
+  /** Cano de brinquedo do funil até o pombo: progresso (0..1) de cada baforada de cheiro lá dentro. */
+  tube: PropBase & { setPuffs(list: number[]): void; outletPuff?(): void };
+  /** Elevador de balde: altura do balde (0 no chão). */
+  bucket: PropBase & { setY(y: number): void };
+  /** Corda da roldana: handle = a ponta (vai na boca da Rhaenyra); setPull(metros puxados, quem segura). */
+  rope: { handle: THREE.Object3D; setPull(pulled: number, holder: DogModel | null): void };
+  /** Placa de pressão na frente do galpão e a porta basculante (0 fechada … 1 aberta). */
+  plate: PressProp;
+  shedDoor: GateProp;
+  breaker: WallButtonProp;
+  tap: WallButtonProp;
   collectibles: CollectibleProp[];
   reset(): void;
 }

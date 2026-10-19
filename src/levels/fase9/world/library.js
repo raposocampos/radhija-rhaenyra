@@ -5,7 +5,7 @@
 // com a luminária de banqueiro, livros, a xícara de chá, a lupa e as cadeiras.
 import * as THREE from 'three';
 import { rng, rbox, canvasTexture, stdMat, woodMat, contactShadow, shadowAll } from '../../../world/util.js';
-import { makeLink } from './links.js';
+import { makeLink } from '../../../world/links.js';
 
 const TAU = Math.PI * 2;
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));

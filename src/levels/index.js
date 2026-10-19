@@ -9,11 +9,12 @@ import fase6 from './fase6/index.js';
 import fase7 from './fase7/index.js';
 import fase8 from './fase8/index.js';
 import fase9 from './fase9/index.js';
+import fase10 from './fase10/index.js';
 
 // Fronteira heterogênea do catálogo: cada módulo já valida build/load/puzzle com
 // seu próprio LevelDef<FaseNProps>; o núcleo conserva os três na mesma definição.
 /** @type {import('../types').LevelDef[]} */
-export const LEVELS = [fase1, fase2, fase3, fase4, fase5, fase6, fase7, fase8, fase9];
+export const LEVELS = [fase1, fase2, fase3, fase4, fase5, fase6, fase7, fase8, fase9, fase10];
 export default LEVELS;
 
 /**

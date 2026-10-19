@@ -143,7 +143,7 @@ export function createDog(kind) {
     triggerBark() {
       st.bark = 0;
     },
-    /** Força a pose do item na boca: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | null (automático). */
+    /** Força a pose do item na boca: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle' | 'rope' | null (automático). */
     setCarryPose(kind) {
       carry.setForced(kind);
     },

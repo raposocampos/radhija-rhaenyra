@@ -376,9 +376,9 @@ export function createFeedback(opts) {
     if (time - lastPickupFx < 0.2) return;
     lastPickupFx = time;
     glowItem = null;
-    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee', sock: 'pickupSock', glasses: 'pickupGlasses', book: 'pickupBook' }[item] || 'pickupCarrot';
+    const snd = { ball: 'pickupBall', slipper: 'pickupSlipper', duck: 'pickupDuck', bear: 'pickupBear', frisbee: 'pickupFrisbee', sock: 'pickupSock', glasses: 'pickupGlasses', book: 'pickupBook', hat: 'pickupHat', ribbon: 'pickupRibbon', candle: 'pickupCandle' }[item] || 'pickupCarrot';
     sfx(snd, x, z);
-    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394', sock: '#FF9A8F', glasses: '#FFE8A3', book: '#F08A7E' }[item] || '#FFB46E';
+    const col = { ball: '#E6F27A', slipper: '#F9B8C9', duck: '#FFE066', bear: '#E8B98A', frisbee: '#FFA394', sock: '#FF9A8F', glasses: '#FFE8A3', book: '#F08A7E', hat: '#FF9ED2', ribbon: '#F7A8C8', candle: '#FFD46A' }[item] || '#FFB46E';
     particles.burst({ x, y: 0.35, z }, { kind: 'stars', count: 10, size: 0.85, speed: 0.8 });
     particles.ring({ x, y: 0, z }, { radius: 0.7, from: 0.1, life: 0.6, color: col, opacity: 0.55, width: 0.09 });
   }
@@ -623,6 +623,65 @@ export function createFeedback(opts) {
     particles.sparkle({ x, y: 0.7, z }, { count: 12, radius: 0.22, size: 0.9, rise: 0.9 });
     particles.ring({ x, y: 0.6, z }, { radius: 0.45, from: 0.08, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.07 });
   });
+  // festa no quintal (fase 10): água da piscininha, barquinho, balde da roldana, pombo, bolo, porta do galpão e o quadro
+  events.on('water:start', ({ x, z }) => sfx('waterStart', x, z));
+  events.on('water:flow', ({ x, z, lx, lz, y = 0.1 }) => {
+    sfx('waterGush', x, z, { dur: 0.9, volume: 0.8 });
+    if (Number.isFinite(lx)) particles.splash({ x: lx, y: y + 0.02, z: lz }, { count: 5, size: 0.55, strength: 0.4, mist: 2 });
+  });
+  events.on('water:stop', ({ x, z }) => sfx('waterStop', x, z));
+  events.on('water:full', ({ x, z }) => {
+    sfx('waterFull', x, z);
+    particles.sparkle({ x, y: 0.35, z }, { count: 14, radius: 0.6, size: 0.8, rise: 0.6, color: '#bfe6ff' });
+    particles.ring({ x, y: 0.28, z }, { radius: 0.9, from: 0.2, life: 0.8, color: '#dff4ff', opacity: 0.55, width: 0.07 });
+  });
+  events.on('boat:dock', ({ x, z }) => {
+    sfx('boatDock', x, z);
+    particles.ring({ x, y: 0.27, z }, { radius: 0.4, from: 0.08, life: 0.6, color: '#dff4ff', opacity: 0.5, width: 0.05 });
+  });
+  events.on('bucket:move', ({ x, z, up }) => sfx('pulleyCreak', x, z, { up }));
+  events.on('bucket:in', ({ x, z }) => sfx('bucketClank', x, z));
+  events.on('bucket:out', ({ x, z }) => {
+    sfx('bucketClank', x, z, { volume: 0.7 });
+    later(0.38, () => particles.dust({ x: x - 0.5, y: 0.03, z: z + 0.28 }, { count: 3, size: 0.6, alpha: 0.3, strength: 0.4 }));
+  });
+  events.on('deck:arrive', ({ x, z }) => later(0.45, () => sfx('deckThump', x, z)));
+  events.on('rope:grab', ({ x, z }) => sfx('ropeCreak', x, z));
+  events.on('rope:drop', ({ x, z }) => sfx('ropeCreak', x, z, { volume: 0.7 }));
+  events.on('pigeon:peck', ({ x, z }) => {
+    sfx('pigeonPeck', x, z);
+    particles.feathers({ x, y: 2.5, z }, { count: 3, size: 0.6 });
+  });
+  events.on('cake:place', ({ x, z, tier = 0 }) => {
+    sfx('cakePlace', x, z);
+    const y = (L().CAKE?.base ?? 0.8) + 0.12 + tier * 0.16;
+    particles.sparkle({ x, y, z: z + 0.1 }, { count: 14, radius: 0.25, size: 0.9, rise: 0.8 });
+    particles.ring({ x, y: y - 0.05, z }, { radius: 0.45, from: 0.1, life: 0.7, color: '#FFE09A', opacity: 0.55, width: 0.06 });
+  });
+  events.on('cake:wrong', ({ x, z, name }) => {
+    sfx('cakeWrong', x, z);
+    if (name) popIcon('curious', { follow: name, life: 1.3, size: 0.22 });
+  });
+  events.on('cake:fall', ({ x, z }) => {
+    sfx('cakeFall', x, z);
+    particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.6, alpha: 0.3, strength: 0.4 });
+  });
+  events.on('cake:lit', ({ x, z }) => {
+    sfx('partyHorn', x, z);
+    const y = (L().CAKE?.base ?? 0.8) + 0.55;
+    particles.burst({ x, y, z }, { kind: 'confetti', count: 46, size: 1 });
+    later(0.3, () => particles.sparkle({ x, y: y + 0.05, z }, { count: 18, radius: 0.3, size: 1, rise: 1.0, color: '#FFE39A' }));
+  });
+  events.on('shed:open', ({ x, z }) => sfx('shedOpen', x, z));
+  events.on('shed:close', ({ x, z }) => {
+    sfx('shedClose', x, z);
+    later(0.45, () => particles.dust({ x: x + 0.1, y: 0.04, z }, { count: 4, size: 0.7, alpha: 0.3, strength: 0.5 }));
+  });
+  events.on('painting:look', ({ x, z }) => {
+    sfx('paintingChime', x, z);
+    particles.sparkle({ x, y: 1.7, z: z + 0.15 }, { count: 10, radius: 0.45, size: 0.8, rise: 0.3, color: '#FFE8B0' });
+  });
+  events.on('item:drop', ({ x, z }) => sfx('itemDrop', x, z));
   events.on('bed:deliver', ({ x, z }) => {
     sfx('bedPlop', x, z);
     particles.sparkle({ x, y: 0.25, z }, { count: 12, radius: 0.25, size: 0.9, rise: 0.9 });
