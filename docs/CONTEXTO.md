@@ -22,6 +22,11 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (`?level=porcos&play`); testes `test/porcos.test.mjs`; suíte E2E `porcos` (`tools/scripts/test-porcos.mjs`) e
   capturas `tools/scripts/capture-porcos.mjs` (`shots/porcos-revisao/`). API e receita de integração: ARQUITETURA §7
   ("Porquinhos"), eventos em §8.
+- Retorno do usuário na prévia (2026-10-19): "ficou divertido, mas os porcos precisam atrapalhar mais: quando a dog
+  estiver com o objeto na boca, eles derrubam". Feito: `carries(nome)` no `update` e `knockItem(nome, hit)` da fase
+  (quem leva algo é o alvo preferido, de mais longe, mais rápido e sem cansar; o esbarrão derruba com
+  `knockChance` 0,85 depois de `knockGrace` 1,5 s; evento `pig:knock`); na arena, legume derrubado na horta vira
+  comida e a bolinha fica no chão até a dog pegar de novo (`item:land` no lugar de `veggie:drop`).
 - Próximo passo: CI e E2E `porcos` verdes no head do PR, revisar as capturas, entregar a prévia (link da arena) e
   esperar a aprovação. Depois do merge, avisar a sessão da fase 10 para integrar (conflitos esperados e simples em
   `e2e.yml`, `run-e2e.mjs`, `sounds.js`, `feedback.js`, `types.d.ts` e `test/helpers/props.mjs`).
