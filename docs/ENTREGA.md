@@ -84,7 +84,8 @@ deve ser salvo no repositório.
 
 Cada PR mantém a última prévia. Uma nova execução usa outra URL e remove a
 anterior: não testar um link antigo nem reaproveitar aprovação de outra versão.
-Os arquivos `version.json` identificam head, base, commit testado e execução.
+Os arquivos `version.json` identificam head, base, commit testado, execução e a
+versão do jogo (ver "Versão do jogo").
 No PR, o commit testado é o merge sintético do GitHub; na produção é o commit
 final do `main`. `main` é recompilado após o merge, com o lockfile versionado.
 Não se deve apresentar os dois commits como se fossem o mesmo SHA.
@@ -98,6 +99,30 @@ Prévia de PR fechado permanece disponível para comparação até limpeza de
 manutenção em `pages-state`. Não há limpeza automática de PRs encerrados nesta
 versão; monitorar o tamanho do site e remover apenas as prévias encerradas,
 sob a mesma serialização. O histórico Git conserva arquivos antigos.
+
+## Versão do jogo
+
+Um contador automático do tanto de mudanças (pedido do usuário, 2026-10-20):
+cada PR integrado ao `main` vira uma versão nova, sem nenhum passo manual.
+
+- **PATCH**: o número do campo `"version"` do `package.json` (normalmente
+  `x.y.0`) mais os commits de primeiro pai do `main` desde o último que mudou
+  esse campo. Como o `main` só recebe squash, cada PR soma um.
+- **Build**: todos os commits de primeiro pai do `main`; nunca volta. Os seis
+  commits laterais de dois merges antigos não contam.
+- **MAJOR.MINOR**: só mudam em marco pedido pelo usuário, editando o campo
+  (PATCH volta a 0) e a raiz do `package-lock.json`. A v0.10.0 fechou a demo
+  de 10 fases.
+
+O cálculo é `tools/deploy/version.mjs` (testes em `test/versao.test.mjs`). O
+checkout do CI usa `fetch-depth: 0`, e o script recusa um histórico raso. O
+passo **Calcular a versão do jogo** exporta `GAME_VERSION_INFO`. O Vite embute
+esse valor no jogo (`src/core/version.js`), e o `version.json` grava `version`,
+`build`, `pr` e `label` ao lado dos campos de identidade. Na prévia, `version`
+e `build` são os do main por baixo, e o canto do menu mostra
+`prévia PR #49 · sobre v0.10.0`. Builds sem esse passo (E2E manual,
+desempenho, servidor local) mostram `versão de desenvolvimento`. Depois de
+integrar, o `version.json` da produção deve ter o build da prévia + 1.
 
 ## Procedimento para os agentes
 
@@ -122,8 +147,9 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
    `POST` no mesmo endpoint com `environment_ids: [ID]`, `state: "approved"`
    e comentário que identifique a aprovação, o PR e a versão. Não inventar IDs
    nem enviar essa aprovação antes da manifestação humana.
-9. Aguardar deploy; conferir HTTP e `version.json` no link principal. Atualizar
-   contexto sem afirmar que testes pendentes passaram.
+9. Aguardar deploy; conferir HTTP e `version.json` (head, `version` e `build`)
+   no link principal. Atualizar contexto sem afirmar que testes pendentes
+   passaram.
 
 ## Recuperação
 
