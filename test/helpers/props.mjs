@@ -420,7 +420,7 @@ export function stubFase10Props(root, layout) {
     gate: gate(root, 'fase10.gate'),
     cord: checked('fase10.cord', { tug: 0, setTug(k) { this.tug = k; } }),
     pigeon: checked('fase10.pigeon', { object: object(root, 'pigeon'), pose: null, pecks: 0, setPose(p) { this.pose = { ...p }; }, peck() { this.pecks++; } }),
-    tube: checked('fase10.tube', { object: object(root, 'tube'), puffs: [], outs: 0, setPuffs(list) { this.puffs = list; }, outletPuff() { this.outs++; } }),
+    tube: checked('fase10.tube', { object: object(root, 'tube'), puffs: [], setPuffs(list) { this.puffs = list; } }),
     bucket: checked('fase10.bucket', { object: object(root, 'bucket'), y: 0, tilt: 1, setY(y) { this.y = y; }, setTilt(k) { this.tilt = k; } }),
     rope: checked('fase10.rope', { handle, pulled: 0, setPull(pulled, holder) { this.pulled = pulled; } }),
     shedDoor: gate(root, 'fase10.shedDoor'),

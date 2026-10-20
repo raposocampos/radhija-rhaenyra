@@ -46,11 +46,15 @@ export const GATE = { hinge: { x: 2.4, z: 0.6 }, latchPost: { x: 2.4, z: -0.6 },
 // ao sul, uma mureta baixa (0,3 m) para a câmera enxergar lá dentro. Grade no oeste (o vento passa).
 export const CORRIDOR = { x0: -0.6, x1: 2.25, z: 2.3, half: 0.32, door: { x0: 0.45, x1: 0.95 } };
 export const AC_UNITS = { depth: 0.34, height: 0.72 }; // aparelhos: de z - half - depth até z - half
-// Duto de exaustão: boca no fundo do corredor, sobe, passa por cima da mureta e sai ao lado do poleiro A.
+// Poleiros (altos: as dogs não alcançam). O pombo do portão começa no A; o B tem a placa (corda até a trava).
+export const PERCH_A = { x: 3.5, z: 2.3, y: 1.25, smellR: 0.55 };
+export const PERCH_B = { x: 3.5, z: -2.2, y: 1.25 };
+// Duto de exaustão: boca no fundo do corredor, sobe, passa por cima da mureta e sai ao lado do poleiro A, na altura do
+// pombo: a caixa da saída fica num pé, com o centro da boca (y) no peito dele.
 export const DUCT = {
   inlet: { x: 2.0, z: 2.3, r: 0.32 },
-  // exit: a nuvem sai pela boca (a 0,27 m do centro da caixa da saída, que tem colisor), não de dentro dela
-  outlet: { x: 2.85, z: 2.3, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.27 },
+  // exit: a nuvem sai pela boca da caixa (a face leste fica a 0,13 m do centro dela), não de dentro dela
+  outlet: { x: 2.85, y: PERCH_A.y + 0.15, z: 2.3, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.2 },
   travel: 1.0,
 };
 // Ventilador industrial num trilho norte–sul; sopra para o leste. Encaixa (marca amarela) em z = CORRIDOR.z.
@@ -59,9 +63,6 @@ export const FAN = {
   alignZ: 2.3, snap: 0.22,
   wind: { offset: 0.32, length: 3.4, halfWidth: 0.26, strength: 2.4 },
 };
-// Poleiros (altos: as dogs não alcançam). O pombo do portão começa no A; o B tem a placa (corda até a trava).
-export const PERCH_A = { x: 3.5, z: 2.3, y: 1.25, smellR: 0.55 };
-export const PERCH_B = { x: 3.5, z: -2.2, y: 1.25 };
 // Bacia d'água dos pombos com o patinho boiando.
 export const BASIN = { x: 5.0, z: 1.0, r: 0.36 };
 export const DUCK = { x: BASIN.x, z: BASIN.z, pickupR: 0.58 };
@@ -94,9 +95,10 @@ export const STATIC_COLLIDERS = [
   wallSeg('canos-vao-grande', CORRIDOR.door.x0, CORRIDOR.door.x1, acZ, AC_UNITS.depth / 2, { blocks: 'large' }),
   wallSeg('corredor-sul', CORRIDOR.x0, CORRIDOR.x1, CORRIDOR.z + CORRIDOR.half, 0.06, { height: 0.3 }),
   { id: 'grade', shape: 'box', x: CORRIDOR.x0 - 0.02, z: CORRIDOR.z, hx: 0.04, hz: CORRIDOR.half + 0.06 },
-  // duto: a caixa da boca no fundo do corredor e a da saída (num pé, do outro lado da mureta) (world/props.js)
+  // duto: a caixa da boca no fundo do corredor e o pé da caixa da saída (ela fica lá em cima, na altura do pombo,
+  // do outro lado da mureta) (world/props.js)
   { id: 'duto-boca', shape: 'box', x: 2.095, z: DUCT.inlet.z, hx: 0.155, hz: 0.24 },
-  { id: 'duto-saida', shape: 'box', x: DUCT.outlet.x, z: DUCT.outlet.z, hx: 0.13, hz: 0.19 },
+  { id: 'duto-saida', shape: 'circle', x: DUCT.outlet.x, z: DUCT.outlet.z, r: 0.06 },
   // zona A: mesa com guarda-sol, espreguiçadeiras, limoeiro no vaso
   { id: 'mesa-guarda-sol', shape: 'circle', x: -4.5, z: 1.2, r: 0.46 },
   // as duas cadeiras da mesa (assento a 0,45 m: ninguém passa por baixo) (world/props.js, buildDecor)

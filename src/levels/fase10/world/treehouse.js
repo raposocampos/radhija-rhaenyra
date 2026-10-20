@@ -538,10 +538,16 @@ export function buildTreehouse(root, layout) {
   const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.02, 18), legMat);
   foot.position.set(funnelPos.x, 0.01, cz);
   tubeGroup.add(funnel, funnelRim, cradle, stem, foot);
-  // o caminho do cano: desce do funil, corre até o poste do deque, sobe e curva até o corrimão
+  // o caminho do cano: desce do funil, corre até o poste do deque, sobe por ele e, na frente do corrimão, faz a curva
+  // que o deita na boca de trompete (virada para o pombo)
   // o poste do meio da frente (o cano sobe por ele até o corrimão, do lado do pombo)
   const post = DECK_POSTS.reduce((best, p) => (p.z > -4.5 && Math.abs(p.x - TUBE.inlet.x) < Math.abs(best.x - TUBE.inlet.x) ? p : best), DECK_POSTS[2]);
-  const mouth = new THREE.Vector3(PIGEON.x - 0.26, PIGEON.y + 0.08, PIGEON.z + 0.12);
+  const mouth = new THREE.Vector3(TUBE.mouth.x, TUBE.mouth.y, TUBE.mouth.z);
+  const bellDir = new THREE.Vector3(TUBE.outlet.dirX, 0, TUBE.outlet.dirZ);
+  // a curva: um quarto de círculo de raio `bend`, de subindo até deitado na direção da boca, 6 cm antes dela
+  const bend = 0.15;
+  const bendEnd = mouth.clone().addScaledVector(bellDir, -0.06);
+  const arc = (a) => bendEnd.clone().addScaledVector(bellDir, -bend * Math.cos(a)).setY(bendEnd.y - bend * (1 - Math.sin(a)));
   const tubePts = [
     new THREE.Vector3(funnelPos.x, funnelPos.y, funnelPos.z - 0.12),
     new THREE.Vector3(funnelPos.x, 0.16, funnelPos.z - 0.34),
@@ -549,7 +555,8 @@ export function buildTreehouse(root, layout) {
     new THREE.Vector3(post.x - 0.1, 0.14, post.z + 0.12),
     new THREE.Vector3(post.x - 0.1, 1.2, post.z + 0.12),
     new THREE.Vector3(post.x - 0.1, top - 0.1, post.z + 0.12),
-    new THREE.Vector3(post.x + 0.1, top + 0.12, post.z + 0.22),
+    arc(0).setY(top + 0.18),
+    arc(0), arc(Math.PI / 4), arc(Math.PI / 2),
     mouth,
   ];
   const tubeCurve = new THREE.CatmullRomCurve3(tubePts, false, 'centripetal', 0.35);
@@ -568,12 +575,13 @@ export function buildTreehouse(root, layout) {
     ring.lookAt(ring.position.clone().add(tubeCurve.getTangentAt(u1 * 0.999)));
     tubeGroup.add(ring);
   }
-  // boca de trompete virada para o pombo
-  const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.04, 0.16, 20, 1, true), new THREE.MeshPhysicalMaterial({ color: '#f6c453', roughness: 0.3, clearcoat: 0.7, side: THREE.DoubleSide }));
-  const bellDir = new THREE.Vector3(PIGEON.x - mouth.x, -0.02, PIGEON.z - mouth.z).normalize();
-  bell.position.copy(mouth).addScaledVector(bellDir, 0.06);
-  bell.lookAt(bell.position.clone().add(bellDir));
-  bell.rotateX(-Math.PI / 2);
+  // boca de trompete virada para o pombo: a ponta fina (do raio do cano) encaixa no fim dele e a beira larga fica em
+  // TUBE.outlet, por onde o cheiro sai
+  const bellLen = 0.16;
+  const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.04, bellLen, 20, 1, true), new THREE.MeshPhysicalMaterial({ color: '#f6c453', roughness: 0.3, clearcoat: 0.7, side: THREE.DoubleSide }));
+  bell.name = 'boca-do-cano';
+  bell.position.copy(mouth).addScaledVector(bellDir, TUBE.mouth.bell - bellLen / 2);
+  bell.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), bellDir); // o topo do cilindro (a beira larga) para o pombo
   tubeGroup.add(bell);
   // presilhas no poste
   for (const y of [0.6, 1.3]) {
@@ -681,7 +689,7 @@ export function buildTreehouse(root, layout) {
   seeThrough.push(slide);
 
   // ================================================================ estado
-  const st = { y: 0, tilt: 1, pull: 0, holder: /** @type {any} */ (null), puffs: /** @type {number[]} */ ([]), glow: 0, outT: -1, peckT: 0, flap: 0 };
+  const st = { y: 0, tilt: 1, pull: 0, holder: /** @type {any} */ (null), puffs: /** @type {number[]} */ ([]), glow: 0, peckT: 0, flap: 0 };
   const _bt = new THREE.Vector3();
   const _bp = new THREE.Vector3();
   const ropeTop = new THREE.Vector3(pulleyPos.x, pulleyPos.y - 0.06, pulleyPos.z);
@@ -725,9 +733,8 @@ export function buildTreehouse(root, layout) {
     },
     tube: {
       object: tubeGroup,
-      /** Progresso (0..1) de cada baforada dentro do cano. */
+      /** Progresso (0..1) de cada baforada dentro do cano (saindo, a nuvem do cheiro aparece na boca: TUBE.outlet). */
       setPuffs(list) { st.puffs = list || []; },
-      outletPuff() { st.outT = 0; },
     },
     pigeon: {
       object: pigeon.object,

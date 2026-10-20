@@ -283,7 +283,11 @@ try {
   await step(45);
   await shot('21b-cheiro-subindo-pelo-cano', { pos: [7.6, 1.8, -1.6], look: [7.1, 1.3, -3.9] });
   await until((i) => i.quintal.pigeon !== 'asleep', 300);
-  await step(30);
+  // a fumaça sai pela boca de trompete, lá em cima do lado do pombo (retorno do usuário: saía embaixo, no chão)
+  await step(12);
+  await shot('21c-cheiro-saindo-na-boca-do-cano', { pos: [8.85, 2.95, -2.45], look: [8.5, 2.58, -3.58] });
+  await shot('21d-cheiro-saindo-camera-do-jogo');
+  await step(18);
   await shot('22-pombo-voando', { pos: [8.6, 2.6, -1.3], look: [9.2, 3.0, -4.4] });
 
   // 5. o balde: a Radhija dentro, a Rhaenyra puxando, o deque, o laço e o escorregador

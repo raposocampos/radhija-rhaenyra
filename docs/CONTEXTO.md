@@ -1,11 +1,37 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
-caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-20, Claude** (superbafo pelos dutos: a fumaça sai na boca do cano da fase 10 e do duto
+da fase 4, na altura do pombo; #48, #53 e #54 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
+## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`)
+
+- Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
+  fumaça acaba saindo na parte de baixo, quando deveria sair na ponta do cano que está do lado do pombo"; fase 4, o duto
+  que leva o superbafo aos pombos "tem a saída muito baixa em comparação com onde está o pombo".
+- Causa: o cheiro (`src/game/mechanics/scent.js`) só tinha x e z; a nuvem e a poeirinha da saída (`scent:exit`, a
+  30 cm) eram desenhadas no chão. Na fase 10, a saída do cano era o x/z do pombo (embaixo do deque) e o puzzle apagava a
+  nuvem na hora: só a poeirinha aparecia, no chão; o `outletPuff` do cano não desenhava nada, e a boca de trompete
+  estava ao contrário (a beira larga encostada no cano). Na fase 4, a caixa da saída ficava a 0,5 m e o pombo a 1,27 m.
+- Feito:
+  - `scent.js`: `outlet.y` (altura da boca); a nuvem sai com `y` e `exitAge` e fica lá em cima; acima de 0,8 m passa
+    por cima dos colisores, do vento e das bocas do chão, e o `near` (o "eca" da Rhaenyra) não a alcança do chão;
+    `scent:exit` traz `y` e a direção; a prévia da mira também leva `y` (o anel da saída fica na boca).
+  - `scentView.js`: a nuvem fica na altura dela (a bolha do meio na altura da boca) e, saindo de um duto, nasce do
+    tamanho da boca e cresce em 0,4 s. `feedback.js`: a poeirinha sai na boca, soprada para fora.
+  - Fase 10: `TUBE.mouth` e `TUBE.outlet` no layout (a beira larga da boca, na altura do peito do pombo, soprando para
+    ele); o cano chega deitado numa curva e a boca de trompete foi desvirada (a beira larga para o pombo). A nuvem não
+    é mais apagada: sai da boca, envolve o pombo e se espalha lá em cima. Saiu o `outletPuff`, que não fazia nada.
+  - Fase 4: `DUCT.outlet.y` no peito do pombo do poleiro A (`PERCH_A.y + 0,15`); o tubo cruza a mureta nessa altura
+    e entra pelas costas da caixa da saída, num pé de ferro acima das dogs. O colisor `duto-saida` virou o do pé.
+- Testes: `test/saida-dos-dutos.test.mjs` (a mecânica, o desenho, o cenário real das duas fases e as duas partidas
+  em Node). Capturas novas: `21c` e `21d` (`capture-quintal.mjs`), `12` a `15` (`capture-pigeons.mjs`).
+- Não mexido: a fase 9 (a saída fica dentro do armário e o cenário desenha a baforada na grade) e a Arena do Bafo
+  (fase de desenvolvimento, com a caixa baixa de antes).
+- Validação: CI e E2E (`fase4` e `quintal`) registrados no PR. No PC, só `node --check` e `git diff --check`.
+- Próximo passo: com CI e E2E verdes, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+
+## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
 
 - Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
   balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
@@ -40,8 +66,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
 - Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
   E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
-- Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
-  só então integrar.
+- Integrado ao main com a aprovação do usuário (squash `3bd1b7b`, CI do main `39507063036`, deploy `39507237110`):
+  produção em v0.10.5 · build 97. Não repetir merge/deploy do #54.
 
 ## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 

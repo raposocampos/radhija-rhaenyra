@@ -363,7 +363,10 @@ estão livres, que as arestas não atravessam colisores e que o grafo é conexo 
   dela a nuvem é levada pela corrente e fica compacta. O objeto devolvido é mutável: mova a origem junto com o
   ventilador ou desligue com `enabled`.
 - **Duto** (`scent.addDuct({ inlet: {x, z, r}, outlet: {x, z, dirX, dirZ}, travel, active() })`): com `active()`
-  verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois.
+  verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois. Saída no alto
+  (`outlet.y`, a altura da boca, como o cano da fase 10 e o duto da fase 4): a nuvem sai e fica nessa altura (o
+  desenho e a poeirinha da saída também); lá em cima ela passa por cima dos colisores, do vento e das bocas do chão, e
+  quem está no chão não a alcança (`near`).
 - **Nariz** (`scent.addNose({ id, x, z, r, onSmell(nuvem) })`): alvo que reage uma vez por nuvem. É aqui que entram
   os tipos de alvo: animais que fogem (os pombos da fase 4 e da Arena do Bafo), mecanismos que espirram, plantas que recolhem.
 - **Prévia**: `scent.preview(tiro)` roda a mesma simulação sem efeitos; é o que a mira desenha.

@@ -464,14 +464,18 @@ export interface MoveIntent {
 // Cheiro (src/game/mechanics/scent.js) — nuvens do superbafo, vento, dutos e narizes
 // =====================================================================================================
 
-export interface ScentCloud { id: number; x: number; z: number; vx: number; vz: number; r: number; age: number; life: number; state: 'free' | 'duct' }
+/** y: altura (0 = no chão; ao sair de um duto, a da boca). exitAge: idade ao sair do último duto (-1: não saiu). */
+export interface ScentCloud { id: number; x: number; y: number; z: number; vx: number; vz: number; r: number; age: number; life: number; state: 'free' | 'duct'; exitAge: number }
 /** Faixa de vento a partir de (x, z) na direção (dirX, dirZ). Mova/desligue mexendo no próprio objeto. */
 export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; funnel?: number; enabled?: boolean }
 export interface ScentDuct {
   id?: string;
   inlet: { x: number; z: number; r: number };
-  /** exit: a nuvem sai a essa distância de (x, z), na direção (dirX, dirZ): a boca, fora do colisor da caixa (m). */
-  outlet: { x: number; z: number; dirX: number; dirZ: number; speed?: number; exit?: number };
+  /**
+   * exit: a nuvem sai a essa distância de (x, z), na direção (dirX, dirZ): a boca, fora do colisor da caixa (m).
+   * y: altura da boca (padrão 0, no chão); a nuvem sai e fica nessa altura.
+   */
+  outlet: { x: number; z: number; dirX: number; dirZ: number; speed?: number; exit?: number; y?: number };
   /** Segundos dentro do duto. */
   travel?: number;
   /** O duto só engole nuvens quando ativo (ex.: ventilador alinhado). */
@@ -482,8 +486,9 @@ export interface ScentShot { x: number; z: number; dirX?: number; dirZ?: number;
 export interface ScentField {
   spawn(shot: ScentShot): ScentCloud;
   update(dt: number): void;
-  preview(shot: ScentShot, opts?: { secs?: number; dt?: number }): { points: XZ[]; exits: XZ[]; inDuct: boolean };
-  near(x: number, z: number, margin?: number): ScentCloud | null;
+  preview(shot: ScentShot, opts?: { secs?: number; dt?: number }): { points: XYZ[]; exits: XYZ[]; inDuct: boolean };
+  /** y: altura de quem procura (padrão 0, o chão): uma nuvem muito acima ou abaixo não conta. */
+  near(x: number, z: number, margin?: number, y?: number): ScentCloud | null;
   windAt(x: number, z: number): XZ;
   addWind<T extends ScentWind>(w: T): T & Required<Pick<ScentWind, 'length' | 'halfWidth' | 'strength' | 'enabled'>>;
   addDuct(d: ScentDuct): ScentDuct;
@@ -491,7 +496,7 @@ export interface ScentField {
   reset(): void;
   /** Encerra a fase: libera a vista e remove ventos, dutos, narizes e callbacks. */
   dispose(): void;
-  showPreview(p: { points: XZ[]; exits: XZ[] }): void;
+  showPreview(p: { points: (XZ & { y?: number })[]; exits: (XZ & { y?: number })[] }): void;
   hidePreview(): void;
   readonly clouds: ScentCloud[];
   info(): object;
@@ -947,7 +952,7 @@ export interface Fase10Props extends LevelProps {
   /** Pombo cochilando no corrimão da casa na árvore. peck() = bica e bate as asas em quem chega perto do laço. */
   pigeon: PropBase & { setPose(p: PigeonPose): void; peck?(): void };
   /** Cano de brinquedo do funil até o pombo: progresso (0..1) de cada baforada de cheiro lá dentro. */
-  tube: PropBase & { setPuffs(list: number[]): void; outletPuff?(): void };
+  tube: PropBase & { setPuffs(list: number[]): void };
   /** Elevador de balde: altura do balde (0 no chão) e setTilt (1 = deitado no chão, boca para o sul; 0 = em pé). */
   bucket: PropBase & { setY(y: number): void; setTilt?(k: number): void };
   /** Corda da roldana: handle = a ponta (vai na boca da Rhaenyra); setPull(metros puxados, quem segura). */
