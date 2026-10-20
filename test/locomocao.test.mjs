@@ -254,10 +254,12 @@ test('locomoção nova: a pisada (som e pegada) sai no pouso da pata, também na
 /**
  * Roda um roteiro [[segundos, anim], ...] (na esteira: objeto parado) medindo o que o usuário via como tremedeira e
  * pata esticando: a correção do chão levantando/girando o corpo de um quadro para o outro, a pata afundando antes da
- * correção e, parada, a pata pulando de lugar.
+ * correção, a pata apoiada saindo do lugar com a dog parada e qualquer pata pulando mais que a de um passo (no ar, a
+ * pata anda rápido de verdade: no trote, uns 5 cm por quadro).
  */
 function transitions(d, script) {
-  const m = { lift: 0, dTilt: 0, low: 0, pop: 0, popAt: '', liftAt: '', lowAt: '', tiltAt: '' };
+  const m = { lift: 0, dTilt: 0, low: 0, pop: 0, popAt: '', liftAt: '', lowAt: '', tiltAt: '', jump: 0, jumpAt: '' };
+  let prevSwing = null;
   let prevTilt = d.tilt || 0;
   let prevPaws = null;
   let t = 0;
@@ -276,17 +278,19 @@ function transitions(d, script) {
         m.lowAt = `${label} ${t.toFixed(2)} s (${d.lowestBone}, locomoção ${d.gait.toFixed(2)})`;
       }
       const paws = pawsWorld(d);
-      if (prevPaws && !(anim.speed > 0)) {
+      const swing = d.locomotion.legs.map((l) => l.swing);
+      if (prevPaws) {
         for (let i = 0; i < 4; i++) {
           const jump = paws[i].distanceTo(prevPaws[i]);
-          if (jump > m.pop) {
-            const L = d.locomotion.legs[i];
-            m.pop = jump;
-            m.popAt = `${label} ${t.toFixed(2)} s (${PAWS[i]}, no ar ${L.swing}${L.timed ? ' por tempo' : ''}, u ${L.u.toFixed(2)}, locomoção ${d.gait.toFixed(2)})`;
-          }
+          const L = d.locomotion.legs[i];
+          const at = `${label} ${t.toFixed(2)} s (${PAWS[i]}, no ar ${L.swing}${L.timed ? ' por tempo' : ''}, u ${L.u.toFixed(2)}, locomoção ${d.gait.toFixed(2)})`;
+          if (jump > m.jump) { m.jump = jump; m.jumpAt = at; }
+          // parada, com a pata apoiada nos dois quadros (pela locomoção ou pela pose do guia)
+          if (!(anim.speed > 0) && !swing[i] && !prevSwing[i] && jump > m.pop) { m.pop = jump; m.popAt = at; }
         }
       }
       prevPaws = paws;
+      prevSwing = swing;
     }
   }
   return m;
@@ -306,10 +310,12 @@ test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular
     for (const [name, script] of Object.entries(scripts)) {
       const d = fresh(kind);
       const m = transitions(d, script);
-      report.push(`${kind} ${name}: corpo subiu até ${(m.lift * 1000).toFixed(1)} mm (${m.liftAt || '-'}), giro mudou até ${(m.dTilt * 57.3).toFixed(2)}°/quadro (${m.tiltAt || '-'}), afundou ${(m.low * 1000).toFixed(1)} mm antes da correção (${m.lowAt || '-'}), parada a pata pulou até ${(m.pop * 100).toFixed(2)} cm/quadro (${m.popAt || '-'})`);
+      report.push(`${kind} ${name}: corpo subiu até ${(m.lift * 1000).toFixed(1)} mm (${m.liftAt || '-'}), giro mudou até ${(m.dTilt * 57.3).toFixed(2)}°/quadro (${m.tiltAt || '-'}), afundou ${(m.low * 1000).toFixed(1)} mm antes da correção (${m.lowAt || '-'}), parada a pata apoiada andou até ${(m.pop * 100).toFixed(2)} cm/quadro (${m.popAt || '-'}), a pata mais rápida ${(m.jump * 100).toFixed(2)} cm/quadro (${m.jumpAt || '-'})`);
       if (m.lift > 0.004) bad.push(`${kind} ${name}: o corpo subiu ${(m.lift * 1000).toFixed(1)} mm (${m.liftAt})`);
       if (m.dTilt > 0.6 / 57.3) bad.push(`${kind} ${name}: o corpo girou ${(m.dTilt * 57.3).toFixed(2)}° num quadro`);
-      if (m.pop > 0.015) bad.push(`${kind} ${name}: parada, a pata pulou ${(m.pop * 100).toFixed(2)} cm num quadro (${m.popAt})`);
+      if (m.low < -0.012 && !/hips|body|spine/.test(m.lowAt)) bad.push(`${kind} ${name}: a pata afundou ${(m.low * 1000).toFixed(1)} mm (${m.lowAt})`);
+      if (m.pop > 0.012) bad.push(`${kind} ${name}: parada, a pata apoiada andou ${(m.pop * 100).toFixed(2)} cm num quadro (${m.popAt})`);
+      if (m.jump > 0.09) bad.push(`${kind} ${name}: a pata pulou ${(m.jump * 100).toFixed(2)} cm num quadro (${m.jumpAt})`);
     }
   }
   console.log(`[locomoção] trocas de pose\n  ${report.join('\n  ')}`);
