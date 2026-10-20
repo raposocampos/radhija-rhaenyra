@@ -33,11 +33,11 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   sai sem tranco e aparece acima do botão na tela; os modelos de verdade (atual e novo), com a pose do jogo quadro a
   quadro: deitada, a pele cabe no balde; nos pulos do deque, não cruza a parede abaixo da borda.
 - Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
-  E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
+  E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
   só então integrar.
 
-## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
+## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
 - Plano aprovado: o peito e a garupa na colisão (dois círculos) e a cabeça que desvia, sem mudar o gating dos puzzles.
   Pedidos do usuário para esta etapa (2026-10-20): "diminuir um pouco a velocidade da Radhija, ela está andando muito
@@ -133,9 +133,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
   - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
-- Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
-  cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
-  animações de interação).
+- Integrado ao main e publicado (squash `38f5677`, deploy `39496742933`; produção v0.10.4 · build 96). Não repetir
+  merge/deploy do #48. Depois: as animações acima e a etapa 5 (troca nas 10 fases e cascas de pelo mais leves só no
+  celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das animações de interação).
 
 ## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 
