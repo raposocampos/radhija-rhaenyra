@@ -1,7 +1,43 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, sexta rodada de retorno; #34 a #42 e #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 2: locomoção, PR #43; #33 a #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: modelos novos das dogs, etapa 2 de 5: locomoção (Claude, branch `claude/locomocao-dogs`)
+
+- Plano aprovado pelo usuário (etapas 1–5; a 1 entrou no #37). Etapa 2: locomoção própria do modelo novo em
+  `src/dogs/v2/gait.js`, por cima da pose do guia (sem mexer em `dogAnimation.js`, a pedido do orquestrador): pata
+  apoiada plantada no chão do mundo (sem patinar ao arrancar, frear, virar e na voltinha), balanço que prevê onde a
+  pata vai pousar, pulso e jarrete que rolam e dobram, escápula acompanhando a pata, tronco que desce quando a passada
+  pede alcance e passinhos de ajuste ao parar. Ritmo e pisadas continuam os do guia. Testes em
+  `test/locomocao.test.mjs`; capturas novas (`32-andando`, `33-parando`, `34-curva`, `35-galope`) em
+  `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
+- Fila: o #43 é o último da fila; branch atualizado com o main `03dcf1d` (fase 10, #33). A fase 10 trouxe o
+  agachadinho de preparo (`crouch`, só abaixa o tronco do guia: com as patas plantadas as pernas dobram junto) e
+  pulinhos roteirizados (`airK` dos locks, que a locomoção trata como pulo: sai e volta) — teste das trocas cobre.
+- Também: alcance da pata (estica até 4%, tronco desce até 1 cm, passo extra ou arrasto lento quando longe demais),
+  compasso que acelera em curva fechada (voltinha) e volta ao do guia, pisadas (som e pegada) no pouso de cada pata,
+  esteira só com a velocidade pedida, e a locomoção sai na hora no empurrão em pé e na parede. Medido no CI
+  `39341264410`: a pata apoiada escorrega até 0,5 mm por quadro no passo, trote e curva e até 0,74 mm na voltinha
+  (antes, presa ao corpo, vários centímetros). Capturas revisadas (E2E `canil` `39341411128`): parando assenta em
+  ~0,6 s; galope estica e recolhe.
+- O teste do modelo novo no empurrão (`test/empurrao.test.mjs`) comparava a subida/descida com o passo comum da
+  própria dog; como o passo novo afunda menos (−5,2 mm), a referência passou a ser a do passo do guia (−7,1 mm, #41).
+  A subida e a descida ainda são do guia: melhoram na etapa 3, quando o empurrão vier para as camadas do modelo novo.
+- 1ª prévia reprovada: "travando tudo, quando senta do nada a pata estica, ou dependendo do movimento fica se
+  tremendo toda; parece um ragdoll estranho". Causas e correções: na troca com as poses do guia, as rotações das
+  patas eram misturadas (a pata afundava e a correção do chão fazia o corpo saltar): agora a mistura é dos alvos das
+  juntas e, fora da locomoção pura, a pata segue a do guia; a correção do chão do corpo muda no máximo 0,5° e 2 mm por
+  quadro; a pata não atravessa o chão (gira no tornozelo; também resolveu o −9,6 mm da descida do empurrão, achado
+  do orquestrador); o balanço não salta (alvo contínuo, fase de cada pata suave, fim garantido). Testes com sementes
+  (`test/helpers/seeded.mjs`) e o das trocas de pose.
+- 2ª prévia (`0d48e63`): "na comemoração a pata fica acelerada e meio transparente, os passos são curtos; andando,
+  parece que a pata é de borracha, mole demais". Agora: a comemoração inteira e a voltinha antes do cocô ficam com as
+  patas do guia (as aprovadas); as dobras do pulso/jarrete/dedos voltaram às do modelo atual (antes iam até 1,8 rad no
+  pulso), a pata não estica mais (era até 4%) e a escápula mexe menos; numa curva fechada o compasso acelera no máximo
+  1,35× e, além disso, a pata gira com o corpo (pivô).
+- Próximo passo: CI, E2E `todas` no head final, prévia nova e aprovação do usuário; depois, etapa 3 (poses em
+  camadas, inclusive a do empurrão).
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 
@@ -105,7 +141,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
-- Em andamento, **PR #44** (branch `claude/porcos-testes-semente`, a partir do main `f50db80`): "o sininho não prende
+- Entregue (**PR #44**, squash `1b93b41`, deploy `39351131808`; branch `claude/porcos-testes-semente`): "o sininho não prende
   a dog no chiqueiro" falhou no CI da fase 10. Todos os testes de modelo, rebanho e arena de `test/porcos.test.mjs`
   agora rodam com semente fixa (`seededTest`), e uma varredura de sementes (desligada por padrão; liga com
   `PORCOS_SEMENTES`) rodou no CI: 200 sementes por teste de rebanho, 60 de arena e 10 de modelo. Achados: (1) bug real
@@ -114,7 +150,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   outro lado). Agora o passo de lado só vai para onde há lugar (cercas e folha; os outros porcos saem da frente), quem
   está atrás da folha sai primeiro pelo seu lado, e quem espera a vez abre caminho para quem a tem. (2) Só o teste: a
   distração media a distância final (o passeio pode dar a volta); agora mede quanto o porco anda. Com isso, a
-  varredura passou inteira. Fila do orquestrador: #43 → #44 → #33.
+  varredura passou inteira.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`); etapas 2 a 5 em andamento
 
@@ -283,7 +319,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   tela das fases mostra as oito fases (4 + 4) e `menuWith` (`test-expresso.mjs`) abre Jogar → Fases antes de ler.
 - Integrado ao main (squash `1cc73d0`, CI do main `39169001462`). Não repetir merge/deploy do #26.
 
-## Em andamento: demo de 10 fases (pedido de 2026-10-18)
+## Entregue: demo de 10 fases (pedido de 2026-10-18; a última, a fase 10, no PR #33)
 
 - Pedido do usuário: mais três fases criativas (8, 9 e 10, fechando a demo), puzzles mais complexos, **no mínimo
   dois objetos** em cada uma, a mecânica nova de **pulo na parede** da Rhaenyra (alcançar botões e alavancas no
@@ -291,8 +327,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **Ordem atual:** A, B, C e E entregues; **D (fase 10) em andamento**.
-- **D (em andamento, Claude): fase 10 "Festa no Quintal"**, branch `claude/fase10-quintal` (worktree próprio), base
+- **Ordem atual:** A, B, C, D e E entregues.
+- **D (entregue: PR #33, squash `03dcf1d`, deploy `39357683189`): fase 10 "Festa no Quintal"**, branch
+  `claude/fase10-quintal` (worktree próprio), base
   `efa779c`. Desenho aprovado pelo usuário em 2026-10-19 ("grande, complexa e a mais bonita"), com o pedido de que
   as duas fizeram **3 anos** (faixa "Feliz 3 anos", vela do número 3; o quadro mostra a festa de 2 anos). Três
   cenários: a casa em corte (sala com o quadro "Festa do ano passado", cozinha com o disjuntor), a varanda com o bolo

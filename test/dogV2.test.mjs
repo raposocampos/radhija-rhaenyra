@@ -178,6 +178,7 @@ function lowestByRegion(d, parts) {
   return low;
 }
 
+const LEG_BONES = new Set(['FLu', 'FLc', 'FRc', 'HLp', 'HRp']);
 const FOLLOW = [['body', 'body'], ['chest', 'chest'], ['hips', 'hips'], ['head', 'head'], ['FLu', 'FLu'], ['FLc', 'FLp'], ['FRc', 'FRp'], ['HLp', 'HLp'], ['HRp', 'HRp'], ['tail0', 'tail0']];
 
 for (const kind of KINDS) {
@@ -217,11 +218,14 @@ for (const kind of KINDS) {
         const low = lowestByRegion(d, parts);
         worst = worst.map((x, i) => Math.min(x, low[i]));
         // o osso novo e o atual no mesmo lugar (fora a subida do corpo quando a pose afundaria no chão; com o giro
-        // sobre as patas apoiadas, o corpo inteiro gira e a comparação não vale neste quadro)
+        // sobre as patas apoiadas, o corpo inteiro gira e a comparação não vale neste quadro). Andando, as patas são
+        // da locomoção própria do modelo novo (gait.js, testada em test/locomocao.test.mjs): aí só o tronco segue o guia.
         if (d.tilt || d.overlay) continue;
         d.driver.inner.updateMatrixWorld(true);
-        const rise = d.object.children[0].position.y - d.driver.inner.position.y;
+        // andando com a passada comprida, o tronco desce um pouco para as patas plantadas alcançarem o chão (gait.js)
+        const rise = d.object.children[0].position.y - d.driver.inner.position.y - (d.gait > 0 ? d.locomotion.drop : 0);
         for (const [n2, n1] of FOLLOW) {
+          if (d.gait > 0 && LEG_BONES.has(n2)) continue;
           byName(d.bones, n2).getWorldPosition(v);
           byName(d.driver.rig.bones, n1).getWorldPosition(w);
           follow = Math.max(follow, Math.hypot(v.x - w.x, v.y - w.y - rise, v.z - w.z));

@@ -16,6 +16,7 @@ import { withStart } from '../src/dogs/config.js';
 import { LEVELS } from '../src/levels/index.js';
 import empurra from '../src/levels/_empurra/index.js';
 import { createHeadlessGame, installBrowserStubs } from './helpers/headless.mjs';
+import { withSeed } from './helpers/seeded.mjs';
 import { buildLevelWorld } from './helpers/worldBuild.mjs';
 
 const DT = 1 / 60;
@@ -479,49 +480,59 @@ test('modelo novo (?dogs=novo): subir, empurrar e descer não afundam mais que o
   installBrowserStubs();
   const { createDogV2 } = await import('../src/dogs/v2/dog.js');
   const { SHOVE_PROP_SIZE } = await import('../src/world/shoveProps.js');
-  const d = createDogV2('rhaenyra');
   const world = createCollisionWorld({ WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } }, STATIC_COLLIDERS: [] });
-  // `lowest` é o ponto mais baixo ANTES da correção do chão do modelo novo (que levanta o corpo além de 4 mm): quanto
-  // mais fundo, maior o pulinho do corpo. Referência: andar e parar (o passo comum).
-  let walk = 0;
-  for (const v of [0.6, 1.2, 1.8]) {
-    for (let i = 0; i < 45; i++) { d.update(DT, { speed: v, action: 'none' }); walk = Math.min(walk, d.lowest); }
-    for (let i = 0; i < 15; i++) { d.update(DT, { speed: 0, action: 'none' }); walk = Math.min(walk, d.lowest); }
-  }
-  const worst = {};
-  for (const [name, y, over] of [['tronco', SHOVE_PROP_SIZE.tree.paws, 0], ['mesinha', SHOVE_PROP_SIZE.table.h, 0.05]]) {
-    // fases diferentes da passada quando ela começa e quando desce (o pior caso depende delas)
-    for (const warm of [0, 7, 14, 21]) {
-      const c = rhaenyra(0, -1.2 - warm * 0.004, Math.PI);
-      const S = { ...SPOT, y, over, kind: name };
-      const sync = () => {
-        const on = !!c.shove;
-        d.object.position.set(c.x, 0, c.z);
-        d.object.rotation.y = c.yaw;
-        d.update(DT, {
-          speed: c.animSpeed, action: on ? 'shove' : 'none', shoveK: on ? c.shoveK : 0,
-          shoveCycle: on && c.shoveStage === 'push' ? c.shoveCycle : -1, shoveN: c.shoveN,
-          shoveGap: c.r + SHOVE_GAP, shoveY: S.y, shoveOver: S.over,
-        });
-      };
-      for (let i = 0; i < warm + 5; i++) sync();
-      startShove(c, S);
-      for (let i = 0; i < 200 && c.shove; i++) {
-        c.shoveHeld = i < 70 + warm;
-        steer(c, DT, { dx: 0, dz: 0, speed: 0 });
-        integrate(c, DT, world);
-        c.shoveHit = null;
-        sync();
-        const k = c.shoveStage;
-        if (!(k in worst) || d.lowest < worst[k].low) worst[k] = { low: d.lowest, bone: d.lowestBone, name };
+  // a fase da passada e o relógio começam sorteados: várias sementes, cada uma sempre igual
+  const seeds = [11, 23, 37, 41, 59, 73];
+  const report = [];
+  for (const seed of seeds) withSeed(seed, () => {
+    const d = createDogV2('rhaenyra');
+    // `lowest` é o ponto mais baixo ANTES da correção do chão do modelo novo (que levanta o corpo além de 4 mm): quanto
+    // mais fundo, maior o pulinho do corpo. Referência: andar e parar (o passo comum).
+    let walk = 0;
+    for (const v of [0.6, 1.2, 1.8]) {
+      for (let i = 0; i < 45; i++) { d.update(DT, { speed: v, action: 'none' }); walk = Math.min(walk, d.lowest); }
+      for (let i = 0; i < 15; i++) { d.update(DT, { speed: 0, action: 'none' }); walk = Math.min(walk, d.lowest); }
+    }
+    const worst = {};
+    for (const [name, y, over] of [['tronco', SHOVE_PROP_SIZE.tree.paws, 0], ['mesinha', SHOVE_PROP_SIZE.table.h, 0.05]]) {
+      // fases diferentes da passada quando ela começa e quando desce (o pior caso depende delas)
+      for (const warm of [0, 7, 14, 21]) {
+        const c = rhaenyra(0, -1.2 - warm * 0.004, Math.PI);
+        const S = { ...SPOT, y, over, kind: name };
+        const sync = () => {
+          const on = !!c.shove;
+          d.object.position.set(c.x, 0, c.z);
+          d.object.rotation.y = c.yaw;
+          d.update(DT, {
+            speed: c.animSpeed, action: on ? 'shove' : 'none', shoveK: on ? c.shoveK : 0,
+            shoveCycle: on && c.shoveStage === 'push' ? c.shoveCycle : -1, shoveN: c.shoveN,
+            shoveGap: c.r + SHOVE_GAP, shoveY: S.y, shoveOver: S.over,
+          });
+        };
+        for (let i = 0; i < warm + 5; i++) sync();
+        startShove(c, S);
+        for (let i = 0; i < 200 && c.shove; i++) {
+          c.shoveHeld = i < 70 + warm;
+          steer(c, DT, { dx: 0, dz: 0, speed: 0 });
+          integrate(c, DT, world);
+          c.shoveHit = null;
+          sync();
+          const k = c.shoveStage;
+          if (!(k in worst) || d.lowest < worst[k].low) worst[k] = { low: d.lowest, bone: d.lowestBone, name };
+        }
       }
     }
-  }
-  const fmt = (w) => `${(w.low * 1000).toFixed(1)} mm (${w.bone}, ${w.name})`;
-  assert.ok(worst.push.low > -0.0045, `de pé, empurrando: só as almofadinhas no chão (${fmt(worst.push)})`);
-  for (const k of ['up', 'down']) {
-    // no main antes da correção a descida chegava a −12 mm (a pata de trás dobrava como num passo sem levantar o pé)
-    assert.ok(worst[k].low > walk - 0.003, `${k}: ${fmt(worst[k])}; o passo comum chega a ${(walk * 1000).toFixed(1)} mm`);
-    assert.ok(worst[k].low > -0.0095, `${k}: ${fmt(worst[k])}`);
-  }
+    const fmt = (w) => `${(w.low * 1000).toFixed(1)} mm (${w.bone}, ${w.name}, semente ${seed})`;
+    report.push(`semente ${seed}: passo ${(walk * 1000).toFixed(1)} mm, ${['push', 'up', 'down'].map((k) => `${k} ${fmt(worst[k])}`).join(', ')}`);
+    assert.ok(worst.push.low > -0.0045, `de pé, empurrando: só as almofadinhas no chão (${fmt(worst.push)})`);
+    for (const k of ['up', 'down']) {
+      // no main antes da correção a descida chegava a −12 mm (a pata de trás dobrava como num passo sem levantar o pé).
+      // Referência: o passo comum com as patas do guia (−7,1 mm, medido no #41); com a locomoção própria do modelo novo
+      // (gait.js, etapa 2) o passo afunda menos, e a subida e a descida (ainda do guia) continuam valendo pelo do guia
+      const ref = Math.min(walk, -0.0071);
+      assert.ok(worst[k].low > ref - 0.003, `${k}: ${fmt(worst[k])}; o passo comum chega a ${(walk * 1000).toFixed(1)} mm (guia: −7,1 mm)`);
+      assert.ok(worst[k].low > -0.0095, `${k}: ${fmt(worst[k])}`);
+    }
+  });
+  console.log(`[empurrão, modelo novo] ponto mais baixo antes da correção do chão:\n  ${report.join('\n  ')}`);
 });
