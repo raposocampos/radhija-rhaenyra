@@ -80,6 +80,16 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     (entrar e sair), dentro a 4–8 cm do meio com o corpo na almofada (10 cm), pata apoiada a 14–22 mm do chão
     embaixo dela, arrasto de 0 a 12 quadros (logo depois do pouso). Os raios do chão e do empurrar olham só malhas (as
     estrelinhas da caminha da fase 2 são sprites e quebrariam o raycast). Testes em `test/chao.test.mjs`;
+  - prévia `165dcb0`, retorno do usuário: "a 2 elas contornam, a 5 e 8 ainda está com problema na borda" (as dogs
+    em pé em cima dela). Causa: o jogo monta o chão logo depois de construir a fase, antes do primeiro quadro, e o
+    grupo da caminha (posto no lugar dela) ainda não tinha a posição no mundo: o chão a media na origem e, no jogo,
+    nem a almofada nem a borda contavam (os testes atualizavam a cena antes; reproduzido em Node com o `game.js`, o
+    cenário real e teclas). Corrigido (`updateWorldMatrix` com os pais, teste que falha sem a correção) e, do lado de
+    fora, a borda segura o corpo de quem está no chão (`rim: { r, t }`, `pushOffRims`, `keepOffRims`): a irmã
+    empurrada ou passando rente não fica em cima dela. Medido no jogo em Node (fases 5 e 8, seis jeitos de chegar, as
+    duas dogs): pulinhos para entrar e sair e, de fora, no máximo 4 quadros raspando. E2E `todas` `39484870979` do
+    `165dcb0`: 21 de 22 partes verdes; a `biblioteca` falhou uma vez (o E do ventilador) e passou ao repetir
+    (`39486030063`, mesmo commit);
   - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.

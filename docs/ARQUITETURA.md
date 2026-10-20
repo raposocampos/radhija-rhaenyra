@@ -335,8 +335,11 @@ que vem à frente; a apoiada que gira para cima de algo sobe nele). **Bordas** (
 caminhas grandes: fases 5 e 8 e a Arena dos Porquinhos): andando para ela, para entrar ou sair, a dog dá um pulinho
 por cima (`ground.planRimHop` decide, `game.js` `hopOverRim` chama `startHop` do controle: o caminho do pulo, com um
 arco de topo largo; as duas pulam, sem `dog:jump`; o pouso sai em `dog:land` com `hop`, baixinho e sem poeira). Indo
-para um lugar antes da borda (a comemoração perto dela), não pula. As caminhas pequenas para as duas (fase 2 e Arena
-do Empurrão) são sólidas (colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
+para um lugar antes da borda (a comemoração perto dela), não pula. Com o anel da borda (`rim: { r, t }`), do lado de
+fora ela segura o corpo de quem está no chão (`ground.pushOffRims`, `game.js` `keepOffRims` depois de cada movimento):
+ninguém fica parado em cima dela; dentro, livre. O chão mede cada desenho com a posição dos pais (`updateWorldMatrix`):
+o jogo o monta antes do primeiro quadro. As caminhas pequenas para as duas (fase 2 e Arena do Empurrão) são sólidas
+(colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
 por raios horizontais (`src/game/pushRest.js`: a face, a beirada e a altura das patas, pulando frestas), não na caixa
 de colisão.
 

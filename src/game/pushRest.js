@@ -52,7 +52,7 @@ function hitAt(meshes, x, y, z, dx, dz, far) {
  *   das patas nela; null se os raios não acham o desenho
  */
 export function pushRest(obj, at, { near, pref, scale = 1 }) {
-  obj.updateMatrixWorld(true);
+  obj.updateWorldMatrix(true, true);
   const meshes = meshesOf(obj);
   const dx = Math.sin(at.yaw), dz = Math.cos(at.yaw);
   const far = near + 0.6;

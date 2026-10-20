@@ -249,7 +249,7 @@ function dogBed(root, D) {
   g.add(rim, pad);
   // as dogs entram na caminha (game/ground.js): pisam na almofada e dão um pulinho por cima da borda
   pad.userData.walkable = true;
-  Object.assign(rim.userData, { walkable: true, rim: true });
+  Object.assign(rim.userData, { walkable: true, rim: { r: D.r, t: 0.09 } });
   g.position.set(D.x, 0, D.z);
   shadowAll(g);
   root.add(g);

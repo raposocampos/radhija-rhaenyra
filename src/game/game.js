@@ -9,7 +9,7 @@ import { createGameEvents } from './gameEvents.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
 import { pushRest } from './pushRest.js';
-import { createGround, walkablesOf, bodyGround, planRimHop } from './ground.js';
+import { createGround, walkablesOf, bodyGround, planRimHop, pushOffRims } from './ground.js';
 import { createController, placeController, steer, integrate, resolveDogBody, startDash, canDash, startJump, canJump, startHop, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
@@ -452,6 +452,16 @@ export function createGame({ engine, dogs, levels, params }) {
     startHop(c, hop.dx, hop.dz, hop);
   }
 
+  /** Do lado de fora de uma caminha, a dog no chão não fica em cima da borda (ground.pushOffRims): entra pulando. */
+  function keepOffRims(c) {
+    if (!ground?.rings.length || airborne(c) || locks[c.name]?.drive) return;
+    const p = pushOffRims(ground, c);
+    if (!p) return;
+    const res = world.resolve(p.x, p.z, c.r, c.size);
+    c.x = res.x;
+    c.z = res.z;
+  }
+
   /** Depois de um empurrãozinho fora do integrate, o peito e a garupa também saem de paredes e móveis. */
   function settleBody(c) {
     if (c.shove || c.wallDur > 0 || locks[c.name]?.drive) return; // movimento roteirizado: quem move cuida
@@ -681,6 +691,7 @@ export function createGame({ engine, dogs, levels, params }) {
       if (ra.bump) emit('dog:bump', { name: A.name, x: A.x, z: A.z, strength: ra.bump.strength });
     }
     if (stay[compName] && lick.target !== compName) softBlock(A, C, dt);
+    keepOffRims(A);
     anims[activeDog].action = action;
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
@@ -722,6 +733,7 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     world.setCompanionMode?.(false);
     if (!stay[compName] && !compLock && !licked) separate(C, A, dt);
+    keepOffRims(C);
     anims[compName].action = ci.action;
     setLook(compName, ci.lookAt);
     // Fase da lambida para as duas animações (a língua e o "ai, que bom" ficam no mesmo ritmo).
@@ -819,6 +831,7 @@ export function createGame({ engine, dogs, levels, params }) {
       if (!st.arrived) hopOverRim(c, intent, spot);
       steer(c, dt, intent);
       integrate(c, dt, world);
+      keepOffRims(c);
       anims[n].action = st.arrived ? 'celebrate' : 'none';
       setLook(n, st.arrived ? { x: celebCam.position.x, y: 1.0, z: celebCam.position.z } : null);
     }
@@ -854,6 +867,7 @@ export function createGame({ engine, dogs, levels, params }) {
         steer(c, dt, gi);
       } else steer(c, dt, { dx: 0, dz: 0, speed: 0 });
       integrate(c, dt, world);
+      keepOffRims(c);
     }
     if (state === 'title' || state === 'intro') {
       anims.radhija.action = 'none';

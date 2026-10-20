@@ -5,7 +5,9 @@
 // por um raio para baixo no desenho de agora (a placa que afunda ao ser pisada já vem afundada). Só as malhas contam
 // (o brilho de destaque em sprite, sem câmera no raio, quebraria o raycast do three.js). Bordas altas e fofas (a das
 // caminhas) levam também `userData.rim`: andando para elas a dog dá um pulinho por cima (rimAlong, game.js), em vez
-// de passar a pata por cima da borda (retorno do usuário: as dogs atravessavam as caminhas).
+// de passar a pata por cima da borda (retorno do usuário: as dogs atravessavam as caminhas). Com o anel da borda
+// (`rim: { r, t }`, o raio do meio do tubo e a meia largura, em volta da posição do desenho), de fora ela segura o
+// corpo de quem está no chão (pushOffRims): ninguém fica parado em cima dela.
 import * as THREE from 'three';
 import { shown, meshesOf } from './pushRest.js';
 
@@ -56,6 +58,35 @@ export function planRimHop(ground, c, gy, goal = null) {
   };
 }
 
+/**
+ * Do lado de fora de uma caminha, a borda segura o corpo da dog que está no chão (ela entra pulando, planRimHop): para
+ * onde levar o centro para o círculo do meio, o peito e a garupa saírem de cima da borda (empurra para fora, a partir
+ * do meio da caminha). Dentro, livre: deitada, a cabeça na borda. null se não precisa.
+ * @param {ReturnType<typeof createGround> | null} ground
+ * @param {{ x: number, z: number, yaw: number, r: number, cfg: { body?: { front: number, back: number, r: number } } }} c
+ */
+export function pushOffRims(ground, c) {
+  if (!ground?.rings.length) return null;
+  const b = c.cfg.body;
+  const sx = Math.sin(c.yaw), sz = Math.cos(c.yaw);
+  /** @type {[number, number][]} [quanto à frente do centro, raio] */
+  const circles = b ? [[0, c.r], [b.front - b.r, b.r], [b.r - b.back, b.r]] : [[0, c.r]];
+  let x = c.x, z = c.z, moved = false;
+  for (const g of ground.rings) {
+    for (let it = 0; it < 2; it++) {
+      const dx = x - g.x, dz = z - g.z, d = Math.hypot(dx, dz);
+      if (d < g.r || d > g.r + g.t + 0.8) break;
+      let need = 0;
+      for (const [o, rr] of circles) need = Math.max(need, g.r + g.t + rr - Math.hypot(x + sx * o - g.x, z + sz * o - g.z));
+      if (need < 1e-4) break;
+      x += (dx / d) * need;
+      z += (dz / d) * need;
+      moved = true;
+    }
+  }
+  return moved ? { x, z } : null;
+}
+
 /** Os desenhos marcados para pisar dentro de `root`. @param {THREE.Object3D | null} root */
 export function walkablesOf(root) {
   /** @type {THREE.Object3D[]} */
@@ -79,7 +110,10 @@ export function createGround(objects) {
   const rims = new Set();
   // cada desenho com o círculo (no chão) que o contém e as malhas dele: os longe nem entram no raio
   const items = objects.map((obj) => {
-    obj.updateMatrixWorld(true);
+    // com os pais: o jogo monta o chão logo depois de construir a fase, antes do primeiro quadro, quando o grupo da
+    // caminha (posto no lugar dela) ainda não calculou a posição no mundo (só com o próprio objeto, o círculo ficava
+    // na origem e a caminha não virava chão no jogo)
+    obj.updateWorldMatrix(true, true);
     box.setFromObject(obj);
     box.getBoundingSphere(sphere);
     const meshes = meshesOf(obj);
@@ -92,6 +126,16 @@ export function createGround(objects) {
     return { meshes, rim, x: sphere.center.x, z: sphere.center.z, r: sphere.radius };
   });
   const rimItems = items.filter((it) => it.rim);
+  /** @type {{ x: number, z: number, r: number, t: number }[]} anéis das bordas (pushOffRims), no mundo */
+  const rings = [];
+  const _p = new THREE.Vector3();
+  for (const obj of objects) {
+    const R = obj.userData.rim;
+    if (R && typeof R.r === 'number') {
+      obj.getWorldPosition(_p);
+      rings.push({ x: _p.x, z: _p.z, r: R.r, t: R.t ?? 0.1 });
+    }
+  }
   const TOP = Math.max(GROUND_MAX, ...maxOf.values());
   /** @type {THREE.Object3D[]} */
   const near = [];
@@ -144,5 +188,7 @@ export function createGround(objects) {
     get count() { return items.length; },
     /** Quantas bordas (caminhas) há para pular. */
     get rims() { return rimItems.length; },
+    /** Os anéis das bordas (pushOffRims). */
+    rings,
   };
 }
