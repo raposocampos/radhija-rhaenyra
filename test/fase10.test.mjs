@@ -1071,8 +1071,8 @@ seededTest('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=do
 // 4 min): para investigar um teste instável no CI, ligue com FASE10_SEMENTES=1 no passo de testes (ou troque o `skip`
 // por false num commit temporário). Cada partida headless deixa ouvintes globais: mais de ~350 num processo só estoura
 // a memória do CI.
-test('fase 10: varredura de sementes dos testes que dependem do sorteio', { skip: false }, async () => {
-  const from = Number(process.env.FASE10_SEMENTES_DE) || 121;
+test('fase 10: varredura de sementes dos testes que dependem do sorteio', { skip: !process.env.FASE10_SEMENTES }, async () => {
+  const from = Number(process.env.FASE10_SEMENTES_DE) || 1;
   /** @type {Record<string, string[]>} */
   const bad = {};
   for (const { name, fn, sweep } of SEEDED) {

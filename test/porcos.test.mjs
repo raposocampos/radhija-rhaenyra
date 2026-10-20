@@ -875,7 +875,7 @@ test('sons e efeitos: todo evento dos porquinhos tem som ou efeito no feedback, 
 // Varredura de sementes: roda cada teste com semente com muitas sementes (rebanho 200, arena 60, modelo 10) e lista o
 // que falhar. Desligada por padrão (leva ~50 s): para investigar um teste instável no CI, ligue com a variável
 // PORCOS_SEMENTES=1 no passo de testes (ou troque o `skip` por false num commit temporário).
-test('varredura de sementes de todos os testes com semente', { skip: false }, async () => {
+test('varredura de sementes de todos os testes com semente', { skip: !process.env.PORCOS_SEMENTES }, async () => {
   const bad = {};
   for (const { name, fn } of SEEDED) {
     const n = name.startsWith('porquinho') ? 10 : name.startsWith('arena') ? 60 : 200;
