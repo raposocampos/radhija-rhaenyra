@@ -143,6 +143,43 @@ export function createDogV2(kind) {
   const toObject = (out, i) => out.copy(retarget.P2[i]).applyQuaternion(inner.quaternion).add(inner.position);
   /** Meio de duas patas no referencial do objeto. */
   const pair = (out, a, b) => toObject(out, a).add(toObject(_pc, b)).multiplyScalar(0.5);
+  /**
+   * A pata não atravessa o chão: se a almofadinha afundaria (os dedos dobrados num passo baixo, por exemplo na volta
+   * do empurrão em pé), a pata gira no tornozelo até ficar rente ao chão, em vez de o corpo inteiro subir. Só a pata
+   * gira (ela não tem ossos filhos): o resto da pose não muda.
+   */
+  const PAW_IDX = [I2.FLp, I2.FRp, I2.HLp, I2.HRp];
+  const pawContacts = PAW_IDX.map((i) => contacts.filter((k) => k.i === i));
+  const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+  /** O ponto mais baixo da pata j com ela girada `ang` (rad, no eixo de lado do corpo) a partir da rotação _qa. */
+  function pawLow(j, ang) {
+    retarget.Q2[PAW_IDX[j]].copy(_qb.setFromAxisAngle(_X, ang).multiply(_qa));
+    return lowestPoint(pawContacts[j], retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+  }
+  function pawGuard() {
+    self.pawFix = 0;
+    for (let j = 0; j < 4; j++) {
+      const i = PAW_IDX[j];
+      _qa.copy(retarget.Q2[i]);
+      const low0 = lowestPoint(pawContacts[j], retarget.P2, retarget.Q2, inner.position, inner.quaternion);
+      if (low0 >= -GROUND_TOLERANCE) continue;
+      // para que lado girar sobe a almofadinha; quanto girar (duas aproximações, no máximo 0,8 rad)
+      const target = -GROUND_TOLERANCE * 0.75;
+      const up = pawLow(j, 0.12), dn = pawLow(j, -0.12);
+      const dir = up >= dn ? 1 : -1;
+      const slope = (Math.max(up, dn) - low0) / 0.12;
+      let ang = 0;
+      if (slope > 1e-4) {
+        ang = dir * Math.min(0.8, (target - low0) / slope);
+        const low = pawLow(j, ang);
+        if (low < target) ang = dir * Math.min(0.8, Math.abs(ang) + (target - low) / slope);
+      }
+      pawLow(j, ang);
+      bones[i].quaternion.copy(retarget.Q2[skel2.parentIdx[i]]).invert().multiply(retarget.Q2[i]);
+      self.pawFix = Math.max(self.pawFix, Math.abs(ang));
+    }
+  }
+
   /** Giro e subida aplicados pela correção do chão: mudam no máximo um tanto por quadro (sem tremer o corpo). */
   let tiltS = 0, liftS = 0, tiltFront = true;
   const TILT_STEP = 0.5 * Math.PI / 180, LIFT_UP = 0.002, LIFT_DOWN = 0.001; // por quadro a 60 qps
@@ -202,6 +239,7 @@ export function createDogV2(kind) {
     self.gait = gait.apply(dt, anim || {}, st, inner, object);
     self.overlay = roll.apply(anim?.extra, inner);
     if (self.gait > 0 || self.overlay > 0) retarget.refresh();
+    pawGuard();
     // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
     settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0, dt);
     earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
@@ -231,6 +269,8 @@ export function createDogV2(kind) {
     lowestBone: '',
     /** Peso da pose própria do modelo novo (a rolagem) sobre a do guia, no último quadro (0..1). */
     overlay: 0,
+    /** Quanto a pata mais girada no tornozelo para não atravessar o chão (rad), no último quadro. */
+    pawFix: 0,
     /** Peso da locomoção própria (gait.js) nas patas, no último quadro (0..1), e o estado dela (testes e capturas). */
     gait: 0,
     locomotion: gait,

@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { installBrowserStubs } from './helpers/headless.mjs';
+import { withSeed } from './helpers/seeded.mjs';
 
 installBrowserStubs();
 const { createDogV2 } = await import('../src/dogs/v2/dog.js');
@@ -14,6 +15,9 @@ const PAWS = ['FLp', 'FRp', 'HLp', 'HRp'];
 const DT = 1 / 60;
 const bone = (d, n) => d.bones.find((b) => b.name === n);
 const pawsWorld = (d) => PAWS.map((n) => bone(d, n).getWorldPosition(new THREE.Vector3()));
+
+/** Sementes dos testes com várias amostras (a fase da passada e o relógio do guia começam sorteados). */
+const SEEDS = Array.from({ length: 16 }, (_, i) => 1001 + i * 7919);
 
 /** Uma dog nova, parada um pouco (pose de pé). */
 function fresh(kind) {
@@ -75,44 +79,56 @@ function slideMeter(d) {
   return { out, each };
 }
 
-test('locomoção nova: andando no mundo, a pata apoiada fica plantada no chão (passo, trote e curva)', () => {
+test('locomoção nova: andando no mundo, a pata apoiada fica plantada no chão (passo, trote e curva; 4 sementes)', () => {
   const report = [];
   for (const kind of KINDS) {
     for (const [name, speed, turn] of [['passo', 0.7, 0], ['trote', 1.6, 0], ['curva', 0.9, 1.3]]) {
-      const d = fresh(kind);
-      walk(d, { speed, turn, secs: 1.0 });
-      const m = slideMeter(d);
-      walk(d, { speed, turn, secs: 2.0, each: m.each });
-      const o = m.out;
-      report.push(`${kind} ${name}: escorrega até ${(o.max * 1000).toFixed(2)} mm/quadro (${o.worst}), média ${(o.sum / Math.max(o.n, 1) * 1000).toFixed(3)}, ${o.lifts} passos, tronco desceu ${(d.locomotion.drop * 1000).toFixed(1)} mm`);
-      assert.ok(o.n > 120, `${kind} ${name}: patas apoiadas medidas (${o.n})`);
-      assert.ok(o.lifts >= 8, `${kind} ${name}: as patas dão passos (${o.lifts})`);
-      assert.ok(o.max < 0.003, `${kind} ${name}: a pata apoiada escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
+      const maxes = [];
+      for (const seed of SEEDS.slice(0, 4)) {
+        const o = withSeed(seed, () => {
+          const d = fresh(kind);
+          walk(d, { speed, turn, secs: 1.0 });
+          const m = slideMeter(d);
+          walk(d, { speed, turn, secs: 2.0, each: m.each });
+          return m.out;
+        });
+        maxes.push(o.max);
+        assert.ok(o.n > 120, `${kind} ${name} (semente ${seed}): patas apoiadas medidas (${o.n})`);
+        assert.ok(o.lifts >= 8, `${kind} ${name} (semente ${seed}): as patas dão passos (${o.lifts})`);
+        assert.ok(o.max < 0.003, `${kind} ${name} (semente ${seed}): a pata apoiada escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
+      }
+      report.push(`${kind} ${name}: escorrega até ${maxes.map((x) => (x * 1000).toFixed(2)).join(' / ')} mm/quadro`);
     }
   }
   console.log(`[locomoção] ${report.join('\n  ')}`);
 });
 
-test('locomoção nova: na voltinha da comemoração (o corpo anda o círculo com o objeto parado), a pata quase não patina', () => {
+test('locomoção nova: na voltinha da comemoração (o corpo anda o círculo com o objeto parado), a pata quase não patina (16 sementes)', () => {
   const report = [];
+  const bad = [];
   for (const kind of KINDS) {
-    const d = fresh(kind);
-    const m = slideMeter(d);
-    walk(d, {
-      speed: 0, secs: 2.0, action: 'celebrate', move: false,
-      // da metade da voltinha em diante (antes, a locomoção ainda está assumindo depois dos pulinhos)
-      each: (f) => { if (f / 60 >= 1.15 && f / 60 < 2.05) m.each(); },
-    });
-    const o = m.out;
-    report.push(`${kind}: escorrega até ${(o.max * 1000).toFixed(2)} mm/quadro (${o.worst}), média ${(o.sum / Math.max(o.n, 1) * 1000).toFixed(3)}, ${o.lifts} passos, ${d.locomotion.info.drags} arrastos${o.events.length ? `\n    ${o.events.join('\n    ')}` : ''}`);
-    console.log(`[locomoção] voltinha ${report[report.length - 1]}`);
-    assert.ok(o.n > 60, `${kind}: patas apoiadas na voltinha (${o.n})`);
-    assert.ok(o.lifts >= 6, `${kind}: as patas dão passos na voltinha (${o.lifts})`);
-    // a voltinha é bem fechada (raio de 20 cm, menor que a dog): numa curva assim a pata pode girar um pouco no chão
-    assert.ok(o.sum / Math.max(o.n, 1) < 0.001, `${kind}: na voltinha a pata apoiada escorrega em média ${(o.sum / o.n * 1000).toFixed(2)} mm por quadro`);
-    assert.ok(o.max < 0.008, `${kind}: na voltinha a pata escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
+    const runs = SEEDS.map((seed) => withSeed(seed, () => {
+      const d = fresh(kind);
+      const m = slideMeter(d);
+      walk(d, {
+        speed: 0, secs: 2.0, action: 'celebrate', move: false,
+        // da metade da voltinha em diante (antes, a locomoção ainda está assumindo depois dos pulinhos)
+        each: (f) => { if (f / 60 >= 1.15 && f / 60 < 2.05) m.each(); },
+      });
+      return { seed, o: m.out, drags: d.locomotion.info.drags };
+    }));
+    const sorted = runs.map((r) => r.o.max).sort((a, b) => a - b);
+    const worst = runs.reduce((a, b) => (b.o.max > a.o.max ? b : a));
+    report.push(`${kind}: máximo por semente (mm/quadro) mediana ${(sorted[sorted.length >> 1] * 1000).toFixed(2)}, pior ${(worst.o.max * 1000).toFixed(2)} (semente ${worst.seed}, ${worst.o.worst}, ${worst.drags} arrastos)${worst.o.events.length ? `\n    ${worst.o.events.join('\n    ')}` : ''}`);
+    for (const { seed, o } of runs) {
+      if (o.n < 60) bad.push(`${kind} ${seed}: patas apoiadas na voltinha (${o.n})`);
+      if (o.lifts < 6) bad.push(`${kind} ${seed}: as patas dão passos na voltinha (${o.lifts})`);
+      if (o.sum / Math.max(o.n, 1) > 0.001) bad.push(`${kind} ${seed}: escorrega em média ${(o.sum / o.n * 1000).toFixed(2)} mm por quadro`);
+      if (o.max > 0.004) bad.push(`${kind} ${seed}: escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
+    }
   }
   console.log(`[locomoção] voltinha\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad.slice(0, 6), []);
 });
 
 test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar', () => {
