@@ -181,8 +181,11 @@ try {
   await H.sleep(2700);
   await H.clearLog();
   await H.press('KeyE');
-  check((await info()).ball.holder === 'radhija' && !(await H.logOf('hint')).some((hint) => hint.text === earlyHint),
-    'interagir novamente com a bolinha na boca não anuncia que ela está no trem');
+  state = await info();
+  check(state.ball.holder === null && state.expresso.place.planet === 'tray' && !(await H.logOf('hint')).some((hint) => hint.text === earlyHint),
+    'E de novo com a bolinha na boca, na bandeja: ela volta para a bandeja (sem anunciar que está no trem)');
+  await H.press('KeyE');
+  check((await info()).ball.holder === 'radhija', 'E pega a bolinha-planeta de volta');
   // a outra boca: a Rhaenyra sai da placa, pega a lua e as duas levam juntas ao foguete
   await station('rhaenyra', { x: layout.TRAY.x + 0.1, z: layout.TRAY.z + 0.35, yaw: Math.PI });
   await H.press('KeyE');

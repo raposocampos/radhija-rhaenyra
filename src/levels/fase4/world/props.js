@@ -586,7 +586,8 @@ function buildBasin(root, layout, updaters) {
     ripple.offset.set(t * 0.02, t * 0.013);
     st.ripple = Math.max(0, st.ripple - dt * 0.8);
     waterMat.normalScale.setScalar(0.4 + st.ripple * 0.9);
-    if (duck.parent === root) {
+    // boiando na bacia (largado no chão, fora dela, fica parado)
+    if (duck.parent === root && Math.hypot(duck.position.x - home.x, duck.position.z - home.z) < 0.02) {
       duck.position.y = home.y + Math.sin(t * 2.1) * 0.006;
       duck.rotation.z = Math.sin(t * 1.7) * 0.05;
       duck.rotation.x = Math.sin(t * 1.3 + 1) * 0.04;

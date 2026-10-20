@@ -17,7 +17,8 @@
 //   ESTRELA: dentro da piñata, em cima da roseira. O superbafo a faz balançar para fora; a Rhaenyra pula e bate quando
 //     ela passa por cima; três batidas e ela abre.
 //   Nada trava: o enfeite errado volta para o chão, o balde desce sozinho, o caixote solto fica onde parou, o legume rebrota.
-import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
+//   Com um enfeite ou um legume na boca, E larga no chão à frente (nunca do outro lado de uma cerca); E perto pega de volta.
+import { createCarryItem, createCollectibles, createHints, reach, deliveredAt, dropSpot, inZones } from '../../game/puzzleKit.js';
 import {
   createDogEffects, createPushCrate, createWallButton, createHingedGate, createGooseNPC, createMud, createPigHerd,
 } from '../../game/mechanics/index.js';
@@ -232,12 +233,17 @@ export function createPuzzle(ctx) {
   // as galinhas do quintal (ambientação): fogem de quem chega de frente; latido as faz voar
   const chickens = createChickenFlock({ cfg: CHICKENS, world, root, emit, createChicken });
   const items = {
-    hat: createCarryItem({ obj: props.hat.object, dogs, scene: root, name: 'hat' }),
-    ribbon: createCarryItem({ obj: props.ribbon.object, dogs, scene: root, name: 'ribbon' }),
-    candle: createCarryItem({ obj: props.candle.object, dogs, scene: root, name: 'candle' }),
-    cookie: createCarryItem({ obj: props.cookie.object, dogs, scene: root, name: 'cookie' }),
-    star: createCarryItem({ obj: props.star.object, dogs, scene: root, name: 'star' }),
+    hat: createCarryItem({ obj: props.hat.object, dogs, scene: root, name: 'hat', emit, world }),
+    ribbon: createCarryItem({ obj: props.ribbon.object, dogs, scene: root, name: 'ribbon', emit, world }),
+    candle: createCarryItem({ obj: props.candle.object, dogs, scene: root, name: 'candle', emit, world }),
+    cookie: createCarryItem({ obj: props.cookie.object, dogs, scene: root, name: 'cookie', emit, world }),
+    star: createCarryItem({ obj: props.star.object, dogs, scene: root, name: 'star', emit, world }),
   };
+  /**
+   * Largado, o enfeite (ou o legume) não fica em volta da mesa do bolo (lá se entrega chegando perto) nem no lugar do
+   * balde do elevador.
+   */
+  const dropAvoid = inZones([GOAL, { x: BUCKET.x, z: BUCKET.z, r: BUCKET.r + 0.2 }]);
   const handle = createCarryItem({ obj: props.rope.handle, dogs, scene: root, name: 'rope', carrier: 'large' });
   // a porta basculante fechada é uma parede; o balde no chão é sólido para a Rhaenyra
   const doorCol = world.addDynamic({ id: 'porta-do-galpao', kind: 'gate', shape: 'box', x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, hx: SHED.t / 2, hz: (SHED.door.z1 - SHED.door.z0) / 2 });
@@ -430,6 +436,9 @@ export function createPuzzle(ctx) {
     }
     // depois de errar a ordem, o quadro da sala vem primeiro (até alguém olhar de perto)
     if (S.wrong > 0 && !S.lookedPainting) return { text: O.lookPainting, target: at(PAINTING.x, PAINTING.z + 0.1, PAINTING.y), stage: st };
+    // um enfeite que ficou no chão ali perto (largado ou derrubado): pegar de volta
+    const lyingNear = THINGS.find((t) => S.place[t] === 'floor' && !(S.reject && S.reject.thing === t) && Math.hypot(S.floor[t].x - c.x, S.floor[t].z - c.z) < 2.5);
+    if (lyingNear) return { text: fill(O.pickFloor, lyingNear), target: at(S.floor[lyingNear].x, S.floor[lyingNear].z, 0.3), stage: st };
     const pending = THINGS.filter((t) => S.place[t] !== 'cake');
     const homeLeft = pending.filter((t) => S.place[t] === 'home');
     const floorLeft = pending.filter((t) => S.place[t] === 'floor' && !(S.reject && S.reject.thing === t));
@@ -467,14 +476,11 @@ export function createPuzzle(ctx) {
     hints.now({ hat: 'gotHat', ribbon: 'gotRibbon', candle: 'gotCandle', cookie: 'gotCookie', star: 'gotStar' }[thing], 2.8, 0);
     notifyStage();
   }
+  /** Larga o enfeite à frente (nada no meio: nunca do outro lado de uma cerca); ele cai deitado e dá para pegar de volta. */
   function dropThing(thing, c) {
-    const x = c.x + Math.sin(c.yaw) * 0.32;
-    const z = c.z + Math.cos(c.yaw) * 0.32;
-    const res = world.resolve(x, z, 0.1, 'small');
-    items[thing].drop(res.x, res.z, 0);
+    const spot = items[thing].dropBy(c, { avoid: dropAvoid });
     S.place[thing] = 'floor';
-    S.floor[thing] = { x: res.x, z: res.z };
-    emit('item:drop', { name: c.name, item: thing, x: res.x, z: res.z });
+    S.floor[thing] = { x: spot.x, z: spot.z };
     notifyStage();
   }
   /** O enfeite chega no bolo: no andar certo ele fica; fora de ordem, balança e cai ao lado da mesa. */
@@ -511,11 +517,20 @@ export function createPuzzle(ctx) {
     const k = clamp01(r.t / 1.1);
     props.cake.reject(r.thing, r.tier, k, r.x, r.z);
     if (k >= 1) {
-      // no chão: vira um item comum (E pega de novo)
-      items[r.thing].drop(r.x, r.z, 0);
+      // no chão: vira um item comum (E pega de novo); ele assenta deitado do jeito dele
+      items[r.thing].putDown(r.x, r.z, { silent: true });
       emit('cake:fall', { item: r.thing, x: r.x, z: r.z });
       S.reject = null;
     }
+  }
+
+  /** Na frente do quadro da sala (E olha de perto, com ou sem algo na boca). */
+  const atPainting = (c) => inHouse(c) && Math.hypot(c.x - PAINTING.x, c.z - (PAINTING.z + 0.95)) < 1.0;
+  function lookPainting() {
+    S.lookedPainting = true;
+    cam?.focusShot(PAINTING.x, PAINTING.z + 1.4, { hold: 3.2, inT: 0.6, outT: 0.7, scale: 0.42, target: { x: PAINTING.x, y: PAINTING.y, z: PAINTING.z + 0.05 } });
+    hints.now('painting', 4, 0);
+    emit('painting:look', { x: PAINTING.x, z: PAINTING.z });
   }
 
   // ------------------------------------------------------------------ chapéu: água, barquinho e vento
@@ -1218,7 +1233,9 @@ export function createPuzzle(ctx) {
           const sx = ROSE_BUSH.x + (ox / oL) * (ROSE_BUSH.r + 0.4), sz = ROSE_BUSH.z + (oz / oL) * (ROSE_BUSH.r + 0.4);
           const res = world.resolve(sx, sz, 0.1, 'small');
           props.star.setShown?.(true);
-          items.star.drop(res.x, res.z, 0);
+          // ela sai de dentro da piñata e cai deitada no gramado
+          props.star.object.position.set(p.x, Math.max(0.1, p.y - PINATA.size * 0.5), p.z);
+          items.star.putDown(res.x, res.z, { silent: true });
           S.place.star = 'floor';
           S.floor.star = { x: res.x, z: res.z };
           emit('pinata:burst', { x: p.x, z: p.z });
@@ -1279,9 +1296,9 @@ export function createPuzzle(ctx) {
   function dropVeg(c) {
     const v = S.veg.held[c.name];
     if (!v) return;
-    const x = c.x + Math.sin(c.yaw) * 0.32, z = c.z + Math.cos(c.yaw) * 0.32;
-    const res = world.resolve(x, z, 0.1, 'small');
-    v.it.drop(res.x, res.z, 0);
+    // à frente, sem nada no meio (nunca do outro lado da cerca da horta); ele cai da boca até o chão
+    const res = dropSpot(world, c, { r: v.it.radius, avoid: dropAvoid });
+    v.it.putDown(res.x, res.z, { yaw: c.yaw + (Math.random() - 0.5) * 0.7, size: c.size });
     v.x = res.x;
     v.z = res.z;
     S.veg.held[c.name] = null;
@@ -1337,17 +1354,17 @@ export function createPuzzle(ctx) {
     const ux = dirX * 0.8 - dirZ * side * 0.6, uz = dirZ * 0.8 + dirX * side * 0.6, ul = Math.hypot(ux, uz) || 1;
     const res = landingFor(c, ux / ul, uz / ul, c.r + 0.35);
     if (v) {
-      v.it.drop(res.x, res.z, 0);
+      v.it.putDown(res.x, res.z, { yaw: c.yaw, size: c.size });
       v.x = res.x;
       v.z = res.z;
       S.veg.held[name] = null;
       S.veg.floor.push(v);
       feedPigs(v);
     } else {
-      items[thing].drop(res.x, res.z, 0);
+      // voa da boca para o lado do empurrão (item:drop ao soltar, item:land ao cair)
+      items[thing].putDown(res.x, res.z, { yaw: c.yaw + (Math.random() - 0.5) * 1.2, size: c.size });
       S.place[thing] = 'floor';
       S.floor[thing] = { x: res.x, z: res.z };
-      emit('item:drop', { name, item: thing, x: res.x, z: res.z });
       notifyStage();
     }
     hints.now('pigKnock', 3.6, 8);
@@ -1429,6 +1446,13 @@ export function createPuzzle(ctx) {
     if (S.onDeck && !S.deck) confineDeck(C.radhija);
     stepRamp(dt);
     stepReject(dt);
+    // a queda de quem foi largado (enfeites e legumes); no chão, o enfeite sai de baixo do que passar por cima
+    for (const t of THINGS) {
+      items[t].update(dt);
+      const f = items[t].floor;
+      if (S.place[t] === 'floor' && f && !(S.reject && S.reject.thing === t) && (S.floor[t].x !== f.x || S.floor[t].z !== f.z)) S.floor[t] = { x: f.x, z: f.z };
+    }
+    for (const v of S.veg.floor) v.it.update(dt);
     stepCrates(dt);
     stepClimb(dt);
     stepPinata(dt, C);
@@ -1493,10 +1517,13 @@ export function createPuzzle(ctx) {
     const nearPainting = inHouse(active) && Math.hypot(active.x - PAINTING.x, active.z - (PAINTING.z + 0.95)) < 1.0;
     const crateDo = !up ? crateAction(active) : null;
     const vegDo = !up && !crateDo ? vegAction(active) : null;
+    const mine = carriedBy(k);
     if (handle.holder === k) hints.setPrompt('ropeDrop');
     else if (up) hints.setPrompt(deckDo);
     else if (crateDo && TEXT.prompt[crateDo]) hints.setPrompt(crateDo);
     else if (vegDo) hints.setPrompt(vegDo);
+    // com um enfeite na boca: olhar o quadro (não precisa da boca) ou largar; perto da mesa do bolo, nada (lá entrega)
+    else if (mine && !S.riding) hints.setPrompt(nearPainting ? 'painting' : deliveredAt(GOAL, active, active) ? null : 'drop');
     else if (boardAction(active)) hints.setPrompt('board');
     else if (S.riding && k === 'radhija' && S.pulled < 0.05) hints.setPrompt('bucketOut');
     else if (canHat) hints.setPrompt('hat');
@@ -1524,12 +1551,14 @@ export function createPuzzle(ctx) {
       if (swinging && k === 'radhija') hints.cond('pinataJumpRad', 3.4, 10);
       else if (!swinging) hints.cond('pinataThorns', 3.6, 12);
     }
-    if (S.place.hat === 'home' && S.docked) props.hat.setHighlight(true);
+    // destaques: no lugar, quando dá para pegar; e no chão (largados ou derrubados), sempre
+    const lying = (t) => S.place[t] === 'floor';
+    if ((S.place.hat === 'home' && S.docked) || lying('hat')) props.hat.setHighlight(true);
     props.crate.setHighlight?.(crateOnHose() && k === 'rhaenyra');
-    props.ribbon.setHighlight(S.place.ribbon === 'home' && !pigeonAround());
-    props.candle.setHighlight(S.place.candle === 'home' && (inShed(ctrls.radhija) || doorOpen()));
-    props.cookie.setHighlight(S.place.cookie === 'home' && stairsReady());
-    props.star.setHighlight(S.place.star === 'floor');
+    props.ribbon.setHighlight((S.place.ribbon === 'home' && !pigeonAround()) || lying('ribbon'));
+    props.candle.setHighlight((S.place.candle === 'home' && (inShed(ctrls.radhija) || doorOpen())) || lying('candle'));
+    props.cookie.setHighlight((S.place.cookie === 'home' && stairsReady()) || lying('cookie'));
+    props.star.setHighlight(lying('star'));
     props.cake.setHighlight(THINGS.some((t) => items[t].holder));
     if (!S.wasPower && power()) emit('power:on', { x: BREAKER.x, z: BREAKER.z });
     S.wasPower = power();
@@ -1642,6 +1671,8 @@ export function createPuzzle(ctx) {
     const vg = vegAction(c);
     if (vg) return doVeg(c, vg);
     if (S.veg.held[c.name]) { dropVeg(c); return true; }
+    // com um enfeite na boca: o quadro (olhar não precisa da boca); senão larga à frente (perto da mesa do bolo, não)
+    if (carried && atPainting(c)) { lookPainting(); return true; }
     if (carried) {
       if (!deliveredAt(GOAL, c, c)) dropThing(carried, c);
       return true;
@@ -1671,13 +1702,7 @@ export function createPuzzle(ctx) {
       return true;
     }
     if (atBucket) { hints.now('bucketHeavy', 3.4, 2); return true; }
-    if (inHouse(c) && Math.hypot(c.x - PAINTING.x, c.z - (PAINTING.z + 0.95)) < 1.0) {
-      S.lookedPainting = true;
-      cam?.focusShot(PAINTING.x, PAINTING.z + 1.4, { hold: 3.2, inT: 0.6, outT: 0.7, scale: 0.42, target: { x: PAINTING.x, y: PAINTING.y, z: PAINTING.z + 0.05 } });
-      hints.now('painting', 4, 0);
-      emit('painting:look', { x: PAINTING.x, z: PAINTING.z });
-      return true;
-    }
+    if (atPainting(c)) { lookPainting(); return true; }
     if (inHorta(c) || (c.name === 'radhija' && Math.abs(c.x - HORTA.x0) < 0.6 && c.z > HORTA.z0 && c.z < HORTA.z1)) return false;
     return false;
   }

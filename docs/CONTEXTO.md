@@ -1,9 +1,30 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (largar e pegar os objetos em todas as fases; #47, #50 e #51 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
+## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
+
+- Pedido do usuário (2026-10-20, pela sessão dos modelos das dogs): "deveria ter a opção de largar e pegar os objetos
+  em todas as fases, não somente em algumas". Com o item na boca, E larga no chão à frente quando não há outra ação ali;
+  E perto pega de volta (só quem pode carregar: a pantufa e o livro, só a Rhaenyra).
+- Feito: `src/game/puzzleKit.js` (`dropSpot`, `inZones`, `mouthPoint`, `FLOOR_REACH`; `createCarryItem` com `dropBy`,
+  `putDown`, `floor`, `nearFloor` e `update`: o item cai da boca e pousa deitado do jeito dele, num ponto fora de
+  colisores, sem nada entre a dog e ele e ao alcance dela; se algo passar por cima, ele é empurrado para fora). As 10
+  fases: prompt "Largar…", objetivo "Pegue … de volta (E)", destaque no chão; largado de frente para a entrega, entrega;
+  fase 6: perto da bandeja a carga volta para ela; fase 7: dentro do túnel não larga; fases 9 e 10: o livro e os enfeites
+  caem num ponto seguro (antes, `world.resolve` podia jogá-los do outro lado da porta ou da cerca); fase 10: com algo na
+  boca, E na frente do quadro olha o quadro. A fase 1 passou a usar `createCarryItem` (o colisor do carrinho, do PR #48,
+  ficou intocado). Visual: o patinho largado fora da bacia não boia; a sombra da carga da fase 6 acompanha o chão.
+  Docs: ARQUITETURA §4 (peças prontas).
+- Testes: `test/pegar-largar.test.mjs` (as 10 fases, cerca, porta e cerca da horta, caixote por cima, entrega largando,
+  sorteio com semente); `test/fase6.test.mjs` e o E2E `test-expresso.mjs` ajustados (E com a carga na boca, na bandeja,
+  agora a devolve à bandeja). Nada rodou no PC além de `node --check`/`git diff --check`.
+- Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR não toca nesses arquivos. Quem entrar depois
+  sincroniza (o `docs/CONTEXTO.md` é o conflito esperado).
+- Próximo passo: CI, E2E `todas` no head final, prévia e aprovação do usuário no chat desta sessão.
+
+## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`)
 
 - Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
   0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
@@ -20,8 +41,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
   `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
   (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
-- Próximo passo: prévia e aprovação do usuário no chat; depois, integrar (squash com o SHA conferido), liberar o
-  deploy e conferir `version.json` (v0.10.1 · build 93). O #48 vem depois.
+- Integrado ao main (squash `0c22c48`, 2026-10-20). Não repetir merge/deploy do #51.
 
 ## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
