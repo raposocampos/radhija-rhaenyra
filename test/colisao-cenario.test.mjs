@@ -13,6 +13,13 @@ import { findLooseObstacles } from './helpers/obstaculos.mjs';
 
 const ALL = [...LEVELS, ...DEV_LEVELS];
 
+// Atravessáveis de propósito: capim, florzinhas soltas no gramado e os ossinhos (as dogs passam por cima para pegar).
+const SKIP = /^(grama-baixa|grama-alta|grama-do-morrinho|florzinhas|osso-.*)$/;
+const skipped = (o) => {
+  for (let p = o; p; p = p.parent) if (p.name && SKIP.test(p.name)) return true;
+  return false;
+};
+
 const fmt = (f) => {
   const s = f.suggest;
   const sug = s.shape === 'circle' ? `circle x ${s.x} z ${s.z} r ${s.r}` : `box x ${s.x} z ${s.z} hx ${s.hx} hz ${s.hz}`;
@@ -31,9 +38,10 @@ for (const [idx, def] of ALL.entries()) {
         name, size: L.DOGS[name].size, r: L.DOGS[name].radius, yMax: L.DOGS[name].visual.headTop * 0.85,
       }));
       const t0 = performance.now();
-      const found = findLooseObstacles(root, h.world, { dogs });
+      const found = findLooseObstacles(root, h.world, { dogs, tol: 0.06, skip: skipped });
       const ms = Math.round(performance.now() - t0);
       console.log(`\n#### AUDITORIA ${def.id}: ${found.length} achado(s) em ${ms} ms; colisores ${h.world.statics.length} estáticos, ${h.world.dynamics.length} dinâmicos${found.map(fmt).join('')}\n#### FIM ${def.id}`);
+      assert.equal(found.length, 0, `${found.length} desenho(s) na altura das dogs sem colisor`);
     } finally {
       dispose();
     }
