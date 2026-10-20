@@ -107,6 +107,7 @@ export function createGait({ skel2, retarget, s }) {
       // estado: no ar (swing), por tempo (passinho de ajuste) ou pela fase; u = progresso do balanço
       swing: false, timed: false, settle: false, u: 0, u0: 0, rate: 0, lift: 0, phSwing: false, stanceT: 0,
       over: false, dragged: false, stretch: 1,
+      off: -1, // fase desta pata no ciclo (a do guia, mudando devagar: passo ↔ trote sem a pata pular)
       foot: rest[idx[idx.length - 1]].clone(), from: V(),
       // alvos do quadro: junta de cima (ombro/quadril) antes da descida do tronco, pulso/jarrete, giro do tronco, dedos
       R0: V(), J: V(), qY: new THREE.Quaternion(), toe: 0,
@@ -261,9 +262,17 @@ export function createGait({ skel2, retarget, s }) {
     const own = gate > 0.98;
     const resumed = own && !wasOwn; // a locomoção acabou de voltar (depois de sentar, pular...)
     wasOwn = own;
+    const R = gaitRhythm(st, s);
     if (weight < 0.02 || teleport || lastG < 0) {
       ph = st.phase;
       lastG = st.phase;
+      for (let li = 0; li < 4; li++) legs[li].off = R.off[li];
+    }
+    // a fase de cada pata vai para a do ritmo no máximo 0,8 ciclo por segundo (do passo ao trote a pata não pula)
+    for (let li = 0; li < 4; li++) {
+      const leg = legs[li];
+      const e = fract(R.off[li] - leg.off + 0.5) - 0.5;
+      leg.off = fract(leg.off + clamp(e, -0.8 * dt, 0.8 * dt));
     }
     if (weight < 0.02) {
       // as patas estão na pose do guia (sentada, no ar...): a locomoção recomeça de onde elas estiverem
@@ -274,7 +283,6 @@ export function createGait({ skel2, retarget, s }) {
       }
     } else if (teleport) resetFeet(false);
 
-    const R = gaitRhythm(st, s);
     const moving = Math.abs(mv.v) > 0.05 || Math.abs(mv.w) > 0.35;
     still = moving ? 0 : still + dt;
     const fast = clamp(mv.v / 1.8, 0, 1);
@@ -308,11 +316,11 @@ export function createGait({ skel2, retarget, s }) {
         leg.swing = leg.timed = leg.settle = false;
         leg.stanceT = 1;
         leg.foot.lerp(P2[leg.idx[leg.idx.length - 1]], 1 - Math.exp(-12 * dt));
-        leg.phSwing = fract(ph + R.off[li]) >= R.beta;
+        leg.phSwing = fract(ph + leg.off) >= R.beta;
         continue;
       }
       if (!leg.swing) leg.stanceT += dt;
-      const p = fract(ph + R.off[li]);
+      const p = fract(ph + leg.off);
       const phSwing = p >= R.beta;
       const edge = phSwing && !leg.phSwing;
       leg.phSwing = phSwing;
@@ -336,14 +344,14 @@ export function createGait({ skel2, retarget, s }) {
         if (!leg.timed && !phSwing) {
           if (leg.u < 0.97) {
             leg.timed = true;
-            leg.rate = 1 / clamp(swingDur, 0.1, 0.3);
+            leg.rate = 1 / clamp(swingDur, 0.06, 0.3);
           } else leg.u = 1;
         }
         if (leg.timed) leg.u = Math.min(1, leg.u + leg.rate * dt);
         else {
-          // pela fase, mas sem pular adiante quando o ritmo muda (no máximo 1,6× um balanço normal por quadro)
+          // pela fase, mas nunca aos saltos (no máximo 3× um balanço normal por quadro)
           const uT = clamp((uPh - leg.u0) / Math.max(1 - leg.u0, 1e-3), 0, 1);
-          leg.u = clamp(uT, leg.u, leg.u + (1.6 * dt) / Math.max(swingDur, 0.05));
+          leg.u = clamp(uT, leg.u, leg.u + (3 * dt) / Math.max(swingDur, 0.05));
         }
         // pousa onde a pata vai estar no meio do próximo apoio (prevê pela velocidade medida, que muda suave: parando,
         // o alvo vai chegando ao lugar dela sem pular); o passinho de ajuste vai direto ao lugar
@@ -381,7 +389,7 @@ export function createGait({ skel2, retarget, s }) {
     let need = 0;
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
-      const stanceK = leg.swing ? 0 : clamp(fract(ph + R.off[li]) / R.beta, 0, 1); // 0 = pousou, 1 = decolando
+      const stanceK = leg.swing ? 0 : clamp(fract(ph + leg.off) / R.beta, 0, 1); // 0 = pousou, 1 = decolando
       leg.stanceK = leg.swing ? -1 : stanceK;
       const su = leg.swing ? leg.u : 0;
       const flex = leg.swing ? sstep(0, 0.28, su) * (1 - sstep(0.55, 0.92, su)) : 0;

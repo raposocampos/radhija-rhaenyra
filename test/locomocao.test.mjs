@@ -318,7 +318,8 @@ test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular
       if (m.dTilt > 0.6 / 57.3) bad.push(`${kind} ${name}: o corpo girou ${(m.dTilt * 57.3).toFixed(2)}° num quadro`);
       if (m.low < -0.012 && !/hips|body|spine/.test(m.lowAt)) bad.push(`${kind} ${name}: a pata afundou ${(m.low * 1000).toFixed(1)} mm (${m.lowAt})`);
       if (m.pop > 0.012) bad.push(`${kind} ${name}: parada, a pata apoiada andou ${(m.pop * 100).toFixed(2)} cm num quadro (${m.popAt})`);
-      if (m.jump > 0.09) bad.push(`${kind} ${name}: a pata pulou ${(m.jump * 100).toFixed(2)} cm num quadro (${m.jumpAt})`);
+      // no ar a pata anda rápido de verdade (arrancando no trote, uns 10 cm por quadro): pulo é bem mais que isso
+      if (m.jump > 0.13) bad.push(`${kind} ${name}: a pata pulou ${(m.jump * 100).toFixed(2)} cm num quadro (${m.jumpAt})`);
     }
   }
   console.log(`[locomoção] trocas de pose\n  ${report.join('\n  ')}`);
