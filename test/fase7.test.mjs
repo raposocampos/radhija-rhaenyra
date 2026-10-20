@@ -353,6 +353,60 @@ test('fase 7: o trinco do portão só abre por dentro', async (t) => {
   assert.equal(h.puzzle.navFlags().tunnel, false, 'com o portão aberto, a companheira não usa o túnel');
 });
 
+// A folha abre para dentro, por cima de onde a Radhija puxa o trinco. Antes, a colisão de cada quadro a arrastava
+// junto com a folha e onde ela terminava dependia do passo do quadro: a 30 e a 20 fps (o E2E sob carga, celular
+// lento), atrás da folha aberta, e a Rhaenyra que entrava pelo vão não lambia ("Tem cerca no meio").
+test('fase 7: o portão abre sem arrastar a Radhija: ela pula para fora da folha, no mesmo lugar a 60, 30 e 20 fps', async (t) => {
+  const h = await campaign(t, 'stage=inside');
+  const G = L.GATE;
+  const rad = h.ctrls.radhija;
+  const FPS = [60, 30, 20];
+  /** Puxa o trinco de (x, z) com quadros de dt e espera a folha abrir; devolve onde a Radhija ficou. */
+  const open = (x, z, dt) => {
+    h.puzzle.jumpToStage('inside');
+    h.releaseAll();
+    assert.equal(h.game.activeDog, 'radhija');
+    h.teleport('radhija', x, z, 0.3);
+    h.game.setStay('rhaenyra', true);
+    h.run(0.2, { dt });
+    h.clearLog();
+    h.keyDown('KeyE');
+    h.step(dt);
+    h.keyUp('KeyE');
+    assert.ok(h.run(2, { dt, until: (i) => i.lambe.gateOpen }), `(${x.toFixed(2)}, ${z.toFixed(2)}): destravou`);
+    h.step(dt);
+    assert.equal(h.dogs.radhija.anim.action, 'startled', 'pulinho assustado quando a folha vem');
+    h.run(1.3, { dt }); // a folha leva 1 s
+    assert.ok(info(h).gate.t > 0.99, 'o portão abriu inteiro');
+    return { x: rad.x, z: rad.z };
+  };
+  // de onde ela alcança o trinco: o E2E para a até 0,12 m do ponto de referência; o último fica perto da dobradiça
+  for (const [ox, oz] of [[0, 0], [-0.1, 0], [0.1, 0], [0, -0.1], [-0.08, -0.08], [-0.4, 0.05]]) {
+    const x = L.LATCH.x + ox;
+    const z = L.LATCH.z - 0.05 + oz;
+    const ends = FPS.map((fps) => open(x, z, 1 / fps));
+    ends.forEach((p, k) => {
+      const where = `(${x.toFixed(2)}, ${z.toFixed(2)}) a ${FPS[k]} fps → (${p.x.toFixed(2)}, ${p.z.toFixed(2)})`;
+      assert.ok(p.x > G.hinge.x && Math.hypot(p.x - G.hinge.x, p.z - G.hinge.z) > G.length + rad.r, `${where}: fora do alcance da folha, do lado do vão`);
+      assert.ok(Math.hypot(p.x - ends[0].x, p.z - ends[0].z) < 0.01, `${where}: o mesmo lugar que a 60 fps`);
+    });
+  }
+  // como no E2E sob carga (20 fps): a Rhaenyra entra pelo vão e o Lambe-Lambe limpa a irmã
+  const dt = 1 / 20;
+  open(L.LATCH.x, L.LATCH.z - 0.05, dt);
+  select(h, 'rhaenyra');
+  h.teleport('rhaenyra', L.LATCH.x - 0.35, L.LATCH.z - 0.75, 0.4);
+  h.game.setStay('radhija', true);
+  h.run(0.25, { dt });
+  h.clearLog();
+  h.keyDown('KeyL');
+  assert.ok(h.run(6, { dt, until: (i) => i.lambe.mud.radhija.k === 0 }), 'cinco lambidas limpam a Radhija');
+  h.keyUp('KeyL');
+  assert.equal(h.log('lick:start').length, 1);
+  assert.equal(h.log('mud:lick').length, 5);
+  assert.ok(!hints(h).some((x) => x.startsWith('Tem cerca no meio')), 'nenhuma folha entre as duas');
+});
+
 test('fase 7: cinco lambidas tiram a lama em placas; ela sacode e a arrancada volta', async (t) => {
   const h = await campaign(t, 'stage=muddy&dog=rhaenyra');
   assert.equal(h.game.activeDog, 'rhaenyra');
@@ -633,6 +687,8 @@ test('fase 7: partida completa andando — túnel, trinco, Lambe-Lambe, escorreg
   h.walkTo(L.LATCH.x, L.LATCH.z - 0.05, { tol: 0.12 });
   h.tap('KeyE');
   waitFor(h, (i) => i.gateOpen, 'portão aberto', 4);
+  // a folha abre por cima do trinco: a Radhija pula para trás, para fora do caminho dela (trava a troca nesse pulinho)
+  waitFor(h, (i) => !i.effects.radhija.busy, 'a Radhija sai do caminho da folha', 1);
   // 3. a Rhaenyra vem pelo portão e lambe a irmã até limpar
   h.tap('KeyQ');
   assert.equal(h.game.activeDog, 'rhaenyra');

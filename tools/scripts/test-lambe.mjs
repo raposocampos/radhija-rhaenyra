@@ -111,7 +111,7 @@ try {
   state = await info();
   const L = await ev(() => {
     const l = window.__game.layout;
-    return { TUNNEL: l.TUNNEL, LATCH: l.LATCH, FENCE: l.FENCE, SLIDE: l.SLIDE, SLIDE_ENTRY: l.SLIDE_ENTRY, BALL: l.BALL, GOAL: l.GOAL };
+    return { TUNNEL: l.TUNNEL, LATCH: l.LATCH, FENCE: l.FENCE, GATE: l.GATE, SLIDE: l.SLIDE, SLIDE_ENTRY: l.SLIDE_ENTRY, BALL: l.BALL, GOAL: l.GOAL };
   });
   check(state.levelId === 'fase7' && state.stage === 'start', 'link por id (?level=fase7) abre a fase 7');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
@@ -157,6 +157,10 @@ try {
   check(lambe(state).gateOpen, 'a Radhija destrava o portão por dentro');
   await H.gsleep(900);
   await shot('04-portao-aberto.png');
+  // a folha abre por cima do trinco: a Radhija pula para fora do caminho dela, do lado do vão (antes, sob carga, a
+  // folha a arrastava para trás dela e a Rhaenyra não a alcançava para o Lambe-Lambe)
+  const rad = await ev(() => { const c = window.__game.game.debug.ctrls.radhija; return { x: c.x, z: c.z, r: c.r }; });
+  check(rad.x > L.GATE.hinge.x && Math.hypot(rad.x - L.GATE.hinge.x, rad.z - L.GATE.hinge.z) > L.GATE.length + rad.r, 'a folha do portão não arrasta a Radhija (ela pula para o lado do vão)', `${rad.x.toFixed(2)}, ${rad.z.toFixed(2)}`);
 
   // Lambe-Lambe até limpar
   await station('rhaenyra', { x: L.LATCH.x - 0.35, z: L.LATCH.z - 0.75, yaw: 0.4 });
@@ -166,6 +170,8 @@ try {
   await shot('05-lambe-lambe.png');
   state = await waitFor((i) => lambe(i).mud.radhija.k === 0, { timeout: 8000 });
   await page.keyboard.up('KeyL');
+  // pelo registro da página (não depende de a leitura pegar o instante): a lambida começou e foi na irmã
+  check((await H.logOf('lick:start')).some((l) => l.name === 'rhaenyra' && l.target === 'radhija'), 'segurar L com a Rhaenyra começa o Lambe-Lambe na irmã', (await H.logOf('hint')).map((h) => h.text).join(' | '));
   check(lambe(state).mud.radhija.k === 0, 'cinco lambidas limpam a Radhija');
   check((await H.logOf('mud:lick')).length === 5 && (await H.logOf('mud:clean')).length === 1, 'cada lambida tira uma placa; a última deixa limpinha');
   await H.gsleep(800);

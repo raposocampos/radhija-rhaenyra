@@ -1,7 +1,23 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (fase 10: chão da horta, lama e chiqueiro, PR #49; #33 a #46 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (falha intermitente do E2E `lambe`: o portão da fase 7 arrastava a Radhija; #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
+
+- Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
+  0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
+- Causa (bug do jogo, não do teste): a folha do portão abre para dentro, por cima de onde a Radhija puxa o trinco, e a
+  colisão de cada quadro a arrastava junto. Onde ela terminava dependia do passo do quadro: simulando a mesma partida
+  em Node, a 60 fps ela saía do lado do vão; a 30 e a 20 fps (CI lento, celular fraco), parava em (1,18; 0,7), atrás
+  da folha aberta. A Rhaenyra que entra pelo vão recebia "Tem cerca no meio!" e, com o L segurado, a lambida não
+  recomeçava. As capturas `05-lambe-lambe` das duas falhas mostram a folha entre as duas e a Rhaenyra sem virar.
+- Correção: `createHingedGate().sweepExit(ctrl)` (a folha, abrindo, vai passar pela dog? para onde ela sai, além da
+  ponta) e, na fase 7, quem está no caminho dá um pulinho assustado para lá (`effects.pushTo`, 0,3 s, olhando o
+  portão). Mesmo lugar a 60, 30 e 20 fps. Teste novo em `test/fase7.test.mjs`; a partida completa em Node espera o
+  pulinho antes de trocar de dog. O E2E ganhou a checagem da posição depois do portão e a do início da lambida pelo
+  registro da página (aponta a causa se voltar).
+- Próximo passo: CI do PR, várias rodadas do E2E `lambe` e uma do `todas`; prévia e aprovação do usuário.
 
 ## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
 
