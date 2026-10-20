@@ -526,10 +526,12 @@ test('fase 6: dica da bandeja só anuncia a carga no trem enquanto ele viaja', a
     h.clearLog();
     const handled = h.puzzle.interact(c);
     const traveling = TRIP.includes(stage);
-    assert.equal(handled, traveling, `interação na borda: ${stage}`);
+    // com a carga na boca, o E ali (longe do lugar dela na bandeja) a larga no chão, sem a dica do trem
+    assert.equal(handled, traveling || holder !== null, `interação na borda: ${stage}`);
     assert.equal(h.log('hint').some((hint) => hint.text === h.puzzle.TEXT.hint.early), traveling,
       `dica corresponde ao estado real: ${stage}`);
-    assert.equal(h.puzzle.carrier, holder, 'interação distante não muda quem carrega');
+    assert.equal(h.log('item:drop').length, holder ? 1 : 0, `só larga quem carrega: ${stage}`);
+    assert.equal(h.puzzle.carrier, null, holder ? `a carga vai para o chão: ${stage}` : 'interação distante não muda quem carrega');
   }
 });
 

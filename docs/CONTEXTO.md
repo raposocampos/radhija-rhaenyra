@@ -19,7 +19,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   Docs: ARQUITETURA §4 (peças prontas).
 - Testes: `test/pegar-largar.test.mjs` (as 10 fases, cerca, porta e cerca da horta, caixote por cima, entrega largando,
   sorteio com semente); `test/fase6.test.mjs` e o E2E `test-expresso.mjs` ajustados (E com a carga na boca, na bandeja,
-  agora a devolve à bandeja). Nada rodou no PC além de `node --check`/`git diff --check`.
+  agora a devolve à bandeja; na borda da bandeja, fora do alcance dela, larga no chão sem a dica do trem). O 1º CI
+  (`fab6abc`) só falhou nesse teste da borda, que ainda esperava o E sem efeito com a carga na boca. Nada rodou no PC
+  além de `node --check`/`git diff --check`.
 - Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR não toca nesses arquivos. Quem entrar depois
   sincroniza (o `docs/CONTEXTO.md` é o conflito esperado).
 - Próximo passo: CI, E2E `todas` no head final, prévia e aprovação do usuário no chat desta sessão.
