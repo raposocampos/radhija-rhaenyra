@@ -154,8 +154,9 @@ export const PLANTATION = {
 export const ROSE_BUSH = { x: 1.6, z: 4.4, r: 0.6, h: 0.55 };
 export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
 /**
- * A casca do tronco da mangueira na altura das patas do empurrão: o tronco de pinata.js sobe torto (ali o centro fica
- * 3,5 cm a leste e 7,7 cm ao sul da base) e afina (raio de 29 cm). As patas apoiam nela e o colisor fica rente.
+ * A casca do tronco da mangueira na altura das patas do empurrão: o tronco de pinata.js sobe reto até ali e depois
+ * entorta (o centro fica 3,5 cm a leste e 7,7 cm ao sul de MANGO_TREE) e afina (raio de 29 cm). As patas apoiam nela
+ * e o colisor fica rente.
  */
 const MANGO_BARK = { x: MANGO_TREE.x + 0.035, z: MANGO_TREE.z + 0.077, r: 0.29 };
 /**

@@ -374,6 +374,7 @@ export function buildGarden(root, layout) {
   const rampLen = Math.hypot(RAMP.x1 - RAMP.x0, RAMP.top);
   const rampAng = Math.atan2(RAMP.top, RAMP.x1 - RAMP.x0);
   const plank = new THREE.Group();
+  plank.name = 'rampa-do-galpao';
   const board = new THREE.Mesh(rbox(rampLen, 0.04, RAMP.halfWidth * 2, 0.01), woodMat('#d8b080', { key: 'f10-rampa' }));
   plank.add(board);
   for (let k = 1; k < 7; k++) {

@@ -29,7 +29,8 @@ const SEM_COLISOR = [
   [/^(milharal|rama-de-abobora)$/, 'folhas do milho e a rama das abóboras: o colisor é a fileira e a abóbora; a Radhija passa roçando'],
   [/^balde$/, 'balde deitado da casa na árvore: a Radhija entra nele (elevador); o colisor dinâmico do puzzle segura a Rhaenyra'],
   [/^(corda-da-roldana|puxador)$/, 'cordas finas e o puxador do portãozinho: as dogs pegam e puxam com a boca'],
-  [/^(torneira|mangueira)$/, 'torneira da fase 10 é um botão de parede (impulso): um colisor na frente dela impede o impulso'],
+  [/^(torneira|cano-da-torneira|mangueira)$/, 'torneira da fase 10 é um botão de parede (impulso): um colisor na frente dela impede o impulso'],
+  [/^rampa-do-galpao$/, 'pé da rampa da fase 10: a dog encosta o peito na tábua para subir (o colisor começa 22 cm depois do pé, onde a tábua já tem 17 cm)'],
 ];
 const skipped = (o) => {
   for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;
