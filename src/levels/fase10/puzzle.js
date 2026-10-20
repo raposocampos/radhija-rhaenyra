@@ -662,10 +662,15 @@ export function createPuzzle(ctx) {
    * passam do fundo (o bumbum e o rabo ficam para fora da boca).
    */
   const RIDE_IN = 0.18;
+  /**
+   * Sentada no balde em pé, a base dela fica `RIDE_SIT` acima do fundo: sentada, ela ocupa quase toda a largura dele, e
+   * o focinho e o rabo, que chegam perto das paredes, ficam acima da borda.
+   */
+  const RIDE_SIT = 0.2;
   /** Onde a Radhija fica dentro do balde: deitada lá dentro (balde deitado) ou sentada (em pé), na altura dele. */
   function ridePos() {
     const k = 1 - (S.bucketTilt ?? 1);
-    return { x: BUCKET.x, y: 0.03 + (S.bucketY + 0.14 - 0.03) * k, z: BUCKET.z + RIDE_IN * (1 - k) };
+    return { x: BUCKET.x, y: 0.03 + (S.bucketY + RIDE_SIT - 0.03) * k, z: BUCKET.z + RIDE_IN * (1 - k) };
   }
   /** A boca do balde deitado (de onde ela entra e por onde sai). */
   const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.38 };
