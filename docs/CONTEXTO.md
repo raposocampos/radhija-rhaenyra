@@ -1,7 +1,32 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (colisão dos objetos do cenário, PR #53; #47 e #49 a #52 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: colisão dos objetos do cenário (Claude, branch `claude/colisao-cenario`, PR #53)
+
+- Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
+  permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
+  pernas da tábua de passar, a pilha da lavanderia); o biscoito da caminha da fase 8 confundia com os ossinhos.
+- Feito: auditoria `test/colisao-cenario.test.mjs` (com `test/helpers/obstaculos.mjs`): monta o cenário real de cada
+  fase e arena e acha desenho na altura do corpo (de 8 cm a 85% do alto da cabeça) onde o círculo de uma dog, num lugar
+  livre, entra mais de 6 cm. As exceções, com motivo, ficam na lista `SEM_COLISOR` do teste (caminhas e placas viram
+  chão no #48). Colisores novos nos `layout.js` das 10 fases e do superbafo; desenho ajustado onde um colisor
+  atrapalharia o jogo (irrigador da fase 2 embutido no gramado, raízes da casa na árvore e pé da mangueira rentes,
+  canos e frondes acima das dogs). Calço da fase 2: travado, a ponta fica por baixo da folha aberta
+  (`test/helpers/interpenetra.mjs`, teste novo em `test/fase2.test.mjs`). Fase 8: a almofada em forma de osso da
+  caminha virou argolinha. Navegação da companheira ajustada nas fases 2, 4 e 7.
+- Testes ajustados: as dogs param diante da bandeja da fase 6 (TRAY.z + 0,55, fora do colisor), inclusive na linha
+  nova do #52; `test/regressoes.test.mjs` aceita o calço a até 10 cm da linha da folha.
+- Não mexido (trabalho paralelo): os arquivos do #48 e os `puzzle.js`/`puzzleKit.js`. O merge de teste com o branch do
+  #48 não deu conflito de texto (ambos mexem em `fase2/3/8/world/props.js`, `fase9/world/conservatory.js` e
+  `types.d.ts`); quem integrar depois sincroniza e roda o CI.
+- Validação: até `7f95a34`, o CI só falhava nos 9 achados da fase 10, corrigidos em `3657884`; depois veio a
+  sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
+- Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
+  na boca dele; fica para um PR próprio.
+- Próximo passo: com CI e E2E `todas` verdes no head final e as capturas revistas, prévia e aprovação do usuário no
+  chat desta sessão; só então integrar.
 
 ## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
 
