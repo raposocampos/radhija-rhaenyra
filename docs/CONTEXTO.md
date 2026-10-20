@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (o balde da fase 10 segura a Rhaenyra, PR #54; #47 e #49 a #53 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (colisão dos objetos do cenário, PR #53; #47 e #49 a #52 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: o balde deitado da fase 10 segura a Rhaenyra (Claude, branch `claude/colisao-balde`, PR #54)
@@ -24,7 +24,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: com CI e E2E verdes, entregar a prévia e esperar a aprovação do usuário no chat desta sessão; só
   então integrar.
 
-## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, produção v0.10.3 · build 95)
+## Em andamento: colisão dos objetos do cenário (Claude, branch `claude/colisao-cenario`, PR #53)
 
 - Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
   permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
@@ -45,9 +45,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Validação: até `7f95a34`, o CI só falhava nos 9 achados da fase 10, corrigidos em `3657884`; depois veio a
   sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
 - Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
-  na boca dele; segue no PR #54.
-- Integrado ao main (squash `acae42f`, CI do main `39489396152`); `version.json` da produção: v0.10.3 · build 95.
-  Não repetir merge/deploy do #53.
+  na boca dele; fica para um PR próprio.
+- Próximo passo: com CI e E2E `todas` verdes no head final e as capturas revistas, prévia e aprovação do usuário no
+  chat desta sessão; só então integrar.
 
 ## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
 
