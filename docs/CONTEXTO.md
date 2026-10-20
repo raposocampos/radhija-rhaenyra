@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, sexta rodada de retorno; #34 a #42 e #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 2: locomoção, PR #43; #33 a #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 2 de 5: locomoção (Claude, branch `claude/locomocao-dogs`)
@@ -12,8 +12,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   pede alcance e passinhos de ajuste ao parar. Ritmo e pisadas continuam os do guia. Testes em
   `test/locomocao.test.mjs`; capturas novas (`32-andando`, `33-parando`, `34-curva`, `35-galope`) em
   `tools/scripts/capture-modelos.mjs`; sandbox com `stop=<s>`.
-- Fila: o orquestrador liberou o #43 na frente do #33 (a fase 10 terá mais uma rodada; o `merge-tree` com ela está
-  limpo). Branch atualizado com o main `f50db80` (#41 e #42).
+- Fila: o #43 é o último da fila; branch atualizado com o main `03dcf1d` (fase 10, #33). A fase 10 trouxe o
+  agachadinho de preparo (`crouch`, só abaixa o tronco do guia: com as patas plantadas as pernas dobram junto) e
+  pulinhos roteirizados (`airK` dos locks, que a locomoção trata como pulo: sai e volta) — teste das trocas cobre.
 - Também: alcance da pata (estica até 4%, tronco desce até 1 cm, passo extra ou arrasto lento quando longe demais),
   compasso que acelera em curva fechada (voltinha) e volta ao do guia, pisadas (som e pegada) no pouso de cada pata,
   esteira só com a velocidade pedida, e a locomoção sai na hora no empurrão em pé e na parede. Medido no CI
@@ -318,7 +319,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   tela das fases mostra as oito fases (4 + 4) e `menuWith` (`test-expresso.mjs`) abre Jogar → Fases antes de ler.
 - Integrado ao main (squash `1cc73d0`, CI do main `39169001462`). Não repetir merge/deploy do #26.
 
-## Em andamento: demo de 10 fases (pedido de 2026-10-18)
+## Entregue: demo de 10 fases (pedido de 2026-10-18; a última, a fase 10, no PR #33)
 
 - Pedido do usuário: mais três fases criativas (8, 9 e 10, fechando a demo), puzzles mais complexos, **no mínimo
   dois objetos** em cada uma, a mecânica nova de **pulo na parede** da Rhaenyra (alcançar botões e alavancas no
@@ -326,8 +327,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **Ordem atual:** A, B, C e E entregues; **D (fase 10) em andamento**.
-- **D (em andamento, Claude): fase 10 "Festa no Quintal"**, branch `claude/fase10-quintal` (worktree próprio), base
+- **Ordem atual:** A, B, C, D e E entregues.
+- **D (entregue: PR #33, squash `03dcf1d`, deploy `39357683189`): fase 10 "Festa no Quintal"**, branch
+  `claude/fase10-quintal` (worktree próprio), base
   `efa779c`. Desenho aprovado pelo usuário em 2026-10-19 ("grande, complexa e a mais bonita"), com o pedido de que
   as duas fizeram **3 anos** (faixa "Feliz 3 anos", vela do número 3; o quadro mostra a festa de 2 anos). Três
   cenários: a casa em corte (sala com o quadro "Festa do ano passado", cozinha com o disjuntor), a varanda com o bolo

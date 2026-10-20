@@ -314,6 +314,11 @@ test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular
         [1.5, { speed: 0, action: 'sniff' }, 'levantando'], [1.0, { speed: 0.8 }, 'andando']],
       sozinha: [[1.0, { speed: 0.8 }, 'andando'], [7.0, { speed: 0 }, 'parada (senta sozinha)'], [1.0, { speed: 0, action: 'sniff' }, 'levantando']],
       empurrar: [[1.2, { speed: 0.6 }, 'andando'], [1.5, { speed: 0.6, action: 'push' }, 'empurrando'], [1.2, { speed: 0.6 }, 'andando'], [0.8, { speed: 0 }, 'parando']],
+      // fase 10: agachadinho de preparo e pulinho roteirizado (crouch e airK dos locks)
+      agachar: [[0.8, { speed: 0 }, 'parada'], ...Array.from({ length: 18 }, (_, i) => [1 / 60, { speed: 0, crouch: i / 18 }, 'agachando']),
+        [0.3, { speed: 0, crouch: 1 }, 'agachada'],
+        ...Array.from({ length: 24 }, (_, i) => [1 / 60, { speed: 0, airK: i / 24, jump: 4 * 0.25 * (i / 24) * (1 - i / 24) }, 'pulinho']),
+        [0.8, { speed: 0 }, 'parada']],
       arrancar: [[0.6, { speed: 0 }, 'parada'], [1.0, { speed: 1.6 }, 'arrancando no trote'], [0.6, { speed: 0 }, 'parando'],
         [0.8, { speed: 0.5, turn: 2.5 }, 'virando'], [0.8, { speed: 0 }, 'parando']],
       pular: [[1.0, { speed: 1.6 }, 'trotando'], ...Array.from({ length: 24 }, (_, i) => [1 / 60, { speed: 1.6, airK: i / 24, jump: 4 * 0.3 * (i / 24) * (1 - i / 24) }, 'no ar']), [1.0, { speed: 1.6 }, 'trotando'], [0.8, { speed: 0 }, 'parando']],
