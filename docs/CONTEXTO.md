@@ -26,7 +26,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - Fase 4: `DUCT.outlet.y` no peito do pombo do poleiro A (`PERCH_A.y + 0,15`); o tubo cruza a mureta nessa altura
     e entra pelas costas da caixa da saída, num pé de ferro acima das dogs. O colisor `duto-saida` virou o do pé.
 - Testes: `test/saida-dos-dutos.test.mjs` (a mecânica, o desenho, o cenário real das duas fases e as duas partidas
-  em Node). Capturas novas: `21c` e `21d` (`capture-quintal.mjs`), `12` a `15` (`capture-pigeons.mjs`).
+  em Node). Capturas novas: `21a`, `21c` e `21d` (`capture-quintal.mjs`), `12` a `15` (`capture-pigeons.mjs`). Revisadas
+  no E2E do `46e6a01`: a fumaça nasce na beira larga da boca do cano, lá em cima, e envolve o pombo; na fase 4, sai da
+  caixa alta direto no pombo, na altura dele.
 - Não mexido: a fase 9 (a saída fica dentro do armário e o cenário desenha a baforada na grade) e a Arena do Bafo
   (fase de desenvolvimento, com a caixa baixa de antes).
 - Validação: CI `39510626848` verde no código de `46e6a01` (573 testes, 0 falhas); E2E `fase4` e `quintal` e os do
