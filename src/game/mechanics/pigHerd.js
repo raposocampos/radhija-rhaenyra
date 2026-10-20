@@ -173,6 +173,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       oinkT: rand(cfg.oinkEvery) * (0.5 + i * 0.3), grumpyCd: 0, alertT: 0,
       idleT: 0.5 + i, idleAct: 'idle', pesterT: 0, boredT: 0, exitAt: 0, left: 0, phase: '', munchT: 0,
       action: 'idle', lookAt: null, barkFrom: null, fxT: 1 + i, side: 0,
+      // atrás da dog parada: progresso até ela e o modo "vai direto encostar" (chase)
+      chDog: null, chD: Infinity, chT: 0, direct: 0, sideGoal: null, sideT: 0,
     };
   });
   const byCol = new Map(pigs.map((P) => [P.id, P]));
@@ -631,13 +633,43 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       g = clampArea(c.x + fx * lead, c.z + fz * lead);
     }
     const dDog = Math.hypot(c.x - P.x, c.z - P.z);
+    // com a dog parada, o lugar dele no arco pode cair num obstáculo (no cantinho entre o galpão, a cerca e a porteira
+    // aberta, ele ficava empurrando a quina sem sair do lugar e ela ficava a salvo): 1,2 s sem chegar mais perto dela,
+    // vai direto encostar pelo lado em que está, contornando a ponta da porteira aberta e, empacado, com um passo de lado
+    if (P.chDog !== P.dog) Object.assign(P, { chDog: P.dog, chD: Infinity, chT: 0, direct: 0, sideGoal: null });
+    // (fora da área ela não é alcançável: eles só esperam na beirada)
+    const touchD = Math.max(r + c.r, cfg.nose + dogExtent(c, P.x, P.z)) + 0.08;
+    const away = sp > 0.3 || offArea(c.x, c.z) > 0;
+    if (away || dDog < touchD || dDog < P.chD - 0.04) Object.assign(P, { chD: away ? Infinity : dDog, chT: 0 });
+    else if ((P.chT += dt) > 1.2) Object.assign(P, { direct: 3, chT: 0, chD: dDog });
+    if (away) P.direct = 0;
+    // encostado nela no modo direto, fica (para não voltar ao lugar bloqueado no arco no meio dos esbarrões)
+    else if (P.direct > 0 && dDog < touchD) P.direct = Math.max(P.direct, 1);
+    if (P.direct > 0) {
+      P.direct -= dt;
+      // o focinho encosta nela (a mesma distância do arco)
+      const ux = (P.x - c.x) / (dDog || 1), uz = (P.z - c.z) / (dDog || 1);
+      const lead = Math.max(r + c.r + 0.02, cfg.nose + dogExtent(c, c.x + ux, c.z + uz));
+      g = clampArea(c.x + ux * lead, c.z + uz * lead);
+      const w = aroundLeaf(P, g);
+      if (w) g = w[0];
+      if (P.stuckT > 1) {
+        P.stuckT = 0;
+        P.sideGoal = sidestep(P, g);
+        P.sideT = 0.8;
+      }
+      if (P.sideGoal && (P.sideT -= dt) > 0) g = P.sideGoal;
+      else P.sideGoal = null;
+    }
     const dGoal = Math.hypot(g.x - P.x, g.z - P.z);
     const outside = offArea(c.x, c.z) > 0.25;
     P.lookAt = { x: c.x, y: 0.3, z: c.z };
-    if (dGoal > 0.14) {
+    // no modo direto chega bem perto (parar a 0,14 m do ponto podia deixar o focinho a um dedo dela, sem encostar)
+    const arrive = P.direct > 0 ? 0.04 : 0.14;
+    if (dGoal > arrive) {
       const top = target ? cfg.chaseCarrier : cfg.chaseSpeed;
       const speed = dGoal > 1 ? top : lerp(cfg.walkSpeed, top, dGoal);
-      walkTo(P, g.x, g.z, speed, dt, ctrls, { arrive: 0.1 });
+      walkTo(P, g.x, g.z, speed, dt, ctrls, { arrive: Math.min(0.1, arrive) });
       P.action = 'walk';
     } else {
       stand(P, dt);
@@ -936,6 +968,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       const h = homes[P.i];
       Object.assign(P, {
         state: 'pen', t: 0, route: [], goal: null, food: null, dog: null, slot: 0, speed: 0, yawRate: 0, stuckT: 0,
+        chDog: null, chD: Infinity, chT: 0, direct: 0, sideGoal: null, sideT: 0,
         bumpT: 0, bumpWait: rand(cfg.bumpEvery), bumpPending: -1, bumpDog: null, oinkT: rand(cfg.oinkEvery), grumpyCd: 0,
         alertT: 0, idleT: 0.5 + P.i, idleAct: 'idle', pesterT: 0, boredT: 0, exitAt: 0, left: 0, phase: '', action: 'idle', lookAt: null,
         fxT: 1 + P.i, failed: false,
