@@ -489,7 +489,12 @@ export function createGait({ skel2, retarget, s }) {
         const n = dx * dx + dy * dy + dz * dz > maxD * maxD ? dy - Math.sqrt(Math.max(0, maxD * maxD - dx * dx - dz * dz)) : 0;
         if (n > MAX_DROP) {
           leg.over = true;
-          if (!moving || lifting() >= 2) {
+          if (!moving && lifting() < 2) {
+            // parada e longe demais (parou de repente e o corpo subiu um tiquinho, saindo da postura de andar): passinho
+            // de ajuste já, em vez de arrastar a pata (arrastada, ela escorregava 4 mm por quadro)
+            startSwing(leg, true, 0.014 * s, 1 / 0.2, 'ajuste');
+            leg.settle = true;
+          } else if (!moving || lifting() >= 2) {
             // arrastada para perto, devagar (nunca um salto)
             const ex = leg.neutral.x - leg.foot.x, ez = leg.neutral.z - leg.foot.z;
             const k = Math.min(0.2, (0.004 * s) / Math.max(Math.hypot(ex, ez), 1e-6));

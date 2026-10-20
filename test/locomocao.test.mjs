@@ -202,28 +202,44 @@ test('locomoção nova: a comemoração (pulinhos, voltinha, reverência) e a vo
   }
 });
 
-test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar', () => {
+test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar (8 sementes)', () => {
+  // instável no main antes da etapa 4 (E2E do #51 e CI do #48): parando de repente, o corpo sobe um tiquinho (sai da
+  // postura de andar) e uma pata da frente no limite do alcance ficava longe demais; parada, ela era arrastada 4 mm por
+  // quadro até o passinho de ajuste. Agora ela dá o passinho na hora (gait.js); as sementes fixam a fase da passada
+  const report = [];
+  const bad = [];
   for (const kind of KINDS) {
-    const d = fresh(kind);
-    walk(d, { speed: 1.4, secs: 1.5 });
-    const m = slideMeter(d);
-    let steps = 0;
-    let was = d.locomotion.legs.map((l) => l.swing);
-    walk(d, {
-      speed: 0, secs: 1.6, each: () => {
-        m.each();
-        const now = d.locomotion.legs.map((l) => l.swing);
-        for (let i = 0; i < 4; i++) if (now[i] && !was[i]) steps++;
-        was = now;
-      },
-    });
-    const L = d.locomotion.legs;
-    const off = L.map((l) => Math.hypot(l.foot.x - l.neutral.x, l.foot.z - l.neutral.z));
-    assert.ok(m.out.max < 0.003, `${kind}: parando, a pata apoiada escorregou ${(m.out.max * 1000).toFixed(2)} mm num quadro (${m.out.worst})`);
-    assert.ok(L.every((l) => !l.swing), `${kind}: parada, todas as patas no chão`);
-    assert.ok(off.every((x) => x < 0.016 * 1.2), `${kind}: patas no lugar (${off.map((x) => (x * 100).toFixed(1)).join(', ')} cm)`);
-    assert.ok(steps <= 10, `${kind}: poucos passos para assentar (${steps})`);
+    const rows = [];
+    for (const seed of SEEDS.slice(0, 8)) {
+      const o = withSeed(seed, () => {
+        const d = fresh(kind);
+        walk(d, { speed: 1.4, secs: 1.5 });
+        const m = slideMeter(d);
+        let steps = 0;
+        let was = d.locomotion.legs.map((l) => l.swing);
+        walk(d, {
+          speed: 0, secs: 1.6, each: () => {
+            m.each();
+            const now = d.locomotion.legs.map((l) => l.swing);
+            for (let i = 0; i < 4; i++) if (now[i] && !was[i]) steps++;
+            was = now;
+          },
+        });
+        const L = d.locomotion.legs;
+        const off = L.map((l) => Math.hypot(l.foot.x - l.neutral.x, l.foot.z - l.neutral.z));
+        return { max: m.out.max, worst: m.out.worst, events: m.out.events, steps, off, swinging: L.some((l) => l.swing) };
+      });
+      rows.push(o);
+      const tag = `${kind} (semente ${seed})`;
+      if (o.max >= 0.003) bad.push(`${tag}: parando, a pata apoiada escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst}; ${o.events.join(' | ')})`);
+      if (o.swinging) bad.push(`${tag}: parada, uma pata ainda no ar`);
+      if (!o.off.every((x) => x < 0.016 * 1.2)) bad.push(`${tag}: patas fora do lugar (${o.off.map((x) => (x * 100).toFixed(1)).join(', ')} cm)`);
+      if (o.steps > 10) bad.push(`${tag}: passos demais para assentar (${o.steps})`);
+    }
+    report.push(`${kind}: escorrega até ${(Math.max(...rows.map((r) => r.max)) * 1000).toFixed(2)} mm/quadro, ${Math.min(...rows.map((r) => r.steps))}–${Math.max(...rows.map((r) => r.steps))} passos para assentar`);
   }
+  console.log(`[locomoção] parando\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
 });
 
 test('locomoção nova: na esteira (objeto parado, só a velocidade), a pata apoiada vai para trás na velocidade', () => {
