@@ -184,6 +184,7 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
   const aborts = [];
   const inflight = new Set(); // quem para cada operação em curso desta página quando ela cai
   if (onBeat) beatInfo = onBeat;
+  if (probe && name) probe.label = name;
 
   const contextText = () => (context ? context() : note ? `Último passo: ${note.text}, há ${secs(Date.now() - note.at)}.` : '');
   function abort(what, site, why) {
@@ -294,6 +295,8 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
   async function annotate(e, at) {
     if (e instanceof HarnessAbort || closing || typeof e?.message !== 'string') return e;
     const first = e.message.split('\n')[0];
+    // prazo vencido: a sonda imprime o diagnóstico antes (quadros desta aba e das outras, processos, pilhas nativas)
+    if (e.name === 'TimeoutError') await diagnose(`${tag}${first} (${siteOf(at) ?? 'linha desconhecida'})`);
     const better = `${first} [${tag}${siteOf(at) ?? 'linha desconhecida'}; ${await peek()}]`;
     e.message = e.message.replace(first, better);
     if (typeof e.stack === 'string') e.stack = e.stack.replace(first, better);

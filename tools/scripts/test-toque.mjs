@@ -517,7 +517,9 @@ try {
       window.__fakePads = [];
       Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value() { return window.__fakePads; } });
       if (!ci) return;
-      // a mesma redução gráfica do harness no CI sem GPU (só o custo de desenho; o jogo é o mesmo)
+      // a mesma redução gráfica do harness no CI sem GPU (só o custo de desenho; o jogo é o mesmo), inclusive desenhar
+      // 1 de cada 30 quadros: desenhando todos, cada quadro do iPhone levava 0,7–2 s no SwiftShader, dividindo o
+      // processo da GPU com a página principal (que segue jogando); a simulação e a entrada continuam em todo quadro
       Object.defineProperty(window, '__game', {
         configurable: true,
         set(value) {
@@ -525,6 +527,14 @@ try {
           const low = () => { renderer.setPixelRatio(0.25); composer.setPixelRatio(0.25); renderer.shadowMap.enabled = false; bloom.enabled = false; };
           low();
           value.events?.on?.('quality:change', low);
+          const render = value.engine.render.bind(value.engine);
+          let frame = 0;
+          let last = [0, 0];
+          value.engine.render = (dt, t) => {
+            last = [dt, t];
+            if (frame++ % 30 === 0) render(dt, t);
+          };
+          window.__e2eRender = () => render(...last);
           Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
         },
       });
@@ -533,6 +543,11 @@ try {
     await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
     await p.waitForTimeout(2500);
     return p;
+  };
+  /** Captura de uma página de iPhone: no CI ela desenha 1 de 30 quadros, então força um desenho real antes. */
+  const snap = async (p, path) => {
+    await p.evaluate(() => window.__e2eRender?.());
+    await p.screenshot({ path });
   };
   const center = (p, sel) => p.evaluate((s) => {
     const r = document.querySelector(s)?.getBoundingClientRect();
@@ -551,7 +566,7 @@ try {
   const playBox = await center(ip, '.rr-btn--play');
   const optionsBox = await center(ip, '.rr-btn--options');
   check(inView(tipBox) && !overlaps(tipBox, playBox) && !overlaps(tipBox, optionsBox) && tipBox.top >= optionsBox.bottom, 'cartão da dica cabe sob o Jogar e o Opções', { tipBox, playBox, optionsBox });
-  await ip.screenshot({ path: 'shots/toque/12-iphone-dica.png' });
+  await snap(ip, 'shots/toque/12-iphone-dica.png');
   // fechar no × some e não volta mais
   const close = await center(ip, '.rr-ios-tip__close');
   await ip.touchscreen.tap(close.x, close.y);
@@ -592,12 +607,12 @@ try {
   });
   check(how.shown && /Adicionar à Tela de Início/.test(how.text) && !how.nav, 'pausa: nota com o passo a passo (só texto, nada focável sem efeito)', how);
   check(inView(await center(ip, '.rr-card--pause')), 'pausa com o passo a passo cabe na tela');
-  await ip.screenshot({ path: 'shots/toque/13-iphone-pausa.png' });
+  await snap(ip, 'shots/toque/13-iphone-pausa.png');
   await ip.setViewportSize({ width: PHONE.height, height: PHONE.width });
   await ip.waitForTimeout(500);
   const rotIos = await ip.evaluate(() => ({ overlay: getComputedStyle(document.querySelector('.rr-rotate')).display, line: getComputedStyle(document.querySelector('.rr-rotate__ios')).display }));
   check(rotIos.overlay === 'grid' && rotIos.line !== 'none', 'de pé: o aviso de girar traz a dica do iPhone', rotIos);
-  await ip.screenshot({ path: 'shots/toque/14-iphone-de-pe.png' });
+  await snap(ip, 'shots/toque/14-iphone-de-pe.png');
   await ip.close();
 
   // aberto pelo ícone da tela inicial: tela cheia de verdade, nada de dica
@@ -608,7 +623,7 @@ try {
     mobile: document.querySelector('.rr').dataset.mobile ?? null,
   }));
   check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
-  await app.screenshot({ path: 'shots/toque/15-iphone-app.png' });
+  await snap(app, 'shots/toque/15-iphone-app.png');
   await app.close();
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
