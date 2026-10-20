@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, branch `claude/iphone-e2e-travamento`; antes, modelos das dogs, etapa 3; #33 a #45 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: travamentos do iPhone emulado na suíte `toque` (Claude, branch `claude/iphone-e2e-travamento`)
@@ -35,7 +35,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   Próximo passo: conferir no PR o CI e os E2E `toque` e `todas` do head atual; entregar a prévia e aguardar a
   aprovação do usuário (nada muda no jogo; é só o navegador dos testes).
 
-## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
+## Entregue: modelos novos das dogs, etapa 3 de 5: poses em camadas (PR #45, squash `b95c2b0`, deploy `39368373474`)
 
 - Pedido do usuário (pelo orquestrador, 2026-10-20): "pode começar as etapas novas" — 3, depois 4 (colisão do corpo e
   da cabeça), depois 5 (troca nas 10 fases). Lembretes dele: pata firme, compasso calmo, nada de giro parado; mudança
@@ -47,7 +47,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Feito: camadas em ordem em `src/dogs/v2/dog.js` (`LAYERS`, pesos em `d.layers`), física de correntinhas genérica
   (`physics.js`: orelhas com os mesmos números aprovados e o rabo, firme), testes do rabo, da boca (bebendo e comendo,
   no mesmo lugar do atual) e das camadas; captura `39-rabo-parando`.
-- Próximo passo: CI, E2E `canil` (capturas) e `todas`, prévia e aprovação; depois, etapa 4.
+- Integrado ao main com a aprovação do usuário (squash `b95c2b0`, deploy `39368373474`). Não repetir merge/deploy do
+  #45. A etapa 4 (colisão do corpo e da cabeça) segue no PR #48.
 
 ## Entregue: modelos novos das dogs, etapa 2 de 5: locomoção (PR #43, squash `ef2cb50`, deploy `39362697455`)
 
@@ -187,6 +188,17 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
+- Entregue (**PR #46**, squash `cdabb1b`, deploy `39372958855`; branch `claude/fase10-sementes`): o teste dos
+  porquinhos da fase 10 caiu no CI do #45 (`knocks: 0`). `test/fase10.test.mjs` passou a rodar com semente
+  (`seededTest`) e ganhou uma varredura persistente (desligada; liga com `FASE10_SEMENTES`, início em
+  `FASE10_SEMENTES_DE`; até ~260 partidas por processo, porque cada partida headless deixa ouvintes globais e ~430
+  estouraram a memória do CI). Achados: (1) o teste punha a Radhija a 0,7 m do primeiro porco (lugar sorteado) e às
+  vezes ela ficava na beirada da área deles; agora fica no meio da horta; (2) bug real no `pigHerd.js`: com a dog parada
+  no cantinho entre o galpão, a cerca e a porteira aberta, o lugar de cada porco no arco caía num obstáculo e eles
+  ficavam parados sem encostar (ela a salvo com a vela). Agora, com a dog parada e dentro da área, 1,2 s sem chegar
+  mais perto leva o porco a ir direto encostar pelo lado dele (focinho na distância do arco, contorna a folha da
+  porteira, passo de lado se empacar) e, encostado, ele fica. Varreduras no CI: porquinhos da fase 10 com 240 sementes,
+  galinhas 100, botão da porta 40, e a dos porcos (200/60/10), todas verdes; desligadas no commit final.
 - Entregue (**PR #44**, squash `1b93b41`, deploy `39351131808`; branch `claude/porcos-testes-semente`): "o sininho não prende
   a dog no chiqueiro" falhou no CI da fase 10. Todos os testes de modelo, rebanho e arena de `test/porcos.test.mjs`
   agora rodam com semente fixa (`seededTest`), e uma varredura de sementes (desligada por padrão; liga com

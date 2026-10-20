@@ -263,7 +263,8 @@ try {
   await page.keyboard.press('KeyE');
   state = await waitFor((s) => s.hat?.holder === 'radhija', { timeout: 1500 });
   check(state.hat?.holder === 'radhija', 'pega o chapéu do chão (E)');
-  await walkTo(L.GOAL.x, L.GOAL.z + 1.0, { tol: 0.15 });
+  // pela frente da mesa, como as outras entregas (andando direto do chapéu, às vezes ela parava antes do círculo)
+  await toCake(L);
   state = await waitFor((s) => s.quintal.cake.length === 4, { timeout: 3000 });
   check(qt(state).cake.join() === 'ribbon,cookie,candle,hat', 'o chapéu no quarto andar', JSON.stringify(qt(state).cake));
 
