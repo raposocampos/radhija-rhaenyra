@@ -9,9 +9,10 @@
 //   3. A estrela tem uma cancela que só sobe com alguém na placa do lado de fora (use o Fica). No fim dela,
 //      a caçamba bascula e as cargas rolam pela canaleta até a bandeja; o trem volta sozinho.
 //   4. Cada dog leva uma carga na boca (as duas podem ir juntas: pegue uma, troque de dog e pegue a
-//      outra). Com as duas nos berços do foguete, ele decola.
+//      outra). Com as duas nos berços do foguete, ele decola. Com a carga na boca, E larga: perto da bandeja ela
+//      volta para a bandeja, de frente para o foguete ela encaixa, e no resto cai no chão (E perto pega de volta).
 // Também vale levar o planeta primeiro pela estrela e depois buscar a lua: nenhuma ordem trava a fase.
-import { createCarryItem, createCollectibles, createHints, deliveredAt, reach } from '../../game/puzzleKit.js';
+import { createCarryItem, createCollectibles, createHints, deliveredAt, reach, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPressurePlate } from '../../game/mechanics/index.js';
 import { createTrack } from './track.js';
 import {
@@ -24,7 +25,7 @@ import {
  *   |'ready'|'carrying'|'planetDocked'|'moonReady'|'carryingMoon'|'done'} Stage
  * @typedef {import('../../types').Fase6Route} Route
  * @typedef {import('../../types').Fase6Cargo} Cargo
- * @typedef {'wagon'|'gantry'|'loading'|'unloading'|'tray'|'carried'|'rocket'} Place
+ * @typedef {'wagon'|'gantry'|'loading'|'unloading'|'tray'|'carried'|'floor'|'rocket'} Place
  * @typedef {'idle'|'sneezing'|'out'|'blocked'|'unloading'|'loading'|'parked'|'home'} TrainMode
  */
 /** @type {Stage[]} */
@@ -50,6 +51,8 @@ export const TEXT = {
     airing: 'Espere o cheirinho sair da janela para soprar de novo',
     pickup: 'Pegue a bolinha-planeta na bandeja (E)',
     pickupMoon: 'Pegue a lua na bandeja (E)',
+    pickupFloor: 'Pegue a bolinha-planeta de volta (E)',
+    pickupMoonFloor: 'Pegue a lua de volta (E)',
     carrying: 'Leve a bolinha-planeta ao foguete',
     carryingMoon: 'Leve a lua ao foguete',
     carryingBoth: 'Levem a bolinha-planeta e a lua juntas ao foguete',
@@ -78,7 +81,10 @@ export const TEXT = {
     needMoon: 'Agora falta a lua! Ela está presa no pórtico da maquete: mande o trem buscar.',
     launch: '3… 2… 1… o foguete decolou!',
   },
-  prompt: { ball: 'Pegar a bolinha-planeta', moon: 'Pegar a lua' },
+  prompt: {
+    ball: 'Pegar a bolinha-planeta', moon: 'Pegar a lua',
+    dropPlanet: 'Largar a bolinha-planeta', dropMoon: 'Largar a lua', trayBack: 'Pôr de volta na bandeja',
+  },
 };
 
 const TR = createTrack();
@@ -96,13 +102,15 @@ const ROUTE_STAGE = { loop: 'movingLoop', delivery: 'movingDelivery', moon: 'mov
 
 /** @param {import('../../types').PuzzleContext<import('../../types').Fase6Props>} ctx @returns {import('../../types').Puzzle} */
 export function createPuzzle(ctx) {
-  const { props, dogs, root, emit, scent, cam, place } = ctx;
+  const { props, dogs, root, emit, scent, cam, place, world } = ctx;
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
   const items = {
-    planet: { item: createCarryItem({ obj: props.ball.object, dogs, scene: root, name: 'ball' }), prop: props.ball },
-    moon: { item: createCarryItem({ obj: props.moon.object, dogs, scene: root, name: 'ball' }), prop: props.moon },
+    planet: { item: createCarryItem({ obj: props.ball.object, dogs, scene: root, name: 'ball', emit, world }), prop: props.ball },
+    moon: { item: createCarryItem({ obj: props.moon.object, dogs, scene: root, name: 'ball', emit, world }), prop: props.moon },
   };
+  /** Largada, a carga não fica no pedal, na placa da cancela, dentro da bandeja nem no tapete do foguete. */
+  const dropAvoid = inZones([PEDAL, BARRIER_PLATE, { x: TRAY.x, z: TRAY.z, r: 0.34 }, GOAL], 0.08);
   const plate = createPressurePlate({ id: BARRIER_PLATE.id, x: BARRIER_PLATE.x, z: BARRIER_PLATE.z, r: BARRIER_PLATE.r, emit, prop: props.barrierPlate, margin: 0.4 });
   const fresh = () => ({
     route: /** @type {Route} */ ('loop'),
@@ -116,6 +124,8 @@ export function createPuzzle(ctx) {
     unload: { list: [], timer: 0 },
     load: { timer: 0, landed: false },
     prevPlateBy: /** @type {import('../../types').DogName | null} */ (null),
+    /** E com a carga na boca, de frente para o foguete: ela encaixa neste quadro (no update). */
+    dropDock: /** @type {Cargo | null} */ (null),
   });
   const S = fresh();
   const train = { ...TRAIN.start };
@@ -149,6 +159,19 @@ export function createPuzzle(ctx) {
     }
     return best;
   }
+  /** Carga largada no chão ao alcance (a mais próxima). */
+  function floorCargoNear(c) {
+    let best = null, bestD = Infinity;
+    for (const cargo of CARGOS) {
+      const f = items[cargo].item.floor;
+      if (S.place[cargo] !== 'floor' || !f || !items[cargo].item.nearFloor(c)) continue;
+      const d = reach(c, f.x, f.z);
+      if (d < bestD) { best = cargo; bestD = d; }
+    }
+    return best;
+  }
+  /** Com a carga na boca, perto do lugar dela na bandeja: E a devolve para lá. */
+  const nearTraySlot = (cargo, c) => reach(c, trayPoint(cargo).x, trayPoint(cargo).z) < TRAY.pickupR;
 
   // ------------------------------------------------------------------ estágio (derivado do estado)
   /** A viagem atual tem propósito (carga a bordo ou a lua para buscar)? Viagem vazia não muda a etapa. */
@@ -169,8 +192,9 @@ export function createPuzzle(ctx) {
     }
     if (S.place.planet === 'carried') return 'carrying';
     if (S.place.moon === 'carried') return 'carryingMoon';
-    if (S.place.planet === 'tray') return 'ready';
-    if (S.place.moon === 'tray') return 'moonReady';
+    // na bandeja, ou largada no chão: falta pegar (e levar)
+    if (S.place.planet === 'tray' || S.place.planet === 'floor') return 'ready';
+    if (S.place.moon === 'tray' || S.place.moon === 'floor') return 'moonReady';
     if (S.place.moon === 'wagon') return 'moonLoaded';
     if (S.place.planet === 'rocket') return 'planetDocked';
     return 'waiting';
@@ -265,8 +289,12 @@ export function createPuzzle(ctx) {
       const both = S.place.planet === 'carried' && S.place.moon === 'carried';
       return { text: both ? O.carryingBoth : st === 'carrying' ? O.carrying : O.carryingMoon, target: at(ROCKET.x, ROCKET.z, 1.0), stage: st };
     }
-    if (st === 'ready') return { text: O.pickup, target: at(TRAY.x, TRAY.z, 0.45), stage: st };
-    if (st === 'moonReady') return { text: O.pickupMoon, target: at(TRAY.x, TRAY.z, 0.45), stage: st };
+    if (st === 'ready' || st === 'moonReady') {
+      const cargo = st === 'ready' ? 'planet' : 'moon';
+      const f = S.place[cargo] === 'floor' ? items[cargo].item.floor : null;
+      if (f) return { text: cargo === 'planet' ? O.pickupFloor : O.pickupMoonFloor, target: at(f.x, f.z, 0.45), stage: st };
+      return { text: cargo === 'planet' ? O.pickup : O.pickupMoon, target: at(TRAY.x, TRAY.z, 0.45), stage: st };
+    }
     if (st === 'blocked') return { text: O.blocked, target: at(train.x, train.z, 1.05), stage: st };
     if (st === 'sneezing' || st === 'movingLoop' || st === 'movingDelivery' || st === 'movingMoon' || st === 'returning') {
       const back = T.mode === 'parked' || T.mode === 'home';
@@ -539,24 +567,28 @@ export function createPuzzle(ctx) {
       if (stepTrain(dt, 0, -1)) arriveHome();
     }
     enableAfterClear();
-    // prompts e destaques (cada boca leva uma carga)
-    const trayCargo = carriedBy(active.name) ? null : trayCargoNear(active);
-    hints.setPrompt(trayCargo === 'planet' ? 'ball' : trayCargo === 'moon' ? 'moon' : null);
+    for (const cargo of CARGOS) items[cargo].item.update(dt);
+    // prompts e destaques (cada boca leva uma carga): pegar na bandeja ou no chão; com a carga na boca, largar
+    const mine = carriedBy(active.name);
+    const near = mine ? null : trayCargoNear(active) || floorCargoNear(active);
+    const dropKind = !mine ? null : nearTraySlot(mine, active) ? 'trayBack' : mine === 'planet' ? 'dropPlanet' : 'dropMoon';
+    hints.setPrompt(near === 'planet' ? 'ball' : near === 'moon' ? 'moon' : dropKind);
     cols.update(active);
     for (const cargo of CARGOS) {
       const pl = S.place[cargo];
-      // na bandeja (pegar) e a lua presa no pórtico (o objetivo dela)
-      items[cargo].prop.setHighlight(pl === 'tray' || (cargo === 'moon' && pl === 'gantry'));
+      // na bandeja ou no chão (pegar) e a lua presa no pórtico (o objetivo dela)
+      items[cargo].prop.setHighlight(pl === 'tray' || pl === 'floor' || (cargo === 'moon' && pl === 'gantry'));
     }
     props.goal.setHighlight(S.place.planet === 'carried' || S.place.moon === 'carried');
-    // foguete: a carga na boca encaixa no berço; as duas → decola
+    // foguete: a carga na boca encaixa no berço (chegando nele, ou largada de frente para ele); as duas → decola
     for (const cargo of CARGOS) {
       const holder = holderOf(cargo);
-      if (!holder || !deliveredAt(GOAL, ctrls[holder], active)) continue;
+      if (!holder || !(S.dropDock === cargo || deliveredAt(GOAL, ctrls[holder], active))) continue;
       dock(cargo);
       const both = S.place.planet === 'rocket' && S.place.moon === 'rocket';
       hints.now(both ? 'launch' : cargo === 'planet' && S.place.moon === 'gantry' ? 'needMoon' : 'docked', 3.6, 0);
     }
+    S.dropDock = null;
     const o = objective(active.name);
     const key = `${o.stage}|${o.text}`;
     if (key !== S.objKey) { S.objKey = key; onStageChange(o.stage); }
@@ -571,10 +603,36 @@ export function createPuzzle(ctx) {
     return null;
   }
 
+  // ------------------------------------------------------------------ largar e pegar de volta
+  /**
+   * E com a carga na boca: perto do lugar dela na bandeja, ela volta para a bandeja; de frente para o foguete, encaixa
+   * no berço; no resto, cai no chão à frente (E perto pega de volta).
+   * @param {Cargo} cargo @param {import('../../types').DogController} c
+   */
+  function dropCargo(cargo, c) {
+    const it = items[cargo];
+    if (nearTraySlot(cargo, c)) {
+      const p = trayPoint(cargo);
+      // a carga desce da boca até o lugar dela na bandeja (o centro na altura TRAY.y, como quando chega pela canaleta)
+      it.item.putDown(p.x, p.z, { yaw: c.yaw, originY: p.y, size: c.size });
+      S.place[cargo] = 'tray';
+    } else {
+      const m = mouthPoint(c);
+      if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+        S.dropDock = cargo;
+        return;
+      }
+      it.item.dropBy(c, { avoid: dropAvoid });
+      S.place[cargo] = 'floor';
+    }
+    notifyStage();
+  }
+
   // ------------------------------------------------------------------ interação (E)
   function interact(c) {
-    // uma carga em cada boca: com a boca vazia, qualquer irmã pega a carga da bandeja
-    if (!carriedBy(c.name)) {
+    // uma carga em cada boca: com a boca vazia, qualquer irmã pega a carga da bandeja (ou a que ficou no chão)
+    const mine = carriedBy(c.name);
+    if (!mine) {
       const cargo = trayCargoNear(c);
       if (cargo) {
         items[cargo].item.attach(c.name);
@@ -587,6 +645,18 @@ export function createPuzzle(ctx) {
         notifyStage();
         return true;
       }
+      const lying = floorCargoNear(c);
+      if (lying) {
+        items[lying].item.attach(c.name);
+        items[lying].prop.setHighlight(false);
+        S.place[lying] = 'carried';
+        emit('item:pickup', { name: c.name, item: 'ball', cargo: lying, x: c.x, z: c.z });
+        notifyStage();
+        return true;
+      }
+    } else {
+      dropCargo(mine, c);
+      return true;
     }
     if (onPedal(c)) { hints.now('jump'); return true; }
     if (atWindow(c)) { hints.now('nose'); return true; }
@@ -683,6 +753,9 @@ export function createPuzzle(ctx) {
     lookTarget: (c) => {
       const tc = trayCargoNear(c);
       if (tc) return at(TRAY.x, TRAY.z, TRAY.y);
+      const fc = carriedBy(c.name) ? null : floorCargoNear(c);
+      const f = fc && items[fc].item.floor;
+      if (f) return at(f.x, f.z, 0.08);
       return atWindow(c) ? at(NOSE.x, NOSE.z, 0.65) : null;
     },
     onBark: (c) => { if (atWindow(c)) hints.now('nose'); else if (onPedal(c)) hints.now('jump'); },
@@ -696,8 +769,8 @@ export function createPuzzle(ctx) {
         unloading: S.train.mode === 'unloading', loading: S.train.mode === 'loading', place: { ...S.place },
         barrier: { open: +S.barrierK.toFixed(3), plate: plate.pressed, by: plate.by },
       },
-      ball: { holder: items.planet.item.holder, x: props.ball.object.position.x, z: props.ball.object.position.z },
-      moon: { holder: items.moon.item.holder, x: props.moon.object.position.x, z: props.moon.object.position.z },
+      ball: { holder: items.planet.item.holder, x: props.ball.object.position.x, z: props.ball.object.position.z, floor: S.place.planet === 'floor' ? items.planet.item.floor : null },
+      moon: { holder: items.moon.item.holder, x: props.moon.object.position.x, z: props.moon.object.position.z, floor: S.place.moon === 'floor' ? items.moon.item.floor : null },
       objective: objective(ctx.activeDog).text,
     }),
     get stage() { return stage(); },

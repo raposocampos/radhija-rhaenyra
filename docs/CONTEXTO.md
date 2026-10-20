@@ -3,6 +3,30 @@
 Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
+
+- Pedido do usuário (2026-10-20, pela sessão dos modelos das dogs): "deveria ter a opção de largar e pegar os objetos
+  em todas as fases, não somente em algumas". Com o item na boca, E larga no chão à frente quando não há outra ação ali;
+  E perto pega de volta (só quem pode carregar: a pantufa e o livro, só a Rhaenyra).
+- Feito: `src/game/puzzleKit.js` (`dropSpot`, `inZones`, `mouthPoint`, `FLOOR_REACH`; `createCarryItem` com `dropBy`,
+  `putDown`, `floor`, `nearFloor` e `update`: o item cai da boca e pousa deitado do jeito dele, num ponto fora de
+  colisores, sem nada entre a dog e ele e ao alcance dela; se algo passar por cima, ele é empurrado para fora). As 10
+  fases: prompt "Largar…", objetivo "Pegue … de volta (E)", destaque no chão; largado de frente para a entrega, entrega;
+  fase 6: perto da bandeja a carga volta para ela; fase 7: dentro do túnel não larga; fases 9 e 10: o livro e os enfeites
+  caem num ponto seguro (antes, `world.resolve` podia jogá-los do outro lado da porta ou da cerca); fase 10: com algo na
+  boca, E na frente do quadro olha o quadro. A fase 1 passou a usar `createCarryItem` (o colisor do carrinho, do PR #48,
+  ficou intocado). Visual: o patinho largado fora da bacia não boia; a sombra da carga da fase 6 acompanha o chão.
+  Docs: ARQUITETURA §4 (peças prontas).
+- Testes: `test/pegar-largar.test.mjs` (as 10 fases, cerca, porta e cerca da horta, caixote por cima, entrega largando,
+  sorteio com semente); `test/fase6.test.mjs` e o E2E `test-expresso.mjs` ajustados (E com a carga na boca, na bandeja,
+  agora a devolve à bandeja; na borda da bandeja, fora do alcance dela, larga no chão sem a dica do trem). O 1º CI
+  (`fab6abc`) só falhou nesse teste da borda, que ainda esperava o E sem efeito com a carga na boca. Nada rodou no PC
+  além de `node --check`/`git diff --check`.
+- Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR (#52) não toca nesses arquivos e, no
+  `docs/CONTEXTO.md`, só nesta seção. Na fila do orquestrador, o #48 entra antes: depois dele, sincronizar com o main
+  e validar o head final (CI e E2E `todas`).
+- Próximo passo: com o head final verde, prévia e aprovação do usuário no chat desta sessão; só então integrar.
+
 ## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
 
 - Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
