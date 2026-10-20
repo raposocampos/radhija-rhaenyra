@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (fase 10: chão da horta, lama e chiqueiro, PR #48; #33 a #46 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (fase 10: chão da horta, lama e chiqueiro, PR #49; #33 a #46 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
@@ -488,7 +488,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     sul; o rodapé de pedra da fachada não atravessa mais a porta da varanda e saiu o capacho (era a "mancha" no chão);
     no empurrão, as patas apoiam na casca de verdade (`MANGO_BARK`: o tronco sobe torto e afina; o colisor ficou
     rente a ela).
-  - Ajuste visual pedido em 2026-10-20 (PR #48, branch `claude/fase10-chao`, a partir do main `cdabb1b`): a terra da
+  - Ajuste visual pedido em 2026-10-20 (PR #49, branch `claude/fase10-chao`, a partir do main `cdabb1b`): a terra da
     horta ficou seca (castanho claro, rachadinhas, torrões) e a lama, mais escura, molhada e brilhante, com a borda de
     terra úmida, respingos e um rastro de patinhas saindo dela (`ground.js`); caminho de pedras com cascalho na porta
     do galpão; o chão do chiqueiro virou barro (manchas molhadas que brilham, marcas de casco, palha) com a poça mais
