@@ -28,9 +28,12 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Diagnóstico novo (fica): `hang-probe.mjs` testa se cada aba recebe quadros, lista todas as threads da GPU e das abas
   e grava pilhas nativas com gdb (só se houver gdb no job); `page-guard.mjs` imprime o diagnóstico em todo prazo
   vencido do Playwright numa página protegida. ARQUITETURA §10 atualizada.
-- Validação: estresse da correção no branch descartável `claude/iphone-e2e-travamento-estresse` (E2E `39369177965`,
-  mesmas 10 cópias × 6 voltas que deram 3 travamentos sem a correção). Falta: tirar o job temporário `toque-diag` do
-  `e2e.yml`, abrir o PR, CI, E2E `toque` e `todas` no head final, prévia e aprovação; depois apagar o branch descartável.
+- **PR #47.** Validação: estresse da correção (este código + um laço que repete PC e iPhones 6×, no branch descartável
+  já apagado; E2E `39369177965`): 10/10 jobs verdes, 60 sequências PC+iPhone (42 em EPYC 7763) e 20 rodadas de
+  capturas, sem nenhum diagnóstico; sem a correção, a mesma configuração deu 3 travamentos em 10 jobs. E2E `toque`
+  verde em `ffd9cab` (`39369408152`, EPYC 7763, 98/98). O job temporário `toque-diag` já saiu do `e2e.yml`.
+  Próximo passo: conferir no PR o CI e os E2E `toque` e `todas` do head atual; entregar a prévia e aguardar a
+  aprovação do usuário (nada muda no jogo; é só o navegador dos testes).
 
 ## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
 
