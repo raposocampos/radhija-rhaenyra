@@ -32,7 +32,7 @@ import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
   RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R, PANTRY, CUPBOARD, PANTRY_CRATES, PLANTATION, ROSE_BUSH,
-  PINATA, MANGO_TREE, MANGO_SHOVE, SHED_BUTTONS, GENERATOR, STY, SECRET, EAST_WALL, CHICKENS, PIGS,
+  PINATA, MANGO_TREE, MANGO_SHOVE, SHED_BUTTONS, GENERATOR, STY, SECRET, EAST_WALL, CHICKENS, PIGS, DOGS,
 } from './layout.js';
 
 /**
@@ -131,6 +131,7 @@ export const TEXT = {
     deckArrive: 'No deque! Desamarre o laço (E). Para descer: o escorregador ou o balde.',
     deckHold: 'Daqui de cima não dá para largar o laço: desça pelo escorregador (E na boca dele).',
     bucketHeavy: 'A Rhaenyra é pesada demais para o balde: ela puxa a corda.',
+    bucketMouth: 'A entrada do balde é pela boca: dê a volta até a frente dele (E).',
     ropeLight: 'A Radhija é leve demais para puxar o balde: ela vai dentro dele.',
     ropeTip: 'Ande para longe do balde com a corda na boca: ele sobe. Ela continua segurando quando você trocar.',
     ropeEnd: 'A corda acabou: o balde está lá em cima.',
@@ -245,9 +246,17 @@ export function createPuzzle(ctx) {
    */
   const dropAvoid = inZones([GOAL, { x: BUCKET.x, z: BUCKET.z, r: BUCKET.r + 0.2 }]);
   const handle = createCarryItem({ obj: props.rope.handle, dogs, scene: root, name: 'rope', carrier: 'large' });
-  // a porta basculante fechada é uma parede; o balde no chão é sólido para a Rhaenyra
+  // a porta basculante fechada é uma parede
   const doorCol = world.addDynamic({ id: 'porta-do-galpao', kind: 'gate', shape: 'box', x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, hx: SHED.t / 2, hz: (SHED.door.z1 - SHED.door.z0) / 2 });
-  const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'circle', x: BUCKET.x, z: BUCKET.z, r: BUCKET.r, blocks: 'large' });
+  /**
+   * O balde no chão é sólido para as duas: deitado (como começa) e levantando, uma caixa do tamanho dele visto de cima
+   * (do fundo até a boca, da largura dela); quase em pé, o círculo da boca (fitBucketCol acompanha o desenho de
+   * treehouse.js). A Radhija entra pela boca com E; lá dentro, só a Rhaenyra esbarra nele.
+   */
+  const bucketBox = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'box', x: BUCKET.x, z: BUCKET.z, hx: BUCKET.r, hz: BUCKET.h / 2 });
+  const bucketRound = world.addDynamic({ id: 'balde-em-pe', kind: 'prop', shape: 'circle', x: BUCKET.x, z: BUCKET.z, r: BUCKET.r });
+  /** O balde subindo só deixa de segurar as duas quando o fundo dele passa da cabeça da Rhaenyra (a mais alta). */
+  const BUCKET_CLEAR = DOGS.rhaenyra.visual.headTop;
   // os caixotes da despensa (andam no trilho); a porteira fechada; a tábua do muro
   const CR = PANTRY_CRATES;
   const crateCols = CR.list.map((cr) => world.addDynamic({ id: `caixote-${cr.id}`, kind: 'prop', shape: 'box', x: CR.x0, z: cr.z, hx: CR.hx, hz: CR.hz }));
@@ -287,6 +296,8 @@ export function createPuzzle(ctx) {
     /** pulinho para dentro ou para fora do balde */
     /** @type {null | { t: number, dur: number, a: { x: number, y: number, z: number }, b: { x: number, y: number, z: number }, then: 'ride' | 'free', via?: { x: number, y: number, z: number }, lift?: number, yaw?: number | null, speed?: number, act?: string, action?: string, slope?: number }} */
     hop: null, bucketTilt: 1,
+    /** para onde ela fica virada no balde: para o fundo (entrou de cabeça pela boca) ou como pousou, voltando do deque */
+    rideYaw: NORTH,
     /** @type {null | { phase: string, t: number, x0: number, z0: number, y0: number, yaw0: number, grabbed: boolean, action?: string, slope?: number }} */
     deck: null, // pose roteirizada no deque (subir do balde, desamarrar, escorregar, voltar para o balde)
     /** @type {null | { phase: string, t: number, x0: number, z0: number, yaw0: number, grabbed: boolean, reason?: string, action?: string, slope?: number }} */
@@ -641,15 +652,61 @@ export function createPuzzle(ctx) {
     return { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e + Math.sin(Math.PI * u) * lift, z: a.z + (b.z - a.z) * e };
   };
   const yawTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
-  /** @type {{ action?: string, slope?: number }} */
+  /**
+   * A pose dela no balde (stepBucket): deitada de barriga no balde deitado, sentada nele em pé, assustada com o pombo.
+   * @type {{ action?: string, slope?: number }}
+   */
   const rideSeq = {};
-  /** Onde a Radhija fica dentro do balde: deitada lá dentro (balde deitado) ou sentada (em pé), na altura dele. */
+  /**
+   * Deitada no balde deitado, ela fica `RIDE_IN` mais para a boca que o meio dele: o focinho e as patas da frente não
+   * passam do fundo (o bumbum e o rabo ficam para fora da boca).
+   */
+  const RIDE_IN = 0.18;
+  /**
+   * Sentada no balde em pé, a base dela fica `RIDE_SIT` acima do fundo: sentada, ela ocupa quase toda a largura dele, e
+   * o focinho e o rabo, que chegam perto das paredes, ficam acima da borda.
+   */
+  const RIDE_SIT = 0.2;
+  /** Levantando, ela senta quando a inclinação do balde (`bucketTilt`) fica abaixo disto. */
+  const SIT_TILT = 0.4;
+  /**
+   * Onde a Radhija fica dentro do balde, no espaço dele (y ao longo do balde, do fundo para a boca; z para o lado que
+   * fica embaixo quando ele deita), girando com ele: deitada, perto da boca, na parede de baixo; levantando, depois da
+   * metade do giro ela sai da parede para o meio, senta e desce até RIDE_SIT acima do fundo (o que sobra do corpo fica
+   * para fora da boca, sem passar pelas paredes).
+   */
   function ridePos() {
-    const k = 1 - (S.bucketTilt ?? 1);
-    return { x: BUCKET.x, y: 0.03 + (S.bucketY + 0.14 - 0.03) * k, z: BUCKET.z + 0.06 * (1 - k) };
+    const tilt = S.bucketTilt ?? 1, k = 1 - tilt;
+    const th = (tilt * Math.PI) / 2, s = Math.sin(th), co = Math.cos(th);
+    const lieY = BUCKET.h / 2 + RIDE_IN, lieZ = BUCKET.r - 0.03;
+    const ly = lieY + (RIDE_SIT - lieY) * smooth((k - 0.5) / 0.5);
+    const lz = lieZ * (1 - smooth((k - 0.5) / 0.25));
+    const py = S.bucketY + BUCKET.r * s, pz = BUCKET.z - (BUCKET.h / 2) * s;
+    return { x: BUCKET.x, y: py + ly * co - lz * s, z: pz + ly * s + lz * co };
   }
   /** A boca do balde deitado (de onde ela entra e por onde sai). */
   const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.38 };
+  /** A Radhija entra pela boca, de frente para ela (de lado ou por trás, o balde segura e o pulinho não o atravessa). */
+  const atMouth = (c) => Math.hypot(c.x - BUCKET_MOUTH.x, c.z - BUCKET_MOUTH.z) < BUCKET.mouthR;
+  /** Quase em pé (`bucketTilt` abaixo disto), o colisor do balde é o círculo da boca. */
+  const ROUND_TILT = 0.15;
+  /**
+   * O colisor do balde acompanha o desenho (treehouse.js, layoutRope): visto de cima, a boca (raio r) e o fundo (raio
+   * r·taper), inclinados, ficam a h/2 do meio para cada lado; deitado, é uma caixa do fundo até a boca. Com a Radhija lá
+   * dentro, ele não a empurra para fora (ativa, ela não fica travada: a troca continua valendo).
+   */
+  function fitBucketCol() {
+    const th = (S.bucketTilt * Math.PI) / 2, s = Math.sin(th), co = Math.cos(th);
+    const h2 = BUCKET.h / 2, rb = BUCKET.r * BUCKET.taper;
+    const z1 = BUCKET.z + h2 * s + BUCKET.r * co;
+    const z0 = BUCKET.z - Math.max(h2 * s + rb * co, BUCKET.r * co - h2 * s);
+    bucketBox.z = (z0 + z1) / 2;
+    bucketBox.hz = (z1 - z0) / 2;
+    const on = S.bucketY < BUCKET_CLEAR, round = S.bucketTilt < ROUND_TILT;
+    bucketBox.enabled = on && !round;
+    bucketRound.enabled = on && round;
+    bucketBox.blocks = bucketRound.blocks = S.riding ? 'large' : 'all';
+  }
   function stepBucket(dt) {
     const rh = ctrls.rhaenyra;
     if (handle.holder === 'rhaenyra') {
@@ -669,7 +726,7 @@ export function createPuzzle(ctx) {
     const y = Math.min(BUCKET.top, Math.max(0, S.pulled - BUCKET.lie) * BUCKET.rise);
     if (Math.abs(y - S.bucketY) > 1e-4 && !S.riding && Math.abs(y - S.bucketY) > 0.2 * dt) emit('bucket:move', { x: BUCKET.x, z: BUCKET.z, up: y > S.bucketY });
     S.bucketY = y;
-    bucketCol.enabled = S.bucketY < 0.25;
+    fitBucketCol();
     props.bucket.setY(S.bucketY);
     props.rope.setPull(S.pulled, handle.holder ? dogs[handle.holder] : null);
     if (S.bucketY < BUCKET.top - 0.3) { S.topUsed = false; S.topBlocked = false; }
@@ -677,7 +734,7 @@ export function createPuzzle(ctx) {
     if (S.riding) {
       const c = ctrls.radhija;
       const rp = ridePos();
-      pose(rideSeq, c, rp.x, rp.y, rp.z, NORTH, 0, S.peckT > 0 ? 'startled' : S.bucketTilt > 0.5 ? 'slide' : 'sit');
+      pose(rideSeq, c, rp.x, rp.y, rp.z, S.rideYaw, 0, S.peckT > 0 ? 'startled' : S.bucketTilt > SIT_TILT ? 'slide' : 'sit');
       if (S.bucketY >= BUCKET.top - 0.02 && !S.deck && !S.topUsed && !S.topBlocked) {
         if (pigeonAround()) {
           // o pombo acorda, bate as asas em cima do laço e não deixa ela pular para o deque
@@ -711,10 +768,17 @@ export function createPuzzle(ctx) {
     S.hop = null;
     if (h.then === 'ride') {
       S.riding = true;
+      S.rideYaw = NORTH; // entrou de cabeça, virada para o fundo
       emit('bucket:in', { x: BUCKET.x, z: BUCKET.z });
       hints.now('inBucket', 3.4, 0);
     } else finishScript(c);
   }
+  /**
+   * Os pulos entre o balde lá em cima e o deque (s e m): agacha (prep), voa (air) e pousa (land). A saída sobe `lift`
+   * acima da reta e passa da borda do balde com o corpo inteiro; a volta sobe `liftIn` até em cima do balde e desce,
+   * sentada, para dentro (sink).
+   */
+  const DECK_HOP = { prep: 0.3, air: 0.6, land: 0.12, lift: 0.48, liftIn: 0.22, sink: 0.3 };
   /** As partes roteirizadas do deque: subir do balde, desamarrar o laço, escorregar e voltar para o balde. */
   function stepDeck(dt) {
     const sq = S.deck;
@@ -724,11 +788,11 @@ export function createPuzzle(ctx) {
     const top = DECK.h;
     const A = { x: DECK_PATH.arrive.x, y: top, z: DECK_PATH.arrive.z };
     if (sq.phase === 'hop') {
-      // do balde para o deque, por cima da abertura do corrimão
-      const u = clamp01(sq.t / 0.5);
-      const p = hopArc({ x: sq.x0, y: sq.y0, z: sq.z0 }, A, u, 0.22);
-      pose(sq, c, p.x, p.y, p.z, yawTo({ x: sq.x0, z: sq.z0 }, A), 1.2, 'jump');
-      if (u >= 1) {
+      // do balde para o deque: sentada lá dentro, se apoia (agacha) e salta por cima da borda do balde e pela abertura
+      // do corrimão; o corpo inteiro passa da borda no ar
+      const H = DECK_HOP;
+      const landed = hopStep(sq, c, { x: sq.x0, y: sq.y0, z: sq.z0 }, A, sq.t, { ...H, yaw0: sq.yaw0, prepAct: 'sit' });
+      if (landed && sq.t >= H.prep + H.air + H.land) {
         S.deck = null;
         S.onDeck = true;
         c.yaw = NORTH;
@@ -778,15 +842,18 @@ export function createPuzzle(ctx) {
       pose(sq, c, SLIDE.x, 0.22 * (1 - smooth(u * 1.6)), z, 0, 1.4 * (1 - u), 'none');
       if (u >= 1) finishScript(c);
     } else if (sq.phase === 'rehop') {
-      // de volta para o balde (lá em cima, com a Rhaenyra segurando a corda)
-      const u = clamp01(sq.t / 0.5);
-      const rp = ridePos();
-      const p = hopArc({ x: sq.x0, y: top, z: sq.z0 }, rp, u, 0.2);
-      pose(sq, c, p.x, p.y, p.z, yawTo({ x: sq.x0, z: sq.z0 }, { x: BUCKET.x, z: BUCKET.z }), 1.2, 'jump');
-      if (u >= 1) {
+      // de volta para o balde (lá em cima, com a Rhaenyra segurando a corda): agacha na beira do deque, salta até em cima
+      // do balde e se acomoda lá dentro, sentada (comprida, ela não cabe deitada: entra encolhida, de cima)
+      const H = DECK_HOP, rp = ridePos();
+      const over = { x: rp.x, y: S.bucketY + BUCKET.h + 0.06, z: rp.z };
+      if (!hopStep(sq, c, { x: sq.x0, y: top, z: sq.z0 }, over, sq.t, { ...H, lift: H.liftIn, yaw0: sq.yaw0 })) return;
+      const k = smooth(clamp01((sq.t - H.prep - H.air) / H.sink));
+      pose(sq, c, rp.x, over.y + (rp.y - over.y) * k, rp.z, c.yaw, 0, 'sit');
+      if (k >= 1) {
         S.deck = null;
         S.onDeck = false;
         S.riding = true;
+        S.rideYaw = c.yaw;
         S.topUsed = true;
         emit('bucket:in', { x: BUCKET.x, z: BUCKET.z });
       }
@@ -1065,20 +1132,21 @@ export function createPuzzle(ctx) {
     });
   }
   /**
-   * Um pulinho roteirizado com preparo: vira para onde vai e agacha (prep s), salta em arco com a pose de pulo (air s)
-   * e pousa (o agachadinho do pouso vem da animação). Retorna true quando pousou.
+   * Um pulinho roteirizado com preparo: vira para onde vai e agacha (prep s, na pose `prepAct`), salta em arco com a
+   * pose de pulo (air s) e pousa (o agachadinho do pouso vem da animação; depois, a pose `landAct`). Retorna true quando
+   * pousou.
    */
-  function hopStep(seq, c, a, b, t, { prep = 0.24, air = 0.4, lift = 0.16, yaw = null, yaw0 = null } = {}) {
+  function hopStep(seq, c, a, b, t, { prep = 0.24, air = 0.4, lift = 0.16, yaw = null, yaw0 = null, prepAct = 'none', landAct = 'none' } = {}) {
     const fy = yaw ?? (Math.hypot(b.x - a.x, b.z - a.z) > 0.04 ? yawTo(a, b) : c.yaw);
     if (t < prep) {
       const y0 = yaw0 ?? fy;
-      pose(seq, c, a.x, a.y, a.z, y0 + wrap(fy - y0) * smooth(t / (prep * 0.6)), 0, 'none');
+      pose(seq, c, a.x, a.y, a.z, y0 + wrap(fy - y0) * smooth(t / (prep * 0.6)), 0, prepAct);
       seq.crouch = smooth(t / (prep * 0.75));
       return false;
     }
     const u = clamp01((t - prep) / air);
     const p = hopArc(a, b, u, lift);
-    pose(seq, c, p.x, p.y, p.z, fy, 1.0, 'none');
+    pose(seq, c, p.x, p.y, p.z, fy, 1.0, u < 1 ? 'none' : landAct);
     seq.crouch = u < 0.15 ? 1 - u / 0.15 : 0;
     seq.airK = u < 1 ? u : -1;
     return u >= 1;
@@ -1513,7 +1581,7 @@ export function createPuzzle(ctx) {
     const canHat = !up && free && S.place.hat === 'home' && S.docked && Math.hypot(active.x - BOAT.dock.x, active.z - BOAT.dock.z) < BOAT.grabR;
     const canCord = !S.gateOpen && S.cordT < 0 && reach(active, CORD.x, CORD.z) < CORD.reach;
     const canRope = k === 'rhaenyra' && free && !handle.holder && reach(active, ROPE.rest.x, ROPE.rest.z) < ROPE.grabR && S.bucketY < 0.05;
-    const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(active, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
+    const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && atMouth(active);
     const nearPainting = inHouse(active) && Math.hypot(active.x - PAINTING.x, active.z - (PAINTING.z + 0.95)) < 1.0;
     const crateDo = !up ? crateAction(active) : null;
     const vegDo = !up && !crateDo ? vegAction(active) : null;
@@ -1610,8 +1678,9 @@ export function createPuzzle(ctx) {
       c.z += (cr.z - c.z) * Math.min(1, dt * 6);
       return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x - 1, faceZ: c.z }, action: v > 0.05 ? 'tug' : null };
     }
-    // dentro do balde (a Radhija ativa): fica sentada; a câmera e a troca continuam valendo
-    if (S.riding && c.name === 'radhija') return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw) }, action: 'sit' };
+    // dentro do balde (a Radhija ativa): deitada no balde deitado, sentada nele em pé (stepBucket); a câmera e a troca
+    // continuam valendo
+    if (S.riding && c.name === 'radhija') return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw) }, action: rideSeq.action || 'sit' };
     // a Rhaenyra com a corda na boca: anda normalmente (as patas continuam) e não passa do comprimento da corda;
     // no fim da corda, insistindo, ela faz força
     if (handle.holder === c.name) {
@@ -1658,8 +1727,8 @@ export function createPuzzle(ctx) {
     if (S.riding && c.name === 'radhija') {
       if (S.pulled < 0.05) {
         S.riding = false;
-        // sai de ré pela boca do balde deitado
-        S.hop = { t: 0, dur: 0.6, a: ridePos(), b: { ...BUCKET_MOUTH }, then: 'free', lift: 0.02, yaw: NORTH, speed: 0.7, act: 'none' };
+        // sai pela boca do balde deitado: de ré, se está virada para o fundo; andando, se está virada para a boca
+        S.hop = { t: 0, dur: 0.6, a: ridePos(), b: { ...BUCKET_MOUTH }, then: 'free', lift: 0.02, yaw: S.rideYaw, speed: 0.7, act: 'none' };
         emit('bucket:out', { x: BUCKET.x, z: BUCKET.z });
       }
       return true;
@@ -1688,8 +1757,9 @@ export function createPuzzle(ctx) {
       return true;
     }
     // o balde e a ponta da corda ficam lado a lado: para a Radhija vale o balde, para a Rhaenyra a corda
-    const atBucket = !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
-    if (atBucket && c.name === 'radhija') {
+    const bucketDown = !S.riding && !S.deck && !S.hop && S.pulled < 0.05;
+    const atBucket = bucketDown && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
+    if (bucketDown && c.name === 'radhija' && atMouth(c)) {
       // vai até a boca do balde deitado e entra andando, de cabeça
       S.hop = { t: 0, dur: 0.9, a: { x: c.x, y: 0, z: c.z }, via: { ...BUCKET_MOUTH }, b: ridePos(), then: 'ride', lift: 0.02, yaw: null, speed: 0.9, act: 'none' };
       return true;
@@ -1701,7 +1771,8 @@ export function createPuzzle(ctx) {
       hints.now('ropeTip', 4.2, 0);
       return true;
     }
-    if (atBucket) { hints.now('bucketHeavy', 3.4, 2); return true; }
+    // de lado ou por trás, a Radhija dá a volta até a boca; a Rhaenyra é pesada demais (ela puxa a corda)
+    if (atBucket) { hints.now(c.name === 'radhija' ? 'bucketMouth' : 'bucketHeavy', 3.4, 2); return true; }
     if (atPainting(c)) { lookPainting(); return true; }
     if (inHorta(c) || (c.name === 'radhija' && Math.abs(c.x - HORTA.x0) < 0.6 && c.z > HORTA.z0 && c.z < HORTA.z1)) return false;
     return false;
@@ -1745,8 +1816,8 @@ export function createPuzzle(ctx) {
       const sq = /** @type {any} */ (S.deck || S.ramp || S.hop || S.climb);
       return { action: sq.action || 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: sq.slope || 0, airK: sq.airK ?? -1, crouch: sq.crouch || 0 };
     }
-    // no balde, como companheira: sentada (a Radhija ativa usa o modifyIntent, para a troca continuar valendo)
-    if (name === 'radhija' && S.riding && ctx.activeDog !== 'radhija') return { action: 'sit', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
+    // no balde, como companheira: a mesma pose (a Radhija ativa usa o modifyIntent, para a troca continuar valendo)
+    if (name === 'radhija' && S.riding && ctx.activeDog !== 'radhija') return { action: rideSeq.action || 'sit', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
     // no deque, como companheira: espera lá em cima (sem seguir a irmã)
     if (name === 'radhija' && S.onDeck && ctx.activeDog !== 'radhija') return { action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
     // a Rhaenyra segurando a corda enquanto o jogador está com a irmã
@@ -1778,7 +1849,7 @@ export function createPuzzle(ctx) {
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) ctrls[n].y = 0;
     Object.assign(S, fresh());
     doorCol.enabled = true;
-    bucketCol.enabled = true;
+    fitBucketCol();
     boardCol.enabled = true;
     crateCols.forEach((col) => { col.x = CR.x0; });
     props.pigeon.object.visible = true;

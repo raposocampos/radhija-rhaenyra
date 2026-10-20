@@ -306,8 +306,11 @@ try {
   await shot('24-puxando-a-corda-camera-do-jogo');
   await until((i) => i.quintal.deck === 'hop', 400);
   await keyUp('KeyS');
+  // sentada no balde, ela se apoia (agacha) e salta por cima da borda para o deque
   await step(12);
-  await shot('24b-pulando-para-o-deque', { pos: [5.9, 3.1, -0.9], look: [7.1, 2.2, -3.7] });
+  await shot('24b-se-apoiando-no-balde', { pos: [5.9, 3.1, -0.9], look: [7.1, 2.2, -3.7] });
+  await step(24);
+  await shot('24b2-pulando-para-o-deque', { pos: [5.9, 3.1, -0.9], look: [7.1, 2.2, -3.7] });
   await until((i) => i.quintal.onDeck, 120);
   // lá em cima quem anda é o jogador (troca para a Radhija)
   await tap('KeyQ');

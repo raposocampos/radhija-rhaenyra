@@ -5,7 +5,45 @@ de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e a
 caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
+## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
+
+- Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
+  balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
+  colisão da Rhaenyra está ok", mas a Radhija atravessava o balde e a câmera (zona `casa-na-arvore`) deixava o balde no
+  rodapé da tela, atrás do botão; 2ª (`36177f7`), "as colisões funcionaram", mas a alça ficava para fora da boca, com a
+  corda na frente da entrada; deitada lá dentro, a cabeça vazava; e o pulo para o deque atravessava o balde; 3ª
+  (`bf15bbd`), "ficou bom", mas com o balde virando as pernas dela atravessavam o balde.
+- Feito (`fase10/puzzle.js`, `layout.js`, `world/treehouse.js`):
+  - Colisor do balde para as duas (`fitBucketCol`): caixa do tamanho dele visto de cima, do fundo até a boca, enquanto
+    ele está deitado ou levantando; quase em pé, o círculo da boca. Só desliga quando o fundo passa da cabeça da
+    Rhaenyra. Com a Radhija lá dentro, vale só para a Rhaenyra (ativa no balde, ela não tem trava, para a troca
+    continuar valendo; a colisão a empurraria a cada quadro).
+  - A Radhija entra só pela boca (`atMouth`, `BUCKET.mouthR`); de lado ou por trás, o E dá a dica `bucketMouth`.
+  - A alça fica presa em orelhas um pouco abaixo da borda e aponta para a roldana (`layoutRope`): deitado, por cima do
+    balde; puxando, gira com ele. A corda desce por cima do balde, longe da boca.
+  - Achado: a pose do balde (`rideSeq`) nunca chegava à animação, e ela ficava sentada no balde deitado (a cabeça
+    passava do teto). Agora fica deitada de barriga (`slide`), a `RIDE_IN` do meio, virada como entrou (`rideYaw`).
+    A posição dela (`ridePos`) fica no espaço do balde e gira com ele: deitada perto da boca, na parede de baixo, até
+    a metade do giro; depois vai para o meio, senta (`SIT_TILT`) e desce até `RIDE_SIT` acima do fundo. Antes era
+    uma reta no mundo, e no meio do giro as patas de trás passavam pela parede.
+  - Os pulos do deque usam o `hopStep` (agacha, salta com a pose de pulo e pousa): a saída, sentada, sobe por cima da
+    borda; a volta salta até em cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque.
+  - Câmera: zona `balde-no-chao` (o olhar sobe 0,5 m, em vez de 1,2 m, na volta do balde).
+  - A exceção `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`); ela passa a conferir também o balde da
+    fase 8, que tinha o mesmo nome.
+- Testes (`test/fase10.test.mjs`): o desenho real (`buildLevelWorld`) contra o colisor, com o `findLooseObstacles` do
+  #53, para as duas, em 9 pontos da corda, e as duas livres a 3 cm do balde deitado; deitado, nada do balde nem da
+  corda na frente da boca; a Radhija esbarra de lado, por trás e na boca, entra só pela boca, fica quieta lá dentro,
+  sai sem tranco e aparece acima do botão na tela; os modelos de verdade (atual e novo), com a pose do jogo quadro a
+  quadro: deitada e com o balde virando (corda puxada devagar, com paradas), a pele cabe nele; nos pulos do deque, não
+  cruza a parede abaixo da borda. Medidas no CI `39503913840`: deitada, 2,6 cm (atual) e 0,9 cm (novo) para dentro;
+  virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
+- Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
+  E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
+- Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
+  só então integrar.
+
+## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
 - Plano aprovado: o peito e a garupa na colisão (dois círculos) e a cabeça que desvia, sem mudar o gating dos puzzles.
   Pedidos do usuário para esta etapa (2026-10-20): "diminuir um pouco a velocidade da Radhija, ela está andando muito
@@ -101,9 +139,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
   - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
-- Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
-  cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
-  animações de interação).
+- Integrado ao main e publicado (squash `38f5677`, deploy `39496742933`; produção v0.10.4 · build 96). Não repetir
+  merge/deploy do #48. Depois: as animações acima e a etapa 5 (troca nas 10 fases e cascas de pelo mais leves só no
+  celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das animações de interação).
 
 ## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 
