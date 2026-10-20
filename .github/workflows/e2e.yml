@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento, toque-diag]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento]
 
 permissions:
   contents: read
@@ -132,49 +132,8 @@ jobs:
           path: shots/
           if-no-files-found: ignore
           retention-days: 7
-  # VALIDAÇÃO (temporária, sai antes do merge): cópias da suíte toque e das capturas do celular, com gdb para as
-  # pilhas nativas se algo travar.
-  toque-diag:
-    if: inputs.suite == 'toque-diag'
-    name: Toque (validação) — cópia ${{ matrix.copia }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        copia: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    env:
-      CI: 'true'
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - name: Instalar Chromium e dependências Linux
-        run: node node_modules/playwright-core/cli.js install --with-deps chromium
-      - name: Instalar gdb (pilhas nativas no diagnóstico)
-        run: |
-          sudo apt-get install -y --no-install-recommends gdb || { sudo apt-get update && sudo apt-get install -y --no-install-recommends gdb; }
-          gdb --version | head -1
-      - name: Jogar e verificar
-        run: npm run test:e2e -- --only toque
-      - name: Capturas do celular e do PC para revisão (qualidade de cada aparelho)
-        if: always()
-        run: node tools/scripts/capture-celular.mjs
-      - name: Guardar diagnóstico
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: toque-diag-${{ matrix.copia }}
-          path: shots/diagnostico/
-          if-no-files-found: ignore
-          retention-days: 7
   partidas:
-    if: inputs.suite != 'recursos' && inputs.suite != 'carregamento' && inputs.suite != 'toque-diag'
+    if: inputs.suite != 'recursos' && inputs.suite != 'carregamento'
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30

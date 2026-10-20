@@ -1,7 +1,36 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 3: camadas e rabo com física; #33 a #44 e #43 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, branch `claude/iphone-e2e-travamento`; antes, modelos das dogs, etapa 3; #33 a #45 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: travamentos do iPhone emulado na suíte `toque` (Claude, branch `claude/iphone-e2e-travamento`)
+
+- Pedido (orquestrador): investigar os travamentos intermitentes do iPhone emulado na suíte `toque` dentro do
+  `todas` (PR #43, E2E `39358151432`: `test-toque.mjs:581` preso na intro; 2ª tentativa, `capture-celular.mjs:88` sem
+  responder) e corrigir sem afrouxar verificações. Só ferramentas de E2E; nada em `src/`.
+- Dois sintomas nos logs desde 2026-10-18. (1) "Deixa de responder": a aba nova (boot da página principal, das
+  páginas extras do PC/iPhone ou de cada aparelho das capturas) para em `rr:boot:ui` com a thread principal presa
+  fora do JavaScript. É o mesmo "travamento no primeiro carregamento" de ~1% documentado na ARQUITETURA §10.
+  (2) "Não sai da intro": 4 vezes (`39358151432`, `39313770288`, `39303364280`, `39178028583`), sempre depois do
+  `ip.reload()` do iPhone, sempre em runner AMD EPYC 7763, com `simSec` parado em ~5 s e a aba respondendo.
+- Causa de (1), com pilhas nativas (gdb) em 4 travamentos (experimento `toque-diag`, E2E `39365366605` e
+  `39366431425`): impasse dentro da aba. Os módulos do Vite compilam em segundo plano
+  (`BackgroundResourceScriptStreamer`) no pool de threads da aba (3 vagas no runner de 4 núcleos) e esperam uma coleta
+  de lixo da thread principal; a thread principal, no layout do logotipo com a fonte web carregando, espera o
+  serviço de fontes (`FontServiceThread`), cuja tarefa vai para o mesmo pool, sem vaga. Navegador e GPU ociosos.
+  Correção: `--disable-features=ScriptStreaming` em `tools/scripts/lib/browser.mjs`, junto com a lista do
+  Playwright (o Chromium só lê o último `--disable-features`); teste em `test/e2e-runner.test.mjs`.
+- (2) não se repetiu em ~75 sequências do iPhone nos experimentos (nem nas de runner EPYC 7763). Pista: nas falhas o
+  `simSec` chegou a ~5 s antes de parar; nos experimentos, no mesmo ponto, fica em 0,7–1,4 s (cada quadro do iPhone
+  levava 0,7–2 s, desenhando todo quadro no SwiftShader, dividindo a GPU com a página principal). Mitigação: as
+  páginas do iPhone ganharam a mesma redução de desenho do harness (1 de 30 quadros, desenho real antes das
+  capturas). Se voltar, o diagnóstico agora sai no prazo vencido, com os quadros de cada aba e as pilhas.
+- Diagnóstico novo (fica): `hang-probe.mjs` testa se cada aba recebe quadros, lista todas as threads da GPU e das abas
+  e grava pilhas nativas com gdb (só se houver gdb no job); `page-guard.mjs` imprime o diagnóstico em todo prazo
+  vencido do Playwright numa página protegida. ARQUITETURA §10 atualizada.
+- Validação: estresse da correção no branch descartável `claude/iphone-e2e-travamento-estresse` (E2E `39369177965`,
+  mesmas 10 cópias × 6 voltas que deram 3 travamentos sem a correção). Falta: tirar o job temporário `toque-diag` do
+  `e2e.yml`, abrir o PR, CI, E2E `toque` e `todas` no head final, prévia e aprovação; depois apagar o branch descartável.
 
 ## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
 
