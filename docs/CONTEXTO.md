@@ -11,7 +11,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   rápido"; "analisar a arrancada: a pata traseira acaba ficando tempo demais no chão e esticando a perna de um jeito
   estranho"; e, no meio do trabalho, "essa mecânica de empurrar poderia usar uma animação parecida com aquela de
   empurrar em pé... ela empurraria com as patas, andando apenas em duas patas traseiras; resolveria essa colisão".
-- Feito (PR #48; validar CI e E2E `todas` no head final antes da prévia):
+- Feito (PR #48):
   - Radhija a 2,1 m/s (era 2,4; a Rhaenyra continua a 2,0): `src/dogs/config.js`.
   - Arrancada (`src/dogs/v2/gait.js`): o ritmo do guia demora uns décimos de segundo para acompanhar a aceleração do
     controle (12–16 m/s²) e a pata de trás ia até o limite (~11 cm atrás, perna reta) e era arrastada. Agora, acelerando,
@@ -29,15 +29,33 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     uns 3 cm antes. Vale para os dois modelos (é o jogo). Testes em `test/colisao.test.mjs`.
   - Empurrando caixote ou carrinho de pé (`dogAnimation.js`, os dois modelos): a pose do empurrão em pé, patas da
     frente na face (ou em cima, se é baixo), andando nas traseiras; a Radhija fazendo força também fica de pé e
-    patina no lugar. O núcleo manda `pushGap`/`pushTop` (`game.js` `pushFace`; a altura vem do `height` do colisor,
-    agora em `createPushCrate` e no carrinho da fase 1). Testes em `test/empurrao.test.mjs`.
+    patina no lugar. O núcleo manda `pushGap`/`pushTop`/`pushY` (`game.js` `pushFace`). Testes em
+    `test/empurrao.test.mjs`.
   - Cabeça que desvia (`src/dogs/v2/head.js`, só o modelo novo, primeira camada de `LAYERS`): com o mundo da fase
     (`d.setWorld`), o desenho freia antes de uma parede (aos poucos, até o focinho encostar) e a cabeça vira
     farejando; raspando de lado, gira para fora. A locomoção não trata o recuo como esteira. Testes em
     `test/cabeca.test.mjs`; sandbox `wall=<m>`/`crate=<altura>` e capturas `45-parede`, `46-empurrando-de-pe`,
     `47-empurrando-cesto`, `48-forca-de-pe`.
-- Próximo passo: CI, E2E `todas` (inclui as capturas do `canil`), prévia e aprovação do usuário; depois, etapa 5 (troca
-  nas 10 fases e cascas de pelo mais leves só no celular).
+- 1ª prévia (`94579d0`), retorno do usuário: "a pata fica distante do objeto, no ar"; "alguns botões e cenários os
+  personagens atravessam, é como se só existisse a colisão do chão"; "segurando o direcional antes de a animação
+  acabar, as patas ficam presas"; "o círculo branco está muito forte". Corrigido:
+  - as patas apoiam no desenho do objeto empurrado, medido por raios (`src/game/pushRest.js`: face, beirada e altura
+    das patas, pulando frestas); o colisor dos empurráveis leva o desenho (`visual`). No carrinho da fase 1 a caixa
+    passa 6 cm das pontas e a beirada (37,5 cm) fica abaixo das patas: agora elas vão em cima dela;
+  - coisas baixas de pisar (placas, pedais e botões do chão, marcadas com `userData.walkable`) viram chão
+    (`src/game/ground.js`): o objeto da dog sobe (suave) e, no modelo novo, cada pata pisa em cima (chão por pata no
+    `gait.js`; a correção do chão do corpo vai até a pata mais baixa). Marcadas: fase 2 (tábua), fase 3 (pedras),
+    fase 6 (pedal e placa da cancela), fase 9 (botão do registro) e Arena dos Porquinhos (botão);
+  - andando, as poses de ação que acabaram saem 2,6× mais depressa (as patas não ficam presas);
+  - o anel da dog ativa ficou fino e discreto (`src/fx/feedback.js`).
+  Testes em `test/chao.test.mjs` (cenário real de cada fase). CI `39458897060` (509 testes) e E2E `todas`
+  `39460483667` verdes no código de `3b2520b`.
+- Pedidos do mesmo retorno que ficam para depois do #48 (combinados com o usuário): animações de interação de verdade
+  (a corda do portão presa na boca, fechar o registro mordendo o volante) e, parada muito tempo, coçar de olhinho
+  fechado e xixi agachada (fêmea), além de sentar e deitar; pegar e largar objetos em todas as fases está na sessão
+  própria `pegar-largar` (branch próprio, sem mexer nos arquivos deste PR).
+- Próximo passo: aprovação do usuário na prévia; depois, as animações acima e a etapa 5 (troca nas 10 fases e cascas
+  de pelo mais leves só no celular).
 
 ## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`, deploy `39443414245`)
 
