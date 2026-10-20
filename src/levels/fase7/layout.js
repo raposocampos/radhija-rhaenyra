@@ -61,6 +61,8 @@ export const FRISBEE = { x: TOWER.x + 0.02, y: SLIDE.deck + 0.004, z: SLIDE.z, s
 /** Toalha de piquenique no gramado sudoeste: a entrega dos dois objetos. */
 export const PICNIC = { x: -4.25, z: 2.62, hx: 0.78, hz: 0.55, yaw: 0.12 };
 export const BASKET = { x: -4.82, z: 2.88, r: 0.2 };
+/** Garrafa térmica na toalha, ao lado da cesta (longe dos lugares da comemoração). */
+export const THERMOS = { x: PICNIC.x - 0.66, z: PICNIC.z - 0.3 };
 /** Onde cada objeto fica na toalha (perto da cesta). */
 export const PICNIC_SPOTS = { ball: { x: -4.38, z: 2.95 }, frisbee: { x: -3.95, z: 2.55 } };
 
@@ -85,6 +87,7 @@ const seg = (id, ax, az, bx, bz, extra = {}) => ({ id, shape: /** @type {const} 
 const tunnelLen = TUNNEL.x1 - TUNNEL.x0;
 const tunnelMid = (TUNNEL.x0 + TUNNEL.x1) / 2;
 const outerR = TUNNEL.r + TUNNEL.wall;
+const moundFoot = 0.07; // o pé da encosta do morrinho passa de MOUND.hx/hz com mais de 8 cm de altura
 
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
@@ -93,9 +96,9 @@ export const STATIC_COLLIDERS = [
   seg('cerca-oeste-sul', FENCE.west, MOUND.z + MOUND.hz - 0.1, FENCE.west, FENCE.south),
   seg('cerca-sul-oeste', FENCE.west, FENCE.south, GATE.hinge.x - 0.06, FENCE.south),
   seg('cerca-sul-leste', GATE.latchPost.x + 0.06, FENCE.south, 6.3, FENCE.south),
-  // morrinho: as duas metades, deixando o corredor da manilha
-  { id: 'morrinho-norte', shape: 'box', x: MOUND.x, z: (MOUND.z - MOUND.hz + TUNNEL.z - outerR) / 2, hx: MOUND.hx, hz: (MOUND.hz - outerR) / 2 },
-  { id: 'morrinho-sul', shape: 'box', x: MOUND.x, z: (MOUND.z + MOUND.hz + TUNNEL.z + outerR) / 2, hx: MOUND.hx, hz: (MOUND.hz - outerR) / 2 },
+  // morrinho: as duas metades, deixando o corredor da manilha (com o pé da encosta: + moundFoot de cada lado)
+  { id: 'morrinho-norte', shape: 'box', x: MOUND.x, z: (MOUND.z - MOUND.hz - moundFoot + TUNNEL.z - outerR) / 2, hx: MOUND.hx + moundFoot, hz: (MOUND.hz + moundFoot - outerR) / 2 },
+  { id: 'morrinho-sul', shape: 'box', x: MOUND.x, z: (MOUND.z + MOUND.hz + moundFoot + TUNNEL.z + outerR) / 2, hx: MOUND.hx + moundFoot, hz: (MOUND.hz + moundFoot - outerR) / 2 },
   // paredes da manilha (o corredor tem o diâmetro interno) e os batentes das bocas, que só barram a Rhaenyra
   { id: 'manilha-norte', shape: 'box', x: tunnelMid, z: TUNNEL.z - TUNNEL.r - TUNNEL.wall / 2, hx: tunnelLen / 2, hz: TUNNEL.wall / 2 },
   { id: 'manilha-sul', shape: 'box', x: tunnelMid, z: TUNNEL.z + TUNNEL.r + TUNNEL.wall / 2, hx: tunnelLen / 2, hz: TUNNEL.wall / 2 },
@@ -103,21 +106,28 @@ export const STATIC_COLLIDERS = [
   { id: 'boca-leste', shape: 'box', x: TUNNEL.x1 - 0.06, z: TUNNEL.z, hx: 0.05, hz: TUNNEL.r, blocks: 'large' },
   // escorregador: a rampa e a casinha (com a escadinha do lado leste)
   { id: 'escorregador', shape: 'box', x: (SLIDE.x0 + 0.16 + SLIDE.x1) / 2, z: SLIDE.z, hx: (SLIDE.x1 - SLIDE.x0 - 0.16) / 2, hz: SLIDE.halfWidth + 0.04 },
-  { id: 'casinha', shape: 'box', x: TOWER.x + 0.07, z: TOWER.z, hx: TOWER.hx + 0.07, hz: TOWER.hz },
+  // as bordas da rampa no pé dela (entre elas a subida fica livre: a Radhija sobe pelo meio)
+  ...[-1, 1].map((s) => /** @type {import('../../types').BoxCollider} */ ({
+    id: `escorregador-pe-${s < 0 ? 'norte' : 'sul'}`, shape: 'box', x: SLIDE.x0 + 0.06, z: SLIDE.z + s * (SLIDE.halfWidth - 0.02), hx: 0.11, hz: 0.03,
+  })),
+  { id: 'casinha', shape: 'box', x: TOWER.x + 0.09, z: TOWER.z, hx: TOWER.hx + 0.09, hz: TOWER.hz }, // com a escadinha
   // brinquedos
   { id: 'balanco-oeste', shape: 'box', x: SWINGS.x - SWINGS.halfSpan, z: SWINGS.z, hx: 0.08, hz: 0.42 },
   { id: 'balanco-leste', shape: 'box', x: SWINGS.x + SWINGS.halfSpan, z: SWINGS.z, hx: 0.08, hz: 0.42 },
   { id: 'balanco-assentos', shape: 'box', x: SWINGS.x, z: SWINGS.z, hx: 0.68, hz: 0.18 },
   { id: 'gangorra', shape: 'box', x: SEESAW.x, z: SEESAW.z, hx: SEESAW.halfLength, hz: 0.17 },
   { id: 'caixa-de-areia', shape: 'box', x: SANDBOX.x, z: SANDBOX.z, hx: SANDBOX.hx, hz: SANDBOX.hz },
-  { id: 'cavalinho', shape: 'circle', x: SPRING_RIDER.x, z: SPRING_RIDER.z, r: SPRING_RIDER.r },
+  // a joaninha de mola: o corpo (0,4 m de comprido, virado a 0,6 rad) e a cabeça passam da base
+  { id: 'cavalinho', shape: 'circle', x: SPRING_RIDER.x + 0.03, z: SPRING_RIDER.z + 0.04, r: 0.3 },
   // gramado
   { id: 'cesta', shape: 'circle', x: BASKET.x, z: BASKET.z, r: BASKET.r },
+  { id: 'garrafa-termica', shape: 'circle', x: THERMOS.x, z: THERMOS.z, r: 0.06 },
   { id: 'banco-oeste', shape: 'box', x: BENCHES[0].x, z: BENCHES[0].z, hx: 0.25, hz: 0.72 },
   { id: 'banco-sul', shape: 'box', x: BENCHES[1].x, z: BENCHES[1].z, hx: 0.72, hz: 0.25 },
   { id: 'lixeira', shape: 'circle', x: TRASH.x, z: TRASH.z, r: TRASH.r },
   ...LAMPS.map((l, i) => ({ id: `poste-${i}`, shape: /** @type {const} */ ('circle'), x: l.x, z: l.z, r: 0.09 })),
-  ...TREES.map((t, i) => ({ id: `arvore-${i}`, shape: /** @type {const} */ ('circle'), x: t.x, z: t.z, r: t.r })),
+  // (o pé do tronco abre 6 cm além de r)
+  ...TREES.map((t, i) => ({ id: `arvore-${i}`, shape: /** @type {const} */ ('circle'), x: t.x, z: t.z, r: t.r + 0.06 })),
 ];
 
 export const NAV_NODES = {
@@ -163,7 +173,7 @@ export const CAMERA = {
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = {
   WORLD, DOGS, FENCE, MOUND, TUNNEL, MUD_ZONE, MUD, GATE, LATCH, BALL, SLIDE, TOWER, SLIDE_ENTRY, SLIDE_TIMES, FRISBEE,
-  PICNIC, BASKET, PICNIC_SPOTS, SWINGS, SEESAW, SANDBOX, SPRING_RIDER, BENCHES, LAMPS, TREES, TRASH, PUDDLES,
+  PICNIC, BASKET, THERMOS, PICNIC_SPOTS, SWINGS, SEESAW, SANDBOX, SPRING_RIDER, BENCHES, LAMPS, TREES, TRASH, PUDDLES,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES, COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
 export default LAYOUT;

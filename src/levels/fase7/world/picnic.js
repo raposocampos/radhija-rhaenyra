@@ -90,9 +90,9 @@ export function buildPicnic(root, layout) {
   bsh.position.y = 0.01;
   basket.add(bsh);
   group.add(basket);
-  // garrafa térmica
+  // garrafa térmica (layout.THERMOS, com colisor)
   const thermos = new THREE.Group();
-  thermos.position.set(P.x - 0.12, 0.01, P.z - 0.32);
+  thermos.position.set(layout.THERMOS.x, 0.01, layout.THERMOS.z);
   const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.22, 16), new THREE.MeshPhysicalMaterial({ color: '#4fa3d9', roughness: 0.3, clearcoat: 0.8 }));
   tb.position.y = 0.11;
   const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.047, 0.05, 16), stdMat('#f2ede2', { roughness: 0.4 }));
@@ -120,8 +120,9 @@ export function buildPicnic(root, layout) {
     sw.rotation.y = ry;
     plate.add(sw);
   }
-  const orange = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), stdMat('#f39a3d', { roughness: 0.6 }));
-  orange.position.set(0.0, 0.05, -0.07);
+  // (uma tangerina: baixinha como o resto do pratinho, a pata passa por cima)
+  const orange = new THREE.Mesh(new THREE.SphereGeometry(0.03, 14, 10), stdMat('#f39a3d', { roughness: 0.6 }));
+  orange.position.set(0.0, 0.034, -0.07);
   plate.add(orange);
   group.add(plate);
   group.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh && !o.userData.noShadow && o !== cloth) { o.castShadow = true; o.receiveShadow = true; } });

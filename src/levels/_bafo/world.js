@@ -204,6 +204,7 @@ export function buildBafoWorld({ root, layout }) {
   const carrotHome = carrot.position.clone();
   const collectibles = COLLECTIBLES.map((c) => {
     const bone = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.025, 8, 16), std('#e8c06a', { emissive: '#7a5200', emissiveIntensity: 0.4 }));
+    bone.name = `osso-${c.id}`;
     bone.rotation.x = Math.PI / 2;
     bone.position.set(c.x, 0.12, c.z);
     root.add(bone);

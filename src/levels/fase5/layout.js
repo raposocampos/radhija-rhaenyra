@@ -96,10 +96,11 @@ export const STATIC_COLLIDERS = [
   wallX('cercadinho-sul', PEN.z1, PEN.x0, PEN.x1, { jumpable: true, height: PEN.height }),
   wallZ('cercadinho-oeste', PEN.x0, PEN.z0, PEN.z1, { jumpable: true, height: PEN.height }),
   wallZ('cercadinho-leste', PEN.x1, PEN.z0, PEN.z1, { jumpable: true, height: PEN.height }),
-  // brinquedos dentro do cercadinho (world/props.js, buildPlaypen): os cubos, a torre de argolas e a bola
-  { id: 'cubos', shape: 'box', x: PEN.x0 + 0.37, z: PEN.z1 - 0.275, hx: 0.19, hz: 0.095 },
-  { id: 'argolas', shape: 'circle', x: PEN.x1 - 0.3, z: PEN.z0 + 0.3, r: 0.1 },
-  { id: 'bola-cercadinho', shape: 'circle', x: PEN.x0 + 0.3, z: PEN.z0 + 0.35, r: 0.07 },
+  // brinquedos dentro do cercadinho (world/props.js, buildPlaypen): os cubos, a torre de argolas e a bola; baixos, a
+  // Rhaenyra pula por cima (e quem pula para dentro do cercadinho não é empurrada através deles ao pousar)
+  { id: 'cubos', shape: 'box', x: PEN.x0 + 0.37, z: PEN.z1 - 0.275, hx: 0.19, hz: 0.095, jumpable: true, height: 0.23 },
+  { id: 'argolas', shape: 'circle', x: PEN.x1 - 0.3, z: PEN.z0 + 0.3, r: 0.1, jumpable: true, height: 0.25 },
+  { id: 'bola-cercadinho', shape: 'circle', x: PEN.x0 + 0.3, z: PEN.z0 + 0.35, r: 0.07, jumpable: true, height: 0.17 },
   // corredor
   { id: 'escada', shape: 'box', x: (STAIRS.x0 + STAIRS.x1) / 2, z: (STAIRS.z0 + STAIRS.z1) / 2, hx: (STAIRS.x1 - STAIRS.x0) / 2, hz: (STAIRS.z1 - STAIRS.z0) / 2 },
   { id: 'cabideiro', shape: 'circle', x: -1.35, z: -2.25, r: 0.2 },

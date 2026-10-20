@@ -19,11 +19,13 @@ const SEM_COLISOR = [
   [/^(grama-baixa|grama-alta|grama-do-morrinho|florzinhas|folhinhas)$/, 'capim, florzinhas e a pele de folhinhas: as dogs passam roçando'],
   [/^osso-/, 'ossinho: as dogs passam por cima para pegar'],
   [/^caminha$/, 'caminha: as dogs sobem nela (chão, como as placas do PR #48)'],
+  [/^almofada-do-gato$/, 'almofada do Bichano: fofa e baixinha (12 cm), como as caminhas'],
   [/^(tabua-pressao|pedra-de-pressao-.+|pedal-de-pulo|placa-da-cancela|botao-do-registro|botao-do-chiqueiro)$/, 'placa de pisar: é chão (src/game/ground.js)'],
   [/^cenoura$/, 'item da fase (vai na boca)'],
   [/^bolinha-listrada$/, 'bolinha que rola com a focinhada (src/world/extraProps.js)'],
   [/^fita-do-vento$/, 'fitas do ventilador: tecido leve'],
   [/^corda-da-tabua$/, 'corda fina da tábua até a roldana, rente ao chão (de 4 a 11 cm): a pata passa por cima'],
+  [/^(manilha|lama)$/, 'túnel da fase 7: a Radhija passa por dentro (as paredes do corredor são os colisores manilha-norte/sul)'],
 ];
 const skipped = (o) => {
   for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;

@@ -49,7 +49,10 @@ export const WALL_HL = { x: -1.6, gap: { z0: -1.25, z1: 1.55 } };
 /** Divisória biblioteca | jardim de inverno: portas de vidro abertas. */
 export const WALL_LJ = { x: 4.4, gap: { z0: -0.95, z1: 1.45 } };
 /** Vidraças do jardim de inverno na parede do fundo; o trecho de alvenaria (com o duto) fica de x0 a x1. */
-export const CONSERVATORY = { x0: WALL_LJ.x, x1: WORLD.bounds.maxX, brick: { x0: 5.45, x1: 6.85 } };
+// parapet: o peitoril de tijolinho das vidraças
+export const CONSERVATORY = { x0: WALL_LJ.x, x1: WORLD.bounds.maxX, brick: { x0: 5.45, x1: 6.85 }, parapet: 0.55 };
+/** Portas de vidro do jardim de inverno: abertas, encostadas na divisória do lado do jardim (openTurn × meia-volta). */
+export const GLASS_DOORS = { openTurn: 0.965 };
 /** Porta da frente da casa (na parede do fundo do hall; fechada, só cenário). */
 export const FRONT_DOOR = { x: -3.0, w: 1.0, h: 2.15 };
 
@@ -173,6 +176,11 @@ export const FAN = {
  * fica atrás. Os limites do ventilador nunca o deixam encostar neles (sempre sobra um lado para empurrar).
  */
 export const POTS = [{ x: 7.45, z: -1.0, r: 0.34 }, { x: 7.45, z: -2.08, r: 0.34 }];
+/** Vasinhos de enfeite no chão, junto da vidraça (r: colisor, que cobre as folhas; seedX: a semente do desenho). */
+export const SMALL_POTS = [
+  { x: 4.62, z: WORLD.bounds.minZ + 0.18, kind: 'fern', scale: 0.4, r: 0.2, seedX: 4.85 },
+  { x: 7.4, z: WORLD.bounds.minZ + 0.18, kind: 'monstera', scale: 0.45, r: 0.22, seedX: 7.4 },
+];
 export const WICKER_CHAIR = { x: 5.6, z: 2.6, r: 0.38 };
 export const PLANT_TABLE = { x: 7.35, z: 2.35, hx: 0.4, hz: 0.24, h: 0.62 };
 
@@ -202,8 +210,10 @@ export const STATIC_COLLIDERS = [
   { id: 'arquivo', shape: 'box', x: -5.15, z: -3.35, hx: 0.3, hz: 0.25 },
   // hall
   { id: 'banco', shape: 'box', x: HALL_BENCH.x, z: HALL_BENCH.z, hx: HALL_BENCH.hx, hz: HALL_BENCH.hz },
+  // as galochas no chão, ao lado do banco (world/hall.js)
+  { id: 'galochas', shape: 'box', x: HALL_BENCH.x + HALL_BENCH.hx + 0.175, z: HALL_BENCH.z + 0.08, hx: 0.105, hz: 0.09 },
   { id: 'porta-guarda-chuva', shape: 'circle', x: UMBRELLA_STAND.x, z: UMBRELLA_STAND.z, r: UMBRELLA_STAND.r },
-  { id: 'cabideiro', shape: 'circle', x: COAT_RACK.x, z: COAT_RACK.z, r: COAT_RACK.r },
+  { id: 'cabideiro', shape: 'circle', x: COAT_RACK.x, z: COAT_RACK.z, r: COAT_RACK.r + 0.04 }, // com o pé de madeira
   { id: 'aparador', shape: 'box', x: CONSOLE.x, z: CONSOLE.z, hx: CONSOLE.hx, hz: CONSOLE.hz },
   // biblioteca
   { id: 'estante-oeste', shape: 'box', x: (SHELF_W.x0 + SHELF_W.x1) / 2, z: SHELF_W.z, hx: (SHELF_W.x1 - SHELF_W.x0) / 2, hz: SHELF_W.depth / 2 },
@@ -220,6 +230,17 @@ export const STATIC_COLLIDERS = [
   ...STUDY_CHAIRS.map((c, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `cadeira-de-estudos-${i + 1}`, shape: 'circle', x: c.x, z: c.z, r: c.r })),
   // jardim de inverno
   ...POTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
+  // as folhas abertas das portas de vidro (world/room.js) e o cano do duto, que sobe da grade de baixo
+  ...[[WALL_LJ.gap.z0, 1], [WALL_LJ.gap.z1, -1]].map(([hz, dir], i) => {
+    const a = dir * Math.PI * GLASS_DOORS.openTurn; // rotation.y da folha
+    const leafW = (WALL_LJ.gap.z1 - WALL_LJ.gap.z0) / 2;
+    const hx = WALL_LJ.x + WALLS.t / 2;
+    return /** @type {import('../../types').SegmentCollider} */ ({
+      id: `porta-de-vidro-${i + 1}`, shape: 'segment', ax: hx, az: hz, bx: hx + Math.sin(a) * dir * leafW, bz: hz + Math.cos(a) * dir * leafW, t: 0.03,
+    });
+  }),
+  { id: 'cano-do-duto', shape: 'circle', x: DUCT.inlet.x, z: B.minZ + 0.12, r: 0.08 },
+  ...SMALL_POTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vasinho-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
   { id: 'poltrona-de-vime', shape: 'circle', x: WICKER_CHAIR.x, z: WICKER_CHAIR.z, r: WICKER_CHAIR.r },
   { id: 'mesa-das-plantas', shape: 'box', x: PLANT_TABLE.x, z: PLANT_TABLE.z, hx: PLANT_TABLE.hx, hz: PLANT_TABLE.hz },
 ];
@@ -277,11 +298,11 @@ export const CAMERA = {
 const LAYOUT = {
   // GATE: a porta principal da fase (o feedback desenha o brilho de "abriu" ao longo dela)
   GATE: DOOR,
-  WORLD, DOGS, WALLS, WALL_EH, WALL_HL, WALL_LJ, CONSERVATORY, FRONT_DOOR, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN,
+  WORLD, DOGS, WALLS, WALL_EH, WALL_HL, WALL_LJ, CONSERVATORY, GLASS_DOORS, FRONT_DOOR, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN,
   WARDROBE, DESK, DESK_CHAIR, BOOK_FALL, CAT, HALL_BENCH, UMBRELLA_STAND, COAT_RACK, CONSOLE, SHELF_W, FIREPLACE,
   SHELF_E, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB, BRAKE_LEVER, ARMCHAIR, SIDE_TABLE, FOOTSTOOL, FLOOR_LAMP, RUG,
   STUDY_TABLE, STUDY_CHAIRS,
-  TABLE_SPOTS, DUCT, BREAKER, PLANTER, DAMPER_PLATE, FAN, POTS, WICKER_CHAIR, PLANT_TABLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
+  TABLE_SPOTS, DUCT, BREAKER, PLANTER, DAMPER_PLATE, FAN, POTS, SMALL_POTS, WICKER_CHAIR, PLANT_TABLE, STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };
 export default LAYOUT;
