@@ -8,6 +8,8 @@ import { createInput } from './input.js';
 import { createGameEvents } from './gameEvents.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
+import { pushRest } from './pushRest.js';
+import { createGround, walkablesOf } from './ground.js';
 import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
@@ -80,6 +82,9 @@ export function createGame({ engine, dogs, levels, params }) {
   /** @type {import('../types').LevelBuild} */
   let built = null; // { env, props, update, seeThrough }
   let world = null;
+  /** Chão das coisas baixas de pisar da fase (ground.js) e a altura suavizada do chão embaixo de cada dog. */
+  let ground = null;
+  const gnd = { radhija: { y: 0, x: NaN, z: NaN }, rhaenyra: { y: 0, x: NaN, z: NaN } };
   let nav = null;
   let puzzle = null;
   let dbg = null;
@@ -824,7 +829,13 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   // ---------- aplicar às dogs ----------
-  /** Caixote ou carrinho bem na frente da dog (empurrando ou fazendo força nele): distância do centro à face e altura. */
+  /** Medidas do desenho do objeto empurrado por dog (recalculadas só quando ela muda de lugar em relação a ele). */
+  const pushCache = new Map();
+  /**
+   * Caixote ou carrinho bem na frente da dog (empurrando ou fazendo força nele): distância do centro à face, alto da
+   * face (a beirada) e a altura das patas nela, medidos no desenho do objeto (pushRest.js); sem desenho, a caixa de
+   * colisão.
+   */
   function pushFace(c) {
     if (!world) return null;
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
@@ -834,16 +845,33 @@ export function createGame({ engine, dogs, levels, params }) {
       if (h.kind !== 'crate' && h.kind !== 'cart') continue;
       if (-(h.nx * fx + h.nz * fz) < 0.6) continue; // de frente para ele
       const gap = c.r + M - h.depth;
-      if (!best || gap < best.gap) best = { gap, top: world.getDynamic(h.id)?.height ?? 0.5 };
+      if (!best || gap < best.gap) best = { id: h.id, gap };
     }
-    return best;
+    if (!best) return null;
+    const col = world.getDynamic(best.id);
+    const plain = { gap: best.gap, top: col?.height ?? 0.5, y: 0 };
+    if (!col?.visual || col.shape !== 'box') return plain;
+    const prev = pushCache.get(c.name);
+    const rx = c.x - col.x, rz = c.z - col.z;
+    if (prev && prev.id === best.id && Math.hypot(rx - prev.rx, rz - prev.rz) < 0.01 && Math.abs(c.yaw - prev.yaw) < 0.03) return prev.res;
+    const sc = (c.cfg.visual?.shoulder ?? 0.3) / 0.3;
+    const r = pushRest(col.visual, c, { near: best.gap, pref: 0.36 * sc, scale: sc });
+    const res = r ? { gap: r.gap, top: r.top, y: r.y } : plain;
+    pushCache.set(c.name, { id: best.id, rx, rz, yaw: c.yaw, res });
+    return res;
   }
   function applyDogs(dt) {
     for (const n of NAMES) {
       const c = ctrls[n];
       const d = dogs[n];
       const an = anims[n];
-      d.object.position.set(c.x, 0, c.z);
+      // em cima de uma coisa baixa de pisar (placa, pedal), o corpo sobe junto (suave; posta em outro lugar, na hora)
+      const G = gnd[n];
+      const gy = ground ? ground.heightAt(c.x, c.z) : 0;
+      G.y = Math.hypot(c.x - G.x, c.z - G.z) < 0.5 ? G.y + (gy - G.y) * (1 - Math.exp(-14 * dt)) : gy;
+      G.x = c.x;
+      G.z = c.z;
+      d.object.position.set(c.x, G.y, c.z);
       d.object.rotation.y = c.yaw;
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
@@ -881,6 +909,7 @@ export function createGame({ engine, dogs, levels, params }) {
       const PF = !SV && (an.action === 'push' || an.action === 'strain') ? pushFace(c) : null;
       an.pushGap = PF ? PF.gap : 0;
       an.pushTop = PF ? PF.top : 0;
+      an.pushY = PF ? PF.y : 0;
       if (c.shoveHit) {
         // As patas empurraram (um por ciclo; ativa ou companheira): o tum, a rosnadinha e o puzzle.
         shove.hit(c, { puzzle, ctrls, playing: state === 'playing' });
@@ -940,6 +969,9 @@ export function createGame({ engine, dogs, levels, params }) {
     attempt(() => built?.dispose?.());
     attempt(() => resources?.dispose(dbg?.group));
     for (const n of NAMES) attempt(() => dogs[n]?.setWorld?.(null));
+    for (const n of NAMES) attempt(() => dogs[n]?.setGround?.(null));
+    ground = null;
+    pushCache.clear();
     // Nenhum getter/closure do núcleo deve manter a montagem descartada viva.
     root = built = puzzle = scent = world = nav = dbg = resources = null;
     if (errors.length) throw new AggregateError(errors, 'Falha ao encerrar a fase');
@@ -1042,6 +1074,9 @@ export function createGame({ engine, dogs, levels, params }) {
         world = createCollisionWorld(L);
         // o modelo novo desvia a cabeça das paredes e dos móveis (src/dogs/v2/head.js)
         for (const n of NAMES) dogs[n]?.setWorld?.(world);
+        // as coisas baixas de pisar (placas, pedais, botões do chão): a dog sobe nelas (ground.js)
+        ground = createGround(walkablesOf(root));
+        for (const n of NAMES) dogs[n]?.setGround?.(ground.count ? ground.heightAt : null);
         nav = createNavigator(L, world);
         scent = createScentField({ world, emit, view: createScentView(root) });
         cancelBafo();
@@ -1260,7 +1295,7 @@ export function createGame({ engine, dogs, levels, params }) {
     floorOf(name) {
       const c = ctrls?.[name];
       if (!c) return { y: 0, ramp: false };
-      return { y: airborne(c) ? 0 : Math.max(0, c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
+      return { y: Math.max(gnd[name]?.y || 0, airborne(c) ? 0 : c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
     },
     update,
     reset,

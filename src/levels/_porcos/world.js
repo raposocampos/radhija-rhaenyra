@@ -109,6 +109,7 @@ function floorButton(root, cfg) {
   g.add(base, ring, dome);
   g.position.set(cfg.x, 0, cfg.z);
   shadowAll(g);
+  g.userData.walkable = true; // dá para pisar: a dog sobe nela (src/game/ground.js)
   root.add(g);
   return {
     object: g,

@@ -115,6 +115,9 @@ export function createGait({ skel2, retarget, s }) {
       over: false, dragged: false, stretch: 1,
       reachBack: 1, // traseira: até onde a pata apoiada vai para trás antes de a perna ficar reta (m; abaixo)
       why: '', // por que o último passo saiu: 'fase', 'atrasada', 'longe', 'conforto' ou 'ajuste' (testes e capturas)
+      // alto do chão (no mundo) embaixo da pata apoiada e de onde ela saiu (coisas baixas de pisar: placas, pedais);
+      // NaN = o chão do objeto
+      h: NaN, h0: NaN,
       off: -1, // fase desta pata no ciclo (a do guia, mudando devagar: passo ↔ trote sem a pata pular)
       foot: rest[idx[idx.length - 1]].clone(), from: V(),
       // alvos do quadro: junta de cima (ombro/quadril) antes da descida do tronco, pulso/jarrete, giro do tronco, dedos
@@ -140,6 +143,7 @@ export function createGait({ skel2, retarget, s }) {
   const kD = V(), kDir = V(), kPl = V(); // solve2()
   const Sh = V(), Wr = V(), Kn = V(), Pole = V(), Nrm = V(), Seg = V(), Ax = V(), Fw = V(), Tg = V();
   const qT = new THREE.Quaternion(), qL = new THREE.Quaternion();
+  const _gw = V(); // chão por pata (groundUnder)
 
   /** Quaternion que leva a direção de repouso `r` (com a normal n0) para `dir` (com a normal `n`). */
   function basis(out, r, n0, dir, n) {
@@ -187,6 +191,7 @@ export function createGait({ skel2, retarget, s }) {
   let staticN = 0; // quadros seguidos parada no mundo
   let wasOwn = false; // no quadro anterior, só a locomoção mexia nas patas
   let wasMoving = false; // no quadro anterior, andando ou girando
+  let lowG = 0; // o chão mais baixo embaixo das patas, relativo ao do objeto (≤ 0: uma pata desceu de uma placa)
   let ph = 0; // fase das patas: a do guia; mais rápida numa curva fechada (e volta ao compasso dele depois)
   let lastG = -1; // fase do guia no quadro anterior
   /** @type {[number, number][]} pisadas do quadro (pata, passada m/s): o dog.js avisa o jogo no fim do quadro */
@@ -208,6 +213,7 @@ export function createGait({ skel2, retarget, s }) {
   /** A pata sai do chão: pela fase (timed = false) ou por tempo (rate = 1/duração: passo extra ou de ajuste). */
   function startSwing(leg, timed, lift, rate, why) {
     leg.why = why;
+    leg.h0 = leg.h;
     leg.swing = true;
     leg.timed = timed;
     leg.settle = false;
@@ -222,6 +228,7 @@ export function createGait({ skel2, retarget, s }) {
       const pi = leg.idx[leg.idx.length - 1];
       leg.foot.copy(fromGuide ? P2[pi] : leg.neutral);
       leg.foot.y = Math.max(leg.neutral.y, leg.foot.y);
+      leg.h = leg.h0 = NaN;
       leg.swing = false;
       leg.timed = false;
       leg.settle = false;
@@ -236,7 +243,15 @@ export function createGait({ skel2, retarget, s }) {
    * @param {number} dt @param {import('../../types').DogAnim} A @param {any} st (estado do guia)
    * @param {THREE.Object3D} inner @param {THREE.Object3D} object
    */
-  function apply(dt, A, st, inner, object) {
+  function apply(dt, A, st, inner, object, groundAt = null) {
+    // chão por pata: o alto do que está embaixo de um ponto do corpo (inner), relativo ao chão do objeto
+    const objY = object.position.y;
+    const hRel = (h) => (Number.isFinite(h) ? h - objY : 0);
+    const groundUnder = (p) => {
+      if (!groundAt) return NaN;
+      _gw.copy(p).applyQuaternion(inner.quaternion).add(inner.position).applyQuaternion(object.quaternion).add(object.position);
+      return groundAt(_gw.x, _gw.z);
+    };
     // --- quanto o corpo andou e girou desde o quadro anterior (no referencial do corpo de antes)
     const oy = object.rotation.y;
     const yaw = oy + st.spin;
@@ -361,6 +376,7 @@ export function createGait({ skel2, retarget, s }) {
         leg.stanceT = 1;
         leg.foot.lerp(P2[leg.idx[leg.idx.length - 1]], 1 - Math.exp(-12 * dt));
         leg.phSwing = fract(ph + leg.off) >= beta;
+        leg.h = NaN; // a pata do guia fica no chão do objeto
         continue;
       }
       if (!leg.swing) leg.stanceT += dt;
@@ -417,7 +433,9 @@ export function createGait({ skel2, retarget, s }) {
         Fw.lerpVectors(leg.neutral, leg.land, clamp(Math.abs(mv.v) / 0.3, 0, 1));
         const T = leg.settle ? Tg.copy(leg.neutral) : ahead(Tg, Fw, left + stanceDur / 2);
         leg.foot.lerpVectors(leg.from, T, sstep(0, 1, leg.u));
-        leg.foot.y = leg.neutral.y + leg.lift * Math.sin(Math.PI * leg.u);
+        // sobe ou desce para o chão de onde ela vai pousar (em cima de uma placa, de um pedal...)
+        const hT = groundUnder(T);
+        leg.foot.y = leg.neutral.y + lerp(hRel(leg.h0), hRel(hT), sstep(0, 1, leg.u)) + leg.lift * Math.sin(Math.PI * leg.u);
         if (leg.u >= 1) {
           // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
           if (weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) steps.push([li, leg.settle ? 0.1 : stepSpeed]);
@@ -428,10 +446,12 @@ export function createGait({ skel2, retarget, s }) {
           leg.timed = false;
           leg.settle = false;
           leg.stanceT = 0;
-          leg.foot.y = leg.neutral.y;
+          leg.h = hT;
+          leg.foot.y = leg.neutral.y + hRel(leg.h);
         }
-      } else leg.foot.y = leg.neutral.y;
+      } else leg.foot.y = leg.neutral.y + hRel(leg.h);
     }
+    lowG = Math.min(0, ...legs.map((l) => hRel(l.h)));
     // parada: a pata mais fora do lugar dá um passinho de ajuste (uma de cada vez)
     if (own && !moving && still > 0.08 && !legs.some((l) => l.swing)) {
       let best = null, far = 0.014 * s;
@@ -604,5 +624,7 @@ export function createGait({ skel2, retarget, s }) {
     get drop() { return drop * weight; },
     /** Velocidade (m/s) e giro (rad/s) do corpo sobre o chão, medidos. */
     get motion() { return mv; },
+    /** O chão mais baixo embaixo das patas, relativo ao do objeto (m, ≤ 0): a correção do chão do corpo vai até ele. */
+    get lowGround() { return weight > 0.02 ? lowG : 0; },
   };
 }

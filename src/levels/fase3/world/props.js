@@ -219,6 +219,7 @@ function makePlate(P, kind, seed) {
   gap.position.y = 0.002;
   root.add(gap);
   root.add(contactShadow(R * 1.25, R * 1.25, 0.35, 0.004));
+  moving.userData.walkable = true; // a pedra dá para pisar: a dog sobe nela (src/game/ground.js)
   let press = 0, glow = 0;
   return {
     object: root, stoneMat,

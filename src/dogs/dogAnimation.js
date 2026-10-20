@@ -227,6 +227,7 @@ function createAnimState() {
     pushAir: [false, false, false, false],
     pushGap: 0.26,
     pushTop: 0.5,
+    pushY: 0,
   };
 }
 
@@ -442,10 +443,16 @@ export function createDogAnimation(ctx) {
     if (v < 0.05 && action === 'none' && Math.abs(turn) < 0.4 && st.bark < 0) st.idle += dt;
     else st.idle = 0;
     const wantSit = action === 'sit' || (action === 'none' && st.idle > 5);
-    w.sit = damp(w.sit, wantSit ? 1 : 0, wantSit ? 3.2 : 7);
-    for (const k of ['push', 'strain', 'tug', 'celebrate', 'sniff', 'dash', 'turn']) w[k] = damp(w[k], action === k ? 1 : 0, k === 'dash' ? 10 : 6);
-    w.shake = damp(w.shake, action === 'shake' ? 1 : 0, action === 'shake' ? 14 : 8);
-    w.startled = damp(w.startled, action === 'startled' ? 1 : 0, action === 'startled' ? 22 : 5);
+    // andando, as poses de ação que acabaram saem depressa: segurando o direcional antes de uma animação terminar
+    // (puxar a corda do portão, molhar no irrigador, empurrar), as patas não ficam presas enquanto ela já anda
+    // (retorno do usuário: "as patas demoram muito pra se mexer")
+    const offK = speedIn > 0.3 ? 2.6 : 1;
+    w.sit = damp(w.sit, wantSit ? 1 : 0, wantSit ? 3.2 : 7 * offK);
+    for (const k of ['push', 'strain', 'tug', 'celebrate', 'sniff', 'dash', 'turn']) {
+      w[k] = damp(w[k], action === k ? 1 : 0, k === 'dash' ? 10 : action === k ? 6 : 6 * offK);
+    }
+    w.shake = damp(w.shake, action === 'shake' ? 1 : 0, action === 'shake' ? 14 : 8 * offK);
+    w.startled = damp(w.startled, action === 'startled' ? 1 : 0, action === 'startled' ? 22 : 5 * offK);
     st.shakeT += dt;
     st.startT += dt;
     // chacoalhar: onda de torção que vai da cabeça à cauda (~0,9 s); k = atraso do segmento
@@ -504,8 +511,9 @@ export function createDogAnimation(ctx) {
     if (pushOn) {
       st.pushGap = A.pushGap;
       st.pushTop = A.pushTop ?? 0.5;
+      st.pushY = A.pushY || 0;
     }
-    w.pushUp = damp(w.pushUp, pushOn ? 1 : 0, pushOn ? 5 : 6);
+    w.pushUp = damp(w.pushUp, pushOn ? 1 : 0, pushOn ? 5 : 6 * offK);
     if (!pushOn && w.pushUp < 1e-3) w.pushUp = 0;
     const pk = sstep(0, 1, w.pushUp) * (1 - skShove);
     const sk = Math.max(skShove, pk);
@@ -518,8 +526,9 @@ export function createDogAnimation(ctx) {
       const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: A.shoveY ?? 0.44, gap: A.shoveGap ?? 0.26, over, s });
       Object.assign(shoveCtx, P, { round: over <= 0.005, cock: st.sb.cock, press: st.sb.press, walk: 0 });
     } else if (pk > 0.001) {
-      // coisa baixa (cesto, carrinho): as patas vão em cima da beirada; alta (escada, ventilador): na face
-      const y0 = PUSH_PAWS * s;
+      // coisa baixa (cesto, carrinho): as patas vão em cima da beirada; alta (escada, ventilador): na face, na altura
+      // medida no desenho dela (game.js pushRest) ou na padrão
+      const y0 = st.pushY > 0 ? clamp(st.pushY, 0.16 * s, 0.56 * s) : PUSH_PAWS * s;
       const onTop = st.pushTop < y0 + 0.03 * s;
       const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: onTop ? st.pushTop : y0, gap: st.pushGap, over: onTop ? 0.04 * s : 0, s });
       // passada de pé: curtinha e rápida (uns 12 cm na escala), no compasso de quem empurra; fazendo força, patinando

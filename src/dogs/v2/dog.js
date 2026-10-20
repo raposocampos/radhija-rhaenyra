@@ -141,6 +141,8 @@ export function createDogV2(kind) {
   const head = createHeadAvoid({ skel2, retarget, design, s, hs: P.hs, cfg });
   /** @type {import('../../types').CollisionWorld | null} */
   let world = null;
+  /** Alto das coisas baixas de pisar embaixo de um ponto do mundo (game.js / ground.js); null: chão plano. */
+  let groundAt = null;
   /**
    * Camadas por cima da base (as poses do modelo atual), em ordem; cada uma mexe nos ossos dela e devolve o peso
    * aplicado no quadro (0 = nada; self.layers guarda os pesos):
@@ -154,7 +156,7 @@ export function createDogV2(kind) {
    */
   const LAYERS = [
     { name: 'head', apply: (dt, A) => head.apply(dt, A, inner, object, world) },
-    { name: 'gait', apply: (dt, A) => gait.apply(dt, A, st, inner, object) },
+    { name: 'gait', apply: (dt, A) => gait.apply(dt, A, st, inner, object, groundAt) },
     { name: 'roll', apply: (dt, A) => roll.apply(A.extra, inner) },
   ];
 
@@ -269,8 +271,9 @@ export function createDogV2(kind) {
     markerAnchor.position.z -= head.info.back * 0.2;
     if (any > 0) retarget.refresh();
     pawGuard();
-    // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
-    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0, dt);
+    // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto; com
+    // uma pata descendo de uma placa ou pedal, o chão vai até o embaixo dela
+    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : gait.lowGround, dt);
     physics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
     // pisadas da locomoção própria, com a pose do quadro pronta (a pegada sai onde a pata pousou)
@@ -311,6 +314,10 @@ export function createDogV2(kind) {
     setWorld(w) {
       world = w || null;
       head.reset();
+    },
+    /** Alto das coisas baixas de pisar (placas, pedais) embaixo de um ponto do mundo: cada pata sobe e desce nelas. */
+    setGround(fn) {
+      groundAt = typeof fn === 'function' ? fn : null;
     },
     /** Física das orelhas e do rabo (testes: physics.tip('tail')). */
     physics,

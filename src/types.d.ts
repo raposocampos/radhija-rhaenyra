@@ -39,6 +39,8 @@ export interface ColliderBase {
   jumpable?: boolean;
   /** Altura visual (m), usada pelo cenário provisório para desenhar obstáculos puláveis. */
   height?: number;
+  /** Desenho do objeto (empurráveis): empurrando de pé, as patas da frente apoiam nele (src/game/pushRest.js). */
+  visual?: THREE.Object3D | null;
 }
 export interface BoxCollider extends ColliderBase { shape: 'box'; x: number; z: number; hx: number; hz: number }
 export interface CircleCollider extends ColliderBase { shape: 'circle'; x: number; z: number; r: number }
@@ -1038,6 +1040,8 @@ export interface DogAnim {
    */
   pushGap?: number;
   pushTop?: number;
+  /** Altura das patas da frente na face (m; 0 = a padrão da pose). */
+  pushY?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
   /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */
@@ -1131,6 +1135,11 @@ export interface DogModel {
   readonly mud?: number;
   /** O mundo de colisão da fase (o modelo novo desvia a cabeça das paredes e dos móveis); null fora de uma fase. */
   setWorld?(world: CollisionWorld | null): void;
+  /**
+   * Alto das coisas baixas de pisar embaixo de um ponto do mundo (placas, pedais; src/game/ground.js): o modelo novo
+   * pisa nelas com cada pata. null fora de uma fase ou sem elas.
+   */
+  setGround?(heightAt: ((x: number, z: number) => number) | null): void;
   stats?: any;
   bones?: THREE.Bone[];
   skeleton?: THREE.Skeleton;

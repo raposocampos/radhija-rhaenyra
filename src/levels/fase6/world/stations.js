@@ -188,6 +188,7 @@ export function buildStations(root) {
   const pedalObject = new THREE.Group();
   pedalObject.name = 'pedal-de-pulo';
   pedalObject.position.set(PEDAL.x, 0, PEDAL.z);
+  pedalObject.userData.walkable = true; // dá para pisar: a dog sobe nela (src/game/ground.js)
   root.add(pedalObject);
   add(pedalObject, new THREE.CylinderGeometry(PEDAL.r + 0.05, PEDAL.r + 0.07, 0.03, 40), iron, 0, 0.015, 0);
   const coilGeo = coilGeometry(0.045, 4, 0.008);
@@ -227,6 +228,7 @@ export function buildStations(root) {
   const plateObject = new THREE.Group();
   plateObject.name = 'placa-da-cancela';
   plateObject.position.set(BARRIER_PLATE.x, 0, BARRIER_PLATE.z);
+  plateObject.userData.walkable = true; // dá para pisar: a dog sobe nela (src/game/ground.js)
   root.add(plateObject);
   add(plateObject, new THREE.CylinderGeometry(BARRIER_PLATE.r + 0.03, BARRIER_PLATE.r + 0.04, 0.02, 32), iron, 0, 0.01, 0);
   const plateTop = new THREE.Group();
