@@ -1,9 +1,23 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (testes da fase 10 com semente e porquinhos que encostam, PR #46; #33 a #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (testes da fase 10 com semente e porquinhos que encostam, PR #46; #33 a #45 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: modelos novos das dogs, etapa 2 de 5: locomoção (Claude, branch `claude/locomocao-dogs`)
+## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
+
+- Pedido do usuário (pelo orquestrador, 2026-10-20): "pode começar as etapas novas" — 3, depois 4 (colisão do corpo e
+  da cabeça), depois 5 (troca nas 10 fases). Lembretes dele: pata firme, compasso calmo, nada de giro parado; mudança
+  grande de estilo tende a ser reprovada (manter o jeito do modelo atual).
+- Achado: as poses e extras do jogo já existem no modelo novo pela base (as do modelo atual, retarget) e ficam limpas
+  no chão em todas as ações (relatório do `test/dogV2.test.mjs`); só a Rhaenyra sentada usa o giro da correção do
+  chão (5,4°: no atual a garupa dela fica 2 cm dentro do chão). Por isso a etapa 3 não refaz poses que já estão
+  certas: organiza o modelo novo em camadas e acrescenta o que ele faz melhor.
+- Feito: camadas em ordem em `src/dogs/v2/dog.js` (`LAYERS`, pesos em `d.layers`), física de correntinhas genérica
+  (`physics.js`: orelhas com os mesmos números aprovados e o rabo, firme), testes do rabo, da boca (bebendo e comendo,
+  no mesmo lugar do atual) e das camadas; captura `39-rabo-parando`.
+- Próximo passo: CI, E2E `canil` (capturas) e `todas`, prévia e aprovação; depois, etapa 4.
+
+## Entregue: modelos novos das dogs, etapa 2 de 5: locomoção (PR #43, squash `ef2cb50`, deploy `39362697455`)
 
 - Plano aprovado pelo usuário (etapas 1–5; a 1 entrou no #37). Etapa 2: locomoção própria do modelo novo em
   `src/dogs/v2/gait.js`, por cima da pose do guia (sem mexer em `dogAnimation.js`, a pedido do orquestrador): pata
@@ -36,8 +50,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   patas do guia (as aprovadas); as dobras do pulso/jarrete/dedos voltaram às do modelo atual (antes iam até 1,8 rad no
   pulso), a pata não estica mais (era até 4%) e a escápula mexe menos; numa curva fechada o compasso acelera no máximo
   1,35× e, além disso, a pata gira com o corpo (pivô).
-- Próximo passo: CI, E2E `todas` no head final, prévia nova e aprovação do usuário; depois, etapa 3 (poses em
-  camadas, inclusive a do empurrão).
+- 3ª prévia aprovada pelo usuário ("aprovado", versão `9a4a16a`, sobre a fase 10): integrada e publicada (squash
+  `ef2cb50`, CI do main `39362616970`, deploy `39362697455`).
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 
