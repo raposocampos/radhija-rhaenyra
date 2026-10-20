@@ -289,11 +289,17 @@ export function createGait({ skel2, retarget, s }) {
       lastG = st.phase;
       for (let li = 0; li < 4; li++) legs[li].off = R.off[li];
     }
-    // a fase de cada pata vai para a do ritmo no máximo 0,8 ciclo por segundo (do passo ao trote a pata não pula)
+    // acelerando à frente do guia (0 = andando no compasso dele; 1 = arrancando forte): o ritmo dele ainda é o de uma
+    // velocidade menor
+    const acc = clamp((mv.v - st.speed) / 0.3, 0, 1);
+    // a fase de cada pata vai para a do ritmo no máximo 0,8 ciclo por segundo (do passo ao trote a pata não pula); na
+    // arrancada, depressa e adiantando a pata (atrasada, a de trás ficaria plantada até esticar a perna)
+    const offRate = lerp(0.8, 3, acc);
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
-      const e = fract(R.off[li] - leg.off + 0.5) - 0.5;
-      leg.off = fract(leg.off + clamp(e, -0.8 * dt, 0.8 * dt));
+      let e = fract(R.off[li] - leg.off + 0.5) - 0.5;
+      if (acc > 0.3 && e < -0.45) e += 1;
+      leg.off = fract(leg.off + clamp(e, -offRate * dt, offRate * dt));
     }
     if (weight < 0.02) {
       // as patas estão na pose do guia (sentada, no ar...): a locomoção recomeça de onde elas estiverem
@@ -317,10 +323,8 @@ export function createGait({ skel2, retarget, s }) {
     const fStraight = (Math.abs(mv.v) * R.beta) / (0.18 * s);
     const fCurve = fStraight + (Math.abs(mv.w) * 0.2 * s * R.beta) / (0.12 * s);
     const demand = fCurve / lerp(R.f, Math.max(fStraight, R.f), dash);
-    // arrancada: o ritmo que o guia terá nesta velocidade (ele ainda está no de uma velocidade menor); acc = o quanto
-    // ela está acelerando à frente do guia (0 andando no compasso dele)
+    // arrancada: o ritmo que o guia terá nesta velocidade (ele ainda está no de uma velocidade menor)
     const RN = gaitRhythm({ speed: Math.max(st.speed, Math.abs(mv.v)), turnS: st.turnS, w: st.w }, s);
-    const acc = clamp((mv.v - st.speed) / 0.3, 0, 1);
     const boost = Math.max(clamp(demand, 1, 1.35), clamp(RN.f / R.f, 1, 1.9));
     // além disso a pata apoiada gira um tanto junto com o corpo (pivô): na curva fechada ela torce no chão em vez de dar
     // passinhos acelerados
@@ -337,7 +341,7 @@ export function createGait({ skel2, retarget, s }) {
     const stepSpeed = Math.max(Math.abs(mv.v), Math.abs(mv.w) * 0.2 * s);
     // conforto da traseira: a pata apoiada sai do chão um tanto depois de onde ela sairia no ritmo desta velocidade, e
     // sempre antes de a perna ficar reta (sem isso, na arrancada ela ia até o limite e era arrastada esticada)
-    const halfN = (Math.abs(mv.v) * RN.beta) / RN.f / 2;
+    const halfN = (Math.max(st.speed, Math.abs(mv.v)) * RN.beta) / RN.f / 2;
 
     const lifting = () => legs.reduce((n, l) => n + (l.swing ? 1 : 0), 0);
     for (let li = 0; li < 4; li++) {
@@ -377,10 +381,11 @@ export function createGait({ skel2, retarget, s }) {
       if (!leg.swing && moving && leg.over && leg.stanceT > 0.3 * stanceDur && room) {
         startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25));
       }
-      // traseira atrás demais na arrancada: passo de conforto antes de a perna esticar (só acelerando: freando, a pata
+      // traseira atrás demais: passo de conforto antes de a perna esticar (andando e arrancando; freando, não: a pata
       // atrás do lugar é normal e os passinhos de ajuste ao parar cuidam dela). Arrancando forte, ela sai mesmo com as
       // outras no ar (o trote rápido já tem um instante sem pata no chão); nunca fica arrastada esticada
-      if (!leg.front && !leg.swing && moving && acc > 0 && leg.stanceT > 0.3 * stanceDur && (room || acc > 0.3)) {
+      const braking = mv.v < st.speed - 0.15;
+      if (!leg.front && !leg.swing && moving && mv.v > 0 && !braking && leg.stanceT > 0.3 * stanceDur && (room || acc > 0.3)) {
         const comfort = Math.min(1.2 * halfN + 0.02 * s, leg.reachBack - 0.012 * s);
         if (leg.land.z - leg.foot.z > comfort) startSwing(leg, true, lift, 1 / clamp((1 - RN.beta) / RN.f, 0.1, 0.22));
       }
