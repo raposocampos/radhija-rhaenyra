@@ -12,7 +12,8 @@
 //
 // Fica de fora: malhas invisíveis, instanciadas com 0 instâncias, com esqueleto (bichos), linhas, pontos e sprites;
 // materiais que não desenham; e o que estiver marcado num pai com `userData.walkable` (coisas baixas de pisar,
-// src/game/ground.js) ou com `userData.passThrough` (atravessável de propósito, como capim e flores soltas).
+// src/game/ground.js), `userData.passThrough` (atravessável de propósito) ou `userData.carryKind` (item que vai na
+// boca: a fase cuida dele).
 import * as THREE from 'three';
 import { penCollider } from '../../src/game/collision.js';
 
@@ -35,12 +36,15 @@ function drawn(m) {
 }
 
 /** Nome legível: caminho de nomes até a raiz, tipo da geometria e cor do material. */
+const _box = new THREE.Box3();
 export function meshLabel(mesh) {
   const names = [];
   for (let p = mesh; p && names.length < 4; p = p.parent) if (p.name) names.push(p.name);
   const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
   const col = mat?.color ? ` #${mat.color.getHexString()}` : '';
-  return `${names.reverse().join('>') || 'malha'} ${mesh.geometry?.type || ''}${col}`;
+  _box.setFromObject(mesh);
+  const f = (v) => v.toArray().map((x) => +x.toFixed(2)).join(', ');
+  return `${names.reverse().join('>') || 'malha'} ${mesh.geometry?.type || ''}${col} [centro ${f(_box.getCenter(new THREE.Vector3()))} · tamanho ${f(_box.getSize(new THREE.Vector3()))}]`;
 }
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
@@ -111,7 +115,8 @@ function reachDepth(world, x, z, dog, tol) {
       if (p && p.depth >= reach) return 0;
     }
   }
-  for (const k of [0, 0.25, 0.5, 0.75, 1]) {
+  // o anel de fora fica um pouco antes de r − tol: encostar só até a tolerância não conta
+  for (const k of [0, 0.2, 0.4, 0.6, 0.8, 0.92]) {
     const d = reach * k;
     const n = k === 0 ? 1 : 16;
     for (let i = 0; i < n; i++) {
@@ -131,7 +136,7 @@ function reachDepth(world, x, z, dog, tol) {
  *   tol: quanto a dog pode encostar sem contar (pelo, ponta de folha); step: distância entre pontos da superfície;
  *   cell: grade dos pontos; link: distância que junta pontos num mesmo achado; skip: malhas a ignorar.
  */
-export function findLooseObstacles(root, world, { dogs, yMin = 0.04, tol = 0.04, step = 0.035, cell = 0.02, link = 0.07, skip = null }) {
+export function findLooseObstacles(root, world, { dogs, yMin = 0.05, tol = 0.06, step = 0.035, cell = 0.02, link = 0.07, skip = null }) {
   const yMax = Math.max(...dogs.map((d) => d.yMax));
   const B = world.bounds;
   const pad = Math.max(...dogs.map((d) => d.r));
@@ -144,7 +149,7 @@ export function findLooseObstacles(root, world, { dogs, yMin = 0.04, tol = 0.04,
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     if (!mats.some(drawn)) return;
     if (o.isInstancedMesh && o.count === 0) return;
-    if (markedUp(o, 'walkable') || markedUp(o, 'passThrough')) return;
+    if (markedUp(o, 'walkable') || markedUp(o, 'passThrough') || markedUp(o, 'carryKind')) return;
     if (skip?.(o)) return;
     meshes.push(o);
   });

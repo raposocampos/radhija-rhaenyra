@@ -38,7 +38,7 @@ for (const [idx, def] of ALL.entries()) {
         name, size: L.DOGS[name].size, r: L.DOGS[name].radius, yMax: L.DOGS[name].visual.headTop * 0.85,
       }));
       const t0 = performance.now();
-      const found = findLooseObstacles(root, h.world, { dogs, tol: 0.06, skip: skipped });
+      const found = findLooseObstacles(root, h.world, { dogs, skip: skipped });
       const ms = Math.round(performance.now() - t0);
       console.log(`\n#### AUDITORIA ${def.id}: ${found.length} achado(s) em ${ms} ms; colisores ${h.world.statics.length} estáticos, ${h.world.dynamics.length} dinâmicos${found.map(fmt).join('')}\n#### FIM ${def.id}`);
       assert.equal(found.length, 0, `${found.length} desenho(s) na altura das dogs sem colisor`);
