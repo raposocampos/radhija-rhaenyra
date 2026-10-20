@@ -285,8 +285,9 @@ function transitions(d, script) {
           const L = d.locomotion.legs[i];
           const at = `${label} ${t.toFixed(2)} s (${PAWS[i]}, no ar ${L.swing}${L.timed ? ' por tempo' : ''}, u ${L.u.toFixed(2)}, locomoção ${d.gait.toFixed(2)})`;
           if (jump > m.jump) { m.jump = jump; m.jumpAt = at; }
-          // parada, com a pata apoiada nos dois quadros (pela locomoção ou pela pose do guia)
-          if (!(anim.speed > 0) && !swing[i] && !prevSwing[i] && jump > m.pop) { m.pop = jump; m.popAt = at; }
+          // parada, com a pata apoiada nos dois quadros pela locomoção (a pose do guia mexe as patas do jeito dela:
+          // levantando de sentada, por exemplo, ele puxa as de trás de volta)
+          if (!(anim.speed > 0) && d.gait > 0.99 && !swing[i] && !prevSwing[i] && jump > m.pop) { m.pop = jump; m.popAt = at; }
         }
       }
       prevPaws = paws;
@@ -305,6 +306,8 @@ test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular
         [1.5, { speed: 0, action: 'sniff' }, 'levantando'], [1.0, { speed: 0.8 }, 'andando']],
       sozinha: [[1.0, { speed: 0.8 }, 'andando'], [7.0, { speed: 0 }, 'parada (senta sozinha)'], [1.0, { speed: 0, action: 'sniff' }, 'levantando']],
       empurrar: [[1.2, { speed: 0.6 }, 'andando'], [1.5, { speed: 0.6, action: 'push' }, 'empurrando'], [1.2, { speed: 0.6 }, 'andando'], [0.8, { speed: 0 }, 'parando']],
+      arrancar: [[0.6, { speed: 0 }, 'parada'], [1.0, { speed: 1.6 }, 'arrancando no trote'], [0.6, { speed: 0 }, 'parando'],
+        [0.8, { speed: 0.5, turn: 2.5 }, 'virando'], [0.8, { speed: 0 }, 'parando']],
       pular: [[1.0, { speed: 1.6 }, 'trotando'], ...Array.from({ length: 24 }, (_, i) => [1 / 60, { speed: 1.6, airK: i / 24, jump: 4 * 0.3 * (i / 24) * (1 - i / 24) }, 'no ar']), [1.0, { speed: 1.6 }, 'trotando'], [0.8, { speed: 0 }, 'parando']],
     };
     for (const [name, script] of Object.entries(scripts)) {

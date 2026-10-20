@@ -279,12 +279,13 @@ export function createGait({ skel2, retarget, s }) {
     still = moving ? 0 : still + dt;
     const fast = clamp(mv.v / 1.8, 0, 1);
     const dash = st.w.dash;
-    // compasso: o do guia; numa curva fechada a pata de fora anda bem mais que o corpo e, para a passada caber no
-    // alcance dela, o compasso acelera (só pela curva: em linha reta, no trote e no galope, é sempre o do guia)
+    // compasso: o do guia. Se a passada não cabe no alcance da pata, ele acelera: numa curva fechada (a pata de fora
+    // anda bem mais que o corpo) e na arrancada (o ritmo do guia demora uns décimos de segundo para acompanhar a
+    // velocidade); no galope, não (a passada comprida, com o voo, é a dele)
     const reach = 0.18 * s;
     const fStraight = (Math.abs(mv.v) * R.beta) / reach;
     const fCurve = ((Math.abs(mv.v) + Math.abs(mv.w) * 0.2 * s) * R.beta) / reach;
-    const boost = clamp(fCurve / Math.max(fStraight, R.f), 1, 2.2);
+    const boost = clamp(fCurve / lerp(R.f, Math.max(fStraight, R.f), dash), 1, 2.2);
     info.boost = boost;
     ph = fract(ph + fract(st.phase - lastG) * boost);
     lastG = st.phase;
@@ -320,8 +321,10 @@ export function createGait({ skel2, retarget, s }) {
       // decola na virada da fase (andando; não logo depois de um passo extra); se a locomoção acabou de assumir, a pata
       // que está no tempo do balanço já sai no ar (senão ela ficaria para trás, plantada no meio da passada)
       if (!leg.swing && moving && phSwing && (edge || uPh < (resumed ? 0.9 : 0.35)) && leg.stanceT > 0.35 * stanceDur) {
-        startSwing(leg, false, lift, 0);
-        leg.u0 = uPh;
+        if (edge || uPh < 0.35) {
+          startSwing(leg, false, lift, 0);
+          leg.u0 = uPh;
+        } else startSwing(leg, true, lift, 1 / clamp((1 - uPh) * swingDur, 0.1, 0.3)); // atrasada: balanço inteiro, curto
       }
       // longe demais (curva fechada, empurrada): um passo extra, fora do ritmo, se no máximo uma outra pata está no ar
       if (!leg.swing && moving && leg.over && leg.stanceT > 0.3 * stanceDur && lifting() < 2) {
@@ -338,10 +341,9 @@ export function createGait({ skel2, retarget, s }) {
         }
         if (leg.timed) leg.u = Math.min(1, leg.u + leg.rate * dt);
         else {
-          // pela fase, mas sem pular adiante quando o ritmo muda (no máximo o dobro do passo normal por quadro)
-          const span = Math.max(1 - leg.u0, 1e-3);
-          const uT = clamp((uPh - leg.u0) / span, 0, 1);
-          leg.u = clamp(uT, leg.u, leg.u + (2 * dt) / Math.max(swingDur * span, 1e-3));
+          // pela fase, mas sem pular adiante quando o ritmo muda (no máximo 1,6× um balanço normal por quadro)
+          const uT = clamp((uPh - leg.u0) / Math.max(1 - leg.u0, 1e-3), 0, 1);
+          leg.u = clamp(uT, leg.u, leg.u + (1.6 * dt) / Math.max(swingDur, 0.05));
         }
         // pousa onde a pata vai estar no meio do próximo apoio (prevê pela velocidade medida, que muda suave: parando,
         // o alvo vai chegando ao lugar dela sem pular); o passinho de ajuste vai direto ao lugar
