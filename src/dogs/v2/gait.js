@@ -328,14 +328,21 @@ export function createGait({ skel2, retarget, s }) {
         startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25));
       }
       if (leg.swing) {
-        // o ritmo mudou (passo ↔ trote, parando) e a fase voltou ao apoio antes do fim do balanço: a pata termina o
-        // balanço no tempo dela, em vez de pousar de repente
-        if (!leg.timed && !phSwing && leg.u < 0.97) {
-          leg.timed = true;
-          leg.rate = 1 / clamp(swingDur, 0.1, 0.3);
+        // a fase voltou ao apoio: no fim do balanço, pousa; antes do fim (o ritmo mudou: passo ↔ trote, parando), a
+        // pata termina o balanço no tempo dela em vez de pousar de repente
+        if (!leg.timed && !phSwing) {
+          if (leg.u < 0.97) {
+            leg.timed = true;
+            leg.rate = 1 / clamp(swingDur, 0.1, 0.3);
+          } else leg.u = 1;
         }
         if (leg.timed) leg.u = Math.min(1, leg.u + leg.rate * dt);
-        else leg.u = Math.max(leg.u, clamp((uPh - leg.u0) / Math.max(1 - leg.u0, 1e-3), 0, 1));
+        else {
+          // pela fase, mas sem pular adiante quando o ritmo muda (no máximo o dobro do passo normal por quadro)
+          const span = Math.max(1 - leg.u0, 1e-3);
+          const uT = clamp((uPh - leg.u0) / span, 0, 1);
+          leg.u = clamp(uT, leg.u, leg.u + (2 * dt) / Math.max(swingDur * span, 1e-3));
+        }
         // pousa onde a pata vai estar no meio do próximo apoio (prevê pela velocidade medida, que muda suave: parando,
         // o alvo vai chegando ao lugar dela sem pular); o passinho de ajuste vai direto ao lugar
         const left = (1 - leg.u) * (leg.timed ? 1 / leg.rate : swingDur);
@@ -471,7 +478,10 @@ export function createGait({ skel2, retarget, s }) {
     return weight;
   }
 
-  /** Passa as rotações da cadeia (no referencial do corpo) para os ossos, misturando com as do guia pelo peso w. */
+  /**
+   * Passa as rotações da cadeia (no referencial do corpo) para os ossos. As rotações são sempre as da IK daqui (na troca
+   * com uma pose do guia, a mistura já foi feita nos alvos); só o comprimento dos gomos vai do do guia ao daqui por w.
+   */
   function setChain(leg, w) {
     const ids = leg.idx;
     for (let j = 0; j < ids.length; j++) {
@@ -482,13 +492,9 @@ export function createGait({ skel2, retarget, s }) {
       Seg.copy(rest[i]).sub(rest[p]); // posição local: a do repouso (o comprimento do gomo)
       const o = leg.front ? 1 : 0;
       if (j === o + 1 || j === o + 2) Seg.multiplyScalar(leg.stretch); // gomos esticados (cotovelo/joelho e pulso/jarrete)
-      if (w >= 0.999) {
-        bone.quaternion.copy(qL);
-        bone.position.copy(Seg);
-      } else {
-        bone.quaternion.slerp(qL, w);
-        bone.position.lerp(Seg, w);
-      }
+      bone.quaternion.copy(qL);
+      if (w >= 0.999) bone.position.copy(Seg);
+      else bone.position.lerp(Seg, w);
     }
   }
 
