@@ -1,9 +1,30 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (colisão dos objetos do cenário, PR #53; #47 e #49 a #52 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (o balde da fase 10 segura a Rhaenyra, PR #54; #47 e #49 a #53 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: colisão dos objetos do cenário (Claude, branch `claude/colisao-cenario`, PR #53)
+## Em andamento: o balde deitado da fase 10 segura a Rhaenyra (Claude, branch `claude/colisao-balde`, PR #54)
+
+- Pedido (seguimento do #53, pela sessão do cenário): o colisor dinâmico do balde-elevador (`fase10/puzzle.js`)
+  deixava a Rhaenyra entrar 18,8 cm no desenho do balde deitado, pela boca e por cima da alça (auditoria do #53 sem a
+  exceção, CI `39476688055`). A Radhija tem de continuar entrando e subindo como antes.
+- Causa: o colisor era um círculo de 28 cm no meio do balde; deitado, a boca e a alça vão até 48 cm ao sul do centro.
+- Feito: o `bucketCol` virou uma cápsula (segmento com meia-espessura `BUCKET.r`) do meio do balde até o meio da boca;
+  `fitBucketCol()` a encolhe com a inclinação (h/2 · sen θ, como o `layoutRope` de `treehouse.js`) e só a desliga
+  quando o fundo do balde passa da cabeça da Rhaenyra (`DOGS.rhaenyra.visual.headTop`; antes, aos 25 cm). Continua
+  `blocks: 'large'`: nada muda para a Radhija. A exceção `balde` da auditoria fica (a Radhija entra nele), com o motivo
+  apontando para o teste novo.
+- Teste novo em `test/fase10.test.mjs`: o desenho real (`buildLevelWorld`) contra o colisor do jogo, com o
+  `findLooseObstacles` do #53, só para a Rhaenyra, em 9 pontos da corda (deitado, levantando, em pé, subindo e acima
+  dela); e, deitado, ela fica livre a 3 cm do desenho, de frente para a alça e dos lados (sem parede invisível).
+- Observação (fora do PR): o nome `balde` da exceção também pega o balde da fase 8, que tem colisor estático e fica
+  sem conferência na auditoria.
+- Validação: CI, prévia e E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e
+  `git diff --check`.
+- Próximo passo: com CI e E2E verdes, entregar a prévia e esperar a aprovação do usuário no chat desta sessão; só
+  então integrar.
+
+## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, produção v0.10.3 · build 95)
 
 - Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
   permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
@@ -24,9 +45,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Validação: até `7f95a34`, o CI só falhava nos 9 achados da fase 10, corrigidos em `3657884`; depois veio a
   sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
 - Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
-  na boca dele; fica para um PR próprio.
-- Próximo passo: com CI e E2E `todas` verdes no head final e as capturas revistas, prévia e aprovação do usuário no
-  chat desta sessão; só então integrar.
+  na boca dele; segue no PR #54.
+- Integrado ao main (squash `acae42f`, CI do main `39489396152`); `version.json` da produção: v0.10.3 · build 95.
+  Não repetir merge/deploy do #53.
 
 ## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
 
