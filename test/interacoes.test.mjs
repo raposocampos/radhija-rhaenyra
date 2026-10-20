@@ -248,3 +248,38 @@ test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e
     });
   }
 });
+
+test('corda na boca: arrancando, a arrancada acaba e ela vai até a corda; no ar, nada de passinho (o pulo segue) e sem morder', () => {
+  // desenho mínimo: a boca 36 cm à frente e 34 cm acima do meio
+  const fake = () => {
+    const object = new THREE.Group();
+    const mouthSocket = new THREE.Object3D();
+    mouthSocket.position.set(0, 0.34, 0.36);
+    object.add(mouthSocket);
+    return { object, mouthSocket, setCarryPose() {} };
+  };
+  const d = fake();
+  const c = createController('radhija', withStart('radhija', { x: 0, z: 0, yaw: 0 }));
+  placeController(c, 0, 0, 0);
+  const sync = () => { d.object.position.set(c.x, 0, c.z); d.object.rotation.y = c.yaw; d.object.updateMatrixWorld(true); };
+  sync();
+  const tug = createMouthTug({ dogs: { radhija: d }, ctrls: { radhija: c }, world: null });
+  const bite = { x: 0, y: 0.4, z: 0.8 };
+  // arrancando: a arrancada acaba, ela dá o passinho e morde
+  c.dashT = 0.2;
+  assert.ok(tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5, dur: 0.7 }) > 0, 'passinho até a corda');
+  assert.equal(c.dashT, 0, 'a arrancada acabou');
+  for (let i = 0; i < 60 && tug.stepping(); i++) { tug.update(DT); sync(); }
+  for (let i = 0; i < 12; i++) { tug.update(DT); sync(); }
+  assert.ok(tug.biting(), 'chegou na corda e mordeu');
+  assert.ok(Math.abs(c.z + 0.36 - bite.z) < 0.03, `a boca na corda (meio em z ${c.z.toFixed(3)})`);
+  tug.reset();
+  // no ar: sem passinho (a fase não a move; o pulo segue) e sem morder
+  placeController(c, 0, 0, 0);
+  sync();
+  c.jumpT = 0.2;
+  assert.equal(tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5, dur: 0.7 }), 0, 'no ar, nada de passinho');
+  assert.equal(tug.lockFor('radhija').drive, undefined, 'a trava não move a dog');
+  for (let i = 0; i < 12; i++) tug.update(DT);
+  assert.equal(tug.biting(), false, 'no ar, não morde');
+});

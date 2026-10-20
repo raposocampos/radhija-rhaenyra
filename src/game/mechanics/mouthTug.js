@@ -29,12 +29,15 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 /**
  * Passinho até um ponto: o meio do corpo vai ficar a `reach` m de `P`, de frente para ele (ou chegando pelo rumo `yaw`,
- * quando o ponto só se alcança de um lado, como o botão na base do ventilador). → null se ela já está lá.
+ * quando o ponto só se alcança de um lado, como o botão na base do ventilador). → null se ela já está lá ou está no
+ * ar (no ar, o pulo segue; a fase faz a ação de onde ela está). A arrancada acaba aqui (ela vai parar na coisa).
  * @param {any} c @param {{ x: number, z: number }} P @param {number} reach @param {any} world
  * @param {{ yaw?: number }} [o]
  * @returns {Step | null}
  */
 export function planStep(c, P, reach, world, { yaw } = {}) {
+  if (c.dashT > 0) c.dashT = 0;
+  if (c.jumpT > 0) return null;
   const yaw1 = yaw ?? Math.atan2(P.x - c.x, P.z - c.z);
   let x1 = P.x - Math.sin(yaw1) * reach;
   let z1 = P.z - Math.cos(yaw1) * reach;
@@ -123,7 +126,7 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
      */
     start(c, { bite, anchor, len, dur, face = anchor }) {
       endTug();
-      const free = mouthFree(c.name);
+      let free = mouthFree(c.name);
       let step = null, reach = 0;
       const m = free ? mouthOf(c.name, _m) : null;
       const o = dogs?.[c.name]?.object;
@@ -135,7 +138,9 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
         const back = dogs?.[c.name]?.head?.info?.back || 0;
         reach = clamp((m.x - o.position.x) * Math.sin(oy) + (m.z - o.position.z) * Math.cos(oy) + back, 0.2, 0.55);
         step = planStep(c, bite, reach, world);
-      }
+        // sem passinho (já está na corda, ou no ar): só morde se a boca está mesmo nela
+        if (!step && (c.jumpT > 0 || Math.hypot(m.x - bite.x, m.z - bite.z) > GRIP.miss)) free = false;
+      } else if (c.dashT > 0) c.dashT = 0;
       T = {
         who: c.name, bite: { x: bite.x, y: bite.y, z: bite.z }, anchor: new THREE.Vector3(anchor.x, anchor.y, anchor.z),
         face: { x: face.x, z: face.z }, len, dur, t: 0, grip: 0, free, reach, carry: false, step,
