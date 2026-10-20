@@ -44,6 +44,9 @@ function buildBed(root, B) {
   const cushion = new THREE.Mesh(new THREE.CylinderGeometry(B.r * 0.7, B.r * 0.72, 0.07, 36), stdMat('#f1dfc4', { roughness: 1 }));
   cushion.position.y = 0.075;
   g.add(rim, base, cushion);
+  // a caminha é sólida (layout: colisor 'caminha'); encostando nela, a pata que alcança a base, a almofada ou a borda
+  // pisa em cima em vez de entrar (game/ground.js)
+  for (const m of [base, cushion, rim]) m.userData.walkable = true;
   shadowAll(g);
   root.add(g);
   const sh = contactShadow(B.r * 1.1, B.r * 1.1, 0.4);

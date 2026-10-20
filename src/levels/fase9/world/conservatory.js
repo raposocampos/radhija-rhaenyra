@@ -422,6 +422,7 @@ function buildPlate(P) {
   icon.position.y = 0.053;
   g.add(ring, cap, icon);
   shadowAll(g);
+  g.userData.walkable = true; // dá para pisar: a dog sobe nela (src/game/ground.js)
   return {
     group: g,
     /** Ponto de onde sai a haste até a grade (lado leste do aro). */

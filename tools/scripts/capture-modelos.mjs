@@ -36,7 +36,7 @@ try {
       const res = await page.evaluate((c) => window.__pose(c), cfg);
       await page.screenshot({ path: `${OUT}/${name}.png` });
       shots++;
-      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}${r.tilt ? ` girou ${(r.tilt * 180 / Math.PI).toFixed(1)}°` : ''}${r.lift ? ` subiu ${(r.lift * 1000).toFixed(0)} mm` : ''}${r.tilt || r.lift ? ` (${r.bone})` : ''}`))}`);
+      console.log(`  captura: ${OUT}/${name}.png  ${JSON.stringify(res.map((r) => `${r.kind}/${r.model}: chão ${r.lowest === null ? '-' : r.lowest.toFixed(3)}${r.tilt ? ` girou ${(r.tilt * 180 / Math.PI).toFixed(1)}°` : ''}${r.lift ? ` subiu ${(r.lift * 1000).toFixed(0)} mm` : ''}${r.tilt || r.lift ? ` (${r.bone})` : ''}${r.back || r.headYaw ? ` recuou ${(r.back * 100).toFixed(1)} cm, cabeça ${(r.headYaw * 180 / Math.PI).toFixed(0)}°` : ''}`))}`);
     };
     for (const view of ['34', 'side', 'front', 'back', 'top', 'face', 'ear', 'hero']) await pose(`01-repouso-${view}`, { view, sim: 1.5 });
     const side = (extra) => ({ view: 'side', sim: 1.6, ...extra });
@@ -89,6 +89,16 @@ try {
     for (let k = 0; k < 8; k++) await pose(`38-arrancando-${k}`, side({ speed: 1.6, move: '1', sim: 0.03 + k * 0.05 }));
     // etapa 3: o rabo com física (firme) assentando depois de parar o trote
     for (let k = 0; k < 6; k++) await pose(`39-rabo-parando-${k}`, side({ speed: 1.6, move: '1', stop: 1.0, sim: 1.0 + k * 0.06 }));
+    // etapa 4: andando contra uma parede com o controle e a colisão do jogo (o peito encosta; no modelo novo o desenho
+    // freia antes e a cabeça desvia, farejando), de lado e em 3/4
+    for (let k = 0; k < 8; k++) await pose(`45-parede-${k}`, side({ speed: 1.6, wall: 0.9, sim: 0.3 + k * 0.12 }));
+    // de trás e de cima: a cabeça virada farejando, o focinho na face da parede
+    await pose('45-parede-tras', { view: 'back', speed: 1.6, wall: 0.9, sim: 1.6 });
+    await pose('45-parede-cima', { view: 'top', speed: 1.6, wall: 0.9, sim: 1.6 });
+    // empurrando de pé (retorno do usuário): caixote alto e cesto baixo (patas em cima da beirada); fazendo força
+    for (let k = 0; k < 6; k++) await pose(`46-empurrando-de-pe-${k}`, side({ action: 'push', speed: 0.8, move: '1', crate: 0.55, sim: 1.0 + k * 0.07 }));
+    await pose('47-empurrando-cesto', side({ action: 'push', speed: 0.7, move: '1', crate: 0.42, sim: 1.5 }));
+    await pose('48-forca-de-pe', side({ action: 'strain', crate: 0.5, sim: 1.5 }));
     await page.close();
   }
 

@@ -277,6 +277,7 @@ export function buildProps({ root, layout, engine }) {
   deck.position.y = deckRest;
   plankRoot.add(deck);
   plankRoot.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  plankRoot.userData.walkable = true; // dá para pisar: a dog sobe nela (src/game/ground.js)
   root.add(plankRoot);
   root.add(contactShadow(pw / 2 + 0.12, pd / 2 + 0.12, 0.4).translateX(PLANK.x).translateZ(PLANK.z));
 
@@ -1164,6 +1165,10 @@ function buildBed(root, BED, starTex, updaters) {
   toy.rotation.y = 0.6;
   g.add(toy);
   g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  // a caminha é sólida (layout: colisor 'caminha'); encostando nela, a pata que alcança a base, a almofada ou a borda
+  // (com o encosto alto de trás, até 40 cm) pisa em cima em vez de entrar (game/ground.js)
+  for (const m of [base, cush]) m.userData.walkable = true;
+  rim.userData.walkable = 0.4;
   g.add(contactShadow(ax + 0.14, az + 0.14, 0.55));
   // destaque: brilho quente pulsante + halo no chão + estrelinhas
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radialTexture(), color: '#ffbf6a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));

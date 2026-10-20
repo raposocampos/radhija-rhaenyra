@@ -12,7 +12,11 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export function createPushCrate({ id = 'crate', cfg, world, emit, prop = null, onLimit = null }) {
   const h = cfg.half;
-  const col = world.addDynamic({ id, kind: 'crate', shape: 'box', x: cfg.start.x, z: cfg.start.z, hx: h, hz: h });
+  // a altura e o desenho vão junto: empurrando de pé, a dog apoia as patas da frente no desenho (na face ou, se ele é
+  // baixo, em cima da beirada; game.js pushRest)
+  const col = world.addDynamic({
+    id, kind: 'crate', shape: 'box', x: cfg.start.x, z: cfg.start.z, hx: h, hz: h, height: cfg.height, visual: prop?.object ?? null,
+  });
   const S = { x: cfg.start.x, z: cfg.start.z, v: 0, axis: 'x', dir: 0, pushing: false, pushOffT: 0, pusher: null, blockedBy: null, enabled: true, moved: 0 };
 
   function setPos(x, z) {

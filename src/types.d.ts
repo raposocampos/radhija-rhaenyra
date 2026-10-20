@@ -39,6 +39,8 @@ export interface ColliderBase {
   jumpable?: boolean;
   /** Altura visual (m), usada pelo cenário provisório para desenhar obstáculos puláveis. */
   height?: number;
+  /** Desenho do objeto (empurráveis): empurrando de pé, as patas da frente apoiam nele (src/game/pushRest.js). */
+  visual?: THREE.Object3D | null;
 }
 export interface BoxCollider extends ColliderBase { shape: 'box'; x: number; z: number; hx: number; hz: number }
 export interface CircleCollider extends ColliderBase { shape: 'circle'; x: number; z: number; r: number }
@@ -60,6 +62,11 @@ export interface CollisionWorld {
   readonly companionMode: boolean;
   contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string>; airborne?: boolean }): Contact[];
   resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
+  /**
+   * Peito e garupa (dois círculos menores presos ao rumo `yaw`, DogStats.body) para fora do que invadem; o círculo do
+   * meio (r) manda. Devolve o centro corrigido e os contatos dos três.
+   */
+  resolveBody(x: number, z: number, yaw: number, body: DogBody, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
   /** Move com sub-passos (nunca atravessa paredes finas). */
   move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
   overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): boolean;
@@ -74,12 +81,20 @@ export interface CollisionWorld {
 
 export interface Bounds { minX: number; maxX: number; minZ: number; maxZ: number }
 
+/**
+ * Corpo da dog para a colisão, além do círculo do meio: o peito vai até `front` m à frente do centro e a garupa até
+ * `back` m atrás, em círculos de raio `r` (menores que o do meio).
+ */
+export interface DogBody { front: number; back: number; r: number }
+
 /** Estatísticas e posição inicial de uma dog (layout.DOGS[nome]). */
 export interface DogStats {
   displayName: string;
   size: DogSize;
   /** Raio do círculo de colisão (m). */
   radius: number;
+  /** Peito e garupa na colisão (sem: só o círculo do meio). */
+  body?: DogBody;
   walkSpeed: number;
   /** Só a Radhija: velocidade, duração e recarga da arrancada. */
   dashSpeed?: number;
@@ -382,6 +397,10 @@ export interface DogController {
   shoveStop: boolean;
   /** Empurrou neste quadro (o jogo emite dog:shove, chama puzzle.onShove e zera). */
   shoveHit: ShoveSpot | null;
+  /** Pulinho por cima de uma borda (startHop): altura do arco (m); 0 = pulo comum ou no chão. */
+  hopH: number;
+  /** O pouso deste quadro foi de um pulinho. */
+  landedHop: boolean;
 }
 
 /**
@@ -1020,6 +1039,18 @@ export interface DogAnim {
   shoveGap?: number;
   shoveY?: number;
   shoveOver?: number;
+  /**
+   * Empurrando um caixote ou carrinho (ou fazendo força nele): distância do centro da dog à face dele e a altura dele
+   * (m; 0 = sem). Ela fica de pé nas traseiras, com as patas da frente na face (ou em cima da beirada, se ele é baixo).
+   */
+  pushGap?: number;
+  pushTop?: number;
+  /** Altura das patas da frente na face (m; 0 = a padrão da pose). */
+  pushY?: number;
+  /** A face é um pé fino (o cano do ventilador): as patas da frente o abraçam, juntinhas. */
+  pushRound?: boolean;
+  /** Para que lado está o pé fino (m, o x do corpo: + = esquerda): as patas vão para ele. */
+  pushLat?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
   /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */
@@ -1111,6 +1142,13 @@ export interface DogModel {
   setShine?(k: number): void;
   /** Lama atual (0..1), para pegadas e respingos. */
   readonly mud?: number;
+  /** O mundo de colisão da fase (o modelo novo desvia a cabeça das paredes e dos móveis); null fora de uma fase. */
+  setWorld?(world: CollisionWorld | null): void;
+  /**
+   * Alto das coisas baixas de pisar embaixo de um ponto do mundo (placas, pedais; src/game/ground.js): o modelo novo
+   * pisa nelas com cada pata. null fora de uma fase ou sem elas.
+   */
+  setGround?(heightAt: ((x: number, z: number) => number) | null): void;
   stats?: any;
   bones?: THREE.Bone[];
   skeleton?: THREE.Skeleton;

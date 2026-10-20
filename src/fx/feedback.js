@@ -264,7 +264,8 @@ export function createFeedback(opts) {
   const dogRings = {};
   const stayRings = {};
   for (const name of Object.keys(dogs)) {
-    const mat = createRingMaterial({ color: '#FFF6E6', opacity: 0, width: 0.2, fill: 0.14 });
+    // anel da dog ativa: fino e discreto (retorno do usuário: "muito forte"), ainda mostrando quem está no controle
+    const mat = createRingMaterial({ color: '#FFF6E6', opacity: 0, width: 0.11, fill: 0.04 });
     const m = new THREE.Mesh(planeGeo, mat);
     m.renderOrder = 11;
     m.frustumCulled = false;
@@ -482,7 +483,12 @@ export function createFeedback(opts) {
     sfx('jump', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.85, alpha: 0.38, dir: { x: -dirX, z: -dirZ }, strength: 0.6 });
   });
-  events.on('dog:land', ({ x, z }) => {
+  events.on('dog:land', ({ x, z, hop = false }) => {
+    // o pulinho por cima da borda da caminha pousa na almofada (ou no chão do lado): baixinho e sem poeira
+    if (hop) {
+      sfx('land', x, z, { volume: 0.45 });
+      return;
+    }
     sfx('land', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.9, alpha: 0.4, strength: 0.55 });
   });
@@ -1361,7 +1367,7 @@ export function createFeedback(opts) {
         r.mesh.position.set(p.x, floor + 0.018, p.z);
         const pulse = 1 + Math.sin(r.pop * Math.PI) * 0.22;
         r.mesh.scale.setScalar(r.r * 2 * r.s * pulse);
-        r.mat.uniforms.uOpacity.value = 0.55 * r.a;
+        r.mat.uniforms.uOpacity.value = 0.34 * r.a;
       }
       const sr = stayRings[name];
       const son = showWorldUi && name !== active && stay[name] && !!p && !onRamp;

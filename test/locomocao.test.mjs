@@ -10,6 +10,7 @@ import { withSeed } from './helpers/seeded.mjs';
 
 installBrowserStubs();
 const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+const { DOG_CONFIG } = await import('../src/dogs/config.js');
 
 const KINDS = ['radhija', 'rhaenyra'];
 const PAWS = ['FLp', 'FRp', 'HLp', 'HRp'];
@@ -104,6 +105,90 @@ test('locomoção nova: andando no mundo, a pata apoiada fica plantada no chão 
   console.log(`[locomoção] ${report.join('\n  ')}`);
 });
 
+test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tempo (não fica plantada esticando a perna)', () => {
+  // retorno do usuário (2026-10-20): "quando as dogs começam a andar, a pata traseira acaba ficando tempo demais no
+  // chão e acaba esticando a perna de um jeito estranho". O controle chega à velocidade em ~0,15 s (aceleração de
+  // 12–16 m/s²) e o ritmo do guia demora uns décimos de segundo para acompanhar: a pata ia até o limite e era arrastada
+  const report = [];
+  const bad = [];
+  const HIND = [2, 3];
+  /** Quanto a perna de trás i está esticada: quadril→jarrete sobre o comprimento dos dois gomos (1 = reta). */
+  const ext = (d, i) => {
+    const [u, l, m] = ['u', 'l', 'm'].map((k) => bone(d, `H${i === 2 ? 'L' : 'R'}${k}`).getWorldPosition(new THREE.Vector3()));
+    return u.distanceTo(m) / (u.distanceTo(l) + l.distanceTo(m));
+  };
+  for (const kind of KINDS) {
+    const cfg = DOG_CONFIG[kind];
+    const rows = [];
+    for (const seed of SEEDS.slice(0, 6)) {
+      const o = withSeed(seed, () => {
+        const d = fresh(kind);
+        // como no jogo (dogController.js): a velocidade sobe com a aceleração do controle; a da animação vem suavizada
+        let v = 0, anim = 0, t = 0;
+        const first = [-1, -1, -1, -1];
+        let was = [false, false, false, false];
+        const meter = (secs) => {
+          // ev: cada decolagem de traseira (por quê, quanto atrás, quantas no ar, compasso) e cada quadro arrastada
+          const m = { back: 0, ext: 0, straight: 0, drags: 0, ev: [], air2: 0, n: 0 };
+          for (let f = 0; f < Math.round(secs * 60); f++, t += DT) {
+            v = Math.min(cfg.walkSpeed, v + cfg.accel * DT);
+            anim += (v - anim) * (1 - Math.exp(-DT * 18));
+            const yaw = d.object.rotation.y;
+            d.object.position.x += Math.sin(yaw) * v * DT;
+            d.object.position.z += Math.cos(yaw) * v * DT;
+            d.update(DT, { speed: anim, turn: 0, action: 'none' });
+            d.object.updateMatrixWorld(true);
+            const G = d.locomotion;
+            const air = G.legs.filter((l) => l.swing).length;
+            m.n++;
+            if (air >= 2) m.air2++;
+            G.legs.forEach((L, i) => {
+              if (L.swing && first[i] < 0) first[i] = t;
+              if (HIND.includes(i) && L.swing && !was[i]) {
+                m.ev.push(`${t.toFixed(2)} ${PAWS[i]} ${L.why} ${((L.land.z - L.from.z) * 100).toFixed(1)}cm no-ar ${air} acc ${G.info.acc.toFixed(2)} beta ${G.info.beta.toFixed(2)} x${G.info.boost.toFixed(2)}`);
+              }
+              if (L.swing || !HIND.includes(i)) return;
+              m.back = Math.max(m.back, L.land.z - L.foot.z);
+              const e = ext(d, i);
+              m.ext = Math.max(m.ext, e);
+              if (e > 0.985) m.straight++;
+              if (L.dragged) {
+                m.drags++;
+                m.ev.push(`${t.toFixed(2)} ${PAWS[i]} ARRASTADA ${((L.land.z - L.foot.z) * 100).toFixed(1)}cm no-ar ${air} fase ${L.phSwing ? 'balanço' : 'apoio'} apoio ${L.stanceT.toFixed(2)}s`);
+              }
+            });
+            was = G.legs.map((l) => l.swing);
+          }
+          return m;
+        };
+        const start = meter(0.8);
+        const steady = meter(1.2);
+        return { start, steady, first };
+      });
+      rows.push(o);
+      const { start, steady, first } = o;
+      const tag = `${kind} (semente ${seed})`;
+      if (start.drags > 0) bad.push(`${tag}: na arrancada a pata de trás foi arrastada ${start.drags} quadro(s)`);
+      if (start.straight > 2) bad.push(`${tag}: na arrancada a perna de trás ficou reta ${start.straight} quadro(s) (até ${start.ext.toFixed(3)})`);
+      // a perna de trás fica reta com a pata uns 11 cm atrás do lugar dela (na escala): a pata sai do chão antes
+      if (start.back > 0.115 * (kind === 'rhaenyra' ? 1.133 : 1)) {
+        bad.push(`${tag}: na arrancada a pata de trás foi ${(start.back * 100).toFixed(1)} cm para trás (andando, ${(steady.back * 100).toFixed(1)} cm)`);
+      }
+      if (first.some((x) => x < 0 || x > 0.45)) bad.push(`${tag}: demorou para cada pata dar o primeiro passo (${first.map((x) => x.toFixed(2)).join(', ')} s)`);
+    }
+    const mx = (k, w) => Math.max(...rows.map((r) => r[w][k]));
+    report.push(`${kind} (${cfg.walkSpeed} m/s): na arrancada a pata de trás vai até ${(mx('back', 'start') * 100).toFixed(1)} cm para trás, perna até ${mx('ext', 'start').toFixed(3)} (reta em ${mx('straight', 'start')} quadros, arrastada ${mx('drags', 'start')}); andando, ${(mx('back', 'steady') * 100).toFixed(1)} cm e ${mx('ext', 'steady').toFixed(3)}; primeiro passo de cada pata até ${Math.max(...rows.map((r) => Math.max(...r.first))).toFixed(2)} s`);
+    // diagnóstico: as decolagens das traseiras na primeira semente e na pior (arrancada e andando)
+    const worst = rows.reduce((a, r) => (r.start.back + r.steady.back > a.start.back + a.steady.back ? r : a), rows[0]);
+    for (const [label, r] of [['1ª semente', rows[0]], ['pior', worst]]) {
+      report.push(`  ${label}: arrancada [${r.start.ev.slice(0, 14).join(' | ')}]`);
+      report.push(`  ${label}: andando (${((r.steady.air2 / r.steady.n) * 100).toFixed(0)}% dos quadros com 2+ no ar) [${r.steady.ev.slice(0, 12).join(' | ')}]`);
+    }
+  }
+  console.log(`[locomoção] arrancada\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});
+
 test('locomoção nova: a comemoração (pulinhos, voltinha, reverência) e a voltinha do segredo ficam com as patas do guia', () => {
   // retorno do usuário: com a pata plantada, a voltinha (raio de 20 cm, menor que a dog) virava passinhos curtos e
   // acelerados; ela fica com as patas do guia, as da comemoração aprovada
@@ -117,28 +202,44 @@ test('locomoção nova: a comemoração (pulinhos, voltinha, reverência) e a vo
   }
 });
 
-test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar', () => {
+test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar (8 sementes)', () => {
+  // instável no main antes da etapa 4 (E2E do #51 e CI do #48): parando de repente, o corpo sobe um tiquinho (sai da
+  // postura de andar) e uma pata da frente no limite do alcance ficava longe demais; parada, ela era arrastada 4 mm por
+  // quadro até o passinho de ajuste. Agora ela dá o passinho na hora (gait.js); as sementes fixam a fase da passada
+  const report = [];
+  const bad = [];
   for (const kind of KINDS) {
-    const d = fresh(kind);
-    walk(d, { speed: 1.4, secs: 1.5 });
-    const m = slideMeter(d);
-    let steps = 0;
-    let was = d.locomotion.legs.map((l) => l.swing);
-    walk(d, {
-      speed: 0, secs: 1.6, each: () => {
-        m.each();
-        const now = d.locomotion.legs.map((l) => l.swing);
-        for (let i = 0; i < 4; i++) if (now[i] && !was[i]) steps++;
-        was = now;
-      },
-    });
-    const L = d.locomotion.legs;
-    const off = L.map((l) => Math.hypot(l.foot.x - l.neutral.x, l.foot.z - l.neutral.z));
-    assert.ok(m.out.max < 0.003, `${kind}: parando, a pata apoiada escorregou ${(m.out.max * 1000).toFixed(2)} mm num quadro (${m.out.worst})`);
-    assert.ok(L.every((l) => !l.swing), `${kind}: parada, todas as patas no chão`);
-    assert.ok(off.every((x) => x < 0.016 * 1.2), `${kind}: patas no lugar (${off.map((x) => (x * 100).toFixed(1)).join(', ')} cm)`);
-    assert.ok(steps <= 10, `${kind}: poucos passos para assentar (${steps})`);
+    const rows = [];
+    for (const seed of SEEDS.slice(0, 8)) {
+      const o = withSeed(seed, () => {
+        const d = fresh(kind);
+        walk(d, { speed: 1.4, secs: 1.5 });
+        const m = slideMeter(d);
+        let steps = 0;
+        let was = d.locomotion.legs.map((l) => l.swing);
+        walk(d, {
+          speed: 0, secs: 1.6, each: () => {
+            m.each();
+            const now = d.locomotion.legs.map((l) => l.swing);
+            for (let i = 0; i < 4; i++) if (now[i] && !was[i]) steps++;
+            was = now;
+          },
+        });
+        const L = d.locomotion.legs;
+        const off = L.map((l) => Math.hypot(l.foot.x - l.neutral.x, l.foot.z - l.neutral.z));
+        return { max: m.out.max, worst: m.out.worst, events: m.out.events, steps, off, swinging: L.some((l) => l.swing) };
+      });
+      rows.push(o);
+      const tag = `${kind} (semente ${seed})`;
+      if (o.max >= 0.003) bad.push(`${tag}: parando, a pata apoiada escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst}; ${o.events.join(' | ')})`);
+      if (o.swinging) bad.push(`${tag}: parada, uma pata ainda no ar`);
+      if (!o.off.every((x) => x < 0.016 * 1.2)) bad.push(`${tag}: patas fora do lugar (${o.off.map((x) => (x * 100).toFixed(1)).join(', ')} cm)`);
+      if (o.steps > 10) bad.push(`${tag}: passos demais para assentar (${o.steps})`);
+    }
+    report.push(`${kind}: escorrega até ${(Math.max(...rows.map((r) => r.max)) * 1000).toFixed(2)} mm/quadro, ${Math.min(...rows.map((r) => r.steps))}–${Math.max(...rows.map((r) => r.steps))} passos para assentar`);
   }
+  console.log(`[locomoção] parando\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
 });
 
 test('locomoção nova: na esteira (objeto parado, só a velocidade), a pata apoiada vai para trás na velocidade', () => {
@@ -336,5 +437,74 @@ test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular
     }
   }
   console.log(`[locomoção] trocas de pose\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});
+
+test('locomoção nova: pousando do pulo ou soltando o empurrar com o direcional seguro, as patas voltam a andar já', () => {
+  // retorno do usuário (2026-10-20): "quando se pula, no pouso, ou se está segurando o shift e solta com o direcional
+  // sendo pressionado para andar, as patas ainda permanecem presas no chão". A pose do pulo (ou do empurrar) saía
+  // devagar e, até ela sair de todo, as patas seguiam as do guia com atraso: a de trás ficava apoiada com a perna reta
+  // e a locomoção só dava o primeiro passo uns 0,3 s depois
+  const report = [];
+  const bad = [];
+  /** Quanto a perna de trás i está esticada: quadril→jarrete sobre o comprimento dos dois gomos (1 = reta). */
+  const ext = (d, i) => {
+    const [u, l, m] = ['u', 'l', 'm'].map((k) => bone(d, `H${i === 2 ? 'L' : 'R'}${k}`).getWorldPosition(new THREE.Vector3()));
+    return u.distanceTo(m) / (u.distanceTo(l) + l.distanceTo(m));
+  };
+  const cases = [['pulo', 'rhaenyra'], ['empurrar', 'rhaenyra'], ['empurrar', 'radhija'], ['empurrar de pé', 'rhaenyra'], ['empurrar de pé', 'radhija']];
+  for (const [what, kind] of cases) {
+    const cfg = DOG_CONFIG[kind];
+    const rows = SEEDS.slice(0, 4).map((seed) => withSeed(seed, () => {
+      const d = fresh(kind);
+      // como no jogo (dogController.js): a velocidade vai à pedida com a aceleração do controle; a da animação, suavizada
+      let v = 0, anim = 0, t = 0;
+      const m = { first: -1, planted: 0, drags: 0, at: [] };
+      const frame = (A, target, rec = false, jump = 0) => {
+        v = target > v ? Math.min(target, v + cfg.accel * DT) : Math.max(target, v - cfg.decel * DT);
+        anim += (v - anim) * (1 - Math.exp(-DT * 18));
+        const yaw = d.object.rotation.y;
+        d.object.position.x += Math.sin(yaw) * v * DT;
+        d.object.position.z += Math.cos(yaw) * v * DT;
+        d.update(DT, { speed: anim, turn: 0, jump, ...A });
+        if (!rec) return;
+        d.object.updateMatrixWorld(true);
+        t += DT;
+        const G = d.locomotion;
+        if (m.first < 0 && G.legs.some((l) => l.swing)) m.first = t;
+        for (const i of [2, 3]) {
+          const L = G.legs[i];
+          if (L.dragged) m.drags++;
+          // passados 0,1 s (antes, é a pose do guia saindo), a pata de trás apoiada com a perna reta
+          if (t > 0.1 && !L.swing && ext(d, i) > 0.985) {
+            m.planted++;
+            if (m.at.length < 4) m.at.push(`${t.toFixed(2)} s ${PAWS[i]}`);
+          }
+        }
+      };
+      if (what === 'pulo') {
+        // correndo, pula (0,42 s no ar, como no jogo) e pousa segurando o direcional
+        for (let f = 0; f < 60; f++) frame({ action: 'none' }, cfg.walkSpeed);
+        v = Math.max(v, cfg.jumpSpeed);
+        const n = Math.round(cfg.jumpTime / DT);
+        for (let k = 1; k <= n; k++) frame({ action: 'jump', airK: k / n }, v, false, 4 * cfg.jumpHeight * (k / n) * (1 - k / n));
+        v = Math.min(v, cfg.walkSpeed);
+      } else {
+        // segurando o empurrar andando (no aberto, até 1,2 m/s; de pé num caixote, devagar) e soltando
+        const A = what === 'empurrar de pé' ? { action: 'push', pushGap: 0.36, pushTop: 0.9, pushY: 0.4 } : { action: 'push' };
+        for (let f = 0; f < 90; f++) frame(A, what === 'empurrar de pé' ? 0.6 : 1.2);
+      }
+      for (let f = 0; f < 60; f++) frame({ action: 'none', airK: -1 }, cfg.walkSpeed, true);
+      return m;
+    }));
+    const tag = `${kind} (${what})`;
+    report.push(`${tag}: primeiro passo em ${rows.map((r) => r.first.toFixed(2)).join('/')} s; traseira apoiada reta ${rows.map((r) => r.planted).join('/')} quadro(s) [${rows.flatMap((r) => r.at).slice(0, 4).join(', ')}]; arrastada ${rows.map((r) => r.drags).join('/')}`);
+    for (const r of rows) {
+      if (r.first < 0 || r.first > 0.2) bad.push(`${tag}: as patas só voltaram a andar ${r.first.toFixed(2)} s depois`);
+      if (r.planted > 1) bad.push(`${tag}: a pata de trás ficou apoiada com a perna reta ${r.planted} quadros (${r.at.join(', ')})`);
+      if (r.drags > 0) bad.push(`${tag}: a pata de trás foi arrastada ${r.drags} quadro(s)`);
+    }
+  }
+  console.log(`[locomoção] depois do pulo e do empurrar\n  ${report.join('\n  ')}`);
   assert.deepEqual(bad, []);
 });

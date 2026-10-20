@@ -282,7 +282,9 @@ Peças prontas:
 - `src/game/mechanics/`: `createPressurePlate` (placa que exige peso: `requires 'large' | 'any'`), `createHingedGate`
   (portão com dobradiça que não esmaga ninguém ao fechar; ao abrir, `sweepExit(ctrl)` diz se a folha vai passar
   pela dog e para onde ela sai: a fase a afasta antes, senão a colisão a arrasta e o lugar onde ela termina depende
-  do fps — fase 7: pulinho assustado com `effects.pushTo`), `createPushCrate` (caixote em 2 eixos com `onLimit`),
+  do fps — fase 7: pulinho assustado com `effects.pushTo`), `createPushCrate` (caixote em 2 eixos com `onLimit`; a
+  Radhija nele faz força, `contact: 'strain'`, e o núcleo mostra o aviso de que só a Rhaenyra empurra enquanto ela
+  insiste, `HEAVY_HINT` no `game.js`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
@@ -312,6 +314,37 @@ meia-espessura `t`). Opções:
 Colisores dinâmicos são registrados pelo puzzle com `world.addDynamic({...})`, que devolve o próprio objeto: mova
 `x/z/ax…` e ligue/desligue com `enabled`. O movimento usa sub-passos de no máximo 0,45 × raio, então nem a arrancada
 atravessa paredes finas (há teste de regressão para isso em todas as fases).
+
+O corpo é mais comprido que o círculo: o peito e a garupa vão em dois círculos menores presos ao rumo da dog
+(`DOG_CONFIG[nome].body = { front, back, r }`: até onde o peito vai à frente do centro, até onde a garupa vai atrás e
+o raio dos dois; `world.resolveBody`, chamado pelo `integrate` do controle). Eles empurram o centro para fora do que
+invadem e o círculo do meio manda: os vãos continuam os mesmos (os dois são mais estreitos que ele) e, onde os três
+não cabem (girando num corredor justo), fica o do meio. De frente para uma parede a dog para uns 3 cm antes (o peito
+encosta); os contatos do peito e da garupa entram em `c.hits` e na batida. Quem desloca a dog por fora do `integrate`
+chama `resolveDogBody` (do controle) para o corpo também ficar fora: os empurrões das mecânicas (`createDogEffects`:
+irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço (`separate`/`softBlock` do `game.js`); as poses
+roteirizadas (`lock.drive`, impulso na parede, empurrão em pé) não. A cabeça, que vai além do peito, desvia no
+desenho do modelo novo (`src/dogs/v2/head.js`, §7), sem mudar o jogo.
+
+**Chão de pisar** (`src/game/ground.js`): coisas baixas marcadas no desenho com `userData.walkable` (placas, pedais e
+botões do chão, as caminhas e a almofada do gato) viram chão: `heightAt(x, z)` é o alto delas embaixo do ponto, por um
+raio para baixo no desenho de agora (até 30 cm, ou o alto que `walkable` der em metros; só malhas, porque um sprite sem
+câmera quebra o raycast do three.js). O corpo apoia no que está embaixo das patas da frente e das de trás
+(`bodyGround`, suave no `game.js`) e o modelo novo pisa pata por pata (`gait.js`: a pata no balanço passa por cima do
+que vem à frente; a apoiada que gira para cima de algo sobe nele). **Bordas** (`userData.rim`, a borda alta e fofa das
+caminhas grandes: fases 5 e 8 e a Arena dos Porquinhos): andando para ela, para entrar ou sair, a dog dá um pulinho
+por cima (`ground.planRimHop` decide, `game.js` `hopOverRim` chama `startHop` do controle: o caminho do pulo, com um
+arco de topo largo; as duas pulam, sem `dog:jump`; o pouso sai em `dog:land` com `hop`, baixinho e sem poeira). Indo
+para um lugar antes da borda (a comemoração perto dela), não pula. Com o anel da borda (`rim: { r, t }`), do lado de
+fora ela segura o corpo de quem está no chão (`ground.pushOffRims`, `game.js` `keepOffRims` depois de cada movimento):
+ninguém fica parado em cima dela; dentro, livre. O chão mede cada desenho com a posição dos pais (`updateWorldMatrix`):
+o jogo o monta antes do primeiro quadro. As caminhas pequenas para as duas (fase 2 e Arena do Empurrão) são sólidas
+(colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
+por raios horizontais na largura do peito (`src/game/pushRest.js`: cinco raios; a face, a beirada e a altura das
+patas, pulando frestas), não na caixa de colisão; um pé fino (o cano do ventilador) só vale sem face larga ao alcance,
+e aí as patas o abraçam (`round`, centradas nele por `lat`); sem nada ao alcance, o eixo do meio do desenho. Na pose, a
+medida nova chega suave (sem a pata pular entre o cano e a grade) e, de pé, o joelho de trás aponta para a frente no
+chão (com o tronco inclinado, o "para a frente" da garupa ficava na direção da perna e o joelho abria para o lado).
 
 **Navegação** (`src/game/navigation.js`, `companion.js`): a companheira anda em linha reta quando enxerga a líder;
 senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cada aresta pode exigir
@@ -486,7 +519,12 @@ com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `tri
 `carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
 `airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
 `dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`, `shove` (empurrão em pé: os campos
-`shove*` estão em `DogAnim`, `src/types.d.ts`). A pose de boca é detectada pelo nome
+`shove*` estão em `DogAnim`, `src/types.d.ts`). Empurrando um caixote ou carrinho (`push`, ou `strain` fazendo força
+nele), o núcleo manda `pushGap`/`pushTop` (distância do centro à face e altura dele, de `kind` `'crate'` ou `'cart'`
+na frente da dog; a altura vem do `height` do colisor): ela fica de pé nas traseiras, com as patas da frente na face
+(ou em cima da beirada, se ele é baixo), a pose do empurrão em pé, e anda nas traseiras em passinhos curtos; fazendo
+força, elas patinam no lugar. Sem caixote ou carrinho na frente (puxando a corda, no escorregador), a pose de sempre.
+A pose de boca é detectada pelo nome
 (ou `userData.carryKind`) do objeto no `mouthSocket` ou pela forma dele.
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
@@ -515,13 +553,27 @@ não atravessa o chão (`dog.js`, gira no tornozelo; a correção do chão do co
 quadro), a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
 pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
 física (`physics.js`: correntinhas com mola, inércia, gravidade e chão; a pose do guia é o descanso), e o rabo também,
-bem mais firme (cinco gomos presos na garupa; só atrasa um pouco nas curvas, no pulo e ao parar). Em `dog.js`, as
-camadas ficam numa lista em ordem (`LAYERS`: locomoção e rolagem, cada uma devolve o peso do quadro em
-`d.layers`), por cima da base (as poses do modelo atual) e antes do contato com o chão e da física; a colisão do
-corpo e da cabeça (etapa 4) entra nessa lista. Para ver:
+bem mais firme (cinco gomos presos na garupa; só atrasa um pouco nas curvas, no pulo e ao parar). Na arrancada
+(etapa 4), o compasso das patas já é o da velocidade de agora (o ritmo do guia demora uns décimos de segundo para
+acompanhar), as patas no tempo do balanço saem logo e a de trás dá um passo de conforto antes de a perna ficar reta.
+Saindo de uma pose do guia já andando (pousou do pulo, soltou o empurrar segurando o direcional), a pose sai 2,6×
+mais depressa (`dogAnimation.js`, `offK`) e a locomoção assume com ela quase fora (peso 0,9 em vez de 0,98): seguindo
+o guia com atraso, a perna de trás ficava apoiada e reta. Correndo ou arrancando, a traseira dá o passo extra mesmo
+com as outras três no ar, e a pata que ficou embaixo de um degrau (o corpo subiu numa placa) também.
+A cabeça que desvia (`head.js`, etapa 4) usa o mundo de colisão da fase (`d.setWorld(world)`, chamado pelo
+`game.js`): chegando de frente numa parede ou móvel, o desenho inteiro freia antes do centro do jogo (prevê onde o
+peito vai parar e freia aos poucos, chegando parado com o focinho encostado; até 24 cm na escala) e a cabeça vira um
+pouco farejando; raspando de lado, a cabeça gira para fora; indo embora, tudo volta devagar. Contam os colisores que
+seguram a dog, mais altos que a cabeça (água, áreas da IA e a coisa em que ela está de propósito, não); desligada
+nas poses que vão de propósito até a coisa (empurrão em pé, parede, empurrando de pé, extras, Lambe-Lambe). Em
+`dog.js`, as camadas ficam numa lista em ordem (`LAYERS`: cabeça, locomoção e rolagem, cada uma devolve o peso do
+quadro em `d.layers`), por cima da base (as poses do modelo atual) e antes do contato com o chão e da física. Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
-guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).
+guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola, arrancada),
+`test/cabeca.test.mjs` (a cabeça não entra na parede, o desenho freia aos poucos), suíte E2E `canil` e capturas
+`tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`; `wall=<m>` anda com o controle e a colisão do
+jogo até uma parede, `crate=<altura>` empurra de pé um caixote).
 
 **Dona Gansa** (`createGoose()` em `src/characters/goose.js`, tipo `GooseModel`): modelo e animação; o comportamento
 está em `src/game/mechanics/gooseNpc.js`.

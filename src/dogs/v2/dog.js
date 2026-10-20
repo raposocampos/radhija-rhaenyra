@@ -3,8 +3,9 @@
 // mesma base procedural (SDF → Surface Nets → SkinnedMesh com pesos automáticos + cascas de pelo).
 // A base é a pose da animação atual (dogAnimation.js) num esqueleto atual invisível, copiada para o novo (retarget.js):
 // todas as poses e extras do jogo, com o jeito aprovado. Por cima dela, em camadas (LAYERS, abaixo): a locomoção
-// própria (gait.js: patas plantadas e firmes, passinhos de ajuste ao parar) e a rolagem (roll.js); depois, a pata e o
-// corpo que não atravessam o chão (contacts.js) e a física das correntinhas: orelhas e rabo (physics.js).
+// própria (gait.js: patas plantadas e firmes, passinhos de ajuste ao parar), a rolagem (roll.js) e a cabeça que desvia
+// das paredes e dos móveis (head.js); depois, a pata e o corpo que não atravessam o chão (contacts.js) e a física das
+// correntinhas: orelhas e rabo (physics.js).
 // No jogo: ?dogs=novo troca as duas dogs pelo modelo novo (main.js); a arena ?level=canil mostra os dois lado a lado.
 import * as THREE from 'three';
 import { DOG_CONFIG } from '../config.js';
@@ -25,6 +26,7 @@ import { groundContacts, lowestPoint } from './contacts.js';
 import { createChainPhysics, designChains } from './physics.js';
 import { createRollOverlay } from './roll.js';
 import { createGait } from './gait.js';
+import { createHeadAvoid } from './head.js';
 
 /**
  * Quanto as formas de contato podem passar do chão antes de o corpo ser levantado (m). As formas já levam a folga da
@@ -135,17 +137,26 @@ export function createDogV2(kind) {
   const roll = createRollOverlay({ skel2, cfg });
   // andar, trotar, galopar e girar: patas próprias, plantadas no chão, no ritmo do guia (gait.js)
   const gait = createGait({ skel2, retarget, s });
+  // a cabeça desvia das paredes e dos móveis do mundo da fase (setWorld): o desenho recua e o pescoço vira (head.js)
+  const head = createHeadAvoid({ skel2, retarget, design, s, hs: P.hs, cfg });
+  /** @type {import('../../types').CollisionWorld | null} */
+  let world = null;
+  /** Alto das coisas baixas de pisar embaixo de um ponto do mundo (game.js / ground.js); null: chão plano. */
+  let groundAt = null;
   /**
    * Camadas por cima da base (as poses do modelo atual), em ordem; cada uma mexe nos ossos dela e devolve o peso
    * aplicado no quadro (0 = nada; self.layers guarda os pesos):
+   *   · cabeça (head.js): perto de uma parede ou móvel, o desenho inteiro recua e o pescoço e a cabeça viram (antes da
+   *     locomoção, para as patas plantadas darem os passos do recuo);
    *   · locomoção (gait.js): patas e escápula quando ela anda, trota, galopa ou gira (fora das poses do guia);
    *   · rolagem (roll.js): o corpo inteiro enquanto o extra 'roll' roda.
    * Depois delas vêm a pata que não atravessa o chão, o contato do corpo com o chão (settle) e a física das
-   * correntinhas (orelhas e rabo). A colisão do corpo e da cabeça (etapa 4) entra aqui, depois das poses.
+   * correntinhas (orelhas e rabo). O peito e a garupa ficam fora das paredes pela colisão do jogo (resolveBody).
    * @type {{ name: string, apply: (dt: number, A: import('../../types').DogAnim) => number }[]}
    */
   const LAYERS = [
-    { name: 'gait', apply: (dt, A) => gait.apply(dt, A, st, inner, object) },
+    { name: 'head', apply: (dt, A) => head.apply(dt, A, inner, object, world) },
+    { name: 'gait', apply: (dt, A) => gait.apply(dt, A, st, inner, object, groundAt) },
     { name: 'roll', apply: (dt, A) => roll.apply(A.extra, inner) },
   ];
 
@@ -255,10 +266,14 @@ export function createDogV2(kind) {
     for (const L of LAYERS) any = Math.max(any, (self.layers[L.name] = L.apply(dt, A)));
     self.gait = self.layers.gait;
     self.overlay = self.layers.roll;
+    // a sombra e o marcador acompanham o desenho recuado (o marcador vem suavizado do guia: 0,2 por quadro)
+    shadow.position.z -= head.info.back * 0.9;
+    markerAnchor.position.z -= head.info.back * 0.2;
     if (any > 0) retarget.refresh();
     pawGuard();
-    // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
-    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0, dt);
+    // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto; com
+    // uma pata descendo de uma placa ou pedal, o chão vai até o embaixo dela
+    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : gait.lowGround, dt);
     physics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
     // pisadas da locomoção própria, com a pose do quadro pronta (a pegada sai onde a pata pousou)
@@ -292,7 +307,18 @@ export function createDogV2(kind) {
     gait: 0,
     locomotion: gait,
     /** Peso de cada camada (LAYERS) no último quadro. */
-    layers: { gait: 0, roll: 0 },
+    layers: { head: 0, gait: 0, roll: 0 },
+    /** Cabeça que desvia: recuo do desenho e giro da cabeça no último quadro (head.info) e os pontos de contato. */
+    head,
+    /** O mundo de colisão da fase (paredes e móveis de que a cabeça desvia); null fora de uma fase. */
+    setWorld(w) {
+      world = w || null;
+      head.reset();
+    },
+    /** Alto das coisas baixas de pisar (placas, pedais) embaixo de um ponto do mundo: cada pata sobe e desce nelas. */
+    setGround(fn) {
+      groundAt = typeof fn === 'function' ? fn : null;
+    },
     /** Física das orelhas e do rabo (testes: physics.tip('tail')). */
     physics,
     tilt: 0,
