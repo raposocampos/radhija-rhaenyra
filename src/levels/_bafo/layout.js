@@ -26,7 +26,8 @@ export const CORRIDOR = { x0: -1.7, x1: 1.1, z: 2.4, half: 0.32, door: { x0: -0.
 // Duto: boca no fundo do corredor, sai do outro lado da mureta, soprando para o poleiro A.
 export const DUCT = {
   inlet: { x: 0.85, z: 2.4, r: 0.32 },
-  outlet: { x: 1.65, z: 2.4, dirX: 1, dirZ: 0, speed: 1.3 },
+  // exit: a nuvem sai pela boca da caixa da saída (que tem colisor), não de dentro dela
+  outlet: { x: 1.65, z: 2.4, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.25 },
   travel: 1.0,
 };
 // Ventilador num trilho norte–sul; sopra para o leste. Alinhado (encaixe) quando z = CORRIDOR.z.
@@ -58,6 +59,9 @@ export const STATIC_COLLIDERS = [
   wallSeg('corredor-norte-leste', CORRIDOR.door.x1, CORRIDOR.x1, CORRIDOR.z - CORRIDOR.half, 0.05, { height: 0.35 }),
   wallSeg('corredor-vao-grande', CORRIDOR.door.x0, CORRIDOR.door.x1, CORRIDOR.z - CORRIDOR.half, 0.05, { blocks: 'large' }),
   { id: 'grade', shape: 'box', x: CORRIDOR.x0 - 0.02, z: CORRIDOR.z, hx: 0.04, hz: CORRIDOR.half },
+  // duto: a caixa da boca no fundo do corredor e a da saída do outro lado da mureta (world.js)
+  { id: 'duto-boca', shape: 'box', x: DUCT.inlet.x + 0.08, z: DUCT.inlet.z, hx: 0.11, hz: 0.23 },
+  { id: 'duto-saida', shape: 'box', x: DUCT.outlet.x, z: DUCT.outlet.z, hx: 0.12, hz: 0.18 },
   // postes dos poleiros
   { id: 'poleiro-a', shape: 'circle', x: PERCH_A.x, z: PERCH_A.z, r: 0.14 },
   { id: 'poleiro-b', shape: 'circle', x: PERCH_B.x, z: PERCH_B.z, r: 0.14 },

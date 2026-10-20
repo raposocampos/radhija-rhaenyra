@@ -49,7 +49,8 @@ export const AC_UNITS = { depth: 0.34, height: 0.72 }; // aparelhos: de z - half
 // Duto de exaustão: boca no fundo do corredor, sobe, passa por cima da mureta e sai ao lado do poleiro A.
 export const DUCT = {
   inlet: { x: 2.0, z: 2.3, r: 0.32 },
-  outlet: { x: 2.85, z: 2.3, dirX: 1, dirZ: 0, speed: 1.3 },
+  // exit: a nuvem sai pela boca (a 0,27 m do centro da caixa da saída, que tem colisor), não de dentro dela
+  outlet: { x: 2.85, z: 2.3, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.27 },
   travel: 1.0,
 };
 // Ventilador industrial num trilho norte–sul; sopra para o leste. Encaixa (marca amarela) em z = CORRIDOR.z.
@@ -78,8 +79,9 @@ export const STATIC_COLLIDERS = [
   { id: 'mureta-sul', shape: 'box', x: 0, z: 4.05, hx: 6.9, hz: 0.25 },
   { id: 'mureta-oeste', shape: 'box', x: -6.65, z: 0, hx: 0.25, hz: 4.5 },
   { id: 'mureta-leste', shape: 'box', x: 6.65, z: 0, hx: 0.25, hz: 4.5 },
-  // casa da escada
+  // casa da escada (e o batente da porta e o cano que saem 7 cm da fachada)
   { id: 'casa-da-escada', shape: 'box', x: (STAIR_HOUSE.x0 + STAIR_HOUSE.x1) / 2, z: (STAIR_HOUSE.z0 + STAIR_HOUSE.z1) / 2, hx: (STAIR_HOUSE.x1 - STAIR_HOUSE.x0) / 2, hz: (STAIR_HOUSE.z1 - STAIR_HOUSE.z0) / 2 },
+  { id: 'casa-da-escada-frente', shape: 'box', x: (STAIR_HOUSE.x0 + STAIR_HOUSE.x1) / 2, z: STAIR_HOUSE.z1 + 0.04, hx: (STAIR_HOUSE.x1 - STAIR_HOUSE.x0) / 2, hz: 0.04 },
   // floreiras (dois trechos; o vão do meio é a passagem do pombo)
   { id: 'floreiras-norte', shape: 'box', x: PLANTERS.x, z: (-4.2 + PASS.z0) / 2, hx: PLANTERS.half, hz: (PASS.z0 + 4.2) / 2 },
   { id: 'floreiras-sul', shape: 'box', x: PLANTERS.x, z: (PASS.z1 + 3.8) / 2, hx: PLANTERS.half, hz: (3.8 - PASS.z1) / 2 },
@@ -92,8 +94,14 @@ export const STATIC_COLLIDERS = [
   wallSeg('canos-vao-grande', CORRIDOR.door.x0, CORRIDOR.door.x1, acZ, AC_UNITS.depth / 2, { blocks: 'large' }),
   wallSeg('corredor-sul', CORRIDOR.x0, CORRIDOR.x1, CORRIDOR.z + CORRIDOR.half, 0.06, { height: 0.3 }),
   { id: 'grade', shape: 'box', x: CORRIDOR.x0 - 0.02, z: CORRIDOR.z, hx: 0.04, hz: CORRIDOR.half + 0.06 },
+  // duto: a caixa da boca no fundo do corredor e a da saída (num pé, do outro lado da mureta) (world/props.js)
+  { id: 'duto-boca', shape: 'box', x: 2.095, z: DUCT.inlet.z, hx: 0.155, hz: 0.24 },
+  { id: 'duto-saida', shape: 'box', x: DUCT.outlet.x, z: DUCT.outlet.z, hx: 0.13, hz: 0.19 },
   // zona A: mesa com guarda-sol, espreguiçadeiras, limoeiro no vaso
   { id: 'mesa-guarda-sol', shape: 'circle', x: -4.5, z: 1.2, r: 0.46 },
+  // as duas cadeiras da mesa (assento a 0,45 m: ninguém passa por baixo) (world/props.js, buildDecor)
+  { id: 'cadeira-oeste', shape: 'circle', x: -5.12, z: 1.35, r: 0.26 },
+  { id: 'cadeira-leste', shape: 'circle', x: -3.95, z: 1.62, r: 0.26 },
   { id: 'espreguicadeira-1', shape: 'box', x: -5.75, z: 2.45, hx: 0.3, hz: 0.82 },
   { id: 'espreguicadeira-2', shape: 'box', x: -4.85, z: 2.75, hx: 0.3, hz: 0.82 },
   { id: 'limoeiro', shape: 'circle', x: -3.45, z: -3.65, r: 0.3 },
@@ -120,7 +128,7 @@ export const NAV_NODES = {
   A_home: { x: -4.6, z: -1.6 },
   A_mid: { x: -4.0, z: 0.0 },
   A_pass: { x: -3.5, z: 0.45 },
-  A_south: { x: -3.6, z: 2.2 },
+  A_south: { x: -3.38, z: 2.2 }, // entre a cadeira leste e as floreiras
   B_pass: { x: -2.2, z: 0.45 },
   B_nw: { x: -2.05, z: -0.75 },
   B_mid: { x: -0.3, z: -0.5 },
@@ -134,7 +142,6 @@ export const NAV_NODES = {
 export const NAV_EDGES = [
   ['A_home', 'A_mid'],
   ['A_mid', 'A_pass'],
-  ['A_mid', 'A_south'],
   ['A_south', 'A_pass'],
   ['A_pass', 'B_pass', { requires: 'passOpen' }],
   ['B_pass', 'B_nw'],

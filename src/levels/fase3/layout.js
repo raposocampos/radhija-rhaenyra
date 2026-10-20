@@ -130,7 +130,8 @@ export const STATIC_COLLIDERS = [
   { id: 'limite-sul', shape: 'box', x: 0, z: 4.9, hx: 9, hz: 0.5 },
 
   // Cerca-viva A|B
-  ...HEDGE_AB.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `cerca-viva-${i}`, shape: 'box', x: HEDGE_AB.x, z: (s.zMin + s.zMax) / 2, hx: HEDGE_AB.hx, hz: (s.zMax - s.zMin) / 2 })),
+  // (a folhagem passa ~7 cm de cada lado de HEDGE_AB.hx)
+  ...HEDGE_AB.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `cerca-viva-${i}`, shape: 'box', x: HEDGE_AB.x, z: (s.zMin + s.zMax) / 2, hx: HEDGE_AB.hx + 0.04, hz: (s.zMax - s.zMin) / 2 })),
 
   // Cantinho da pedra leve
   { id: 'cantinho-oeste', shape: 'box', x: NOOK.minX - nookHedge, z: (NOOK.minZ + NOOK.maxZ) / 2 + nookHedge / 2, hx: nookHedge, hz: (NOOK.maxZ - NOOK.minZ) / 2 + nookHedge },
@@ -149,7 +150,7 @@ export const STATIC_COLLIDERS = [
   })),
   { id: 'ponte-guarda-norte', shape: 'segment', ax: BRIDGE.x0, az: BRIDGE.zMin, bx: BRIDGE.x1, bz: BRIDGE.zMin, t: 0.04 },
   { id: 'ponte-guarda-sul', shape: 'segment', ax: BRIDGE.x0, az: BRIDGE.zMax, bx: BRIDGE.x1, bz: BRIDGE.zMax, t: 0.04 },
-  { id: 'ninho', shape: 'circle', x: NEST.x, z: NEST.z, r: NEST.r },
+  { id: 'ninho', shape: 'circle', x: NEST.x, z: NEST.z, r: NEST.r + 0.07 }, // com a palha solta em volta (até ~0,4 m)
 ];
 
 export const KEEP_CLEAR = [

@@ -32,7 +32,8 @@ function potPlant(x, z, r, kind, seed) {
       const pts = [];
       for (let k = 0; k <= 8; k++) {
         const u = k / 8;
-        pts.push(new THREE.Vector3(Math.cos(a) * len * u, h + Math.sin(Math.PI * u * 0.8) * 0.35 - u * u * 0.25, Math.sin(a) * len * u));
+        // frondes em arco: as pontas não descem abaixo da cabeça da Rhaenyra (quem passa perto não as atravessa)
+        pts.push(new THREE.Vector3(Math.cos(a) * len * u, h + Math.sin(Math.PI * u * 0.8) * 0.35 - u * u * 0.08, Math.sin(a) * len * u));
       }
       const curve = new THREE.CatmullRomCurve3(pts);
       const frond = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.012, 4, false), leafMat);
@@ -494,10 +495,11 @@ export function buildConservatory({ root, layout }) {
   const grp = new THREE.Group();
   grp.name = 'jardim-de-inverno';
   POTS.forEach((p, i) => grp.add(potPlant(p.x, p.z, p.r * 0.85, i === 0 ? 'fern' : 'monstera', 31 + i)));
-  // vasinhos pequenos no peitoril das vidraças (só enfeite, perto do vidro)
-  for (const [x, k] of /** @type {[number, string][]} */ ([[4.85, 'fern'], [7.4, 'monstera']])) {
-    const small = potPlant(x, B.minZ + 0.18, 0.09, k, 70 + x);
-    small.scale.setScalar(0.55);
+  // vasinhos pequenos no chão, junto do peitoril das vidraças (layout.SMALL_POTS, com colisor; o de samambaia fica
+  // no canto, longe da placa do registro onde o carrinho do vaso para)
+  for (const p of layout.SMALL_POTS) {
+    const small = potPlant(p.x, p.z, 0.09, p.kind, 70 + p.seedX);
+    small.scale.setScalar(p.scale);
     small.position.y = 0.0;
     grp.add(small);
   }

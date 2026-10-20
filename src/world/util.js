@@ -448,6 +448,7 @@ export function leafSkin(foliageGeo, { count = 1000, size = 0.07, seed = 1, mate
     k++;
   }
   im.count = k;
+  im.name = 'folhinhas'; // pele de folhas soltas: a forma (e o colisor) é a da folhagem por baixo
   im.castShadow = false;
   im.receiveShadow = true;
   return im;

@@ -451,7 +451,8 @@ export interface ScentWind { id?: string; x: number; z: number; dirX: number; di
 export interface ScentDuct {
   id?: string;
   inlet: { x: number; z: number; r: number };
-  outlet: { x: number; z: number; dirX: number; dirZ: number; speed?: number };
+  /** exit: a nuvem sai a essa distância de (x, z), na direção (dirX, dirZ): a boca, fora do colisor da caixa (m). */
+  outlet: { x: number; z: number; dirX: number; dirZ: number; speed?: number; exit?: number };
   /** Segundos dentro do duto. */
   travel?: number;
   /** O duto só engole nuvens quando ativo (ex.: ventilador alinhado). */

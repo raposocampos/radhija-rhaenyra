@@ -180,15 +180,14 @@ export function buildTunnel(root, layout) {
     splat.scale.set(1, 0.6 + r() * 0.6, 1);
     group.add(splat);
   }
-  // pedrinhas em volta das bocas
+  // pedrinhas dos dois lados das bocas, fora do caminho da manilha e rasteiras (a pata passa por cima)
   const stoneMat = mat('f7-stone', () => new THREE.MeshStandardMaterial({ color: '#9b958a', roughness: 0.85 }));
   for (const [x, dir] of [[T.x0 - 0.05, -1], [T.x1 + 0.05, 1]]) {
-    for (let i = 0; i < 7; i++) {
-      const a = -1.2 + (i / 6) * 2.4;
+    for (const a of [-1.2, -1.02, -0.85, 0.85, 1.02, 1.2]) {
       const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.045 + r() * 0.04, 0), stoneMat);
       st.position.set(x + dir * (0.04 + r() * 0.08), 0.015, T.z + Math.sin(a) * (outerR + 0.12) + (r() - 0.5) * 0.05);
       st.scale.y = 0.55;
-      st.rotation.set(r(), r() * 3, r());
+      st.rotation.set(r() * 0.3, r() * 3, r() * 0.3);
       st.castShadow = true;
       st.receiveShadow = true;
       group.add(st);

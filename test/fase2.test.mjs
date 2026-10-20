@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
+import { interpenetration, surfacePoints } from './helpers/interpenetra.mjs';
 
 const TAU = Math.PI * 2;
 
@@ -183,4 +184,57 @@ test('fase 2: Radhija molhada pelo jato é empurrada para fora e chacoalha', asy
   assert.equal(i.dogs.radhija.action, 'shake');
   const c = h.ctrls.radhija;
   assert.ok(!h.world.overlaps(c.x, c.z, c.r * 0.95, c.size), 'posição válida depois do empurrão');
+});
+
+// Retorno do usuário na prévia do PR #48 (2026-10-20): "essa madeira que fica atravessando o portão da fase 2". Travado,
+// o calço fica de frente para a folha aberta com a ponta fina por baixo dela; em nenhuma abertura do portão, em nenhum
+// ponto do caminho do calço e nem quicando a madeira entra na folha (cenário de verdade: test/helpers/worldBuild.mjs).
+test('fase 2: o calço nunca entra na folha do portão (travado, a ponta fica por baixo dela)', async () => {
+  const [{ buildLevelWorld }, { LEVELS }] = await Promise.all([import('./helpers/worldBuild.mjs'), import('../src/levels/index.js')]);
+  const def = LEVELS.find((d) => d.id === 'fase2');
+  const { built, dispose } = await buildLevelWorld(def);
+  try {
+    const { gate, wedge } = built.props;
+    const bad = [];
+    const check = (label) => {
+      const hit = interpenetration(wedge.object, gate.object, { maxY: 0.2 });
+      if (hit.length) bad.push(`${label}: ${JSON.stringify(hit[0])}`);
+    };
+    for (let i = 0; i <= 10; i++) {
+      for (let j = 0; j <= 20; j++) {
+        gate.setOpen(i / 10);
+        wedge.setState(j / 20);
+        check(`portão ${i / 10}, calço ${j / 20}`);
+      }
+    }
+    for (const t of [0, 0.5, 0.84]) {
+      gate.setOpen(t);
+      wedge.setState(0);
+      wedge.bump();
+      for (let f = 0; f < 72; f++) {
+        built.update(1 / 60, f / 60);
+        check(`quicando, portão ${t}, quadro ${f}`);
+      }
+    }
+    assert.deepEqual(bad.slice(0, 4), [], `${bad.length} posição(ões) com o calço dentro da folha`);
+    // travado: a ponta passa da linha da folha (por baixo dela) e a madeira ali fica abaixo da barra de baixo (5,5 cm)
+    const { GATE } = def.layout;
+    gate.setOpen(1);
+    wedge.setState(1);
+    wedge.object.updateMatrixWorld(true);
+    const u = { x: -Math.sin(GATE.openYaw), z: -Math.cos(GATE.openYaw) };
+    let north = Infinity, under = 0;
+    wedge.object.traverse((/** @type {any} */ o) => {
+      if (!o.isMesh) return;
+      for (const v of surfacePoints(o, 0.004)) {
+        const off = -(v.x - GATE.hinge.x) * u.z + (v.z - GATE.hinge.z) * u.x; // > 0: ao sul da folha
+        north = Math.min(north, off);
+        if (Math.abs(off) < 0.015) under = Math.max(under, v.y);
+      }
+    });
+    assert.ok(north < -0.005, `a ponta passa por baixo da folha (${(north * 100).toFixed(1)} cm além da linha dela)`);
+    assert.ok(under > 0.03 && under < 0.05, `debaixo da folha o calço tem ${(under * 100).toFixed(1)} cm (encosta quase na barra de baixo)`);
+  } finally {
+    dispose();
+  }
 });

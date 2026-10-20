@@ -194,8 +194,10 @@ export function buildFences(root, layout) {
   // a parte que desce até o puxador (anima com o puxão)
   const cordMat = stdMat('#e8d0a0', { roughness: 0.9 });
   const cordDown = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 6), cordMat);
+  cordDown.name = 'puxador';
   group.add(cordDown);
   const pullHandle = new THREE.Group();
+  pullHandle.name = 'puxador';
   const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), woodMat('#e8554a', { key: 'f10-puxador' }));
   knob.scale.y = 1.25;
   const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 10, 1, true), stdMat('#f6c453', { roughness: 0.9, side: THREE.DoubleSide }));

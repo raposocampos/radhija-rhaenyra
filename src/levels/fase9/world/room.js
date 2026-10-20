@@ -224,7 +224,7 @@ function buildWalls(layout, updaters) {
   const br = CONSERVATORY.brick;
   wallBox(grp, (br.x0 + br.x1) / 2, 0, zN, br.x1 - br.x0, H, T, brick);
   const glassSpans = [[WALL_LJ.x, br.x0], [br.x1, x1]];
-  const parapet = 0.55;
+  const parapet = CONSERVATORY.parapet;
   const garden = new THREE.MeshBasicMaterial({ map: nightGardenTexture(), fog: false });
   const rainTex = rainTexture();
   const rainMat = new THREE.MeshBasicMaterial({ map: rainTex, transparent: true, depthWrite: false, fog: false });
@@ -320,8 +320,8 @@ function buildWalls(layout, updaters) {
     const [zc, len] = zs(z0, z1);
     wallBox(grp, x, 0, zc, T, C, len, dSide);
   }
-  // em cima da portinha de gato a parede continua (a passagem fica embaixo)
-  const flapH = 0.26;
+  // em cima da portinha de gato a parede continua (a passagem fica embaixo, com altura para a Radhija passar inteira)
+  const flapH = 0.5;
   const [fzc, flen] = zs(WALL_EH.catFlap.z0, WALL_EH.catFlap.z1);
   wallBox(grp, WALL_EH.x, flapH, fzc, T, C - flapH, flen, dSide);
   // a portinha: um buraco de verdade (forro escuro por dentro da parede), moldura de madeira em arco dos dois lados,
@@ -392,7 +392,7 @@ function buildWalls(layout, updaters) {
   for (const [hz, dir] of [[WALL_LJ.gap.z0, 1], [WALL_LJ.gap.z1, -1]]) {
     const leaf = new THREE.Group();
     leaf.position.set(WALL_LJ.x + T / 2, 0, hz);
-    leaf.rotation.y = dir * Math.PI * 0.965;
+    leaf.rotation.y = dir * Math.PI * layout.GLASS_DOORS.openTurn; // colisores das folhas no layout
     const pane = new THREE.Mesh(new THREE.PlaneGeometry(leafW - 0.06, C - 0.1), glassMat);
     pane.position.set(0, C / 2, dir * leafW / 2);
     pane.rotation.y = Math.PI / 2;

@@ -119,6 +119,7 @@ function buildFan(root, FAN, updaters) {
   for (let i = 0; i < 3; i++) {
     const g = new THREE.PlaneGeometry(0.36, 0.03, 8, 1).translate(0.18, 0, 0);
     const rb = new THREE.Mesh(g, stdMat(ribbonCols[i], { side: THREE.DoubleSide, roughness: 0.7 }));
+    rb.name = 'fita-do-vento'; // tecido leve: não tem colisor
     rb.position.set(0.12, 0.6 + (i - 1) * 0.12, (i - 1) * 0.1);
     rb.userData.base = Float32Array.from(g.attributes.position.array);
     ribbons.push(rb);
@@ -216,8 +217,8 @@ function buildCorridor(root, layout, updaters) {
       }
     }
   }
-  // canos de cobre com isolamento atravessando o vão (baixos: a Rhaenyra não passa por baixo)
-  const pipeY = 0.33;
+  // canos de cobre com isolamento atravessando o vão: acima da cabeça da Radhija, baixos demais para a Rhaenyra
+  const pipeY = 0.52;
   const insul = stdMat('#2d2f31', { roughness: 0.95 });
   const copper = stdMat('#c07a4a', { roughness: 0.35, metalness: 0.9 });
   const x0 = C.door.x0 - 0.15, x1 = C.door.x1 + 0.15;

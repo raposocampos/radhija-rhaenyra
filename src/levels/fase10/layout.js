@@ -154,8 +154,9 @@ export const PLANTATION = {
 export const ROSE_BUSH = { x: 1.6, z: 4.4, r: 0.6, h: 0.55 };
 export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
 /**
- * A casca do tronco da mangueira na altura das patas do empurrão: o tronco de pinata.js sobe torto (ali o centro fica
- * 3,5 cm a leste e 7,7 cm ao sul da base) e afina (raio de 29 cm). As patas apoiam nela e o colisor fica rente.
+ * A casca do tronco da mangueira na altura das patas do empurrão: o tronco de pinata.js sobe reto até ali e depois
+ * entorta (o centro fica 3,5 cm a leste e 7,7 cm ao sul de MANGO_TREE) e afina (raio de 29 cm). As patas apoiam nela
+ * e o colisor fica rente.
  */
 const MANGO_BARK = { x: MANGO_TREE.x + 0.035, z: MANGO_TREE.z + 0.077, r: 0.29 };
 /**
@@ -255,6 +256,8 @@ export const VEG_BEDS = [
 ];
 /** O pé de tomate no tutor (perto da cerca norte) e o regador encostado no canteiro, dentro da horta. */
 export const TOMATO = { x: 7.45, z: 0.7, r: 0.22 };
+/** Girassóis do lado de fora da cerca norte da horta, encostados nela (h: altura; colisor no caule e nas folhas). */
+export const SUNFLOWERS = [{ x: 7.35, h: 1.1 }, { x: 7.85, h: 1.25 }, { x: 8.85, h: 1.0 }].map((s) => ({ ...s, z: HORTA.z0 - 0.06 }));
 export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
 /** Galpão de ferramentas (paredes cortadas, sem telhado) com a porta basculante no oeste. */
 export const SHED = { x0: 9.6, x1: 12.05, z0: 0.6, z1: 3.6, wallH: 1.45, t: 0.15, door: { z0: 1.7, z1: 2.6, h: 1.25 } };
@@ -333,8 +336,9 @@ const thin = 0.06;
 export const STATIC_COLLIDERS = [
   // casa
   wallX('casa-frente', HOUSE.zS, HOUSE.x0, WALL_LK.x),
-  wallZ('casa-leste-norte', HOUSE.x1, B.minZ, PORCH_DOOR.z0),
-  wallZ('casa-leste-sul', HOUSE.x1, PORCH_DOOR.z1, HOUSE.zS),
+  // (com os batentes da porta da varanda; a parede não engorda: a torneira é um botão de impulso nela)
+  wallZ('casa-leste-norte', HOUSE.x1, B.minZ, PORCH_DOOR.z0 + 0.05),
+  wallZ('casa-leste-sul', HOUSE.x1, PORCH_DOOR.z1 - 0.05, HOUSE.zS),
   // despensa (a frente da cozinha vira a parede de dentro, com a porta)
   wallX('despensa-porta-oeste', HOUSE.zS, WALL_LK.x, PANTRY.door.x0),
   wallX('despensa-porta-leste', HOUSE.zS, PANTRY.door.x1, HOUSE.x1 + T / 2),
@@ -343,8 +347,10 @@ export const STATIC_COLLIDERS = [
   wallX('despensa-frente', PANTRY.zS, PANTRY.x0 - T / 2, PANTRY.x1 + T / 2),
   { id: 'armario-da-despensa', shape: 'box', x: CUPBOARD.x, z: CUPBOARD.z, hx: CUPBOARD.hx, hz: CUPBOARD.hz },
   { id: 'prateleiras-da-despensa', shape: 'box', x: PANTRY_SHELF.x, z: PANTRY_SHELF.z, hx: PANTRY_SHELF.hx, hz: PANTRY_SHELF.hz },
-  wallZ('divisoria-norte', WALL_LK.x, B.minZ, WALL_LK.gap.z0),
-  wallZ('divisoria-sul', WALL_LK.x, WALL_LK.gap.z1, HOUSE.zS),
+  { id: 'sacos-de-farinha', shape: 'box', x: -7.615, z: 1.8, hx: 0.52, hz: 0.2 }, // e a cestinha de batatas (world/pantry.js)
+  // (com os batentes do arco, que entram 7 cm no vão)
+  wallZ('divisoria-norte', WALL_LK.x, B.minZ, WALL_LK.gap.z0 + 0.07),
+  wallZ('divisoria-sul', WALL_LK.x, WALL_LK.gap.z1 - 0.07, HOUSE.zS),
   // sala (atrás do sofá, no vão até a parede da frente, só a Radhija passa)
   { id: 'sofa', shape: 'box', x: SOFA.x, z: SOFA.z, hx: SOFA.hx, hz: SOFA.hz },
   { id: 'mesa-de-centro', shape: 'box', x: COFFEE_TABLE.x, z: COFFEE_TABLE.z, hx: COFFEE_TABLE.hx, hz: COFFEE_TABLE.hz, jumpable: true, height: COFFEE_TABLE.h },
@@ -357,17 +363,27 @@ export const STATIC_COLLIDERS = [
   { id: 'bancada', shape: 'box', x: (COUNTER.x0 + COUNTER.x1) / 2, z: COUNTER.z, hx: (COUNTER.x1 - COUNTER.x0) / 2, hz: COUNTER.hz },
   { id: 'geladeira', shape: 'box', x: FRIDGE.x, z: FRIDGE.z, hx: FRIDGE.hx, hz: FRIDGE.hz },
   { id: 'mesa-da-cozinha', shape: 'box', x: KITCHEN_TABLE.x, z: KITCHEN_TABLE.z, hx: KITCHEN_TABLE.hx, hz: KITCHEN_TABLE.hz, blocks: 'large' },
+  // os pés da mesa (a Radhija passa por baixo dela, entre eles)
+  ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => /** @type {import('../../types').CircleCollider} */ ({
+    id: `pe-da-mesa-da-cozinha-${i + 1}`, shape: 'circle', x: KITCHEN_TABLE.x + sx * (KITCHEN_TABLE.hx - 0.06), z: KITCHEN_TABLE.z + sz * (KITCHEN_TABLE.hz - 0.06), r: 0.04,
+  })),
+  // as tigelas das dogs no tapetinho (comer e beber: de frente para elas, no lugar do extra)
+  { id: 'tigelas', shape: 'box', x: DOG_BOWLS.x, z: DOG_BOWLS.z, hx: 0.26, hz: 0.11 },
   ...KITCHEN_CHAIRS.map((c, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `cadeira-${i + 1}`, shape: 'circle', x: c.x, z: c.z, r: c.r })),
   // varanda
   ...PERGOLA_POSTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `poste-pergolado-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.08 })),
-  { id: 'mesa-do-bolo', shape: 'box', x: CAKE_TABLE.x, z: CAKE_TABLE.z, hx: CAKE_TABLE.hx, hz: CAKE_TABLE.hz },
+  { id: 'mesa-do-bolo', shape: 'box', x: CAKE_TABLE.x, z: CAKE_TABLE.z, hx: CAKE_TABLE.hx + 0.08, hz: CAKE_TABLE.hz + 0.07 }, // com a toalha
   { id: 'presentes', shape: 'box', x: GIFTS.x, z: GIFTS.z, hx: GIFTS.hx, hz: GIFTS.hz },
   { id: 'banco-da-varanda', shape: 'box', x: PORCH_BENCH.x, z: PORCH_BENCH.z, hx: PORCH_BENCH.hx, hz: PORCH_BENCH.hz },
   ...PORCH_POTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-da-varanda-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.21 })),
   // quintal
   { id: 'piscininha', shape: 'circle', x: POOL.x, z: POOL.z, r: POOL.r + 0.02 },
+  { id: 'tomada', shape: 'box', x: OUTLET.x + 0.04, z: OUTLET.z, hx: 0.06, hz: 0.06 }, // a tomada da fachada e o fio descendo
   { id: 'cesta-do-piquenique', shape: 'circle', x: PICNIC.x - 0.45, z: PICNIC.z - 0.15, r: 0.2 },
-  // campinho: fileiras de milho (corredores só para a Radhija) e as abóboras
+  // campinho: o canteiro de cenouras (borda baixa: pula), o espantalho, fileiras de milho (corredores só para a
+  // Radhija) e as abóboras
+  { id: 'canteiro-de-cenouras', shape: 'box', x: PLANTATION.carrots.x, z: PLANTATION.carrots.z, hx: PLANTATION.carrots.hx + 0.03, hz: PLANTATION.carrots.hz + 0.03, jumpable: true, height: 0.14 },
+  { id: 'espantalho', shape: 'circle', x: PLANTATION.x0 + 0.15, z: PLANTATION.z1 - 0.1, r: 0.05 },
   ...PLANTATION.corn.map((c, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `milho-${i + 1}`, shape: 'box', x: c.x, z: (c.z0 + c.z1) / 2, hx: PLANTATION.cornHx, hz: (c.z1 - c.z0) / 2 })),
   ...PLANTATION.pumpkins.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `abobora-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.22 })),
   // a piñata: a roseira embaixo e a mangueira
@@ -380,10 +396,15 @@ export const STATIC_COLLIDERS = [
   // cerca do fundo (o portãozinho é dinâmico)
   wallZ('cerca-fundo-norte', BACK_FENCE.x, B.minZ, BACK_FENCE.gate.z0, { hx: thin }),
   wallZ('cerca-fundo-sul', BACK_FENCE.x, BACK_FENCE.gate.z1, B.maxZ, { hx: thin }),
+  // as duas moitas da trepadeira, do lado do quintal (world/fences.js)
+  { id: 'trepadeira-norte', shape: 'box', x: BACK_FENCE.x - 0.07, z: -2.185, hx: 0.13, hz: 0.55 },
+  { id: 'trepadeira-sul', shape: 'box', x: BACK_FENCE.x - 0.07, z: 2.4, hx: 0.13, hz: 0.55 },
   // casa na árvore
-  { id: 'tronco', shape: 'circle', x: TREE.x, z: TREE.z, r: TREE.r },
+  { id: 'tronco', shape: 'circle', x: TREE.x, z: TREE.z, r: TREE.r + 0.18 }, // o pé do tronco alarga e as raízes saem dele
   ...DECK_POSTS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `poste-deque-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.08 })),
   { id: 'funil', shape: 'box', x: TUBE.inlet.x, z: TUBE.inlet.z - 0.03, hx: 0.21, hz: 0.15 },
+  { id: 'cano-de-brinquedo', shape: 'box', x: 8.12, z: -3.3, hx: 0.26, hz: 0.4 }, // do funil até o deque (o funil fica livre)
+  { id: 'espeto-da-corda', shape: 'circle', x: ROPE.ring.x, z: ROPE.ring.z, r: 0.04 },
   // o muro leste e o cantinho do outro lado (a tábua solta é dinâmica)
   wallZ('muro-leste-norte', EAST_WALL.x, B.minZ, SECRET.board.z0, { hx: 0.07 }),
   wallZ('muro-leste-sul', EAST_WALL.x, SECRET.board.z1, B.maxZ, { hx: 0.07 }),
@@ -399,7 +420,8 @@ export const STATIC_COLLIDERS = [
   wallZ('horta-leste-meio', HORTA.x1, SHED.z1, STY.z0, { hx: thin, jumpable: true, height: HORTA.fenceH }),
   ...VEG_BEDS.map((b, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `canteiro-${i + 1}`, shape: 'box', x: b.x, z: b.z, hx: b.hx, hz: b.hz })),
   { id: 'tomateiro', shape: 'circle', x: TOMATO.x, z: TOMATO.z, r: TOMATO.r },
-  { id: 'regador', shape: 'circle', x: WATERING_CAN.x, z: WATERING_CAN.z, r: WATERING_CAN.r },
+  ...SUNFLOWERS.map((s, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `girassol-${i + 1}`, shape: 'circle', x: s.x, z: s.z, r: 0.08 })),
+  { id: 'regador', shape: 'circle', x: WATERING_CAN.x + 0.05, z: WATERING_CAN.z, r: WATERING_CAN.r + 0.03 }, // com o bico
   // galpão (a porta é dinâmica)
   wallX('galpao-norte', SHED.z0, SHED.x0, SHED.x1, { hz: SHED.t / 2 }),
   wallX('galpao-sul', SHED.z1, SHED.x0, SHED.x1, { hz: SHED.t / 2 }),
@@ -417,6 +439,7 @@ export const STATIC_COLLIDERS = [
   wallZ('chiqueiro-oeste-sul', STY.x0, STY.gate.z1, STY.z1, { hx: thin }),
   wallZ('chiqueiro-leste', STY.x1, STY.z0, STY.z1, { hx: thin }),
   { id: 'casinha-dos-porcos', shape: 'box', x: STY.x1 - 0.45, z: STY.z1 - 0.45, hx: 0.38, hz: 0.38 },
+  { id: 'cocho', shape: 'box', x: STY.x1 - 0.5, z: STY.z0 + 0.35, hx: 0.36, hz: 0.14 }, // o cocho de madeira (world/sty.js)
   { id: 'painel-dos-botoes', shape: 'box', x: BUTTON_BOARD.x, z: (BUTTON_BOARD.z0 + BUTTON_BOARD.z1) / 2, hx: BUTTON_BOARD.t / 2 + 0.005, hz: (BUTTON_BOARD.z1 - BUTTON_BOARD.z0) / 2 },
   { id: 'gerador', shape: 'box', x: GENERATOR.x, z: GENERATOR.z, hx: GENERATOR.hx, hz: GENERATOR.hz },
 ];
@@ -496,7 +519,7 @@ const LAYOUT = {
   CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, MANGO_SHOVE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, GENERATOR, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
+  VEG_BEDS, TOMATO, SUNFLOWERS, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, GENERATOR, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };

@@ -14,7 +14,7 @@ const shadowAll = (g) => g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isM
  */
 export function buildBafoWorld({ root, layout }) {
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, GATE, CARROT, COLLECTIBLES } = layout;
-  const base = buildPlaceholderWorld({ root, layout, skip: new Set(['grade', 'poleiro-a', 'poleiro-b']) });
+  const base = buildPlaceholderWorld({ root, layout, skip: new Set(['grade', 'poleiro-a', 'poleiro-b', 'duto-boca', 'duto-saida']) });
   const updaters = [];
 
   // ---------------------------------------------------------------- trilho do ventilador
@@ -56,6 +56,7 @@ export function buildBafoWorld({ root, layout }) {
   const ribbons = [];
   for (let i = 0; i < 3; i++) {
     const rb = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.035).translate(0.17, 0, 0), std('#ff7a59', { side: THREE.DoubleSide }));
+    rb.name = 'fita-do-vento'; // tecido leve: não tem colisor
     rb.position.set(0.26, 0.4 + i * 0.08, (i - 1) * 0.08);
     ribbons.push(rb);
     fan.add(rb);
@@ -203,6 +204,7 @@ export function buildBafoWorld({ root, layout }) {
   const carrotHome = carrot.position.clone();
   const collectibles = COLLECTIBLES.map((c) => {
     const bone = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.025, 8, 16), std('#e8c06a', { emissive: '#7a5200', emissiveIntensity: 0.4 }));
+    bone.name = `osso-${c.id}`;
     bone.rotation.x = Math.PI / 2;
     bone.position.set(c.x, 0.12, c.z);
     root.add(bone);

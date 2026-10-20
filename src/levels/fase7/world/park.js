@@ -126,7 +126,8 @@ function hedgeLine(group, ax, az, bx, bz, seed, flowers = '#ff6a55') {
   for (let d = 0.4; d < len - 0.3; d += 0.7 + r() * 0.5) {
     const t = d / len;
     const fl = new THREE.Mesh(r() < 0.5 ? geranium({ radius: 0.16, height: 0.18, seed: seed + d * 10, flower: flowers }) : smallFlowers({ count: 18, radius: 0.13, height: 0.14, color: '#fff3f0', seed: seed + d * 7 }), plantMat());
-    fl.position.set(ax + (bx - ax) * t + nx * 0.36, 0, az + (bz - az) * t + nz * 0.36);
+    // no pé da cerca viva, por fora dos limites (sem invadir o gramado onde as dogs andam)
+    fl.position.set(ax + (bx - ax) * t + nx * 0.26, 0, az + (bz - az) * t + nz * 0.26);
     group.add(fl);
   }
 }

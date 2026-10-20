@@ -335,16 +335,17 @@ function buildIroningBoard(root, Bd) {
   const top = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
   top.position.y = Bd.h - 0.035;
   grp.add(top);
-  // pernas em X (dois pares, um de cada lado) e o descanso do ferro
+  // pernas em X (dois pares, um de cada lado, em z ± legZ; os pés a legX do centro, com os colisores da Radhija em
+  // layout.STATIC_COLLIDERS) e o descanso do ferro
   const metal = new THREE.MeshStandardMaterial({ color: '#dfe2e4', roughness: 0.3, metalness: 0.7 });
   const legLen = Math.hypot(Bd.h, 0.7);
   for (const side of [-1, 1]) for (const lean of [-1, 1]) {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, legLen, 8), metal);
-    leg.position.set(lean * 0.02, Bd.h / 2, side * (W / 2 - 0.05));
+    leg.position.set(lean * 0.02, Bd.h / 2, side * Bd.legZ);
     leg.rotation.z = lean * Math.atan2(0.7, Bd.h);
     grp.add(leg);
     const foot = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.06, 4, 8).rotateZ(Math.PI / 2), stdMat('#4a4a46', { roughness: 0.7 }));
-    foot.position.set(lean * 0.35, 0.018, side * (W / 2 - 0.05));
+    foot.position.set(lean * (Bd.legX - 0.03), 0.018, side * Bd.legZ);
     grp.add(foot);
   }
   const rest = new THREE.Mesh(rbox(0.18, 0.012, 0.16, 0.004), metal);

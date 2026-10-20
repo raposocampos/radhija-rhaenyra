@@ -52,7 +52,10 @@ export function buildPinata(root, layout) {
   const trunkPts = [];
   for (let i = 0; i <= 5; i++) {
     const t = i / 5;
-    trunkPts.push(new THREE.Vector3(MANGO_TREE.x + Math.sin(t * 2.2) * 0.1, t * 3.4, MANGO_TREE.z + Math.cos(t * 1.6) * 0.08));
+    // o pé sobe reto até a altura das patas do empurrão e só dali entorta: o pé largo fica dentro do colisor, que é rente
+    // à casca nessa altura
+    const tl = Math.max(t, MANGO_SHOVE.y / 3.4);
+    trunkPts.push(new THREE.Vector3(MANGO_TREE.x + Math.sin(tl * 2.2) * 0.1, t * 3.4, MANGO_TREE.z + Math.cos(tl * 1.6) * 0.08));
   }
   const trunkCurve = new THREE.CatmullRomCurve3(trunkPts);
   const trunkGeo = tube(trunkCurve, 18, MANGO_TREE.r * 0.85, 12);
@@ -60,7 +63,8 @@ export function buildPinata(root, layout) {
   for (let i = 0; i < tp.count; i++) {
     const seg = Math.floor(i / 13) / 18;
     const c = trunkCurve.getPointAt(Math.min(1, seg));
-    const k = (1 - seg * 0.5) * (1 + Math.max(0, 0.1 - seg) * 4);
+    // o pé alarga pouco: fica dentro do colisor (a Rhaenyra empurra o tronco de perto: MANGO_SHOVE)
+    const k = (1 - seg * 0.5) * (1 + Math.max(0, 0.1 - seg) * 1.5);
     tp.setXYZ(i, c.x + (tp.getX(i) - c.x) * k, tp.getY(i), c.z + (tp.getZ(i) - c.z) * k);
   }
   trunkGeo.computeVertexNormals();
