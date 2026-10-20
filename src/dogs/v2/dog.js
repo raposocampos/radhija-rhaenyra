@@ -143,13 +143,17 @@ export function createDogV2(kind) {
   const toObject = (out, i) => out.copy(retarget.P2[i]).applyQuaternion(inner.quaternion).add(inner.position);
   /** Meio de duas patas no referencial do objeto. */
   const pair = (out, a, b) => toObject(out, a).add(toObject(_pc, b)).multiplyScalar(0.5);
+  /** Giro e subida aplicados pela correção do chão: mudam no máximo um tanto por quadro (sem tremer o corpo). */
+  let tiltS = 0, liftS = 0, tiltFront = true;
+  const TILT_STEP = 0.5 * Math.PI / 180, LIFT_UP = 0.002, LIFT_DOWN = 0.001; // por quadro a 60 qps
   /**
    * Nada do corpo passa do chão. Se a pose afundaria (a garupa da Rhaenyra sentada, por exemplo), o corpo primeiro
    * gira sobre as patas que estão apoiadas do outro lado (sentada: as da frente ficam no chão e a garupa sobe); o que
-   * ainda faltar, o corpo inteiro sobe. rest (0..1): rolando, o corpo fica apoiado no chão (`floor`, a altura do monte
-   * quando houver): a altura vem do ponto mais baixo, para cima ou para baixo.
+   * ainda faltar, o corpo inteiro sobe. O giro e a subida mudam aos poucos (no máximo 0,5° e 2 mm por quadro): uma
+   * pata que encosta no chão por um quadro não faz o corpo inteiro saltar. rest (0..1): rolando, o corpo fica apoiado
+   * no chão (`floor`, a altura do monte quando houver): a altura vem do ponto mais baixo, para cima ou para baixo.
    */
-  function settle(rest = 0, floor = 0) {
+  function settle(rest = 0, floor = 0, dt = 1 / 60) {
     let low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion);
     if (rest > 0) {
       inner.position.y += (floor - low) * rest;
@@ -158,25 +162,35 @@ export function createDogV2(kind) {
     low -= floor;
     self.lowest = low;
     self.lowestBone = bones[lowestPoint.bone]?.name ?? '';
-    self.tilt = 0;
-    self.lift = 0;
-    if (low >= -GROUND_TOLERANCE) return;
-    const lz = toObject(_pv, lowestPoint.bone).z;
-    const mid = toObject(_pc, I2.body).z;
-    const pivot = lz < mid ? pair(_pf, I2.FLp, I2.FRp) : pair(_ph, I2.HLp, I2.HRp);
-    const arm = Math.abs(lz - pivot.z);
-    if (pivot.y < 0.035 * s && arm > 0.08) {
-      const th = Math.atan2(-GROUND_TOLERANCE - low, arm) * (lz < pivot.z ? 1 : -1);
-      _qx.setFromAxisAngle(_X, th);
+    const k = Math.max(dt, 1e-3) * 60;
+    // giro que a pose pede (sobre as patas apoiadas do outro lado)
+    let want = 0;
+    if (low < -GROUND_TOLERANCE) {
+      const lz = toObject(_pv, lowestPoint.bone).z;
+      const mid = toObject(_pc, I2.body).z;
+      const front = lz < mid;
+      const pivot = front ? pair(_pf, I2.FLp, I2.FRp) : pair(_ph, I2.HLp, I2.HRp);
+      const arm = Math.abs(lz - pivot.z);
+      if (pivot.y < 0.035 * s && arm > 0.08) {
+        want = Math.atan2(-GROUND_TOLERANCE - low, arm) * (lz < pivot.z ? 1 : -1);
+        tiltFront = front;
+      }
+    }
+    tiltS += clamp(want - tiltS, -TILT_STEP * k, TILT_STEP * k);
+    if (Math.abs(tiltS) < 1e-5) tiltS = 0;
+    if (tiltS) {
+      const pivot = tiltFront ? pair(_pf, I2.FLp, I2.FRp) : pair(_ph, I2.HLp, I2.HRp);
+      _qx.setFromAxisAngle(_X, tiltS);
       inner.position.sub(pivot).applyQuaternion(_qx).add(pivot);
       inner.quaternion.premultiply(_qx);
-      self.tilt = th;
       low = lowestPoint(contacts, retarget.P2, retarget.Q2, inner.position, inner.quaternion) - floor;
     }
-    if (low < -GROUND_TOLERANCE) {
-      self.lift = -GROUND_TOLERANCE - low;
-      inner.position.y += self.lift;
-    }
+    self.tilt = tiltS;
+    // o que ainda faltar, o corpo inteiro sobe (e desce de volta devagar)
+    liftS += clamp(Math.max(0, -GROUND_TOLERANCE - low) - liftS, -LIFT_DOWN * k, LIFT_UP * k);
+    if (liftS < 1e-6) liftS = 0;
+    self.lift = liftS;
+    inner.position.y += liftS;
   }
 
   /** @param {number} dt @param {import('../../types').DogAnim} [anim] */
@@ -189,7 +203,7 @@ export function createDogV2(kind) {
     self.overlay = roll.apply(anim?.extra, inner);
     if (self.gait > 0 || self.overlay > 0) retarget.refresh();
     // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
-    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0);
+    settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0, dt);
     earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
     // pisadas da locomoção própria, com a pose do quadro pronta (a pegada sai onde a pata pousou)

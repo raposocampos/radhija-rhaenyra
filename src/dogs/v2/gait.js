@@ -170,6 +170,7 @@ export function createGait({ skel2, retarget, s }) {
   let still = 0; // s parada
   let drop = 0; // quanto o tronco desceu para as patas alcançarem o chão (m)
   let staticN = 0; // quadros seguidos parada no mundo
+  let wasOwn = false; // no quadro anterior, só a locomoção mexia nas patas
   let ph = 0; // fase das patas: a do guia; mais rápida numa curva fechada (e volta ao compasso dele depois)
   let lastG = -1; // fase do guia no quadro anterior
   /** @type {[number, number][]} pisadas do quadro (pata, passada m/s): o dog.js avisa o jogo no fim do quadro */
@@ -258,6 +259,8 @@ export function createGait({ skel2, retarget, s }) {
     if (gate < 0.02 && weight < 0.02) weight = 0;
     // só andando (nenhuma outra pose mexendo nas patas) a pata fica plantada e dá passos
     const own = gate > 0.98;
+    const resumed = own && !wasOwn; // a locomoção acabou de voltar (depois de sentar, pular...)
+    wasOwn = own;
     if (weight < 0.02 || teleport || lastG < 0) {
       ph = st.phase;
       lastG = st.phase;
@@ -314,9 +317,9 @@ export function createGait({ skel2, retarget, s }) {
       leg.phSwing = phSwing;
       const uPh = phSwing ? (p - R.beta) / (1 - R.beta) : 0;
       const lift = (leg.front ? 0.03 : 0.025) * s * (0.75 + 0.45 * fast) + dash * 0.02 * s;
-      // decola na virada da fase (andando; não logo depois de um passo extra); se a locomoção acabou de assumir, ainda
-      // no começo do balanço
-      if (!leg.swing && moving && phSwing && (edge || uPh < 0.35) && leg.stanceT > 0.35 * stanceDur) {
+      // decola na virada da fase (andando; não logo depois de um passo extra); se a locomoção acabou de assumir, a pata
+      // que está no tempo do balanço já sai no ar (senão ela ficaria para trás, plantada no meio da passada)
+      if (!leg.swing && moving && phSwing && (edge || uPh < (resumed ? 0.9 : 0.35)) && leg.stanceT > 0.35 * stanceDur) {
         startSwing(leg, false, lift, 0);
         leg.u0 = uPh;
       }
@@ -325,11 +328,19 @@ export function createGait({ skel2, retarget, s }) {
         startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25));
       }
       if (leg.swing) {
+        // o ritmo mudou (passo ↔ trote, parando) e a fase voltou ao apoio antes do fim do balanço: a pata termina o
+        // balanço no tempo dela, em vez de pousar de repente
+        if (!leg.timed && !phSwing && leg.u < 0.97) {
+          leg.timed = true;
+          leg.rate = 1 / clamp(swingDur, 0.1, 0.3);
+        }
         if (leg.timed) leg.u = Math.min(1, leg.u + leg.rate * dt);
-        else leg.u = phSwing ? Math.max(leg.u, clamp((uPh - leg.u0) / Math.max(1 - leg.u0, 1e-3), 0, 1)) : 1;
-        // pousa onde a pata vai estar no meio do próximo apoio (passinho de ajuste, ou parada: no lugar dela)
+        else leg.u = Math.max(leg.u, clamp((uPh - leg.u0) / Math.max(1 - leg.u0, 1e-3), 0, 1));
+        // pousa onde a pata vai estar no meio do próximo apoio (prevê pela velocidade medida, que muda suave: parando,
+        // o alvo vai chegando ao lugar dela sem pular); o passinho de ajuste vai direto ao lugar
         const left = (1 - leg.u) * (leg.timed ? 1 / leg.rate : swingDur);
-        const T = moving && !leg.settle ? ahead(Tg, leg.land, left + stanceDur / 2) : Tg.copy(leg.neutral);
+        Fw.lerpVectors(leg.neutral, leg.land, clamp(Math.abs(mv.v) / 0.3, 0, 1));
+        const T = leg.settle ? Tg.copy(leg.neutral) : ahead(Tg, Fw, left + stanceDur / 2);
         leg.foot.lerpVectors(leg.from, T, sstep(0, 1, leg.u));
         leg.foot.y = leg.neutral.y + leg.lift * Math.sin(Math.PI * leg.u);
         if (leg.u >= 1) {
