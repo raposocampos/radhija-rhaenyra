@@ -269,7 +269,7 @@ function placeCamera(tm, focusDogs) {
   const p = new THREE.Vector3(...pos);
   if (cfg.orbit) p.applyAxisAngle(new THREE.Vector3(0, 1, 0), tm * 0.4);
   const focus = cfg.view === 'face' || cfg.view === 'ear' ? focusDogs[0].object.position : c;
-  if (cfg.wallk !== null) p.multiplyScalar(1.5);
+  if (cfg.wallk !== null || cfg.crate !== null) p.multiplyScalar(1.5); // de pé: a cabeça fica bem mais alta
   camera.position.copy(focus).add(p);
   target.copy(focus).add(new THREE.Vector3(...look));
   camera.lookAt(target);

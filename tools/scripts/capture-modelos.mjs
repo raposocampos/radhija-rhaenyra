@@ -92,7 +92,9 @@ try {
     // etapa 4: andando contra uma parede com o controle e a colisão do jogo (o peito encosta; no modelo novo o desenho
     // freia antes e a cabeça desvia, farejando), de lado e em 3/4
     for (let k = 0; k < 8; k++) await pose(`45-parede-${k}`, side({ speed: 1.6, wall: 0.9, sim: 0.3 + k * 0.12 }));
-    await pose('45-parede-34', { view: '34', speed: 1.6, wall: 0.9, sim: 1.6 });
+    // de trás e de cima: a cabeça virada farejando, o focinho na face da parede
+    await pose('45-parede-tras', { view: 'back', speed: 1.6, wall: 0.9, sim: 1.6 });
+    await pose('45-parede-cima', { view: 'top', speed: 1.6, wall: 0.9, sim: 1.6 });
     // empurrando de pé (retorno do usuário): caixote alto e cesto baixo (patas em cima da beirada); fazendo força
     for (let k = 0; k < 6; k++) await pose(`46-empurrando-de-pe-${k}`, side({ action: 'push', speed: 0.8, move: '1', crate: 0.55, sim: 1.0 + k * 0.07 }));
     await pose('47-empurrando-cesto', side({ action: 'push', speed: 0.7, move: '1', crate: 0.42, sim: 1.5 }));
