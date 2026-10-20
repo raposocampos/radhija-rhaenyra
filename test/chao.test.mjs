@@ -129,7 +129,7 @@ test('modelo novo atravessando uma placa: cada pata pisa em cima dela, o corpo s
       const d = createDogV2(kind);
       d.setGround(ground.heightAt);
       let y = 0, z = 0;
-      const m = { inside: 0, insideAt: '', onTop: 0, lift: 0 };
+      const m = { inside: Infinity, insideAt: '', onTop: 0, lift: 0 };
       for (let f = 0; f < 150; f++) {
         // como no jogo: anda 0,9 m/s para a frente; o chão do objeto vem suavizado do chão embaixo do centro
         z += 0.9 * DT;
@@ -149,7 +149,8 @@ test('modelo novo atravessando uma placa: cada pata pisa em cima dela, o corpo s
       report.push(`${kind}: corpo subiu até ${(m.lift * 100).toFixed(1)} cm; pata apoiada mais baixa em relação ao chão embaixo dela: ${(m.inside * 1000).toFixed(1)} mm (${m.insideAt}); quadros de pata apoiada em cima da placa: ${m.onTop}`);
       if (m.lift < 0.08) bad.push(`${kind}: o corpo não subiu na placa (${(m.lift * 100).toFixed(1)} cm)`);
       if (m.onTop < 40) bad.push(`${kind}: as patas não pisaram em cima da placa (${m.onTop} quadros)`);
-      if (m.inside < 0.008) bad.push(`${kind}: uma pata apoiada entrou na placa (${m.insideAt})`);
+      // a articulação da pata apoiada fica ~2 cm acima do chão embaixo dela: menos que 5 mm, a pata entrou
+      if (m.inside < 0.005) bad.push(`${kind}: uma pata apoiada entrou na placa (${m.insideAt})`);
     });
   }
   console.log(`[chão] modelo novo na placa\n  ${report.join('\n  ')}`);

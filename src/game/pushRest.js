@@ -52,10 +52,17 @@ export function pushRest(obj, at, { near, pref, scale = 1 }) {
   if (!Number.isFinite(dmin)) return null;
   // a face: as alturas em que o desenho está a até FACE_TOL do mais perto (da mais baixa à mais alta, contínuas a
   // partir da mais perto)
+  // (frestas pequenas, como entre as tábuas da ponta do carrinho, não acabam a face)
   const iMin = ds.indexOf(dmin);
+  const isFace = (i) => ds[i] <= dmin + FACE_TOL;
+  const slit = Math.max(1, Math.round((0.05 * scale) / step)); // quantos raios seguidos podem passar por uma fresta
   let lo = iMin, hi = iMin;
-  while (lo > 0 && ds[lo - 1] <= dmin + FACE_TOL) lo--;
-  while (hi < ys.length - 1 && ds[hi + 1] <= dmin + FACE_TOL) hi++;
+  for (let i = iMin - 1, miss = 0; i >= 0 && miss <= slit; i--) {
+    if (isFace(i)) { lo = i; miss = 0; } else miss++;
+  }
+  for (let i = iMin + 1, miss = 0; i < ys.length && miss <= slit; i++) {
+    if (isFace(i)) { hi = i; miss = 0; } else miss++;
+  }
   // a beirada, refinada entre a última altura da face e a seguinte; se a face passa do alto dos raios, é alta
   let top;
   if (hi === ys.length - 1) top = Infinity;
@@ -68,9 +75,9 @@ export function pushRest(obj, at, { near, pref, scale = 1 }) {
     }
     top = a;
   }
-  // as patas: na altura da face mais perto da preferida
+  // as patas: na altura da face (fora das frestas) mais perto da preferida
   let y = ys[lo];
-  for (let i = lo; i <= hi; i++) if (Math.abs(ys[i] - pref) < Math.abs(y - pref)) y = ys[i];
+  for (let i = lo; i <= hi; i++) if (isFace(i) && Math.abs(ys[i] - pref) < Math.abs(y - pref)) y = ys[i];
   if (Number.isFinite(top) && pref > top) y = top;
   return { gap: dmin, top, y };
 }
