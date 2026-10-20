@@ -225,10 +225,11 @@ export const PIGEON = { x: RIBBON.x, y: DECK.h + DECK_RAIL.h + 0.01, z: DECK.z1 
 export const TUBE = { inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.3, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
 /**
  * Elevador de balde na frente do deque (a câmera vê subir), com a roldana em cima. O balde de lata grande fica
- * DEITADO no chão, com a boca para o sul: a Radhija entra andando e se deita lá dentro; a corda primeiro levanta o
- * balde (os `lie` metros iniciais do puxão o deixam em pé, com ela sentada) e depois o sobe até o deque.
+ * DEITADO no chão, com a boca para o sul: a Radhija entra andando pela boca (E a até `mouthR` da frente dela) e se
+ * deita lá dentro; a corda primeiro levanta o balde (os `lie` metros iniciais do puxão o deixam em pé, com ela
+ * sentada) e depois o sobe até o deque.
  */
-export const BUCKET = { x: 6.95, z: -3.1, r: 0.28, h: 0.4, lie: 0.35, top: DECK.h, pulleyY: 2.85, rise: 1.0, fall: 0.9, enterR: 0.6 };
+export const BUCKET = { x: 6.95, z: -3.1, r: 0.28, h: 0.4, lie: 0.35, top: DECK.h, pulleyY: 2.85, rise: 1.0, fall: 0.9, enterR: 0.6, mouthR: 0.45 };
 /**
  * A corda desce da roldana (em cima do balde) até a argola num espeto no chão, ao lado; a ponta solta fica no chão
  * (rest). Quem segura a ponta e se afasta da argola mais que `slack` levanta o balde (andando para o portão).
@@ -503,6 +504,9 @@ export const CAMERA = {
     // o balde subindo (a fase liga só durante a subida): a câmera recua e olha alto, quem puxa a corda e quem sobe
     // ficam no quadro
     { id: 'balde', minX: 5.6, maxX: 12.4, minZ: -6.0, maxZ: 2.4, lookY: 1.0, dz: -1.2 },
+    // no balde, no chão (entrando, deitada lá dentro, saindo): o olhar sobe pouco. Com o da casa na árvore, a dog e o
+    // balde iam para o rodapé da tela, atrás do botão de agir
+    { id: 'balde-no-chao', minX: BUCKET.x - 0.9, maxX: BUCKET.x + 0.9, minZ: BUCKET.z - 0.5, maxZ: BUCKET.z + 1.4, lookY: 0.5, dz: -0.5 },
     // perto da árvore o olhar sobe para a casa na árvore
     { id: 'casa-na-arvore', minX: 6.0, maxX: 11.5, minZ: -6.0, maxZ: -1.6, lookY: 1.2, dz: -0.8 },
   ],

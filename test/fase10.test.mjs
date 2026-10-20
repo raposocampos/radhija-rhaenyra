@@ -556,18 +556,21 @@ seededTest('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto de
   assert.equal(h.info().ribbon.holder, null, 'sem o laço');
 });
 
-seededTest('fase 10: o balde segura a Rhaenyra na borda (deitado com a alça, levantando, em pé e subindo)', 1, async () => {
-  // A auditoria do cenário (test/colisao-cenario.test.mjs) deixa o balde de fora porque a Radhija entra nele. Aqui o
-  // desenho de verdade (treehouse.js) é medido contra o colisor do jogo só para a Rhaenyra: antes, deitado, ela entrava
-  // 19 cm pela boca, por cima da alça. A cada distância da corda o balde fica num ponto (deita, levanta, sobe).
+seededTest('fase 10: o balde segura as duas na borda (deitado com a alça, levantando, em pé e subindo)', 1, async () => {
+  // A auditoria do cenário (test/colisao-cenario.test.mjs) olha o balde só como ele começa (deitado). Aqui o desenho
+  // de verdade (treehouse.js) é medido contra o colisor do jogo em cada ponto da corda (deita, levanta, sobe): antes,
+  // deitado, a Rhaenyra entrava 19 cm pela boca, por cima da alça, e a Radhija atravessava o balde.
   const h = await game();
   const { root, built, dispose } = await buildLevelWorld(fase10);
   try {
     h.run(0.3);
     const pail = root.getObjectByName('balde');
     assert.ok(pail, 'o desenho do balde');
+    const dogs = ['radhija', 'rhaenyra'].map((name) => {
+      const D = L.DOGS[name];
+      return { name, size: D.size, r: D.radius, yMax: D.visual.headTop * 0.85 };
+    });
     const R = L.DOGS.rhaenyra;
-    const rh = { name: 'rhaenyra', size: R.size, r: R.radius, yMax: R.visual.headTop * 0.85 };
     const notPail = (o) => {
       for (let p = o; p; p = p.parent) if (p === pail) return false;
       return true;
@@ -593,19 +596,77 @@ seededTest('fase 10: o balde segura a Rhaenyra na borda (deitado com a alça, le
       seen.tilting ||= b.tilt > 0.2 && b.tilt < 0.8;
       seen.upright ||= b.tilt === 0 && b.y < 0.5;
       seen.clear ||= b.y > R.visual.headTop;
-      const found = findLooseObstacles(root, h.world, { dogs: [rh], skip: notPail });
-      const what = found.map((f) => `entra ${f.depth} m em x[${f.box.minX}, ${f.box.maxX}] z[${f.box.minZ}, ${f.box.maxZ}]`).join('; ');
+      const found = findLooseObstacles(root, h.world, { dogs, skip: notPail });
+      const what = found.map((f) => `entra ${f.depth} m (${f.sizes.join(', ')}) em x[${f.box.minX}, ${f.box.maxX}] z[${f.box.minZ}, ${f.box.maxZ}]`).join('; ');
       assert.equal(found.length, 0, `balde (inclinação ${b.tilt}, altura ${b.y}): ${what}`);
     }
     assert.deepEqual(seen, { lying: true, tilting: true, upright: true, clear: true }, 'passou por todos os pontos do balde');
-    // e encosta: deitado, de frente para a alça e dos lados ela para a 3 cm do desenho (sem parede invisível)
+    // e encosta: deitado, de frente para a alça e dos lados cada uma para a 3 cm do desenho (sem parede invisível)
     at(0.4);
     const box = new THREE.Box3().setFromObject(pail);
-    const near = [[(box.min.x + box.max.x) / 2, box.max.z + R.radius + 0.03], [box.min.x - R.radius - 0.03, L.BUCKET.z], [box.max.x + R.radius + 0.03, L.BUCKET.z]];
-    for (const [x, z] of near) assert.ok(!h.world.overlaps(x, z, R.radius, R.size), `livre em (${x.toFixed(2)}, ${z.toFixed(2)}), encostada no balde`);
+    for (const d of dogs) {
+      const near = [[(box.min.x + box.max.x) / 2, box.max.z + d.r + 0.03], [box.min.x - d.r - 0.03, L.BUCKET.z], [box.max.x + d.r + 0.03, L.BUCKET.z]];
+      for (const [x, z] of near) assert.ok(!h.world.overlaps(x, z, d.r, d.size), `${d.name} livre em (${x.toFixed(2)}, ${z.toFixed(2)}), encostada no balde`);
+    }
   } finally {
     dispose();
   }
+});
+
+seededTest('fase 10: a Radhija esbarra no balde, entra só pela boca (E), fica quieta lá dentro e sai sem tranco; o balde fica acima do botão', 1, async () => {
+  // Retorno do usuário na prévia do PR #54: a Radhija atravessava o balde; e perto da casa na árvore a câmera olhava
+  // para cima, e a dog e o balde ficavam no rodapé da tela, atrás do botão "Entrar no balde".
+  const h = await game();
+  h.run(0.3);
+  puz(h).debugSet('pigeon'); // sem o plano do pombo na primeira vez no fundo do quintal
+  const B = L.BUCKET;
+  const rad = h.ctrls.radhija;
+  as(h, 'radhija');
+  h.teleport('rhaenyra', L.NAV_NODES.Y_mid.x, L.NAV_NODES.Y_mid.z);
+  h.game.setStay('rhaenyra', true);
+  /** Distância do centro da Radhija até o meio do balde deitado (do centro dele até o meio da boca). */
+  const fromAxis = () => Math.hypot(rad.x - B.x, rad.z - Math.min(B.z + B.h / 2, Math.max(B.z, rad.z)));
+  const edge = B.r + rad.r - 0.01;
+  // de lado: ela para na lateral; ali não há "Entrar no balde", e o E manda ir até a boca
+  put(h, 'radhija', B.x + 0.7, B.z, -Math.PI / 2);
+  h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
+  assert.ok(rad.x > B.x && fromAxis() > edge, `para na lateral do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  assert.notEqual(h.info().prompt, TEXT.prompt.bucket, 'de lado não aparece "Entrar no balde"');
+  h.clearLog();
+  h.tap('KeyE');
+  h.run(0.3);
+  assert.equal(q(h).bucket.riding, false, 'de lado, o E não a põe no balde');
+  assert.ok(hints(h).includes(TEXT.hint.bucketMouth), 'a dica manda dar a volta até a boca');
+  // por trás (do lado do deque): para no fundo do balde
+  put(h, 'radhija', B.x, B.z - 0.75, 0);
+  h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
+  assert.ok(rad.z < B.z && fromAxis() > edge, `para no fundo do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  // pela frente: para na boca, sem entrar andando; ali o E vale
+  put(h, 'radhija', B.x, B.z + 1.3, Math.PI);
+  h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
+  assert.ok(rad.z > B.z + B.h / 2 && fromAxis() > edge, `para na boca, sem entrar andando (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  assert.equal(h.info().prompt, TEXT.prompt.bucket, 'na frente da boca: "Entrar no balde"');
+  // na tela, a dog e o balde ficam acima do rodapé (onde fica o botão de agir)
+  h.run(2.5);
+  const cam = h.engine.camera;
+  cam.updateMatrixWorld();
+  const ndcY = (x, y, z) => new THREE.Vector3(x, y, z).project(cam).y;
+  const dogY = ndcY(rad.x, 0.25, rad.z), pailY = ndcY(B.x, B.r, B.z);
+  assert.ok(dogY > -0.6 && pailY > -0.6, `a Radhija (${dogY.toFixed(2)}) e o balde (${pailY.toFixed(2)}) acima do botão de agir`);
+  // entra; lá dentro, ativa e sem nada apertado, fica quieta: o balde não a empurra para fora
+  h.tap('KeyE');
+  assert.ok(h.run(1.6, { until: (i) => i.quintal.bucket.riding }), 'entrou no balde');
+  h.run(0.2);
+  const inside = { x: rad.x, z: rad.z };
+  h.run(0.5);
+  assert.ok(Math.hypot(rad.x - inside.x, rad.z - inside.z) < 1e-3 && Math.hypot(rad.vx, rad.vz) < 0.05, `quieta lá dentro (v = ${Math.hypot(rad.vx, rad.vz).toFixed(3)})`);
+  // sai de ré pela boca e fica do lado de fora, sem tranco
+  h.tap('KeyE');
+  assert.ok(h.run(1.5, { until: (i) => !i.quintal.bucket.riding && i.dogs.radhija.y === 0 }), 'saiu do balde');
+  const out = { x: rad.x, z: rad.z };
+  assert.ok(out.z > B.z + B.h / 2 && !h.world.overlaps(out.x, out.z, rad.r, rad.size), `fora do balde, na frente da boca (${out.x.toFixed(2)}, ${out.z.toFixed(2)})`);
+  h.run(0.5);
+  assert.ok(Math.hypot(rad.x - out.x, rad.z - out.z) < 1e-3, 'sem tranco depois de sair');
 });
 
 seededTest('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', 1, async () => {

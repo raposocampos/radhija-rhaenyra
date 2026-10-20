@@ -131,6 +131,7 @@ export const TEXT = {
     deckArrive: 'No deque! Desamarre o laço (E). Para descer: o escorregador ou o balde.',
     deckHold: 'Daqui de cima não dá para largar o laço: desça pelo escorregador (E na boca dele).',
     bucketHeavy: 'A Rhaenyra é pesada demais para o balde: ela puxa a corda.',
+    bucketMouth: 'A entrada do balde é pela boca: dê a volta até a frente dele (E).',
     ropeLight: 'A Radhija é leve demais para puxar o balde: ela vai dentro dele.',
     ropeTip: 'Ande para longe do balde com a corda na boca: ele sobe. Ela continua segurando quando você trocar.',
     ropeEnd: 'A corda acabou: o balde está lá em cima.',
@@ -248,12 +249,13 @@ export function createPuzzle(ctx) {
   // a porta basculante fechada é uma parede
   const doorCol = world.addDynamic({ id: 'porta-do-galpao', kind: 'gate', shape: 'box', x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, hx: SHED.t / 2, hz: (SHED.door.z1 - SHED.door.z0) / 2 });
   /**
-   * O balde no chão é sólido para a Rhaenyra (a Radhija entra nele com E): uma cápsula do meio do balde até o meio da
-   * boca, da largura dele. Deitado (como começa), a boca e a alça ficam ao sul e a cápsula vai até a ponta da alça; em
-   * pé, ela vira o círculo do balde (fitBucketCol acompanha o desenho de treehouse.js).
+   * O balde no chão é sólido para as duas: uma cápsula do meio do balde até o meio da boca, da largura dele. Deitado
+   * (como começa), a boca e a alça ficam ao sul e a cápsula vai até a ponta da alça; em pé, ela vira o círculo do balde
+   * (fitBucketCol acompanha o desenho de treehouse.js). A Radhija entra pela boca com E; lá dentro, só a Rhaenyra
+   * esbarra nele.
    */
-  const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'segment', ax: BUCKET.x, az: BUCKET.z, bx: BUCKET.x, bz: BUCKET.z + BUCKET.h / 2, t: BUCKET.r, blocks: 'large' });
-  /** O balde só deixa de segurar a Rhaenyra quando o fundo dele passa da cabeça dela. */
+  const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'segment', ax: BUCKET.x, az: BUCKET.z, bx: BUCKET.x, bz: BUCKET.z + BUCKET.h / 2, t: BUCKET.r });
+  /** O balde subindo só deixa de segurar as duas quando o fundo dele passa da cabeça da Rhaenyra (a mais alta). */
   const BUCKET_CLEAR = DOGS.rhaenyra.visual.headTop;
   // os caixotes da despensa (andam no trilho); a porteira fechada; a tábua do muro
   const CR = PANTRY_CRATES;
@@ -655,15 +657,19 @@ export function createPuzzle(ctx) {
     const k = 1 - (S.bucketTilt ?? 1);
     return { x: BUCKET.x, y: 0.03 + (S.bucketY + 0.14 - 0.03) * k, z: BUCKET.z + 0.06 * (1 - k) };
   }
-  /** A boca do balde deitado (de onde ela entra e por onde sai). */
-  const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.38 };
+  /** A boca do balde deitado (de onde ela entra e por onde sai), do lado de fora dele: ela sai sem esbarrar no balde. */
+  const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.5 };
+  /** A Radhija entra pela boca, de frente para ela (de lado ou por trás, o balde segura e o pulinho não o atravessa). */
+  const atMouth = (c) => Math.hypot(c.x - BUCKET_MOUTH.x, c.z - BUCKET_MOUTH.z) < BUCKET.mouthR;
   /**
    * O colisor do balde acompanha o desenho (treehouse.js, layoutRope): visto de cima, deitando, o meio da boca vai do
-   * centro do balde até h/2 ao sul, e a borda e a alça ficam a menos de r dele.
+   * centro do balde até h/2 ao sul, e a borda e a alça ficam a menos de r dele. Com a Radhija lá dentro, ele não a
+   * empurra para fora (ativa, ela não fica travada: a troca continua valendo).
    */
   function fitBucketCol() {
     bucketCol.bz = BUCKET.z + (BUCKET.h / 2) * Math.sin((S.bucketTilt * Math.PI) / 2);
     bucketCol.enabled = S.bucketY < BUCKET_CLEAR;
+    bucketCol.blocks = S.riding ? 'large' : 'all';
   }
   function stepBucket(dt) {
     const rh = ctrls.rhaenyra;
@@ -1528,7 +1534,7 @@ export function createPuzzle(ctx) {
     const canHat = !up && free && S.place.hat === 'home' && S.docked && Math.hypot(active.x - BOAT.dock.x, active.z - BOAT.dock.z) < BOAT.grabR;
     const canCord = !S.gateOpen && S.cordT < 0 && reach(active, CORD.x, CORD.z) < CORD.reach;
     const canRope = k === 'rhaenyra' && free && !handle.holder && reach(active, ROPE.rest.x, ROPE.rest.z) < ROPE.grabR && S.bucketY < 0.05;
-    const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(active, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
+    const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && atMouth(active);
     const nearPainting = inHouse(active) && Math.hypot(active.x - PAINTING.x, active.z - (PAINTING.z + 0.95)) < 1.0;
     const crateDo = !up ? crateAction(active) : null;
     const vegDo = !up && !crateDo ? vegAction(active) : null;
@@ -1703,8 +1709,9 @@ export function createPuzzle(ctx) {
       return true;
     }
     // o balde e a ponta da corda ficam lado a lado: para a Radhija vale o balde, para a Rhaenyra a corda
-    const atBucket = !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
-    if (atBucket && c.name === 'radhija') {
+    const bucketDown = !S.riding && !S.deck && !S.hop && S.pulled < 0.05;
+    const atBucket = bucketDown && reach(c, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
+    if (bucketDown && c.name === 'radhija' && atMouth(c)) {
       // vai até a boca do balde deitado e entra andando, de cabeça
       S.hop = { t: 0, dur: 0.9, a: { x: c.x, y: 0, z: c.z }, via: { ...BUCKET_MOUTH }, b: ridePos(), then: 'ride', lift: 0.02, yaw: null, speed: 0.9, act: 'none' };
       return true;
@@ -1716,7 +1723,8 @@ export function createPuzzle(ctx) {
       hints.now('ropeTip', 4.2, 0);
       return true;
     }
-    if (atBucket) { hints.now('bucketHeavy', 3.4, 2); return true; }
+    // de lado ou por trás, a Radhija dá a volta até a boca; a Rhaenyra é pesada demais (ela puxa a corda)
+    if (atBucket) { hints.now(c.name === 'radhija' ? 'bucketMouth' : 'bucketHeavy', 3.4, 2); return true; }
     if (atPainting(c)) { lookPainting(); return true; }
     if (inHorta(c) || (c.name === 'radhija' && Math.abs(c.x - HORTA.x0) < 0.6 && c.z > HORTA.z0 && c.z < HORTA.z1)) return false;
     return false;

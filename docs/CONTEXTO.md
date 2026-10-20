@@ -11,18 +11,23 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Causa: o colisor era um círculo de 28 cm no meio do balde; deitado, a boca e a alça vão até 48 cm ao sul do centro.
 - Feito: o `bucketCol` virou uma cápsula (segmento com meia-espessura `BUCKET.r`) do meio do balde até o meio da boca;
   `fitBucketCol()` a encolhe com a inclinação (h/2 · sen θ, como o `layoutRope` de `treehouse.js`) e só a desliga
-  quando o fundo do balde passa da cabeça da Rhaenyra (`DOGS.rhaenyra.visual.headTop`; antes, aos 25 cm). Continua
-  `blocks: 'large'`: nada muda para a Radhija. A exceção `balde` da auditoria fica (a Radhija entra nele), com o motivo
-  apontando para o teste novo.
-- Teste novo em `test/fase10.test.mjs`: o desenho real (`buildLevelWorld`) contra o colisor do jogo, com o
-  `findLooseObstacles` do #53, só para a Rhaenyra, em 9 pontos da corda (deitado, levantando, em pé, subindo e acima
-  dela); e, deitado, ela fica livre a 3 cm do desenho, de frente para a alça e dos lados (sem parede invisível).
-- Observação (fora do PR): o nome `balde` da exceção também pega o balde da fase 8, que tem colisor estático e fica
-  sem conferência na auditoria.
+  quando o fundo do balde passa da cabeça da Rhaenyra (`DOGS.rhaenyra.visual.headTop`; antes, aos 25 cm).
+- Retorno do usuário na 1ª prévia (`a7574d8`): "a colisão da Rhaenyra está ok", mas a Radhija atravessava o balde, e
+  perto da casa na árvore a câmera olhava para cima: a dog e o balde ficavam no rodapé da tela, atrás do botão "Entrar
+  no balde". Feito: a cápsula segura as duas (`blocks: 'large'` só com a Radhija lá dentro, porque, ativa, ela não fica
+  travada e a colisão a empurraria a cada quadro); ela entra só pela boca (E a até `BUCKET.mouthR` = 45 cm do ponto da
+  boca, que foi para 50 cm à frente dela, fora do balde: sai sem tranco); de lado ou por trás, o E dá a dica
+  `bucketMouth`; zona de câmera `balde-no-chao` (olhar 0,5 m acima, em vez de 1,2 m, só na volta do balde). A exceção
+  `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`): agora ela confere o balde deitado e também o balde da
+  fase 8, que tinha o mesmo nome e passava sem conferência.
+- Testes em `test/fase10.test.mjs`: o desenho real (`buildLevelWorld`) contra o colisor do jogo, com o
+  `findLooseObstacles` do #53, para as duas, em 9 pontos da corda (deitado, levantando, em pé, subindo e acima delas);
+  deitadas, ficam livres a 3 cm do desenho (sem parede invisível); a Radhija esbarra de lado, por trás e na boca, só
+  entra pela boca, fica quieta lá dentro (sem tranco), sai sem tranco, e a câmera deixa a dog e o balde acima do botão.
 - Validação: CI, prévia e E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e
   `git diff --check`.
-- Próximo passo: com CI e E2E verdes, entregar a prévia e esperar a aprovação do usuário no chat desta sessão; só
-  então integrar.
+- Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
+  só então integrar.
 
 ## Em andamento: colisão dos objetos do cenário (Claude, branch `claude/colisao-cenario`, PR #53)
 
