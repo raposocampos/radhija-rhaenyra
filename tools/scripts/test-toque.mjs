@@ -538,7 +538,24 @@ try {
     const r = document.querySelector(s)?.getBoundingClientRect();
     return r && { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
   }, sel);
+  // EXPERIMENTO (temporário): E2E_DIAG_STEPS=1 registra cada passo do iPhone com os quadros (rAF) desta aba e da principal
+  const FRAME = () => new Promise((done) => {
+    const raf = window.__probeRaf || window.requestAnimationFrame.bind(window);
+    const t0 = performance.now();
+    let i = null;
+    try { i = window.__game?.game?.debug?.info?.(); } catch {}
+    const base = `${i?.state ?? '-'} sim ${i?.simSec ?? '-'}`;
+    const t = setTimeout(() => done(`${base} SEM QUADRO em 2 s`), 2000);
+    raf(() => { clearTimeout(t); done(`${base} rAF ${Math.round(performance.now() - t0)} ms`); });
+  });
+  const trace = async (p, what) => {
+    if (process.env.E2E_DIAG_STEPS !== '1') return;
+    const look = (pg) => Promise.race([pg.evaluate(FRAME).catch((e) => `erro ${String(e.message).split('\n')[0]}`), new Promise((r) => setTimeout(r, 5000, 'sem resposta em 5 s'))]);
+    const [a, b] = await Promise.all([look(p), look(page)]);
+    console.log(`  [passo] ${what}: iphone ${a} · principal ${b}`);
+  };
   const ip = await iphonePage();
+  await trace(ip, 'aberto');
   let ios = await ip.evaluate(() => ({
     mark: document.querySelector('.rr').dataset.installTip ?? null, tip: document.querySelector('.rr-ios-tip')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
     fsBtnHidden: document.querySelector('.rr-fullscreen').hidden, iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
@@ -555,11 +572,14 @@ try {
   // fechar no × some e não volta mais
   const close = await center(ip, '.rr-ios-tip__close');
   await ip.touchscreen.tap(close.x, close.y);
+  await trace(ip, 'toque no ×');
   // o clique do toque chega quando a página (desenhando no SwiftShader) fica livre: espera o efeito, não um tempo fixo
   await ip.waitForFunction(() => !document.querySelector('.rr-ios-tip'), null, { timeout: 15000 }).catch(() => {});
   ios = await ip.evaluate(() => ({ tip: !!document.querySelector('.rr-ios-tip'), saved: localStorage.getItem('rr-dica-tela-inicial'), state: window.__game.game.state }));
   check(!ios.tip && ios.saved === '1' && ios.state === 'title', 'fechar a dica: some, fica salvo e não começa a partida', ios);
+  await trace(ip, 'antes de recarregar');
   await ip.reload({ waitUntil: 'load' });
+  await trace(ip, 'recarregado (load)');
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
@@ -573,11 +593,15 @@ try {
   };
   for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
     await tapShown(sel);
+    await trace(ip, `toque em ${sel}`);
     await ip.waitForTimeout(400);
   }
   await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
+  await trace(ip, 'intro');
   await ip.waitForTimeout(1200);
+  await trace(ip, 'antes de Começar');
   await tapShown('[data-action="start"]');
+  await trace(ip, 'toque em Começar');
   await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');

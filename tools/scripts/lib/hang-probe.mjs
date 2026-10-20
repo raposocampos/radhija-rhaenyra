@@ -5,11 +5,12 @@
 // separa as causas possíveis: thread principal presa em JavaScript (pilha pelo Debugger.pause), presa fora dele
 // (chamada nativa, GPU) ou aba morta; quem gasta CPU (processo e thread do Chromium); memória e OOM do kernel; console
 // da página (com os marcos do boot `rr:*`) e o registro do próprio Chromium (browser-log.mjs).
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
+import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { cpus, loadavg } from 'node:os';
-import { browserLogFile } from './browser-log.mjs';
+import { DIAG_DIR, browserLogFile } from './browser-log.mjs';
 
 const run = promisify(execFile);
 const CONSOLE_KEEP = 80;
@@ -88,13 +89,86 @@ async function processSection(gapMs = 1500) {
       lines.push(`    ${p.type.padEnd(22)} pid ${p.pid}: ${x ? 'SUMIU durante a medição' : 'sumiu'}`);
       continue;
     }
-    lines.push(`    ${p.type.padEnd(22)} pid ${p.pid} ${y.state} CPU ${pct(y.cpu - x.cpu).padStart(4)}  RSS ${Math.round(y.rss / 2 ** 20)} MB  ${y.threads} threads`);
+    lines.push(`    ${p.type.padEnd(22)} pid ${p.pid} ${y.state} CPU ${pct(y.cpu - x.cpu).padStart(4)}  RSS ${Math.round(y.rss / 2 ** 20)} MB  ${y.threads.size} threads`);
     // threads que gastaram CPU na janela, mais a principal (mesmo parada: onde ela espera, pelo wchan)
     const busy = [...y.threads].map(([tid, t]) => ({ tid, ...t, used: t.cpu - (x.threads.get(tid)?.cpu ?? t.cpu) }))
       .filter((t) => t.used > 0 || t.comm.endsWith('(principal)'))
       .sort((m, n) => n.used - m.used)
       .slice(0, 6);
     for (const t of busy) lines.push(`      ${t.comm.padEnd(30)} ${t.state} CPU ${pct(t.used).padStart(4)}${t.wchan && t.wchan !== '0' ? `  espera em ${t.wchan}` : ''}`);
+    // GPU e abas: TODAS as threads, agrupadas por nome, estado e espera (um impasse deixa todas paradas, sem CPU)
+    if (p.type === 'gpu-process' || p.type === 'renderer') {
+      const groups = new Map();
+      for (const t of y.threads.values()) {
+        const key = `${t.comm.replace(/\d+$/, '#')} ${t.state}${t.wchan && t.wchan !== '0' ? ` em ${t.wchan}` : ''}`;
+        groups.set(key, (groups.get(key) || 0) + 1);
+      }
+      lines.push(`      todas: ${[...groups].map(([k, n]) => (n > 1 ? `${n}× ${k}` : k)).join(' · ')}`);
+    }
+  }
+  return lines;
+}
+
+// ---- Pilhas nativas (gdb) do processo da GPU e das abas: onde cada thread espera quando ninguém gasta CPU. Só no
+// Linux com gdb (no CI, pelo sudo sem senha). O binário do Chromium não tem símbolos: os quadros dele saem como
+// "headless_shell", mas os das bibliotecas (SwiftShader, ANGLE, libc) dizem quem espera quem. O texto inteiro vai para
+// shots/diagnostico/pilhas-*.txt; no log, um resumo por thread (quadros do topo), com as iguais juntas.
+let gdbPath;
+async function findGdb() {
+  if (gdbPath !== undefined) return gdbPath;
+  gdbPath = null;
+  if (process.platform !== 'linux') return gdbPath;
+  for (const p of ['/usr/bin/gdb', '/usr/local/bin/gdb']) if (existsSync(p)) gdbPath = p;
+  return gdbPath;
+}
+/** Resumo de `thread apply all bt`: { nome da thread → quadros do topo } agrupados. */
+export function summarizeStacks(text, frames = 10) {
+  const threads = [];
+  let cur = null;
+  for (const line of text.split('\n')) {
+    const head = line.match(/^Thread \d+ \(.*?LWP (\d+)\)(?: "([^"]*)")?/);
+    if (head) {
+      cur = { lwp: head[1], name: head[2] || '?', frames: [] };
+      threads.push(cur);
+      continue;
+    }
+    const f = cur && line.match(/^#\d+\s+(?:0x[0-9a-f]+ in )?(\S+)(?: \(.*?\))?(?: from (\S+))?(?: at (\S+))?/);
+    if (!f || cur.frames.length >= frames) continue;
+    const fn = f[1] === '??' ? null : f[1].replace(/\(.*$/, '');
+    const lib = f[2] ? f[2].split('/').pop() : null;
+    const where = fn ? (lib && !/^lib(c|pthread)\.so/.test(lib) ? `${fn}@${lib}` : fn) : `??@${lib || 'headless_shell'}`;
+    if (cur.frames.at(-1) !== where) cur.frames.push(where);
+  }
+  const groups = new Map();
+  for (const t of threads) {
+    const key = `${t.name.replace(/\d+$/, '#')}: ${t.frames.join(' ← ')}`;
+    groups.set(key, (groups.get(key) || 0) + 1);
+  }
+  return [...groups].map(([k, n]) => (n > 1 ? `${n}× ${k}` : k));
+}
+async function nativeStackSection() {
+  if (process.platform !== 'linux') return [];
+  const gdb = await findGdb();
+  if (!gdb) return ['  pilhas nativas: sem gdb nesta máquina'];
+  const procs = chromiumProcesses().filter((p) => p.type === 'gpu-process' || p.type === 'renderer');
+  const lines = [];
+  const started = Date.now();
+  for (const p of procs) {
+    if (Date.now() - started > 40000) { lines.push(`  pilhas nativas: ${p.type} ${p.pid} não lido (tempo do diagnóstico esgotado)`); continue; }
+    const cmd = process.env.CI ? 'sudo' : gdb;
+    const argv = [...(process.env.CI ? ['-n', gdb] : []), '-p', String(p.pid), '-batch', '-nx', '-q', '-ex', 'set pagination off', '-ex', 'thread apply all bt 40'];
+    const out = await run(cmd, argv, { timeout: 25000, maxBuffer: 32 * 2 ** 20 }).then((r) => r.stdout, (e) => (e.stdout ? String(e.stdout) : `falhou: ${String(e.message).split('\n')[0]}`));
+    let file = '';
+    try {
+      mkdirSync(DIAG_DIR, { recursive: true });
+      file = resolve(DIAG_DIR, `pilhas-${p.type}-${p.pid}-${Date.now()}.txt`);
+      writeFileSync(file, out);
+      file = ` (inteiras em shots/diagnostico/${file.split(/[\\/]/).pop()})`;
+    } catch { file = ''; }
+    lines.push(`  pilhas nativas de ${p.type} ${p.pid}${file}:`);
+    const summary = summarizeStacks(out);
+    if (!summary.length) lines.push(`    ${out.split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 300)}`);
+    for (const s of summary.slice(0, 40)) lines.push(`    ${s.slice(0, 400)}`);
   }
   return lines;
 }
@@ -157,6 +231,28 @@ export function browserLogTail(n = 30) {
   return lines.slice(-n).map((l) => l.replace(/^\S+ pw:browser /, '').slice(0, 260));
 }
 
+/** Sondas das páginas abertas neste processo: o diagnóstico de uma aba diz também se as outras ainda recebem quadros
+ *  (todas paradas = o processo da GPU, compartilhado, parou; só uma = a aba). */
+const probes = new Set();
+/** O navegador entrega quadros à aba? requestAnimationFrame em até 3 s, visibilidade e o tempo simulado do jogo. */
+const FRAME_CHECK = `new Promise((done) => {
+  const raf = window.__probeRaf || window.requestAnimationFrame.bind(window);
+  const t0 = performance.now();
+  let info = null;
+  try { info = window.__game?.game?.debug?.info?.() ?? null; } catch {}
+  const base = { vis: document.visibilityState, state: info?.state ?? null, sim: info?.simSec ?? null };
+  const timer = setTimeout(() => done({ ...base, raf: null }), 3000);
+  raf(() => { clearTimeout(timer); done({ ...base, raf: Math.round(performance.now() - t0) }); });
+})`;
+async function frameCheck(session) {
+  const r = await within(session.send('Runtime.evaluate', { expression: FRAME_CHECK, awaitPromise: true, returnByValue: true }), 4500, 'quadro');
+  if (!r.ok) return `teste de quadro: ${r.error}`;
+  const v = r.value?.result?.value;
+  if (!v) return 'teste de quadro: sem resultado';
+  const game = v.state ? `; jogo ${v.state}, simSec ${v.sim}` : '';
+  return `${v.raf === null ? 'NENHUM QUADRO em 3 s (requestAnimationFrame parado)' : `quadros chegando (rAF em ${v.raf} ms)`}, aba ${v.vis}${game}`;
+}
+
 /**
  * Liga a sonda numa página recém-criada, antes da primeira navegação. Abre uma sessão CDP própria com o Debugger já
  * ligado: com a thread principal ocupada, o Chromium só atende comandos de interrupção (Debugger.pause), e um
@@ -176,6 +272,8 @@ export async function attachHangProbe(page) {
   page.on('crash', () => remember('crash', 'o Playwright avisou que a aba caiu'));
   page.on('framenavigated', (f) => { if (f === page.mainFrame()) remember('navegação', f.url()); });
   await page.addInitScript(() => {
+    // o requestAnimationFrame original, antes de outra troca (as capturas congelam o laço do jogo por ele)
+    window.__probeRaf = window.requestAnimationFrame.bind(window);
     const mark = performance.mark.bind(performance);
     performance.mark = (name, options) => {
       if (typeof name === 'string' && name.startsWith('rr:')) console.debug(`[marco] ${name} ${Math.round(performance.now())} ms`);
@@ -196,7 +294,12 @@ export async function attachHangProbe(page) {
     if (!session) return [`  JavaScript da aba: sessão de diagnóstico indisponível (${sessionNote || 'não aberta'})`];
     // A thread principal atende um comando comum? (ociosa ou esperando a rede)
     const alive = await within(session.send('Runtime.evaluate', { expression: 'document.readyState + " " + location.search', returnByValue: true }), 2000, 'Runtime.evaluate');
-    if (alive.ok) return [`  JavaScript da aba: a thread principal RESPONDE (${alive.value?.result?.value ?? '?'}); não está presa`];
+    if (alive.ok) {
+      // Responde, mas o navegador ainda entrega quadros a ela? Sem quadros, o laço do jogo (requestAnimationFrame) e as
+      // transições de CSS param, e toques podem cair num elemento que nunca terminou de aparecer.
+      const frames = await frameCheck(session);
+      return [`  JavaScript da aba: a thread principal RESPONDE (${alive.value?.result?.value ?? '?'}); não está presa; ${frames}`];
+    }
     if (!/sem resposta/.test(alive.error)) return [`  JavaScript da aba: a sessão de diagnóstico falhou (${alive.error}); aba fechada ou caída?`];
     // Ocupada: Debugger.pause é atendido por interrupção do V8 se ela estiver rodando JavaScript.
     const paused = new Promise((done) => { session.once('Debugger.paused', done); });
@@ -242,10 +345,22 @@ export async function attachHangProbe(page) {
     return lines;
   }
 
+  async function othersSection() {
+    const lines = [];
+    for (const other of probes) {
+      if (other === probe || !other.session) continue;
+      const alive = await within(other.session.send('Runtime.evaluate', { expression: 'location.pathname + location.search', returnByValue: true }), 2000, 'Runtime.evaluate');
+      lines.push(`  outra aba${other.label ? ` [${other.label}]` : ''}: ${alive.ok ? `responde; ${await frameCheck(other.session)}` : `não responde (${alive.error})`}`);
+    }
+    return lines;
+  }
+
   async function report(reason) {
     const started = Date.now();
-    const [js, browser, procs, machine] = await Promise.all([jsSection(), browserSection(), processSection(), machineSection()]);
-    const lines = [`  [diagnóstico] ${reason} (página aberta há ${secs(started - t0)})`, ...js, ...browser, ...procs, ...machine];
+    const [js, others, browser, procs, machine] = await Promise.all([jsSection(), othersSection(), browserSection(), processSection(), machineSection()]);
+    // gdb pausa o processo lido: depois das medições de CPU
+    const stacks = await nativeStackSection();
+    const lines = [`  [diagnóstico] ${reason} (página aberta há ${secs(started - t0)})`, ...js, ...others, ...browser, ...procs, ...machine, ...stacks];
     lines.push(`  console da página (últimas ${Math.min(25, consoleTail.length)} de ${consoleTail.length}, tempo desde a abertura):`);
     for (const m of consoleTail.slice(-25)) lines.push(`    +${secs(m.at - t0).padStart(7)} ${m.type.padEnd(9)} ${m.text}`);
     const log = browserLogTail();
@@ -257,7 +372,10 @@ export async function attachHangProbe(page) {
     return lines.join('\n');
   }
 
-  return { report, consoleTail, get session() { return session; } };
+  const probe = { report, consoleTail, label: null, get session() { return session; } };
+  probes.add(probe);
+  page.once('close', () => probes.delete(probe));
+  return probe;
 }
 
 /** Tempos do boot do jogo na página atual, pelos marcos `rr:*` (src/main.js e loadLevel em src/game/game.js). */
