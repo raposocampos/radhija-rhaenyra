@@ -1,10 +1,11 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (superbafo pelos dutos: a fumaça sai na boca do cano da fase 10 e do duto
-da fase 4, na altura do pombo; #48, #53 e #54 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
-[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
+de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
+caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`)
+## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`, PR #56)
 
 - Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
   fumaça acaba saindo na parte de baixo, quando deveria sair na ponta do cano que está do lado do pombo"; fase 4, o duto
@@ -28,10 +29,13 @@ da fase 4, na altura do pombo; #48, #53 e #54 no main). Ler primeiro [AGENTS.md]
   em Node). Capturas novas: `21c` e `21d` (`capture-quintal.mjs`), `12` a `15` (`capture-pigeons.mjs`).
 - Não mexido: a fase 9 (a saída fica dentro do armário e o cenário desenha a baforada na grade) e a Arena do Bafo
   (fase de desenvolvimento, com a caixa baixa de antes).
-- Validação: CI e E2E (`fase4` e `quintal`) registrados no PR. No PC, só `node --check` e `git diff --check`.
+- Validação: CI `39510626848` verde no código de `46e6a01` (573 testes, 0 falhas); E2E `fase4` e `quintal` e os do
+  head final registrados no PR. No PC, só `node --check` e `git diff --check`.
+- Fila (orquestrador): o #55 entra antes; depois dele, sincronizar com o main, rodar CI e E2E de novo e apresentar a
+  prévia nova. Só o `docs/CONTEXTO.md` conflita com o #55 (`git merge-tree`).
 - Próximo passo: com CI e E2E verdes, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
 
-## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
+## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
 
 - Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
   balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
@@ -66,8 +70,8 @@ da fase 4, na altura do pombo; #48, #53 e #54 no main). Ler primeiro [AGENTS.md]
   virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
 - Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
   E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
-- Integrado ao main com a aprovação do usuário (squash `3bd1b7b`, CI do main `39507063036`, deploy `39507237110`):
-  produção em v0.10.5 · build 97. Não repetir merge/deploy do #54.
+- Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
+  só então integrar.
 
 ## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
