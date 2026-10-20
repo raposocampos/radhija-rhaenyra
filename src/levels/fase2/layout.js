@@ -126,14 +126,13 @@ export const STATIC_COLLIDERS = [
   { id: 'cesto-toalha', shape: 'box', x: -2.8, z: -3.27, hx: 0.11, hz: 0.05 }, // a toalha caindo pela borda do cesto
   { id: 'poste-varal-oeste', shape: 'circle', x: -6.15, z: -4.35, r: 0.08 },
   { id: 'poste-varal-leste', shape: 'circle', x: -2.75, z: -4.35, r: 0.08 },
-  { id: 'vaso-samambaia', shape: 'circle', x: -6.05, z: 2.0, r: 0.42 }, // o vaso tem 0,25 m; as frondes chegam a ~0,45 m
+  { id: 'vaso-samambaia', shape: 'circle', x: -6.05, z: 2.0, r: 0.44 }, // o vaso tem 0,25 m; as frondes chegam a ~0,47 m
   { id: 'poste-roldana', shape: 'circle', x: PLANK.pulley.x, z: PLANK.pulley.z, r: 0.08 },
   { id: 'balde', shape: 'circle', x: -5.05, z: -4.55, r: 0.16 }, // balde azul ao lado da porta (world/dressing.js)
   { id: 'vassoura', shape: 'box', x: -6.41, z: -4.73, hx: 0.15, hz: 0.07 }, // vassoura encostada no muro
 
   // Zona B
   { id: 'registro', shape: 'box', x: VALVE.x, z: -4.62, hx: 0.16, hz: 0.18 }, // com a mangueira descendo dele até o chão
-  { id: 'irrigador', shape: 'circle', x: SPRINKLER.x, z: SPRINKLER.z, r: 0.12 }, // a cabeça do irrigador, com os braços
   { id: 'pilar-calha', shape: 'box', x: 1.635, z: -4.745, hx: 0.225, hz: 0.055 }, // pilar do muro e o condutor da calha
   // a cerca-viva: as folhas passam 0,13 m da ponta norte (z = HEDGE_BC.zMin)
   { id: 'sebe-bc', shape: 'box', x: HEDGE_BC.x, z: (HEDGE_BC.zMin - 0.13 + HEDGE_BC.zMax) / 2, hx: HEDGE_BC.hx, hz: (HEDGE_BC.zMax - HEDGE_BC.zMin + 0.13) / 2 },
@@ -171,7 +170,7 @@ export const NAV_NODES = {
   A_gate: { x: -3.1, z: 0.9 },
   B_gate: { x: -1.5, z: 1.0 },
   B_south: { x: -0.4, z: 2.9 },
-  B_field: { x: 0.1, z: -1.5 }, // ao lado da cabeça do irrigador
+  B_field: { x: -0.4, z: -1.5 },
   B_north: { x: 0.2, z: -4.0 },
   B_valve: { x: 1.1, z: -3.9 },
   C_north: { x: 2.45, z: -3.95 }, // longe do vaso de gerânio

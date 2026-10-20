@@ -326,6 +326,7 @@ export function buildProps({ root, layout, engine }) {
   const NP = 90;
   const ropeTube = makeDynamicTube(NP, 6);
   const ropeMesh = new THREE.Mesh(ropeTube.geometry, ropeMat);
+  ropeMesh.name = 'corda-da-tabua';
   ropeMesh.castShadow = true;
   ropeMesh.frustumCulled = false;
   root.add(ropeMesh);
@@ -551,19 +552,20 @@ function buildSprinkler(root, S) {
   grp.name = 'irrigador';
   grp.position.set(S.x, 0, S.z);
   root.add(grp);
-  // corpo: base tipo "estaca" verde + cabeça de latão com 3 braços
+  // corpo: irrigador embutido no gramado (aro verde rente ao chão) + cabeça de latão com 3 braços, a 8 cm do chão no
+  // máximo: o centro, onde os jatos passam por cima, é a travessia da arrancada (tools/scripts/sim-sprinkler.mjs), e
+  // a dog passa por cima dele em vez de atravessar uma estaca (retorno do usuário na prévia do PR #48)
   const green = stdMat('#2f7a46', { roughness: 0.45 });
   const brass = brassMat();
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.05, 16), green);
-  base.position.y = 0.025;
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 0.14, 10), green);
-  stem.position.y = 0.11;
-  grp.add(base, stem);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.02, 16), green);
+  base.position.y = 0.01;
+  grp.add(base);
+  const headY = 0.02;
   const head = new THREE.Group();
-  head.position.y = 0.19;
+  head.position.y = headY;
   const hub = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), brass);
   head.add(hub);
-  const nozY = 0.235;
+  const nozY = headY + 0.045;
   for (let i = 0; i < S.jets; i++) {
     const a = (i / S.jets) * TAU;
     const arm = new THREE.Group();

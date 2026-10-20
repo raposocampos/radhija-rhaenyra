@@ -159,7 +159,7 @@ test('fase 2: partida completa (tábua → Fica → calço → irrigador → reg
   i = h.info();
   assert.equal(i.stage, 'carrying');
   assert.equal(i.carrier, 'rhaenyra');
-  h.walkPath([[5.75, 1.4], [3.8, 1.4], [3.75, -1.0], [3.4, -3.9], [2.2, -4.3], [1.0, -3.9], [-0.1, -1.15], [-1.6, 0.9], [-3.1, 0.9], [-4.2, -0.6], [-5.0, -3.4]]);
+  h.walkPath([[5.75, 1.4], [3.8, 1.4], [3.75, -1.0], [3.4, -3.9], [2.2, -4.3], [1.0, -3.9], [-0.4, -1.5], [-1.6, 0.9], [-3.1, 0.9], [-4.2, -0.6], [-5.0, -3.4]]);
   h.run(0.4);
   assert.ok(['celebrating', 'victory'].includes(h.info().state));
   assert.ok(h.run(5, { until: (s) => s.state === 'victory' }));

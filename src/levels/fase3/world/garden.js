@@ -99,8 +99,10 @@ export function buildGarden(layout) {
     const wx = NOOK.minX - t;
     hedgeBlobs(blobs, { ax: wx, az: NOOK.minZ + 0.05, bx: wx, bz: NOOK.gap.z, height: H, half: t * 1.05, r, spacing: 0.08 });
     const sz = NOOK.gap.z;
-    hedgeBlobs(blobs, { ax: wx, az: sz, bx: NOOK.gap.xMin - 0.03, bz: sz, height: H, half: t * 1.05, r, spacing: 0.08 });
-    hedgeBlobs(blobs, { ax: NOOK.gap.xMax + 0.03, az: sz, bx: NOOK.maxX + 0.05, bz: sz, height: H, half: t * 1.05, r, spacing: 0.08 });
+    // as fileiras das pontas param 0,15 m antes do vão: os tufos (até ~0,2 m do centro) terminam na beira dele, e a
+    // Radhija passa pelo vão sem atravessar folhagem (o vão do colisor é o mesmo)
+    hedgeBlobs(blobs, { ax: wx, az: sz, bx: NOOK.gap.xMin - 0.15, bz: sz, height: H, half: t * 1.05, r, spacing: 0.08 });
+    hedgeBlobs(blobs, { ax: NOOK.gap.xMax + 0.15, az: sz, bx: NOOK.maxX + 0.05, bz: sz, height: H, half: t * 1.05, r, spacing: 0.08 });
     // arco folhoso sobre o vão: folhagem só acima de ~0.42 m (a Rhaenyra não cabe; a Radhija passa por baixo)
     const gx0 = NOOK.gap.xMin, gx1 = NOOK.gap.xMax;
     for (let k = 0; k <= 6; k++) {

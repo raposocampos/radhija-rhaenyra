@@ -148,8 +148,11 @@ export const STATIC_COLLIDERS = [
   { id: 'parede-leste', shape: 'box', x: 5.7, z: 0, hx: 0.2, hz: 4.2 },
   // Área inteira inacessível, inclusive durante saltos; trem nunca colide com dogs.
   { id: 'ferrovia', shape: 'box', x: RAIL_YARD.x, z: RAIL_YARD.z, hx: RAIL_YARD.hx, hz: RAIL_YARD.hz },
-  // As canaletas saem da maquete; terminam antes das bandejas, que ficam livres para pegar a carga.
-  { id: 'canaleta', shape: 'box', x: CHUTE.x, z: (CHUTE.z0 + 0.98) / 2, hx: CHUTE.halfWidth + 0.03, hz: (0.98 - CHUTE.z0) / 2 },
+  // A canaleta sai da maquete e desce até a bandeja da estrela. A bandeja (r 0,32 m, borda a 10,6 cm do chão) tem
+  // colisor (retorno do usuário na prévia do PR #48): as dogs pegam a carga da beira, de frente para ela (a cabeça
+  // alcança: TRAY.pickupR).
+  { id: 'canaleta', shape: 'box', x: CHUTE.x, z: (CHUTE.z0 + CHUTE.z1) / 2, hx: CHUTE.halfWidth + 0.03, hz: (CHUTE.z1 - CHUTE.z0) / 2 },
+  { id: 'bandeja', shape: 'circle', x: TRAY.x, z: TRAY.z, r: 0.31 },
   { id: 'foguete', shape: 'circle', x: ROCKET.x, z: ROCKET.z, r: ROCKET.r },
   { id: 'bancada', shape: 'box', x: BENCH.x, z: BENCH.z, hx: BENCH.hx + 0.02, hz: BENCH.hz + 0.02 },
   { id: 'bau', shape: 'box', x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx + 0.02, hz: TOY_CHEST.hz + 0.02 },

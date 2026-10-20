@@ -23,6 +23,7 @@ const SEM_COLISOR = [
   [/^cenoura$/, 'item da fase (vai na boca)'],
   [/^bolinha-listrada$/, 'bolinha que rola com a focinhada (src/world/extraProps.js)'],
   [/^fita-do-vento$/, 'fitas do ventilador: tecido leve'],
+  [/^corda-da-tabua$/, 'corda fina da tábua até a roldana, rente ao chão (de 4 a 11 cm): a pata passa por cima'],
 ];
 const skipped = (o) => {
   for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;

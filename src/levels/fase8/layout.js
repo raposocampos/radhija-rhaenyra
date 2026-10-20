@@ -62,8 +62,11 @@ export const RACK = { x0: 1.35, x1: 3.25, z: -1.25, halfDepth: 0.26, up: 1.85, d
  */
 export const SOCK = { x: 2.6, z: RACK.z + RACK.halfDepth, hang: 0.3, grabR: 0.4, nearR: 0.7 };
 
-/** Tábua de passar: a Radhija passa por baixo das pernas em X; a Rhaenyra e o cesto não. */
-export const BOARD = { x: 0.2, z: 0.75, hx: 0.62, hz: 0.22, h: 0.82 };
+/**
+ * Tábua de passar: a Rhaenyra e o cesto não chegam perto (colisor 'tabua'); a Radhija chega até as pernas em X (um
+ * par de cada lado, legs: em z ± legZ, de pé a pé) e pega o ossinho de debaixo da tábua esticando o focinho.
+ */
+export const BOARD = { x: 0.2, z: 0.75, hx: 0.62, hz: 0.22, h: 0.82, legZ: 0.12, legX: 0.38 };
 
 /**
  * Cesto de roupa com rodinhas (empurrável pela Rhaenyra, segurando Shift). Os limites deixam sempre uma dog
@@ -88,10 +91,16 @@ export const RUG = { x: -2.1, z: -1.95, rx: 0.95, rz: 0.55 };
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   { id: 'armario', shape: 'box', x: CABINET.x, z: CABINET.z, hx: CABINET.hx, hz: CABINET.hz },
-  { id: 'secadora', shape: 'box', x: DRYER.x, z: DRYER.z, hx: DRYER.hx, hz: DRYER.hz },
-  { id: 'maquina', shape: 'box', x: WASHER.x, z: WASHER.z, hx: WASHER.hx, hz: WASHER.hz },
+  // (a porta redonda das duas sai 3 cm da frente)
+  { id: 'secadora', shape: 'box', x: DRYER.x, z: DRYER.z + 0.015, hx: DRYER.hx, hz: DRYER.hz + 0.015 },
+  { id: 'maquina', shape: 'box', x: WASHER.x, z: WASHER.z + 0.015, hx: WASHER.hx, hz: WASHER.hz + 0.015 },
   { id: 'tanque', shape: 'box', x: TANK.x, z: TANK.z, hx: TANK.hx, hz: TANK.hz },
   { id: 'tabua', shape: 'box', x: BOARD.x, z: BOARD.z, hx: BOARD.hx, hz: BOARD.hz, blocks: 'large' },
+  // as pernas em X de cada lado, de pé a pé (só valem para a Radhija: a Rhaenyra e o cesto param na 'tabua')
+  ...[-1, 1].map((s) => /** @type {import('../../types').SegmentCollider} */ ({
+    id: `tabua-pernas-${s < 0 ? 'norte' : 'sul'}`, shape: 'segment', blocks: 'small', t: 0.03,
+    ax: BOARD.x - BOARD.legX, az: BOARD.z + s * BOARD.legZ, bx: BOARD.x + BOARD.legX, bz: BOARD.z + s * BOARD.legZ,
+  })),
   { id: 'pilha-de-roupa', shape: 'circle', x: PILE.x, z: PILE.z, r: PILE.r },
   { id: 'balde', shape: 'circle', x: BUCKET.x, z: BUCKET.z, r: BUCKET.r },
 ];

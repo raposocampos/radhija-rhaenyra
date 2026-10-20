@@ -241,19 +241,22 @@ function buildDogBed(root, B, spots) {
   rim.position.y = 0.11;
   const cushion = new THREE.Mesh(new THREE.CylinderGeometry(B.r - 0.12, B.r - 0.1, 0.08, 32), new THREE.MeshStandardMaterial({ color: '#f6eadb', roughness: 1 }));
   cushion.position.y = 0.06;
-  // travesseirinho em forma de osso
-  const pillow = new THREE.Group();
-  const pm = stdMat('#f2c14e', { roughness: 0.95 });
-  const mid = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.12, 4, 10).rotateZ(Math.PI / 2), pm);
-  pillow.add(mid);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const k = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), pm);
-    k.position.set(sx * 0.1, 0, sz * 0.03);
-    pillow.add(k);
+  // argolinha de borracha com cravinhos (brinquedo delas; antes era um travesseirinho em forma de osso, que se
+  // confundia com os ossinhos colecionáveis: retorno do usuário na prévia do PR #48), deitada no lado sudoeste da
+  // almofada, longe dos lugares da meia e da mantinha
+  const toy = new THREE.Group();
+  toy.name = 'argolinha';
+  const rubber = stdMat('#e8554a', { roughness: 0.55 });
+  toy.add(new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.024, 12, 32).rotateX(Math.PI / 2), rubber));
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const nub = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), rubber);
+    nub.position.set(Math.cos(a) * 0.1, 0, Math.sin(a) * 0.1);
+    toy.add(nub);
   }
-  pillow.position.set(-0.18, 0.14, -0.18);
-  pillow.rotation.y = 0.7;
-  grp.add(rim, cushion, pillow);
+  toy.position.set(-0.24, 0.125, 0.2);
+  toy.rotation.set(0.12, 0.4, -0.08);
+  grp.add(rim, cushion, toy);
   grp.position.set(B.x, 0, B.z);
   const spot = (name) => {
     const o = new THREE.Object3D();
