@@ -6,16 +6,17 @@
 // parar (retorno do usuário: nada "mole").
 import * as THREE from 'three';
 
-/** Orelhas: mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico), gravidade extra (m/s²) e
- * folga da ponta acima do chão (m). */
-export const EAR_PHYSICS = Object.freeze({ freq: [5.6, 4.3, 3.4], zeta: 0.4, gravity: 1.6, floorPad: 0.012 });
-/** Rabo: bem mais firme que as orelhas, bem amortecido e quase sem cair (o rabo em pluma fica no alto, como na pose). */
-export const TAIL_PHYSICS = Object.freeze({ freq: [11, 9.5, 8.5, 7.5, 7], zeta: 0.75, gravity: 0.4, floorPad: 0.015 });
+/** Orelhas: mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico), gravidade extra (m/s²),
+ * folga da ponta acima do chão (m) e quanto do desvio simulado aparece (1 = todo). */
+export const EAR_PHYSICS = Object.freeze({ freq: [5.6, 4.3, 3.4], zeta: 0.4, gravity: 1.6, floorPad: 0.012, follow: 1 });
+/** Rabo: bem mais firme que as orelhas, bem amortecido, quase sem cair, e só metade do desvio aparece (o rabo em pluma
+ * fica no alto, como na pose: só atrasa e quica um tiquinho). */
+export const TAIL_PHYSICS = Object.freeze({ freq: [11, 9.5, 8.5, 7.5, 7], zeta: 0.75, gravity: 0.4, floorPad: 0.015, follow: 0.5 });
 
 /**
  * Uma correntinha: ossos da base para a ponta, a ponta (repouso) e a física.
  * @typedef {{ name: string, bones: number[], tip: number[], freq: readonly number[], zeta: number, gravity: number,
- *             floorPad: number }} ChainDef
+ *             floorPad: number, follow?: number }} ChainDef
  */
 
 /**
@@ -50,7 +51,8 @@ export function createChainPhysics({ skel2, chains: defs }) {
       dir: c.bones.map((_, k) => rest[k + 1].clone().sub(rest[k]).normalize()),
       len: c.bones.map((_, k) => rest[k + 1].distanceTo(rest[k])),
       tipOff: tip.clone().sub(rest[n - 1]),
-      p: pts(), v: pts(), t: pts(),
+      p: pts(), v: pts(), t: pts(), q: pts(),
+      follow: c.follow ?? 1,
       ready: false,
     };
   });
@@ -105,13 +107,15 @@ export function createChainPhysics({ skel2, chains: defs }) {
           e.v[k].subVectors(e.p[k], _x).divideScalar(h);
         }
       }
-      // rotações: cada gomo aponta para o ponto simulado seguinte (sem mudar a torção da pose)
+      // o que aparece: a pose mais `follow` do desvio simulado
+      for (let k = 0; k <= n; k++) e.q[k].copy(e.t[k]).lerp(e.p[k], e.follow);
+      // rotações: cada gomo aponta para o ponto seguinte (sem mudar a torção da pose)
       _qp.copy(Q[e.parent]);
       for (let k = 0; k < n; k++) {
         const bone = skel2.bones[bones[k]];
         _qk.multiplyQuaternions(_qp, bone.quaternion); // rotação do gomo no corpo, com a pose do guia
         _c.copy(e.dir[k]).applyQuaternion(_qk);
-        _d.subVectors(e.p[k + 1], e.p[k]).applyQuaternion(_qwi).normalize();
+        _d.subVectors(e.q[k + 1], e.q[k]).applyQuaternion(_qwi).normalize();
         if (Number.isFinite(_d.x)) {
           _qd.setFromUnitVectors(_c, _d);
           _qk.premultiply(_qd);

@@ -384,9 +384,9 @@ test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa pouc
     const jump = Math.max(...gap.slice(281, 330));
     const back = gap[gap.length - 1];
     assert.ok(restGap < 0.015, `${kind}: parado, o rabo fica na pose (${(restGap * 1000).toFixed(1)} mm)`);
-    assert.ok(turn > 0.002 && turn < 0.035, `${kind}: no giro o rabo atrasa só um pouco (${(turn * 1000).toFixed(1)} mm)`);
-    // num pulo alto o corpo sai e pousa a ~3,8 m/s de uma vez: o rabo quica um pouco (as orelhas vão até 9 cm)
-    assert.ok(jump < 0.07, `${kind}: no pulo o rabo quica só um pouco (${(jump * 1000).toFixed(1)} mm)`);
+    assert.ok(turn > 0.002 && turn < 0.02, `${kind}: no giro o rabo atrasa só um pouco (${(turn * 1000).toFixed(1)} mm)`);
+    // num pulo alto o corpo sai e pousa a ~3,8 m/s de uma vez: o rabo quica um tiquinho (as orelhas vão até 9 cm)
+    assert.ok(jump < 0.04, `${kind}: no pulo o rabo quica só um pouco (${(jump * 1000).toFixed(1)} mm)`);
     assert.ok(back < 0.004, `${kind}: o rabo volta à pose (${(back * 1000).toFixed(1)} mm)`);
     console.log(`[v2] ${kind} rabo: parado ${(restGap * 1000).toFixed(1)} mm, giro ${(turn * 1000).toFixed(1)} mm, pulo ${(jump * 1000).toFixed(1)} mm, volta ${(back * 1000).toFixed(1)} mm`);
     // rolando: as juntas do rabo ficam acima do chão
