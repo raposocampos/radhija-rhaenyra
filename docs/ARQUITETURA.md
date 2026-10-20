@@ -501,7 +501,11 @@ cocô) ficam com ele: `locomotionGate`; na troca, os alvos das juntas são mistu
 não atravessa o chão (`dog.js`, gira no tornozelo; a correção do chão do corpo muda no máximo 0,5° e 2 mm por
 quadro), a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
 pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
-física (`physics.js`: correntinha de três gomos com mola, inércia, gravidade e chão; a pose do guia é o descanso). Para ver:
+física (`physics.js`: correntinhas com mola, inércia, gravidade e chão; a pose do guia é o descanso), e o rabo também,
+bem mais firme (cinco gomos presos na garupa; só atrasa um pouco nas curvas, no pulo e ao parar). Em `dog.js`, as
+camadas ficam numa lista em ordem (`LAYERS`: locomoção e rolagem, cada uma devolve o peso do quadro em
+`d.layers`), por cima da base (as poses do modelo atual) e antes do contato com o chão e da física; a colisão do
+corpo e da cabeça (etapa 4) entra nessa lista. Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola), suíte E2E `canil` e capturas `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`).

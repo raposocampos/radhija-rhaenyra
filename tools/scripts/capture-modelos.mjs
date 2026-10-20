@@ -87,6 +87,8 @@ try {
     for (let k = 0; k < 8; k++) await pose(`36-sentando-${k}`, side({ speed: 0.8, move: '1', stop: 1.0, then: 'sit', at: 1.3, sim: 1.25 + k * 0.1 }));
     for (let k = 0; k < 8; k++) await pose(`37-levantando-${k}`, side({ action: 'sit', then: 'sniff', at: 2.0, sim: 1.95 + k * 0.08 }));
     for (let k = 0; k < 8; k++) await pose(`38-arrancando-${k}`, side({ speed: 1.6, move: '1', sim: 0.03 + k * 0.05 }));
+    // etapa 3: o rabo com física (firme) assentando depois de parar o trote
+    for (let k = 0; k < 6; k++) await pose(`39-rabo-parando-${k}`, side({ speed: 1.6, move: '1', stop: 1.0, sim: 1.0 + k * 0.06 }));
     await page.close();
   }
 

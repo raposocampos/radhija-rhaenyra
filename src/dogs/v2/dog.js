@@ -1,9 +1,10 @@
 // Modelo novo das cachorrinhas (etapa 1 da troca dos modelos, docs/ARQUITETURA.md §7): mesma API de createDog
 // (dog.js), com o esqueleto novo de 38 ossos (skeleton.js), o desenho revisto pelas fotos (design.js) e a malha na
 // mesma base procedural (SDF → Surface Nets → SkinnedMesh com pesos automáticos + cascas de pelo).
-// A pose vem da animação atual (dogAnimation.js) num esqueleto atual invisível, copiada para o novo (retarget.js);
-// por cima dela o modelo novo tem a locomoção própria (gait.js: patas plantadas, que rolam, escápula, passinhos de
-// ajuste ao parar) e a rolagem (roll.js), e garante que nada do corpo passa do chão (contacts.js).
+// A base é a pose da animação atual (dogAnimation.js) num esqueleto atual invisível, copiada para o novo (retarget.js):
+// todas as poses e extras do jogo, com o jeito aprovado. Por cima dela, em camadas (LAYERS, abaixo): a locomoção
+// própria (gait.js: patas plantadas e firmes, passinhos de ajuste ao parar) e a rolagem (roll.js); depois, a pata e o
+// corpo que não atravessam o chão (contacts.js) e a física das correntinhas: orelhas e rabo (physics.js).
 // No jogo: ?dogs=novo troca as duas dogs pelo modelo novo (main.js); a arena ?level=canil mostra os dois lado a lado.
 import * as THREE from 'three';
 import { DOG_CONFIG } from '../config.js';
@@ -21,7 +22,7 @@ import { buildDesignV2, paramsV2 } from './design.js';
 import { createSkinMaterial } from './materials.js';
 import { createRetarget } from './retarget.js';
 import { groundContacts, lowestPoint } from './contacts.js';
-import { createEarPhysics } from './physics.js';
+import { createChainPhysics, designChains } from './physics.js';
 import { createRollOverlay } from './roll.js';
 import { createGait } from './gait.js';
 
@@ -128,12 +129,25 @@ export function createDogV2(kind) {
   const retarget = createRetarget({ rig1, design1, design2: design, skel2 });
   // contato com o chão: tronco, cabeça e patas (rabo e orelhas caem por cima do chão sem levantar o corpo)
   const contacts = groundContacts(design, BONE_INDEX_V2, skel2.rest, { skip: ['tail', 'ear'] });
-  // orelhas com física (mola, inércia, gravidade e chão): reagem ao pulo, às curvas e ao rolar
-  const earPhysics = createEarPhysics({ skel2, design });
+  // orelhas e rabo com física (mola, inércia, gravidade e chão): reagem ao pulo, às curvas e ao rolar (o rabo, firme)
+  const physics = createChainPhysics({ skel2, chains: designChains(skel2, design) });
   // rolar de costas: pose própria do modelo novo por cima da do guia (roll.js)
   const roll = createRollOverlay({ skel2, cfg });
   // andar, trotar, galopar e girar: patas próprias, plantadas no chão, no ritmo do guia (gait.js)
   const gait = createGait({ skel2, retarget, s });
+  /**
+   * Camadas por cima da base (as poses do modelo atual), em ordem; cada uma mexe nos ossos dela e devolve o peso
+   * aplicado no quadro (0 = nada; self.layers guarda os pesos):
+   *   · locomoção (gait.js): patas e escápula quando ela anda, trota, galopa ou gira (fora das poses do guia);
+   *   · rolagem (roll.js): o corpo inteiro enquanto o extra 'roll' roda.
+   * Depois delas vêm a pata que não atravessa o chão, o contato do corpo com o chão (settle) e a física das
+   * correntinhas (orelhas e rabo). A colisão do corpo e da cabeça (etapa 4) entra aqui, depois das poses.
+   * @type {{ name: string, apply: (dt: number, A: import('../../types').DogAnim) => number }[]}
+   */
+  const LAYERS = [
+    { name: 'gait', apply: (dt, A) => gait.apply(dt, A, st, inner, object) },
+    { name: 'roll', apply: (dt, A) => roll.apply(A.extra, inner) },
+  ];
 
   const I2 = BONE_INDEX_V2;
   const _pv = new THREE.Vector3(), _pf = new THREE.Vector3(), _ph = new THREE.Vector3(), _pc = new THREE.Vector3();
@@ -236,13 +250,16 @@ export function createDogV2(kind) {
     inner.position.copy(driverInner.position);
     inner.quaternion.copy(driverInner.quaternion);
     retarget.apply();
-    self.gait = gait.apply(dt, anim || {}, st, inner, object);
-    self.overlay = roll.apply(anim?.extra, inner);
-    if (self.gait > 0 || self.overlay > 0) retarget.refresh();
+    const A = anim || {};
+    let any = 0;
+    for (const L of LAYERS) any = Math.max(any, (self.layers[L.name] = L.apply(dt, A)));
+    self.gait = self.layers.gait;
+    self.overlay = self.layers.roll;
+    if (any > 0) retarget.refresh();
     pawGuard();
     // o monte (anim.jump) só vale como chão para a rolagem: no escorregador e no pulo o chão continua o do objeto
     settle(self.overlay, self.overlay > 0 ? Math.max(0, anim?.jump || 0) : 0, dt);
-    earPhysics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
+    physics.update(dt, { P: retarget.P2, Q: retarget.Q2, inner, object, floorY: object.position.y });
     mudU.uTime.value = st.t;
     // pisadas da locomoção própria, com a pose do quadro pronta (a pegada sai onde a pata pousou)
     for (const [i, v] of gait.takeSteps()) self.onFootstep?.(i, v);
@@ -274,6 +291,10 @@ export function createDogV2(kind) {
     /** Peso da locomoção própria (gait.js) nas patas, no último quadro (0..1), e o estado dela (testes e capturas). */
     gait: 0,
     locomotion: gait,
+    /** Peso de cada camada (LAYERS) no último quadro. */
+    layers: { gait: 0, roll: 0 },
+    /** Física das orelhas e do rabo (testes: physics.tip('tail')). */
+    physics,
     tilt: 0,
     lift: 0,
     /** Esqueleto guia (atual, sem malha): testes e capturas comparam com ele. */

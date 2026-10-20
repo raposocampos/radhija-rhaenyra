@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { installBrowserStubs } from './helpers/headless.mjs';
+import { withSeed } from './helpers/seeded.mjs';
 
 installBrowserStubs();
 const { createDog } = await import('../src/dogs/dog.js');
@@ -342,6 +343,104 @@ test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca 
     }
     void dur;
     assert.ok(low > -0.005, `${kind}: rolando, as juntas da orelha ficam acima do chão (${low.toFixed(3)})`);
+  }
+});
+
+test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa pouco no giro, quica pouco no pulo e volta; nunca passa do chão', () => {
+  const tipInHips = (dog) => {
+    dog.object.updateMatrixWorld(true);
+    const b = (n) => dog.bones.find((x) => x.name === n);
+    return b('hips').worldToLocal(b('tail4').getWorldPosition(new THREE.Vector3()));
+  };
+  const still = { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } };
+  /** O roteiro (parada, pulo com meia-volta, parada) com a mesma semente: a ponta do rabo em cada quadro. */
+  const run = (kind, physics) => withSeed(7, () => {
+    const dog = createDogV2(kind);
+    const out = [];
+    const step = (anim, yaw = 0) => {
+      dog.object.rotation.y += yaw;
+      if (!physics) dog.physics.reset(); // sem física: a correntinha vai direto para a pose do guia
+      dog.update(1 / 60, anim);
+      out.push(tipInHips(dog));
+    };
+    step({ speed: 0, action: 'sniff' });
+    for (let i = 0; i < 150; i++) step(still); // 0..150: parada
+    for (let f = 0; f < 40; f++) step(still, f < 20 ? 0.06 : 0); // 151..190: meia-volta em 1/3 s
+    for (let i = 0; i < 90; i++) step(still);
+    for (let f = 0; f <= 40; f++) { // 281..321: pulo alto (sobe e pousa a ~3,8 m/s)
+      const k = f / 25;
+      step(k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still);
+    }
+    for (let i = 0; i < 150; i++) step(still);
+    return { dog, out };
+  });
+  for (const kind of KINDS) {
+    // a diferença entre a dog com a física e a sem física (mesmos sorteios) é só o atraso da física
+    const { dog: d, out: a } = run(kind, true);
+    const { out: b } = run(kind, false);
+    const gap = a.map((p, i) => p.distanceTo(b[i]));
+    const restGap = gap[150];
+    const turn = Math.max(...gap.slice(151, 200));
+    const jump = Math.max(...gap.slice(281, 330));
+    const back = gap[gap.length - 1];
+    assert.ok(restGap < 0.015, `${kind}: parado, o rabo fica na pose (${(restGap * 1000).toFixed(1)} mm)`);
+    assert.ok(turn > 0.002 && turn < 0.02, `${kind}: no giro o rabo atrasa só um pouco (${(turn * 1000).toFixed(1)} mm)`);
+    // num pulo alto o corpo sai e pousa a ~3,8 m/s de uma vez: o rabo quica um tiquinho (as orelhas vão até 9 cm)
+    assert.ok(jump < 0.04, `${kind}: no pulo o rabo quica só um pouco (${(jump * 1000).toFixed(1)} mm)`);
+    assert.ok(back < 0.004, `${kind}: o rabo volta à pose (${(back * 1000).toFixed(1)} mm)`);
+    console.log(`[v2] ${kind} rabo: parado ${(restGap * 1000).toFixed(1)} mm, giro ${(turn * 1000).toFixed(1)} mm, pulo ${(jump * 1000).toFixed(1)} mm, volta ${(back * 1000).toFixed(1)} mm`);
+    // rolando: as juntas do rabo ficam acima do chão
+    let low = Infinity;
+    for (let f = 0; f < 150; f++) {
+      d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k: 0.3 + f / 300, t: f / 60, h: 0 } });
+      d.object.updateMatrixWorld(true);
+      for (const n of ['tail1', 'tail2', 'tail3', 'tail4']) low = Math.min(low, d.bones.find((x) => x.name === n).getWorldPosition(v).y);
+    }
+    assert.ok(low > -0.005, `${kind}: rolando, as juntas do rabo ficam acima do chão (${low.toFixed(3)})`);
+  }
+});
+
+test('modelo novo: bebendo e comendo, a cabeça desce até a vasilha sem a boca entrar no chão', () => {
+  // (o lugar da cabeça é o do atual: "segue o esqueleto atual"; a mandíbula fica ~1 cm à frente, focinho mais comprido)
+  for (const kind of KINDS) {
+    const d = v2[kind];
+    const a = v1[kind];
+    for (const x of ['drink', 'eat']) {
+      let worst = Infinity, lowest = Infinity;
+      for (const dog of [d, a]) {
+        dog.update(1 / 60, { speed: 0, action: 'sniff' });
+        for (let i = 0; i < 30; i++) dog.update(1 / 60, { speed: 0, action: 'none' });
+      }
+      d.object.updateMatrixWorld(true);
+      const standing = d.bones.find((b) => b.name === 'jaw').getWorldPosition(v).y;
+      for (let f = 0; f <= 120; f++) {
+        const k = f / 120;
+        const pose = { speed: 0, action: 'none', extra: { kind: x, k, t: k * EXTRA_TIME[x], h: 0 } };
+        d.update(1 / 60, pose);
+        a.update(1 / 60, pose);
+        if (k < 0.3 || k > 0.7) continue;
+        d.object.updateMatrixWorld(true);
+        a.object.updateMatrixWorld(true);
+        const jaw2 = d.bones.find((b) => b.name === 'jaw').getWorldPosition(v);
+        lowest = Math.min(lowest, jaw2.y);
+        worst = Math.min(worst, jaw2.y);
+      }
+      assert.ok(lowest < standing - 0.08, `${kind} ${x}: a cabeça desce até a vasilha (mandíbula de ${(standing * 100).toFixed(1)} a ${(lowest * 100).toFixed(1)} cm)`);
+      assert.ok(worst > 0.02, `${kind} ${x}: a boca não entra no chão (mandíbula a ${(worst * 100).toFixed(1)} cm)`);
+    }
+  }
+});
+
+test('modelo novo: as camadas — locomoção andando, rolagem rolando; sentada, nenhuma (a pose é a do atual)', () => {
+  for (const kind of KINDS) {
+    const d = createDogV2(kind);
+    for (let i = 0; i < 60; i++) d.update(1 / 60, { speed: 1.2, action: 'none' });
+    assert.ok(d.layers.gait > 0.99 && d.layers.roll === 0, `${kind} andando: ${JSON.stringify(d.layers)}`);
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    for (let i = 0; i < 120; i++) d.update(1 / 60, { speed: 0, action: 'sit' });
+    assert.ok(d.layers.gait === 0 && d.layers.roll === 0, `${kind} sentada: ${JSON.stringify(d.layers)}`);
+    for (let f = 0; f < 60; f++) d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k: 0.3 + f / 300, t: f / 60, h: 0 } });
+    assert.ok(d.layers.roll > 0.99 && d.layers.gait === 0, `${kind} rolando: ${JSON.stringify(d.layers)}`);
   }
 });
 
