@@ -1,14 +1,87 @@
 // FASE 10 · O chiqueiro ao sul do galpão: cerca de tábuas largas (os porcos não pulam), a porteira para a horta (abre
-// girando para fora), a casinha dos porcos com telhado de zinco, o cocho de madeira com lavagem, a poça de lama e a
-// placa "Chiqueiro". Na faixa de grama ao lado da cerca branca, o painel de madeira grande dos dois botões altos (de
-// costas para a cerca, com a luz de força) e o gerador pequeno que dá força a ele (partida de cordinha); na parede do galpão, a
-// caixinha de força onde os fios dos botões se juntam, com um cabo para a roldana da porta e outro, pelo chão, até a
-// trava da porteira (qual botão vai para onde é sorteado).
+// girando para fora), o chão de barro (manchas molhadas que brilham, marcas de casco, palha) com a poça de lama, a
+// casinha dos porcos com telhado de zinco, o cocho de madeira com lavagem e a placa "Chiqueiro". Na faixa de grama ao
+// lado da cerca branca, o painel de madeira grande dos dois botões altos (de costas para a cerca, com a luz de força) e
+// o gerador pequeno que dá força a ele (partida de cordinha); na parede do galpão, a caixinha de força onde os fios dos
+// botões se juntam, com um cabo para a roldana da porta e outro, pelo chão, até a trava da porteira (qual botão vai
+// para onde é sorteado).
 // API: buildSty(root, layout) → { group, gate: GateProp (setOpen 0..1), links: { door, gate } (pulso), seeThrough,
 //   generator: { object, setPull(k), setState(s), state }, update(dt) }
 import * as THREE from 'three';
-import { rng, rbox, canvasTexture, stdMat, woodMat, contactShadow, mergeGeometries } from '../../../world/util.js';
+import { rng, rbox, canvasTexture, stdMat, woodMat, contactShadow, mergeGeometries, rippleNormalTexture } from '../../../world/util.js';
 import { makeLink } from '../../../world/links.js';
+
+/** Desenha `fn(x, y)` também nas cópias do outro lado das bordas (textura que se repete sem emenda). */
+function wrapDraw(w, h, x, y, rad, fn) {
+  for (const ox of [-w, 0, w]) {
+    for (const oy of [-h, 0, h]) {
+      if (x + ox < -rad || x + ox > w + rad || y + oy < -rad || y + oy > h + rad) continue;
+      fn(x + ox, y + oy);
+    }
+  }
+}
+/**
+ * O barro do chiqueiro (cor e aspereza juntas, da mesma semente): marrom molhado com manchas mais escuras e
+ * brilhantes (aspereza baixa), marcas de casco de porquinho, palha espalhada e torrões.
+ */
+function barroTextures() {
+  const blobs = [];
+  const r = rng(91);
+  for (let k = 0; k < 70; k++) blobs.push({ x: r() * 256, y: r() * 256, rad: 10 + r() * 30, wet: r() < 0.45 });
+  const hoofs = [];
+  for (let k = 0; k < 26; k++) hoofs.push({ x: r() * 256, y: r() * 256, a: r() * Math.PI * 2 });
+  const straws = [];
+  for (let k = 0; k < 55; k++) straws.push({ x: r() * 256, y: r() * 256, a: r() * Math.PI, l: 6 + r() * 10 });
+  const map = canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#6a4528'; g.fillRect(0, 0, w, h);
+    for (const b of blobs) {
+      wrapDraw(w, h, b.x, b.y, b.rad, (px, py) => {
+        const gr = g.createRadialGradient(px, py, 0, px, py, b.rad);
+        gr.addColorStop(0, b.wet ? 'rgba(40,24,12,0.75)' : 'rgba(140,100,62,0.45)');
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr;
+        g.fillRect(px - b.rad, py - b.rad, b.rad * 2, b.rad * 2);
+      });
+    }
+    // marcas de casco (dois gomos fundos)
+    for (const f of hoofs) {
+      wrapDraw(w, h, f.x, f.y, 10, (px, py) => {
+        g.save(); g.translate(px, py); g.rotate(f.a);
+        g.fillStyle = 'rgba(28,16,8,0.7)';
+        for (const sx of [-3, 3]) { g.beginPath(); g.ellipse(sx, 0, 2.4, 4.4, sx * 0.04, 0, Math.PI * 2); g.fill(); }
+        g.restore();
+      });
+    }
+    // torrões e palha
+    const rr = rng(13);
+    for (let k = 0; k < 500; k++) {
+      const x = rr() * w, y = rr() * h, sz = 1 + rr() * 2;
+      g.fillStyle = 'rgba(30,18,8,0.45)'; g.fillRect(x, y + 1, sz, sz);
+      g.fillStyle = 'rgba(150,108,70,0.55)'; g.fillRect(x, y, sz, sz);
+    }
+    g.strokeStyle = 'rgba(226,196,118,0.75)';
+    g.lineWidth = 1.2;
+    for (const st of straws) {
+      wrapDraw(w, h, st.x, st.y, st.l, (px, py) => {
+        g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(st.a) * st.l, py + Math.sin(st.a) * st.l); g.stroke();
+      });
+    }
+  });
+  const rough = canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = 'rgb(225,225,225)'; g.fillRect(0, 0, w, h);
+    for (const b of blobs) {
+      if (!b.wet) continue;
+      wrapDraw(w, h, b.x, b.y, b.rad, (px, py) => {
+        const gr = g.createRadialGradient(px, py, 0, px, py, b.rad);
+        gr.addColorStop(0, 'rgba(40,40,40,0.95)');
+        gr.addColorStop(1, 'rgba(40,40,40,0)');
+        g.fillStyle = gr;
+        g.fillRect(px - b.rad, py - b.rad, b.rad * 2, b.rad * 2);
+      });
+    }
+  }, { srgb: false });
+  return { map, rough };
+}
 
 /** @param {THREE.Object3D} root @param {import('../../../types').LevelLayout} layout */
 export function buildSty(root, layout) {
@@ -53,12 +126,22 @@ export function buildSty(root, layout) {
   plankMesh.receiveShadow = true;
   group.add(plankMesh);
 
-  // ---------------- chão de terra com a poça de lama
-  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(STY.x1 - STY.x0 - 0.1, STY.z1 - STY.z0 - 0.1).rotateX(-Math.PI / 2), stdMat('#7a5a38', { roughness: 1 }));
+  // ---------------- chão de barro (manchas molhadas que brilham, cascos, palha) com a poça de lama
+  const bw0 = STY.x1 - STY.x0 - 0.1, bd0 = STY.z1 - STY.z0 - 0.1;
+  const barro = barroTextures();
+  for (const t of [barro.map, barro.rough]) t.repeat.set(bw0 / 1.3, bd0 / 1.3);
+  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(bw0, bd0).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({
+    map: barro.map, roughnessMap: barro.rough, roughness: 1, clearcoat: 0.35, clearcoatRoughness: 0.35,
+  }));
   dirt.position.set((STY.x0 + STY.x1) / 2, 0.008, (STY.z0 + STY.z1) / 2);
   dirt.receiveShadow = true;
-  const puddle = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: '#4a3220', roughness: 0.25, clearcoat: 0.6 }));
-  puddle.scale.set(1.3, 1, 0.8);
+  const ripple = rippleNormalTexture().clone();
+  ripple.wrapS = ripple.wrapT = THREE.RepeatWrapping;
+  const puddle = new THREE.Mesh(new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({
+    color: '#5a3a22', roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.06, normalMap: ripple, normalScale: new THREE.Vector2(0.2, 0.2),
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+  }));
+  puddle.scale.set(1.3, 1, 0.82);
   puddle.position.set(STY.x0 + 0.95, 0.012, STY.z0 + 0.9);
   group.add(dirt, puddle);
 

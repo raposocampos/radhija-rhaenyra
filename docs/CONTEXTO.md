@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; etapa 3 e #46, testes da fase 10 com semente, no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+de pé, Radhija mais devagar e arrancada; etapa 3, #46 e #49 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -185,7 +185,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
-- Entregue, **PR #46** (squash `cdabb1b`, deploy `39372958855`) (Claude, 2026-10-20; branch `claude/fase10-sementes`, a partir do main `ef2cb50`): o teste dos
+- Entregue (**PR #46**, squash `cdabb1b`, deploy `39372958855`; Claude, 2026-10-20; branch `claude/fase10-sementes`, a partir do main `ef2cb50`): o teste dos
   porquinhos da fase 10 caiu no CI do #45 (`knocks: 0`). `test/fase10.test.mjs` passou a rodar com semente
   (`seededTest`) e ganhou uma varredura persistente (desligada; liga com `FASE10_SEMENTES`, início em
   `FASE10_SEMENTES_DE`; até ~260 partidas por processo, porque cada partida headless deixa ouvintes globais e ~430
@@ -518,6 +518,12 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     sul; o rodapé de pedra da fachada não atravessa mais a porta da varanda e saiu o capacho (era a "mancha" no chão);
     no empurrão, as patas apoiam na casca de verdade (`MANGO_BARK`: o tronco sobe torto e afina; o colisor ficou
     rente a ela).
+  - Entregue, ajuste visual pedido em 2026-10-20 (**PR #49**, squash `7737c04`, deploy `39376268869`; branch
+    `claude/fase10-chao`, a partir do main `cdabb1b`): a terra da
+    horta ficou seca (castanho claro, rachadinhas, torrões) e a lama, mais escura, molhada e brilhante, com a borda de
+    terra úmida, respingos e um rastro de patinhas saindo dela (`ground.js`); caminho de pedras com cascalho na porta
+    do galpão; o chão do chiqueiro virou barro (manchas molhadas que brilham, marcas de casco, palha) com a poça mais
+    clara (`sty.js`). Só visual.
 - Próximo passo da D: com o #43 no main, sincronizar, rodar CI e E2E `todas` no head final, revisar as capturas
   (painel, gerador, vão, galinha, empurrão, porta da varanda) e entregar a prévia; integrar só com a aprovação do
   usuário (squash com SHA esperado, deploy do `github-pages` dessa versão e aviso ao orquestrador).
