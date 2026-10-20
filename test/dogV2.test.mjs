@@ -347,36 +347,40 @@ test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca 
 });
 
 test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa um pouco no pulo e no giro e volta; nunca passa do chão', () => {
-  for (const kind of KINDS) {
-    // duas dogs iguais (mesma semente): uma com a física, outra com o rabo sempre na pose do guia (física zerada a cada
-    // quadro); a diferença entre as duas é só o atraso da física
-    const [d, g] = [0, 1].map(() => withSeed(7, () => createDogV2(kind)));
-    const tipInHips = (dog) => {
-      dog.object.updateMatrixWorld(true);
-      const b = (n) => dog.bones.find((x) => x.name === n);
-      return b('hips').worldToLocal(b('tail4').getWorldPosition(new THREE.Vector3()));
-    };
+  const tipInHips = (dog) => {
+    dog.object.updateMatrixWorld(true);
+    const b = (n) => dog.bones.find((x) => x.name === n);
+    return b('hips').worldToLocal(b('tail4').getWorldPosition(new THREE.Vector3()));
+  };
+  const still = { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } };
+  /** O roteiro (parada, pulo com meia-volta, parada) com a mesma semente: a ponta do rabo em cada quadro. */
+  const run = (kind, physics) => withSeed(7, () => {
+    const dog = createDogV2(kind);
+    const out = [];
     const step = (anim, yaw = 0) => {
-      for (const dog of [d, g]) {
-        dog.object.rotation.y += yaw;
-        if (dog === g) dog.physics.reset();
-        dog.update(1 / 60, anim);
-      }
-      return tipInHips(d).distanceTo(tipInHips(g));
+      dog.object.rotation.y += yaw;
+      if (!physics) dog.physics.reset(); // sem física: a correntinha vai direto para a pose do guia
+      dog.update(1 / 60, anim);
+      out.push(tipInHips(dog));
     };
-    const still = { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } };
     step({ speed: 0, action: 'sniff' });
-    let restGap = 0;
-    for (let i = 0; i < 150; i++) restGap = step(still);
-    assert.ok(restGap < 0.015, `${kind}: parado, o rabo fica na pose (${(restGap * 1000).toFixed(1)} mm)`);
-    // pulo e meia-volta rápida: atrasa um tiquinho (firme: nada de rabo mole) e volta
-    let lag = 0;
+    for (let i = 0; i < 150; i++) step(still);
     for (let f = 0; f <= 40; f++) {
       const k = f / 25;
-      lag = Math.max(lag, step(k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still, f < 20 ? 0.06 : 0));
+      step(k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still, f < 20 ? 0.06 : 0);
     }
-    let back = 0;
-    for (let i = 0; i < 150; i++) back = step(still);
+    for (let i = 0; i < 150; i++) step(still);
+    return { dog, out };
+  });
+  for (const kind of KINDS) {
+    // a diferença entre a dog com a física e a sem física (mesmos sorteios) é só o atraso da física
+    const { dog: d, out: a } = run(kind, true);
+    const { out: b } = run(kind, false);
+    const gap = a.map((p, i) => p.distanceTo(b[i]));
+    const restGap = gap[150];
+    const lag = Math.max(...gap.slice(151, 192));
+    const back = gap[gap.length - 1];
+    assert.ok(restGap < 0.015, `${kind}: parado, o rabo fica na pose (${(restGap * 1000).toFixed(1)} mm)`);
     assert.ok(lag > 0.002 && lag < 0.045, `${kind}: no pulo e no giro o rabo atrasa só um pouco (${(lag * 1000).toFixed(1)} mm)`);
     assert.ok(back < 0.004, `${kind}: o rabo volta à pose (${(back * 1000).toFixed(1)} mm)`);
     // rolando: as juntas do rabo ficam acima do chão
