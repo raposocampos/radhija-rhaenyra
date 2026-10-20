@@ -176,6 +176,7 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     };
   });
   const byCol = new Map(pigs.map((P) => [P.id, P]));
+  const pigIds = new Set(pigs.map((P) => P.id));
 
   const S = {
     t: 0, wantOpen: false, released: false, recall: false, bumps: 0, knocks: 0, nextFood: 1, eaten: 0, done: 0, errors: 0,
@@ -378,16 +379,27 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
       S.doorT = S.t;
     }
   }
-  /** Espera a vez: parado, olhando para a porteira; colado no vão, recua devagar (para longe do meio dela). */
+  /**
+   * Espera a vez: parado, olhando para a porteira. Abre caminho para quem tem a vez quando ele vem passando (o corpo de
+   * quem espera não pode ficar no caminho dele); colado no vão, recua devagar (para longe do meio dela).
+   */
   function waitDoor(P, dt, ctrls) {
     faceDir(P, gateMid.x - P.x, gateMid.z - P.z, dt, 2);
-    if (toDoor(P) < 0.4) {
-      let bx = P.x - gateMid.x, bz = P.z - gateMid.z;
+    const o = S.doorPig != null ? pigs[S.doorPig] : null;
+    let bx = 0, bz = 0;
+    if (o && o !== P && Math.hypot(o.x - P.x, o.z - P.z) < r * 2 + 0.2) {
+      bx = P.x - o.x;
+      bz = P.z - o.z;
+    } else if (toDoor(P) < 0.4) {
+      bx = P.x - gateMid.x;
+      bz = P.z - gateMid.z;
       if (Math.hypot(bx, bz) < 1e-3) {
         const s = inPen(P.x, P.z) ? door.in : door.out;
         bx = s.x - gateMid.x;
         bz = s.z - gateMid.z;
       }
+    }
+    if (bx || bz) {
       const l = Math.hypot(bx, bz) || 1, step = 0.3 * dt;
       const res = world.move(P.x, P.z, (bx / l) * step, (bz / l) * step, r, 'large', { ignore: P.ignore });
       P.x = res.x;
@@ -455,9 +467,10 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     P.side = -(P.side || (P.i % 2 ? -1 : 1));
     const opts = [P.side, -P.side].map((s) => ({ x: P.x - uz * 0.6 * s + ux * 0.1, z: P.z + ux * 0.6 * s + uz * 0.1 }));
     opts.push({ x: P.x - ux * 0.45, z: P.z - uz * 0.45 });
+    // os outros porcos não contam (eles saem da frente): só cercas, paredes e a folha da porteira
     for (const q of opts) {
-      if (world.overlaps(q.x, q.z, r, 'large', { ignore: P.ignore })) continue;
-      if (!world.segmentClear(P.x, P.z, q.x, q.z, r * 0.8, 'large', { ignore: P.ignore })) continue;
+      if (world.overlaps(q.x, q.z, r, 'large', { ignore: pigIds })) continue;
+      if (!world.segmentClear(P.x, P.z, q.x, q.z, r * 0.8, 'large', { ignore: pigIds })) continue;
       if (released(P) && offArea(q.x, q.z) > 0) continue;
       return q;
     }
