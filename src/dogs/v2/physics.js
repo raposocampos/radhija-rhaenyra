@@ -107,8 +107,11 @@ export function createChainPhysics({ skel2, chains: defs }) {
           e.v[k].subVectors(e.p[k], _x).divideScalar(h);
         }
       }
-      // o que aparece: a pose mais `follow` do desvio simulado
-      for (let k = 0; k <= n; k++) e.q[k].copy(e.t[k]).lerp(e.p[k], e.follow);
+      // o que aparece: a pose mais `follow` do desvio simulado (também acima do chão)
+      for (let k = 0; k <= n; k++) {
+        e.q[k].copy(e.t[k]).lerp(e.p[k], e.follow);
+        if (k > 0 && e.q[k].y < floorY + e.floorPad) e.q[k].y = floorY + e.floorPad;
+      }
       // rotações: cada gomo aponta para o ponto seguinte (sem mudar a torção da pose)
       _qp.copy(Q[e.parent]);
       for (let k = 0; k < n; k++) {
