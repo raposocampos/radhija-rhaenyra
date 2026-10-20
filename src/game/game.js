@@ -103,7 +103,7 @@ export function createGame({ engine, dogs, levels, params }) {
   const lookVecs = {};
   const pressVecs = { radhija: new THREE.Vector3(), rhaenyra: new THREE.Vector3() };
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, turnTo: 0, reach: false, hop: false, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, celebrateLoop: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, turnTo: 0, reach: false, hop: false, back: false, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, celebrateLoop: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -571,7 +571,17 @@ export function createGame({ engine, dogs, levels, params }) {
     locks[activeDog] = lock;
     let standing = false;
     if (lock) {
-      intent = { dx: 0, dz: 0, speed: 0, faceX: lock.faceX, faceZ: lock.faceZ };
+      // a trava pode pedir um passo (lock.move: indo até a corda ou o botão), com o controle e a colisão de sempre
+      const mv = lock.move;
+      intent = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, back: !!mv?.back, faceX: lock.faceX, faceZ: lock.faceZ };
+      // segurando uma corda com a boca (lock.pull): o direcional para longe dela puxa (de ré, de frente para ela); para
+      // perto, dá folga
+      const P = lock.pull;
+      if (P && Lm > 1e-4) {
+        const out = (dx * P.ax + dz * P.az) * mag;
+        if (out > 0.2) intent = { dx: P.ax, dz: P.az, speed: P.speed * Math.min(1, out), back: true, faceX: lock.faceX, faceZ: lock.faceZ };
+        else if (out < -0.2) intent = { dx: -P.ax, dz: -P.az, speed: P.speed * Math.min(1, -out), faceX: lock.faceX, faceZ: lock.faceZ };
+      }
       action = lock.action;
       input.consumeShift();
       standing = shove.frame(A, C, { held: false });
@@ -704,7 +714,7 @@ export function createGame({ engine, dogs, levels, params }) {
     if (compLock) {
       // uma trava pode pedir um passo (compLock.move: a irmã dando espaço no cocô), com colisão normal
       const mv = compLock.move;
-      ci = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
+      ci = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, back: !!mv?.back, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
       resetBrain(brains[compName]);
     } else if (licked) {
       // Recebendo o Lambe-Lambe: para onde está, vira a cabeça um pouco para a irmã (sem esconder o lugar
@@ -749,7 +759,7 @@ export function createGame({ engine, dogs, levels, params }) {
     anims[compName].lickY = -1;
 
     // Interações (E: interagir ou latir · X do controle: latir sempre)
-    if (input.consume('KeyE') && !lock && !A.shove) {
+    if (input.consume('KeyE') && (!lock || lock.letGo) && !A.shove) {
       if (!puzzle.interact(A) && !extras.interact(A, puzzle.navFlags?.() || {}, !bafo.aiming && !(bafo.blowT > 0) && !lick.on)) bark(A);
     }
     if (input.consume('Bark') && !lock) bark(A);
@@ -938,6 +948,7 @@ export function createGame({ engine, dogs, levels, params }) {
       an.turnTo = locks[n]?.drive || c.shove || c.wallDur > 0 ? 0 : Math.atan2(Math.sin(tt), Math.cos(tt));
       an.reach = !!locks[n]?.reach;
       an.hop = c.jumpT > 0 && c.hopH > 0; // o pulinho por cima da borda da caminha (patas encolhidas)
+      an.back = c.v < -0.02; // de ré (puxando uma corda): as patas andam ao contrário
       // mordendo uma corda (lock.bite), a boca fecha nela como num item
       an.carrying = carries(n) || !!locks[n]?.bite;
       an.poopK = extras ? extras.poopK(n) : -1;

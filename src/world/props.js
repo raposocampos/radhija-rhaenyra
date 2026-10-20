@@ -168,11 +168,19 @@ export function createProps(engine, layout) {
   const ropeRoot = new THREE.Group();
   ropeRoot.name = 'cordinha';
   scene.add(ropeRoot);
-  const A = new THREE.Vector3(ROPE.anchor.x, ROPE.anchor.y, ROPE.anchor.z);
+  // presa no trinco, na ponta do portão: quando ele abre, a argola (e a corda) vai junto
+  const A0 = new THREE.Vector3(ROPE.anchor.x, ROPE.anchor.y, ROPE.anchor.z);
+  const A = A0.clone();
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 8, 16), brassMat());
-  ring.position.copy(A).add(new THREE.Vector3(-0.012, 0.0, 0));
-  ring.rotation.y = Math.PI / 2;
   ropeRoot.add(ring);
+  function placeAnchor() {
+    const H = FENCE.gate.hinge, a = FENCE.gate.openYaw * gate.t;
+    const ox = A0.x - H.x, oz = A0.z - H.z, c = Math.cos(a), sn = Math.sin(a);
+    A.set(H.x + ox * c + oz * sn, A0.y, H.z - ox * sn + oz * c);
+    ring.position.set(A.x - 0.012 * c, A.y, A.z + 0.012 * sn);
+    ring.rotation.y = Math.PI / 2 + a;
+  }
+  placeAnchor();
   const braid = braidTexture();
   braid.repeat.set(1, 5);
   const ropeMat = new THREE.MeshStandardMaterial({ map: braid, roughness: 0.85, bumpMap: braid, bumpScale: 2 });
@@ -222,6 +230,7 @@ export function createProps(engine, layout) {
   };
   const _end = new THREE.Vector3(), _mid = new THREE.Vector3(), _p = new THREE.Vector3(), _bm = new THREE.Vector3(), _q = new THREE.Vector3();
   function updateRope(t) {
+    placeAnchor();
     const k = rope.t;
     const swayX = Math.sin(t * 1.3) * 0.025 * (1 - k), swayZ = Math.sin(t * 0.9 + 1) * 0.018 * (1 - k);
     // ponta: pendurada (repouso) → puxada para baixo e para fora (leste/sul, onde a dog fica)

@@ -1,6 +1,7 @@
-// Interações de verdade (retornos do usuário): a pata aperta o botão do ventilador, a boca morde as cordinhas (fase 1
-// e fase 10) e puxa, a cabeça vai na frente na curva e o pulo amortece no pouso. Modelos novos, cenário real e a
-// colisão da fase (com a cabeça que desvia ligada), como no jogo.
+// Interações de verdade (retornos do usuário): ela anda até o botão do ventilador e aperta com a pata; anda até as
+// cordinhas (fase 1 e fase 10), morde e o jogador puxa de ré; a cabeça vai na frente na curva e o pulo amortece no
+// pouso. Modelos novos, cenário real e a colisão da fase (com a cabeça que desvia ligada), como no jogo: a trava pede
+// o passo (move) ou o puxão (pull) e o controle de sempre move a dog (steer + integrate).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -9,7 +10,7 @@ import { buildLevelWorld } from './helpers/worldBuild.mjs';
 import { withSeed, withSeedAsync } from './helpers/seeded.mjs';
 import { LEVELS } from '../src/levels/index.js';
 import { createCollisionWorld } from '../src/game/collision.js';
-import { createController, placeController, steer } from '../src/game/dogController.js';
+import { createController, placeController, steer, integrate } from '../src/game/dogController.js';
 import { withStart } from '../src/dogs/config.js';
 import { createMouthTug, planStep, driveStep } from '../src/game/mechanics/mouthTug.js';
 
@@ -38,6 +39,14 @@ async function rig(kind, start, world) {
   return { d, c, frame, bone };
 }
 
+/** Um quadro do núcleo com a trava `L` (game.js): o passo pedido, o puxão de ré (back) ou parada de frente. */
+function coreStep(c, world, L, back = false) {
+  let intent = { dx: L?.move?.dx ?? 0, dz: L?.move?.dz ?? 0, speed: L?.move?.speed ?? 0, back: !!L?.move?.back, faceX: L?.faceX, faceZ: L?.faceZ };
+  if (back && L?.pull) intent = { dx: L.pull.ax, dz: L.pull.az, speed: L.pull.speed, back: true, faceX: L.faceX, faceZ: L.faceZ };
+  steer(c, DT, intent);
+  integrate(c, DT, world);
+}
+
 test('botão do ventilador (modelo novo): ela vai até a frente do botão e a pata aperta em cima dele', async () => {
   const L = level('fase9').layout;
   const fan = L.FAN.start;
@@ -48,9 +57,22 @@ test('botão do ventilador (modelo novo): ela vai até a frente do botão e a pa
       const world = createCollisionWorld(L);
       world.addDynamic({ id: 'ventilador', kind: 'crate', shape: 'box', x: fan.x, z: fan.z, hx: L.FAN.half, hz: L.FAN.half, height: L.FAN.height });
       const { c, frame, bone } = await rig(kind, start, world);
-      // o passinho da fase 9 (pressFrom): na frente do botão, pelo sul, de frente para ele
+      // o passinho da fase 9 (pressFrom): ela anda até a frente do botão, pelo sul, e vira para ele
       const step = planStep(c, btn, c.cfg.body.front + 0.17, world, { yaw: Math.PI });
-      if (step) while (!driveStep(c, step, DT, world)) frame({ reach: true });
+      let walked = 0, slid = 0, n = 0;
+      if (step) {
+        for (; n < 200; n++) {
+          const px = c.x, pz = c.z;
+          coreStep(c, world, { faceX: btn.x, faceZ: btn.z, move: step.move });
+          if (driveStep(c, step, DT)) break;
+          frame({ reach: !step.back });
+          walked += Math.hypot(c.x - px, c.z - pz);
+          // andou com as patas paradas (o "ímã")?
+          if (Math.hypot(c.x - px, c.z - pz) > 0.004 && c.animSpeed < 0.05) slid++;
+        }
+      }
+      if (n >= 200) bad.push(`${kind}: não chegou à frente do botão`);
+      if (slid > 2) bad.push(`${kind}: deslizou ${slid} quadros sem andar`);
       const far = Math.hypot(c.x - btn.x, c.z - btn.z);
       if (Math.abs(c.x - btn.x) > 0.03 || c.z < btn.z || far > 0.46) bad.push(`${kind}: parou em (${c.x.toFixed(2)}, ${c.z.toFixed(2)}), a ${cm(far)} cm do botão`);
       let best = Infinity;
@@ -66,8 +88,8 @@ test('botão do ventilador (modelo novo): ela vai até a frente do botão e a pa
         }
       }
       if (best > 0.02) bad.push(`${kind}: a pata chegou só a ${cm(best)} cm do botão`);
-      // depois do aperto, as quatro patas de volta no chão
-      for (let i = 0; i < 40; i++) frame();
+      // depois do aperto, as quatro patas de volta no chão (um passinho de ajuste pode estar no meio: espera ele)
+      for (let i = 0; i < 90; i++) frame();
       const high = ['FLp', 'FRp', 'HLp', 'HRp'].map((n) => bone(n).getWorldPosition(p).y).filter((y) => y > 0.045);
       if (high.length) bad.push(`${kind}: patas no ar depois do aperto (${high.map(cm).join(', ')} cm)`);
     });
@@ -76,29 +98,43 @@ test('botão do ventilador (modelo novo): ela vai até a frente do botão e a pa
 });
 
 /**
- * A dog puxa uma corda de verdade com a boca: o passinho, a mordida (o ponto mordido segue a boca) e a soltura.
- * → { gap (folga máx boca → ponto mordido), first (boca → ponto parado, ao morder), moved (passinho, m), back (a corda
- *     depois de solta: distância do ponto mordido ao de repouso) }
+ * A dog puxa uma corda de verdade com a boca: anda até ela, morde (o ponto mordido segue a boca), o jogador puxa de ré
+ * até `S.pullTo` m e ela solta.
+ * → { gap (folga máx boca → ponto mordido), first (boca → ponto parado, ao morder), pulled (m), back (a corda depois de
+ *     solta: distância do ponto mordido ao de repouso), inside (quadros com a alça dentro do que não pode), backSteps
+ *     (passos das patas puxando de ré), slid (quadros andando de ré com as patas paradas) }
  */
 async function pull(fixture, world, kind, start, S) {
   const { d, c, frame } = await rig(kind, start, world);
   fixture.root.add(d.object);
   const tug = createMouthTug({ dogs: { [kind]: d }, ctrls: { [kind]: c }, world });
   S.prop.setGrip(tug.grip);
-  tug.start(c, { bite: S.bite, anchor: S.anchor, len: S.len, dur: S.dur, face: S.face });
+  tug.start(c, { bite: S.bite, anchor: S.anchor, len: S.len, face: S.face });
   const m = new THREE.Vector3();
-  let gap = 0, first = -1, t = 0, inside = 0;
-  const x0 = c.x, z0 = c.z;
-  while (tug.busy() && t < 3) {
+  let gap = 0, first = -1, t = 0, inside = 0, pulled = 0, backSteps = 0, slid = 0;
+  const swings = new Map();
+  while (tug.busy() && t < 6) {
+    const L = tug.lockFor(kind);
+    // segurando: puxa de ré até pullTo e solta (o E)
+    const pulling = tug.holding() && tug.pulled() < S.pullTo;
+    if (tug.holding() && !pulling) tug.release();
+    coreStep(c, world, L, pulling);
     tug.update(DT);
     t += DT;
-    const L = tug.lockFor(kind);
-    if (!L) break;
-    if (!L.drive) steer(c, DT, { dx: 0, dz: 0, speed: 0, faceX: L.faceX, faceZ: L.faceZ });
-    const pt = tug.pullT();
-    if (pt >= 0) S.onPull(pt);
-    frame({ action: L.action, carrying: !!L.bite, lookAt: L.drive ? S.bite : S.look, reach: !!L.reach });
+    pulled = Math.max(pulled, tug.pulled());
+    S.onPull(tug.pulled(), tug);
+    frame({ action: L?.action ?? 'none', carrying: !!L?.bite, lookAt: tug.stepping() ? S.bite : S.look, reach: !!L?.reach, back: c.v < -0.02 });
     fixture.built.update(DT, t);
+    if (c.v < -0.1) {
+      // de ré: as patas dão passos (cada pata sai do chão e volta)
+      for (const [i, Lg] of d.locomotion.legs.entries()) {
+        const up = d.bones.find((b) => b.name === ['FLp', 'FRp', 'HLp', 'HRp'][i]).getWorldPosition(m).y > 0.035;
+        if (up && !swings.get(i)) backSteps++;
+        swings.set(i, up);
+        void Lg;
+      }
+      if (c.animSpeed < 0.05) slid++;
+    }
     const g = tug.grip();
     if (!g) continue;
     d.mouthSocket.getWorldPosition(m);
@@ -106,15 +142,16 @@ async function pull(fixture, world, kind, start, S) {
     if (g.k > 0.9) gap = Math.max(gap, m.distanceTo(g.pos));
     if (g.k > 0.5 && S.inside?.(S.held())) inside++;
   }
-  // solta: a corda volta para o lugar dela
-  S.onPull(9);
+  // soltou: a corda volta para o lugar dela
+  S.onPull(0);
   for (let i = 0; i < 40; i++) {
     t += DT;
+    coreStep(c, world, null);
     frame();
     fixture.built.update(DT, t);
   }
   const h = S.held();
-  return { gap, first, moved: Math.hypot(c.x - x0, c.z - z0), back: Math.hypot(h.x - S.rest.x, h.y - S.rest.y, h.z - S.rest.z), inside, biting: first >= 0 };
+  return { gap, first, pulled, back: Math.hypot(h.x - S.rest.x, h.y - S.rest.y, h.z - S.rest.z), inside, biting: first >= 0, backSteps, slid };
 }
 
 test('cordinha da fase 1 (modelo novo): ela chega na corda, morde, a corda vai junto com a boca e, no fim, volta', async (t) => {
@@ -122,21 +159,31 @@ test('cordinha da fase 1 (modelo novo): ela chega na corda, morde, a corda vai j
   const L = def.layout;
   const fixture = await buildLevelWorld(def);
   t.after(() => fixture.dispose());
-  const { rope } = fixture.built.props;
+  const { rope, gate } = fixture.built.props;
   const world = createCollisionWorld(L);
   const bad = [];
   for (const [kind, start] of [['radhija', { x: 1.5, z: 0.9, yaw: 0 }], ['radhija', { x: 1.6, z: 0.6, yaw: -0.7 }], ['rhaenyra', { x: 1.5, z: 0.9, yaw: 0 }]]) {
     await withSeedAsync(7, async () => {
       const rest = rope.end.clone();
       const r = await pull(fixture, world, kind, start, {
-        prop: rope, bite: rope.bitePoint(), anchor: L.ROPE.anchor, len: 0.52, dur: 0.7, face: L.ROPE.anchor,
+        prop: rope, bite: rope.bitePoint(), anchor: L.ROPE.anchor, len: 0.8, face: L.ROPE.anchor, pullTo: 0.42,
         look: { x: L.ROPE.anchor.x, y: L.ROPE.anchor.y - 0.15, z: L.ROPE.anchor.z },
-        onPull: (pt) => rope.setTug(pt < 0.6 ? Math.sin((Math.PI * pt) / 0.6) : 0),
+        // como a fase 1: o trinco levanta e o portão vem junto (a cordinha presa na ponta dele)
+        onPull: (p, tug) => {
+          rope.setTug(Math.min(1, p / 0.08));
+          const k = 0.28 * Math.min(1, Math.max(0, (p - 0.08) / 0.34)) ** 1;
+          gate.setOpen(k);
+          const H = L.FENCE.gate.hinge, a = L.FENCE.gate.openYaw * k, ox = L.ROPE.anchor.x - H.x, oz = L.ROPE.anchor.z - H.z;
+          tug?.setAnchor(H.x + ox * Math.cos(a) + oz * Math.sin(a), L.ROPE.anchor.y, H.z - ox * Math.sin(a) + oz * Math.cos(a));
+        },
         held: () => rope.end, rest,
       });
       if (!r.biting) bad.push(`${kind}: não mordeu`);
-      if (r.first > 0.06) bad.push(`${kind}: a boca chegou a ${cm(r.first)} cm da corda`);
+      if (r.first > 0.05) bad.push(`${kind}: a boca chegou a ${cm(r.first)} cm da corda`);
       if (r.gap > 0.01) bad.push(`${kind}: a corda ficou ${cm(r.gap)} cm longe da boca`);
+      if (r.pulled < 0.41) bad.push(`${kind}: puxou só ${cm(r.pulled)} cm`);
+      if (r.backSteps < 4) bad.push(`${kind}: puxando de ré, só ${r.backSteps} passos das patas`);
+      if (r.slid > 3) bad.push(`${kind}: puxando de ré, ${r.slid} quadros com as patas paradas`);
       if (r.back > 0.04) bad.push(`${kind}: a corda não voltou (${cm(r.back)} cm do lugar)`);
     });
   }
@@ -167,19 +214,20 @@ test('cordinhas da fase 10 (modelo novo): o puxador do portãozinho e a alça do
       const b = prop.bitePoint(), a = prop.anchor;
       const rest = gen ? handleAt(generator.handle) : handleAt(cord.handle);
       const r = await pull(fixture, world, kind, start, {
-        prop, bite: b, anchor: a, len: Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) + (gen ? 0.3 : 0.2), dur: gen ? G.pull : 0.75,
+        prop, bite: b, anchor: a, len: Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) + (gen ? 0.4 : 0.53), pullTo: gen ? 0.24 : 0.38,
         face: gen ? { x: G.x, z: G.z } : { x: L.CORD.x, z: L.CORD.z },
         look: gen ? { x: G.x, y: G.cord.y, z: G.z } : { x: L.CORD.x, y: 0.75, z: L.CORD.z },
-        onPull: (pt) => (gen ? generator.setPull(pt < G.pull ? Math.sin((Math.PI * pt) / G.pull) : 0) : cord.setTug(pt < 0.7 ? Math.sin((Math.PI * pt) / 0.7) : 0)),
+        onPull: (p) => (gen ? null : cord.setTug(Math.min(1, p / 0.06))),
         held: () => handleAt(prop.handle), rest,
         // a alça dentro da caixa do gerador
         inside: gen ? (p) => p.x < G.x + G.hx - 0.005 && Math.abs(p.z - G.z) < G.hz && p.y < G.h : null,
       });
       const tag = `${kind} (${what})`;
       if (!r.biting) bad.push(`${tag}: não mordeu`);
-      if (r.first > 0.06) bad.push(`${tag}: a boca chegou a ${cm(r.first)} cm da cordinha`);
+      if (r.first > 0.05) bad.push(`${tag}: a boca chegou a ${cm(r.first)} cm da cordinha`);
       if (r.gap > 0.01) bad.push(`${tag}: a cordinha ficou ${cm(r.gap)} cm longe da boca`);
       if (r.inside) bad.push(`${tag}: a alça entrou no gerador (${r.inside} quadros)`);
+      if (r.pulled < (gen ? 0.23 : 0.37)) bad.push(`${tag}: puxou só ${cm(r.pulled)} cm`);
       if (r.back > 0.04) bad.push(`${tag}: não voltou (${cm(r.back)} cm do lugar)`);
     });
   }
@@ -249,7 +297,7 @@ test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e
   }
 });
 
-test('corda na boca: arrancando, a arrancada acaba e ela vai até a corda; no ar, nada de passinho (o pulo segue) e sem morder', () => {
+test('corda na boca: arrancando, a arrancada acaba e ela anda até a corda, morde e puxa de ré; no ar, nada (o pulo segue)', () => {
   // desenho mínimo: a boca 36 cm à frente e 34 cm acima do meio
   const fake = () => {
     const object = new THREE.Group();
@@ -265,21 +313,30 @@ test('corda na boca: arrancando, a arrancada acaba e ela vai até a corda; no ar
   sync();
   const tug = createMouthTug({ dogs: { radhija: d }, ctrls: { radhija: c }, world: null });
   const bite = { x: 0, y: 0.4, z: 0.8 };
-  // arrancando: a arrancada acaba, ela dá o passinho e morde
+  // arrancando: a arrancada acaba, ela anda até a corda e morde
   c.dashT = 0.2;
-  assert.ok(tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5, dur: 0.7 }) > 0, 'passinho até a corda');
+  tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5 });
+  assert.equal(tug.phase(), 'step', 'anda até a corda');
   assert.equal(c.dashT, 0, 'a arrancada acabou');
-  for (let i = 0; i < 60 && tug.stepping(); i++) { tug.update(DT); sync(); }
-  for (let i = 0; i < 12; i++) { tug.update(DT); sync(); }
+  const world = createCollisionWorld({ STATIC_COLLIDERS: [], WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } } });
+  for (let i = 0; i < 200 && tug.stepping(); i++) { coreStep(c, world, tug.lockFor('radhija')); tug.update(DT); sync(); }
+  for (let i = 0; i < 12; i++) { coreStep(c, world, tug.lockFor('radhija')); tug.update(DT); sync(); }
   assert.ok(tug.biting(), 'chegou na corda e mordeu');
-  assert.ok(Math.abs(c.z + 0.36 - bite.z) < 0.03, `a boca na corda (meio em z ${c.z.toFixed(3)})`);
-  tug.reset();
-  // no ar: sem passinho (a fase não a move; o pulo segue) e sem morder
+  assert.ok(Math.abs(c.z + 0.36 - bite.z) < 0.04, `a boca na corda (meio em z ${c.z.toFixed(3)})`);
+  // segurando, o direcional para trás puxa de ré (de frente para a corda); o E (release) solta
+  assert.equal(tug.phase(), 'hold');
+  const z0 = c.z, yaw0 = c.yaw;
+  for (let i = 0; i < 30; i++) { coreStep(c, world, tug.lockFor('radhija'), true); tug.update(DT); sync(); }
+  assert.ok(c.z < z0 - 0.1 && Math.abs(wrap(c.yaw - yaw0)) < 0.15, `puxou de ré, de frente para a corda (z ${z0.toFixed(2)} → ${c.z.toFixed(2)})`);
+  assert.ok(tug.pulled() > 0.1, `puxou ${cm(tug.pulled())} cm`);
+  tug.release();
+  for (let i = 0; i < 20; i++) tug.update(DT);
+  assert.equal(tug.busy(), false, 'soltou');
+  // no ar: nada de passinho (o pulo segue) e sem morder
   placeController(c, 0, 0, 0);
   sync();
   c.jumpT = 0.2;
-  assert.equal(tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5, dur: 0.7 }), 0, 'no ar, nada de passinho');
-  assert.equal(tug.lockFor('radhija').drive, undefined, 'a trava não move a dog');
-  for (let i = 0; i < 12; i++) tug.update(DT);
-  assert.equal(tug.biting(), false, 'no ar, não morde');
+  tug.start(c, { bite, anchor: { x: 0, y: 0.8, z: 0.8 }, len: 0.5 });
+  assert.equal(tug.phase(), 'miss', 'no ar, não vai e não morde');
+  assert.equal(tug.lockFor('radhija'), null, 'a trava não segura a dog');
 });

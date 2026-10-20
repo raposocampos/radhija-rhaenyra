@@ -24,10 +24,20 @@ test('fase 1: partida completa (abertura → cordinha → carrinho → cenoura �
   assert.ok(i.dogs.rhaenyra.x < 1.0, `Rhaenyra no oeste (x=${i.dogs.rhaenyra.x})`);
   assert.equal(i.dogs.rhaenyra.mode, 'wait');
 
-  // Cordinha → portão abre: ela vai até a corda (passinho), morde e puxa.
+  // Cordinha → portão abre: ela anda até a corda, morde e segura; puxando de ré (para longe do portão), ele vem junto
+  // e, puxado o bastante, ela solta e ele termina de abrir.
   h.tap('KeyE');
   assert.ok(h.info().rope.who === 'radhija', 'indo até a cordinha');
-  assert.ok(h.run(0.6, { until: (x) => x.dogs.radhija.action === 'tug' }), 'puxando a cordinha');
+  assert.ok(h.run(2, { until: (x) => x.rope.phase === 'hold' }), 'mordeu e segura a cordinha');
+  h.run(0.5);
+  assert.equal(h.info().dogs.radhija.action, 'tug');
+  assert.equal(h.info().prompt, 'Soltar a cordinha');
+  assert.equal(h.info().stage, 'east', 'parada, segurando, o portão não abre');
+  h.hold([1, 0]); // para longe do portão (o trinco fica a oeste dela)
+  assert.ok(h.run(3, { until: (x) => x.gate.t > 0.05 }), 'puxando, o portão vem junto');
+  assert.ok(h.run(3, { until: (x) => x.stage === 'gateOpen' }), 'puxou o bastante');
+  h.hold(null);
+  assert.equal(h.log('rope:tug').length, 1);
   h.run(2.2);
   i = h.info();
   assert.equal(i.stage, 'gateOpen');

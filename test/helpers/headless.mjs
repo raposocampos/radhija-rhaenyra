@@ -57,6 +57,8 @@ export function stubDog(name) {
   object.name = name;
   const mouthSocket = new THREE.Group();
   mouthSocket.name = `${name}:boca`;
+  // na frente do focinho, como nos modelos (a corda na boca mede a distância dela até o que ela morde)
+  mouthSocket.position.set(0, 0.32, 0.32);
   object.add(mouthSocket);
   return {
     object,

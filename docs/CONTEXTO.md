@@ -1,40 +1,52 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55: a pata aperta o botão do ventilador, as
-cordinhas das fases 1 e 10 vão na boca; a cabeça vai na frente nas curvas e o pulo ficou mais solto; a etapa 4 dos
-modelos, #48, e o balde da fase 10, #54, estão no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
-antes de editar.
+Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55, 2ª rodada: ela anda até a coisa, o
+jogador puxa as cordas de ré, o portãozinho da fase 10 abre para o quintal, o gerador pega no segundo puxão, o pulo
+encolhido e o corpo com inércia nas curvas; #48 e #54 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`)
+## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`, PR #55)
 
 - Pedidos do usuário (2026-10-20, ao aprovar a prévia do #48): "o botão do ventilador, as dogs poderiam de fato
   apertar o botão"; "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e
   o realismo"; "dar um pouco mais de molejo, pouca coisa: quando andar e virar, a cabeça também vira, o tronco… ficar
   mais natural"; e "deixa o pulo mais fluido, hoje está muito travado e duro, sem deixar aquele bug de quando
   aterrissar o dog fica com as patas presas".
-- Feito (PR #55, branch sincronizado com o main `3bd1b7b`, que tem o #54):
-  - Botão do ventilador (fase 9): no E ela dá um passinho até a frente do botão (pelo sul da base, de onde a pata
-    alcança; de trás do ventilador não há prompt) e aperta com a pata do lado dele (`action: 'press'`, `lock.press`,
-    `anim.pressAt`/`pressK` em `dogAnimation.js`; o corpo vai mais para a frente se o botão está longe). O ventilador
-    liga no aperto (`PRESS.hit`). Medido com o cenário e a colisão: a pata chega a menos de 1 cm do alto do botão.
-  - Cordinhas na boca (`src/game/mechanics/mouthTug.js`): fase 1 (a do portão), fase 10 (a do portãozinho e a alça do
-    gerador). No E: passinho até a corda (`planStep`/`driveStep`, com colisão; com algo na boca ou sem chegar, puxa
-    como antes), mordida (o ponto mordido vai para a boca, pose de carregar `rope`, `lock.bite`), puxão com a corda
-    presa à boca (o prop desenha a corda até a boca, `setGrip(tug.grip)`, no máximo `len` do ponto onde ela prende) e
-    soltura (volta ao lugar). O puxão e os eventos (`rope:tug`, `generator:pull`) começam ao chegar na corda.
-    Indo de propósito até a corda ou o botão (`lock.reach`), a cabeça que desvia fica desligada (`v2/head.js`).
-  - Curva: o controle guarda o rumo pedido (`c.wantYaw`) e o núcleo manda `anim.turnTo`; a cabeça vai na frente (antes
-    ela chegava atrasada, só pelo giro amortecido), o tronco vem atrás com mola, e a inclinação e o "molejo" de
-    arrancar e frear também são molas (passam um tiquinho e assentam).
-  - Pulo: decolando, as traseiras ainda empurram o chão; no meio, as patas encolhidas; descendo, as dianteiras
-    esticam e pousam primeiro; o pouso afunda e volta com mola (mais forte quanto mais alto o pulo). O conserto das
-    patas presas (#48) continua: teste "pousando do pulo… as patas voltam a andar já" verde.
-  - Testes: `test/interacoes.test.mjs` (modelos novos, cenário real e colisão), fases 1, 9 e 10 ajustadas ao passinho.
-    Capturas novas no E2E: `13b-cordinha-na-boca` (jogo), `05b-cordinha-na-boca` (quintal), `02b-pata-no-botao`
-    (biblioteca).
-- Validação: CI e E2E (`todas`) do head sincronizado: conferir no PR #55 pelo commit (os do `9077833`, antes do #54,
-  não valem). No PC, diagnósticos leves em Node e testes de um arquivo durante o trabalho; a bateria fica no CI.
-- Próximo passo: prévia para o usuário testar; aprovação explícita antes de integrar.
+- 1ª prévia (`637fcbe`, CI `39507380599` e E2E `todas` `39507375922` verdes), retorno do usuário: "não senti o
+  molejo"; o pulo "ainda está meio duro, pulando reto, esticado"; no botão, "o cachorro é meio que puxado para frente
+  do botão, como se tivesse sendo arrastado, ou como se tivesse um ímã"; e "nas cordas ficou ok, mas poderia ser
+  melhor: o player puxar ela; pro gerador, puxar 2 vezes até ligar; e pros portões… o player controla o cachorro até
+  abrir. No caso da fase 10, abrir pro lado da corda talvez, sem que atrapalhe nada".
+- Feito (2ª rodada, sobre o main `3bd1b7b`):
+  - Ir até a coisa andando (`src/game/mechanics/mouthTug.js`, `planStep`/`driveStep`): a trava pede o passo
+    (`lock.move`) e o núcleo anda com o controle e a colisão de sempre (`game.js`); ela vira de frente e para; passou
+    um tiquinho do ponto, dá uns passinhos de ré (`intent.back` no `steer`). Antes era um deslize roteirizado.
+  - Puxar de ré: mordendo, a trava tem `pull` (o eixo, da corda para ela) e o direcional para longe puxa de ré, de
+    frente para a corda; para perto, dá folga; o E solta (`lock.letGo`). As patas andam ao contrário (`anim.back`,
+    `st.backK` no `dogAnimation.js`).
+  - Fase 1: a cordinha presa na ponta do portão (a argola gira junto, `world/props.js`); puxando, o trinco levanta
+    (8 cm) e o portão vem junto até 28%; puxou 42 cm, ela solta e ele termina de abrir no embalo; soltou antes, ele
+    volta. O brinquedo de corda deixa de ser colisor quando o portão abre.
+  - Fase 10: o portãozinho pende na face do lado do quintal e abre para lá, para o lado da cordinha (`layout.js`
+    `GATE`, `world/fences.js`); aberto, fica rente à cerca ao sul do vão (longe da gansa, da trepadeira e do painel;
+    a dog que puxa fica fora do giro e quem estiver no caminho dá um pulinho para fora, `sweepExit`). Puxando, o
+    ferrolho solta e ele vem junto até 30%; puxou 38 cm, termina de abrir. O gerador: puxou 24 cm, a cordinha corre e
+    o motor tenta; no primeiro puxão engasga (a cordinha recolhe, ela solta, dica "puxe de novo"), no segundo pega.
+  - Fase 9: ela anda até a frente do botão do ventilador e aperta com a pata (`lock.move`; a pata chega a menos de
+    1 cm do alto dele, com a colisão e a cabeça que desvia).
+  - Pulo encolhido: as dianteiras dobram já na decolagem, no meio as quatro dobradas (0,55–0,72 do comprimento de
+    pé) e as costas arredondadas; descendo, as dianteiras desdobram e pousam primeiro, as traseiras dobradas até o fim;
+    sem perna esticada para baixo.
+  - Molejo: o corpo tem inércia no giro (`st.dev`, movida pelas mudanças do giro, mola ω 13): andando e virando 90°, o
+    tronco fica até 11° atrás do corpo e, ao parar de virar, passa 6–7° e assenta em meio segundo; a cabeça vai na
+    frente. Girando parada, bem menos (a cabeça perto da parede não entra).
+  - Testes: `test/interacoes.test.mjs` (andar sem deslizar, a boca a até 5 cm da corda, a corda na boca puxando de ré
+    com passos das patas, o portão junto, a alça fora do gerador, a curva e o pulo), fases 1, 9 e 10 com o puxão de
+    ré e os dois puxões do gerador; E2E `playthrough`, `test-toque` (joystick), `test-quintal` e `capture-quintal`
+    puxando.
+- Validação: CI e E2E (`todas`) do commit desta rodada: conferir no PR #55. No PC, diagnósticos leves em Node e
+  testes de um arquivo durante o trabalho; a bateria fica no CI.
+- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar.
 
 ## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
 

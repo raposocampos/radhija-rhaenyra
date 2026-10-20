@@ -747,9 +747,9 @@ export function createPuzzle(ctx) {
   function stepPress(dt) {
     const P = S.press;
     if (!P) return;
-    // primeiro o passinho até a frente do botão (a fase move a dog)
+    // primeiro ela anda até a frente do botão e vira para ele (a trava pede o passo ao núcleo)
     if (P.step) {
-      if (driveStep(ctrls[P.who], P.step, dt, world)) P.step = null;
+      if (driveStep(ctrls[P.who], P.step, dt)) P.step = null;
       return;
     }
     P.t += dt;
@@ -911,8 +911,8 @@ export function createPuzzle(ctx) {
     const c = ctrls[name];
     if (S.press && S.press.who === name) {
       const b = fanButton();
-      // indo até o botão e apertando: de propósito (a cabeça não desvia do ventilador)
-      if (S.press.step) return { action: 'none', faceX: b.x, faceZ: b.z, drive: true, reach: true };
+      // indo até o botão (andando, com o controle de sempre) e apertando: de propósito (a cabeça não desvia do ventilador)
+      if (S.press.step) return { action: 'none', faceX: b.x, faceZ: b.z, move: S.press.step.move, reach: !S.press.step.back };
       return { action: 'press', faceX: b.x, faceZ: b.z, press: { ...b, k: Math.min(1, S.press.t / PRESS.dur) }, reach: true };
     }
     if (cl && name === 'radhija') {

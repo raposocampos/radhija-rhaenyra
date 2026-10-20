@@ -58,14 +58,29 @@ function kickSpot(cfg) {
   const lat = WALL_BUTTON_SHAPE[cfg.kind].lat;
   return { x: cfg.x + cfg.nx * 0.5 + -cfg.nz * lat, z: cfg.z + cfg.nz * 0.5 + cfg.nx * lat };
 }
-/** A Rhaenyra (ativa) puxa a cordinha do gerador do painel e espera ele pegar. */
+/**
+ * A Rhaenyra (ativa) dá a partida no gerador do painel: morde a alça e puxa de ré (o direcional para longe dele); no
+ * primeiro puxão o motor engasga e a cordinha recolhe; morde de novo, puxa e ele pega.
+ */
 function startGenerator(h) {
   const G = L.GENERATOR;
   put(h, 'rhaenyra', G.cord.x + 0.3, G.cord.z, -Math.PI / 2);
   assert.equal(h.info().prompt, TEXT.prompt.gen, 'prompt do gerador');
-  h.tap('KeyE');
-  assert.equal(q(h).generator.pulling, true, 'puxando a cordinha');
-  assert.ok(h.run(G.pull + G.crank + 0.5, { until: (i) => i.quintal.generator.on }), 'o gerador pegou');
+  for (let pull = 1; pull <= 2; pull++) {
+    h.tap('KeyE');
+    assert.equal(q(h).generator.pulling, true, `indo até a alça (${pull}º puxão)`);
+    assert.ok(h.run(2, { until: (i) => i.quintal.generator.phase === 'hold' }), `mordeu a alça (${pull}º puxão)`);
+    assert.equal(h.info().prompt, TEXT.prompt.genLet, 'com a alça na boca, o E solta');
+    h.hold([1, 0]); // para longe do gerador (ele fica a oeste)
+    assert.ok(h.run(2, { until: (i) => i.quintal.generator.pulls === pull }), `puxou (${pull}º)`);
+    h.hold(null);
+    if (pull === 1) {
+      assert.ok(h.run(2, { until: (i) => !i.quintal.generator.pulling }), 'engasgou e parou');
+      assert.equal(q(h).generator.on, false, 'no primeiro puxão, não pega');
+      assert.ok(hints(h).includes(TEXT.hint.genAgain), 'dica: puxe mais uma vez');
+    }
+  }
+  assert.ok(h.run(G.crank + 0.5, { until: (i) => i.quintal.generator.on }), 'o gerador pegou');
 }
 /** A Rhaenyra (ativa) vai para a frente do botão `cfg`, de frente para a parede, e dá o impulso. */
 function wallJump(h, cfg) {
@@ -248,7 +263,13 @@ seededTest('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cin
   h.run(0.1);
   assert.equal(h.info().prompt, TEXT.prompt.cord, 'prompt da cordinha');
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => i.quintal.gateOpen }), 'a cordinha destravou o portãozinho');
+  assert.ok(h.run(2, { until: (i) => i.quintal.cord.phase === 'hold' }), 'mordeu a cordinha');
+  h.run(0.3);
+  assert.equal(q(h).gateOpen, false, 'parada, segurando, o portãozinho não abre');
+  h.hold([-1, 0]); // para longe da cerca (a cordinha fica a leste dela)
+  assert.ok(h.run(3, { until: (i) => i.quintal.gate.t > 0.05 }), 'puxando, o portãozinho vem junto (para o quintal)');
+  assert.ok(h.run(3, { until: (i) => i.quintal.gateOpen }), 'a cordinha destravou o portãozinho');
+  h.hold(null);
   assert.equal(h.log('gate:open').length, 1);
   h.run(0.6); // termina de puxar (enquanto puxa, ela fica presa na cordinha)
 
@@ -333,7 +354,7 @@ seededTest('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cin
   assert.equal(h.info().objective, TEXT.objective.genRh);
   h.clearLog();
   startGenerator(h);
-  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [2, 2, 1]);
   assert.ok(hints(h).includes(TEXT.hint.genOn));
   assert.equal(h.info().objective, TEXT.objective.buttonsRh);
   h.clearLog();
@@ -466,7 +487,10 @@ seededTest('fase 10: a gansa guarda a cordinha; latido de longe distrai; com o p
   h.hold(null);
   h.run(0.1);
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => i.quintal.gateOpen }), 'abriu');
+  assert.ok(h.run(2, { until: (i) => i.quintal.cord.phase === 'hold' }), 'mordeu a cordinha');
+  h.hold([-1, 0]);
+  assert.ok(h.run(3, { until: (i) => i.quintal.gateOpen }), 'abriu');
+  h.hold(null);
   // depois do portão aberto, chegar perto da gansa não dá investida
   const hits = q(h).goose.hits;
   const g = q(h).goose;
@@ -902,7 +926,7 @@ seededTest('fase 10: lama sem arrancada; o gerador liga o painel; os dois botõe
   h.tap('KeyE');
   h.run(0.3);
   assert.ok(hints(h).includes(TEXT.hint.genHeavy));
-  assert.deepEqual(q(h).generator, { on: false, pulling: false });
+  assert.deepEqual(q(h).generator, { on: false, pulling: false, pulls: 0, phase: null });
   // a Rhaenyra: com o painel apagado, nada de impulso (o Espaço é um pulo comum) e nenhum botão afunda
   as(h, 'rhaenyra');
   const k0 = kickSpot(L.SHED_BUTTONS[0]);
@@ -918,7 +942,7 @@ seededTest('fase 10: lama sem arrancada; o gerador liga o painel; os dois botõe
   // a partida: puxa a cordinha, o motor engasga e pega; ligado, o "tá-tá-tá" e a fumacinha
   h.clearLog();
   startGenerator(h);
-  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [2, 2, 1]);
   assert.ok(h.run(1.2, { until: () => h.log('generator:hum').length > 0 }), 'ligado, o motor faz tá-tá-tá');
   // o primeiro botão abre o chiqueiro (a porta continua fechada); o segundo, a porta
   h.clearLog();

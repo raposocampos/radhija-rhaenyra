@@ -13,6 +13,7 @@ const TEXT = {
   objective: {
     start: 'Leve a Radhija pela abertura na cerca',
     east: 'Puxe a cordinha do portão (E)',
+    pull: 'Ande para trás para puxar: o portão vem junto',
     gateOpenRadhija: 'Troque para a Rhaenyra (Q) e passe pelo portão',
     gateOpenRhaenyra: 'Empurre o carrinho com a Rhaenyra (segure Shift)',
     cartMoved: 'Pegue a cenoura (E)',
@@ -24,16 +25,25 @@ const TEXT = {
     heavy: 'Pesado demais para a Radhija. Chame a Rhaenyra (Q)!',
     shift: 'Segure Shift para empurrar',
     locked: 'Trancado… o trinco fica do outro lado da cerca.',
+    pull: 'Com a cordinha na boca, ande para trás (para longe do portão) para abrir. E solta.',
+    ropeFar: 'Chegue mais perto da cordinha para morder',
   },
-  prompt: { rope: 'Puxar a cordinha', carrot: 'Pegar a cenoura', drop: 'Largar a cenoura' },
+  prompt: { rope: 'Puxar a cordinha', ropeLet: 'Soltar a cordinha', carrot: 'Pegar a cenoura', drop: 'Largar a cenoura' },
 };
 
-// Linha do tempo da cordinha/portão (s desde o começo do puxão; antes dele, o passinho até a corda)
-const TUG_DUR = 0.6;
-const GATE_START = 0.45;
+// A cordinha é presa na ponta do portão (no trinco). Mordendo, ela puxa de ré: nos primeiros PULL.latch m o trinco
+// levanta; daí o portão vem junto, até HOLD_OPEN, em PULL.open m. Puxou o bastante, ela solta e ele termina de abrir
+// sozinho, no embalo (GATE_DUR s); soltou antes, ele volta e o trinco cai (CLOSE_DUR s).
+const PULL = { latch: 0.08, open: 0.42 };
+const HOLD_OPEN = 0.28;
 const GATE_DUR = 0.9;
-/** Mordida na cordinha: até onde a corda alcança, do trinco ao ponto mordido (m; o trinco é uma alavanca e cede um tanto). */
-const ROPE_REACH = 0.52;
+const CLOSE_DUR = 0.45;
+/** Mordida na cordinha: até onde a corda alcança, da ponta do portão ao ponto mordido (m; ela puxa uns 42 cm). */
+const ROPE_REACH = 0.8;
+const sstep = (a, b, x) => {
+  const u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return u * u * (3 - 2 * u);
+};
 
 function easeOutBack(x) {
   const c1 = 1.0;
@@ -71,12 +81,23 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
   props.rope?.setGrip?.(tug.grip);
   /** O ponto da cordinha que a dog morde (logo acima da bolinha). */
   const ropeBite = () => props.rope?.bitePoint?.() ?? { x: ROPE.anchor.x + 0.03, y: ROPE.anchor.y - 0.41, z: ROPE.anchor.z };
+  /** Onde a cordinha prende com o portão aberto `t`: ela gira junto com a ponta dele (presa no trinco). */
+  function ropeAnchorAt(t) {
+    const H = FENCE.gate.hinge, a = FENCE.gate.openYaw * t;
+    const ox = ROPE.anchor.x - H.x, oz = ROPE.anchor.z - H.z, c = Math.cos(a), sn = Math.sin(a);
+    return { x: H.x + ox * c + oz * sn, y: ROPE.anchor.y, z: H.z - ox * sn + oz * c };
+  }
+  /** O brinquedo de corda é um colisor: com o portão aberto ele foi junto com a ponta, e o lugar dele fica livre. */
+  const ropeCol = world.statics?.find?.((k) => k.id === 'cordinha') || null;
   /** Largada, a cenoura não fica no capacho da porta: lá ela é entregue. */
   const dropAvoid = inZones([DOOR.zone]);
 
   const S = {
     stage: 'start',
-    ropeT: -1, // < 0: não puxada
+    ropeT: -1, // < 0: o portão ainda não abriu (≥ 0: s desde que ela soltou com ele abrindo)
+    tugEmitted: false, // o som da cordinha (rope:tug) quando ela morde
+    pullHinted: false, // a dica de andar para trás, uma vez por mordida
+    gateFrom: 0, // onde o portão estava quando ela soltou (ele termina de abrir dali)
     gateT: 0,
     gateEmitted: false,
     cartX: CART.start.x,
@@ -133,7 +154,7 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
     const O = TEXT.objective;
     switch (st) {
       case 'start': return { text: O.start, target: { x: FENCE.x, y: 0.8, z: FENCE.gap.center }, stage: st };
-      case 'east': return { text: O.east, target: { x: ROPE.anchor.x, y: 1.18, z: ROPE.anchor.z }, stage: st };
+      case 'east': return { text: tug.holding() ? O.pull : O.east, target: { x: ROPE.anchor.x, y: 1.18, z: ROPE.anchor.z }, stage: st };
       case 'gateOpen':
         return activeName === 'rhaenyra'
           ? { text: O.gateOpenRhaenyra, target: { x: S.cartX, y: 1.0, z: CART.start.z }, stage: st }
@@ -158,38 +179,69 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
   const gateOpenEnough = () => S.gateT >= 0.97;
   const ropeAvailable = () => S.ropeT < 0 && !tug.busy();
 
-  /** E na cordinha: ela vai até a corda (passinho), morde e puxa; o puxão começa no updateRope. */
+  /** E na cordinha: ela vai até a corda, morde e segura; quem puxa é o jogador (updateRope). */
   function startTug(c) {
     S.gateEmitted = false;
-    tug.start(c, { bite: ropeBite(), anchor: ROPE.anchor, len: ROPE_REACH, dur: TUG_DUR + 0.1 });
+    S.tugEmitted = false;
+    S.pullHinted = false;
+    tug.start(c, { bite: ropeBite(), anchor: ropeAnchorAt(S.gateT), len: ROPE_REACH });
     if (S.stage === 'start') setStage('east', { silent: true });
   }
 
   function updateRope(dt) {
     tug.update(dt);
+    const ph = tug.phase();
+    if (ph === 'miss') {
+      hintNow('ropeFar');
+      tug.clearMiss();
+    }
     if (S.ropeT < 0) {
-      // o puxão começa quando ela chega à corda
-      const p = tug.pullT();
-      if (p < 0) return;
-      S.ropeT = p - dt;
-      emit('rope:tug', { x: ROPE.anchor.x, z: ROPE.anchor.z });
-    }
-    const before = S.ropeT;
-    S.ropeT += dt;
-    const t = S.ropeT;
-    if (before < TUG_DUR + dt) props.rope?.setTug?.(t < TUG_DUR ? Math.sin((Math.PI * t) / TUG_DUR) : 0);
-    if (t >= GATE_START) {
-      if (!S.gateEmitted) {
-        S.gateEmitted = true;
-        const gx = (FENCE.gate.hinge.x + 0.5);
-        const gz = (FENCE.gate.hinge.z + FENCE.gate.latchPost.z) / 2;
-        emit('gate:open', { x: gx, z: gz });
-        cam?.focusShot(1.35, 1.75, { hold: 1.2 });
-        setStage('gateOpen');
+      // a cordinha presa na ponta do portão (vai junto quando ele abre)
+      const A = ropeAnchorAt(S.gateT);
+      tug.setAnchor(A.x, A.y, A.z);
+      if ((ph === 'grip' || ph === 'hold') && !S.tugEmitted) {
+        S.tugEmitted = true;
+        emit('rope:tug', { x: ROPE.anchor.x, z: ROPE.anchor.z });
       }
-      const k = Math.min(1, (t - GATE_START) / GATE_DUR);
-      if (S.gateT < 1 || k < 1) setGate(k >= 1 ? 1 : easeOutBack(k));
+      if (ph === 'hold') {
+        if (!S.pullHinted) {
+          S.pullHinted = true;
+          hintNow('pull', 4.2, 6);
+          onStageChange(S.stage); // o objetivo vira "ande para trás"
+        }
+        // puxando: o trinco levanta e o portão vem junto
+        const p = tug.pulled();
+        props.rope?.setTug?.(Math.min(1, p / PULL.latch));
+        setGate(HOLD_OPEN * sstep(PULL.latch, PULL.open, p));
+        if (p >= PULL.open) {
+          // puxou o bastante: ela solta e o portão termina de abrir sozinho, no embalo
+          tug.release();
+          S.ropeT = 0;
+          S.gateFrom = S.gateT;
+          S.gateEmitted = true;
+          const gx = FENCE.gate.hinge.x + 0.5;
+          const gz = (FENCE.gate.hinge.z + FENCE.gate.latchPost.z) / 2;
+          emit('gate:open', { x: gx, z: gz });
+          cam?.focusShot(1.35, 1.75, { hold: 1.2 });
+          if (ropeCol) ropeCol.enabled = false;
+          setStage('gateOpen');
+        }
+        return;
+      }
+      // soltou antes (ou ainda está chegando): o portão volta e o trinco cai
+      if (S.gateT > 0) setGate(Math.max(0, S.gateT - (HOLD_OPEN * dt) / CLOSE_DUR));
+      props.rope?.setTug?.(0);
+      if (S.pullHinted && !tug.busy()) {
+        S.pullHinted = false;
+        onStageChange(S.stage);
+      }
+      return;
     }
+    // depois de solta: o portão termina de abrir, a partir de onde ela deixou
+    S.ropeT += dt;
+    props.rope?.setTug?.(Math.max(0, 1 - S.ropeT / 0.3));
+    const k = Math.min(1, S.ropeT / GATE_DUR);
+    if (S.gateT < 1 || k < 1) setGate(k >= 1 ? 1 : S.gateFrom + (1 - S.gateFrom) * easeOutBack(k));
   }
 
   // ---------- carrinho ----------
@@ -342,6 +394,11 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
 
   /** E pressionado. Retorna true se tratou (senão a dog late). */
   function interact(c) {
+    // indo até a corda ou com ela na boca, o E solta
+    if (tug.busy(c.name)) {
+      tug.release();
+      return true;
+    }
     const k = interactable(c);
     if (k === 'rope') { startTug(c); return true; }
     if (k === 'carrot') {
@@ -400,7 +457,7 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
     if (S.gateT < 0.05 && active.x < FENCE.x && touch.some((h) => h.id === 'gate')) hintCond('locked');
 
     // Prompt
-    setPrompt(tug.busy() ? null : interactable(active));
+    setPrompt(tug.holding(active.name) ? 'ropeLet' : tug.busy() ? null : interactable(active));
 
     // Colecionáveis (dog ativa)
     COLLECTIBLES.forEach((col, i) => {
@@ -453,6 +510,10 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
     S.dropDeliver = false;
     S.ropeT = -1;
     S.gateEmitted = false;
+    S.tugEmitted = false;
+    S.pullHinted = false;
+    S.gateFrom = 0;
+    if (ropeCol) ropeCol.enabled = true;
     setGate(0);
     S.cartV = 0;
     setCartX(CART.start.x);
@@ -469,8 +530,9 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
 
   /** Atalhos de depuração para ?stage. */
   function forceGateOpen() {
-    S.ropeT = GATE_START + GATE_DUR + 1;
+    S.ropeT = GATE_DUR + 1;
     S.gateEmitted = true;
+    if (ropeCol) ropeCol.enabled = false;
     setGate(1);
   }
 
@@ -548,7 +610,7 @@ export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, roo
     return {
       cart: { x: +S.cartX.toFixed(3), v: +S.cartV.toFixed(3), pushing: S.pushing },
       gate: { t: +S.gateT.toFixed(3), open: gateOpenEnough() },
-      rope: { who: tug.who, stepping: tug.stepping(), pulling: tug.pullT() >= 0, biting: tug.biting() },
+      rope: { who: tug.who, phase: tug.phase(), pulled: +tug.pulled().toFixed(3), biting: tug.biting() },
       carrot: { holder: S.carrier, floor: f ? { x: +f.x.toFixed(3), z: +f.z.toFixed(3) } : null, falling: carrot.falling },
     };
   }

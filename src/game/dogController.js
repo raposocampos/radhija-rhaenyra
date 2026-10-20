@@ -471,7 +471,8 @@ export function startDash(c, dx, dz) {
 /**
  * Atualiza orientação e velocidade escalar a partir de uma intenção:
  *   { dx, dz } direção desejada (unitária ou zero), speed (m/s desejado), turnScale,
- *   faceX/faceZ: só girar para olhar um ponto (sem andar).
+ *   faceX/faceZ: só girar para olhar um ponto (sem andar);
+ *   back: anda de ré a speed m/s, de frente para faceX/faceZ (puxando uma corda com a boca).
  */
 export function steer(c, dt, intent) {
   const { cfg } = c;
@@ -550,7 +551,15 @@ export function steer(c, dt, intent) {
     let target = 0;
     let decelScale = 1;
     c.pivoting = false;
-    if (has) {
+    if (has && intent.back) {
+      // de ré (puxando uma corda com a boca): de frente para o ponto faceX/faceZ, anda para trás devagar
+      const desiredYaw = intent.faceX != null ? Math.atan2(intent.faceX - c.x, intent.faceZ - c.z) : c.yaw;
+      c.wantYaw = desiredYaw;
+      const delta = wrapAngle(desiredYaw - c.yaw);
+      const turnMax = cfg.turnSpeed * 0.6;
+      c.yaw = wrapAngle(c.yaw + Math.max(-turnMax, Math.min(turnMax, delta * 8)) * dt);
+      target = -intent.speed;
+    } else if (has) {
       const desiredYaw = Math.atan2(intent.dx, intent.dz);
       c.wantYaw = desiredYaw;
       const delta = wrapAngle(desiredYaw - c.yaw);

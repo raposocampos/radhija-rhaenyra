@@ -461,6 +461,8 @@ export interface MoveIntent {
   faceX?: number;
   faceZ?: number;
   turnScale?: number;
+  /** De ré a speed m/s, de frente para faceX/faceZ (puxando uma corda com a boca). */
+  back?: boolean;
   [k: string]: any;
 }
 
@@ -555,8 +557,15 @@ export interface InputLock {
   airK?: number;
   /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
   crouch?: number;
-  /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
-  move?: { dx: number; dz: number; speed: number };
+  /** Anda nesta direção (unitária) a speed m/s, com colisão: a irmã dando espaço no cocô; indo até a corda ou o botão. */
+  move?: { dx: number; dz: number; speed: number; back?: boolean } | null;
+  /**
+   * Segurando uma corda com a boca (dog ativa): o direcional para longe dela (ax, az: unitário, da corda para a dog) puxa,
+   * de ré e de frente para faceX/faceZ, a até speed m/s; para perto, dá folga.
+   */
+  pull?: { ax: number; az: number; speed: number };
+  /** Com a trava, o E ainda chega à fase (soltar a corda). */
+  letGo?: boolean;
   /** Apertando um botão com a pata: onde ele está (no mundo, o alto dele) e o progresso do gesto (0..1). */
   press?: XYZ & { k: number };
   /** Mordendo uma corda (src/game/mechanics/mouthTug.js): a boca fecha nela como num item carregado. */
@@ -1022,6 +1031,8 @@ export interface DogAnim {
   reach?: boolean;
   /** No pulinho por cima da borda da caminha (startHop): as patas ficam encolhidas até quase pousar. */
   hop?: boolean;
+  /** De ré (puxando uma corda): as patas andam ao contrário. */
+  back?: boolean;
   action?: DogAction | string;
   /** Ponto para onde olhar (ou null). */
   lookAt?: THREE.Vector3 | XYZ | null;

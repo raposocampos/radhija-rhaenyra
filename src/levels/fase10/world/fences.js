@@ -159,10 +159,12 @@ export function buildFences(root, layout) {
     hg.position.set(0.0, y, -0.02);
     leaf.add(hg);
   }
-  // o ferrolho fica do lado do quintal e a lingueta entra no mourão da trava (a folha pende na face de trás dele)
-  const boltX = BACK_FENCE.x + 0.042 - GATE.hinge.x;
+  // o ferrolho fica entre a folha e o mourão da trava, e a lingueta entra nele (a folha pende na face do mourão do lado
+  // do quintal; `side` é para onde fica o mourão, a partir da folha)
+  const side = Math.sign(fx - GATE.hinge.x) || 1;
+  const boltX = (fx - GATE.hinge.x) * 0.6;
   const boltBody = new THREE.Mesh(rbox(0.04, 0.05, 0.16, 0.006), iron);
-  boltBody.position.set(-0.052, ph - 0.36, -gl + 0.12);
+  boltBody.position.set(0.052 * side, ph - 0.36, -gl + 0.12);
   const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.14, 8).rotateX(Math.PI / 2), brassMat());
   bolt.position.set(boltX, ph - 0.36, -gl + 0.02);
   leaf.add(boltBody, bolt);
@@ -173,8 +175,8 @@ export function buildFences(root, layout) {
   seeThrough.push(gate);
   // as chapas das dobradiças: do mourão até o pino da folha
   for (const y of [0.3, ph - 0.25]) {
-    const strap = new THREE.Mesh(new THREE.BoxGeometry(GATE.hinge.x - fx - 0.03, 0.035, 0.02), iron);
-    strap.position.set((fx + 0.045 + GATE.hinge.x) / 2, y, GATE.hinge.z + 0.005);
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(GATE.hinge.x - fx) - 0.03, 0.035, 0.02), iron);
+    strap.position.set((fx - 0.045 * side + GATE.hinge.x) / 2, y, GATE.hinge.z + 0.005);
     group.add(strap);
   }
 

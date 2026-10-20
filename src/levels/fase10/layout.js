@@ -181,12 +181,13 @@ export const MANGO_SHOVE = {
 /** Cerca de ripas entre o quintal e o fundo (x fixo) com o portãozinho. */
 export const BACK_FENCE = { x: 5.4, h: 0.95, gate: { z0: -0.4, z1: 0.8 } };
 /**
- * O portãozinho fica pendurado na face de trás dos mourões (dobradiça 10 cm a leste da linha da cerca) e abre para o
- * fundo quase até encostar na cerca (162°): aberto, não forma bolsão com a cerca da horta.
+ * O portãozinho fica pendurado na face dos mourões do lado do quintal (dobradiça 10 cm a oeste da linha da cerca) e
+ * abre para o quintal, para o lado da cordinha (retorno do usuário: a dog puxa e ele vem junto), quase até encostar na
+ * cerca (162°): aberto, fica rente a ela ao sul do vão, longe do caminho da gansa, da trepadeira e do painel.
  */
 export const GATE = {
-  hinge: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z0 },
-  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: -Math.PI * 0.9, openTime: 1.2, closeTime: 1.0,
+  hinge: { x: BACK_FENCE.x - 0.1, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x - 0.1, z: BACK_FENCE.gate.z0 },
+  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: Math.PI * 0.9, openTime: 1.2, closeTime: 1.0,
 };
 /** A cordinha da trava, pendurada no mourão do lado do quintal (E puxa). */
 export const CORD = { x: BACK_FENCE.x - 0.12, z: BACK_FENCE.gate.z0 - 0.16, top: 1.0, reach: 0.62 };

@@ -1,36 +1,47 @@
-// Puxar com a boca: a cordinha do portão (fase 1), a cordinha do portãozinho e a do gerador (fase 10). Retorno do
-// usuário: "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e o
-// realismo". No E, a dog dá um passinho até a corda (se a boca não está nela: a fase a move, trava com `drive`),
-// morde (o ponto mordido vai para a boca, que fecha nele: pose de carregar 'rope'), puxa na pose de puxar com a
-// corda presa e, no fim, solta: a corda volta para o lugar dela. A corda não estica: o ponto mordido fica no máximo
-// `len` m de onde ela prende. Com algo na boca, ou sem chegar à corda (algo no caminho), ela puxa como antes.
-// O passinho (planStep/driveStep) também serve para chegar a um botão que ela aperta com a pata (fase 9).
+// Puxar com a boca: a cordinha do portão (fase 1), a cordinha do portãozinho e a alça do gerador (fase 10). Retornos
+// do usuário: "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e o
+// realismo"; depois, "o player puxar ela" (o gerador com dois puxões; os portões abrindo enquanto ela puxa) e, do
+// passinho roteirizado, "como se tivesse sendo arrastado, ou como se tivesse um ímã".
+//
+// No E, a dog ANDA até a corda (o núcleo a move com o controle e a colisão de sempre: a trava pede `move`), vira de
+// frente e morde (o ponto mordido vai para a boca, que fecha nele: pose de carregar 'rope'). Mordendo, ela segura: o
+// direcional para longe da corda puxa (de ré, de frente para ela, em passinhos de força: `lock.pull`) e para perto dá
+// folga; o E solta. A fase lê quanto ela puxou (`pulled`) e decide (o portão abre junto; o gerador engasga ou pega) e
+// manda soltar (`release`). A corda não estica: o ponto mordido fica no máximo `len` m de onde ela prende. Com algo
+// na boca, ou sem chegar à corda (algo no caminho), ela não morde (`phase` 'miss': a fase dá a dica).
+// O passinho (planStep/driveStep) também leva a dog até o botão que ela aperta com a pata (fase 9).
 //
 // Uso na fase: const tug = createMouthTug({ dogs, ctrls, world });
-//   no E: tug.start(c, { bite, anchor, len, dur })   (bite: o ponto que ela morde, parado; anchor: onde a corda prende)
-//   por quadro: tug.update(dt)   ·   a fase espera tug.pullT() >= 0 para começar o puxão dela
+//   no E: tug.start(c, { bite, anchor, len })   (bite: o ponto que ela morde, parado; anchor: onde a corda prende)
+//   por quadro: tug.update(dt); tug.phase(), tug.pulled(); tug.release() para soltar
 //   no prop: setGrip(tug.grip) (o prop pede a boca na hora de desenhar, depois da animação das dogs)
 //   lockFor(name): tug.lockFor(name)   ·   reset(): tug.reset()
 import * as THREE from 'three';
-import { resolveDogBody } from '../dogController.js';
 
-/** Passinho: velocidade (m/s), o que já está perto (m, rad) e a duração (s). */
-const STEP = { speed: 0.9, near: 0.05, turn: 0.3, min: 0.15, max: 0.6 };
+/**
+ * O passinho: velocidade máxima (m/s), chegou (m), de frente (rad), o que já está perto (m, rad), tempo máximo e
+ * quanto tempo sem chegar mais perto conta como "não dá para chegar" (s).
+ */
+const STEP = { speed: 0.85, arrive: 0.02, facing: 0.05, near: 0.025, turnNear: 0.15, back: 0.2, max: 1.8, stuck: 0.5 };
 /** Mordida: tempo para o ponto mordido ir à boca e para voltar (s); longe assim da corda depois do passinho, não morde (m). */
-const GRIP = { in: 0.12, out: 0.16, miss: 0.12 };
+const GRIP = { in: 0.14, out: 0.16, miss: 0.12 };
+/** Puxando: a velocidade de ré com o direcional todo para trás (m/s). */
+const PULL = { speed: 0.45 };
 
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const ease = (u) => u * u * (3 - 2 * u);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 /**
- * @typedef {{ x0: number, z0: number, x1: number, z1: number, yaw0: number, yaw1: number, t: number, dur: number, back: boolean }} Step
+ * @typedef {{ x1: number, z1: number, P: { x: number, z: number }, t: number, walk: boolean, best: number, stuck: number,
+ *   move: null | { dx: number, dz: number, speed: number }, back: boolean }} Step
  */
 
 /**
  * Passinho até um ponto: o meio do corpo vai ficar a `reach` m de `P`, de frente para ele (ou chegando pelo rumo `yaw`,
- * quando o ponto só se alcança de um lado, como o botão na base do ventilador). → null se ela já está lá ou está no
- * ar (no ar, o pulo segue; a fase faz a ação de onde ela está). A arrancada acaba aqui (ela vai parar na coisa).
+ * quando o ponto só se alcança de um lado, como o botão na base do ventilador). Ela anda (a trava pede `move`, o
+ * núcleo a move com o controle de sempre) e vira de frente. Se ela já passou do ponto (teria de andar de ré), só vira.
+ * → null se ela já está lá ou está no ar (o pulo segue; a fase faz a ação de onde ela está). A arrancada acaba aqui.
  * @param {any} c @param {{ x: number, z: number }} P @param {number} reach @param {any} world
  * @param {{ yaw?: number }} [o]
  * @returns {Step | null}
@@ -47,43 +58,43 @@ export function planStep(c, P, reach, world, { yaw } = {}) {
     z1 = r.z;
   }
   const dist = Math.hypot(x1 - c.x, z1 - c.z);
-  const turn = Math.abs(wrap(yaw1 - c.yaw));
-  if (dist <= STEP.near && turn <= STEP.turn) return null;
-  const back = (x1 - c.x) * Math.sin(yaw1) + (z1 - c.z) * Math.cos(yaw1) < 0;
-  return { x0: c.x, z0: c.z, x1, z1, yaw0: c.yaw, yaw1, t: 0, dur: clamp(Math.max(dist / STEP.speed, turn / 5), STEP.min, STEP.max), back };
+  const turn = Math.abs(wrap(Math.atan2(P.x - c.x, P.z - c.z) - c.yaw));
+  if (dist <= STEP.near && turn <= STEP.turnNear) return null;
+  // um tiquinho para trás (passou do ponto): ela dá uns passinhos de ré, de frente para a coisa; mais longe, vira e anda
+  const back = dist > STEP.near && dist < STEP.back && (x1 - c.x) * Math.sin(yaw1) + (z1 - c.z) * Math.cos(yaw1) < 0;
+  const S = { x1, z1, P: { x: P.x, z: P.z }, t: 0, walk: dist > STEP.near, best: dist, stuck: 0, move: null, back };
+  S.move = S.walk ? walkTo(S, dist, x1 - c.x, z1 - c.z) : null;
+  return S;
+}
+
+/** A intenção de andar até o ponto do passinho: chega devagar (a velocidade cai perto dele); de ré, mais devagar. */
+function walkTo(S, d, dx, dz) {
+  return { dx: dx / d, dz: dz / d, speed: clamp(d * 3.5, 0.2, S.back ? 0.35 : STEP.speed), back: S.back };
 }
 
 /**
- * Um quadro do passinho: move a dog (com colisão: nada atravessa) e vira para o rumo. A fase chama no update e a
- * trava pede drive (o núcleo não a move). → true quando chegou.
- * @param {any} c @param {Step} S @param {number} dt @param {any} world
+ * Um quadro do passinho (no update da fase): enquanto ela anda, a próxima intenção (S.move, que a trava passa ao
+ * núcleo); chegou (ou não dá para chegar mais perto), ela vira de frente para o ponto. → true quando está pronta.
+ * @param {any} c @param {Step} S @param {number} dt
  */
-export function driveStep(c, S, dt, world) {
+export function driveStep(c, S, dt) {
   S.t += dt;
-  const u = Math.min(1, S.t / S.dur);
-  const e = ease(u);
-  const px = c.x, pz = c.z, pyaw = c.yaw;
-  c.x = S.x0 + (S.x1 - S.x0) * e;
-  c.z = S.z0 + (S.z1 - S.z0) * e;
-  if (world?.resolve) {
-    const r = world.resolve(c.x, c.z, c.r, c.size);
-    c.x = r.x;
-    c.z = r.z;
+  if (S.walk) {
+    const dx = S.x1 - c.x, dz = S.z1 - c.z, d = Math.hypot(dx, dz);
+    if (d < S.best - 0.002) {
+      S.best = d;
+      S.stuck = 0;
+    } else S.stuck += dt;
+    if (d > STEP.arrive && S.t < STEP.max && S.stuck < STEP.stuck) {
+      S.move = walkTo(S, d, dx, dz);
+      return false;
+    }
+    S.walk = false;
   }
-  if (world) resolveDogBody(c, world);
-  c.yaw = wrap(S.yaw0 + wrap(S.yaw1 - S.yaw0) * Math.min(1, e * 1.5));
-  const idt = 1 / Math.max(dt, 1e-4);
-  c.vx = (c.x - px) * idt;
-  c.vz = (c.z - pz) * idt;
-  c.yawRate = wrap(c.yaw - pyaw) * idt;
-  c.v = 0;
-  // para a frente, as patas andam; o tiquinho para trás fica com os passinhos de ajuste (parada)
-  c.animSpeed = S.back ? 0 : Math.hypot(c.vx, c.vz);
-  if (u < 1) return false;
-  c.vx = c.vz = 0;
-  c.yawRate = 0;
-  c.animSpeed = 0;
-  return true;
+  S.move = null;
+  // de frente para o ponto (o núcleo vira a dog para faceX/faceZ); parada, sem embalo
+  const want = Math.atan2(S.P.x - c.x, S.P.z - c.z);
+  return (Math.abs(wrap(want - c.yaw)) < STEP.facing && Math.abs(c.v) < 0.12) || S.t > STEP.max + 0.8;
 }
 
 /**
@@ -92,7 +103,8 @@ export function driveStep(c, S, dt, world) {
 export function createMouthTug({ dogs, ctrls, world = null }) {
   /**
    * @type {null | { who: string, bite: { x: number, y: number, z: number }, anchor: THREE.Vector3, face: { x: number, z: number },
-   *   len: number, dur: number, t: number, grip: number, free: boolean, reach: number, carry: boolean, step: Step | null }}
+   *   len: number, phase: 'step' | 'grip' | 'hold' | 'let' | 'miss', t: number, grip: number, free: boolean, reach: number,
+   *   carry: boolean, step: Step | null, back: boolean, x0: number, z0: number, ax: number, az: number, pulled: number }}
    */
   let T = null;
   const _m = new THREE.Vector3();
@@ -115,66 +127,97 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
     setCarry(false);
     T = null;
   }
+  /** A boca está mesmo na corda? (o desenho de agora, com a cabeça que desvia e tudo) */
+  function mouthAt(name, bite) {
+    const m = mouthOf(name, _m);
+    return !!m && Math.hypot(m.x - bite.x, m.z - bite.z) <= GRIP.miss;
+  }
 
   return {
     /**
-     * A dog `c` vai puxar a corda que prende em `anchor`, mordendo no ponto `bite` (onde ele está, parado); a corda
-     * alcança `len` m de `anchor`; o puxão dura `dur` s; durante ele, a dog fica de frente para `face` (padrão: anchor).
-     * → quanto dura o passinho até a corda (0 se a boca já está nela).
+     * A dog `c` vai até a corda que prende em `anchor`, morde no ponto `bite` (onde ele está, parado) e segura; a corda
+     * alcança `len` m de `anchor`; segurando, ela fica de frente para `face` (padrão: anchor).
      * @param {any} c
-     * @param {{ bite: { x: number, y: number, z: number }, anchor: { x: number, y: number, z: number }, len: number, dur: number, face?: { x: number, z: number } }} o
+     * @param {{ bite: { x: number, y: number, z: number }, anchor: { x: number, y: number, z: number }, len: number, face?: { x: number, z: number } }} o
      */
-    start(c, { bite, anchor, len, dur, face = anchor }) {
+    start(c, { bite, anchor, len, face = anchor }) {
       endTug();
-      let free = mouthFree(c.name);
+      const free = mouthFree(c.name);
       let step = null, reach = 0;
       const m = free ? mouthOf(c.name, _m) : null;
       const o = dogs?.[c.name]?.object;
       if (m && o) {
         // o quanto a boca fica à frente do meio do corpo (medido no desenho, que pode estar um quadro atrás do
         // controlador; encostada em algo, o desenho está recuado: head.info.back); o passinho leva o meio até essa
-        // distância do ponto mordido, de frente para ele (andando para a frente ou, se passou dele, um tiquinho para trás)
+        // distância do ponto mordido, de frente para ele
         const oy = o.rotation.y;
         const back = dogs?.[c.name]?.head?.info?.back || 0;
         reach = clamp((m.x - o.position.x) * Math.sin(oy) + (m.z - o.position.z) * Math.cos(oy) + back, 0.2, 0.55);
         step = planStep(c, bite, reach, world);
-        // sem passinho (já está na corda, ou no ar): só morde se a boca está mesmo nela
-        if (!step && (c.jumpT > 0 || Math.hypot(m.x - bite.x, m.z - bite.z) > GRIP.miss)) free = false;
       } else if (c.dashT > 0) c.dashT = 0;
       T = {
         who: c.name, bite: { x: bite.x, y: bite.y, z: bite.z }, anchor: new THREE.Vector3(anchor.x, anchor.y, anchor.z),
-        face: { x: face.x, z: face.z }, len, dur, t: 0, grip: 0, free, reach, carry: false, step,
+        face: { x: face.x, z: face.z }, len, phase: step ? 'step' : 'grip', t: 0, grip: 0, free, reach, carry: false, step,
+        back: !!step?.back, x0: c.x, z0: c.z, ax: 0, az: 1, pulled: 0,
       };
-      return step ? step.dur : 0;
+      // sem passinho (já está na corda, ou no ar): só morde se a boca está mesmo nela
+      if (!step && (!free || c.jumpT > 0 || !mouthAt(c.name, bite))) T.phase = 'miss';
     },
-    /** Por quadro: o passinho (move a dog, com colisão), depois a mordida (vai, segura e solta). */
+    /** Por quadro: o passinho, a mordida, o puxão (quanto ela já puxou) e a soltura. */
     update(dt) {
       if (!T) return;
       const c = ctrls[T.who];
-      if (T.step) {
-        if (!driveStep(c, T.step, dt, world)) return;
+      if (T.phase === 'miss') return;
+      if (T.phase === 'step') {
+        if (!driveStep(c, T.step, dt)) return;
         T.step = null;
-        // não chegou à corda (algo no caminho): puxa sem morder
-        const mx = c.x + Math.sin(c.yaw) * T.reach, mz = c.z + Math.cos(c.yaw) * T.reach;
-        if (Math.hypot(mx - T.bite.x, mz - T.bite.z) > GRIP.miss) T.free = false;
+        T.phase = T.free && mouthAt(T.who, T.bite) ? 'grip' : 'miss';
+        T.t = 0;
         return;
       }
       T.t += dt;
-      if (T.free) {
-        T.grip = T.t < T.dur - GRIP.out ? Math.min(1, T.t / GRIP.in) : Math.max(0, (T.dur - T.t) / GRIP.out);
+      if (T.phase === 'grip') {
+        T.grip = Math.min(1, T.t / GRIP.in);
         if (T.grip > 0.4) setCarry(true);
-        else if (T.grip < 0.2 && T.t > GRIP.in) setCarry(false);
+        if (T.grip >= 1) {
+          // mordeu: segura; daqui ela puxa para longe da corda (o eixo vai de onde a corda prende até ela)
+          T.phase = 'hold';
+          T.x0 = c.x;
+          T.z0 = c.z;
+          const ax = c.x - T.anchor.x, az = c.z - T.anchor.z, L = Math.hypot(ax, az) || 1;
+          T.ax = ax / L;
+          T.az = az / L;
+          T.pulled = 0;
+        }
+      } else if (T.phase === 'hold') {
+        T.grip = 1;
+        T.pulled = Math.max(0, (c.x - T.x0) * T.ax + (c.z - T.z0) * T.az);
+      } else if (T.phase === 'let') {
+        T.grip = Math.max(0, 1 - T.t / GRIP.out);
+        if (T.grip < 0.2) setCarry(false);
+        if (T.t >= GRIP.out) endTug();
       }
-      if (T.t >= T.dur) endTug();
+    },
+    /** Solta a corda (a fase manda: puxou o bastante, ou o E). No passinho ou sem morder, desiste. */
+    release() {
+      if (!T) return;
+      if (T.phase === 'grip' || T.phase === 'hold') {
+        T.phase = 'let';
+        T.t = 0;
+      } else if (T.phase !== 'let') endTug();
     },
     /**
-     * A trava de quem puxa: no passinho a fase move a dog (drive); puxando, de frente para a corda, mordendo. As duas
-     * vão de propósito até a corda (reach: a cabeça não desvia dela).
+     * A trava de quem vai até a corda e segura: no passinho, a intenção de andar (move, de ré se ela passou do ponto) e
+     * de frente para a corda; mordendo, a pose de puxar, a boca fechada e, segurando, o direcional puxando (pull). Ela
+     * vai de propósito até a corda (reach: a cabeça não desvia dela). O E sempre chega à fase (soltar).
      */
     lockFor(name) {
-      if (!T || T.who !== name) return null;
-      if (T.step) return { action: 'none', faceX: T.bite.x, faceZ: T.bite.z, drive: true, reach: true };
-      return { action: 'tug', faceX: T.face.x, faceZ: T.face.z, bite: T.grip > 0.3, reach: true };
+      if (!T || T.who !== name || T.phase === 'miss') return null;
+      if (T.phase === 'step') return { action: 'none', faceX: T.step.P.x, faceZ: T.step.P.z, move: T.step.move, reach: true, letGo: true };
+      /** @type {import('../../types').InputLock} */
+      const L = { action: 'tug', faceX: T.face.x, faceZ: T.face.z, bite: T.grip > 0.3, reach: true, letGo: true };
+      if (T.phase === 'hold') L.pull = { ax: T.ax, az: T.az, speed: PULL.speed };
+      return L;
     },
     /**
      * O ponto mordido agora: na boca (k: o quanto, 0..1, na ida e na volta), no máximo `len` de onde a corda prende.
@@ -182,23 +225,35 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
      * @returns {{ pos: THREE.Vector3, k: number } | null} null se ninguém está mordendo
      */
     grip() {
-      if (!T || T.step || !T.free || T.grip <= 0) return null;
+      if (!T || T.grip <= 0 || (T.phase !== 'grip' && T.phase !== 'hold' && T.phase !== 'let')) return null;
       const m = mouthOf(T.who, _g);
       if (!m) return null;
       const d = m.distanceTo(T.anchor);
       if (d > T.len) m.sub(T.anchor).multiplyScalar(T.len / d).add(T.anchor);
       return { pos: m, k: ease(T.grip) };
     },
-    /** Alguém (ou `name`) está indo até a corda ou puxando? */
-    busy: (name = null) => !!T && (name == null || T.who === name),
+    /** Onde a corda prende agora (a fase move junto com o portão, por exemplo). */
+    setAnchor(x, y, z) {
+      if (T) T.anchor.set(x, y, z);
+    },
+    /** Alguém (ou `name`) está indo até a corda, mordendo, segurando ou soltando? */
+    busy: (name = null) => !!T && T.phase !== 'miss' && (name == null || T.who === name),
+    /** Em que pé está: 'step' (indo), 'grip' (mordendo), 'hold' (segurando), 'let' (soltando), 'miss' (não mordeu) ou null. */
+    phase: () => T?.phase ?? null,
     /** No passinho até a corda? */
-    stepping: () => !!T?.step,
-    /** Quanto tempo (s) do puxão já passou (−1: nenhum puxão; no passinho, ainda não começou). */
-    pullT: () => (T && !T.step ? T.t : -1),
-    /** Quem está puxando (ou null). */
+    stepping: () => T?.phase === 'step',
+    /** Segurando a corda (`name`, ou alguém)? */
+    holding: (name = null) => T?.phase === 'hold' && (name == null || T.who === name),
+    /** Quanto ela já puxou (m, para longe de onde mordeu). */
+    pulled: () => (T?.phase === 'hold' ? T.pulled : 0),
+    /** Quem está com a corda (ou null). */
     get who() { return T?.who ?? null; },
     /** A dog está mordendo (com a corda na boca)? */
-    biting: () => !!T && !T.step && T.free && T.grip > 0.3,
+    biting: () => !!T && (T.phase === 'grip' || T.phase === 'hold') && T.grip > 0.3,
+    /** Esquece a tentativa que não mordeu (a fase já deu a dica). */
+    clearMiss() {
+      if (T?.phase === 'miss') T = null;
+    },
     reset: endTug,
   };
 }
