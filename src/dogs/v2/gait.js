@@ -296,8 +296,11 @@ export function createGait({ skel2, retarget, s }) {
     // empurrão em pé e parede: o corpo inteiro inclina, a troca é rápida
     weight += (gate - weight) * (1 - Math.exp(-(gate > weight ? 10 : hardGate(A) ? 30 : 14) * dt));
     if (gate < 0.02 && weight < 0.02) weight = 0;
-    // só andando (nenhuma outra pose mexendo nas patas) a pata fica plantada e dá passos
-    const own = gate > 0.98;
+    // só andando (nenhuma outra pose mexendo nas patas) a pata fica plantada e dá passos. Já andando para a frente,
+    // com a pose do guia quase saindo (pousou do pulo, soltou o empurrar segurando o direcional), a locomoção assume
+    // antes: seguindo o guia com atraso, a perna de trás ficava esticada para trás (retorno do usuário: "as patas
+    // ainda permanecem presas no chão")
+    const own = gate > (mv.v > 0.3 ? 0.9 : 0.98);
     const resumed = own && !wasOwn; // a locomoção acabou de voltar (depois de sentar, pular...)
     wasOwn = own;
     const R = gaitRhythm(st, s);
@@ -363,6 +366,11 @@ export function createGait({ skel2, retarget, s }) {
     const halfN = (Math.max(st.speed, Math.abs(mv.v)) * RN.beta) / RN.f / 2;
 
     const lifting = () => legs.reduce((n, l) => n + (l.swing ? 1 : 0), 0);
+    // cabe mais uma pata no ar? Andando, até duas no ar; trotando ou arrancando, três; a traseira correndo ou arrancando,
+    // sempre (ver o passo extra); e a pata que ficou embaixo de um degrau (o corpo subiu numa placa ou na caminha e ela
+    // ainda está no chão), sempre: esperando, ela era arrastada com a perna esticada
+    const brisk = acc > 0.3 || Math.abs(mv.v) > 1.2;
+    const roomFor = (leg) => lifting() < (brisk ? 3 : 2) || (!leg.front && brisk) || hRel(leg.h) < -0.02 * s;
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
       // os pontos parados no chão acompanham o movimento do corpo
@@ -398,7 +406,9 @@ export function createGait({ skel2, retarget, s }) {
       // longe demais (curva fechada, empurrada): um passo extra, fora do ritmo, se no máximo uma outra pata está no ar
       // (arrancando ou trotando, duas: no trote quase sempre há duas no ar, e no começo de uma corrida a dog fica um
       // instante com três no ar; esperar deixava a pata ser arrastada esticada)
-      const room = lifting() < (acc > 0.3 || Math.abs(mv.v) > 1.2 ? 3 : 2);
+      // (a traseira correndo ou arrancando sai mesmo com as outras três no ar: um instante de voo, como no trote rápido;
+      // esperar deixava a pata presa no chão com a perna reta, retorno do usuário depois do pulo e do empurrar)
+      const room = roomFor(leg);
       if (!leg.swing && moving && leg.over && leg.stanceT > 0.3 * stanceDur && room) {
         startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25), 'longe');
       }
@@ -510,8 +520,7 @@ export function createGait({ skel2, retarget, s }) {
         const n = dx * dx + dy * dy + dz * dz > maxD * maxD ? dy - Math.sqrt(Math.max(0, maxD * maxD - dx * dx - dz * dz)) : 0;
         if (n > MAX_DROP) {
           leg.over = true;
-          const roomNow = lifting() < (acc > 0.3 || Math.abs(mv.v) > 1.2 ? 3 : 2);
-          if (moving && roomNow && leg.stanceT > 0.3 * stanceDur) {
+          if (moving && roomFor(leg) && leg.stanceT > 0.3 * stanceDur) {
             // longe demais andando: o passo extra sai já (esperar o quadro seguinte arrastava a pata um quadro)
             const lift = (leg.front ? 0.03 : 0.025) * s * (0.75 + 0.45 * fast) + dash * 0.02 * s;
             startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25), 'longe');

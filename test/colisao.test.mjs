@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createController, placeController, steer, integrate, startDash, startJump } from '../src/game/dogController.js';
 import { createCollisionWorld } from '../src/game/collision.js';
+import { createDogEffects } from '../src/game/mechanics/dogEffects.js';
 import { withStart } from '../src/dogs/config.js';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { LEVELS } from '../src/levels/index.js';
@@ -206,4 +207,27 @@ test('corpo: a batida de frente conta no peito (som e tranco da batida continuam
   }
   assert.ok(bump && bump.id === 'parede', `batida na parede (${JSON.stringify(bump)})`);
   assert.ok(c.hits.some((h) => h.id === 'parede'), 'contato registrado');
+});
+
+test('corpo: os empurrões das mecânicas (irrigador, ganso, porcos, portão) também seguram a garupa fora da parede', () => {
+  for (const name of ['radhija', 'rhaenyra']) {
+    const cfg = withStart(name, { x: 0, z: 0, yaw: Math.PI });
+    const b = cfg.body;
+    const world = arena([box('parede', 0, 2.2, 3, 0.2)]); // face em z = 2
+    const c = createController(name, cfg);
+    // de costas para a parede (olhando para -z), com a garupa a 5 cm dela
+    const z0 = 2 - b.back - 0.05;
+    placeController(c, 0, z0, Math.PI);
+    const effects = createDogEffects({ world, dogs: {} });
+    // um empurrão de 0,6 m para trás, para dentro da parede (o círculo do meio sozinho iria até 2 - r)
+    effects.knock(c, 0, 1, 0.6, { dur: 0.4 });
+    let worst = -Infinity;
+    for (let t = 0; t < 0.6; t += DT) {
+      effects.update(DT, { [name]: c });
+      for (const [, pz] of parts(c)) worst = Math.max(worst, pz + b.r - 2);
+    }
+    assert.ok(worst < 0.002, `${name}: a garupa entrou ${(worst * 1000).toFixed(1)} mm na parede`);
+    assert.ok(c.z > z0 + 0.04, `${name}: o empurrão continua levando a dog até encostar (andou ${((c.z - z0) * 100).toFixed(1)} cm)`);
+    assert.ok(!effects.busy(name), `${name}: o empurrão terminou`);
+  }
 });

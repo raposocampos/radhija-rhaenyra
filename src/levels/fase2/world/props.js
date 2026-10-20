@@ -1161,6 +1161,9 @@ function buildBed(root, BED, starTex, updaters) {
   toy.rotation.y = 0.6;
   g.add(toy);
   g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  // as dogs pisam na almofada da caminha (game/ground.js: o corpo sobe e as patas vão em cima); a borda, alta e fofa,
+  // não (subindo nela a pata ficava esticada e arrastada)
+  for (const m of [base, cush]) m.userData.walkable = true;
   g.add(contactShadow(ax + 0.14, az + 0.14, 0.55));
   // destaque: brilho quente pulsante + halo no chão + estrelinhas
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radialTexture(), color: '#ffbf6a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));

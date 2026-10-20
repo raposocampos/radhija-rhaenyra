@@ -271,7 +271,9 @@ Peças prontas:
 - `src/game/mechanics/`: `createPressurePlate` (placa que exige peso: `requires 'large' | 'any'`), `createHingedGate`
   (portão com dobradiça que não esmaga ninguém ao fechar; ao abrir, `sweepExit(ctrl)` diz se a folha vai passar
   pela dog e para onde ela sai: a fase a afasta antes, senão a colisão a arrasta e o lugar onde ela termina depende
-  do fps — fase 7: pulinho assustado com `effects.pushTo`), `createPushCrate` (caixote em 2 eixos com `onLimit`),
+  do fps — fase 7: pulinho assustado com `effects.pushTo`), `createPushCrate` (caixote em 2 eixos com `onLimit`; a
+  Radhija nele faz força, `contact: 'strain'`, e o núcleo mostra o aviso de que só a Rhaenyra empurra enquanto ela
+  insiste, `HEAVY_HINT` no `game.js`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
@@ -307,8 +309,19 @@ O corpo é mais comprido que o círculo: o peito e a garupa vão em dois círcul
 o raio dos dois; `world.resolveBody`, chamado pelo `integrate` do controle). Eles empurram o centro para fora do que
 invadem e o círculo do meio manda: os vãos continuam os mesmos (os dois são mais estreitos que ele) e, onde os três
 não cabem (girando num corredor justo), fica o do meio. De frente para uma parede a dog para uns 3 cm antes (o peito
-encosta); os contatos do peito e da garupa entram em `c.hits` e na batida. A cabeça, que vai além do peito, desvia
-no desenho do modelo novo (`src/dogs/v2/head.js`, §7), sem mudar o jogo.
+encosta); os contatos do peito e da garupa entram em `c.hits` e na batida. Quem desloca a dog por fora do `integrate`
+chama `resolveDogBody` (do controle) para o corpo também ficar fora: os empurrões das mecânicas (`createDogEffects`:
+irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço (`separate`/`softBlock` do `game.js`); as poses
+roteirizadas (`lock.drive`, impulso na parede, empurrão em pé) não. A cabeça, que vai além do peito, desvia no
+desenho do modelo novo (`src/dogs/v2/head.js`, §7), sem mudar o jogo.
+
+**Chão de pisar** (`src/game/ground.js`): coisas baixas marcadas no desenho com `userData.walkable` (placas, pedais e
+botões do chão, as almofadas das caminhas das fases 2, 5 e 8) viram chão: `heightAt(x, z)` é o alto delas embaixo do
+ponto, por um raio para baixo no desenho de agora (até 30 cm; só malhas, porque um sprite sem câmera quebra o raycast
+do three.js). O objeto da dog sobe suave (`game.js`) e o modelo novo pisa pata por pata (`gait.js`). A borda alta das
+caminhas fica de fora (subindo nela, a pata ficava esticada e arrastada). Empurrando de pé, as patas da frente apoiam
+no desenho do objeto, medido por raios horizontais (`src/game/pushRest.js`: a face, a beirada e a altura das patas,
+pulando frestas), não na caixa de colisão.
 
 **Navegação** (`src/game/navigation.js`, `companion.js`): a companheira anda em linha reta quando enxerga a líder;
 senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cada aresta pode exigir
@@ -520,6 +533,10 @@ física (`physics.js`: correntinhas com mola, inércia, gravidade e chão; a pos
 bem mais firme (cinco gomos presos na garupa; só atrasa um pouco nas curvas, no pulo e ao parar). Na arrancada
 (etapa 4), o compasso das patas já é o da velocidade de agora (o ritmo do guia demora uns décimos de segundo para
 acompanhar), as patas no tempo do balanço saem logo e a de trás dá um passo de conforto antes de a perna ficar reta.
+Saindo de uma pose do guia já andando (pousou do pulo, soltou o empurrar segurando o direcional), a pose sai 2,6×
+mais depressa (`dogAnimation.js`, `offK`) e a locomoção assume com ela quase fora (peso 0,9 em vez de 0,98): seguindo
+o guia com atraso, a perna de trás ficava apoiada e reta. Correndo ou arrancando, a traseira dá o passo extra mesmo
+com as outras três no ar, e a pata que ficou embaixo de um degrau (o corpo subiu numa placa) também.
 A cabeça que desvia (`head.js`, etapa 4) usa o mundo de colisão da fase (`d.setWorld(world)`, chamado pelo
 `game.js`): chegando de frente numa parede ou móvel, o desenho inteiro freia antes do centro do jogo (prevê onde o
 peito vai parar e freia aos poucos, chegando parado com o focinho encostado; até 24 cm na escala) e a cabeça vira um

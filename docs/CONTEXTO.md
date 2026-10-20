@@ -1,7 +1,8 @@
 # Contexto para retomar o projeto
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; etapa 3, #46, #47, #49, #50 e #51 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
+caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47, #49, #50 e #51 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -53,9 +54,31 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Pedidos do mesmo retorno que ficam para depois do #48 (combinados com o usuário): animações de interação de verdade
   (a corda do portão presa na boca, fechar o registro mordendo o volante) e, parada muito tempo, coçar de olhinho
   fechado e xixi agachada (fêmea), além de sentar e deitar; pegar e largar objetos em todas as fases está na sessão
-  própria `pegar-largar` (branch próprio, sem mexer nos arquivos deste PR).
-- Próximo passo: aprovação do usuário na prévia; depois, as animações acima e a etapa 5 (troca nas 10 fases e cascas
-  de pelo mais leves só no celular).
+  própria `pegar-largar` (PR #52, branch próprio, sem mexer nos arquivos deste PR).
+- 2ª prévia (`8f27f1a`), retorno do usuário: muitos objetos sem colisão (vasos, a madeira do portão da fase 2, o
+  irrigador, as caminhas, a tábua de passar, sabonetes, a bandeja da fase 6) e o biscoito da caminha da fase 8
+  confundido com os colecionáveis: com a sessão própria "Colisão e acabamento do cenário" (branch
+  `claude/colisao-cenario`), menos as caminhas. Aqui (commit seguinte a `8f27f1a`):
+  - "quando se pula, no pouso, ou segurando o Shift e soltando com o direcional, as patas ainda ficam presas no chão":
+    a pose do pulo também sai 2,6× mais depressa andando (e lamber, escorregar e reverência), a locomoção do modelo
+    novo assume com a pose quase fora (peso 0,9) e a traseira correndo dá o passo mesmo com as outras três no ar.
+    Medido em Node: o primeiro passo sai 0,08 s depois do pouso (era 0,33 s) e 0,15 s depois de soltar o Shift (era
+    0,27 s); a traseira apoiada com a perna reta, 0 quadros (eram 3 a 5). Teste novo em `test/locomocao.test.mjs`;
+  - "poderia ter um aviso dizendo que é pesado para ela, e só a irmã consegue empurrar": a dica de cada fase só saía
+    no primeiro toque, por 3,4 s; agora o núcleo (`game.js`, `HEAVY_HINT`) mostra "Pesado demais para a Radhija: só a
+    Rhaenyra consegue empurrar! Troque (Q) e segure Shift." enquanto ela faz força (repete a cada 3,6 s), em todas as
+    fases, sem mexer nos `puzzle.js` (área do #52). Teste em `test/empurrao.test.mjs`;
+  - caminhas das fases 2, 5 e 8: a almofada (e a base, na 2) vira chão de pisar; a borda alta, não (subindo nela a
+    pata ficava esticada e arrastada; atravessar a borda continua como antes). A da fase 10 já tem colisor. Os raios
+    do chão e do empurrar olham só malhas (as estrelinhas da caminha da fase 2 são sprites e quebrariam o raycast).
+    Teste em `test/chao.test.mjs`;
+  - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
+    (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
+    garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
+  - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
+- Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
+  cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
+  animações de interação).
 
 ## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`, deploy `39443414245`)
 

@@ -636,3 +636,25 @@ test('empurrando de pé só com caixote ou carrinho na frente; sem ele (puxando 
     assert.ok(up < 0.04, `${action}: nas quatro patas (ombro ${(up * 100).toFixed(1)} cm acima do quadril)`);
   }
 });
+
+test('a Radhija fazendo força numa coisa pesada: o aviso diz que só a irmã empurra e fica na tela enquanto ela insiste', async () => {
+  // retorno do usuário: "poderia ter um aviso dizendo que é pesado para ela, e só a irmã consegue empurrar" (a dica de
+  // cada fase só saía no primeiro toque, por 3,4 s)
+  const h = await createHeadlessGame({ level: 1, query: 'dog=radhija' });
+  h.game.setStay('rhaenyra', true);
+  h.teleport('radhija', 3.2, -2.25, Math.PI / 2);
+  h.run(0.3);
+  h.clearLog();
+  const heavy = () => h.log('hint').filter((x) => /^Pesado demais para a Radhija: só a Rhaenyra consegue empurrar/.test(x.text));
+  // segurando o direcional contra o carrinho por 4,5 s
+  h.hold([1, 0]);
+  h.run(4.5);
+  const action = h.info().dogs.radhija.action;
+  h.hold(null);
+  assert.equal(action, 'strain', 'fazendo força no carrinho');
+  assert.ok(heavy().length >= 2, `o aviso aparece e volta enquanto ela insiste (${heavy().length} vez(es))`);
+  // parou de fazer força: o aviso não volta
+  h.clearLog();
+  h.run(4);
+  assert.equal(heavy().length, 0, 'parada, sem aviso');
+});

@@ -10,7 +10,7 @@ import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
 import { pushRest } from './pushRest.js';
 import { createGround, walkablesOf } from './ground.js';
-import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
+import { createController, placeController, steer, integrate, resolveDogBody, startDash, canDash, startJump, canJump, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
@@ -26,6 +26,12 @@ const NAMES = ['radhija', 'rhaenyra'];
 const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
 const CELEBRATE_DUR = 3.1;
 const PUSH_STANCE_SPEED = 1.2;
+/**
+ * A Radhija fazendo força numa coisa pesada demais para ela (o caixote, o carrinho...): o aviso fica na tela enquanto
+ * ela insiste (repete a cada `every` s). Retorno do usuário: "poderia ter um aviso dizendo que é pesado para ela, e só
+ * a irmã consegue empurrar" (a dica de cada fase só saía no primeiro toque, por 3,4 s, e esperava 8 a 9 s).
+ */
+const HEAVY_HINT = { text: 'Pesado demais para a Radhija: só a Rhaenyra consegue empurrar! Troque (Q) e segure Shift.', dur: 3.4, every: 3.6 };
 const FADE_MS = 420; // tempo para a UI cobrir a tela antes de montar a próxima fase
 const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -114,6 +120,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let victoryT = 0;
   let barkCd = 0;
   let jumpHintCd = 0; // dica "só a Rhaenyra pula"
+  let heavyHintCd = 0; // aviso "pesado demais para a Radhija" (HEAVY_HINT)
   let loadingPromise = null;
   let loadFailure = null;
   const cel = { radhija: {}, rhaenyra: {} };
@@ -430,6 +437,12 @@ export function createGame({ engine, dogs, levels, params }) {
     emitObjective();
   }
 
+  /** Depois de um empurrãozinho fora do integrate, o peito e a garupa também saem de paredes e móveis. */
+  function settleBody(c) {
+    if (c.shove || c.wallDur > 0 || locks[c.name]?.drive) return; // movimento roteirizado: quem move cuida
+    resolveDogBody(c, world, c.jumpT > 0 ? { airborne: true } : {});
+  }
+
   /** A companheira cede: separação suave, nunca empurra a líder. */
   function separate(comp, lead, dt) {
     const dx = comp.x - lead.x;
@@ -452,6 +465,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const res = world.resolve(comp.x + nx * push, comp.z + nz * push, comp.r, comp.size);
     comp.x = res.x;
     comp.z = res.z;
+    settleBody(comp);
   }
 
   function setLook(name, p) {
@@ -492,6 +506,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const res = world.resolve(A.x + nx * push, A.z + nz * push, A.r, A.size);
     A.x = res.x;
     A.z = res.z;
+    settleBody(A);
   }
 
   // ---------- jogo ----------
@@ -499,6 +514,7 @@ export function createGame({ engine, dogs, levels, params }) {
     playTime += dt;
     barkCd = Math.max(0, barkCd - dt);
     jumpHintCd = Math.max(0, jumpHintCd - dt);
+    heavyHintCd = Math.max(0, heavyHintCd - dt);
     if (input.consume('KeyQ') && !puzzle.lockFor(activeDog) && !extras.busy(activeDog)) switchDog();
     const A = ctrls[activeDog];
     const compName = other(activeDog);
@@ -584,6 +600,10 @@ export function createGame({ engine, dogs, levels, params }) {
         const pr = puzzle.modifyIntent?.(dt, A, intent, { shift, comp: C }) || {};
         if (pr.intent) intent = pr.intent;
         if (pr.action) action = pr.action;
+        if (pr.action === 'strain' && A.size !== 'large' && heavyHintCd <= 0) {
+          heavyHintCd = HEAVY_HINT.every;
+          emit('hint', { text: HEAVY_HINT.text, duration: HEAVY_HINT.dur });
+        }
       }
     }
     // Superbafo (R / R2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.

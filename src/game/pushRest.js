@@ -19,14 +19,27 @@ export function shown(o) {
   return !(m && m.transparent && m.opacity <= 0.01);
 }
 
-/** Distância (m) do ponto (x, y, z) até o desenho `obj` na direção (dx, dz); Infinity se não há nada até `far`. */
-function hitAt(obj, x, y, z, dx, dz, far) {
+/**
+ * As malhas do desenho `obj` (ele e os filhos). Os raios só olham malhas: um brilho em sprite, sem câmera no raio,
+ * quebraria o raycast do three.js. @param {THREE.Object3D} obj @returns {THREE.Mesh[]}
+ */
+export function meshesOf(obj) {
+  /** @type {THREE.Mesh[]} */
+  const out = [];
+  obj.traverse((o) => {
+    if (/** @type {any} */ (o).isMesh) out.push(/** @type {THREE.Mesh} */ (o));
+  });
+  return out;
+}
+
+/** Distância (m) do ponto (x, y, z) até as malhas na direção (dx, dz); Infinity se não há nada até `far`. */
+function hitAt(meshes, x, y, z, dx, dz, far) {
   _o.set(x, y, z);
   _d.set(dx, 0, dz);
   _ray.set(_o, _d);
   _ray.near = 0;
   _ray.far = far;
-  for (const h of _ray.intersectObject(obj, true)) if (shown(h.object)) return h.distance;
+  for (const h of _ray.intersectObjects(meshes, false)) if (shown(h.object)) return h.distance;
   return Infinity;
 }
 
@@ -40,13 +53,14 @@ function hitAt(obj, x, y, z, dx, dz, far) {
  */
 export function pushRest(obj, at, { near, pref, scale = 1 }) {
   obj.updateMatrixWorld(true);
+  const meshes = meshesOf(obj);
   const dx = Math.sin(at.yaw), dz = Math.cos(at.yaw);
   const far = near + 0.6;
   const y0 = 0.14 * scale, y1 = 0.64 * scale, step = 0.03 * scale;
   const ys = [], ds = [];
   for (let y = y0; y <= y1 + 1e-6; y += step) {
     ys.push(y);
-    ds.push(hitAt(obj, at.x, y, at.z, dx, dz, far));
+    ds.push(hitAt(meshes, at.x, y, at.z, dx, dz, far));
   }
   const dmin = Math.min(...ds);
   if (!Number.isFinite(dmin)) return null;
@@ -70,7 +84,7 @@ export function pushRest(obj, at, { near, pref, scale = 1 }) {
     let a = ys[hi], b = ys[hi + 1];
     for (let k = 0; k < 5; k++) {
       const m = (a + b) / 2;
-      if (hitAt(obj, at.x, m, at.z, dx, dz, far) <= dmin + FACE_TOL) a = m;
+      if (hitAt(meshes, at.x, m, at.z, dx, dz, far) <= dmin + FACE_TOL) a = m;
       else b = m;
     }
     top = a;

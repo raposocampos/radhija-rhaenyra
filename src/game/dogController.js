@@ -581,17 +581,10 @@ export function integrate(c, dt, world, opts = {}) {
     c.z = res.z;
   }
   // O peito e a garupa (o corpo é mais comprido que o círculo) também não entram em paredes e móveis.
-  if (c.cfg.body && world.resolveBody) {
-    const b = world.resolveBody(c.x, c.z, c.yaw, c.cfg.body, c.r, c.size, opts);
-    if (Number.isFinite(b.x) && Number.isFinite(b.z)) {
-      c.x = b.x;
-      c.z = b.z;
-      for (const h of b.hits) {
-        const i = res.hits.findIndex((k) => k.id === h.id);
-        if (i < 0) res.hits.push(h);
-        else if (res.hits[i].depth < h.depth) res.hits[i] = h;
-      }
-    }
+  for (const h of resolveDogBody(c, world, opts)) {
+    const i = res.hits.findIndex((k) => k.id === h.id);
+    if (i < 0) res.hits.push(h);
+    else if (res.hits[i].depth < h.depth) res.hits[i] = h;
   }
   const idt = 1 / Math.max(dt, 1e-4);
   c.vx = (c.x - px) * idt;
@@ -631,6 +624,21 @@ export function integrate(c, dt, world, opts = {}) {
   c.stillT = actual < 0.15 ? c.stillT + dt : 0;
   c.hits = res.hits;
   return { hits: res.hits, bump };
+}
+
+/**
+ * O peito e a garupa (o corpo é mais comprido que o círculo do meio) fora de paredes e móveis: puxa a dog para fora.
+ * integrate faz isso a cada passo; quem desloca a dog por fora dele (os empurrões das mecânicas, a irmã cedendo
+ * espaço) chama também, senão a garupa entra na parede. Poses roteirizadas (a fase põe a dog no lugar) não chamam.
+ * → os contatos do corpo.
+ */
+export function resolveDogBody(c, world, opts = {}) {
+  if (!c.cfg?.body || !world.resolveBody) return [];
+  const b = world.resolveBody(c.x, c.z, c.yaw, c.cfg.body, c.r, c.size, opts);
+  if (!Number.isFinite(b.x) || !Number.isFinite(b.z)) return [];
+  c.x = b.x;
+  c.z = b.z;
+  return b.hits;
 }
 
 /**

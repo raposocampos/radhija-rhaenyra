@@ -1,8 +1,9 @@
 // Chão e apoio das patas (etapa 4, retorno do usuário na prévia do #48):
 //   · empurrando de pé, as patas da frente apoiam no DESENHO do objeto (pushRest.js), não na caixa de colisão (no
 //     carrinho da fase 1 a caixa passa 6 cm das pontas e a beirada fica abaixo da altura das patas: elas ficavam no ar);
-//   · as coisas baixas de pisar (placas de pressão, pedais, botões do chão) viram chão (ground.js): a dog sobe nelas, e
-//     no modelo novo cada pata pisa em cima (antes as patas entravam no estrado).
+//   · as coisas baixas de pisar (placas de pressão, pedais, botões do chão e as caminhas) viram chão (ground.js): a dog
+//     sobe nelas, e no modelo novo cada pata pisa em cima (antes as patas entravam no estrado e as dogs atravessavam a
+//     caminha).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -85,8 +86,9 @@ test('empurrando de pé: no carrinho da fase 1 as patas vão em cima da beirada 
   }
 });
 
-test('placas de pisar (cenário real): viram chão; longe delas, o chão de sempre', async () => {
-  const cases = [['fase2', 'PLANK'], ['fase3', 'PLATE_H'], ['fase6', 'PEDAL'], ['fase6', 'BARRIER_PLATE'], ['fase9', 'DAMPER_PLATE'], ['porcos', 'BUTTON']];
+test('placas de pisar e caminhas (cenário real): viram chão; longe delas, o chão de sempre', async () => {
+  const cases = [['fase2', 'PLANK'], ['fase3', 'PLATE_H'], ['fase6', 'PEDAL'], ['fase6', 'BARRIER_PLATE'], ['fase9', 'DAMPER_PLATE'], ['porcos', 'BUTTON'],
+    ['fase2', 'DOG_BED'], ['fase5', 'DOG_BED'], ['fase8', 'DOG_BED']];
   const report = [];
   const bad = [];
   const worlds = new Map();

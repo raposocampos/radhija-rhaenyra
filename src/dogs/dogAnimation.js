@@ -483,7 +483,8 @@ export function createDogAnimation(ctx) {
     const jumpY = Math.max(0, A.jump || 0) + (PY ? PY.hop : 0);
     const inAir = (A.airK ?? -1) >= 0 || pAir >= 0;
     const airK = (A.airK ?? -1) >= 0 ? A.airK : pAir >= 0 ? pAir : 1;
-    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 22 : 12);
+    // pousando andando (segurando o direcional), a pose do pulo sai depressa: as patas voltam a andar já (offK)
+    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 22 : 12 * offK);
     if (st.prevAir && !inAir) st.landT = 0;
     st.prevAir = inAir;
     // impulso na parede (quadros-chave WALL_*): wp = progresso, wEnv liga/desliga as poses nas pontas
@@ -565,9 +566,9 @@ export function createDogAnimation(ctx) {
     const lpk = lp >= 0 ? lp : 0;
     const lSide = A.lickSide ?? 1;
     const lSolo = !!A.lickSolo;
-    w.lick = damp(w.lick, action === 'lick' ? 1 : 0, action === 'lick' ? 12 : 7);
-    w.licked = damp(w.licked, action === 'licked' ? 1 : 0, action === 'licked' ? 9 : 5);
-    w.slide = damp(w.slide, action === 'slide' ? 1 : 0, 10);
+    w.lick = damp(w.lick, action === 'lick' ? 1 : 0, action === 'lick' ? 12 : 7 * offK);
+    w.licked = damp(w.licked, action === 'licked' ? 1 : 0, action === 'licked' ? 9 : 5 * offK);
+    w.slide = damp(w.slide, action === 'slide' ? 1 : 0, action === 'slide' ? 10 : 10 * offK);
     const lExt = lp >= 0 ? sstep(0.04, 0.3, lpk) * (1 - sstep(0.64, 0.94, lpk)) : 0;
     const lSweep = lp >= 0 ? sstep(0.28, 0.68, lpk) : 0;
     const lTouch = lp >= 0 ? Math.sin(Math.PI * clamp((lpk - 0.3) / 0.38, 0, 1)) : 0;
@@ -644,7 +645,8 @@ export function createDogAnimation(ctx) {
     // a irmã, alegre, dá dois pulinhos nas patas da frente
     const cheerHop = ct >= 0.78 && ct < 1.38 ? Math.sin(Math.PI * fract((ct - 0.78) / 0.3)) * 0.026 * s * glad : 0;
     st.hop = action === 'celebrate' ? hopTarget : ct >= 0 ? cheerHop : damp(st.hop, 0, 12);
-    w.bow = damp(w.bow, Math.max(bowTarget, PY ? PY.bow : 0), 7);
+    const bowTo = Math.max(bowTarget, PY ? PY.bow : 0);
+    w.bow = damp(w.bow, bowTo, bowTo < w.bow ? 7 * offK : 7);
     inner.rotation.y = st.spin;
     // impulso na parede: o corpo fica de pé girando em torno do quadril (Hr), que sobe e se aproxima da parede
     let wallLiftY = 0;

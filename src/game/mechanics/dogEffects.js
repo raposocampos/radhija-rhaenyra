@@ -1,7 +1,9 @@
 // Efeitos aplicados às dogs pelas mecânicas: empurrão animado (knockback), ação temporária que trava
 // a entrada (shake, startled…) e "molhada" com decaimento (dog.setWet?.(k)).
-// O deslocamento usa world.move (sub-passos + colisão): nunca entra na água, numa parede nem sai dos limites.
+// O deslocamento usa world.move (sub-passos + colisão): nunca entra na água, numa parede nem sai dos limites; o peito
+// e a garupa também não (resolveDogBody: o corpo é mais comprido que o círculo do meio).
 // Uso no puzzle: effects.update(dt, ctrls) por quadro; effects.lockFor(name) dentro do lockFor do puzzle.
+import { resolveDogBody } from '../dogController.js';
 
 const easeOut = (x) => 1 - (1 - x) * (1 - x) * (1 - x);
 
@@ -61,6 +63,7 @@ export function createDogEffects({ world, dogs }) {
           c.x = res.x;
           c.z = res.z;
         }
+        resolveDogBody(c, world);
         c.v = 0;
         if (k.t >= k.dur) s.kb = null;
       }
