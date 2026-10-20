@@ -13,10 +13,19 @@ import { findLooseObstacles } from './helpers/obstaculos.mjs';
 
 const ALL = [...LEVELS, ...DEV_LEVELS];
 
-// Atravessáveis de propósito: capim, florzinhas soltas no gramado e os ossinhos (as dogs passam por cima para pegar).
-const SKIP = /^(grama-baixa|grama-alta|grama-do-morrinho|florzinhas|osso-.*)$/;
+// Sem colisor de propósito: nome do desenho (ou de um pai) → motivo. Itens que vão na boca ficam de fora sozinhos
+// (userData.carryKind), como as coisas baixas de pisar marcadas com userData.walkable (src/game/ground.js).
+const SEM_COLISOR = [
+  [/^(grama-baixa|grama-alta|grama-do-morrinho|florzinhas|folhinhas)$/, 'capim, florzinhas e a pele de folhinhas: as dogs passam roçando'],
+  [/^osso-/, 'ossinho: as dogs passam por cima para pegar'],
+  [/^caminha$/, 'caminha: as dogs sobem nela (chão, como as placas do PR #48)'],
+  [/^(tabua-pressao|pedra-de-pressao-.+|pedal-de-pulo|placa-da-cancela|botao-do-registro|botao-do-chiqueiro)$/, 'placa de pisar: é chão (src/game/ground.js)'],
+  [/^cenoura$/, 'item da fase (vai na boca)'],
+  [/^bolinha-listrada$/, 'bolinha que rola com a focinhada (src/world/extraProps.js)'],
+  [/^fita-do-vento$/, 'fitas do ventilador: tecido leve'],
+];
 const skipped = (o) => {
-  for (let p = o; p; p = p.parent) if (p.name && SKIP.test(p.name)) return true;
+  for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;
   return false;
 };
 

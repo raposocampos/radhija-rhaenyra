@@ -56,6 +56,7 @@ export function buildBafoWorld({ root, layout }) {
   const ribbons = [];
   for (let i = 0; i < 3; i++) {
     const rb = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.035).translate(0.17, 0, 0), std('#ff7a59', { side: THREE.DoubleSide }));
+    rb.name = 'fita-do-vento'; // tecido leve: não tem colisor
     rb.position.set(0.26, 0.4 + i * 0.08, (i - 1) * 0.08);
     ribbons.push(rb);
     fan.add(rb);

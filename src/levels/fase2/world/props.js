@@ -372,13 +372,15 @@ export function buildProps({ root, layout, engine }) {
   plank.setPress(0);
 
   // ================================================================== CALÇO (cunha de madeira com faixa amarela)
+  // Travado, a ponta fina entra por baixo da folha aberta (a barra de baixo fica a 5,5 cm do chão): a rampa tem
+  // 1,2 cm na ponta e para a 1 cm da barra (WEDGE.lockedAt no layout; teste em test/fase2.test.mjs).
   const wedgeRoot = new THREE.Group();
   wedgeRoot.name = 'calco';
   {
     const shape = new THREE.Shape();
-    const L = 0.3, Hh = 0.1;
-    shape.moveTo(-L / 2, 0); shape.lineTo(L / 2, 0); shape.lineTo(L / 2, Hh * 0.35); shape.lineTo(-L / 2 + 0.03, Hh); shape.lineTo(-L / 2, Hh); shape.closePath();
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2 });
+    const L = 0.3, Hh = 0.1, tipH = 0.012;
+    shape.moveTo(-L / 2, 0); shape.lineTo(L / 2, 0); shape.lineTo(L / 2, tipH); shape.lineTo(-L / 2 + 0.03, Hh); shape.lineTo(-L / 2, Hh); shape.closePath();
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.004, bevelSegments: 2 });
     geo.translate(0, 0, -0.07);
     const uv = geo.attributes.uv, p = geo.attributes.position;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, p.getX(i) * 2 + 0.5, p.getY(i) * 3 + p.getZ(i) * 2);
@@ -397,10 +399,10 @@ export function buildProps({ root, layout, engine }) {
   const wedgeShadow = contactShadow(0.2, 0.12, 0.45);
   root.add(wedgeRoot, wedgeShadow);
   const wA = new THREE.Vector2(WEDGE.x, WEDGE.z), wB = new THREE.Vector2(WEDGE.lockedAt.x, WEDGE.lockedAt.z);
-  // na posição inicial aponta para o portão; travado, encaixa sob a ponta da folha aberta
+  // na posição inicial aponta para a ponta da folha aberta; travado, atravessa a folha com a ponta por baixo dela
   const tipOpen = new THREE.Vector2(GATE.hinge.x + Math.sin(-GATE.openYaw) * gL, GATE.hinge.z - Math.cos(-GATE.openYaw) * gL);
   const yawA = Math.atan2(-(tipOpen.y - wA.y), tipOpen.x - wA.x);
-  const yawB = Math.atan2(-(tipOpen.y - wB.y), tipOpen.x - wB.x);
+  const yawB = WEDGE.lockedYaw;
   const wedgeState = { t: 0, bump: -1 };
   function placeWedge() {
     const k = ease(wedgeState.t);

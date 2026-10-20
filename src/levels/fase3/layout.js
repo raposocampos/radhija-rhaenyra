@@ -149,7 +149,7 @@ export const STATIC_COLLIDERS = [
   })),
   { id: 'ponte-guarda-norte', shape: 'segment', ax: BRIDGE.x0, az: BRIDGE.zMin, bx: BRIDGE.x1, bz: BRIDGE.zMin, t: 0.04 },
   { id: 'ponte-guarda-sul', shape: 'segment', ax: BRIDGE.x0, az: BRIDGE.zMax, bx: BRIDGE.x1, bz: BRIDGE.zMax, t: 0.04 },
-  { id: 'ninho', shape: 'circle', x: NEST.x, z: NEST.z, r: NEST.r },
+  { id: 'ninho', shape: 'circle', x: NEST.x, z: NEST.z, r: NEST.r + 0.07 }, // com a palha solta em volta (até ~0,4 m)
 ];
 
 export const KEEP_CLEAR = [

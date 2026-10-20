@@ -29,10 +29,11 @@ export function markedUp(o, key) {
   return false;
 }
 
-/** O material desenha alguma coisa? */
+/** O material desenha alguma coisa sólida? Efeitos (raio de sol, brilho: transparentes sem profundidade) não contam. */
 function drawn(m) {
   if (!m || m.visible === false || m.colorWrite === false) return false;
-  return !(m.transparent && m.opacity <= 0.02);
+  if (m.transparent && (m.opacity <= 0.02 || m.depthWrite === false)) return false;
+  return m.blending !== THREE.AdditiveBlending;
 }
 
 /** Nome legível: caminho de nomes até a raiz, tipo da geometria e cor do material. */
@@ -80,11 +81,11 @@ function sampleSurface(mesh, { yMin, yMax, step, region }, visit) {
       if (Math.max(_a.y, _b.y, _c.y) < yMin || Math.min(_a.y, _b.y, _c.y) > yMax) continue;
       if (Math.max(_a.x, _b.x, _c.x) < region.minX || Math.min(_a.x, _b.x, _c.x) > region.maxX) continue;
       if (Math.max(_a.z, _b.z, _c.z) < region.minZ || Math.min(_a.z, _b.z, _c.z) > region.maxZ) continue;
-      const len = Math.max(_a.distanceTo(_b), _a.distanceTo(_c), _b.distanceTo(_c));
-      const n = Math.max(1, Math.ceil(len / step));
-      for (let i = 0; i <= n; i++) {
-        for (let j = 0; i + j <= n; j++) {
-          const u = i / n, v = j / n;
+      // grade com a densidade de cada lado (triângulo comprido e fino não vira milhares de pontos repetidos)
+      const nu = Math.max(1, Math.ceil(_a.distanceTo(_b) / step)), nv = Math.max(1, Math.ceil(_a.distanceTo(_c) / step));
+      for (let i = 0; i <= nu; i++) {
+        for (let j = 0; j <= nv * (1 - i / nu) + 1e-9; j++) {
+          const u = i / nu, v = j / nv;
           const y = _a.y + (_b.y - _a.y) * u + (_c.y - _a.y) * v;
           if (y < yMin || y > yMax) continue;
           const x = _a.x + (_b.x - _a.x) * u + (_c.x - _a.x) * v;
@@ -132,11 +133,12 @@ function reachDepth(world, x, z, dog, tol) {
  * @param {ReturnType<typeof import('../../src/game/collision.js').createCollisionWorld>} world
  * @param {{ dogs: { name: string, size: 'small' | 'large', r: number, yMax: number }[], yMin?: number, tol?: number,
  *   step?: number, cell?: number, link?: number, skip?: (mesh: THREE.Mesh) => boolean }} opts
- *   dogs: raio de colisão e altura até onde o corpo dela vai (yMax); yMin: abaixo disto é chão (tapete, placa, mangueira);
+ *   dogs: raio de colisão e altura até onde o corpo dela vai (yMax); yMin: até aqui a pata passa por cima (tapete,
+ *   degrau, mangueira, chinelo);
  *   tol: quanto a dog pode encostar sem contar (pelo, ponta de folha); step: distância entre pontos da superfície;
  *   cell: grade dos pontos; link: distância que junta pontos num mesmo achado; skip: malhas a ignorar.
  */
-export function findLooseObstacles(root, world, { dogs, yMin = 0.05, tol = 0.06, step = 0.035, cell = 0.02, link = 0.07, skip = null }) {
+export function findLooseObstacles(root, world, { dogs, yMin = 0.08, tol = 0.06, step = 0.035, cell = 0.02, link = 0.07, skip = null }) {
   const yMax = Math.max(...dogs.map((d) => d.yMax));
   const B = world.bounds;
   const pad = Math.max(...dogs.map((d) => d.r));

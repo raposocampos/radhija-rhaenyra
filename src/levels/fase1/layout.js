@@ -95,8 +95,8 @@ export const STATIC_COLLIDERS = [
   // Limites (paredes externas grossas)
   { id: 'casa', shape: 'box', x: 0, z: -5.3, hx: 9, hz: 0.5 },
   { id: 'limite-oeste', shape: 'box', x: -6.5, z: 0, hx: 0.5, hz: 6 },
-  { id: 'limite-leste', shape: 'box', x: 7.3, z: 0, hx: 0.5, hz: 6 },
-  { id: 'limite-sul', shape: 'box', x: 0, z: 5.0, hx: 9, hz: 0.5 },
+  { id: 'limite-leste', shape: 'box', x: 7.27, z: 0, hx: 0.53, hz: 6 }, // face em x 6.74: as folhas da cerca-viva começam ali
+  { id: 'limite-sul', shape: 'box', x: 0, z: 4.96, hx: 9, hz: 0.54 }, // face em z 4.42: a fileira de arbustos do sul começa ali
 
   // Cerca divisória
   ...FENCE.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({
@@ -107,6 +107,8 @@ export const STATIC_COLLIDERS = [
     hx: ft,
     hz: (s.zMax - s.zMin) / 2,
   })),
+  // a tábua da cerca na beira sul da abertura entorta para dentro dela, rente ao chão
+  { id: 'cerca-ponta-abertura', shape: 'box', x: fx, z: FENCE.gap.zMin + 0.02, hx: ft, hz: 0.03 },
   {
     id: 'abertura-bloqueio-grande',
     shape: 'box',
@@ -124,11 +126,14 @@ export const STATIC_COLLIDERS = [
   { id: 'arvore-vaso-noroeste', shape: 'circle', x: -5.2, z: -3.9, r: 0.55 },
   { id: 'banco', shape: 'box', x: -5.535, z: 0.6, hx: 0.465, hz: 0.75 }, // assento ao longo de Z, de frente p/ leste
   { id: 'vaso-banco', shape: 'circle', x: -5.4, z: 1.75, r: 0.25 },
+  { id: 'regador', shape: 'circle', x: -5.8, z: 1.45, r: 0.14 }, // regador ao lado do banco (src/world/garden.js)
   { id: 'luminaria', shape: 'circle', x: -1.3, z: 3.7, r: 0.12 },
 
   // Lado leste (jardim do condomínio)
   { id: 'horta-elevada', shape: 'box', x: 3.2, z: -3.7, hx: 0.6, hz: 1.1 }, // x[2.6,3.8] z[-4.8,-2.6]
   { id: 'armario-jardim', shape: 'box', x: 5.9, z: -3.7, hx: 0.9, hz: 1.1 }, // x[5.0,6.8] z[-4.8,-2.6] (altura ≤ 1.2 m)
+  { id: 'mangueira-nicho', shape: 'circle', x: 4.69, z: -4.57, r: 0.07 }, // a ponta da mangueira descendo do suporte (src/world/house.js)
+  { id: 'cordinha', shape: 'circle', x: 1.13, z: 1.12, r: 0.08 }, // o brinquedo de corda pendurado no trinco
   { id: 'bebedouro-passaros', shape: 'circle', x: 3.4, z: -0.6, r: 0.32 },
   { id: 'vaso-canto-1', shape: 'circle', x: 6.1, z: 3.7, r: 0.3 },
   { id: 'vaso-canto-2', shape: 'circle', x: 5.6, z: 4.05, r: 0.22 },
