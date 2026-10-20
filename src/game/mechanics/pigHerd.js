@@ -637,14 +637,18 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     // aberta, ele ficava empurrando a quina sem sair do lugar e ela ficava a salvo): 1,2 s sem chegar mais perto dela,
     // vai direto encostar pelo lado em que está, contornando a ponta da porteira aberta e, empacado, com um passo de lado
     if (P.chDog !== P.dog) Object.assign(P, { chDog: P.dog, chD: Infinity, chT: 0, direct: 0, sideGoal: null });
+    // (fora da área ela não é alcançável: eles só esperam na beirada)
     const touchD = Math.max(r + c.r, cfg.nose + dogExtent(c, P.x, P.z)) + 0.08;
-    if (sp > 0.3 || dDog < touchD || dDog < P.chD - 0.04) Object.assign(P, { chD: Math.min(dDog, sp > 0.3 ? Infinity : dDog), chT: 0 });
+    const away = sp > 0.3 || offArea(c.x, c.z) > 0;
+    if (away || dDog < touchD || dDog < P.chD - 0.04) Object.assign(P, { chD: away ? Infinity : dDog, chT: 0 });
     else if ((P.chT += dt) > 1.2) Object.assign(P, { direct: 3, chT: 0, chD: dDog });
-    if (sp > 0.3) P.direct = 0;
+    if (away) P.direct = 0;
     if (P.direct > 0) {
       P.direct -= dt;
+      // o focinho encosta nela (a mesma distância do arco)
       const ux = (P.x - c.x) / (dDog || 1), uz = (P.z - c.z) / (dDog || 1);
-      g = clampArea(c.x + ux * (r + c.r + 0.02), c.z + uz * (r + c.r + 0.02));
+      const lead = Math.max(r + c.r + 0.02, cfg.nose + dogExtent(c, c.x + ux, c.z + uz));
+      g = clampArea(c.x + ux * lead, c.z + uz * lead);
       const w = aroundLeaf(P, g);
       if (w) g = w[0];
       if (P.stuckT > 1) {

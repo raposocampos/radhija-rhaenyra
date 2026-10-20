@@ -699,7 +699,7 @@ seededTest('fase 10: o botão da porta é sorteado a cada partida (sem ?botao=)'
     seen.add(q(h).shed.doorBtn);
   }
   assert.deepEqual([...seen].sort(), [0, 1], 'os dois botões aparecem');
-}, { sweep: 60 });
+}, { sweep: 40 });
 
 seededTest('fase 10: caixotes — a Radhija não puxa e só sobe com os três na marca; solto no meio, o caixote fica onde parou', 1, async () => {
   const h = await game();
@@ -829,7 +829,7 @@ seededTest('fase 10: as galinhas — de frente fogem correndo; por trás nem lig
   assert.ok(q(h).chickens.every(inArea), `continuam na área ${JSON.stringify(q(h).chickens)}`);
   // ninguém tem texto
   assert.equal(h.log('hint').filter((x) => /galinha/i.test(x.text || '')).length, 0);
-}, { sweep: 150 });
+}, { sweep: 100 });
 
 seededTest('fase 10: a Rhaenyra que pisa na lama escorrega (sem pulo nem impulso) até a Radhija lambê-la (L)', 1, async () => {
   const h = await game('botao=1');
@@ -937,7 +937,7 @@ seededTest('fase 10: o botão errado solta os porquinhos; eles derrubam o legume
   h.events.emit('ui:restart', {});
   h.run(0.2);
   assert.deepEqual([q(h).pigs.inPen, q(h).pigs.open, q(h).shed.sty], [3, false, false]);
-}, { sweep: 200 });
+}, { sweep: 120 });
 
 seededTest('fase 10: com algo na boca a Radhija não sobe a rampa nem pega a vela (a boca já está ocupada)', 1, async () => {
   const h = await game('botao=1');
@@ -1066,14 +1066,17 @@ seededTest('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=do
   assert.ok(h.run(10, { until: (st) => st.state === 'victory' }), 'stage=done termina a fase');
 });
 
-// Varredura de sementes: roda cada teste que depende do sorteio com muitas sementes (sweep: porquinhos 200, galinhas
-// 150, botão da porta 60) e lista o que falhar. Desligada por padrão (leva uns 5 min): para investigar um teste instável
-// no CI, ligue com a variável FASE10_SEMENTES=1 no passo de testes (ou troque o `skip` por false num commit temporário).
+// Varredura de sementes: roda cada teste que depende do sorteio com muitas sementes (sweep: porquinhos 120, galinhas
+// 100, botão da porta 40; a partir de FASE10_SEMENTES_DE, padrão 1) e lista o que falhar. Desligada por padrão (leva uns
+// 4 min): para investigar um teste instável no CI, ligue com FASE10_SEMENTES=1 no passo de testes (ou troque o `skip`
+// por false num commit temporário). Cada partida headless deixa ouvintes globais: mais de ~350 num processo só estoura
+// a memória do CI.
 test('fase 10: varredura de sementes dos testes que dependem do sorteio', { skip: false }, async () => {
+  const from = Number(process.env.FASE10_SEMENTES_DE) || 1;
   /** @type {Record<string, string[]>} */
   const bad = {};
   for (const { name, fn, sweep } of SEEDED) {
-    for (let seed = 1; seed <= sweep; seed++) {
+    for (let seed = from; seed < from + sweep; seed++) {
       try {
         await withSeedAsync(seed, fn);
       } catch (err) {
