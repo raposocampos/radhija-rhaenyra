@@ -1,46 +1,143 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (colisão dos objetos do cenário, PR #53; #47 e #49 a #52 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
+de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
+caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: o balde deitado da fase 10 segura a Rhaenyra (Claude, branch `claude/colisao-balde`, PR #54)
+## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
 
-- Pedido (seguimento do #53, pela sessão do cenário): o colisor dinâmico do balde-elevador (`fase10/puzzle.js`)
-  deixava a Rhaenyra entrar 18,8 cm no desenho do balde deitado, pela boca e por cima da alça (auditoria do #53 sem a
-  exceção, CI `39476688055`). A Radhija tem de continuar entrando e subindo como antes.
-- Causa: o colisor era um círculo de 28 cm no meio do balde; deitado, a boca e a alça vão até 48 cm ao sul do centro.
-- Feito: o `bucketCol` virou uma cápsula (segmento com meia-espessura `BUCKET.r`) do meio do balde até o meio da boca;
-  `fitBucketCol()` a encolhe com a inclinação (h/2 · sen θ, como o `layoutRope` de `treehouse.js`) e só a desliga
-  quando o fundo do balde passa da cabeça da Rhaenyra (`DOGS.rhaenyra.visual.headTop`; antes, aos 25 cm).
-- Retorno do usuário na 1ª prévia (`a7574d8`): "a colisão da Rhaenyra está ok", mas a Radhija atravessava o balde, e
-  perto da casa na árvore a câmera olhava para cima: a dog e o balde ficavam no rodapé da tela, atrás do botão "Entrar
-  no balde". Feito: a cápsula segura as duas (`blocks: 'large'` só com a Radhija lá dentro, porque, ativa, ela não fica
-  travada e a colisão a empurraria a cada quadro); ela entra só pela boca (E a até `BUCKET.mouthR` = 45 cm do ponto da
-  boca, que foi para 50 cm à frente dela, fora do balde: sai sem tranco); de lado ou por trás, o E dá a dica
-  `bucketMouth`; zona de câmera `balde-no-chao` (olhar 0,5 m acima, em vez de 1,2 m, só na volta do balde). A exceção
-  `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`): agora ela confere o balde deitado e também o balde da
-  fase 8, que tinha o mesmo nome e passava sem conferência.
-- Retorno na 2ª prévia (`36177f7`): "as colisões funcionaram", mas (1) a alça ficava para fora da boca, com a corda
-  presa na ponta, e a Radhija atravessava a corda ao entrar; (2) com o balde deitado, o topo da cabeça dela vazava;
-  (3) lá em cima, o pulo para o deque atravessava o balde ("talvez ela se apoia primeiro e pula"). Feito: a alça fica
-  presa em orelhas um pouco abaixo da borda e aponta para a roldana (deitado, por cima do balde; puxando, ela gira
-  com o balde), e a corda desce por cima dele; o colisor virou caixa (deitado e levantando; quase em pé, o círculo).
-  Achado: a pose do balde (`rideSeq`) nunca chegava à animação, então ela ficava sentada no balde deitado (a cabeça
-  passava do teto); agora fica deitada de barriga (`slide`), `RIDE_IN` mais perto da boca. Os pulos do deque usam o
-  `hopStep` (agacha, salta com a pose de pulo, pousa): a saída, sentada, sobe por cima da borda; a volta salta até em
-  cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque. Ela fica virada como entrou.
-- Testes em `test/fase10.test.mjs`: o desenho real (`buildLevelWorld`) contra o colisor do jogo, com o
-  `findLooseObstacles` do #53, para as duas, em 9 pontos da corda (deitado, levantando, em pé, subindo e acima delas);
-  deitadas, ficam livres a 3 cm do desenho (sem parede invisível); deitado, nada do balde nem da corda na frente da
-  boca; a Radhija esbarra de lado, por trás e na boca, só entra pela boca, fica quieta lá dentro (sem tranco), sai sem
-  tranco, e a câmera deixa a dog e o balde acima do botão; e os modelos de verdade (atual e novo), com a pose do jogo
-  quadro a quadro: deitada, a pele cabe no balde; nos pulos do deque, não cruza a parede abaixo da borda.
-- Validação: CI, prévia e E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e
-  `git diff --check`.
+- Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
+  balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
+  colisão da Rhaenyra está ok", mas a Radhija atravessava o balde e a câmera (zona `casa-na-arvore`) deixava o balde no
+  rodapé da tela, atrás do botão; 2ª (`36177f7`), "as colisões funcionaram", mas a alça ficava para fora da boca, com a
+  corda na frente da entrada; deitada lá dentro, a cabeça vazava; e o pulo para o deque atravessava o balde.
+- Feito (`fase10/puzzle.js`, `layout.js`, `world/treehouse.js`):
+  - Colisor do balde para as duas (`fitBucketCol`): caixa do tamanho dele visto de cima, do fundo até a boca, enquanto
+    ele está deitado ou levantando; quase em pé, o círculo da boca. Só desliga quando o fundo passa da cabeça da
+    Rhaenyra. Com a Radhija lá dentro, vale só para a Rhaenyra (ativa no balde, ela não tem trava, para a troca
+    continuar valendo; a colisão a empurraria a cada quadro).
+  - A Radhija entra só pela boca (`atMouth`, `BUCKET.mouthR`); de lado ou por trás, o E dá a dica `bucketMouth`.
+  - A alça fica presa em orelhas um pouco abaixo da borda e aponta para a roldana (`layoutRope`): deitado, por cima do
+    balde; puxando, gira com ele. A corda desce por cima do balde, longe da boca.
+  - Achado: a pose do balde (`rideSeq`) nunca chegava à animação, e ela ficava sentada no balde deitado (a cabeça
+    passava do teto). Agora fica deitada de barriga (`slide`), a `RIDE_IN` do meio, virada como entrou (`rideYaw`).
+  - Os pulos do deque usam o `hopStep` (agacha, salta com a pose de pulo e pousa): a saída, sentada, sobe por cima da
+    borda; a volta salta até em cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque.
+  - Câmera: zona `balde-no-chao` (o olhar sobe 0,5 m, em vez de 1,2 m, na volta do balde).
+  - A exceção `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`); ela passa a conferir também o balde da
+    fase 8, que tinha o mesmo nome.
+- Testes (`test/fase10.test.mjs`): o desenho real (`buildLevelWorld`) contra o colisor, com o `findLooseObstacles` do
+  #53, para as duas, em 9 pontos da corda, e as duas livres a 3 cm do balde deitado; deitado, nada do balde nem da
+  corda na frente da boca; a Radhija esbarra de lado, por trás e na boca, entra só pela boca, fica quieta lá dentro,
+  sai sem tranco e aparece acima do botão na tela; os modelos de verdade (atual e novo), com a pose do jogo quadro a
+  quadro: deitada, a pele cabe no balde; nos pulos do deque, não cruza a parede abaixo da borda.
+- Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
+  E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
   só então integrar.
 
-## Em andamento: colisão dos objetos do cenário (Claude, branch `claude/colisao-cenario`, PR #53)
+## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
+
+- Plano aprovado: o peito e a garupa na colisão (dois círculos) e a cabeça que desvia, sem mudar o gating dos puzzles.
+  Pedidos do usuário para esta etapa (2026-10-20): "diminuir um pouco a velocidade da Radhija, ela está andando muito
+  rápido"; "analisar a arrancada: a pata traseira acaba ficando tempo demais no chão e esticando a perna de um jeito
+  estranho"; e, no meio do trabalho, "essa mecânica de empurrar poderia usar uma animação parecida com aquela de
+  empurrar em pé... ela empurraria com as patas, andando apenas em duas patas traseiras; resolveria essa colisão".
+- Feito (PR #48):
+  - Radhija a 2,1 m/s (era 2,4; a Rhaenyra continua a 2,0): `src/dogs/config.js`.
+  - Arrancada (`src/dogs/v2/gait.js`): o ritmo do guia demora uns décimos de segundo para acompanhar a aceleração do
+    controle (12–16 m/s²) e a pata de trás ia até o limite (~11 cm atrás, perna reta) e era arrastada. Agora, acelerando,
+    o compasso e o apoio já são os da velocidade de agora e as fases das patas convergem depressa; a traseira dá um
+    passo de conforto antes de a perna esticar. Achado no diagnóstico do CI (cada passo registra por que saiu,
+    `leg.why`): andando a 2 m/s o trote tem duas patas ou mais no ar em 92–99% dos quadros, então o passo extra e o de
+    conforto agora saem com até duas outras no ar, e um passo fora do ritmo recomeça a fase da pata (senão o apoio
+    seguinte ficava longo e a pata ia até 17 cm atrás). Medido no CI `7972bf6`: arrancada até 9,4 cm atrás (perna até
+    0,94, nada arrastado). Teste novo em `test/locomocao.test.mjs`.
+  - Teste instável do main ("ao parar, as patas assentam…", do #43; caiu no E2E do #51): parando de repente, o corpo
+    sobe um tiquinho e a pata no limite era arrastada 4 mm por quadro; agora dá o passinho de ajuste na hora. O teste
+    roda com 8 sementes.
+  - Corpo na colisão (`world.resolveBody` em `src/game/collision.js`, chamado pelo `integrate`): peito e garupa em
+    círculos menores que o do meio (`DOG_CONFIG[nome].body`); os vãos não mudam e, de frente para a parede, ela para
+    uns 3 cm antes. Vale para os dois modelos (é o jogo). Testes em `test/colisao.test.mjs`.
+  - Empurrando caixote ou carrinho de pé (`dogAnimation.js`, os dois modelos): a pose do empurrão em pé, patas da
+    frente na face (ou em cima, se é baixo), andando nas traseiras; a Radhija fazendo força também fica de pé e
+    patina no lugar. O núcleo manda `pushGap`/`pushTop`/`pushY` (`game.js` `pushFace`). Testes em
+    `test/empurrao.test.mjs`.
+  - Cabeça que desvia (`src/dogs/v2/head.js`, só o modelo novo, primeira camada de `LAYERS`): com o mundo da fase
+    (`d.setWorld`), o desenho freia antes de uma parede (aos poucos, até o focinho encostar) e a cabeça vira
+    farejando; raspando de lado, gira para fora. A locomoção não trata o recuo como esteira. Testes em
+    `test/cabeca.test.mjs`; sandbox `wall=<m>`/`crate=<altura>` e capturas `45-parede`, `46-empurrando-de-pe`,
+    `47-empurrando-cesto`, `48-forca-de-pe`.
+- 1ª prévia (`94579d0`), retorno do usuário: "a pata fica distante do objeto, no ar"; "alguns botões e cenários os
+  personagens atravessam, é como se só existisse a colisão do chão"; "segurando o direcional antes de a animação
+  acabar, as patas ficam presas"; "o círculo branco está muito forte". Corrigido:
+  - as patas apoiam no desenho do objeto empurrado, medido por raios (`src/game/pushRest.js`: face, beirada e altura
+    das patas, pulando frestas); o colisor dos empurráveis leva o desenho (`visual`). No carrinho da fase 1 a caixa
+    passa 6 cm das pontas e a beirada (37,5 cm) fica abaixo das patas: agora elas vão em cima dela;
+  - coisas baixas de pisar (placas, pedais e botões do chão, marcadas com `userData.walkable`) viram chão
+    (`src/game/ground.js`): o objeto da dog sobe (suave) e, no modelo novo, cada pata pisa em cima (chão por pata no
+    `gait.js`; a correção do chão do corpo vai até a pata mais baixa). Marcadas: fase 2 (tábua), fase 3 (pedras),
+    fase 6 (pedal e placa da cancela), fase 9 (botão do registro) e Arena dos Porquinhos (botão);
+  - andando, as poses de ação que acabaram saem 2,6× mais depressa (as patas não ficam presas);
+  - o anel da dog ativa ficou fino e discreto (`src/fx/feedback.js`).
+  Testes em `test/chao.test.mjs` (cenário real de cada fase). CI `39458897060` (509 testes) e E2E `todas`
+  `39460483667` verdes no código de `3b2520b`.
+- Pedidos do mesmo retorno que ficam para depois do #48 (combinados com o usuário): animações de interação de verdade
+  (a corda do portão presa na boca, fechar o registro mordendo o volante) e, parada muito tempo, coçar de olhinho
+  fechado e xixi agachada (fêmea), além de sentar e deitar; pegar e largar objetos em todas as fases foi feito na
+  sessão própria `pegar-largar` (PR #52, já no main).
+- 2ª prévia (`8f27f1a`), retorno do usuário: muitos objetos sem colisão (vasos, a madeira do portão da fase 2, o
+  irrigador, as caminhas, a tábua de passar, sabonetes, a bandeja da fase 6) e o biscoito da caminha da fase 8
+  confundido com os colecionáveis: com a sessão própria "Colisão e acabamento do cenário" (branch
+  `claude/colisao-cenario`), menos as caminhas. Aqui (commit seguinte a `8f27f1a`):
+  - "quando se pula, no pouso, ou segurando o Shift e soltando com o direcional, as patas ainda ficam presas no chão":
+    a pose do pulo também sai 2,6× mais depressa andando (e lamber, escorregar e reverência), a locomoção do modelo
+    novo assume com a pose quase fora (peso 0,9) e a traseira correndo dá o passo mesmo com as outras três no ar.
+    Medido em Node: o primeiro passo sai 0,08 s depois do pouso (era 0,33 s) e 0,15 s depois de soltar o Shift (era
+    0,27 s); a traseira apoiada com a perna reta, 0 quadros (eram 3 a 5). Teste novo em `test/locomocao.test.mjs`;
+  - "poderia ter um aviso dizendo que é pesado para ela, e só a irmã consegue empurrar": a dica de cada fase só saía
+    no primeiro toque, por 3,4 s; agora o núcleo (`game.js`, `HEAVY_HINT`) mostra "Pesado demais para a Radhija: só a
+    Rhaenyra consegue empurrar! Troque (Q) e segure Shift." enquanto ela faz força (repete a cada 3,6 s), em todas as
+    fases, sem mexer nos `puzzle.js` (área do #52). Teste em `test/empurrao.test.mjs`;
+  - caminhas: na 2ª prévia (`fb551bf`, CI `39477096835` e E2E `todas` `39477101963` verdes) só a almofada virava chão
+    e as dogs ainda atravessavam a borda (retorno do usuário, com imagens das fases 2 e 8: "esse ainda não foi
+    arrumado"; "deve ser aplicada a todas caminhas, ou objetos com esse tipo de borda"). Medido em Node, pisar na borda
+    com a pata não fica bom (arrastava 10 a 40 quadros e a pata entrava até 10 cm). Agora: nas caminhas grandes (fases
+    5 e 8 e Arena dos Porquinhos), andando para a borda a dog dá um pulinho por cima (`userData.rim`,
+    `ground.planRimHop`, `game.js` `hopOverRim`, `startHop`), as duas, e pousa na almofada; as pequenas (fase 2, 80 × 60
+    cm com encosto de 36 cm, e Arena do Empurrão) são sólidas (colisor `caminha`); a almofada do gato (fase 9, 12 cm) é
+    chão de pisar. O corpo apoia no chão embaixo das patas da frente e de trás (`bodyGround`), a pata no balanço passa
+    por cima do que vem à frente e a apoiada sobe no que estiver embaixo. Medido nas caminhas reais: dois pulinhos
+    (entrar e sair), dentro a 4–8 cm do meio com o corpo na almofada (10 cm), pata apoiada a 14–22 mm do chão
+    embaixo dela, arrasto de 0 a 12 quadros (logo depois do pouso). Os raios do chão e do empurrar olham só malhas (as
+    estrelinhas da caminha da fase 2 são sprites e quebrariam o raycast). Testes em `test/chao.test.mjs`;
+  - prévia `165dcb0`, retorno do usuário: "a 2 elas contornam, a 5 e 8 ainda está com problema na borda" (as dogs
+    em pé em cima dela). Causa: o jogo monta o chão logo depois de construir a fase, antes do primeiro quadro, e o
+    grupo da caminha (posto no lugar dela) ainda não tinha a posição no mundo: o chão a media na origem e, no jogo,
+    nem a almofada nem a borda contavam (os testes atualizavam a cena antes; reproduzido em Node com o `game.js`, o
+    cenário real e teclas). Corrigido (`updateWorldMatrix` com os pais, teste que falha sem a correção) e, do lado de
+    fora, a borda segura o corpo de quem está no chão (`rim: { r, t }`, `pushOffRims`, `keepOffRims`): a irmã
+    empurrada ou passando rente não fica em cima dela. Medido no jogo em Node (fases 5 e 8, seis jeitos de chegar, as
+    duas dogs): pulinhos para entrar e sair e, de fora, no máximo 4 quadros raspando. E2E `todas` `39484870979` do
+    `165dcb0`: 21 de 22 partes verdes; a `biblioteca` falhou uma vez (o E do ventilador) e passou ao repetir
+    (`39486030063`, mesmo commit);
+  - empurrando de pé (retorno do usuário com o ventilador): "tem hora que encosta, tem hora que fica no ar" — um raio
+    só, no meio da dog, ora pegava o cano, ora a grade, ora nada (a pata ia para a caixa de colisão, no ar). Agora são
+    cinco raios na largura do peito; um pé fino só vale sem face larga ao alcance e as patas o abraçam; sem nada, o eixo
+    do meio; a medida nova chega suave na pose. "Andando de duas patas, a esquerda abre demais": de pé, o joelho de
+    trás ficava sem rumo (o "para a frente" da garupa inclinada apontava na direção da perna) e abria até 4,5 cm além
+    da pata; agora aponta para a frente no chão. Testes novos em `test/chao.test.mjs` (o ventilador das fases 4 e 9 de
+    240 posições) e `test/empurrao.test.mjs` (o joelho);
+  - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
+    (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
+    garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
+  - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
+- Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
+  cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
+  animações de interação).
+
+## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 
 - Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
   permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
@@ -62,10 +159,10 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
 - Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
   na boca dele; fica para um PR próprio.
-- Próximo passo: com CI e E2E `todas` verdes no head final e as capturas revistas, prévia e aprovação do usuário no
-  chat desta sessão; só então integrar.
+- Integrado ao main com a aprovação do usuário, antes do #48 (squash `acae42f`, CI do main `39489396152`, deploy
+  `39489612450`): produção em v0.10.3 · build 95. O #48 sincronizou com ele.
 
-## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
+## Entregue: largar e pegar os objetos em todas as fases (PR #52, squash `8a3c743`, deploy `39473919953`)
 
 - Pedido do usuário (2026-10-20, pela sessão dos modelos das dogs): "deveria ter a opção de largar e pegar os objetos
   em todas as fases, não somente em algumas". Com o item na boca, E larga no chão à frente quando não há outra ação ali;
@@ -85,11 +182,11 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (`fab6abc`) só falhou nesse teste da borda, que ainda esperava o E sem efeito com a carga na boca. Nada rodou no PC
   além de `node --check`/`git diff --check`.
 - Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR (#52) não toca nesses arquivos e, no
-  `docs/CONTEXTO.md`, só nesta seção. Na fila do orquestrador, o #48 entra antes: depois dele, sincronizar com o main
-  e validar o head final (CI e E2E `todas`).
-- Próximo passo: com o head final verde, prévia e aprovação do usuário no chat desta sessão; só então integrar.
+  `docs/CONTEXTO.md`, só nesta seção (acabou entrando antes do #48, que sincronizou com ele).
+- Integrado ao main com a aprovação do usuário (squash `8a3c743`, deploy `39473919953`): produção em v0.10.2. Não
+  repetir merge/deploy do #52.
 
-## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
+## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`, deploy `39443414245`)
 
 - Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
   0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
@@ -106,8 +203,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
   `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
   (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
-- Próximo passo: prévia e aprovação do usuário no chat; depois, integrar (squash com o SHA conferido), liberar o
-  deploy e conferir `version.json` (v0.10.1 · build 93). O #48 vem depois.
+- Integrado ao main com a aprovação do usuário (squash `0c22c48`, deploy `39443414245`): produção em v0.10.1. Não
+  repetir merge/deploy do #51.
 
 ## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
@@ -645,8 +742,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     sul; o rodapé de pedra da fachada não atravessa mais a porta da varanda e saiu o capacho (era a "mancha" no chão);
     no empurrão, as patas apoiam na casca de verdade (`MANGO_BARK`: o tronco sobe torto e afina; o colisor ficou
     rente a ela).
-  - Entregue: ajuste visual pedido em 2026-10-20 (PR #49, squash `7737c04`, deploy liberado pela sessão da fase 10;
-    branch `claude/fase10-chao`, a partir do main `cdabb1b`): a terra da
+  - Entregue, ajuste visual pedido em 2026-10-20 (**PR #49**, squash `7737c04`, deploy `39376268869`; branch
+    `claude/fase10-chao`, a partir do main `cdabb1b`): a terra da
     horta ficou seca (castanho claro, rachadinhas, torrões) e a lama, mais escura, molhada e brilhante, com a borda de
     terra úmida, respingos e um rastro de patinhas saindo dela (`ground.js`); caminho de pedras com cascalho na porta
     do galpão; o chão do chiqueiro virou barro (manchas molhadas que brilham, marcas de casco, palha) com a poça mais

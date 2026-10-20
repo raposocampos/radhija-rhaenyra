@@ -204,10 +204,10 @@ async function sideTests() {
   // segura S até a velocidade de corrida; o tempo (de jogo) que levou é o que se confere
   const t0 = (await info()).simSec;
   await page.keyboard.down('KeyS');
-  i = await waitFor((s) => s.dogs.radhija.speed > 2.0, { timeout: 1500, step: 30 });
+  i = await waitFor((s) => s.dogs.radhija.speed > 1.9, { timeout: 1500, step: 30 });
   const v1 = i.dogs.radhija.speed;
   const tAcc = i.simSec - t0;
-  check(v1 > 2.0 && tAcc < 1.0, 'acelera até ~2.4 m/s', `${v1} em ${tAcc.toFixed(2)} s de jogo`);
+  check(v1 > 1.9 && tAcc < 1.0, 'acelera até ~2,1 m/s', `${v1} em ${tAcc.toFixed(2)} s de jogo`);
   // inversão: grava a velocidade quadro a quadro (uma leitura a 90 ms perde o pivô quando a máquina está carregada)
   const rec = await record((g) => ({ v: g.debug.ctrls.radhija.v, piv: g.debug.ctrls.radhija.pivoting }));
   await page.keyboard.up('KeyS');

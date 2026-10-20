@@ -29,7 +29,9 @@ export const DOGS = {
 
 // Porta da lavanderia (na parede z = -4.8) e caminha das dogs (objetivo final).
 export const LAUNDRY_DOOR = { x: -4.4, width: 0.95, height: 2.1 };
-export const DOG_BED = { x: -5.5, z: -3.95, w: 0.8, d: 0.6 }; // caminha (só visual, andável)
+// A caminha é pequena para as duas (80 × 60 cm, com o encosto de 36 cm atrás): sólida, elas a contornam e entregam a
+// bolinha na beirada (antes era só visual e elas a atravessavam; retorno do usuário).
+export const DOG_BED = { x: -5.5, z: -3.95, w: 0.8, d: 0.6 };
 
 // Mureta que separa a zona A da B, com portão de ferro (mesma convenção de dobradiça da fase 1:
 // folha ao longo de -Z local; yaw = openYaw * t; abre para o LESTE). Ponta aberta ≈ (-1.12, 1.71).
@@ -121,6 +123,7 @@ export const STATIC_COLLIDERS = [
 
   // Zona A
   ...WALL_AB.segments.map((s, i) => /** @type {import('../../types').BoxCollider} */ ({ id: `mureta-${i}`, shape: 'box', x: WALL_AB.x, z: (s.zMin + s.zMax) / 2, hx: wt, hz: (s.zMax - s.zMin) / 2 })),
+  { id: 'caminha', shape: 'box', x: DOG_BED.x, z: DOG_BED.z - 0.02, hx: DOG_BED.w / 2 - 0.02, hz: DOG_BED.d / 2 - 0.01 }, // a borda e o encosto
   { id: 'tanque', shape: 'box', x: -3.3, z: -4.45, hx: 0.45, hz: 0.35 },
   { id: 'cesto-roupa', shape: 'circle', x: -2.85, z: -3.55, r: 0.26 },
   { id: 'cesto-toalha', shape: 'box', x: -2.8, z: -3.27, hx: 0.11, hz: 0.05 }, // a toalha caindo pela borda do cesto

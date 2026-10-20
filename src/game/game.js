@@ -8,7 +8,9 @@ import { createInput } from './input.js';
 import { createGameEvents } from './gameEvents.js';
 import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
-import { createController, placeController, steer, integrate, startDash, canDash, startJump, canJump, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
+import { pushRest } from './pushRest.js';
+import { createGround, walkablesOf, bodyGround, planRimHop, pushOffRims } from './ground.js';
+import { createController, placeController, steer, integrate, resolveDogBody, startDash, canDash, startJump, canJump, startHop, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
@@ -24,6 +26,12 @@ const NAMES = ['radhija', 'rhaenyra'];
 const other = (n) => (n === 'radhija' ? 'rhaenyra' : 'radhija');
 const CELEBRATE_DUR = 3.1;
 const PUSH_STANCE_SPEED = 1.2;
+/**
+ * A Radhija fazendo força numa coisa pesada demais para ela (o caixote, o carrinho...): o aviso fica na tela enquanto
+ * ela insiste (repete a cada `every` s). Retorno do usuário: "poderia ter um aviso dizendo que é pesado para ela, e só
+ * a irmã consegue empurrar" (a dica de cada fase só saía no primeiro toque, por 3,4 s, e esperava 8 a 9 s).
+ */
+const HEAVY_HINT = { text: 'Pesado demais para a Radhija: só a Rhaenyra consegue empurrar! Troque (Q) e segure Shift.', dur: 3.4, every: 3.6 };
 const FADE_MS = 420; // tempo para a UI cobrir a tela antes de montar a próxima fase
 const nextPaint = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -80,6 +88,10 @@ export function createGame({ engine, dogs, levels, params }) {
   /** @type {import('../types').LevelBuild} */
   let built = null; // { env, props, update, seeThrough }
   let world = null;
+  /** Chão das coisas baixas de pisar da fase (ground.js) e a altura suavizada do chão embaixo de cada dog. */
+  let ground = null;
+  /** @type {Record<string, { y: number, x: number, z: number, hop?: { g0: number, g1: number } | null }>} */
+  const gnd = { radhija: { y: 0, x: NaN, z: NaN, hop: null }, rhaenyra: { y: 0, x: NaN, z: NaN, hop: null } };
   let nav = null;
   let puzzle = null;
   let dbg = null;
@@ -109,6 +121,7 @@ export function createGame({ engine, dogs, levels, params }) {
   let victoryT = 0;
   let barkCd = 0;
   let jumpHintCd = 0; // dica "só a Rhaenyra pula"
+  let heavyHintCd = 0; // aviso "pesado demais para a Radhija" (HEAVY_HINT)
   let loadingPromise = null;
   let loadFailure = null;
   const cel = { radhija: {}, rhaenyra: {} };
@@ -425,6 +438,36 @@ export function createGame({ engine, dogs, levels, params }) {
     emitObjective();
   }
 
+  /**
+   * Andando para a borda de uma caminha (entrando ou saindo, também na arrancada), a dog dá um pulinho por cima dela
+   * (ground.planRimHop). Só indo para a frente (`intent` com velocidade: soltou o direcional, não pula); `goal`: aonde
+   * ela vai (a comemoração, a vitória), se fica antes da borda, não pula.
+   */
+  function hopOverRim(c, intent, goal = null) {
+    if (!ground?.rims || !(intent?.speed > 0.05) || airborne(c) || c.shove || locks[c.name]?.drive) return;
+    const G = gnd[c.name];
+    const hop = planRimHop(ground, c, G.y, goal);
+    if (!hop) return;
+    G.hop = { g0: hop.g0, g1: hop.g1 };
+    startHop(c, hop.dx, hop.dz, hop);
+  }
+
+  /** Do lado de fora de uma caminha, a dog no chão não fica em cima da borda (ground.pushOffRims): entra pulando. */
+  function keepOffRims(c) {
+    if (!ground?.rings.length || airborne(c) || locks[c.name]?.drive) return;
+    const p = pushOffRims(ground, c);
+    if (!p) return;
+    const res = world.resolve(p.x, p.z, c.r, c.size);
+    c.x = res.x;
+    c.z = res.z;
+  }
+
+  /** Depois de um empurrãozinho fora do integrate, o peito e a garupa também saem de paredes e móveis. */
+  function settleBody(c) {
+    if (c.shove || c.wallDur > 0 || locks[c.name]?.drive) return; // movimento roteirizado: quem move cuida
+    resolveDogBody(c, world, c.jumpT > 0 ? { airborne: true } : {});
+  }
+
   /** A companheira cede: separação suave, nunca empurra a líder. */
   function separate(comp, lead, dt) {
     const dx = comp.x - lead.x;
@@ -447,6 +490,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const res = world.resolve(comp.x + nx * push, comp.z + nz * push, comp.r, comp.size);
     comp.x = res.x;
     comp.z = res.z;
+    settleBody(comp);
   }
 
   function setLook(name, p) {
@@ -487,6 +531,7 @@ export function createGame({ engine, dogs, levels, params }) {
     const res = world.resolve(A.x + nx * push, A.z + nz * push, A.r, A.size);
     A.x = res.x;
     A.z = res.z;
+    settleBody(A);
   }
 
   // ---------- jogo ----------
@@ -494,6 +539,7 @@ export function createGame({ engine, dogs, levels, params }) {
     playTime += dt;
     barkCd = Math.max(0, barkCd - dt);
     jumpHintCd = Math.max(0, jumpHintCd - dt);
+    heavyHintCd = Math.max(0, heavyHintCd - dt);
     if (input.consume('KeyQ') && !puzzle.lockFor(activeDog) && !extras.busy(activeDog)) switchDog();
     const A = ctrls[activeDog];
     const compName = other(activeDog);
@@ -579,6 +625,10 @@ export function createGame({ engine, dogs, levels, params }) {
         const pr = puzzle.modifyIntent?.(dt, A, intent, { shift, comp: C }) || {};
         if (pr.intent) intent = pr.intent;
         if (pr.action) action = pr.action;
+        if (pr.action === 'strain' && A.size !== 'large' && heavyHintCd <= 0) {
+          heavyHintCd = HEAVY_HINT.every;
+          emit('hint', { text: HEAVY_HINT.text, duration: HEAVY_HINT.dur });
+        }
       }
     }
     // Superbafo (R / R2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
@@ -635,11 +685,13 @@ export function createGame({ engine, dogs, levels, params }) {
     puzzle.assist?.(A, intent, dt);
     // Pose roteirizada (lock.drive): a fase move a dog (subir o escorregador…); o núcleo não a desloca.
     if (!lock?.drive) {
+      hopOverRim(A, intent);
       steer(A, dt, intent);
       const ra = integrate(A, dt, world);
       if (ra.bump) emit('dog:bump', { name: A.name, x: A.x, z: A.z, strength: ra.bump.strength });
     }
     if (stay[compName] && lick.target !== compName) softBlock(A, C, dt);
+    keepOffRims(A);
     anims[activeDog].action = action;
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
@@ -675,11 +727,13 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     if (!compLock && !licked && ci.speed) ci.speed *= puzzle.speedScale?.(C) ?? 1;
     if (!compLock?.drive) {
+      hopOverRim(C, ci);
       steer(C, dt, ci);
       integrate(C, dt, world);
     }
     world.setCompanionMode?.(false);
     if (!stay[compName] && !compLock && !licked) separate(C, A, dt);
+    keepOffRims(C);
     anims[compName].action = ci.action;
     setLook(compName, ci.lookAt);
     // Fase da lambida para as duas animações (a língua e o "ai, que bom" ficam no mesmo ritmo).
@@ -774,8 +828,10 @@ export function createGame({ engine, dogs, levels, params }) {
         // a voltinha (do lado longe da irmã e do tamanho que cabe), já virada para onde ela vai olhar
         setCelebrateLoop(n, Math.atan2(intent.faceX - c.x, intent.faceZ - c.z));
       }
+      if (!st.arrived) hopOverRim(c, intent, spot);
       steer(c, dt, intent);
       integrate(c, dt, world);
+      keepOffRims(c);
       anims[n].action = st.arrived ? 'celebrate' : 'none';
       setLook(n, st.arrived ? { x: celebCam.position.x, y: 1.0, z: celebCam.position.z } : null);
     }
@@ -807,9 +863,11 @@ export function createGame({ engine, dogs, levels, params }) {
           cel[n].arrived = true;
           setCelebrateLoop(n, c.yaw);
         }
+        hopOverRim(c, gi, L.GOAL.celebrate[n]);
         steer(c, dt, gi);
       } else steer(c, dt, { dx: 0, dz: 0, speed: 0 });
       integrate(c, dt, world);
+      keepOffRims(c);
     }
     if (state === 'title' || state === 'intro') {
       anims.radhija.action = 'none';
@@ -824,12 +882,53 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   // ---------- aplicar às dogs ----------
+  /** Medidas do desenho do objeto empurrado por dog (recalculadas só quando ela muda de lugar em relação a ele). */
+  const pushCache = new Map();
+  /**
+   * Caixote ou carrinho bem na frente da dog (empurrando ou fazendo força nele): distância do centro à face, alto da
+   * face (a beirada) e a altura das patas nela, medidos no desenho do objeto (pushRest.js); sem desenho, a caixa de
+   * colisão.
+   */
+  function pushFace(c) {
+    if (!world) return null;
+    const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+    const M = 0.18;
+    let best = null;
+    for (const h of world.contacts(c.x, c.z, c.r, c.size, { margin: M })) {
+      if (h.kind !== 'crate' && h.kind !== 'cart') continue;
+      if (-(h.nx * fx + h.nz * fz) < 0.6) continue; // de frente para ele
+      const gap = c.r + M - h.depth;
+      if (!best || gap < best.gap) best = { id: h.id, gap };
+    }
+    if (!best) return null;
+    const col = world.getDynamic(best.id);
+    const plain = { gap: best.gap, top: col?.height ?? 0.5, y: 0, round: false, lat: 0 };
+    if (!col?.visual || col.shape !== 'box') return plain;
+    const prev = pushCache.get(c.name);
+    const rx = c.x - col.x, rz = c.z - col.z;
+    if (prev && prev.id === best.id && Math.hypot(rx - prev.rx, rz - prev.rz) < 0.01 && Math.abs(c.yaw - prev.yaw) < 0.03) return prev.res;
+    const sc = (c.cfg.visual?.shoulder ?? 0.3) / 0.3;
+    const r = pushRest(col.visual, c, { near: best.gap, pref: 0.36 * sc, scale: sc });
+    const res = r ? { gap: r.gap, top: r.top, y: r.y, round: r.round, lat: r.lat } : plain;
+    pushCache.set(c.name, { id: best.id, rx, rz, yaw: c.yaw, res });
+    return res;
+  }
   function applyDogs(dt) {
     for (const n of NAMES) {
       const c = ctrls[n];
       const d = dogs[n];
       const an = anims[n];
-      d.object.position.set(c.x, 0, c.z);
+      // em cima de uma coisa baixa de pisar (placa, pedal, caminha), o corpo sobe junto (suave; posta em outro lugar, na
+      // hora), apoiado no que está embaixo das patas da frente e das de trás
+      const G = gnd[n];
+      let gy = !ground ? 0 : c.cfg.body ? bodyGround(ground, c.x, c.z, c.yaw, c.cfg.body) : ground.heightAt(c.x, c.z);
+      // no pulinho por cima da borda, o corpo vai do chão de onde saiu ao de onde pousa (a borda não o levanta mais)
+      if (G.hop && c.jumpT > 0 && c.hopH > 0) gy = G.hop.g0 + (G.hop.g1 - G.hop.g0) * (1 - c.jumpT / c.jumpDur);
+      else G.hop = null;
+      G.y = Math.hypot(c.x - G.x, c.z - G.z) < 0.5 ? G.y + (gy - G.y) * (1 - Math.exp(-14 * dt)) : gy;
+      G.x = c.x;
+      G.z = c.z;
+      d.object.position.set(c.x, G.y, c.z);
       d.object.rotation.y = c.yaw;
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
@@ -863,6 +962,13 @@ export function createGame({ engine, dogs, levels, params }) {
         an.shoveOver = SV.over ?? 0;
         an.action = 'shove'; // também como companheira (trocou de dog no meio do empurrão)
       }
+      // Empurrando um caixote ou carrinho (ou fazendo força nele): de pé, as patas da frente na face dele.
+      const PF = !SV && (an.action === 'push' || an.action === 'strain') ? pushFace(c) : null;
+      an.pushGap = PF ? PF.gap : 0;
+      an.pushTop = PF ? PF.top : 0;
+      an.pushY = PF ? PF.y : 0;
+      an.pushRound = PF ? PF.round : false;
+      an.pushLat = PF ? PF.lat : 0;
       if (c.shoveHit) {
         // As patas empurraram (um por ciclo; ativa ou companheira): o tum, a rosnadinha e o puzzle.
         shove.hit(c, { puzzle, ctrls, playing: state === 'playing' });
@@ -880,7 +986,7 @@ export function createGame({ engine, dogs, levels, params }) {
       if (c.landed) {
         // Pouso (ativa ou companheira, até depois de trocar de dog no ar).
         c.landed = false;
-        if (state === 'playing' || state === 'celebrating') emit('dog:land', { name: n, x: c.x, z: c.z });
+        if (state === 'playing' || state === 'celebrating') emit('dog:land', { name: n, x: c.x, z: c.z, hop: c.landedHop });
       }
       d.update?.(dt, an);
       // Plano B dos passos: cadência pela distância se a dog nunca chamou onFootstep.
@@ -921,6 +1027,10 @@ export function createGame({ engine, dogs, levels, params }) {
     attempt(() => scent?.dispose());
     attempt(() => built?.dispose?.());
     attempt(() => resources?.dispose(dbg?.group));
+    for (const n of NAMES) attempt(() => dogs[n]?.setWorld?.(null));
+    for (const n of NAMES) attempt(() => dogs[n]?.setGround?.(null));
+    ground = null;
+    pushCache.clear();
     // Nenhum getter/closure do núcleo deve manter a montagem descartada viva.
     root = built = puzzle = scent = world = nav = dbg = resources = null;
     if (errors.length) throw new AggregateError(errors, 'Falha ao encerrar a fase');
@@ -1021,6 +1131,11 @@ export function createGame({ engine, dogs, levels, params }) {
         applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
 
         world = createCollisionWorld(L);
+        // o modelo novo desvia a cabeça das paredes e dos móveis (src/dogs/v2/head.js)
+        for (const n of NAMES) dogs[n]?.setWorld?.(world);
+        // as coisas baixas de pisar (placas, pedais, botões do chão): a dog sobe nelas (ground.js)
+        ground = createGround(walkablesOf(root));
+        for (const n of NAMES) dogs[n]?.setGround?.(ground.count ? ground.heightAt : null);
         nav = createNavigator(L, world);
         scent = createScentField({ world, emit, view: createScentView(root) });
         cancelBafo();
@@ -1239,7 +1354,7 @@ export function createGame({ engine, dogs, levels, params }) {
     floorOf(name) {
       const c = ctrls?.[name];
       if (!c) return { y: 0, ramp: false };
-      return { y: airborne(c) ? 0 : Math.max(0, c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
+      return { y: Math.max(gnd[name]?.y || 0, airborne(c) ? 0 : c.y || 0), ramp: Math.abs(anims[name]?.slope || 0) > 0.05 };
     },
     update,
     reset,

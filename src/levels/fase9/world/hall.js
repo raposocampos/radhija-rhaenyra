@@ -167,6 +167,8 @@ export function buildHall({ root, layout }) {
   }), roughness: 0.95 }));
   pillow.position.y = 0.03;
   cushion.add(ring, pillow);
+  // baixinha (12 cm) e fofa: as dogs pisam nela como numa placa (game/ground.js), sem atravessar
+  cushion.userData.walkable = true;
   grp.add(cushion);
 
   shadowAll(grp);

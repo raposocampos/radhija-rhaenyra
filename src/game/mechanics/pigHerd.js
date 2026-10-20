@@ -48,7 +48,7 @@ export const PIG_DEFAULTS = {
   radius: 0.23,
   walkSpeed: 0.5, // passeando
   trotSpeed: 1.2, // indo a algum lugar (sair do cercado, ir comer)
-  chaseSpeed: 1.55, // atrás de uma dog (elas andam a 2,0–2,4 m/s: dá para despistar, mas eles alcançam)
+  chaseSpeed: 1.55, // atrás de uma dog (elas andam a 2,0–2,1 m/s: dá para despistar, mas eles alcançam)
   turnRate: 4.5, // rad/s
   noticeR: 4, // vê uma dog (perto da área) a esta distância
   loseR: 6.5, // desiste se ela ficar mais longe

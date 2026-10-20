@@ -16,9 +16,12 @@
 //   0 = sem espaço: só pulinhos; padrão 1), extra ({ kind, k (0..1), t (s) }: animação do cenário —
 //   'drink' | 'eat' | 'dig' | 'sneeze' | 'nudge' | 'roll'; null sem), shoveK (0..1 de pé no empurrão; 0 sem),
 //   shoveCycle (0..1 do empurrão atual; −1 sem), shoveN (empurrões dados), shoveGap/shoveY/shoveOver (distância do
-//   centro à superfície, altura das patas e quanto além da face elas apoiam, m) }). Os extras ficam em
-//   src/game/extras.js; a pose de pé do empurrão,
-//   em src/dogs/shovePose.js (o roteiro é do controlador).
+//   centro à superfície, altura das patas e quanto além da face elas apoiam, m), pushGap/pushTop (empurrando um
+//   caixote ou carrinho, ou fazendo força nele: distância do centro à face e altura dele, m; 0 sem) }). Os extras
+//   ficam em src/game/extras.js; a pose de pé do empurrão,
+//   em src/dogs/shovePose.js (o roteiro é do controlador). Empurrando caixote ou carrinho ela também fica de pé nas
+//   traseiras, com as patas da frente na face (ou na beirada de cima) da coisa, andando nas traseiras (retorno do
+//   usuário: empurrando com a cabeça, ela entrava na coisa).
 import * as THREE from 'three';
 import { shoveStand, shoveBeat, shoveEnv } from './shovePose.js';
 
@@ -177,7 +180,7 @@ function createAnimState() {
     idle: 0,
     lean: 0,
     turnS: 0,
-    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0, jump: 0, aim: 0, blow: 0, proud: 0, yuck: 0, lick: 0, licked: 0, slide: 0, pre: 0 },
+    w: { sit: 0, push: 0, strain: 0, tug: 0, celebrate: 0, sniff: 0, dash: 0, carry: 0, bow: 0, shake: 0, startled: 0, turn: 0, jump: 0, aim: 0, blow: 0, proud: 0, yuck: 0, lick: 0, licked: 0, slide: 0, pre: 0, pushUp: 0 },
     slope: 0,
     mud: 0, // lama (dog.setMud): orelhas e cauda mais caídas
     shakeT: 9,
@@ -218,6 +221,15 @@ function createAnimState() {
     wallTheta: 0, // corpo de pé no impulso na parede (rad)
     shoveTheta: 0, // corpo de pé no empurrão (rad)
     sb: { cock: 0, jolt: 0, press: 0, growl: 0 }, // ciclo do empurrão, suavizado
+    // empurrando caixote ou carrinho de pé: passada das traseiras, distância até a face e altura da coisa (a última,
+    // para a descida)
+    pushPh: 0,
+    pushAir: [false, false, false, false],
+    pushGap: 0.26,
+    pushTop: 0.5,
+    pushY: 0,
+    pushRound: 0, // 0..1: a face é um pé fino (as patas o abraçam)
+    pushLat: 0,
   };
 }
 
@@ -337,7 +349,22 @@ export function createDogAnimation(ctx) {
   }
 
   // Empurrão em pé (shovePose.js): a pose do quadro (ângulo, quadril, alvo das patas da frente) e o ciclo suavizado.
-  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, cock: 0, press: 0 };
+  // walk/stroke/lift: empurrando caixote ou carrinho de pé, as traseiras andam (quanto, passada e altura do passo)
+  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, roundK: 0, lat: 0, cock: 0, press: 0, walk: 0, stroke: 0, lift: 0, vts: 0 };
+  /** De pé empurrando: o passo da traseira li agora (z para a frente, y para cima; m) e se ela está no ar. */
+  const PUSH_BETA = 0.6;
+  /** Altura das patas da frente na face da coisa empurrada (m, na escala da dog). */
+  const PUSH_PAWS = 0.36;
+  function pushStep(li) {
+    const C = shoveCtx;
+    const p = fract(st.pushPh + (li === 2 ? 0 : 0.5));
+    if (p < PUSH_BETA) return { dz: C.walk * C.stroke * (0.5 - p / PUSH_BETA), dy: 0, air: false };
+    const u = (p - PUSH_BETA) / (1 - PUSH_BETA);
+    // no ar a pata sai e chega parada no chão (no mundo): com o corpo andando, ela ainda vai um tiquinho para trás no
+    // começo e chega na velocidade dele (vts = quanto o corpo anda durante o balanço)
+    const e = sstep(0, 1, u);
+    return { dz: C.walk * (C.stroke * (-0.5 + e) + C.vts * (e - u)), dy: C.walk * C.lift * Math.sin(Math.PI * u), air: true };
+  }
   /** Altura de um ponto do referencial da dog (inner) no referencial do objeto. */
   function objY(T) {
     const a = st.slope + st.wallTheta + st.shoveTheta;
@@ -346,18 +373,20 @@ export function createDogAnimation(ctx) {
   /**
    * Alvo da pata li no empurrão em pé: as dianteiras apoiadas na superfície (num tronco redondo, mais juntinhas); a cada
    * empurrão elas armam (um tiquinho para trás e para cima, cotovelos dobrando) e batem esticando, junto com o tranco dos
-   * ombros. As traseiras ficam firmes no chão debaixo do quadril, um pouco abertas. Entra e sai com o quanto ela está de
-   * pé (sk). Nada abaixo do chão.
+   * ombros. As traseiras ficam firmes no chão debaixo do quadril, um pouco abertas; empurrando caixote ou carrinho, elas
+   * andam em passinhos alternados (pushStep). Entra e sai com o quanto ela está de pé (sk). Nada abaixo do chão.
    */
   function shoveLegTarget(li, leg, T) {
     const C = shoveCtx;
     if (leg.front) {
-      const lat = leg.side * (C.round ? 0.036 : 0.052) * s;
+      // num tronco redondo ou no cano do ventilador, mais juntinhas (abraçando), e centradas nele
+      const lat = leg.side * lerp(0.052, 0.036, C.roundK) * s + C.lat;
       const late = li === 1 ? 0.8 : 1; // a direita arma um tiquinho menos (as duas batem quase juntas)
       toInner(_wallV, lat, C.wy + C.cock * late * 0.025 * s, C.wz - C.cock * late * 0.045 * s + C.press * 0.01 * s);
       T.lerp(_wallV, sstep(0.3, 0.92, C.sk));
     } else {
-      toInner(_wallV, leg.foot0.x + leg.side * 0.014 * s, leg.foot0.y, C.hz + 0.03 * s);
+      const P = C.walk > 0.001 ? pushStep(li) : null;
+      toInner(_wallV, leg.foot0.x + leg.side * 0.014 * s, leg.foot0.y + (P ? P.dy : 0), C.hz + 0.03 * s + (P ? P.dz : 0));
       T.lerp(_wallV, C.sk);
     }
     const floor = leg.foot0.y;
@@ -417,10 +446,16 @@ export function createDogAnimation(ctx) {
     if (v < 0.05 && action === 'none' && Math.abs(turn) < 0.4 && st.bark < 0) st.idle += dt;
     else st.idle = 0;
     const wantSit = action === 'sit' || (action === 'none' && st.idle > 5);
-    w.sit = damp(w.sit, wantSit ? 1 : 0, wantSit ? 3.2 : 7);
-    for (const k of ['push', 'strain', 'tug', 'celebrate', 'sniff', 'dash', 'turn']) w[k] = damp(w[k], action === k ? 1 : 0, k === 'dash' ? 10 : 6);
-    w.shake = damp(w.shake, action === 'shake' ? 1 : 0, action === 'shake' ? 14 : 8);
-    w.startled = damp(w.startled, action === 'startled' ? 1 : 0, action === 'startled' ? 22 : 5);
+    // andando, as poses de ação que acabaram saem depressa: segurando o direcional antes de uma animação terminar
+    // (puxar a corda do portão, molhar no irrigador, empurrar), as patas não ficam presas enquanto ela já anda
+    // (retorno do usuário: "as patas demoram muito pra se mexer")
+    const offK = speedIn > 0.3 ? 2.6 : 1;
+    w.sit = damp(w.sit, wantSit ? 1 : 0, wantSit ? 3.2 : 7 * offK);
+    for (const k of ['push', 'strain', 'tug', 'celebrate', 'sniff', 'dash', 'turn']) {
+      w[k] = damp(w[k], action === k ? 1 : 0, k === 'dash' ? 10 : action === k ? 6 : 6 * offK);
+    }
+    w.shake = damp(w.shake, action === 'shake' ? 1 : 0, action === 'shake' ? 14 : 8 * offK);
+    w.startled = damp(w.startled, action === 'startled' ? 1 : 0, action === 'startled' ? 22 : 5 * offK);
     st.shakeT += dt;
     st.startT += dt;
     // chacoalhar: onda de torção que vai da cabeça à cauda (~0,9 s); k = atraso do segmento
@@ -451,7 +486,8 @@ export function createDogAnimation(ctx) {
     const jumpY = Math.max(0, A.jump || 0) + (PY ? PY.hop : 0);
     const inAir = (A.airK ?? -1) >= 0 || pAir >= 0;
     const airK = (A.airK ?? -1) >= 0 ? A.airK : pAir >= 0 ? pAir : 1;
-    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 22 : 12);
+    // pousando andando (segurando o direcional), a pose do pulo sai depressa: as patas voltam a andar já (offK)
+    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 22 : 12 * offK);
     if (st.prevAir && !inAir) st.landT = 0;
     st.prevAir = inAir;
     // impulso na parede (quadros-chave WALL_*): wp = progresso, wEnv liga/desliga as poses nas pontas
@@ -472,16 +508,61 @@ export function createDogAnimation(ctx) {
     wallCtx.side = A.wallSide || 0.165;
     wallCtx.lat = A.wallLat ?? 0;
     // empurrão em pé: o quanto está de pé (sk), a pose para o apoio e o ciclo de cada empurrão (suavizado)
-    const sk = shoveEnv(A.shoveK ?? 0);
+    const skShove = shoveEnv(A.shoveK ?? 0);
+    // empurrando caixote ou carrinho (ou fazendo força nele): de pé nas traseiras com as patas da frente nele, na mesma
+    // pose (pk); as traseiras andam no ritmo de quem empurra ou, fazendo força, patinam no lugar
+    const pushOn = (action === 'push' || action === 'strain') && (A.pushGap ?? 0) > 0 && skShove < 0.001;
+    if (pushOn) {
+      // já de pé, a medida nova (game.js pushRest) chega suave: andando ou girando, ela pode mudar de um quadro para
+      // o outro (do cano para a grade do ventilador) e a pata pulava; subindo, vale a de agora
+      const up = w.pushUp > 0.05;
+      const k = up ? 1 - Math.exp(-10 * dt) : 1;
+      const top = A.pushTop ?? 0.5;
+      const y = A.pushY > 0 ? A.pushY : PUSH_PAWS * s;
+      st.pushGap += (A.pushGap - st.pushGap) * k;
+      st.pushTop = up && Number.isFinite(top) && Number.isFinite(st.pushTop) ? st.pushTop + (top - st.pushTop) * k : top;
+      st.pushY = up && st.pushY > 0 ? st.pushY + (y - st.pushY) * k : y;
+      st.pushRound += ((A.pushRound ? 1 : 0) - st.pushRound) * k;
+      st.pushLat += ((A.pushLat || 0) - st.pushLat) * k;
+    }
+    w.pushUp = damp(w.pushUp, pushOn ? 1 : 0, pushOn ? 5 : 6 * offK);
+    if (!pushOn && w.pushUp < 1e-3) w.pushUp = 0;
+    const pk = sstep(0, 1, w.pushUp) * (1 - skShove);
+    const sk = Math.max(skShove, pk);
     const beat = shoveBeat(A.shoveCycle ?? -1);
-    for (const k of ['cock', 'jolt', 'press', 'growl']) st.sb[k] = damp(st.sb[k], beat[k] * sstep(0.6, 0.95, sk), 30);
-    const growl = sk * st.sb.growl; // rosnadinha: boquinha franzida
+    for (const k of ['cock', 'jolt', 'press', 'growl']) st.sb[k] = damp(st.sb[k], beat[k] * sstep(0.6, 0.95, skShove), 30);
+    const growl = skShove * st.sb.growl; // rosnadinha: boquinha franzida
     shoveCtx.sk = sk;
-    if (sk > 0.001) {
+    if (skShove > 0.001) {
       const over = A.shoveOver ?? 0;
       const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: A.shoveY ?? 0.44, gap: A.shoveGap ?? 0.26, over, s });
-      Object.assign(shoveCtx, P, { round: over <= 0.005, cock: st.sb.cock, press: st.sb.press });
+      Object.assign(shoveCtx, P, { round: over <= 0.005, roundK: over <= 0.005 ? 1 : 0, lat: 0, cock: st.sb.cock, press: st.sb.press, walk: 0 });
+    } else if (pk > 0.001) {
+      // coisa baixa (cesto, carrinho): as patas vão em cima da beirada; alta (escada, ventilador): na face, na altura
+      // medida no desenho dela (game.js pushRest) ou na padrão
+      const y0 = clamp(st.pushY, 0.16 * s, 0.56 * s);
+      const onTop = st.pushTop < y0 + 0.03 * s;
+      const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: onTop ? st.pushTop : y0, gap: st.pushGap, over: onTop ? 0.04 * s : 0, s });
+      // passada de pé: curtinha e rápida (uns 12 cm na escala), no compasso de quem empurra; fazendo força, patinando
+      const scrab = clamp(w.strain, 0, 1);
+      const fP = Math.min(4.5, Math.max(v / (0.2 * s), 1.6 * sstep(0.05, 0.3, v), 3.2 * scrab));
+      st.pushPh = fract(st.pushPh + fP * dt);
+      const strokeP = v > 0.05 ? (PUSH_BETA * v) / Math.max(fP, 0.5) : 0;
+      Object.assign(shoveCtx, P, {
+        round: false, roundK: st.pushRound, lat: clamp(st.pushLat, -0.12 * s, 0.12 * s), cock: 0, press: 0, walk: pk,
+        stroke: Math.max(strokeP, 0.03 * s * scrab), lift: (v > 0.05 ? 0.022 : 0.015 * scrab) * s,
+        vts: (strokeP * (1 - PUSH_BETA)) / PUSH_BETA,
+      });
+      // pisadas das traseiras (som e pegada), no pouso de cada uma
+      for (const li of [2, 3]) {
+        const air = pushStep(li).air;
+        if (st.pushAir[li] && !air && pk > 0.5 && v > 0.15) onFootstep(li, v);
+        st.pushAir[li] = air;
+      }
     }
+    // empurrando de pé, nada da pose de empurrar de cabeça baixa (nas quatro patas)
+    const wPush4 = w.push * (1 - pk);
+    const wStrain4 = w.strain * (1 - pk);
     st.landT += dt;
     const land = Math.max(st.landT < 0.5 ? Math.exp(-st.landT * 9) * sstep(0, 0.04, st.landT) : 0, clamp(A.crouch || 0, 0, 1));
     // superbafo: aim = enche o peito mirando; blow = "HÁÁÁ!"; proud = toda orgulhosa; yuck = vira a cara
@@ -496,9 +577,9 @@ export function createDogAnimation(ctx) {
     const lpk = lp >= 0 ? lp : 0;
     const lSide = A.lickSide ?? 1;
     const lSolo = !!A.lickSolo;
-    w.lick = damp(w.lick, action === 'lick' ? 1 : 0, action === 'lick' ? 12 : 7);
-    w.licked = damp(w.licked, action === 'licked' ? 1 : 0, action === 'licked' ? 9 : 5);
-    w.slide = damp(w.slide, action === 'slide' ? 1 : 0, 10);
+    w.lick = damp(w.lick, action === 'lick' ? 1 : 0, action === 'lick' ? 12 : 7 * offK);
+    w.licked = damp(w.licked, action === 'licked' ? 1 : 0, action === 'licked' ? 9 : 5 * offK);
+    w.slide = damp(w.slide, action === 'slide' ? 1 : 0, action === 'slide' ? 10 : 10 * offK);
     const lExt = lp >= 0 ? sstep(0.04, 0.3, lpk) * (1 - sstep(0.64, 0.94, lpk)) : 0;
     const lSweep = lp >= 0 ? sstep(0.28, 0.68, lpk) : 0;
     const lTouch = lp >= 0 ? Math.sin(Math.PI * clamp((lpk - 0.3) / 0.38, 0, 1)) : 0;
@@ -575,7 +656,8 @@ export function createDogAnimation(ctx) {
     // a irmã, alegre, dá dois pulinhos nas patas da frente
     const cheerHop = ct >= 0.78 && ct < 1.38 ? Math.sin(Math.PI * fract((ct - 0.78) / 0.3)) * 0.026 * s * glad : 0;
     st.hop = action === 'celebrate' ? hopTarget : ct >= 0 ? cheerHop : damp(st.hop, 0, 12);
-    w.bow = damp(w.bow, Math.max(bowTarget, PY ? PY.bow : 0), 7);
+    const bowTo = Math.max(bowTarget, PY ? PY.bow : 0);
+    w.bow = damp(w.bow, bowTo, bowTo < w.bow ? 7 * offK : 7);
     inner.rotation.y = st.spin;
     // impulso na parede: o corpo fica de pé girando em torno do quadril (Hr), que sobe e se aproxima da parede
     let wallLiftY = 0;
@@ -676,12 +758,12 @@ export function createDogAnimation(ctx) {
     const breathe = Math.sin(t * (2.2 + 3 * st.move)) * 0.0016 * s;
     const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s + w.aim * Math.sin(t * 41) * 0.0012 * s + effort * Math.sin(t * 52) * 0.0024 * s;
 
-    let pitch = boundPitch + w.push * 0.11 + w.strain * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.5 * airK - 0.24) + land * 0.08 - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06 + lDn * (0.05 + 0.04 * lExt) - lUp * (0.07 + 0.03 * lIn)
+    let pitch = boundPitch + wPush4 * 0.11 + wStrain4 * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.5 * airK - 0.24) + land * 0.08 - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06 + lDn * (0.05 + 0.04 * lExt) - lUp * (0.07 + 0.03 * lIn)
       - squat * 0.04 + scratchK * 0.1 + (xDrink + xEat) * 0.2 + xDig * 0.16 + xNudge * 0.08 - pBrace * 0.12 - wow * 0.05;
-    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - w.push * 0.012 * s - w.strain * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s - lr * 0.009 * s - w.slide * 0.045 * s - st.mud * 0.004 * s - (wallOn ? keyed(WALL_CROUCH, wp) * 0.03 * s : 0)
+    let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - wPush4 * 0.012 * s - wStrain4 * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s - lr * 0.009 * s - w.slide * 0.045 * s - st.mud * 0.004 * s - (wallOn ? keyed(WALL_CROUCH, wp) * 0.03 * s : 0)
       - squat * 0.006 * s + effort * Math.sin(t * 61) * 0.001 * s - (xDrink + xEat) * 0.01 * s - xDig * 0.012 * s - pBrace * 0.016 * s
       + lUp * (0.01 + 0.006 * lIn) * s;
-    let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + w.strain * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s - w.aim * 0.012 * s + w.blow * 0.015 * s - w.yuck * 0.02 * s + lk * (0.008 + 0.016 * lIn) * s
+    let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + wStrain4 * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s - w.aim * 0.012 * s + w.blow * 0.015 * s - w.yuck * 0.02 * s + lk * (0.008 + 0.016 * lIn) * s
       + scratchK * 0.012 * s + xNudge * 0.07 * s + (xDrink + xEat) * 0.02 * s - pBrace * 0.012 * s - wow * 0.014 * s;
     const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s - lr * lSide * 0.004 * s;
     qE(_q, pitch, 0, st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
@@ -787,7 +869,7 @@ export function createDogAnimation(ctx) {
         }
         T.x += leg.side * (xDrink + xEat) * 0.012 * s;
       } else {
-        T.z += w.sit * 0.07 * s - (w.push + w.strain) * 0.025 * s + w.tug * 0.012 * s - w.turn * 0.02 * s;
+        T.z += w.sit * 0.07 * s - (wPush4 + wStrain4) * 0.025 * s + w.tug * 0.012 * s - w.turn * 0.02 * s;
         T.x += leg.side * (w.sit * 0.01 + shkEnv * 0.01 + ws * 0.006) * s;
         // no ar: traseiras estendidas para trás na decolagem, recolhidas depois
         T.z -= w.jump * 0.06 * (1 - airK) * s;
@@ -854,6 +936,14 @@ export function createDogAnimation(ctx) {
         // agachada: joelhos para a frente e um pouco para fora
         _v.set(leg.side * 0.45, 0.3, 1).normalize();
         _pole.lerp(_v, squat * 0.6).normalize();
+      }
+      if (!leg.front && sk > 0.001) {
+        // de pé (empurrão em pé, empurrando ou fazendo força de pé): o tronco inclinado leva o "para a frente" da garupa
+        // quase para a direção da perna e o joelho ficava sem rumo, abrindo para o lado a cada passo (retorno do usuário:
+        // "a esquerda está abrindo demais"); ele aponta para a frente no chão, um tiquinho para fora
+        const a = st.slope + st.wallTheta + st.shoveTheta;
+        _v.set(leg.side * 0.1, -Math.sin(a), Math.cos(a)).normalize();
+        _pole.lerp(_v, sstep(0, 0.5, sk)).normalize();
       }
 
       if (leg.front) {
@@ -927,7 +1017,7 @@ export function createDogAnimation(ctx) {
     const tu = fract(t * 0.85);
     const turnRoll = w.turn * (tu < 0.72 ? lerp(-0.42, 0.48, sstep(0, 0.72, tu)) : lerp(0.48, -0.42, sstep(0.72, 1, tu)));
     const sniffTw = w.sniff * Math.sin(t * 19) * 0.04;
-    const neckPitch = 0.05 + w.push * 0.42 + w.strain * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
+    const neckPitch = 0.05 + wPush4 * 0.42 + wStrain4 * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * 0.18 * (1 - airK) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
       + lDn * (0.14 + 0.3 * lIn - 0.1 * lSweep * lExt) - lUp * (0.3 + 0.12 * lIn) - ls * 0.1 - lr * 0.09 - w.slide * 0.2 + wEnv * st.wallTheta * 0.22 + sk * st.shoveTheta * 0.42 + shoveJolt * 0.1
       + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 + xRoll * 0.3 * (1 - xBack) + xBack * 1.2 - wow * 0.18;
     const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
@@ -936,7 +1026,7 @@ export function createDogAnimation(ctx) {
     const wallYaw = wallOn ? -0.34 * sstep(0.36, 0.48, wp) * (1 - sstep(0.62, 0.76, wp)) : 0;
     qE(_q, bodyPitchW * 0.35 + neckPitch, st.lookYaw * 0.45 + shake * 0.3 + shk(0.5) * 0.25 + lickYaw * 0.4 + wallYaw * 0.45, shk(0.5) * 0.3 + turnRoll * 0.3);
     setWorld(BI.neck, _q);
-    const headPitch = -0.05 - w.push * 0.3 - w.strain * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12
+    const headPitch = -0.05 - wPush4 * 0.3 - wStrain4 * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12
       + lDn * (0.28 * lIn - 0.32 * lSweep * lExt) + lUp * (0.1 * lIn - 0.3 * lSweep * lExt) - ls * (0.18 + 0.25 * lSweep * lExt) - lr * 0.34 - w.slide * 0.12 + wEnv * st.wallTheta * 0.18 + sk * st.shoveTheta * 0.3 + shoveJolt * 0.06
       + squat * 0.02 + (xDrink + xEat) * 0.85 + xEat * chew * 0.07 + xDig * 0.45 + sniffX * 0.35 + sneezeP + xNudge * 0.5 - xRoll * 0.15 * (1 - xBack) + xBack * 0.5 - wow * 0.1;
     const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 + w.proud * 0.12

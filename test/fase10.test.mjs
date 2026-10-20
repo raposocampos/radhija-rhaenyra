@@ -696,6 +696,7 @@ seededTest('fase 10: a Radhija de verdade não vaza do balde: deitada nele, cabe
   const { createDog } = await import('../src/dogs/dog.js');
   const { createDogV2 } = await import('../src/dogs/v2/dog.js');
   const models = [['atual', createDog('radhija')], ['novo', createDogV2('radhija')]].map(([name, d]) => ({ name, d }));
+  for (const { d } of models) d.setWorld?.(h.world); // como o jogo faz (a cabeça do modelo novo desvia dos colisores)
   const B = L.BUCKET;
   /** Raio do balde a `y` do fundo (0..h). */
   const pailR = (y) => B.r * (B.taper + (1 - B.taper) * Math.min(B.h, Math.max(0, y)) / B.h);

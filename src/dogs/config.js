@@ -3,8 +3,9 @@
 // variantes de habilidades por cenário.
 
 /**
- * @typedef {Readonly<Omit<import('../types').DogStats, 'start' | 'visual'>> & {
- *   readonly visual: Readonly<import('../types').DogStats['visual']>
+ * @typedef {Readonly<Omit<import('../types').DogStats, 'start' | 'visual' | 'body'>> & {
+ *   readonly visual: Readonly<import('../types').DogStats['visual']>,
+ *   readonly body: Readonly<import('../types').DogBody>
  * }} DogConfig
  */
 
@@ -14,7 +15,9 @@ export const DOG_CONFIG = Object.freeze({
     displayName: 'Radhija',
     size: 'small',
     radius: 0.17, // colisão (círculo no plano XZ)
-    walkSpeed: 2.4,
+    // peito e garupa na colisão (o corpo vai de ~0,2 m à frente a ~0,22 m atrás do centro; ver collision.js resolveBody)
+    body: Object.freeze({ front: 0.2, back: 0.225, r: 0.08 }),
+    walkSpeed: 2.1, // retorno do usuário (2026-10-20): a 2,4 m/s ela andava rápido demais; ainda um tiquinho mais ligeira que a irmã
     dashSpeed: 6.0,
     dashTime: 0.3,
     dashCooldown: 0.8,
@@ -35,6 +38,7 @@ export const DOG_CONFIG = Object.freeze({
     displayName: 'Rhaenyra',
     size: 'large',
     radius: 0.22,
+    body: Object.freeze({ front: 0.245, back: 0.275, r: 0.09 }),
     walkSpeed: 2.0,
     pushSpeed: 0.85,
     // Pulo (Espaço / ✕): sobe ~0,5 m em 0,42 s e avança ~1,3 m; só passa por cima de colisores jumpable.
@@ -68,5 +72,5 @@ export const DOG_CONFIG = Object.freeze({
  */
 export function withStart(name, start) {
   const cfg = DOG_CONFIG[name];
-  return { ...cfg, visual: { ...cfg.visual }, start: { ...start } };
+  return { ...cfg, visual: { ...cfg.visual }, body: { ...cfg.body }, start: { ...start } };
 }
