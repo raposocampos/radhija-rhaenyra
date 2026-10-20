@@ -116,6 +116,8 @@ export function createController(name, cfg) {
     shoveHeld: false, // o botão continua seguro (o jogo atualiza a cada quadro)
     shoveStop: false, // o jogo pede para descer ao fim do ciclo
     shoveHit: null, // empurrou neste quadro (o jogo emite dog:shove e zera)
+    hopH: 0, // pulinho por cima de uma borda (startHop): altura do arco (0 = pulo comum ou no chão)
+    landedHop: false, // o pouso deste quadro foi de um pulinho (som mais baixo, sem poeira)
   };
 }
 
@@ -137,6 +139,7 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.y = 0;
   c.jumpT = 0;
   c.jumpCd = 0;
+  c.hopH = 0;
   c.landed = false;
   c.wall = null;
   c.wallT = 0;
@@ -421,7 +424,26 @@ export function startJump(c, dx, dz) {
     c.v = Math.max(c.v, c.cfg.jumpSpeed ?? c.cfg.walkSpeed);
   }
   c.jumpT = c.jumpDur = c.cfg.jumpTime ?? 0.5;
+  c.hopH = 0;
   c.y = 0;
+  c.landed = false;
+  c.pivoting = false;
+}
+
+/**
+ * Pulinho por cima de uma borda (a da caminha; game.js decide quando): a dog vai a `speed` m/s na direção (dx, dz) por
+ * `time` s, num arco de `height` m, pelo mesmo caminho do pulo (no ar, a entrada só vira a direção). Vale para as duas
+ * (a Radhija não pula, mas pula a borda da caminha) e não é o pulo do jogo: ninguém emite dog:jump.
+ */
+export function startHop(c, dx, dz, { time, speed, height }) {
+  const L = Math.hypot(dx, dz) || 1;
+  c.jumpDx = dx / L;
+  c.jumpDz = dz / L;
+  c.jumpT = c.jumpDur = time;
+  c.hopH = height;
+  c.v = speed;
+  c.y = 0;
+  c.dashT = 0;
   c.landed = false;
   c.pivoting = false;
 }
@@ -483,10 +505,13 @@ export function steer(c, dt, intent) {
       c.y = 0;
       c.jumpCd = cfg.jumpCooldown ?? 0.15;
       c.landed = true;
+      c.landedHop = c.hopH > 0;
+      c.hopH = 0;
       c.v = Math.min(c.v, cfg.walkSpeed);
     } else {
       const p = 1 - c.jumpT / c.jumpDur;
-      c.y = 4 * cfg.jumpHeight * p * (1 - p);
+      // o pulinho por cima da borda sobe logo e só desce depois dela (um arco de topo largo); o pulo, uma parábola
+      c.y = c.hopH > 0 ? c.hopH * (1 - (2 * p - 1) ** 4) : 4 * cfg.jumpHeight * p * (1 - p);
     }
     c.pivoting = false;
   } else if (c.dashT > 0) {

@@ -68,10 +68,18 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     no primeiro toque, por 3,4 s; agora o núcleo (`game.js`, `HEAVY_HINT`) mostra "Pesado demais para a Radhija: só a
     Rhaenyra consegue empurrar! Troque (Q) e segure Shift." enquanto ela faz força (repete a cada 3,6 s), em todas as
     fases, sem mexer nos `puzzle.js` (área do #52). Teste em `test/empurrao.test.mjs`;
-  - caminhas das fases 2, 5 e 8: a almofada (e a base, na 2) vira chão de pisar; a borda alta, não (subindo nela a
-    pata ficava esticada e arrastada; atravessar a borda continua como antes). A da fase 10 já tem colisor. Os raios
-    do chão e do empurrar olham só malhas (as estrelinhas da caminha da fase 2 são sprites e quebrariam o raycast).
-    Teste em `test/chao.test.mjs`;
+  - caminhas: na 2ª prévia (`fb551bf`, CI `39477096835` e E2E `todas` `39477101963` verdes) só a almofada virava chão
+    e as dogs ainda atravessavam a borda (retorno do usuário, com imagens das fases 2 e 8: "esse ainda não foi
+    arrumado"; "deve ser aplicada a todas caminhas, ou objetos com esse tipo de borda"). Medido em Node, pisar na borda
+    com a pata não fica bom (arrastava 10 a 40 quadros e a pata entrava até 10 cm). Agora: nas caminhas grandes (fases
+    5 e 8 e Arena dos Porquinhos), andando para a borda a dog dá um pulinho por cima (`userData.rim`,
+    `ground.planRimHop`, `game.js` `hopOverRim`, `startHop`), as duas, e pousa na almofada; as pequenas (fase 2, 80 × 60
+    cm com encosto de 36 cm, e Arena do Empurrão) são sólidas (colisor `caminha`); a almofada do gato (fase 9, 12 cm) é
+    chão de pisar. O corpo apoia no chão embaixo das patas da frente e de trás (`bodyGround`), a pata no balanço passa
+    por cima do que vem à frente e a apoiada sobe no que estiver embaixo. Medido nas caminhas reais: dois pulinhos
+    (entrar e sair), dentro a 4–8 cm do meio com o corpo na almofada (10 cm), pata apoiada a 14–22 mm do chão
+    embaixo dela, arrasto de 0 a 12 quadros (logo depois do pouso). Os raios do chão e do empurrar olham só malhas (as
+    estrelinhas da caminha da fase 2 são sprites e quebrariam o raycast). Testes em `test/chao.test.mjs`;
   - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.

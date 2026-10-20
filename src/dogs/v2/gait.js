@@ -445,7 +445,20 @@ export function createGait({ skel2, retarget, s }) {
         leg.foot.lerpVectors(leg.from, T, sstep(0, 1, leg.u));
         // sobe ou desce para o chão de onde ela vai pousar (em cima de uma placa, de um pedal...)
         const hT = groundUnder(T);
-        leg.foot.y = leg.neutral.y + lerp(hRel(leg.h0), hRel(hT), sstep(0, 1, leg.u)) + leg.lift * Math.sin(Math.PI * leg.u);
+        let fy = leg.neutral.y + lerp(hRel(leg.h0), hRel(hT), sstep(0, 1, leg.u)) + leg.lift * Math.sin(Math.PI * leg.u);
+        // passando por cima de uma beirada (a borda da caminha), a pata sobe logo no começo do balanço para acima do
+        // chão mais alto do caminho que falta e só desce depois dele: sem isso ela atravessava a lateral da borda
+        // (retorno do usuário: "as caminhas" sem colisão)
+        if (groundAt && leg.u < 1) {
+          let hMax = -Infinity;
+          for (const k of [0, 0.25, 0.5, 0.75]) {
+            const h = groundUnder(Seg.lerpVectors(leg.foot, T, k));
+            if (Number.isFinite(h) && h > hMax) hMax = h;
+          }
+          const clear = hMax > -Infinity ? leg.neutral.y + hRel(hMax) + 0.015 * s : -Infinity;
+          if (clear > fy) fy += (clear - fy) * sstep(0, 0.25, leg.u);
+        }
+        leg.foot.y = fy;
         if (leg.u >= 1) {
           // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
           if (weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) steps.push([li, leg.settle ? 0.1 : stepSpeed]);
@@ -459,7 +472,15 @@ export function createGait({ skel2, retarget, s }) {
           leg.h = hT;
           leg.foot.y = leg.neutral.y + hRel(leg.h);
         }
-      } else leg.foot.y = leg.neutral.y + hRel(leg.h);
+      } else {
+        // apoiada que foi parar em cima de algo mais alto (girando no lugar rente à borda da caminha, a pata gira um
+        // tanto com o corpo): sobe nele em vez de ficar dentro
+        if (groundAt) {
+          const g = groundUnder(leg.foot);
+          if (Number.isFinite(g) && g > (Number.isFinite(leg.h) ? leg.h : objY) + 0.01) leg.h = g;
+        }
+        leg.foot.y = leg.neutral.y + hRel(leg.h);
+      }
     }
     lowG = Math.min(0, ...legs.map((l) => hRel(l.h)));
     // parada: a pata mais fora do lugar dá um passinho de ajuste (uma de cada vez)

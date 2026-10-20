@@ -483,7 +483,12 @@ export function createFeedback(opts) {
     sfx('jump', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 4, size: 0.85, alpha: 0.38, dir: { x: -dirX, z: -dirZ }, strength: 0.6 });
   });
-  events.on('dog:land', ({ x, z }) => {
+  events.on('dog:land', ({ x, z, hop = false }) => {
+    // o pulinho por cima da borda da caminha pousa na almofada (ou no chão do lado): baixinho e sem poeira
+    if (hop) {
+      sfx('land', x, z, { volume: 0.45 });
+      return;
+    }
     sfx('land', x, z);
     particles.dust({ x, y: 0.03, z }, { count: 5, size: 0.9, alpha: 0.4, strength: 0.55 });
   });

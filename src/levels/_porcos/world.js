@@ -247,6 +247,9 @@ function dogBed(root, D) {
   const pad = new THREE.Mesh(new THREE.CylinderGeometry(D.r, D.r, 0.06, 32), stdMat('#f1e3c8', { roughness: 0.95 }));
   pad.position.y = 0.04;
   g.add(rim, pad);
+  // as dogs entram na caminha (game/ground.js): pisam na almofada e dão um pulinho por cima da borda
+  pad.userData.walkable = true;
+  Object.assign(rim.userData, { walkable: true, rim: true });
   g.position.set(D.x, 0, D.z);
   shadowAll(g);
   root.add(g);

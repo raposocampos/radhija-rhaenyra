@@ -71,6 +71,9 @@ export const BED = { x: -3.75, z: -2.85, r: 0.42 };
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
   { id: 'limite-norte', shape: 'box', x: 0, z: -4.5, hx: 6, hz: 0.5 },
+  // a caminha é pequena para as duas (a almofada tem 29 cm de raio): sólida, elas a contornam (a borda vai a 42 cm; o
+  // colisor fica um pouco para dentro, a pata que alcança a borda pisa em cima dela)
+  { id: 'caminha', shape: 'circle', x: BED.x, z: BED.z, r: 0.34 },
   { id: 'limite-sul', shape: 'box', x: 0, z: 4.5, hx: 6, hz: 0.5 },
   { id: 'limite-oeste', shape: 'box', x: -5.5, z: 0, hx: 0.5, hz: 5 },
   { id: 'limite-leste', shape: 'box', x: 5.5, z: 0, hx: 0.5, hz: 5 },

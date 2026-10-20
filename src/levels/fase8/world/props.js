@@ -266,9 +266,10 @@ function buildDogBed(root, B, spots) {
   sockSpot.rotation.set(Math.PI / 2, 0, 0.6); // a meia deitada na almofada
   sockSpot.position.y = 0.13;
   const blanketSpot = spot('blanket');
-  // as dogs pisam na almofada da caminha (game/ground.js: o corpo sobe e as patas vão em cima); a borda, alta e fofa,
-  // não (subindo nela a pata ficava esticada e arrastada)
+  // as dogs entram na caminha (game/ground.js): pisam na almofada e, andando para a borda, dão um pulinho por cima dela
+  // em vez de atravessar
   cushion.userData.walkable = true;
+  Object.assign(rim.userData, { walkable: true, rim: true });
   shadowAll(grp);
   root.add(grp);
   const sh = contactShadow(B.r + 0.05, B.r + 0.05, 0.3);

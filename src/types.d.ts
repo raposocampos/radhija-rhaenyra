@@ -397,6 +397,10 @@ export interface DogController {
   shoveStop: boolean;
   /** Empurrou neste quadro (o jogo emite dog:shove, chama puzzle.onShove e zera). */
   shoveHit: ShoveSpot | null;
+  /** Pulinho por cima de uma borda (startHop): altura do arco (m); 0 = pulo comum ou no chão. */
+  hopH: number;
+  /** O pouso deste quadro foi de um pulinho. */
+  landedHop: boolean;
 }
 
 /**

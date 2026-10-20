@@ -13,7 +13,11 @@ import { withSeed } from './helpers/seeded.mjs';
 import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS } from '../src/levels/dev.js';
 import { pushRest } from '../src/game/pushRest.js';
-import { createGround, walkablesOf } from '../src/game/ground.js';
+import { createGround, walkablesOf, bodyGround, planRimHop } from '../src/game/ground.js';
+import { createCollisionWorld } from '../src/game/collision.js';
+import { createController, placeController, steer, integrate, startHop } from '../src/game/dogController.js';
+import { withStart } from '../src/dogs/config.js';
+import { createHeadlessGame } from './helpers/headless.mjs';
 
 installBrowserStubs();
 const DT = 1 / 60;
@@ -88,7 +92,7 @@ test('empurrando de pé: no carrinho da fase 1 as patas vão em cima da beirada 
 
 test('placas de pisar e caminhas (cenário real): viram chão; longe delas, o chão de sempre', async () => {
   const cases = [['fase2', 'PLANK'], ['fase3', 'PLATE_H'], ['fase6', 'PEDAL'], ['fase6', 'BARRIER_PLATE'], ['fase9', 'DAMPER_PLATE'], ['porcos', 'BUTTON'],
-    ['fase2', 'DOG_BED'], ['fase5', 'DOG_BED'], ['fase8', 'DOG_BED']];
+    ['fase2', 'DOG_BED'], ['fase5', 'DOG_BED'], ['fase8', 'DOG_BED'], ['fase9', 'CAT.bed']];
   const report = [];
   const bad = [];
   const worlds = new Map();
@@ -99,7 +103,7 @@ test('placas de pisar e caminhas (cenário real): viram chão; longe delas, o ch
       const fx = worlds.get(id);
       fx.root.updateMatrixWorld(true);
       const ground = createGround(walkablesOf(fx.root));
-      const P = def.layout[key];
+      const P = key.split('.').reduce((o, k) => o[k], def.layout);
       const h = ground.heightAt(P.x, P.z);
       const far = ground.heightAt(P.x + 3, P.z + 3);
       report.push(`${id} ${key}: ${(h * 100).toFixed(1)} cm (${ground.count} coisa(s) de pisar na fase)`);
@@ -157,4 +161,154 @@ test('modelo novo atravessando uma placa: cada pata pisa em cima dela, o corpo s
   }
   console.log(`[chão] modelo novo na placa\n  ${report.join('\n  ')}`);
   assert.deepEqual(bad, []);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Caminhas com borda (2º retorno da prévia do #48: "as caminhas" sem colisão; "deve valer para todas as caminhas ou
+// objetos com esse tipo de borda"). A borda alta e fofa (`userData.rim`) não é para pisar com a pata: andando para ela,
+// a dog dá um pulinho por cima (ground.planRimHop, game.js hopOverRim) e pousa na almofada; a caminha pequena da fase 2
+// é sólida.
+// ---------------------------------------------------------------------------------------------------------------
+/** Até onde as patas da frente vão à frente do centro (m), como no ground.planRimHop. */
+const c0 = (kind) => withStart(kind, { x: 0, z: 0, yaw: 0 }).body.front * 0.8;
+
+/** Uma caminha como a das fases 5 e 8 (borda em toro, almofada no meio), em (0, 0). */
+function bedScene(R = 0.62) {
+  const scene = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R - 0.1, 0.11, 14, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial());
+  rim.scale.set(1, 1.15, 1);
+  rim.position.y = 0.11;
+  Object.assign(rim.userData, { walkable: true, rim: true });
+  const cushion = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.12, R - 0.1, 0.08, 32), new THREE.MeshBasicMaterial());
+  cushion.position.y = 0.06;
+  cushion.userData.walkable = true;
+  scene.add(rim, cushion);
+  scene.updateMatrixWorld(true);
+  return { scene, ground: createGround(walkablesOf(scene)), R };
+}
+
+test('caminha com borda: a borda é achada à frente (onde começa e acaba) e o pulinho leva as patas de trás além dela', () => {
+  const { ground } = bedScene();
+  assert.equal(ground.rims, 1);
+  // de fora (leste), andando para o oeste: a borda vai de 0,63 a 0,41 m do meio
+  const rim = ground.rimAlong(1.2, 0, -1, 0, 0.16, 0.6);
+  assert.ok(rim, 'achou a borda');
+  assert.ok(Math.abs(1.2 - rim.start - 0.63) < 0.04 && Math.abs(1.2 - rim.end - 0.41) < 0.04, `de ${rim.start.toFixed(2)} a ${rim.end.toFixed(2)} m`);
+  assert.ok(Math.abs(rim.top - 0.236) < 0.01, `alto ${(rim.top * 100).toFixed(1)} cm`);
+  assert.equal(ground.rimAlong(1.2, 2, -1, 0, 0.16, 0.6), null, 'passando longe, nada (e nem raio)');
+  assert.equal(ground.rimAlong(0, 0, 1, 0, 0.16, 0.2), null, 'no meio, a borda ainda está longe');
+  for (const kind of ['radhija', 'rhaenyra']) {
+    // andando para o oeste, com as patas da frente a 1–2 cm da borda
+    const x0 = 0.63 + c0(kind) + 0.015;
+    const c = createController(kind, withStart(kind, { x: x0, z: 0, yaw: -Math.PI / 2 }));
+    placeController(c, x0, 0, -Math.PI / 2);
+    c.v = c.cfg.walkSpeed;
+    const hop = planRimHop(ground, c, 0);
+    assert.ok(hop, `${kind}: pula`);
+    // pousa com as patas de trás (0,8 da garupa atrás do centro) além da borda, em cima da almofada
+    const land = x0 - hop.speed * hop.time;
+    assert.ok(land + c.cfg.body.back * 0.8 < 0.41, `${kind}: as patas de trás passam da borda (pousa a ${land.toFixed(2)} m)`);
+    assert.ok(Math.abs(hop.g1 - 0.1) < 0.01, `${kind}: o corpo pousa na almofada (${(hop.g1 * 100).toFixed(1)} cm)`);
+    assert.ok(hop.height + (hop.g0 + hop.g1) / 2 > 0.236, `${kind}: o arco passa por cima da borda`);
+    // indo para um ponto antes da borda (a comemoração perto dela), não pula
+    assert.equal(planRimHop(ground, c, 0, { x: x0 - 0.15, z: 0 }), null, `${kind}: o lugar dela fica antes da borda`);
+  }
+});
+
+test('caminha com borda (modelo novo, como no jogo): pulinho para entrar e para sair, pousa na almofada e nenhuma pata entra no desenho', async () => {
+  const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+  const { ground } = bedScene();
+  const world = createCollisionWorld({ STATIC_COLLIDERS: [], WORLD: { bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } } });
+  const PAWS = ['FLp', 'FRp', 'HLp', 'HRp'];
+  const report = [];
+  const bad = [];
+  for (const kind of ['radhija', 'rhaenyra']) {
+    withSeed(77, () => {
+      const c = createController(kind, withStart(kind, { x: 1.4, z: 0.3, yaw: -Math.PI / 2 }));
+      placeController(c, 1.4, 0.3, -Math.PI / 2);
+      const d = createDogV2(kind);
+      d.setGround(ground.heightAt);
+      const G = { y: 0, hop: null };
+      const m = { hops: 0, stand: Infinity, standAt: '', air: Infinity, drags: 0, inside: null };
+      // como o game.js: o pulinho (hopOverRim), o controle, o chão do corpo e a animação
+      const frame = (tx, tz) => {
+        const dx = tx - c.x, dz = tz - c.z, L = Math.hypot(dx, dz);
+        if (!(c.jumpT > 0)) {
+          const hop = planRimHop(ground, c, G.y, { x: tx, z: tz });
+          if (hop) {
+            G.hop = { g0: hop.g0, g1: hop.g1 };
+            startHop(c, hop.dx, hop.dz, hop);
+            m.hops++;
+          }
+        }
+        steer(c, DT, L > 0.08 ? { dx: dx / L, dz: dz / L, speed: c.cfg.walkSpeed } : { dx: 0, dz: 0, speed: 0 });
+        integrate(c, DT, world);
+        let gy = bodyGround(ground, c.x, c.z, c.yaw, c.cfg.body);
+        if (G.hop && c.jumpT > 0 && c.hopH > 0) gy = G.hop.g0 + (G.hop.g1 - G.hop.g0) * (1 - c.jumpT / c.jumpDur);
+        else G.hop = null;
+        G.y += (gy - G.y) * (1 - Math.exp(-14 * DT));
+        d.object.position.set(c.x, G.y, c.z);
+        d.object.rotation.y = c.yaw;
+        d.update(DT, { speed: c.animSpeed, turn: c.yawRate, action: c.jumpT > 0 ? 'jump' : 'none', jump: c.y, airK: c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1 });
+        d.object.updateMatrixWorld(true);
+        d.locomotion.legs.forEach((Lg, i) => {
+          const p = d.bones.find((b) => b.name === PAWS[i]).getWorldPosition(new THREE.Vector3());
+          const gap = p.y - ground.heightAt(p.x, p.z); // a articulação da pata fica ~2 cm acima da sola
+          if (Lg.dragged) m.drags++;
+          if (c.jumpT > 0 || Lg.swing) m.air = Math.min(m.air, gap);
+          else if (d.gait > 0.5 && gap < m.stand) { m.stand = gap; m.standAt = PAWS[i]; }
+        });
+      };
+      for (let f = 0; f < 150; f++) frame(0, 0);
+      m.inside = { r: Math.hypot(c.x, c.z), y: G.y };
+      for (let f = 0; f < 150; f++) frame(1.5, 0);
+      report.push(`${kind}: ${m.hops} pulinho(s); dentro a ${(m.inside.r * 100).toFixed(0)} cm do meio com o corpo a ${(m.inside.y * 100).toFixed(1)} cm; fora a ${(Math.hypot(c.x, c.z) * 100).toFixed(0)} cm; pata apoiada a ${(m.stand * 1000).toFixed(0)} mm do chão embaixo dela (${m.standAt}); no ar, ${(m.air * 1000).toFixed(0)} mm; arrastada ${m.drags} quadro(s)`);
+      if (m.hops !== 2) bad.push(`${kind}: ${m.hops} pulinho(s) (um para entrar e um para sair)`);
+      if (m.inside.r > 0.3 || Math.abs(m.inside.y - 0.1) > 0.01) bad.push(`${kind}: dentro, a ${(m.inside.r * 100).toFixed(0)} cm do meio e o corpo a ${(m.inside.y * 100).toFixed(1)} cm`);
+      if (Math.hypot(c.x, c.z) < 1.2) bad.push(`${kind}: não saiu da caminha`);
+      if (m.stand < 0.005) bad.push(`${kind}: uma pata apoiada entrou no desenho (${(m.stand * 1000).toFixed(0)} mm, ${m.standAt})`);
+      if (m.air < -0.035) bad.push(`${kind}: no pulinho uma pata passou ${(-m.air * 100).toFixed(1)} cm por dentro da borda`);
+      if (m.drags > 15) bad.push(`${kind}: pata arrastada ${m.drags} quadros`);
+    });
+  }
+  console.log(`[chão] caminha com borda\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});
+
+test('caminhas do cenário real: as das fases 5 e 8 têm borda para o pulinho; a da fase 2, pequena, é sólida (elas a contornam)', async () => {
+  for (const id of ['fase5', 'fase8']) {
+    const def = level(id);
+    const fx = await buildLevelWorld(def);
+    try {
+      fx.root.updateMatrixWorld(true);
+      const ground = createGround(walkablesOf(fx.root));
+      const B = def.layout.DOG_BED;
+      assert.ok(ground.rims >= 1, `${id}: a borda da caminha está marcada`);
+      // de 1,2 m do meio, andando para ele, a borda aparece à frente
+      let found = null;
+      for (let k = 0; k < 8 && !found; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        found = ground.rimAlong(B.x + Math.sin(a) * 1.2, B.z + Math.cos(a) * 1.2, -Math.sin(a), -Math.cos(a), 0.16, 0.7);
+      }
+      assert.ok(found && found.top > 0.15, `${id}: borda à frente (${JSON.stringify(found)})`);
+    } finally {
+      fx.dispose();
+    }
+  }
+  // fase 2: andando para a caminha (de leste e de sul), as duas param encostadas nela, sem entrar
+  const L2 = level('fase2').layout;
+  const B = L2.DOG_BED;
+  const world = createCollisionWorld(L2);
+  for (const kind of ['radhija', 'rhaenyra']) {
+    for (const [sx, sz] of [[1, 0], [0, 1]]) {
+      const c = createController(kind, L2.DOGS[kind]);
+      placeController(c, B.x + sx * 1.0, B.z + sz * 0.9, Math.atan2(-sx, -sz));
+      for (let f = 0; f < 120; f++) {
+        steer(c, DT, { dx: -sx, dz: -sz, speed: c.cfg.walkSpeed });
+        integrate(c, DT, world);
+      }
+      const into = sx ? B.x + B.w / 2 - (c.x - c.r) : B.z + B.d / 2 - (c.z - c.r);
+      assert.ok(into < 0.05, `${kind} vindo de ${sx ? 'leste' : 'sul'}: parou encostada (entrou ${(into * 100).toFixed(1)} cm)`);
+    }
+  }
 });

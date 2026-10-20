@@ -327,12 +327,18 @@ roteirizadas (`lock.drive`, impulso na parede, empurrão em pé) não. A cabeça
 desenho do modelo novo (`src/dogs/v2/head.js`, §7), sem mudar o jogo.
 
 **Chão de pisar** (`src/game/ground.js`): coisas baixas marcadas no desenho com `userData.walkable` (placas, pedais e
-botões do chão, as almofadas das caminhas das fases 2, 5 e 8) viram chão: `heightAt(x, z)` é o alto delas embaixo do
-ponto, por um raio para baixo no desenho de agora (até 30 cm; só malhas, porque um sprite sem câmera quebra o raycast
-do three.js). O objeto da dog sobe suave (`game.js`) e o modelo novo pisa pata por pata (`gait.js`). A borda alta das
-caminhas fica de fora (subindo nela, a pata ficava esticada e arrastada). Empurrando de pé, as patas da frente apoiam
-no desenho do objeto, medido por raios horizontais (`src/game/pushRest.js`: a face, a beirada e a altura das patas,
-pulando frestas), não na caixa de colisão.
+botões do chão, as caminhas e a almofada do gato) viram chão: `heightAt(x, z)` é o alto delas embaixo do ponto, por um
+raio para baixo no desenho de agora (até 30 cm, ou o alto que `walkable` der em metros; só malhas, porque um sprite sem
+câmera quebra o raycast do three.js). O corpo apoia no que está embaixo das patas da frente e das de trás
+(`bodyGround`, suave no `game.js`) e o modelo novo pisa pata por pata (`gait.js`: a pata no balanço passa por cima do
+que vem à frente; a apoiada que gira para cima de algo sobe nele). **Bordas** (`userData.rim`, a borda alta e fofa das
+caminhas grandes: fases 5 e 8 e a Arena dos Porquinhos): andando para ela, para entrar ou sair, a dog dá um pulinho
+por cima (`ground.planRimHop` decide, `game.js` `hopOverRim` chama `startHop` do controle: o caminho do pulo, com um
+arco de topo largo; as duas pulam, sem `dog:jump`; o pouso sai em `dog:land` com `hop`, baixinho e sem poeira). Indo
+para um lugar antes da borda (a comemoração perto dela), não pula. As caminhas pequenas para as duas (fase 2 e Arena
+do Empurrão) são sólidas (colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
+por raios horizontais (`src/game/pushRest.js`: a face, a beirada e a altura das patas, pulando frestas), não na caixa
+de colisão.
 
 **Navegação** (`src/game/navigation.js`, `companion.js`): a companheira anda em linha reta quando enxerga a líder;
 senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cada aresta pode exigir
