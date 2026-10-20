@@ -11,6 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
+import { withSeedAsync } from './helpers/seeded.mjs';
 import { WALL_BUTTON_SHAPE } from '../src/game/mechanics/wallButton.js';
 import { DOG_CONFIG } from '../src/dogs/config.js';
 import { shoveStance } from '../src/game/dogController.js';
@@ -25,6 +26,18 @@ const q = (h) => h.info().quintal;
 const game = (query = '') => createHeadlessGame({ level: LEVEL, query });
 const puz = (h) => h.game.debug.puzzle;
 const hints = (h) => h.log('hint').map((x) => x.text);
+/**
+ * Todos os testes daqui rodam com semente (Math.random sorteia os porquinhos, o botão da porta sem ?botao=, a fase da
+ * passada e as piscadas das dogs): cada caso dá sempre o mesmo resultado em qualquer máquina. Os que dependem do
+ * sorteio guardam quantas sementes uma varredura deve cobrir quando um deles parecer instável (sweep).
+ * @type {{ name: string, fn: () => any, sweep: number }[]}
+ */
+const SEEDED = [];
+/** @param {string} name @param {number} seed @param {() => any} fn @param {{ sweep?: number }} [o] */
+function seededTest(name, seed, fn, { sweep = 0 } = {}) {
+  SEEDED.push({ name, fn, sweep });
+  test(name, () => withSeedAsync(seed, fn));
+}
 const NOUN = { hat: 'o chapeuzinho', ribbon: 'o laço', candle: 'a vela do 3', cookie: 'o biscoito de osso', star: 'a estrela' };
 const fill = (s, item) => s.replace('{item}', NOUN[item]);
 const GOAL_IN = { x: L.GOAL.x, z: L.GOAL.z + 1.0 };
@@ -151,7 +164,7 @@ function breakPinata(h) {
   assert.equal(q(h).pinata.broken, true, `três batidas abriram a piñata ${JSON.stringify(q(h).pinata)}`);
 }
 
-test('fase 10: na campanha, a última, com o cenário sob demanda, chapéu como item e extras', () => {
+seededTest('fase 10: na campanha, a última, com o cenário sob demanda, chapéu como item e extras', 1, () => {
   assert.equal(LEVELS[LEVEL - 1].id, 'fase10');
   assert.equal(LEVEL, LEVELS.length, 'a fase 10 fecha a campanha');
   assert.equal(fase10.number, 10);
@@ -163,7 +176,7 @@ test('fase 10: na campanha, a última, com o cenário sob demanda, chapéu como 
   assert.deepEqual([...L.CAKE_ORDER], ['ribbon', 'cookie', 'candle', 'hat', 'star'], 'a ordem do quadro: laço, biscoito, vela, chapéu e estrela');
 });
 
-test('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enfeites na ordem certa)', async () => {
+seededTest('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enfeites na ordem certa)', 1, async () => {
   const h = await game('botao=1');
   h.run(0.3);
   let s = q(h);
@@ -402,7 +415,7 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enf
   assert.equal(vic[0].hasNext, false, 'a 10 é a última');
 });
 
-test('fase 10: a mangueira esmagada não deixa a água passar; sem energia o barquinho fica no meio', async () => {
+seededTest('fase 10: a mangueira esmagada não deixa a água passar; sem energia o barquinho fica no meio', 1, async () => {
   const h = await game();
   h.run(0.3);
   as(h, 'rhaenyra');
@@ -427,7 +440,7 @@ test('fase 10: a mangueira esmagada não deixa a água passar; sem energia o bar
   assert.ok(h.run(5, { until: (i) => i.quintal.boat.docked }), 'com energia, o vento leva o barquinho');
 });
 
-test('fase 10: a gansa guarda a cordinha; latido de longe distrai; com o portão aberto ela só passeia', async () => {
+seededTest('fase 10: a gansa guarda a cordinha; latido de longe distrai; com o portão aberto ela só passeia', 1, async () => {
   const h = await game();
   h.run(0.3);
   // direto na cordinha: a gansa não deixa (e avança)
@@ -459,7 +472,7 @@ test('fase 10: a gansa guarda a cordinha; latido de longe distrai; com o portão
   assert.equal(q(h).goose.hits, hits, 'com o portão aberto, a gansa não avança mais');
 });
 
-test('fase 10: o pombo não sai com latido nem com superbafo direto; pelo cano, voa', async () => {
+seededTest('fase 10: o pombo não sai com latido nem com superbafo direto; pelo cano, voa', 1, async () => {
   const h = await game();
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -483,7 +496,7 @@ test('fase 10: o pombo não sai com latido nem com superbafo direto; pelo cano, 
   assert.ok(h.run(4, { until: (i) => i.quintal.pigeon === 'gone' }), 'e vai embora');
 });
 
-test('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; com o pombo lá em cima, ela volta)', async () => {
+seededTest('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; com o pombo lá em cima, ela volta)', 1, async () => {
   const h = await game();
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -540,7 +553,7 @@ test('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto desce; c
   assert.equal(h.info().ribbon.holder, null, 'sem o laço');
 });
 
-test('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', async () => {
+seededTest('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', 1, async () => {
   const h = await game();
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -596,7 +609,7 @@ test('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolh
   assert.equal(q(h).place.ribbon, 'home');
 });
 
-test('fase 10: lama sem arrancada; o gerador liga o painel; os dois botões (um abre a porta, o outro o chiqueiro); a rampa só com arrancada', async () => {
+seededTest('fase 10: lama sem arrancada; o gerador liga o painel; os dois botões (um abre a porta, o outro o chiqueiro); a rampa só com arrancada', 1, async () => {
   const h = await game('botao=2');
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -676,7 +689,7 @@ test('fase 10: lama sem arrancada; o gerador liga o painel; os dois botões (um 
   assert.ok(h.run(4, { until: (i) => i.candle.holder === 'radhija' && !i.quintal.ramp }), 'com arrancada, pegou a vela');
 });
 
-test('fase 10: o botão da porta é sorteado a cada partida (sem ?botao=)', async () => {
+seededTest('fase 10: o botão da porta é sorteado a cada partida (sem ?botao=)', 1, async () => {
   const seen = new Set();
   const h = await game();
   seen.add(q(h).shed.doorBtn);
@@ -686,9 +699,9 @@ test('fase 10: o botão da porta é sorteado a cada partida (sem ?botao=)', asyn
     seen.add(q(h).shed.doorBtn);
   }
   assert.deepEqual([...seen].sort(), [0, 1], 'os dois botões aparecem');
-});
+}, { sweep: 60 });
 
-test('fase 10: caixotes — a Radhija não puxa e só sobe com os três na marca; solto no meio, o caixote fica onde parou', async () => {
+seededTest('fase 10: caixotes — a Radhija não puxa e só sobe com os três na marca; solto no meio, o caixote fica onde parou', 1, async () => {
   const h = await game();
   h.run(0.3);
   // a Radhija na alça: pesado demais; no pé da escadinha sem os caixotes: ainda não
@@ -733,7 +746,7 @@ test('fase 10: caixotes — a Radhija não puxa e só sobe com os três na marca
   assert.notEqual(h.info().prompt, TEXT.prompt.climb);
 });
 
-test('fase 10: a piñata parada em cima da roseira; legumes do campinho (colher, largar, pegar do chão, rebrotar)', async () => {
+seededTest('fase 10: a piñata parada em cima da roseira; legumes do campinho (colher, largar, pegar do chão, rebrotar)', 1, async () => {
   const h = await game();
   h.run(0.3);
   // enroscada no alto da mangueira: a dica do tronco; o superbafo nem chega lá
@@ -777,7 +790,7 @@ test('fase 10: a piñata parada em cima da roseira; legumes do campinho (colher,
   assert.equal(q(h).veg.held.radhija, null, 'E larga o legume');
 });
 
-test('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o latido as faz voar e elas não saem da área', async () => {
+seededTest('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o latido as faz voar e elas não saem da área', 1, async () => {
   const h = await game();
   h.run(0.3);
   const hen = () => q(h).chickens[0];
@@ -816,9 +829,9 @@ test('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o 
   assert.ok(q(h).chickens.every(inArea), `continuam na área ${JSON.stringify(q(h).chickens)}`);
   // ninguém tem texto
   assert.equal(h.log('hint').filter((x) => /galinha/i.test(x.text || '')).length, 0);
-});
+}, { sweep: 150 });
 
-test('fase 10: a Rhaenyra que pisa na lama escorrega (sem pulo nem impulso) até a Radhija lambê-la (L)', async () => {
+seededTest('fase 10: a Rhaenyra que pisa na lama escorrega (sem pulo nem impulso) até a Radhija lambê-la (L)', 1, async () => {
   const h = await game('botao=1');
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -874,7 +887,7 @@ test('fase 10: a Rhaenyra que pisa na lama escorrega (sem pulo nem impulso) até
   assert.ok(h.run(1.5, { until: (i) => i.quintal.doorOpen }), 'limpinha, o impulso abriu a porta');
 });
 
-test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da boca, comem por um tempo e voltam a atrapalhar', async () => {
+seededTest('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da boca, comem por um tempo e voltam a atrapalhar', 1, async () => {
   const h = await game('botao=2'); // com ?botao=2, o primeiro botão abre o chiqueiro
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -896,8 +909,9 @@ test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da bo
   h.tap('KeyQ');
   h.tap('KeyF'); // a Rhaenyra espera fora da horta
   h.tap('KeyQ');
-  const P0 = q(h).pigs.pigs[0];
-  put(h, 'radhija', P0.x - 0.7, P0.z, Math.PI / 2);
+  // no meio da horta, longe das cercas: na beirada da área deles (o lugar do primeiro porquinho é sorteado e às vezes
+  // ficava junto da cerca oeste) eles mal encostam nela
+  put(h, 'radhija', 8.7, 4.1, -Math.PI / 2);
   h.clearLog();
   assert.ok(h.run(25, { until: (i) => i.quintal.veg.held.radhija === null }), `um porquinho derrubou a cenoura ${JSON.stringify(q(h).pigs)}`);
   assert.ok(h.log('pig:knock').length >= 1);
@@ -923,9 +937,9 @@ test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da bo
   h.events.emit('ui:restart', {});
   h.run(0.2);
   assert.deepEqual([q(h).pigs.inPen, q(h).pigs.open, q(h).shed.sty], [3, false, false]);
-});
+}, { sweep: 120 });
 
-test('fase 10: com algo na boca a Radhija não sobe a rampa nem pega a vela (a boca já está ocupada)', async () => {
+seededTest('fase 10: com algo na boca a Radhija não sobe a rampa nem pega a vela (a boca já está ocupada)', 1, async () => {
   const h = await game('botao=1');
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -957,7 +971,7 @@ test('fase 10: com algo na boca a Radhija não sobe a rampa nem pega a vela (a b
   assert.ok(h.run(4, { until: (i) => i.candle.holder === 'radhija' && !i.quintal.ramp }), 'com a boca livre, pegou a vela');
 });
 
-test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', async () => {
+seededTest('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, o quadro (sem texto)', 1, async () => {
   const h = await game();
   h.run(0.3);
   const boardZ = (L.SECRET.board.z0 + L.SECRET.board.z1) / 2;
@@ -984,7 +998,7 @@ test('fase 10: a tábua solta do muro só cede quando está pronta; lá dentro, 
   assert.equal(h.log('hint').length, 0, 'nenhum texto na tela');
 });
 
-test('fase 10: fora de ordem duas vezes, a dica muda; o quadro de perto; o enfeite volta do chão', async () => {
+seededTest('fase 10: fora de ordem duas vezes, a dica muda; o quadro de perto; o enfeite volta do chão', 1, async () => {
   const h = await game();
   h.run(0.3);
   puz(h).debugSet('water');
@@ -1015,7 +1029,7 @@ test('fase 10: fora de ordem duas vezes, a dica muda; o quadro de perto; o enfei
   assert.notEqual(h.info().objective, TEXT.objective.lookPainting, 'depois do quadro, o objetivo volta aos enfeites');
 });
 
-test('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=done', async () => {
+seededTest('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=done', 1, async () => {
   const h = await game();
   h.run(0.3);
   const order = ['ribbon', 'cookie', 'candle', 'hat'];
@@ -1051,3 +1065,8 @@ test('fase 10: etapas ?stage=, pausa congela a água, reinício e stage=done', a
   h.game.debug.setStage('done');
   assert.ok(h.run(10, { until: (st) => st.state === 'victory' }), 'stage=done termina a fase');
 });
+
+// VARREDURA TEMPORÁRIA DE SEMENTES (sai antes da integração): cada teste que depende do sorteio, com muitas sementes
+for (const t of SEEDED) {
+  for (let seed = 2; seed <= t.sweep; seed++) test(`[varredura ${seed}] ${t.name}`, () => withSeedAsync(seed, t.fn));
+}
