@@ -869,18 +869,43 @@ test('sons e efeitos: todo evento dos porquinhos tem som ou efeito no feedback, 
   for (const ev of emitted) assert.ok(fb.includes(`events.on('${ev}'`) || ev === 'pig:sleep' || ev === 'pig:wake', `${ev} tem resposta no feedback`);
 });
 
-test('VARREDURA TEMPORÁRIA: todos os testes com semente, com muitas sementes', async () => {
-  const bad = {};
-  for (const { name, fn } of SEEDED) {
-    const n = name.startsWith('porquinho') ? 10 : name.startsWith('arena') ? 60 : 200;
-    for (let seed = 1; seed <= n; seed++) {
-      try {
-        await withSeedAsync(seed, fn);
-      } catch (err) {
-        (bad[name.slice(0, 60)] ||= []).push(`${seed}: ${String(err.message).replace(/\s+/g, ' ').slice(0, 220)}`);
-      }
-    }
-  }
-  const summary = Object.fromEntries(Object.entries(bad).map(([k, v]) => [k, { falhas: v.length, primeiras: v.slice(0, 4) }]));
-  assert.deepEqual(summary, {});
+test('DIAGNÓSTICO TEMPORÁRIO: trajetos das sementes que falharam', () => {
+  const out = {};
+  // A) recall, semente 176
+  withSeed(176, () => {
+    const h = herd();
+    h.pigs.setOpen(true);
+    h.run(10);
+    h.pigs.recall();
+    const tr = [];
+    for (let k = 0; k < 14; k++) { h.run(1); tr.push(`${k + 1}s ${snap(h)} g${h.pigs.gate.t.toFixed(2)}`); }
+    out.recall176 = tr;
+  });
+  // B) dog no chiqueiro, semente 26
+  withSeed(26, () => {
+    const h = herd();
+    h.pigs.releaseNow();
+    h.run(2);
+    const c = h.ctrls.radhija;
+    Object.assign(c, { x: h.P.pen.x1 - 0.3, z: h.P.pen.z1 - 0.3 });
+    h.pigs.recall();
+    const tr = [];
+    for (let k = 0; k < 8; k++) { h.run(2); tr.push(`${(k + 1) * 2}s ${snap(h)}`); }
+    Object.assign(c, { x: 3, z: 0.6 });
+    for (let k = 0; k < 10; k++) { h.run(0.5); tr.push(`saiu+${((k + 1) * 0.5).toFixed(1)}s ${snap(h)}`); }
+    out.dog26 = tr;
+  });
+  // C) distração, semente 195
+  withSeed(195, () => {
+    const h = herd({ foods: { corn: { time: 5, eat: 2 } } });
+    h.pigs.releaseNow();
+    [[1.0, 1.0], [3.6, 2.8], [-0.1, 3.2]].forEach(([x, z], i) => h.pigs.place(i, x, z, 0, 'roam'));
+    for (const P of h.pigs.pigs) Object.assign(P, { idleAct: 'go', goal: { x: P.x + 0.4, z: P.z - 0.4 }, idleT: 7 });
+    h.pigs.addFood({ x: 1.0, z: 1.8, kind: 'corn' });
+    h.run(11.05);
+    const tr = [`done ${h.events('pig:done').length} ${snap(h)}`];
+    for (let k = 0; k < 12; k++) { h.run(0.5); tr.push(`+${((k + 1) * 0.5).toFixed(1)}s ${snap(h)} goal${JSON.stringify(h.pigs.pigs[0].goal)}`); }
+    out.dist195 = tr;
+  });
+  assert.fail(JSON.stringify(out));
 });
