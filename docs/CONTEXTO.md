@@ -128,7 +128,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
-- Em andamento, **PR #44** (branch `claude/porcos-testes-semente`, a partir do main `f50db80`): "o sininho não prende
+- Entregue (**PR #44**, squash `1b93b41`, deploy `39351131808`; branch `claude/porcos-testes-semente`): "o sininho não prende
   a dog no chiqueiro" falhou no CI da fase 10. Todos os testes de modelo, rebanho e arena de `test/porcos.test.mjs`
   agora rodam com semente fixa (`seededTest`), e uma varredura de sementes (desligada por padrão; liga com
   `PORCOS_SEMENTES`) rodou no CI: 200 sementes por teste de rebanho, 60 de arena e 10 de modelo. Achados: (1) bug real
@@ -137,7 +137,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   outro lado). Agora o passo de lado só vai para onde há lugar (cercas e folha; os outros porcos saem da frente), quem
   está atrás da folha sai primeiro pelo seu lado, e quem espera a vez abre caminho para quem a tem. (2) Só o teste: a
   distração media a distância final (o passeio pode dar a volta); agora mede quanto o porco anda. Com isso, a
-  varredura passou inteira. Fila do orquestrador: #43 → #44 → #33.
+  varredura passou inteira.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 

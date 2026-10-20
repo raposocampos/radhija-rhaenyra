@@ -121,7 +121,8 @@ test('locomoção nova: na voltinha da comemoração (o corpo anda o círculo co
     const worst = runs.reduce((a, b) => (b.o.max > a.o.max ? b : a));
     report.push(`${kind}: máximo por semente (mm/quadro) mediana ${(sorted[sorted.length >> 1] * 1000).toFixed(2)}, pior ${(worst.o.max * 1000).toFixed(2)} (semente ${worst.seed}, ${worst.o.worst}, ${worst.drags} arrastos)${worst.o.events.length ? `\n    ${worst.o.events.join('\n    ')}` : ''}`);
     for (const { seed, o } of runs) {
-      if (o.n < 60) bad.push(`${kind} ${seed}: patas apoiadas na voltinha (${o.n})`);
+      // na voltinha o compasso acelera (mais tempo no ar): ~1 s de medida dá umas 40 a 60 amostras de pata apoiada
+      if (o.n < 40) bad.push(`${kind} ${seed}: patas apoiadas na voltinha (${o.n})`);
       if (o.lifts < 6) bad.push(`${kind} ${seed}: as patas dão passos na voltinha (${o.lifts})`);
       if (o.sum / Math.max(o.n, 1) > 0.001) bad.push(`${kind} ${seed}: escorrega em média ${(o.sum / o.n * 1000).toFixed(2)} mm por quadro`);
       if (o.max > 0.004) bad.push(`${kind} ${seed}: escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
