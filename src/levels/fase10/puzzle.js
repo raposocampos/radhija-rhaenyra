@@ -1513,8 +1513,8 @@ export function createPuzzle(ctx) {
     const nearLever = activeLevers().some((b) => !b.on && Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 1.0);
     if (nearLever && k === 'radhija') hints.cond('wallRadhija', 3.4, 10);
     if (k === 'rhaenyra' && mud.muddy('rhaenyra') && activeLevers().some((b) => !b.on && b.inReach(active, world))) hints.cond('wallMud', 3.6, 8);
-    // o painel apagado: primeiro o gerador
-    if (!S.gen.on && S.gen.t < 0 && shedButtons.some((b) => Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 0.9)) hints.cond('noPowerBoard', 3.6, 10);
+    // a Rhaenyra na frente do painel apagado: primeiro o gerador
+    if (k === 'rhaenyra' && !S.gen.on && S.gen.t < 0 && shedButtons.some((b) => Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 0.6)) hints.cond('noPowerBoard', 3.6, 10);
     if (!S.full && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.7) hints.cond(tap.on && crateOnHose() ? 'hoseBlocked' : 'poolDeep', 3.6, 12);
     if (S.full && !power() && !S.docked && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.8) hints.cond('boatFar', 3.6, 10);
     // a piñata em cima da roseira: parada, os espinhos não deixam chegar; balançando, quem bate é a Rhaenyra
