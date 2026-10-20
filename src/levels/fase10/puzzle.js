@@ -32,7 +32,7 @@ import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
   RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, RIBBON, COLLECTIBLES, COLLECTIBLE_PICKUP_R, PANTRY, CUPBOARD, PANTRY_CRATES, PLANTATION, ROSE_BUSH,
-  PINATA, MANGO_TREE, MANGO_SHOVE, SHED_BUTTONS, GENERATOR, STY, SECRET, EAST_WALL, CHICKENS, PIGS,
+  PINATA, MANGO_TREE, MANGO_SHOVE, SHED_BUTTONS, GENERATOR, STY, SECRET, EAST_WALL, CHICKENS, PIGS, DOGS,
 } from './layout.js';
 
 /**
@@ -245,9 +245,16 @@ export function createPuzzle(ctx) {
    */
   const dropAvoid = inZones([GOAL, { x: BUCKET.x, z: BUCKET.z, r: BUCKET.r + 0.2 }]);
   const handle = createCarryItem({ obj: props.rope.handle, dogs, scene: root, name: 'rope', carrier: 'large' });
-  // a porta basculante fechada é uma parede; o balde no chão é sólido para a Rhaenyra
+  // a porta basculante fechada é uma parede
   const doorCol = world.addDynamic({ id: 'porta-do-galpao', kind: 'gate', shape: 'box', x: SHED.x0, z: (SHED.door.z0 + SHED.door.z1) / 2, hx: SHED.t / 2, hz: (SHED.door.z1 - SHED.door.z0) / 2 });
-  const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'circle', x: BUCKET.x, z: BUCKET.z, r: BUCKET.r, blocks: 'large' });
+  /**
+   * O balde no chão é sólido para a Rhaenyra (a Radhija entra nele com E): uma cápsula do meio do balde até o meio da
+   * boca, da largura dele. Deitado (como começa), a boca e a alça ficam ao sul e a cápsula vai até a ponta da alça; em
+   * pé, ela vira o círculo do balde (fitBucketCol acompanha o desenho de treehouse.js).
+   */
+  const bucketCol = world.addDynamic({ id: 'balde', kind: 'prop', shape: 'segment', ax: BUCKET.x, az: BUCKET.z, bx: BUCKET.x, bz: BUCKET.z + BUCKET.h / 2, t: BUCKET.r, blocks: 'large' });
+  /** O balde só deixa de segurar a Rhaenyra quando o fundo dele passa da cabeça dela. */
+  const BUCKET_CLEAR = DOGS.rhaenyra.visual.headTop;
   // os caixotes da despensa (andam no trilho); a porteira fechada; a tábua do muro
   const CR = PANTRY_CRATES;
   const crateCols = CR.list.map((cr) => world.addDynamic({ id: `caixote-${cr.id}`, kind: 'prop', shape: 'box', x: CR.x0, z: cr.z, hx: CR.hx, hz: CR.hz }));
@@ -650,6 +657,14 @@ export function createPuzzle(ctx) {
   }
   /** A boca do balde deitado (de onde ela entra e por onde sai). */
   const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.38 };
+  /**
+   * O colisor do balde acompanha o desenho (treehouse.js, layoutRope): visto de cima, deitando, o meio da boca vai do
+   * centro do balde até h/2 ao sul, e a borda e a alça ficam a menos de r dele.
+   */
+  function fitBucketCol() {
+    bucketCol.bz = BUCKET.z + (BUCKET.h / 2) * Math.sin((S.bucketTilt * Math.PI) / 2);
+    bucketCol.enabled = S.bucketY < BUCKET_CLEAR;
+  }
   function stepBucket(dt) {
     const rh = ctrls.rhaenyra;
     if (handle.holder === 'rhaenyra') {
@@ -669,7 +684,7 @@ export function createPuzzle(ctx) {
     const y = Math.min(BUCKET.top, Math.max(0, S.pulled - BUCKET.lie) * BUCKET.rise);
     if (Math.abs(y - S.bucketY) > 1e-4 && !S.riding && Math.abs(y - S.bucketY) > 0.2 * dt) emit('bucket:move', { x: BUCKET.x, z: BUCKET.z, up: y > S.bucketY });
     S.bucketY = y;
-    bucketCol.enabled = S.bucketY < 0.25;
+    fitBucketCol();
     props.bucket.setY(S.bucketY);
     props.rope.setPull(S.pulled, handle.holder ? dogs[handle.holder] : null);
     if (S.bucketY < BUCKET.top - 0.3) { S.topUsed = false; S.topBlocked = false; }
@@ -1778,7 +1793,7 @@ export function createPuzzle(ctx) {
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) ctrls[n].y = 0;
     Object.assign(S, fresh());
     doorCol.enabled = true;
-    bucketCol.enabled = true;
+    fitBucketCol();
     boardCol.enabled = true;
     crateCols.forEach((col) => { col.x = CR.x0; });
     props.pigeon.object.visible = true;

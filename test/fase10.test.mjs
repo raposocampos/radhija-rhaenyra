@@ -10,8 +10,11 @@
 // porquinhos do chiqueiro; as galinhas do quintal; e as regras de cada passo. Headless.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { withSeedAsync } from './helpers/seeded.mjs';
+import { buildLevelWorld } from './helpers/worldBuild.mjs';
+import { findLooseObstacles } from './helpers/obstaculos.mjs';
 import { WALL_BUTTON_SHAPE } from '../src/game/mechanics/wallButton.js';
 import { DOG_CONFIG } from '../src/dogs/config.js';
 import { shoveStance } from '../src/game/dogController.js';
@@ -551,6 +554,58 @@ seededTest('fase 10: o balde (só a Radhija entra, só a Rhaenyra puxa, solto de
   assert.equal(q(h).bucket.riding, true, 'ela ficou no balde');
   assert.equal(q(h).onDeck, false, 'sem pular para o deque');
   assert.equal(h.info().ribbon.holder, null, 'sem o laço');
+});
+
+seededTest('fase 10: o balde segura a Rhaenyra na borda (deitado com a alça, levantando, em pé e subindo)', 1, async () => {
+  // A auditoria do cenário (test/colisao-cenario.test.mjs) deixa o balde de fora porque a Radhija entra nele. Aqui o
+  // desenho de verdade (treehouse.js) é medido contra o colisor do jogo só para a Rhaenyra: antes, deitado, ela entrava
+  // 19 cm pela boca, por cima da alça. A cada distância da corda o balde fica num ponto (deita, levanta, sobe).
+  const h = await game();
+  const { root, built, dispose } = await buildLevelWorld(fase10);
+  try {
+    h.run(0.3);
+    const pail = root.getObjectByName('balde');
+    assert.ok(pail, 'o desenho do balde');
+    const R = L.DOGS.rhaenyra;
+    const rh = { name: 'rhaenyra', size: R.size, r: R.radius, yMax: R.visual.headTop * 0.85 };
+    const notPail = (o) => {
+      for (let p = o; p; p = p.parent) if (p === pail) return false;
+      return true;
+    };
+    as(h, 'rhaenyra');
+    put(h, 'rhaenyra', L.ROPE.rest.x, L.ROPE.rest.z + 0.5, Math.PI);
+    h.tap('KeyE');
+    assert.equal(q(h).rope.holder, 'rhaenyra', 'a Rhaenyra pegou a corda');
+    /** A Rhaenyra a `d` da argola (ao sul dela, longe do balde) e o desenho no mesmo ponto do balde. */
+    const at = (d) => {
+      h.teleport('rhaenyra', L.ROPE.ring.x, L.ROPE.ring.z + d, 0);
+      h.run(1 / 30);
+      const b = q(h).bucket;
+      built.props.bucket.setTilt(b.tilt);
+      built.props.bucket.setY(b.y);
+      built.update(0, 0);
+      return b;
+    };
+    const seen = { lying: false, tilting: false, upright: false, clear: false };
+    for (const d of [0.4, 0.62, 0.72, 0.8, 0.9, 1.1, 1.3, 1.45, 1.6]) {
+      const b = at(d);
+      seen.lying ||= b.tilt === 1;
+      seen.tilting ||= b.tilt > 0.2 && b.tilt < 0.8;
+      seen.upright ||= b.tilt === 0 && b.y < 0.5;
+      seen.clear ||= b.y > R.visual.headTop;
+      const found = findLooseObstacles(root, h.world, { dogs: [rh], skip: notPail });
+      const what = found.map((f) => `entra ${f.depth} m em x[${f.box.minX}, ${f.box.maxX}] z[${f.box.minZ}, ${f.box.maxZ}]`).join('; ');
+      assert.equal(found.length, 0, `balde (inclinação ${b.tilt}, altura ${b.y}): ${what}`);
+    }
+    assert.deepEqual(seen, { lying: true, tilting: true, upright: true, clear: true }, 'passou por todos os pontos do balde');
+    // e encosta: deitado, de frente para a alça e dos lados ela para a 3 cm do desenho (sem parede invisível)
+    at(0.4);
+    const box = new THREE.Box3().setFromObject(pail);
+    const near = [[(box.min.x + box.max.x) / 2, box.max.z + R.radius + 0.03], [box.min.x - R.radius - 0.03, L.BUCKET.z], [box.max.x + R.radius + 0.03, L.BUCKET.z]];
+    for (const [x, z] of near) assert.ok(!h.world.overlaps(x, z, R.radius, R.size), `livre em (${x.toFixed(2)}, ${z.toFixed(2)}), encostada no balde`);
+  } finally {
+    dispose();
+  }
 });
 
 seededTest('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', 1, async () => {
