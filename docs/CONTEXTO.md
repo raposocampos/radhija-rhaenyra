@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (falha intermitente do E2E `lambe`: o portão da fase 7 arrastava a Radhija; #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (fase 10: chão da horta, lama e chiqueiro, PR #49; #33 a #46 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
