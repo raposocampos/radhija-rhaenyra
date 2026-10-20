@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (largar e pegar os objetos em todas as fases; #47, #50 e #51 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: largar e pegar os objetos em todas as fases (Claude, branch `claude/pegar-largar-b1c73c`)
@@ -22,11 +22,12 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   agora a devolve à bandeja; na borda da bandeja, fora do alcance dela, larga no chão sem a dica do trem). O 1º CI
   (`fab6abc`) só falhou nesse teste da borda, que ainda esperava o E sem efeito com a carga na boca. Nada rodou no PC
   além de `node --check`/`git diff --check`.
-- Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR não toca nesses arquivos. Quem entrar depois
-  sincroniza (o `docs/CONTEXTO.md` é o conflito esperado).
-- Próximo passo: CI, E2E `todas` no head final, prévia e aprovação do usuário no chat desta sessão.
+- Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR (#52) não toca nesses arquivos e, no
+  `docs/CONTEXTO.md`, só nesta seção. Na fila do orquestrador, o #48 entra antes: depois dele, sincronizar com o main
+  e validar o head final (CI e E2E `todas`).
+- Próximo passo: com o head final verde, prévia e aprovação do usuário no chat desta sessão; só então integrar.
 
-## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`)
+## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
 
 - Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
   0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
@@ -43,7 +44,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
   `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
   (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
-- Integrado ao main (squash `0c22c48`, 2026-10-20). Não repetir merge/deploy do #51.
+- Próximo passo: prévia e aprovação do usuário no chat; depois, integrar (squash com o SHA conferido), liberar o
+  deploy e conferir `version.json` (v0.10.1 · build 93). O #48 vem depois.
 
 ## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
