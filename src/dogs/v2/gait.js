@@ -249,7 +249,7 @@ export function createGait({ skel2, retarget, s }) {
     prev.z = oz;
     prev.yaw = yaw;
     if (dt > 0 && !teleport) {
-      const k = 1 - Math.exp(-12 * dt);
+      const k = 1 - Math.exp(-20 * dt);
       mv.v += (lz / dt - mv.v) * k;
       mv.w += (dyaw / dt - mv.w) * k;
     }
@@ -287,13 +287,12 @@ export function createGait({ skel2, retarget, s }) {
     still = moving ? 0 : still + dt;
     const fast = clamp(mv.v / 1.8, 0, 1);
     const dash = st.w.dash;
-    // compasso: o do guia. Se a passada não cabe no alcance da pata, ele acelera: numa curva fechada (a pata de fora
-    // anda bem mais que o corpo) e na arrancada (o ritmo do guia demora uns décimos de segundo para acompanhar a
-    // velocidade); no galope, não (a passada comprida, com o voo, é a dele)
-    const reach = 0.18 * s;
-    const fStraight = (Math.abs(mv.v) * R.beta) / reach;
-    const fCurve = ((Math.abs(mv.v) + Math.abs(mv.w) * 0.2 * s) * R.beta) / reach;
-    const boost = clamp(fCurve / lerp(R.f, Math.max(fStraight, R.f), dash), 1, 2.2);
+    // compasso: o do guia. Se a passada não cabe no alcance da pata, ele acelera: numa curva fechada (o giro leva a
+    // pata para o lado, onde ela alcança bem menos que para a frente) e na arrancada (o ritmo do guia demora uns
+    // décimos de segundo para acompanhar a velocidade); no galope, não (a passada comprida, com o voo, é a dele)
+    const fStraight = (Math.abs(mv.v) * R.beta) / (0.18 * s);
+    const fCurve = fStraight + (Math.abs(mv.w) * 0.2 * s * R.beta) / (0.12 * s);
+    const boost = clamp(fCurve / lerp(R.f, Math.max(fStraight, R.f), dash), 1, 2.6);
     info.boost = boost;
     ph = fract(ph + fract(st.phase - lastG) * boost);
     lastG = st.phase;
