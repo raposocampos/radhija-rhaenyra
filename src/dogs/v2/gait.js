@@ -380,17 +380,18 @@ export function createGait({ skel2, retarget, s }) {
         } else startSwing(leg, true, lift, 1 / clamp((1 - uPh) * swingDur, 0.1, 0.3), 'atrasada'); // balanço inteiro, curto
       }
       // longe demais (curva fechada, empurrada): um passo extra, fora do ritmo, se no máximo uma outra pata está no ar
-      // (arrancando, duas: no começo de uma corrida a dog fica um instante com três patas no ar)
-      const room = lifting() < (acc > 0.3 ? 3 : 2);
+      // (arrancando ou trotando, duas: no trote quase sempre há duas no ar, e no começo de uma corrida a dog fica um
+      // instante com três no ar; esperar deixava a pata ser arrastada esticada)
+      const room = lifting() < (acc > 0.3 || Math.abs(mv.v) > 1.2 ? 3 : 2);
       if (!leg.swing && moving && leg.over && leg.stanceT > 0.3 * stanceDur && room) {
         startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25), 'longe');
       }
       // traseira atrás demais: passo de conforto antes de a perna esticar (andando e arrancando; freando, não: a pata
       // atrás do lugar é normal e os passinhos de ajuste ao parar cuidam dela). Arrancando forte, ela sai mesmo com as
       // outras no ar (o trote rápido já tem um instante sem pata no chão); nunca fica arrastada esticada
-      // (no trote, com até duas outras no ar: nele quase sempre há duas no ar, e esperar deixava a pata ir longe demais)
+      // (no trote, com até duas outras no ar, como o passo extra; arrancando forte, mesmo com três)
       const braking = mv.v < st.speed - 0.15;
-      const roomC = room || acc > 0.3 || (Math.abs(mv.v) > 1.2 && lifting() < 3);
+      const roomC = room || acc > 0.3;
       if (!leg.front && !leg.swing && moving && mv.v > 0 && !braking && leg.stanceT > 0.3 * stanceDur && roomC) {
         const comfort = Math.min(1.2 * halfN + 0.02 * s, leg.reachBack - 0.012 * s);
         if (leg.land.z - leg.foot.z > comfort) startSwing(leg, true, lift, 1 / clamp((1 - RN.beta) / RN.f, 0.1, 0.22), 'conforto');
