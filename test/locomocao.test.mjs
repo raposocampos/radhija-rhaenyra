@@ -250,3 +250,58 @@ test('locomoção nova: a pisada (som e pegada) sai no pouso da pata, também na
     }
   }
 });
+
+/**
+ * Roda um roteiro [[segundos, anim], ...] (na esteira: objeto parado) medindo o que o usuário via como tremedeira e
+ * pata esticando: a correção do chão levantando/girando o corpo de um quadro para o outro, a pata afundando antes da
+ * correção e, parada, a pata pulando de lugar.
+ */
+function transitions(d, script) {
+  const m = { lift: 0, dTilt: 0, low: 0, pop: 0, popAt: '', liftAt: '' };
+  let prevTilt = d.tilt || 0;
+  let prevPaws = null;
+  let t = 0;
+  for (const [secs, anim, label] of script) {
+    for (let f = 0; f < Math.round(secs * 60); f++, t += DT) {
+      d.update(DT, anim);
+      d.object.updateMatrixWorld(true);
+      if (d.lift > m.lift) { m.lift = d.lift; m.liftAt = `${label} ${t.toFixed(2)} s (${d.lowestBone})`; }
+      m.dTilt = Math.max(m.dTilt, Math.abs((d.tilt || 0) - prevTilt));
+      prevTilt = d.tilt || 0;
+      m.low = Math.min(m.low, d.lowest);
+      const paws = pawsWorld(d);
+      if (prevPaws && !(anim.speed > 0)) {
+        for (let i = 0; i < 4; i++) {
+          const jump = paws[i].distanceTo(prevPaws[i]);
+          if (jump > m.pop) { m.pop = jump; m.popAt = `${label} ${t.toFixed(2)} s (${PAWS[i]})`; }
+        }
+      }
+      prevPaws = paws;
+    }
+  }
+  return m;
+}
+
+test('locomoção nova: nas trocas com as poses do guia (sentar, empurrar, pular) o corpo não treme e a pata não salta', () => {
+  const report = [];
+  const bad = [];
+  for (const kind of KINDS) {
+    const scripts = {
+      sentar: [[1.5, { speed: 0.8 }, 'andando'], [0.6, { speed: 0 }, 'parando'], [2.0, { speed: 0, action: 'sit' }, 'sentando'],
+        [1.5, { speed: 0, action: 'sniff' }, 'levantando'], [1.0, { speed: 0.8 }, 'andando']],
+      sozinha: [[1.0, { speed: 0.8 }, 'andando'], [7.0, { speed: 0 }, 'parada (senta sozinha)'], [1.0, { speed: 0, action: 'sniff' }, 'levantando']],
+      empurrar: [[1.2, { speed: 0.6 }, 'andando'], [1.5, { speed: 0.6, action: 'push' }, 'empurrando'], [1.2, { speed: 0.6 }, 'andando'], [0.8, { speed: 0 }, 'parando']],
+      pular: [[1.0, { speed: 1.6 }, 'trotando'], ...Array.from({ length: 24 }, (_, i) => [1 / 60, { speed: 1.6, airK: i / 24, jump: 4 * 0.3 * (i / 24) * (1 - i / 24) }, 'no ar']), [1.0, { speed: 1.6 }, 'trotando'], [0.8, { speed: 0 }, 'parando']],
+    };
+    for (const [name, script] of Object.entries(scripts)) {
+      const d = fresh(kind);
+      const m = transitions(d, script);
+      report.push(`${kind} ${name}: corpo subiu até ${(m.lift * 1000).toFixed(1)} mm (${m.liftAt || '-'}), giro mudou até ${(m.dTilt * 57.3).toFixed(2)}°/quadro, pata afundou ${(m.low * 1000).toFixed(1)} mm antes da correção, parada a pata pulou até ${(m.pop * 100).toFixed(2)} cm/quadro (${m.popAt || '-'})`);
+      if (m.lift > 0.004) bad.push(`${kind} ${name}: o corpo subiu ${(m.lift * 1000).toFixed(1)} mm (${m.liftAt})`);
+      if (m.dTilt > 0.6 / 57.3) bad.push(`${kind} ${name}: o corpo girou ${(m.dTilt * 57.3).toFixed(2)}° num quadro`);
+      if (m.pop > 0.015) bad.push(`${kind} ${name}: parada, a pata pulou ${(m.pop * 100).toFixed(2)} cm num quadro (${m.popAt})`);
+    }
+  }
+  console.log(`[locomoção] trocas de pose\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});
