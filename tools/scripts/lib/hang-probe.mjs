@@ -4,7 +4,8 @@
 // a limpeza `handle.evaluate(h => h.abort())` NA PÁGINA antes de rejeitar (server/frames.js e progress.js). O relatório
 // separa as causas possíveis: thread principal presa em JavaScript (pilha pelo Debugger.pause), presa fora dele
 // (chamada nativa, GPU) ou aba morta; quem gasta CPU (processo e thread do Chromium); memória e OOM do kernel; console
-// da página (com os marcos do boot `rr:*`) e o registro do próprio Chromium (browser-log.mjs).
+// da página (com os marcos do boot `rr:*`), o registro do próprio Chromium (browser-log.mjs), se cada aba ainda recebe
+// quadros e, com gdb, as pilhas nativas.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -109,10 +110,11 @@ async function processSection(gapMs = 1500) {
   return lines;
 }
 
-// ---- Pilhas nativas (gdb) do processo da GPU e das abas: onde cada thread espera quando ninguém gasta CPU. Só no
-// Linux com gdb (no CI, pelo sudo sem senha). O binário do Chromium não tem símbolos: os quadros dele saem como
-// "headless_shell", mas os das bibliotecas (SwiftShader, ANGLE, libc) dizem quem espera quem. O texto inteiro vai para
-// shots/diagnostico/pilhas-*.txt; no log, um resumo por thread (quadros do topo), com as iguais juntas.
+// ---- Pilhas nativas (gdb) das abas, do navegador e da GPU: onde cada thread espera quando ninguém gasta CPU. Só no
+// Linux com gdb (no CI, pelo sudo sem senha; os jobs normais não instalam). O Chromium do Playwright traz os nomes das
+// funções (sem linhas); quadro sem nome sai como ??@biblioteca (headless_shell, SwiftShader, ANGLE, libc). O texto
+// inteiro vai para shots/diagnostico/pilhas-*.txt; no log, um resumo por thread (quadros do topo), com as iguais juntas.
+// Foi assim que apareceu o impasse do streaming de scripts com o serviço de fontes (browser.mjs).
 let gdbPath;
 async function findGdb() {
   if (gdbPath !== undefined) return gdbPath;
