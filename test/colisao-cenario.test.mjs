@@ -26,6 +26,10 @@ const SEM_COLISOR = [
   [/^fita-do-vento$/, 'fitas do ventilador: tecido leve'],
   [/^corda-da-tabua$/, 'corda fina da tábua até a roldana, rente ao chão (de 4 a 11 cm): a pata passa por cima'],
   [/^(manilha|lama)$/, 'túnel da fase 7: a Radhija passa por dentro (as paredes do corredor são os colisores manilha-norte/sul)'],
+  [/^(milharal|rama-de-abobora)$/, 'folhas do milho e a rama das abóboras: o colisor é a fileira e a abóbora; a Radhija passa roçando'],
+  [/^balde$/, 'balde deitado da casa na árvore: a Radhija entra nele (elevador); o colisor dinâmico do puzzle segura a Rhaenyra'],
+  [/^(corda-da-roldana|puxador)$/, 'cordas finas e o puxador do portãozinho: as dogs pegam e puxam com a boca'],
+  [/^(torneira|mangueira)$/, 'torneira da fase 10 é um botão de parede (impulso): um colisor na frente dela impede o impulso'],
 ];
 const skipped = (o) => {
   for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;

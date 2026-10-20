@@ -33,7 +33,7 @@ function potPlant(x, z, r, kind, seed) {
       for (let k = 0; k <= 8; k++) {
         const u = k / 8;
         // frondes em arco: as pontas não descem abaixo da cabeça da Rhaenyra (quem passa perto não as atravessa)
-        pts.push(new THREE.Vector3(Math.cos(a) * len * u, h + Math.sin(Math.PI * u * 0.8) * 0.35 - u * u * 0.1, Math.sin(a) * len * u));
+        pts.push(new THREE.Vector3(Math.cos(a) * len * u, h + Math.sin(Math.PI * u * 0.8) * 0.35 - u * u * 0.08, Math.sin(a) * len * u));
       }
       const curve = new THREE.CatmullRomCurve3(pts);
       const frond = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.012, 4, false), leafMat);

@@ -178,7 +178,7 @@ export const FAN = {
 export const POTS = [{ x: 7.45, z: -1.0, r: 0.34 }, { x: 7.45, z: -2.08, r: 0.34 }];
 /** Vasinhos de enfeite no chão, junto da vidraça (r: colisor, que cobre as folhas; seedX: a semente do desenho). */
 export const SMALL_POTS = [
-  { x: 4.62, z: WORLD.bounds.minZ + 0.18, kind: 'fern', scale: 0.4, r: 0.2, seedX: 4.85 },
+  { x: 4.62, z: WORLD.bounds.minZ + 0.18, kind: 'fern', scale: 0.4, r: 0.22, seedX: 4.85 },
   { x: 7.4, z: WORLD.bounds.minZ + 0.18, kind: 'monstera', scale: 0.45, r: 0.22, seedX: 7.4 },
 ];
 export const WICKER_CHAIR = { x: 5.6, z: 2.6, r: 0.38 };

@@ -14,7 +14,7 @@ const shadowAll = (g) => g.traverse((/** @type {THREE.Mesh} */ o) => { if (o.isM
  */
 export function buildBafoWorld({ root, layout }) {
   const { FAN, CORRIDOR, DUCT, PERCH_A, PERCH_B, GATE, CARROT, COLLECTIBLES } = layout;
-  const base = buildPlaceholderWorld({ root, layout, skip: new Set(['grade', 'poleiro-a', 'poleiro-b']) });
+  const base = buildPlaceholderWorld({ root, layout, skip: new Set(['grade', 'poleiro-a', 'poleiro-b', 'duto-boca', 'duto-saida']) });
   const updaters = [];
 
   // ---------------------------------------------------------------- trilho do ventilador

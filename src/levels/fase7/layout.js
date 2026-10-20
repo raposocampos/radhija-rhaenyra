@@ -87,7 +87,8 @@ const seg = (id, ax, az, bx, bz, extra = {}) => ({ id, shape: /** @type {const} 
 const tunnelLen = TUNNEL.x1 - TUNNEL.x0;
 const tunnelMid = (TUNNEL.x0 + TUNNEL.x1) / 2;
 const outerR = TUNNEL.r + TUNNEL.wall;
-const moundFoot = 0.07; // o pé da encosta do morrinho passa de MOUND.hx/hz com mais de 8 cm de altura
+// o pé da encosta do morrinho passa de MOUND.hx/hz com mais de 8 cm de altura (no leste, a aresta TE-SW passa rente)
+const moundFoot = { x: 0.07, z: 0.1 };
 
 /** @type {import('../../types').Collider[]} */
 export const STATIC_COLLIDERS = [
@@ -96,9 +97,9 @@ export const STATIC_COLLIDERS = [
   seg('cerca-oeste-sul', FENCE.west, MOUND.z + MOUND.hz - 0.1, FENCE.west, FENCE.south),
   seg('cerca-sul-oeste', FENCE.west, FENCE.south, GATE.hinge.x - 0.06, FENCE.south),
   seg('cerca-sul-leste', GATE.latchPost.x + 0.06, FENCE.south, 6.3, FENCE.south),
-  // morrinho: as duas metades, deixando o corredor da manilha (com o pé da encosta: + moundFoot de cada lado)
-  { id: 'morrinho-norte', shape: 'box', x: MOUND.x, z: (MOUND.z - MOUND.hz - moundFoot + TUNNEL.z - outerR) / 2, hx: MOUND.hx + moundFoot, hz: (MOUND.hz + moundFoot - outerR) / 2 },
-  { id: 'morrinho-sul', shape: 'box', x: MOUND.x, z: (MOUND.z + MOUND.hz + moundFoot + TUNNEL.z + outerR) / 2, hx: MOUND.hx + moundFoot, hz: (MOUND.hz + moundFoot - outerR) / 2 },
+  // morrinho: as duas metades, deixando o corredor da manilha (com o pé da encosta)
+  { id: 'morrinho-norte', shape: 'box', x: MOUND.x, z: (MOUND.z - MOUND.hz - moundFoot.z + TUNNEL.z - outerR) / 2, hx: MOUND.hx + moundFoot.x, hz: (MOUND.hz + moundFoot.z - outerR) / 2 },
+  { id: 'morrinho-sul', shape: 'box', x: MOUND.x, z: (MOUND.z + MOUND.hz + moundFoot.z + TUNNEL.z + outerR) / 2, hx: MOUND.hx + moundFoot.x, hz: (MOUND.hz + moundFoot.z - outerR) / 2 },
   // paredes da manilha (o corredor tem o diâmetro interno) e os batentes das bocas, que só barram a Rhaenyra
   { id: 'manilha-norte', shape: 'box', x: tunnelMid, z: TUNNEL.z - TUNNEL.r - TUNNEL.wall / 2, hx: tunnelLen / 2, hz: TUNNEL.wall / 2 },
   { id: 'manilha-sul', shape: 'box', x: tunnelMid, z: TUNNEL.z + TUNNEL.r + TUNNEL.wall / 2, hx: tunnelLen / 2, hz: TUNNEL.wall / 2 },

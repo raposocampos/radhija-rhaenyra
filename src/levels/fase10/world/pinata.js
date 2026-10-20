@@ -60,7 +60,8 @@ export function buildPinata(root, layout) {
   for (let i = 0; i < tp.count; i++) {
     const seg = Math.floor(i / 13) / 18;
     const c = trunkCurve.getPointAt(Math.min(1, seg));
-    const k = (1 - seg * 0.5) * (1 + Math.max(0, 0.1 - seg) * 4);
+    // o pé alarga pouco: fica dentro do colisor (a Rhaenyra empurra o tronco de perto: MANGO_SHOVE)
+    const k = (1 - seg * 0.5) * (1 + Math.max(0, 0.1 - seg) * 2);
     tp.setXYZ(i, c.x + (tp.getX(i) - c.x) * k, tp.getY(i), c.z + (tp.getZ(i) - c.z) * k);
   }
   trunkGeo.computeVertexNormals();

@@ -90,10 +90,11 @@ export function buildTreehouse(root, layout) {
   const roots = [];
   for (let k = 0; k < 6; k++) {
     const a = (k / 6) * TAU + 0.4;
+    // (rentes ao chão além do colisor do tronco, que vai a TREE.r + 0,18: a pata passa por cima)
     const c = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(TREE.x + Math.cos(a) * 0.3, 0.3, TREE.z + Math.sin(a) * 0.3),
-      new THREE.Vector3(TREE.x + Math.cos(a) * 0.55, 0.06, TREE.z + Math.sin(a) * 0.55),
-      new THREE.Vector3(TREE.x + Math.cos(a) * 0.9, -0.02, TREE.z + Math.sin(a) * 0.9),
+      new THREE.Vector3(TREE.x + Math.cos(a) * 0.55, 0.03, TREE.z + Math.sin(a) * 0.55),
+      new THREE.Vector3(TREE.x + Math.cos(a) * 0.9, -0.05, TREE.z + Math.sin(a) * 0.9),
     );
     roots.push(tube(c, 8, 0.07, 8));
   }
@@ -460,6 +461,7 @@ export function buildTreehouse(root, layout) {
   const ropeD = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 1, 6), ropeMat);
   const ropeT = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 1, 6), ropeMat);
   ropeV.castShadow = ropeD.castShadow = ropeT.castShadow = true;
+  ropeV.name = ropeD.name = ropeT.name = 'corda-da-roldana';
   group.add(ropeV, ropeD, ropeT);
   // a argola no espeto
   const ringPos = new THREE.Vector3(ROPE.ring.x, ROPE.ring.y, ROPE.ring.z);

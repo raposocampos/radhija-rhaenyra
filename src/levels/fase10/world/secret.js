@@ -95,8 +95,8 @@ export function buildSecret(root, layout) {
   }
   toyBone.position.set(SECRET.photo.x - 0.42, 0.04, SECRET.photo.z + 0.16);
   toyBone.rotation.y = 0.6;
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.05, 14, 10), stdMat('#7cc4e8', { roughness: 0.45 }));
-  ball.position.set(SECRET.photo.x - 0.55, 0.05, SECRET.photo.z - 0.17);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.038, 14, 10), stdMat('#7cc4e8', { roughness: 0.45 }));
+  ball.position.set(SECRET.photo.x - 0.55, 0.038, SECRET.photo.z - 0.17);
   nook.add(toyBone, ball);
   nook.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(nook);
