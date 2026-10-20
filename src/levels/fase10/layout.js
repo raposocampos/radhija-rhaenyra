@@ -154,6 +154,11 @@ export const PLANTATION = {
 export const ROSE_BUSH = { x: 1.6, z: 4.4, r: 0.6, h: 0.55 };
 export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
 /**
+ * A casca do tronco da mangueira na altura das patas do empurrão: o tronco de pinata.js sobe torto (ali o centro fica
+ * 3,5 cm a leste e 7,7 cm ao sul da base) e afina (raio de 29 cm). As patas apoiam nela e o colisor fica rente.
+ */
+const MANGO_BARK = { x: MANGO_TREE.x + 0.035, z: MANGO_TREE.z + 0.077, r: 0.29 };
+/**
  * A piñata: presa no galho (pivot) por uma corda de comprimento L, parada em cima da roseira. O superbafo dá
  * impulso; ela balança como um pêndulo. A Rhaenyra, no ar (pulo), acerta quando passa por baixo dela e o fundo da
  * piñata está ao alcance (reach). hits batidas abrem a piñata.
@@ -167,7 +172,7 @@ export const PINATA = { pivot: { x: ROSE_BUSH.x, y: 2.75, z: ROSE_BUSH.z }, L: 1
  * @type {import('../../types').ShoveTargetCfg & { tangled: { x: number, y: number, z: number }, slide: number, drop: number, pivotY: number }}
  */
 export const MANGO_SHOVE = {
-  x: MANGO_TREE.x + 0.02 - 0.33, z: MANGO_TREE.z + 0.06, nx: -1, nz: 0, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3,
+  x: MANGO_BARK.x - MANGO_BARK.r, z: MANGO_BARK.z, nx: -1, nz: 0, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3,
   tangled: { x: MANGO_TREE.x - 0.85, y: 2.45, z: MANGO_TREE.z - 0.62 }, slide: 0.55, drop: 0.65, pivotY: 2.3,
 };
 
@@ -254,21 +259,22 @@ export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
 /** Galpão de ferramentas (paredes cortadas, sem telhado) com a porta basculante no oeste. */
 export const SHED = { x0: 9.6, x1: 12.05, z0: 0.6, z1: 3.6, wallH: 1.45, t: 0.15, door: { z0: 1.7, z1: 2.6, h: 1.25 } };
 /**
- * O painel de madeira dos botões, na faixa de grama entre a cerca branca e a horta: preso na cerca, atravessado na
- * faixa e virado para o sul (de frente para a câmera). Entre a ponta dele e a cerca da horta fica a passagem.
+ * O painel de madeira dos botões, grande, de costas para a cerca branca (preso nela) e virado para o leste, para a
+ * faixa de grama entre a cerca e a horta: x = meio da espessura t; de z0 a z1; altura h.
  */
-export const BUTTON_BOARD = { x0: BACK_FENCE.x + 0.1, x1: 6.3, z: 2.75, t: 0.06, h: 1.35 };
+export const BUTTON_BOARD = { x: BACK_FENCE.x + 0.11, z0: 2.15, z1: 3.5, t: 0.06, h: 1.65 };
+const BOARD_FACE = BUTTON_BOARD.x + BUTTON_BOARD.t / 2;
 /**
  * Os dois botões altos no painel (impulso da Rhaenyra): um abre a porta do galpão e o outro a porteira do chiqueiro.
  * Qual é qual é sorteado a cada partida. Sem o gerador ligado, o painel fica apagado e os botões não valem.
  * @type {import('../../types').WallButtonCfg[]}
  */
 export const SHED_BUTTONS = [
-  { x: 5.94, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
-  { x: 6.22, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
+  { x: BOARD_FACE, z: 2.5, nx: 1, nz: 0, top: 1.05, kind: 'button', mode: 'once' },
+  { x: BOARD_FACE, z: 3.0, nx: 1, nz: 0, top: 1.05, kind: 'button', mode: 'once' },
 ];
 /**
- * O gerador pequeno, encostado na cerca branca, logo à frente do painel (o cabo dele sobe para o painel). A Rhaenyra
+ * O gerador pequeno, encostado na cerca branca, do lado do painel (o cabo dele sobe para o painel). A Rhaenyra
  * puxa a cordinha de partida (E perto da alça, no lado leste): pull s de puxão, crank s de engasgo e ele pega. A
  * fumacinha sai pelo escapamento (exhaust), virado para o sul.
  */
@@ -366,7 +372,7 @@ export const STATIC_COLLIDERS = [
   ...PLANTATION.pumpkins.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `abobora-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: 0.22 })),
   // a piñata: a roseira embaixo e a mangueira
   { id: 'roseira', shape: 'circle', x: ROSE_BUSH.x, z: ROSE_BUSH.z, r: ROSE_BUSH.r },
-  { id: 'mangueira-grande', shape: 'circle', x: MANGO_TREE.x + 0.02, z: MANGO_TREE.z + 0.06, r: 0.33 },
+  { id: 'mangueira-grande', shape: 'circle', x: MANGO_BARK.x, z: MANGO_BARK.z, r: MANGO_BARK.r + 0.03 },
   { id: 'ventilador', shape: 'circle', x: FAN.x, z: FAN.z, r: FAN.r },
   ...PLANTERS.map((p, i) => /** @type {import('../../types').CircleCollider} */ ({ id: `vaso-${i + 1}`, shape: 'circle', x: p.x, z: p.z, r: p.r })),
   { id: 'arvorezinha', shape: 'circle', x: LITTLE_TREE.x, z: LITTLE_TREE.z, r: LITTLE_TREE.r },
@@ -411,7 +417,7 @@ export const STATIC_COLLIDERS = [
   wallZ('chiqueiro-oeste-sul', STY.x0, STY.gate.z1, STY.z1, { hx: thin }),
   wallZ('chiqueiro-leste', STY.x1, STY.z0, STY.z1, { hx: thin }),
   { id: 'casinha-dos-porcos', shape: 'box', x: STY.x1 - 0.45, z: STY.z1 - 0.45, hx: 0.38, hz: 0.38 },
-  { id: 'painel-dos-botoes', shape: 'box', x: (BUTTON_BOARD.x0 + BUTTON_BOARD.x1) / 2, z: BUTTON_BOARD.z - 0.035, hx: (BUTTON_BOARD.x1 - BUTTON_BOARD.x0) / 2, hz: BUTTON_BOARD.t / 2 + 0.035 },
+  { id: 'painel-dos-botoes', shape: 'box', x: BUTTON_BOARD.x, z: (BUTTON_BOARD.z0 + BUTTON_BOARD.z1) / 2, hx: BUTTON_BOARD.t / 2 + 0.005, hz: (BUTTON_BOARD.z1 - BUTTON_BOARD.z0) / 2 },
   { id: 'gerador', shape: 'box', x: GENERATOR.x, z: GENERATOR.z, hx: GENERATOR.hx, hz: GENERATOR.hz },
 ];
 

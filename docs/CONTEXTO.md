@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, quinta rodada de retorno; #34 a #42 e #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, sexta rodada de retorno; #34 a #42 e #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
@@ -418,9 +418,17 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
       escuras, arqueadas; crista serrilhada (extrusão); duas cores de marrom; mesma animação.
     - Testes (`fase10.test.mjs`), E2E (`test-quintal.mjs`) e capturas (`capture-quintal.mjs`) com o gerador, o vão
       novo, o empurrão pelo oeste e o pulo bloqueado.
-- Próximo passo da D: conferir CI e E2E `todas` do head do PR #33, revisar as capturas (gerador, painel, vão, galinha,
-  empurrão) e entregar a prévia; integrar só com a aprovação do usuário (squash com SHA esperado, deploy do
-  `github-pages` dessa versão e aviso ao orquestrador).
+  - Prévia da quinta rodada em `4d22f9f` (CI ok; E2E `todas` 39348516051 com a partida `quintal` ok; as duas falhas
+    eram de fora: teste do empurrão herdado, corrigido no #43, e download do Chromium). Main com o #44 (`1b93b41`)
+    trazido para o branch.
+  - Sexta rodada de retorno (2026-10-19): o painel dos botões ficou maior (1,35 × 1,65 m) e de costas para a cerca
+    branca, virado para o leste (`BUTTON_BOARD` com `x`, `z0`, `z1`; botões com `nx = 1`), com o gerador ao lado, ao
+    sul; o rodapé de pedra da fachada não atravessa mais a porta da varanda e saiu o capacho (era a "mancha" no chão);
+    no empurrão, as patas apoiam na casca de verdade (`MANGO_BARK`: o tronco sobe torto e afina; o colisor ficou
+    rente a ela).
+- Próximo passo da D: com o #43 no main, sincronizar, rodar CI e E2E `todas` no head final, revisar as capturas
+  (painel, gerador, vão, galinha, empurrão, porta da varanda) e entregar a prévia; integrar só com a aprovação do
+  usuário (squash com SHA esperado, deploy do `github-pages` dessa versão e aviso ao orquestrador).
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,

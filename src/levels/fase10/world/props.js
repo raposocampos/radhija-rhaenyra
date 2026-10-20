@@ -313,11 +313,11 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   });
   const shedLamps = SHED_BUTTONS.map((cfg) => {
     // a plaquinha "?" logo acima do botão (abaixo do topo do painel; as patinhas pintadas ficam livres embaixo) e a
-    // lampadinha do lado esquerdo dela (os dois botões ficam juntinhos no painel)
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.13), askMat);
-    board.position.set(0, cfg.top + 0.19, 0.006);
-    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
-    lamp.position.set(-0.12, cfg.top + 0.19, 0.03);
+    // lampadinha do lado dela
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.16), askMat);
+    board.position.set(0, cfg.top + 0.22, 0.006);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
+    lamp.position.set(-0.155, cfg.top + 0.22, 0.03);
     const holder = new THREE.Group();
     holder.add(board, lamp);
     holder.position.set(cfg.x, 0, cfg.z);

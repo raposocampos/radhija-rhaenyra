@@ -162,7 +162,7 @@ try {
   await shot('09g-casinha-luneta-e-bau', { pos: [7.9, 3.2, -3.0], look: [8.6, 2.4, -5.4] });
   await shot('10-horta', { pos: [7.4, 1.8, 4.2], look: [8.0, 0.2, 1.6] });
   await shot('10b-vao-e-lama', { pos: [6.3, 1.2, 6.4], look: [7.3, 0.15, 5.1] });
-  await shot('10c-painel-e-gerador', { pos: [L.GENERATOR.x + 1.2, 1.1, L.GENERATOR.z + 1.5], look: [L.GENERATOR.x + 0.25, 0.6, L.BUTTON_BOARD.z] });
+  await shot('10c-painel-e-gerador', { pos: [L.BUTTON_BOARD.x + 1.8, 1.3, L.GENERATOR.z + 1.0], look: [L.BUTTON_BOARD.x + 0.1, 0.75, (L.BUTTON_BOARD.z0 + L.BUTTON_BOARD.z1) / 2 + 0.3] });
   await shot('11-galpao', { pos: [10.4, 2.3, 4.6], look: [10.6, 0.5, 1.8] });
   await shot('11b-rampa-e-vela', { pos: [10.2, 1.5, 4.0], look: [11.2, 0.9, 3.0] });
   // a câmera do jogo em cada cenário
@@ -335,7 +335,7 @@ try {
   // 6. VELA: o gerador e o painel ao lado da cerca branca, o botão alto e a porta, o vão lá no fundo, a lama, o
   // Lambe-Lambe e a rampa
   const GEN = L.GENERATOR, BB = L.BUTTON_BOARD;
-  const genCam = { pos: [GEN.x + 1.15, 0.95, GEN.z + 1.25], look: [GEN.x + 0.2, 0.5, BB.z + 0.25] };
+  const genCam = { pos: [GEN.x + 1.4, 1.0, GEN.z + 0.9], look: [GEN.x + 0.1, 0.55, GEN.z - 0.55] };
   await setup({ stage: 'cake1', active: 'rhaenyra', place: { rhaenyra: { x: GEN.cord.x + 0.3, z: GEN.cord.z, yaw: -Math.PI / 2 }, radhija: { x: 6.5, z: 1.6, yaw: Math.PI } }, stay: 'radhija', settle: 40 });
   await shot('27a-painel-apagado-camera-do-jogo');
   await shot('27b-gerador-desligado', genCam);
@@ -374,7 +374,7 @@ try {
   await setup({ active: 'rhaenyra', place: { rhaenyra: kick(L.SHED_BUTTONS[0]) }, settle: 10 });
   await tap('Space');
   await step(14);
-  await shot('29-impulso-no-botao-do-painel', { pos: [BB.x1 + 0.9, 1.4, BB.z + 1.9], look: [(BB.x0 + BB.x1) / 2, 0.85, BB.z] });
+  await shot('29-impulso-no-botao-do-painel', { pos: [BB.x + 1.9, 1.4, BB.z1 + 1.2], look: [BB.x + 0.1, 0.85, (BB.z0 + BB.z1) / 2] });
   await until((i) => i.quintal.doorOpen, 200);
   await step(40);
   await shot('29b-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });

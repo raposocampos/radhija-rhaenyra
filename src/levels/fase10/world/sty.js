@@ -1,7 +1,7 @@
 // FASE 10 · O chiqueiro ao sul do galpão: cerca de tábuas largas (os porcos não pulam), a porteira para a horta (abre
 // girando para fora), a casinha dos porcos com telhado de zinco, o cocho de madeira com lavagem, a poça de lama e a
-// placa "Chiqueiro". Na faixa de grama ao lado da cerca branca, o painel de madeira dos dois botões altos (virado para
-// o sul, com a luz de força) e o gerador pequeno que dá força a ele (partida de cordinha); na parede do galpão, a
+// placa "Chiqueiro". Na faixa de grama ao lado da cerca branca, o painel de madeira grande dos dois botões altos (de
+// costas para a cerca, com a luz de força) e o gerador pequeno que dá força a ele (partida de cordinha); na parede do galpão, a
 // caixinha de força onde os fios dos botões se juntam, com um cabo para a roldana da porta e outro, pelo chão, até a
 // trava da porteira (qual botão vai para onde é sorteado).
 // API: buildSty(root, layout) → { group, gate: GateProp (setOpen 0..1), links: { door, gate } (pulso), seeThrough,
@@ -121,34 +121,44 @@ export function buildSty(root, layout) {
   gate.position.set(STY.x0, 0, STY.gate.z0);
   group.add(gate);
 
-  // ---------------- o painel dos botões (tábuas, dois pés de mourão), preso na cerca branca e virado para o sul, com a
-  // luz de força no alto (vermelha fraca apagado; verde com o gerador ligado) e um raio pintado
+  // ---------------- o painel dos botões (tábuas verticais), grande, de costas para a cerca branca e virado para o leste:
+  // presilhas pregadas nos mourões da cerca, moldura em cima, a luz de força no alto (vermelha fraca apagado; verde com
+  // o gerador ligado) e um raio pintado
   const B = BUTTON_BOARD;
-  const bw = B.x1 - B.x0;
+  const bw = B.z1 - B.z0;
+  const zc = (B.z0 + B.z1) / 2;
   const board = new THREE.Group();
   board.name = 'painel-dos-botoes';
   const boardMat = woodMat('#c8a070', { key: 'f10-painel', vertical: true, rough: 0.85 });
-  const boardFace = new THREE.Mesh(rbox(bw, B.h, B.t, 0.01), boardMat);
-  boardFace.position.set((B.x0 + B.x1) / 2, B.h / 2, B.z);
+  const boardFace = new THREE.Mesh(rbox(B.t, B.h, bw, 0.01), boardMat);
+  boardFace.position.set(B.x, B.h / 2 + 0.02, zc);
   board.add(boardFace);
-  for (const x of [B.x0 + 0.05, B.x1 - 0.05]) {
-    const leg = new THREE.Mesh(rbox(0.07, B.h + 0.05, 0.07, 0.01), postMat);
-    leg.position.set(x, (B.h + 0.05) / 2, B.z - B.t / 2 - 0.035);
-    board.add(leg);
+  // as frestas entre as tábuas (riscos escuros na frente)
+  const gapMat = stdMat('#7a5234', { roughness: 0.9 });
+  for (let k = 1; k < 5; k++) {
+    const g = new THREE.Mesh(new THREE.BoxGeometry(0.004, B.h - 0.04, 0.008), gapMat);
+    g.position.set(B.x + B.t / 2 + 0.001, B.h / 2 + 0.02, B.z0 + (bw * k) / 5);
+    board.add(g);
   }
-  const trim = new THREE.Mesh(rbox(bw + 0.04, 0.05, B.t + 0.03, 0.01), postMat);
-  trim.position.set((B.x0 + B.x1) / 2, B.h + 0.02, B.z);
+  // duas travessas atrás, presas na cerca
+  for (const y of [0.35, B.h - 0.25]) {
+    const batten = new THREE.Mesh(rbox(0.05, 0.07, bw - 0.1, 0.008), postMat);
+    batten.position.set(B.x - B.t / 2 - 0.025, y, zc);
+    board.add(batten);
+  }
+  const trim = new THREE.Mesh(rbox(B.t + 0.04, 0.05, bw + 0.04, 0.01), postMat);
+  trim.position.set(B.x, B.h + 0.045, zc);
   board.add(trim);
   board.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.add(board);
-  const zf = B.z + B.t / 2 + 0.01;
-  const lampX = B.x0 + 0.14, lampY = B.h - 0.22;
-  const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.024, 20).rotateX(Math.PI / 2), stdMat('#2d2a28', { metalness: 0.5, roughness: 0.4 }));
-  bezel.position.set(lampX, lampY, zf);
+  const xf = B.x + B.t / 2 + 0.01;
+  const lampZ = B.z1 - 0.17, lampY = B.h - 0.2;
+  const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.024, 20).rotateZ(Math.PI / 2), stdMat('#2d2a28', { metalness: 0.5, roughness: 0.4 }));
+  bezel.position.set(xf, lampY, lampZ);
   const powerMat = new THREE.MeshStandardMaterial({ color: '#6a1c18', emissive: '#ff3a2a', emissiveIntensity: 0.18, roughness: 0.3 });
-  const powerLamp = new THREE.Mesh(new THREE.SphereGeometry(0.038, 16, 10), powerMat);
-  powerLamp.scale.z = 0.6;
-  powerLamp.position.set(lampX, lampY, zf + 0.014);
+  const powerLamp = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 10), powerMat);
+  powerLamp.scale.x = 0.6;
+  powerLamp.position.set(xf + 0.014, lampY, lampZ);
   const boltMat = new THREE.MeshStandardMaterial({ map: canvasTexture(64, 96, (g, w, h) => {
     g.clearRect(0, 0, w, h);
     g.beginPath();
@@ -156,11 +166,11 @@ export function buildSty(root, layout) {
     g.fillStyle = '#ffd400'; g.fill();
     g.lineWidth = 4; g.strokeStyle = '#2d2a28'; g.stroke();
   }, { repeat: false }), transparent: true, roughness: 0.6 });
-  const boltSign = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.14), boltMat);
-  boltSign.position.set(lampX, lampY - 0.16, zf + 0.002);
+  const boltSign = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.19).rotateY(Math.PI / 2), boltMat);
+  boltSign.position.set(xf - 0.006, lampY - 0.2, lampZ);
   group.add(bezel, powerLamp, boltSign);
 
-  // ---------------- o gerador pequeno, encostado na cerca branca na frente do painel: estrutura de tubos vermelha,
+  // ---------------- o gerador pequeno, encostado na cerca branca do lado do painel: estrutura de tubos vermelha,
   // tanque amarelo, motor, escapamento virado para o sul e a partida de cordinha (alça preta) no lado leste. Ligado, ele
   // treme; na partida, engasga e chacoalha. O cabo dele sobe pela beirada do painel até a luz de força.
   const G = GENERATOR;
@@ -229,13 +239,14 @@ export function buildSty(root, layout) {
   genShadow.position.set(0, 0.006, 0);
   gen.add(genShadow);
   group.add(gen);
+  // do gerador, pelo chão, até a ponta sul do painel e subindo por ela até a luz de força
   const genLink = makeLink([
-    new THREE.Vector3(B.x0 + 0.05, 0.1, G.z - G.hz - 0.004),
-    new THREE.Vector3(B.x0 + 0.05, 0.022, G.z - G.hz - 0.07),
-    new THREE.Vector3(B.x0 + 0.05, 0.022, zf + 0.04),
-    new THREE.Vector3(B.x0 + 0.05, 0.07, zf),
-    new THREE.Vector3(B.x0 + 0.05, lampY, zf),
-    new THREE.Vector3(lampX - 0.055, lampY, zf),
+    new THREE.Vector3(G.x - 0.08, 0.1, G.z - G.hz - 0.004),
+    new THREE.Vector3(G.x - 0.08, 0.022, G.z - G.hz - 0.07),
+    new THREE.Vector3(xf + 0.03, 0.022, B.z1 - 0.05),
+    new THREE.Vector3(xf, 0.07, B.z1 - 0.05),
+    new THREE.Vector3(xf, lampY, B.z1 - 0.05),
+    new THREE.Vector3(xf, lampY, lampZ + 0.055),
   ], { radius: 0.011, color: '#1e1c1a', glow: '#9cff7a', clips: 2 });
   group.add(genLink.object);
 
@@ -249,13 +260,12 @@ export function buildSty(root, layout) {
   group.add(jbox);
   const cableOpts = { radius: 0.007, color: '#3a3634', glow: '#ffd36a', metal: true };
   SHED_BUTTONS.forEach((b, i) => {
-    const y = 0.26 + i * 0.06;
     const zg = boxZ - 0.03 + i * 0.06;
+    // desce pela frente do painel, embaixo do botão, e segue pelo chão da faixa e da horta
     const lk = makeLink([
-      new THREE.Vector3(b.x, b.top - 0.13, zf),
-      new THREE.Vector3(b.x, y, zf),
-      new THREE.Vector3(B.x1 + 0.02, y, zf),
-      new THREE.Vector3(B.x1 + 0.03, 0.02, zf + 0.02),
+      new THREE.Vector3(xf, b.top - 0.13, b.z),
+      new THREE.Vector3(xf, 0.06, b.z),
+      new THREE.Vector3(xf + 0.03, 0.02, b.z),
       new THREE.Vector3(HORTA.x0 - 0.1, 0.02, zg),
       new THREE.Vector3(xw, 0.02, zg),
       new THREE.Vector3(xw, 0.72, zg),

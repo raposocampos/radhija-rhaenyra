@@ -539,11 +539,15 @@ export function buildHouse(root, layout) {
   wallBox(walls, xE, 0, (PORCH_DOOR.z1 + zS + T / 2) / 2, T, eastH, zS + T / 2 - PORCH_DOOR.z1, eastMat, false);
   wallBox(walls, xE, 2.05, (PORCH_DOOR.z0 + PORCH_DOOR.z1) / 2, T, eastH - 2.05, PORCH_DOOR.z1 - PORCH_DOOR.z0, eastMat, false);
   // rodapé de pedra da fachada e o beiral de telhas
-  // começa 3 mm dentro da parede e termina 4 mm antes da quina (nenhuma face no plano da fachada ou do muro)
+  // começa 3 mm dentro da parede e termina 4 mm antes da quina (nenhuma face no plano da fachada ou do muro); na porta
+  // da varanda ele para nos batentes (a abertura fica livre até o chão)
   const sbZ0 = zN, sbZ1 = zS + T / 2 - 0.004;
-  const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, sbZ1 - sbZ0), stdMat('#9a8e7e', { roughness: 0.9 }));
-  stoneBase.position.set(xE + T / 2 + 0.012, 0.16, (sbZ0 + sbZ1) / 2);
-  walls.add(stoneBase);
+  const stoneMat = stdMat('#9a8e7e', { roughness: 0.9 });
+  for (const [z0, z1] of [[sbZ0, PORCH_DOOR.z0 - 0.025], [PORCH_DOOR.z1 + 0.025, sbZ1]]) {
+    const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, z1 - z0), stoneMat);
+    stoneBase.position.set(xE + T / 2 + 0.012, 0.16, (z0 + z1) / 2);
+    walls.add(stoneBase);
+  }
   const tileMat = stdMat('#b8553a', { roughness: 0.7 });
   const eave = new THREE.Group();
   for (let z = zN - T; z < zS + T; z += 0.22) {
@@ -587,12 +591,6 @@ export function buildHouse(root, layout) {
   }
   sliding.position.set(xE + T / 2 + 0.04, 0, PORCH_DOOR.z0 - dw / 2 + 0.05);
   walls.add(sliding);
-  // capacho na porta (pelo lado da varanda) com a patinha
-  const mat2 = new THREE.Mesh(rbox(0.5, 0.015, 0.8, 0.006), new THREE.MeshStandardMaterial({ map: labelTexture('BEM-VINDAS', { bg: '#a8743e', ink: '#5a3a1a', w: 256, h: 96, font: 'bold 30px Georgia, serif' }), roughness: 1 }));
-  mat2.position.set(xE + 0.42, 0.013, (PORCH_DOOR.z0 + PORCH_DOOR.z1) / 2);
-  mat2.rotation.y = Math.PI / 2;
-  mat2.receiveShadow = true;
-  group.add(mat2);
   // janela da cozinha na fachada (com floreira de gerânios), entre a porta e a torneira
   const kWin = sunsetWindow(0.9, 0.7, 13);
   kWin.position.set(xE + T / 2 + 0.002, 1.45, -2.55);
