@@ -1,7 +1,9 @@
 // FASE 10 · Chão do quintal no fim de tarde: gramado aparado com o tom quente do pôr do sol (mapa de cor procedural:
 // verdes variados, grama mais alta e escura nas bordas, terra batida no pé da árvore e no portãozinho), a trilha de
-// pedras da varanda até o portão e do portão até a casa na árvore e a horta, a terra fofa da horta com sulcos, a
-// lama brilhante do canteiro, o piso de cimento do galpão e tufos de grama instanciados que balançam com o vento.
+// pedras da varanda até o portão e do portão até a casa na árvore e a horta, a terra seca da horta com sulcos e
+// rachadinhas, a lama molhada e brilhante do canteiro (com a borda úmida, respingos e patinhas saindo dela), o caminho
+// de pedras com cascalho na porta do galpão, o piso de cimento do galpão e tufos de grama instanciados que balançam
+// com o vento.
 // Medidas do layout (HOUSE, PORCH, POOL, HORTA, MUD, SHED, BACK_FENCE, TREE…); nada de assets: texturas em canvas.
 import * as THREE from 'three';
 import { shared, rng, fbm2, vnoise2, smoothstep, canvasTexture, mergeGeometries, rippleNormalTexture, mat } from '../../../world/util.js';
@@ -113,32 +115,75 @@ function stoneTexture() {
   });
 }
 
-/** Terra fofa da horta: sulcos escuros ao longo de X, torrões e palhinha. */
+/** Desenha `fn(x, y)` também nas cópias do outro lado das bordas (textura que se repete sem emenda). */
+function wrapDraw(w, h, x, y, rad, fn) {
+  for (const ox of [-w, 0, w]) {
+    for (const oy of [-h, 0, h]) {
+      if (x + ox < -rad || x + ox > w + rad || y + oy < -rad || y + oy > h + rad) continue;
+      fn(x + ox, y + oy);
+    }
+  }
+}
+
+/** Terra seca da horta: castanho claro e empoeirado, sulcos rasos ao longo de X, rachadinhas, torrões e palhinha. */
 function soilTexture() {
   return canvasTexture(256, 256, (g, w, h) => {
     const r = rng(61);
-    g.fillStyle = '#5d4128'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#8e7a5c'; g.fillRect(0, 0, w, h);
+    // manchas claras (poeira) e escuras, sem emenda
+    for (let k = 0; k < 90; k++) {
+      const x = r() * w, y = r() * h, rad = 10 + r() * 26, light = r() < 0.55;
+      wrapDraw(w, h, x, y, rad, (px, py) => {
+        const gr = g.createRadialGradient(px, py, 0, px, py, rad);
+        gr.addColorStop(0, light ? 'rgba(192,174,140,0.38)' : 'rgba(104,84,60,0.3)');
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr;
+        g.fillRect(px - rad, py - rad, rad * 2, rad * 2);
+      });
+    }
+    // sulcos rasos (oito por repetição)
     for (let y = 0; y < h; y++) {
       const furrow = 0.5 + 0.5 * Math.sin((y / h) * Math.PI * 8);
-      g.fillStyle = `rgba(30,18,8,${0.32 * furrow})`;
+      g.fillStyle = `rgba(72,56,38,${0.18 * furrow})`;
       g.fillRect(0, y, w, 1);
     }
-    for (let k = 0; k < 1400; k++) {
-      const v = r();
-      g.fillStyle = v < 0.5 ? 'rgba(120,88,58,0.5)' : 'rgba(40,26,14,0.45)';
-      const s = 1 + r() * 3;
-      g.fillRect(r() * w, r() * h, s, s);
-    }
-    g.strokeStyle = 'rgba(214,190,120,0.55)'; // palhinha
+    // rachadinhas da terra seca
+    g.strokeStyle = 'rgba(70,54,36,0.6)';
     g.lineWidth = 1;
-    for (let k = 0; k < 70; k++) {
+    for (let k = 0; k < 34; k++) {
+      let x = r() * w, y = r() * h, a = r() * Math.PI * 2;
+      const pts = [[x, y]];
+      for (let s = 0; s < 6; s++) {
+        a += (r() - 0.5) * 1.3;
+        x += Math.cos(a) * (5 + r() * 6);
+        y += Math.sin(a) * (5 + r() * 6);
+        pts.push([x, y]);
+      }
+      wrapDraw(w, h, pts[0][0], pts[0][1], 60, (px, py) => {
+        const ox = px - pts[0][0], oy = py - pts[0][1];
+        g.beginPath();
+        g.moveTo(pts[0][0] + ox, pts[0][1] + oy);
+        for (const [qx, qy] of pts.slice(1)) g.lineTo(qx + ox, qy + oy);
+        g.stroke();
+      });
+    }
+    // torrões (claro em cima, sombrinha embaixo) e pedrinhas
+    for (let k = 0; k < 700; k++) {
+      const x = r() * w, y = r() * h, s = 1 + r() * 2.5;
+      g.fillStyle = 'rgba(66,50,34,0.45)';
+      g.fillRect(x, y + 1, s, s);
+      g.fillStyle = r() < 0.5 ? 'rgba(200,184,150,0.6)' : 'rgba(156,134,104,0.6)';
+      g.fillRect(x, y, s, s);
+    }
+    g.strokeStyle = 'rgba(222,198,128,0.55)'; // palhinha
+    for (let k = 0; k < 60; k++) {
       const x = r() * w, y = r() * h, a = r() * Math.PI;
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); g.stroke();
     }
   });
 }
 
-/** Lama do canteiro: marrom escuro brilhante com poças rasas e marcas de patinha. */
+/** Lama do canteiro: marrom quase preto, molhado, com poças rasas que brilham, marcas de patinha e respingos. */
 function mudTexture() {
   return canvasTexture(256, 256, (g, w, h) => {
     const r = rng(19);
@@ -147,21 +192,59 @@ function mudTexture() {
       const n = fbm2(x / 40, y / 40, 4);
       const wet = smoothstep(0.5, 0.62, n);
       const k = (y * w + x) * 4;
-      img.data[k] = 78 - wet * 26 + n * 18;
-      img.data[k + 1] = 52 - wet * 16 + n * 12;
-      img.data[k + 2] = 30 - wet * 6 + n * 8;
+      img.data[k] = 64 - wet * 30 + n * 16;
+      img.data[k + 1] = 42 - wet * 20 + n * 10;
+      img.data[k + 2] = 24 - wet * 9 + n * 6;
       img.data[k + 3] = 255;
     }
     g.putImageData(img, 0, 0);
-    // patinhas (quem já passou por ali)
-    g.fillStyle = 'rgba(28,16,8,0.55)';
-    for (let k = 0; k < 7; k++) {
+    // patinhas afundadas (quem já passou por ali)
+    g.fillStyle = 'rgba(16,9,4,0.6)';
+    for (let k = 0; k < 9; k++) {
       const cx = 30 + r() * 196, cy = 30 + r() * 196;
       g.beginPath(); g.ellipse(cx, cy, 6, 7, 0, 0, Math.PI * 2); g.fill();
       for (let t = 0; t < 4; t++) {
         const a = -Math.PI / 2 + (t - 1.5) * 0.55;
         g.beginPath(); g.ellipse(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9, 2.6, 3.2, a, 0, Math.PI * 2); g.fill();
       }
+    }
+    // bolhinhas e brilhos de água parada
+    g.fillStyle = 'rgba(150,120,90,0.35)';
+    for (let k = 0; k < 40; k++) { g.beginPath(); g.arc(r() * w, r() * h, 0.8 + r() * 1.6, 0, Math.PI * 2); g.fill(); }
+  }, { repeat: false });
+}
+/** A borda úmida em volta da lama: opaca perto dela, sumindo para fora, com a beirada irregular e respingos. */
+function dampAlphaTexture() {
+  return canvasTexture(256, 256, (g, w, h) => {
+    const r = rng(23);
+    const img = g.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const dx = (x + 0.5) / w - 0.5, dy = (y + 0.5) / h - 0.5;
+      const d = Math.hypot(dx, dy) * 2 + (fbm2(x / 22, y / 22, 3) - 0.5) * 0.35;
+      const v = 1 - smoothstep(0.62, 0.95, d);
+      const k = (y * w + x) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = Math.round(v * 235);
+      img.data[k + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    // respingos de lama na terra seca, logo depois da beirada
+    g.fillStyle = 'rgb(210,210,210)';
+    for (let k = 0; k < 40; k++) {
+      const a = r() * Math.PI * 2, d = 0.4 + r() * 0.08;
+      const x = w / 2 + Math.cos(a) * d * w, y = h / 2 + Math.sin(a) * d * h;
+      g.beginPath(); g.ellipse(x, y, 1.5 + r() * 3.5, 1.2 + r() * 2.5, r() * 3, 0, Math.PI * 2); g.fill();
+    }
+  }, { srgb: false, repeat: false });
+}
+/** Uma patinha de lama (almofada e quatro dedos) para o rastro que sai do canteiro. */
+function pawPrintTexture() {
+  return canvasTexture(64, 64, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(44,26,14,0.9)';
+    g.beginPath(); g.ellipse(32, 38, 11, 9, 0, 0, Math.PI * 2); g.fill();
+    for (let t = 0; t < 4; t++) {
+      const a = -Math.PI / 2 + (t - 1.5) * 0.55;
+      g.beginPath(); g.ellipse(32 + Math.cos(a) * 18, 36 + Math.sin(a) * 18, 4.2, 5.4, a, 0, Math.PI * 2); g.fill();
     }
   }, { repeat: false });
 }
@@ -375,7 +458,7 @@ export function buildGround(root, layout) {
   stones.name = 'trilha-de-pedras';
   group.add(stones);
 
-  // terra da horta (com sulcos) e a lama do canteiro, um pouco acima para não brigar com o gramado
+  // terra seca da horta (com sulcos) e a lama do canteiro, um pouco acima para não brigar com o gramado
   const soil = new THREE.Mesh(
     new THREE.PlaneGeometry(HORTA.x1 - HORTA.x0, HORTA.z1 - HORTA.z0 + 0.2).rotateX(-Math.PI / 2),
     new THREE.MeshStandardMaterial({ map: soilTexture(), roughness: 0.96 }),
@@ -410,13 +493,74 @@ export function buildGround(root, layout) {
   ripple.wrapS = ripple.wrapT = THREE.RepeatWrapping;
   ripple.repeat.set(1.5, 1.5);
   const mud = new THREE.Mesh(mudGeo, new THREE.MeshPhysicalMaterial({
-    map: mudTexture(), roughnessMap: mudRoughTexture(), roughness: 1, normalMap: ripple, normalScale: new THREE.Vector2(0.15, 0.15),
-    clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 1.2, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    map: mudTexture(), roughnessMap: mudRoughTexture(), roughness: 1, normalMap: ripple, normalScale: new THREE.Vector2(0.28, 0.28),
+    clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 1.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
   }));
   mud.position.set((MUD.x0 + MUD.x1) / 2, 0.01, (MUD.z0 + MUD.z1) / 2);
   mud.receiveShadow = true;
   mud.name = 'lama';
   group.add(mud);
+  // a terra úmida em volta (escurece a terra seca até a lama, com respingos): deixa claro onde ela começa
+  const dampGeo = new THREE.ShapeGeometry(mudShape, 3).rotateX(-Math.PI / 2).scale(1.38, 1, 1.32);
+  const dp = dampGeo.attributes.position;
+  const duv = new Float32Array(dp.count * 2);
+  for (let k = 0; k < dp.count; k++) {
+    duv[k * 2] = dp.getX(k) / (mw * 1.6) + 0.5;
+    duv[k * 2 + 1] = dp.getZ(k) / (mh * 1.55) + 0.5;
+  }
+  dampGeo.setAttribute('uv', new THREE.BufferAttribute(duv, 2));
+  const damp = new THREE.Mesh(dampGeo, new THREE.MeshStandardMaterial({
+    color: '#3a2414', alphaMap: dampAlphaTexture(), transparent: true, depthWrite: false, roughness: 0.75,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+  }));
+  damp.position.set(mud.position.x, 0.008, mud.position.z);
+  damp.receiveShadow = true;
+  damp.name = 'terra-umida';
+  group.add(damp);
+  // patinhas de lama saindo dela para o galpão (quem passou por ali levou a lama)
+  const printMat = new THREE.MeshStandardMaterial({ map: pawPrintTexture(), transparent: true, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  const printGeo = new THREE.PlaneGeometry(0.1, 0.1).rotateX(-Math.PI / 2);
+  const trail = [[0.62, -0.72, 0.85], [0.78, -0.92, 0.75], [0.96, -1.06, 0.6], [1.12, -1.28, 0.45], [1.3, -1.42, 0.3]];
+  trail.forEach(([dx, dz, o], k) => {
+    const m = new THREE.Mesh(printGeo, printMat.clone());
+    /** @type {THREE.MeshStandardMaterial} */ (m.material).opacity = o;
+    m.position.set(MUD.x1 - 0.1 + dx + (k % 2 ? 0.05 : -0.05), 0.009, (MUD.z0 + MUD.z1) / 2 + dz);
+    m.rotation.y = -0.9;
+    m.name = 'patinha-de-lama';
+    group.add(m);
+  });
+
+  // o caminho de pedras com cascalho na porta do galpão (de frente para a porta, curvando para o sul da horta)
+  const D = SHED.door;
+  const dz0 = (D.z0 + D.z1) / 2;
+  const pathAt = [[SHED.x0 - 0.26, dz0], [SHED.x0 - 0.72, dz0 + 0.15], [SHED.x0 - 0.94, dz0 + 0.57]];
+  const pathGeos = pathAt.map(([x, z], i) => {
+    const g = stoneGeometry(40 + i * 7);
+    g.rotateY(i * 1.1 + 0.4);
+    g.translate(x, -0.004, z);
+    return g;
+  });
+  const pathStones = new THREE.Mesh(mergeGeometries(pathGeos), new THREE.MeshStandardMaterial({ color: '#cfd4d8', map: stoneMat.map, roughness: 0.72 }));
+  pathStones.receiveShadow = true;
+  pathStones.name = 'caminho-do-galpao';
+  group.add(pathStones);
+  // pedrinhas soltas em volta delas
+  const pr = rng(57);
+  const pebbles = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 0.85 }), 150);
+  const pm4 = new THREE.Matrix4(), pq = new THREE.Quaternion(), ps = new THREE.Vector3(), pp = new THREE.Vector3(), pc = new THREE.Color();
+  const pebbleCols = ['#c9cdd0', '#a9adb0', '#8f9396', '#dcdcd6', '#b8b2a6'];
+  for (let k = 0; k < pebbles.count; k++) {
+    const [cx, cz] = pathAt[k % pathAt.length];
+    const a = pr() * Math.PI * 2, d = 0.12 + pr() * 0.3;
+    const sz = 0.014 + pr() * 0.02;
+    pq.setFromEuler(new THREE.Euler(pr() * 3, pr() * 3, pr() * 3));
+    pm4.compose(pp.set(cx + Math.cos(a) * d, sz * 0.35, cz + Math.sin(a) * d), pq, ps.set(sz, sz * 0.6, sz * 1.2));
+    pebbles.setMatrixAt(k, pm4);
+    pebbles.setColorAt(k, pc.set(pebbleCols[k % pebbleCols.length]));
+  }
+  pebbles.receiveShadow = true;
+  pebbles.name = 'cascalho-do-galpao';
+  group.add(pebbles);
 
   // piso do galpão (cimento) com a soleira de madeira na porta
   const floor = new THREE.Mesh(
