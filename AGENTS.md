@@ -75,6 +75,22 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
   Se houver bloqueio real, explicar o que falta sem alegar conclusão nem pedir
   tokens no chat. Fotos e dados privados também não podem ir para prévias.
 
+## Versão do jogo
+
+- Formato `vMAJOR.MINOR.PATCH · build N`, no canto do menu principal e no
+  `version.json`. Cada PR integrado ao `main` é uma versão nova.
+- **PATCH e build são automáticos**: o CI conta os commits de primeiro pai do
+  `main` (1 PR = 1 squash). PATCH = commits desde o último que mudou o campo
+  `"version"` do `package.json`; build = todos, e nunca volta. Nenhum PR edita
+  número para o patch subir.
+- **MINOR muda à mão, no próprio PR**, quando ele traz uma fase nova ou um
+  recurso grande: `"version": "0.11.0"` (PATCH volta a 0; atualizar também a
+  raiz do `package-lock.json`). Na dúvida, perguntar ao usuário. **MAJOR**
+  (`1.0.0`) só no marco do modo história completo. Correções, ajustes, testes,
+  documentação e ferramentas não mudam o campo.
+- A prévia mostra a base (`prévia PR #N · sobre v0.10.0`, com `→ v0.11.0` se o
+  PR sobe o MINOR). Detalhes e conferência em `docs/ENTREGA.md`.
+
 ## Testes e build na nuvem
 
 - Por padrão, executar testes, checagem de tipos e build nos servidores do

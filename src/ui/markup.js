@@ -7,6 +7,7 @@ import {
   jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, pauseIcon, stickIcon, fullscreenIcon, qualityIcon,
   rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, mapArt, itemIcon,
 } from './icons.js';
+import { VERSION_LABEL } from '../core/version.js';
 
 export const DOG_INFO = {
   radhija: { name: 'Radhija', trait: 'ágil' },
@@ -203,7 +204,8 @@ export function template() {
   const fanItems = ['carrot', 'ball', 'duck'].map((item) => `<i>${itemIcon(item)}</i>`).join('');
 
   // Tela inicial: data-screen na seção escolhe a tela visível (ui.css): main (Jogar e Opções), modes (Modo
-  // História e Fases), levels (Continuar e os cartões das fases) e options. Voltar (canto) fora da principal.
+  // História e Fases), levels (Continuar e os cartões das fases) e options. Voltar (canto) fora da principal;
+  // a versão do jogo (src/core/version.js), discreta no canto, só na principal.
   return `
   <section class="rr-layer rr-title" data-screen="main" aria-label="Tela inicial">
     <div class="rr-title__shade"></div>
@@ -254,6 +256,7 @@ export function template() {
     </div>
     <div class="rr-levels" role="group" aria-label="${MODES.levels.name}"></div>
     <div class="rr-title__controls rr-glass">${ctlBar}</div>
+    <p class="rr-version">${esc(VERSION_LABEL)}</p>
   </section>
 
   <section class="rr-layer rr-intro" aria-label="Abertura da fase">

@@ -84,7 +84,8 @@ deve ser salvo no repositório.
 
 Cada PR mantém a última prévia. Uma nova execução usa outra URL e remove a
 anterior: não testar um link antigo nem reaproveitar aprovação de outra versão.
-Os arquivos `version.json` identificam head, base, commit testado e execução.
+Os arquivos `version.json` identificam head, base, commit testado, execução e a
+versão do jogo (ver "Versão do jogo").
 No PR, o commit testado é o merge sintético do GitHub; na produção é o commit
 final do `main`. `main` é recompilado após o merge, com o lockfile versionado.
 Não se deve apresentar os dois commits como se fossem o mesmo SHA.
@@ -99,6 +100,49 @@ manutenção em `pages-state`. Não há limpeza automática de PRs encerrados ne
 versão; monitorar o tamanho do site e remover apenas as prévias encerradas,
 sob a mesma serialização. O histórico Git conserva arquivos antigos.
 
+## Versão do jogo
+
+Regra (aprovada pelo usuário, 2026-10-20): `MAJOR.MINOR.PATCH` mais um número
+de build, uma versão nova por PR integrado. O canto superior direito do menu
+principal mostra `v0.10.0 · build 90` (no celular deitado, o canto de baixo).
+
+- **MAJOR.MINOR**: o campo `"version"` do `package.json`. O PR que traz uma fase
+  nova ou um recurso grande (modo novo, mecânica que muda várias fases) sobe o
+  MINOR no próprio diff, com PATCH 0 (`0.10.0` → `0.11.0`), e atualiza as duas
+  ocorrências da raiz no `package-lock.json`. MAJOR `1.0.0` fica para o modo
+  história completo. Correções, ajustes, testes, docs e ferramentas não mexem
+  no campo. A v0.10.0 fecha a demo de 10 fases.
+- **PATCH**: o número declarado (normalmente 0) mais os commits de primeiro pai
+  do `main` desde o último que mudou o valor do campo `"version"`. Mudar
+  dependências ou formatação do `package.json` não zera. O PR que muda o
+  MINOR vira `x.y.0` ao entrar; o seguinte, `x.y.1`.
+- **Build**: todos os commits de primeiro pai do `main`
+  (`git rev-list --count --first-parent HEAD`); nunca volta. Como o `main` só
+  recebe squash, cada PR soma um. Os seis commits laterais de dois merges
+  antigos não contam (por isso o build é menor que o total de commits).
+
+O cálculo é `tools/deploy/version.mjs` (testes em `test/versao.test.mjs`).
+Precisa do histórico completo: os checkouts que contam (CI e o `source` da
+publicação) usam `fetch-depth: 0`, e o script recusa um repositório raso.
+
+- **CI** (`ci.yml`): o passo **Calcular a versão do jogo** exporta
+  `GAME_VERSION_INFO`. O Vite embute esse valor no jogo (define
+  `__GAME_VERSION__`, lido em `src/core/version.js`) e o `version.json` grava
+  `version`, `build`, `pr` e `label` ao lado de commit/head/base/run/attempt.
+- **Prévia**: `version`/`build` são os do main sob a prévia (o `base`), e o
+  menu mostra `prévia PR #49 · sobre v0.10.0`. `next` traz o que o squash
+  recebe se entrar agora (o main exige branch atualizado); se o PR sobe o
+  MINOR, o menu acrescenta `→ v0.11.0`. O número de um PR só se fixa no merge.
+- **Publicação** (`deploy.yml`): **Conferir a versão do jogo** recalcula com o
+  script do main. Na produção, `version`/`build` do artefato precisam bater,
+  ou a publicação para antes do Pages; na prévia, só avisa (o PR pode ter
+  mudado o cálculo). O resumo da execução mostra o rótulo.
+- Builds sem o passo (E2E manual, desempenho, servidor local) mostram
+  `versão de desenvolvimento`; CI disparado em outro branch, `· teste`.
+
+Depois de integrar, conferir em produção o `version.json` (`version` e `build`
+esperados: o da prévia em `next`) e o canto do menu.
+
 ## Procedimento para os agentes
 
 1. Ler `AGENTS.md` e `docs/CONTEXTO.md`; conferir estado real do Git/GitHub.
@@ -109,8 +153,10 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
    Enviar o branch e abrir PR. Monitorar os checks e corrigir falhas na nuvem.
 4. Se necessário, disparar E2E na referência do branch pelo CLI/API. Conferir
    que o SHA testado corresponde ao head apresentado. CI não espera E2E sozinho.
-5. Preencher o PR com links, SHAs, resultados e roteiro de teste. Entregar a
-   prévia e aguardar aprovação explícita do usuário. Não ativar auto-merge.
+5. Preencher o PR com links, SHAs, resultados, a versão que ele vira (`next`
+   do `version.json` da prévia; se traz fase nova, subir o MINOR) e roteiro de
+   teste. Entregar a prévia e aguardar aprovação explícita do usuário. Não
+   ativar auto-merge.
 6. Após aprovação, conferir head/base novamente e se os checks estão verdes.
    Se outra mudança entrou no main, atualizar o branch, testar e apresentar nova
    prévia para aprovação. Nunca usar bypass de proteção.
@@ -122,8 +168,9 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
    `POST` no mesmo endpoint com `environment_ids: [ID]`, `state: "approved"`
    e comentário que identifique a aprovação, o PR e a versão. Não inventar IDs
    nem enviar essa aprovação antes da manifestação humana.
-9. Aguardar deploy; conferir HTTP e `version.json` no link principal. Atualizar
-   contexto sem afirmar que testes pendentes passaram.
+9. Aguardar deploy; conferir HTTP e `version.json` (head, `version` e `build`)
+   no link principal. Atualizar contexto sem afirmar que testes pendentes
+   passaram.
 
 ## Recuperação
 
