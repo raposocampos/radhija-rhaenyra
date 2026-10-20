@@ -185,7 +185,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
   Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
-- Em andamento (**PR #46**, Claude, 2026-10-20; branch `claude/fase10-sementes`, a partir do main `ef2cb50`): o teste dos
+- Entregue, **PR #46** (squash `cdabb1b`, deploy `39372958855`) (Claude, 2026-10-20; branch `claude/fase10-sementes`, a partir do main `ef2cb50`): o teste dos
   porquinhos da fase 10 caiu no CI do #45 (`knocks: 0`). `test/fase10.test.mjs` passou a rodar com semente
   (`seededTest`) e ganhou uma varredura persistente (desligada; liga com `FASE10_SEMENTES`, início em
   `FASE10_SEMENTES_DE`; até ~260 partidas por processo, porque cada partida headless deixa ouvintes globais e ~430
