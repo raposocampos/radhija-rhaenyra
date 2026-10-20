@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; etapa 3, #46, #47, #49 e #50 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+de pé, Radhija mais devagar e arrancada; etapa 3, #46, #47, #49, #50 e #51 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -11,12 +11,19 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   rápido"; "analisar a arrancada: a pata traseira acaba ficando tempo demais no chão e esticando a perna de um jeito
   estranho"; e, no meio do trabalho, "essa mecânica de empurrar poderia usar uma animação parecida com aquela de
   empurrar em pé... ela empurraria com as patas, andando apenas em duas patas traseiras; resolveria essa colisão".
-- Feito (aguardando CI, E2E e prévia):
+- Feito (PR #48; validar CI e E2E `todas` no head final antes da prévia):
   - Radhija a 2,1 m/s (era 2,4; a Rhaenyra continua a 2,0): `src/dogs/config.js`.
   - Arrancada (`src/dogs/v2/gait.js`): o ritmo do guia demora uns décimos de segundo para acompanhar a aceleração do
-    controle (12–16 m/s²) e a pata de trás ia até o limite (~11 cm atrás, perna reta) e era arrastada. Agora o
-    compasso já é o da velocidade de agora (até 1,9× no começo), as patas no tempo do balanço saem logo e a de trás
-    dá um passo de conforto antes de a perna esticar. Teste novo em `test/locomocao.test.mjs`.
+    controle (12–16 m/s²) e a pata de trás ia até o limite (~11 cm atrás, perna reta) e era arrastada. Agora, acelerando,
+    o compasso e o apoio já são os da velocidade de agora e as fases das patas convergem depressa; a traseira dá um
+    passo de conforto antes de a perna esticar. Achado no diagnóstico do CI (cada passo registra por que saiu,
+    `leg.why`): andando a 2 m/s o trote tem duas patas ou mais no ar em 92–99% dos quadros, então o passo extra e o de
+    conforto agora saem com até duas outras no ar, e um passo fora do ritmo recomeça a fase da pata (senão o apoio
+    seguinte ficava longo e a pata ia até 17 cm atrás). Medido no CI `7972bf6`: arrancada até 9,4 cm atrás (perna até
+    0,94, nada arrastado). Teste novo em `test/locomocao.test.mjs`.
+  - Teste instável do main ("ao parar, as patas assentam…", do #43; caiu no E2E do #51): parando de repente, o corpo
+    sobe um tiquinho e a pata no limite era arrastada 4 mm por quadro; agora dá o passinho de ajuste na hora. O teste
+    roda com 8 sementes.
   - Corpo na colisão (`world.resolveBody` em `src/game/collision.js`, chamado pelo `integrate`): peito e garupa em
     círculos menores que o do meio (`DOG_CONFIG[nome].body`); os vãos não mudam e, de frente para a parede, ela para
     uns 3 cm antes. Vale para os dois modelos (é o jogo). Testes em `test/colisao.test.mjs`.
@@ -32,7 +39,27 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI, E2E `todas` (inclui as capturas do `canil`), prévia e aprovação do usuário; depois, etapa 5 (troca
   nas 10 fases e cascas de pelo mais leves só no celular).
 
-## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`; Claude, branch `claude/versao-automatica`, 2026-10-20)
+## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`, deploy `39443414245`)
+
+- Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
+  0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
+- Causa (bug do jogo, não do teste): a folha do portão abre para dentro, por cima de onde a Radhija puxa o trinco, e a
+  colisão de cada quadro a arrastava junto. Onde ela terminava dependia do passo do quadro: simulando a mesma partida
+  em Node, a 60 fps ela saía do lado do vão; a 30 e a 20 fps (CI lento, celular fraco), parava em (1,18; 0,7), atrás
+  da folha aberta. A Rhaenyra que entra pelo vão recebia "Tem cerca no meio!" e, com o L segurado, a lambida não
+  recomeçava. As capturas `05-lambe-lambe` das duas falhas mostram a folha entre as duas e a Rhaenyra sem virar.
+- Correção: `createHingedGate().sweepExit(ctrl)` (a folha, abrindo, vai passar pela dog? para onde ela sai, além da
+  ponta) e, na fase 7, quem está no caminho dá um pulinho assustado para lá (`effects.pushTo`, 0,3 s, olhando o
+  portão). Mesmo lugar a 60, 30 e 20 fps. Teste novo em `test/fase7.test.mjs`; a partida completa em Node espera o
+  pulinho antes de trocar de dog. O E2E ganhou a checagem da posição depois do portão e a do início da lambida pelo
+  registro da página (aponta a causa se voltar).
+- PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
+  `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
+  (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
+- Integrado ao main com a aprovação do usuário (squash `0c22c48`, deploy `39443414245`): produção em v0.10.1. Não
+  repetir merge/deploy do #51.
+
+## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
 - Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
   de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
@@ -45,8 +72,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Número: build = commits de primeiro pai do main (6 commits laterais de dois merges antigos não contam). Com o
   #49 e o #47 já no main (91 commits de primeiro pai: hoje `v0.1.90 · build 91`), o merge deste PR vira
   **v0.10.0 · build 92** se nada mais entrar antes (cada PR integrado antes soma 1 ao build; a versão continua 0.10.0).
-- Integrado ao main com a aprovação do usuário (squash `f1218f5`; deploy e `version.json` com a sessão da versão e o
-  orquestrador). Não repetir merge/deploy do #50.
+- Integrado e publicado (pelo orquestrador): produção em **v0.10.0 · build 92**. Cada PR integrado depois soma 1 ao
+  build (o próximo, v0.10.1 · build 93).
 
 ## Entregue: travamentos do iPhone emulado na suíte `toque` (PR #47, squash `3c41acd`, deploy `39378360338`)
 

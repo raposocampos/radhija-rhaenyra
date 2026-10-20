@@ -147,6 +147,14 @@ export function createPuzzle(ctx) {
     gate.lock();
     props.latch?.setTurn?.(1);
     if (!silent) {
+      // A folha abre para dentro, por cima de onde a Radhija puxa o trinco: quem está no caminho dá um pulinho
+      // assustado para trás, para além da ponta da folha, olhando o portão. Antes a colisão de cada quadro a
+      // arrastava junto com a folha e, conforme o passo do quadro (a 20–30 fps), ela terminava atrás da folha
+      // aberta, onde a Rhaenyra que entra pelo vão não a alcança ("Tem cerca no meio").
+      for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) {
+        const out = gate.sweepExit(ctrls[n]);
+        if (out) effects.pushTo(ctrls[n], out.x, out.z, { dur: 0.3, action: 'startled', face: gateMid });
+      }
       emit('gate:open', { x: gateMid.x, z: gateMid.z });
       hints.now('gateOpen', 3.4, 4);
       cam?.focusShot(gateMid.x, gateMid.z - 0.3, { hold: 0.9 });
