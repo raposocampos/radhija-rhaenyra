@@ -71,6 +71,43 @@ test('empurrando de pé: as patas apoiam no desenho de cada objeto de empurrar (
   assert.deepEqual(bad, []);
 });
 
+test('empurrando de pé: no ventilador (cano fino, grade no alto) as patas sempre acham onde apoiar, de qualquer lado, desviada ou torta', async () => {
+  // retorno do usuário: "nos empurrões no ventilador, tem hora que encosta, tem hora que fica no ar". Com um raio só, no
+  // meio da dog, o cano passava ao lado e a medida caía na caixa de colisão (a pata no ar)
+  const report = [];
+  const bad = [];
+  for (const id of ['fase4', 'fase9']) {
+    const def = level(id);
+    const fx = await buildLevelWorld(def);
+    try {
+      const obj = fx.built.props.fan.object;
+      obj.updateWorldMatrix(true, true);
+      const c = obj.getWorldPosition(new THREE.Vector3());
+      const half = def.layout.FAN.half;
+      let n = 0, round = 0;
+      for (const [kind, near, pref, scale] of [['radhija', 0.2, 0.36, 1], ['rhaenyra', 0.245, 0.408, 1.133]]) {
+        for (const [dx, dz] of [[-1, 0], [1, 0], [0, 1], [0, -1]]) {
+          for (const lat of [-0.15, -0.06, 0, 0.06, 0.15]) {
+            for (const tilt of [-0.25, 0, 0.25]) {
+              const at = { x: c.x + dx * (half + near) + (dz ? lat : 0), z: c.z + dz * (half + near) + (dx ? lat : 0), yaw: Math.atan2(-dx, -dz) + tilt };
+              const r = pushRest(obj, at, { near, pref: pref * scale, scale });
+              n++;
+              if (!r) { bad.push(`${id} ${kind} de (${dx}, ${dz}), ${lat} de lado, torta ${tilt}: sem apoio (a pata ficaria no ar)`); continue; }
+              if (r.round) round++;
+              if (r.gap > near + 0.45) bad.push(`${id} ${kind}: o apoio a ${((r.gap - near) * 100).toFixed(0)} cm além da caixa`);
+            }
+          }
+        }
+      }
+      report.push(`${id}: ${n} posições, todas com apoio; abraçando o cano em ${round}`);
+    } finally {
+      fx.dispose();
+    }
+  }
+  console.log(`[chão] ventilador\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad.slice(0, 8), []);
+});
+
 test('empurrando de pé: no carrinho da fase 1 as patas vão em cima da beirada (ela fica abaixo da altura das patas)', async () => {
   const def = level('fase1');
   const fx = await buildLevelWorld(def);

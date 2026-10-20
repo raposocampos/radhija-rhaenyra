@@ -1047,6 +1047,10 @@ export interface DogAnim {
   pushTop?: number;
   /** Altura das patas da frente na face (m; 0 = a padrão da pose). */
   pushY?: number;
+  /** A face é um pé fino (o cano do ventilador): as patas da frente o abraçam, juntinhas. */
+  pushRound?: boolean;
+  /** Para que lado está o pé fino (m, o x do corpo: + = esquerda): as patas vão para ele. */
+  pushLat?: number;
   /** Extras (src/game/extras.js): progresso 0..1 da sequência do cocô (−1 = sem). */
   poopK?: number;
   /** Extras: progresso 0..1 da voltinha antes do cocô (−1 = sem). */

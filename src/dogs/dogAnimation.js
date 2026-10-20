@@ -228,6 +228,8 @@ function createAnimState() {
     pushGap: 0.26,
     pushTop: 0.5,
     pushY: 0,
+    pushRound: 0, // 0..1: a face é um pé fino (as patas o abraçam)
+    pushLat: 0,
   };
 }
 
@@ -348,7 +350,7 @@ export function createDogAnimation(ctx) {
 
   // Empurrão em pé (shovePose.js): a pose do quadro (ângulo, quadril, alvo das patas da frente) e o ciclo suavizado.
   // walk/stroke/lift: empurrando caixote ou carrinho de pé, as traseiras andam (quanto, passada e altura do passo)
-  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, cock: 0, press: 0, walk: 0, stroke: 0, lift: 0, vts: 0 };
+  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, roundK: 0, lat: 0, cock: 0, press: 0, walk: 0, stroke: 0, lift: 0, vts: 0 };
   /** De pé empurrando: o passo da traseira li agora (z para a frente, y para cima; m) e se ela está no ar. */
   const PUSH_BETA = 0.6;
   /** Altura das patas da frente na face da coisa empurrada (m, na escala da dog). */
@@ -377,7 +379,8 @@ export function createDogAnimation(ctx) {
   function shoveLegTarget(li, leg, T) {
     const C = shoveCtx;
     if (leg.front) {
-      const lat = leg.side * (C.round ? 0.036 : 0.052) * s;
+      // num tronco redondo ou no cano do ventilador, mais juntinhas (abraçando), e centradas nele
+      const lat = leg.side * lerp(0.052, 0.036, C.roundK) * s + C.lat;
       const late = li === 1 ? 0.8 : 1; // a direita arma um tiquinho menos (as duas batem quase juntas)
       toInner(_wallV, lat, C.wy + C.cock * late * 0.025 * s, C.wz - C.cock * late * 0.045 * s + C.press * 0.01 * s);
       T.lerp(_wallV, sstep(0.3, 0.92, C.sk));
@@ -510,9 +513,17 @@ export function createDogAnimation(ctx) {
     // pose (pk); as traseiras andam no ritmo de quem empurra ou, fazendo força, patinam no lugar
     const pushOn = (action === 'push' || action === 'strain') && (A.pushGap ?? 0) > 0 && skShove < 0.001;
     if (pushOn) {
-      st.pushGap = A.pushGap;
-      st.pushTop = A.pushTop ?? 0.5;
-      st.pushY = A.pushY || 0;
+      // já de pé, a medida nova (game.js pushRest) chega suave: andando ou girando, ela pode mudar de um quadro para
+      // o outro (do cano para a grade do ventilador) e a pata pulava; subindo, vale a de agora
+      const up = w.pushUp > 0.05;
+      const k = up ? 1 - Math.exp(-10 * dt) : 1;
+      const top = A.pushTop ?? 0.5;
+      const y = A.pushY > 0 ? A.pushY : PUSH_PAWS * s;
+      st.pushGap += (A.pushGap - st.pushGap) * k;
+      st.pushTop = up && Number.isFinite(top) && Number.isFinite(st.pushTop) ? st.pushTop + (top - st.pushTop) * k : top;
+      st.pushY = up && st.pushY > 0 ? st.pushY + (y - st.pushY) * k : y;
+      st.pushRound += ((A.pushRound ? 1 : 0) - st.pushRound) * k;
+      st.pushLat += ((A.pushLat || 0) - st.pushLat) * k;
     }
     w.pushUp = damp(w.pushUp, pushOn ? 1 : 0, pushOn ? 5 : 6 * offK);
     if (!pushOn && w.pushUp < 1e-3) w.pushUp = 0;
@@ -525,11 +536,11 @@ export function createDogAnimation(ctx) {
     if (skShove > 0.001) {
       const over = A.shoveOver ?? 0;
       const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: A.shoveY ?? 0.44, gap: A.shoveGap ?? 0.26, over, s });
-      Object.assign(shoveCtx, P, { round: over <= 0.005, cock: st.sb.cock, press: st.sb.press, walk: 0 });
+      Object.assign(shoveCtx, P, { round: over <= 0.005, roundK: over <= 0.005 ? 1 : 0, lat: 0, cock: st.sb.cock, press: st.sb.press, walk: 0 });
     } else if (pk > 0.001) {
       // coisa baixa (cesto, carrinho): as patas vão em cima da beirada; alta (escada, ventilador): na face, na altura
       // medida no desenho dela (game.js pushRest) ou na padrão
-      const y0 = st.pushY > 0 ? clamp(st.pushY, 0.16 * s, 0.56 * s) : PUSH_PAWS * s;
+      const y0 = clamp(st.pushY, 0.16 * s, 0.56 * s);
       const onTop = st.pushTop < y0 + 0.03 * s;
       const P = shoveStand({ hip: rest[BI.HLu], shoulder: rest[BI.FLu], lf: LEGS[0].a + LEGS[0].b, y: onTop ? st.pushTop : y0, gap: st.pushGap, over: onTop ? 0.04 * s : 0, s });
       // passada de pé: curtinha e rápida (uns 12 cm na escala), no compasso de quem empurra; fazendo força, patinando
@@ -538,7 +549,7 @@ export function createDogAnimation(ctx) {
       st.pushPh = fract(st.pushPh + fP * dt);
       const strokeP = v > 0.05 ? (PUSH_BETA * v) / Math.max(fP, 0.5) : 0;
       Object.assign(shoveCtx, P, {
-        round: false, cock: 0, press: 0, walk: pk,
+        round: false, roundK: st.pushRound, lat: clamp(st.pushLat, -0.12 * s, 0.12 * s), cock: 0, press: 0, walk: pk,
         stroke: Math.max(strokeP, 0.03 * s * scrab), lift: (v > 0.05 ? 0.022 : 0.015 * scrab) * s,
         vts: (strokeP * (1 - PUSH_BETA)) / PUSH_BETA,
       });
@@ -925,6 +936,14 @@ export function createDogAnimation(ctx) {
         // agachada: joelhos para a frente e um pouco para fora
         _v.set(leg.side * 0.45, 0.3, 1).normalize();
         _pole.lerp(_v, squat * 0.6).normalize();
+      }
+      if (!leg.front && sk > 0.001) {
+        // de pé (empurrão em pé, empurrando ou fazendo força de pé): o tronco inclinado leva o "para a frente" da garupa
+        // quase para a direção da perna e o joelho ficava sem rumo, abrindo para o lado a cada passo (retorno do usuário:
+        // "a esquerda está abrindo demais"); ele aponta para a frente no chão, um tiquinho para fora
+        const a = st.slope + st.wallTheta + st.shoveTheta;
+        _v.set(leg.side * 0.1, -Math.sin(a), Math.cos(a)).normalize();
+        _pole.lerp(_v, sstep(0, 0.5, sk)).normalize();
       }
 
       if (leg.front) {

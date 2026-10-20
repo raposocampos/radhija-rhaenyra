@@ -658,3 +658,40 @@ test('a Radhija fazendo força numa coisa pesada: o aviso diz que só a irmã em
   h.run(4);
   assert.equal(heavy().length, 0, 'parada, sem aviso');
 });
+
+test('de pé (empurrando andando, fazendo força), o joelho de trás não abre para o lado', async () => {
+  // retorno do usuário: "quando a dog anda de duas patas empurrando, a esquerda está abrindo demais". O tronco inclinado
+  // levava o "para a frente" da garupa (que orienta o joelho) quase para a direção da perna, e o joelho saía de lado
+  installBrowserStubs();
+  const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+  const DT = 1 / 60;
+  const bad = [];
+  const report = [];
+  for (const kind of ['radhija', 'rhaenyra']) {
+    for (const [label, A, speed] of [['empurrando de pé, andando', { action: 'push', pushGap: 0.3, pushTop: 0.9, pushY: 0.4 }, 0.5], ['fazendo força de pé', { action: 'strain', pushGap: 0.3, pushTop: 0.9, pushY: 0.4 }, 0.15]]) {
+      withSeed(31, () => {
+        const d = createDogV2(kind);
+        for (let i = 0; i < 40; i++) d.update(DT, { speed: 0, action: 'none' });
+        let worst = 0;
+        for (let f = 0; f < 150; f++) {
+          const yaw = d.object.rotation.y;
+          d.object.position.x += Math.sin(yaw) * speed * DT;
+          d.object.position.z += Math.cos(yaw) * speed * DT;
+          d.update(DT, { speed, turn: 0, ...A });
+          d.object.updateMatrixWorld(true);
+          if (f < 60) continue; // já de pé
+          for (const [knee, paw] of [['HLl', 'HLp'], ['HRl', 'HRp']]) {
+            const k = d.object.worldToLocal(d.bones.find((b) => b.name === knee).getWorldPosition(new THREE.Vector3()));
+            const p = d.object.worldToLocal(d.bones.find((b) => b.name === paw).getWorldPosition(new THREE.Vector3()));
+            // para fora (do lado da pata): o joelho além da linha da pata
+            worst = Math.max(worst, (Math.abs(k.x) - Math.abs(p.x)));
+          }
+        }
+        report.push(`${kind} ${label}: joelho de trás até ${(worst * 100).toFixed(1)} cm para fora da pata`);
+        if (worst > 0.02) bad.push(`${kind} ${label}: o joelho de trás abriu ${(worst * 100).toFixed(1)} cm para o lado`);
+      });
+    }
+  }
+  console.log(`[empurrão] joelho de pé\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});

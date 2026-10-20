@@ -90,6 +90,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     duas dogs): pulinhos para entrar e sair e, de fora, no máximo 4 quadros raspando. E2E `todas` `39484870979` do
     `165dcb0`: 21 de 22 partes verdes; a `biblioteca` falhou uma vez (o E do ventilador) e passou ao repetir
     (`39486030063`, mesmo commit);
+  - empurrando de pé (retorno do usuário com o ventilador): "tem hora que encosta, tem hora que fica no ar" — um raio
+    só, no meio da dog, ora pegava o cano, ora a grade, ora nada (a pata ia para a caixa de colisão, no ar). Agora são
+    cinco raios na largura do peito; um pé fino só vale sem face larga ao alcance e as patas o abraçam; sem nada, o eixo
+    do meio; a medida nova chega suave na pose. "Andando de duas patas, a esquerda abre demais": de pé, o joelho de
+    trás ficava sem rumo (o "para a frente" da garupa inclinada apontava na direção da perna) e abria até 4,5 cm além
+    da pata; agora aponta para a frente no chão. Testes novos em `test/chao.test.mjs` (o ventilador das fases 4 e 9 de
+    240 posições) e `test/empurrao.test.mjs` (o joelho);
   - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
@@ -98,7 +105,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
   animações de interação).
 
-## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`)
+## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 
 - Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
   permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
@@ -120,8 +127,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
 - Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
   na boca dele; fica para um PR próprio.
-- Integrado ao main com a aprovação do usuário, antes do #48 (squash `acae42f`); o deploy fica com a sessão do cenário
-  (conferir no Actions e no `version.json`). O #48 sincronizou com ele.
+- Integrado ao main com a aprovação do usuário, antes do #48 (squash `acae42f`, CI do main `39489396152`, deploy
+  `39489612450`): produção em v0.10.3 · build 95. O #48 sincronizou com ele.
 
 ## Entregue: largar e pegar os objetos em todas as fases (PR #52, squash `8a3c743`, deploy `39473919953`)
 

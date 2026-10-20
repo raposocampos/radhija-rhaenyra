@@ -902,14 +902,14 @@ export function createGame({ engine, dogs, levels, params }) {
     }
     if (!best) return null;
     const col = world.getDynamic(best.id);
-    const plain = { gap: best.gap, top: col?.height ?? 0.5, y: 0 };
+    const plain = { gap: best.gap, top: col?.height ?? 0.5, y: 0, round: false, lat: 0 };
     if (!col?.visual || col.shape !== 'box') return plain;
     const prev = pushCache.get(c.name);
     const rx = c.x - col.x, rz = c.z - col.z;
     if (prev && prev.id === best.id && Math.hypot(rx - prev.rx, rz - prev.rz) < 0.01 && Math.abs(c.yaw - prev.yaw) < 0.03) return prev.res;
     const sc = (c.cfg.visual?.shoulder ?? 0.3) / 0.3;
     const r = pushRest(col.visual, c, { near: best.gap, pref: 0.36 * sc, scale: sc });
-    const res = r ? { gap: r.gap, top: r.top, y: r.y } : plain;
+    const res = r ? { gap: r.gap, top: r.top, y: r.y, round: r.round, lat: r.lat } : plain;
     pushCache.set(c.name, { id: best.id, rx, rz, yaw: c.yaw, res });
     return res;
   }
@@ -967,6 +967,8 @@ export function createGame({ engine, dogs, levels, params }) {
       an.pushGap = PF ? PF.gap : 0;
       an.pushTop = PF ? PF.top : 0;
       an.pushY = PF ? PF.y : 0;
+      an.pushRound = PF ? PF.round : false;
+      an.pushLat = PF ? PF.lat : 0;
       if (c.shoveHit) {
         // As patas empurraram (um por ciclo; ativa ou companheira): o tum, a rosnadinha e o puzzle.
         shove.hit(c, { puzzle, ctrls, playing: state === 'playing' });

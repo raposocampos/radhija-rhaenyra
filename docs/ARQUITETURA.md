@@ -340,8 +340,11 @@ fora ela segura o corpo de quem está no chão (`ground.pushOffRims`, `game.js` 
 ninguém fica parado em cima dela; dentro, livre. O chão mede cada desenho com a posição dos pais (`updateWorldMatrix`):
 o jogo o monta antes do primeiro quadro. As caminhas pequenas para as duas (fase 2 e Arena do Empurrão) são sólidas
 (colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
-por raios horizontais (`src/game/pushRest.js`: a face, a beirada e a altura das patas, pulando frestas), não na caixa
-de colisão.
+por raios horizontais na largura do peito (`src/game/pushRest.js`: cinco raios; a face, a beirada e a altura das
+patas, pulando frestas), não na caixa de colisão; um pé fino (o cano do ventilador) só vale sem face larga ao alcance,
+e aí as patas o abraçam (`round`, centradas nele por `lat`); sem nada ao alcance, o eixo do meio do desenho. Na pose, a
+medida nova chega suave (sem a pata pular entre o cano e a grade) e, de pé, o joelho de trás aponta para a frente no
+chão (com o tronco inclinado, o "para a frente" da garupa ficava na direção da perna e o joelho abria para o lado).
 
 **Navegação** (`src/game/navigation.js`, `companion.js`): a companheira anda em linha reta quando enxerga a líder;
 senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cada aresta pode exigir
