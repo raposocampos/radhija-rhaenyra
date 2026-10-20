@@ -479,6 +479,10 @@ try {
   await sleep(1500);
   check(i.state === 'playing' && (await uiState()).touchOn, 'Começar (toque): partida com os controles');
 
+  // EXPERIMENTO (temporário): E2E_IPHONE_VOLTAS=N repete as páginas do PC e dos iPhones N vezes
+  const VOLTAS = Number(process.env.E2E_IPHONE_VOLTAS) || 1;
+  for (let volta = 1; volta <= VOLTAS; volta++) {
+  if (VOLTAS > 1) console.log(`\n== volta ${volta} de ${VOLTAS} ==`);
   console.log('\n== PC (sem toque): nada muda ==');
   // páginas extras com as redes do harness (tetos de relógio, vigia e escuta de queda; erros do navegador reprovam)
   const pc = await H.newPage({ viewport: { width: 1280, height: 720 } }, 'pc');
@@ -634,6 +638,7 @@ try {
   check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
   await app.screenshot({ path: 'shots/toque/15-iphone-app.png' });
   await app.close();
+  } // fim das voltas (EXPERIMENTO)
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {
