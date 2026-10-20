@@ -1,8 +1,10 @@
 // FASE 1 · Operação Cenoura — puzzle (interface de puzzle: docs/ARQUITETURA.md §4.5).
 // Cordinha → portão, empurrar o carrinho, cenoura, porta, colecionáveis,
 // prompts (interact:prompt) e dicas contextuais (hint) sem repetição excessiva.
+// A cenoura vai na boca (createCarryItem): E larga no chão, E perto pega de novo; largada na porta, entrega.
 import { approach } from '../../game/dogController.js';
 import { gateTip } from '../../game/collision.js';
+import { createCarryItem, inZones, mouthPoint } from '../../game/puzzleKit.js';
 
 export const STAGES = ['start', 'east', 'gateOpen', 'cartMoved', 'carrying', 'done'];
 
@@ -14,6 +16,7 @@ const TEXT = {
     gateOpenRhaenyra: 'Empurre o carrinho com a Rhaenyra (segure Shift)',
     cartMoved: 'Pegue a cenoura (E)',
     carrying: 'Leve a cenoura até a porta de casa',
+    pickAgain: 'Pegue a cenoura de volta (E)',
   },
   hint: {
     gap: 'A Rhaenyra não cabe aqui… mas a Radhija cabe!',
@@ -21,7 +24,7 @@ const TEXT = {
     shift: 'Segure Shift para empurrar',
     locked: 'Trancado… o trinco fica do outro lado da cerca.',
   },
-  prompt: { rope: 'Puxar a cordinha', carrot: 'Pegar a cenoura' },
+  prompt: { rope: 'Puxar a cordinha', carrot: 'Pegar a cenoura', drop: 'Largar a cenoura' },
 };
 
 // Linha do tempo da cordinha/portão (s desde o E)
@@ -59,12 +62,9 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     gateCol.bz = tip.z;
   };
   const worldSetCartX = (x) => { cartCol.x = x; };
-  const carrotObj = props.carrot?.object || null;
-  const carrotHome = {
-    parent: carrotObj?.parent || scene,
-    pos: carrotObj ? carrotObj.position.clone() : null,
-    quat: carrotObj ? carrotObj.quaternion.clone() : null,
-  };
+  const carrot = createCarryItem({ obj: props.carrot?.object || null, dogs, scene, name: 'carrot', emit, world });
+  /** Largada, a cenoura não fica no capacho da porta: lá ela é entregue. */
+  const dropAvoid = inZones([DOOR.zone]);
 
   const S = {
     stage: 'start',
@@ -85,6 +85,8 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     hintNow: new Set(),
     lockLeft: 0,
     lockDog: null,
+    /** E com a cenoura na boca, de frente para a porta: entrega neste quadro (no update). */
+    dropDeliver: false,
   };
 
   /** @type {(stage: string) => void} */
@@ -131,7 +133,12 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
           ? { text: O.gateOpenRhaenyra, target: { x: S.cartX, y: 1.0, z: CART.start.z }, stage: st }
           : { text: O.gateOpenRadhija, target: { x: FENCE.x, y: 1.0, z: (FENCE.gate.hinge.z + FENCE.gate.latchPost.z) / 2 }, stage: st };
       case 'cartMoved': return { text: O.cartMoved, target: { x: CARROT.x, y: 0.75, z: CARROT.z }, stage: st };
-      case 'carrying': return { text: O.carrying, target: { x: DOOR.zone.x, y: 0.95, z: DOOR.zone.z }, stage: st };
+      case 'carrying': {
+        // largada no caminho: pegar de volta onde ela caiu
+        const f = !S.carrier && carrot.floor;
+        if (f) return { text: O.pickAgain, target: { x: f.x, y: 0.6, z: f.z }, stage: st };
+        return { text: O.carrying, target: { x: DOOR.zone.x, y: 0.95, z: DOOR.zone.z }, stage: st };
+      }
       default: return { text: null, target: null, stage: st };
     }
   }
@@ -263,13 +270,8 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   // ---------- cenoura ----------
   function pickup(name) {
     const dog = dogs[name];
+    carrot.attach(name);
     S.carrier = name;
-    if (carrotObj) {
-      const socket = dog.mouthSocket || dog.object;
-      socket.add(carrotObj);
-      carrotObj.position.set(0, 0, 0);
-      carrotObj.rotation.set(0, 0, 0);
-    }
     props.carrot?.setHighlight?.(false);
     props.door?.setHighlight?.(true);
     const p = dog.object.position;
@@ -278,19 +280,28 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     setStage('carrying');
   }
 
-  function returnCarrot() {
-    if (!carrotObj) return;
-    let p = carrotObj.parent;
-    let inDog = false;
-    while (p) {
-      if (p === dogs.radhija.object || p === dogs.rhaenyra.object) inDog = true;
-      p = p.parent;
+  /** Pega de volta a cenoura que ficou no chão. */
+  function pickAgain(c) {
+    carrot.attach(c.name);
+    S.carrier = c.name;
+    props.carrot?.setHighlight?.(false);
+    props.door?.setHighlight?.(true);
+    emit('item:pickup', { name: c.name, item: 'carrot', x: c.x, z: c.z });
+    onStageChange(S.stage); // o objetivo volta a ser levar até a porta
+  }
+
+  /** E com a cenoura na boca: de frente para a porta, entrega; senão ela cai no chão à frente (dá para pegar de volta). */
+  function dropCarrot(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - DOOR.zone.x, m.z - DOOR.zone.z) < DOOR.zone.r) {
+      S.dropDeliver = true;
+      return;
     }
-    if (inDog || !carrotObj.parent) {
-      (carrotHome.parent || scene).add(carrotObj);
-      carrotObj.position.copy(carrotHome.pos);
-      carrotObj.quaternion.copy(carrotHome.quat);
-    }
+    carrot.dropBy(c, { avoid: dropAvoid });
+    S.carrier = null;
+    props.carrot?.setHighlight?.(true);
+    props.door?.setHighlight?.(false);
+    onStageChange(S.stage); // o objetivo vira "pegue de volta"
   }
 
   // ---------- interação (E) ----------
@@ -306,6 +317,9 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     if (ropeAvailable() && c.x > ROPE.interact.requireEastOfX
       && reach(c, ROPE.interact.x, ROPE.interact.z) < ROPE.interact.r) return 'rope';
     if (S.stage === 'cartMoved' && !S.carrier && reach(c, CARROT.x, CARROT.z) < CARROT.pickupR) return 'carrot';
+    // largada no caminho: E perto pega de volta; com ela na boca (e nada mais ali), E larga
+    if (S.stage === 'carrying' && !S.carrier && carrot.nearFloor(c)) return 'carrot';
+    if (S.stage === 'carrying' && S.carrier === c.name) return 'drop';
     return null;
   }
 
@@ -320,7 +334,12 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   function interact(c) {
     const k = interactable(c);
     if (k === 'rope') { startTug(c); return true; }
-    if (k === 'carrot') { pickup(c.name); return true; }
+    if (k === 'carrot') {
+      if (S.stage === 'carrying') pickAgain(c);
+      else pickup(c.name);
+      return true;
+    }
+    if (k === 'drop') { dropCarrot(c); return true; }
     if (nearLockedGateWest(c)) hintNow('locked');
     return false;
   }
@@ -337,7 +356,10 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   function lookTarget(c) {
     const k = S.promptKind;
     if (k === 'rope') return { x: ROPE.anchor.x, y: ROPE.anchor.y - 0.2, z: ROPE.anchor.z };
-    if (k === 'carrot') return { x: CARROT.x, y: 0.1, z: CARROT.z };
+    if (k === 'carrot') {
+      const f = carrot.floor;
+      return f ? { x: f.x, y: 0.06, z: f.z } : { x: CARROT.x, y: 0.1, z: CARROT.z };
+    }
     if (S.lockLeft > 0 && S.lockDog === c.name) return { x: ROPE.anchor.x, y: ROPE.anchor.y - 0.15, z: ROPE.anchor.z };
     return null;
   }
@@ -351,6 +373,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     S.hintPrev = S.hintNow;
     S.hintNow = new Set();
     let result = null;
+    carrot.update(dt);
 
     // start → east
     if (S.stage === 'start' && (ctrls.radhija.x > 1.15 || ctrls.rhaenyra.x > 1.15)) setStage('east');
@@ -379,16 +402,17 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
       }
     });
 
-    // Entrega
+    // Entrega (andando até a porta, ou largando a cenoura de frente para ela)
     if (S.stage === 'carrying' && S.carrier) {
       const cc = ctrls[S.carrier];
       const d = Math.hypot(cc.x - DOOR.zone.x, cc.z - DOOR.zone.z);
       const leaderIn = Math.hypot(active.x - DOOR.zone.x, active.z - DOOR.zone.z) < DOOR.zone.r;
-      if (d < DOOR.zone.r || (cc !== active && leaderIn && d < DOOR.zone.r + 0.8)) {
+      if (S.dropDeliver || d < DOOR.zone.r || (cc !== active && leaderIn && d < DOOR.zone.r + 0.8)) {
         setStage('done');
         result = 'delivered';
       }
     }
+    S.dropDeliver = false;
     return result;
   }
 
@@ -410,11 +434,12 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
       props.cart?.setX?.(CART.start.x);
       props.collectibles?.forEach?.((c) => c.reset?.());
     }
-    returnCarrot();
+    carrot.returnHome();
     props.carrot?.setHighlight?.(false);
     props.door?.setHighlight?.(false);
     props.rope?.setTug?.(0);
     S.stage = 'start';
+    S.dropDeliver = false;
     S.ropeT = -1;
     S.gateEmitted = false;
     setGate(0);
@@ -509,9 +534,11 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   }
 
   function info() {
+    const f = carrot.floor;
     return {
       cart: { x: +S.cartX.toFixed(3), v: +S.cartV.toFixed(3), pushing: S.pushing },
       gate: { t: +S.gateT.toFixed(3), open: gateOpenEnough() },
+      carrot: { holder: S.carrier, floor: f ? { x: +f.x.toFixed(3), z: +f.z.toFixed(3) } : null, falling: carrot.falling },
     };
   }
 

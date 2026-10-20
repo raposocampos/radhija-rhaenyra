@@ -9,8 +9,9 @@
 //      Rhaenyra, a dog escorrega de volta (a dica diz por quê). Lá em cima a Radhija pega o frisbee, vira e
 //      desce de barriga.
 //   5. A bolinha está no chão do parquinho. Cada dog leva um objeto na boca até a toalha de piquenique; com os
-//      dois lá, a fase acaba. Nenhuma ordem trava: dá para pegar a bolinha antes ou depois do frisbee.
-import { createCarryItem, createCollectibles, createHints, reach } from '../../game/puzzleKit.js';
+//      dois lá, a fase acaba. Nenhuma ordem trava: dá para pegar a bolinha antes ou depois do frisbee. Com algo na
+//      boca, E larga no chão (E perto pega de volta; largado na toalha, fica no piquenique).
+import { createCarryItem, createCollectibles, createHints, reach, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createDogEffects, createHingedGate, createLockedInteractable, createMud } from '../../game/mechanics/index.js';
 import {
   FENCE, TUNNEL, MUD_ZONE, MUD, GATE, LATCH, BALL, SLIDE, SLIDE_ENTRY, SLIDE_TIMES, FRISBEE, PICNIC, PICNIC_SPOTS, PUDDLES,
@@ -20,7 +21,7 @@ import {
 /**
  * @typedef {'start'|'inside'|'muddy'|'clean'|'carrying'|'done'} Stage
  * @typedef {'ball'|'frisbee'} Thing
- * @typedef {'ground'|'top'|'carried'|'picnic'} Place
+ * @typedef {'ground'|'top'|'carried'|'floor'|'picnic'} Place
  * @typedef {'climb'|'slip'} SlideMode
  * @typedef {'up'|'grab'|'turn'|'down'|'runout'|'slipUp'|'slipDown'} SlidePhase
  */
@@ -37,13 +38,15 @@ export const TEXT = {
     muddyRad: 'Enlameada, a Radhija fica lenta e sem arrancada: troque para a Rhaenyra (Q) e faça o Lambe-Lambe (L)',
     climb: 'Suba o escorregador com uma arrancada (Shift) e pegue o frisbee',
     climbRh: 'Só a arrancada da Radhija sobe o escorregador: troque para ela (Q)',
-    climbFull: 'Leve a bolinha ao piquenique antes: com a boca cheia não dá para pegar o frisbee',
+    climbFull: 'Com a boca cheia não dá para pegar o frisbee: largue a bolinha (E) ou leve-a ao piquenique antes',
     ball: 'Pegue a bolinha no parquinho (E)',
     ballRhOut: 'A bolinha está no parquinho: entre pelo portão e pegue-a (E)',
     carryBall: 'Leve a bolinha até a toalha de piquenique',
     carryFrisbee: 'Leve o frisbee até a toalha de piquenique',
     carryBoth: 'Levem a bolinha e o frisbee juntas até a toalha de piquenique',
     frisbeeFirst: 'Falta o frisbee: ele está no alto do escorregador',
+    ballAgain: 'Pegue a bolinha de volta (E)',
+    frisbeeAgain: 'Pegue o frisbee de volta (E)',
   },
   hint: {
     tooBig: 'A Rhaenyra é grande demais para o túnel… a Radhija cabe!',
@@ -61,15 +64,19 @@ export const TEXT = {
     slipMud: 'Com as patas enlameadas ela escorrega! Peça um Lambe-Lambe para a Rhaenyra (L).',
     slipWalk: 'Escorrega! Só com uma arrancada (Shift) dá para subir.',
     slipRh: 'Pesada e sem arrancada, a Rhaenyra escorrega. A Radhija sobe correndo!',
-    mouthFull: 'Com a bolinha na boca não deu para pegar o frisbee. Leve a bolinha ao piquenique antes!',
+    mouthFull: 'Com a bolinha na boca não deu para pegar o frisbee. Largue a bolinha (E) ou leve-a ao piquenique antes!',
     gotFrisbee: 'Frisbee na boca! Lá vem ela escorregando!',
     emptyTop: 'Lá em cima não tem mais nada… mas escorregar é divertido!',
     delivered: 'Chegou no piquenique!',
     needFrisbee: 'Falta o frisbee: ele está no alto do escorregador!',
     needBall: 'Falta a bolinha: ela está no chão do parquinho!',
     secondMouth: 'A outra irmã está de boca vazia: troque (Q) e pegue o outro objeto para levarem juntas!',
+    tunnelDrop: 'Aqui dentro do túnel, não: largue lá fora (E).',
   },
-  prompt: { ball: 'Pegar a bolinha', latch: 'Destravar o portão' },
+  prompt: {
+    ball: 'Pegar a bolinha', frisbee: 'Pegar o frisbee', latch: 'Destravar o portão',
+    dropBall: 'Largar a bolinha', dropFrisbee: 'Largar o frisbee',
+  },
 };
 
 const smooth = (k) => { const x = Math.min(1, Math.max(0, k)); return x * x * (3 - 2 * x); };
@@ -107,13 +114,20 @@ export function createPuzzle(ctx) {
   const gateMid = { x: (GATE.hinge.x + GATE.latchPost.x) / 2, z: GATE.hinge.z };
   /** @type {Record<Thing, { item: ReturnType<typeof createCarryItem>, prop: import('../../types').ItemProp }>} */
   const items = {
-    ball: { item: createCarryItem({ obj: props.ball.object, dogs, scene: root, name: 'ball' }), prop: props.ball },
-    frisbee: { item: createCarryItem({ obj: props.frisbee.object, dogs, scene: root, name: 'frisbee' }), prop: props.frisbee },
+    ball: { item: createCarryItem({ obj: props.ball.object, dogs, scene: root, name: 'ball', emit, world }), prop: props.ball },
+    frisbee: { item: createCarryItem({ obj: props.frisbee.object, dogs, scene: root, name: 'frisbee', emit, world }), prop: props.frisbee },
   };
   /** @type {Thing[]} */
   const THINGS = ['ball', 'frisbee'];
+  /**
+   * Largado, o objeto não fica na toalha (lá ele é entregue) nem dentro do túnel de manilha (sumiria lá dentro, e só a
+   * Radhija entra): cai no gramado ou no chão do parquinho.
+   */
+  const dropAvoid = inZones([GOAL, { minX: TUNNEL.x0 - 0.3, maxX: TUNNEL.x1 + 0.3, minZ: TUNNEL.z - TUNNEL.r - 0.2, maxZ: TUNNEL.z + TUNNEL.r + 0.2 }]);
   const fresh = () => ({
     gateOpen: false, done: false, disposed: false, objKey: '', climbs: 0, slips: 0,
+    /** E com o objeto na boca, de frente para a toalha: ele fica no piquenique neste quadro (no update). */
+    dropDeliver: /** @type {Thing | null} */ (null),
     /** @type {Record<Thing, Place>} */
     place: { ball: 'ground', frisbee: 'top' },
     /** @type {null | { who: import('../../types').DogName, mode: SlideMode, phase: SlidePhase, t: number, x0: number, z0: number, yaw0: number, reason: string, grabbed: boolean, action?: string, slope?: number }} */
@@ -207,6 +221,12 @@ export function createPuzzle(ctx) {
     const theirs = carriedBy(other(activeName));
     if (mine && theirs) return { text: O.carryBoth, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
     if (mine) return { text: mine === 'ball' ? O.carryBall : O.carryFrisbee, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
+    // largado no caminho: pegar de volta onde caiu
+    const lying = THINGS.find((t) => S.place[t] === 'floor' && items[t].item.floor);
+    if (lying) {
+      const f = items[lying].item.floor;
+      return { text: lying === 'ball' ? O.ballAgain : O.frisbeeAgain, target: at(f.x, f.z, 0.35), stage: st };
+    }
     if (S.place.ball === 'ground') {
       const c = ctrls[activeName];
       const text = insidePark(c) ? O.ball : O.ballRhOut;
@@ -391,26 +411,30 @@ export function createPuzzle(ctx) {
     if (rh === active && rh.hits?.some((h) => h.id === 'boca-oeste' || h.id === 'boca-leste')) hints.cond('tooBig', 3.4, 8);
     stepSlide(dt);
     if (!S.slide && active) tryClimb(active);
-    // prompts e destaques
-    const mouthFree = !carriedBy(active.name);
-    const nearBall = mouthFree && S.place.ball === 'ground' && reach(active, BALL.x, BALL.z) < BALL.pickupR;
-    hints.setPrompt(latch.near(active) ? 'latch' : nearBall ? 'ball' : null);
+    for (const thing of THINGS) items[thing].item.update(dt);
+    // prompts e destaques: pegar (no lugar dela ou largado no chão); com algo na boca (e nada mais ali), largar
+    const mine = carriedBy(active.name);
+    const nearBall = !mine && S.place.ball === 'ground' && reach(active, BALL.x, BALL.z) < BALL.pickupR;
+    const lying = mine ? null : floorThingNear(active);
+    const dropKind = mine && !S.slide && !inTunnel(active) ? (mine === 'ball' ? 'dropBall' : 'dropFrisbee') : null;
+    hints.setPrompt(latch.near(active) ? 'latch' : nearBall ? 'ball' : lying || dropKind);
     cols.update(active);
-    items.ball.prop.setHighlight(S.place.ball === 'ground' && S.gateOpen);
-    items.frisbee.prop.setHighlight(S.place.frisbee === 'top' && !mud.muddy('radhija') && S.gateOpen);
+    items.ball.prop.setHighlight((S.place.ball === 'ground' && S.gateOpen) || S.place.ball === 'floor');
+    items.frisbee.prop.setHighlight((S.place.frisbee === 'top' && !mud.muddy('radhija') && S.gateOpen) || S.place.frisbee === 'floor');
     props.goal.setHighlight(S.place.ball === 'carried' || S.place.frisbee === 'carried');
-    // piquenique: o objeto na boca fica na toalha
+    // piquenique: o objeto na boca fica na toalha (chegando nela, ou largado de frente para ela)
     for (const thing of THINGS) {
       const holder = holderOf(thing);
       if (!holder) continue;
       const hc = C[holder];
       const d = Math.hypot(hc.x - GOAL.x, hc.z - GOAL.z);
       const leaderIn = Math.hypot(active.x - GOAL.x, active.z - GOAL.z) < GOAL.r;
-      if (!(d < GOAL.r || (hc !== active && leaderIn && d < GOAL.r + 0.8))) continue;
+      if (!(S.dropDeliver === thing || d < GOAL.r || (hc !== active && leaderIn && d < GOAL.r + 0.8))) continue;
       deliver(thing);
       const both = S.place.ball === 'picnic' && S.place.frisbee === 'picnic';
       if (!both) hints.now(S.place.frisbee === 'picnic' ? 'needBall' : S.place.frisbee === 'top' ? 'needFrisbee' : 'delivered', 3.6, 0);
     }
+    S.dropDeliver = null;
     const o = objective(active.name);
     const key = `${o.stage}|${o.text}`;
     if (key !== S.objKey) { S.objKey = key; onStageChange(o.stage); }
@@ -423,17 +447,57 @@ export function createPuzzle(ctx) {
     return null;
   }
 
+  // ------------------------------------------------------------------ largar e pegar de volta
+  /** O objeto largado no chão ao alcance de `c` (o mais perto), ou null. */
+  function floorThingNear(c) {
+    let best = null, bestD = Infinity;
+    for (const t of THINGS) {
+      const f = items[t].item.floor;
+      if (S.place[t] !== 'floor' || !f || !items[t].item.nearFloor(c)) continue;
+      const d = reach(c, f.x, f.z);
+      if (d < bestD) { best = t; bestD = d; }
+    }
+    return best;
+  }
+  /** E com o objeto na boca: de frente para a toalha, ele fica no piquenique; senão cai no chão à frente. */
+  function dropThing(thing, c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = thing;
+      return;
+    }
+    items[thing].item.dropBy(c, { avoid: dropAvoid });
+    S.place[thing] = 'floor';
+    notifyStage();
+  }
+
   // ------------------------------------------------------------------ interação (E)
   function interact(c) {
     if (latch.near(c)) { latch.start(c); return true; }
     if (!S.gateOpen && !insidePark(c) && reach(c, LATCH.x, FENCE.south) < 0.9) { hints.now('latchOutside', 3.2, 3); return true; }
-    if (!carriedBy(c.name) && S.place.ball === 'ground' && reach(c, BALL.x, BALL.z) < BALL.pickupR) {
+    const mine = carriedBy(c.name);
+    if (!mine && S.place.ball === 'ground' && reach(c, BALL.x, BALL.z) < BALL.pickupR) {
       items.ball.item.attach(c.name);
       items.ball.prop.setHighlight(false);
       S.place.ball = 'carried';
       emit('item:pickup', { name: c.name, item: 'ball', x: BALL.x, z: BALL.z });
       if (S.place.frisbee === 'carried' && !carriedBy(other(c.name))) hints.now('secondMouth', 4.5, 30);
       notifyStage();
+      return true;
+    }
+    const lying = mine ? null : floorThingNear(c);
+    if (lying) {
+      items[lying].item.attach(c.name);
+      items[lying].prop.setHighlight(false);
+      S.place[lying] = 'carried';
+      emit('item:pickup', { name: c.name, item: lying, x: c.x, z: c.z });
+      notifyStage();
+      return true;
+    }
+    if (mine) {
+      // dentro do túnel de manilha o objeto sumiria lá dentro: só lá fora
+      if (inTunnel(c)) hints.now('tunnelDrop', 3, 3);
+      else dropThing(mine, c);
       return true;
     }
     return false;
@@ -531,6 +595,9 @@ export function createPuzzle(ctx) {
     lookTarget: (c) => {
       if (latch.near(c)) return at(GATE.latchPost.x - 0.12, FENCE.south, 0.5);
       if (!carriedBy(c.name) && S.place.ball === 'ground' && reach(c, BALL.x, BALL.z) < BALL.pickupR + 0.3) return at(BALL.x, BALL.z, 0.06);
+      const lying = carriedBy(c.name) ? null : floorThingNear(c);
+      const f = lying && items[lying].item.floor;
+      if (f) return at(f.x, f.z, 0.06);
       return null;
     },
     speedScale: (c) => mud.speedScale(c.name),
@@ -552,8 +619,8 @@ export function createPuzzle(ctx) {
         inside: { radhija: insidePark(ctrls.radhija), rhaenyra: insidePark(ctrls.rhaenyra) },
         effects: { radhija: effects.info('radhija'), rhaenyra: effects.info('rhaenyra') },
       },
-      ball: { holder: items.ball.item.holder, x: props.ball.object.position.x, z: props.ball.object.position.z },
-      frisbee: { holder: items.frisbee.item.holder, x: props.frisbee.object.position.x, z: props.frisbee.object.position.z },
+      ball: { holder: items.ball.item.holder, x: props.ball.object.position.x, z: props.ball.object.position.z, floor: S.place.ball === 'floor' ? items.ball.item.floor : null },
+      frisbee: { holder: items.frisbee.item.holder, x: props.frisbee.object.position.x, z: props.frisbee.object.position.z, floor: S.place.frisbee === 'floor' ? items.frisbee.item.floor : null },
       objective: objective(ctx.activeDog).text,
     }),
     get stage() { return stage(); },

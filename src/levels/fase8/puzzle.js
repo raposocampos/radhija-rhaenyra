@@ -6,7 +6,8 @@
 //     máquina e aperta o botão de centrifugar (impulso): a máquina chacoalha e a mantinha escorrega para o cesto.
 //     Sem o cesto, ela cai no chão e vai para o cesto quando ele encosta (E). O cesto empurrado até a caminha
 //     entrega a mantinha. Nenhuma ordem trava: as duas cadeias são independentes e tudo se refaz.
-import { createCarryItem, createCollectibles, createHints, reach } from '../../game/puzzleKit.js';
+//   Com a meia na boca, E larga no chão (E perto pega de volta, qualquer uma); largada na caminha, entrega.
+import { createCarryItem, createCollectibles, createHints, reach, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createWallButton } from '../../game/mechanics/index.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
@@ -16,7 +17,7 @@ import {
 
 /**
  * @typedef {'start'|'sock'|'basket'|'carrying'|'done'} Stage
- * @typedef {'rack'|'carried'|'bed'} SockPlace
+ * @typedef {'rack'|'carried'|'floor'|'bed'} SockPlace
  * @typedef {'machine'|'falling'|'basket'|'floor'|'bed'} BlanketPlace
  */
 /** @type {Stage[]} */
@@ -28,6 +29,7 @@ export const TEXT = {
     dashRad: 'O varal desceu! Dê a arrancada até a meia (Shift) para soltar o pregador',
     dashRh: 'O varal desceu! Troque para a Radhija (Q) e dê a arrancada até a meia',
     carrySock: 'Leve a meia até a caminha',
+    pickSock: 'Pegue a meia de volta (E)',
     toMachine: 'Empurre o cesto até a frente da máquina de lavar (segure Shift)',
     spin: 'Cesto no lugar! Pegue impulso nas patinhas e aperte o botão de centrifugar (Espaço)',
     spinRad: 'A mantinha está em cima da máquina: a Rhaenyra empurra o cesto e alcança o botão (Q)',
@@ -57,7 +59,7 @@ export const TEXT = {
     needBlanket: 'Falta a mantinha: ela está em cima da máquina de lavar.',
     needSock: 'Falta a meia: ela está no varal.',
   },
-  prompt: { load: 'Pôr a mantinha no cesto', wall: 'Impulso na parede' },
+  prompt: { load: 'Pôr a mantinha no cesto', wall: 'Impulso na parede', sock: 'Pegar a meia', dropSock: 'Largar a meia' },
 };
 
 const clamp01 = (k) => Math.min(1, Math.max(0, k));
@@ -72,9 +74,13 @@ export function createPuzzle(ctx) {
   const rackBtn = createWallButton({ id: 'botao-varal', cfg: RACK_BUTTON, emit, prop: props.rackButton });
   const buttons = [spinBtn, rackBtn];
   const basket = createPushCrate({ id: 'cesto', cfg: BASKET, world, emit, prop: props.basket });
-  const sock = createCarryItem({ obj: props.sock.object, dogs, scene: root, name: 'sock' });
+  const sock = createCarryItem({ obj: props.sock.object, dogs, scene: root, name: 'sock', emit, world });
+  /** Largada, a meia não fica na caminha (lá ela é entregue) nem na frente da máquina, onde a mantinha cai. */
+  const dropAvoid = inZones([GOAL, CATCH], 0.1);
   const fresh = () => ({
     done: false, disposed: false, objKey: '',
+    /** E com a meia na boca, de frente para a caminha: entrega neste quadro (no update). */
+    dropDeliver: false,
     /** @type {SockPlace} */ sock: /** @type {SockPlace} */ ('rack'),
     /** @type {BlanketPlace} */ blanket: /** @type {BlanketPlace} */ ('machine'),
     lowerK: 0, lowerDir: 0, spinK: 0, spinElapsed: -1, fallT: -1, fallToBasket: false,
@@ -130,8 +136,12 @@ export function createPuzzle(ctx) {
     if (sock.holder === activeName) return { text: O.carrySock, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
     const sockPending = S.sock === 'rack';
     const blanketPending = S.blanket !== 'bed';
+    // a meia largada no chão: pegar de volta onde ela caiu
+    const sockFloor = S.sock === 'floor' ? sock.floor : null;
+    const sockAgain = sockFloor ? { text: O.pickSock, target: at(sockFloor.x, sockFloor.z, 0.35), stage: st } : null;
     if (activeName === 'radhija') {
       if (sockPending) return rackDown() ? { text: O.dashRad, target: sockTarget(), stage: st } : { text: O.rackRad, target: rackTarget(), stage: st };
+      if (sockAgain) return sockAgain;
       if (blanketPending) {
         if (S.blanket === 'basket') return { text: O.pushHomeRad, target: at(basket.x, basket.z, 0.75), stage: st };
         if (S.blanket === 'floor') return { text: O.loadFloor, target: at(CATCH.x, CATCH.z, 0.4), stage: st };
@@ -139,10 +149,11 @@ export function createPuzzle(ctx) {
       }
       return { text: O.carrySock, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
     }
-    // Rhaenyra: o varal embaixo é urgente; depois a mantinha; por fim o varal
+    // Rhaenyra: o varal embaixo é urgente; depois a mantinha; por fim o varal (ou a meia que ficou no chão)
     if (sockPending && rackDown()) return { text: O.dashRh, target: sockTarget(), stage: st };
     if (blanketPending) return blanketObjective(st);
     if (sockPending) return { text: O.rackRh, target: rackTarget(), stage: st };
+    if (sockAgain) return sockAgain;
     return { text: O.carrySock, target: at(GOAL.x, GOAL.z, 0.6), stage: st };
   }
 
@@ -157,6 +168,26 @@ export function createPuzzle(ctx) {
     hints.now('gotSock', 3, 0);
     notifyStage();
   }
+  /** Pega de volta a meia que ficou no chão (qualquer uma das duas leva). */
+  function pickSock(c) {
+    sock.attach(c.name);
+    props.sock.setHighlight(false);
+    S.sock = 'carried';
+    emit('item:pickup', { name: c.name, item: 'sock', x: c.x, z: c.z });
+    notifyStage();
+  }
+  /** E com a meia na boca: de frente para a caminha, entrega; senão ela cai no chão à frente (E perto pega de volta). */
+  function dropSock(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = true;
+      return;
+    }
+    sock.dropBy(c, { avoid: dropAvoid });
+    S.sock = 'floor';
+    notifyStage();
+  }
+  const nearFloorSock = (c) => S.sock === 'floor' && sock.nearFloor(c);
   function deliverSock() {
     sock.returnHome();
     const spot = props.bed.spot('sock');
@@ -243,7 +274,8 @@ export function createPuzzle(ctx) {
     if (S.blanket === 'basket' && Math.hypot(basket.x - DOG_BED.x, basket.z - DOG_BED.z) < DOG_BED.basketR) blanketHome();
     if (basket.pushing && basket.blockedBy === 'tabua') hints.cond('board', 3.2, 8);
 
-    // meia: o tranco da arrancada da Radhija com o varal embaixo
+    // meia: o tranco da arrancada da Radhija com o varal embaixo (e a queda dela, se foi largada)
+    sock.update(dt);
     const rad = C.radhija;
     if (S.sock === 'rack' && rackDown()) {
       const d = dist(head(rad), SOCK);
@@ -257,8 +289,9 @@ export function createPuzzle(ctx) {
       const hc = C[sock.holder];
       const d = Math.hypot(hc.x - GOAL.x, hc.z - GOAL.z);
       const leaderIn = Math.hypot(active.x - GOAL.x, active.z - GOAL.z) < GOAL.r;
-      if (d < GOAL.r || (hc !== active && leaderIn && d < GOAL.r + 0.8)) deliverSock();
+      if (S.dropDeliver || d < GOAL.r || (hc !== active && leaderIn && d < GOAL.r + 0.8)) deliverSock();
     }
+    S.dropDeliver = false;
 
     // dicas de quem não alcança, prompts e destaques
     const nearSpot = buttons.some((b) => {
@@ -269,8 +302,10 @@ export function createPuzzle(ctx) {
     const canLoad = S.blanket === 'floor' && reach(active, CATCH.x, CATCH.z) < 0.7 && basketNearBlanket();
     const wallReady = active.name === 'rhaenyra' && !airborne(active) && buttons.some((b) => b.inReach(active, world));
     if (canLoad) hints.setPrompt('load');
-    else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
-    props.sock.setHighlight(S.sock === 'rack' && rackDown());
+    else if (nearFloorSock(active)) hints.setPrompt('sock');
+    else if (wallReady) hints.setPrompt('wall', 'Espaço');
+    else hints.setPrompt(sock.holder === active.name ? 'dropSock' : null);
+    props.sock.setHighlight((S.sock === 'rack' && rackDown()) || S.sock === 'floor');
     props.basket.setHighlight(S.blanket === 'floor' || (S.blanket === 'machine' && !basketAtCatch() && active.name === 'rhaenyra'));
     props.bed.setHighlight(!!sock.holder || S.blanket === 'basket');
     cols.update(active);
@@ -297,9 +332,13 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ interação (E)
   function interact(c) {
-    if (S.blanket === 'floor' && reach(c, CATCH.x, CATCH.z) < 0.7) {
-      if (basketNearBlanket()) loadBlanket();
-      else hints.now(c.name === 'radhija' ? 'tooBig' : 'needBasket', 3.4, 2);
+    const atBlanket = S.blanket === 'floor' && reach(c, CATCH.x, CATCH.z) < 0.7;
+    if (atBlanket && basketNearBlanket()) { loadBlanket(); return true; }
+    // a meia: pegar de volta do chão, ou largar a que está na boca (antes das dicas de E)
+    if (nearFloorSock(c)) { pickSock(c); return true; }
+    if (sock.holder === c.name) { dropSock(c); return true; }
+    if (atBlanket) {
+      hints.now(c.name === 'radhija' ? 'tooBig' : 'needBasket', 3.4, 2);
       return true;
     }
     if (S.blanket === 'machine' && reach(c, WASHER.x, WASHER.z + WASHER.hz) < 0.65) {
@@ -367,6 +406,7 @@ export function createPuzzle(ctx) {
     onWallTouch,
     lookTarget: (c) => {
       if (S.sock === 'rack' && rackDown() && reach(c, SOCK.x, SOCK.z) < SOCK.nearR + 0.4) return sockTarget();
+      if (nearFloorSock(c)) return at(sock.floor.x, sock.floor.z, 0.05);
       if (S.blanket === 'floor' && reach(c, CATCH.x, CATCH.z) < 1.0) return at(CATCH.x, CATCH.z, 0.08);
       return null;
     },
@@ -380,7 +420,7 @@ export function createPuzzle(ctx) {
         spinning: spinBtn.on, basket: basket.info(), atCatch: basketAtCatch(),
         buttons: { spin: spinBtn.info(), rack: rackBtn.info() },
       },
-      sock: { holder: sock.holder },
+      sock: { holder: sock.holder, floor: S.sock === 'floor' ? sock.floor : null, falling: sock.falling },
       objective: objective(ctx.activeDog).text,
     }),
     get stage() { return stage(); },

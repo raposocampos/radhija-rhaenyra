@@ -343,11 +343,12 @@ export function buildStations(root) {
   return {
     pedal, goal, ball, moon, barrierPlate,
     update(dt) {
-      // sombrinha das cargas só quando estão na bandeja (não no vagão, no pórtico, na boca ou no foguete)
+      // sombrinha das cargas só quando estão na bandeja ou largadas no chão (não no vagão, no pórtico, na boca ou no
+      // foguete): logo embaixo delas, no fundo da bandeja ou no assoalho
       for (const { o, sh } of shadows) {
         const p = o.position;
         sh.visible = o.parent === root && o.visible && p.y < TRAY.y + 0.05;
-        sh.position.set(p.x, TRAY.y - BALL.r + 0.002, p.z);
+        sh.position.set(p.x, Math.min(TRAY.y - BALL.r, p.y - (o === moonObject ? MOON.r : BALL.r)) + 0.002, p.z);
       }
       if (launchState.on) { launchState.t += dt; setLaunchPose(); }
     },

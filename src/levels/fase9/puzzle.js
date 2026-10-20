@@ -12,8 +12,9 @@
 //     portinha de gato.
 //     A porta do escritório abre com o impulso na maçaneta e a mola fecha de novo; com alguém no vão, ela espera.
 //     Com o livro (pesado, só a Rhaenyra carrega) na boca não dá impulso: presa lá dentro, ela larga o livro (E).
-//   Entrega: os dois objetos na mesinha ao lado da poltrona. Nenhuma ordem trava e tudo se refaz.
-import { createCarryItem, createCollectibles, createHints, reach, deliveredAt } from '../../game/puzzleKit.js';
+//   Entrega: os dois objetos na mesinha ao lado da poltrona. Nenhuma ordem trava e tudo se refaz. Com algo na boca,
+//   E larga no chão (E perto pega de volta; o livro, só a Rhaenyra); largado de frente para a mesinha, fica nela.
+import { createCarryItem, createCollectibles, createHints, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createWallButton, createHingedGate, createPressurePlate } from '../../game/mechanics/index.js';
 import { airborne, wallKick } from '../../game/dogController.js';
 import {
@@ -24,7 +25,7 @@ import {
 
 /**
  * @typedef {'start'|'glasses'|'book'|'carrying'|'done'} Stage
- * @typedef {'shelf'|'carried'|'table'} GlassesPlace
+ * @typedef {'shelf'|'carried'|'floor'|'table'} GlassesPlace
  * @typedef {'wardrobe'|'falling'|'floor'|'carried'|'table'} BookPlace
  * @typedef {'asleep'|'waking'|'jumping'|'walking'|'bed'} CatState
  */
@@ -42,6 +43,7 @@ export const TEXT = {
     climbRad: 'A escadinha está firme: suba (E) e pegue os óculos',
     holdRad: 'A escadinha rola com peso em cima: a Rhaenyra precisa segurar o pé dela (Q)',
     carryGlasses: 'Leve os óculos até a mesinha da poltrona',
+    pickGlasses: 'Pegue os óculos de volta (E)',
     powerRh: 'O Bichano dorme em cima do livro. O jardim de inverno está sem luz: ligue o disjuntor no alto da parede (Espaço)',
     powerRad: 'O Bichano dorme em cima do livro. A Rhaenyra liga o disjuntor do jardim de inverno (Q)',
     fanOn: 'Luz! Agora ligue o ventilador: o botão vermelho fica na base dele (E)',
@@ -105,6 +107,7 @@ export const TEXT = {
   prompt: {
     climb: 'Subir a escadinha', book: 'Pegar o livro', drop: 'Largar o livro', wall: 'Impulso na parede',
     hold: 'Segurar a escadinha', letGo: 'Soltar a escadinha', fan: 'Ligar o ventilador', fanOff: 'Desligar o ventilador',
+    glasses: 'Pegar os óculos', dropGlasses: 'Largar os óculos',
   },
 };
 
@@ -135,8 +138,17 @@ export function createPuzzle(ctx) {
   // botão do registro no chão: só o vaso pesa o bastante (as dogs não contam)
   const plate = createPressurePlate({ id: 'botao-registro', x: DAMPER_PLATE.x, z: DAMPER_PLATE.z, hx: DAMPER_PLATE.hx, hz: DAMPER_PLATE.hz, emit, prop: props.plate });
   const door = createHingedGate({ id: 'porta-escritorio', cfg: DOOR, world, prop: props.door, thickness: 0.05 });
-  const glasses = createCarryItem({ obj: props.glasses.object, dogs, scene: root, name: 'glasses' });
-  const book = createCarryItem({ obj: props.book.object, dogs, scene: root, name: 'book', carrier: 'large' });
+  const glasses = createCarryItem({ obj: props.glasses.object, dogs, scene: root, name: 'glasses', emit, world });
+  const book = createCarryItem({ obj: props.book.object, dogs, scene: root, name: 'book', carrier: 'large', emit, world });
+  /**
+   * Largado, nada fica na mesinha da poltrona (lá é a entrega), no botão do registro, na almofada do Bichano, no vão da
+   * porta do escritório (por onde a folha passa) nem na portinha de gato.
+   */
+  const dropAvoid = inZones([
+    GOAL, DAMPER_PLATE, { x: CAT.bed.x, z: CAT.bed.z, r: 0.35 },
+    { minX: WALL_EH.x - 1.05, maxX: WALL_EH.x + 0.3, minZ: DOOR.latchPost.z - 0.25, maxZ: DOOR.hinge.z + 0.15 },
+    { minX: WALL_EH.x - 0.3, maxX: WALL_EH.x + 0.3, minZ: WALL_EH.catFlap.z0 - 0.1, maxZ: WALL_EH.catFlap.z1 + 0.1 },
+  ], 0.06);
   // o gato deitado na almofada do hall é sólido (as dogs não passam por cima dele)
   const catCol = world.addDynamic({ id: 'gato', kind: 'npc', shape: 'circle', x: CAT.bed.x, z: CAT.bed.z, r: 0.2, enabled: /** @type {boolean} */ (false) });
 
@@ -152,6 +164,8 @@ export function createPuzzle(ctx) {
     climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
     aligned: false, wasDoorOpen: false, doorHintT: 0, ductHint: false, wasAligned: false,
     holdLadder: false, wasDamper: false, introT: 0, fanOn: false,
+    /** E com o objeto na boca, de frente para a mesinha: ele fica nela neste quadro (no update). */
+    dropDeliver: /** @type {'glasses' | 'book' | null} */ (null),
   });
   const S = fresh();
   let introDone = false; // a apresentação (óculos e o Bichano) só uma vez por carregamento da fase
@@ -208,6 +222,9 @@ export function createPuzzle(ctx) {
   /** O que falta dos óculos para quem está ativa. */
   function glassesStep(name) {
     const O = TEXT.objective;
+    // largados no chão: pegar de volta (qualquer uma leva)
+    const gf = S.glasses === 'floor' ? glasses.floor : null;
+    if (gf) return { text: O.pickGlasses, target: at(gf.x, gf.z, 0.3) };
     if (!brake.on) return name === 'rhaenyra' ? { text: O.brakeRh, target: brake.target(0.3) } : { text: O.brakeRad, target: brake.target(0.3) };
     if (!globeClear()) return { text: name === 'rhaenyra' ? O.globe : O.pushRad, target: at(globe.x, globe.z, 0.95) };
     if (!ladderAtGlasses()) return { text: name === 'rhaenyra' ? O.ladder : O.pushRad, target: at(ladder.x, ladder.z, 1.5) };
@@ -249,7 +266,7 @@ export function createPuzzle(ctx) {
       if (inOffice(ctrls[activeName]) && !doorOpen() && !inDoorway(ctrls.radhija)) return { text: O.dropBook, target: handleIn.target(0.3), stage: st };
       return { text: O.carryBook, target: goal, stage: st };
     }
-    const gPending = S.glasses === 'shelf';
+    const gPending = S.glasses === 'shelf' || S.glasses === 'floor';
     const bPending = S.book !== 'table' && !book.holder;
     const c = ctrls[activeName];
     // o que tem pressa primeiro: a porta aberta com o livro lá dentro, a escada segura esperando a Radhija
@@ -528,17 +545,32 @@ export function createPuzzle(ctx) {
     hints.now(other ? (thing === 'glasses' ? 'glassesHome' : 'bookHome') : (thing === 'glasses' ? 'needBook' : 'needGlasses'), 3.8, 0);
     notifyStage();
   }
+  /** O objeto na boca de `c` fica na mesinha se ela o largar de frente para ela (a boca dentro da entrega). */
+  const facesTable = (c) => {
+    const m = mouthPoint(c);
+    return Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r;
+  };
+  /** Larga o livro à frente (nada no meio: nunca do outro lado da porta); ele cai deitado, com um baque. */
   function dropBook(c) {
-    const x = c.x + Math.sin(c.yaw) * 0.32;
-    const z = c.z + Math.cos(c.yaw) * 0.32;
-    const res = world.resolve(x, z, 0.12, 'small');
-    book.drop(res.x, res.z, 0);
-    props.book.setLying(true);
+    const spot = book.dropBy(c, { avoid: dropAvoid, land: 'book:drop' });
     S.book = 'floor';
-    S.bookX = res.x;
-    S.bookZ = res.z;
-    emit('book:drop', { name: c.name, x: res.x, z: res.z });
+    S.bookX = spot.x;
+    S.bookZ = spot.z;
     hints.now('dropped', 2.4, 0);
+    notifyStage();
+  }
+  /** Os óculos que ficaram no chão: E perto pega de volta (qualquer uma, de boca vazia). */
+  const nearFloorGlasses = (c) => S.glasses === 'floor' && glasses.nearFloor(c);
+  function pickGlasses(c) {
+    glasses.attach(c.name);
+    props.glasses.setHighlight(false);
+    S.glasses = 'carried';
+    emit('item:pickup', { name: c.name, item: 'glasses', x: c.x, z: c.z });
+    notifyStage();
+  }
+  function dropGlasses(c) {
+    glasses.dropBy(c, { avoid: dropAvoid });
+    S.glasses = 'floor';
     notifyStage();
   }
   function takeBook(c) {
@@ -640,11 +672,17 @@ export function createPuzzle(ctx) {
     S.wasDoorOpen = open;
     if (door.blocked && bookInOffice()) hints.cond('doorClosing', 3, 10);
 
-    // entregas na mesinha
+    // entregas na mesinha (chegando nela, ou largando de frente para ela); a queda de quem foi largado
+    glasses.update(dt);
+    book.update(dt);
+    // o livro largado que a folha da porta (ou algo que passe) empurrou: o lugar dele acompanha
+    if (S.book === 'floor' && book.floor) { S.bookX = book.floor.x; S.bookZ = book.floor.z; }
     for (const it of [glasses, book]) {
       if (!it.holder) continue;
-      if (deliveredAt(GOAL, C[it.holder], active)) deliver(it === glasses ? 'glasses' : 'book');
+      const thing = it === glasses ? 'glasses' : 'book';
+      if (S.dropDeliver === thing || deliveredAt(GOAL, C[it.holder], active)) deliver(thing);
     }
+    S.dropDeliver = null;
 
     // dicas, prompts e destaques
     const nearLever = levers.some((b) => {
@@ -660,17 +698,20 @@ export function createPuzzle(ctx) {
     const canClimb = !S.climb && active.name === 'radhija' && nearClimb(active);
     const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && glasses.holder !== 'rhaenyra';
     const canHold = active.name === 'rhaenyra' && !book.holder && !S.climb && inHoldZone(active) && brake.on;
-    const canFan = nearFanSwitch(active);
+    const canFan = nearFanSwitch(active) && !book.holder;
+    const canGlasses = nearFloorGlasses(active) && !book.holder && !glasses.holder;
     if (canClimb) hints.setPrompt('climb');
     else if (canHold) hints.setPrompt(S.holdLadder ? 'letGo' : 'hold');
     else if (canFan) hints.setPrompt(S.fanOn ? 'fanOff' : 'fan');
     else if (canBook) hints.setPrompt('book');
+    else if (canGlasses) hints.setPrompt('glasses');
     else if (book.holder === active.name && inOffice(active) && !open) hints.setPrompt('drop');
-    else hints.setPrompt(wallReady ? 'wall' : null, 'Espaço');
+    else if (wallReady) hints.setPrompt('wall', 'Espaço');
+    else hints.setPrompt(book.holder === active.name ? 'drop' : glasses.holder === active.name && !S.climb ? 'dropGlasses' : null);
     props.ladder.setHighlight(brake.on && globeClear() && !ladderAtGlasses() && active.name === 'rhaenyra');
     props.planter.setHighlight(power() && S.aligned && !damperOpen() && active.name === 'rhaenyra' && S.cat === 'asleep');
     const introGlasses = !introDone && S.introT > 0.6 && S.introT < 3.3;
-    props.glasses.setHighlight(S.glasses === 'shelf' && ((ladderAtGlasses() && brake.on) || introGlasses));
+    props.glasses.setHighlight((S.glasses === 'shelf' && ((ladderAtGlasses() && brake.on) || introGlasses)) || S.glasses === 'floor');
     props.book.setHighlight(S.book === 'floor');
     props.table.setHighlight(!!glasses.holder || !!book.holder);
     cols.update(active);
@@ -724,7 +765,8 @@ export function createPuzzle(ctx) {
   // ------------------------------------------------------------------ interação (E)
   function interact(c) {
     if (book.holder === c.name) {
-      if (!deliveredAt(GOAL, c, c)) dropBook(c);
+      if (facesTable(c)) S.dropDeliver = 'book';
+      else if (!deliveredAt(GOAL, c, c)) dropBook(c);
       return true;
     }
     if (S.book === 'floor' && reach(c, S.bookX, S.bookZ) < 0.55) {
@@ -750,6 +792,13 @@ export function createPuzzle(ctx) {
         emit('fan:switch', { on: S.fanOn, x: fan.x, z: fan.z });
         hints.now(S.fanOn ? 'fanStarted' : 'fanStopped', 2.2, 0);
       }
+      return true;
+    }
+    // os óculos: pegar de volta do chão (boca vazia) ou largar os que estão na boca (de frente para a mesinha, ficam nela)
+    if (nearFloorGlasses(c) && !glasses.holder) { pickGlasses(c); return true; }
+    if (glasses.holder === c.name) {
+      if (facesTable(c)) S.dropDeliver = 'glasses';
+      else dropGlasses(c);
       return true;
     }
     if (S.cat === 'asleep' && inOffice(c) && reach(c, WARDROBE.x, WARDROBE.z + WARDROBE.hz) < 0.9) {
@@ -850,6 +899,7 @@ export function createPuzzle(ctx) {
     lookTarget: (c) => {
       if (S.glasses === 'shelf' && Math.hypot(c.x - ladder.x, c.z - ladder.z) < 1.4 && ladderAtGlasses()) return at(GLASSES.x, GLASSES.z, GLASSES.y);
       if (S.book === 'floor' && reach(c, S.bookX, S.bookZ) < 1.0) return at(S.bookX, S.bookZ, 0.05);
+      if (nearFloorGlasses(c)) return at(glasses.floor.x, glasses.floor.z, 0.03);
       if (S.cat === 'asleep' && inOffice(c) && reach(c, WARDROBE.x, WARDROBE.z) < 1.8) return at(CAT.top.x, CAT.top.z, CAT.top.y + 0.1);
       return null;
     },
@@ -873,8 +923,8 @@ export function createPuzzle(ctx) {
         ladder: ladder.info(), globe: globe.info(), fan: fan.info(), door: { ...door.info(), open: doorOpen() },
         levers: { brake: brake.info(), breaker: breaker.info(), handle: handle.info(), handleIn: handleIn.info() },
       },
-      glasses: { holder: glasses.holder },
-      book: { holder: book.holder },
+      glasses: { holder: glasses.holder, floor: S.glasses === 'floor' ? glasses.floor : null, falling: glasses.falling },
+      book: { holder: book.holder, falling: book.falling },
       objective: objective(ctx.activeDog).text,
     }),
     get stage() { return stage(); },

@@ -268,6 +268,17 @@ Peças prontas:
 
 - `src/game/puzzleKit.js`: `createHints` (dicas sem repetição e prompts "E Pegar…"), `createCollectibles`,
   `createCarryItem` (item na boca, com `returnHome` e `drop`), `deliveredAt` e `reach`.
+- **Largar e pegar de volta** (todas as fases): com o item na boca, E larga quando não há outra ação ali (então,
+  carregando, o E não late mais; no controle, o □/X continua latindo) e E perto pega de volta. `createCarryItem({ …, emit, world })` ganha `dropBy(ctrl, { avoid })`
+  (ponto de `dropSpot` e a queda da boca até o chão), `putDown(x, z, opts)` (a queda até um ponto dado; `originY` para
+  um encaixe, como a bandeja da fase 6), `floor`, `nearFloor(ctrl)` (alcance `FLOOR_REACH`, 0,55 m) e `update(dt)`
+  (todo quadro: anima a queda e, no chão, tira o item de baixo de um caixote ou portão que passe por cima). O item pousa
+  deitado do jeito dele (`REST_TILT`: laço, óculos, vela, estrela e livro de costas; a meia de lado), apoiado pelo
+  ponto mais baixo da malha. `dropSpot(world, ctrl, { r, avoid })` escolhe o ponto: à frente do focinho, fora de
+  colisores e do mapa, sem nada entre a dog e ele (nunca do outro lado de uma cerca ou porta) e ao alcance dela; os
+  bichos que andam (`kind: 'npc'`) não contam. `inZones(lista, folga)` monta o `avoid` da fase (a entrega, placas,
+  pedal, o vão de uma porta). Largado de frente para a entrega (`mouthPoint` dentro de `GOAL.r`), o item é entregue.
+  Eventos: `item:drop` ao soltar e `item:land` ao pousar (o livro da fase 9 usa `book:drop`).
 - `src/game/mechanics/`: `createPressurePlate` (placa que exige peso: `requires 'large' | 'any'`), `createHingedGate`
   (portão com dobradiça que não esmaga ninguém ao fechar; ao abrir, `sweepExit(ctrl)` diz se a folha vai passar
   pela dog e para onde ela sai: a fase a afasta antes, senão a colisão a arrasta e o lugar onde ela termina depende

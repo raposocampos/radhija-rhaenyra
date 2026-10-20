@@ -2,7 +2,7 @@
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
 de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
-caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47, #49, #50 e #51 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47, #49, #50, #51 e #52 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -53,8 +53,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `39460483667` verdes no código de `3b2520b`.
 - Pedidos do mesmo retorno que ficam para depois do #48 (combinados com o usuário): animações de interação de verdade
   (a corda do portão presa na boca, fechar o registro mordendo o volante) e, parada muito tempo, coçar de olhinho
-  fechado e xixi agachada (fêmea), além de sentar e deitar; pegar e largar objetos em todas as fases está na sessão
-  própria `pegar-largar` (PR #52, branch próprio, sem mexer nos arquivos deste PR).
+  fechado e xixi agachada (fêmea), além de sentar e deitar; pegar e largar objetos em todas as fases foi feito na
+  sessão própria `pegar-largar` (PR #52, já no main).
 - 2ª prévia (`8f27f1a`), retorno do usuário: muitos objetos sem colisão (vasos, a madeira do portão da fase 2, o
   irrigador, as caminhas, a tábua de passar, sabonetes, a bandeja da fase 6) e o biscoito da caminha da fase 8
   confundido com os colecionáveis: com a sessão própria "Colisão e acabamento do cenário" (branch
@@ -79,6 +79,30 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
   cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
   animações de interação).
+
+## Entregue: largar e pegar os objetos em todas as fases (PR #52, squash `8a3c743`, deploy `39473919953`)
+
+- Pedido do usuário (2026-10-20, pela sessão dos modelos das dogs): "deveria ter a opção de largar e pegar os objetos
+  em todas as fases, não somente em algumas". Com o item na boca, E larga no chão à frente quando não há outra ação ali;
+  E perto pega de volta (só quem pode carregar: a pantufa e o livro, só a Rhaenyra).
+- Feito: `src/game/puzzleKit.js` (`dropSpot`, `inZones`, `mouthPoint`, `FLOOR_REACH`; `createCarryItem` com `dropBy`,
+  `putDown`, `floor`, `nearFloor` e `update`: o item cai da boca e pousa deitado do jeito dele, num ponto fora de
+  colisores, sem nada entre a dog e ele e ao alcance dela; se algo passar por cima, ele é empurrado para fora). As 10
+  fases: prompt "Largar…", objetivo "Pegue … de volta (E)", destaque no chão; largado de frente para a entrega, entrega;
+  fase 6: perto da bandeja a carga volta para ela; fase 7: dentro do túnel não larga; fases 9 e 10: o livro e os enfeites
+  caem num ponto seguro (antes, `world.resolve` podia jogá-los do outro lado da porta ou da cerca); fase 10: com algo na
+  boca, E na frente do quadro olha o quadro. A fase 1 passou a usar `createCarryItem` (o colisor do carrinho, do PR #48,
+  ficou intocado). Visual: o patinho largado fora da bacia não boia; a sombra da carga da fase 6 acompanha o chão.
+  Docs: ARQUITETURA §4 (peças prontas).
+- Testes: `test/pegar-largar.test.mjs` (as 10 fases, cerca, porta e cerca da horta, caixote por cima, entrega largando,
+  sorteio com semente); `test/fase6.test.mjs` e o E2E `test-expresso.mjs` ajustados (E com a carga na boca, na bandeja,
+  agora a devolve à bandeja; na borda da bandeja, fora do alcance dela, larga no chão sem a dica do trem). O 1º CI
+  (`fab6abc`) só falhou nesse teste da borda, que ainda esperava o E sem efeito com a carga na boca. Nada rodou no PC
+  além de `node --check`/`git diff --check`.
+- Coordenação: o PR #48 mexe em `game.js`, colisão e modelos; este PR (#52) não toca nesses arquivos e, no
+  `docs/CONTEXTO.md`, só nesta seção (acabou entrando antes do #48, que sincronizou com ele).
+- Integrado ao main com a aprovação do usuário (squash `8a3c743`, deploy `39473919953`): produção em v0.10.2. Não
+  repetir merge/deploy do #52.
 
 ## Entregue: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (PR #51, squash `0c22c48`, deploy `39443414245`)
 
