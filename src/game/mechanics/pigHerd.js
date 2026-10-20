@@ -643,6 +643,8 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     if (away || dDog < touchD || dDog < P.chD - 0.04) Object.assign(P, { chD: away ? Infinity : dDog, chT: 0 });
     else if ((P.chT += dt) > 1.2) Object.assign(P, { direct: 3, chT: 0, chD: dDog });
     if (away) P.direct = 0;
+    // encostado nela no modo direto, fica (para não voltar ao lugar bloqueado no arco no meio dos esbarrões)
+    else if (P.direct > 0 && dDog < touchD) P.direct = Math.max(P.direct, 1);
     if (P.direct > 0) {
       P.direct -= dt;
       // o focinho encosta nela (a mesma distância do arco)
@@ -662,10 +664,12 @@ export function createPigHerd({ id = 'porcos', cfg: userCfg, world, root = null,
     const dGoal = Math.hypot(g.x - P.x, g.z - P.z);
     const outside = offArea(c.x, c.z) > 0.25;
     P.lookAt = { x: c.x, y: 0.3, z: c.z };
-    if (dGoal > 0.14) {
+    // no modo direto chega bem perto (parar a 0,14 m do ponto podia deixar o focinho a um dedo dela, sem encostar)
+    const arrive = P.direct > 0 ? 0.04 : 0.14;
+    if (dGoal > arrive) {
       const top = target ? cfg.chaseCarrier : cfg.chaseSpeed;
       const speed = dGoal > 1 ? top : lerp(cfg.walkSpeed, top, dGoal);
-      walkTo(P, g.x, g.z, speed, dt, ctrls, { arrive: 0.1 });
+      walkTo(P, g.x, g.z, speed, dt, ctrls, { arrive: Math.min(0.1, arrive) });
       P.action = 'walk';
     } else {
       stand(P, dt);
