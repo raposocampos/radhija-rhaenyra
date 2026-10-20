@@ -163,7 +163,16 @@ export function createHeadAvoid({ skel2, retarget, design, s, hs, cfg }) {
         const L = 2 * LIM.back + 0.06 * s, step = 0.02 * s;
         ahead = L;
         for (let t = 0; t <= L; t += step) {
-          if (!bodyFree(ox + fx * t, oz + fz * t, fx, fz, world)) { ahead = Math.max(0, t - step); break; }
+          if (bodyFree(ox + fx * t, oz + fz * t, fx, fz, world)) continue;
+          // refina entre o último livre e o primeiro que encosta (degraus de 2 cm davam trancos na freada)
+          let a = Math.max(0, t - step), b = t;
+          for (let k = 0; k < 5; k++) {
+            const m = (a + b) / 2;
+            if (bodyFree(ox + fx * m, oz + fz * m, fx, fz, world)) a = m;
+            else b = m;
+          }
+          ahead = a;
+          break;
         }
         // onde ele vai parar, quanto o desenho terá de recuar; freia aos poucos nos últimos 2× isso (chega parado)
         let pred = 0;

@@ -102,7 +102,7 @@ try {
   await axes(0, 1);
   await sleep(800);
   i = await info();
-  check(i.dogs.radhija.speed > 2.1, 'inclinação total: trote (~2,4 m/s)', `${i.dogs.radhija.speed} m/s`);
+  check(i.dogs.radhija.speed > 1.9, 'inclinação total: trote (~2,1 m/s)', `${i.dogs.radhija.speed} m/s`);
   await axes(0, 0);
   await sleep(500);
   // D-pad

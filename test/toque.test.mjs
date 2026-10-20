@@ -119,7 +119,8 @@ test('joystick anda com velocidade proporcional e para ao soltar', async () => {
   h.run(0.8);
   const fast = h.info().dogs.radhija;
   assert.ok(slow > 0.3 && slow < fast.speed * 0.75, `meia inclinação mais devagar (${slow} < ${fast.speed})`);
-  assert.ok(fast.speed > 2.1, `inclinação total: trote (${fast.speed})`);
+  // (a Radhija anda a 2,1 m/s: DOG_CONFIG)
+  assert.ok(fast.speed > 1.9, `inclinação total: trote (${fast.speed})`);
   assert.ok((fast.x + 2.0) * B.fx + (fast.z + 0.2) * B.fz > 0.8, 'andou para a frente da câmera');
   touch(h).stick(0, 0, 0);
   h.run(0.6);

@@ -347,7 +347,7 @@ export function createDogAnimation(ctx) {
 
   // Empurrão em pé (shovePose.js): a pose do quadro (ângulo, quadril, alvo das patas da frente) e o ciclo suavizado.
   // walk/stroke/lift: empurrando caixote ou carrinho de pé, as traseiras andam (quanto, passada e altura do passo)
-  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, cock: 0, press: 0, walk: 0, stroke: 0, lift: 0 };
+  const shoveCtx = { sk: 0, theta: 0, hy: 0, hz: 0, wy: 0, wz: 0, top: false, round: false, cock: 0, press: 0, walk: 0, stroke: 0, lift: 0, vts: 0 };
   /** De pé empurrando: o passo da traseira li agora (z para a frente, y para cima; m) e se ela está no ar. */
   const PUSH_BETA = 0.6;
   /** Altura das patas da frente na face da coisa empurrada (m, na escala da dog). */
@@ -357,7 +357,10 @@ export function createDogAnimation(ctx) {
     const p = fract(st.pushPh + (li === 2 ? 0 : 0.5));
     if (p < PUSH_BETA) return { dz: C.walk * C.stroke * (0.5 - p / PUSH_BETA), dy: 0, air: false };
     const u = (p - PUSH_BETA) / (1 - PUSH_BETA);
-    return { dz: C.walk * C.stroke * (-0.5 + sstep(0, 1, u)), dy: C.walk * C.lift * Math.sin(Math.PI * u), air: true };
+    // no ar a pata sai e chega parada no chão (no mundo): com o corpo andando, ela ainda vai um tiquinho para trás no
+    // começo e chega na velocidade dele (vts = quanto o corpo anda durante o balanço)
+    const e = sstep(0, 1, u);
+    return { dz: C.walk * (C.stroke * (-0.5 + e) + C.vts * (e - u)), dy: C.walk * C.lift * Math.sin(Math.PI * u), air: true };
   }
   /** Altura de um ponto do referencial da dog (inner) no referencial do objeto. */
   function objY(T) {
@@ -527,6 +530,7 @@ export function createDogAnimation(ctx) {
       Object.assign(shoveCtx, P, {
         round: false, cock: 0, press: 0, walk: pk,
         stroke: Math.max(strokeP, 0.03 * s * scrab), lift: (v > 0.05 ? 0.022 : 0.015 * scrab) * s,
+        vts: (strokeP * (1 - PUSH_BETA)) / PUSH_BETA,
       });
       // pisadas das traseiras (som e pegada), no pouso de cada uma
       for (const li of [2, 3]) {

@@ -157,7 +157,8 @@ test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tem
       const tag = `${kind} (semente ${seed})`;
       if (start.drags > 0) bad.push(`${tag}: na arrancada a pata de trás foi arrastada ${start.drags} quadro(s)`);
       if (start.straight > 2) bad.push(`${tag}: na arrancada a perna de trás ficou reta ${start.straight} quadro(s) (até ${start.ext.toFixed(3)})`);
-      if (start.back > steady.back + 0.02 * (kind === 'rhaenyra' ? 1.133 : 1)) {
+      // a perna de trás fica reta com a pata uns 11 cm atrás do lugar dela (na escala): a pata sai do chão antes
+      if (start.back > 0.115 * (kind === 'rhaenyra' ? 1.133 : 1)) {
         bad.push(`${tag}: na arrancada a pata de trás foi ${(start.back * 100).toFixed(1)} cm para trás (andando, ${(steady.back * 100).toFixed(1)} cm)`);
       }
       if (first.some((x) => x < 0 || x > 0.45)) bad.push(`${tag}: demorou para cada pata dar o primeiro passo (${first.map((x) => x.toFixed(2)).join(', ')} s)`);

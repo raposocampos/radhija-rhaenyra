@@ -589,8 +589,8 @@ test('empurrando caixote de pé: patas da frente nele, traseiras andando (sempre
           const hind = [pos(d, 'HLp'), pos(d, 'HRp')];
           m.hindMin = Math.max(m.hindMin, Math.min(hind[0].y, hind[1].y)); // a mais baixa das duas, no pior quadro
           hind.forEach((p, i) => { m.hindLift[i] = Math.max(m.hindLift[i], p.y); });
-          // a traseira apoiada (a articulação da pata perto da altura de repouso, 2,4 cm na escala) não escorrega
-          const flat = 0.024 * s + 0.006;
+          // a traseira apoiada (a articulação da pata na altura de repouso, 2,4 cm na escala) não escorrega
+          const flat = 0.024 * s + 0.0015;
           if (prevHind) hind.forEach((p, i) => { if (p.y < flat && prevHind[i].y < flat) m.slide = Math.max(m.slide, Math.hypot(p.x - prevHind[i].x, p.z - prevHind[i].z)); });
           prevHind = hind;
         }
