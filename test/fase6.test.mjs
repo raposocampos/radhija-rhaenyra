@@ -493,7 +493,7 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
   assert.equal(info(h).moon.holder, null, 'a mesma boca não leva duas cargas');
   assert.equal(info(h).place.moon, 'tray');
   assert.equal(info(h).place.planet, 'tray', 'o planeta voltou para a bandeja');
-  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija', 'diante do lugar dele, pegou o planeta de volta');
   place(h, 'radhija', { x: L.TRAY.x - 0.6, z: L.TRAY.z + 0.9 });
