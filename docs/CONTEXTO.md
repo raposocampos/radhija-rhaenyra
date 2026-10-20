@@ -20,10 +20,21 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   `bucketMouth`; zona de câmera `balde-no-chao` (olhar 0,5 m acima, em vez de 1,2 m, só na volta do balde). A exceção
   `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`): agora ela confere o balde deitado e também o balde da
   fase 8, que tinha o mesmo nome e passava sem conferência.
+- Retorno na 2ª prévia (`36177f7`): "as colisões funcionaram", mas (1) a alça ficava para fora da boca, com a corda
+  presa na ponta, e a Radhija atravessava a corda ao entrar; (2) com o balde deitado, o topo da cabeça dela vazava;
+  (3) lá em cima, o pulo para o deque atravessava o balde ("talvez ela se apoia primeiro e pula"). Feito: a alça fica
+  presa em orelhas um pouco abaixo da borda e aponta para a roldana (deitado, por cima do balde; puxando, ela gira
+  com o balde), e a corda desce por cima dele; o colisor virou caixa (deitado e levantando; quase em pé, o círculo).
+  Achado: a pose do balde (`rideSeq`) nunca chegava à animação, então ela ficava sentada no balde deitado (a cabeça
+  passava do teto); agora fica deitada de barriga (`slide`), `RIDE_IN` mais perto da boca. Os pulos do deque usam o
+  `hopStep` (agacha, salta com a pose de pulo, pousa): a saída, sentada, sobe por cima da borda; a volta salta até em
+  cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque. Ela fica virada como entrou.
 - Testes em `test/fase10.test.mjs`: o desenho real (`buildLevelWorld`) contra o colisor do jogo, com o
   `findLooseObstacles` do #53, para as duas, em 9 pontos da corda (deitado, levantando, em pé, subindo e acima delas);
-  deitadas, ficam livres a 3 cm do desenho (sem parede invisível); a Radhija esbarra de lado, por trás e na boca, só
-  entra pela boca, fica quieta lá dentro (sem tranco), sai sem tranco, e a câmera deixa a dog e o balde acima do botão.
+  deitadas, ficam livres a 3 cm do desenho (sem parede invisível); deitado, nada do balde nem da corda na frente da
+  boca; a Radhija esbarra de lado, por trás e na boca, só entra pela boca, fica quieta lá dentro (sem tranco), sai sem
+  tranco, e a câmera deixa a dog e o balde acima do botão; e os modelos de verdade (atual e novo), com a pose do jogo
+  quadro a quadro: deitada, a pele cabe no balde; nos pulos do deque, não cruza a parede abaixo da borda.
 - Validação: CI, prévia e E2E `quintal` do head final registrados no PR #54. No PC, só `node --check` e
   `git diff --check`.
 - Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;

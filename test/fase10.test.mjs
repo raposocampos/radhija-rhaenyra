@@ -601,9 +601,26 @@ seededTest('fase 10: o balde segura as duas na borda (deitado com a alça, levan
       assert.equal(found.length, 0, `balde (inclinação ${b.tilt}, altura ${b.y}): ${what}`);
     }
     assert.deepEqual(seen, { lying: true, tilting: true, upright: true, clear: true }, 'passou por todos os pontos do balde');
-    // e encosta: deitado, de frente para a alça e dos lados cada uma para a 3 cm do desenho (sem parede invisível)
     at(0.4);
+    root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(pail);
+    // deitado, a alça fica por cima do balde e a corda desce por cima dele: na frente da boca, até a altura da cabeça
+    // da Radhija, não há alça nem corda (antes, a alça ficava para fora da boca, com a corda presa na ponta)
+    const B = L.BUCKET, mouthZ = B.z + B.h / 2;
+    assert.ok(box.max.z < mouthZ + 0.02, `nada do balde na frente da boca (vai até z ${box.max.z.toFixed(3)})`);
+    const entry = new THREE.Box3(new THREE.Vector3(B.x - B.r, 0, mouthZ + 0.02), new THREE.Vector3(B.x + B.r, L.DOGS.radhija.visual.headTop + 0.05, mouthZ + 0.8));
+    /** @type {THREE.Mesh[]} */
+    const ropes = [];
+    root.traverse((o) => { if (o.name === 'corda-da-roldana') ropes.push(/** @type {THREE.Mesh} */ (o)); });
+    assert.equal(ropes.length, 3, 'as três cordas da roldana');
+    const p = new THREE.Vector3();
+    for (const m of ropes) {
+      for (let k = 0; k <= 40; k++) {
+        m.localToWorld(p.set(0, k / 40 - 0.5, 0));
+        assert.ok(!entry.containsPoint(p), `corda na frente da boca, onde ela entra (${p.toArray().map((x) => x.toFixed(2)).join(', ')})`);
+      }
+    }
+    // e encosta: deitado, de frente para a boca e dos lados cada uma para a 3 cm do desenho (sem parede invisível)
     for (const d of dogs) {
       const near = [[(box.min.x + box.max.x) / 2, box.max.z + d.r + 0.03], [box.min.x - d.r - 0.03, L.BUCKET.z], [box.max.x + d.r + 0.03, L.BUCKET.z]];
       for (const [x, z] of near) assert.ok(!h.world.overlaps(x, z, d.r, d.size), `${d.name} livre em (${x.toFixed(2)}, ${z.toFixed(2)}), encostada no balde`);
@@ -624,13 +641,14 @@ seededTest('fase 10: a Radhija esbarra no balde, entra só pela boca (E), fica q
   as(h, 'radhija');
   h.teleport('rhaenyra', L.NAV_NODES.Y_mid.x, L.NAV_NODES.Y_mid.z);
   h.game.setStay('rhaenyra', true);
-  /** Distância do centro da Radhija até o meio do balde deitado (do centro dele até o meio da boca). */
-  const fromAxis = () => Math.hypot(rad.x - B.x, rad.z - Math.min(B.z + B.h / 2, Math.max(B.z, rad.z)));
-  const edge = B.r + rad.r - 0.01;
+  /** Folga do círculo da Radhija até o balde deitado visto de cima (do fundo até a boca, da largura dela). */
+  const gap = () => Math.hypot(Math.max(Math.abs(rad.x - B.x) - B.r, 0), Math.max(Math.abs(rad.z - B.z) - B.h / 2, 0)) - rad.r;
+  /** Parou encostada no balde: nem entrou nele, nem ficou longe. */
+  const touching = () => gap() > -0.01 && gap() < 0.05;
   // de lado: ela para na lateral; ali não há "Entrar no balde", e o E manda ir até a boca
   put(h, 'radhija', B.x + 0.7, B.z, -Math.PI / 2);
   h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
-  assert.ok(rad.x > B.x && fromAxis() > edge, `para na lateral do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  assert.ok(rad.x > B.x + B.r && touching(), `para na lateral do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)}; folga ${gap().toFixed(3)})`);
   assert.notEqual(h.info().prompt, TEXT.prompt.bucket, 'de lado não aparece "Entrar no balde"');
   h.clearLog();
   h.tap('KeyE');
@@ -640,11 +658,11 @@ seededTest('fase 10: a Radhija esbarra no balde, entra só pela boca (E), fica q
   // por trás (do lado do deque): para no fundo do balde
   put(h, 'radhija', B.x, B.z - 0.75, 0);
   h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
-  assert.ok(rad.z < B.z && fromAxis() > edge, `para no fundo do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  assert.ok(rad.z < B.z - B.h / 2 && touching(), `para no fundo do balde (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)}; folga ${gap().toFixed(3)})`);
   // pela frente: para na boca, sem entrar andando; ali o E vale
   put(h, 'radhija', B.x, B.z + 1.3, Math.PI);
   h.walkTo(B.x, B.z, { tol: 0.05, timeout: 1.5 });
-  assert.ok(rad.z > B.z + B.h / 2 && fromAxis() > edge, `para na boca, sem entrar andando (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)})`);
+  assert.ok(rad.z > B.z + B.h / 2 && touching(), `para na boca, sem entrar andando (${rad.x.toFixed(3)}, ${rad.z.toFixed(3)}; folga ${gap().toFixed(3)})`);
   assert.equal(h.info().prompt, TEXT.prompt.bucket, 'na frente da boca: "Entrar no balde"');
   // na tela, a dog e o balde ficam acima do rodapé (onde fica o botão de agir)
   h.run(2.5);
@@ -660,13 +678,102 @@ seededTest('fase 10: a Radhija esbarra no balde, entra só pela boca (E), fica q
   const inside = { x: rad.x, z: rad.z };
   h.run(0.5);
   assert.ok(Math.hypot(rad.x - inside.x, rad.z - inside.z) < 1e-3 && Math.hypot(rad.vx, rad.vz) < 0.05, `quieta lá dentro (v = ${Math.hypot(rad.vx, rad.vz).toFixed(3)})`);
-  // sai de ré pela boca e fica do lado de fora, sem tranco
+  // entrou de cabeça: sai de ré pela boca e fica do lado de fora, sem tranco
   h.tap('KeyE');
   assert.ok(h.run(1.5, { until: (i) => !i.quintal.bucket.riding && i.dogs.radhija.y === 0 }), 'saiu do balde');
   const out = { x: rad.x, z: rad.z };
   assert.ok(out.z > B.z + B.h / 2 && !h.world.overlaps(out.x, out.z, rad.r, rad.size), `fora do balde, na frente da boca (${out.x.toFixed(2)}, ${out.z.toFixed(2)})`);
   h.run(0.5);
   assert.ok(Math.hypot(rad.x - out.x, rad.z - out.z) < 1e-3, 'sem tranco depois de sair');
+});
+
+seededTest('fase 10: a Radhija de verdade não vaza do balde: deitada nele, cabe; lá em cima, os pulos passam por cima da borda', 1, async () => {
+  // Retorno do usuário na prévia do PR #54: com o balde deitado, o topo da cabeça dela vazava (ela ficava sentada lá
+  // dentro); lá em cima, o pulo para o deque atravessava o balde. O jogo headless dá, a cada quadro, a posição, o rumo e
+  // o que a animação recebe (o dublê guarda tudo); isso vai para os modelos de verdade (o atual e o novo), e a pele deles
+  // é conferida contra o desenho do balde (treehouse.js: raio r na boca, r·taper no fundo, altura h).
+  const h = await game(); // (instala os dublês do navegador antes dos modelos)
+  const { createDog } = await import('../src/dogs/dog.js');
+  const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+  const models = [['atual', createDog('radhija')], ['novo', createDogV2('radhija')]].map(([name, d]) => ({ name, d }));
+  const B = L.BUCKET;
+  /** Raio do balde a `y` do fundo (0..h). */
+  const pailR = (y) => B.r * (B.taper + (1 - B.taper) * Math.min(B.h, Math.max(0, y)) / B.h);
+  h.run(0.3);
+  puz(h).debugSet('gate');
+  puz(h).debugSet('pigeon');
+  const stub = h.dogs.radhija;
+  const v = new THREE.Vector3();
+  /** Um quadro do jogo, espelhado nos modelos de verdade. */
+  const frame = () => {
+    h.step();
+    for (const { d } of models) {
+      d.object.position.copy(stub.object.position);
+      d.object.rotation.y = stub.object.rotation.y;
+      d.update(1 / 60, stub.anim);
+    }
+  };
+  /** Quadros até `until` (ou `sec` s); `each` mede o quadro. */
+  const play = (sec, { until = null, each = null } = {}) => {
+    for (let i = 0; i < Math.round(sec * 60); i++) {
+      frame();
+      each?.();
+      if (until?.(h.info())) return true;
+    }
+    return false;
+  };
+  /** O pior valor de `f(vértice)` na pele de cada modelo (de 3 em 3 vértices), com onde foi. */
+  const worst = (f) => models.map(({ name, d }) => {
+    d.object.updateMatrixWorld(true);
+    let w = -Infinity, at = '';
+    for (const m of [d.meshes.body, d.meshes.ears]) {
+      const n = m.geometry.attributes.position.count;
+      for (let i = 0; i < n; i += 3) {
+        m.getVertexPosition(i, v).applyMatrix4(m.matrixWorld);
+        const k = f(v);
+        if (k > w) { w = k; at = v.toArray().map((x) => x.toFixed(3)).join(', '); }
+      }
+    }
+    return { name, w, at };
+  });
+  // 1. entra pela boca e fica deitada no balde deitado: atrás da boca, a pele não passa do fundo nem das paredes
+  as(h, 'radhija');
+  put(h, 'radhija', B.x, B.z + 0.7, Math.PI);
+  h.tap('KeyE');
+  assert.ok(play(1.6, { until: (i) => i.quintal.bucket.riding }), 'entrou no balde');
+  play(1.0);
+  assert.equal(stub.anim.action, 'slide', 'deitada de barriga lá dentro');
+  const bottomZ = B.z - B.h / 2, mouthZ = B.z + B.h / 2;
+  for (const { name, w, at } of worst((p) => (p.z >= mouthZ ? -1 : Math.max(bottomZ + 0.01 - p.z, Math.hypot(p.x - B.x, p.y - B.r) - pailR(p.z - bottomZ))))) {
+    assert.ok(w < 0.01, `${name}: deitada, a pele passa ${(w * 100).toFixed(1)} cm do balde em (${at})`);
+  }
+  // 2. a Rhaenyra puxa a corda: o balde sobe e ela pula para o deque, sem a pele cruzar a parede abaixo da borda
+  /** O quanto a pele chega perto da parede do balde lá em cima, abaixo da borda (positivo: está nela). */
+  const wall = () => {
+    const y0 = q(h).bucket.y;
+    return worst((p) => (p.y < y0 + 0.01 || p.y > y0 + B.h - 0.005 ? -1 : 0.012 - Math.abs(Math.hypot(p.x - B.x, p.z - B.z) - pailR(p.y - y0))));
+  };
+  const hits = [];
+  const check = (phase) => () => {
+    if (q(h).deck !== phase) return;
+    for (const r of wall()) if (r.w > 0) hits.push(`${phase} ${r.name} em (${r.at})`);
+  };
+  as(h, 'rhaenyra');
+  put(h, 'rhaenyra', L.ROPE.rest.x, L.ROPE.rest.z + 0.5, Math.PI);
+  h.tap('KeyE');
+  assert.equal(q(h).rope.holder, 'rhaenyra');
+  h.hold([0, 1]);
+  assert.ok(play(10, { until: (i) => i.quintal.deck === 'hop' }), `o balde chegou lá em cima ${JSON.stringify(q(h).bucket)}`);
+  assert.ok(play(2, { until: (i) => i.quintal.onDeck, each: check('hop') }), 'pulou para o deque');
+  h.hold(null);
+  assert.deepEqual(hits.slice(0, 4), [], 'saindo do balde, a pele passou pela parede');
+  // 3. e volta: da beira do deque, salta até em cima do balde e se acomoda lá dentro, sentada
+  as(h, 'radhija');
+  h.walkTo(L.DECK_PATH.arrive.x, L.DECK_PATH.arrive.z, { tol: 0.08 });
+  assert.equal(h.info().prompt, TEXT.prompt.bucketBack);
+  h.tap('KeyE');
+  assert.ok(play(2.5, { until: (i) => i.quintal.bucket.riding && !i.quintal.onDeck, each: check('rehop') }), 'voltou para o balde');
+  assert.deepEqual(hits.slice(0, 4), [], 'voltando para o balde, a pele passou pela parede');
 });
 
 seededTest('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolhe voltar para o balde ou escorregar', 1, async () => {
@@ -709,7 +816,7 @@ seededTest('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e 
   h.walkTo(L.DECK_PATH.arrive.x, L.DECK_PATH.arrive.z, { tol: 0.08 });
   assert.equal(h.info().prompt, TEXT.prompt.bucketBack);
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => i.quintal.bucket.riding && !i.quintal.onDeck }), 'voltou para o balde');
+  assert.ok(h.run(2, { until: (i) => i.quintal.bucket.riding && !i.quintal.onDeck }), 'voltou para o balde');
   h.run(1);
   assert.equal(q(h).onDeck, false, 'não pula de novo para o deque sozinha');
   // a Rhaenyra solta: o balde desce com ela; E e ela sai
