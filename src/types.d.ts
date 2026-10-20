@@ -17,7 +17,7 @@ export interface XZ { x: number; z: number }
 export interface XYZ { x: number; y: number; z: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
-export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book';
+export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle' | 'rope';
 
 // =====================================================================================================
 // Colisão (src/game/collision.js) — círculos das dogs contra o mundo, no plano XZ
@@ -121,7 +121,8 @@ export interface DogStats {
  */
 export type NavEdge = [string, string] | [string, string, { requires?: string | string[] }];
 
-export interface Collectible { id: string; x: number; z: number; hint?: string }
+/** Ossinho escondido: y = altura do chão onde ele fica (deque, prateleira), 0 se omitido. */
+export interface Collectible { id: string; x: number; z: number; y?: number; hint?: string }
 
 export interface Goal {
   x: number;
@@ -496,7 +497,7 @@ export interface PuzzleContext<P extends LevelProps = LevelProps> {
   ctrls: Record<DogName, DogController>;
   emit: GameEmit;
   /** Planos de foco curtos (focusShot). */
-  cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number; y?: number; target?: { x: number; y: number; z: number } }): void; [k: string]: any };
+  cam: { focusShot(x: number, z: number, opts?: { hold?: number; inT?: number; outT?: number; scale?: number; y?: number; target?: { x: number; y: number; z: number }; from?: { x: number; y: number; z: number } }): void; [k: string]: any };
   root: THREE.Group;
   /** Teletransporta uma dog (e reinicia a IA dela). */
   place(name: DogName, x: number, z: number, yaw?: number): void;
@@ -506,6 +507,8 @@ export interface PuzzleContext<P extends LevelProps = LevelProps> {
   isStaying(name: DogName): boolean;
   setStay(name: DogName, on: boolean): void;
   brains: Record<DogName, any>;
+  /** A animação escondida (extras) desta fase já aconteceu? */
+  extrasUsed?(): boolean;
 }
 
 export interface Objective {
@@ -524,6 +527,10 @@ export interface InputLock {
   drive?: boolean;
   /** Inclinação do corpo inteiro (rad, + = focinho para cima), por exemplo numa rampa. */
   slope?: number;
+  /** Pulinho roteirizado: fase no ar (0..1; −1 no chão), para a pose de pulo e o agachadinho do pouso. */
+  airK?: number;
+  /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
+  crouch?: number;
   /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
   move?: { dx: number; dz: number; speed: number };
 }
@@ -584,6 +591,9 @@ export interface Puzzle {
   /** false impede a arrancada (Shift) desta dog; o núcleo emite dog:dashBlocked e chama onDashBlocked. */
   canDash?(ctrl: DogController): boolean;
   onDashBlocked?(ctrl: DogController): void;
+  /** false impede o pulo (e o impulso na parede) desta dog; o núcleo emite dog:jumpBlocked e chama onJumpBlocked. */
+  canJump?(ctrl: DogController): boolean;
+  onJumpBlocked?(ctrl: DogController): void;
   /**
    * Lambe-Lambe: cada lambida que chega à irmã. As duas dogs lambem: ctrl é quem lambeu e lick.target quem foi
    * lambida. Declarar este método diz ao núcleo que a fase dá um efeito às lambidas (e cuida das dicas). Devolva
@@ -880,6 +890,73 @@ export interface Fase9Props extends LevelProps {
   collectibles: CollectibleProp[];
   reset(): void;
 }
+export type Fase10Thing = 'hat' | 'ribbon' | 'candle' | 'cookie' | 'star';
+export interface Fase10Props extends LevelProps {
+  /** Chapeuzinho de festa: no barquinho (setOnBoat: acompanha o barco) até alguém pegar. */
+  hat: ItemProp & { setOnBoat(on: boolean): void };
+  /** Laço de cetim amarrado no corrimão da casa na árvore. */
+  ribbon: ItemProp;
+  /** Vela do número 3 (com estrelinhas) na prateleira alta do galpão. */
+  candle: ItemProp;
+  /** Biscoito de osso de glacê, em cima do armário alto da despensa. */
+  cookie: ItemProp;
+  /** Estrela de topo de bolo, escondida na piñata (setShown: aparece quando ela abre). */
+  star: ItemProp & { setShown?(on: boolean): void };
+  /** Bolo de cinco enfeites: place(enfeite, andar) prende no lugar; reject(…, k 0..1, x, z) balança e cai; light() acende a vela. */
+  cake: PropBase & HighlightProp & {
+    place(thing: Fase10Thing, tier: number): void;
+    reject(thing: Fase10Thing, tier: number, k: number, x: number, z: number): void;
+    light(): void;
+  };
+  /** Piscininha: setLevel(k 0..1, altura da água), setFlow(água correndo, mangueira esmagada com a torneira aberta). */
+  pool: { setLevel(k: number, y: number): void; setFlow(on: boolean, blocked: boolean): void };
+  /** Barquinho: posição, altura (na água) e se o vento o está levando. */
+  boat: PropBase & { setPos(x: number, z: number, y: number, drifting: boolean): void };
+  /** Caixote de brinquedos (empurrável) em cima da mangueira. */
+  crate: PropBase & HighlightProp & { setPos(x: number, z: number): void };
+  /** Ventilador do quintal: setPower(on) gira a hélice e as fitinhas voam. */
+  fan: PropBase & { setPower(on: boolean): void };
+  /**
+   * Energia da festa: o pulso sobe do disjuntor ('house'), acende as luzinhas do quadro ('painting'), segue para a
+   * varanda ('porch') e acende as luzinhas da festa e a tomada do ventilador ('on').
+   */
+  power: { setOn(on: boolean): void; readonly stage: 'off' | 'house' | 'painting' | 'porch' | 'on' };
+  /** Portãozinho do fundo (dobradiça) e a cordinha da trava (setTug 0..1). */
+  gate: GateProp;
+  cord: { setTug(k: number): void };
+  /** Pombo cochilando no corrimão da casa na árvore. peck() = bica e bate as asas em quem chega perto do laço. */
+  pigeon: PropBase & { setPose(p: PigeonPose): void; peck?(): void };
+  /** Cano de brinquedo do funil até o pombo: progresso (0..1) de cada baforada de cheiro lá dentro. */
+  tube: PropBase & { setPuffs(list: number[]): void; outletPuff?(): void };
+  /** Elevador de balde: altura do balde (0 no chão) e setTilt (1 = deitado no chão, boca para o sul; 0 = em pé). */
+  bucket: PropBase & { setY(y: number): void; setTilt?(k: number): void };
+  /** Corda da roldana: handle = a ponta (vai na boca da Rhaenyra); setPull(metros puxados, quem segura). */
+  rope: { handle: THREE.Object3D; setPull(pulled: number, holder: DogModel | null): void };
+  /** A porta basculante do galpão (0 fechada … 1 aberta). */
+  shedDoor: GateProp;
+  /** Os dois botões altos do painel ao lado da cerca branca (um abre a porta do galpão, o outro o chiqueiro: sorteado). */
+  shedButtons: WallButtonProp[];
+  /** O gerador do painel: setPull(k) tira a alça da partida (0..1); setState: 'off', 'crank' (engasgando) ou 'on'. */
+  generator: { object: THREE.Object3D; setPull(k: number): void; setState(state: 'off' | 'crank' | 'on'): void };
+  /** Os fios da caixinha de força: pulse() corre a luz pelo fio; setOn deixa aceso. */
+  shedLinks: { door: { pulse(): void; setOn(on: boolean): void }; gate: { pulse(): void; setOn(on: boolean): void } };
+  /** A porteira do chiqueiro (0 fechada … 1 aberta). */
+  styGate: GateProp;
+  /** Os caixotes da despensa: setCrate(i, x ao longo do trilho, travado na marca do chão). */
+  crates: { setCrate(i: number, x: number, locked: boolean): void };
+  /** A piñata em cima da roseira: setPos(gancho e inclinações), setCracks(batidas), burst() abre, reset(). */
+  pinata: { setPos(x: number, y: number, z: number, tiltX: number, tiltZ: number): void; setCracks(n: number): void; burst(): void; reset(): void };
+  /** A mangueira da piñata (empurrão em pé): setSway(a, va) inclina a copa. */
+  mango: { object: THREE.Object3D; setSway(a: number, va: number): void };
+  /** O campinho: os pés de legume (setReady: com ou sem legume) e makeVeg(tipo) cria o legume para carregar. */
+  farm: { spots: { id: string; kind: string; x: number; z: number; setReady(on: boolean): void }[]; makeVeg(kind: string): THREE.Object3D };
+  /** A tábua solta do muro leste (0 fechada … 1 aberta); setLoose: frouxa, balançando de leve. */
+  secretBoard: { object: THREE.Object3D; setOpen(t: number): void; setLoose(on: boolean): void };
+  breaker: WallButtonProp;
+  tap: WallButtonProp;
+  collectibles: CollectibleProp[];
+  reset(): void;
+}
 export interface PigeonPose {
   x?: number; y?: number; z?: number; yaw?: number; flying?: boolean; asleep?: boolean;
   /** Progresso 0..1 para desacelerar o pouso; null volta à animação livre. */
@@ -908,6 +985,8 @@ export interface DogAnim {
   jump?: number;
   /** Progresso do pulo 0..1 (decolagem → pouso); −1 = no chão. */
   airK?: number;
+  /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
+  crouch?: number;
   /** Lambe-Lambe: fase da lambida atual 0..1 (contato em 0,5) para quem lambe e para quem é lambida; −1 = sem. */
   lickPhase?: number;
   /** Lado da lambida (±1, alterna a cada uma: a cabeça balança). */
@@ -1100,6 +1179,7 @@ declare global {
     __f5Timings?: any;
     __f6Timings?: any;
     __f7Timings?: any;
+    __f10Timings?: any;
     __envTimings?: any;
     webkitAudioContext?: typeof AudioContext;
   }

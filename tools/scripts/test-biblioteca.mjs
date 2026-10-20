@@ -39,7 +39,7 @@ try {
   });
   check(state.levelId === 'fase9' && state.state === 'playing', 'link por id (?level=fase9) abre a fase 9');
   const catalog = await ev(() => ({ ids: window.__game.levels.map((level) => level.id).join(), level: window.__game.game.debug.info().level }));
-  check(catalog.ids.endsWith('fase8,fase9') && catalog.level === 8, 'na campanha, depois da fase 8', JSON.stringify(catalog));
+  check(catalog.ids.includes('fase8,fase9,fase10') && catalog.level === 8, 'na campanha, depois da fase 8 (e antes da 10)', JSON.stringify(catalog));
   check(lib(state).glasses === 'shelf' && lib(state).book === 'wardrobe' && lib(state).cat === 'asleep', 'óculos na estante, livro no armário com o gato dormindo');
   await shot('01-biblioteca.png');
 

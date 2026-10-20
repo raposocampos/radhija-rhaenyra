@@ -552,8 +552,12 @@ export function createGame({ engine, dogs, levels, params }) {
       });
       // Pulo (Espaço / ✕): só quem tem pulo, fora da postura de empurrar. Quem não pula ganha a dica.
       // De frente para uma parede marcada que a fase oferece (puzzle.wallSpots), vira impulso na parede.
+      // Uma fase pode tirar o pulo de uma dog por um tempo (lama: puzzle.canJump); quem tenta ganha a dica da fase.
       const jumpPressed = input.consume('Space', 'Jump');
-      if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
+      if (jumpPressed && A.cfg.jumpHeight && action !== 'push' && !lick.on && puzzle.canJump?.(A) === false) {
+        emit('dog:jumpBlocked', { name: A.name, x: A.x, z: A.z });
+        puzzle.onJumpBlocked?.(A);
+      } else if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
         const spot = pickWallSpot(A, puzzle.wallSpots?.(), Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0, world);
         if (spot) {
           startWallJump(A, spot);
@@ -837,7 +841,8 @@ export function createGame({ engine, dogs, levels, params }) {
       an.extra = extras ? extras.extraAnim(n) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       an.jump = W ? 0 : c.y;
-      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1;
+      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : locks[n]?.airK ?? -1;
+      an.crouch = locks[n]?.crouch ?? 0;
       an.wallK = W ? Math.min(1, c.wallT / c.wallDur) : -1;
       an.wallGap = W ? (c.x - W.x) * W.nx + (c.z - W.z) * W.nz : 0;
       an.wallTop = W ? W.top : 0;
@@ -1049,6 +1054,8 @@ export function createGame({ engine, dogs, levels, params }) {
           isStaying: (n) => stay[n],
           setStay: (n, on) => setStay(n, on),
           brains,
+          // a animação escondida desta fase já aconteceu? (as fases podem guardar algo para depois dela)
+          extrasUsed: () => !!extras?.info().used,
         });
         puzzle.onStageChange = () => {
           if (state === 'playing') emitObjective();

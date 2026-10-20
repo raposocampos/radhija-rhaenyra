@@ -10,14 +10,15 @@ import { createHeadlessGame } from './helpers/headless.mjs';
 
 const ids = (levels) => levels.map((def) => def.id);
 
-test('campanha: as nove fases em ordem, numeradas 1…9, com cenário sob demanda', () => {
-  assert.deepEqual(ids(LEVELS), ['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7', 'fase8', 'fase9']);
+test('campanha: as dez fases em ordem, numeradas 1…10, com cenário sob demanda', () => {
+  assert.deepEqual(ids(LEVELS), ['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6', 'fase7', 'fase8', 'fase9', 'fase10']);
   LEVELS.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: número do cartão = posição no menu`));
   for (const def of LEVELS.slice(5)) assert.equal(typeof def.load, 'function', `${def.id}: world/ continua num chunk à parte`);
   assert.equal(LEVELS.find((def) => def.id === 'fase6').name, 'Expresso do Superbafo');
   assert.equal(LEVELS.find((def) => def.id === 'fase7').name, 'Lambe-Lambe na Pracinha');
   assert.equal(LEVELS.find((def) => def.id === 'fase8').name, 'Lavanderia de Domingo');
   assert.equal(LEVELS.find((def) => def.id === 'fase9').name, 'Biblioteca do Vovô');
+  assert.equal(LEVELS.find((def) => def.id === 'fase10').name, 'Festa no Quintal');
 });
 
 test('catálogo: nenhum id repetido entre a campanha e as fases de desenvolvimento', () => {
@@ -32,12 +33,14 @@ test('links: ?level= por posição e por id abrem a fase publicada; outro id fic
   assert.equal(publishedLevelIndex(LEVELS, 'fase7'), 6);
   assert.equal(publishedLevelIndex(LEVELS, 'fase8'), 7);
   assert.equal(publishedLevelIndex(LEVELS, 'fase9'), 8);
+  assert.equal(publishedLevelIndex(LEVELS, 'fase10'), 9);
   // posição 1-based, limitada à lista, como antes
   assert.equal(publishedLevelIndex(LEVELS, '6'), 5);
   assert.equal(publishedLevelIndex(LEVELS, '7'), 6);
   assert.equal(publishedLevelIndex(LEVELS, '8'), 7);
   assert.equal(publishedLevelIndex(LEVELS, '9'), 8);
-  assert.equal(publishedLevelIndex(LEVELS, '99'), 8);
+  assert.equal(publishedLevelIndex(LEVELS, '10'), 9);
+  assert.equal(publishedLevelIndex(LEVELS, '99'), 9);
   assert.equal(publishedLevelIndex(LEVELS, '0'), 0);
   assert.equal(publishedLevelIndex(LEVELS, ''), 0);
   assert.equal(publishedLevelIndex(LEVELS, null), 0);
@@ -68,10 +71,10 @@ test('arenas: entram sozinhas no fim da campanha; protótipos futuros entram jun
   assert.equal(devCatalog(LEVELS, 'nada'), null);
   // protótipos de exemplo com número depois da última publicada (a próxima fase nova seguirá este caminho)
   const proto = (id, number) => ({ ...DEV_LEVELS[2], id, number });
-  const dev = [...DEV_LEVELS, proto('fase11', 11), proto('fase10', 10)];
-  for (const [id, index] of [['fase10', 9], ['fase11', 10]]) {
+  const dev = [...DEV_LEVELS, proto('fase12', 12), proto('fase11', 11)];
+  for (const [id, index] of [['fase11', 10], ['fase12', 11]]) {
     const catalog = devCatalog(LEVELS, id, dev);
-    assert.deepEqual(ids(catalog.levels), [...published, 'fase10', 'fase11'], `${id}: o menu da prévia mostra as fases 10 e 11`);
+    assert.deepEqual(ids(catalog.levels), [...published, 'fase11', 'fase12'], `${id}: o menu da prévia mostra as fases 11 e 12`);
     assert.equal(catalog.index, index, `${id}: começa na fase pedida`);
     catalog.levels.forEach((def, i) => assert.equal(def.number, i + 1, `${def.id}: numeração em sequência no menu`));
   }
@@ -79,16 +82,17 @@ test('arenas: entram sozinhas no fim da campanha; protótipos futuros entram jun
   assert.deepEqual(ids(LEVELS), published, 'a campanha publicada não muda');
 });
 
-test('campanha: fases 5 a 8 oferecem a próxima; a 9 é a última', async () => {
+test('campanha: fases 5 a 9 oferecem a próxima; a 10 é a última', async () => {
   const h = await createHeadlessGame({ level: 5, mode: 'title' });
   const loaded = [];
   const off = h.events.on('level:loaded', (info) => loaded.push(info));
   try {
-    for (const index of [4, 5, 6, 7, 8]) assert.equal(await h.game.loadLevel(index, { mode: 'title', initial: true }), true);
+    for (const index of [4, 5, 6, 7, 8, 9]) assert.equal(await h.game.loadLevel(index, { mode: 'title', initial: true }), true);
   } finally {
     off?.();
   }
   assert.deepEqual(loaded.map((info) => [info.id, info.number, info.count, info.hasNext]), [
-    ['fase5', 5, 9, true], ['fase6', 6, 9, true], ['fase7', 7, 9, true], ['fase8', 8, 9, true], ['fase9', 9, 9, false],
+    ['fase5', 5, 10, true], ['fase6', 6, 10, true], ['fase7', 7, 10, true], ['fase8', 8, 10, true], ['fase9', 9, 10, true],
+    ['fase10', 10, 10, false],
   ]);
 });

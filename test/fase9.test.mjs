@@ -177,7 +177,7 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   const vic = h.log('victory');
   assert.equal(vic.length, 1);
   assert.equal(vic[0].levelId, 'fase9');
-  assert.equal(vic[0].hasNext, false, 'a 9 é a última por enquanto');
+  assert.equal(vic[0].hasNext, true, 'depois da 9 vem a 10');
 });
 
 test('fase 9: E no pé da escada segura (e continua depois da troca); andando, ela solta', async () => {

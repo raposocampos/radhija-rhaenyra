@@ -23,6 +23,14 @@ export const CARRY = {
   glasses: { open: 0.2, pos: [0, -0.014, 0.018], rot: [0.12, 0, 0] },
   // livro de capa dura: mordido pela borda de cima, pendurado na frente do peito com a capa para a frente
   book: { open: 0.62, pos: [0, -0.03, 0.02], rot: [0.18, 0, 0] },
+  // chapeuzinho de festa: mordido pelo elástico da aba, pendurado na frente do peito com a ponta para cima
+  hat: { open: 0.3, pos: [0, -0.024, 0.02], rot: [0.1, 0, 0] },
+  // laço de cetim: mordido pelo nó do meio, as duas alças para os lados e as pontas caindo
+  ribbon: { open: 0.24, pos: [0, -0.016, 0.022], rot: [0.08, 0, 0] },
+  // vela do 3: mordida de leve pela base, o número em pé na frente do focinho
+  candle: { open: 0.26, pos: [0, -0.01, 0.026], rot: [0, 0, 0] },
+  // ponta da corda: o pegador de madeira atravessado na boca, como a cenoura
+  rope: { open: 0.32, pos: [0, -0.012, 0.008], rot: [0, 0, 0] },
 };
 
 /**
@@ -69,6 +77,10 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
     if (/sock|meia/.test(tag)) return 'sock';
     if (/glasses|oculos|óculos/.test(tag)) return 'glasses';
     if (/book|livro/.test(tag)) return 'book';
+    if (/party-hat|chapeu|chapéu/.test(tag)) return 'hat';
+    if (/ribbon|laco|laço/.test(tag)) return 'ribbon';
+    if (/candle|vela/.test(tag)) return 'candle';
+    if (/rope-handle|corda/.test(tag)) return 'rope';
     const b = localBox(o);
     if (b.isEmpty()) return 'carrot';
     const d = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].sort((a, c) => a - c);
@@ -98,6 +110,12 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         if (kind === 'sock') mouthSocket.position.add(_v2.set(0, -dy * 0.42, 0).applyQuaternion(mouthSocket.quaternion));
         // livro: a boca segura a borda de cima, então ele pende abaixo da boca
         if (kind === 'book') mouthSocket.position.add(_v2.set(0, -dy * 0.4, 0).applyQuaternion(mouthSocket.quaternion));
+        // chapéu: a boca segura a aba (embaixo), então ele fica acima e à frente da boca
+        if (kind === 'hat') mouthSocket.position.add(_v2.set(0, dy * 0.36, dz * 0.2).applyQuaternion(mouthSocket.quaternion));
+        // laço: as pontas caem abaixo do nó
+        if (kind === 'ribbon') mouthSocket.position.add(_v2.set(0, -dy * 0.18, 0).applyQuaternion(mouthSocket.quaternion));
+        // vela: a boca segura a base, então o número fica em pé acima dela
+        if (kind === 'candle') mouthSocket.position.add(_v2.set(0, dy * 0.38, 0).applyQuaternion(mouthSocket.quaternion));
       }
     }
   }
@@ -112,7 +130,7 @@ export function createCarrySocket({ kind, headBone, toHead, design, s, P }) {
         applyCarryPose(carryForced || (ch ? detectKind(ch) : 'carrot'), ch);
       }
     },
-    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | null (automático). */
+    /** Força a pose: 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle' | 'rope' | null (automático). */
     setForced(kind) {
       carryForced = kind || null;
       carryChild = undefined; // reaplica no próximo sync

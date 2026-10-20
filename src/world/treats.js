@@ -28,8 +28,11 @@ export function buildTreats(root, list, {
 } = {}) {
   const geo = boneGeometry();
   const baseMat = new THREE.MeshStandardMaterial({ color: '#dba04f', roughness, metalness, emissive: '#ffb347', emissiveIntensity: 0 });
-  const y0 = y + 0.021;
+  const base = y;
   const items = list.map((c, i) => {
+    // cada ossinho pode ficar numa altura própria (c.y: em cima de um deque, de uma prateleira…)
+    const y = base + (c.y ?? 0);
+    const y0 = y + 0.021;
     const grp = new THREE.Group();
     grp.name = `osso-${c.id}`;
     const r = rng(i + 3);

@@ -148,7 +148,7 @@ export function buildWallButton({
     const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.011, 10, 32), stdMat('#e9e4da', { roughness: 0.25, metalness: 0.5 }));
     bezel.position.set(0, top, FRONT + 0.004);
     const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.06, 0.016, 28).rotateX(Math.PI / 2), stdMat('#2f3a3c', { roughness: 0.6 }));
-    housing.position.set(0, top, FRONT + 0.002); // começa dentro da placa; a frente fica 5 mm atrás do aro
+    housing.position.set(0, top, FRONT + 0.004); // começa dentro da placa; a frente fica 3 mm atrás do aro (o fundo, 3 mm à frente do fundo do aro)
     object.add(housing, bezel);
     // cogumelo: perfil girado (eixo do torno → +Z), topo quase reto para a patinha
     const prof = [[0, 0.027], [0.03, 0.026], [0.042, 0.022], [0.0485, 0.014], [0.05, 0.004], [0.05, 0]].map(([r, h]) => new THREE.Vector2(r, h));

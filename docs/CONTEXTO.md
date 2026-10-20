@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (porquinhos: testes com semente e o desvio da porteira, PR #44). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, sexta rodada de retorno; #34 a #42 e #44 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
@@ -116,7 +116,7 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   distração media a distância final (o passeio pode dar a volta); agora mede quanto o porco anda. Com isso, a
   varredura passou inteira. Fila do orquestrador: #43 → #44 → #33.
 
-## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
+## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`); etapas 2 a 5 em andamento
 
 - Pedido do usuário (2026-10-19): refazer os modelos das dogs, mais maleáveis, com rig, colisão e animações fluidas,
   sem perder o visual de que ele gosta. Plano aprovado ("pode seguir"), uma prévia por etapa: **1** esqueleto novo +
@@ -291,9 +291,146 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   **A** impulso na parede · **B** fase 8 "Lavanderia de Domingo" · **C** fase 9 "Biblioteca do Vovô" ·
   **D** fase 10 "Festa no Quintal" · **E** animações extras. Antes de construir cada fase, apresentar ao usuário
   cenário e objetos em poucas linhas e esperar o ok.
-- **Ordem atual:** A, B e E entregues; **C (fase 9) em andamento**; depois D (fase 10).
-- **C (em andamento, Claude): fase 9 "Biblioteca do Vovô"**, branch `claude/fase9-biblioteca` (worktree próprio),
-  **PR #29**, já com o main `d306983`. Feito: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
+- **Ordem atual:** A, B, C e E entregues; **D (fase 10) em andamento**.
+- **D (em andamento, Claude): fase 10 "Festa no Quintal"**, branch `claude/fase10-quintal` (worktree próprio), base
+  `efa779c`. Desenho aprovado pelo usuário em 2026-10-19 ("grande, complexa e a mais bonita"), com o pedido de que
+  as duas fizeram **3 anos** (faixa "Feliz 3 anos", vela do número 3; o quadro mostra a festa de 2 anos). Três
+  cenários: a casa em corte (sala com o quadro "Festa do ano passado", cozinha com o disjuntor), a varanda com o bolo
+  e o quintal (piscininha, a Dona Gansa no portão) e o fundo (casa na árvore, horta com lama, galpão). Ordem do bolo,
+  de baixo para cima: laço, vela do 3, chapéu (`CAKE_ORDER`); fora de ordem o enfeite cai ao lado da mesa e o objetivo
+  manda olhar o quadro (o texto não entrega a ordem). Chapéu: caixote fora da mangueira, torneira (impulso), água
+  sobe, disjuntor (impulso) liga luzinhas e ventilador, o barquinho vai até a borda. Laço: latido distrai a gansa (de
+  guarda, ela não deixa puxar a cordinha), cordinha abre o portão, superbafo pelo cano de brinquedo (duto) espanta o
+  pombo, a Radhija no balde e a Rhaenyra puxando a corda (segura na troca; a câmera recua pela zona `balde`), o deque
+  roteirizado e o escorregador. Vela: vão da horta e lama, Lambe-Lambe, placa (só a Rhaenyra; fica lá na troca) que
+  segura a porta basculante, rampa só com arrancada. Ligações visíveis com pulso de luz: conduíte do disjuntor até o
+  pergolado e a tomada, cano da torneira, cabo da placa à porta, cordinha até o ferrolho (`src/world/links.js`,
+  movido da fase 9). Itens novos `hat`, `ribbon`, `candle` e `rope` (pose, ícones, nomes, sons). Feito no branch:
+  `src/levels/fase10/` (layout, puzzle, world/), `soundsQuintal.js`, eventos no feedback, catálogo com dez fases
+  (menu 5 + 5; a 9 oferece "Próxima fase"), `test/fase10.test.mjs`, suíte E2E `quintal` e `capture-quintal.mjs`.
+  Consultar o PR para SHA, CI, E2E e prévia; nada rodou no PC.
+- Estado da D: **PR #33**, atualizado com o main `415bd67` (#32). O CI apontou faces coplanares, tipos e duas
+  esperas nos testes (corrigidos). O primeiro E2E passava de 30 min sem log; com a grama mais aberta, as auréolas
+  das luzinhas num desenho só e o ritmo medido logo no início, a suíte `quintal` roda em ~2 min (32/32) e as 66
+  capturas foram revisadas (ajustados: a vela do 2 no anel do meio do quadro, o brilho do bolo aceso, o laço e a
+  estante). No E2E, o E e o Q no mesmo quadro levavam o E para a outra dog: esperar o efeito do E antes do Q.
+- Retorno do usuário na prévia do #33 (2026-10-19), "melhore esses pontos iniciais, depois acrescentamos mais
+  coisas", e o que mudou no branch (consultar o PR para SHA, CI e E2E):
+  - Câmera e quadro: sem plano automático do quadro (saíram a zona `quadro` e o plano da apresentação; fica o E na
+    frente dele). Ao ligar o disjuntor, o pulso sobe até a parede do fundo, acende as luzinhas novas em volta do
+    quadro (ramal do conduíte; a câmera mostra) e só depois segue para a varanda (a câmera vai para as luzinhas da
+    festa). Etapas em `props.power.stage` (`house` → `painting` → `porch` → `on`), `info().quintal.powerStage`.
+    `cam.focusShot` ganhou `from` opcional (de onde a câmera olha; sem ele, nada muda nas outras fases).
+  - Portão: pendurado atrás dos mourões e abrindo 162°, encostado na cerca. Antes a folha aberta formava um bolsão
+    com a cerca da horta e a Radhija, voltando do galpão pelo vão, ficava presa.
+  - Casa na árvore ampliada (deque 3,4 × 2,35 m, tronco no canto de trás, casinha nos fundos, luneta, baú,
+    bandeirinhas; balde na frente do deque, escorregador a leste). O pombo dorme no corrimão em cima do laço: plano de
+    câmera e dica na primeira vez no fundo do quintal; com ele lá, o balde chega e ele bate as asas (ela fica no
+    balde). Lá em cima a Radhija anda livre (`confineDeck`: corrimão, tronco, casinha, luneta e baú seguram), E
+    desamarra o laço, E na boca do escorregador desce, E na abertura volta para o balde. O roteiro antigo atravessava
+    o tronco.
+  - Sofá com saia até o chão: o ossinho fica no vão de 42 cm atrás do encosto (só a Radhija). Antes ela passava por
+    baixo de um vão de 16 cm e atravessava o assento.
+  - FPS: o usuário notou FPS baixo com a GTX 1650 "inativa" (o Windows rodava o navegador na placa integrada; o jogo
+    já pede `high-performance`). Na fase 10 a grama era metade dos triângulos do cenário (~250 mil de ~555 mil):
+    tufos mais leves e malha um pouco mais aberta (~126 mil); peças com menos de ~9 cm não fazem sombra.
+- Segunda rodada de retorno (2026-10-19), com sessões paralelas para o que não é da fase: pombo mais bonito
+  (PR #34), Lambe-Lambe também na Radhija com superbafo no R2 e Lambe-Lambe no L2 (PR #35), porcos (PR #36,
+  `createPigHerd` em `src/game/mechanics/pigHerd.js`) e modelos das dogs com rig (PR #37). No branch da D (consultar o
+  PR #33 para SHA, CI e E2E):
+  - Já validado antes: balde começa deitado (a Radhija entra pela boca), a Rhaenyra anda normal com a corda, o
+    escorregador saiu da cerca, a rampa do galpão não vira de ponta-cabeça, potes de ração e água à vista,
+    colisões de móveis revistas.
+  - Desenho novo aprovado ("Pode ser assim"): **cinco enfeites**, `CAKE_ORDER` laço → biscoito de osso de glacê →
+    vela do 3 → chapéu → estrela; o quadro da sala mostra os cinco. **Despensa** nova ao sul da cozinha com o
+    **gaveteiro** (`DRAWERS`): a Rhaenyra puxa cada gaveta com a boca (E, andando para trás; `modifyIntent`) até virar
+    degrau (a de baixo 0,34–0,5 m para fora, cada uma ao menos 10 cm mais para dentro; puxada além de 0,55 m cai e E
+    encaixa); a Radhija sobe (E, `stepClimb`) e pega o biscoito. **Piñata** da estrela pendurada na mangueira, em
+    cima da roseira (`PINATA`, pêndulo): o superbafo balança, a Rhaenyra pula e bate quando ela passa por cima, três
+    batidas abrem e a estrela cai fora da roseira. **Horta e galpão maiores**, **chiqueiro** ao sul do galpão e
+    **dois botões altos** na parede do galpão: um abre a porta, o outro a porteira (sorteado; `?botao=1|2` fixa).
+    **Campinho** (milho, cenouras, abóboras) no quintal vazio: E colhe, E larga; o pé rebrota em 6 s. A placa de
+    pressão saiu. Os porcos ainda são um marcador em `puzzle.js` (`pigs`, nada sai do chiqueiro) até o PR #36.
+  - **Cinco ossinhos** na fase 10 (um no deque, `y` por ossinho em `COLLECTIBLES`, com `treats.js` e
+    `createCollectibles` respeitando a altura; `test/extras.test.mjs` aceita cinco na última fase).
+  - Segredo novo, **nunca citar no jogo, menu ou README**: com todos os ossinhos e o extra usado (`ctx.extrasUsed`),
+    a tábua do muro leste, atrás da casa na árvore, fica frouxa; E a empurra e, no cantinho do vizinho, o quadro
+    "Raniri e Radidi" (apelidos delas) com a foto real das duas (`public/img/quintal-quadro.jpg`, recortada e regravada sem
+    metadados; exceção registrada no AGENTS.md). Sem texto na tela; `debugSet('secret')` para testes e capturas.
+  - Testes: `test/fase10.test.mjs` refeito (partida completa com os cinco, botões, gavetas, piñata, legumes,
+    tábua); `test/helpers/props.mjs` com as peças novas; E2E `quintal` e `capture-quintal.mjs` com as cenas novas.
+- Prévia entregue em `55a811e` (CI ok, E2E `quintal` 48/48 e `todas` verdes, capturas revisadas). Terceira rodada
+  de retorno do usuário (2026-10-19), feita no branch (consultar o PR #33 para SHA, CI e E2E):
+  - Abóbora do pé do tamanho da que vai na boca; plaquinha do cantinho "Raniri e Radidi"; o plano do quadro repete a
+    cada entrada.
+  - Despensa: no lugar das gavetas, o armário alto (`CUPBOARD`) e **três caixotes** (`PANTRY_CRATES`, escolha do
+    usuário). A Rhaenyra pega a alça (E) e anda para trás num trilho reto; na marca do chão o caixote trava sozinho e
+    a marca fica verde (sem "puxar demais"). Com os três travados, a Radhija sobe pelo pé da escadinha (E).
+  - Pulinhos roteirizados com preparo: `InputLock.airK` (pose de pulo) e `InputLock.crouch` (agachadinha), lidos em
+    `game.js` e em `dogAnimation.js` (duas linhas; o resto é da fase). Usados na escadinha e na descida da prateleira
+    do galpão (agacha na beirada antes de pular).
+  - Funil do cano deitado, de boca para o sul, na altura do focinho; botões do galpão com placa branca, borda
+    vermelha, plaquinha "?" e lampadinha que pisca até serem apertados; animação de comer no pote de ração (e de
+    beber no de água) nos extras; dois canteiros a mais na horta; roseira com rosas; milho com folhas em fita.
+  - Duas **galinhas** (`src/characters/chicken.js`, `src/levels/fase10/chickens.js`, `CHICKENS`): ciscam do lado de fora
+    da cerca oeste da horta; dog chegando de frente as faz correr; por trás não; latido, esbarrão ou arrancada as faz
+    voar baixinho. Sons novos (cocoricó, alarme, asas, caixote travando, piñata, colheita) em `soundsQuintal.js`.
+  - Com o #35 no main: a lama da horta vale para as duas. A Rhaenyra que o jogador leva para a lama fica com as patas
+    escorregadias (sem impulso na parede: `wallSpots` vazio) até a Radhija lambê-la (L); a Radhija continua se sujando
+    no vão. `onLick`/`onLickMiss` seguem o modelo da fase 7 (as duas lambem). Nos testes, lamber é `KeyL`.
+  - Com o #36 no main: os porquinhos ligados (`createPigHerd` no puzzle, `PIGS` com `STY_PEN = pigPenLayout(...)`,
+    porteira com o mesmo ângulo do colisor, `STY.swing`). O botão errado do galpão abre o chiqueiro e eles saem para
+    a horta; atrapalham, derrubam o enfeite ou o legume da boca (`knockItem`) e o legume no chão vira comida por um
+    tempo (`feedPigs`; pegar de volta chama `removeFood`). `debugSet('pigsOut')` solta já fora (testes e capturas).
+  - Retorno do usuário na prévia de `cefe748`: os botões quase não apareciam (ficavam na parede oeste do galpão, vista
+    de lado pela câmera): agora estão num painel de madeira virado para o sul (`BUTTON_BOARD`), encostado no galpão,
+    com os fios pela frestinha entre os dois. No cantinho secreto ela ficava presa (sala maior que a fresta e fora da
+    vista): o nicho agora tem a largura da fresta, a tábua abre para fora e o muro leste e o nicho entram no "ver
+    através". As galinhas foram para o campinho (milho e legumes) e ganharam modelo arredondado (cores por vértice,
+    crista serrilhada, asas em penas) e animação (cabeça parada que dá o tranco, ciscar, planar, piscar, arrepiar).
+  - Com o #38 no main: a piñata começa enroscada no galho, perto da copa da mangueira (`MANGO_SHOVE.tangled`; fora de
+    alcance, o superbafo não a mexe). A Rhaenyra fica de pé de frente para o tronco e empurra (`createShoveTarget` só
+    para o balanço da copa e a contagem; `shoveSpots`/`onShove` no puzzle); no 3º empurrão ela escorrega pelo galho
+    (`slide`) e desce na corda (`drop`) até em cima da roseira (`free`), e daí segue o superbafo e as batidas.
+    `debugSet('pinataDown')` pula a etapa. A Rhaenyra só se suja quando o jogador anda com ela na lama (parada ali na
+    troca, não).
+  - Ainda falta: a cabeça das dogs atravessando paredes e móveis (etapa 4 do PR #37, das sessões dos modelos).
+  - Quarta rodada (prévia de `1a8562b`: CI ok, E2E `quintal` 52/52, `todas` verde em `5c56527`): com algo na boca,
+    nada de pegar outro item (`take()` recusa; a rampa também).
+  - Quinta rodada de retorno (2026-10-19), feita no branch (consultar o PR #33 para SHA, CI e E2E):
+    - Saiu o vaso do canto da porta da varanda (`PORCH_POTS` ficou com um, no canto do fundo).
+    - Empurrão na mangueira pelo **oeste** (`MANGO_SHOVE.nx = -1`, do lado da roseira, à vista da câmera); a copa
+      balança para longe da dog (`setSway` segue a normal), a piñata enroscada gira junto (`swayPoint`, `pivotY`) e o
+      tronco e a copa entram no "ver através".
+    - O vão da horta foi para o **fundo** (`HORTA.gap` z 4,95–5,35, na altura da porteira do chiqueiro) com a lama logo
+      depois (`MUD`); canteiros, tomateiro e grafo (`B_pass`, `B_strip`, `B_gap`, `H_mud`) refeitos. A cerca oeste da
+      horta foi 30 cm para leste (`HORTA.x0 = 7.1`) para caber o painel na faixa ao lado da cerca branca.
+    - **Rhaenyra enlameada não pula**: gancho novo do núcleo `puzzle.canJump`/`onJumpBlocked` (evento
+      `dog:jumpBlocked`, ARQUITETURA §6), além do impulso já bloqueado.
+    - Funil do cano: no lugar dos pés em V, um pezinho só (argola, haste e base) dentro do colisor; a plaquinha
+      "FALE AQUI" foi para cima da argola.
+    - Painel dos botões na faixa entre a cerca branca e a horta (`BUTTON_BOARD`, preso na cerca, virado para o sul,
+      passagem de 74 cm na ponta) com luz de força, e o **gerador** (`GENERATOR`, `sty.js`): a Rhaenyra puxa a cordinha
+      (E; a Radhija não tem força), ele engasga (`crank`) e pega; ligado, treme, solta fumacinha e faz "tá-tá-tá"
+      (eventos `generator:pull|crank|start|hum`, sons `genPull|genCrank|genStart|genHum`). Sem ele, os botões ficam
+      fora de `wallSpots` (dica `noPowerBoard`); os fios vão pelo chão até a caixinha do galpão.
+    - Galinha refeita (`src/characters/chicken.js`): corpo numa malha só, sem a "bola" atrás; rabo de penas compridas
+      escuras, arqueadas; crista serrilhada (extrusão); duas cores de marrom; mesma animação.
+    - Testes (`fase10.test.mjs`), E2E (`test-quintal.mjs`) e capturas (`capture-quintal.mjs`) com o gerador, o vão
+      novo, o empurrão pelo oeste e o pulo bloqueado.
+  - Prévia da quinta rodada em `4d22f9f` (CI ok; E2E `todas` 39348516051 com a partida `quintal` ok; as duas falhas
+    eram de fora: teste do empurrão herdado, corrigido no #43, e download do Chromium). Main com o #44 (`1b93b41`)
+    trazido para o branch.
+  - Sexta rodada de retorno (2026-10-19): o painel dos botões ficou maior (1,35 × 1,65 m) e de costas para a cerca
+    branca, virado para o leste (`BUTTON_BOARD` com `x`, `z0`, `z1`; botões com `nx = 1`), com o gerador ao lado, ao
+    sul; o rodapé de pedra da fachada não atravessa mais a porta da varanda e saiu o capacho (era a "mancha" no chão);
+    no empurrão, as patas apoiam na casca de verdade (`MANGO_BARK`: o tronco sobe torto e afina; o colisor ficou
+    rente a ela).
+- Próximo passo da D: com o #43 no main, sincronizar, rodar CI e E2E `todas` no head final, revisar as capturas
+  (painel, gerador, vão, galinha, empurrão, porta da varanda) e entregar a prévia; integrar só com a aprovação do
+  usuário (squash com SHA esperado, deploy do `github-pages` dessa versão e aviso ao orquestrador).
+- **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
+  (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,
   poltrona, mesa de estudos, duto no alto, ventilador, vasos, chuva nas vidraças), o gato (`src/world/cat.js`), os
   itens óculos e livro (`src/world/toys.js`, `carryPose.js`, ícones), sons (`soundsBiblioteca.js`), o puzzle
@@ -313,9 +450,6 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (óculos e gato, uma vez por carregamento); "Zzz" no gato dormindo. Portinha de gato com buraco de verdade,
   moldura em arco, aba âmbar que balança, plaquinha e capachos. Escadinha e ventilador remodelados. A animação de
   rolar (tapete) e o cocô secreto ficaram com a sessão dos extras, num PR próprio.
-- Próximo passo da C: CI e E2E `biblioteca` (depois `todas`) no head novo do PR #29, revisar as capturas
-  (`shots/biblioteca-revisao/`), entregar a prévia e esperar a aprovação. Depois, apresentar o desenho da fase 10 e
-  esperar o ok.
 - **E entregue (extras escondidos, PR #28):** squash `d306983` no main, CI do main `39174689553`, deployment
   `7162054221` no ambiente `github-pages`; `version.json` de produção conferido em `d306983`. Não repetir
   merge/deploy. Resumo: extras escondidos nas fases, branch
@@ -345,8 +479,6 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   solta o cheiro, o Bichano pula, derruba o livro e sai pela portinha; impulso na maçaneta (alavanca alta) abre a
   porta, a mola fecha de novo, a Radhija segura a porta com o Fica e a Rhaenyra traz o livro. Na versão construída,
   o ventilador fica no jardim de inverno e o impulso é no registro do duto (alavanca na parede de tijolos).
-- **D (rascunho):** fase 10 "Festa no Quintal": laço, chapéu e vela estrela na torre de presentes; o quadro "Festa
-  do ano passado" na varanda mostra a ordem de baixo para cima (ordem errada: a peça balança e cai na grama).
 
 ## Entregue: impulso na parede (PR #23)
 

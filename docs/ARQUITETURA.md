@@ -260,6 +260,7 @@ E devolve um objeto com:
 | `reset()`, `jumpToStage?(etapa, {who})` | reiniciar; `?stage=` e testes |
 | `onBark?(ctrl)`, `endActions?()`, `info?()`, `dispose?()` | latido; fim da fase; depuração; descarte |
 | `speedScale?(ctrl)`, `canDash?(ctrl)`, `onDashBlocked?(ctrl)` | estado da dog que a fase controla (lama: metade da velocidade e sem arrancada) |
+| `canJump?(ctrl)`, `onJumpBlocked?(ctrl)` | a fase tira o pulo por um tempo (fase 10: a Rhaenyra enlameada não pula); o núcleo emite `dog:jumpBlocked` |
 | `onLick?(ctrl, lick)` → `{ stop }`, `onLickMiss?(ctrl, { blocked })` | efeito de cada lambida do Lambe-Lambe (as duas lambem: `ctrl` é quem lambeu, `lick.target` quem foi lambida; declarar `onLick` também tira a dica genérica de alcance) |
 | `onStageChange` (setter) | o núcleo registra um callback para reemitir o objetivo |
 
@@ -454,7 +455,8 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
   as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
-- Uma fase nova precisa de três ossinhos e de pelo menos um ponto em `extras` (`test/extras.test.mjs`). A suíte E2E
+- Uma fase nova precisa de três ossinhos (a fase 10, a última, tem cinco) e de pelo menos um ponto em `extras`
+  (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
 
 ## 7. Personagens
@@ -581,7 +583,7 @@ Quem emite e quem ouve:
   `touch`), `quality:change {device, mode, level, reason, fps}` (perfil gráfico, §9), `settings:change {noHints}`
   (opções salvas, §9).
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
-  `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase),
+  `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase), `dog:jumpBlocked` (pulo recusado pela fase),
   `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
   `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
