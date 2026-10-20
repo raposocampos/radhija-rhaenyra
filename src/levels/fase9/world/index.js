@@ -8,7 +8,7 @@
 //   hall.js          banco, guarda-chuva pingando, cabideiro, aparador, espelho, arandela e a almofada do gato
 //   conservatory.js  vasos grandes, mesinha de plantas, poltrona de vime, lanterna, disjuntor e varal de luzinhas, o
 //                    ventilador (botão de liga e fio), o vaso de rodinhas e o botão do registro no chão
-//   links.js         cabos e conduítes com o pulso de luz (o que cada alavanca ou botão aciona)
+//   (src/world/links.js: cabos e conduítes com o pulso de luz, o que cada alavanca ou botão aciona)
 //   props.js         óculos, livro, Bichano, alavancas, ossinhos e as luzes da casa
 // Luz: o luar fraco do preset (com sombra) + cinco PointLights quentes sem sombra (o fogo da lareira tremula).
 import { shared } from '../../../world/util.js';

@@ -63,6 +63,8 @@ export function createCollectibles({ list, props, emit, pickupR = 0.42 }) {
     update(active) {
       list.forEach((col, i) => {
         if (got.has(col.id)) return;
+        // na altura certa: um ossinho lá em cima (col.y) só para quem está lá; quem está lá em cima não pega os do chão
+        if (Math.abs((active.y || 0) - (col.y ?? 0)) > 0.6) return;
         if (Math.hypot(active.x - col.x, active.z - col.z) < pickupR) {
           got.add(col.id);
           const item = props?.collectibles?.find?.((p) => p.id === col.id) || props?.collectibles?.[i];
@@ -94,8 +96,8 @@ export function createCarryItem({ obj, dogs, scene, carrier = 'any', name = 'ite
     get holder() { return holder; },
     attach(dogName) {
       holder = dogName;
-      // pose da boca para o tipo do item (cenoura/bolinha/pantufa/patinho/ursinho/frisbee/meia/óculos/livro), se o modelo suportar
-      if (['carrot', 'ball', 'slipper', 'duck', 'bear', 'frisbee', 'sock', 'glasses', 'book'].includes(name)) dogs[dogName]?.setCarryPose?.(name);
+      // pose da boca para o tipo do item (cenoura/bolinha/pantufa/patinho/ursinho/frisbee/meia/óculos/livro/chapéu/laço/vela/corda), se o modelo suportar
+      if (['carrot', 'ball', 'slipper', 'duck', 'bear', 'frisbee', 'sock', 'glasses', 'book', 'hat', 'ribbon', 'candle', 'rope'].includes(name)) dogs[dogName]?.setCarryPose?.(name);
       if (!obj) return;
       const dog = dogs[dogName];
       (dog.mouthSocket || dog.object).add(obj);

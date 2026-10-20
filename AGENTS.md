@@ -104,6 +104,11 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
 
 - Nunca publicar fotos pessoais de `referencias/fotos/`, credenciais, tokens,
   arquivos `.env`, chaves privadas ou configurações locais de agentes.
+- Exceção autorizada pelo usuário em 2026-10-19: só a foto das duas filhotes em
+  `public/img/quintal-quadro.jpg`, recortada e regravada sem nenhum metadado
+  (EXIF, GPS, ICC, XMP), usada num quadro da fase 10. Os originais e qualquer
+  outra foto continuam proibidos; ao trocar essa imagem, regravar sem metadados
+  e conferir os bytes antes de enviar.
 - Respeitar o `.gitignore` e revisar o conteúdo que será enviado. Não usar
   `git add -f` para incluir arquivos privados ou ignorados.
 - Usar a identidade pública do projeto nos commits:

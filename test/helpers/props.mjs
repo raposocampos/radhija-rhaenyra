@@ -376,6 +376,86 @@ export function stubFase9Props(root, layout) {
   return level('fase9', props);
 }
 
+/** Fase 10: os três enfeites, o bolo (andares e queda), piscininha, barquinho, caixote, ventilador, energia, portão e
+ * cordinha, pombo, cano, balde e corda, placa e porta do galpão, disjuntor e torneira.
+ * @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
+export function stubFase10Props(root, layout) {
+  const hat = item(root, 'hat', { x: layout.BOAT.start.x, z: layout.BOAT.start.z });
+  const ribbon = item(root, 'ribbon', { x: layout.RIBBON.x, z: layout.RIBBON.z });
+  const candle = item(root, 'candle', { x: layout.CANDLE.x, z: layout.CANDLE.z });
+  const cookie = item(root, 'cookie', { x: layout.CUPBOARD.x, z: layout.CUPBOARD.z });
+  const star = item(root, 'star', { x: layout.ROSE_BUSH.x, z: layout.ROSE_BUSH.z + layout.ROSE_BUSH.r + 0.4 });
+  const handle = object(root, 'rope-handle');
+  handle.position.set(layout.ROPE.rest.x, 0, layout.ROPE.rest.z);
+  const cakeObj = object(root, 'cake');
+  const tierSpots = [0, 1, 2, 3, 4].map((i) => object(cakeObj, `tier-${i}`));
+  const things = { hat, ribbon, candle, cookie, star };
+  const link = (name) => checked(name, { on: false, pulses: 0, pulse() { this.pulses++; }, setOn(on) { this.on = on; }, update(dt) {} });
+  const spots = [
+    ...layout.PLANTATION.corn.map((c, i) => ({ id: `milho-${i + 1}`, kind: 'corn', x: c.x, z: c.z1 + 0.32 })),
+    { id: 'cenouras', kind: 'carrot', x: layout.PLANTATION.carrots.x, z: layout.PLANTATION.carrots.z + layout.PLANTATION.carrots.hz + 0.3 },
+    ...layout.PLANTATION.pumpkins.map((p, i) => ({ id: `abobora-${i + 1}`, kind: 'pumpkin', x: p.x, z: p.z })),
+  ].map((sp) => ({ ...sp, ready: true, setReady(on) { this.ready = on; } }));
+  /** @satisfies {import('../../src/types').Fase10Props} */
+  const props = {
+    hat: Object.assign(hat, { onBoat: true, setOnBoat(on) { this.onBoat = on; } }),
+    ribbon,
+    candle,
+    cookie,
+    star: Object.assign(star, { shown: false, setShown(on) { this.shown = on; } }),
+    cake: checked('fase10.cake', {
+      object: cakeObj, placed: /** @type {string[]} */ ([]), lit: false, rejected: 0,
+      setHighlight(on) {},
+      /** @param {import('../../src/types').Fase10Thing} thing @param {number} tier */
+      place(thing, tier) { tierSpots[tier].add(things[thing].object); this.placed.push(thing); },
+      /** @param {import('../../src/types').Fase10Thing} thing */
+      reject(thing, tier, k, x, z) { if (k === 0) this.rejected++; root.add(things[thing].object); things[thing].object.position.set(x, 0, z); },
+      light() { this.lit = true; },
+    }),
+    pool: checked('fase10.pool', { level: 0, y: 0, flowing: false, blocked: false, setLevel(k, y) { this.level = k; this.y = y; }, setFlow(on, blocked) { this.flowing = on; this.blocked = blocked; } }),
+    boat: checked('fase10.boat', { object: object(root, 'boat'), setPos(x, z, y, drifting) { this.object.position.set(x, y, z); } }),
+    crate: checked('fase10.crate', { object: object(root, 'crate'), setPos(x, z) { this.object.position.set(x, 0, z); }, setHighlight(on) {} }),
+    fan: checked('fase10.fan', { object: object(root, 'fan'), power: false, setPower(on) { this.power = on; } }),
+    power: checked('fase10.power', { on: false, stage: /** @type {'off' | 'house' | 'painting' | 'porch' | 'on'} */ ('off'), setOn(on) { this.on = on; this.stage = on ? 'on' : 'off'; } }),
+    gate: gate(root, 'fase10.gate'),
+    cord: checked('fase10.cord', { tug: 0, setTug(k) { this.tug = k; } }),
+    pigeon: checked('fase10.pigeon', { object: object(root, 'pigeon'), pose: null, pecks: 0, setPose(p) { this.pose = { ...p }; }, peck() { this.pecks++; } }),
+    tube: checked('fase10.tube', { object: object(root, 'tube'), puffs: [], outs: 0, setPuffs(list) { this.puffs = list; }, outletPuff() { this.outs++; } }),
+    bucket: checked('fase10.bucket', { object: object(root, 'bucket'), y: 0, tilt: 1, setY(y) { this.y = y; }, setTilt(k) { this.tilt = k; } }),
+    rope: checked('fase10.rope', { handle, pulled: 0, setPull(pulled, holder) { this.pulled = pulled; } }),
+    shedDoor: gate(root, 'fase10.shedDoor'),
+    shedButtons: [wallButton(root, 'fase10.shedButton1'), wallButton(root, 'fase10.shedButton2')],
+    shedLinks: { door: link('fase10.shedLinks.door'), gate: link('fase10.shedLinks.gate') },
+    generator: checked('fase10.generator', { object: object(root, 'gerador'), pull: 0, state: 'off', setPull(k) { this.pull = k; }, setState(s) { this.state = s; } }),
+    styGate: gate(root, 'fase10.styGate'),
+    crates: checked('fase10.crates', { list: layout.PANTRY_CRATES.list.map(() => ({ x: layout.PANTRY_CRATES.x0, locked: false })), setCrate(i, x, locked) { this.list[i] = { x, locked }; } }),
+    pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),
+    mango: checked('fase10.mango', { object: object(root, 'mangueira'), a: 0, setSway(a, va) { this.a = a; void va; } }),
+    farm: { spots, makeVeg(kind) { const o = new THREE.Group(); o.name = `veg:${kind}`; return o; } },
+    secretBoard: checked('fase10.secretBoard', { object: object(root, 'tabua-solta'), open: 0, loose: false, setOpen(t) { this.open = t; }, setLoose(on) { this.loose = on; } }),
+    breaker: wallButton(root, 'fase10.breaker'),
+    tap: wallButton(root, 'fase10.tap'),
+    collectibles: [],
+    reset() {
+      for (const it of [hat, ribbon, candle, cookie, star]) { root.add(it.object); it.object.position.copy(it.home); }
+      props.star.setShown(false);
+      props.pinata.reset();
+      props.secretBoard.setOpen(0);
+      props.secretBoard.setLoose(false);
+      for (const sp of spots) sp.setReady(true);
+      props.hat.setOnBoat(true);
+      props.cake.placed.length = 0;
+      props.cake.lit = false;
+      props.gate.setOpen(0);
+      props.shedDoor.setOpen(0);
+      props.bucket.setY(0);
+      props.pigeon.object.visible = true;
+    },
+  };
+  props.reset();
+  return level('fase10', props);
+}
+
 /** @param {THREE.Group} root @param {import('../../src/types').LevelLayout} layout */
 export function stubPlaceholderProps(root, layout) {
   const obj = object(root, 'item');
@@ -503,6 +583,7 @@ export function stubProps(id, root, layout) {
     case 'fase7': return stubFase7Props(root, layout);
     case 'fase8': return stubFase8Props(root, layout);
     case 'fase9': return stubFase9Props(root, layout);
+    case 'fase10': return stubFase10Props(root, layout);
     case 'modelo': return stubPlaceholderProps(root, layout);
     case 'pulo': return stubPuloProps(root, layout);
     case 'bafo': return stubBafoProps(root, layout);

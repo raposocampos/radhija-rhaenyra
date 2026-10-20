@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, canil, empurra, recursos, carregamento]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento]
 
 permissions:
   contents: read
@@ -140,7 +140,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","canil","empurra"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil","empurra"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -177,6 +177,9 @@ jobs:
       - name: Capturas da biblioteca (fase 9) para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'biblioteca'
         run: node tools/scripts/capture-biblioteca.mjs
+      - name: Capturas da festa no quintal (fase 10) para revisão (qualidade visual completa)
+        if: always() && matrix.suite == 'quintal'
+        run: node tools/scripts/capture-quintal.mjs
       - name: Capturas dos extras para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'extras'
         run: node tools/scripts/capture-extras.mjs

@@ -1,10 +1,11 @@
-// FASE 9 · Ligações visíveis entre o que a Rhaenyra aciona e o que muda: um cabo (ou conduíte, ou haste) preso na
-// parede ou no chão, com um pulso de luz que corre de uma ponta à outra quando o mecanismo dispara e depois fica
-// aceso de leve (ligado). Usado no freio da escadinha (alavanca → trava da roda), no disjuntor (→ luzes e tomada do
-// ventilador) e no botão do registro (→ grade do duto).
+// Ligações visíveis entre o que a Rhaenyra aciona e o que muda: um cabo (ou conduíte, ou haste) preso na parede ou no
+// chão, com um pulso de luz que corre de uma ponta à outra quando o mecanismo dispara e depois fica aceso de leve
+// (ligado). Fase 9: freio da escadinha (alavanca → trava da roda), disjuntor (→ luzes e tomada do ventilador) e botão
+// do registro (→ grade do duto). Fase 10: disjuntor (→ luzinhas da festa e tomada), placa (→ porta do galpão) e
+// cordinha (→ trava do portão).
 //   makeLink(points, { radius, color, glow, clips }) → { object, pulse(), setOn(on), update(dt) }
 import * as THREE from 'three';
-import { stdMat } from '../../../world/util.js';
+import { stdMat } from './util.js';
 
 const ease = (cur, target, dt, rate) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
