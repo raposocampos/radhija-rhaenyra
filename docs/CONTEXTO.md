@@ -34,6 +34,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   verde em `ffd9cab` (`39369408152`, EPYC 7763, 98/98). O job temporário `toque-diag` já saiu do `e2e.yml`.
   Próximo passo: conferir no PR o CI e os E2E `toque` e `todas` do head atual; entregar a prévia e aguardar a
   aprovação do usuário (nada muda no jogo; é só o navegador dos testes).
+- Pendência separada (não é deste PR): a suíte `lambe` cai de vez em quando em "cinco lambidas limpam a Radhija" com
+  o jogo lento (E2E `39313770288` e 1ª tentativa de `39373228456`, mesma cascata); sessão própria aberta para isso.
 
 ## Entregue: modelos novos das dogs, etapa 3 de 5: poses em camadas (PR #45, squash `b95c2b0`, deploy `39368373474`)
 
