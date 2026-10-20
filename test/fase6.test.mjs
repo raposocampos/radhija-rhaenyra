@@ -294,10 +294,19 @@ test('fase 6: ordem inversa — a volta é recuperável, a cancela barra a estre
   assert.equal(h.puzzle.carrier, 'radhija');
   assert.equal(ball.parent, h.dogs.radhija.mouthSocket);
   assert.deepEqual(ball.position.toArray(), [0, 0, 0]);
+  // E de novo ali, com o planeta na boca: ele desce de volta para o lugar dele na bandeja; E pega de novo
   h.tap('KeyE');
+  assert.equal(h.puzzle.carrier, null, 'na bandeja, E com a carga na boca a devolve');
+  assert.equal(info(h).place.planet, 'tray');
+  h.run(1);
+  near(ball.position.x, L.TRAY.x - 0.1, 'de volta no lugar dela X');
+  near(ball.position.y, L.TRAY.y, 'de volta no lugar dela Y');
+  near(ball.position.z, L.TRAY.z, 'de volta no lugar dela Z');
+  h.tap('KeyE');
+  assert.equal(h.puzzle.carrier, 'radhija', 'pegou de volta');
   h.tap('KeyQ');
   assert.equal(h.puzzle.carrier, 'radhija', 'troca de dog não transfere nem duplica a carga');
-  assert.equal(h.log('item:pickup').length, 1);
+  assert.equal(h.log('item:pickup').length, 2);
   select(h, 'radhija');
   h.clearLog();
   h.walkPath([[L.TRAY.x, 2.5], [L.GOAL.x, 2.5], [L.GOAL.x, L.GOAL.z]]);
@@ -470,19 +479,23 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
     const ball = h.props.ball.object;
     assert.equal(ball.parent, h.dogs[name].mouthSocket, 'pegou o planeta, que estava diante dela');
     assert.equal(info(h).place.moon, 'tray', 'a lua espera na bandeja');
-    h.tap('KeyE');
     frontCloud(h);
     h.run(0.5);
     assert.equal(ball.parent, h.dogs[name].mouthSocket, 'o trem não leva a carga depois da retirada');
     assert.deepEqual(ball.position.toArray(), [0, 0, 0]);
     assert.equal(h.puzzle.stage, 'carrying');
   }
-  // uma carga em cada boca: quem já leva o planeta não pega a lua; a outra irmã, de boca vazia, pega
+  // uma carga em cada boca: quem já leva o planeta não pega a lua (E ali devolve o planeta ao lugar dele na bandeja);
+  // ela pega o planeta de volta e a outra irmã, de boca vazia, pega a lua
   h.game.debug.setStage('carrying', 'radhija');
   place(h, 'radhija', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).moon.holder, null, 'a mesma boca não leva duas cargas');
   assert.equal(info(h).place.moon, 'tray');
+  assert.equal(info(h).place.planet, 'tray', 'o planeta voltou para a bandeja');
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  h.tap('KeyE');
+  assert.equal(info(h).ball.holder, 'radhija', 'diante do lugar dele, pegou o planeta de volta');
   place(h, 'radhija', { x: L.TRAY.x - 0.6, z: L.TRAY.z + 0.9 });
   select(h, 'rhaenyra');
   place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
@@ -513,10 +526,12 @@ test('fase 6: dica da bandeja só anuncia a carga no trem enquanto ele viaja', a
     h.clearLog();
     const handled = h.puzzle.interact(c);
     const traveling = TRIP.includes(stage);
-    assert.equal(handled, traveling, `interação na borda: ${stage}`);
+    // com a carga na boca, o E ali (longe do lugar dela na bandeja) a larga no chão, sem a dica do trem
+    assert.equal(handled, traveling || holder !== null, `interação na borda: ${stage}`);
     assert.equal(h.log('hint').some((hint) => hint.text === h.puzzle.TEXT.hint.early), traveling,
       `dica corresponde ao estado real: ${stage}`);
-    assert.equal(h.puzzle.carrier, holder, 'interação distante não muda quem carrega');
+    assert.equal(h.log('item:drop').length, holder ? 1 : 0, `só larga quem carrega: ${stage}`);
+    assert.equal(h.puzzle.carrier, null, holder ? `a carga vai para o chão: ${stage}` : 'interação distante não muda quem carrega');
   }
 });
 

@@ -1,7 +1,8 @@
 // FASE 4 · Operação Patinho — puzzle (ver o cabeçalho de ./layout.js).
 // Cadeia: superbafo no pombo da passagem → vão das floreiras livre → ventilador alinhado → vento no
 // corredor → duto → cheiro no poleiro A → pombo voa para o B → placa → portão abre e trava → patinho → casa.
-import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
+// E larga o patinho no chão (E perto pega de volta); largado no capacho, entrega.
+import { createHints, createCollectibles, createCarryItem, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createHingedGate } from '../../game/mechanics/index.js';
 
 export const STAGES = ['start', 'passOpen', 'gateOpen', 'carrying', 'done'];
@@ -19,6 +20,7 @@ export const TEXT = {
     radNow: 'Agora a Radhija (Q): só ela passa por baixo dos canos',
     duck: 'O portão abriu! Pegue o patinho na bacia (E)',
     carrying: 'Leve o patinho para o capacho da escada',
+    pickAgain: 'Pegue o patinho de volta (E)',
   },
   hint: {
     napBlock: 'Um pombo cochila bem no meio da passagem…',
@@ -34,7 +36,7 @@ export const TEXT = {
     opened: 'O peso do pombo baixou a placa e puxou a trava do portão!',
     gateBark: 'O pombo do portão está alto demais. Talvez o duto ajude…',
   },
-  prompt: { duck: 'Pegar o patinho' },
+  prompt: { duck: 'Pegar o patinho', drop: 'Largar o patinho' },
 };
 
 /** @import { PuzzleContext, Puzzle, Fase4Props } from '../../types' */
@@ -53,11 +55,13 @@ export function createPuzzle(ctx) {
 
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
-  const duck = createCarryItem({ obj: props.duck?.object || null, dogs, scene: root, name: 'duck' });
+  const duck = createCarryItem({ obj: props.duck?.object || null, dogs, scene: root, name: 'duck', emit, world });
   const fan = createPushCrate({ id: 'ventilador', cfg: FAN, world, emit, prop: props.fan });
   const gate = createHingedGate({ id: 'gate', cfg: GATE, world, prop: props.gate });
+  /** Largado, o patinho não fica no capacho (lá ele é entregue). */
+  const dropAvoid = inZones([GOAL]);
 
-  const S = { stage: 'start', objKey: '', nap: 'asleep', napT: 0, aligned: false, pigeon: 'A', flyT: 0, lingerT: 0, ductHint: false };
+  const S = { stage: 'start', objKey: '', nap: 'asleep', napT: 0, aligned: false, pigeon: 'A', flyT: 0, lingerT: 0, ductHint: false, dropDeliver: false };
 
   // ---------- beat 1: o pombo cochilando no vão das floreiras ----------
   const napBlock = world.addDynamic({
@@ -147,7 +151,11 @@ export function createPuzzle(ctx) {
         else { text = O.corridor; target = at((CORRIDOR.door.x0 + CORRIDOR.door.x1) / 2, CORRIDOR.z - CORRIDOR.half - 0.2, 0.6); }
       } else { text = O.radNow; target = at(C.radhija.x, C.radhija.z, 0.9); }
     } else if (S.stage === 'gateOpen') { text = O.duck; target = at(DUCK.x, DUCK.z, 0.6); }
-    else if (S.stage === 'carrying') { text = O.carrying; target = at(GOAL.x, GOAL.z, 0.9); }
+    else if (S.stage === 'carrying') {
+      const f = !duck.holder && duck.floor;
+      if (f) { text = O.pickAgain; target = at(f.x, f.z, 0.55); }
+      else { text = O.carrying; target = at(GOAL.x, GOAL.z, 0.9); }
+    }
     return { text, target, stage: S.stage };
   }
 
@@ -216,15 +224,29 @@ export function createPuzzle(ctx) {
   }
 
   // ---------- patinho ----------
-  const nearDuck = (c) => S.stage === 'gateOpen' && !duck.holder && reach(c, DUCK.x, DUCK.z) < DUCK.pickupR;
+  /** Na bacia, ainda no lugar dele; ou largado no chão depois (E perto pega de volta). */
+  const nearDuck = (c) => (S.stage === 'gateOpen' && !duck.holder && reach(c, DUCK.x, DUCK.z) < DUCK.pickupR)
+    || (S.stage === 'carrying' && !duck.holder && duck.nearFloor(c));
   function pickup(name) {
     const c = ctx.ctrls[name];
+    const fromBasin = S.stage === 'gateOpen';
     duck.attach(name);
-    props.basin?.setRipple?.(1);
+    if (fromBasin) props.basin?.setRipple?.(1);
     props.goal?.setHighlight?.(true);
     emit('item:pickup', { name, item: 'duck', x: c.x, z: c.z });
     setStage('carrying');
   }
+  /** E com o patinho na boca: de frente para o capacho, entrega; senão ele cai no chão à frente (E perto pega de volta). */
+  function dropDuck(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = true;
+      return;
+    }
+    duck.dropBy(c, { avoid: dropAvoid });
+    props.goal?.setHighlight?.(false);
+  }
+  const canDrop = (c) => S.stage === 'carrying' && duck.holder === c.name;
 
   // ---------- quadro ----------
   function modifyIntent(dt, c, intent, { shift, comp }) {
@@ -238,6 +260,7 @@ export function createPuzzle(ctx) {
 
   function update(dt, { active, comp, ctrls }) {
     hints.frame(dt);
+    duck.update(dt);
     if (!S.fanUpdated) fan.update(dt, { comp });
     S.fanUpdated = false;
     updateFan();
@@ -253,7 +276,7 @@ export function createPuzzle(ctx) {
     if (S.lingerT > 1.2) hints.cond('noWind', 3.4, 10);
     if (!S.ductHint && scent.clouds.some((c) => c.state === 'duct')) { S.ductHint = true; hints.now('duct', 2.8, 4); }
 
-    hints.setPrompt(nearDuck(active) ? 'duck' : null);
+    hints.setPrompt(nearDuck(active) ? 'duck' : canDrop(active) ? 'drop' : null);
     cols.update(active);
 
     const o = objective(active.name);
@@ -263,7 +286,9 @@ export function createPuzzle(ctx) {
       S.objKey = key;
       if (!first) onStageChange(S.stage);
     }
-    if (S.stage === 'carrying' && deliveredAt(GOAL, ctrls[duck.holder], active)) {
+    const dropped = S.dropDeliver;
+    S.dropDeliver = false;
+    if (S.stage === 'carrying' && duck.holder && (dropped || deliveredAt(GOAL, ctrls[duck.holder], active))) {
       setStage('done');
       return 'delivered';
     }
@@ -272,6 +297,7 @@ export function createPuzzle(ctx) {
 
   function interact(c) {
     if (nearDuck(c)) { pickup(c.name); return true; }
+    if (canDrop(c)) { dropDuck(c); return true; }
     return false;
   }
 
@@ -302,7 +328,7 @@ export function createPuzzle(ctx) {
     gate.reset();
     duck.returnHome();
     nose.enabled = true;
-    Object.assign(S, { stage: 'start', objKey: '', aligned: false, pigeon: 'A', flyT: 0, lingerT: 0, ductHint: false });
+    Object.assign(S, { stage: 'start', objKey: '', aligned: false, pigeon: 'A', flyT: 0, lingerT: 0, ductHint: false, dropDeliver: false });
     resetNap();
     props.fan?.setPos?.(FAN.start.x, FAN.start.z);
     updateFan();
@@ -342,7 +368,10 @@ export function createPuzzle(ctx) {
     objective, update, interact, reset, jumpToStage, modifyIntent, onBark,
     lockFor: () => null,
     lookTarget: (c) => {
-      if (nearDuck(c)) return { x: DUCK.x, y: 0.12, z: DUCK.z };
+      if (nearDuck(c)) {
+        const f = duck.floor;
+        return f ? { x: f.x, y: 0.08, z: f.z } : { x: DUCK.x, y: 0.12, z: DUCK.z };
+      }
       if (S.nap === 'asleep' && Math.hypot(c.x - NAP_PIGEON.x, c.z - NAP_PIGEON.z) < 1.6) return { x: NAP_PIGEON.x, y: 0.12, z: NAP_PIGEON.z };
       return null;
     },
@@ -352,7 +381,8 @@ export function createPuzzle(ctx) {
     info: () => ({
       nap: S.nap,
       fan: { ...fan.info(), aligned: S.aligned }, gate: gate.info(), pigeon: S.pigeon,
-      duck: { holder: duck.holder }, objective: objective(ctx.activeDog).text,
+      duck: { holder: duck.holder, floor: duck.floor ? { x: +duck.floor.x.toFixed(3), z: +duck.floor.z.toFixed(3) } : null, falling: duck.falling },
+      objective: objective(ctx.activeDog).text,
     }),
     mech: { fan, gate, wind, nose, napNose, napBlock },
     set onStageChange(fn) { onStageChange = fn; },

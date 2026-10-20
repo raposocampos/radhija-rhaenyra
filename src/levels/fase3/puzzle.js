@@ -4,8 +4,8 @@
 //      Radhija cabe). Cada pedra acende uma lanterna; as duas → o portão de treliça abre e trava.
 //   2. Dona Gansa guarda a ponte: chegar perto com a dog ATIVA → grasna e avança (knockback suave).
 //      Um latido atrai a gansa (curiosa por um tempo, depois volta). A pantufa é pesada: só a Rhaenyra.
-//   Pantufa → porta de vidro.
-import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
+//   Pantufa → porta de vidro. E larga a pantufa no chão (E perto pega de volta); largada na porta, entrega.
+import { createHints, createCollectibles, createCarryItem, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createDogEffects, createPressurePlate, createHingedGate, createGooseNPC } from '../../game/mechanics/index.js';
 import { createGoose } from '../../characters/goose.js';
 
@@ -27,6 +27,8 @@ export const TEXT = {
     goRh: 'Ela foi ver! Troque para a Rhaenyra (Q) e corra para a ilha',
     goNow: 'Rápido! Atravesse a ponte e pegue a pantufa (E)',
     carrying: 'Leve a pantufa até a porta de vidro',
+    pickAgain: 'Pegue a pantufa de volta (E)',
+    pickAgainRad: 'A pantufa ficou no chão: só a Rhaenyra carrega (Q)',
   },
   hint: {
     lightH: 'Leve demais para a pedra grande… precisa da Rhaenyra!',
@@ -41,7 +43,7 @@ export const TEXT = {
     heavy: 'A pantufa é pesada demais para a Radhija!',
     got: 'Pantufa resgatada! Agora é só voltar para casa.',
   },
-  prompt: { slipper: 'Pegar a pantufa' },
+  prompt: { slipper: 'Pegar a pantufa', drop: 'Largar a pantufa' },
 };
 
 /** @import { PuzzleContext, Puzzle, Fase3Props } from '../../types' */
@@ -62,7 +64,9 @@ export function createPuzzle(ctx) {
   const plateL = createPressurePlate({ id: 'plateL', x: PLATE_L.x, z: PLATE_L.z, r: PLATE_L.r, requires: PLATE_L.requires, emit, prop: props.plateL, margin: 0.4 });
   const goose = createGooseNPC({ cfg: GOOSE, world, nav: ctx.nav, root, emit, effects, createGoose });
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
-  const slipper = createCarryItem({ obj: props.slipper?.object || null, dogs, scene: root, carrier: SLIPPER.carrier || 'large', name: 'slipper' });
+  const slipper = createCarryItem({ obj: props.slipper?.object || null, dogs, scene: root, carrier: SLIPPER.carrier || 'large', name: 'slipper', emit, world });
+  /** Largada, a pantufa não fica na porta de vidro (lá ela é entregue) nem nas pedras de pressão. */
+  const dropAvoid = inZones([GOAL, PLATE_H, PLATE_L], 0.08);
 
   const S = {
     stage: 'start',
@@ -72,6 +76,8 @@ export function createPuzzle(ctx) {
     gooseState: 'patrol',
     objKey: '',
     luredShot: false,
+    /** E com a pantufa na boca, de frente para a porta: entrega neste quadro (no update). */
+    dropDeliver: false,
   };
   /** @type {(stage: string) => void} */
   let onStageChange = () => {};
@@ -117,7 +123,9 @@ export function createPuzzle(ctx) {
         else { text = O.lureRh; target = tgt(C.radhija.x, C.radhija.z, 0.9); }
       } else { text = O.island; target = tgt(SLIPPER.x, SLIPPER.z, 0.6); }
     } else if (st === 'carrying') {
-      text = O.carrying; target = tgt(GOAL.x, GOAL.z, 0.9);
+      const f = !slipper.holder && slipper.floor;
+      if (f) { text = activeName === 'rhaenyra' ? O.pickAgain : O.pickAgainRad; target = tgt(f.x, f.z, 0.55); }
+      else { text = O.carrying; target = tgt(GOAL.x, GOAL.z, 0.9); }
     }
     return { text, target, stage: st };
   }
@@ -206,23 +214,44 @@ export function createPuzzle(ctx) {
   // ---------- pantufa ----------
   function pickup(name) {
     const c = ctx.ctrls[name];
+    const again = S.stage === 'carrying'; // pegando de volta do chão: sem a comemoração da primeira vez
     slipper.attach(name);
     props.slipper?.setHighlight?.(false);
     props.door?.setHighlight?.(true);
     emit('item:pickup', { name, item: 'slipper', x: c.x, z: c.z });
-    hints.now('got', 3.0, 30);
+    if (!again) hints.now('got', 3.0, 30);
     setStage('carrying');
   }
-  const nearSlipper = (c) => S.stage === 'gateOpen' && !slipper.holder && reach(c, SLIPPER.x, SLIPPER.z) < SLIPPER.pickupR;
+  /** Na ilha, ainda no lugar dela; ou largada no chão depois (E perto pega de volta). */
+  const nearSlipper = (c) => (S.stage === 'gateOpen' && !slipper.holder && reach(c, SLIPPER.x, SLIPPER.z) < SLIPPER.pickupR)
+    || (S.stage === 'carrying' && !slipper.holder && slipper.nearFloor(c));
+
+  /** E com a pantufa na boca: de frente para a porta, entrega; senão ela cai no chão à frente (E perto pega de volta). */
+  function dropSlipper(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = true;
+      return;
+    }
+    slipper.dropBy(c, { avoid: dropAvoid });
+    props.slipper?.setHighlight?.(true);
+    props.door?.setHighlight?.(false);
+  }
 
   function interactable(c) {
     if (nearSlipper(c) && slipper.canCarry(c)) return 'slipper';
+    if (S.stage === 'carrying' && slipper.holder === c.name) return 'drop';
     return null;
   }
 
   function interact(c) {
-    if (interactable(c) === 'slipper') {
+    const k = interactable(c);
+    if (k === 'slipper') {
       pickup(c.name);
+      return true;
+    }
+    if (k === 'drop') {
+      dropSlipper(c);
       return true;
     }
     if (nearSlipper(c) && !slipper.canCarry(c)) {
@@ -237,7 +266,10 @@ export function createPuzzle(ctx) {
   }
 
   function lookTarget(c) {
-    if (hints.promptKind === 'slipper' || nearSlipper(c)) return { x: SLIPPER.x, y: 0.08, z: SLIPPER.z };
+    if (hints.promptKind === 'slipper' || nearSlipper(c)) {
+      const f = slipper.floor;
+      return f ? { x: f.x, y: 0.06, z: f.z } : { x: SLIPPER.x, y: 0.08, z: SLIPPER.z };
+    }
     if (S.stage !== 'start' && Math.hypot(c.x - goose.x, c.z - goose.z) < 3) return { x: goose.x, y: 0.45, z: goose.z };
     return null;
   }
@@ -246,6 +278,7 @@ export function createPuzzle(ctx) {
   function update(dt, { active, ctrls }) {
     hints.frame(dt);
     effects.update(dt, ctrls);
+    slipper.update(dt);
     updatePlates(dt, ctrls, active);
     updateGoose(dt, active, ctrls);
 
@@ -266,7 +299,9 @@ export function createPuzzle(ctx) {
       if (!first) onStageChange(S.stage);
     }
 
-    if (S.stage === 'carrying' && slipper.holder && deliveredAt(GOAL, ctrls[slipper.holder], active)) {
+    const dropped = S.dropDeliver;
+    S.dropDeliver = false;
+    if (S.stage === 'carrying' && slipper.holder && (dropped || deliveredAt(GOAL, ctrls[slipper.holder], active))) {
       setStage('done');
       return 'delivered';
     }
@@ -296,7 +331,7 @@ export function createPuzzle(ctx) {
     props.door?.setHighlight?.(false);
     Object.assign(S, {
       stage: 'start', lantH: 0, lantL: 0, litH: false, litL: false, metGoose: false, sawGate: false, oneT: 0,
-      prevBy: { H: null, L: null }, gooseState: 'patrol', objKey: '', luredShot: false,
+      prevBy: { H: null, L: null }, gooseState: 'patrol', objKey: '', luredShot: false, dropDeliver: false,
     });
   }
 
@@ -335,7 +370,7 @@ export function createPuzzle(ctx) {
       plateL: plateL.info(),
       lanterns: { H: +S.lantH.toFixed(2), L: +S.lantL.toFixed(2) },
       goose: goose.info(),
-      slipper: { holder: slipper.holder },
+      slipper: { holder: slipper.holder, floor: slipper.floor ? { x: +slipper.floor.x.toFixed(3), z: +slipper.floor.z.toFixed(3) } : null, falling: slipper.falling },
       fx: { radhija: effects.info('radhija'), rhaenyra: effects.info('rhaenyra') },
       objective: objective(ctx.activeDog).text,
       lureSpot: LURE_SPOT,

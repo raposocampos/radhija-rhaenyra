@@ -4,9 +4,9 @@
 //      e dá uma arrancada (Shift) no calço → o portão fica travado aberto.
 //   2. Irrigador giratório: atravessar sem se molhar (arrancada ajuda) e fechar o registro (E).
 //   3. Caixote (só a Rhaenyra empurra, eixo X ou Z) até o vão do meio-fio → cai no canal e vira ponte.
-//   Bolinha na faixa leste → caminha.
+//   Bolinha na faixa leste → caminha. E larga a bolinha no chão (E perto pega de volta); largada na caminha, entrega.
 // Mecânicas genéricas: src/game/mechanics/. Props visuais (§6) sempre com ?. (cenário em paralelo).
-import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
+import { createHints, createCollectibles, createCarryItem, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import {
   createDogEffects, createPressurePlate, createHingedGate, createPushCrate, createSprinkler, createLockedInteractable,
 } from '../../game/mechanics/index.js';
@@ -29,6 +29,7 @@ export const TEXT = {
     pushCrate: 'Empurre o caixote até o vão do meio-fio (segure Shift)',
     ball: 'Atravesse a ponte e pegue a bolinha (E)',
     carrying: 'Leve a bolinha até a caminha',
+    pickAgain: 'Pegue a bolinha de volta (E)',
   },
   hint: {
     light: 'Leve demais! Precisa de alguém mais pesado…',
@@ -50,7 +51,7 @@ export const TEXT = {
     companion: 'Cuidado com a sua companheira!',
     bridge: 'Virou ponte! Dá para atravessar o canal.',
   },
-  prompt: { valve: 'Fechar o registro', ball: 'Pegar a bolinha' },
+  prompt: { valve: 'Fechar o registro', ball: 'Pegar a bolinha', drop: 'Largar a bolinha' },
 };
 
 const smoother = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (x * 6 - 15) + 10));
@@ -88,7 +89,9 @@ export function createPuzzle(ctx) {
     onDone: () => turnOffSprinkler(),
   });
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
-  const ball = createCarryItem({ obj: props.ball?.object || null, dogs, scene: root, carrier: 'any', name: 'ball' });
+  const ball = createCarryItem({ obj: props.ball?.object || null, dogs, scene: root, carrier: 'any', name: 'ball', emit, world });
+  /** Largada, a bolinha não fica na caminha (lá ela é entregue) nem na tábua de pressão. */
+  const dropAvoid = inZones([GOAL, { x: PLANK.x, z: PLANK.z, hx: PLANK.hx + 0.08, hz: PLANK.hz + 0.08 }]);
 
   const S = {
     stage: 'start',
@@ -101,6 +104,8 @@ export function createPuzzle(ctx) {
     wetCount: 0,
     objKey: '',
     plankBy: null,
+    /** E com a bolinha na boca, de frente para a caminha: entrega neste quadro (no update). */
+    dropDeliver: false,
   };
   /** @type {(stage: string) => void} */
   let onStageChange = () => {};
@@ -145,7 +150,9 @@ export function createPuzzle(ctx) {
     } else if (st === 'bridge') {
       text = O.ball; target = tgt(BALL.x, BALL.z, 0.6);
     } else if (st === 'carrying') {
-      text = O.carrying; target = tgt(GOAL.x, GOAL.z, 0.9);
+      const f = !ball.holder && ball.floor;
+      if (f) { text = O.pickAgain; target = tgt(f.x, f.z, 0.55); }
+      else { text = O.carrying; target = tgt(GOAL.x, GOAL.z, 0.9); }
     }
     return { text, target, stage: st };
   }
@@ -284,10 +291,26 @@ export function createPuzzle(ctx) {
     setStage('carrying');
   }
 
+  /** E com a bolinha na boca: de frente para a caminha, entrega; senão ela cai no chão à frente (E perto pega de volta). */
+  function dropBall(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = true;
+      return;
+    }
+    ball.dropBy(c, { avoid: dropAvoid });
+    props.ball?.setHighlight?.(true);
+    props.bed?.setHighlight?.(false);
+  }
+
   // ---------- interação ----------
+  /** A bolinha largada no chão, ao alcance de `c` (depois da primeira vez que alguém a pegou). */
+  const nearFloorBall = (c) => S.stage === 'carrying' && !ball.holder && ball.canCarry(c) && ball.nearFloor(c);
   function interactable(c) {
     if (valve.near(c)) return 'valve';
     if (S.stage === 'bridge' && !ball.holder && ball.canCarry(c) && reach(c, BALL.x, BALL.z) < BALL.pickupR) return 'ball';
+    if (nearFloorBall(c)) return 'ball';
+    if (S.stage === 'carrying' && ball.holder === c.name) return 'drop';
     return null;
   }
 
@@ -296,6 +319,10 @@ export function createPuzzle(ctx) {
     if (k === 'valve') return valve.start(c);
     if (k === 'ball') {
       pickup(c.name);
+      return true;
+    }
+    if (k === 'drop') {
+      dropBall(c);
       return true;
     }
     if (!S.wedgeLocked && gate.t < 0.05 && c.x < WALL_AB.x && c.x > WALL_AB.x - 0.75 && Math.abs(c.z - gateMid.z) < 0.9) {
@@ -311,7 +338,10 @@ export function createPuzzle(ctx) {
   function lookTarget(c) {
     const k = hints.promptKind;
     if (k === 'valve') return { x: VALVE.x, y: VALVE.y, z: VALVE.z };
-    if (k === 'ball') return { x: BALL.x, y: 0.07, z: BALL.z };
+    if (k === 'ball') {
+      const f = ball.floor;
+      return f ? { x: f.x, y: 0.07, z: f.z } : { x: BALL.x, y: 0.07, z: BALL.z };
+    }
     if (valve.dog === c.name) return { x: VALVE.x, y: VALVE.y, z: VALVE.z };
     if (!S.wedgeLocked && Math.hypot(c.x - wedgeCol.x, c.z - wedgeCol.z) < 1.1) return { x: wedgeCol.x, y: 0.05, z: wedgeCol.z };
     if (S.stage === 'gateLocked' && sprinkler.running && Math.hypot(c.x - SPRINKLER.x, c.z - SPRINKLER.z) < SPRINKLER.r + 1.2) {
@@ -340,6 +370,7 @@ export function createPuzzle(ctx) {
   function update(dt, { active, comp, ctrls }) {
     hints.frame(dt);
     effects.update(dt, ctrls);
+    ball.update(dt);
     updateGate(dt, ctrls, active);
     updateWedge(dt, active, ctrls);
     const wet = sprinkler.update(dt, ctrls);
@@ -368,7 +399,9 @@ export function createPuzzle(ctx) {
       if (!first) onStageChange(S.stage);
     }
 
-    if (S.stage === 'carrying' && ball.holder && deliveredAt(GOAL, ctrls[ball.holder], active)) {
+    const dropped = S.dropDeliver;
+    S.dropDeliver = false;
+    if (S.stage === 'carrying' && ball.holder && (dropped || deliveredAt(GOAL, ctrls[ball.holder], active))) {
       setStage('done');
       return 'delivered';
     }
@@ -408,7 +441,7 @@ export function createPuzzle(ctx) {
       stage: 'start', openedOnce: false, gateWasOpen: false,
       wedgeT: 0, wedgeAnim: -1, wedgeLocked: false, wedgeBumpCd: 0,
       dashRecent: { radhija: 0, rhaenyra: 0 }, sink: null, bridge: false, crateUpdated: false,
-      wetCount: 0, objKey: '', plankBy: null,
+      wetCount: 0, objKey: '', plankBy: null, dropDeliver: false,
     });
   }
 
@@ -495,7 +528,7 @@ export function createPuzzle(ctx) {
       valve: valve.info(),
       crate: crate.info(),
       bridge: S.bridge,
-      ball: { holder: ball.holder },
+      ball: { holder: ball.holder, floor: ball.floor ? { x: +ball.floor.x.toFixed(3), z: +ball.floor.z.toFixed(3) } : null, falling: ball.falling },
       fx: { radhija: effects.info('radhija'), rhaenyra: effects.info('rhaenyra') },
       objective: objective(ctx.activeDog).text,
     };

@@ -1,8 +1,8 @@
 // FASE 5 · Operação Ursinho — puzzle (ver o cabeçalho de ./layout.js).
 // Cadeia: Rhaenyra pula o portãozinho → abre a trava do lado do corredor → pula a barricada de caixas
 // → empurra a caixa de almofadas de dentro da cozinha (desmonta) → Radhija entra debaixo da mesa →
-// ursinho → caminha.
-import { createHints, createCollectibles, createCarryItem, reach, deliveredAt } from '../../game/puzzleKit.js';
+// ursinho → caminha. E larga o ursinho no chão (E perto pega de volta); largado na caminha, entrega.
+import { createHints, createCollectibles, createCarryItem, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createHingedGate, createLockedInteractable } from '../../game/mechanics/index.js';
 
 export const STAGES = ['start', 'gateOpen', 'boxClear', 'carrying', 'done'];
@@ -19,6 +19,7 @@ export const TEXT = {
     bear: 'Só a Radhija cabe debaixo da mesa: pegue o ursinho (E)',
     bearRh: 'A Rhaenyra é grande demais para a mesa: troque para a Radhija (Q)',
     carrying: 'Leve o ursinho para a caminha',
+    pickAgain: 'Pegue o ursinho de volta (E)',
   },
   hint: {
     gateRad: 'A Radhija não alcança a trava. A Rhaenyra pula! (Q)',
@@ -33,7 +34,7 @@ export const TEXT = {
     tableBig: 'A Rhaenyra é grande demais para entrar debaixo da mesa…',
     found: 'Achou o ursinho!',
   },
-  prompt: { latch: 'Abrir a trava', bear: 'Pegar o ursinho' },
+  prompt: { latch: 'Abrir a trava', bear: 'Pegar o ursinho', drop: 'Largar o ursinho' },
 };
 
 /** @import { PuzzleContext, Puzzle, Fase5Props } from '../../types' */
@@ -49,10 +50,12 @@ export function createPuzzle(ctx) {
 
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
-  const bear = createCarryItem({ obj: props.bear?.object || null, dogs, scene: root, name: 'bear' });
+  const bear = createCarryItem({ obj: props.bear?.object || null, dogs, scene: root, name: 'bear', emit, world });
   const gate = createHingedGate({ id: 'portaozinho', cfg: PET_GATE, world, prop: props.petGate });
   gate.col.jumpable = true; // baixinho: a Rhaenyra passa por cima
-  const S = { stage: 'start', objKey: '', collapseT: -1, boxClear: false, crateUpdated: false };
+  /** Largado, o ursinho não fica na caminha (lá ele é entregue). */
+  const dropAvoid = inZones([GOAL]);
+  const S = { stage: 'start', objKey: '', collapseT: -1, boxClear: false, crateUpdated: false, dropDeliver: false };
 
   // ---------- caixa de almofadas: só anda para o oeste; em minX desmonta ----------
   const box = createPushCrate({
@@ -135,21 +138,39 @@ export function createPuzzle(ctx) {
     } else if (S.stage === 'boxClear') {
       if (activeName === 'radhija') { text = O.bear; target = at(BEAR.x, BEAR.z, 0.45); }
       else { text = O.bearRh; target = at(C.radhija.x, C.radhija.z, 0.9); }
-    } else if (S.stage === 'carrying') { text = O.carrying; target = at(GOAL.x, GOAL.z, 0.7); }
+    } else if (S.stage === 'carrying') {
+      const f = !bear.holder && bear.floor;
+      if (f) { text = O.pickAgain; target = at(f.x, f.z, 0.5); }
+      else { text = O.carrying; target = at(GOAL.x, GOAL.z, 0.7); }
+    }
     return { text, target, stage: S.stage };
   }
 
   // ---------- ursinho ----------
-  const nearBear = (c) => S.stage === 'boxClear' && !bear.holder && c.size === 'small' && reach(c, BEAR.x, BEAR.z) < BEAR.pickupR;
+  /** Debaixo da mesa (só a Radhija cabe lá); ou largado no chão depois (E perto pega de volta, qualquer uma). */
+  const nearBear = (c) => (S.stage === 'boxClear' && !bear.holder && c.size === 'small' && reach(c, BEAR.x, BEAR.z) < BEAR.pickupR)
+    || (S.stage === 'carrying' && !bear.holder && bear.nearFloor(c));
   function pickup(name) {
     const c = ctx.ctrls[name];
+    const again = S.stage === 'carrying';
     props.bear?.setCarried?.(true);
     bear.attach(name);
     props.bed?.setHighlight?.(true);
     emit('item:pickup', { name, item: 'bear', x: c.x, z: c.z });
-    hints.now('found', 2.6, 4);
+    if (!again) hints.now('found', 2.6, 4);
     setStage('carrying');
   }
+  /** E com o ursinho na boca: de frente para a caminha, entrega; senão ele cai no chão à frente (E perto pega de volta). */
+  function dropBear(c) {
+    const m = mouthPoint(c);
+    if (Math.hypot(m.x - GOAL.x, m.z - GOAL.z) < GOAL.r) {
+      S.dropDeliver = true;
+      return;
+    }
+    bear.dropBy(c, { avoid: dropAvoid });
+    props.bed?.setHighlight?.(false);
+  }
+  const canDrop = (c) => S.stage === 'carrying' && bear.holder === c.name;
 
   // ---------- quadro ----------
   function modifyIntent(dt, c, intent, { shift, comp }) {
@@ -165,6 +186,7 @@ export function createPuzzle(ctx) {
 
   function update(dt, { active, comp, ctrls }) {
     hints.frame(dt);
+    bear.update(dt);
     if (!S.crateUpdated) box.update(dt, { comp });
     S.crateUpdated = false;
     gate.update(dt, { ctrls });
@@ -181,7 +203,7 @@ export function createPuzzle(ctx) {
     if (active.size === 'large' && active.hits?.some((h) => h.id === 'mesa-toalha')) hints.cond('tableBig', 3.4, 10);
 
     // a trava vale enquanto o portãozinho estiver fechado, em qualquer etapa
-    const prompt = !gate.locked && latch.near(active) ? 'latch' : nearBear(active) ? 'bear' : null;
+    const prompt = !gate.locked && latch.near(active) ? 'latch' : nearBear(active) ? 'bear' : canDrop(active) ? 'drop' : null;
     hints.setPrompt(prompt);
     cols.update(active);
 
@@ -192,7 +214,9 @@ export function createPuzzle(ctx) {
       S.objKey = key;
       if (!first) onStageChange(S.stage);
     }
-    if (S.stage === 'carrying' && deliveredAt(GOAL, ctrls[bear.holder], active)) {
+    const dropped = S.dropDeliver;
+    S.dropDeliver = false;
+    if (S.stage === 'carrying' && bear.holder && (dropped || deliveredAt(GOAL, ctrls[bear.holder], active))) {
       setStage('done');
       return 'delivered';
     }
@@ -202,6 +226,7 @@ export function createPuzzle(ctx) {
   function interact(c) {
     if (!gate.locked && latch.near(c)) { latch.start(c); return true; }
     if (nearBear(c)) { pickup(c.name); return true; }
+    if (canDrop(c)) { dropBear(c); return true; }
     // do lado da sala, a trava não alcança
     if (!gate.locked && c.x < WALL_SH.x && Math.hypot(c.x - gateMid.x, c.z - gateMid.z) < 1.0) {
       hints.now('latchSide', 3.2, 4);
@@ -219,7 +244,7 @@ export function createPuzzle(ctx) {
     box.reset();
     bear.returnHome();
     props.bear?.setCarried?.(false);
-    Object.assign(S, { stage: 'start', objKey: '', collapseT: -1, boxClear: false, crateUpdated: false });
+    Object.assign(S, { stage: 'start', objKey: '', collapseT: -1, boxClear: false, crateUpdated: false, dropDeliver: false });
   }
 
   /** @param {string} st @param {{ who?: import('../../types').DogName }} [opts] */
@@ -252,7 +277,10 @@ export function createPuzzle(ctx) {
     objective, update, interact, reset, jumpToStage, modifyIntent,
     lockFor: (name) => latch.lockFor(name),
     lookTarget: (c) => {
-      if (nearBear(c)) return { x: BEAR.x, y: 0.1, z: BEAR.z };
+      if (nearBear(c)) {
+        const f = bear.floor;
+        return f ? { x: f.x, y: 0.06, z: f.z } : { x: BEAR.x, y: 0.1, z: BEAR.z };
+      }
       if (!gate.locked && latch.near(c)) return { x: PET_GATE.latchPost.x, y: 0.4, z: PET_GATE.latchPost.z };
       return null;
     },
@@ -261,7 +289,8 @@ export function createPuzzle(ctx) {
     endActions: () => box.endPush(),
     info: () => ({
       gate: gate.info(), latch: latch.info(), box: { ...box.info(), collapsed: S.collapseT >= 0 },
-      bear: { holder: bear.holder }, objective: objective(ctx.activeDog).text,
+      bear: { holder: bear.holder, floor: bear.floor ? { x: +bear.floor.x.toFixed(3), z: +bear.floor.z.toFixed(3) } : null, falling: bear.falling },
+      objective: objective(ctx.activeDog).text,
       rooms: { rhaenyra: inHall(ctx.ctrls.rhaenyra) ? 'corredor' : inKitchen(ctx.ctrls.rhaenyra) ? 'cozinha' : 'sala' },
     }),
     mech: { gate, latch, box },
