@@ -26,7 +26,6 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   const OUT = resolve(outDir);
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch(browserOptions());
-  const extraBrowsers = new Set();
   const page = await browser.newPage({ viewport, ...device });
   // Sonda de travamento (hang-probe.mjs): pilha do JavaScript, processos do Chromium, memória, console e registro do
   // navegador quando a página para de responder. Antes de qualquer navegação (marcos do boot e Debugger ligado).
@@ -120,16 +119,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
    *  (opMaxMs) e escuta de queda, com `[nome]` nas mensagens. Os erros do navegador nela reprovam a suíte, e uma espera
    *  abortada reprova mesmo se a suíte engolir a exceção. */
   async function newPage(options = {}, name = 'extra') {
-    // EXPERIMENTO (temporário): E2E_EXTRA_BROWSER=1 abre a página extra num navegador próprio (processo da GPU novo)
-    const own = process.env.E2E_EXTRA_BROWSER === '1' ? await chromium.launch(browserOptions()) : null;
-    const { page: p } = await openPage(own || browser, options, { name, limits, onAbort, onOverdue });
-    if (own) {
-      extraBrowsers.add(own);
-      const closePage = p.close;
-      p.close = async (...a) => {
-        try { await closePage(...a); } finally { extraBrowsers.delete(own); await closeBrowser(own, { limits, report: false }); }
-      };
-    }
+    const { page: p } = await openPage(browser, options, { name, limits, onAbort, onOverdue });
     p.on('console', (m) => { if (m.type() === 'error') errors.push(`[${name} console.error] ${m.text()}`); });
     p.on('pageerror', (e) => errors.push(`[${name} pageerror] ${e.message}`));
     if (process.env.CI) p.setDefaultTimeout(120000);
@@ -474,7 +464,6 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   async function close() {
     // o 'disconnected' do fechamento não é queda; preso, closeBrowser encerra o processo da suíte em 2 s. Antes de
     // fechar, ele espera um diagnóstico em curso (hang-probe.mjs).
-    for (const b of extraBrowsers) await closeBrowser(b, { limits, report: false });
     if (!await closeBrowser(browser, { limits, report: false })) aborts.push(`[harness] o navegador não fechou em ${secs(limits.closeMs)}`);
     stopWatch(); // depois de fechar: outra suíte no mesmo processo (stress-boot.mjs) segue vigiada
     if (pace.real > 0) {

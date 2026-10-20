@@ -479,10 +479,6 @@ try {
   await sleep(1500);
   check(i.state === 'playing' && (await uiState()).touchOn, 'Começar (toque): partida com os controles');
 
-  // EXPERIMENTO (temporário): E2E_IPHONE_VOLTAS=N repete as páginas do PC e dos iPhones N vezes
-  const VOLTAS = Number(process.env.E2E_IPHONE_VOLTAS) || 1;
-  for (let volta = 1; volta <= VOLTAS; volta++) {
-  if (VOLTAS > 1) console.log(`\n== volta ${volta} de ${VOLTAS} ==`);
   console.log('\n== PC (sem toque): nada muda ==');
   // páginas extras com as redes do harness (tetos de relógio, vigia e escuta de queda; erros do navegador reprovam)
   const pc = await H.newPage({ viewport: { width: 1280, height: 720 } }, 'pc');
@@ -521,7 +517,9 @@ try {
       window.__fakePads = [];
       Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value() { return window.__fakePads; } });
       if (!ci) return;
-      // a mesma redução gráfica do harness no CI sem GPU (só o custo de desenho; o jogo é o mesmo)
+      // a mesma redução gráfica do harness no CI sem GPU (só o custo de desenho; o jogo é o mesmo), inclusive desenhar
+      // 1 de cada 30 quadros: desenhando todos, cada quadro do iPhone levava 0,7–2 s no SwiftShader, dividindo o
+      // processo da GPU com a página principal (que segue jogando); a simulação e a entrada continuam em todo quadro
       Object.defineProperty(window, '__game', {
         configurable: true,
         set(value) {
@@ -529,6 +527,14 @@ try {
           const low = () => { renderer.setPixelRatio(0.25); composer.setPixelRatio(0.25); renderer.shadowMap.enabled = false; bloom.enabled = false; };
           low();
           value.events?.on?.('quality:change', low);
+          const render = value.engine.render.bind(value.engine);
+          let frame = 0;
+          let last = [0, 0];
+          value.engine.render = (dt, t) => {
+            last = [dt, t];
+            if (frame++ % 30 === 0) render(dt, t);
+          };
+          window.__e2eRender = () => render(...last);
           Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
         },
       });
@@ -538,28 +544,16 @@ try {
     await p.waitForTimeout(2500);
     return p;
   };
+  /** Captura de uma página de iPhone: no CI ela desenha 1 de 30 quadros, então força um desenho real antes. */
+  const snap = async (p, path) => {
+    await p.evaluate(() => window.__e2eRender?.());
+    await p.screenshot({ path });
+  };
   const center = (p, sel) => p.evaluate((s) => {
     const r = document.querySelector(s)?.getBoundingClientRect();
     return r && { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
   }, sel);
-  // EXPERIMENTO (temporário): E2E_DIAG_STEPS=1 registra cada passo do iPhone com os quadros (rAF) desta aba e da principal
-  const FRAME = () => new Promise((done) => {
-    const raf = window.__probeRaf || window.requestAnimationFrame.bind(window);
-    const t0 = performance.now();
-    let i = null;
-    try { i = window.__game?.game?.debug?.info?.(); } catch {}
-    const base = `${i?.state ?? '-'} sim ${i?.simSec ?? '-'}`;
-    const t = setTimeout(() => done(`${base} SEM QUADRO em 2 s`), 2000);
-    raf(() => { clearTimeout(t); done(`${base} rAF ${Math.round(performance.now() - t0)} ms`); });
-  });
-  const trace = async (p, what) => {
-    if (process.env.E2E_DIAG_STEPS !== '1') return;
-    const look = (pg) => Promise.race([pg.evaluate(FRAME).catch((e) => `erro ${String(e.message).split('\n')[0]}`), new Promise((r) => setTimeout(r, 5000, 'sem resposta em 5 s'))]);
-    const [a, b] = await Promise.all([look(p), look(page)]);
-    console.log(`  [passo] ${what}: iphone ${a} · principal ${b}`);
-  };
   const ip = await iphonePage();
-  await trace(ip, 'aberto');
   let ios = await ip.evaluate(() => ({
     mark: document.querySelector('.rr').dataset.installTip ?? null, tip: document.querySelector('.rr-ios-tip')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
     fsBtnHidden: document.querySelector('.rr-fullscreen').hidden, iosBtn: !!document.querySelector('.rr-ios-fs__how'), rotateLine: !!document.querySelector('.rr-rotate__ios'),
@@ -572,18 +566,15 @@ try {
   const playBox = await center(ip, '.rr-btn--play');
   const optionsBox = await center(ip, '.rr-btn--options');
   check(inView(tipBox) && !overlaps(tipBox, playBox) && !overlaps(tipBox, optionsBox) && tipBox.top >= optionsBox.bottom, 'cartão da dica cabe sob o Jogar e o Opções', { tipBox, playBox, optionsBox });
-  await ip.screenshot({ path: 'shots/toque/12-iphone-dica.png' });
+  await snap(ip, 'shots/toque/12-iphone-dica.png');
   // fechar no × some e não volta mais
   const close = await center(ip, '.rr-ios-tip__close');
   await ip.touchscreen.tap(close.x, close.y);
-  await trace(ip, 'toque no ×');
   // o clique do toque chega quando a página (desenhando no SwiftShader) fica livre: espera o efeito, não um tempo fixo
   await ip.waitForFunction(() => !document.querySelector('.rr-ios-tip'), null, { timeout: 15000 }).catch(() => {});
   ios = await ip.evaluate(() => ({ tip: !!document.querySelector('.rr-ios-tip'), saved: localStorage.getItem('rr-dica-tela-inicial'), state: window.__game.game.state }));
   check(!ios.tip && ios.saved === '1' && ios.state === 'title', 'fechar a dica: some, fica salvo e não começa a partida', ios);
-  await trace(ip, 'antes de recarregar');
   await ip.reload({ waitUntil: 'load' });
-  await trace(ip, 'recarregado (load)');
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
@@ -597,15 +588,11 @@ try {
   };
   for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
     await tapShown(sel);
-    await trace(ip, `toque em ${sel}`);
     await ip.waitForTimeout(400);
   }
   await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
-  await trace(ip, 'intro');
   await ip.waitForTimeout(1200);
-  await trace(ip, 'antes de Começar');
   await tapShown('[data-action="start"]');
-  await trace(ip, 'toque em Começar');
   await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');
@@ -620,12 +607,12 @@ try {
   });
   check(how.shown && /Adicionar à Tela de Início/.test(how.text) && !how.nav, 'pausa: nota com o passo a passo (só texto, nada focável sem efeito)', how);
   check(inView(await center(ip, '.rr-card--pause')), 'pausa com o passo a passo cabe na tela');
-  await ip.screenshot({ path: 'shots/toque/13-iphone-pausa.png' });
+  await snap(ip, 'shots/toque/13-iphone-pausa.png');
   await ip.setViewportSize({ width: PHONE.height, height: PHONE.width });
   await ip.waitForTimeout(500);
   const rotIos = await ip.evaluate(() => ({ overlay: getComputedStyle(document.querySelector('.rr-rotate')).display, line: getComputedStyle(document.querySelector('.rr-rotate__ios')).display }));
   check(rotIos.overlay === 'grid' && rotIos.line !== 'none', 'de pé: o aviso de girar traz a dica do iPhone', rotIos);
-  await ip.screenshot({ path: 'shots/toque/14-iphone-de-pe.png' });
+  await snap(ip, 'shots/toque/14-iphone-de-pe.png');
   await ip.close();
 
   // aberto pelo ícone da tela inicial: tela cheia de verdade, nada de dica
@@ -636,9 +623,8 @@ try {
     mobile: document.querySelector('.rr').dataset.mobile ?? null,
   }));
   check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
-  await app.screenshot({ path: 'shots/toque/15-iphone-app.png' });
+  await snap(app, 'shots/toque/15-iphone-app.png');
   await app.close();
-  } // fim das voltas (EXPERIMENTO)
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {
