@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; etapa 3, #46 e #49 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+de pé, Radhija mais devagar e arrancada; etapa 3, #46, #47, #49 e #50 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -32,6 +32,56 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: CI, E2E `todas` (inclui as capturas do `canil`), prévia e aprovação do usuário; depois, etapa 5 (troca
   nas 10 fases e cascas de pelo mais leves só no celular).
 
+## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`; Claude, branch `claude/versao-automatica`, 2026-10-20)
+
+- Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
+  de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
+  Regra curta no `AGENTS.md` e detalhes no `docs/ENTREGA.md` ("Versão do jogo"): PATCH e build automáticos pelos
+  commits de primeiro pai do main; o campo `"version"` só muda em marco pedido pelo usuário. Este PR declara
+  `0.10.0` (fecha a demo de 10 fases).
+- Feito (PR #50): `tools/deploy/version.mjs` (cálculo e rótulos), passo no `ci.yml` (`fetch-depth: 0`,
+  `GAME_VERSION_INFO`, `version.json` com version/build/pr/label), texto pequeno no canto da tela inicial
+  (`src/core/version.js`, `.rr-version`) e `test/versao.test.mjs`. O `deploy.yml` não muda: ele só copia o artefato.
+- Número: build = commits de primeiro pai do main (6 commits laterais de dois merges antigos não contam). Com o
+  #49 e o #47 já no main (91 commits de primeiro pai: hoje `v0.1.90 · build 91`), o merge deste PR vira
+  **v0.10.0 · build 92** se nada mais entrar antes (cada PR integrado antes soma 1 ao build; a versão continua 0.10.0).
+- Integrado ao main com a aprovação do usuário (squash `f1218f5`; deploy e `version.json` com a sessão da versão e o
+  orquestrador). Não repetir merge/deploy do #50.
+
+## Entregue: travamentos do iPhone emulado na suíte `toque` (PR #47, squash `3c41acd`, deploy `39378360338`)
+
+- Pedido (orquestrador): investigar os travamentos intermitentes do iPhone emulado na suíte `toque` dentro do
+  `todas` (PR #43, E2E `39358151432`: `test-toque.mjs:581` preso na intro; 2ª tentativa, `capture-celular.mjs:88` sem
+  responder) e corrigir sem afrouxar verificações. Só ferramentas de E2E; nada em `src/`.
+- Dois sintomas nos logs desde 2026-10-18. (1) "Deixa de responder": a aba nova (boot da página principal, das
+  páginas extras do PC/iPhone ou de cada aparelho das capturas) para em `rr:boot:ui` com a thread principal presa
+  fora do JavaScript. É o mesmo "travamento no primeiro carregamento" de ~1% documentado na ARQUITETURA §10.
+  (2) "Não sai da intro": 4 vezes (`39358151432`, `39313770288`, `39303364280`, `39178028583`), sempre depois do
+  `ip.reload()` do iPhone, sempre em runner AMD EPYC 7763, com `simSec` parado em ~5 s e a aba respondendo.
+- Causa de (1), com pilhas nativas (gdb) em 4 travamentos (experimento `toque-diag`, E2E `39365366605` e
+  `39366431425`): impasse dentro da aba. Os módulos do Vite compilam em segundo plano
+  (`BackgroundResourceScriptStreamer`) no pool de threads da aba (3 vagas no runner de 4 núcleos) e esperam uma coleta
+  de lixo da thread principal; a thread principal, no layout do logotipo com a fonte web carregando, espera o
+  serviço de fontes (`FontServiceThread`), cuja tarefa vai para o mesmo pool, sem vaga. Navegador e GPU ociosos.
+  Correção: `--disable-features=ScriptStreaming` em `tools/scripts/lib/browser.mjs`, junto com a lista do
+  Playwright (o Chromium só lê o último `--disable-features`); teste em `test/e2e-runner.test.mjs`.
+- (2) não se repetiu em ~75 sequências do iPhone nos experimentos (nem nas de runner EPYC 7763). Pista: nas falhas o
+  `simSec` chegou a ~5 s antes de parar; nos experimentos, no mesmo ponto, fica em 0,7–1,4 s (cada quadro do iPhone
+  levava 0,7–2 s, desenhando todo quadro no SwiftShader, dividindo a GPU com a página principal). Mitigação: as
+  páginas do iPhone ganharam a mesma redução de desenho do harness (1 de 30 quadros, desenho real antes das
+  capturas). Se voltar, o diagnóstico agora sai no prazo vencido, com os quadros de cada aba e as pilhas.
+- Diagnóstico novo (fica): `hang-probe.mjs` testa se cada aba recebe quadros, lista todas as threads da GPU e das abas
+  e grava pilhas nativas com gdb (só se houver gdb no job); `page-guard.mjs` imprime o diagnóstico em todo prazo
+  vencido do Playwright numa página protegida. ARQUITETURA §10 atualizada.
+- **PR #47.** Validação: estresse da correção (este código + um laço que repete PC e iPhones 6×, no branch descartável
+  já apagado; E2E `39369177965`): 10/10 jobs verdes, 60 sequências PC+iPhone (42 em EPYC 7763) e 20 rodadas de
+  capturas, sem nenhum diagnóstico; sem a correção, a mesma configuração deu 3 travamentos em 10 jobs. E2E `toque`
+  verde em `ffd9cab` (`39369408152`, EPYC 7763, 98/98). O job temporário `toque-diag` já saiu do `e2e.yml`.
+  Integrado ao main com a aprovação do usuário (squash `3c41acd`, deploy `39378360338`, `version.json` conferido
+  pelo orquestrador). Não repetir merge/deploy do #47.
+- Pendência separada (não é deste PR): a suíte `lambe` cai de vez em quando em "cinco lambidas limpam a Radhija" com
+  o jogo lento (E2E `39313770288` e 1ª tentativa de `39373228456`, mesma cascata); sessão própria aberta para isso.
+
 ## Entregue: modelos novos das dogs, etapa 3 de 5: poses em camadas (PR #45, squash `b95c2b0`, deploy `39368373474`)
 
 - Pedido do usuário (pelo orquestrador, 2026-10-20): "pode começar as etapas novas" — 3, depois 4 (colisão do corpo e
@@ -44,8 +94,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Feito: camadas em ordem em `src/dogs/v2/dog.js` (`LAYERS`, pesos em `d.layers`), física de correntinhas genérica
   (`physics.js`: orelhas com os mesmos números aprovados e o rabo, firme), testes do rabo, da boca (bebendo e comendo,
   no mesmo lugar do atual) e das camadas; captura `39-rabo-parando`.
-- Aprovada pelo usuário ("pode publicar", versão `6ad75f7`): integrada e publicada (squash `b95c2b0`, CI do main
-  `39368273038`, deploy `39368373474`).
+- Integrado ao main com a aprovação do usuário (squash `b95c2b0`, deploy `39368373474`). Não repetir merge/deploy do
+  #45. A etapa 4 (colisão do corpo e da cabeça) segue no PR #48.
 
 ## Entregue: modelos novos das dogs, etapa 2 de 5: locomoção (PR #43, squash `ef2cb50`, deploy `39362697455`)
 

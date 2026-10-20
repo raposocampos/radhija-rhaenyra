@@ -75,6 +75,15 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
   Se houver bloqueio real, explicar o que falta sem alegar conclusão nem pedir
   tokens no chat. Fotos e dados privados também não podem ir para prévias.
 
+## Versão do jogo
+
+- Contador automático de mudanças: cada PR integrado ao `main` sobe o PATCH e
+  o build sozinho (`v0.10.0 · build 90` no `version.json` e, discreto, no
+  menu). O CI conta pelo Git; nenhum PR edita número, e não há changelog, tag
+  nem release.
+- O campo `"version"` do `package.json` só muda em marco pedido pelo usuário
+  (MINOR; PATCH volta a 0). Detalhes em `docs/ENTREGA.md`.
+
 ## Testes e build na nuvem
 
 - Por padrão, executar testes, checagem de tipos e build nos servidores do

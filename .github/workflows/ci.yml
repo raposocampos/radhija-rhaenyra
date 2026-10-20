@@ -18,11 +18,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          # Histórico completo: a versão do jogo conta os commits de primeiro pai do main (docs/ENTREGA.md).
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Exporta GAME_VERSION_INFO: o Vite embute a versão no menu e o version.json grava version e build.
+      - name: Calcular a versão do jogo
+        env:
+          VERSION_PR: ${{ github.event.pull_request.number }}
+          VERSION_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node tools/deploy/version.mjs --github-env
       # O build roda antes "npm run typecheck" e "npm test" (prebuild).
       - run: npm run build
       - name: Identificar a versão testada
@@ -34,6 +42,8 @@ jobs:
           node --input-type=module <<'NODE'
           import { writeFileSync } from 'node:fs';
           writeFileSync('dist/version.json', JSON.stringify({
+            // version, build, pr e label (e next na prévia): o mesmo que o menu mostra.
+            ...JSON.parse(process.env.GAME_VERSION_INFO),
             commit: process.env.BUILD_COMMIT,
             head: process.env.BUILD_HEAD,
             base: process.env.BUILD_BASE || null,

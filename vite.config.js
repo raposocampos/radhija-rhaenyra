@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { gameVersionFromEnv } from './tools/deploy/version.mjs';
 
 export default defineConfig({
   // URLs relativas funcionam também na subpasta do GitHub Pages.
   base: './',
+  // Versão do jogo (src/core/version.js): o CI calcula (tools/deploy/version.mjs) e passa em GAME_VERSION_INFO.
+  define: { __GAME_VERSION__: JSON.stringify(gameVersionFromEnv()) },
   server: { host: '127.0.0.1', port: 5173 },
   build: {
     target: 'es2020',
