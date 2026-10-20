@@ -11,7 +11,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
   colisão da Rhaenyra está ok", mas a Radhija atravessava o balde e a câmera (zona `casa-na-arvore`) deixava o balde no
   rodapé da tela, atrás do botão; 2ª (`36177f7`), "as colisões funcionaram", mas a alça ficava para fora da boca, com a
-  corda na frente da entrada; deitada lá dentro, a cabeça vazava; e o pulo para o deque atravessava o balde.
+  corda na frente da entrada; deitada lá dentro, a cabeça vazava; e o pulo para o deque atravessava o balde; 3ª
+  (`bf15bbd`), "ficou bom", mas com o balde virando as pernas dela atravessavam o balde.
 - Feito (`fase10/puzzle.js`, `layout.js`, `world/treehouse.js`):
   - Colisor do balde para as duas (`fitBucketCol`): caixa do tamanho dele visto de cima, do fundo até a boca, enquanto
     ele está deitado ou levantando; quase em pé, o círculo da boca. Só desliga quando o fundo passa da cabeça da
@@ -22,6 +23,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     balde; puxando, gira com ele. A corda desce por cima do balde, longe da boca.
   - Achado: a pose do balde (`rideSeq`) nunca chegava à animação, e ela ficava sentada no balde deitado (a cabeça
     passava do teto). Agora fica deitada de barriga (`slide`), a `RIDE_IN` do meio, virada como entrou (`rideYaw`).
+    A posição dela (`ridePos`) fica no espaço do balde e gira com ele: deitada perto da boca, na parede de baixo, até
+    a metade do giro; depois vai para o meio, senta (`SIT_TILT`) e desce até `RIDE_SIT` acima do fundo. Antes era
+    uma reta no mundo, e no meio do giro as patas de trás passavam pela parede.
   - Os pulos do deque usam o `hopStep` (agacha, salta com a pose de pulo e pousa): a saída, sentada, sobe por cima da
     borda; a volta salta até em cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque.
   - Câmera: zona `balde-no-chao` (o olhar sobe 0,5 m, em vez de 1,2 m, na volta do balde).
@@ -31,7 +35,9 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   #53, para as duas, em 9 pontos da corda, e as duas livres a 3 cm do balde deitado; deitado, nada do balde nem da
   corda na frente da boca; a Radhija esbarra de lado, por trás e na boca, entra só pela boca, fica quieta lá dentro,
   sai sem tranco e aparece acima do botão na tela; os modelos de verdade (atual e novo), com a pose do jogo quadro a
-  quadro: deitada, a pele cabe no balde; nos pulos do deque, não cruza a parede abaixo da borda.
+  quadro: deitada e com o balde virando (corda puxada devagar, com paradas), a pele cabe nele; nos pulos do deque, não
+  cruza a parede abaixo da borda. Medidas no CI `39503913840`: deitada, 2,6 cm (atual) e 0,9 cm (novo) para dentro;
+  virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
 - Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
   E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
