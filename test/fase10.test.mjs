@@ -740,18 +740,54 @@ seededTest('fase 10: a Radhija de verdade não vaza do balde: deitada nele, cabe
   /** Tudo o que vazou (as medidas vão para o registro do teste, para ajustar de uma vez). */
   const problems = [];
   const cm = (w) => `${(w * 100).toFixed(1)} cm`;
-  // 1. entra pela boca e fica deitada no balde deitado: atrás da boca, a pele não passa do fundo nem das paredes
+  /**
+   * O quanto a pele passa do balde inclinado `tilt` a `by` do chão (o mesmo giro de treehouse.js, layoutRope): no espaço
+   * dele, o que fica antes da boca não passa do fundo nem das paredes; o que sai pela boca não conta.
+   */
+  const outOfPail = (tilt, by) => {
+    const th = (tilt * Math.PI) / 2, s = Math.sin(th), co = Math.cos(th);
+    const py = by + B.r * s, pz = B.z - (B.h / 2) * s;
+    return worst((p) => {
+      const oy = p.y - py, oz = p.z - pz;
+      const ly = oy * co + oz * s, lz = -oy * s + oz * co;
+      return ly >= B.h ? -1 : Math.max(0.01 - ly, Math.hypot(p.x - B.x, lz) - pailR(ly));
+    });
+  };
+  // 1. entra pela boca e fica deitada no balde deitado: a pele não passa do fundo nem das paredes
   as(h, 'radhija');
   put(h, 'radhija', B.x, B.z + 0.7, Math.PI);
   h.tap('KeyE');
   assert.ok(play(1.6, { until: (i) => i.quintal.bucket.riding }), 'entrou no balde');
   play(1.0);
   assert.equal(stub.anim.action, 'slide', 'deitada de barriga lá dentro');
-  const bottomZ = B.z - B.h / 2, mouthZ = B.z + B.h / 2;
-  const lying = worst((p) => (p.z >= mouthZ ? -1 : Math.max(bottomZ + 0.01 - p.z, Math.hypot(p.x - B.x, p.y - B.r) - pailR(p.z - bottomZ))));
+  const lying = outOfPail(1, 0);
   console.log(`[balde] deitada: ${lying.map((r) => `${r.name} ${cm(r.w)} em (${r.at})`).join('; ')}`);
   for (const { name, w, at } of lying) if (w >= 0.01) problems.push(`${name}: deitada, a pele passa ${cm(w)} do balde em (${at})`);
-  // 2. a Rhaenyra puxa a corda: o balde sobe e ela pula para o deque, sem a pele cruzar a parede abaixo da borda
+  // 2. a Rhaenyra pega a corda frouxa e puxa devagar, parando no meio do giro: o balde levanta com ela dentro, e a
+  // pele não passa dele (retorno da 3ª prévia: as pernas atravessavam o balde enquanto ele virava)
+  as(h, 'rhaenyra');
+  put(h, 'rhaenyra', L.ROPE.ring.x, L.ROPE.ring.z + 0.45, Math.PI);
+  h.tap('KeyE');
+  assert.equal(q(h).rope.holder, 'rhaenyra', 'a Rhaenyra pegou a corda');
+  assert.equal(q(h).bucket.tilt, 1, 'corda frouxa: o balde ainda deitado');
+  /** O pior de cada modelo enquanto o balde vira, com a inclinação. */
+  const turning = {};
+  const pauses = new Set([130, 148, 156, 170]); // (d em 1/200 m: inclinação ~0,71, ~0,46, ~0,34 e ~0,14)
+  for (let i = 0; i <= 110; i++) {
+    const d = 0.45 + i * 0.005;
+    h.teleport('rhaenyra', L.ROPE.ring.x, L.ROPE.ring.z + d);
+    const n = pauses.has(Math.round(d * 200)) ? 40 : 1;
+    for (let f = 0; f < n; f++) {
+      frame();
+      if (f % 2) continue;
+      const b = q(h).bucket;
+      for (const r of outOfPail(b.tilt, b.y)) if (!turning[r.name] || r.w > turning[r.name].w) turning[r.name] = { ...r, tilt: b.tilt };
+    }
+  }
+  assert.equal(q(h).bucket.tilt, 0, 'o balde ficou em pé');
+  console.log(`[balde] virando: ${Object.entries(turning).map(([n, r]) => `${n} ${cm(r.w)} (inclinação ${r.tilt}) em (${r.at})`).join('; ')}`);
+  for (const [n, r] of Object.entries(turning)) if (r.w >= 0.01) problems.push(`${n}: com o balde virando (inclinação ${r.tilt}), a pele passa ${cm(r.w)} dele em (${r.at})`);
+  // 3. a Rhaenyra continua puxando: o balde sobe e ela pula para o deque, sem a pele cruzar a parede abaixo da borda
   /** O quanto a pele chega perto da parede do balde lá em cima, abaixo da borda (positivo: está nela). */
   const wall = () => {
     const y0 = q(h).bucket.y;
@@ -770,15 +806,12 @@ seededTest('fase 10: a Radhija de verdade não vaza do balde: deitada nele, cabe
   };
   /** Distância até a parede (o que o `wall` dá é 1,2 cm menos ela). */
   const report = ([key, r]) => `${key}: ${cm(0.012 - r.w)} da parede aos ${r.t.toFixed(2)} s, em (${r.at})`;
-  as(h, 'rhaenyra');
-  put(h, 'rhaenyra', L.ROPE.rest.x, L.ROPE.rest.z + 0.5, Math.PI);
-  h.tap('KeyE');
-  assert.equal(q(h).rope.holder, 'rhaenyra');
   h.hold([0, 1]);
   assert.ok(play(10, { until: (i) => i.quintal.deck === 'hop' }), `o balde chegou lá em cima ${JSON.stringify(q(h).bucket)}`);
   assert.ok(play(2, { until: (i) => i.quintal.onDeck, each: check('hop') }), 'pulou para o deque');
   h.hold(null);
-  // 3. e volta: da beira do deque, salta até em cima do balde e se acomoda lá dentro, sentada
+  assert.equal(q(h).rope.holder, 'rhaenyra', 'a Rhaenyra continua segurando a corda');
+  // 4. e volta: da beira do deque, salta até em cima do balde e se acomoda lá dentro, sentada
   as(h, 'radhija');
   h.walkTo(L.DECK_PATH.arrive.x, L.DECK_PATH.arrive.z, { tol: 0.08 });
   assert.equal(h.info().prompt, TEXT.prompt.bucketBack);

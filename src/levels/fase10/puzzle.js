@@ -667,10 +667,22 @@ export function createPuzzle(ctx) {
    * o focinho e o rabo, que chegam perto das paredes, ficam acima da borda.
    */
   const RIDE_SIT = 0.2;
-  /** Onde a Radhija fica dentro do balde: deitada lá dentro (balde deitado) ou sentada (em pé), na altura dele. */
+  /** Levantando, ela senta quando a inclinação do balde (`bucketTilt`) fica abaixo disto. */
+  const SIT_TILT = 0.4;
+  /**
+   * Onde a Radhija fica dentro do balde, no espaço dele (y ao longo do balde, do fundo para a boca; z para o lado que
+   * fica embaixo quando ele deita), girando com ele: deitada, perto da boca, na parede de baixo; levantando, depois da
+   * metade do giro ela sai da parede para o meio, senta e desce até RIDE_SIT acima do fundo (o que sobra do corpo fica
+   * para fora da boca, sem passar pelas paredes).
+   */
   function ridePos() {
-    const k = 1 - (S.bucketTilt ?? 1);
-    return { x: BUCKET.x, y: 0.03 + (S.bucketY + RIDE_SIT - 0.03) * k, z: BUCKET.z + RIDE_IN * (1 - k) };
+    const tilt = S.bucketTilt ?? 1, k = 1 - tilt;
+    const th = (tilt * Math.PI) / 2, s = Math.sin(th), co = Math.cos(th);
+    const lieY = BUCKET.h / 2 + RIDE_IN, lieZ = BUCKET.r - 0.03;
+    const ly = lieY + (RIDE_SIT - lieY) * smooth((k - 0.5) / 0.5);
+    const lz = lieZ * (1 - smooth((k - 0.5) / 0.25));
+    const py = S.bucketY + BUCKET.r * s, pz = BUCKET.z - (BUCKET.h / 2) * s;
+    return { x: BUCKET.x, y: py + ly * co - lz * s, z: pz + ly * s + lz * co };
   }
   /** A boca do balde deitado (de onde ela entra e por onde sai). */
   const BUCKET_MOUTH = { x: BUCKET.x, y: 0, z: BUCKET.z + BUCKET.h / 2 + 0.38 };
@@ -722,7 +734,7 @@ export function createPuzzle(ctx) {
     if (S.riding) {
       const c = ctrls.radhija;
       const rp = ridePos();
-      pose(rideSeq, c, rp.x, rp.y, rp.z, S.rideYaw, 0, S.peckT > 0 ? 'startled' : S.bucketTilt > 0.5 ? 'slide' : 'sit');
+      pose(rideSeq, c, rp.x, rp.y, rp.z, S.rideYaw, 0, S.peckT > 0 ? 'startled' : S.bucketTilt > SIT_TILT ? 'slide' : 'sit');
       if (S.bucketY >= BUCKET.top - 0.02 && !S.deck && !S.topUsed && !S.topBlocked) {
         if (pigeonAround()) {
           // o pombo acorda, bate as asas em cima do laço e não deixa ela pular para o deque
