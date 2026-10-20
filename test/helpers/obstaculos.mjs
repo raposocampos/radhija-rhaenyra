@@ -6,9 +6,9 @@
 //   const achados = findLooseObstacles(root, world, { dogs });   // [{ center, box, y, depth, sizes, meshes, suggest }]
 //
 // Como: a superfície de cada malha vira pontos a cada `step` m (só os da faixa de altura), agrupados numa grade de
-// `cell` m. Um ponto conta se existe um centro LIVRE para a dog (sem encostar em colisor nem nos limites) a menos de
-// r − tol dele: ela consegue ficar com o corpo por cima do desenho. Pontos encostados viram um achado (um objeto),
-// com a caixa no chão e um colisor sugerido (círculo ou caixa que cobre o desenho por perto).
+// `cell` m. Um ponto conta se existe um centro LIVRE para a dog (sem encostar em colisor nem nos limites, fora de
+// buraco sem entrada) a menos de r − tol dele: ela consegue ficar com o corpo por cima do desenho. Pontos encostados
+// viram um achado (um objeto), com a caixa no chão e um colisor sugerido (círculo ou caixa que cobre o desenho por perto).
 //
 // Fica de fora: malhas invisíveis, instanciadas com 0 instâncias, com esqueleto (bichos), linhas, pontos e sprites;
 // materiais que não desenham; e o que estiver marcado num pai com `userData.walkable` (coisas baixas de pisar,
@@ -101,11 +101,31 @@ function sampleSurface(mesh, { yMin, yMax, step, region }, visit) {
 /** O colisor vale para a dog de tamanho `size` (mesma regra do mundo de colisão, sem o modo da companheira)? */
 const applies = (c, size) => c.enabled !== false && (c.blocks === 'all' || c.blocks === size) && !c.companionOnly;
 
+const inRect = (e, x, z) => x >= e.minX && x <= e.maxX && z >= e.minZ && z <= e.maxZ;
+
+/**
+ * Buracos sem entrada: o `except` de um colisor que fica todo dentro da forma dele (o miolo da bandeja da fase 6, onde
+ * as cargas assentam). Andando, a dog nunca chega lá; um centro "livre" ali não conta. (O da ponte da fase 3 passa da
+ * água dos dois lados: ali a dog anda.)
+ */
+function enclosedHoles(world) {
+  const out = [];
+  for (const list of [world.statics, world.dynamics]) {
+    for (const c of list) {
+      const e = c.except;
+      if (!e) continue;
+      const corners = [[e.minX, e.minZ], [e.minX, e.maxZ], [e.maxX, e.minZ], [e.maxX, e.maxZ]];
+      if (corners.every(([x, z]) => penCollider(x, z, 0, c))) out.push(c);
+    }
+  }
+  return out;
+}
+
 /**
  * Até onde o círculo de uma dog (num centro livre) entra no ponto (x, z): r − distância do centro livre mais perto
  * achado; 0 se nenhum centro livre fica a menos de r − tol. Procura em anéis em volta do ponto.
  */
-function reachDepth(world, x, z, dog, tol) {
+function reachDepth(world, x, z, dog, tol, holes) {
   const reach = dog.r - tol;
   if (reach <= 0) return 0;
   // fundo dentro de um colisor: nenhum centro livre chega perto o bastante (atalho)
@@ -122,7 +142,9 @@ function reachDepth(world, x, z, dog, tol) {
     const n = k === 0 ? 1 : 16;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
-      if (!world.overlaps(x + Math.cos(a) * d, z + Math.sin(a) * d, dog.r, dog.size)) return dog.r - d;
+      const px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d;
+      if (holes.some((c) => applies(c, dog.size) && inRect(c.except, px, pz))) continue;
+      if (!world.overlaps(px, pz, dog.r, dog.size)) return dog.r - d;
     }
   }
   return 0;
@@ -140,6 +162,7 @@ function reachDepth(world, x, z, dog, tol) {
  */
 export function findLooseObstacles(root, world, { dogs, yMin = 0.08, tol = 0.06, step = 0.035, cell = 0.02, link = 0.07, skip = null }) {
   const yMax = Math.max(...dogs.map((d) => d.yMax));
+  const holes = enclosedHoles(world);
   const B = world.bounds;
   const pad = Math.max(...dogs.map((d) => d.r));
   const region = { minX: B.minX - pad, maxX: B.maxX + pad, minZ: B.minZ - pad, maxZ: B.maxZ + pad };
@@ -180,7 +203,7 @@ export function findLooseObstacles(root, world, { dogs, yMin = 0.08, tol = 0.06,
     const sizes = new Set();
     for (const dog of dogs) {
       if (c.y0 > dog.yMax) continue;
-      const d = reachDepth(world, x, z, dog, tol);
+      const d = reachDepth(world, x, z, dog, tol, holes);
       if (d >= tol) {
         sizes.add(dog.name);
         depth = Math.max(depth, d);

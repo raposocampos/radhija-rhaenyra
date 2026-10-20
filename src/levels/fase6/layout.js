@@ -152,7 +152,9 @@ export const STATIC_COLLIDERS = [
   // colisor (retorno do usuário na prévia do PR #48): as dogs pegam a carga da beira, de frente para ela (a cabeça
   // alcança: TRAY.pickupR).
   { id: 'canaleta', shape: 'box', x: CHUTE.x, z: (CHUTE.z0 + CHUTE.z1) / 2, hx: CHUTE.halfWidth + 0.03, hz: (CHUTE.z1 - CHUTE.z0) / 2 },
-  { id: 'bandeja', shape: 'circle', x: TRAY.x, z: TRAY.z, r: 0.295 }, // (a beirada vai a 0,32 m: 2,5 cm de folga)
+  // (a beirada vai a 0,32 m: 2,5 cm de folga) except: o miolo, onde as cargas assentam; devolvida com E, a carga não é
+  // empurrada para fora da bandeja (as dogs nunca chegam ao miolo: a beirada as segura antes)
+  { id: 'bandeja', shape: 'circle', x: TRAY.x, z: TRAY.z, r: 0.295, except: { minX: TRAY.x - 0.16, maxX: TRAY.x + 0.16, minZ: TRAY.z - 0.06, maxZ: TRAY.z + 0.06 } },
   { id: 'foguete', shape: 'circle', x: ROCKET.x, z: ROCKET.z, r: ROCKET.r },
   { id: 'bancada', shape: 'box', x: BENCH.x, z: BENCH.z, hx: BENCH.hx + 0.02, hz: BENCH.hz + 0.02 },
   { id: 'bau', shape: 'box', x: TOY_CHEST.x, z: TOY_CHEST.z, hx: TOY_CHEST.hx + 0.02, hz: TOY_CHEST.hz + 0.02 },
