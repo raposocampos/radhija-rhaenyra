@@ -17,9 +17,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   portão). Mesmo lugar a 60, 30 e 20 fps. Teste novo em `test/fase7.test.mjs`; a partida completa em Node espera o
   pulinho antes de trocar de dog. O E2E ganhou a checagem da posição depois do portão e a do início da lambida pelo
   registro da página (aponta a causa se voltar).
-- Próximo passo: CI do PR, várias rodadas do E2E `lambe` e uma do `todas`; prévia e aprovação do usuário.
+- PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
+  `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
+  (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
+- Próximo passo: prévia e aprovação do usuário no chat; depois, integrar (squash com o SHA conferido), liberar o
+  deploy e conferir `version.json` (v0.10.1 · build 93). O #48 vem depois.
 
-## Em andamento: versão automática do jogo, v0.10.0 (Claude, branch `claude/versao-automatica`, 2026-10-20)
+## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
 - Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
   de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
@@ -32,8 +36,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Número: build = commits de primeiro pai do main (6 commits laterais de dois merges antigos não contam). Com o
   #49 e o #47 já no main (91 commits de primeiro pai: hoje `v0.1.90 · build 91`), o merge deste PR vira
   **v0.10.0 · build 92** se nada mais entrar antes (cada PR integrado antes soma 1 ao build; a versão continua 0.10.0).
-- Próximo passo: CI e prévia do head sincronizado (canto: `prévia PR #50 · sobre v0.1.90`), aprovação do usuário;
-  depois do merge, conferir `version.json` e o menu em produção.
+- Integrado e publicado (pelo orquestrador): produção em **v0.10.0 · build 92**. Cada PR integrado depois soma 1 ao
+  build (o próximo, v0.10.1 · build 93).
 
 ## Entregue: travamentos do iPhone emulado na suíte `toque` (PR #47, squash `3c41acd`, deploy `39378360338`)
 
