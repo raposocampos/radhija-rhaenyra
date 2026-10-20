@@ -3,7 +3,27 @@
 Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: versão automática do jogo, v0.10.0 (Claude, branch `claude/versao-automatica`, 2026-10-20)
+## Em andamento: E2E `lambe` intermitente — o portão da fase 7 arrastava a Radhija (Claude, branch `claude/lambe-e2e-intermitente`)
+
+- Sintoma: `cinco lambidas limpam a Radhija` falhava às vezes (E2E `39313770288` e `39373228456`, tentativa 1, ritmo
+  0,54× e 0,47×) e o resto da fase 7 caía em cascata; 37 outras execuções passaram.
+- Causa (bug do jogo, não do teste): a folha do portão abre para dentro, por cima de onde a Radhija puxa o trinco, e a
+  colisão de cada quadro a arrastava junto. Onde ela terminava dependia do passo do quadro: simulando a mesma partida
+  em Node, a 60 fps ela saía do lado do vão; a 30 e a 20 fps (CI lento, celular fraco), parava em (1,18; 0,7), atrás
+  da folha aberta. A Rhaenyra que entra pelo vão recebia "Tem cerca no meio!" e, com o L segurado, a lambida não
+  recomeçava. As capturas `05-lambe-lambe` das duas falhas mostram a folha entre as duas e a Rhaenyra sem virar.
+- Correção: `createHingedGate().sweepExit(ctrl)` (a folha, abrindo, vai passar pela dog? para onde ela sai, além da
+  ponta) e, na fase 7, quem está no caminho dá um pulinho assustado para lá (`effects.pushTo`, 0,3 s, olhando o
+  portão). Mesmo lugar a 60, 30 e 20 fps. Teste novo em `test/fase7.test.mjs`; a partida completa em Node espera o
+  pulinho antes de trocar de dog. O E2E ganhou a checagem da posição depois do portão e a do início da lambida pelo
+  registro da página (aponta a causa se voltar).
+- PR #51, sincronizado com o main (#47 e #50). Antes da sincronização: CI verde (o teste novo incluso), E2E `lambe`
+  `39378009030` verde (32/32, ritmo 0,60×, Radhija em (2,51; 0,96) depois do portão). A validação do head final
+  (CI, `lambe` em várias rodadas e `todas`) fica registrada no PR.
+- Próximo passo: prévia e aprovação do usuário no chat; depois, integrar (squash com o SHA conferido), liberar o
+  deploy e conferir `version.json` (v0.10.1 · build 93). O #48 vem depois.
+
+## Entregue: versão automática do jogo, v0.10.0 (PR #50, squash `f1218f5`, deploy `39379501836`)
 
 - Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
   de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
@@ -16,8 +36,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Número: build = commits de primeiro pai do main (6 commits laterais de dois merges antigos não contam). Com o
   #49 e o #47 já no main (91 commits de primeiro pai: hoje `v0.1.90 · build 91`), o merge deste PR vira
   **v0.10.0 · build 92** se nada mais entrar antes (cada PR integrado antes soma 1 ao build; a versão continua 0.10.0).
-- Próximo passo: CI e prévia do head sincronizado (canto: `prévia PR #50 · sobre v0.1.90`), aprovação do usuário;
-  depois do merge, conferir `version.json` e o menu em produção.
+- Integrado e publicado (pelo orquestrador): produção em **v0.10.0 · build 92**. Cada PR integrado depois soma 1 ao
+  build (o próximo, v0.10.1 · build 93).
 
 ## Entregue: travamentos do iPhone emulado na suíte `toque` (PR #47, squash `3c41acd`, deploy `39378360338`)
 

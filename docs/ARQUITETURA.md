@@ -269,7 +269,9 @@ Peças prontas:
 - `src/game/puzzleKit.js`: `createHints` (dicas sem repetição e prompts "E Pegar…"), `createCollectibles`,
   `createCarryItem` (item na boca, com `returnHome` e `drop`), `deliveredAt` e `reach`.
 - `src/game/mechanics/`: `createPressurePlate` (placa que exige peso: `requires 'large' | 'any'`), `createHingedGate`
-  (portão com dobradiça que não esmaga ninguém ao fechar), `createPushCrate` (caixote em 2 eixos com `onLimit`),
+  (portão com dobradiça que não esmaga ninguém ao fechar; ao abrir, `sweepExit(ctrl)` diz se a folha vai passar
+  pela dog e para onde ela sai: a fase a afasta antes, senão a colisão a arrasta e o lugar onde ela termina depende
+  do fps — fase 7: pulinho assustado com `effects.pushTo`), `createPushCrate` (caixote em 2 eixos com `onLimit`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
