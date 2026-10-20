@@ -50,7 +50,8 @@ export const BOX_PILLOWS = {
 export const THRESHOLD = { x: WALL_HK.x + 0.32, z0: WALL_HK.gap.z0, z1: WALL_HK.gap.z1 }; // soleira (visual)
 
 // Mesa da cozinha com toalha comprida: a Rhaenyra não cabe embaixo; a Radhija sim.
-export const TABLE = { x: 4.7, z: 1.3, hx: 0.62, hz: 0.42, height: 0.76, drop: 0.36 };
+// drop: altura da barra da toalha (acima da cabeça da Radhija, que passa por baixo; a Rhaenyra não cabe)
+export const TABLE = { x: 4.7, z: 1.3, hx: 0.62, hz: 0.42, height: 0.76, drop: 0.5 };
 export const BEAR = { x: TABLE.x + 0.1, z: TABLE.z + 0.2, pickupR: 0.55 }; // perto da borda sul: as patinhas aparecem
 
 // Cercadinho de brinquedos na sala (cerca baixa, pulável): o ossinho de lá é da Rhaenyra.
@@ -86,7 +87,7 @@ export const STATIC_COLLIDERS = [
   // sala
   { id: 'sofa', shape: 'box', x: SOFA.x, z: SOFA.z, hx: SOFA.hx, hz: SOFA.hz },
   { id: 'mesa-de-centro', shape: 'box', x: COFFEE_TABLE.x, z: COFFEE_TABLE.z, hx: COFFEE_TABLE.hx, hz: COFFEE_TABLE.hz, jumpable: true, height: COFFEE_TABLE.height },
-  { id: 'poltrona', shape: 'box', x: -2.75, z: -2.95, hx: 0.42, hz: 0.42 },
+  { id: 'poltrona', shape: 'circle', x: -2.75, z: -2.95, r: 0.5 }, // girada 20°: os cantos chegam a 0,57 m do centro
   { id: 'estante', shape: 'box', x: -6.15, z: -0.9, hx: 0.25, hz: 0.9 },
   { id: 'abajur', shape: 'circle', x: -6.0, z: -3.35, r: 0.18 },
   { id: 'vaso-sala', shape: 'circle', x: -6.05, z: 0.75, r: 0.22 },
@@ -95,12 +96,18 @@ export const STATIC_COLLIDERS = [
   wallX('cercadinho-sul', PEN.z1, PEN.x0, PEN.x1, { jumpable: true, height: PEN.height }),
   wallZ('cercadinho-oeste', PEN.x0, PEN.z0, PEN.z1, { jumpable: true, height: PEN.height }),
   wallZ('cercadinho-leste', PEN.x1, PEN.z0, PEN.z1, { jumpable: true, height: PEN.height }),
+  // brinquedos dentro do cercadinho (world/props.js, buildPlaypen): os cubos, a torre de argolas e a bola; baixos, a
+  // Rhaenyra pula por cima (e quem pula para dentro do cercadinho não é empurrada através deles ao pousar)
+  { id: 'cubos', shape: 'box', x: PEN.x0 + 0.37, z: PEN.z1 - 0.275, hx: 0.19, hz: 0.095, jumpable: true, height: 0.23 },
+  { id: 'argolas', shape: 'circle', x: PEN.x1 - 0.3, z: PEN.z0 + 0.3, r: 0.1, jumpable: true, height: 0.25 },
+  { id: 'bola-cercadinho', shape: 'circle', x: PEN.x0 + 0.3, z: PEN.z0 + 0.35, r: 0.07, jumpable: true, height: 0.17 },
   // corredor
   { id: 'escada', shape: 'box', x: (STAIRS.x0 + STAIRS.x1) / 2, z: (STAIRS.z0 + STAIRS.z1) / 2, hx: (STAIRS.x1 - STAIRS.x0) / 2, hz: (STAIRS.z1 - STAIRS.z0) / 2 },
   { id: 'cabideiro', shape: 'circle', x: -1.35, z: -2.25, r: 0.2 },
   { id: 'aparador', shape: 'box', x: 1.55, z: -1.95, hx: 0.3, hz: 0.2 },
   { id: 'porta-guarda-chuva', shape: 'circle', x: -1.4, z: 2.9, r: 0.16 },
   { id: 'sapateira', shape: 'box', x: 0.3, z: 3.15, hx: 0.5, hz: 0.17 },
+  { id: 'aspirador', shape: 'box', x: 1.55, z: 2.92, hx: 0.17, hz: 0.2 }, // aspirador robô na base (world/furniture.js)
   // cozinha
   { id: 'bancada', shape: 'box', x: (COUNTER.x0 + COUNTER.x1) / 2, z: (COUNTER.z0 + COUNTER.z1) / 2, hx: (COUNTER.x1 - COUNTER.x0) / 2, hz: (COUNTER.z1 - COUNTER.z0) / 2 },
   { id: 'geladeira', shape: 'box', x: FRIDGE.x, z: FRIDGE.z, hx: FRIDGE.hx, hz: FRIDGE.hz },

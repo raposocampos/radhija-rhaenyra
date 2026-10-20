@@ -193,6 +193,7 @@ export function buildFarm(root, layout) {
     pk.position.set(p.x, 0.13, p.z);
     group.add(pk);
     const vine = new THREE.Mesh(foliageCluster([{ x: p.x - 0.25, y: 0.06, z: p.z + 0.1, r: 0.16, sy: 0.4 }, { x: p.x + 0.2, y: 0.05, z: p.z - 0.15, r: 0.13, sy: 0.4 }], { seed: 130 + i, dark: '#2c5226', mid: '#4a7f36', light: '#86b850', amp: 0.4 }), plantMat());
+    vine.name = 'rama-de-abobora';
     group.add(vine);
     spots.push({ id: `abobora-${i + 1}`, kind: 'pumpkin', x: p.x, z: p.z, setReady(on) { pk.visible = on; } });
   });

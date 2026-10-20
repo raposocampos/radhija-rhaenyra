@@ -110,7 +110,8 @@ export function buildGarden(root, layout) {
   // o vão: uma ripa pendurada torta num prego e outra caída na grama
   const hanging = new THREE.Mesh(pk, rustic);
   hanging.scale.y = fh / 0.9;
-  hanging.position.set(HORTA.x0 - 0.05, fh * 0.6 + 0.02, HORTA.gap.z0 + 0.05);
+  // pendurada do lado do mourão, sem entrar no vão (a Radhija passa por ele)
+  hanging.position.set(HORTA.x0 - 0.05, fh * 0.6 + 0.02, HORTA.gap.z0 - 0.06);
   hanging.rotation.set(0, -Math.PI / 2, 2.6);
   hanging.castShadow = true;
   const fallen = new THREE.Mesh(pk, rustic);
@@ -201,7 +202,8 @@ export function buildGarden(root, layout) {
     group.add(f);
     return head;
   };
-  const heads = [sunflower(7.35, HORTA.z0 - 0.18, 1.1, 1), sunflower(7.85, HORTA.z0 - 0.22, 1.25, 2), sunflower(8.85, HORTA.z0 - 0.18, 1.0, 3)];
+  // (encostados na cerca: layout.SUNFLOWERS, com colisor)
+  const heads = layout.SUNFLOWERS.map((s, i) => sunflower(s.x, s.z, s.h, i + 1));
   // regador azul encostado no canteiro
   const can = new THREE.Group();
   const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.18, 16), stdMat('#5a8fc0', { roughness: 0.4, metalness: 0.3 }));
@@ -372,6 +374,7 @@ export function buildGarden(root, layout) {
   const rampLen = Math.hypot(RAMP.x1 - RAMP.x0, RAMP.top);
   const rampAng = Math.atan2(RAMP.top, RAMP.x1 - RAMP.x0);
   const plank = new THREE.Group();
+  plank.name = 'rampa-do-galpao';
   const board = new THREE.Mesh(rbox(rampLen, 0.04, RAMP.halfWidth * 2, 0.01), woodMat('#d8b080', { key: 'f10-rampa' }));
   plank.add(board);
   for (let k = 1; k < 7; k++) {

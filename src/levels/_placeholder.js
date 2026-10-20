@@ -48,6 +48,8 @@ export function buildPlaceholderWorld({ root, layout, colors = {}, skip = new Se
   }
   // item padrão (bolinha) em layout.BALL / layout.SLIPPER, se houver
   const item = new THREE.Group();
+  item.name = 'bolinha';
+  item.userData.carryKind = 'ball'; // vai na boca (a pose da boca e o teste dos colisores do cenário leem isto)
   const it = layout.BALL || layout.SLIPPER;
   if (it) {
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshStandardMaterial({ color: '#d8f04a' }));

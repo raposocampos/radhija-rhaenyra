@@ -289,7 +289,7 @@ test('fase 6: ordem inversa — a volta é recuperável, a cancela barra a estre
   waitFor(h, (i) => i.mode === 'idle', 'o trem volta sozinho para a estação', 12);
   near(h.props.train.object.position.z, L.TRAIN.start.z, 'estacionou na estação');
   // pega na bandeja e leva ao foguete
-  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(h.puzzle.carrier, 'radhija');
   assert.equal(ball.parent, h.dogs.radhija.mouthSocket);
@@ -467,13 +467,13 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
   }
   h.game.debug.setStage('movingDelivery', 'radhija');
   waitFor(h, (i) => i.unloading, 'o trem chegou, mas a descarga ainda não terminou');
-  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(h.puzzle.carrier, null, 'carga na canaleta ainda não pode ser retirada');
   for (const name of ['radhija', 'rhaenyra']) {
     assert.equal(h.game.debug.setStage('ready', name), true);
     // as duas cargas estão na bandeja: a da frente da cabeça é a que vem
-    place(h, name, { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+    place(h, name, { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
     h.tap('KeyE');
     assert.equal(h.puzzle.carrier, name, `qualquer irmã pode retirar: ${name}`);
     const ball = h.props.ball.object;
@@ -488,17 +488,17 @@ test('fase 6: carga só sai do trem pela bandeja, inclusive quando a cabeça alc
   // uma carga em cada boca: quem já leva o planeta não pega a lua (E ali devolve o planeta ao lugar dele na bandeja);
   // ela pega o planeta de volta e a outra irmã, de boca vazia, pega a lua
   h.game.debug.setStage('carrying', 'radhija');
-  place(h, 'radhija', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).moon.holder, null, 'a mesma boca não leva duas cargas');
   assert.equal(info(h).place.moon, 'tray');
   assert.equal(info(h).place.planet, 'tray', 'o planeta voltou para a bandeja');
-  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija', 'diante do lugar dele, pegou o planeta de volta');
   place(h, 'radhija', { x: L.TRAY.x - 0.6, z: L.TRAY.z + 0.9 });
   select(h, 'rhaenyra');
-  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).moon.holder, 'rhaenyra', 'a outra irmã, de boca vazia, pega a lua');
   assert.equal(info(h).ball.holder, 'radhija', 'o planeta continua com a Radhija');
@@ -651,8 +651,8 @@ test('fase 6: troca de fase em cada estado descarta nariz e item sem callbacks t
 
 test('fase 6: passeio, estações e petiscos são alcançáveis por ambas, ferrovia bloqueia inclusive saltos', async (t) => {
   const h = await campaign(t);
-  // onde as dogs param para usar cada coisa
-  const stations = [L.PEDAL, L.BLOW_SPOT, L.TRAY, L.GOAL, L.BARRIER_PLATE, ...L.COLLECTIBLES];
+  // onde as dogs param para usar cada coisa (a bandeja tem colisor: diante dela)
+  const stations = [L.PEDAL, L.BLOW_SPOT, { x: L.TRAY.x, z: L.TRAY.z + 0.55 }, L.GOAL, L.BARRIER_PLATE, ...L.COLLECTIBLES];
   const yard = L.RAIL_YARD;
   for (const name of ['radhija', 'rhaenyra']) {
     const c = h.ctrls[name];
@@ -1012,14 +1012,14 @@ test('fase 6: as duas pela estrela — a da frente desce primeiro, cada uma no s
   waitFor(h, (i) => i.mode === 'idle', 'o trem voltou vazio', 12);
   // cada irmã leva uma na boca: a Radhija pega o planeta, a Rhaenyra sai da placa e pega a lua
   select(h, 'radhija');
-  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'radhija', { x: L.TRAY.x - 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.clearLog();
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija');
   assert.ok(h.log('hint').some((x) => x.text === h.puzzle.TEXT.hint.secondMouth), 'sugere a outra boca');
   h.tap('KeyQ');
   assert.equal(h.game.activeDog, 'rhaenyra');
-  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.35, yaw: Math.PI });
+  place(h, 'rhaenyra', { x: L.TRAY.x + 0.1, z: L.TRAY.z + 0.55, yaw: Math.PI });
   h.tap('KeyE');
   assert.equal(info(h).moon.holder, 'rhaenyra');
   assert.equal(info(h).ball.holder, 'radhija');
@@ -1096,13 +1096,13 @@ test('fase 6: partida longa andando, com a companheira junto — lua no pórtico
   blowNorth();
   assert.ok(h.run(20, { until: () => { watch(); return info(h).stage === 'ready'; } }), 'o trem levou as duas à bandeja');
   // 5. a Radhija pega o planeta (chegando pelo sul, diante dele)
-  walk([[L.TRAY.x - 0.1, 2.1], [L.TRAY.x - 0.1, L.TRAY.z + 0.32]]);
+  walk([[L.TRAY.x - 0.1, 2.1], [L.TRAY.x - 0.1, L.TRAY.z + 0.55]]);
   h.tap('KeyE');
   assert.equal(info(h).ball.holder, 'radhija', 'pegou o planeta');
   // 6. a Rhaenyra sai da placa, pega a lua com a boca vazia e as duas levam juntas ao foguete
   h.tap('KeyQ');
   assert.equal(h.game.activeDog, 'rhaenyra');
-  walk([[L.BARRIER_PLATE.x, 1.75], [L.TRAY.x + 0.35, 2.1], [L.TRAY.x + 0.1, L.TRAY.z + 0.32]]);
+  walk([[L.BARRIER_PLATE.x, 1.75], [L.TRAY.x + 0.35, 2.1], [L.TRAY.x + 0.1, L.TRAY.z + 0.55]]);
   h.tap('KeyE');
   assert.equal(info(h).moon.holder, 'rhaenyra', 'a Rhaenyra pegou a lua');
   assert.equal(info(h).ball.holder, 'radhija', 'e a Radhija continua com o planeta');

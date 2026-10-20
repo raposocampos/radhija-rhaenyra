@@ -51,8 +51,18 @@ export const PLANK = { x: -3.5, z: 2.6, hx: 0.45, hz: 0.32, requires: 'large', p
 
 // Calço de madeira (lado leste do portão). Arrancada da Radhija com o portão ≥ 85% aberto → desliza
 // até `lockedAt` (sob a folha aberta) e trava o portão aberto para sempre. Com o portão fechado: quica e volta (dica).
-// lockedAt: embaixo da folha aberta, perto da ponta (85% do comprimento) — como um calço de porta de verdade.
-export const WEDGE = { x: -1.35, z: 2.35, r: 0.14, lockedAt: { x: -1.3, z: 1.68 }, needGateT: 0.85 };
+// lockedAt: a 85% do comprimento da folha aberta, de frente para ela, com a ponta fina enfiada por baixo, como um calço
+// de porta de verdade: a rampa para a 1 cm da barra de baixo da folha e nada da madeira entra nela, em nenhuma posição
+// (world/props.js, buildProps: o desenho do calço; teste em test/fase2.test.mjs).
+const leaf = { x: -Math.sin(GATE.openYaw), z: -Math.cos(GATE.openYaw) }; // da dobradiça para a ponta, com o portão aberto
+const wedgeAt = 0.85 * GATE.length; // onde, ao longo da folha
+const wedgeBack = 0.0785; // centro do calço ao sul da folha (o calço vem do sul)
+export const WEDGE = {
+  x: -1.35, z: 2.35, r: 0.14, needGateT: 0.85,
+  lockedAt: { x: GATE.hinge.x + leaf.x * wedgeAt - leaf.z * wedgeBack, z: GATE.hinge.z + leaf.z * wedgeAt + leaf.x * wedgeBack },
+  /** Rumo da ponta fina travado: atravessando a folha, para o norte (yaw do Three.js; a ponta é o +X local). */
+  lockedYaw: Math.atan2(leaf.x, leaf.z),
+};
 
 // Irrigador giratório (zona B). Disco de alcance r; jatos igualmente espaçados girando a omega rad/s.
 // Um jato "molha" quem estiver dentro do disco e a menos de halfWidth (rad) do ângulo do jato.
@@ -116,17 +126,24 @@ export const STATIC_COLLIDERS = [
   { id: 'caminha', shape: 'box', x: DOG_BED.x, z: DOG_BED.z - 0.02, hx: DOG_BED.w / 2 - 0.02, hz: DOG_BED.d / 2 - 0.01 }, // a borda e o encosto
   { id: 'tanque', shape: 'box', x: -3.3, z: -4.45, hx: 0.45, hz: 0.35 },
   { id: 'cesto-roupa', shape: 'circle', x: -2.85, z: -3.55, r: 0.26 },
+  { id: 'cesto-toalha', shape: 'box', x: -2.8, z: -3.27, hx: 0.11, hz: 0.05 }, // a toalha caindo pela borda do cesto
   { id: 'poste-varal-oeste', shape: 'circle', x: -6.15, z: -4.35, r: 0.08 },
   { id: 'poste-varal-leste', shape: 'circle', x: -2.75, z: -4.35, r: 0.08 },
-  { id: 'vaso-samambaia', shape: 'circle', x: -6.05, z: 2.0, r: 0.28 },
+  { id: 'vaso-samambaia', shape: 'circle', x: -6.05, z: 2.0, r: 0.44 }, // o vaso tem 0,25 m; as frondes chegam a ~0,47 m
   { id: 'poste-roldana', shape: 'circle', x: PLANK.pulley.x, z: PLANK.pulley.z, r: 0.08 },
+  { id: 'balde', shape: 'circle', x: -5.05, z: -4.55, r: 0.16 }, // balde azul ao lado da porta (world/dressing.js)
+  { id: 'vassoura', shape: 'box', x: -6.41, z: -4.73, hx: 0.15, hz: 0.07 }, // vassoura encostada no muro
 
   // Zona B
-  { id: 'registro', shape: 'box', x: VALVE.x, z: -4.68, hx: 0.16, hz: 0.12 },
-  { id: 'sebe-bc', shape: 'box', x: HEDGE_BC.x, z: (HEDGE_BC.zMin + HEDGE_BC.zMax) / 2, hx: HEDGE_BC.hx, hz: (HEDGE_BC.zMax - HEDGE_BC.zMin) / 2 },
+  { id: 'registro', shape: 'box', x: VALVE.x, z: -4.62, hx: 0.16, hz: 0.18 }, // com a mangueira descendo dele até o chão
+  { id: 'pilar-calha', shape: 'box', x: 1.635, z: -4.745, hx: 0.225, hz: 0.055 }, // pilar do muro e o condutor da calha
+  // a cerca-viva: as folhas passam 0,13 m da ponta norte (z = HEDGE_BC.zMin)
+  { id: 'sebe-bc', shape: 'box', x: HEDGE_BC.x, z: (HEDGE_BC.zMin - 0.13 + HEDGE_BC.zMax) / 2, hx: HEDGE_BC.hx, hz: (HEDGE_BC.zMax - HEDGE_BC.zMin + 0.13) / 2 },
 
   // Zona C
   { id: 'tijolos', shape: 'box', x: BRICKS.x, z: BRICKS.z, hx: BRICKS.hx, hz: BRICKS.hz },
+  { id: 'vaso-geranio', shape: 'circle', x: 2.25, z: -4.6, r: 0.19 }, // vasos junto à parede norte (world/dressing.js)
+  { id: 'vaso-florzinhas', shape: 'circle', x: 3.55, z: -4.6, r: 0.17 },
   // Canal (água) — o trecho do vão é dinâmico (some quando o caixote vira ponte)
   { id: 'canal-norte', shape: 'box', x: (CHANNEL.xMin + CHANNEL.xMax) / 2, z: (CHANNEL.zMin + CHANNEL.slot.zMin) / 2, hx: (CHANNEL.xMax - CHANNEL.xMin) / 2, hz: (CHANNEL.slot.zMin - CHANNEL.zMin) / 2, kind: 'water' },
   { id: 'canal-sul', shape: 'box', x: (CHANNEL.xMin + CHANNEL.xMax) / 2, z: (CHANNEL.slot.zMax + CHANNEL.zMax) / 2, hx: (CHANNEL.xMax - CHANNEL.xMin) / 2, hz: (CHANNEL.zMax - CHANNEL.slot.zMax) / 2, kind: 'water' },
@@ -159,7 +176,7 @@ export const NAV_NODES = {
   B_field: { x: -0.4, z: -1.5 },
   B_north: { x: 0.2, z: -4.0 },
   B_valve: { x: 1.1, z: -3.9 },
-  C_north: { x: 2.4, z: -4.25 },
+  C_north: { x: 2.45, z: -3.95 }, // longe do vaso de gerânio
   C_mid: { x: 3.6, z: -0.2 },
   C_slot: { x: 3.6, z: 1.4 },
   C_south: { x: 3.4, z: 3.4 },

@@ -156,6 +156,7 @@ export function buildHall({ root, layout }) {
 
   // almofada do Bichano (redonda, xadrez), perto do arco
   const cushion = new THREE.Group();
+  cushion.name = 'almofada-do-gato';
   cushion.position.set(CAT.bed.x, 0, CAT.bed.z);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 10, 24).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#b06a4a', roughness: 0.95 }));
   ring.position.y = 0.06;

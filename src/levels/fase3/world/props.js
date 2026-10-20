@@ -169,6 +169,7 @@ function makeLantern(kind) {
 // ------------------------------------------------------------------ pedra de pressão
 function makePlate(P, kind, seed) {
   const root = new THREE.Group();
+  root.name = `pedra-de-pressao-${kind}`;
   root.position.set(P.x, 0, P.z);
   const r = rng(seed);
   // pedra: disco irregular com topo levemente abaulado
@@ -504,7 +505,8 @@ export function createProps(layout, field, refs) {
   root.add(wireH.group);
   const topY = HEDGE_AB.height + 0.04;
   const wireL = makeFairyWire([
-    new THREE.Vector3(PLATE_L.x + 0.27, yGround, PLATE_L.z), new THREE.Vector3(-2.45, yGround, PLATE_L.z + 0.02),
+    // no chão até o pé da cerca-viva e sobe por dentro das folhas (sem fio atravessado no cantinho da Radhija)
+    new THREE.Vector3(PLATE_L.x + 0.27, yGround, PLATE_L.z), new THREE.Vector3(-2.31, yGround, PLATE_L.z + 0.02),
     new THREE.Vector3(HEDGE_AB.x - 0.08, 0.5, -3.95), new THREE.Vector3(HEDGE_AB.x - 0.02, topY, -3.6),
     new THREE.Vector3(HEDGE_AB.x + 0.04, topY + 0.01, -1.5), new THREE.Vector3(HEDGE_AB.x - 0.03, topY, 0.4),
     new THREE.Vector3(HEDGE_AB.x + 0.03, topY + 0.01, 1.6), new THREE.Vector3(HEDGE_AB.x, postH + 0.02, LANTERNS.H.z + 0.05),

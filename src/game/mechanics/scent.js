@@ -74,9 +74,10 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
       if (c.ductT >= c.duct.travel) {
         const d = c.duct;
         c.state = 'free';
-        c.x = d.outlet.x;
-        c.z = d.outlet.z;
         const L = Math.hypot(d.outlet.dirX, d.outlet.dirZ) || 1;
+        // outlet.exit: a boca fica a essa distância do ponto de saída, na direção dele (fora do colisor da caixa)
+        c.x = d.outlet.x + (d.outlet.dirX / L) * (d.outlet.exit ?? 0);
+        c.z = d.outlet.z + (d.outlet.dirZ / L) * (d.outlet.exit ?? 0);
         c.vx = (d.outlet.dirX / L) * (d.outlet.speed ?? 1.6);
         c.vz = (d.outlet.dirZ / L) * (d.outlet.speed ?? 1.6);
         c.r = WIND_R;

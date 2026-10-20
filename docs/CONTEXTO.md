@@ -2,7 +2,7 @@
 
 Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
 de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
-caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47, #49, #50, #51 e #52 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
@@ -97,6 +97,31 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
   cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
   animações de interação).
+
+## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`)
+
+- Pedido do usuário (2026-10-20, na prévia do #48, pela sessão dos modelos das dogs): "muitos objetos dos mapas ainda
+  permanecem sem colisão" (vasos, a madeira que atravessa o portão da fase 2, o irrigador, a bandeja da fase 6, as
+  pernas da tábua de passar, a pilha da lavanderia); o biscoito da caminha da fase 8 confundia com os ossinhos.
+- Feito: auditoria `test/colisao-cenario.test.mjs` (com `test/helpers/obstaculos.mjs`): monta o cenário real de cada
+  fase e arena e acha desenho na altura do corpo (de 8 cm a 85% do alto da cabeça) onde o círculo de uma dog, num lugar
+  livre, entra mais de 6 cm. As exceções, com motivo, ficam na lista `SEM_COLISOR` do teste (caminhas e placas viram
+  chão no #48). Colisores novos nos `layout.js` das 10 fases e do superbafo; desenho ajustado onde um colisor
+  atrapalharia o jogo (irrigador da fase 2 embutido no gramado, raízes da casa na árvore e pé da mangueira rentes,
+  canos e frondes acima das dogs). Calço da fase 2: travado, a ponta fica por baixo da folha aberta
+  (`test/helpers/interpenetra.mjs`, teste novo em `test/fase2.test.mjs`). Fase 8: a almofada em forma de osso da
+  caminha virou argolinha. Navegação da companheira ajustada nas fases 2, 4 e 7.
+- Testes ajustados: as dogs param diante da bandeja da fase 6 (TRAY.z + 0,55, fora do colisor), inclusive na linha
+  nova do #52; `test/regressoes.test.mjs` aceita o calço a até 10 cm da linha da folha.
+- Não mexido (trabalho paralelo): os arquivos do #48 e os `puzzle.js`/`puzzleKit.js`. O merge de teste com o branch do
+  #48 não deu conflito de texto (ambos mexem em `fase2/3/8/world/props.js`, `fase9/world/conservatory.js` e
+  `types.d.ts`); quem integrar depois sincroniza e roda o CI.
+- Validação: até `7f95a34`, o CI só falhava nos 9 achados da fase 10, corrigidos em `3657884`; depois veio a
+  sincronização com o main (#52). CI e E2E `todas` do head final: conferir no PR #53.
+- Pendência: o balde deitado da fase 10 (colisor dinâmico em `fase10/puzzle.js`) deixa a Rhaenyra entrar uns 19 cm
+  na boca dele; fica para um PR próprio.
+- Integrado ao main com a aprovação do usuário, antes do #48 (squash `acae42f`); o deploy fica com a sessão do cenário
+  (conferir no Actions e no `version.json`). O #48 sincronizou com ele.
 
 ## Entregue: largar e pegar os objetos em todas as fases (PR #52, squash `8a3c743`, deploy `39473919953`)
 

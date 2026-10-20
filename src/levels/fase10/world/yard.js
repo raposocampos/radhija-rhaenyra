@@ -275,6 +275,7 @@ export function buildYard(root, layout) {
     new THREE.Vector3(tapX + 0.02, 0.5, TAP.z),
     new THREE.Vector3(tapX + 0.035, 0.45, TAP.z),
   ], { radius: 0.016, color: '#c87a4a', glow: '#8fd8ff', metal: true });
+  tapLink.object.name = 'cano-da-torneira';
   group.add(tapLink.object);
   // gotinhas que escapam da torneira quando a mangueira está esmagada
   const dripG = new THREE.SphereGeometry(0.012, 8, 6);
@@ -510,8 +511,9 @@ export function buildYard(root, layout) {
   basket.position.set(-0.45, 0.008, -0.15); // em cima da toalha
   basket.rotation.y = 0.4;
   pic.add(basket);
-  const tball = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), new THREE.MeshPhysicalMaterial({ color: '#d8f25a', roughness: 0.7, sheen: 1 }));
-  tball.position.set(0.4, 0.06, 0.2);
+  // bolinha de tênis de verdade (6,6 cm): a pata passa por cima
+  const tball = new THREE.Mesh(new THREE.SphereGeometry(0.033, 14, 10), new THREE.MeshPhysicalMaterial({ color: '#d8f25a', roughness: 0.7, sheen: 1 }));
+  tball.position.set(0.4, 0.033, 0.2);
   pic.add(tball);
   pic.position.set(PICNIC.x, 0, PICNIC.z);
   pic.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
