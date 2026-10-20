@@ -5,6 +5,38 @@ de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e a
 caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`, PR #56)
+
+- Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
+  fumaça acaba saindo na parte de baixo, quando deveria sair na ponta do cano que está do lado do pombo"; fase 4, o duto
+  que leva o superbafo aos pombos "tem a saída muito baixa em comparação com onde está o pombo".
+- Causa: o cheiro (`src/game/mechanics/scent.js`) só tinha x e z; a nuvem e a poeirinha da saída (`scent:exit`, a
+  30 cm) eram desenhadas no chão. Na fase 10, a saída do cano era o x/z do pombo (embaixo do deque) e o puzzle apagava a
+  nuvem na hora: só a poeirinha aparecia, no chão; o `outletPuff` do cano não desenhava nada, e a boca de trompete
+  estava ao contrário (a beira larga encostada no cano). Na fase 4, a caixa da saída ficava a 0,5 m e o pombo a 1,27 m.
+- Feito:
+  - `scent.js`: `outlet.y` (altura da boca); a nuvem sai com `y` e `exitAge` e fica lá em cima; acima de 0,8 m passa
+    por cima dos colisores, do vento e das bocas do chão, e o `near` (o "eca" da Rhaenyra) não a alcança do chão;
+    `scent:exit` traz `y` e a direção; a prévia da mira também leva `y` (o anel da saída fica na boca).
+  - `scentView.js`: a nuvem fica na altura dela (a bolha do meio na altura da boca) e, saindo de um duto, nasce do
+    tamanho da boca e cresce em 0,4 s. `feedback.js`: a poeirinha sai na boca, soprada para fora.
+  - Fase 10: `TUBE.mouth` e `TUBE.outlet` no layout (a beira larga da boca, na altura do peito do pombo, soprando para
+    ele); o cano chega deitado numa curva e a boca de trompete foi desvirada (a beira larga para o pombo). A nuvem não
+    é mais apagada: sai da boca, envolve o pombo e se espalha lá em cima. Saiu o `outletPuff`, que não fazia nada.
+  - Fase 4: `DUCT.outlet.y` no peito do pombo do poleiro A (`PERCH_A.y + 0,15`); o tubo cruza a mureta nessa altura
+    e entra pelas costas da caixa da saída, num pé de ferro acima das dogs. O colisor `duto-saida` virou o do pé.
+- Testes: `test/saida-dos-dutos.test.mjs` (a mecânica, o desenho, o cenário real das duas fases e as duas partidas
+  em Node). Capturas novas: `21a`, `21c` e `21d` (`capture-quintal.mjs`), `12` a `15` (`capture-pigeons.mjs`). Revisadas
+  no E2E do `46e6a01`: a fumaça nasce na beira larga da boca do cano, lá em cima, e envolve o pombo; na fase 4, sai da
+  caixa alta direto no pombo, na altura dele.
+- Não mexido: a fase 9 (a saída fica dentro do armário e o cenário desenha a baforada na grade) e a Arena do Bafo
+  (fase de desenvolvimento, com a caixa baixa de antes).
+- Validação: CI `39510626848` verde no código de `46e6a01` (573 testes, 0 falhas); E2E `fase4` e `quintal` e os do
+  head final registrados no PR. No PC, só `node --check` e `git diff --check`.
+- Fila (orquestrador): o #55 entra antes; depois dele, sincronizar com o main, rodar CI e E2E de novo e apresentar a
+  prévia nova. Só o `docs/CONTEXTO.md` conflita com o #55 (`git merge-tree`).
+- Próximo passo: com CI e E2E verdes, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+
 ## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
 
 - Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no

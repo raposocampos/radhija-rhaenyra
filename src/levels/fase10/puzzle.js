@@ -608,13 +608,13 @@ export function createPuzzle(ctx) {
     }
     if (S.cordT >= 0.75) { S.cordT = -1; S.cordWho = null; }
   }
+  // o cheiro sai pela boca do cano, lá em cima do lado do pombo (TUBE.outlet, na altura dela), e se espalha ali
   const tube = scent.addDuct({ id: 'cano-de-brinquedo', inlet: TUBE.inlet, outlet: TUBE.outlet, travel: TUBE.travel, active: () => true });
   scent.addNose({
     id: 'pombo', x: PIGEON.x, z: PIGEON.z, r: PIGEON.smellR,
     onSmell: (cloud) => {
       if (!pigeonAround()) return;
       if (/** @type {any} */ (cloud).duct === tube) {
-        cloud.age = cloud.life;
         S.pigeon = 'flying';
         S.pigeonT = 0;
         emit('pigeon:flee', { x: PIGEON.x, z: PIGEON.z, y: PIGEON.y, id: 'casa-na-arvore' });

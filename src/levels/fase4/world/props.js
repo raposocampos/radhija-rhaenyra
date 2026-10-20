@@ -274,13 +274,14 @@ function buildCorridor(root, layout, updaters) {
 
 // ================================================================== duto de exaustão
 function buildDuct(root, layout) {
-  const { DUCT: D, WALL } = layout;
+  const { DUCT: D } = layout;
   const grp = new THREE.Group();
   grp.name = 'duto';
   const metal = new THREE.MeshStandardMaterial({ color: '#b9bec2', roughness: 0.32, metalness: 0.85 });
   const seam = stdMat('#8e9397', { roughness: 0.4, metalness: 0.8 });
   const dark = stdMat('#151618', { roughness: 1 });
-  const R = 0.11, top = WALL.height + 0.42;
+  // a saída fica na altura do pombo do poleiro A (centro da boca em D.outlet.y): o tubo cruza a mureta nessa altura
+  const R = 0.11, outY = D.outlet.y;
   // boca (para o oeste, dentro do corredor)
   const inBox = new THREE.Mesh(rbox(0.26, 0.42, 0.48, 0.02), metal);
   inBox.position.set(D.inlet.x + 0.1, 0.23, D.inlet.z);
@@ -295,14 +296,12 @@ function buildDuct(root, layout) {
     bar.position.set(D.inlet.x - 0.045, y, D.inlet.z + z);
     grp.add(bar);
   }
-  // tubo: sobe, cruza a mureta, desce
+  // tubo: sobe, deita, cruza a mureta e entra pelas costas da caixa da saída (2 cm para dentro dela)
   const pts = [
     new THREE.Vector3(D.inlet.x + 0.12, 0.42, D.inlet.z),
-    new THREE.Vector3(D.inlet.x + 0.12, top - 0.2, D.inlet.z),
-    new THREE.Vector3(D.inlet.x + 0.2, top, D.inlet.z),
-    new THREE.Vector3(D.outlet.x - 0.08, top, D.inlet.z),
-    new THREE.Vector3(D.outlet.x, top - 0.2, D.outlet.z),
-    new THREE.Vector3(D.outlet.x, 0.62, D.outlet.z),
+    new THREE.Vector3(D.inlet.x + 0.12, outY - 0.2, D.inlet.z),
+    new THREE.Vector3(D.inlet.x + 0.2, outY, D.inlet.z),
+    new THREE.Vector3(D.outlet.x - 0.11, outY, D.outlet.z),
   ];
   const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.2);
   const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, R, 16), metal);
@@ -315,17 +314,23 @@ function buildDuct(root, layout) {
     ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg);
     grp.add(ring);
   }
-  // saída (para o leste, junto ao poleiro A) com chapéu e tela
+  // saída (para o leste, de frente para o pombo do poleiro A) com chapéu, num pé de ferro com sapata (colisor
+  // duto-saida); a caixa fica acima das dogs
   const outBox = new THREE.Mesh(rbox(0.26, 0.32, 0.38, 0.02), metal);
-  outBox.position.set(D.outlet.x, 0.5, D.outlet.z);
+  outBox.name = 'caixa-da-saida-do-duto';
+  outBox.position.set(D.outlet.x, outY, D.outlet.z);
   const outHole = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.2).rotateY(Math.PI / 2), dark);
-  outHole.position.set(D.outlet.x + 0.136, 0.5, D.outlet.z); // 6 mm à frente da chapa
+  outHole.name = 'saida-do-duto';
+  outHole.position.set(D.outlet.x + 0.136, outY, D.outlet.z); // 6 mm à frente da chapa
   const hood = new THREE.Mesh(rbox(0.18, 0.03, 0.42, 0.01), seam);
-  hood.position.set(D.outlet.x + 0.16, 0.66, D.outlet.z);
+  hood.position.set(D.outlet.x + 0.16, outY + 0.16, D.outlet.z);
   hood.rotation.z = -0.35;
-  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.05), ironMat());
-  stand.position.set(D.outlet.x, 0.17, D.outlet.z);
-  grp.add(outBox, outHole, hood, stand);
+  const standH = outY - 0.16 + 0.02; // até 2 cm dentro da caixa
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.06, standH, 0.06), ironMat());
+  stand.position.set(D.outlet.x, standH / 2, D.outlet.z);
+  const standFoot = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.025, 14), ironMat());
+  standFoot.position.set(D.outlet.x, 0.0125, D.outlet.z);
+  grp.add(outBox, outHole, hood, stand, standFoot);
   shadowAll(grp);
   root.add(grp);
   return grp;
