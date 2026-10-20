@@ -23,8 +23,20 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - O teste do modelo novo no empurrão (`test/empurrao.test.mjs`) comparava a subida/descida com o passo comum da
   própria dog; como o passo novo afunda menos (−5,2 mm), a referência passou a ser a do passo do guia (−7,1 mm, #41).
   A subida e a descida ainda são do guia: melhoram na etapa 3, quando o empurrão vier para as camadas do modelo novo.
-- Próximo passo: CI, E2E `todas`, prévia (`?dogs=novo`, `?level=canil`) e aprovação do usuário; depois, etapa 3
-  (poses em camadas, inclusive a do empurrão).
+- 1ª prévia reprovada: "travando tudo, quando senta do nada a pata estica, ou dependendo do movimento fica se
+  tremendo toda; parece um ragdoll estranho". Causas e correções: na troca com as poses do guia, as rotações das
+  patas eram misturadas (a pata afundava e a correção do chão fazia o corpo saltar): agora a mistura é dos alvos das
+  juntas e, fora da locomoção pura, a pata segue a do guia; a correção do chão do corpo muda no máximo 0,5° e 2 mm por
+  quadro; a pata não atravessa o chão (gira no tornozelo; também resolveu o −9,6 mm da descida do empurrão, achado
+  do orquestrador); o balanço não salta (alvo contínuo, fase de cada pata suave, fim garantido). Testes com sementes
+  (`test/helpers/seeded.mjs`) e o das trocas de pose.
+- 2ª prévia (`0d48e63`): "na comemoração a pata fica acelerada e meio transparente, os passos são curtos; andando,
+  parece que a pata é de borracha, mole demais". Agora: a comemoração inteira e a voltinha antes do cocô ficam com as
+  patas do guia (as aprovadas); as dobras do pulso/jarrete/dedos voltaram às do modelo atual (antes iam até 1,8 rad no
+  pulso), a pata não estica mais (era até 4%) e a escápula mexe menos; numa curva fechada o compasso acelera no máximo
+  1,35× e, além disso, a pata gira com o corpo (pivô).
+- Próximo passo: CI, E2E `todas` no head final, prévia nova e aprovação do usuário; depois, etapa 3 (poses em
+  camadas, inclusive a do empurrão).
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
 

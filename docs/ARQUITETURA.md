@@ -491,10 +491,13 @@ patas apoiadas do outro lado (sentada, as da frente continuam no chão e a garup
 Por cima da pose do guia, o modelo novo já tem: a locomoção própria (`gait.js`, etapa 2: andando, trotando,
 galopando ou girando, a pata apoiada fica plantada no chão do mundo (mede o quanto o corpo andou e girou; parada no
 mundo com velocidade, como no sandbox, vale a velocidade da animação), o balanço pousa onde a pata vai estar no meio
-do próximo apoio, o pulso e o jarrete rolam no fim do apoio e dobram no balanço, a escápula acompanha a pata, o
-tronco desce um pouco quando a passada pede alcance e, ao parar, cada pata fora do lugar dá um passinho; o ritmo é o
-do guia, e as poses com as patas (sentar, pular, empurrar, extras, pulinhos e reverência da comemoração) ficam com
-ele: `locomotionGate`), a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
+do próximo apoio, as dobras do pulso, do jarrete e dos dedos são as do modelo atual (a pata não estica), a escápula
+acompanha um pouco a pata, o tronco desce até 1 cm quando a passada pede alcance e, ao parar, cada pata fora do lugar
+dá um passinho; o ritmo é o do guia (numa curva fechada acelera até 1,35× e, além disso, a pata gira com o corpo,
+como num pivô), e as poses com as patas (sentar, pular, empurrar, extras, a comemoração inteira e a voltinha antes do
+cocô) ficam com ele: `locomotionGate`; na troca, os alvos das juntas são misturados, não as rotações), a pata que
+não atravessa o chão (`dog.js`, gira no tornozelo; a correção do chão do corpo muda no máximo 0,5° e 2 mm por
+quadro), a rolagem própria (`roll.js`, enquanto o extra `roll` roda: tomba
 pelo ombro, de costas em "C" com as patas dobradas, se esfrega e volta; o corpo fica apoiado no chão) e orelhas com
 física (`physics.js`: correntinha de três gomos com mola, inércia, gravidade e chão; a pose do guia é o descanso). Para ver:
 `?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento

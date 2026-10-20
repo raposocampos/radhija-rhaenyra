@@ -1,6 +1,7 @@
 // Locomoção do modelo novo (src/dogs/v2/gait.js, etapa 2 da troca dos modelos): a pata apoiada fica plantada no
-// chão (não patina andando, trotando, na curva nem na voltinha da comemoração), as patas assentam no lugar com
-// passinhos ao parar, a pata rola no fim do apoio e o pulso dobra no balanço; nas outras poses, as patas são as do guia.
+// chão (não patina andando, trotando nem na curva), as patas assentam no lugar com passinhos ao parar, a pata sobe um
+// pouco no fim do apoio e dobra no balanço como a do modelo atual, sem esticar; na comemoração e nas outras poses, as
+// patas são as do guia.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -31,7 +32,7 @@ function fresh(kind) {
  * Anda de verdade no mundo: a cada quadro o objeto vai `speed` para a frente e gira `turn` (como o jogo faz) e a dog
  * anima. each(f, d) roda depois de cada quadro, com as matrizes atualizadas.
  */
-function walk(d, { speed, turn = 0, secs, action = 'none', move = true, each = null }) {
+function walk(d, { speed, turn = 0, secs, action = 'none', move = true, each = null, ...rest }) {
   for (let f = 0; f < Math.round(secs * 60); f++) {
     if (move) {
       const yaw = d.object.rotation.y;
@@ -39,7 +40,7 @@ function walk(d, { speed, turn = 0, secs, action = 'none', move = true, each = n
       d.object.position.z += Math.cos(yaw) * speed * DT;
       d.object.rotation.y += turn * DT;
     }
-    d.update(DT, { speed, turn, action });
+    d.update(DT, { speed, turn, action, ...rest });
     if (each) {
       d.object.updateMatrixWorld(true);
       each(f, d);
@@ -103,33 +104,17 @@ test('locomoção nova: andando no mundo, a pata apoiada fica plantada no chão 
   console.log(`[locomoção] ${report.join('\n  ')}`);
 });
 
-test('locomoção nova: na voltinha da comemoração (o corpo anda o círculo com o objeto parado), a pata quase não patina (16 sementes)', () => {
-  const report = [];
-  const bad = [];
+test('locomoção nova: a comemoração (pulinhos, voltinha, reverência) e a voltinha do segredo ficam com as patas do guia', () => {
+  // retorno do usuário: com a pata plantada, a voltinha (raio de 20 cm, menor que a dog) virava passinhos curtos e
+  // acelerados; ela fica com as patas do guia, as da comemoração aprovada
   for (const kind of KINDS) {
-    const runs = SEEDS.map((seed) => withSeed(seed, () => {
+    for (const [name, anim] of [['comemoração', { speed: 0, action: 'celebrate' }], ['voltinha do segredo', { speed: 0.7, turn: 1.6, poopPre: 0.5 }]]) {
       const d = fresh(kind);
-      const m = slideMeter(d);
-      walk(d, {
-        speed: 0, secs: 2.0, action: 'celebrate', move: false,
-        // da metade da voltinha em diante (antes, a locomoção ainda está assumindo depois dos pulinhos)
-        each: (f) => { if (f / 60 >= 1.15 && f / 60 < 2.05) m.each(); },
-      });
-      return { seed, o: m.out, drags: d.locomotion.info.drags };
-    }));
-    const sorted = runs.map((r) => r.o.max).sort((a, b) => a - b);
-    const worst = runs.reduce((a, b) => (b.o.max > a.o.max ? b : a));
-    report.push(`${kind}: máximo por semente (mm/quadro) mediana ${(sorted[sorted.length >> 1] * 1000).toFixed(2)}, pior ${(worst.o.max * 1000).toFixed(2)} (semente ${worst.seed}, ${worst.o.worst}, ${worst.drags} arrastos)${worst.o.events.length ? `\n    ${worst.o.events.join('\n    ')}` : ''}`);
-    for (const { seed, o } of runs) {
-      // na voltinha o compasso acelera (mais tempo no ar): ~1 s de medida dá umas 40 a 60 amostras de pata apoiada
-      if (o.n < 40) bad.push(`${kind} ${seed}: patas apoiadas na voltinha (${o.n})`);
-      if (o.lifts < 6) bad.push(`${kind} ${seed}: as patas dão passos na voltinha (${o.lifts})`);
-      if (o.sum / Math.max(o.n, 1) > 0.001) bad.push(`${kind} ${seed}: escorrega em média ${(o.sum / o.n * 1000).toFixed(2)} mm por quadro`);
-      if (o.max > 0.004) bad.push(`${kind} ${seed}: escorregou ${(o.max * 1000).toFixed(2)} mm num quadro (${o.worst})`);
+      let worst = 0;
+      walk(d, { ...anim, secs: 3.2, move: false, each: (f) => { if (f >= 30) worst = Math.max(worst, d.gait); } });
+      assert.equal(worst, 0, `${kind} ${name}: a locomoção própria não entra (peso ${worst.toFixed(2)})`);
     }
   }
-  console.log(`[locomoção] voltinha\n  ${report.join('\n  ')}`);
-  assert.deepEqual(bad.slice(0, 6), []);
 });
 
 test('locomoção nova: ao parar, as patas assentam no lugar com passinhos, sem patinar', () => {
@@ -177,7 +162,7 @@ test('locomoção nova: na esteira (objeto parado, só a velocidade), a pata apo
   }
 });
 
-test('locomoção nova: a pata rola no fim do apoio e o pulso dobra no balanço (a botinha vira para trás)', () => {
+test('locomoção nova: no fim do apoio o pulso sobe um pouco; no balanço a pata dobra como a do atual; a pata não estica', () => {
   for (const kind of KINDS) {
     const d = fresh(kind);
     walk(d, { speed: 1.6, secs: 1.0 });
@@ -189,9 +174,13 @@ test('locomoção nova: a pata rola no fim do apoio e o pulso dobra no balanço 
       const fwd = (p.x - w.x) * Math.sin(yaw) + (p.z - w.z) * Math.cos(yaw);
       return Math.atan2(fwd, w.y - p.y);
     };
-    let midSt = [], lateSt = [], swingMin = Infinity;
+    let midSt = [], lateSt = [], swingMin = Infinity, stretch = 0;
+    // comprimento dos gomos (cotovelo→pulso, joelho→jarrete...) no repouso: andando, nenhum alonga
+    const SEG = ['FLl', 'FLc', 'FRl', 'FRc', 'HLl', 'HLm', 'HRl', 'HRm'];
+    const len0 = SEG.map((n) => bone(d, n).position.length());
     walk(d, {
       speed: 1.6, secs: 1.5, each: () => {
+        SEG.forEach((n, i) => { stretch = Math.max(stretch, bone(d, n).position.length() / len0[i] - 1); });
         const L = d.locomotion.legs[0];
         const a = ang();
         if (L.swing) swingMin = Math.min(swingMin, a);
@@ -204,8 +193,10 @@ test('locomoção nova: a pata rola no fim do apoio e o pulso dobra no balanço 
     });
     const avg = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
     assert.ok(midSt.length && lateSt.length, `${kind}: apoio medido (${midSt.length}/${lateSt.length})`);
-    assert.ok(avg(midSt) - avg(lateSt) > 0.35, `${kind}: no fim do apoio o pulso passa por cima da pata (${(avg(midSt) * 57.3).toFixed(0)}° → ${(avg(lateSt) * 57.3).toFixed(0)}°)`);
-    assert.ok(swingMin < -1.0, `${kind}: no balanço o pulso dobra (pata para trás: ${(swingMin * 57.3).toFixed(0)}°)`);
+    assert.ok(avg(midSt) - avg(lateSt) > 0.08, `${kind}: no fim do apoio o pulso sobe um pouco (${(avg(midSt) * 57.3).toFixed(0)}° → ${(avg(lateSt) * 57.3).toFixed(0)}°)`);
+    // no balanço a pata dobra para trás, mas como no modelo atual (até ~0,9 rad no pulso): mais que isso parecia borracha
+    assert.ok(swingMin < -0.2 && swingMin > -0.8, `${kind}: no balanço a pata dobra sem exagero (${(swingMin * 57.3).toFixed(0)}°)`);
+    assert.ok(stretch < 1e-6, `${kind}: a pata não estica (${(stretch * 100).toFixed(2)}%)`);
   }
 });
 
@@ -246,9 +237,9 @@ test('locomoção nova: galopando, nada inválido e as patas não afundam no ch�
   }
 });
 
-test('locomoção nova: a pisada (som e pegada) sai no pouso da pata, também na voltinha', () => {
+test('locomoção nova: a pisada (som e pegada) sai no pouso da pata, também numa curva fechada', () => {
   for (const kind of KINDS) {
-    for (const [name, opts] of [['trote', { speed: 1.6, secs: 1.5 }], ['voltinha', { speed: 0, secs: 2.0, action: 'celebrate', move: false }]]) {
+    for (const [name, opts] of [['trote', { speed: 1.6, secs: 1.5 }], ['curva fechada', { speed: 0.9, turn: 2.5, secs: 1.5 }]]) {
       const d = fresh(kind);
       const bad = [];
       let n = 0;

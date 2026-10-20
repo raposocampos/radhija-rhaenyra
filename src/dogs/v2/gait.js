@@ -3,14 +3,16 @@
 //   · a pata apoiada fica PLANTADA no chão (no mundo): não patina ao arrancar, frear, virar nem na voltinha;
 //   · no balanço a pata sai de onde estava e pousa onde vai estar no meio do próximo apoio (prevê a velocidade e a
 //     curva), chegando ao chão parada;
-//   · a pata rola: no fim do apoio o pulso (frente) e o jarrete (trás) sobem com os dedos ainda no chão; no balanço o
-//     pulso dobra (a "botinha" vira para trás) e estica de novo antes de pousar;
-//   · a escápula acompanha a pata da frente (o ombro vai para a frente e para trás com ela);
+//   · no fim do apoio o pulso (frente) e o jarrete (trás) sobem um pouco com os dedos ainda no chão; no balanço as
+//     dobras do pulso, do jarrete e dos dedos são as do modelo atual (retorno do usuário: dobrando mais e esticando,
+//     a pata parecia "de borracha, mole demais"); a pata não estica;
+//   · a escápula acompanha um pouco a pata da frente;
 //   · ao parar, cada pata que ficou fora do lugar dá um passinho de ajuste, uma de cada vez.
 // O ritmo (fase, apoio/balanço, passo/trote/galope) é o do guia (dogAnimation.js, "passada"), e o corpo (sobe e
-// desce, balanço) fica no compasso das patas; numa curva bem fechada (a voltinha da comemoração) as patas aceleram o
-// passo para continuar plantadas e depois voltam ao compasso do guia. As pisadas (sons, pegadas) saem daqui, no pouso
-// de cada pata.
+// desce, balanço) fica no compasso das patas; numa curva fechada o compasso acelera só um pouco (até 1,35×) e, além
+// disso, a pata gira um tanto junto com o corpo, como num pivô (passinhos acelerados ficavam "estranhos"). A
+// comemoração e a voltinha antes do cocô ficam com as patas do guia (as aprovadas). As pisadas (sons, pegadas) saem
+// daqui, no pouso de cada pata.
 // As outras poses (sentar, pular, empurrar, extras...) são do guia. Na troca, as patas daqui deixam de ficar plantadas
 // e deslizam até as do guia, e a mistura é das posições das juntas (pata, pulso/jarrete, joelho), não das rotações:
 // a pata nunca afunda no chão nem estica no caminho (misturar as rotações dava isso, e o corpo saltava).
@@ -62,8 +64,9 @@ export function locomotionGate(st, A, s) {
   const w = st.w;
   if (hardGate(A) || A.extra || (A.poopK ?? -1) >= 0 || A.party) return 0;
   if ((A.cheer ?? -1) >= 0 && A.cheer < 2) return 0;
-  // comemoração: os pulinhos e a reverência são do guia; a voltinha andando, daqui
-  if (A.action === 'celebrate' && !st.circling) return 0;
+  // comemoração (pulinhos, voltinha andando e reverência) e a voltinha antes do cocô: as patas do guia, aprovadas
+  // pelo usuário (a voltinha é fechada demais para a pata plantada sem passinhos acelerados)
+  if (A.action === 'celebrate' || st.circling || (A.poopPre ?? -1) >= 0) return 0;
   let g = (1 - w.sit) * (1 - w.bow) * (1 - w.jump) * (1 - w.slide) * (1 - w.tug) * (1 - w.turn) * (1 - Math.max(w.aim, w.blow))
     * (1 - w.push) * (1 - w.strain) * (1 - w.shake) * (1 - w.startled) * (1 - w.lick) * (1 - w.licked);
   g *= 1 - clamp(st.hop / (0.012 * s), 0, 1); // pulinhos da comemoração: patas encolhidas (do guia)
@@ -177,7 +180,8 @@ export function createGait({ skel2, retarget, s }) {
   /** @type {[number, number][]} pisadas do quadro (pata, passada m/s): o dog.js avisa o jogo no fim do quadro */
   const steps = [];
   const info = { boost: 1, drags: 0 }; // para testes e capturas
-  const MAX_DROP = 0.01 * s, MAX_STRETCH = 1.04;
+  const MAX_DROP = 0.01 * s, MAX_STRETCH = 1;
+  let pivotK = 1; // quanto a pata apoiada gira com o mundo (1) ou junto com o corpo (pivô, numa curva bem fechada)
   /** Leva um ponto parado no chão do referencial do corpo do quadro anterior para o de agora. */
   const carry = (p, lx, lz, dy) => {
     const x1 = p.x - lx, z1 = p.z - lz, c = Math.cos(dy), sn = Math.sin(dy);
@@ -186,7 +190,7 @@ export function createGait({ skel2, retarget, s }) {
   };
   /** Onde está agora o ponto `p` do corpo de daqui a tau s (o corpo anda mv.v e gira mv.w). */
   const ahead = (out, p, tau) => {
-    const th = mv.w * tau, c = Math.cos(th), sn = Math.sin(th), d = mv.v * tau;
+    const th = mv.w * pivotK * tau, c = Math.cos(th), sn = Math.sin(th), d = mv.v * tau;
     return out.set(p.x * c + p.z * sn + d * Math.sin(th / 2), p.y, -p.x * sn + p.z * c + d * Math.cos(th / 2));
   };
   /** A pata sai do chão: pela fase (timed = false) ou por tempo (rate = 1/duração: passo extra ou de ajuste). */
@@ -292,7 +296,11 @@ export function createGait({ skel2, retarget, s }) {
     // décimos de segundo para acompanhar a velocidade); no galope, não (a passada comprida, com o voo, é a dele)
     const fStraight = (Math.abs(mv.v) * R.beta) / (0.18 * s);
     const fCurve = fStraight + (Math.abs(mv.w) * 0.2 * s * R.beta) / (0.12 * s);
-    const boost = clamp(fCurve / lerp(R.f, Math.max(fStraight, R.f), dash), 1, 2.6);
+    const demand = fCurve / lerp(R.f, Math.max(fStraight, R.f), dash);
+    const boost = clamp(demand, 1, 1.35);
+    // além disso a pata apoiada gira um tanto junto com o corpo (pivô): na curva fechada ela torce no chão em vez de dar
+    // passinhos acelerados
+    pivotK = demand > 1.35 ? clamp(1.35 / demand, 0.35, 1) : 1;
     info.boost = boost;
     ph = fract(ph + fract(st.phase - lastG) * boost);
     lastG = st.phase;
@@ -307,8 +315,8 @@ export function createGait({ skel2, retarget, s }) {
       const leg = legs[li];
       // os pontos parados no chão acompanham o movimento do corpo
       if (!teleport) {
-        carry(leg.foot, lx, lz, dyaw);
-        carry(leg.from, lx, lz, dyaw);
+        carry(leg.foot, lx, lz, dyaw * pivotK);
+        carry(leg.from, lx, lz, dyaw * pivotK);
       }
       if (!own) {
         // outra pose está mexendo nas patas: nada de passos; a pata desliza até a do guia (e a segue)
@@ -384,7 +392,6 @@ export function createGait({ skel2, retarget, s }) {
     }
 
     // --- alvos (no referencial do corpo, inner): a pata, o pulso/jarrete que a leva e a junta de cima (ombro/quadril)
-    const k = 0.55 + 0.45 * Math.max(fast, dash); // passo: dobras menores; trote e galope: maiores
     let need = 0;
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
@@ -399,27 +406,28 @@ export function createGait({ skel2, retarget, s }) {
       Ax.copy(X).applyQuaternion(leg.qY); // eixo de lado do tronco (as dobras das juntas)
       let ang;
       if (leg.front) {
-        // escápula: gira no alto acompanhando a pata (pata à frente → ombro à frente)
-        const sig = clamp(-((leg.foot.z - leg.neutral.z) / (0.2 * s)) * 0.55, -0.32, 0.32);
+        // escápula: gira um pouco no alto acompanhando a pata (pata à frente → ombro à frente)
+        const sig = clamp(-((leg.foot.z - leg.neutral.z) / (0.2 * s)) * 0.3, -0.18, 0.18);
         leg.Q[0].copy(qp).multiply(qT.setFromAxisAngle(X, sig));
         leg.R0.copy(leg.scapOff).applyQuaternion(leg.Q[0]).add(P2[leg.idx[0]]);
-        // pulso: no apoio em cima da pata e rolando no fim (o calcanhar sai primeiro); no balanço dobra para trás e
-        // estica de novo antes de pousar
-        ang = 0.8 * roll + (1.25 + 0.55 * k) * flex - 0.08 * (leg.swing ? sstep(0.7, 1, su) : 0);
-        leg.toe = leg.swing ? ang + 0.5 * flex : 0; // dedos: deitados no apoio; no ar acompanham o pulso
+        // pulso: no apoio em cima da pata, sobe um pouco no fim; no balanço dobra como no modelo atual (até 0,9 rad,
+        // a pata inteira junto) e estica de novo antes de pousar
+        ang = 0.2 * roll + 0.9 * flex - 0.05 * (leg.swing ? sstep(0.7, 1, su) : 0);
+        leg.toe = leg.swing ? ang : 0; // dedos: deitados no apoio; no ar, com o pulso
       } else {
         leg.R0.copy(rest[leg.idx[0]]).sub(rest[ip]).applyQuaternion(qp).add(P2[ip]);
         // metatarso: pousa quase em pé e inclina para trás no empurrão (jarrete à frente da pata); no balanço o
         // jarrete dobra (a pata sobe para trás) e depois a pata vem para a frente para pousar
+        // (como no modelo atual: metatarso até 0,45 rad e dedos até 0,7 no balanço; no apoio, só um pouco no fim)
         ang = leg.swing
-          ? 0.75 * k * sstep(0, 0.25, su) * (1 - sstep(0.4, 0.85, su)) - 0.2 * sstep(0.45, 0.8, su) * (1 - sstep(0.85, 1, su))
-          : own && moving ? lerp(-0.08, 0.42, sstep(0, 1, stanceK)) : 0;
-        leg.toe = leg.swing ? 0.6 * flex * k : 0;
+          ? 0.45 * flex - 0.08 * sstep(0.5, 0.8, su) * (1 - sstep(0.85, 1, su))
+          : own && moving ? lerp(0, 0.15, sstep(0.3, 1, stanceK)) : 0;
+        leg.toe = leg.swing ? 0.7 * flex : 0;
       }
       Wr.copy(leg.distal).applyQuaternion(leg.qY).applyAxisAngle(Ax, ang);
       leg.J.copy(leg.foot).sub(Wr);
-      // apoiada e longe demais da junta de cima (mesmo com a pata um pouco esticada): quanto o tronco precisa descer;
-      // mais que MAX_DROP, a pata pede um passo extra (e, sem poder dar, é arrastada para perto)
+      // apoiada e longe demais da junta de cima: quanto o tronco precisa descer; mais que MAX_DROP, a pata pede um passo
+      // extra (e, sem poder dar, é arrastada para perto)
       leg.over = false;
       leg.dragged = false;
       if (own && !leg.swing) {
@@ -473,7 +481,7 @@ export function createGait({ skel2, retarget, s }) {
         if (Seg.lengthSq() > 1e-10) Pole.normalize().multiplyScalar(w).addScaledVector(Seg.normalize(), 1 - w);
         if (leg.front) leg.Q[0].slerpQuaternions(Q2[leg.idx[0]], qT.copy(leg.Q[0]), w);
       }
-      // pata quase esticada: os dois gomos alongam um tiquinho (até 4%) antes de a pata sair do lugar
+      // (MAX_STRETCH = 1: a pata não estica; com mais, os dois gomos alongariam antes de a pata sair do lugar)
       leg.stretch = clamp(Rt.distanceTo(J) / ((leg.a + leg.b) * 0.998), 1, MAX_STRETCH);
       solve2(Rt, J, leg.a * leg.stretch, leg.b * leg.stretch, Pole, Kn);
       legNormal(Nrm, Rt, Kn, J, leg, qp);
