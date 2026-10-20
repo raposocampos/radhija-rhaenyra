@@ -20,6 +20,17 @@ const L = porcos.layout;
 const levels = [...LEVELS, porcos];
 const arena = (query = '') => createHeadlessGame({ level: levels.length, levels, query });
 
+/**
+ * Testes que dependem do sorteio (os porcos e o modelo usam Math.random): cada um roda com uma semente fixa, então
+ * dá sempre o mesmo resultado. O registro serve para varrer muitas sementes de uma vez quando um deles fica instável.
+ * @type {{ name: string, fn: () => any }[]}
+ */
+const SEEDED = [];
+function seededTest(name, seed, fn) {
+  SEEDED.push({ name, fn });
+  test(name, () => withSeedAsync(seed, fn));
+}
+
 /** Roda fn guardando o que sair em console.error (a rede de segurança dos porcos registra lá). → as mensagens */
 async function consoleErrors(fn) {
   const errs = [];
@@ -63,7 +74,7 @@ function lowestPoint(pig) {
 }
 
 // ---------------------------------------------------------------------------------------------- modelo
-test('porquinho: uma malha com esqueleto + peças rígidas, materiais e geometria compartilhados, enxuto', () => {
+seededTest('porquinho: uma malha com esqueleto + peças rígidas, materiais e geometria compartilhados, enxuto', 1, () => {
   const a = createPig({ variant: 0 });
   const b = createPig({ variant: 1 });
   const meshes = (p) => { const out = []; p.object.traverse((o) => { if (/** @type {any} */ (o).isMesh) out.push(o); }); return out; };
@@ -82,7 +93,7 @@ test('porquinho: uma malha com esqueleto + peças rígidas, materiais e geometri
   assert.ok(a.radius > 0.2 && a.radius < 0.26);
 });
 
-test('porquinho: nada atravessa o chão em nenhuma ação nem gesto (e em pé os cascos ficam no chão)', () => {
+seededTest('porquinho: nada atravessa o chão em nenhuma ação nem gesto (e em pé os cascos ficam no chão)', 1, () => {
   const poses = [
     ['parado', { action: 'idle' }],
     ['andando', { action: 'walk', speed: 0.55 }],
@@ -112,7 +123,7 @@ test('porquinho: nada atravessa o chão em nenhuma ação nem gesto (e em pé os
   }
 });
 
-test('porquinho: deitado o corpo encosta no chão; dormindo tomba de lado e fecha os olhos', () => {
+seededTest('porquinho: deitado o corpo encosta no chão; dormindo tomba de lado e fecha os olhos', 1, () => {
   const pig = createPig({ variant: 0 });
   for (let i = 0; i < 240; i++) pig.update(1 / 60, { action: 'lie' });
   const lie = lowestPoint(pig);
@@ -127,7 +138,7 @@ test('porquinho: deitado o corpo encosta no chão; dormindo tomba de lado e fech
   assert.equal(eyes.length, 2, 'olhinhos fechados');
 });
 
-test('porquinho: girando parado ele dá passinhos (nada de girar como pião) e anda mais rápido trota', () => {
+seededTest('porquinho: girando parado ele dá passinhos (nada de girar como pião) e anda mais rápido trota', 1, () => {
   const pig = createPig({ variant: 1 });
   for (let i = 0; i < 90; i++) pig.update(1 / 60, { action: 'idle', turn: 2.2 });
   const g = pig.gait;
@@ -231,7 +242,7 @@ function inDoorway(h) {
   return h.pigs.pigs.filter((P) => (P.state === 'exit' || P.state === 'return') && Math.hypot(P.x - mx, P.z - mz) < 0.45).length;
 }
 
-test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', () => withSeed(191, () => {
+seededTest('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás do outro', 191, () => {
   // semente 191: antes, dois porcos entravam juntos no vão, entalavam lado a lado e ninguém saía
   const h = herd();
   h.run(4);
@@ -249,7 +260,7 @@ test('rebanho: presos no cercado até a porteira abrir; soltos, saem um atrás d
     const a = h.pigs.cfg.area;
     assert.ok(P.x >= a.minX + P.r - 1e-6 && P.x <= a.maxX - P.r + 1e-6 && P.z >= a.minZ + P.r - 1e-6 && P.z <= a.maxZ - P.r + 1e-6, 'dentro da área');
   }
-}));
+});
 
 test('rebanho: a porteira é um de cada vez: em 200 sorteios os três sempre saem, sem dois no vão ao mesmo tempo', () => {
   const bad = [];
@@ -294,7 +305,7 @@ test('rebanho: o sininho em 100 sorteios: todos voltam pela porteira, um de cada
   assert.deepEqual(bad, []);
 });
 
-test('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão esbarrões de leve', () => {
+seededTest('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão esbarrões de leve', 1, () => {
   const knocks = [];
   const effects = { busy: () => false, knock: (c, nx, nz, dist) => { knocks.push({ name: c.name, dist }); c.x += (nx / Math.hypot(nx, nz)) * dist; c.z += (nz / Math.hypot(nx, nz)) * dist; } };
   const h = herd({}, { effects });
@@ -323,7 +334,7 @@ test('rebanho: vão atrás da dog ativa, ficam à frente dela, encostam e dão e
   assert.ok(ahead.length >= 1, 'com a dog andando, eles se põem à frente');
 });
 
-test('rebanho: quem leva algo na boca é o alvo; o esbarrão derruba o objeto (depois do tempo de graça)', () => {
+seededTest('rebanho: quem leva algo na boca é o alvo; o esbarrão derruba o objeto (depois do tempo de graça)', 1, () => {
   const knocks = [];
   const effects = { busy: () => false, knock: () => {} };
   let holding = true;
@@ -346,7 +357,7 @@ test('rebanho: quem leva algo na boca é o alvo; o esbarrão derruba o objeto (d
   assert.equal(knocks.length, n, 'sem nada na boca, nada a derrubar');
 });
 
-test('rebanho: comida no chão distrai o porco mais perto por um tempo; depois ele volta a atrapalhar (pig:done)', () => {
+seededTest('rebanho: comida no chão distrai o porco mais perto por um tempo; depois ele volta a atrapalhar (pig:done)', 1, () => {
   const h = herd({ foods: { corn: { time: 6, eat: 3.5 } } });
   h.pigs.releaseNow();
   const c = h.ctrls.radhija;
@@ -381,11 +392,9 @@ test('rebanho: comida no chão distrai o porco mais perto por um tempo; depois e
   assert.equal(inf.foods.length, 0);
 });
 
-test('rebanho: acabou a distração sem dog por perto: o porco volta a passear (o caso que travava a prévia)', async () => {
-  // determinístico: semente fixa e os três porcos em lugares conhecidos, longe uns dos outros
-  const random = Math.random;
-  Math.random = seeded(36);
-  try {
+seededTest('rebanho: acabou a distração sem dog por perto: o porco volta a passear (o caso que travava a prévia)', 36, async () => {
+  // os três porcos em lugares conhecidos, longe uns dos outros
+  {
     const h = herd({ foods: { corn: { time: 5, eat: 2 } } });
     h.pigs.releaseNow();
     const spots = [[1.0, 1.0], [3.6, 2.8], [-0.1, 3.2]];
@@ -395,7 +404,7 @@ test('rebanho: acabou a distração sem dog por perto: o porco volta a passear (
     for (const P of h.pigs.pigs) Object.assign(P, { idleAct: 'go', goal: { x: P.x + 0.4, z: P.z - 0.4 }, idleT: 7 });
     h.pigs.addFood({ x: 1.0, z: 1.8, kind: 'corn' }); // 0,8 m do porco 0; os outros, bem mais longe
     const P = h.pigs.pigs[0];
-    let x0 = 0, z0 = 0;
+    let walked = 0;
     const errs = await consoleErrors(() => {
       h.run(0.05);
       assert.equal(h.events('pig:smell')[0].pig, 0, 'o porco mais perto vai comer');
@@ -404,20 +413,21 @@ test('rebanho: acabou a distração sem dog por perto: o porco volta a passear (
       h.run(11);
       assert.equal(h.events('pig:done').length, 1, 'comeu, cochilou e acordou');
       assert.equal(h.events('pig:done')[0].reason, 'time');
-      x0 = P.x;
-      z0 = P.z;
-      h.run(6);
+      // quanto ele anda nos 6 s seguintes (o passeio pode dar a volta e terminar perto de onde começou)
+      for (let k = 0; k < 6 * 60; k++) {
+        const x = P.x, z = P.z;
+        h.run(1 / 60);
+        walked += Math.hypot(P.x - x, P.z - z);
+      }
     });
     assert.deepEqual(errs, []);
     assert.equal(h.pigs.info().errors, 0);
     assert.equal(P.state, 'roam');
-    assert.ok(Math.hypot(P.x - x0, P.z - z0) > 0.1, 'voltou a passear');
-  } finally {
-    Math.random = random;
+    assert.ok(walked > 0.3, `voltou a passear (${walked.toFixed(2)} m)`);
   }
 });
 
-test('rebanho: um erro num porco não trava o jogo: sai no console uma vez por porco e os outros seguem', async () => {
+seededTest('rebanho: um erro num porco não trava o jogo: sai no console uma vez por porco e os outros seguem', 1, async () => {
   const effects = { busy: () => false, knock: () => {} };
   const h = herd({}, { effects, carries: (n) => n === 'rhaenyra', knockItem: () => { throw new Error('falha de teste'); } });
   h.pigs.releaseNow();
@@ -434,7 +444,7 @@ test('rebanho: um erro num porco não trava o jogo: sai no console uma vez por p
   assert.ok(inf.bumps >= 1, 'continuaram esbarrando');
 });
 
-test('rebanho: tempos padrão generosos por legume, comida tirada de volta e comida fora da área', () => {
+seededTest('rebanho: tempos padrão generosos por legume, comida tirada de volta e comida fora da área', 1, () => {
   assert.ok(PIG_DEFAULTS.distractTime >= 25 && PIG_DEFAULTS.distractTime <= 40);
   for (const k of ['corn', 'carrot', 'pumpkin']) {
     const f = PIG_DEFAULTS.foods[k];
@@ -460,7 +470,7 @@ test('rebanho: tempos padrão generosos por legume, comida tirada de volta e com
   assert.ok(h.pigs.info().pigs.some((p) => p.state === 'nap'), 'com time Infinity ele cochila de vez');
 });
 
-test('rebanho: recall leva todos de volta e a porteira fecha; reset volta ao começo', () => {
+seededTest('rebanho: recall leva todos de volta e a porteira fecha; reset volta ao começo', 1, () => {
   const h = herd();
   h.pigs.setOpen(true);
   h.run(10);
@@ -482,7 +492,7 @@ test('rebanho: recall leva todos de volta e a porteira fecha; reset volta ao com
   assert.equal(h.pigs.info().foods.length, 0);
 });
 
-test('rebanho: o sininho não prende a dog no chiqueiro: com ela lá dentro, a porteira espera ela sair', () => {
+seededTest('rebanho: o sininho não prende a dog no chiqueiro: com ela lá dentro, a porteira espera ela sair', 1, () => {
   const h = herd();
   h.pigs.releaseNow();
   h.run(2);
@@ -498,7 +508,7 @@ test('rebanho: o sininho não prende a dog no chiqueiro: com ela lá dentro, a p
   assert.ok(h.pigs.gate.t < 0.05, 'agora fecha');
 });
 
-test('rebanho: a dog fora da área não é seguida; eles esperam na beirada', () => {
+seededTest('rebanho: a dog fora da área não é seguida; eles esperam na beirada', 1, () => {
   const h = herd();
   h.pigs.releaseNow();
   const c = h.ctrls.radhija;
@@ -535,7 +545,7 @@ test('legumes: comidos aos poucos (a ponta some), somem no fim e voltam inteiros
 });
 
 // ---------------------------------------------------------------------------------------------- arena
-test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e eles saem', async () => {
+seededTest('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e eles saem', 1, async () => {
   const h = await arena();
   assert.equal(h.info().levelId, 'porcos');
   assert.equal(h.info().stage, 'start');
@@ -556,8 +566,8 @@ test('arena: os porquinhos começam no chiqueiro; o botão abre a porteira e ele
   assert.ok(h.log('plate:press').length >= 1);
 });
 
-test('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', () =>
-  withSeedAsync(58, legumeSteps)); // semente 58: um esbarrão engolia o E da Radhija ao pegar de volta
+// semente 58: um esbarrão engolia o E da Radhija ao pegar de volta
+seededTest('arena: E pega o legume, E de novo joga no chão; na horta um porquinho come; pegar de volta tira dele', 58, legumeSteps);
 
 async function legumeSteps() {
   const h = await arena();
@@ -595,7 +605,7 @@ async function legumeSteps() {
   h.releaseAll();
 }
 
-test('arena: o legume comido até o fim volta para o lugar; o sininho chama os porquinhos de volta', async () => {
+seededTest('arena: o legume comido até o fim volta para o lugar; o sininho chama os porquinhos de volta', 1, async () => {
   const h = await arena();
   h.puzzle.jumpToStage('pigsOut');
   h.run(0.5);
@@ -627,7 +637,7 @@ test('arena: o legume comido até o fim volta para o lugar; o sininho chama os p
   assert.equal(h.log('pig:home').length, 1);
 });
 
-test('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', () => withSeedAsync(1, bolinhaSteps));
+seededTest('arena: os porquinhos derrubam a bolinha da boca; ela fica no chão e a dog pega de novo', 1, bolinhaSteps);
 
 async function bolinhaSteps() {
   const h = await arena();
@@ -650,7 +660,7 @@ async function bolinhaSteps() {
   h.releaseAll();
 }
 
-test('arena: a bolinha do chiqueiro na caminha termina a fase', async () => {
+seededTest('arena: a bolinha do chiqueiro na caminha termina a fase', 1, async () => {
   const h = await arena();
   h.puzzle.jumpToStage('carrying');
   assert.equal(h.info().ball.holder, 'radhija');
@@ -832,7 +842,7 @@ test('arena: bagunça longa e aleatória (com semente): nada trava, nada vai par
   }
 });
 
-test('arena: a Rhaenyra não passa no vão da cerca (pula a cerca baixa); a Radhija passa', async () => {
+seededTest('arena: a Rhaenyra não passa no vão da cerca (pula a cerca baixa); a Radhija passa', 1, async () => {
   const h = await arena('dog=rhaenyra');
   const G = L.HORTA.gap;
   const zg = (G.z0 + G.z1) / 2;
@@ -860,4 +870,23 @@ test('sons e efeitos: todo evento dos porquinhos tem som ou efeito no feedback, 
   const src = readFileSync(new URL('../src/game/mechanics/pigHerd.js', import.meta.url), 'utf8');
   const emitted = new Set([...src.matchAll(/fire\('(pig:[a-z]+)'/g)].map((m) => m[1]));
   for (const ev of emitted) assert.ok(fb.includes(`events.on('${ev}'`) || ev === 'pig:sleep' || ev === 'pig:wake', `${ev} tem resposta no feedback`);
+});
+
+// Varredura de sementes: roda cada teste com semente com muitas sementes (rebanho 200, arena 60, modelo 10) e lista o
+// que falhar. Desligada por padrão (leva ~50 s): para investigar um teste instável no CI, ligue com a variável
+// PORCOS_SEMENTES=1 no passo de testes (ou troque o `skip` por false num commit temporário).
+test('varredura de sementes de todos os testes com semente', { skip: !process.env.PORCOS_SEMENTES }, async () => {
+  const bad = {};
+  for (const { name, fn } of SEEDED) {
+    const n = name.startsWith('porquinho') ? 10 : name.startsWith('arena') ? 60 : 200;
+    for (let seed = 1; seed <= n; seed++) {
+      try {
+        await withSeedAsync(seed, fn);
+      } catch (err) {
+        (bad[name.slice(0, 60)] ||= []).push(`${seed}: ${String(err.message).replace(/\s+/g, ' ').slice(0, 220)}`);
+      }
+    }
+  }
+  const summary = Object.fromEntries(Object.entries(bad).map(([k, v]) => [k, { falhas: v.length, primeiras: v.slice(0, 4) }]));
+  assert.deepEqual(summary, {});
 });
