@@ -83,8 +83,8 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    impulso, a piscininha enche e, com o disjuntor da cozinha ligado (acendem as luzinhas em volta do quadro e depois
    as da festa), o ventilador leva o barquinho até a borda. O laço está na casa na árvore, com um pombo dormindo em
    cima dele: um latido de longe distrai a Dona Gansa e a outra puxa a cordinha do portão; o superbafo da Radhija
-   sobe pelo cano de brinquedo e espanta o pombo; a Radhija entra no balde deitado e a Rhaenyra puxa a corda (ela
-   segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo escorregador. O
+   sobe pelo cano de brinquedo e espanta o pombo; a Radhija entra pela boca do balde deitado e a Rhaenyra puxa a corda
+   (ela segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo escorregador. O
    biscoito de osso de glacê está em cima do armário alto da despensa: a Rhaenyra puxa três caixotes pela alça, com a
    boca, até as marcas do chão (lá eles travam sozinhos e a marca fica verde); em fila, do mais alto ao mais baixo, eles
    viram uma escadinha e a Radhija sobe por eles. A vela do 3 está no galpão, atrás da horta. Ao lado da cerca branca,

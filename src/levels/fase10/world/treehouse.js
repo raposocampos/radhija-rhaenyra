@@ -428,20 +428,33 @@ export function buildTreehouse(root, layout) {
   bucket.name = 'balde';
   const tin = new THREE.MeshStandardMaterial({ color: '#b8c4cc', metalness: 0.75, roughness: 0.35, side: THREE.DoubleSide });
   const bH = BUCKET.h;
-  const pail = new THREE.Mesh(new THREE.CylinderGeometry(BUCKET.r, BUCKET.r * 0.82, bH, 28, 1, true), tin);
+  /** Raio do balde na altura y (do fundo, BUCKET.taper da boca, até a boca). */
+  const pailR = (y) => BUCKET.r * (BUCKET.taper + (1 - BUCKET.taper) * (y / bH));
+  const pail = new THREE.Mesh(new THREE.CylinderGeometry(BUCKET.r, pailR(0), bH, 28, 1, true), tin);
   pail.position.y = bH / 2;
-  const pailBottom = new THREE.Mesh(new THREE.CircleGeometry(BUCKET.r * 0.82, 28).rotateX(-Math.PI / 2), tin);
+  const pailBottom = new THREE.Mesh(new THREE.CircleGeometry(pailR(0), 28).rotateX(-Math.PI / 2), tin);
   pailBottom.position.y = 0.01;
   const ribs = [0.08, 0.24].map((y) => {
-    const rr = BUCKET.r * (0.82 + 0.18 * (y / bH));
-    const rib = new THREE.Mesh(new THREE.TorusGeometry(rr + 0.004, 0.006, 6, 28).rotateX(Math.PI / 2), tin);
+    const rib = new THREE.Mesh(new THREE.TorusGeometry(pailR(y) + 0.004, 0.006, 6, 28).rotateX(Math.PI / 2), tin);
     rib.position.y = y;
     return rib;
   });
   const lip = new THREE.Mesh(new THREE.TorusGeometry(BUCKET.r, 0.01, 6, 28).rotateX(Math.PI / 2), tin);
   lip.position.y = bH;
-  const bail = new THREE.Mesh(new THREE.TorusGeometry(BUCKET.r, 0.008, 6, 24, Math.PI), stdMat('#5a5650', { metalness: 0.8, roughness: 0.3 }));
-  bail.position.y = bH;
+  // a alça presa nas orelhas, por fora, um pouco abaixo da borda: ela gira em volta delas e aponta para a roldana,
+  // para onde a corda puxa (layoutRope). Deitado, fica por cima do balde e a corda desce por cima dele, longe da boca
+  const earY = bH - 0.03;
+  const bailR = pailR(earY) + 0.012;
+  const bailMat = stdMat('#5a5650', { metalness: 0.8, roughness: 0.3 });
+  const bailPivot = new THREE.Group();
+  bailPivot.position.y = earY;
+  bailPivot.add(new THREE.Mesh(new THREE.TorusGeometry(bailR, 0.008, 6, 24, Math.PI), bailMat));
+  const earGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.012, 10).rotateZ(Math.PI / 2);
+  const ears = [-1, 1].map((sx) => {
+    const ear = new THREE.Mesh(earGeo, bailMat);
+    ear.position.set(sx * (bailR - 0.006), earY, 0);
+    return ear;
+  });
   // faixa de tinta com a patinha
   const bandTex = canvasTexture(256, 32, (g, w, h) => {
     g.fillStyle = '#f27a8a'; g.fillRect(0, 0, w, h);
@@ -454,12 +467,12 @@ export function buildTreehouse(root, layout) {
   });
   const band = new THREE.Mesh(new THREE.CylinderGeometry(BUCKET.r * 0.95 + 0.003, BUCKET.r * 0.9 + 0.003, 0.08, 28, 1, true), new THREE.MeshStandardMaterial({ map: bandTex, roughness: 0.5 }));
   band.position.y = 0.17;
-  bucket.add(pail, pailBottom, ...ribs, lip, bail, band);
+  bucket.add(pail, pailBottom, ...ribs, lip, bailPivot, ...ears, band);
   bucket.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.castShadow = true; });
   bucket.position.set(BUCKET.x, 0, BUCKET.z);
   group.add(bucket);
-  // a ponta da alça (onde a corda prende), no espaço do balde
-  const bailTop = new THREE.Vector3(0, bH + BUCKET.r * 0.95, 0);
+  // a ponta da alça (onde a corda prende), no espaço dela
+  const bailTop = new THREE.Vector3(0, bailR * 0.97, 0);
   const bucketShadow = contactShadow(BUCKET.r + 0.06, BUCKET.r + 0.06, 0.4);
   bucketShadow.position.set(BUCKET.x, 0.006, BUCKET.z);
   group.add(bucketShadow);
@@ -670,6 +683,8 @@ export function buildTreehouse(root, layout) {
   // ================================================================ estado
   const st = { y: 0, tilt: 1, pull: 0, holder: /** @type {any} */ (null), puffs: /** @type {number[]} */ ([]), glow: 0, outT: -1, peckT: 0, flap: 0 };
   const _bt = new THREE.Vector3();
+  const _bp = new THREE.Vector3();
+  const ropeTop = new THREE.Vector3(pulleyPos.x, pulleyPos.y - 0.06, pulleyPos.z);
   function layoutRope() {
     const by = st.y;
     // balde: deitado (tilt 1, boca para o sul, encostado no chão pela lateral) até em pé (tilt 0)
@@ -677,10 +692,15 @@ export function buildTreehouse(root, layout) {
     bucket.rotation.x = th;
     bucket.position.set(BUCKET.x, by + BUCKET.r * Math.sin(th), BUCKET.z - (bH / 2) * Math.sin(th));
     bucket.updateMatrixWorld(true);
+    // a alça aponta para a roldana: a direção até ela, no espaço do balde, vira o giro em volta das orelhas
+    bailPivot.getWorldPosition(_bp);
+    const dy = ropeTop.y - _bp.y, dz = ropeTop.z - _bp.z;
+    bailPivot.rotation.x = Math.atan2(dz * Math.cos(th) - dy * Math.sin(th), dy * Math.cos(th) + dz * Math.sin(th));
+    bailPivot.updateMatrixWorld(true);
     bucketShadow.material.opacity = 0.4 * Math.max(0, 1 - by / 1.2);
     bucketShadow.scale.set((BUCKET.r + 0.06) * 2, 1, (BUCKET.r + 0.06) * 2 * (1 + 0.5 * st.tilt));
-    const bucketTop = bucket.localToWorld(_bt.copy(bailTop));
-    stretch(ropeV, new THREE.Vector3(pulleyPos.x, pulleyPos.y - 0.06, pulleyPos.z), bucketTop);
+    const bucketTop = bailPivot.localToWorld(_bt.copy(bailTop));
+    stretch(ropeV, ropeTop, bucketTop);
     // roldana → argola
     stretch(ropeD, pOut, ringPos);
     // argola → ponta (no chão ou na boca)

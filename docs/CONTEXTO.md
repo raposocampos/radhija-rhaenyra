@@ -1,8 +1,8 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (interações de verdade: a pata aperta o botão do ventilador, as cordinhas
-das fases 1 e 10 vão na boca; a cabeça vai na frente nas curvas e o pulo ficou mais solto; a etapa 4 dos modelos, #48,
-está no main e em produção). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
+Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55: a pata aperta o botão do ventilador, as
+cordinhas das fases 1 e 10 vão na boca; a cabeça vai na frente nas curvas e o pulo ficou mais solto; a etapa 4 dos
+modelos, #48, e o balde da fase 10, #54, estão no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
 antes de editar.
 
 ## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`)
@@ -12,7 +12,7 @@ antes de editar.
   o realismo"; "dar um pouco mais de molejo, pouca coisa: quando andar e virar, a cabeça também vira, o tronco… ficar
   mais natural"; e "deixa o pulo mais fluido, hoje está muito travado e duro, sem deixar aquele bug de quando
   aterrissar o dog fica com as patas presas".
-- Feito (commit deste branch; PR a abrir):
+- Feito (PR #55, branch sincronizado com o main `3bd1b7b`, que tem o #54):
   - Botão do ventilador (fase 9): no E ela dá um passinho até a frente do botão (pelo sul da base, de onde a pata
     alcança; de trás do ventilador não há prompt) e aperta com a pata do lado dele (`action: 'press'`, `lock.press`,
     `anim.pressAt`/`pressK` em `dogAnimation.js`; o corpo vai mais para a frente se o botão está longe). O ventilador
@@ -32,8 +32,47 @@ antes de editar.
   - Testes: `test/interacoes.test.mjs` (modelos novos, cenário real e colisão), fases 1, 9 e 10 ajustadas ao passinho.
     Capturas novas no E2E: `13b-cordinha-na-boca` (jogo), `05b-cordinha-na-boca` (quintal), `02b-pata-no-botao`
     (biblioteca).
-- Validação: CI e E2E (`todas`) do commit do PR: conferir no GitHub.
+- Validação: CI e E2E (`todas`) do head sincronizado: conferir no PR #55 pelo commit (os do `9077833`, antes do #54,
+  não valem). No PC, diagnósticos leves em Node e testes de um arquivo durante o trabalho; a bateria fica no CI.
 - Próximo passo: prévia para o usuário testar; aprovação explícita antes de integrar.
+
+## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
+
+- Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
+  balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
+  colisão da Rhaenyra está ok", mas a Radhija atravessava o balde e a câmera (zona `casa-na-arvore`) deixava o balde no
+  rodapé da tela, atrás do botão; 2ª (`36177f7`), "as colisões funcionaram", mas a alça ficava para fora da boca, com a
+  corda na frente da entrada; deitada lá dentro, a cabeça vazava; e o pulo para o deque atravessava o balde; 3ª
+  (`bf15bbd`), "ficou bom", mas com o balde virando as pernas dela atravessavam o balde.
+- Feito (`fase10/puzzle.js`, `layout.js`, `world/treehouse.js`):
+  - Colisor do balde para as duas (`fitBucketCol`): caixa do tamanho dele visto de cima, do fundo até a boca, enquanto
+    ele está deitado ou levantando; quase em pé, o círculo da boca. Só desliga quando o fundo passa da cabeça da
+    Rhaenyra. Com a Radhija lá dentro, vale só para a Rhaenyra (ativa no balde, ela não tem trava, para a troca
+    continuar valendo; a colisão a empurraria a cada quadro).
+  - A Radhija entra só pela boca (`atMouth`, `BUCKET.mouthR`); de lado ou por trás, o E dá a dica `bucketMouth`.
+  - A alça fica presa em orelhas um pouco abaixo da borda e aponta para a roldana (`layoutRope`): deitado, por cima do
+    balde; puxando, gira com ele. A corda desce por cima do balde, longe da boca.
+  - Achado: a pose do balde (`rideSeq`) nunca chegava à animação, e ela ficava sentada no balde deitado (a cabeça
+    passava do teto). Agora fica deitada de barriga (`slide`), a `RIDE_IN` do meio, virada como entrou (`rideYaw`).
+    A posição dela (`ridePos`) fica no espaço do balde e gira com ele: deitada perto da boca, na parede de baixo, até
+    a metade do giro; depois vai para o meio, senta (`SIT_TILT`) e desce até `RIDE_SIT` acima do fundo. Antes era
+    uma reta no mundo, e no meio do giro as patas de trás passavam pela parede.
+  - Os pulos do deque usam o `hopStep` (agacha, salta com a pose de pulo e pousa): a saída, sentada, sobe por cima da
+    borda; a volta salta até em cima do balde e desce sentada. `DECK_PATH.arrive` foi para 50 cm da beira do deque.
+  - Câmera: zona `balde-no-chao` (o olhar sobe 0,5 m, em vez de 1,2 m, na volta do balde).
+  - A exceção `balde` saiu da auditoria (`test/colisao-cenario.test.mjs`); ela passa a conferir também o balde da
+    fase 8, que tinha o mesmo nome.
+- Testes (`test/fase10.test.mjs`): o desenho real (`buildLevelWorld`) contra o colisor, com o `findLooseObstacles` do
+  #53, para as duas, em 9 pontos da corda, e as duas livres a 3 cm do balde deitado; deitado, nada do balde nem da
+  corda na frente da boca; a Radhija esbarra de lado, por trás e na boca, entra só pela boca, fica quieta lá dentro,
+  sai sem tranco e aparece acima do botão na tela; os modelos de verdade (atual e novo), com a pose do jogo quadro a
+  quadro: deitada e com o balde virando (corda puxada devagar, com paradas), a pele cabe nele; nos pulos do deque, não
+  cruza a parede abaixo da borda. Medidas no CI `39503913840`: deitada, 2,6 cm (atual) e 0,9 cm (novo) para dentro;
+  virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
+- Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
+  E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
+- Integrado ao main com a aprovação do usuário (squash `3bd1b7b`); a publicação (`39507237110`) foi liberada pela
+  sessão do balde: conferir o deploy e o `version.json` (previsto v0.10.5 · build 97).
 
 ## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
@@ -133,7 +172,7 @@ antes de editar.
   - Head final `1d8e00e`: CI `39492776642` e E2E `todas` `39492800353` verdes (a parte da fase 3 falhou uma vez na dica
     do cantinho e passou ao repetir, `39494273942`).
 - Integrado com a aprovação do usuário ("Ta aprovado a prévia"): squash `38f5677`, CI do main `39496518317`, deploy
-  `39496742933`; produção em v0.10.4 · build 96 (`version.json` conferido).
+  `39496742933`; produção em v0.10.4 · build 96 (`version.json` conferido). Não repetir merge/deploy do #48.
 - Depois: as interações de verdade (seção acima, em andamento) e a etapa 5 (troca nas 10 fases e cascas de pelo mais
   leves só no celular); fechar o registro mordendo o volante e, parada muito tempo, coçar, xixi agachada, sentar e
   deitar continuam anotados.
