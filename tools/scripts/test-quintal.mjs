@@ -139,7 +139,10 @@ try {
   await page.keyboard.press('KeyE');
   // ela anda até a cordinha e morde; puxando de ré (para longe da cerca), o portãozinho vem junto, para o quintal
   state = await waitFor((s) => s.quintal.cord.phase === 'hold', { timeout: 2500 });
-  check(qt(state).cord.phase === 'hold', 'a outra morde a cordinha e segura');
+  check(qt(state).cord.phase === 'hold', 'a outra morde a cordinha e segura', JSON.stringify({
+    cord: qt(state).cord, dog: state.dogs[state.activeDog], active: state.activeDog, prompt: state.prompt, goose: qt(state).goose,
+    hints: (await logOf('hint')).map((x) => x.text), tug: (await logOf('rope:tug')).length,
+  }));
   state = await H.holdUntil(keysFor(-1, 0), (s) => s.quintal.gate.t > 0.15, { timeout: 2500 });
   check(qt(state).gate.t > 0.15 && !qt(state).gateOpen, 'puxando de ré, o portãozinho vem junto (para o quintal)', JSON.stringify(qt(state).gate));
   await shot('05b-cordinha-na-boca.png'); // o puxador na boca, no meio do puxão

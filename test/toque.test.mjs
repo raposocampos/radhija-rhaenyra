@@ -273,8 +273,14 @@ test('trecho da fase 1 só com toque: abertura, cordinha, portão e troca', asyn
   h.run(3, { until: (i) => i.prompt === 'Puxar a cordinha' });
   assert.equal(h.info().prompt, 'Puxar a cordinha');
   tapTouch(h, 'act');
-  h.run(3, { until: (i) => i.stage === 'gateOpen' });
-  assert.equal(h.info().stage, 'gateOpen', 'Agir puxou a cordinha e abriu o portão');
+  // Agir: ela anda até a cordinha e morde; o joystick para longe do portão (leste) puxa de ré até ele abrir
+  assert.ok(h.run(3, { until: (i) => i.rope.phase === 'hold' }), 'Agir: ela morde a cordinha e segura');
+  for (let i = 0; i < 240 && h.info().stage !== 'gateOpen'; i++) {
+    stickToward(h, 1, 0, 1);
+    h.step();
+  }
+  touch(h).stick(0, 0, 0);
+  assert.equal(h.info().stage, 'gateOpen', 'o joystick puxou a cordinha e abriu o portão');
   stickTo(2.4, 0.9);
   h.run(6, { until: (i) => i.dogs.rhaenyra.x > 1.05 });
   tapTouch(h, 'swap');
