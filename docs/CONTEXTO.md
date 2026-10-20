@@ -3,7 +3,23 @@
 Última atualização: **2026-10-20, Claude** (travamento das abas no carregamento do E2E, PR #47; #33 a #46 e #49 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: travamentos do iPhone emulado na suíte `toque` (Claude, branch `claude/iphone-e2e-travamento`)
+## Em andamento: versão automática do jogo, v0.10.0 (Claude, branch `claude/versao-automatica`, 2026-10-20)
+
+- Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
+  de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
+  Regra curta no `AGENTS.md` e detalhes no `docs/ENTREGA.md` ("Versão do jogo"): PATCH e build automáticos pelos
+  commits de primeiro pai do main; o campo `"version"` só muda em marco pedido pelo usuário. Este PR declara
+  `0.10.0` (fecha a demo de 10 fases).
+- Feito (PR #50): `tools/deploy/version.mjs` (cálculo e rótulos), passo no `ci.yml` (`fetch-depth: 0`,
+  `GAME_VERSION_INFO`, `version.json` com version/build/pr/label), texto pequeno no canto da tela inicial
+  (`src/core/version.js`, `.rr-version`) e `test/versao.test.mjs`. O `deploy.yml` não muda: ele só copia o artefato.
+- Número: build = commits de primeiro pai do main (6 commits laterais de dois merges antigos não contam). Com o
+  #49 e o #47 já no main (91 commits de primeiro pai: hoje `v0.1.90 · build 91`), o merge deste PR vira
+  **v0.10.0 · build 92** se nada mais entrar antes (cada PR integrado antes soma 1 ao build; a versão continua 0.10.0).
+- Próximo passo: CI e prévia do head sincronizado (canto: `prévia PR #50 · sobre v0.1.90`), aprovação do usuário;
+  depois do merge, conferir `version.json` e o menu em produção.
+
+## Entregue: travamentos do iPhone emulado na suíte `toque` (PR #47, squash `3c41acd`, deploy `39378360338`)
 
 - Pedido (orquestrador): investigar os travamentos intermitentes do iPhone emulado na suíte `toque` dentro do
   `todas` (PR #43, E2E `39358151432`: `test-toque.mjs:581` preso na intro; 2ª tentativa, `capture-celular.mjs:88` sem
@@ -32,8 +48,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   já apagado; E2E `39369177965`): 10/10 jobs verdes, 60 sequências PC+iPhone (42 em EPYC 7763) e 20 rodadas de
   capturas, sem nenhum diagnóstico; sem a correção, a mesma configuração deu 3 travamentos em 10 jobs. E2E `toque`
   verde em `ffd9cab` (`39369408152`, EPYC 7763, 98/98). O job temporário `toque-diag` já saiu do `e2e.yml`.
-  Próximo passo: conferir no PR o CI e os E2E `toque` e `todas` do head atual; entregar a prévia e aguardar a
-  aprovação do usuário (nada muda no jogo; é só o navegador dos testes).
+  Integrado ao main com a aprovação do usuário (squash `3c41acd`, deploy `39378360338`, `version.json` conferido
+  pelo orquestrador). Não repetir merge/deploy do #47.
 - Pendência separada (não é deste PR): a suíte `lambe` cai de vez em quando em "cinco lambidas limpam a Radhija" com
   o jogo lento (E2E `39313770288` e 1ª tentativa de `39373228456`, mesma cascata); sessão própria aberta para isso.
 
