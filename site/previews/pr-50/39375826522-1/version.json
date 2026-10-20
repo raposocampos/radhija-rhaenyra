@@ -1,0 +1,15 @@
+{
+  "version": "0.1.88",
+  "build": 89,
+  "pr": 50,
+  "next": {
+    "version": "0.10.0",
+    "build": 90
+  },
+  "label": "prévia PR #50 · sobre v0.1.88 → v0.10.0",
+  "commit": "4b154496c8bb604509f9de2dddccd9f07d55ddfe",
+  "head": "7154f4bc7472110c795728beefc976dc0830c1f5",
+  "base": "cdabb1bacfd9b0acb9ff28a11292aa33126d9bc6",
+  "run": "39375826522",
+  "attempt": "1"
+}
