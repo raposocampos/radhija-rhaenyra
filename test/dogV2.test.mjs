@@ -345,6 +345,89 @@ test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca 
   }
 });
 
+test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa um pouco no pulo e no giro e volta; nunca passa do chão', () => {
+  for (const kind of KINDS) {
+    const d = createDogV2(kind);
+    const bone = (n) => d.bones.find((b) => b.name === n);
+    // a ponta do rabo (junta do último gomo) no referencial da garupa
+    const tipInHips = () => {
+      d.object.updateMatrixWorld(true);
+      return bone('hips').worldToLocal(bone('tail4').getWorldPosition(new THREE.Vector3()));
+    };
+    const still = { speed: 0, action: 'none', lookAt: { x: 0, y: 0.3, z: 4 } };
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    // a pose do guia: sem a física (zerada a cada quadro, a correntinha vai direto para a pose)
+    for (let i = 0; i < 90; i++) { d.physics.reset(); d.update(1 / 60, still); }
+    const guide = tipInHips();
+    for (let i = 0; i < 150; i++) d.update(1 / 60, still);
+    const rest = tipInHips();
+    assert.ok(rest.distanceTo(guide) < 0.015, `${kind}: parado, o rabo fica na pose (${(rest.distanceTo(guide) * 1000).toFixed(1)} mm)`);
+    // pulo e meia-volta rápida: atrasa um tiquinho (firme: nada de rabo mole) e volta
+    let swing = 0;
+    for (let f = 0; f <= 40; f++) {
+      const k = f / 25;
+      d.object.rotation.y += f < 20 ? 0.06 : 0; // meia-volta em 1/3 s
+      d.update(1 / 60, k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still);
+      swing = Math.max(swing, tipInHips().distanceTo(rest));
+    }
+    for (let i = 0; i < 150; i++) d.update(1 / 60, still);
+    const back = tipInHips().distanceTo(rest);
+    assert.ok(swing > 0.002 && swing < 0.045, `${kind}: no pulo e no giro o rabo atrasa só um pouco (${(swing * 1000).toFixed(1)} mm)`);
+    assert.ok(back < 0.004, `${kind}: o rabo volta à pose (${(back * 1000).toFixed(1)} mm)`);
+    // rolando: as juntas do rabo ficam acima do chão
+    let low = Infinity;
+    for (let f = 0; f < 150; f++) {
+      d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k: 0.3 + f / 300, t: f / 60, h: 0 } });
+      d.object.updateMatrixWorld(true);
+      for (const n of ['tail1', 'tail2', 'tail3', 'tail4']) low = Math.min(low, bone(n).getWorldPosition(v).y);
+    }
+    assert.ok(low > -0.005, `${kind}: rolando, as juntas do rabo ficam acima do chão (${low.toFixed(3)})`);
+  }
+});
+
+test('modelo novo: bebendo e comendo, a boca desce até perto do chão, no mesmo lugar do atual', () => {
+  for (const kind of KINDS) {
+    const d = v2[kind];
+    const a = v1[kind];
+    for (const x of ['drink', 'eat']) {
+      let worst = 0, lowest = Infinity;
+      for (const dog of [d, a]) {
+        dog.update(1 / 60, { speed: 0, action: 'sniff' });
+        for (let i = 0; i < 30; i++) dog.update(1 / 60, { speed: 0, action: 'none' });
+      }
+      for (let f = 0; f <= 120; f++) {
+        const k = f / 120;
+        const pose = { speed: 0, action: 'none', extra: { kind: x, k, t: k * EXTRA_TIME[x], h: 0 } };
+        d.update(1 / 60, pose);
+        a.update(1 / 60, pose);
+        if (k < 0.3 || k > 0.7) continue;
+        d.object.updateMatrixWorld(true);
+        a.object.updateMatrixWorld(true);
+        const jaw2 = d.bones.find((b) => b.name === 'jaw').getWorldPosition(v);
+        const jaw1 = a.bones.find((b) => b.name === 'jaw').getWorldPosition(w);
+        worst = Math.max(worst, jaw2.distanceTo(jaw1) - Math.abs(d.object.children[0].position.y - d.driver.inner.position.y));
+        lowest = Math.min(lowest, jaw2.y);
+      }
+      // em pé a mandíbula fica a uns 30 cm do chão
+      assert.ok(lowest < 0.12, `${kind} ${x}: a boca desce até perto do chão (${(lowest * 100).toFixed(1)} cm)`);
+      assert.ok(worst < 0.006, `${kind} ${x}: a boca no mesmo lugar do atual (${(worst * 1000).toFixed(1)} mm)`);
+    }
+  }
+});
+
+test('modelo novo: as camadas — locomoção andando, rolagem rolando; sentada, nenhuma (a pose é a do atual)', () => {
+  for (const kind of KINDS) {
+    const d = createDogV2(kind);
+    for (let i = 0; i < 60; i++) d.update(1 / 60, { speed: 1.2, action: 'none' });
+    assert.ok(d.layers.gait > 0.99 && d.layers.roll === 0, `${kind} andando: ${JSON.stringify(d.layers)}`);
+    d.update(1 / 60, { speed: 0, action: 'sniff' });
+    for (let i = 0; i < 120; i++) d.update(1 / 60, { speed: 0, action: 'sit' });
+    assert.ok(d.layers.gait === 0 && d.layers.roll === 0, `${kind} sentada: ${JSON.stringify(d.layers)}`);
+    for (let f = 0; f < 60; f++) d.update(1 / 60, { speed: 0, action: 'none', extra: { kind: 'roll', k: 0.3 + f / 300, t: f / 60, h: 0 } });
+    assert.ok(d.layers.roll > 0.99 && d.layers.gait === 0, `${kind} rolando: ${JSON.stringify(d.layers)}`);
+  }
+});
+
 test('modelo novo: o item vai na boca (bolinha), à frente da cabeça e perto de onde fica no atual', () => {
   for (const kind of KINDS) {
     const pos = {};

@@ -1,34 +1,50 @@
-// Física das orelhas do modelo novo: cada orelha é uma correntinha de três gomos (a base presa na cabeça) com mola,
-// amortecimento, um pouco de gravidade e o chão. A pose de cada quadro (a do esqueleto guia, com as orelhas alertas,
-// para trás na corrida etc.) é o ponto de descanso da mola; a inércia faz o resto: no pulo as orelhas sobem quando a
-// cabeça desce e balançam no pouso, nas curvas abrem para fora, e ao rolar caem sobre o chão sem atravessá-lo.
+// Física das correntinhas do modelo novo: as orelhas (três gomos, presas na cabeça) e o rabo (cinco gomos, preso na
+// garupa). Cada correntinha tem mola, amortecimento, um pouco de gravidade e o chão. A pose de cada quadro (a do
+// esqueleto guia: orelhas alertas, para trás na corrida, o rabo abanando etc.) é o ponto de descanso da mola; a
+// inércia faz o resto: no pulo as orelhas sobem quando a cabeça desce e balançam no pouso, nas curvas abrem para fora,
+// ao rolar caem sobre o chão sem atravessá-lo; o rabo, bem mais firme, só atrasa um tiquinho nas curvas, no pulo e ao
+// parar (retorno do usuário: nada "mole").
 import * as THREE from 'three';
 
-/** Mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico) e gravidade extra (m/s²). */
-const FREQ = [5.6, 4.3, 3.4];
-const ZETA = 0.4;
-const GRAVITY = 1.6;
-/** Folga da ponta da orelha acima do chão (m). */
-const FLOOR_PAD = 0.012;
+/** Orelhas: mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico), gravidade extra (m/s²) e
+ * folga da ponta acima do chão (m). */
+export const EAR_PHYSICS = Object.freeze({ freq: [5.6, 4.3, 3.4], zeta: 0.4, gravity: 1.6, floorPad: 0.012 });
+/** Rabo: bem mais firme que as orelhas e quase sem cair (o rabo em pluma fica no alto, como na pose). */
+export const TAIL_PHYSICS = Object.freeze({ freq: [9, 7.5, 6.5, 5.8, 5.2], zeta: 0.6, gravity: 0.4, floorPad: 0.015 });
 
 /**
- * @param {{ skel2: { bones: THREE.Bone[], rest: THREE.Vector3[], index: Record<string, number> }, design: any }} opts
+ * As correntinhas do desenho: orelhas e (se `tail`) o rabo.
+ * @param {{ bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> }} skel2
+ * @param {any} design @param {{ tail?: boolean }} [opts]
  */
-export function createEarPhysics({ skel2, design }) {
+export function designChains(skel2, design, { tail = true } = {}) {
   const I = skel2.index;
-  const ears = ['L', 'R'].map((s) => {
-    const b = [I[`ear${s}0`], I[`ear${s}1`], I[`ear${s}2`]];
-    const tip = new THREE.Vector3(...design.chains[`ear${s}`][3]);
-    const rest = [skel2.rest[b[0]], skel2.rest[b[1]], skel2.rest[b[2]], tip];
+  const chains = ['L', 'R'].map((s) => ({
+    name: `ear${s}`, bones: [0, 1, 2].map((k) => I[`ear${s}${k}`]), tip: design.chains[`ear${s}`][3], ...EAR_PHYSICS,
+  }));
+  if (tail) chains.push({ name: 'tail', bones: [0, 1, 2, 3, 4].map((k) => I[`tail${k}`]), tip: design.chains.tail[5], ...TAIL_PHYSICS });
+  return chains;
+}
+
+/**
+ * @param {{ skel2: { bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> },
+ *           chains: { name: string, bones: number[], tip: number[], freq: number[], zeta: number, gravity: number,
+ *                     floorPad: number }[] }} opts
+ */
+export function createChainPhysics({ skel2, chains: defs }) {
+  const chains = defs.map((c) => {
+    const n = c.bones.length;
+    const tip = new THREE.Vector3(...c.tip);
+    const rest = [...c.bones.map((b) => skel2.rest[b]), tip];
+    const pts = () => Array.from({ length: n + 1 }, () => new THREE.Vector3());
     return {
-      b,
+      ...c, n,
+      parent: skel2.parentIdx[c.bones[0]],
       /** direção de repouso de cada gomo (o osso nasce sem rotação: a direção é a do desenho) */
-      dir: [0, 1, 2].map((k) => rest[k + 1].clone().sub(rest[k]).normalize()),
-      len: [0, 1, 2].map((k) => rest[k + 1].distanceTo(rest[k])),
-      tipOff: tip.clone().sub(rest[2]),
-      p: [0, 1, 2, 3].map(() => new THREE.Vector3()),
-      v: [0, 1, 2, 3].map(() => new THREE.Vector3()),
-      t: [0, 1, 2, 3].map(() => new THREE.Vector3()),
+      dir: c.bones.map((_, k) => rest[k + 1].clone().sub(rest[k]).normalize()),
+      len: c.bones.map((_, k) => rest[k + 1].distanceTo(rest[k])),
+      tipOff: tip.clone().sub(rest[n - 1]),
+      p: pts(), v: pts(), t: pts(),
       ready: false,
     };
   });
@@ -43,34 +59,35 @@ export function createEarPhysics({ skel2, design }) {
 
   /**
    * Um quadro: P/Q = ossos no referencial do corpo com a pose de agora (o descanso da mola). Muda só as rotações
-   * locais dos ossos das orelhas.
+   * locais dos ossos das correntinhas.
    * @param {number} dt @param {{ P: THREE.Vector3[], Q: THREE.Quaternion[], inner: THREE.Object3D, object: THREE.Object3D, floorY: number }} f
    */
   function update(dt, { P, Q, inner, object, floorY }) {
     dt = Math.min(Math.max(dt || 0, 0), 0.05);
     _qw.multiplyQuaternions(object.quaternion, inner.quaternion);
     _qwi.copy(_qw).invert();
-    for (const e of ears) {
+    for (const e of chains) {
+      const { n, bones } = e;
       // alvos (a pose do guia) no mundo
-      for (let k = 0; k < 3; k++) toWorld(e.t[k], P[e.b[k]], inner, object);
-      toWorld(e.t[3], _a.copy(e.tipOff).applyQuaternion(Q[e.b[2]]).add(P[e.b[2]]), inner, object);
-      // começo, teleporte ou troca de fase: a orelha vai direto para a pose
+      for (let k = 0; k < n; k++) toWorld(e.t[k], P[bones[k]], inner, object);
+      toWorld(e.t[n], _a.copy(e.tipOff).applyQuaternion(Q[bones[n - 1]]).add(P[bones[n - 1]]), inner, object);
+      // começo, teleporte ou troca de fase: a correntinha vai direto para a pose
       if (!e.ready || e.p[0].distanceToSquared(e.t[0]) > 0.25) {
-        for (let k = 0; k < 4; k++) {
+        for (let k = 0; k <= n; k++) {
           e.p[k].copy(e.t[k]);
           e.v[k].set(0, 0, 0);
         }
         e.ready = true;
       }
-      const n = Math.max(1, Math.ceil(dt * 120));
-      const h = dt / n;
-      for (let s = 0; s < n; s++) {
-        // a base acompanha a cabeça no meio do quadro (interpolada)
-        e.p[0].lerp(e.t[0], 1 / (n - s));
-        for (let k = 1; k < 4; k++) {
-          const w = 2 * Math.PI * FREQ[k - 1];
-          _a.subVectors(e.t[k], e.p[k]).multiplyScalar(w * w).addScaledVector(e.v[k], -2 * ZETA * w);
-          _a.y -= GRAVITY;
+      const steps = Math.max(1, Math.ceil(dt * 120));
+      const h = dt / steps;
+      for (let s = 0; s < steps; s++) {
+        // a base acompanha o osso de onde ela sai no meio do quadro (interpolada)
+        e.p[0].lerp(e.t[0], 1 / (steps - s));
+        for (let k = 1; k <= n; k++) {
+          const w = 2 * Math.PI * e.freq[k - 1];
+          _a.subVectors(e.t[k], e.p[k]).multiplyScalar(w * w).addScaledVector(e.v[k], -2 * e.zeta * w);
+          _a.y -= e.gravity;
           e.v[k].addScaledVector(_a, h);
           _x.copy(e.p[k]);
           e.p[k].addScaledVector(e.v[k], h);
@@ -78,14 +95,14 @@ export function createEarPhysics({ skel2, design }) {
           _d.subVectors(e.p[k], e.p[k - 1]);
           const L = _d.length() || 1e-6;
           e.p[k].copy(e.p[k - 1]).addScaledVector(_d, e.len[k - 1] / L);
-          if (e.p[k].y < floorY + FLOOR_PAD) e.p[k].y = floorY + FLOOR_PAD;
+          if (e.p[k].y < floorY + e.floorPad) e.p[k].y = floorY + e.floorPad;
           e.v[k].subVectors(e.p[k], _x).divideScalar(h);
         }
       }
       // rotações: cada gomo aponta para o ponto simulado seguinte (sem mudar a torção da pose)
-      _qp.copy(Q[I.head]);
-      for (let k = 0; k < 3; k++) {
-        const bone = skel2.bones[e.b[k]];
+      _qp.copy(Q[e.parent]);
+      for (let k = 0; k < n; k++) {
+        const bone = skel2.bones[bones[k]];
         _qk.multiplyQuaternions(_qp, bone.quaternion); // rotação do gomo no corpo, com a pose do guia
         _c.copy(e.dir[k]).applyQuaternion(_qk);
         _d.subVectors(e.p[k + 1], e.p[k]).applyQuaternion(_qwi).normalize();
@@ -101,11 +118,16 @@ export function createEarPhysics({ skel2, design }) {
 
   /** Esquece o estado (troca de modelo de pose, testes). */
   function reset() {
-    for (const e of ears) e.ready = false;
+    for (const e of chains) e.ready = false;
   }
 
-  /** Ponta da orelha simulada (mundo), para testes. */
-  const tip = (i) => ears[i].p[3];
+  /** Ponta simulada (mundo) da correntinha `name` ('earL', 'earR', 'tail'), para testes. */
+  const tip = (name) => chains.find((c) => c.name === name)?.p.at(-1) ?? null;
 
   return { update, reset, tip };
+}
+
+/** Só as orelhas (compatibilidade: o rabo entra com createChainPhysics + designChains). */
+export function createEarPhysics({ skel2, design }) {
+  return createChainPhysics({ skel2, chains: designChains(skel2, design, { tail: false }) });
 }
