@@ -222,8 +222,21 @@ export const DECK_PROPS = { telescope: { x: 6.85, z: -5.6, r: 0.2 }, chest: { x:
 /** O laço amarrado no corrimão da frente e o pombo cochilando em cima dele, no corrimão. */
 export const RIBBON = { x: 8.6, y: DECK.h + 0.34, z: DECK.z1 + 0.02 };
 export const PIGEON = { x: RIBBON.x, y: DECK.h + DECK_RAIL.h + 0.01, z: DECK.z1 - DECK_RAIL.inset, smellR: 0.55 };
-/** Cano de brinquedo: funil no chão (entrada do cheiro), sobe pelo poste do meio e a boca fica do lado do pombo. */
-export const TUBE = { inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.3, outlet: { x: PIGEON.x, z: PIGEON.z, dirX: 0, dirZ: 1, speed: 0.4 }, travel: 1.4 };
+/**
+ * Cano de brinquedo: funil no chão (entrada do cheiro), sobe pelo poste do meio e termina na boca de trompete do lado
+ * do pombo, deitada e virada para ele, na altura do peito dele: o cano acaba em `mouth` e a boca abre `mouth.bell`
+ * metros dali. O cheiro sai pela beira larga da boca (`outlet`, na altura dela), soprado na direção do pombo.
+ */
+const MOUTH = { x: PIGEON.x - 0.26, y: PIGEON.y + 0.12, z: PIGEON.z + 0.12, bell: 0.14 };
+const toPigeon = Math.atan2(PIGEON.x - MOUTH.x, PIGEON.z - MOUTH.z);
+export const TUBE = {
+  inlet: { x: 8.3, z: -2.75, r: 0.42 }, funnelY: 0.3, mouth: MOUTH,
+  outlet: {
+    x: MOUTH.x + Math.sin(toPigeon) * MOUTH.bell, y: MOUTH.y, z: MOUTH.z + Math.cos(toPigeon) * MOUTH.bell,
+    dirX: Math.sin(toPigeon), dirZ: Math.cos(toPigeon), speed: 0.4,
+  },
+  travel: 1.4,
+};
 /**
  * Elevador de balde na frente do deque (a câmera vê subir), com a roldana em cima. O balde de lata grande fica
  * DEITADO no chão, com a boca para o sul: a Radhija entra andando pela boca (E a até `mouthR` da frente dela) e se

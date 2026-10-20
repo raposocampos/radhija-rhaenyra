@@ -1,5 +1,7 @@
 // Desenho do cheiro (src/game/mechanics/scent.js): nuvens verdes cartunescas feitas de bolhas que
 // balançam e somem no fim da vida, e a prévia da mira do superbafo (pontinhos no chão + saídas de duto).
+// A nuvem fica na altura dela (c.y): no chão, as bolhas ficam por cima dele; saindo de uma boca no alto, a bolha do
+// meio fica na altura da boca. Saindo de um duto, ela nasce do tamanho da boca e cresce enquanto sai.
 import * as THREE from 'three';
 import { createResourceScope, ownResource } from '../core/resources.js';
 
@@ -7,7 +9,9 @@ const PUFFS = [
   [0, 0.55, 0, 1.0], [0.55, 0.42, 0.15, 0.72], [-0.5, 0.45, -0.1, 0.78], [0.15, 0.85, -0.35, 0.62],
   [-0.2, 0.38, 0.5, 0.66], [0.3, 0.3, -0.55, 0.58], [-0.42, 0.9, 0.25, 0.5],
 ];
+const MID_Y = PUFFS[0][1]; // altura da bolha do meio (na escala vertical da nuvem)
 const MAX_DOTS = 40;
+const EMERGE = { from: 0.35, time: 0.4 }; // saindo de um duto: escala inicial e quanto tempo leva para o tamanho cheio
 
 /** Cria o desenho da fase. clear() reinicia nuvens; dispose() encerra a vista. */
 export function createScentView(root) {
@@ -47,19 +51,24 @@ export function createScentView(root) {
       if (!v) { v = make(); views.set(c.id, v); }
       v.g.visible = c.state === 'free';
       if (!v.g.visible) continue;
-      const fadeIn = Math.min(1, c.age / 0.25);
+      // tempo desde que apareceu: soprada agora ou saindo de um duto
+      const since = c.exitAge >= 0 ? c.age - c.exitAge : c.age;
+      const fadeIn = Math.min(1, since / 0.25);
       const fadeOut = Math.min(1, (c.life - c.age) / (c.life * 0.3));
+      const u = c.exitAge >= 0 ? Math.min(1, since / EMERGE.time) : 1;
+      const grow = EMERGE.from + (1 - EMERGE.from) * u * u * (3 - 2 * u);
       // espalhando: mais rala, mais baixa e mais transparente (não esconde as dogs)
       const R = c.r;
       const thin = Math.min(1, Math.max(0.3, 0.42 / R));
       v.mat.opacity = 0.55 * fadeIn * Math.max(0, fadeOut) * thin;
-      v.g.position.set(c.x, 0, c.z);
-      const puffS = 0.12 + R * 0.3;
-      const puffY = 0.18 + R * 0.22;
+      const spread = R * 0.75 * grow;
+      const puffS = (0.12 + R * 0.3) * grow;
+      const puffY = (0.18 + R * 0.22) * grow;
+      v.g.position.set(c.x, c.y > 0 ? c.y - MID_Y * puffY : 0, c.z);
       for (const m of v.puffs) {
         const b = m.userData.base;
         const wob = 1 + 0.08 * Math.sin(time * 3.1 + b.ph);
-        m.position.set(b.x * R * 0.75, b.y * puffY, b.z * R * 0.75);
+        m.position.set(b.x * spread, b.y * puffY, b.z * spread);
         m.scale.setScalar(b.s * puffS * wob);
       }
     }
@@ -88,7 +97,10 @@ export function createScentView(root) {
   group.add(preview);
   const _m = new THREE.Matrix4();
 
-  /** p = scent.preview(...): pontinhos espaçados ao longo do caminho; anéis nas saídas de duto e no fim. */
+  /**
+   * p = scent.preview(...): pontinhos espaçados ao longo do caminho; anéis nas saídas de duto e no fim. Cada ponto
+   * fica na altura da nuvem (y; depois de uma saída no alto, na altura da boca).
+   */
   function showPreview(p) {
     if (disposed) return;
     const pts = p.points;
@@ -99,7 +111,7 @@ export function createScentView(root) {
       if (acc < 0.16) continue;
       acc = 0;
       const s = 1 - 0.5 * (n / MAX_DOTS);
-      _m.makeScale(s, 1, s).setPosition(pts[i].x, 0.02, pts[i].z);
+      _m.makeScale(s, 1, s).setPosition(pts[i].x, (pts[i].y ?? 0) + 0.02, pts[i].z);
       dots.setMatrixAt(n++, _m);
     }
     dots.count = n;
@@ -108,7 +120,7 @@ export function createScentView(root) {
     rings.forEach((r, i) => {
       const e = ends[i];
       r.visible = !!e;
-      if (e) r.position.set(e.x, 0.02, e.z);
+      if (e) r.position.set(e.x, (e.y ?? 0) + 0.02, e.z);
     });
     preview.visible = true;
   }

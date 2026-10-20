@@ -149,7 +149,66 @@ try {
     g.engine.render(0, 10.5);
   });
   await page.screenshot({ path: 'shots/pombos/11-mecanismo-vertical.png' });
-  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, head, stats, framing, events, errors }, null, 2));
+
+  // A saída do duto na altura do pombo (retorno do usuário, 2026-10-20: estava muito baixa): superbafo de verdade no
+  // vento do corredor; a fumaça sai pela boca do duto, lá em cima, e chega no pombo do poleiro A. Plano fixo de lado
+  // (a boca olha para o leste) e a câmera do jogo.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  guard.note('saída do duto na altura do pombo');
+  const ductCam = { pos: [3.95, 1.85, 3.65], look: [3.05, 1.35, 2.3] };
+  const ductFrames = (cam, n) => page.evaluate(({ c, k }) => {
+    const g = window.__game;
+    for (let i = 0; i < k; i++) {
+      window.__ductT += 1 / 60;
+      g.game.update(1 / 60, window.__ductT);
+      g.feedback?.update?.(1 / 60, window.__ductT);
+      g.particles?.update?.(1 / 60);
+    }
+    if (c) {
+      g.engine.camera.position.set(...c.pos);
+      g.engine.camera.lookAt(...c.look);
+      g.engine.camera.updateMatrixWorld();
+    }
+    g.engine.render(0, window.__ductT);
+  }, { c: cam, k: n });
+  await page.evaluate(() => {
+    const g = window.__game, d = g.game.debug, L = g.layout;
+    window.__ductT = 30;
+    d.setStage('passOpen');
+    d.puzzle.mech.fan.setPos(L.FAN.start.x, L.FAN.alignZ);
+    for (let i = 0; i < 240; i++) { window.__ductT += 1 / 60; g.game.update(1 / 60, window.__ductT); }
+    if (!d.puzzle.info().fan.aligned) throw new Error('O ventilador não encaixou na marca.');
+    d.teleport('radhija', 1.1, L.CORRIDOR.z);
+    d.ctrls.radhija.yaw = Math.PI / 2;
+    d.cam.snapFollow(1.1, L.CORRIDOR.z);
+    d.clearLog();
+  });
+  await ductFrames(ductCam, 20);
+  await page.screenshot({ path: 'shots/pombos/12-duto-na-altura-do-pombo.png' });
+  const key = (type) => page.evaluate((t) => window.dispatchEvent(new KeyboardEvent(t, { code: 'KeyR', key: 'KeyR' })), type);
+  await key('keydown');
+  await ductFrames(null, 24);
+  await key('keyup');
+  const ductExit = await page.evaluate(() => {
+    const g = window.__game, d = g.game.debug;
+    for (let i = 0; i < 300 && !d.events('scent:exit').length; i++) {
+      window.__ductT += 1 / 60;
+      g.game.update(1 / 60, window.__ductT);
+      g.feedback?.update?.(1 / 60, window.__ductT);
+      g.particles?.update?.(1 / 60);
+    }
+    return { exit: d.events('scent:exit')[0]?.payload ?? null, outlet: g.layout.DUCT.outlet };
+  });
+  if (!ductExit.exit || Math.abs(ductExit.exit.y - ductExit.outlet.y) > 1e-6) {
+    throw new Error(`O cheiro não saiu pela boca do duto, na altura do pombo: ${JSON.stringify(ductExit)}`);
+  }
+  await ductFrames(ductCam, 10);
+  await page.screenshot({ path: 'shots/pombos/13-cheiro-saindo-do-duto.png' });
+  await ductFrames(ductCam, 10);
+  await page.screenshot({ path: 'shots/pombos/14-cheiro-chegando-no-pombo.png' });
+  await ductFrames(null, 4);
+  await page.screenshot({ path: 'shots/pombos/15-cheiro-no-pombo-camera-do-jogo.png' });
+  writeFileSync('shots/pombos/metrics.json', JSON.stringify({ base, head, stats, framing, events, ductExit, errors }, null, 2));
   console.log(JSON.stringify({ base, head, before: old, after: next, errors }, null, 2));
   if (errors.length) throw new Error('Erros no navegador durante a revisão visual.');
 } finally {

@@ -810,9 +810,10 @@ export function createFeedback(opts) {
     sfx('bafo', x, z);
     particles.dust({ x, y: 0.25, z }, { count: 7, size: 1.1, alpha: 0.5, color: '#A8E07A', dir: { x: dirX, z: dirZ }, strength: 1.1 });
   });
-  events.on('scent:exit', ({ x, z }) => {
+  // a baforada sai pela boca do duto, na altura dela (a do chão, a 30 cm), soprada para fora
+  events.on('scent:exit', ({ x, y = 0, z, dirX = 0, dirZ = 0 }) => {
     sfx('scentPuff', x, z);
-    particles.dust({ x, y: 0.3, z }, { count: 5, size: 1.0, alpha: 0.45, color: '#A8E07A', strength: 0.7 });
+    particles.dust({ x, y: y > 0 ? y : 0.3, z }, { count: 5, size: 1.0, alpha: 0.45, color: '#A8E07A', dir: { x: dirX, z: dirZ }, strength: 0.7 });
   });
   events.on('dog:yuck', ({ x, z }) => sfx('yuck', x, z));
   // pombo: y = altura de onde ele sai (padrão: poleiro); do chão, um voo curto (pigeonHop)

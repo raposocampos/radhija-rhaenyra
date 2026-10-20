@@ -5,15 +5,18 @@
 //   pela corrente e fica compacta. Mova o objeto devolvido (x, z, dirX, dirZ) ou desligue com enabled.
 //   funnel (opcional, 1/s): também puxa a nuvem de volta para o eixo da faixa (não escapa pelos lados).
 // - Duto (addDuct): uma nuvem que chega à boca (inlet) com o duto ativo é engolida e sai pela outra ponta
-//   (outlet) depois de `travel` segundos, soprada na direção da saída.
+//   (outlet) depois de `travel` segundos, soprada na direção da saída. Saída no alto (outlet.y): a nuvem sai na
+//   altura da boca e fica lá em cima (y); nessa altura ela passa por cima dos colisores do chão, e quem está no
+//   chão não a alcança (near).
 // - Nariz (addNose): alvo que reage quando uma nuvem o alcança (onSmell), uma vez por nuvem.
 // Tudo determinístico: preview() roda a mesma simulação, sem efeitos, para desenhar a mira.
-// Eventos: scent:spawn, scent:duct, scent:exit, scent:smell, scent:fade (sempre com x, z).
+// Eventos: scent:spawn, scent:duct, scent:exit (com y e a direção da saída), scent:smell, scent:fade (sempre com x, z).
 
 const SPAWN_R = 0.3;
 const CALM_R = 1.05; // raio máximo parado (o cheiro se espalha por perto)
 const WIND_R = 0.38; // no vento a nuvem fica compacta
 const COLLIDE_R = 0.12;
+const HIGH = 0.8; // m: nuvem mais alta que isso passa por cima do que está no chão (colisores, dogs)
 
 /**
  * opts: { world (colisão; opcional), emit(nome, dados), view (desenho; opcional) }
@@ -60,9 +63,10 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
   /** @param {import('../../types').ScentShot} shot @returns {any} */
   function makeCloud({ x, z, dirX = 0, dirZ = 1, speed = 2.6, life = 5 }) {
     const L = Math.hypot(dirX, dirZ) || 1;
+    // y: altura (0 = no chão; ao sair de um duto, a da boca); exitAge: idade ao sair do último duto (-1: não saiu)
     return {
-      id: nextId++, x, z, vx: (dirX / L) * speed, vz: (dirZ / L) * speed,
-      r: SPAWN_R, age: 0, life, state: 'free', duct: null, ductT: 0, smelled: new Set(),
+      id: nextId++, x, y: 0, z, vx: (dirX / L) * speed, vz: (dirZ / L) * speed,
+      r: SPAWN_R, age: 0, life, state: 'free', duct: null, ductT: 0, exitAge: -1, smelled: new Set(),
     };
   }
 
@@ -75,23 +79,29 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
         const d = c.duct;
         c.state = 'free';
         const L = Math.hypot(d.outlet.dirX, d.outlet.dirZ) || 1;
+        const ux = d.outlet.dirX / L;
+        const uz = d.outlet.dirZ / L;
         // outlet.exit: a boca fica a essa distância do ponto de saída, na direção dele (fora do colisor da caixa)
-        c.x = d.outlet.x + (d.outlet.dirX / L) * (d.outlet.exit ?? 0);
-        c.z = d.outlet.z + (d.outlet.dirZ / L) * (d.outlet.exit ?? 0);
-        c.vx = (d.outlet.dirX / L) * (d.outlet.speed ?? 1.6);
-        c.vz = (d.outlet.dirZ / L) * (d.outlet.speed ?? 1.6);
+        c.x = d.outlet.x + ux * (d.outlet.exit ?? 0);
+        c.z = d.outlet.z + uz * (d.outlet.exit ?? 0);
+        c.y = d.outlet.y ?? 0; // na altura da boca de saída
+        c.vx = ux * (d.outlet.speed ?? 1.6);
+        c.vz = uz * (d.outlet.speed ?? 1.6);
         c.r = WIND_R;
         c.age = Math.min(c.age, c.life * 0.35); // sai "fresca" do outro lado
-        if (live) emit('scent:exit', { id: c.id, duct: d.id, x: c.x, z: c.z });
+        c.exitAge = c.age;
+        if (live) emit('scent:exit', { id: c.id, duct: d.id, x: c.x, y: c.y, z: c.z, dirX: ux, dirZ: uz });
       }
       return;
     }
-    const w = windAt(c.x, c.z);
+    // no alto (saiu de um duto lá em cima), o vento dos ventiladores, os colisores e as bocas dos dutos ficam embaixo
+    const high = c.y > HIGH;
+    const w = high ? { x: 0, z: 0 } : windAt(c.x, c.z);
     const inWind = Math.abs(w.x) + Math.abs(w.z) > 0.01;
     const k = 1 - Math.exp(-dt * (inWind ? 3.2 : 1.7));
     c.vx += (w.x - c.vx) * k;
     c.vz += (w.z - c.vz) * k;
-    if (world) {
+    if (world && !high) {
       const res = world.move(c.x, c.z, c.vx * dt, c.vz * dt, COLLIDE_R, 'small');
       // bateu: perde a velocidade contra a parede
       if (res.hits.length) {
@@ -108,6 +118,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     }
     const rT = inWind ? WIND_R : CALM_R;
     c.r += (rT - c.r) * (1 - Math.exp(-dt * (inWind ? 2.5 : 0.55)));
+    if (high) return;
     for (const d of ducts) {
       if (!d.active()) continue;
       if (Math.hypot(c.x - d.inlet.x, c.z - d.inlet.z) < d.inlet.r) {
@@ -153,31 +164,35 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
   }
 
   /**
-   * Prévia do caminho de uma nuvem soprada agora: { points: [{x, z}], exits: [{x, z}] }.
-   * Mesma simulação do jogo (vento, paredes, dutos), por `secs` segundos, sem eventos.
+   * Prévia do caminho de uma nuvem soprada agora: { points: [{x, y, z}], exits: [{x, y, z}] } (y: altura da nuvem,
+   * a da boca depois de uma saída no alto). Mesma simulação do jogo (vento, paredes, dutos), por `secs` segundos,
+   * sem eventos.
    */
   function preview(opts, { secs = 2.6, dt = 1 / 20 } = {}) {
     const c = makeCloud(opts);
     nextId--; // a prévia não gasta id
-    const points = [{ x: c.x, z: c.z }];
+    const points = [{ x: c.x, y: c.y, z: c.z }];
     const exits = [];
     let wasDuct = false;
     const steps = Math.round(secs / dt);
     for (let k = 0; k < steps && c.age < c.life; k++) {
       step(c, dt, false);
       if (c.state === 'duct') { wasDuct = true; continue; }
-      if (wasDuct) { exits.push({ x: c.x, z: c.z }); wasDuct = false; }
-      points.push({ x: c.x, z: c.z });
+      if (wasDuct) { exits.push({ x: c.x, y: c.y, z: c.z }); wasDuct = false; }
+      points.push({ x: c.x, y: c.y, z: c.z });
     }
     return { points, exits, inDuct: c.state === 'duct' };
   }
 
-  /** Nuvem livre mais próxima de (x, z) cujo contorno está a menos de `margin` (ou null). */
-  function near(x, z, margin = 0.5) {
+  /**
+   * Nuvem livre mais próxima de (x, z) cujo contorno está a menos de `margin` (ou null). `y`: altura de quem procura
+   * (padrão: o chão); uma nuvem muito acima ou abaixo dela não conta.
+   */
+  function near(x, z, margin = 0.5, y = 0) {
     let best = null;
     let bd = Infinity;
     for (const c of clouds) {
-      if (c.state !== 'free') continue;
+      if (c.state !== 'free' || Math.abs(c.y - y) > HIGH) continue;
       const d = Math.hypot(c.x - x, c.z - z) - c.r;
       if (d < margin && d < bd) { bd = d; best = c; }
     }
@@ -190,7 +205,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     winds.push(o);
     return o;
   }
-  /** Duto: { id, inlet: {x, z, r}, outlet: {x, z, dirX, dirZ, speed?}, travel (s), active() }. */
+  /** Duto: { id, inlet: {x, z, r}, outlet: {x, z, dirX, dirZ, speed?, exit?, y?}, travel (s), active() }. */
   function addDuct(d) {
     const o = Object.assign({ travel: 1.2, active: () => true }, d);
     ducts.push(o);
@@ -224,7 +239,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     get ducts() { return ducts; },
     get noses() { return noses; },
     info: () => ({
-      clouds: clouds.map((c) => ({ id: c.id, x: +c.x.toFixed(2), z: +c.z.toFixed(2), r: +c.r.toFixed(2), state: c.state, age: +c.age.toFixed(2) })),
+      clouds: clouds.map((c) => ({ id: c.id, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), r: +c.r.toFixed(2), state: c.state, age: +c.age.toFixed(2) })),
     }),
   };
 }
