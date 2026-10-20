@@ -791,10 +791,25 @@ capturas trazem o estado. Os prazos das capturas e das páginas extras passaram 
 Provas `extra` (página extra que cai no meio da espera, com um erro de console nela) e `capture` (script de captura
 com a aba caída) em `test-e2e-infra.mjs`.
 
-*Travamento no primeiro carregamento*: em cerca de 1% dos jobs, o PRIMEIRO boot de um navegador novo não termina: o
+*Travamento no carregamento (causa achada e corrigida)*: em cerca de 1% das páginas novas, o boot não termina: o
 `goto` volta, `window.__game` nunca aparece e a thread principal da aba para de responder (lavanderia no E2E
 `39160265826`, fase3 no `39164306879`, expresso no `39166156986` e no `39169122476`, `capture-lambe.mjs` no
-`39173570454`, lambe com a fase 1 no `39183733885`; nunca num segundo `load()` da mesma aba). Em quatro casos o
+`39173570454`, lambe com a fase 1 no `39183733885`, as capturas do celular no tablet e no iPhone em `39355249740` e
+`39358151432`; nunca num segundo `load()` da mesma aba). Não é só o primeiro navegador: qualquer página nova, como as
+extras da suíte `toque` e as de cada aparelho das capturas. Causa, pelas pilhas nativas (gdb) de três travamentos nos
+E2E `39365366605` e `39366431425`: um impasse DENTRO da aba, com todos os processos sem CPU. O Vite serve os módulos
+um a um e o Chromium os compila em segundo plano (`blink::BackgroundResourceScriptStreamer`, o streaming de scripts)
+no pool de threads da aba, que tem 3 vagas no runner de 4 núcleos; as três compilações pedem uma coleta de lixo
+(`CollectionBarrier::AwaitCollectionBackground`) e esperam a thread principal; a thread principal, no layout do
+primeiro texto (o logotipo em SVG, com a fonte web ainda carregando; marco seguinte a `rr:boot:ui`), pergunta ao
+serviço de fontes (`FontServiceThread::MatchFamilyName`/`FontRenderStyleForStrike`) e espera uma tarefa que vai para
+esse MESMO pool, sem vaga. O processo do navegador fica ocioso (o pedido nem sai) e o da GPU também. Correção:
+`--disable-features=ScriptStreaming` em `tools/scripts/lib/browser.mjs` (vale para suítes, capturas e medições):
+os scripts compilam na thread principal e nada no pool espera por ela. O Chromium só lê o ÚLTIMO
+`--disable-features` e o Playwright 1.49 acrescenta os nossos argumentos depois dos dele, então a lista dele sai
+(`ignoreDefaultArgs`) e entra uma só, com as duas (`disabledFeaturesOptions`; teste em `test/e2e-runner.test.mjs`).
+O jogo publicado não muda: é uma otimização de carregamento do navegador dos testes. O histórico abaixo fica como
+registro do que já foi descartado. Em quatro casos o
 `waitForFunction` nem venceu os próprios 120 s: no Playwright 1.49, ao vencer o prazo ele espera a limpeza
 `handle.evaluate(h => h.abort())` NA PÁGINA antes de rejeitar (`ProgressController.run` e
 `_waitForFunctionExpression`), e com a aba parada nem o erro de prazo chega. No caso da fase 1 o prazo venceu e só a
@@ -816,7 +831,16 @@ estiver rodando JavaScript; sem pausa, ela está presa fora do JavaScript (chama
 `wchan` onde esperam); (3) o que o navegador vê pelo CDP dele (processos, abas, estado do WebGL e da GPU); (4) CPU do
 runner, roubo do hipervisor, memória e `dmesg` (OOM); (5) o console da página com os marcos do boot e as navegações;
 (6) o fim do registro do próprio Chromium (`--enable-logging=stderr`, desviado por
-`tools/scripts/lib/browser-log.mjs` para `shots/diagnostico/navegador-*.log`, que vai no artefato do job). Os marcos
+`tools/scripts/lib/browser-log.mjs` para `shots/diagnostico/navegador-*.log`, que vai no artefato do job);
+(7) se a thread principal responde, se o navegador ainda ENTREGA QUADROS à aba (`requestAnimationFrame` em até 3 s,
+com o original guardado antes de qualquer troca, visibilidade e `simSec`), e o mesmo para cada outra aba protegida
+aberta no processo: todas sem quadros apontam o processo da GPU, compartilhado; só uma, a própria aba; (8) com `gdb`
+na máquina (no CI pelo `sudo` sem senha; os jobs normais não instalam: basta um passo
+`sudo apt-get install -y --no-install-recommends gdb` no job), as pilhas nativas das abas, do navegador e da GPU:
+um resumo por thread no log (os quadros do topo, threads iguais juntas, a biblioteca de cada quadro: SwiftShader,
+ANGLE, libc) e as inteiras em `shots/diagnostico/pilhas-*.txt`. O Chromium do Playwright traz nomes de função, então
+dá para ler quem espera quem; foi assim que saiu a causa do travamento acima. Um prazo do Playwright que vence numa
+página protegida (`waitForFunction` etc.) também imprime o diagnóstico antes do erro. Os marcos
 `rr:boot:*` (`src/main.js`) e `rr:level:*` (`loadLevel`) são `performance.mark` (sem efeito no jogo); o harness
 imprime em cada `load()` uma linha `[boot]` com o tempo de cada etapa (html+módulos, motor, cachorras, interface,
 código da fase, cenário, puzzle, shaders, pronto) e, num travamento, o último marco no console diz onde parou. Cada
