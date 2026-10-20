@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (porquinhos: testes da arena estáveis, PR #42). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (porquinhos: testes com semente e o desvio da porteira, PR #44). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
@@ -98,15 +98,23 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   certo em 12 s tenta de novo; na volta, dentro do cercado e longe da porta já é casa (o cantinho pode estar com
   alguém cochilando); fora há 20 s, refaz a rota. Testes: semente 191 (antes travava), 200 sorteios de saída e 100 de
   volta com o sininho, sem dois porcos no vão ao mesmo tempo; a bagunça conta os eventos no barramento.
-- Em andamento, **PR #42** (branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`, atualizado com o main
+- Entregue, **PR #42** (squash `f50db80`, deploy `39338511759`) (branch `claude/porcos-arena-estavel`, a partir do main `1cd6647`, atualizado com o main
   `0bc887a`, PR #39 e #41): o teste "arena: E pega
   o legume…; pegar de volta tira dele" falhou 1 vez em 7. Diagnóstico no CI (120 sementes): 3 falhavam ao pegar o
   milho de volta, porque os outros porquinhos estavam em volta da Radhija e um esbarrão (susto de 0,3 s) engolia o E.
   É o comportamento pedido (eles atrapalham), não bug: o teste agora tenta o E de novo depois do susto, como quem
   joga (`pickFrom`), e roda com semente (58, que falhava); o da bolinha derrubada, com o mesmo padrão, também.
-  Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe em
-  `test/porcos.test.mjs` e no CONTEXTO. Integração na fila do orquestrador: #39 → #41 → #42 → #33; atualizar com o
-  main na vez dele, refazer o CI e pedir a aprovação do usuário.
+  Varredura temporária no CI: 120 sementes do legume e 80 da bolinha passaram (já removida). Só mexe nos testes e no CONTEXTO.
+- Em andamento, **PR #44** (branch `claude/porcos-testes-semente`, a partir do main `f50db80`): "o sininho não prende
+  a dog no chiqueiro" falhou no CI da fase 10. Todos os testes de modelo, rebanho e arena de `test/porcos.test.mjs`
+  agora rodam com semente fixa (`seededTest`), e uma varredura de sementes (desligada por padrão; liga com
+  `PORCOS_SEMENTES`) rodou no CI: 200 sementes por teste de rebanho, 60 de arena e 10 de modelo. Achados: (1) bug real
+  no `pigHerd.js`: do lado de fora, no cantinho entre a folha aberta da porteira e a cerca, um porco ficava preso na
+  volta com o sininho (o passo de lado era cego e o enfiava lá; e dali ele tentava atravessar a folha até o ponto do
+  outro lado). Agora o passo de lado só vai para onde há lugar (cercas e folha; os outros porcos saem da frente), quem
+  está atrás da folha sai primeiro pelo seu lado, e quem espera a vez abre caminho para quem a tem. (2) Só o teste: a
+  distração media a distância final (o passeio pode dar a volta); agora mede quanto o porco anda. Com isso, a
+  varredura passou inteira. Fila do orquestrador: #43 → #44 → #33.
 
 ## Entregue: modelos novos das dogs, etapa 1 de 5 (PR #37, squash `e9e61fb`, deploy `39312448427`)
 
