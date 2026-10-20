@@ -231,7 +231,8 @@ test('regressão: calço da fase 2 trava sob a folha aberta do portão, sem bloq
   const h = await createHeadlessGame({ level: 2 });
   const { GATE, WEDGE } = h.layout;
 
-  // Geometria: lockedAt fica sob a folha aberta, perto da ponta (85% do comprimento).
+  // Geometria: lockedAt fica junto da folha aberta, perto da ponta (85% do comprimento): o centro do calço fica 7,85 cm
+  // ao lado dela e a ponta fina passa por baixo (o desenho não entra na folha: test/fase2.test.mjs).
   const yaw = GATE.openYaw;
   const ux = -Math.sin(yaw);
   const uz = -Math.cos(yaw); // direção da folha (ao longo de -Z local girado por yaw)
@@ -239,7 +240,7 @@ test('regressão: calço da fase 2 trava sob a folha aberta do portão, sem bloq
   const rz = WEDGE.lockedAt.z - GATE.hinge.z;
   const along = (rx * ux + rz * uz) / GATE.length;
   const across = Math.abs(rx * uz - rz * ux);
-  assert.ok(across < 0.06, `lockedAt a ${across.toFixed(3)} m da linha da folha aberta`);
+  assert.ok(across < 0.1, `lockedAt a ${across.toFixed(3)} m da linha da folha aberta`);
   assert.ok(along > 0.6 && along < 1.0, `lockedAt a ${(along * 100).toFixed(0)}% do comprimento da folha`);
 
   // Portão fechado: a arrancada só quica o calço.
