@@ -863,12 +863,10 @@
   top: calc(var(--sa-t) + clamp(10px, 2vh, 18px));
   right: calc(var(--sa-r) + clamp(12px, 2vw, 24px));
   margin: 0;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 246, 230, .5);
-  color: var(--choco-a);
-  font: 700 12px/1.2 'Nunito', sans-serif;
+  color: rgba(74, 52, 38, .5);
+  font: 600 11px/1.2 'Nunito', sans-serif;
   letter-spacing: .02em;
+  text-shadow: 0 0 3px rgba(255, 246, 230, .7);
   white-space: nowrap;
 }
 .rr-title:not([data-screen="main"]) .rr-version { display: none; }
@@ -1571,7 +1569,7 @@
 .rr[data-mobile="phone"] .rr-nohints .ico { width: 12px; height: 12px; }
 .rr[data-mobile="phone"] .rr-title__controls { display: none; }
 /* no celular deitado o logotipo chega perto do topo: a versão desce para o canto de baixo, livre sem a barra de teclas */
-.rr[data-mobile="phone"] .rr-version { top: auto; bottom: calc(var(--sa-b) + 8px); right: calc(var(--sa-r) + 10px); padding: 3px 8px; font-size: 10.5px; }
+.rr[data-mobile="phone"] .rr-version { top: auto; bottom: calc(var(--sa-b) + 8px); right: calc(var(--sa-r) + 12px); font-size: 10px; }
 .rr[data-mobile="phone"] .rr-levels { bottom: calc(var(--sa-b) + 10px); }
 .rr[data-mobile="phone"] .rr-lvcard__eyebrow, .rr[data-mobile="phone"] .rr-lvcard__stats { display: none; }
 .rr[data-mobile="phone"] .rr-lvcard__icon { width: 36px; height: 36px; }

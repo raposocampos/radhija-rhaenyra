@@ -85,8 +85,6 @@ jobs:
           ref: ${{ github.sha }}
           path: source
           persist-credentials: false
-          # Histórico completo: a versão do jogo é recalculada pelos commits de primeiro pai do main.
-          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -113,13 +111,6 @@ jobs:
             throw new Error('Artefato não corresponde à execução e à versão aprovadas.');
           }
           NODE
-      # Recalcula version/build pelo Git do main com o script confiável (o do artefato é só dado). Na produção uma
-      # divergência reprova; na prévia (o PR pode ter mudado o cálculo) só avisa. O rótulo vai para o resumo.
-      - name: Conferir a versão do jogo
-        id: game
-        env:
-          VERSION_REPO: source
-        run: node source/tools/deploy/version.mjs --check build/version.json
       - name: Preparar o site preservando as outras versões
         run: node source/tools/deploy/prepare-site.mjs published/site build
       - name: Endereço da versão
@@ -166,8 +157,7 @@ jobs:
       - name: Mostrar o link
         env:
           SITE_URL: ${{ steps.address.outputs.url }}
-          GAME_LABEL: ${{ steps.game.outputs.label }}
-        run: echo "### [Abrir a versão publicada]($SITE_URL) · $GAME_LABEL" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "### [Abrir a versão publicada]($SITE_URL)" >> "$GITHUB_STEP_SUMMARY"
       - name: Informar resultado obrigatório no PR
         if: always() && env.SITE_MODE == 'preview'
         env:

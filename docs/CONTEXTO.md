@@ -5,18 +5,18 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: versão automática do jogo, v0.10.0 (Claude, branch `claude/versao-automatica`, 2026-10-20)
 
-- Pedido do usuário (pelo orquestrador): "toda vez que rolar um commit no main, acontecer essa atualização da versão
-  [...] cada versão ser cada PR". Regra aprovada e documentada em `AGENTS.md` e `docs/ENTREGA.md` ("Versão do
-  jogo"): PATCH e build automáticos pelos commits de primeiro pai do main; MINOR à mão no PR de fase nova ou recurso
-  grande; MAJOR 1.0.0 no modo história completo. Este PR declara `0.10.0` (fecha a demo de 10 fases).
-- Feito: `tools/deploy/version.mjs` (cálculo, rótulos e conferência), passo no `ci.yml` (`fetch-depth: 0`,
-  `GAME_VERSION_INFO`, `version.json` com version/build/pr/label/next), conferência no `deploy.yml` (checkout
-  `source` completo; produção recusa divergência), canto do menu principal (`src/core/version.js`, `.rr-version`)
-  e `test/versao.test.mjs`.
+- Pedido do usuário (pelo orquestrador): "cada versão ser cada PR"; depois, "só pra ter um controle ali do tanto
+  de mudanças que já teve": o mais simples possível, sem changelog, tags, releases nem passos manuais por PR.
+  Regra curta no `AGENTS.md` e detalhes no `docs/ENTREGA.md` ("Versão do jogo"): PATCH e build automáticos pelos
+  commits de primeiro pai do main; o campo `"version"` só muda em marco pedido pelo usuário. Este PR declara
+  `0.10.0` (fecha a demo de 10 fases).
+- Feito (PR #50): `tools/deploy/version.mjs` (cálculo e rótulos), passo no `ci.yml` (`fetch-depth: 0`,
+  `GAME_VERSION_INFO`, `version.json` com version/build/pr/label), texto pequeno no canto da tela inicial
+  (`src/core/version.js`, `.rr-version`) e `test/versao.test.mjs`. O `deploy.yml` não muda: ele só copia o artefato.
 - Número: o main tem 89 commits de primeiro pai (95 no total; 6 são de dois merges antigos), então o merge deste PR
   vira **v0.10.0 · build 90** se entrar antes dos outros (cada PR integrado antes soma 1 ao build).
-- Próximo passo: CI, prévia (canto: `prévia PR #N · sobre v0.1.88 → v0.10.0`), aprovação do usuário; depois do
-  merge, conferir `version.json` e o menu em produção.
+- Próximo passo: CI, prévia (canto: `prévia PR #50 · sobre v0.1.88`), aprovação do usuário; depois do merge,
+  conferir `version.json` e o menu em produção.
 
 ## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
 

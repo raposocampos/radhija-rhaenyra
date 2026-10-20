@@ -1,6 +1,6 @@
-// Versão do jogo (tools/deploy/version.mjs, regra em docs/ENTREGA.md): PATCH pelos commits de primeiro pai desde a
-// última mudança do campo "version", build pelo total deles, rótulos do menu, prévia de PR e a conferência da
-// publicação. Os casos com Git usam repositórios temporários pequenos (alguns commits cada).
+// Versão do jogo (tools/deploy/version.mjs, regra no AGENTS.md): PATCH pelos commits de primeiro pai desde a última
+// mudança do campo "version", build pelo total deles, os rótulos do menu e a prévia de PR. Os casos com Git usam
+// repositórios temporários pequenos (alguns commits cada).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -8,9 +8,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import {
-  parseVersion, formatVersion, versionLabel, gameVersionFromEnv, versionAt, resolveBuildInfo, checkArtifact,
-} from '../tools/deploy/version.mjs';
+import { parseVersion, versionLabel, gameVersionFromEnv, versionAt, resolveBuildInfo } from '../tools/deploy/version.mjs';
 import { VERSION_LABEL } from '../src/core/version.js';
 import { template } from '../src/ui/markup.js';
 
@@ -40,19 +38,14 @@ function repo(t) {
 
 test('versão: o package.json declara só MAJOR.MINOR.PATCH (o do jogo também)', () => {
   assert.deepEqual(parseVersion('0.10.0'), { major: 0, minor: 10, patch: 0 });
-  assert.equal(formatVersion({ major: 1, minor: 2, patch: 3 }), '1.2.3');
   for (const bad of ['0.10', 'v0.10.0', '0.10.0-beta', '01.2.3', '', null]) assert.throws(() => parseVersion(bad), /MAJOR\.MINOR\.PATCH/);
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   parseVersion(pkg.version);
 });
 
-test('versão: rótulos do canto do menu (produção, prévia, teste, desenvolvimento)', () => {
+test('versão: rótulos do canto do menu (produção, prévia, desenvolvimento)', () => {
   assert.equal(versionLabel({ version: '0.10.0', build: 90, pr: null }), 'v0.10.0 · build 90');
-  assert.equal(versionLabel({ version: '0.10.0', build: 90, pr: 49, next: { version: '0.10.1', build: 91 } }), 'prévia PR #49 · sobre v0.10.0');
-  assert.equal(versionLabel({ version: '0.10.3', build: 93, pr: 51, next: { version: '0.11.0', build: 94 } }), 'prévia PR #51 · sobre v0.10.3 → v0.11.0');
-  assert.equal(versionLabel({ version: '0.12.4', build: 99, pr: 60, next: { version: '1.0.0', build: 100 } }), 'prévia PR #60 · sobre v0.12.4 → v1.0.0');
-  assert.equal(versionLabel({ version: '0.10.0', build: 90, pr: 49, next: null }), 'prévia PR #49 · sobre v0.10.0');
-  assert.equal(versionLabel({ version: '0.10.2', build: 92, pr: null, test: true }), 'v0.10.2 · build 92 · teste');
+  assert.equal(versionLabel({ version: '0.10.0', build: 90, pr: 49 }), 'prévia PR #49 · sobre v0.10.0');
   assert.equal(versionLabel(null), 'versão de desenvolvimento');
   // Fora do Vite (Node) não há o define: o menu mostra a versão de desenvolvimento, sem erro.
   assert.equal(VERSION_LABEL, 'versão de desenvolvimento');
@@ -62,7 +55,7 @@ test('versão: rótulos do canto do menu (produção, prévia, teste, desenvolvi
   assert.deepEqual(gameVersionFromEnv({ GAME_VERSION_INFO: JSON.stringify(info) }), info);
 });
 
-test('versão: o PATCH sobe a cada commit de primeiro pai e volta a 0 quando o PR muda a versão; o build nunca volta', t => {
+test('versão: o PATCH sobe a cada commit de primeiro pai e volta a 0 quando a versão muda; o build nunca volta', t => {
   const r = repo(t);
   r.commit({ version: '0.1.0' });
   assert.equal(r.at(), '0.1.0 · 1');
@@ -98,55 +91,20 @@ test('versão: merge de verdade no primeiro pai conta uma vez; os commits do out
   assert.equal(r.at(), '0.2.1 · 4');
 });
 
-test('versão: a prévia mostra o main sob ela e o que o merge vira', t => {
+test('versão: no main conta o próprio commit; na prévia, o main sob ela', t => {
   const r = repo(t);
   r.commit({ version: '0.10.0' });
   const base = r.commit();
-  // PR comum: o merge de teste do GitHub (refs/pull/N/merge) tem o main como primeiro pai.
+  assert.deepEqual(resolveBuildInfo({ cwd: r.dir }), { version: '0.10.1', build: 2, pr: null, label: 'v0.10.1 · build 2' });
+  // O merge de teste do GitHub (refs/pull/N/merge) fica por cima do main; a prévia mostra o main.
   r.git('checkout', '-q', '-b', 'pr7');
   r.commit();
   r.git('checkout', '-q', '--detach', base);
   r.git('merge', '-q', '--no-ff', '--no-edit', 'pr7');
-  const info = resolveBuildInfo({ cwd: r.dir, head: 'HEAD', base, pr: '7' });
-  assert.deepEqual(info, { version: '0.10.1', build: 2, pr: 7, next: { version: '0.10.2', build: 3 }, label: 'prévia PR #7 · sobre v0.10.1' });
-  // PR que traz uma fase nova e sobe o MINOR.
-  r.git('checkout', '-q', '-b', 'pr8', base);
-  r.commit({ version: '0.11.0' });
-  r.git('checkout', '-q', '--detach', base);
-  r.git('merge', '-q', '--no-ff', '--no-edit', 'pr8');
-  const bump = resolveBuildInfo({ cwd: r.dir, base, pr: 8 });
-  assert.deepEqual(bump.next, { version: '0.11.0', build: 3 });
-  assert.equal(bump.label, 'prévia PR #8 · sobre v0.10.1 → v0.11.0');
-  // Merge sobre outra base (o main andou): sem previsão do número.
-  r.git('checkout', '-q', 'main');
-  const newer = r.commit();
-  r.git('checkout', '-q', '--detach', newer);
-  r.git('merge', '-q', '--no-ff', '--no-edit', 'pr7');
-  assert.equal(resolveBuildInfo({ cwd: r.dir, base, pr: 7 }).next, null);
+  assert.deepEqual(resolveBuildInfo({ cwd: r.dir, base, pr: '7' }), { version: '0.10.1', build: 2, pr: 7, label: 'prévia PR #7 · sobre v0.10.1' });
+  assert.equal(r.at(), '0.10.2 · 3', 'o merge é o número que o squash recebe');
   assert.throws(() => resolveBuildInfo({ cwd: r.dir, base: 'main', pr: 7 }), /inválidos/);
   assert.throws(() => resolveBuildInfo({ cwd: r.dir, base, pr: '7; rm' }), /inválidos/);
-});
-
-test('versão: main, outro branch e a conferência da publicação', t => {
-  const r = repo(t);
-  r.commit({ version: '0.10.0' });
-  const head = r.commit();
-  r.git('checkout', '-q', 'main');
-  assert.deepEqual(resolveBuildInfo({ cwd: r.dir, ref: 'refs/heads/main' }), { version: '0.10.1', build: 2, pr: null, label: 'v0.10.1 · build 2' });
-  assert.equal(resolveBuildInfo({ cwd: r.dir, ref: 'refs/heads/claude/x' }).label, 'v0.10.1 · build 2 · teste');
-
-  const production = { cwd: r.dir, mode: 'production', head };
-  assert.equal(checkArtifact({ version: '0.10.1', build: 2 }, production).label, 'v0.10.1 · build 2');
-  assert.throws(() => checkArtifact({ version: '0.10.1', build: 3 }, production), /difere/);
-  assert.throws(() => checkArtifact({}, production), /difere/, 'artefato sem versão não vai para a produção');
-  assert.throws(() => checkArtifact({ version: '0.10.1', build: 2 }, { ...production, head: 'HEAD' }), /inválido/);
-
-  const preview = { cwd: r.dir, mode: 'preview', base: head, pr: '7' };
-  const ok = checkArtifact({ version: '0.10.1', build: 2, pr: 7 }, preview);
-  assert.deepEqual([ok.label, ok.warnings], ['prévia PR #7 · sobre v0.10.1', []]);
-  const old = checkArtifact({ head: 'x' }, preview); // PR com o CI antigo ou que mudou o cálculo: só avisa
-  assert.equal(old.label, 'prévia PR #7 · sobre v0.10.1');
-  assert.equal(old.warnings.length, 1);
 });
 
 test('versão: histórico raso é recusado (checkout sem fetch-depth: 0 contaria errado)', t => {
@@ -159,16 +117,10 @@ test('versão: histórico raso é recusado (checkout sem fetch-depth: 0 contaria
   assert.throws(() => versionAt('HEAD', { cwd: shallow }), /fetch-depth: 0/);
 });
 
-test('versão: o CI e a publicação contam com o histórico completo', () => {
-  const read = (name) => readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8');
-  const checkouts = (yml) => yml.split('- uses: actions/checkout@').slice(1).map((s) => s.split(/\n\s+- (?:uses|name|run|id):/)[0]);
-  const ci = read('ci.yml');
-  assert.ok(checkouts(ci).every((c) => /fetch-depth: 0\b/.test(c)), 'ci.yml: checkout com fetch-depth: 0');
+test('versão: o CI conta com o histórico completo e grava a versão no version.json', () => {
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const checkouts = ci.split('- uses: actions/checkout@').slice(1).map((s) => s.split(/\n\s+- (?:uses|name|run|id):/)[0]);
+  assert.ok(checkouts.length && checkouts.every((c) => /fetch-depth: 0\b/.test(c)), 'ci.yml: checkout com fetch-depth: 0');
   assert.match(ci, /node tools\/deploy\/version\.mjs --github-env/);
   assert.match(ci, /\.\.\.JSON\.parse\(process\.env\.GAME_VERSION_INFO\)/);
-  const deploy = read('deploy.yml');
-  const source = checkouts(deploy).filter((c) => /path: source\b/.test(c));
-  assert.equal(source.length, 1);
-  assert.match(source[0], /fetch-depth: 0\b/, 'deploy.yml: checkout do main com fetch-depth: 0');
-  assert.match(deploy, /node source\/tools\/deploy\/version\.mjs --check build\/version\.json/);
 });

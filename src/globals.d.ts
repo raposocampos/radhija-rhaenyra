@@ -6,8 +6,6 @@ interface GameBuildInfo {
   build: number | null;
   pr: number | null;
   label: string;
-  next?: { version: string; build: number } | null;
-  test?: boolean;
 }
 
 /** Ausente fora do Vite (testes em Node): ler com try/catch (src/core/version.js). */

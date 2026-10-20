@@ -102,46 +102,27 @@ sob a mesma serialização. O histórico Git conserva arquivos antigos.
 
 ## Versão do jogo
 
-Regra (aprovada pelo usuário, 2026-10-20): `MAJOR.MINOR.PATCH` mais um número
-de build, uma versão nova por PR integrado. O canto superior direito do menu
-principal mostra `v0.10.0 · build 90` (no celular deitado, o canto de baixo).
+Um contador automático do tanto de mudanças (pedido do usuário, 2026-10-20):
+cada PR integrado ao `main` vira uma versão nova, sem nenhum passo manual.
 
-- **MAJOR.MINOR**: o campo `"version"` do `package.json`. O PR que traz uma fase
-  nova ou um recurso grande (modo novo, mecânica que muda várias fases) sobe o
-  MINOR no próprio diff, com PATCH 0 (`0.10.0` → `0.11.0`), e atualiza as duas
-  ocorrências da raiz no `package-lock.json`. MAJOR `1.0.0` fica para o modo
-  história completo. Correções, ajustes, testes, docs e ferramentas não mexem
-  no campo. A v0.10.0 fecha a demo de 10 fases.
-- **PATCH**: o número declarado (normalmente 0) mais os commits de primeiro pai
-  do `main` desde o último que mudou o valor do campo `"version"`. Mudar
-  dependências ou formatação do `package.json` não zera. O PR que muda o
-  MINOR vira `x.y.0` ao entrar; o seguinte, `x.y.1`.
-- **Build**: todos os commits de primeiro pai do `main`
-  (`git rev-list --count --first-parent HEAD`); nunca volta. Como o `main` só
-  recebe squash, cada PR soma um. Os seis commits laterais de dois merges
-  antigos não contam (por isso o build é menor que o total de commits).
+- **PATCH**: o número do campo `"version"` do `package.json` (normalmente
+  `x.y.0`) mais os commits de primeiro pai do `main` desde o último que mudou
+  esse campo. Como o `main` só recebe squash, cada PR soma um.
+- **Build**: todos os commits de primeiro pai do `main`; nunca volta. Os seis
+  commits laterais de dois merges antigos não contam.
+- **MAJOR.MINOR**: só mudam em marco pedido pelo usuário, editando o campo
+  (PATCH volta a 0) e a raiz do `package-lock.json`. A v0.10.0 fechou a demo
+  de 10 fases.
 
-O cálculo é `tools/deploy/version.mjs` (testes em `test/versao.test.mjs`).
-Precisa do histórico completo: os checkouts que contam (CI e o `source` da
-publicação) usam `fetch-depth: 0`, e o script recusa um repositório raso.
-
-- **CI** (`ci.yml`): o passo **Calcular a versão do jogo** exporta
-  `GAME_VERSION_INFO`. O Vite embute esse valor no jogo (define
-  `__GAME_VERSION__`, lido em `src/core/version.js`) e o `version.json` grava
-  `version`, `build`, `pr` e `label` ao lado de commit/head/base/run/attempt.
-- **Prévia**: `version`/`build` são os do main sob a prévia (o `base`), e o
-  menu mostra `prévia PR #49 · sobre v0.10.0`. `next` traz o que o squash
-  recebe se entrar agora (o main exige branch atualizado); se o PR sobe o
-  MINOR, o menu acrescenta `→ v0.11.0`. O número de um PR só se fixa no merge.
-- **Publicação** (`deploy.yml`): **Conferir a versão do jogo** recalcula com o
-  script do main. Na produção, `version`/`build` do artefato precisam bater,
-  ou a publicação para antes do Pages; na prévia, só avisa (o PR pode ter
-  mudado o cálculo). O resumo da execução mostra o rótulo.
-- Builds sem o passo (E2E manual, desempenho, servidor local) mostram
-  `versão de desenvolvimento`; CI disparado em outro branch, `· teste`.
-
-Depois de integrar, conferir em produção o `version.json` (`version` e `build`
-esperados: o da prévia em `next`) e o canto do menu.
+O cálculo é `tools/deploy/version.mjs` (testes em `test/versao.test.mjs`). O
+checkout do CI usa `fetch-depth: 0`, e o script recusa um histórico raso. O
+passo **Calcular a versão do jogo** exporta `GAME_VERSION_INFO`. O Vite embute
+esse valor no jogo (`src/core/version.js`), e o `version.json` grava `version`,
+`build`, `pr` e `label` ao lado dos campos de identidade. Na prévia, `version`
+e `build` são os do main por baixo, e o canto do menu mostra
+`prévia PR #49 · sobre v0.10.0`. Builds sem esse passo (E2E manual,
+desempenho, servidor local) mostram `versão de desenvolvimento`. Depois de
+integrar, o `version.json` da produção deve ter o build da prévia + 1.
 
 ## Procedimento para os agentes
 
@@ -153,10 +134,8 @@ esperados: o da prévia em `next`) e o canto do menu.
    Enviar o branch e abrir PR. Monitorar os checks e corrigir falhas na nuvem.
 4. Se necessário, disparar E2E na referência do branch pelo CLI/API. Conferir
    que o SHA testado corresponde ao head apresentado. CI não espera E2E sozinho.
-5. Preencher o PR com links, SHAs, resultados, a versão que ele vira (`next`
-   do `version.json` da prévia; se traz fase nova, subir o MINOR) e roteiro de
-   teste. Entregar a prévia e aguardar aprovação explícita do usuário. Não
-   ativar auto-merge.
+5. Preencher o PR com links, SHAs, resultados e roteiro de teste. Entregar a
+   prévia e aguardar aprovação explícita do usuário. Não ativar auto-merge.
 6. Após aprovação, conferir head/base novamente e se os checks estão verdes.
    Se outra mudança entrou no main, atualizar o branch, testar e apresentar nova
    prévia para aprovação. Nunca usar bypass de proteção.

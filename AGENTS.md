@@ -77,19 +77,12 @@ padrão para pedidos de mudanças, salvo instrução diferente no pedido atual.
 
 ## Versão do jogo
 
-- Formato `vMAJOR.MINOR.PATCH · build N`, no canto do menu principal e no
-  `version.json`. Cada PR integrado ao `main` é uma versão nova.
-- **PATCH e build são automáticos**: o CI conta os commits de primeiro pai do
-  `main` (1 PR = 1 squash). PATCH = commits desde o último que mudou o campo
-  `"version"` do `package.json`; build = todos, e nunca volta. Nenhum PR edita
-  número para o patch subir.
-- **MINOR muda à mão, no próprio PR**, quando ele traz uma fase nova ou um
-  recurso grande: `"version": "0.11.0"` (PATCH volta a 0; atualizar também a
-  raiz do `package-lock.json`). Na dúvida, perguntar ao usuário. **MAJOR**
-  (`1.0.0`) só no marco do modo história completo. Correções, ajustes, testes,
-  documentação e ferramentas não mudam o campo.
-- A prévia mostra a base (`prévia PR #N · sobre v0.10.0`, com `→ v0.11.0` se o
-  PR sobe o MINOR). Detalhes e conferência em `docs/ENTREGA.md`.
+- Contador automático de mudanças: cada PR integrado ao `main` sobe o PATCH e
+  o build sozinho (`v0.10.0 · build 90` no `version.json` e, discreto, no
+  menu). O CI conta pelo Git; nenhum PR edita número, e não há changelog, tag
+  nem release.
+- O campo `"version"` do `package.json` só muda em marco pedido pelo usuário
+  (MINOR; PATCH volta a 0). Detalhes em `docs/ENTREGA.md`.
 
 ## Testes e build na nuvem
 
