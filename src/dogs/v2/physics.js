@@ -13,12 +13,19 @@ export const EAR_PHYSICS = Object.freeze({ freq: [5.6, 4.3, 3.4], zeta: 0.4, gra
 export const TAIL_PHYSICS = Object.freeze({ freq: [9, 7.5, 6.5, 5.8, 5.2], zeta: 0.6, gravity: 0.4, floorPad: 0.015 });
 
 /**
+ * Uma correntinha: ossos da base para a ponta, a ponta (repouso) e a física.
+ * @typedef {{ name: string, bones: number[], tip: number[], freq: readonly number[], zeta: number, gravity: number,
+ *             floorPad: number }} ChainDef
+ */
+
+/**
  * As correntinhas do desenho: orelhas e (se `tail`) o rabo.
  * @param {{ bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> }} skel2
  * @param {any} design @param {{ tail?: boolean }} [opts]
  */
 export function designChains(skel2, design, { tail = true } = {}) {
   const I = skel2.index;
+  /** @type {ChainDef[]} */
   const chains = ['L', 'R'].map((s) => ({
     name: `ear${s}`, bones: [0, 1, 2].map((k) => I[`ear${s}${k}`]), tip: design.chains[`ear${s}`][3], ...EAR_PHYSICS,
   }));
@@ -28,8 +35,7 @@ export function designChains(skel2, design, { tail = true } = {}) {
 
 /**
  * @param {{ skel2: { bones: THREE.Bone[], rest: THREE.Vector3[], parentIdx: number[], index: Record<string, number> },
- *           chains: { name: string, bones: number[], tip: number[], freq: number[], zeta: number, gravity: number,
- *                     floorPad: number }[] }} opts
+ *           chains: ChainDef[] }} opts
  */
 export function createChainPhysics({ skel2, chains: defs }) {
   const chains = defs.map((c) => {
