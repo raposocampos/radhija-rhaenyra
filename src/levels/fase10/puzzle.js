@@ -661,7 +661,7 @@ export function createPuzzle(ctx) {
    * Deitada no balde deitado, ela fica `RIDE_IN` mais para a boca que o meio dele: o focinho e as patas da frente não
    * passam do fundo (o bumbum e o rabo ficam para fora da boca).
    */
-  const RIDE_IN = 0.15;
+  const RIDE_IN = 0.18;
   /** Onde a Radhija fica dentro do balde: deitada lá dentro (balde deitado) ou sentada (em pé), na altura dele. */
   function ridePos() {
     const k = 1 - (S.bucketTilt ?? 1);
