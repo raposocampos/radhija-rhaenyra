@@ -126,8 +126,10 @@ test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tem
         // como no jogo (dogController.js): a velocidade sobe com a aceleração do controle; a da animação vem suavizada
         let v = 0, anim = 0, t = 0;
         const first = [-1, -1, -1, -1];
+        let was = [false, false, false, false];
         const meter = (secs) => {
-          const m = { back: 0, ext: 0, straight: 0, drags: 0 };
+          // ev: cada decolagem de traseira (por quê, quanto atrás, quantas no ar, compasso) e cada quadro arrastada
+          const m = { back: 0, ext: 0, straight: 0, drags: 0, ev: [], air2: 0, n: 0 };
           for (let f = 0; f < Math.round(secs * 60); f++, t += DT) {
             v = Math.min(cfg.walkSpeed, v + cfg.accel * DT);
             anim += (v - anim) * (1 - Math.exp(-DT * 18));
@@ -136,15 +138,26 @@ test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tem
             d.object.position.z += Math.cos(yaw) * v * DT;
             d.update(DT, { speed: anim, turn: 0, action: 'none' });
             d.object.updateMatrixWorld(true);
-            d.locomotion.legs.forEach((L, i) => {
+            const G = d.locomotion;
+            const air = G.legs.filter((l) => l.swing).length;
+            m.n++;
+            if (air >= 2) m.air2++;
+            G.legs.forEach((L, i) => {
               if (L.swing && first[i] < 0) first[i] = t;
+              if (HIND.includes(i) && L.swing && !was[i]) {
+                m.ev.push(`${t.toFixed(2)} ${PAWS[i]} ${L.why} ${((L.land.z - L.from.z) * 100).toFixed(1)}cm no-ar ${air} acc ${G.info.acc.toFixed(2)} beta ${G.info.beta.toFixed(2)} x${G.info.boost.toFixed(2)}`);
+              }
               if (L.swing || !HIND.includes(i)) return;
               m.back = Math.max(m.back, L.land.z - L.foot.z);
               const e = ext(d, i);
               m.ext = Math.max(m.ext, e);
               if (e > 0.985) m.straight++;
-              if (L.dragged) m.drags++;
+              if (L.dragged) {
+                m.drags++;
+                m.ev.push(`${t.toFixed(2)} ${PAWS[i]} ARRASTADA ${((L.land.z - L.foot.z) * 100).toFixed(1)}cm no-ar ${air} fase ${L.phSwing ? 'balanço' : 'apoio'} apoio ${L.stanceT.toFixed(2)}s`);
+              }
             });
+            was = G.legs.map((l) => l.swing);
           }
           return m;
         };
@@ -165,6 +178,12 @@ test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tem
     }
     const mx = (k, w) => Math.max(...rows.map((r) => r[w][k]));
     report.push(`${kind} (${cfg.walkSpeed} m/s): na arrancada a pata de trás vai até ${(mx('back', 'start') * 100).toFixed(1)} cm para trás, perna até ${mx('ext', 'start').toFixed(3)} (reta em ${mx('straight', 'start')} quadros, arrastada ${mx('drags', 'start')}); andando, ${(mx('back', 'steady') * 100).toFixed(1)} cm e ${mx('ext', 'steady').toFixed(3)}; primeiro passo de cada pata até ${Math.max(...rows.map((r) => Math.max(...r.first))).toFixed(2)} s`);
+    // diagnóstico: as decolagens das traseiras na primeira semente e na pior (arrancada e andando)
+    const worst = rows.reduce((a, r) => (r.start.back + r.steady.back > a.start.back + a.steady.back ? r : a), rows[0]);
+    for (const [label, r] of [['1ª semente', rows[0]], ['pior', worst]]) {
+      report.push(`  ${label}: arrancada [${r.start.ev.slice(0, 14).join(' | ')}]`);
+      report.push(`  ${label}: andando (${((r.steady.air2 / r.steady.n) * 100).toFixed(0)}% dos quadros com 2+ no ar) [${r.steady.ev.slice(0, 12).join(' | ')}]`);
+    }
   }
   console.log(`[locomoção] arrancada\n  ${report.join('\n  ')}`);
   assert.deepEqual(bad, []);

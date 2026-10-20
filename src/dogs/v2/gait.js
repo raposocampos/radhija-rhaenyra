@@ -114,6 +114,7 @@ export function createGait({ skel2, retarget, s }) {
       swing: false, timed: false, settle: false, u: 0, u0: 0, rate: 0, lift: 0, phSwing: false, stanceT: 0,
       over: false, dragged: false, stretch: 1,
       reachBack: 1, // traseira: até onde a pata apoiada vai para trás antes de a perna ficar reta (m; abaixo)
+      why: '', // por que o último passo saiu: 'fase', 'atrasada', 'longe', 'conforto' ou 'ajuste' (testes e capturas)
       off: -1, // fase desta pata no ciclo (a do guia, mudando devagar: passo ↔ trote sem a pata pular)
       foot: rest[idx[idx.length - 1]].clone(), from: V(),
       // alvos do quadro: junta de cima (ombro/quadril) antes da descida do tronco, pulso/jarrete, giro do tronco, dedos
@@ -190,7 +191,7 @@ export function createGait({ skel2, retarget, s }) {
   let lastG = -1; // fase do guia no quadro anterior
   /** @type {[number, number][]} pisadas do quadro (pata, passada m/s): o dog.js avisa o jogo no fim do quadro */
   const steps = [];
-  const info = { boost: 1, drags: 0 }; // para testes e capturas
+  const info = { boost: 1, drags: 0, beta: 0, acc: 0 }; // para testes e capturas
   const MAX_DROP = 0.01 * s, MAX_STRETCH = 1;
   let pivotK = 1; // quanto a pata apoiada gira com o mundo (1) ou junto com o corpo (pivô, numa curva bem fechada)
   /** Leva um ponto parado no chão do referencial do corpo do quadro anterior para o de agora. */
@@ -205,7 +206,8 @@ export function createGait({ skel2, retarget, s }) {
     return out.set(p.x * c + p.z * sn + d * Math.sin(th / 2), p.y, -p.x * sn + p.z * c + d * Math.cos(th / 2));
   };
   /** A pata sai do chão: pela fase (timed = false) ou por tempo (rate = 1/duração: passo extra ou de ajuste). */
-  function startSwing(leg, timed, lift, rate) {
+  function startSwing(leg, timed, lift, rate, why) {
+    leg.why = why;
     leg.swing = true;
     leg.timed = timed;
     leg.settle = false;
@@ -336,6 +338,8 @@ export function createGait({ skel2, retarget, s }) {
     const f = R.f * boost;
     // acelerando, o apoio também já é o desta velocidade (mais curto: a passada cabe no alcance da pata)
     const beta = lerp(R.beta, Math.min(R.beta, RN.beta), acc);
+    info.beta = beta;
+    info.acc = acc;
     const swingDur = (1 - beta) / f;
     const stanceDur = beta / f;
     const stepSpeed = Math.max(Math.abs(mv.v), Math.abs(mv.w) * 0.2 * s);
@@ -371,15 +375,15 @@ export function createGait({ skel2, retarget, s }) {
       // (também logo que ela começa a andar: a pata parada no tempo do balanço não espera a volta seguinte)
       if (!leg.swing && moving && phSwing && (edge || uPh < (resumed || started ? 0.9 : 0.35)) && leg.stanceT > 0.35 * stanceDur) {
         if (edge || uPh < 0.35) {
-          startSwing(leg, false, lift, 0);
+          startSwing(leg, false, lift, 0, 'fase');
           leg.u0 = uPh;
-        } else startSwing(leg, true, lift, 1 / clamp((1 - uPh) * swingDur, 0.1, 0.3)); // atrasada: balanço inteiro, curto
+        } else startSwing(leg, true, lift, 1 / clamp((1 - uPh) * swingDur, 0.1, 0.3), 'atrasada'); // balanço inteiro, curto
       }
       // longe demais (curva fechada, empurrada): um passo extra, fora do ritmo, se no máximo uma outra pata está no ar
       // (arrancando, duas: no começo de uma corrida a dog fica um instante com três patas no ar)
       const room = lifting() < (acc > 0.3 ? 3 : 2);
       if (!leg.swing && moving && leg.over && leg.stanceT > 0.3 * stanceDur && room) {
-        startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25));
+        startSwing(leg, true, lift, 1 / clamp(swingDur, 0.1, 0.25), 'longe');
       }
       // traseira atrás demais: passo de conforto antes de a perna esticar (andando e arrancando; freando, não: a pata
       // atrás do lugar é normal e os passinhos de ajuste ao parar cuidam dela). Arrancando forte, ela sai mesmo com as
@@ -387,7 +391,7 @@ export function createGait({ skel2, retarget, s }) {
       const braking = mv.v < st.speed - 0.15;
       if (!leg.front && !leg.swing && moving && mv.v > 0 && !braking && leg.stanceT > 0.3 * stanceDur && (room || acc > 0.3)) {
         const comfort = Math.min(1.2 * halfN + 0.02 * s, leg.reachBack - 0.012 * s);
-        if (leg.land.z - leg.foot.z > comfort) startSwing(leg, true, lift, 1 / clamp((1 - RN.beta) / RN.f, 0.1, 0.22));
+        if (leg.land.z - leg.foot.z > comfort) startSwing(leg, true, lift, 1 / clamp((1 - RN.beta) / RN.f, 0.1, 0.22), 'conforto');
       }
       if (leg.swing) {
         // a fase voltou ao apoio: no fim do balanço, pousa; antes do fim (o ritmo mudou: passo ↔ trote, parando), a
@@ -430,7 +434,7 @@ export function createGait({ skel2, retarget, s }) {
         if (d > far) { far = d; best = leg; }
       }
       if (best) {
-        startSwing(best, true, 0.014 * s, 1 / 0.2);
+        startSwing(best, true, 0.014 * s, 1 / 0.2, 'ajuste');
         best.settle = true;
       }
     }

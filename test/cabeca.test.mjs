@@ -55,7 +55,8 @@ test('cabeça: andando de frente para a parede, o desenho freia aos poucos e par
         d.setWorld(world);
         const c = createController(kind, withStart(kind, { x: 0, z: 0, yaw: 0 }));
         placeController(c, 0, 0, 0);
-        const m = { pen: 0, decel: 0, slide: 0, back: 0, yaw: 0, away: 0, awayPen: 0 };
+        const m = { pen: 0, decel: 0, slide: 0, back: 0, yaw: 0, away: 0, awayPen: 0, why: '' };
+        let fr = 0;
         let prevZ = null, prevV = null, prevPaws = null, prevSwing = null;
         const body = d.bones.find((b) => b.name === 'body');
         drive(d, c, world, 0, 1, c.cfg.walkSpeed, 2.2, () => {
@@ -71,9 +72,17 @@ test('cabeça: andando de frente para a parede, o desenho freia aos poucos e par
           // a pata apoiada não escorrega enquanto o desenho freia e recua
           const paws = pawsWorld(d);
           const swing = d.locomotion.legs.map((l) => l.swing);
+          fr++;
           if (prevPaws && d.gait > 0.99) {
             for (let i = 0; i < 4; i++) {
-              if (!swing[i] && !prevSwing[i]) m.slide = Math.max(m.slide, Math.hypot(paws[i].x - prevPaws[i].x, paws[i].z - prevPaws[i].z));
+              if (swing[i] || prevSwing[i]) continue;
+              const sl = Math.hypot(paws[i].x - prevPaws[i].x, paws[i].z - prevPaws[i].z);
+              if (sl > m.slide) {
+                m.slide = sl;
+                const L = d.locomotion.legs[i], G = d.locomotion;
+                // diagnóstico: o que a pata e o desenho faziam no quadro em que ela mais escorregou
+                m.why = `${(fr / 60).toFixed(2)} s ${PAWS[i]}: arrastada ${L.dragged}, longe ${L.over}, esticada ${L.stretch.toFixed(3)}, recuo ${(d.head.info.back * 100).toFixed(1)} cm, corpo ${G.motion.v.toFixed(2)} m/s, no ar ${G.legs.filter((l) => l.swing).length}, centro ${c.v.toFixed(2)} m/s`;
+              }
             }
           }
           prevPaws = paws;
@@ -86,7 +95,7 @@ test('cabeça: andando de frente para a parede, o desenho freia aos poucos e par
         drive(d, c, world, 0, -1, c.cfg.walkSpeed, 1.6, () => { m.awayPen = Math.max(m.awayPen, headPen(d, [WALL])); });
         m.away = d.head.info.back;
         const tag = `${kind} (semente ${seed})`;
-        report.push(`${tag}: parou com o centro a ${(2 - stopZ).toFixed(3)} m da parede; cabeça invadiu até ${(m.pen * 1000).toFixed(1)} mm (indo embora ${(m.awayPen * 1000).toFixed(1)} mm); o desenho recuou ${(m.back * 100).toFixed(1)} cm, cabeça virada ${(m.yaw * 57.3).toFixed(0)}°; freou até ${m.decel.toFixed(1)} m/s²; pata apoiada escorregou até ${(m.slide * 1000).toFixed(1)} mm/quadro; longe, recuo ${(m.away * 100).toFixed(1)} cm`);
+        report.push(`${tag}: parou com o centro a ${(2 - stopZ).toFixed(3)} m da parede; cabeça invadiu até ${(m.pen * 1000).toFixed(1)} mm (indo embora ${(m.awayPen * 1000).toFixed(1)} mm); o desenho recuou ${(m.back * 100).toFixed(1)} cm, cabeça virada ${(m.yaw * 57.3).toFixed(0)}°; freou até ${m.decel.toFixed(1)} m/s²; pata apoiada escorregou até ${(m.slide * 1000).toFixed(1)} mm/quadro (${m.why}); longe, recuo ${(m.away * 100).toFixed(1)} cm`);
         if (Math.abs(2 - stopZ - c.cfg.body.front) > 0.003) bad.push(`${tag}: o jogo mudou (centro a ${(2 - stopZ).toFixed(3)} m; o peito vai até ${c.cfg.body.front})`);
         if (m.pen > 0.012) bad.push(`${tag}: a cabeça entrou ${(m.pen * 1000).toFixed(1)} mm na parede`);
         if (m.awayPen > 0.012) bad.push(`${tag}: indo embora, a cabeça entrou ${(m.awayPen * 1000).toFixed(1)} mm`);
