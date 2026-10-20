@@ -346,7 +346,7 @@ test('modelo novo: as orelhas reagem ao pulo (física) e voltam ao lugar; nunca 
   }
 });
 
-test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa um pouco no pulo e no giro e volta; nunca passa do chão', () => {
+test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa pouco no giro, quica pouco no pulo e volta; nunca passa do chão', () => {
   const tipInHips = (dog) => {
     dog.object.updateMatrixWorld(true);
     const b = (n) => dog.bones.find((x) => x.name === n);
@@ -364,10 +364,12 @@ test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa um p
       out.push(tipInHips(dog));
     };
     step({ speed: 0, action: 'sniff' });
-    for (let i = 0; i < 150; i++) step(still);
-    for (let f = 0; f <= 40; f++) {
+    for (let i = 0; i < 150; i++) step(still); // 0..150: parada
+    for (let f = 0; f < 40; f++) step(still, f < 20 ? 0.06 : 0); // 151..190: meia-volta em 1/3 s
+    for (let i = 0; i < 90; i++) step(still);
+    for (let f = 0; f <= 40; f++) { // 281..321: pulo alto (sobe e pousa a ~3,8 m/s)
       const k = f / 25;
-      step(k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still, f < 20 ? 0.06 : 0);
+      step(k <= 1 ? { speed: 0, airK: k, jump: 4 * 0.4 * k * (1 - k) } : still);
     }
     for (let i = 0; i < 150; i++) step(still);
     return { dog, out };
@@ -378,12 +380,15 @@ test('modelo novo: o rabo tem física firme — parado fica na pose, atrasa um p
     const { out: b } = run(kind, false);
     const gap = a.map((p, i) => p.distanceTo(b[i]));
     const restGap = gap[150];
-    const lag = Math.max(...gap.slice(151, 192));
+    const turn = Math.max(...gap.slice(151, 200));
+    const jump = Math.max(...gap.slice(281, 330));
     const back = gap[gap.length - 1];
     assert.ok(restGap < 0.015, `${kind}: parado, o rabo fica na pose (${(restGap * 1000).toFixed(1)} mm)`);
-    // o pior é o pouso de um pulo alto (o corpo chega a ~3,8 m/s); as orelhas, no mesmo teste, vão até 9 cm
-    assert.ok(lag > 0.002 && lag < 0.06, `${kind}: no pulo e no giro o rabo atrasa só um pouco (${(lag * 1000).toFixed(1)} mm)`);
+    assert.ok(turn > 0.002 && turn < 0.035, `${kind}: no giro o rabo atrasa só um pouco (${(turn * 1000).toFixed(1)} mm)`);
+    // num pulo alto o corpo sai e pousa a ~3,8 m/s de uma vez: o rabo quica um pouco (as orelhas vão até 9 cm)
+    assert.ok(jump < 0.07, `${kind}: no pulo o rabo quica só um pouco (${(jump * 1000).toFixed(1)} mm)`);
     assert.ok(back < 0.004, `${kind}: o rabo volta à pose (${(back * 1000).toFixed(1)} mm)`);
+    console.log(`[v2] ${kind} rabo: parado ${(restGap * 1000).toFixed(1)} mm, giro ${(turn * 1000).toFixed(1)} mm, pulo ${(jump * 1000).toFixed(1)} mm, volta ${(back * 1000).toFixed(1)} mm`);
     // rolando: as juntas do rabo ficam acima do chão
     let low = Infinity;
     for (let f = 0; f < 150; f++) {
