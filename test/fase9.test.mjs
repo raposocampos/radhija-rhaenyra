@@ -120,6 +120,9 @@ test('fase 9: partida completa (óculos pela escadinha, livro pelo duto e pela p
   h.run(0.1);
   assert.equal(h.info().prompt, TEXT.prompt.fan, 'prompt do botão do ventilador');
   h.tap('KeyE');
+  // ela vai até a frente do botão e aperta com a pata: o ventilador liga no aperto (uns 0,3 s depois de começar)
+  assert.ok(h.run(0.7, { until: (i) => i.dogs.rhaenyra.action === 'press' }), 'apertando o botão com a pata');
+  h.run(0.7);
   assert.equal(lib(h).fanOn, true, 'ventilador ligado (E)');
   assert.ok(push(h, fanOf, L.FAN.half, [-1, 0], (i) => Math.abs(i.biblioteca.fan.x - L.DUCT.inlet.x) < 0.12, [[7.45, 1.0], [7.45, 0.7]]), 'ventilador para o oeste');
   assert.ok(push(h, fanOf, L.FAN.half, [0, -1], (i) => i.biblioteca.aligned, [[6.7, 1.3]]), 'ventilador na grade do duto');
@@ -299,6 +302,7 @@ test('fase 9: sem energia o ventilador não liga; o botão do registro só abre 
   h.run(0.2);
   h.clearLog();
   h.tap('KeyE');
+  h.run(0.7); // a dica sai no aperto da pata
   assert.ok(h.log('hint').some((x) => x.text === TEXT.hint.noPower), 'sem energia: dica do disjuntor');
   assert.equal(lib(h).fanOn, false);
   // o disjuntor (impulso) liga a energia

@@ -49,7 +49,9 @@ async function fullRun() {
   await page.keyboard.press('KeyE');
   i = await waitFor((s) => s.dogs.radhija.action === 'tug', { timeout: 1000, step: 30 });
   check(i.dogs.radhija.action === 'tug', 'Radhija puxa a cordinha (action tug)', i.dogs.radhija.action);
-  await sleep(700);
+  await sleep(250);
+  await shot('13b-cordinha-na-boca.png'); // ela chegou na corda e puxa com ela na boca
+  await sleep(450);
   await shot('14-plano-portao-abrindo.png');
   i = await waitFor((s) => s.stage === 'gateOpen' && s.gate.open, { timeout: 2500 });
   check(i.stage === 'gateOpen' && i.gate.open, 'portão aberto → etapa gateOpen', `t=${i.gate.t}`);

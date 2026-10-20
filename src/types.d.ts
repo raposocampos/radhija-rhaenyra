@@ -15,6 +15,8 @@ export type DogSize = 'small' | 'large';
 export interface XZ { x: number; z: number }
 /** Ponto 3D simples (ex.: alvo do marcador do objetivo; y = altura). */
 export interface XYZ { x: number; y: number; z: number }
+/** Uma corda mordida (src/game/mechanics/mouthTug.js): onde está a boca (no mundo) e o quanto ela segura (0..1). */
+export interface RopeGrip { pos: THREE.Vector3; k: number }
 export type Vec3Tuple = [number, number, number];
 /** Item principal de uma fase (ícone na UI, pose de boca da dog). */
 export type ItemKind = 'carrot' | 'ball' | 'slipper' | 'duck' | 'bear' | 'frisbee' | 'sock' | 'glasses' | 'book' | 'hat' | 'ribbon' | 'candle' | 'rope';
@@ -339,6 +341,8 @@ export interface DogController {
   vx: number;
   vz: number;
   yawRate: number;
+  /** Rumo pedido (rad): para onde ela está virando (steer). */
+  wantYaw: number;
   animSpeed: number;
   pivoting: boolean;
   dashT: number;
@@ -553,6 +557,12 @@ export interface InputLock {
   crouch?: number;
   /** Só a companheira: anda nesta direção (unitária) a speed m/s, com colisão (a irmã dando espaço no cocô). */
   move?: { dx: number; dz: number; speed: number };
+  /** Apertando um botão com a pata: onde ele está (no mundo, o alto dele) e o progresso do gesto (0..1). */
+  press?: XYZ & { k: number };
+  /** Mordendo uma corda (src/game/mechanics/mouthTug.js): a boca fecha nela como num item carregado. */
+  bite?: boolean;
+  /** Indo de propósito até a coisa (a corda, o botão): a cabeça não desvia dela (v2/head.js). */
+  reach?: boolean;
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick; quem lambeu é o ctrl recebido). */
@@ -708,7 +718,15 @@ export interface BafoProps extends LevelProps {
 /** Fase 1 (src/world/props.js). */
 export interface Fase1Props extends LevelProps {
   gate: GateProp;
-  rope: PropBase & { setTug(t: number): void };
+  rope: PropBase & {
+    setTug(t: number): void;
+    /** A dog mordendo a corda: src() → a boca (no mundo) e o quanto (0..1), ou null; null: ninguém. */
+    setGrip(src: (() => RopeGrip | null) | null): void;
+    /** O ponto da corda que a dog morde, parado (no mundo). */
+    bitePoint(): XYZ;
+    /** A ponta da corda agora (onde ela entra na bolinha). */
+    readonly end?: THREE.Vector3;
+  };
   cart: PropBase & { setX(x: number): void };
   carrot: ItemProp;
   door: HighlightProp;
@@ -943,7 +961,8 @@ export interface Fase10Props extends LevelProps {
   power: { setOn(on: boolean): void; readonly stage: 'off' | 'house' | 'painting' | 'porch' | 'on' };
   /** Portãozinho do fundo (dobradiça) e a cordinha da trava (setTug 0..1). */
   gate: GateProp;
-  cord: { setTug(k: number): void };
+  /** setGrip: a dog mordendo a cordinha (src() → a boca e o quanto); bitePoint: onde ela morde, parado; anchor: a roldana. */
+  cord: { setTug(k: number): void; setGrip(src: (() => RopeGrip | null) | null): void; bitePoint(): XYZ; readonly anchor: XYZ; readonly handle?: THREE.Object3D };
   /** Pombo cochilando no corrimão da casa na árvore. peck() = bica e bate as asas em quem chega perto do laço. */
   pigeon: PropBase & { setPose(p: PigeonPose): void; peck?(): void };
   /** Cano de brinquedo do funil até o pombo: progresso (0..1) de cada baforada de cheiro lá dentro. */
@@ -957,7 +976,7 @@ export interface Fase10Props extends LevelProps {
   /** Os dois botões altos do painel ao lado da cerca branca (um abre a porta do galpão, o outro o chiqueiro: sorteado). */
   shedButtons: WallButtonProp[];
   /** O gerador do painel: setPull(k) tira a alça da partida (0..1); setState: 'off', 'crank' (engasgando) ou 'on'. */
-  generator: { object: THREE.Object3D; setPull(k: number): void; setState(state: 'off' | 'crank' | 'on'): void };
+  generator: { object: THREE.Object3D; setPull(k: number): void; setState(state: 'off' | 'crank' | 'on'): void; setGrip(src: (() => RopeGrip | null) | null): void; bitePoint(): XYZ; readonly anchor: XYZ; readonly handle?: THREE.Object3D };
   /** Os fios da caixinha de força: pulse() corre a luz pelo fio; setOn deixa aceso. */
   shedLinks: { door: { pulse(): void; setOn(on: boolean): void }; gate: { pulse(): void; setOn(on: boolean): void } };
   /** A porteira do chiqueiro (0 fechada … 1 aberta). */
@@ -997,6 +1016,12 @@ export interface DogAnim {
   speed?: number;
   /** Velocidade de giro (rad/s). */
   turn?: number;
+  /** Quanto falta virar até o rumo pedido (rad, + = esquerda): a cabeça vai na frente, o tronco vem atrás. */
+  turnTo?: number;
+  /** Indo de propósito até a coisa (a corda, o botão; InputLock.reach): a cabeça não desvia dela. */
+  reach?: boolean;
+  /** No pulinho por cima da borda da caminha (startHop): as patas ficam encolhidas até quase pousar. */
+  hop?: boolean;
   action?: DogAction | string;
   /** Ponto para onde olhar (ou null). */
   lookAt?: THREE.Vector3 | XYZ | null;
@@ -1007,6 +1032,10 @@ export interface DogAnim {
   airK?: number;
   /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
   crouch?: number;
+  /** Apertando um botão com a pata: o alto dele no referencial do objeto da dog (x de lado, + = esquerda; z à frente). */
+  pressAt?: XYZ | null;
+  /** Progresso do gesto de apertar (0 = começa, 1 = a pata de volta); −1 = sem. */
+  pressK?: number;
   /** Lambe-Lambe: fase da lambida atual 0..1 (contato em 0,5) para quem lambe e para quem é lambida; −1 = sem. */
   lickPhase?: number;
   /** Lado da lambida (±1, alterna a cada uma: a cabeça balança). */

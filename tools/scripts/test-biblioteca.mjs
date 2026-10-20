@@ -79,8 +79,10 @@ try {
   check(lib(state).power, 'impulso no disjuntor liga a energia do jardim de inverno');
   await walkPath([[6.6, -0.3], [7.45, 0.2], [7.45, 1.25], [7.0, 1.3]], { tol: 0.12 });
   await page.keyboard.press('KeyE');
-  state = await waitFor((s) => s.biblioteca.fanOn, { timeout: 1500 });
+  // ela aperta o botão com a pata: o ventilador liga no aperto (uns 0,3 s de jogo depois do E)
+  state = await waitFor((s) => s.biblioteca.fanOn, { timeout: 3000 });
   check(lib(state).fanOn, 'E no botão da base liga o ventilador');
+  await shot('02b-pata-no-botao.png'); // a pata em cima do botão, no aperto
   state = await push((s) => lib(s).fan, L.FAN.half, -1, 0, (s, x) => s.biblioteca.fan.x < x + 0.08, { via: [[7.45, 1.0], [7.45, 0.7]], arg: L.DUCT.inlet.x });
   check(Math.abs(lib(state).fan.x - L.DUCT.inlet.x) < L.FAN.alignTol, 'ventilador empurrado (Shift) até a linha da grade', JSON.stringify(lib(state).fan));
   state = await push((s) => lib(s).fan, L.FAN.half, 0, -1, (s) => s.biblioteca.aligned, { via: [[6.7, 1.3]] });

@@ -5,6 +5,7 @@
 import { approach } from '../../game/dogController.js';
 import { gateTip } from '../../game/collision.js';
 import { createCarryItem, inZones, mouthPoint } from '../../game/puzzleKit.js';
+import { createMouthTug } from '../../game/mechanics/mouthTug.js';
 
 export const STAGES = ['start', 'east', 'gateOpen', 'cartMoved', 'carrying', 'done'];
 
@@ -27,10 +28,12 @@ const TEXT = {
   prompt: { rope: 'Puxar a cordinha', carrot: 'Pegar a cenoura', drop: 'Largar a cenoura' },
 };
 
-// Linha do tempo da cordinha/portão (s desde o E)
+// Linha do tempo da cordinha/portão (s desde o começo do puxão; antes dele, o passinho até a corda)
 const TUG_DUR = 0.6;
 const GATE_START = 0.45;
 const GATE_DUR = 0.9;
+/** Mordida na cordinha: até onde a corda alcança, do trinco ao ponto mordido (m; o trinco é uma alavanca e cede um tanto). */
+const ROPE_REACH = 0.52;
 
 function easeOutBack(x) {
   const c1 = 1.0;
@@ -44,7 +47,7 @@ function easeOutBack(x) {
  * @param {PuzzleContext<Fase1Props>} ctx
  * @returns {Puzzle}
  */
-export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scene, place }) {
+export function createPuzzle({ layout, props, world, dogs, ctrls, emit, cam, root: scene, place }) {
   const { FENCE, ROPE, CART, CARROT, DOOR, DOGS, COLLECTIBLES, COLLECTIBLE_PICKUP_R } = layout;
 
   // Colisores dinâmicos desta fase: portão (segmento girando na dobradiça) e carrinho (caixa em X).
@@ -63,6 +66,11 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
   };
   const worldSetCartX = (x) => { cartCol.x = x; };
   const carrot = createCarryItem({ obj: props.carrot?.object || null, dogs, scene, name: 'carrot', emit, world });
+  // a cordinha: a dog vai até ela, morde e puxa (a corda vai junto com a boca)
+  const tug = createMouthTug({ dogs, ctrls, world });
+  props.rope?.setGrip?.(tug.grip);
+  /** O ponto da cordinha que a dog morde (logo acima da bolinha). */
+  const ropeBite = () => props.rope?.bitePoint?.() ?? { x: ROPE.anchor.x + 0.03, y: ROPE.anchor.y - 0.41, z: ROPE.anchor.z };
   /** Largada, a cenoura não fica no capacho da porta: lá ela é entregue. */
   const dropAvoid = inZones([DOOR.zone]);
 
@@ -83,8 +91,6 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     hintNext: new Map(),
     hintPrev: new Set(),
     hintNow: new Set(),
-    lockLeft: 0,
-    lockDog: null,
     /** E com a cenoura na boca, de frente para a porta: entrega neste quadro (no update). */
     dropDeliver: false,
   };
@@ -150,20 +156,24 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     worldSetGate(t);
   }
   const gateOpenEnough = () => S.gateT >= 0.97;
-  const ropeAvailable = () => S.ropeT < 0;
+  const ropeAvailable = () => S.ropeT < 0 && !tug.busy();
 
+  /** E na cordinha: ela vai até a corda (passinho), morde e puxa; o puxão começa no updateRope. */
   function startTug(c) {
-    S.ropeT = 0;
     S.gateEmitted = false;
-    S.lockLeft = TUG_DUR + 0.1;
-    S.lockDog = c.name;
-    emit('rope:tug', { x: ROPE.anchor.x, z: ROPE.anchor.z });
+    tug.start(c, { bite: ropeBite(), anchor: ROPE.anchor, len: ROPE_REACH, dur: TUG_DUR + 0.1 });
     if (S.stage === 'start') setStage('east', { silent: true });
   }
 
   function updateRope(dt) {
-    S.lockLeft = Math.max(0, S.lockLeft - dt);
-    if (S.ropeT < 0) return;
+    tug.update(dt);
+    if (S.ropeT < 0) {
+      // o puxão começa quando ela chega à corda
+      const p = tug.pullT();
+      if (p < 0) return;
+      S.ropeT = p - dt;
+      emit('rope:tug', { x: ROPE.anchor.x, z: ROPE.anchor.z });
+    }
     const before = S.ropeT;
     S.ropeT += dt;
     const t = S.ropeT;
@@ -344,12 +354,9 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     return false;
   }
 
-  /** Trava de entrada (ex.: puxando a cordinha). */
+  /** Trava de entrada (indo até a cordinha e puxando). */
   function lockFor(name) {
-    if (S.lockLeft > 0 && S.lockDog === name) {
-      return { action: 'tug', faceX: ROPE.anchor.x, faceZ: ROPE.anchor.z };
-    }
-    return null;
+    return tug.lockFor(name);
   }
 
   /** Para onde a dog ativa olha (algo interessante por perto). */
@@ -360,7 +367,11 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
       const f = carrot.floor;
       return f ? { x: f.x, y: 0.06, z: f.z } : { x: CARROT.x, y: 0.1, z: CARROT.z };
     }
-    if (S.lockLeft > 0 && S.lockDog === c.name) return { x: ROPE.anchor.x, y: ROPE.anchor.y - 0.15, z: ROPE.anchor.z };
+    // indo até a corda, olha para o ponto que vai morder; puxando, para o trinco
+    if (tug.busy(c.name)) {
+      if (tug.stepping()) return ropeBite();
+      return { x: ROPE.anchor.x, y: ROPE.anchor.y - 0.15, z: ROPE.anchor.z };
+    }
     return null;
   }
 
@@ -389,7 +400,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     if (S.gateT < 0.05 && active.x < FENCE.x && touch.some((h) => h.id === 'gate')) hintCond('locked');
 
     // Prompt
-    setPrompt(S.lockLeft > 0 ? null : interactable(active));
+    setPrompt(tug.busy() ? null : interactable(active));
 
     // Colecionáveis (dog ativa)
     COLLECTIBLES.forEach((col, i) => {
@@ -450,8 +461,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     S.collected = new Set();
     S.prompt = undefined;
     S.promptKind = null;
-    S.lockLeft = 0;
-    S.lockDog = null;
+    tug.reset();
     S.hintPrev = new Set();
     S.hintNow = new Set();
     S.hintNext = new Map();
@@ -538,6 +548,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     return {
       cart: { x: +S.cartX.toFixed(3), v: +S.cartV.toFixed(3), pushing: S.pushing },
       gate: { t: +S.gateT.toFixed(3), open: gateOpenEnough() },
+      rope: { who: tug.who, stepping: tug.stepping(), pulling: tug.pullT() >= 0, biting: tug.biting() },
       carrot: { holder: S.carrier, floor: f ? { x: +f.x.toFixed(3), z: +f.z.toFixed(3) } : null, falling: carrot.falling },
     };
   }

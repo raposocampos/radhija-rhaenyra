@@ -17,6 +17,7 @@
 import { createCarryItem, createCollectibles, createHints, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createWallButton, createHingedGate, createPressurePlate } from '../../game/mechanics/index.js';
 import { airborne, wallKick } from '../../game/dogController.js';
+import { planStep, driveStep } from '../../game/mechanics/mouthTug.js';
 import {
   WALL_EH, DOOR, DOOR_HANDLE, DOOR_HANDLE_IN, WARDROBE, BOOK_FALL, CAT, LADDER, GLOBE, GLASSES, LADDER_HOLD, CLIMB,
   BRAKE_LEVER, TABLE_SPOTS, DUCT, BREAKER, PLANTER, DAMPER_PLATE, FAN, GOAL, COLLECTIBLES, COLLECTIBLE_PICKUP_R, WALL_HL,
@@ -164,6 +165,8 @@ export function createPuzzle(ctx) {
     climbDt: 1 / 60, rollFrom: 0, rollTo: 0,
     aligned: false, wasDoorOpen: false, doorHintT: 0, ductHint: false, wasAligned: false,
     holdLadder: false, wasDamper: false, introT: 0, fanOn: false,
+    /** Apertando o botão do ventilador com a pata (quem e há quanto tempo); null = ninguém. */
+    press: /** @type {null | { who: string, t: number, done: boolean, step: import('../../game/mechanics/mouthTug.js').Step | null }} */ (null),
     /** E com o objeto na boca, de frente para a mesinha: ele fica nela neste quadro (no update). */
     dropDeliver: /** @type {'glasses' | 'book' | null} */ (null),
   });
@@ -590,6 +593,7 @@ export function createPuzzle(ctx) {
     for (const b of levers) b.update(dt);
 
     // escada, globo e ventilador (empurrados no modifyIntent); a escada travada ou com a Radhija em cima não anda
+    stepPress(dt);
     ladder.update(dt, { comp, pushSpeed: !brake.on || S.climb ? 0 : undefined });
     globe.update(dt, { comp });
     fan.update(dt, { comp });
@@ -698,7 +702,7 @@ export function createPuzzle(ctx) {
     const canClimb = !S.climb && active.name === 'radhija' && nearClimb(active);
     const canBook = S.book === 'floor' && reach(active, S.bookX, S.bookZ) < 0.55 && active.name === 'rhaenyra' && glasses.holder !== 'rhaenyra';
     const canHold = active.name === 'rhaenyra' && !book.holder && !S.climb && inHoldZone(active) && brake.on;
-    const canFan = nearFanSwitch(active) && !book.holder;
+    const canFan = nearFanSwitch(active) && !book.holder && !S.press;
     const canGlasses = nearFloorGlasses(active) && !book.holder && !glasses.holder;
     if (canClimb) hints.setPrompt('climb');
     else if (canHold) hints.setPrompt(S.holdLadder ? 'letGo' : 'hold');
@@ -730,8 +734,35 @@ export function createPuzzle(ctx) {
   }
 
   /** Perto do botão de liga do ventilador (na base, lado sul)? */
+  /** Perto do botão, pelo lado dele (o sul da base): de trás do ventilador a pata não chega nele. */
   function nearFanSwitch(c) {
-    return Math.hypot(c.x - fan.x, c.z - (fan.z + 0.12)) < 0.62;
+    return c.z > fan.z - 0.05 && Math.hypot(c.x - fan.x, c.z - (fan.z + 0.12)) < 0.62;
+  }
+  /** O alto do botão de liga do ventilador (na base, 12 cm ao sul do meio; world/conservatory.js buildFan). */
+  const fanButton = () => ({ x: fan.x, y: 0.08, z: fan.z + 0.12 });
+  /** O gesto de apertar o botão: a pata chega nele em PRESS.hit (fração de PRESS.dur) e volta. */
+  const PRESS = { dur: 0.7, hit: 0.45 };
+  /** De onde ela aperta: na frente do botão, o meio do corpo a esta distância dele (a pata alcança; m). */
+  const pressFrom = (c) => (c.cfg?.body?.front ?? 0.22) + 0.17;
+  function stepPress(dt) {
+    const P = S.press;
+    if (!P) return;
+    // primeiro o passinho até a frente do botão (a fase move a dog)
+    if (P.step) {
+      if (driveStep(ctrls[P.who], P.step, dt, world)) P.step = null;
+      return;
+    }
+    P.t += dt;
+    if (!P.done && P.t >= PRESS.dur * PRESS.hit) {
+      P.done = true;
+      if (!power()) hints.now('noPower', 3.4, 2);
+      else {
+        S.fanOn = !S.fanOn;
+        emit('fan:switch', { on: S.fanOn, x: fan.x, z: fan.z });
+        hints.now(S.fanOn ? 'fanStarted' : 'fanStopped', 2.2, 0);
+      }
+    }
+    if (P.t >= PRESS.dur) S.press = null;
   }
   /** A Radhija está na frente dos degraus, de frente para a estante? */
   function nearClimb(c) {
@@ -786,12 +817,8 @@ export function createPuzzle(ctx) {
       return true;
     }
     if (nearFanSwitch(c) && !book.holder) {
-      if (!power()) hints.now('noPower', 3.4, 2);
-      else {
-        S.fanOn = !S.fanOn;
-        emit('fan:switch', { on: S.fanOn, x: fan.x, z: fan.z });
-        hints.now(S.fanOn ? 'fanStarted' : 'fanStopped', 2.2, 0);
-      }
+      // ela vai até a frente do botão e aperta com a pata: o ventilador liga (ou desliga) no aperto (stepPress)
+      if (!S.press) S.press = { who: c.name, t: 0, done: false, step: planStep(c, fanButton(), pressFrom(c), world, { yaw: Math.PI }) };
       return true;
     }
     // os óculos: pegar de volta do chão (boca vazia) ou largar os que estão na boca (de frente para a mesinha, ficam nela)
@@ -882,6 +909,12 @@ export function createPuzzle(ctx) {
   function lockFor(name) {
     const cl = S.climb;
     const c = ctrls[name];
+    if (S.press && S.press.who === name) {
+      const b = fanButton();
+      // indo até o botão e apertando: de propósito (a cabeça não desvia do ventilador)
+      if (S.press.step) return { action: 'none', faceX: b.x, faceZ: b.z, drive: true, reach: true };
+      return { action: 'press', faceX: b.x, faceZ: b.z, press: { ...b, k: Math.min(1, S.press.t / PRESS.dur) }, reach: true };
+    }
     if (cl && name === 'radhija') {
       return { action: cl.action || 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true, slope: cl.slope || 0 };
     }

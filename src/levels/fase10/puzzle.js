@@ -28,6 +28,7 @@ import { createPig } from '../../characters/pig.js';
 import { createChickenFlock } from './chickens.js';
 import { createShoveTarget } from '../../game/mechanics/shoveTarget.js';
 import { airborne, wallKick } from '../../game/dogController.js';
+import { createMouthTug } from '../../game/mechanics/mouthTug.js';
 import {
   WALL_LK, HOUSE, BREAKER, PAINTING, CAKE, CAKE_ORDER, CAKE_REJECT, GOAL, POOL, BOAT, TAP, HOSE, CRATE, BACK_FENCE, GATE,
   CORD, GOOSE, PIGEON, TUBE, BUCKET, ROPE, TREE, DECK, DECK_RAIL, HUT, DECK_PROPS, DECK_PATH, SLIDE, HORTA, MUD, SHED,
@@ -222,6 +223,11 @@ export function createPuzzle(ctx) {
   const hints = createHints(emit, TEXT);
   const cols = createCollectibles({ list: COLLECTIBLES, props, emit, pickupR: COLLECTIBLE_PICKUP_R });
   const effects = createDogEffects({ world, dogs });
+  // as cordinhas (do portãozinho e do gerador): a dog vai até elas, morde e puxa (a cordinha vai junto com a boca)
+  const cordTug = createMouthTug({ dogs, ctrls, world });
+  const genTug = createMouthTug({ dogs, ctrls, world });
+  props.cord.setGrip?.(cordTug.grip);
+  props.generator.setGrip?.(genTug.grip);
   const mud = createMud({ dogs, emit, effects, licksToClean: MUD.licksToClean, slow: MUD.slow });
   const breaker = createWallButton({ id: 'disjuntor', cfg: BREAKER, emit, prop: props.breaker });
   const tap = createWallButton({ id: 'torneira', cfg: TAP, emit, prop: props.tap });
@@ -297,7 +303,7 @@ export function createPuzzle(ctx) {
     // galpão: qual botão abre a porta, a porta e o chiqueiro abertos
     doorBtn: pickDoorButton(), shedOpen: false, styOpen: false,
     // o gerador do painel: ligado, o puxão em andamento (t s desde o começo, ou −1) e o próximo "tá-tá-tá"
-    gen: { on: false, t: -1, /** @type {string | null} */ who: null, humT: 0 },
+    gen: { on: false, t: -1, /** @type {string | null} */ who: null, humT: 0, wait: false },
     // despensa: onde está cada caixote no trilho (e se travou), o que a Rhaenyra puxa e a subida da Radhija
     crates: CR.list.map(() => ({ x: CR.x0, locked: false })),
     /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ crateHold: null,
@@ -326,7 +332,7 @@ export function createPuzzle(ctx) {
   const nearPinata = (c) => Math.hypot(c.x - ROSE_BUSH.x, c.z - ROSE_BUSH.z) < 3.2;
   /** Os botões do painel só valem com o gerador ligado. */
   const activeLevers = () => (S.gen.on ? levers : [breaker, tap]);
-  const genReach = (c) => !S.gen.on && S.gen.t < 0 && reach(c, GENERATOR.cord.x, GENERATOR.cord.z) < GENERATOR.reach;
+  const genReach = (c) => !S.gen.on && S.gen.t < 0 && !S.gen.wait && reach(c, GENERATOR.cord.x, GENERATOR.cord.z) < GENERATOR.reach;
   const inDoorway = (c) => Math.abs(c.x - SHED.x0) < 0.4 && c.z > SHED.door.z0 - 0.05 && c.z < SHED.door.z1 + 0.05;
   const doorOpen = () => S.doorT > 0.7;
   const nextThing = () => /** @type {Thing | undefined} */ (CAKE_ORDER[S.cake.length]);
@@ -579,13 +585,30 @@ export function createPuzzle(ctx) {
   }
 
   // ------------------------------------------------------------------ laço: portão, pombo, balde e deque
+  /** A cordinha do portãozinho: onde a dog morde (logo acima do puxador) e de onde ela sai (a roldana no mourão). */
+  const cordBite = () => props.cord.bitePoint?.() ?? { x: CORD.x, y: 0.49, z: CORD.z };
+  const cordFrom = () => props.cord.anchor ?? { x: CORD.x, y: CORD.top, z: CORD.z };
+  /** E na cordinha: ela vai até o puxador (passinho), morde e puxa; o puxão começa no stepCord. */
   function startCord(c) {
-    S.cordT = 0;
     S.cordWho = c.name;
-    emit('rope:tug', { x: CORD.x, z: CORD.z });
+    const b = cordBite(), a = cordFrom();
+    // a cordinha desce até uns 20 cm abaixo de onde ela fica (o ferrolho cede): a boca da Radhija fica mais baixa
+    const len = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) + 0.2;
+    cordTug.start(c, { bite: b, anchor: a, len, dur: 0.75, face: { x: CORD.x, z: CORD.z } });
   }
+  const cordBusy = () => S.cordT >= 0 || cordTug.busy();
   function stepCord(dt) {
-    if (S.cordT < 0) return;
+    cordTug.update(dt);
+    if (S.cordT < 0) {
+      if (!S.cordWho) return;
+      const p = cordTug.pullT();
+      if (p < 0) {
+        if (!cordTug.busy()) S.cordWho = null;
+        return;
+      }
+      S.cordT = p - dt;
+      emit('rope:tug', { x: CORD.x, z: CORD.z });
+    }
     S.cordT += dt;
     props.cord.setTug(S.cordT < 0.7 ? Math.sin((Math.PI * S.cordT) / 0.7) : 0);
     if (!S.gateOpen && S.cordT >= 0.35) {
@@ -935,17 +958,33 @@ export function createPuzzle(ctx) {
   /** E na cordinha: só a Rhaenyra tem força para dar a partida. */
   function startGen(c) {
     if (c.name !== 'rhaenyra') { hints.now('genHeavy', 3.4, 3); return; }
-    S.gen.t = 0;
+    // ela vai até a alça (passinho), morde e dá o puxão; o puxão começa no stepGen
     S.gen.who = c.name;
-    emit('generator:pull', { x: GENERATOR.cord.x, z: GENERATOR.cord.z });
+    S.gen.wait = true;
+    const b = props.generator.bitePoint?.() ?? GENERATOR.cord;
+    const a = props.generator.anchor ?? GENERATOR.cord;
+    genTug.start(c, { bite: b, anchor: a, len: Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) + 0.3, dur: GENERATOR.pull, face: { x: GENERATOR.x, z: GENERATOR.z } });
   }
   function setGen(on) {
-    Object.assign(S.gen, { on: !!on, t: -1, who: null, humT: 0.3 });
+    genTug.reset();
+    Object.assign(S.gen, { on: !!on, t: -1, who: null, humT: 0.3, wait: false });
     props.generator.setPull(0);
     props.generator.setState(on ? 'on' : 'off');
   }
   function stepGen(dt) {
     const g = S.gen;
+    genTug.update(dt);
+    if (g.wait) {
+      const p = genTug.pullT();
+      if (p >= 0) {
+        g.wait = false;
+        g.t = Math.max(0, p - dt); // logo abaixo, o puxão anda dt
+        emit('generator:pull', { x: GENERATOR.cord.x, z: GENERATOR.cord.z });
+      } else if (!genTug.busy()) {
+        g.wait = false;
+        g.who = null;
+      }
+    }
     if (g.t >= 0) {
       const before = g.t;
       g.t += dt;
@@ -1473,7 +1512,7 @@ export function createPuzzle(ctx) {
     if ((goose.state === 'lured' || goose.state === 'curious') && !S.gateOpen) hints.cond('gooseAway', 3, 8);
 
     // a primeira vez no fundo do quintal: a câmera mostra o laço no corrimão com o pombo dormindo em cima
-    if (!S.sawPigeon && pigeonAround() && S.place.ribbon === 'home' && active.x > BACK_FENCE.x + 0.45 && S.cordT < 0) {
+    if (!S.sawPigeon && pigeonAround() && S.place.ribbon === 'home' && active.x > BACK_FENCE.x + 0.45 && !cordBusy()) {
       S.sawPigeon = true;
       cam?.focusShot(PIGEON.x - 0.15, PIGEON.z + 2.1, { hold: 2.4, inT: 0.8, outT: 0.7, scale: 0.55, target: { x: PIGEON.x, y: PIGEON.y - 0.05, z: PIGEON.z } });
       hints.now('pigeonSeen', 4.6, 0);
@@ -1511,7 +1550,7 @@ export function createPuzzle(ctx) {
     const deckDo = k === 'radhija' ? deckAction(active) : null;
     const nearFloor = !up && THINGS.find((t) => S.place[t] === 'floor' && !S.reject && reach(active, S.floor[t].x, S.floor[t].z) < 0.55);
     const canHat = !up && free && S.place.hat === 'home' && S.docked && Math.hypot(active.x - BOAT.dock.x, active.z - BOAT.dock.z) < BOAT.grabR;
-    const canCord = !S.gateOpen && S.cordT < 0 && reach(active, CORD.x, CORD.z) < CORD.reach;
+    const canCord = !S.gateOpen && !cordBusy() && reach(active, CORD.x, CORD.z) < CORD.reach;
     const canRope = k === 'rhaenyra' && free && !handle.holder && reach(active, ROPE.rest.x, ROPE.rest.z) < ROPE.grabR && S.bucketY < 0.05;
     const canBucket = k === 'radhija' && free && !S.riding && !S.deck && !S.hop && S.pulled < 0.05 && reach(active, BUCKET.x, BUCKET.z) < BUCKET.enterR + 0.25;
     const nearPainting = inHouse(active) && Math.hypot(active.x - PAINTING.x, active.z - (PAINTING.z + 0.95)) < 1.0;
@@ -1541,7 +1580,7 @@ export function createPuzzle(ctx) {
     if (nearLever && k === 'radhija') hints.cond('wallRadhija', 3.4, 10);
     if (k === 'rhaenyra' && mud.muddy('rhaenyra') && activeLevers().some((b) => !b.on && b.inReach(active, world))) hints.cond('wallMud', 3.6, 8);
     // a Rhaenyra na frente do painel apagado: primeiro o gerador
-    if (k === 'rhaenyra' && !S.gen.on && S.gen.t < 0 && shedButtons.some((b) => Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 0.6)) hints.cond('noPowerBoard', 3.6, 10);
+    if (k === 'rhaenyra' && !S.gen.on && S.gen.t < 0 && !S.gen.wait && shedButtons.some((b) => Math.hypot(active.x - wallKick(b.spot, active.r).x, active.z - wallKick(b.spot, active.r).z) < 0.6)) hints.cond('noPowerBoard', 3.6, 10);
     if (!S.full && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.7) hints.cond(tap.on && crateOnHose() ? 'hoseBlocked' : 'poolDeep', 3.6, 12);
     if (S.full && !power() && !S.docked && Math.hypot(active.x - POOL.x, active.z - POOL.z) < POOL.r + 0.8) hints.cond('boatFar', 3.6, 10);
     // a piñata em cima da roseira: parada, os espinhos não deixam chegar; balançando, quem bate é a Rhaenyra
@@ -1682,7 +1721,7 @@ export function createPuzzle(ctx) {
     if (nearFloor) { take(nearFloor, c); return true; }
     if (genReach(c)) { startGen(c); return true; }
     if (S.place.hat === 'home' && S.docked && Math.hypot(c.x - BOAT.dock.x, c.z - BOAT.dock.z) < BOAT.grabR) { take('hat', c); return true; }
-    if (!S.gateOpen && S.cordT < 0 && reach(c, CORD.x, CORD.z) < CORD.reach) {
+    if (!S.gateOpen && !cordBusy() && reach(c, CORD.x, CORD.z) < CORD.reach) {
       if (guarding()) { hints.now('gooseGuard', 3.6, 1.5); return true; }
       startCord(c);
       return true;
@@ -1751,9 +1790,12 @@ export function createPuzzle(ctx) {
     if (name === 'radhija' && S.onDeck && ctx.activeDog !== 'radhija') return { action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw), drive: true };
     // a Rhaenyra segurando a corda enquanto o jogador está com a irmã
     if (name === 'rhaenyra' && handle.holder === 'rhaenyra' && ctx.activeDog !== 'rhaenyra') return { action: 'tug', faceX: ROPE.ring.x, faceZ: ROPE.ring.z };
-    if (S.cordT >= 0 && S.cordWho === name) return { action: 'tug', faceX: CORD.x, faceZ: CORD.z };
-    // puxando a cordinha do gerador (a alça na boca, de frente para ele)
-    if (S.gen.t >= 0 && S.gen.t < GENERATOR.pull && S.gen.who === name) return { action: 'tug', faceX: GENERATOR.x, faceZ: GENERATOR.z };
+    // indo até a cordinha do portãozinho e puxando (o puxador na boca)
+    const ct = cordTug.lockFor(name);
+    if (ct) return ct;
+    // indo até a alça do gerador e puxando (a alça na boca, de frente para ele)
+    const gt = genTug.lockFor(name);
+    if (gt) return gt;
     return null;
   }
 
@@ -1777,6 +1819,8 @@ export function createPuzzle(ctx) {
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) { const h = S.veg.held[n]; if (h) { h.it.returnHome(); h.obj.parent?.remove(h.obj); } }
     for (const n of /** @type {import('../../types').DogName[]} */ (['radhija', 'rhaenyra'])) ctrls[n].y = 0;
     Object.assign(S, fresh());
+    cordTug.reset();
+    genTug.reset();
     doorCol.enabled = true;
     bucketCol.enabled = true;
     boardCol.enabled = true;
@@ -1824,6 +1868,13 @@ export function createPuzzle(ctx) {
       if (pigeonAround() && Math.hypot(c.x - PIGEON.x, c.z - PIGEON.z) < 3.4) hints.now('pigeonBark', 3, 5);
     },
     lookTarget: (c) => {
+      // indo até a cordinha ou a alça, olha para onde vai morder; puxando, a cordinha do portãozinho sobe pelo mourão
+      // (a cabeça acompanha) e a do gerador sai da partida, à frente
+      if (cordTug.busy(c.name)) return cordTug.stepping() ? cordBite() : at(CORD.x, CORD.z, 0.75);
+      if (genTug.busy(c.name)) {
+        const b = props.generator.bitePoint?.() ?? GENERATOR.cord;
+        return genTug.stepping() ? { ...b } : at(GENERATOR.x, GENERATOR.z, GENERATOR.cord.y);
+      }
       if (inHouse(c) && Math.hypot(c.x - PAINTING.x, c.z - PAINTING.z) < 2.4) return at(PAINTING.x, PAINTING.z, PAINTING.y);
       if (pigeonAround() && Math.hypot(c.x - PIGEON.x, c.z - PIGEON.z) < 2.6) return at(PIGEON.x, PIGEON.z, PIGEON.y);
       if (S.place.hat === 'home' && Math.hypot(c.x - POOL.x, c.z - POOL.z) < POOL.r + 0.9) return at(S.boatX, S.boatZ, 0.3);
@@ -1884,7 +1935,7 @@ export function createPuzzle(ctx) {
         deck: S.deck ? S.deck.phase : S.onDeck ? 'free' : null, onDeck: S.onDeck, deckAction: deckAction(ctrls.radhija),
         sawPigeon: S.sawPigeon, ramp: S.ramp ? S.ramp.phase : null, door: +S.doorT.toFixed(3), doorOpen: doorOpen(),
         mud: mud.info('radhija'), mudRh: mud.info('rhaenyra'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
-        shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, generator: { on: S.gen.on, pulling: S.gen.t >= 0 }, pigs: pigs.info(),
+        shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, generator: { on: S.gen.on, pulling: S.gen.t >= 0 || S.gen.wait }, pigs: pigs.info(),
         crates: S.crates.map((k) => ({ x: +k.x.toFixed(3), locked: k.locked })), crateHold: S.crateHold ? S.crateHold.i : null,
         climb: S.climb ? S.climb.phase : null, stairs: stairsReady(),
         pinata: { stage: S.pin.stage, shoves: mangoShove.pushes, ax: +S.pin.ax.toFixed(3), az: +S.pin.az.toFixed(3), hits: S.pin.hits, broken: S.pin.broken, ...(() => { const p = pinataPos(); return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }; })() },

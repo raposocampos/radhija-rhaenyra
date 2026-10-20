@@ -376,9 +376,15 @@ export function buildSty(root, layout) {
   const hRest = new THREE.Vector3(G.cord.x - G.x, G.cord.y, G.cord.z - G.z);
   const sPos = new THREE.Vector3(W / 2 - 0.01, G.cord.y - 0.06, 0);
   const _hp = new THREE.Vector3();
+  const _gp = new THREE.Vector3();
   const _up = new THREE.Vector3(0, 1, 0);
+  /** @type {null | (() => ({ pos: THREE.Vector3, k: number } | null))} */
+  let gripSrc = null;
   function layoutGen() {
     _hp.set(hRest.x + 0.24 * gst.pull, hRest.y + 0.05 * gst.pull, hRest.z);
+    // na boca: a alça vai junto com ela (a cordinha sai da partida até a boca)
+    const g = gripSrc?.();
+    if (g && g.k > 0) _hp.lerp(gen.worldToLocal(_gp.copy(g.pos)), g.k);
     handle.position.copy(_hp);
     startCord.position.copy(sPos).add(_hp).multiplyScalar(0.5);
     const d = _hp.clone().sub(sPos);
@@ -429,6 +435,13 @@ export function buildSty(root, layout) {
     generator: {
       object: gen,
       setPull(k) { gst.pull = Math.max(0, Math.min(1, k)); layoutGen(); },
+      /** A Rhaenyra mordendo a alça: src() → a boca (no mundo) e o quanto (0..1), ou null; null: ninguém. */
+      setGrip(src) { gripSrc = src || null; },
+      /** A alça parada (no mundo): o ponto que ela morde. */
+      bitePoint() { return { x: G.cord.x, y: G.cord.y, z: G.cord.z }; },
+      /** De onde a cordinha sai (a partida, no mundo). */
+      anchor: new THREE.Vector3(G.x + sPos.x, sPos.y, G.z + sPos.z),
+      handle,
       setState(state) {
         if (state === 'on' && gst.state !== 'on') { genLink.pulse(); genLink.setOn(true); }
         if (state === 'off') genLink.setOn(false);
@@ -439,6 +452,7 @@ export function buildSty(root, layout) {
     update(dt) {
       toDoor.update(dt);
       toGate.update(dt);
+      if (gripSrc) layoutGen(); // a alça acompanha a boca (desenhada depois da animação das dogs)
       genUpdate(dt);
     },
   };

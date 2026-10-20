@@ -24,9 +24,10 @@ test('fase 1: partida completa (abertura → cordinha → carrinho → cenoura �
   assert.ok(i.dogs.rhaenyra.x < 1.0, `Rhaenyra no oeste (x=${i.dogs.rhaenyra.x})`);
   assert.equal(i.dogs.rhaenyra.mode, 'wait');
 
-  // Cordinha → portão abre.
+  // Cordinha → portão abre: ela vai até a corda (passinho), morde e puxa.
   h.tap('KeyE');
-  assert.equal(h.info().dogs.radhija.action, 'tug');
+  assert.ok(h.info().rope.who === 'radhija', 'indo até a cordinha');
+  assert.ok(h.run(0.6, { until: (x) => x.dogs.radhija.action === 'tug' }), 'puxando a cordinha');
   h.run(2.2);
   i = h.info();
   assert.equal(i.stage, 'gateOpen');

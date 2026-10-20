@@ -1,11 +1,41 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
-caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-20, Claude** (interações de verdade: a pata aperta o botão do ventilador, as cordinhas
+das fases 1 e 10 vão na boca; a cabeça vai na frente nas curvas e o pulo ficou mais solto; a etapa 4 dos modelos, #48,
+está no main e em produção). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
+antes de editar.
 
-## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
+## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`)
+
+- Pedidos do usuário (2026-10-20, ao aprovar a prévia do #48): "o botão do ventilador, as dogs poderiam de fato
+  apertar o botão"; "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e
+  o realismo"; "dar um pouco mais de molejo, pouca coisa: quando andar e virar, a cabeça também vira, o tronco… ficar
+  mais natural"; e "deixa o pulo mais fluido, hoje está muito travado e duro, sem deixar aquele bug de quando
+  aterrissar o dog fica com as patas presas".
+- Feito (commit deste branch; PR a abrir):
+  - Botão do ventilador (fase 9): no E ela dá um passinho até a frente do botão (pelo sul da base, de onde a pata
+    alcança; de trás do ventilador não há prompt) e aperta com a pata do lado dele (`action: 'press'`, `lock.press`,
+    `anim.pressAt`/`pressK` em `dogAnimation.js`; o corpo vai mais para a frente se o botão está longe). O ventilador
+    liga no aperto (`PRESS.hit`). Medido com o cenário e a colisão: a pata chega a menos de 1 cm do alto do botão.
+  - Cordinhas na boca (`src/game/mechanics/mouthTug.js`): fase 1 (a do portão), fase 10 (a do portãozinho e a alça do
+    gerador). No E: passinho até a corda (`planStep`/`driveStep`, com colisão; com algo na boca ou sem chegar, puxa
+    como antes), mordida (o ponto mordido vai para a boca, pose de carregar `rope`, `lock.bite`), puxão com a corda
+    presa à boca (o prop desenha a corda até a boca, `setGrip(tug.grip)`, no máximo `len` do ponto onde ela prende) e
+    soltura (volta ao lugar). O puxão e os eventos (`rope:tug`, `generator:pull`) começam ao chegar na corda.
+    Indo de propósito até a corda ou o botão (`lock.reach`), a cabeça que desvia fica desligada (`v2/head.js`).
+  - Curva: o controle guarda o rumo pedido (`c.wantYaw`) e o núcleo manda `anim.turnTo`; a cabeça vai na frente (antes
+    ela chegava atrasada, só pelo giro amortecido), o tronco vem atrás com mola, e a inclinação e o "molejo" de
+    arrancar e frear também são molas (passam um tiquinho e assentam).
+  - Pulo: decolando, as traseiras ainda empurram o chão; no meio, as patas encolhidas; descendo, as dianteiras
+    esticam e pousam primeiro; o pouso afunda e volta com mola (mais forte quanto mais alto o pulo). O conserto das
+    patas presas (#48) continua: teste "pousando do pulo… as patas voltam a andar já" verde.
+  - Testes: `test/interacoes.test.mjs` (modelos novos, cenário real e colisão), fases 1, 9 e 10 ajustadas ao passinho.
+    Capturas novas no E2E: `13b-cordinha-na-boca` (jogo), `05b-cordinha-na-boca` (quintal), `02b-pata-no-botao`
+    (biblioteca).
+- Validação: CI e E2E (`todas`) do commit do PR: conferir no GitHub.
+- Próximo passo: prévia para o usuário testar; aprovação explícita antes de integrar.
+
+## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
 - Plano aprovado: o peito e a garupa na colisão (dois círculos) e a cabeça que desvia, sem mudar o gating dos puzzles.
   Pedidos do usuário para esta etapa (2026-10-20): "diminuir um pouco a velocidade da Radhija, ela está andando muito
@@ -100,10 +130,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
-  - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
-- Próximo passo: aprovação do usuário na prévia nova; depois, as animações acima e a etapa 5 (troca nas 10 fases e
-  cascas de pelo mais leves só no celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das
-  animações de interação).
+  - Head final `1d8e00e`: CI `39492776642` e E2E `todas` `39492800353` verdes (a parte da fase 3 falhou uma vez na dica
+    do cantinho e passou ao repetir, `39494273942`).
+- Integrado com a aprovação do usuário ("Ta aprovado a prévia"): squash `38f5677`, CI do main `39496518317`, deploy
+  `39496742933`; produção em v0.10.4 · build 96 (`version.json` conferido).
+- Depois: as interações de verdade (seção acima, em andamento) e a etapa 5 (troca nas 10 fases e cascas de pelo mais
+  leves só no celular); fechar o registro mordendo o volante e, parada muito tempo, coçar, xixi agachada, sentar e
+  deitar continuam anotados.
 
 ## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 

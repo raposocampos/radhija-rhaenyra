@@ -77,6 +77,8 @@ export function createController(name, cfg) {
     vx: 0, // velocidade real medida (após colisão)
     vz: 0,
     yawRate: 0,
+    /** Rumo pedido (rad): para onde ela está virando (a animação põe a cabeça na frente, o tronco vem atrás). */
+    wantYaw: cfg.start.yaw,
     animSpeed: 0,
     pivoting: false,
     dashT: 0,
@@ -125,6 +127,7 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.x = x;
   c.z = z;
   c.yaw = yaw;
+  c.wantYaw = yaw;
   c.v = 0;
   c.vx = 0;
   c.vz = 0;
@@ -473,6 +476,7 @@ export function startDash(c, dx, dz) {
 export function steer(c, dt, intent) {
   const { cfg } = c;
   const prevYaw = c.yaw;
+  c.wantYaw = c.yaw; // sem rumo pedido (no ar, arrancando, parada): nada a virar
   c.dashCd = Math.max(0, c.dashCd - dt);
   c.bumpCd = Math.max(0, c.bumpCd - dt);
   if (c.jumpCd > 0) c.jumpCd = Math.max(0, c.jumpCd - dt);
@@ -548,6 +552,7 @@ export function steer(c, dt, intent) {
     c.pivoting = false;
     if (has) {
       const desiredYaw = Math.atan2(intent.dx, intent.dz);
+      c.wantYaw = desiredYaw;
       const delta = wrapAngle(desiredYaw - c.yaw);
       const ad = Math.abs(delta);
       let turnMax = cfg.turnSpeed * turnScale;
@@ -566,6 +571,7 @@ export function steer(c, dt, intent) {
       c.yaw = Math.abs(step) >= ad ? desiredYaw : wrapAngle(c.yaw + step);
     } else if (intent.faceX != null) {
       const desiredYaw = Math.atan2(intent.faceX - c.x, intent.faceZ - c.z);
+      c.wantYaw = desiredYaw;
       const delta = wrapAngle(desiredYaw - c.yaw);
       const turnMax = cfg.turnSpeed * 0.6;
       const rate = Math.max(-turnMax, Math.min(turnMax, delta * 8));

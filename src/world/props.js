@@ -205,12 +205,22 @@ export function createProps(engine, layout) {
   ropeRoot.add(tassel);
   const ropePts = Array.from({ length: NP }, () => new THREE.Vector3());
   const ropeLen = 0.47;
+  /** Mordida: o trecho da ponta que fica abaixo da boca (m) e a fração da corda até o ponto mordido. */
+  const BITE = { below: 0.06, s: 1 - 0.06 / ropeLen };
+  /** @type {null | (() => ({ pos: THREE.Vector3, k: number } | null))} */
+  let gripSrc = null;
   const rope = {
     object: ropeRoot,
     t: 0,
     setTug(t) { this.t = THREE.MathUtils.clamp(t, 0, 1); },
+    /** A dog mordendo a corda: src() → { pos (a boca, no mundo), k (0..1) } ou null; null: ninguém. */
+    setGrip(src) { gripSrc = src || null; },
+    /** O ponto da corda que a dog morde, parado (no mundo): logo acima da bolinha. */
+    bitePoint() { return { x: A.x + 0.03, y: A.y - ropeLen * BITE.s, z: A.z }; },
+    /** A ponta da corda agora (onde ela entra na bolinha). */
+    get end() { return _end; },
   };
-  const _end = new THREE.Vector3(), _mid = new THREE.Vector3();
+  const _end = new THREE.Vector3(), _mid = new THREE.Vector3(), _p = new THREE.Vector3(), _bm = new THREE.Vector3(), _q = new THREE.Vector3();
   function updateRope(t) {
     const k = rope.t;
     const swayX = Math.sin(t * 1.3) * 0.025 * (1 - k), swayZ = Math.sin(t * 0.9 + 1) * 0.018 * (1 - k);
@@ -227,6 +237,31 @@ export function createProps(engine, layout) {
         a * A.y + b * _mid.y + c * _end.y,
         a * A.z + b * _mid.z + c * _end.z,
       );
+    }
+    // na boca: do trinco até a boca (esticando com o puxão) e, abaixo dela, o restinho com a bolinha pendurado
+    const g = gripSrc?.();
+    if (g && g.k > 0) {
+      const B = g.pos;
+      const hang = _p.set(B.x, B.y - BITE.below, B.z);
+      _bm.copy(A).lerp(B, 0.5);
+      _bm.y -= 0.03 * (1 - k); // a barriguinha some quando ela estica
+      for (let i = 0; i < NP; i++) {
+        const s = i / (NP - 1);
+        let x, y, z;
+        if (s <= BITE.s) {
+          const u = s / BITE.s, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
+          x = a * A.x + b * _bm.x + c * B.x;
+          y = a * A.y + b * _bm.y + c * B.y;
+          z = a * A.z + b * _bm.z + c * B.z;
+        } else {
+          const u = (s - BITE.s) / (1 - BITE.s);
+          x = B.x + (hang.x - B.x) * u;
+          y = B.y + (hang.y - B.y) * u;
+          z = B.z + (hang.z - B.z) * u;
+        }
+        ropePts[i].lerp(_q.set(x, y, z), g.k);
+      }
+      _end.lerp(hang, g.k);
     }
     tube.update(ropePts, (s) => 0.026 * (1 - k * 0.12) * (1 + 0.1 * Math.sin(s * 70)));
     for (const kn of knots) {

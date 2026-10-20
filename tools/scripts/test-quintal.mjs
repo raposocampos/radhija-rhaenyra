@@ -139,6 +139,7 @@ try {
   await page.keyboard.press('KeyE');
   state = await waitFor((s) => s.quintal.gateOpen, { timeout: 2000 });
   check(qt(state).gateOpen, 'a outra puxa a cordinha: o portãozinho abre');
+  await shot('05b-cordinha-na-boca.png'); // o puxador na boca, no meio do puxão
   await H.gsleep(700); // termina de puxar
   await put('radhija', L.TUBE.inlet.x, L.TUBE.inlet.z + 0.85, Math.PI);
   await clearLog();

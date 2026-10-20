@@ -101,8 +101,9 @@ export function createGame({ engine, dogs, levels, params }) {
   const brains = { radhija: createBrain(), rhaenyra: createBrain() };
   const anims = {};
   const lookVecs = {};
+  const pressVecs = { radhija: new THREE.Vector3(), rhaenyra: new THREE.Vector3() };
   for (const n of NAMES) {
-    anims[n] = { speed: 0, turn: 0, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, celebrateLoop: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
+    anims[n] = { speed: 0, turn: 0, turnTo: 0, reach: false, hop: false, action: 'none', lookAt: null, carrying: false, jump: 0, airK: -1, lickPhase: -1, lickSide: 1, lickSolo: false, celebrateSide: 1, celebrateLoop: 1, lickY: -1, slope: 0, wallK: -1, wallGap: 0, wallTop: 0, wallOut: 0, wallPaws: 0, wallSide: 0, wallLat: 0, shoveK: 0, shoveCycle: -1, shoveN: 0, shoveGap: 0, shoveY: 0, shoveOver: 0, poopK: -1, poopPre: -1, party: null, cheer: -1, extra: null };
     lookVecs[n] = new THREE.Vector3();
   }
   /** Travas do quadro (puzzle.lockFor) — applyDogs usa a inclinação de uma pose roteirizada. */
@@ -932,7 +933,13 @@ export function createGame({ engine, dogs, levels, params }) {
       d.object.rotation.y = c.yaw;
       an.speed = c.animSpeed;
       an.turn = c.yawRate;
-      an.carrying = carries(n);
+      // quanto falta virar até o rumo pedido (a cabeça vai na frente); roteirizada, nada
+      const tt = c.wantYaw - c.yaw;
+      an.turnTo = locks[n]?.drive || c.shove || c.wallDur > 0 ? 0 : Math.atan2(Math.sin(tt), Math.cos(tt));
+      an.reach = !!locks[n]?.reach;
+      an.hop = c.jumpT > 0 && c.hopH > 0; // o pulinho por cima da borda da caminha (patas encolhidas)
+      // mordendo uma corda (lock.bite), a boca fecha nela como num item
+      an.carrying = carries(n) || !!locks[n]?.bite;
       an.poopK = extras ? extras.poopK(n) : -1;
       an.poopPre = extras ? extras.poopPre(n) : -1;
       an.party = extras ? extras.party(n) : null;
@@ -942,6 +949,16 @@ export function createGame({ engine, dogs, levels, params }) {
       an.jump = W ? 0 : c.y;
       an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : locks[n]?.airK ?? -1;
       an.crouch = locks[n]?.crouch ?? 0;
+      // apertando um botão com a pata (lock.press, no mundo): o alto dele no referencial do objeto da dog
+      const PR = locks[n]?.press;
+      if (PR) {
+        const ox = PR.x - c.x, oz = PR.z - c.z, cy = Math.cos(c.yaw), sy = Math.sin(c.yaw);
+        an.pressAt = pressVecs[n].set(ox * cy - oz * sy, PR.y - G.y, ox * sy + oz * cy);
+        an.pressK = PR.k;
+      } else {
+        an.pressAt = null;
+        an.pressK = -1;
+      }
       an.wallK = W ? Math.min(1, c.wallT / c.wallDur) : -1;
       an.wallGap = W ? (c.x - W.x) * W.nx + (c.z - W.z) * W.nz : 0;
       an.wallTop = W ? W.top : 0;

@@ -253,7 +253,7 @@ E devolve um objeto com:
 | `update(dt, { active, comp, ctrls, stay })` | todo quadro em `playing`; devolva `'delivered'` para comemorar |
 | `updateAlways?(dt)` | todo quadro em `playing` e `celebrating` (animações) |
 | `interact(ctrl)` → bool | E / A; `false` faz a dog latir |
-| `lockFor(nome)` → `{ action, faceX, faceZ, drive?, slope? }` ou null | trava a entrada (puxando corda, girando registro); `drive` = pose roteirizada (a fase move a dog, como na subida do escorregador da fase 7) e `slope` inclina o corpo |
+| `lockFor(nome)` → `{ action, faceX, faceZ, drive?, slope?, press?, bite?, reach? }` ou null | trava a entrada (puxando corda, girando registro); `drive` = pose roteirizada (a fase move a dog, como na subida do escorregador da fase 7) e `slope` inclina o corpo; `press` = botão apertado com a pata (o alto dele no mundo e o progresso `k`); `bite` = a boca fechada numa corda; `reach` = ela vai de propósito até a coisa (a cabeça não desvia dela) |
 | `lookTarget(ctrl)` | para onde a dog ativa olha |
 | `modifyIntent?`, `assist?` | empurrar caixotes; "funis" que ajudam a entrar em passagens |
 | `navFlags()` → `{ flag: bool }` | libera arestas do grafo (`gateOpen`, `bridge`…) |
@@ -286,6 +286,9 @@ Peças prontas:
   Radhija nele faz força, `contact: 'strain'`, e o núcleo mostra o aviso de que só a Rhaenyra empurra enquanto ela
   insiste, `HEAVY_HINT` no `game.js`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
+  `createMouthTug` (`mouthTug.js`: no E, um passinho até a corda, a mordida, o puxão com a corda presa à boca e a
+  soltura; o prop recebe `setGrip(tug.grip)` e desenha o ponto mordido na boca, sem esticar além de `len`; fases 1 e
+  10) com `planStep`/`driveStep` (o passinho roteirizado com colisão; a fase 9 usa para chegar ao botão do ventilador),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
   o Lambe-Lambe; liga `speedScale`/`canDash`/`onLick` do puzzle) e `createPigHerd` + `pigPenLayout` (porquinhos num
@@ -516,8 +519,10 @@ não faz parte deste contrato; só a posição é reaplicada ao trocar ou reinic
 
 **Dogs** (`createDog(nome)` em `src/dogs/dog.js`, tipo `DogModel`): `object`, `mouthSocket` (pendure o item aqui,
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,
-`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
-`airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
+`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, turnTo, action, lookAt, carrying, jump, airK }` (`jump` = altura
+do pulo, `airK` = progresso 0..1 no ar ou −1 no chão, `turnTo` = quanto falta virar até o rumo pedido, `c.wantYaw` do
+controle: a cabeça vai na frente na curva e o tronco vem atrás com mola; `pressAt`/`pressK`, a pata apertando um botão;
+`reach`, indo de propósito até a coisa); ações: `none`, `sit`, `push`, `strain`, `tug`, `press`, `celebrate`, `sniff`,
 `dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`, `shove` (empurrão em pé: os campos
 `shove*` estão em `DogAnim`, `src/types.d.ts`). Empurrando um caixote ou carrinho (`push`, ou `strain` fazendo força
 nele), o núcleo manda `pushGap`/`pushTop` (distância do centro à face e altura dele, de `kind` `'crate'` ou `'cart'`
@@ -529,7 +534,10 @@ A pose de boca é detectada pelo nome
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
 `dogRig.js` monta o esqueleto e a IK das pernas; `dogFace.js`, o rosto; `carryPose.js`, o item na boca;
-`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá).
+`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá: decolando, as
+traseiras ainda empurram o chão; no meio, as patas encolhidas; descendo, as dianteiras esticam e pousam primeiro; o
+pouso afunda e volta com mola, mais forte quanto mais alto o pulo. Na curva, a inclinação, o tronco e o "molejo" de
+arrancar e frear são molas amortecidas).
 
 **Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
 esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,
