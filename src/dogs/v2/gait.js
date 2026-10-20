@@ -388,8 +388,10 @@ export function createGait({ skel2, retarget, s }) {
       // traseira atrás demais: passo de conforto antes de a perna esticar (andando e arrancando; freando, não: a pata
       // atrás do lugar é normal e os passinhos de ajuste ao parar cuidam dela). Arrancando forte, ela sai mesmo com as
       // outras no ar (o trote rápido já tem um instante sem pata no chão); nunca fica arrastada esticada
+      // (no trote, com até duas outras no ar: nele quase sempre há duas no ar, e esperar deixava a pata ir longe demais)
       const braking = mv.v < st.speed - 0.15;
-      if (!leg.front && !leg.swing && moving && mv.v > 0 && !braking && leg.stanceT > 0.3 * stanceDur && (room || acc > 0.3)) {
+      const roomC = room || acc > 0.3 || (Math.abs(mv.v) > 1.2 && lifting() < 3);
+      if (!leg.front && !leg.swing && moving && mv.v > 0 && !braking && leg.stanceT > 0.3 * stanceDur && roomC) {
         const comfort = Math.min(1.2 * halfN + 0.02 * s, leg.reachBack - 0.012 * s);
         if (leg.land.z - leg.foot.z > comfort) startSwing(leg, true, lift, 1 / clamp((1 - RN.beta) / RN.f, 0.1, 0.22), 'conforto');
       }
@@ -418,6 +420,9 @@ export function createGait({ skel2, retarget, s }) {
         if (leg.u >= 1) {
           // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
           if (weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) steps.push([li, leg.settle ? 0.1 : stepSpeed]);
+          // um passo fora do ritmo (por tempo, andando): a fase da pata recomeça do apoio agora e volta devagar para a do
+          // ritmo (senão o apoio seguinte ia até a próxima virada da fase, longo demais, e a pata ia longe para trás)
+          if (leg.timed && !leg.settle && moving) leg.off = fract(-ph);
           leg.swing = false;
           leg.timed = false;
           leg.settle = false;
