@@ -150,11 +150,13 @@ async function nativeStackSection() {
   if (process.platform !== 'linux') return [];
   const gdb = await findGdb();
   if (!gdb) return ['  pilhas nativas: sem gdb nesta máquina'];
-  const procs = chromiumProcesses().filter((p) => p.type === 'gpu-process' || p.type === 'renderer');
+  // abas primeiro (onde a thread principal espera), depois o navegador (quem deveria responder) e a GPU
+  const rank = { renderer: 0, browser: 1, 'gpu-process': 2 };
+  const procs = chromiumProcesses().filter((p) => p.type in rank).sort((x, y) => rank[x.type] - rank[y.type]);
   const lines = [];
   const started = Date.now();
   for (const p of procs) {
-    if (Date.now() - started > 40000) { lines.push(`  pilhas nativas: ${p.type} ${p.pid} não lido (tempo do diagnóstico esgotado)`); continue; }
+    if (Date.now() - started > 60000) { lines.push(`  pilhas nativas: ${p.type} ${p.pid} não lido (tempo do diagnóstico esgotado)`); continue; }
     const cmd = process.env.CI ? 'sudo' : gdb;
     const argv = [...(process.env.CI ? ['-n', gdb] : []), '-p', String(p.pid), '-batch', '-nx', '-q', '-ex', 'set pagination off', '-ex', 'thread apply all bt 40'];
     const out = await run(cmd, argv, { timeout: 25000, maxBuffer: 32 * 2 ** 20 }).then((r) => r.stdout, (e) => (e.stdout ? String(e.stdout) : `falhou: ${String(e.message).split('\n')[0]}`));

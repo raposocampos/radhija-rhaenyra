@@ -34,6 +34,8 @@ const DEVICES = [
   },
 ];
 
+// EXPERIMENTO (temporário): E2E_EXTRA_BROWSER=1 abre cada aparelho num navegador próprio (processo da GPU novo).
+const PER_DEVICE = process.env.E2E_EXTRA_BROWSER === '1';
 let server, browser;
 const errors = [];
 let shots = 0;
@@ -61,8 +63,6 @@ if (errors.length) {
   process.exit(1);
 }
 
-// EXPERIMENTO (temporário): E2E_EXTRA_BROWSER=1 abre cada aparelho num navegador próprio (processo da GPU novo).
-const PER_DEVICE = process.env.E2E_EXTRA_BROWSER === '1';
 async function captureDevice(dev, url) {
   const own = PER_DEVICE ? await chromium.launch(browserOptions()) : null;
   try { await captureWith(own || browser, dev, url); } finally { if (own) await closeBrowser(own); }
