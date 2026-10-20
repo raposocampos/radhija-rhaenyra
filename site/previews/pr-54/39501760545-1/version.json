@@ -3,9 +3,9 @@
   "build": 96,
   "pr": 54,
   "label": "prévia PR #54 · sobre v0.10.4",
-  "commit": "e15603f6eb2e045c9b19dcf03f939a7abeed93e2",
-  "head": "1c0076fef6631e0da8d847f8e28e92f79c610d6c",
+  "commit": "8d6853740d00ca83ed531b11f4c1d356eba893fc",
+  "head": "bf15bbd94cda765692df8a3be20dff06bb762294",
   "base": "38f5677b8202e661e2eef1051146c79ea45fac76",
-  "run": "39500517277",
+  "run": "39501760545",
   "attempt": "1"
 }
