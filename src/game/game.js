@@ -552,8 +552,12 @@ export function createGame({ engine, dogs, levels, params }) {
       });
       // Pulo (Espaço / ✕): só quem tem pulo, fora da postura de empurrar. Quem não pula ganha a dica.
       // De frente para uma parede marcada que a fase oferece (puzzle.wallSpots), vira impulso na parede.
+      // Uma fase pode tirar o pulo de uma dog por um tempo (lama: puzzle.canJump); quem tenta ganha a dica da fase.
       const jumpPressed = input.consume('Space', 'Jump');
-      if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
+      if (jumpPressed && A.cfg.jumpHeight && action !== 'push' && !lick.on && puzzle.canJump?.(A) === false) {
+        emit('dog:jumpBlocked', { name: A.name, x: A.x, z: A.z });
+        puzzle.onJumpBlocked?.(A);
+      } else if (jumpPressed && action !== 'push' && !lick.on && canJump(A)) {
         const spot = pickWallSpot(A, puzzle.wallSpots?.(), Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0, world);
         if (spot) {
           startWallJump(A, spot);

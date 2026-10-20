@@ -754,6 +754,21 @@ export function createFeedback(opts) {
     particles.feathers({ x, y: 0.3, z }, { count: 5, size: 0.6 });
   });
   events.on('chicken:land', ({ x, z }) => particles.dust({ x, y: 0.03, z }, { count: 3, size: 0.5, alpha: 0.28, strength: 0.4 }));
+  // o gerador do painel: o puxão da cordinha, o engasgo com fumaça escura, a partida e o motor ligado (fumacinha)
+  events.on('generator:pull', ({ x, z }) => sfx('genPull', x, z));
+  events.on('generator:crank', ({ x, y = 0.27, z }) => {
+    sfx('genCrank', x, z);
+    for (let i = 0; i < 4; i++) later(i * 0.24, () => particles.dust({ x, y, z }, { count: 3, size: 0.55, alpha: 0.45, color: '#5a5650', dir: { x: 0, z: 1 }, strength: 0.6 }));
+  });
+  events.on('generator:start', ({ x, y = 0.27, z }) => {
+    sfx('genStart', x, z);
+    particles.dust({ x, y, z }, { count: 6, size: 0.7, alpha: 0.4, color: '#8a8680', dir: { x: 0, z: 1 }, strength: 0.8 });
+    particles.sparkle({ x, y: y + 0.3, z: z - 0.15 }, { count: 8, radius: 0.25, size: 0.7, rise: 0.4, color: '#c8ffb0' });
+  });
+  events.on('generator:hum', ({ x, y = 0.27, z }) => {
+    sfx('genHum', x, z, { volume: 0.8 });
+    particles.dust({ x, y, z }, { count: 1, size: 0.45, alpha: 0.25, color: '#b8b4ac', dir: { x: 0, z: 1 }, strength: 0.4 });
+  });
   events.on('cake:lit', ({ x, z }) => {
     sfx('partyHorn', x, z);
     const y = (L().CAKE?.base ?? 0.8) + 0.55;
@@ -904,6 +919,11 @@ export function createFeedback(opts) {
     particles.splash({ x, y: 0.04, z }, { count: 4, size: 0.7, strength: 0.3, mist: 0, color: MUD_COLORS[1] });
   });
   events.on('dog:dashBlocked', ({ x, z }) => {
+    sfx('dashBlocked', x, z);
+    particles.splash({ x, y: 0.05, z }, { count: 5, size: 0.7, strength: 0.3, mist: 0, color: MUD_COLORS[2] });
+  });
+  // pulo recusado (patas enlameadas): o mesmo "plof" de lama da arrancada recusada
+  events.on('dog:jumpBlocked', ({ x, z }) => {
     sfx('dashBlocked', x, z);
     particles.splash({ x, y: 0.05, z }, { count: 5, size: 0.7, strength: 0.3, mist: 0, color: MUD_COLORS[2] });
   });

@@ -2,9 +2,10 @@
 // a outro): o caixote empurrado para fora da mangueira, o impulso na torneira e no disjuntor, o chapeuzinho no
 // barquinho, o chapéu fora de ordem caindo da mesa e o quadro da sala; o latido que distrai a gansa e a cordinha do
 // portão, o superbafo pelo cano de brinquedo, o balde com a Rhaenyra puxando a corda, o deque (E desamarra o laço, E
-// escorrega); os caixotes da despensa (a Rhaenyra puxa até as marcas, a Radhija sobe e pega o biscoito); a lama, o Lambe-Lambe, o
-// botão alto do galpão (com ?botao=1, o primeiro abre a porta) e a arrancada na rampa; a piñata (superbafo e as
-// batidas da Rhaenyra); e o bolo completo na ordem do quadro. As regras de cada passo estão em test/fase10.test.mjs.
+// escorrega); os caixotes da despensa (a Rhaenyra puxa até as marcas, a Radhija sobe e pega o biscoito); o gerador do
+// painel (a Rhaenyra puxa a cordinha), o botão alto (com ?botao=1, o primeiro abre a porta do galpão), o vão da horta
+// lá no fundo, a lama, o Lambe-Lambe e a arrancada na rampa; a piñata (o empurrão no tronco pelo oeste, o superbafo e
+// as batidas da Rhaenyra); e o bolo completo na ordem do quadro. As regras de cada passo estão em test/fase10.test.mjs.
 //   node tools/scripts/test-quintal.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 
@@ -31,7 +32,7 @@ async function as(name) {
 }
 /** A Rhaenyra de frente para o botão/alavanca `cfg` (14 cm à esquerda dele) e Espaço: impulso na parede. */
 async function wallJump(cfg) {
-  await put('rhaenyra', cfg.x + cfg.nx * 0.6 - cfg.nz * 0.14, cfg.z + cfg.nz * 0.6 + cfg.nx * 0.14, Math.atan2(-cfg.nx, -cfg.nz));
+  await put('rhaenyra', cfg.x + cfg.nx * 0.5 - cfg.nz * 0.14, cfg.z + cfg.nz * 0.5 + cfg.nx * 0.14, Math.atan2(-cfg.nx, -cfg.nz));
   await page.keyboard.press('Space');
   await waitFor((s) => !!s.dogs.rhaenyra.wall, { timeout: 1500 });
   return waitFor((s) => !s.dogs.rhaenyra.wall, { timeout: 3000 });
@@ -67,7 +68,7 @@ try {
       TAP: l.TAP, BREAKER: l.BREAKER, CRATE: l.CRATE, BOAT: l.BOAT, GOAL: l.GOAL, PAINTING: l.PAINTING, CORD: l.CORD,
       TUBE: l.TUBE, BUCKET: l.BUCKET, ROPE: l.ROPE, HORTA: l.HORTA, RAMP: l.RAMP, DECK: l.DECK,
       DECK_PATH: l.DECK_PATH, PANTRY_CRATES: l.PANTRY_CRATES, SHED_BUTTONS: l.SHED_BUTTONS, ROSE_BUSH: l.ROSE_BUSH, CHICKENS: l.CHICKENS,
-      MANGO_SHOVE: l.MANGO_SHOVE,
+      MANGO_SHOVE: l.MANGO_SHOVE, GENERATOR: l.GENERATOR,
     };
   });
   check(state.levelId === 'fase10' && state.state === 'playing', 'link por id (?level=fase10) abre a fase 10');
@@ -209,23 +210,31 @@ try {
     state = await waitFor((s) => s.quintal.chickens.every((k) => k.state !== 'glide'), { timeout: 4000 });
   }
 
-  // ---- VELA: lama, Lambe-Lambe, botão do galpão e rampa
-  await put('radhija', L.HORTA.x0 - 0.5, 1.55, Math.PI / 2);
-  await walkPath([[L.HORTA.x0 + 0.45, 1.55], [8.1, 1.85]], { tol: 0.15 });
-  state = await info();
-  check(qt(state).mud.k > 0, 'a Radhija passa pelo vão da tábua e cai na lama');
+  // ---- VELA: o gerador ao lado da cerca branca, o botão do painel, o vão lá no fundo, a lama, o Lambe-Lambe e a rampa
   await as('rhaenyra');
-  await page.keyboard.press('KeyF');
-  await put('rhaenyra', 8.95, L.HORTA.z0 - 0.42, 0);
-  state = await H.holdUntil(keysFor(0, 1), (s) => s.quintal.inHorta.rhaenyra && !s.dogs.rhaenyra.jumping, { timeout: 2000, during: () => page.keyboard.press('Space') });
-  check(qt(state).inHorta.rhaenyra, 'a Rhaenyra pula a cerca baixa da horta');
-  await walkTo(8.62, 1.75, { tol: 0.12 }); // pertinho da irmã
-  state = await H.holdUntil(['KeyL'], (s) => s.quintal.mud.k === 0, { timeout: 8000 });
-  check(qt(state).mud.k === 0, 'o Lambe-Lambe tira a lama', JSON.stringify(qt(state).mud));
+  await put('rhaenyra', L.GENERATOR.cord.x + 0.3, L.GENERATOR.cord.z, -Math.PI / 2);
+  await clearLog();
+  await page.keyboard.press('KeyE');
+  state = await waitFor((s) => s.quintal.generator.on, { timeout: 4000 });
+  check(qt(state).generator.on && (await logOf('generator:crank')).length === 1, 'a Rhaenyra puxa a cordinha: o gerador engasga e pega (o painel acende)');
   state = await wallJump(L.SHED_BUTTONS[0]);
   state = await waitFor((s) => s.quintal.doorOpen, { timeout: 2500 });
-  check(qt(state).doorOpen && !qt(state).shed.sty, 'impulso no botão alto do galpão: a porta basculante sobe (o chiqueiro fica fechado)');
+  check(qt(state).doorOpen && !qt(state).shed.sty, 'impulso no botão alto do painel: a porta basculante do galpão sobe (o chiqueiro fica fechado)');
   await shot('07-porta-do-galpao.png');
+  await as('radhija');
+  const gz = (L.HORTA.gap.z0 + L.HORTA.gap.z1) / 2;
+  await put('radhija', L.HORTA.x0 - 0.45, gz, Math.PI / 2);
+  await walkPath([[L.HORTA.x0 + 0.5, gz], [8.6, 4.2]], { tol: 0.15 });
+  state = await info();
+  check(qt(state).mud.k > 0, 'a Radhija passa pelo vão da tábua, lá no fundo, e cai na lama');
+  await as('rhaenyra');
+  await page.keyboard.press('KeyF');
+  await put('rhaenyra', L.HORTA.x0 - 0.42, 4.0, Math.PI / 2);
+  state = await H.holdUntil(keysFor(1, 0), (s) => s.quintal.inHorta.rhaenyra && !s.dogs.rhaenyra.jumping, { timeout: 2000, during: () => page.keyboard.press('Space') });
+  check(qt(state).inHorta.rhaenyra, 'a Rhaenyra pula a cerca baixa da horta');
+  await walkTo(8.1, 4.1, { tol: 0.12 }); // pertinho da irmã
+  state = await H.holdUntil(['KeyL'], (s) => s.quintal.mud.k === 0, { timeout: 8000 });
+  check(qt(state).mud.k === 0 && qt(state).mudRh.k === 0, 'o Lambe-Lambe tira a lama', JSON.stringify(qt(state).mud));
   await as('radhija');
   await walkPath([[9.0, 2.0], [9.9, 2.0], [9.8, L.RAMP.z - 0.05, { tol: 0.1 }]], { tol: 0.15 });
   await put('radhija', 9.85, L.RAMP.z, Math.PI / 2); // de frente para a rampa, parada
@@ -256,10 +265,11 @@ try {
   state = await waitFor((s) => s.quintal.cake.length === 4, { timeout: 3000 });
   check(qt(state).cake.join() === 'ribbon,cookie,candle,hat', 'o chapéu no quarto andar', JSON.stringify(qt(state).cake));
 
-  // ---- ESTRELA: a piñata enroscada no alto da mangueira; a Rhaenyra fica de pé e empurra o tronco (Shift)
+  // ---- ESTRELA: a piñata enroscada no alto da mangueira; a Rhaenyra fica de pé (do lado da roseira) e empurra o tronco
+  const MS = L.MANGO_SHOVE;
   await as('rhaenyra');
-  await put('rhaenyra', L.MANGO_SHOVE.x, L.MANGO_SHOVE.z - 0.55, 0);
-  state = await H.holdUntil([...keysFor(0, 1), 'ShiftLeft'], (s) => s.quintal.pinata.stage !== 'tree', { timeout: 9000 });
+  await put('rhaenyra', MS.x + MS.nx * 0.55, MS.z + MS.nz * 0.55, Math.atan2(-MS.nx, -MS.nz));
+  state = await H.holdUntil([...keysFor(-MS.nx, -MS.nz), 'ShiftLeft'], (s) => s.quintal.pinata.stage !== 'tree', { timeout: 9000 });
   check(qt(state).pinata.stage !== 'tree', 'de pé, três empurrões no tronco soltam a piñata enroscada', JSON.stringify(qt(state).pinata));
   await shot('10a-empurrando-a-mangueira.png');
   state = await waitFor((s) => s.quintal.pinata.stage === 'free', { timeout: 4000 });

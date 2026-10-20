@@ -1,6 +1,6 @@
-// FASE 10 · Fundo do quintal, lado sul: a HORTA cercada (ripas baixas e rústicas; no oeste, o vão da tábua quebrada,
-// com uma ripa pendurada torta e outra caída na grama), canteiros de alface e cenoura, o pé de tomate no tutor, os
-// girassóis junto da cerca, o regador; e o GALPÃO de ferramentas em corte (tábuas verde-sálvia, a faixa do corte em
+// FASE 10 · Fundo do quintal, lado sul: a HORTA cercada (ripas baixas e rústicas; no oeste, lá no fundo, o vão da
+// tábua quebrada, com uma ripa pendurada torta e outra caída na grama), canteiros de alface e cenoura, o pé de tomate
+// no tutor, os girassóis junto da cerca, o regador; e o GALPÃO de ferramentas em corte (tábuas verde-sálvia, a faixa do corte em
 // cima), com a porta basculante (sobe girando pela dobradiça de cima e entra no galpão; o cabo da caixinha de força
 // chega na roldana dela), a bancada com morsa e o painel de ferramentas, latas de tinta, a vassoura, a lâmpada
 // pendurada, a rampa de tábua com travessinhas e a prateleira alta onde fica a vela.
@@ -101,7 +101,7 @@ export function buildGarden(root, layout) {
   const railMesh = new THREE.Mesh(mergeGeometries(rails), postMat);
   railMesh.castShadow = true;
   group.add(railMesh);
-  for (const [x, z] of [[HORTA.x0, HORTA.z0], [HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.gap.z0 - 0.03], [HORTA.x0, HORTA.gap.z1 + 0.03], [HORTA.x0, 3.2], [HORTA.x0, 5.0], [(HORTA.x0 + HORTA.x1) / 2, HORTA.z0]]) {
+  for (const [x, z] of [[HORTA.x0, HORTA.z0], [HORTA.x1, HORTA.z0], [HORTA.x0, HORTA.gap.z0 - 0.03], [HORTA.x0, HORTA.gap.z1 + 0.03], [HORTA.x0, 1.9], [HORTA.x0, 3.45], [HORTA.x0, 6.2], [(HORTA.x0 + HORTA.x1) / 2, HORTA.z0]]) {
     const p = new THREE.Mesh(rbox(0.07, fh + 0.1, 0.07, 0.01), postMat);
     p.position.set(x, (fh + 0.1) / 2, z);
     p.castShadow = true;
@@ -201,7 +201,7 @@ export function buildGarden(root, layout) {
     group.add(f);
     return head;
   };
-  const heads = [sunflower(7.1, HORTA.z0 - 0.18, 1.1, 1), sunflower(7.6, HORTA.z0 - 0.22, 1.25, 2), sunflower(8.85, HORTA.z0 - 0.18, 1.0, 3)];
+  const heads = [sunflower(7.35, HORTA.z0 - 0.18, 1.1, 1), sunflower(7.85, HORTA.z0 - 0.22, 1.25, 2), sunflower(8.85, HORTA.z0 - 0.18, 1.0, 3)];
   // regador azul encostado no canteiro
   const can = new THREE.Group();
   const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.18, 16), stdMat('#5a8fc0', { roughness: 0.4, metalness: 0.3 }));

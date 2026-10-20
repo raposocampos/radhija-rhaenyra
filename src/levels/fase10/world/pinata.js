@@ -1,8 +1,8 @@
 // FASE 10 · A piñata da estrela no gramado do quintal: a mangueira grande com o galho comprido por cima da roseira,
 // a corda e a piñata de estrela (cinco pontas com franjas de papel colorido) que balança como um pêndulo, racha a
 // cada batida e, na terceira, se abre em pedaços com balas voando. A roseira florida (com espinhos) fica embaixo.
-// API: buildPinata(root, layout) → { group, pinata: { object, setPos(x, y, z, tiltX, tiltZ), setCracks(n), burst(),
-//   reset() }, update(dt, t) }
+// API: buildPinata(root, layout) → { group, seeThrough, mango: { object, setSway(a, va) }, pinata: { object,
+//   setPos(x, y, z, tiltX, tiltZ), setCracks(n), burst(), reset() }, update(dt, t) }
 import * as THREE from 'three';
 import { rng, rbox, stdMat, woodMat, foliageCluster, leafSkin, contactShadow, mergeGeometries, canvasTexture } from '../../../world/util.js';
 import { crownMat, plantMat } from '../../../world/plants.js';
@@ -64,7 +64,8 @@ export function buildPinata(root, layout) {
     tp.setXYZ(i, c.x + (tp.getX(i) - c.x) * k, tp.getY(i), c.z + (tp.getZ(i) - c.z) * k);
   }
   trunkGeo.computeVertexNormals();
-  tree.add(new THREE.Mesh(trunkGeo, bark));
+  const trunkMesh = new THREE.Mesh(trunkGeo, bark);
+  tree.add(trunkMesh);
   // o galho comprido até em cima da roseira (afina na ponta)
   const P = PINATA.pivot;
   const branchCurve = new THREE.CatmullRomCurve3([
@@ -95,9 +96,9 @@ export function buildPinata(root, layout) {
   const leaves = leafSkin(crownGeo, { count: 700, size: 0.11, seed: 63, material: crownMat() });
   // a copa (com as mangas) balança pelo alto do tronco quando a Rhaenyra empurra (a folhagem atrasada)
   const crownSway = new THREE.Group();
-  crownSway.position.set(MANGO_TREE.x, 2.3, MANGO_TREE.z);
+  crownSway.position.set(MANGO_TREE.x, MANGO_SHOVE.pivotY, MANGO_TREE.z);
   const crownIn = new THREE.Group();
-  crownIn.position.set(-MANGO_TREE.x, -2.3, -MANGO_TREE.z);
+  crownIn.position.set(-MANGO_TREE.x, -MANGO_SHOVE.pivotY, -MANGO_TREE.z);
   crownSway.add(crownIn);
   crownIn.add(crown, leaves);
   tree.add(crownSway);
@@ -266,12 +267,16 @@ export function buildPinata(root, layout) {
   layoutPin();
   root.add(group);
   return {
-    /** A mangueira (empurrão em pé): setSway(a, va) inclina a copa para longe da dog (a rad, + = para o sul). */
+    // o tronco e a copa podem ficar entre a câmera e as dogs (empurrando o tronco, perto da roseira)
+    seeThrough: [trunkMesh, crownSway],
+    /** A mangueira (empurrão em pé): setSway(a, va) inclina a copa para longe da dog (a rad, + = para o lado oposto ao dela). */
     mango: {
       object: crownSway,
       setSway(a, va) {
-        crownSway.rotation.x = a * 0.7 + va * 0.012;
-        crownSway.rotation.z = va * 0.004;
+        // −n é o lado para onde ela empurra: inclinar para +Z é girar em +X; para +X, girar em −Z
+        const k = a * 0.7 + va * 0.012;
+        crownSway.rotation.x = -MANGO_SHOVE.nz * k + MANGO_SHOVE.nx * va * 0.004;
+        crownSway.rotation.z = MANGO_SHOVE.nx * k + MANGO_SHOVE.nz * va * 0.004;
       },
     },
     group,

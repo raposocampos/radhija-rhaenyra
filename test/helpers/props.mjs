@@ -426,6 +426,7 @@ export function stubFase10Props(root, layout) {
     shedDoor: gate(root, 'fase10.shedDoor'),
     shedButtons: [wallButton(root, 'fase10.shedButton1'), wallButton(root, 'fase10.shedButton2')],
     shedLinks: { door: link('fase10.shedLinks.door'), gate: link('fase10.shedLinks.gate') },
+    generator: checked('fase10.generator', { object: object(root, 'gerador'), pull: 0, state: 'off', setPull(k) { this.pull = k; }, setState(s) { this.state = s; } }),
     styGate: gate(root, 'fase10.styGate'),
     crates: checked('fase10.crates', { list: layout.PANTRY_CRATES.list.map(() => ({ x: layout.PANTRY_CRATES.x0, locked: false })), setCrate(i, x, locked) { this.list[i] = { x, locked }; } }),
     pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),

@@ -4,9 +4,10 @@
 // árvore (a Dona Gansa guardando a cordinha do portão, o superbafo pelo cano de brinquedo até o pombo, o elevador de
 // balde com a Rhaenyra puxando a corda, o deque onde a Radhija anda livre, desamarra o laço e escorrega); o biscoito
 // em cima do armário da despensa (a Rhaenyra puxa três caixotes até as marcas do chão, a Radhija sobe); a vela do 3 no
-// galpão (a lama da horta, o Lambe-Lambe, os dois botões altos sorteados: porta ou chiqueiro, e a rampa só com
-// arrancada); a estrela na piñata em cima da roseira (o superbafo balança, a Rhaenyra pula e bate); os legumes do
-// campinho; os porquinhos do chiqueiro; as galinhas do quintal; e as regras de cada passo. Headless.
+// galpão (o gerador que liga o painel, os dois botões altos sorteados: porta ou chiqueiro, o vão da horta lá no fundo,
+// a lama, o Lambe-Lambe, a Rhaenyra enlameada sem pulo, e a rampa só com arrancada); a estrela na piñata em cima da
+// roseira (o empurrão no tronco pelo oeste, o superbafo balança, a Rhaenyra pula e bate); os legumes do campinho; os
+// porquinhos do chiqueiro; as galinhas do quintal; e as regras de cada passo. Headless.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
@@ -39,7 +40,16 @@ function as(h, name) {
 /** Onde ficar para o impulso no botão/alavanca `cfg` (de frente, com a dog um pouco à esquerda dele). */
 function kickSpot(cfg) {
   const lat = WALL_BUTTON_SHAPE[cfg.kind].lat;
-  return { x: cfg.x + cfg.nx * 0.6 + -cfg.nz * lat, z: cfg.z + cfg.nz * 0.6 + cfg.nx * lat };
+  return { x: cfg.x + cfg.nx * 0.5 + -cfg.nz * lat, z: cfg.z + cfg.nz * 0.5 + cfg.nx * lat };
+}
+/** A Rhaenyra (ativa) puxa a cordinha do gerador do painel e espera ele pegar. */
+function startGenerator(h) {
+  const G = L.GENERATOR;
+  put(h, 'rhaenyra', G.cord.x + 0.3, G.cord.z, -Math.PI / 2);
+  assert.equal(h.info().prompt, TEXT.prompt.gen, 'prompt do gerador');
+  h.tap('KeyE');
+  assert.equal(q(h).generator.pulling, true, 'puxando a cordinha');
+  assert.ok(h.run(G.pull + G.crank + 0.5, { until: (i) => i.quintal.generator.on }), 'o gerador pegou');
 }
 /** A Rhaenyra (ativa) vai para a frente do botão `cfg`, de frente para a parede, e dá o impulso. */
 function wallJump(h, cfg) {
@@ -97,10 +107,11 @@ function climbCrates(h) {
 /** A piñata enroscada: a Rhaenyra fica de pé de frente para o tronco da mangueira e empurra (Shift) até ela descer. */
 function shoveTree(h) {
   as(h, 'rhaenyra');
-  const K = shoveStance(L.MANGO_SHOVE, h.ctrls.rhaenyra.r);
-  put(h, 'rhaenyra', K.x, K.z - 0.25, 0); // ao norte do tronco, olhando para o sul
+  const M = L.MANGO_SHOVE;
+  const K = shoveStance(M, h.ctrls.rhaenyra.r);
+  put(h, 'rhaenyra', K.x + M.nx * 0.25, K.z + M.nz * 0.25, Math.atan2(-M.nx, -M.nz)); // do lado de cá do tronco (oeste), olhando para ele
   h.clearLog();
-  h.hold([0, 1], ['ShiftLeft']);
+  h.hold([-M.nx, -M.nz], ['ShiftLeft']);
   assert.ok(h.run(2, { until: (i) => !!i.dogs.rhaenyra.shove }), 'de pé, com as patas no tronco');
   h.hold(null, ['ShiftLeft']);
   assert.ok(h.run(6, { until: (i) => i.quintal.pinata.stage !== 'tree' }), `três empurrões soltam a piñata ${JSON.stringify(q(h).pinata)}`);
@@ -300,31 +311,43 @@ test('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cinco enf
   assert.deepEqual(q(h).cake, ['ribbon', 'cookie'], 'o biscoito no segundo andar');
   assert.equal(h.info().stage, 'cake2');
 
-  // ---- VELA: a Radhija pelo vão da horta, cai na lama; a Rhaenyra pula a cerca e lambe
-  put(h, 'radhija', L.HORTA.x0 - 0.5, (L.HORTA.gap.z0 + L.HORTA.gap.z1) / 2, Math.PI / 2);
-  h.walkPath([[L.HORTA.x0 + 0.45, 1.55], [8.1, 1.85]], { tol: 0.12 });
-  assert.ok(q(h).mud.k > 0, 'enlameada');
-  assert.equal(q(h).inHorta.radhija, true);
+  // ---- VELA: o gerador ao lado da cerca branca liga o painel; o botão certo (com ?botao=1, o primeiro) abre a porta
   as(h, 'rhaenyra');
-  h.tap('KeyF'); // a Radhija espera
-  put(h, 'rhaenyra', 8.95, L.HORTA.z0 - 0.42, 0);
-  h.hold([0, 1]);
-  h.tap('Space');
-  h.run(0.55);
-  h.hold(null);
-  h.run(0.2);
-  assert.equal(q(h).inHorta.rhaenyra, true, 'a Rhaenyra pulou a cerca baixa');
-  h.keyDown('KeyL');
-  const clean = h.run(6, { until: (i) => i.quintal.mud.k === 0 });
-  h.keyUp('KeyL');
-  assert.ok(clean, `o Lambe-Lambe limpou a Radhija ${JSON.stringify(q(h).mud)}`);
-  // os dois botões altos do galpão (com ?botao=1, o primeiro abre a porta)
+  put(h, 'rhaenyra', L.GENERATOR.cord.x + 0.3, L.GENERATOR.cord.z, -Math.PI / 2);
+  assert.equal(h.info().objective, TEXT.objective.genRh);
+  h.clearLog();
+  startGenerator(h);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.ok(hints(h).includes(TEXT.hint.genOn));
   assert.equal(h.info().objective, TEXT.objective.buttonsRh);
   h.clearLog();
   wallJump(h, L.SHED_BUTTONS[0]);
   assert.ok(h.run(1.5, { until: (i) => i.quintal.doorOpen }), 'o botão certo abriu a porta do galpão');
   assert.equal(q(h).shed.sty, false, 'o chiqueiro continua fechado');
   assert.ok(hints(h).includes(TEXT.hint.doorButton));
+  // ---- a Radhija entra pelo vão, lá no fundo (perto do chiqueiro), e cai na lama; a Rhaenyra pula a cerca e lambe
+  as(h, 'radhija');
+  assert.equal(h.info().objective, TEXT.objective.hortaRad);
+  const gz = (L.HORTA.gap.z0 + L.HORTA.gap.z1) / 2;
+  put(h, 'radhija', L.HORTA.x0 - 0.45, gz, Math.PI / 2);
+  h.walkPath([[L.HORTA.x0 + 0.5, gz], [8.6, 4.2]], { tol: 0.12 });
+  assert.ok(q(h).mud.k > 0, 'enlameada');
+  assert.equal(q(h).inHorta.radhija, true);
+  as(h, 'rhaenyra');
+  h.tap('KeyF'); // a Radhija espera
+  assert.equal(h.info().objective, TEXT.objective.jumpLickRh);
+  put(h, 'rhaenyra', L.HORTA.x0 - 0.42, 4.0, Math.PI / 2);
+  h.hold([1, 0]);
+  h.tap('Space');
+  h.run(0.55);
+  h.hold(null);
+  h.run(0.2);
+  assert.equal(q(h).inHorta.rhaenyra, true, 'a Rhaenyra pulou a cerca baixa');
+  assert.equal(q(h).mudRh.k, 0, 'longe da lama, ela continua limpinha');
+  h.keyDown('KeyL');
+  const clean = h.run(6, { until: (i) => i.quintal.mud.k === 0 });
+  h.keyUp('KeyL');
+  assert.ok(clean, `o Lambe-Lambe limpou a Radhija ${JSON.stringify(q(h).mud)}`);
   as(h, 'radhija');
 
   // ---- a rampa: arrancada e a vela lá no alto
@@ -573,7 +596,7 @@ test('fase 10: no deque a Radhija anda livre (tronco e casinha seguram) e escolh
   assert.equal(q(h).place.ribbon, 'home');
 });
 
-test('fase 10: lama sem arrancada; os dois botões do galpão (um abre a porta, o outro o chiqueiro); a rampa só com arrancada', async () => {
+test('fase 10: lama sem arrancada; o gerador liga o painel; os dois botões (um abre a porta, o outro o chiqueiro); a rampa só com arrancada', async () => {
   const h = await game('botao=2');
   h.run(0.3);
   puz(h).debugSet('gate');
@@ -588,9 +611,34 @@ test('fase 10: lama sem arrancada; os dois botões do galpão (um abre a porta, 
   h.run(0.2);
   assert.ok(h.log('dog:dashBlocked').length >= 1, 'enlameada, a arrancada não sai');
   assert.ok(hints(h).includes(TEXT.hint.noDash));
-  assert.equal(h.info().objective, TEXT.objective.muddyRad);
-  // a Rhaenyra: o primeiro botão abre o chiqueiro (a porta continua fechada); o segundo, a porta
+  assert.equal(h.info().objective, TEXT.objective.genRad, 'primeiro, o gerador do painel');
+  // a Radhija não tem força para a cordinha do gerador
+  const G = L.GENERATOR;
+  put(h, 'radhija', G.cord.x + 0.28, G.cord.z, -Math.PI / 2);
+  assert.equal(h.info().prompt, TEXT.prompt.gen);
+  h.clearLog();
+  h.tap('KeyE');
+  h.run(0.3);
+  assert.ok(hints(h).includes(TEXT.hint.genHeavy));
+  assert.deepEqual(q(h).generator, { on: false, pulling: false });
+  // a Rhaenyra: com o painel apagado, nada de impulso (o Espaço é um pulo comum) e nenhum botão afunda
   as(h, 'rhaenyra');
+  const k0 = kickSpot(L.SHED_BUTTONS[0]);
+  h.clearLog();
+  put(h, 'rhaenyra', k0.x, k0.z, Math.atan2(-L.SHED_BUTTONS[0].nx, -L.SHED_BUTTONS[0].nz));
+  h.run(0.3);
+  assert.notEqual(h.info().prompt, TEXT.prompt.wall, 'sem força, sem impulso');
+  assert.ok(hints(h).includes(TEXT.hint.noPowerBoard));
+  h.tap('Space');
+  h.run(D + 0.2);
+  assert.equal(h.log('dog:wallJump').length, 0);
+  assert.deepEqual([q(h).shed.open, q(h).shed.sty], [false, false], 'nenhum botão apertado');
+  // a partida: puxa a cordinha, o motor engasga e pega; ligado, o "tá-tá-tá" e a fumacinha
+  h.clearLog();
+  startGenerator(h);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.ok(h.run(1.2, { until: () => h.log('generator:hum').length > 0 }), 'ligado, o motor faz tá-tá-tá');
+  // o primeiro botão abre o chiqueiro (a porta continua fechada); o segundo, a porta
   h.clearLog();
   wallJump(h, L.SHED_BUTTONS[0]);
   assert.equal(q(h).shed.sty, true, 'o primeiro botão abriu o chiqueiro');
@@ -770,10 +818,11 @@ test('fase 10: as galinhas — de frente fogem correndo; por trás nem ligam; o 
   assert.equal(h.log('hint').filter((x) => /galinha/i.test(x.text || '')).length, 0);
 });
 
-test('fase 10: a Rhaenyra que pisa na lama escorrega na parede (sem impulso) até a Radhija lambê-la (L)', async () => {
+test('fase 10: a Rhaenyra que pisa na lama escorrega (sem pulo nem impulso) até a Radhija lambê-la (L)', async () => {
   const h = await game('botao=1');
   h.run(0.3);
   puz(h).debugSet('gate');
+  puz(h).debugSet('generator');
   as(h, 'rhaenyra');
   h.clearLog();
   // parada na lama (como na troca) ela não se suja; andando ali, sim
@@ -786,21 +835,33 @@ test('fase 10: a Rhaenyra que pisa na lama escorrega na parede (sem impulso) at�
   assert.ok(q(h).mudRh.k > 0, `andando na lama, enlameada ${JSON.stringify(q(h).mudRh)}`);
   assert.ok(hints(h).includes(TEXT.hint.mudRh));
   assert.equal(h.info().objective, TEXT.objective.muddyRh);
-  // no botão do galpão: sem prompt de impulso; o Espaço vira um pulinho comum e o botão não afunda
+  // enlameada, nem pulo: o Espaço só espirra lama (e a dica)
+  h.clearLog();
+  h.hold([1, 0]);
+  h.tap('Space');
+  h.run(0.3);
+  h.hold(null);
+  assert.ok(h.log('dog:jumpBlocked').length >= 1, 'enlameada, o pulo não sai');
+  assert.equal(h.log('dog:jump').length, 0);
+  assert.equal(h.ctrls.rhaenyra.jumpT || 0, 0);
+  assert.ok(hints(h).includes(TEXT.hint.jumpMud));
+  // no botão do painel: sem prompt de impulso; o Espaço não pula e o botão não afunda
   const k = kickSpot(L.SHED_BUTTONS[0]);
   put(h, 'rhaenyra', k.x, k.z, Math.atan2(-L.SHED_BUTTONS[0].nx, -L.SHED_BUTTONS[0].nz));
   h.run(0.2);
   assert.notEqual(h.info().prompt, TEXT.prompt.wall, 'enlameada, sem impulso');
   assert.ok(hints(h).includes(TEXT.hint.wallMud));
+  h.clearLog();
   h.tap('Space');
   h.run(D + 0.2);
+  assert.equal(h.log('dog:wallJump').length + h.log('dog:jump').length, 0, 'nem impulso nem pulo');
   assert.equal(q(h).shed.open, false, 'o botão não foi apertado');
   // a Radhija lambe a irmã (L): limpinha, o impulso volta
   as(h, 'radhija');
   assert.equal(h.info().objective, TEXT.objective.lickRad);
   put(h, 'rhaenyra', k.x, k.z, Math.atan2(-L.SHED_BUTTONS[0].nx, -L.SHED_BUTTONS[0].nz));
   const rh = h.ctrls.rhaenyra;
-  put(h, 'radhija', rh.x - 0.45, rh.z + 0.05, Math.PI / 2);
+  put(h, 'radhija', rh.x + 0.45, rh.z + 0.05, -Math.PI / 2);
   h.keyDown('KeyL');
   const clean = h.run(8, { until: (i) => i.quintal.mudRh.k === 0 });
   h.keyUp('KeyL');
@@ -817,6 +878,7 @@ test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da bo
   const h = await game('botao=2'); // com ?botao=2, o primeiro botão abre o chiqueiro
   h.run(0.3);
   puz(h).debugSet('gate');
+  puz(h).debugSet('generator');
   as(h, 'rhaenyra');
   h.clearLog();
   wallJump(h, L.SHED_BUTTONS[0]);
@@ -843,14 +905,14 @@ test('fase 10: o botão errado solta os porquinhos; eles derrubam o legume da bo
   // a Radhija pega a cenoura de volta e larga no meio da horta: um porco come e cochila (distraído) e depois volta
   const fv = q(h).veg;
   assert.equal(fv.floor, 1, 'a cenoura caiu no chão');
-  put(h, 'radhija', 8.3, 2.9, 0);
+  put(h, 'radhija', 8.75, 3.05, 0);
   puz(h).debugSet('vegHere');
   h.run(0.1);
   h.clearLog();
   // um porquinho pode estar dando um esbarrão nela (trava o E por um instante): tenta de novo
   for (let k = 0; k < 20 && q(h).veg.held.radhija; k++) { h.tap('KeyE'); h.run(0.1); }
   assert.equal(q(h).veg.held.radhija, null, 'largou a cenoura no meio da horta');
-  put(h, 'radhija', 7.2, 0.9, Math.PI);
+  put(h, 'radhija', 8.0, 1.3, Math.PI);
   assert.ok(h.run(15, { until: () => h.log('pig:eat').length >= 1 }), `um porco foi comer ${JSON.stringify(q(h).pigs.pigs)}`);
   assert.ok(q(h).pigs.distracted >= 1);
   assert.ok(hints(h).includes(TEXT.hint.pigsEat));

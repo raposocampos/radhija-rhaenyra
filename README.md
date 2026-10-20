@@ -87,16 +87,18 @@ tela cheia; no iPhone, use Compartilhar → "Adicionar à Tela de Início" para 
    segura quando você troca); lá em cima, a Radhija anda pelo deque, desamarra o laço e desce pelo escorregador. O
    biscoito de osso de glacê está em cima do armário alto da despensa: a Rhaenyra puxa três caixotes pela alça, com a
    boca, até as marcas do chão (lá eles travam sozinhos e a marca fica verde); em fila, do mais alto ao mais baixo, eles
-   viram uma escadinha e a Radhija sobe por eles. A vela do 3 está no galpão, atrás da horta: a Radhija passa pelo vão da cerca e cai na lama,
-   a Rhaenyra pula a cerca e a limpa com o Lambe-Lambe; dos dois botões altos no painel ao lado do galpão, um abre a porta
-   basculante e o outro, o chiqueiro (sorteado a cada partida): os três porquinhos saem, atrapalham e derrubam o que
-   a dog leva na boca, e só os legumes do campinho largados no chão os distraem, por um tempo; a Radhija sobe a
-   rampa com uma arrancada até a vela.
+   viram uma escadinha e a Radhija sobe por eles. A vela do 3 está no galpão, atrás da horta. Ao lado da cerca branca,
+   o painel de dois botões altos só funciona com o gerador ligado: a Rhaenyra puxa a cordinha e ele engasga e pega.
+   Um botão abre a porta basculante do galpão e o outro, o chiqueiro (sorteado a cada partida): os três porquinhos
+   saem, atrapalham e derrubam o que a dog leva na boca, e só os legumes do campinho largados no chão os distraem, por
+   um tempo. A Radhija entra na horta pelo vão da cerca, lá no fundo, perto do chiqueiro, e cai na lama; a Rhaenyra
+   pula a cerca e a limpa com o Lambe-Lambe (enlameada, a Rhaenyra não pula). A Radhija sobe a rampa com uma arrancada
+   até a vela e volta pelo mesmo caminho, entre os porcos e a lama.
    Os legumes do campinho (milho, cenoura e abóbora) podem ser colhidos e largados no chão. Duas galinhas ciscam no
    campinho: fogem de quem chega de frente e saem voando com um latido. A estrela está dentro da piñata, que enroscou
-   no alto da mangueira: a Rhaenyra fica de pé e empurra o tronco até ela escorregar e descer na corda, em cima da
-   roseira; o superbafo a faz balançar para fora dos espinhos e a Rhaenyra pula e bate nela quando ela passa por cima;
-   três batidas e ela abre. São cinco ossinhos nesta fase.
+   no alto da mangueira: a Rhaenyra fica de pé, do lado da roseira, e empurra o tronco até ela escorregar e descer na
+   corda, em cima da roseira; o superbafo a faz balançar para fora dos espinhos e a Rhaenyra pula e bate nela quando
+   ela passa por cima; três batidas e ela abre. São cinco ossinhos nesta fase.
 
 Parâmetros úteis: `?level=2` ou `?level=fase2` (começa na fase 2), `?play` (pula a tela inicial), `?debug` (colisores e grafo de navegação),
 `?stage=<etapa>` (pula etapas do puzzle).

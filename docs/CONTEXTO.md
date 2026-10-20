@@ -1,6 +1,6 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, em andamento; #34 a #42 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-19, Claude** (fase 10, tarefa D, quinta rodada de retorno; #34 a #42 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Entregue: empurrão em pé, pés no chão no modelo novo (PR #41, squash `0bc887a`, deploy `39337609932`)
@@ -387,9 +387,32 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
     `debugSet('pinataDown')` pula a etapa. A Rhaenyra só se suja quando o jogador anda com ela na lama (parada ali na
     troca, não).
   - Ainda falta: a cabeça das dogs atravessando paredes e móveis (etapa 4 do PR #37, das sessões dos modelos).
-- Próximo passo da D: com o #40 (correção dos porquinhos) no main, atualizar com o main, rodar CI e E2E `todas` no
-  head final, revisar as capturas e entregar a prévia completa; integrar só com a aprovação do usuário (squash com SHA
-  esperado, deploy do `github-pages` dessa versão e aviso ao orquestrador).
+  - Quarta rodada (prévia de `1a8562b`: CI ok, E2E `quintal` 52/52, `todas` verde em `5c56527`): com algo na boca,
+    nada de pegar outro item (`take()` recusa; a rampa também).
+  - Quinta rodada de retorno (2026-10-19), feita no branch (consultar o PR #33 para SHA, CI e E2E):
+    - Saiu o vaso do canto da porta da varanda (`PORCH_POTS` ficou com um, no canto do fundo).
+    - Empurrão na mangueira pelo **oeste** (`MANGO_SHOVE.nx = -1`, do lado da roseira, à vista da câmera); a copa
+      balança para longe da dog (`setSway` segue a normal), a piñata enroscada gira junto (`swayPoint`, `pivotY`) e o
+      tronco e a copa entram no "ver através".
+    - O vão da horta foi para o **fundo** (`HORTA.gap` z 4,95–5,35, na altura da porteira do chiqueiro) com a lama logo
+      depois (`MUD`); canteiros, tomateiro e grafo (`B_pass`, `B_strip`, `B_gap`, `H_mud`) refeitos. A cerca oeste da
+      horta foi 30 cm para leste (`HORTA.x0 = 7.1`) para caber o painel na faixa ao lado da cerca branca.
+    - **Rhaenyra enlameada não pula**: gancho novo do núcleo `puzzle.canJump`/`onJumpBlocked` (evento
+      `dog:jumpBlocked`, ARQUITETURA §6), além do impulso já bloqueado.
+    - Funil do cano: no lugar dos pés em V, um pezinho só (argola, haste e base) dentro do colisor; a plaquinha
+      "FALE AQUI" foi para cima da argola.
+    - Painel dos botões na faixa entre a cerca branca e a horta (`BUTTON_BOARD`, preso na cerca, virado para o sul,
+      passagem de 74 cm na ponta) com luz de força, e o **gerador** (`GENERATOR`, `sty.js`): a Rhaenyra puxa a cordinha
+      (E; a Radhija não tem força), ele engasga (`crank`) e pega; ligado, treme, solta fumacinha e faz "tá-tá-tá"
+      (eventos `generator:pull|crank|start|hum`, sons `genPull|genCrank|genStart|genHum`). Sem ele, os botões ficam
+      fora de `wallSpots` (dica `noPowerBoard`); os fios vão pelo chão até a caixinha do galpão.
+    - Galinha refeita (`src/characters/chicken.js`): corpo numa malha só, sem a "bola" atrás; rabo de penas compridas
+      escuras, arqueadas; crista serrilhada (extrusão); duas cores de marrom; mesma animação.
+    - Testes (`fase10.test.mjs`), E2E (`test-quintal.mjs`) e capturas (`capture-quintal.mjs`) com o gerador, o vão
+      novo, o empurrão pelo oeste e o pulo bloqueado.
+- Próximo passo da D: conferir CI e E2E `todas` do head do PR #33, revisar as capturas (gerador, painel, vão, galinha,
+  empurrão) e entregar a prévia; integrar só com a aprovação do usuário (squash com SHA esperado, deploy do
+  `github-pages` dessa versão e aviso ao orquestrador).
 - **C entregue (fase 9, PR #29):** squash `efa779c` no main, CI do main `39193811954`, deploy `39193868755`
   (deployment `7164861501`); `version.json` de produção conferido em `efa779c`. Não repetir merge/deploy. Feito na C: cenário em `src/levels/fase9/world/` (casa em corte com escritório,
   hall, biblioteca e jardim de inverno; estantes instanciadas, lareira oca com fogo, escadinha de rodinhas, globo,

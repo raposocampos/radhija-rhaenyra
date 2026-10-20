@@ -591,6 +591,9 @@ export interface Puzzle {
   /** false impede a arrancada (Shift) desta dog; o núcleo emite dog:dashBlocked e chama onDashBlocked. */
   canDash?(ctrl: DogController): boolean;
   onDashBlocked?(ctrl: DogController): void;
+  /** false impede o pulo (e o impulso na parede) desta dog; o núcleo emite dog:jumpBlocked e chama onJumpBlocked. */
+  canJump?(ctrl: DogController): boolean;
+  onJumpBlocked?(ctrl: DogController): void;
   /**
    * Lambe-Lambe: cada lambida que chega à irmã. As duas dogs lambem: ctrl é quem lambeu e lick.target quem foi
    * lambida. Declarar este método diz ao núcleo que a fase dá um efeito às lambidas (e cuida das dicas). Devolva
@@ -931,8 +934,10 @@ export interface Fase10Props extends LevelProps {
   rope: { handle: THREE.Object3D; setPull(pulled: number, holder: DogModel | null): void };
   /** A porta basculante do galpão (0 fechada … 1 aberta). */
   shedDoor: GateProp;
-  /** Os dois botões altos na parede do galpão (um abre a porta, o outro o chiqueiro: sorteado). */
+  /** Os dois botões altos do painel ao lado da cerca branca (um abre a porta do galpão, o outro o chiqueiro: sorteado). */
   shedButtons: WallButtonProp[];
+  /** O gerador do painel: setPull(k) tira a alça da partida (0..1); setState: 'off', 'crank' (engasgando) ou 'on'. */
+  generator: { object: THREE.Object3D; setPull(k: number): void; setState(state: 'off' | 'crank' | 'on'): void };
   /** Os fios da caixinha de força: pulse() corre a luz pelo fio; setOn deixa aceso. */
   shedLinks: { door: { pulse(): void; setOn(on: boolean): void }; gate: { pulse(): void; setOn(on: boolean): void } };
   /** A porteira do chiqueiro (0 fechada … 1 aberta). */

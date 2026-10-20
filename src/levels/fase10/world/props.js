@@ -295,9 +295,9 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   };
   const breaker = place(buildWallButton({ kind: 'lever', top: BREAKER.top, color: '#f2c14e', plate: '#d8dcd6', trim: '#2a2624', name: 'disjuntor' }), BREAKER);
   const tap = place(buildWallButton({ kind: 'button', top: TAP.top, color: '#4aa8e0', plate: '#f4ecdc', trim: '#c87a4a', name: 'botao-torneira' }), TAP);
-  // os dois botões altos do galpão: iguais (qual abre o quê é sorteado)
-  // (bem à vista: botão amarelo em placa branca com borda vermelha, num quadro azul com "?" e uma lampadinha que pisca
-  // até alguém apertar)
+  // os dois botões altos do painel ao lado da cerca branca: iguais (qual abre o quê é sorteado)
+  // (bem à vista: botão amarelo em placa branca com borda vermelha, num quadro azul com "?" e uma lampadinha que, com
+  // o gerador ligado, pisca até alguém apertar; sem força, fica apagada)
   const shedButtons = SHED_BUTTONS.map((cfg, i) => place(buildWallButton({ kind: 'button', top: cfg.top, color: '#ffd400', plate: '#fffaf0', trim: '#e23d3d', name: `botao-galpao-${i + 1}` }), cfg));
   const askTex = canvasTexture(128, 96, (g, w, h) => {
     g.fillStyle = '#2f7fd8'; g.fillRect(0, 0, w, h);
@@ -312,12 +312,12 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     b.setOn = (on) => { shedOn[i] = !!on; setOn(on); };
   });
   const shedLamps = SHED_BUTTONS.map((cfg) => {
-    // a plaquinha "?" logo acima do botão (abaixo do topo da parede; as patinhas pintadas ficam livres embaixo) e a
-    // lampadinha do lado dela
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.16), askMat);
-    board.position.set(0, cfg.top + 0.22, 0.006);
-    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
-    lamp.position.set(0.15, cfg.top + 0.22, 0.032);
+    // a plaquinha "?" logo acima do botão (abaixo do topo do painel; as patinhas pintadas ficam livres embaixo) e a
+    // lampadinha do lado esquerdo dela (os dois botões ficam juntinhos no painel)
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.13), askMat);
+    board.position.set(0, cfg.top + 0.19, 0.006);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ffb020', emissiveIntensity: 1 }));
+    lamp.position.set(-0.12, cfg.top + 0.19, 0.03);
     const holder = new THREE.Group();
     holder.add(board, lamp);
     holder.position.set(cfg.x, 0, cfg.z);
@@ -394,7 +394,7 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
   const st = {
     hlHat: false, hlRibbon: false, hlCandle: false, hlCookie: false, hlStar: false, glow: { hat: 0, ribbon: 0, candle: 0, cookie: 0, star: 0 },
     hatOnBoat: true, power: false, powerT: -1, lightsOn: false, fanWant: false, fanOn: false, tapOn: false,
-    lit: false, litT: 0, lampI: 0,
+    lit: false, litT: 0, lampI: 0, boardPower: false,
     /** @type {'off' | 'house' | 'painting' | 'porch' | 'on'} */ stage: 'off', stageT: 0,
   };
   const goStage = (sg) => { st.stage = sg; st.stageT = 0; };
@@ -477,6 +477,12 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     tube: treehouse.tube,
     shedDoor: garden.door,
     shedButtons,
+    /** O gerador do painel dos botões (a alça da partida e o estado; ligado, as lampadinhas dos botões piscam). */
+    generator: {
+      object: sty.generator.object,
+      setPull: (k) => sty.generator.setPull(k),
+      setState(state) { st.boardPower = state === 'on'; sty.generator.setState(state); },
+    },
     /** Os cabos da caixinha de força do galpão (pulso até a porta ou até a porteira). */
     shedLinks: sty.links,
     styGate: sty.gate,
@@ -501,10 +507,11 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
     fireflies: true,
     update(dt, t) {
       treats.update(dt, t);
-      // a lampadinha de cada botão do galpão pisca até ele ser apertado
+      // a lampadinha de cada botão do painel: apagada sem força; com o gerador ligado, pisca até ele ser apertado
       shedLamps.forEach((lamp, i) => {
-        const on = shedOn[i];
-        /** @type {THREE.MeshStandardMaterial} */ (lamp.material).emissiveIntensity = on ? 0.15 : 0.5 + 0.9 * (0.5 + 0.5 * Math.sin(t * 5 + i * 1.7));
+        const m = /** @type {THREE.MeshStandardMaterial} */ (lamp.material);
+        m.emissiveIntensity = !st.boardPower ? 0 : shedOn[i] ? 0.15 : 0.5 + 0.9 * (0.5 + 0.5 * Math.sin(t * 5 + i * 1.7));
+        m.color.set(st.boardPower ? '#ffb020' : '#6a5a40');
       });
       for (const b of [breaker, tap]) b.update?.(dt, t);
       conduitUp.update(dt);
@@ -588,6 +595,9 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       garden.door.setOpen(0);
       sty.gate.setOpen(0);
       for (const b of shedButtons) b.setOn?.(false);
+      st.boardPower = false;
+      sty.generator.setState('off');
+      sty.generator.setPull(0);
       layout.PANTRY_CRATES.list.forEach((_, i) => pantry.crates.setCrate(i, layout.PANTRY_CRATES.x0, false));
       pinata.pinata.reset();
       pinata.mango.setSway(0, 0);

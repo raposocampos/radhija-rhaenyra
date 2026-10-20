@@ -2,8 +2,8 @@
 // Roda no GitHub Actions (E2E manual, suíte quintal), depois da partida. O laço do jogo fica congelado e o script
 // avança quadro a quadro (1/60 s): cada imagem mostra um instante exato (a água subindo, as luzinhas do quadro e da
 // festa acendendo em onda, o chapéu caindo do bolo, o quadro de perto, a gansa, o pombo em cima do laço, o cheiro
-// subindo pelo cano, o balde, o deque, o escorregador, os caixotes da despensa, a lama, os botões do galpão e o
-// chiqueiro, a rampa, o campinho, as galinhas, a piñata e o bolo pronto). Teclas reais chegam pelos ouvintes do jogo; teleporte,
+// subindo pelo cano, o balde, o deque, o escorregador, os caixotes da despensa, o gerador e o painel dos botões, a
+// lama, a porta do galpão e o chiqueiro, a rampa, o campinho, as galinhas, a piñata e o bolo pronto). Teclas reais chegam pelos ouvintes do jogo; teleporte,
 // etapas e atalhos de depuração só preparam as cenas. Saída: shots/quintal-revisao/*.png.
 import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
 import { mkdirSync } from 'node:fs';
@@ -113,9 +113,10 @@ try {
       DECK_PATH: l.DECK_PATH, HUT: l.HUT, SOFA: l.SOFA, COLLECTIBLES: l.COLLECTIBLES, HOUSE: l.HOUSE,
       CUPBOARD: l.CUPBOARD, PANTRY_CRATES: l.PANTRY_CRATES, CHICKENS: l.CHICKENS, MANGO_SHOVE: l.MANGO_SHOVE, PANTRY: l.PANTRY, PLANTATION: l.PLANTATION, ROSE_BUSH: l.ROSE_BUSH, STY: l.STY,
       SHED_BUTTONS: l.SHED_BUTTONS, SECRET: l.SECRET, EAST_WALL: l.EAST_WALL, DOG_BOWLS: l.DOG_BOWLS,
+      GENERATOR: l.GENERATOR, BUTTON_BOARD: l.BUTTON_BOARD,
     };
   });
-  const kick = (c) => ({ x: c.x + c.nx * 0.6 - c.nz * 0.14, z: c.z + c.nz * 0.6 + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
+  const kick = (c) => ({ x: c.x + c.nx * 0.5 - c.nz * 0.14, z: c.z + c.nz * 0.5 + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
   const cakeCam = { pos: [L.CAKE.x + 0.9, 1.45, L.CAKE.z + 1.6], look: [L.CAKE.x, 0.95, L.CAKE.z] };
   const poolCam = { pos: [L.POOL.x + 1.4, 2.0, L.POOL.z + 2.4], look: [L.POOL.x - 0.2, 0.2, L.POOL.z - 0.3] };
 
@@ -160,12 +161,16 @@ try {
   await shot('09f-deque-visto-de-cima', { pos: [8.2, 5.6, -1.4], look: [8.2, L.DECK.h, -4.8] });
   await shot('09g-casinha-luneta-e-bau', { pos: [7.9, 3.2, -3.0], look: [8.6, 2.4, -5.4] });
   await shot('10-horta', { pos: [7.4, 1.8, 4.2], look: [8.0, 0.2, 1.6] });
-  await shot('10b-vao-e-lama', { pos: [6.2, 1.1, 2.6], look: [7.2, 0.15, 1.6] });
+  await shot('10b-vao-e-lama', { pos: [6.3, 1.2, 6.4], look: [7.3, 0.15, 5.1] });
+  await shot('10c-painel-e-gerador', { pos: [L.GENERATOR.x + 1.2, 1.1, L.GENERATOR.z + 1.5], look: [L.GENERATOR.x + 0.25, 0.6, L.BUTTON_BOARD.z] });
   await shot('11-galpao', { pos: [10.4, 2.3, 4.6], look: [10.6, 0.5, 1.8] });
   await shot('11b-rampa-e-vela', { pos: [10.2, 1.5, 4.0], look: [11.2, 0.9, 3.0] });
   // a câmera do jogo em cada cenário
   await setup({ active: 'radhija', place: { radhija: { x: -2.0, z: -2.2, yaw: Math.PI }, rhaenyra: { x: -1.2, z: -2.0, yaw: 3 } }, settle: 120 });
   await shot('12-varanda-camera-do-jogo');
+  // a saída da porta da varanda para o quintal (o canto livre, sem vaso)
+  await setup({ active: 'radhija', place: { radhija: { x: -3.9, z: -2.9, yaw: 2.6 }, rhaenyra: { x: -3.4, z: -3.6, yaw: 2.4 } }, settle: 60 });
+  await shot('12a-saida-da-porta-da-varanda', { pos: [-2.6, 1.6, -0.6], look: [-4.3, 0.4, -3.2] });
   await setup({ active: 'radhija', place: { radhija: { x: -0.4, z: 1.6, yaw: Math.PI }, rhaenyra: { x: 0.4, z: 1.8, yaw: 3 } }, settle: 120 });
   await shot('12b-quintal-camera-do-jogo');
   // a primeira vez no fundo do quintal: a câmera mostra o pombo dormindo em cima do laço
@@ -327,30 +332,49 @@ try {
   await step(20);
   await shot('26b-no-gramado-com-o-laco-camera-do-jogo');
 
-  // 6. VELA: a lama, o Lambe-Lambe, o botão alto e a porta, a rampa
-  await setup({ stage: 'cake1', active: 'radhija', place: { radhija: { x: L.MUD.x0 + 0.5, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: Math.PI / 2 }, rhaenyra: { x: 8.4, z: 2.0, yaw: -Math.PI / 2 } }, settle: 60 });
-  await shot('27-radhija-na-lama', { pos: [7.9, 1.1, 2.8], look: [7.3, 0.25, 1.6] });
-  await setup({ place: { radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, settle: 30 });
-  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: 8.9, z: 1.9, yaw: -Math.PI / 2 } }, stay: 'radhija', settle: 10 });
+  // 6. VELA: o gerador e o painel ao lado da cerca branca, o botão alto e a porta, o vão lá no fundo, a lama, o
+  // Lambe-Lambe e a rampa
+  const GEN = L.GENERATOR, BB = L.BUTTON_BOARD;
+  const genCam = { pos: [GEN.x + 1.15, 0.95, GEN.z + 1.25], look: [GEN.x + 0.2, 0.5, BB.z + 0.25] };
+  await setup({ stage: 'cake1', active: 'rhaenyra', place: { rhaenyra: { x: GEN.cord.x + 0.3, z: GEN.cord.z, yaw: -Math.PI / 2 }, radhija: { x: 6.5, z: 1.6, yaw: Math.PI } }, stay: 'radhija', settle: 40 });
+  await shot('27a-painel-apagado-camera-do-jogo');
+  await shot('27b-gerador-desligado', genCam);
+  await tap('KeyE');
+  await step(18);
+  await shot('27c-puxando-a-cordinha', genCam);
+  await until((i) => !i.quintal.generator.pulling || i.quintal.generator.on, 120);
+  await step(1);
+  await until((i) => i.quintal.generator.on, 200);
+  await step(50);
+  await shot('27d-gerador-ligado-painel-aceso', genCam);
+  await shot('27e-painel-aceso-camera-do-jogo');
+  await setup({ active: 'radhija', place: { radhija: { x: L.HORTA.x0 + 0.3, z: (L.HORTA.gap.z0 + L.HORTA.gap.z1) / 2, yaw: Math.PI / 2 } }, settle: 60 });
+  await shot('27-radhija-na-lama', { pos: [8.1, 1.1, 6.5], look: [7.5, 0.25, 5.1] });
+  await shot('27f-vao-perto-do-chiqueiro-camera-do-jogo');
+  await setup({ place: { radhija: { x: 8.6, z: 4.2, yaw: Math.PI / 2 } }, settle: 30 });
+  await setup({ active: 'rhaenyra', place: { rhaenyra: { x: 9.05, z: 4.25, yaw: -Math.PI / 2 } }, stay: 'radhija', settle: 10 });
   await keyDown('KeyL');
   await step(70);
-  await shot('28-lambe-lambe', { pos: [8.6, 1.0, 3.0], look: [8.4, 0.35, 1.8] });
+  await shot('28-lambe-lambe', { pos: [8.9, 1.0, 5.5], look: [8.8, 0.35, 4.2] });
   await until((i) => i.quintal.mud.k === 0, 600);
   await keyUp('KeyL');
-  // a Rhaenyra pisa na lama e a Radhija a lambe
-  await setup({ active: 'rhaenyra', set: [['cleanRh', false]], place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.1, z: 1.85, yaw: Math.PI / 2 } }, stay: 'radhija', settle: 50 });
-  await shot('28b-rhaenyra-na-lama', { pos: [7.9, 1.1, 2.9], look: [7.4, 0.3, 1.7] });
-  await setup({ active: 'radhija', place: { rhaenyra: { x: 8.6, z: 1.9, yaw: -Math.PI / 2 }, radhija: { x: 8.15, z: 1.95, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 10 });
+  // a Rhaenyra pisa na lama: nem pulo (o Espaço só espirra lama); a Radhija a lambe
+  await setup({ active: 'rhaenyra', set: [['cleanRh', false]], place: { rhaenyra: { x: (L.MUD.x0 + L.MUD.x1) / 2, z: (L.MUD.z0 + L.MUD.z1) / 2, yaw: 0 }, radhija: { x: 8.6, z: 4.2, yaw: Math.PI / 2 } }, stay: 'radhija', settle: 50 });
+  await shot('28b-rhaenyra-na-lama', { pos: [8.0, 1.1, 6.6], look: [7.6, 0.3, 5.2] });
+  await tap('Space');
+  await step(6);
+  await shot('28b2-enlameada-sem-pulo', { pos: [8.0, 1.1, 6.6], look: [7.6, 0.3, 5.2] });
+  await setup({ active: 'radhija', place: { rhaenyra: { x: 8.3, z: 4.15, yaw: -Math.PI / 2 }, radhija: { x: 7.85, z: 4.2, yaw: Math.PI / 2 } }, stay: 'rhaenyra', settle: 10 });
   await keyDown('KeyL');
   await step(70);
-  await shot('28c-radhija-lambendo-a-rhaenyra', { pos: [8.4, 1.0, 3.0], look: [8.4, 0.35, 1.9] });
+  await shot('28c-radhija-lambendo-a-rhaenyra', { pos: [8.1, 1.0, 5.4], look: [8.1, 0.35, 4.2] });
   await until((i) => i.quintal.mudRh.k === 0, 700);
   await keyUp('KeyL');
   await step(100); // limpinha, ela se sacode
   await setup({ active: 'rhaenyra', place: { rhaenyra: kick(L.SHED_BUTTONS[0]) }, settle: 10 });
   await tap('Space');
   await step(14);
-  await shot('29-impulso-no-botao-do-galpao', { pos: [8.0, 1.5, 2.6], look: [9.4, 0.9, 1.05] });
+  await shot('29-impulso-no-botao-do-painel', { pos: [BB.x1 + 0.9, 1.4, BB.z + 1.9], look: [(BB.x0 + BB.x1) / 2, 0.85, BB.z] });
   await until((i) => i.quintal.doorOpen, 200);
   await step(40);
   await shot('29b-porta-basculante-aberta', { pos: [8.3, 1.5, 3.4], look: [9.3, 0.6, 1.6] });
@@ -417,6 +441,7 @@ try {
   await setup({ stage: 'start', active: 'radhija', place: { radhija: { x: 2.0, z: 2.0, yaw: 0 } }, settle: 120 });
   await shot('38-galinhas-ciscando', henCam);
   const hp = await page.evaluate(() => window.__game.game.debug.info().quintal.chickens[0]);
+  await shot('38a-galinha-de-perto', { pos: [hp.x + 0.75, 0.55, hp.z + 0.85], look: [hp.x, 0.2, hp.z] });
   await setup({ place: { radhija: { x: hp.x + Math.sin(hen0.yaw) * 0.9, z: hp.z + Math.cos(hen0.yaw) * 0.9, yaw: hen0.yaw + Math.PI } }, settle: 2 });
   await until((i) => i.quintal.chickens[0].state === 'flee', 60);
   await step(18);
@@ -440,13 +465,14 @@ try {
   // 6d2. a piñata enroscada no alto da mangueira: a Rhaenyra empurra o tronco de pé e ela desce em cima da roseira
   const MS = L.MANGO_SHOVE;
   const treeCam = { pos: [MS.x - 3.4, 2.5, MS.z - 3.2], look: [MS.x - 1.2, 1.7, MS.z - 0.9] };
-  await setup({ stage: 'cake4', active: 'rhaenyra', place: { rhaenyra: { x: MS.x, z: MS.z - 0.55, yaw: 0 }, radhija: { x: MS.x - 2.2, z: MS.z - 1.6, yaw: 1 } }, stay: 'radhija', settle: 20 });
+  await setup({ stage: 'cake4', active: 'rhaenyra', place: { rhaenyra: { x: MS.x + MS.nx * 0.55, z: MS.z + MS.nz * 0.55, yaw: Math.atan2(-MS.nx, -MS.nz) }, radhija: { x: MS.x - 1.9, z: MS.z + 0.3, yaw: 1 } }, stay: 'radhija', settle: 20 });
   await shot('36a0-pinata-enroscada', treeCam);
-  const toTrunk = await page.evaluate(() => window.__keysFor(0, 1));
+  const toTrunk = await page.evaluate((m) => window.__keysFor(-m.nx, -m.nz), MS);
   for (const k of [...toTrunk, 'ShiftLeft']) await keyDown(k);
   await until((i) => !!i.dogs.rhaenyra.shove, 120);
   await step(30);
-  await shot('36a-empurrando-a-mangueira', { pos: [MS.x + 1.4, 1.2, MS.z - 1.6], look: [MS.x, 0.8, MS.z] });
+  await shot('36a-empurrando-a-mangueira', { pos: [MS.x - 1.1, 1.3, MS.z + 1.9], look: [MS.x + 0.1, 0.8, MS.z] });
+  await shot('36a1-empurrando-camera-do-jogo');
   await until((i) => i.quintal.pinata.stage === 'slide', 400);
   await step(12);
   await shot('36a2-pinata-escorregando', treeCam);

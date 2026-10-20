@@ -502,15 +502,18 @@ export function buildTreehouse(root, layout) {
   funnel.position.copy(funnelPos);
   const funnelRim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.016, 8, 24), stdMat('#f6c453', { roughness: 0.4 }));
   funnelRim.position.set(funnelPos.x, funnelPos.y, funnelPos.z + 0.11);
-  // dois pezinhos em V segurando o funil
+  // um pezinho só, embaixo da ponta fina: a argola abraça o funil, a haste desce reta até a base redonda no chão
+  // (nada atravessa o funil; tudo fica dentro do colisor dele)
   const legMat = stdMat('#7cc4e8', { roughness: 0.4 });
-  for (const s of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, TUBE.funnelY + 0.02, 8), legMat);
-    leg.position.set(funnelPos.x + s * 0.08, TUBE.funnelY / 2 - 0.02, funnelPos.z - 0.02);
-    leg.rotation.z = s * 0.28;
-    tubeGroup.add(leg);
-  }
-  tubeGroup.add(funnel, funnelRim);
+  const cz = funnelPos.z - 0.06;
+  const cr = 0.05 + 0.15 * ((cz - (funnelPos.z - 0.11)) / 0.22) + 0.012;
+  const cradle = new THREE.Mesh(new THREE.TorusGeometry(cr, 0.012, 8, 24), legMat);
+  cradle.position.set(funnelPos.x, funnelPos.y, cz);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.024, funnelPos.y - cr, 10), legMat);
+  stem.position.set(funnelPos.x, (funnelPos.y - cr) / 2, cz);
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.02, 18), legMat);
+  foot.position.set(funnelPos.x, 0.01, cz);
+  tubeGroup.add(funnel, funnelRim, cradle, stem, foot);
   // o caminho do cano: desce do funil, corre até o poste do deque, sobe e curva até o corrimão
   // o poste do meio da frente (o cano sobe por ele até o corrimão, do lado do pombo)
   const post = DECK_POSTS.reduce((best, p) => (p.z > -4.5 && Math.abs(p.x - TUBE.inlet.x) < Math.abs(best.x - TUBE.inlet.x) ? p : best), DECK_POSTS[2]);
@@ -573,11 +576,11 @@ export function buildTreehouse(root, layout) {
     g.fillStyle = '#5a3a2a'; g.font = 'bold 15px "Trebuchet MS", sans-serif'; g.textAlign = 'center';
     g.fillText('FALE', w / 2, 22); g.fillText('AQUI', w / 2, 40);
   }, { repeat: false }), roughness: 0.8 }));
-  // num palitinho fincado do lado do funil, virada para quem chega
-  const pick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), woodMatTag);
-  pick.position.set(funnelPos.x + 0.32, 0.25, funnelPos.z + 0.05);
+  // num palitinho preso em cima da argola do pezinho, virada para quem chega (por cima do funil)
+  const pick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), woodMatTag);
+  pick.position.set(funnelPos.x, funnelPos.y + cr + 0.12, cz);
   tubeGroup.add(pick);
-  tag.position.set(funnelPos.x + 0.32, 0.52, funnelPos.z + 0.058);
+  tag.position.set(funnelPos.x, funnelPos.y + cr + 0.29, cz + 0.008);
   tubeGroup.add(tag);
   group.add(tubeGroup);
 

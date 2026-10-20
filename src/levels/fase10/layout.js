@@ -18,10 +18,12 @@
 //   BISCOITO DE OSSO (no pote em cima do armário alto da despensa): a Rhaenyra puxa três caixotes pela alça (E e
 //     andando para trás) até as marcas do chão, onde eles travam sozinhos (a marca fica verde); em fila, do mais alto ao
 //     mais baixo, eles viram a escadinha, e a Radhija sobe por eles (E) e pega o biscoito.
-//   VELA DO 3 (na prateleira alta do galpão): a Rhaenyra pula a cerca baixa da horta; a Radhija passa pelo vão e cai na
-//     lama (Lambe-Lambe). Na parede do galpão há dois botões altos (impulso): um, sorteado a cada partida, abre a porta
-//     do galpão e o outro solta os três porcos do chiqueiro, que atrapalham; legumes do campinho, largados perto deles,
-//     os distraem por um tempo. Lá dentro, a Radhija sobe a rampa com uma arrancada.
+//   VELA DO 3 (na prateleira alta do galpão): ao lado da cerca branca, o painel de dois botões altos só funciona com o
+//     gerador ligado (a Rhaenyra puxa a cordinha); um botão, sorteado a cada partida, abre a porta do galpão e o outro
+//     solta os três porcos do chiqueiro, que atrapalham (legumes do campinho, largados perto deles, os distraem por um
+//     tempo). A Radhija entra na horta pelo vão da tábua quebrada, lá no fundo, perto do chiqueiro, e cai na lama
+//     (Lambe-Lambe: a Rhaenyra pula a cerca baixa); lá dentro do galpão ela sobe a rampa com uma arrancada e volta com a
+//     vela pelo mesmo caminho, entre os porcos e a lama.
 //   ESTRELA (dentro da piñata pendurada sobre a roseira): o superbafo faz a piñata balançar para fora da roseira; a
 //     Rhaenyra pula e bate nela quando ela passa por cima; três batidas e ela abre.
 // =====================================================================
@@ -112,8 +114,8 @@ export const CAKE_ORDER = /** @type {const} */ (['ribbon', 'cookie', 'candle', '
 export const CAKE_REJECT = { x: CAKE_TABLE.x + 1.25, z: CAKE_TABLE.z + 1.15 };
 export const GIFTS = { x: -1.15, z: -5.35, hx: 0.42, hz: 0.32 };
 export const PORCH_BENCH = { x: -3.55, z: -5.72, hx: 0.6, hz: 0.2, h: 0.44 };
-/** Vasos de samambaia nos cantos da varanda (s = semente da planta). */
-export const PORCH_POTS = [{ x: PORCH.x0 + 0.3, z: PORCH.z1 - 0.3, s: 3 }, { x: PORCH.x1 - 0.25, z: PORCH.z0 + 0.35, s: 5 }];
+/** Vaso de samambaia no canto do fundo da varanda (s = semente da planta); o canto da porta fica livre. */
+export const PORCH_POTS = [{ x: PORCH.x1 - 0.25, z: PORCH.z0 + 0.35, s: 5 }];
 
 // ---------------------------------------------------------------------------------------------- quintal
 /** A piscininha de plástico (borda inflável alta) e a água que sobe quando a mangueira corre. */
@@ -159,13 +161,14 @@ export const MANGO_TREE = { x: 3.5, z: 5.7, r: 0.38 };
 export const PINATA = { pivot: { x: ROSE_BUSH.x, y: 2.75, z: ROSE_BUSH.z }, L: 1.62, size: 0.42, damp: 0.25, kick: 1.6, hitR: 0.42, reach: 1.1, hits: 3 };
 /**
  * No começo a piñata está enroscada no galho, perto da copa (fora de alcance; o superbafo nem chega lá). A Rhaenyra
- * fica de pé e empurra o tronco da mangueira (empurrão em pé, pelo norte): no 3º empurrão ela escorrega pelo galho
- * (slide s) e desce na corda até em cima da roseira (drop s).
- * @type {import('../../types').ShoveTargetCfg & { tangled: { x: number, y: number, z: number }, slide: number, drop: number }}
+ * fica de pé e empurra o tronco da mangueira (empurrão em pé, pelo oeste: ela fica do lado de cá do tronco, à vista
+ * da câmera, e a copa balança para o leste): no 3º empurrão ela escorrega pelo galho (slide s) e desce na corda até
+ * em cima da roseira (drop s). A copa gira em torno do alto do tronco (pivotY).
+ * @type {import('../../types').ShoveTargetCfg & { tangled: { x: number, y: number, z: number }, slide: number, drop: number, pivotY: number }}
  */
 export const MANGO_SHOVE = {
-  x: MANGO_TREE.x + 0.02, z: MANGO_TREE.z + 0.06 - 0.33, nx: 0, nz: -1, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3,
-  tangled: { x: MANGO_TREE.x - 0.85, y: 2.45, z: MANGO_TREE.z - 0.62 }, slide: 0.55, drop: 0.65,
+  x: MANGO_TREE.x + 0.02 - 0.33, z: MANGO_TREE.z + 0.06, nx: -1, nz: 0, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3,
+  tangled: { x: MANGO_TREE.x - 0.85, y: 2.45, z: MANGO_TREE.z - 0.62 }, slide: 0.55, drop: 0.65, pivotY: 2.3,
 };
 
 // ---------------------------------------------------------------------------------------------- cerca e gansa
@@ -234,32 +237,45 @@ export const SLIDE = { x: 9.4, z0: DECK.z1, z1: -1.95, top: DECK.h, halfWidth: 0
 export const DECK_PATH = { arrive: { x: BUCKET.x, z: DECK.z1 - 0.3 }, ribbon: { x: RIBBON.x, z: DECK.z1 - 0.3 }, slideTop: { x: SLIDE.x, z: DECK.z1 - 0.23 } };
 
 // ---------------------------------------------------------------------------------------------- fundo: horta, galpão e chiqueiro
-/** Horta cercada (cerca baixa: a Rhaenyra pula) com o vão da tábua quebrada (só a Radhija) e a lama do canteiro. */
-export const HORTA = { x0: 6.8, x1: 9.6, z0: 0.4, z1: WORLD.bounds.maxZ, fenceH: 0.42, gap: { z0: 1.35, z1: 1.75 } };
-export const MUD = { x0: 6.86, x1: 7.9, z0: 1.0, z1: 2.3, licksToClean: 5, slow: 0.5 };
+/**
+ * Horta cercada (cerca baixa: a Rhaenyra pula). O vão da tábua quebrada (só a Radhija) fica lá no fundo, na mesma
+ * altura da porteira do chiqueiro, longe da porta do galpão: para ir e voltar com a vela, a Radhija atravessa a horta
+ * inteira, entre os porcos, e passa pela lama, logo depois do vão.
+ */
+export const HORTA = { x0: 7.1, x1: 9.6, z0: 0.4, z1: WORLD.bounds.maxZ, fenceH: 0.42, gap: { z0: 4.95, z1: 5.35 } };
+export const MUD = { x0: 7.16, x1: 8.15, z0: 4.5, z1: 5.85, licksToClean: 5, slow: 0.5 };
 export const VEG_BEDS = [
-  { x: 8.2, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 7.85, z: 6.05, hx: 0.6, hz: 0.28 },
-  { x: 7.55, z: 3.55, hx: 0.5, hz: 0.2 }, { x: 7.55, z: 4.75, hx: 0.5, hz: 0.2 },
+  { x: 8.2, z: 0.78, hx: 0.4, hz: 0.18 }, { x: 8.05, z: 6.17, hx: 0.45, hz: 0.2 },
+  { x: 7.85, z: 3.55, hx: 0.5, hz: 0.2 }, { x: 7.75, z: 2.75, hx: 0.45, hz: 0.18 },
 ];
 /** O pé de tomate no tutor (perto da cerca norte) e o regador encostado no canteiro, dentro da horta. */
-export const TOMATO = { x: 7.35, z: 0.62, r: 0.22 };
+export const TOMATO = { x: 7.45, z: 0.7, r: 0.22 };
 export const WATERING_CAN = { x: 8.75, z: 5.75, r: 0.17 };
 /** Galpão de ferramentas (paredes cortadas, sem telhado) com a porta basculante no oeste. */
 export const SHED = { x0: 9.6, x1: 12.05, z0: 0.6, z1: 3.6, wallH: 1.45, t: 0.15, door: { z0: 1.7, z1: 2.6, h: 1.25 } };
 /**
- * O painel de madeira dos botões, na horta, encostado no canto sudoeste do galpão e virado para o sul (de frente
- * para a câmera); entre ele e a parede do galpão fica uma frestinha por onde passam os fios.
+ * O painel de madeira dos botões, na faixa de grama entre a cerca branca e a horta: preso na cerca, atravessado na
+ * faixa e virado para o sul (de frente para a câmera). Entre a ponta dele e a cerca da horta fica a passagem.
  */
-export const BUTTON_BOARD = { x0: 8.72, x1: SHED.x0 - SHED.t / 2 - 0.06, z: 3.1, t: 0.06, h: 1.4 };
+export const BUTTON_BOARD = { x0: BACK_FENCE.x + 0.1, x1: 6.3, z: 2.75, t: 0.06, h: 1.35 };
 /**
  * Os dois botões altos no painel (impulso da Rhaenyra): um abre a porta do galpão e o outro a porteira do chiqueiro.
- * Qual é qual é sorteado a cada partida (os fios vão juntos para a caixinha de força na parede do galpão).
+ * Qual é qual é sorteado a cada partida. Sem o gerador ligado, o painel fica apagado e os botões não valem.
  * @type {import('../../types').WallButtonCfg[]}
  */
 export const SHED_BUTTONS = [
-  { x: 8.96, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
-  { x: 9.3, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
+  { x: 5.94, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
+  { x: 6.22, z: BUTTON_BOARD.z + BUTTON_BOARD.t / 2, nx: 0, nz: 1, top: 1.05, kind: 'button', mode: 'once' },
 ];
+/**
+ * O gerador pequeno, encostado na cerca branca, logo à frente do painel (o cabo dele sobe para o painel). A Rhaenyra
+ * puxa a cordinha de partida (E perto da alça, no lado leste): pull s de puxão, crank s de engasgo e ele pega. A
+ * fumacinha sai pelo escapamento (exhaust), virado para o sul.
+ */
+export const GENERATOR = {
+  x: BACK_FENCE.x + 0.29, z: 3.75, hx: 0.18, hz: 0.16, h: 0.42, cord: { x: BACK_FENCE.x + 0.5, y: 0.3, z: 3.75 }, reach: 0.62, pull: 0.85, crank: 1.0,
+  exhaust: { x: BACK_FENCE.x + 0.2, y: 0.27, z: 3.75 + 0.16 + 0.03 },
+};
 export const WORKBENCH = { x: 10.85, z: 0.92, hx: 0.9, hz: 0.25, h: 0.9 };
 /** Rampa de tábua ao longo da parede sul do galpão, subindo para o leste até a prateleira alta com a vela. */
 export const RAMP = { z: 3.25, x0: 10.15, x1: 11.45, top: 1.0, halfWidth: 0.2 };
@@ -396,6 +412,7 @@ export const STATIC_COLLIDERS = [
   wallZ('chiqueiro-leste', STY.x1, STY.z0, STY.z1, { hx: thin }),
   { id: 'casinha-dos-porcos', shape: 'box', x: STY.x1 - 0.45, z: STY.z1 - 0.45, hx: 0.38, hz: 0.38 },
   { id: 'painel-dos-botoes', shape: 'box', x: (BUTTON_BOARD.x0 + BUTTON_BOARD.x1) / 2, z: BUTTON_BOARD.z - 0.035, hx: (BUTTON_BOARD.x1 - BUTTON_BOARD.x0) / 2, hz: BUTTON_BOARD.t / 2 + 0.035 },
+  { id: 'gerador', shape: 'box', x: GENERATOR.x, z: GENERATOR.z, hx: GENERATOR.hx, hz: GENERATOR.hz },
 ];
 
 export const NAV_NODES = {
@@ -406,7 +423,8 @@ export const NAV_NODES = {
   Y_farm: { x: -8.0, z: 4.6 }, Y_pinata: { x: 0.3, z: 5.3 },
   B_gate: { x: 6.1, z: 0.2 }, B_tree: { x: 8.4, z: -1.6 }, B_north: { x: 6.1, z: -2.25 }, B_east: { x: 10.8, z: -0.4 },
   B_land: { x: 11.2, z: -3.2 },
-  B_gap: { x: 6.35, z: 1.55 }, H_mud: { x: 7.4, z: 1.6 }, H_mid: { x: 8.4, z: 2.4 }, H_south: { x: 8.6, z: 4.6 }, S_in: { x: 10.6, z: 2.15 },
+  B_pass: { x: 6.72, z: 2.7 }, B_strip: { x: 6.55, z: 4.1 }, B_gap: { x: 6.75, z: 5.15 },
+  H_mud: { x: 7.65, z: 5.15 }, H_mid: { x: 8.85, z: 2.3 }, H_south: { x: 8.85, z: 4.6 }, S_in: { x: 10.6, z: 2.15 },
 };
 /** @type {import('../../types').NavEdge[]} */
 export const NAV_EDGES = [
@@ -417,8 +435,10 @@ export const NAV_EDGES = [
   ['Y_gate', 'B_gate', { requires: 'gateOpen' }],
   ['B_gate', 'B_north'], ['B_gate', 'B_tree'], ['B_north', 'B_tree'], ['B_tree', 'B_east'], ['B_gate', 'B_east'],
   ['B_east', 'B_land'],
+  // a faixa ao lado da cerca branca (passa pela ponta do painel dos botões) até o vão, lá no fundo
+  ['B_gate', 'B_pass'], ['B_pass', 'B_strip'], ['B_strip', 'B_gap'],
   // a horta: a Radhija pelo vão da tábua quebrada; a Rhaenyra só pulando a cerca (a companheira não pula: espera fora)
-  ['B_gate', 'B_gap'], ['B_gap', 'H_mud', { requires: 'small' }], ['H_mud', 'H_mid'], ['H_mid', 'H_south'], ['B_gate', 'H_mid', { requires: 'jump' }],
+  ['B_gap', 'H_mud', { requires: 'small' }], ['H_mud', 'H_south'], ['H_south', 'H_mid'], ['B_gate', 'H_mid', { requires: 'jump' }],
   ['H_mid', 'S_in', { requires: 'shedOpen' }],
 ];
 
@@ -426,7 +446,7 @@ export const NAV_EDGES = [
 export const COLLECTIBLES = [
   { id: 'sofa', x: SOFA.x - 0.3, z: (SOFA.z + SOFA.hz + HOUSE.zS - WALLS.t / 2) / 2 }, // atrás do sofá (só a Radhija)
   { id: 'vasos', x: (PLANTERS[0].x + PLANTERS[1].x) / 2, z: -5.78 }, // atrás dos vasos grandes (só a Radhija)
-  { id: 'horta', x: 9.2, z: 6.3 }, // no canto sul da horta, atrás do canteiro (pelo vão ou pulando a cerca)
+  { id: 'horta', x: 9.2, z: 6.3 }, // no canto sul da horta, do lado do canteiro (pelo vão ou pulando a cerca)
   { id: 'deque', x: 7.05, z: -5.3, y: DECK.h }, // lá em cima, entre a luneta e o tronco (só pelo balde)
   { id: 'milharal', x: (PLANTATION.corn[0].x + PLANTATION.corn[1].x) / 2, z: 4.95 }, // num corredor do milho (só a Radhija)
 ];
@@ -470,7 +490,7 @@ const LAYOUT = {
   CRATE, FAN, OUTLET, PLANTERS, LITTLE_TREE, FLOWER_BED, PICNIC, PLANTATION, ROSE_BUSH, MANGO_TREE, MANGO_SHOVE, PINATA,
   BACK_FENCE, GATE, CORD, GOOSE, TREE, DECK, DECK_POSTS, DECK_RAIL, HUT, DECK_PROPS, RIBBON, PIGEON, TUBE, BUCKET, ROPE,
   DECK_PATH, SLIDE, HORTA, MUD,
-  VEG_BEDS, TOMATO, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
+  VEG_BEDS, TOMATO, WATERING_CAN, SHED, BUTTON_BOARD, SHED_BUTTONS, GENERATOR, WORKBENCH, RAMP, RAMP_ENTRY, RAMP_TIMES, CANDLE, STY, STY_PEN, PIGS, CHICKENS, SECRET,
   STATIC_COLLIDERS, NAV_NODES, NAV_EDGES,
   COLLECTIBLES, COLLECTIBLE_PICKUP_R, GOAL, SUN, CAMERA,
 };

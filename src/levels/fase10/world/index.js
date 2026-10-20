@@ -77,7 +77,7 @@ export function buildWorld({ root, layout }) {
     props: P.props,
     env: { ground, house, porch, yard, fences, treehouse, garden, pantry, farm, pinata, sty, secret, timings },
     // o que pode ficar entre a câmera e as dogs (o núcleo aplica o "ver através")
-    seeThrough: [house.walls, pantry.walls, ...yard.seeThrough, ...fences.seeThrough, ...treehouse.seeThrough, ...garden.seeThrough, ...secret.seeThrough],
+    seeThrough: [house.walls, pantry.walls, ...yard.seeThrough, ...fences.seeThrough, ...treehouse.seeThrough, ...garden.seeThrough, ...pinata.seeThrough, ...sty.seeThrough, ...secret.seeThrough],
     update(dt, t) {
       shared.time.value = t;
       ground.update(dt, t);
