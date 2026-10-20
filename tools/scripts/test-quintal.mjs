@@ -252,7 +252,9 @@ try {
   check(qt(state).shed.sty && qt(state).pigs.inPen === 0, 'o outro botão abre o chiqueiro e os três porquinhos saem para a horta', JSON.stringify(qt(state).pigs.pigs));
   await H.gsleep(800);
   await shot('09c-porquinhos-soltos.png');
-  await as('radhija'); // de volta para a Radhija, perto da mesa do bolo
+  await as('radhija');
+  // seguindo a irmã, ela pode ter ido até o painel (a faixa ao lado da cerca branca é livre): volta para perto do bolo
+  await put('radhija', L.GOAL.x, L.GOAL.z + 1.0, 0);
 
   // ---- o chapéu do chão no quarto andar
   const hat = qt(state).floor.hat;
