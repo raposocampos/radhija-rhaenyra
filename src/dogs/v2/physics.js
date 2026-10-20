@@ -9,8 +9,8 @@ import * as THREE from 'three';
 /** Orelhas: mola de cada junta (Hz) da base para a ponta, amortecimento (fração do crítico), gravidade extra (m/s²) e
  * folga da ponta acima do chão (m). */
 export const EAR_PHYSICS = Object.freeze({ freq: [5.6, 4.3, 3.4], zeta: 0.4, gravity: 1.6, floorPad: 0.012 });
-/** Rabo: bem mais firme que as orelhas e quase sem cair (o rabo em pluma fica no alto, como na pose). */
-export const TAIL_PHYSICS = Object.freeze({ freq: [9, 7.5, 6.5, 5.8, 5.2], zeta: 0.6, gravity: 0.4, floorPad: 0.015 });
+/** Rabo: bem mais firme que as orelhas, bem amortecido e quase sem cair (o rabo em pluma fica no alto, como na pose). */
+export const TAIL_PHYSICS = Object.freeze({ freq: [11, 9.5, 8.5, 7.5, 7], zeta: 0.75, gravity: 0.4, floorPad: 0.015 });
 
 /**
  * Uma correntinha: ossos da base para a ponta, a ponta (repouso) e a física.
