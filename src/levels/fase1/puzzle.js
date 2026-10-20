@@ -50,7 +50,7 @@ export function createPuzzle({ layout, props, world, dogs, emit, cam, root: scen
     ax: FENCE.gate.hinge.x, az: FENCE.gate.hinge.z, bx: FENCE.gate.latchPost.x, bz: FENCE.gate.latchPost.z, t: 0.05,
   });
   const cartCol = world.addDynamic({
-    id: 'cart', kind: 'cart', shape: 'box', x: CART.start.x, z: CART.start.z, hx: CART.halfSize.x, hz: CART.halfSize.z,
+    id: 'cart', kind: 'cart', shape: 'box', x: CART.start.x, z: CART.start.z, hx: CART.halfSize.x, hz: CART.halfSize.z, height: CART.height,
   });
   const worldSetGate = (t) => {
     const tip = gateTip(FENCE, t);

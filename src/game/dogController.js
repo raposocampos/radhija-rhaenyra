@@ -580,6 +580,19 @@ export function integrate(c, dt, world, opts = {}) {
     c.x = res.x;
     c.z = res.z;
   }
+  // O peito e a garupa (o corpo é mais comprido que o círculo) também não entram em paredes e móveis.
+  if (c.cfg.body && world.resolveBody) {
+    const b = world.resolveBody(c.x, c.z, c.yaw, c.cfg.body, c.r, c.size, opts);
+    if (Number.isFinite(b.x) && Number.isFinite(b.z)) {
+      c.x = b.x;
+      c.z = b.z;
+      for (const h of b.hits) {
+        const i = res.hits.findIndex((k) => k.id === h.id);
+        if (i < 0) res.hits.push(h);
+        else if (res.hits[i].depth < h.depth) res.hits[i] = h;
+      }
+    }
+  }
   const idt = 1 / Math.max(dt, 1e-4);
   c.vx = (c.x - px) * idt;
   c.vz = (c.z - pz) * idt;

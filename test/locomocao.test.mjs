@@ -10,6 +10,7 @@ import { withSeed } from './helpers/seeded.mjs';
 
 installBrowserStubs();
 const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+const { DOG_CONFIG } = await import('../src/dogs/config.js');
 
 const KINDS = ['radhija', 'rhaenyra'];
 const PAWS = ['FLp', 'FRp', 'HLp', 'HRp'];
@@ -102,6 +103,70 @@ test('locomoção nova: andando no mundo, a pata apoiada fica plantada no chão 
     }
   }
   console.log(`[locomoção] ${report.join('\n  ')}`);
+});
+
+test('locomoção nova: na arrancada do jogo, a pata de trás sai do chão a tempo (não fica plantada esticando a perna)', () => {
+  // retorno do usuário (2026-10-20): "quando as dogs começam a andar, a pata traseira acaba ficando tempo demais no
+  // chão e acaba esticando a perna de um jeito estranho". O controle chega à velocidade em ~0,15 s (aceleração de
+  // 12–16 m/s²) e o ritmo do guia demora uns décimos de segundo para acompanhar: a pata ia até o limite e era arrastada
+  const report = [];
+  const bad = [];
+  const HIND = [2, 3];
+  /** Quanto a perna de trás i está esticada: quadril→jarrete sobre o comprimento dos dois gomos (1 = reta). */
+  const ext = (d, i) => {
+    const [u, l, m] = ['u', 'l', 'm'].map((k) => bone(d, `H${i === 2 ? 'L' : 'R'}${k}`).getWorldPosition(new THREE.Vector3()));
+    return u.distanceTo(m) / (u.distanceTo(l) + l.distanceTo(m));
+  };
+  for (const kind of KINDS) {
+    const cfg = DOG_CONFIG[kind];
+    const rows = [];
+    for (const seed of SEEDS.slice(0, 6)) {
+      const o = withSeed(seed, () => {
+        const d = fresh(kind);
+        // como no jogo (dogController.js): a velocidade sobe com a aceleração do controle; a da animação vem suavizada
+        let v = 0, anim = 0, t = 0;
+        const first = [-1, -1, -1, -1];
+        const meter = (secs) => {
+          const m = { back: 0, ext: 0, straight: 0, drags: 0 };
+          for (let f = 0; f < Math.round(secs * 60); f++, t += DT) {
+            v = Math.min(cfg.walkSpeed, v + cfg.accel * DT);
+            anim += (v - anim) * (1 - Math.exp(-DT * 18));
+            const yaw = d.object.rotation.y;
+            d.object.position.x += Math.sin(yaw) * v * DT;
+            d.object.position.z += Math.cos(yaw) * v * DT;
+            d.update(DT, { speed: anim, turn: 0, action: 'none' });
+            d.object.updateMatrixWorld(true);
+            d.locomotion.legs.forEach((L, i) => {
+              if (L.swing && first[i] < 0) first[i] = t;
+              if (L.swing || !HIND.includes(i)) return;
+              m.back = Math.max(m.back, L.land.z - L.foot.z);
+              const e = ext(d, i);
+              m.ext = Math.max(m.ext, e);
+              if (e > 0.985) m.straight++;
+              if (L.dragged) m.drags++;
+            });
+          }
+          return m;
+        };
+        const start = meter(0.8);
+        const steady = meter(1.2);
+        return { start, steady, first };
+      });
+      rows.push(o);
+      const { start, steady, first } = o;
+      const tag = `${kind} (semente ${seed})`;
+      if (start.drags > 0) bad.push(`${tag}: na arrancada a pata de trás foi arrastada ${start.drags} quadro(s)`);
+      if (start.straight > 2) bad.push(`${tag}: na arrancada a perna de trás ficou reta ${start.straight} quadro(s) (até ${start.ext.toFixed(3)})`);
+      if (start.back > steady.back + 0.02 * (kind === 'rhaenyra' ? 1.133 : 1)) {
+        bad.push(`${tag}: na arrancada a pata de trás foi ${(start.back * 100).toFixed(1)} cm para trás (andando, ${(steady.back * 100).toFixed(1)} cm)`);
+      }
+      if (first.some((x) => x < 0 || x > 0.45)) bad.push(`${tag}: demorou para cada pata dar o primeiro passo (${first.map((x) => x.toFixed(2)).join(', ')} s)`);
+    }
+    const mx = (k, w) => Math.max(...rows.map((r) => r[w][k]));
+    report.push(`${kind} (${cfg.walkSpeed} m/s): na arrancada a pata de trás vai até ${(mx('back', 'start') * 100).toFixed(1)} cm para trás, perna até ${mx('ext', 'start').toFixed(3)} (reta em ${mx('straight', 'start')} quadros, arrastada ${mx('drags', 'start')}); andando, ${(mx('back', 'steady') * 100).toFixed(1)} cm e ${mx('ext', 'steady').toFixed(3)}; primeiro passo de cada pata até ${Math.max(...rows.map((r) => Math.max(...r.first))).toFixed(2)} s`);
+  }
+  console.log(`[locomoção] arrancada\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
 });
 
 test('locomoção nova: a comemoração (pulinhos, voltinha, reverência) e a voltinha do segredo ficam com as patas do guia', () => {

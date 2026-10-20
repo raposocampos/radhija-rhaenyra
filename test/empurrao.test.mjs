@@ -536,3 +536,103 @@ test('modelo novo (?dogs=novo): subir, empurrar e descer não afundam mais que o
   });
   console.log(`[empurrão, modelo novo] ponto mais baixo antes da correção do chão:\n  ${report.join('\n  ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Empurrando caixote ou carrinho de pé (retorno do usuário, 2026-10-20: "essa mecânica de empurrar poderia usar uma
+// animação parecida com aquela de empurrar em pé... ela empurraria com as patas, andando apenas em duas patas
+// traseiras"): a pose do empurrão em pé, as patas da frente na face (ou em cima, se é baixo) e as traseiras andando.
+// ---------------------------------------------------------------------------------------------------------------
+test('empurrando caixote de pé: patas da frente nele, traseiras andando (sempre uma no chão), a cabeça fora dele', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+  const pos = (d, n) => d.bones.find((b) => b.name === n).getWorldPosition(new THREE.Vector3());
+  const report = [];
+  const bad = [];
+  for (const [model, make] of [['atual', createDog], ['novo', createDogV2]]) {
+    // empurrando um caixote alto, um baixo (patas em cima da beirada) e a Radhija fazendo força (ele não anda)
+    for (const [kind, action, speed, top] of [['rhaenyra', 'push', 0.8, 0.55], ['rhaenyra', 'push', 0.7, 0.42], ['radhija', 'strain', 0, 0.5]]) {
+      withSeed(4242, () => {
+        const d = make(kind);
+        const cfg = withStart(kind, { x: 0, z: 0, yaw: 0 });
+        const s = kind === 'rhaenyra' ? 1.133 : 1;
+        const gap = cfg.body.front; // o peito encosta na face (collision.js resolveBody)
+        const tag = `${model} ${kind} ${action} (caixote de ${top} m)`;
+        let steps = 0;
+        d.onFootstep = () => { steps++; };
+        const m = { up: 0, below: 0, belowAt: '', into: -1, intoAt: '', pawZ: [Infinity, -Infinity], pawY: [Infinity, -Infinity], hindMin: 0, hindLift: [0, 0], slide: 0 };
+        let prevHind = null;
+        for (let f = 0; f < 110; f++) {
+          const pushing = f >= 10;
+          d.object.position.z += speed * DT;
+          d.object.rotation.y = 0;
+          d.update(DT, pushing ? { speed, action, pushGap: gap, pushTop: top } : { speed, action: 'none' });
+          d.object.updateMatrixWorld(true);
+          if (f < 50) continue; // já de pé
+          const face = d.object.position.z + gap;
+          const sh = pos(d, 'FLu'), hip = pos(d, 'HLu');
+          m.up = Math.max(m.up, sh.y - hip.y);
+          for (const b of d.bones) {
+            const p = b.getWorldPosition(new THREE.Vector3());
+            if (p.y < m.below) { m.below = p.y; m.belowAt = b.name; }
+            if (/^F[LR][pc]$/.test(b.name)) continue;
+            // além da face, só acima do tampo (a cabeça tem focinho e pelo além dos ossos: pede mais folga)
+            const pad = /^(head|jaw|ear)/.test(b.name) ? 0.04 : 0.01;
+            const pen = p.z - face + pad;
+            if (p.y < top + 0.01 && pen > m.into) { m.into = pen; m.intoAt = `${b.name} (y ${p.y.toFixed(2)})`; }
+          }
+          for (const n of ['FLp', 'FRp']) {
+            const p = pos(d, n);
+            m.pawZ = [Math.min(m.pawZ[0], p.z - face), Math.max(m.pawZ[1], p.z - face)];
+            m.pawY = [Math.min(m.pawY[0], p.y), Math.max(m.pawY[1], p.y)];
+          }
+          const hind = [pos(d, 'HLp'), pos(d, 'HRp')];
+          m.hindMin = Math.max(m.hindMin, Math.min(hind[0].y, hind[1].y)); // a mais baixa das duas, no pior quadro
+          hind.forEach((p, i) => { m.hindLift[i] = Math.max(m.hindLift[i], p.y); });
+          // a traseira apoiada (a articulação da pata perto da altura de repouso, 2,4 cm na escala) não escorrega
+          const flat = 0.024 * s + 0.006;
+          if (prevHind) hind.forEach((p, i) => { if (p.y < flat && prevHind[i].y < flat) m.slide = Math.max(m.slide, Math.hypot(p.x - prevHind[i].x, p.z - prevHind[i].z)); });
+          prevHind = hind;
+        }
+        const onTop = top < 0.36 * s + 0.03 * s;
+        report.push(`${tag}: ombro ${(m.up * 100).toFixed(1)} cm acima do quadril; patas da frente a ${(m.pawZ[0] * 100).toFixed(1)}…${(m.pawZ[1] * 100).toFixed(1)} cm da face, ${(m.pawY[0] * 100).toFixed(0)}…${(m.pawY[1] * 100).toFixed(0)} cm de altura${onTop ? ' (em cima)' : ''}; o que mais chega na face: ${(m.into * 100).toFixed(1)} cm (${m.intoAt}); traseiras sobem até ${m.hindLift.map((x) => (x * 100).toFixed(1)).join('/')} cm, a mais baixa até ${(m.hindMin * 100).toFixed(1)} cm, apoiada escorrega ${(m.slide * 1000).toFixed(1)} mm/quadro; abaixo do chão ${(m.below * 1000).toFixed(1)} mm (${m.belowAt}); ${steps} pisadas`);
+        if (m.up < 0.1 * s) bad.push(`${tag}: não ficou de pé (ombro ${(m.up * 100).toFixed(1)} cm acima do quadril)`);
+        if (m.into > 0.005) bad.push(`${tag}: ${m.intoAt} entrou ${(m.into * 100).toFixed(1)} cm no caixote`);
+        if (onTop) {
+          if (m.pawY[0] < top + 0.005) bad.push(`${tag}: patas da frente abaixo da beirada (${(m.pawY[0] * 100).toFixed(1)} cm)`);
+          if (m.pawZ[0] < -0.03 || m.pawZ[1] > 0.1) bad.push(`${tag}: patas da frente fora da beirada (${(m.pawZ[0] * 100).toFixed(1)}…${(m.pawZ[1] * 100).toFixed(1)} cm)`);
+        } else {
+          if (Math.abs((m.pawY[0] + m.pawY[1]) / 2 - 0.36 * s) > 0.08) bad.push(`${tag}: patas da frente a ${(m.pawY[0] * 100).toFixed(0)}…${(m.pawY[1] * 100).toFixed(0)} cm de altura`);
+          if (m.pawZ[1] > 0.008 || m.pawZ[0] < -0.08) bad.push(`${tag}: patas da frente fora da face (${(m.pawZ[0] * 100).toFixed(1)}…${(m.pawZ[1] * 100).toFixed(1)} cm)`);
+        }
+        if (m.hindMin > 0.024 * s + 0.012) bad.push(`${tag}: as duas traseiras no ar ao mesmo tempo (${(m.hindMin * 100).toFixed(1)} cm)`);
+        if (m.below < -0.008) bad.push(`${tag}: ${m.belowAt} abaixo do chão (${(m.below * 1000).toFixed(1)} mm)`);
+        if (speed > 0) {
+          if (Math.min(...m.hindLift) < 0.024 * s + 0.012) bad.push(`${tag}: as traseiras não andam (sobem ${m.hindLift.map((x) => (x * 100).toFixed(1)).join('/')} cm)`);
+          if (steps < 4) bad.push(`${tag}: poucas pisadas (${steps})`);
+          if (m.slide > 0.005) bad.push(`${tag}: a traseira apoiada escorregou ${(m.slide * 1000).toFixed(1)} mm num quadro`);
+        }
+        for (const b of d.bones) if (!Number.isFinite(b.quaternion.x + b.position.y)) bad.push(`${tag}: osso ${b.name} inválido`);
+      });
+    }
+  }
+  console.log(`[empurrando de pé]\n  ${report.join('\n  ')}`);
+  assert.deepEqual(bad, []);
+});
+
+test('empurrando de pé só com caixote ou carrinho na frente; sem ele (puxando a corda, no escorregador), a pose de sempre', async () => {
+  installBrowserStubs();
+  const { createDog } = await import('../src/dogs/dog.js');
+  for (const [action, speed] of [['push', 0.6], ['strain', 0]]) {
+    const d = createDog('rhaenyra');
+    let up = 0;
+    for (let f = 0; f < 80; f++) {
+      d.update(DT, { speed, action, pushGap: 0 });
+      d.object.updateMatrixWorld(true);
+      const sh = d.bones.find((b) => b.name === 'FLu').getWorldPosition(new THREE.Vector3());
+      const hip = d.bones.find((b) => b.name === 'HLu').getWorldPosition(new THREE.Vector3());
+      if (f > 40) up = Math.max(up, sh.y - hip.y);
+    }
+    assert.ok(up < 0.04, `${action}: nas quatro patas (ombro ${(up * 100).toFixed(1)} cm acima do quadril)`);
+  }
+});

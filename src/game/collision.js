@@ -1,6 +1,7 @@
 // Colisão 2D (plano XZ) — círculo da dog contra o mundo.
 // Puro JS, sem dependência do Three (testável em Node: tools/scripts/test-collision.mjs).
 //
+// O corpo comprido da dog (peito e garupa além do círculo) entra com resolveBody: dois círculos menores no rumo dela.
 // Formas suportadas:
 //   box     { x, z, hx, hz }                 (alinhada aos eixos)
 //   circle  { x, z, r }
@@ -213,6 +214,59 @@ export function createCollisionWorld(layout) {
     return { x, z, hits: [...hits.values()] };
   }
 
+  /**
+   * Corpo comprido: o peito e a garupa passam do círculo do meio (r), então vão em dois círculos menores presos ao rumo
+   * `yaw` (body: { front, back, r } = até onde o peito vai à frente do centro, até onde a garupa vai atrás e o raio
+   * dos dois). Empurra o centro para fora do que o peito ou a garupa invadem; o círculo do meio manda (o vão por onde
+   * a dog passa continua o mesmo): onde os três não cabem (girando num corredor estreito), fica o do meio. Os centros
+   * dos dois ficam dentro do círculo do meio (front − r e back − r menores que ele), então nunca estão do outro lado
+   * de uma parede que o do meio não atravessou. `except` olha o centro da dog, como para o círculo do meio.
+   */
+  function resolveBody(x, z, yaw, body, r, size, opts = {}) {
+    const sx = Math.sin(yaw);
+    const sz = Math.cos(yaw);
+    const offs = [body.front - body.r, body.r - body.back];
+    const br = body.r;
+    const hits = new Map();
+    const keep = (h) => {
+      const prev = hits.get(h.id);
+      if (!prev || prev.depth < h.depth) hits.set(h.id, h);
+    };
+    for (let it = 0; it < 3; it++) {
+      let any = false;
+      for (const o of offs) {
+        for (const list of [statics, dynamics]) {
+          for (const c of list) {
+            if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
+            if (opts.ignore && opts.ignore.has(c.id)) continue;
+            const p = penCollider(x + sx * o, z + sz * o, br, c);
+            if (p && p.depth > 1e-6) {
+              x += p.nx * p.depth;
+              z += p.nz * p.depth;
+              any = true;
+              keep({ id: c.id, kind: c.kind, nx: p.nx, nz: p.nz, depth: p.depth });
+            }
+          }
+        }
+        const px = x + sx * o;
+        const pz = z + sz * o;
+        const b = clampBounds(px, pz, br);
+        if (b.x !== px || b.z !== pz) {
+          keep({ id: 'bounds', kind: 'static', nx: Math.sign(b.x - px), nz: Math.sign(b.z - pz), depth: Math.hypot(b.x - px, b.z - pz) });
+          x += b.x - px;
+          z += b.z - pz;
+          any = true;
+        }
+      }
+      if (!any) break;
+      const res = resolve(x, z, r, size, opts);
+      x = res.x;
+      z = res.z;
+      for (const h of res.hits) keep(h);
+    }
+    return { x, z, hits: [...hits.values()] };
+  }
+
   /** O círculo encosta (penetra) em algo? */
   function overlaps(x, z, r, size, opts = {}) {
     if (x < bounds.minX + r || x > bounds.maxX - r || z < bounds.minZ + r || z > bounds.maxZ - r) return true;
@@ -244,6 +298,6 @@ export function createCollisionWorld(layout) {
     addDynamic, removeDynamic, getDynamic,
     setCompanionMode(on) { companionMode = !!on; },
     get companionMode() { return companionMode; },
-    contacts, resolve, move, overlaps, segmentClear, clampBounds,
+    contacts, resolve, resolveBody, move, overlaps, segmentClear, clampBounds,
   };
 }

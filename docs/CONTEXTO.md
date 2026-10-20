@@ -1,9 +1,38 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 3: camadas e rabo com física; #33 a #44 e #43 já no main). Ler primeiro [AGENTS.md](../AGENTS.md)
+Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
+de pé, Radhija mais devagar e arrancada; etapa 3 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: modelos novos das dogs, etapa 3 de 5: poses em camadas (Claude, branch `claude/camadas-dogs`)
+## Em andamento: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (Claude, branch `claude/colisao-dogs`)
+
+- Plano aprovado: o peito e a garupa na colisão (dois círculos) e a cabeça que desvia, sem mudar o gating dos puzzles.
+  Pedidos do usuário para esta etapa (2026-10-20): "diminuir um pouco a velocidade da Radhija, ela está andando muito
+  rápido"; "analisar a arrancada: a pata traseira acaba ficando tempo demais no chão e esticando a perna de um jeito
+  estranho"; e, no meio do trabalho, "essa mecânica de empurrar poderia usar uma animação parecida com aquela de
+  empurrar em pé... ela empurraria com as patas, andando apenas em duas patas traseiras; resolveria essa colisão".
+- Feito (aguardando CI, E2E e prévia):
+  - Radhija a 2,1 m/s (era 2,4; a Rhaenyra continua a 2,0): `src/dogs/config.js`.
+  - Arrancada (`src/dogs/v2/gait.js`): o ritmo do guia demora uns décimos de segundo para acompanhar a aceleração do
+    controle (12–16 m/s²) e a pata de trás ia até o limite (~11 cm atrás, perna reta) e era arrastada. Agora o
+    compasso já é o da velocidade de agora (até 1,9× no começo), as patas no tempo do balanço saem logo e a de trás
+    dá um passo de conforto antes de a perna esticar. Teste novo em `test/locomocao.test.mjs`.
+  - Corpo na colisão (`world.resolveBody` em `src/game/collision.js`, chamado pelo `integrate`): peito e garupa em
+    círculos menores que o do meio (`DOG_CONFIG[nome].body`); os vãos não mudam e, de frente para a parede, ela para
+    uns 3 cm antes. Vale para os dois modelos (é o jogo). Testes em `test/colisao.test.mjs`.
+  - Empurrando caixote ou carrinho de pé (`dogAnimation.js`, os dois modelos): a pose do empurrão em pé, patas da
+    frente na face (ou em cima, se é baixo), andando nas traseiras; a Radhija fazendo força também fica de pé e
+    patina no lugar. O núcleo manda `pushGap`/`pushTop` (`game.js` `pushFace`; a altura vem do `height` do colisor,
+    agora em `createPushCrate` e no carrinho da fase 1). Testes em `test/empurrao.test.mjs`.
+  - Cabeça que desvia (`src/dogs/v2/head.js`, só o modelo novo, primeira camada de `LAYERS`): com o mundo da fase
+    (`d.setWorld`), o desenho freia antes de uma parede (aos poucos, até o focinho encostar) e a cabeça vira
+    farejando; raspando de lado, gira para fora. A locomoção não trata o recuo como esteira. Testes em
+    `test/cabeca.test.mjs`; sandbox `wall=<m>`/`crate=<altura>` e capturas `45-parede`, `46-empurrando-de-pe`,
+    `47-empurrando-cesto`, `48-forca-de-pe`.
+- Próximo passo: CI, E2E `todas` (inclui as capturas do `canil`), prévia e aprovação do usuário; depois, etapa 5 (troca
+  nas 10 fases e cascas de pelo mais leves só no celular).
+
+## Entregue: modelos novos das dogs, etapa 3 de 5: poses em camadas (PR #45, squash `b95c2b0`, deploy `39368373474`)
 
 - Pedido do usuário (pelo orquestrador, 2026-10-20): "pode começar as etapas novas" — 3, depois 4 (colisão do corpo e
   da cabeça), depois 5 (troca nas 10 fases). Lembretes dele: pata firme, compasso calmo, nada de giro parado; mudança
@@ -15,7 +44,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 - Feito: camadas em ordem em `src/dogs/v2/dog.js` (`LAYERS`, pesos em `d.layers`), física de correntinhas genérica
   (`physics.js`: orelhas com os mesmos números aprovados e o rabo, firme), testes do rabo, da boca (bebendo e comendo,
   no mesmo lugar do atual) e das camadas; captura `39-rabo-parando`.
-- Próximo passo: CI, E2E `canil` (capturas) e `todas`, prévia e aprovação; depois, etapa 4.
+- Aprovada pelo usuário ("pode publicar", versão `6ad75f7`): integrada e publicada (squash `b95c2b0`, CI do main
+  `39368273038`, deploy `39368373474`).
 
 ## Entregue: modelos novos das dogs, etapa 2 de 5: locomoção (PR #43, squash `ef2cb50`, deploy `39362697455`)
 

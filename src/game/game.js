@@ -824,6 +824,20 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   // ---------- aplicar às dogs ----------
+  /** Caixote ou carrinho bem na frente da dog (empurrando ou fazendo força nele): distância do centro à face e altura. */
+  function pushFace(c) {
+    if (!world) return null;
+    const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+    const M = 0.18;
+    let best = null;
+    for (const h of world.contacts(c.x, c.z, c.r, c.size, { margin: M })) {
+      if (h.kind !== 'crate' && h.kind !== 'cart') continue;
+      if (-(h.nx * fx + h.nz * fz) < 0.6) continue; // de frente para ele
+      const gap = c.r + M - h.depth;
+      if (!best || gap < best.gap) best = { gap, top: world.getDynamic(h.id)?.height ?? 0.5 };
+    }
+    return best;
+  }
   function applyDogs(dt) {
     for (const n of NAMES) {
       const c = ctrls[n];
@@ -863,6 +877,10 @@ export function createGame({ engine, dogs, levels, params }) {
         an.shoveOver = SV.over ?? 0;
         an.action = 'shove'; // também como companheira (trocou de dog no meio do empurrão)
       }
+      // Empurrando um caixote ou carrinho (ou fazendo força nele): de pé, as patas da frente na face dele.
+      const PF = !SV && (an.action === 'push' || an.action === 'strain') ? pushFace(c) : null;
+      an.pushGap = PF ? PF.gap : 0;
+      an.pushTop = PF ? PF.top : 0;
       if (c.shoveHit) {
         // As patas empurraram (um por ciclo; ativa ou companheira): o tum, a rosnadinha e o puzzle.
         shove.hit(c, { puzzle, ctrls, playing: state === 'playing' });
@@ -921,6 +939,7 @@ export function createGame({ engine, dogs, levels, params }) {
     attempt(() => scent?.dispose());
     attempt(() => built?.dispose?.());
     attempt(() => resources?.dispose(dbg?.group));
+    for (const n of NAMES) attempt(() => dogs[n]?.setWorld?.(null));
     // Nenhum getter/closure do núcleo deve manter a montagem descartada viva.
     root = built = puzzle = scent = world = nav = dbg = resources = null;
     if (errors.length) throw new AggregateError(errors, 'Falha ao encerrar a fase');
@@ -1021,6 +1040,8 @@ export function createGame({ engine, dogs, levels, params }) {
         applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
 
         world = createCollisionWorld(L);
+        // o modelo novo desvia a cabeça das paredes e dos móveis (src/dogs/v2/head.js)
+        for (const n of NAMES) dogs[n]?.setWorld?.(world);
         nav = createNavigator(L, world);
         scent = createScentField({ world, emit, view: createScentView(root) });
         cancelBafo();

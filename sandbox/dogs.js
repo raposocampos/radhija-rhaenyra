@@ -9,10 +9,15 @@
 //   extra=drink|eat|dig|sneeze|nudge|roll  xk=<0..1> (progresso fixo; sem ele, repete a cada xdur s)
 //   lick=1 (fase da lambida em ciclo)   airk=<0..1> + jumph=<m> (no ar)   slope=<rad>   poop=<0..1>
 //   wallk=<0..1> (impulso na parede, com a parede a 0,45 m à frente)   hop=1 (pula a cada 1 s: física das orelhas)
+//   wall=<m> (parede a m metros à frente: anda com o controle e a colisão do jogo, e a cabeça do modelo novo desvia)
+//   crate=<altura m> (empurrando ou fazendo força num caixote dessa altura, encostado no peito: de pé, patas nele)
 // window.__pose({ ...mesmos campos }) refaz a pose sem remontar as dogs (capturas em série, tools/scripts).
 import * as THREE from 'three';
 import { createDog, createPlushCarrot } from '../src/dogs/dog.js';
 import { createDogV2 } from '../src/dogs/v2/dog.js';
+import { DOG_CONFIG, withStart } from '../src/dogs/config.js';
+import { createCollisionWorld } from '../src/game/collision.js';
+import { createController, placeController, steer, integrate } from '../src/game/dogController.js';
 import { SUN, CAMERA } from '../src/levels/fase1/layout.js';
 
 // itens de teste (o jogo usa os do cenário): bolinha de tênis r≈0,065 e pantufa felpuda ≈0,24 m
@@ -75,6 +80,8 @@ function readConfig(src) {
     wallk: src.wallk !== undefined && src.wallk !== null && src.wallk !== '' ? Number(src.wallk) : null,
     hop: String(get('hop', '')) === '1',
     stopAt: src.stop !== undefined && src.stop !== null && src.stop !== '' ? Number(src.stop) : null,
+    wall: src.wall !== undefined && src.wall !== null && src.wall !== '' ? Number(src.wall) : null,
+    crate: src.crate !== undefined && src.crate !== null && src.crate !== '' ? Number(src.crate) : null,
   });
   cfg.carry = !!cfg.carryKind && cfg.carryKind !== '0';
 }
@@ -167,6 +174,51 @@ dogs.forEach((d, i) => {
   d.object.updateMatrixWorld(true);
   d.bodyRestY = d.bones.find((b) => b.name === 'body').getWorldPosition(new THREE.Vector3()).y;
 });
+// parede (wall=) e caixote (crate=): um por dog, no rumo de onde ela começa
+const propMat = new THREE.MeshStandardMaterial({ color: '#c9b79c', roughness: 0.9 });
+const crateMat = new THREE.MeshStandardMaterial({ color: '#b07a45', roughness: 0.85 });
+let world = null;
+const fwd = () => {
+  const y = THREE.MathUtils.degToRad(cfg.yawDeg);
+  return { x: Math.sin(y), z: Math.cos(y), yaw: y };
+};
+function applyProps() {
+  for (const d of dogs) {
+    for (const k of ['wallMesh', 'crateMesh']) if (d[k]) { scene.remove(d[k]); d[k].geometry.dispose(); d[k] = null; }
+  }
+  const f = fwd();
+  const walls = [];
+  for (const d of dogs) {
+    if (cfg.wall !== null) {
+      // parede de 1 m de largura e 20 cm de espessura, a face a `wall` m do centro (de lado, vê-se a face de quina)
+      const cx = d.home.x + f.x * (cfg.wall + 0.1), cz = d.home.z + f.z * (cfg.wall + 0.1);
+      const along = Math.abs(f.z) > Math.abs(f.x);
+      const hx = along ? 0.5 : 0.1, hz = along ? 0.1 : 0.5;
+      walls.push({ id: `parede-${walls.length}`, shape: 'box', x: cx, z: cz, hx, hz });
+      d.wallMesh = new THREE.Mesh(new THREE.BoxGeometry(hx * 2, 0.9, hz * 2), propMat);
+      d.wallMesh.position.set(cx, 0.45, cz);
+      d.wallMesh.castShadow = d.wallMesh.receiveShadow = true;
+      scene.add(d.wallMesh);
+    }
+    if (cfg.crate !== null) {
+      d.crateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, cfg.crate, 0.5), crateMat);
+      d.crateMesh.castShadow = d.crateMesh.receiveShadow = true;
+      scene.add(d.crateMesh);
+    }
+    d.ctrl = cfg.wall !== null ? createController(d.kind, withStart(d.kind, { x: d.home.x, z: d.home.z, yaw: f.yaw })) : null;
+  }
+  world = cfg.wall !== null ? createCollisionWorld({ STATIC_COLLIDERS: walls, WORLD: { bounds: { minX: -40, maxX: 40, minZ: -40, maxZ: 40 } } }) : null;
+  for (const d of dogs) d.setWorld?.(world);
+}
+/** O caixote encostado no peito (empurrando, ele anda junto com ela). */
+function placeCrate(d) {
+  if (!d.crateMesh) return;
+  const gap = DOG_CONFIG[d.kind].body.front;
+  const y = d.object.rotation.y;
+  d.crateMesh.position.set(d.object.position.x + Math.sin(y) * (gap + 0.25), cfg.crate / 2, d.object.position.z + Math.cos(y) * (gap + 0.25));
+  d.crateMesh.rotation.y = y;
+}
+
 function applyItems() {
   for (const d of dogs) {
     d.mouthSocket.clear();
@@ -175,6 +227,7 @@ function applyItems() {
   }
 }
 applyItems();
+applyProps();
 
 // legendas dos quadros
 const labels = dogs.map((d) => {
@@ -252,6 +305,7 @@ function animAt(t) {
     }
   }
   if (cfg.wallk !== null) Object.assign(a, { action: 'wallJump', wallK: cfg.wallk, wallGap: 0.45, wallTop: 1.1, wallOut: 0.05, wallPaws: 1.03, wallSide: 0.165, wallLat: 0.14 });
+  if (cfg.crate !== null) a.pushTop = cfg.crate;
   return a;
 }
 
@@ -261,14 +315,25 @@ function step(dt) {
   elapsed += dt;
   const a = animAt(elapsed);
   for (const d of dogs) {
-    if (cfg.move && a.speed > 0) {
+    let ad = a;
+    if (d.ctrl) {
+      // contra a parede: o controle e a colisão do jogo (o peito encosta; a cabeça do modelo novo desvia)
+      const f = fwd();
+      steer(d.ctrl, dt, { dx: f.x, dz: f.z, speed: a.speed });
+      integrate(d.ctrl, dt, world);
+      d.object.position.set(d.ctrl.x, 0, d.ctrl.z);
+      d.object.rotation.y = d.ctrl.yaw;
+      ad = { ...a, speed: d.ctrl.animSpeed, turn: d.ctrl.yawRate };
+    } else if (cfg.move && a.speed > 0) {
       const yaw = d.object.rotation.y;
       d.object.position.x += Math.sin(yaw) * a.speed * dt;
       d.object.position.z += Math.cos(yaw) * a.speed * dt;
       if (a.turn) d.object.rotation.y += a.turn * dt;
     }
+    if (cfg.crate !== null) ad = { ...ad, pushGap: DOG_CONFIG[d.kind].body.front };
     if (cfg.barkAt !== null && !barked && elapsed >= cfg.barkAt) d.triggerBark();
-    d.update(dt, a);
+    d.update(dt, ad);
+    placeCrate(d);
   }
   if (cfg.barkAt !== null && elapsed >= cfg.barkAt) barked = true;
 }
@@ -314,10 +379,12 @@ function pose(next = {}) {
   // volta ao lugar e ao rumo do começo (uma pose andando em curva não deixa a próxima virada)
   for (const d of dogs) d.object.rotation.y = THREE.MathUtils.degToRad(cfg.yawDeg);
   applyItems();
+  applyProps();
   elapsed = 0;
   barked = false;
   for (const d of dogs) {
     d.object.position.copy(d.home);
+    if (d.ctrl) placeController(d.ctrl, d.home.x, d.home.z, fwd().yaw);
     d.locomotion?.reset(); // modelo novo: as patas voltam para debaixo do corpo (não "andou" até a casa)
     d.steps = 0;
     // um quadro farejando zera o tempo parado (senão, depois de 5 s, ela senta sozinha)
@@ -326,7 +393,10 @@ function pose(next = {}) {
   const n = Math.round((cfg.sim ?? 2) * 60);
   for (let i = 0; i < n; i++) step(1 / 60);
   draw();
-  return dogs.map((d) => ({ kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, tilt: d.tilt ?? 0, bone: d.lowestBone ?? '' }));
+  return dogs.map((d) => ({
+    kind: d.kind, model: d.modelLabel, steps: d.steps, lowest: d.lowest ?? null, lift: d.lift ?? 0, tilt: d.tilt ?? 0, bone: d.lowestBone ?? '',
+    back: d.head?.info.back ?? 0, headYaw: d.head?.info.yaw ?? 0,
+  }));
 }
 window.__dogs = { dogs, stats: dogs.map((d) => d.stats), genMs, renderer, scene, camera };
 window.__pose = pose;
