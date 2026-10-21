@@ -373,7 +373,8 @@ export async function openPage(browser, options = {}, guardOptions = {}) {
   const tag = guardOptions.name ? `[${guardOptions.name}] ` : '';
   const watchOpts = { tag, limits, onOverdue: guardOptions.onOverdue };
   const page = await watched('browser.newPage()', () => browser.newPage(options), watchOpts);
-  await page.addInitScript(QUIET_IDLE_SCRIPT);
+  // (com o vigia, como as outras chamadas ao navegador: um Chromium que para de responder não prende a captura)
+  await watched('desligar o xixi sorteado (page.addInitScript)', () => page.addInitScript(QUIET_IDLE_SCRIPT), watchOpts);
   const probe = guardOptions.probe === false ? null
     : guardOptions.probe || await watched('ligar a sonda de travamento', () => attachHangProbe(page), watchOpts);
   return { page, guard: guardPage(page, { ...guardOptions, probe }) };
