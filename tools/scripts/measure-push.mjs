@@ -30,8 +30,10 @@ const SCENES = [
   { name: 'caixote', level: 2, id: 'crate' },
   { name: 'ventilador', level: 4, id: 'ventilador' },
 ];
-/** Fases da medida (ms): parada de frente, empurrando, andando sem empurrar. */
-const PHASES = { idle: 2500, push: 3500, walk: 2500 };
+/** Fases da medida (s de jogo): parada de frente, empurrando, andando sem empurrar. */
+const PHASES = { idle: 2.5, push: 3.5, walk: 2.5 };
+/** Desenha 1 de cada DRAW quadros (o SwiftShader do CI desenhando todo quadro deixa o jogo lento demais para andar). */
+const DRAW = 10;
 
 const server = createServer(async (request, response) => {
   try {
@@ -45,7 +47,7 @@ const server = createServer(async (request, response) => {
 });
 
 /** Ganchos de medida, só na página de medida (o jogo não muda). */
-function probe() {
+function probe(DRAW_EVERY) {
   let api;
   Object.defineProperty(window, '__game', {
     configurable: true, get: () => api,
@@ -89,10 +91,12 @@ function probe() {
         return r;
       };
       const render = engine.render;
+      let frame = 0;
       engine.render = function (...a) {
+        const draw = frame++ % DRAW_EVERY === 0;
         const t0 = performance.now();
-        const r = render.apply(this, a);
-        const rm = performance.now() - t0;
+        const r = draw ? render.apply(this, a) : undefined;
+        const rm = draw ? performance.now() - t0 : null;
         if (M.on) M.frames.push({ phase: M.phase, u, r: rm, ...M.cur });
         M.cur = fresh();
         return r;
@@ -115,7 +119,7 @@ function summarize(frames) {
     out[ph] = {
       frames: f.length,
       updateMs: { median: r2(pct(f.map((x) => x.u), 0.5)), p95: r2(pct(f.map((x) => x.u), 0.95)), mean: r2(mean(f.map((x) => x.u))) },
-      renderMs: { median: r2(pct(f.map((x) => x.r), 0.5)), mean: r2(mean(f.map((x) => x.r))) },
+      renderMs: { median: r2(pct(f.filter((x) => x.r != null).map((x) => x.r), 0.5)), mean: r2(mean(f.filter((x) => x.r != null).map((x) => x.r))) },
       animMs: { mean: r2(mean(f.map((x) => x.animMs))) },
       rays: { perFrame: r2(mean(f.map((x) => x.rayN))), ms: r2(mean(f.map((x) => x.rayMs))) },
       pushingFrames: f.filter((x) => x.action === 'push' || x.action === 'strain' || x.action === 'shove').length,
@@ -155,13 +159,13 @@ try {
       const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
       page.setDefaultTimeout(180000);
       page.on('pageerror', (e) => report.errors.push(`${LABEL}/${q}/${S.name}: ${e.message}`));
-      await page.addInitScript(probe);
+      await page.addInitScript(probe, DRAW);
       const extra = q === 'padrao' ? '' : `&${q}`;
       /** Carrega a fase e põe a Rhaenyra de frente para o objeto, recuada; devolve a direção do empurrão ou null. */
       const setup = async (dir) => {
         await page.goto(`${base}?level=${S.level}&play&dog=rhaenyra${extra}`, { waitUntil: 'load' });
         await page.waitForFunction(() => window.__game?.game?.state === 'playing' && !document.getElementById('loading'), null, { timeout: 180000 });
-        await page.waitForTimeout(1500);
+        await page.waitForTimeout(500);
         return page.evaluate(({ id, dir: d, stay }) => {
           const g = window.__game.game;
           g.debug.idle?.setPee?.(false);
@@ -196,9 +200,14 @@ try {
         const s = ((Math.round(Math.atan2(rgt, fwd) / (Math.PI / 4)) % 8) + 8) % 8;
         return [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyS', 'KeyD'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyW', 'KeyA']][s];
       }, [dx, dz]);
-      const holdFor = async (keys, ms) => {
+      /** Espera `sec` s do relógio do jogo (o runner é mais lento que o tempo real). */
+      const gameWait = async (sec) => {
+        const t0 = await page.evaluate(() => window.__game.game.debug.info().timeSec);
+        await page.waitForFunction((t) => window.__game.game.debug.info().timeSec >= t, t0 + sec, { timeout: 180000, polling: 50 });
+      };
+      const holdFor = async (keys, sec) => {
         for (const k of keys) await page.keyboard.down(k);
-        await page.waitForTimeout(ms);
+        await gameWait(sec);
         for (const k of [...keys].reverse()) await page.keyboard.up(k);
       };
       const run = { query: q, scene: S.name, level: S.level };
@@ -209,7 +218,8 @@ try {
           const st = await setup(d);
           if (st?.error) continue;
           const keys = await keysFor(d[0], d[1]);
-          await holdFor(['ShiftLeft', ...keys], 1200);
+          await gameWait(0.5);
+          await holdFor(['ShiftLeft', ...keys], 1.6);
           const moved = await page.evaluate(({ id, x, z }) => {
             const col = window.__game.game.debug.world.getDynamic(id);
             return Math.hypot(col.x - x, col.z - z);
@@ -223,8 +233,9 @@ try {
         run.dir = found;
         const keys = await keysFor(found[0], found[1]);
         const back = await keysFor(-found[0], -found[1]);
+        await gameWait(0.5);
         await page.evaluate(() => { window.__push.frames = []; window.__push.on = true; window.__push.phase = 'idle'; });
-        await page.waitForTimeout(PHASES.idle);
+        await gameWait(PHASES.idle);
         await page.evaluate(() => { window.__push.phase = 'push'; });
         let cdp = null;
         if (PROFILE) {

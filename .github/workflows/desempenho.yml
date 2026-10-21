@@ -143,10 +143,13 @@ jobs:
       - name: A — main publicado (modelo atual; ?dogs=novo, o novo)
         run: node tools/scripts/measure-push.mjs --dist dist-main --label main-1 --queries "padrao,dogs=novo"
       - name: B — PR (modelo novo; ?dogs=atual, o atual), com perfil de CPU
+        if: always()
         run: node tools/scripts/measure-push.mjs --dist dist-pr --label pr-1 --queries "padrao,dogs=atual" --profile
       - name: A de novo
+        if: always()
         run: node tools/scripts/measure-push.mjs --dist dist-main --label main-2 --queries "padrao,dogs=novo" --profile
       - name: B de novo
+        if: always()
         run: node tools/scripts/measure-push.mjs --dist dist-pr --label pr-2 --queries "padrao,dogs=atual"
       - name: Guardar os relatórios
         if: always()
