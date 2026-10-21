@@ -206,6 +206,7 @@ function createAnimState() {
     move: 0,
     phase: Math.random(),
     idle: 0,
+    sitAt: 4 + Math.random() * 4.5, // parada este tanto (s), senta sozinha; sorteado a cada parada (as irmãs fora de compasso)
     lie: 0, // deitada (0..1, com mola) e a cabeça descansando nas patas
     rest: 0,
     lean: 0,
@@ -509,8 +510,12 @@ export function createDogAnimation(ctx) {
       if (action === 'startled') st.startT = 0;
       st.prevAction = action;
     }
-    if (v < 0.05 && action === 'none' && Math.abs(turn) < 0.4 && st.bark < 0) st.idle += dt;
-    else st.idle = 0;
+    // (fazendo xixi, a parada da animação recomeça: saindo dali andando, ela não senta antes)
+    if (v < 0.05 && action === 'none' && Math.abs(turn) < 0.4 && st.bark < 0 && A.idle?.kind !== 'pee') st.idle += dt;
+    else {
+      if (st.idle > 0) st.sitAt = 4 + Math.random() * 4.5;
+      st.idle = 0;
+    }
     // parada por muito tempo (game/idle.js; retorno do usuário: "parada muito tempo, coçar, xixi agachada, sentar e
     // deitar"): deitada (a frente desce, os cotovelos no chão e as patas da frente esticadas; as traseiras dobradas
     // como sentada; depois de um tempo, a cabeça descansa nas patas, de olhinho fechado); coçando (sentada, uma traseira
@@ -528,7 +533,8 @@ export function createDogAnimation(ctx) {
     const iStroke = iKind === 'scratch' ? Math.sin(I.t * TAU * SCRATCH.hz) : 0;
     const iPee = iKind === 'pee' ? sstep(0, 0.2, I.k) * (1 - sstep(0.8, 1, I.k)) : 0;
     w.pee = iPee; // (a locomoção do modelo novo sai: as patas são as da pose)
-    const wantSit = (action === 'sit' || (action === 'none' && st.idle > 5) || iKind === 'scratch' || iLie > 0.02) && iKind !== 'pee';
+    // (sentada num lugar novo depois do xixi, 'sit'; em pé perto da poça, 'stand', não senta)
+    const wantSit = (action === 'sit' || (action === 'none' && st.idle > st.sitAt) || iKind === 'sit' || iKind === 'scratch' || iLie > 0.02) && iKind !== 'pee' && iKind !== 'stand';
     // andando, as poses de ação que acabaram saem depressa: segurando o direcional antes de uma animação terminar
     // (puxar a corda do portão, molhar no irrigador, empurrar), as patas não ficam presas enquanto ela já anda
     // (retorno do usuário: "as patas demoram muito pra se mexer")

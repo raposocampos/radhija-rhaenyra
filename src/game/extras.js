@@ -16,6 +16,7 @@
 // extra:spurt (sempre com x, z), dog:land e dog:yuck (a irmã).
 import { createPoop } from '../world/poop.js';
 import { POOP_DROP, POOP_KICKS, SNEEZE_AT, NUDGE_AT, DIG_RATE } from '../dogs/dogAnimation.js';
+import { buildPath, along, lastOf, speedProfile } from './walkPath.js';
 
 /** Agachada (s), depois da voltinha. */
 export const POOP_TIME = 4.8;
@@ -54,68 +55,6 @@ const smooth = (k) => { const x = Math.min(1, Math.max(0, k)); return x * x * (3
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const mod = (a, m) => ((a % m) + m) % m;
 
-/**
- * Caminho no chão a partir de (x, z) andando para yaw, em trechos { len, k0, k1 }: a curvatura (1/raio; + = vira
- * para a esquerda, com o yaw crescendo) vai de k0 a k1 ao longo do trecho. Pontos a cada ~2 cm, com o yaw contínuo.
- */
-function buildPath(x, z, yaw, segs) {
-  const P = { x: [x], z: [z], yaw: [yaw], k: [segs[0]?.k0 ?? 0], s: [0], len: 0, i: 0 };
-  for (const g of segs) {
-    const n = Math.max(1, Math.ceil(g.len / 0.02));
-    const ds = g.len / n;
-    for (let j = 1; j <= n; j++) {
-      const k = g.k0 + ((g.k1 - g.k0) * (j - 0.5)) / n;
-      x += Math.sin(yaw + (k * ds) / 2) * ds;
-      z += Math.cos(yaw + (k * ds) / 2) * ds;
-      yaw += k * ds;
-      P.len += ds;
-      P.x.push(x);
-      P.z.push(z);
-      P.yaw.push(yaw);
-      P.k.push(g.k0 + ((g.k1 - g.k0) * j) / n);
-      P.s.push(P.len);
-    }
-  }
-  return P;
-}
-/** Ponto do caminho na distância d (em out: x, z, yaw, k). O cursor só volta se d voltar. */
-function along(P, d, out) {
-  const n = P.s.length - 1;
-  if (d < P.s[P.i]) P.i = 0;
-  while (P.i < n - 1 && P.s[P.i + 1] < d) P.i++;
-  const i = P.i;
-  const j = Math.min(n, i + 1);
-  const u = Math.min(1, Math.max(0, (d - P.s[i]) / Math.max(1e-6, P.s[j] - P.s[i])));
-  out.x = P.x[i] + (P.x[j] - P.x[i]) * u;
-  out.z = P.z[i] + (P.z[j] - P.z[i]) * u;
-  out.yaw = P.yaw[i] + (P.yaw[j] - P.yaw[i]) * u;
-  out.k = P.k[i] + (P.k[j] - P.k[i]) * u;
-  return out;
-}
-const lastOf = (P) => ({ x: P.x[P.x.length - 1], z: P.z[P.z.length - 1], yaw: P.yaw[P.yaw.length - 1] });
-/**
- * Velocidade suave para percorrer D m com pico vMax: acelera na fração `up` do tempo e freia na fração `down`.
- * → { T (s), at(τ, out) → out.d (m percorridos), out.v (m/s) }
- */
-function speedProfile(D, vMax, up, down) {
-  const N = 160; // tabela fina: o passo da animação bate com o deslocamento de cada quadro
-  const shape = (u) => smooth(u / up) * (1 - smooth((u - (1 - down)) / down));
-  const F = [0];
-  for (let i = 1; i <= N; i++) F.push(F[i - 1] + shape((i - 0.5) / N) / N);
-  const mean = F[N];
-  const T = D / (vMax * mean);
-  return {
-    T,
-    at(tau, out) {
-      const u = Math.min(1, Math.max(0, tau / T));
-      const f = u * N;
-      const i = Math.min(N - 1, Math.floor(f));
-      out.d = (D * (F[i] + (F[i + 1] - F[i]) * (f - i))) / mean;
-      out.v = vMax * shape(u);
-      return out;
-    },
-  };
-}
 /**
  * Quanto girar (rad, entre a e b) para terminar de perfil para a câmera (view = direção da câmera para a dog): a
  * agachada se lê melhor de lado. Sem câmera, o meio do intervalo.

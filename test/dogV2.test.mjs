@@ -174,6 +174,8 @@ const CASES = [
   ['deitando', 3, (t) => ({ idle: { kind: 'lie', k: Math.min(1, t / 1.2), t, side: 1 } })],
   ['deitada descansando', 6, (t) => ({ idle: { kind: 'lie', k: 1, t: 9 + t, side: 1 } })],
   ['xixi', 3, (t, k) => ({ idle: { kind: 'pee', k, t, side: -1 } })],
+  // depois do xixi: sentada no lugar novo (a parada continua)
+  ['sentada no lugar novo', 3, (t) => ({ idle: { kind: 'sit', k: 1, t: 5.5 + t, side: 1 } })],
 ];
 
 /** Região de cada vértice pelo osso de maior peso: rabo, orelha ou corpo. */

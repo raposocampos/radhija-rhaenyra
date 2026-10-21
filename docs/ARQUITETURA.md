@@ -38,6 +38,8 @@ src/game/                  NÚCLEO genérico
   dogController.js         movimento de uma dog (aceleração, giro, arrancada, pulo, colisão)
   cameraRig.js             câmera de seguimento, planos de foco, tela inicial e comemoração
   celebrateLoop.js         lado e tamanho da voltinha da comemoração que cabem no cenário
+  idle.js                  parada por muito tempo: deitar, xixi raro e a volta depois dele (coçar, desligado)
+  walkPath.js              caminhos andados de verdade (curvas suaves, curva-reta-curva) e o perfil de velocidade
   puzzleKit.js             peças para puzzles: dicas, prompts, colecionáveis, item carregado, entrega
   mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa, porcos…)
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
@@ -509,7 +511,8 @@ depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar 
 
 **Extras** (escondidos de propósito; não remover): pedido do responsável pelo projeto, que conta o segredo a quem
 quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquista ou texto, e nada no README
-(`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
+(`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas (os caminhos andados, a
+voltinha e os zoomies, ficam em `walkPath.js`, junto com os da parada por muito tempo).
 - **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
   todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
   boca. Três partes, com as poses em `dogAnimation.js`:
@@ -532,14 +535,28 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
   as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
-- **Parada por muito tempo** (`src/game/idle.js`, pedido do usuário na etapa 5): sentar já vem da animação (5 s
-  parada); o módulo conta, por dog, quanto ela está parada e livre (a ativa sem o jogador mexer nela, sem trava, extra
-  nem cocô, no chão) e manda `anim.idle`: coça sentada aos 8 s e de 7 a 11 s depois (a pata alterna), deita aos 24 s e
-  fica (a cabeça descansa nas patas depois de 9 s, de olhinho fechado) e, às vezes (30% das paradas, no máximo uma a
-  cada 2 min, no chão de verdade e sem nada na boca), faz xixi agachada em pé antes de sentar (`dog:pee`: a poça
-  discreta que seca, `feedback.js`). Qualquer movimento a levanta; nada trava a dog (a companheira continua seguindo).
-  As poses ficam em `dogAnimation.js` (os dois modelos; no novo, a locomoção sai no xixi: `w.pee`). Testes em
-  `test/parada.test.mjs` e nos casos de `test/dogV2.test.mjs`; sandbox `idle=scratch|lie|pee` e capturas 60–63.
+- **Parada por muito tempo** (`src/game/idle.js`, pedido do usuário na etapa 5): sentar já vem da animação (parada de
+  4 a 8,5 s, sorteado a cada parada e para cada dog); o módulo conta, por dog, quanto ela está parada e livre (a ativa
+  sem o jogador mexer nela, sem trava, extra nem cocô, no chão) e manda `anim.idle`. Os tempos são sorteados a cada
+  parada, e uma irmã não começa o que a outra acabou de começar (`IDLE.apart`; retorno do usuário: "as duas fazem a
+  mesma ação ao mesmo tempo"):
+  - deita entre 20 e 34 s e fica (a cabeça descansa nas patas depois de 9 s, de olhinho fechado);
+  - xixi agachada, raro (12% das paradas, entre 1,5 e 3,5 s; no máximo um a cada 4 min por dog e nunca até 90 s
+    depois do da irmã), em pé, no chão de verdade, sem nada na boca e só com espaço para sair dali (`dog:pee`: a poça
+    discreta que seca, `feedback.js`). Depois (retorno do usuário: "não deixe ela sentar no mijo, faz ela levantar,
+    dar uma cheirada no mijo e então ela senta em outro lugar, tudo andando naturalmente"), ela anda até a poça
+    (curva-reta-curva, `walkPath.dubinsPaths`: nada de girar parada), fica de frente com o focinho em cima dela e
+    cheira (`dog:sniff`), sai andando por um caminho que não passa por cima da poça e senta perto da irmã, de frente
+    para ela (ou num lugar livre em volta), longe da poça (`anim.idle.kind` 'sit'). Os caminhos não encostam em
+    colisores, bordas de caminha nem na irmã (`IDLE.after.pass` entre os centros); a trava `lockFor` pede `drive` (o
+    núcleo não a desloca; `idle.step` a anda antes de pôr o corpo no lugar, com a velocidade e o giro de verdade para
+    as patas). Algo entrou no caminho: ela para ali (perto da poça, fica em pé: 'stand');
+  - coçar está desligado (`IDLE.scratch.on`): o usuário pediu para deixar de fora por enquanto; a pose (sentada, a
+    traseira no pescoço) continua em `dogAnimation.js` e no sandbox (`idle=scratch`).
+  Qualquer movimento ou comando a levanta (a ativa solta a trava no mesmo quadro). As poses ficam em `dogAnimation.js`
+  (os dois modelos; no novo, a locomoção sai no xixi: `w.pee`). Testes em `test/parada.test.mjs` (a agenda, a sequência
+  depois do xixi com e sem o jogo, as irmãs fora de compasso) e nos casos de `test/dogV2.test.mjs`; sandbox
+  `idle=scratch|lie|pee` e capturas 60–63.
 - Uma fase nova precisa de três ossinhos (a fase 10, a última, tem cinco) e de pelo menos um ponto em `extras`
   (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
@@ -710,7 +727,7 @@ Quem emite e quem ouve:
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase), `dog:jumpBlocked` (pulo recusado pela fase),
   `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho), `dog:scratch {name}` e
-  `dog:pee {name, x, z}` (parada por muito tempo, `idle.js`).
+  `dog:pee {name, x, z}` e `dog:sniff {name, x, z}` (parada por muito tempo, `idle.js`).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
   `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
   (o pombo ignorou o latido).

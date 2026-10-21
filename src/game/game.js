@@ -581,7 +581,8 @@ export function createGame({ engine, dogs, levels, params }) {
     touchedT = poked || mag > 0.1 || shift || input.bafo() || input.lick() ? 0 : touchedT + dt;
     let action = 'none';
     let intent;
-    const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog);
+    // (a menor das travas: a da parada por muito tempo, depois do xixi, idle.js; o jogador mexeu nela, sai na hora)
+    const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog) || (touchedT > 0 ? idle?.lockFor(activeDog) : null) || null;
     locks[activeDog] = lock;
     let standing = false;
     if (lock) {
@@ -722,7 +723,7 @@ export function createGame({ engine, dogs, levels, params }) {
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
     world.setCompanionMode?.(true);
-    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName);
+    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName) || idle?.lockFor(compName) || null;
     locks[compName] = compLock;
     const licked = lick.on && lick.target === compName;
     let ci;
@@ -758,7 +759,7 @@ export function createGame({ engine, dogs, levels, params }) {
       integrate(C, dt, world);
     }
     world.setCompanionMode?.(false);
-    if (!stay[compName] && !compLock && !licked) separate(C, A, dt);
+    if (!stay[compName] && (!compLock || compLock.idle) && !licked) separate(C, A, dt);
     keepOffRims(C);
     anims[compName].action = ci.action;
     setLook(compName, ci.lookAt);
@@ -962,9 +963,28 @@ export function createGame({ engine, dogs, levels, params }) {
       const c = ctrls[n];
       const d = dogs[n];
       const an = anims[n];
+      const G = gnd[n];
+      an.poopK = extras ? extras.poopK(n) : -1;
+      an.poopPre = extras ? extras.poopPre(n) : -1;
+      an.party = extras ? extras.party(n) : null;
+      an.cheer = extras ? extras.cheer(n) : -1;
+      an.extra = extras ? extras.extraAnim(n) : null;
+      // parada por muito tempo (idle.js): deitar e, às vezes, xixi agachada (sentar vem da animação); só jogando, parada
+      // e livre (a ativa, sem o jogador mexer nela). Antes de pôr o corpo no lugar: depois do xixi, ela anda.
+      const back = (c.cfg.body?.back ?? 0.25) * 0.7;
+      // livre: nada mais acontecendo com ela; a companheira na sequência depois do xixi solta quando a irmã sai andando
+      const L = ctrls[activeDog];
+      const free = !airborne(c) && !c.shove && (!locks[n] || locks[n].idle) && !an.extra && !(an.poopK >= 0) && !(an.poopPre >= 0)
+        && !an.party && !(an.cheer >= 0) && (n !== activeDog || touchedT > 0.4)
+        && (n === activeDog || !(L.animSpeed > 0.4 && Math.hypot(L.x - c.x, L.z - c.z) > 2));
+      const settled = c.animSpeed < 0.05 && Math.abs(c.yawRate) < 0.4 && (an.action === 'none' || an.action === 'sit');
+      an.idle = idle && state === 'playing' ? idle.step(n, dt, {
+        still: free && (idle.driving(n) || settled),
+        canPee: !carries(n) && G.y < 0.01,
+        at: { x: c.x - Math.sin(c.yaw) * back, z: c.z - Math.cos(c.yaw) * back },
+      }) : null;
       // em cima de uma coisa baixa de pisar (placa, pedal, caminha), o corpo sobe junto (suave; posta em outro lugar, na
       // hora), apoiado no que está embaixo das patas da frente e das de trás
-      const G = gnd[n];
       let gy = !ground ? 0 : c.cfg.body ? bodyGround(ground, c.x, c.z, c.yaw, c.cfg.body) : ground.heightAt(c.x, c.z);
       // no pulinho por cima da borda, o corpo vai do chão de onde saiu ao de onde pousa (a borda não o levanta mais)
       if (G.hop && c.jumpT > 0 && c.hopH > 0) gy = G.hop.g0 + (G.hop.g1 - G.hop.g0) * (1 - c.jumpT / c.jumpDur);
@@ -985,21 +1005,6 @@ export function createGame({ engine, dogs, levels, params }) {
       an.back = c.v < -0.02; // de ré (puxando uma corda): as patas andam ao contrário
       // mordendo uma corda (lock.bite), a boca fecha nela como num item
       an.carrying = carries(n) || !!locks[n]?.bite;
-      an.poopK = extras ? extras.poopK(n) : -1;
-      an.poopPre = extras ? extras.poopPre(n) : -1;
-      an.party = extras ? extras.party(n) : null;
-      an.cheer = extras ? extras.cheer(n) : -1;
-      an.extra = extras ? extras.extraAnim(n) : null;
-      // parada por muito tempo (idle.js): coçar, deitar e, às vezes, xixi agachada (sentar vem da animação); só jogando,
-      // parada e livre (a ativa, sem o jogador mexer nela)
-      const back = (c.cfg.body?.back ?? 0.25) * 0.7;
-      an.idle = idle && state === 'playing' ? idle.step(n, dt, {
-        still: c.animSpeed < 0.05 && Math.abs(c.yawRate) < 0.4 && !airborne(c) && !c.shove && !locks[n] && !an.extra
-          && !(an.poopK >= 0) && !(an.poopPre >= 0) && !an.party && !(an.cheer >= 0)
-          && (an.action === 'none' || an.action === 'sit') && (n !== activeDog || touchedT > 0.4),
-        canPee: !carries(n) && G.y < 0.01,
-        at: { x: c.x - Math.sin(c.yaw) * back, z: c.z - Math.cos(c.yaw) * back },
-      }) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       // por cima do que dá para pular, o corpo desenhado fica acima do alto da coisa (as patas passam por cima dela):
       // sobe depressa, do alto em que está, e, passada a coisa, cai dela como no pulo (a gravidade do arco), até o arco
@@ -1254,7 +1259,7 @@ export function createGame({ engine, dogs, levels, params }) {
           };
         } else cam.configure(L);
         if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
-        if (!idle) idle = createIdle({ emit });
+        if (!idle) idle = createIdle({ emit, ctrls, world: () => world, rims: () => ground?.rings ?? [] });
         idle.reset();
         if (!extras) {
           extras = createExtras({

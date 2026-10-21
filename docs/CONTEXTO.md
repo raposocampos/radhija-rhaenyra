@@ -21,12 +21,26 @@ antes de editar.
   - (2) Pelo no celular: `quality.furShellsFor` (10 cascas no PC, 6 no celular e no tablet; o mesmo comprimento, 40%
     menos malha de pelo), `createDogV2(kind, { shells })`, teste em `test/dogV2.test.mjs` (`d3c3ac3`). Medido em Node:
     a animação do novo custa 0,163 ms por quadro para as duas (o atual, 0,105); a malha é do mesmo tamanho.
-  - (5) Parada por muito tempo (`src/game/idle.js`, poses em `dogAnimation.js`, a poça em `feedback.js`): coça
-    sentada aos 8 s e de tempos em tempos, deita aos 24 s (a cabeça descansa nas patas depois) e, às vezes, faz xixi
-    agachada antes de sentar; qualquer movimento a levanta. Testes em `test/parada.test.mjs` e nos casos de
-    `test/dogV2.test.mjs` (nada passa do chão nos dois modelos); capturas 60–63 (`d64de82`).
-- Próximo passo: revisar as capturas das poses novas e as das fases (E2E `todas` com o modelo novo); testes onde o
-  novo ainda não tem cobertura; prévia para o usuário aprovar.
+  - (5) Parada por muito tempo (`src/game/idle.js`, poses em `dogAnimation.js`, a poça em `feedback.js`): deita
+    depois de um tempo (a cabeça descansa nas patas depois) e, às vezes, faz xixi agachada antes de sentar; qualquer
+    movimento a levanta. Testes em `test/parada.test.mjs` e nos casos de `test/dogV2.test.mjs` (nada passa do chão nos
+    dois modelos); capturas 60–63 (`d64de82`).
+  - Rodada de retorno do usuário (2026-10-21, com dois vídeos de cachorros se coçando): xixi mais raro (12% das
+    paradas, um a cada 4 min por dog, nunca logo depois do da irmã); depois dele ela anda até a poça, cheira e senta em
+    outro lugar, andando (caminhos curva-reta-curva em `walkPath.js`, que agora também guarda os da voltinha do cocô);
+    as irmãs fora de compasso (tempos sorteados por dog a cada parada; sentar sozinha de 4 a 8,5 s; uma não deita junto
+    com a outra). Conferido nas 10 fases (3 sementes cada): a sequência inteira, sem colisor, sem encostar na irmã
+    (≥ 0,63 m entre os centros) e ela continua sentada depois.
+  - Coçar: DESLIGADO a pedido do usuário ("Não precisa mais ter a animação de coçar, pode deixar de fora, outro dia
+    refinamos isso"; `IDLE.scratch.on`). A pose entregue em `3124772` ficou como estava (só no sandbox). Para a próxima
+    vez: ele achou a perna "torta, parece quebrado" (o joelho esticava ao contrário). Na anatomia do cão, para a pata
+    chegar ao pescoço, a coxa sobe junto às costelas (o quadril dobra muito), o joelho fica para cima e para trás, a
+    canela vai para a frente até o jarrete (perto do cotovelo) e o pé sobe; o "joelho para a frente" dos vídeos é o
+    jarrete. No modelo, sentada, o pescoço fica a ~0,31 m do quadril e a perna inteira tem ~0,285 m: a pata só chega à
+    lateral do pescoço com a perna quase esticada ou com o pescoço descendo até ela; com o quadril muito dobrado, a pele
+    da parte de dentro da coxa do modelo novo estica como uma vela. Vídeos e quadros só na máquina do usuário.
+- Próximo passo: prévia desta rodada para o usuário aprovar; depois, revisar as capturas das fases (E2E `todas` com o
+  modelo novo) e testes onde o novo ainda não tem cobertura.
 
 ## Entregue: irmã que segue sem loop quando não alcança a outra (PR #57, squash `54a7116`)
 

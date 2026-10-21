@@ -658,6 +658,7 @@ export function createFeedback(opts) {
     particles.dust({ x, y: 0.04, z }, { count: 6, size: 0.7, alpha: 0.6, dir: { x: dirX, z: dirZ }, strength: 1.2, spread: 0.06, color });
   });
   events.on('extra:sniff', ({ x, z }) => sfx('extraSniff', x, z));
+  events.on('dog:sniff', ({ x, z }) => sfx('extraSniff', x, z)); // cheirando a poça (idle.js)
   events.on('extra:sneeze', ({ x, y = 0.35, z, color = '#FFD36B' }) => {
     sfx('extraSneeze', x, z);
     particles.dust({ x, y, z }, { count: 8, size: 0.7, alpha: 0.55, strength: 0.8, spread: 0.06, color: '#F7F3EA' });
