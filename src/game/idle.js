@@ -25,7 +25,8 @@ export function createIdle({ emit = () => {}, rand = Math.random } = {}) {
   let S = {};
   const fresh = () => ({ t: 0, next: IDLE.scratch.first, side: 1, scr: -1, pee: -1, peeAt: -Infinity, rolled: false, dropped: false, clock: 0 });
   const st = (n) => (S[n] ??= fresh());
-  const between = ([a, b]) => a + (b - a) * rand();
+  /** Um tempo sorteado no intervalo [de, até] (s). @param {readonly number[]} r */
+  const between = (r) => r[0] + (r[1] - r[0]) * rand();
   /** @type {Record<string, { kind: 'scratch' | 'lie' | 'pee', k: number, t: number, side: number } | null>} */
   const now = {};
 
