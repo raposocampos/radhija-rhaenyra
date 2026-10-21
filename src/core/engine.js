@@ -341,7 +341,7 @@ export function createEngine(container, { params } = {}) {
     if (!sync) return Promise.resolve();
     gl.flush();
     const t0 = performance.now();
-    return new Promise((resolve) => {
+    return /** @type {Promise<void>} */ (new Promise((resolve) => {
       const check = () => {
         const status = gl.clientWaitSync(sync, 0, 0);
         // WAIT_FAILED: contexto perdido; também não espera para sempre
@@ -351,7 +351,7 @@ export function createEngine(container, { params } = {}) {
         } else setTimeout(check, 4);
       };
       check();
-    });
+    }));
   }
   const mark = (name) => globalThis.performance?.mark?.(`rr:gpu:${name}`);
   /**
