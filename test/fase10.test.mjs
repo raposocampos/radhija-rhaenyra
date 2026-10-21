@@ -1380,3 +1380,39 @@ test('fase 10: varredura de sementes dos testes que dependem do sorteio', { skip
   const summary = Object.fromEntries(Object.entries(bad).map(([k, v]) => [k, { falhas: v.length, primeiras: v.slice(0, 4) }]));
   assert.deepEqual(summary, {});
 });
+
+test('fase 10: a despensa — com os caixotes no começo do trilho, as duas chegam ao lado das alças (pela passagem ao sul deles)', async () => {
+  // retorno do usuário: "essa área do puzzle na fase 10 não me deixa passar pro outro lado" (o colisor dos sacos de
+  // farinha e da cestinha, do #53, fechava a passagem entre eles e o caixote baixo)
+  const h = await game();
+  h.run(0.2);
+  const w = h.world;
+  const S = 0.04, x0 = -8.25, x1 = -4.55, z0 = -0.6, z1 = 2.15;
+  const nx = Math.round((x1 - x0) / S), nz = Math.round((z1 - z0) / S);
+  for (const [kind, r, size] of [['radhija', L.DOGS.radhija.radius, 'small'], ['rhaenyra', L.DOGS.rhaenyra.radius, 'large']]) {
+    const free = (i, j) => !w.overlaps(x0 + i * S, z0 + j * S, r, size);
+    const seen = new Set();
+    // da cozinha, na frente da porta da despensa
+    const start = [Math.round((-7.35 - x0) / S), Math.round((-0.55 - z0) / S)];
+    const q = [start];
+    seen.add(start.join());
+    while (q.length) {
+      const [i, j] = q.shift();
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a > nx || b > nz || seen.has(a + ',' + b) || !free(a, b)) continue;
+        seen.add(a + ',' + b);
+        q.push([a, b]);
+      }
+    }
+    for (const cr of CR.list) {
+      // do lado leste do caixote, ao alcance da alça (o armário fica logo ao norte do caixote alto)
+      const ex = CR.x0 + CR.hx;
+      let ok = false;
+      for (let x = ex + r + 0.02; x <= ex + r + 0.3 && !ok; x += S) {
+        for (let z = cr.z - 0.08; z <= cr.z + 0.16 && !ok; z += S) ok = seen.has(Math.round((x - x0) / S) + ',' + Math.round((z - z0) / S));
+      }
+      assert.ok(ok, `${kind}: chega à alça do caixote ${cr.id}`);
+    }
+  }
+});

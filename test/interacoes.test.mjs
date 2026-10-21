@@ -258,7 +258,9 @@ test('curva (modelo novo): a cabeça vira primeiro, o tronco vem atrás e, depoi
   }
 });
 
-test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e o pouso afunda e volta, sem pata no chão', async () => {
+// retorno do usuário: "parecendo pulo de coelho, pulando com as duas patas" → de quadrúpede: decolando, a frente sobe
+// primeiro (as traseiras ainda empurram o chão); pousando, as dianteiras chegam primeiro e a garupa desce depois
+test('pulo (modelo novo): a frente sobe primeiro e as traseiras empurram; as dianteiras pousam primeiro, a garupa depois; o pouso afunda e volta, sem pata no chão', async () => {
   const { createDogV2 } = await import('../src/dogs/v2/dog.js');
   for (const speed of [0, 2]) {
     withSeed(11, () => {
@@ -273,7 +275,7 @@ test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e
       d.object.updateMatrixWorld(true);
       const chest0 = y('chest');
       const H = 0.5, N = Math.round(0.42 / DT);
-      let minPaw = Infinity, frontFirst = false, dip = 0, back = Infinity;
+      let minPaw = Infinity, frontFirst = false, dip = 0, back = Infinity, takeoff = -Infinity, rumpAfter = -Infinity;
       for (let f = 0; f < N + 30; f++) {
         const air = f < N, k = f / N;
         d.object.position.z += (air ? 3 : speed) * DT;
@@ -282,6 +284,10 @@ test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e
         const paws = ['FLp', 'FRp', 'HLp', 'HRp'].map(y);
         minPaw = Math.min(minPaw, ...paws);
         if (air && k > 0.88 && k < 0.98) frontFirst ||= Math.max(paws[0], paws[1]) < Math.min(paws[2], paws[3]) - 0.02;
+        // decolando: as dianteiras já no ar, acima das traseiras que ainda empurram
+        if (air && k > 0.05 && k < 0.16) takeoff = Math.max(takeoff, Math.min(paws[0], paws[1]) - Math.max(paws[2], paws[3]));
+        // pousou: nos primeiros quadros, as traseiras ainda acima das dianteiras (a garupa desce depois)
+        if (!air && f - N < 3) rumpAfter = Math.max(rumpAfter, Math.min(paws[2], paws[3]) - Math.max(paws[0], paws[1]));
         if (!air) {
           const t = (f - N) * DT;
           if (t < 0.12) dip = Math.max(dip, chest0 - y('chest'));
@@ -290,7 +296,9 @@ test('pulo (modelo novo): as traseiras empurram, as dianteiras pousam primeiro e
       }
       const tag = speed ? 'andando' : 'parada';
       assert.ok(minPaw > 0.012, `${tag}: pata a ${cm(minPaw)} cm (no chão)`);
+      assert.ok(takeoff > 0.04, `${tag}: decolando, as dianteiras sobem primeiro (${cm(takeoff)} cm acima das traseiras)`);
       assert.ok(frontFirst, `${tag}: as dianteiras pousam primeiro`);
+      assert.ok(rumpAfter > 0.02, `${tag}: pousada, a garupa desce depois (traseiras ${cm(rumpAfter)} cm acima)`);
       assert.ok(dip > 0.02, `${tag}: o pouso afunda o peito (${cm(dip)} cm)`);
       assert.ok(back < 0.015, `${tag}: depois do pouso o peito volta (${cm(back)} cm fora)`);
     });

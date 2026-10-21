@@ -234,6 +234,8 @@ function createAnimState() {
     landT: 9, // tempo desde o último pouso (amortece o "agachadinho")
     peakY: 0, // o mais alto do pulo em andamento (m) e a força do pouso que ele deu (0..1,1)
     landAmp: 1,
+    landFall: 0, // o nariz para baixo do pulo na hora do pouso (rad): a garupa desce depois das dianteiras
+    prevFall: 0,
     wallTheta: 0, // corpo de pé no impulso na parede (rad)
     shoveTheta: 0, // corpo de pé no empurrão (rad)
     sb: { cock: 0, jolt: 0, press: 0, growl: 0 }, // ciclo do empurrão, suavizado
@@ -540,11 +542,17 @@ export function createDogAnimation(ctx) {
     // arredondadas); descendo, as dianteiras desdobram à frente e pousam primeiro, as traseiras dobradas até o fim. Nada
     // de perna esticada para baixo. No pulinho por cima da borda da caminha (A.hop), as de trás ficam encolhidas até
     // pousar (passam por cima da borda) e as da frente quase não esticam.
+    // E (retorno seguinte: "parecendo pulo de coelho, pulando com as duas patas") o pulo é de quadrúpede: decolando, a
+    // frente sobe primeiro (o corpo gira sobre o quadril: jTake) enquanto as traseiras ainda empurram o chão; no ar,
+    // nivela; descendo, a frente baixa (gira sobre os ombros: jFall) e as dianteiras pousam primeiro; pousada, a garupa
+    // desce depois (landFall, que some em ~0,1 s).
     const hopK = A.hop ? 1 : 0;
     const jUp = 1 - sstep(0, 0.5, airK), jDown = sstep(0.5, 1, airK);
+    const jTake = w.jump * 0.5 * (1 - sstep(0, 0.4, airK)) * (1 - 0.7 * hopK);
+    const jFallAir = w.jump * 0.32 * sstep(0.55, 0.95, airK) * (1 - 0.5 * hopK);
     const jTuckF = hopK ? sstep(0.04, 0.25, airK) * (1 - sstep(0.8, 1, airK)) : sstep(0, 0.14, airK) * (1 - sstep(0.62, 0.86, airK));
     const jReachF = sstep(0.62, 0.92, airK) * (1 - 0.6 * hopK);
-    const jPushH = (1 - sstep(0.02, 0.18, airK)) * (1 - hopK);
+    const jPushH = (1 - sstep(0.03, 0.16, airK)) * (1 - hopK);
     const jTuckH = hopK ? sstep(0.04, 0.25, airK) : sstep(0.1, 0.3, airK) * (1 - sstep(0.9, 1, airK));
     const jTuck = Math.max(jTuckF, jTuckH);
     if (inAir) st.peakY = Math.max(st.peakY, jumpY);
@@ -553,7 +561,9 @@ export function createDogAnimation(ctx) {
       // quanto mais alto o pulo, mais o pouso afunda (o pulinho da borda da caminha, de leve)
       st.landAmp = clamp(0.35 + st.peakY * 1.5, 0.35, 1.1);
       st.peakY = 0;
+      st.landFall = st.prevFall;
     }
+    st.prevFall = jFallAir;
     st.prevAir = inAir;
     // impulso na parede (quadros-chave WALL_*): wp = progresso, wEnv liga/desliga as poses nas pontas
     const wallOn = (A.wallK ?? -1) >= 0;
@@ -636,6 +646,7 @@ export function createDogAnimation(ctx) {
     const landK = st.landT < 0.7 ? ((Math.exp(-8.1 * st.landT) * Math.sin(16.1 * st.landT)) / 0.513) * st.landAmp : 0;
     const crouchIn = clamp(A.crouch || 0, 0, 1);
     const land = crouchIn > 0 ? Math.max(crouchIn, landK) : landK;
+    const jFall = Math.max(jFallAir, st.landT < 0.5 ? st.landFall * Math.exp(-st.landT / 0.065) : 0);
     // superbafo: aim = enche o peito mirando; blow = "HÁÁÁ!"; proud = toda orgulhosa; yuck = vira a cara
     w.aim = damp(w.aim, action === 'bafoAim' ? 1 : 0, 9);
     w.blow = damp(w.blow, action === 'bafo' ? 1 : 0, 20);
@@ -839,7 +850,7 @@ export function createDogAnimation(ctx) {
     const breathe = Math.sin(t * (2.2 + 3 * st.move)) * 0.0016 * s;
     const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s + w.aim * Math.sin(t * 41) * 0.0012 * s + effort * Math.sin(t * 52) * 0.0024 * s;
 
-    let pitch = boundPitch + wPush4 * 0.11 + wStrain4 * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + w.jump * (0.28 * jDown - 0.3 * jUp) + land * 0.08 + st.accP - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06 + lDn * (0.05 + 0.04 * lExt) - lUp * (0.07 + 0.03 * lIn)
+    let pitch = boundPitch + wPush4 * 0.11 + wStrain4 * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + land * 0.08 + st.accP - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06 + lDn * (0.05 + 0.04 * lExt) - lUp * (0.07 + 0.03 * lIn)
       - squat * 0.04 + scratchK * 0.1 + (xDrink + xEat) * 0.2 + xDig * 0.16 + xNudge * 0.08 - pBrace * 0.12 - wow * 0.05;
     let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - wPush4 * 0.012 * s - wStrain4 * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s - lr * 0.009 * s - w.slide * 0.045 * s - st.mud * 0.004 * s - (wallOn ? keyed(WALL_CROUCH, wp) * 0.03 * s : 0) - pressGo * 0.02 * s
       - squat * 0.006 * s + effort * Math.sin(t * 61) * 0.001 * s - (xDrink + xEat) * 0.01 * s - xDig * 0.012 * s - pBrace * 0.016 * s
@@ -867,6 +878,18 @@ export function createDogAnimation(ctx) {
       const C = rest[BI.FLu];
       // inclina pouco (a garupa fica a meia altura); a corcunda vem do peito e da pelve dobrando (abaixo)
       _m2.makeTranslation(0, C.y, C.z).multiply(_m3.makeRotationX(-0.22 * squat)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
+      _m.premultiply(_m2);
+    }
+    // pulo de quadrúpede: decolando, gira sobre o quadril (a frente sobe primeiro, as traseiras ficam empurrando);
+    // descendo e logo depois de pousar, gira sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois)
+    if (jTake > 0.001) {
+      const Hh = rest[BI.hips];
+      _m2.makeTranslation(0, Hh.y, Hh.z).multiply(_m3.makeRotationX(-jTake)).multiply(_m3.makeTranslation(0, -Hh.y, -Hh.z));
+      _m.premultiply(_m2);
+    }
+    if (jFall > 0.001) {
+      const C = rest[BI.FLu];
+      _m2.makeTranslation(0, C.y, C.z).multiply(_m3.makeRotationX(jFall)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
       _m.premultiply(_m2);
     }
     _m.decompose(_rootPos, Lq[0], _v);
@@ -940,7 +963,8 @@ export function createDogAnimation(ctx) {
         T.x += leg.side * w.bow * 0.006 * s;
         // no ar: dianteiras dobradas debaixo do peito e, descendo, desdobradas à frente (pousam primeiro)
         T.z += w.jump * (0.01 - 0.012 * jTuckF + 0.045 * jReachF) * s;
-        T.y += w.jump * 0.08 * jTuckF * s;
+        // a frente subindo primeiro (o giro sobre o quadril): as dianteiras sobem dobradas junto com o peito
+        T.y += w.jump * 0.08 * jTuckF * s + 0.27 * s * Math.sin(jTake);
         // escorregando de barriga: patas da frente esticadas para a frente
         T.z += w.slide * 0.09 * s;
         T.y += w.slide * 0.055 * s;
@@ -961,9 +985,11 @@ export function createDogAnimation(ctx) {
       } else {
         T.z += w.sit * 0.07 * s - (wPush4 + wStrain4) * 0.025 * s + w.tug * 0.012 * s - w.turn * 0.02 * s;
         T.x += leg.side * (w.sit * 0.01 + shkEnv * 0.01 + ws * 0.006) * s;
-        // no ar: traseiras para trás no empurrão e depois dobradas debaixo da barriga, até quase pousar
+        // no ar: traseiras empurrando o chão na decolagem (para trás e ainda no chão, enquanto a frente sobe) e depois
+        // dobradas debaixo da barriga, até quase pousar
         T.z += w.jump * (0.048 * jTuckH - 0.05 * jPushH) * s;
-        T.y += w.jump * 0.065 * jTuckH * s;
+        // a garupa alta no pouso (o giro sobre os ombros): as traseiras ficam dobradas lá em cima e descem com ela
+        T.y += w.jump * (0.065 * jTuckH * s - Math.min(jumpY, 0.07 * s) * jPushH) + 0.27 * s * Math.sin(jFall);
         // escorregando de barriga: traseiras esticadas para trás
         T.z -= w.slide * 0.075 * s;
         T.y += w.slide * 0.045 * s;
@@ -1123,7 +1149,7 @@ export function createDogAnimation(ctx) {
     const neckPitch = 0.05 + wPush4 * 0.42 + wStrain4 * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * (0.22 * jUp - 0.16 * jDown) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
       + lDn * (0.14 + 0.3 * lIn - 0.1 * lSweep * lExt) - lUp * (0.3 + 0.12 * lIn) - ls * 0.1 - lr * 0.09 - w.slide * 0.2 + wEnv * st.wallTheta * 0.22 + sk * st.shoveTheta * 0.42 + shoveJolt * 0.1
       + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 + xRoll * 0.3 * (1 - xBack) + xBack * 1.2 - wow * 0.18;
-    const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow;
+    const bodyPitchW = pitch - SIT_PITCH * w.sit + 0.42 * w.bow - jTake * 0.6 + jFall * 0.6;
     const lickYaw = lk * lSide * 0.08 * lSweep - lr * lSide * 0.1;
     // impulso: no alto, a cabeça vira para a direita, olhando a pata no botão
     const wallYaw = wallOn ? -0.34 * sstep(0.36, 0.48, wp) * (1 - sstep(0.62, 0.76, wp)) : 0;

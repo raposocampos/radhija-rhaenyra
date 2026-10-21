@@ -90,8 +90,15 @@ export function createGame({ engine, dogs, levels, params }) {
   let world = null;
   /** Chão das coisas baixas de pisar da fase (ground.js) e a altura suavizada do chão embaixo de cada dog. */
   let ground = null;
-  /** @type {Record<string, { y: number, x: number, z: number, hop?: { g0: number, g1: number } | null }>} */
-  const gnd = { radhija: { y: 0, x: NaN, z: NaN, hop: null }, rhaenyra: { y: 0, x: NaN, z: NaN, hop: null } };
+  /**
+   * jf/jfV/airK: no pulo por cima do que dá para pular, o alto do corpo desenhado acima da coisa, a velocidade com que
+   * ele cai dela e o ponto do arco no último quadro no ar (jumpableUnder).
+   * @type {Record<string, { y: number, x: number, z: number, hop?: { g0: number, g1: number } | null, jf: number, jfV: number, airK: number }>}
+   */
+  const gnd = {
+    radhija: { y: 0, x: NaN, z: NaN, hop: null, jf: 0, jfV: 0, airK: 0 },
+    rhaenyra: { y: 0, x: NaN, z: NaN, hop: null, jf: 0, jfV: 0, airK: 0 },
+  };
   let nav = null;
   let puzzle = null;
   let dbg = null;
@@ -924,6 +931,22 @@ export function createGame({ engine, dogs, levels, params }) {
     pushCache.set(c.name, { id: best.id, rx, rz, yaw: c.yaw, res });
     return res;
   }
+  /**
+   * No ar, o desenho passa por cima do que dá para pular (as caixas da fase 5, a mesa de centro, o cercadinho…): a
+   * colisão deixa passar e, conforme de onde ela pulava, as patas e a garupa atravessavam a caixa (retorno do usuário).
+   * → o alto do que está embaixo do corpo (o meio, o peito e a garupa, da largura do tronco), agora ou daqui a um
+   * tiquinho (para começar a subir antes de chegar); 0 se nada. Só conta o que entra de verdade embaixo dele (mais de
+   * JF_DEPTH): encostada na caixa, o peito passa um pouco da frente dela e o pulo no lugar fica o de sempre.
+   */
+  const JF_DEPTH = 0.04;
+  function jumpableUnder(c) {
+    if (!world?.jumpableTop) return 0;
+    const r = c.cfg.body ? c.cfg.body.r : c.r;
+    return Math.max(
+      world.jumpableTop(c.x, c.z, c.yaw, c.cfg.body, r, c.size, JF_DEPTH),
+      world.jumpableTop(c.x + c.vx * 0.08, c.z + c.vz * 0.08, c.yaw, c.cfg.body, r, c.size, JF_DEPTH),
+    );
+  }
   function applyDogs(dt) {
     for (const n of NAMES) {
       const c = ctrls[n];
@@ -936,7 +959,8 @@ export function createGame({ engine, dogs, levels, params }) {
       // no pulinho por cima da borda, o corpo vai do chão de onde saiu ao de onde pousa (a borda não o levanta mais)
       if (G.hop && c.jumpT > 0 && c.hopH > 0) gy = G.hop.g0 + (G.hop.g1 - G.hop.g0) * (1 - c.jumpT / c.jumpDur);
       else G.hop = null;
-      G.y = Math.hypot(c.x - G.x, c.z - G.z) < 0.5 ? G.y + (gy - G.y) * (1 - Math.exp(-14 * dt)) : gy;
+      const placed = !(Math.hypot(c.x - G.x, c.z - G.z) < 0.5); // posta em outro lugar (troca de fase, teleporte)
+      G.y = !placed ? G.y + (gy - G.y) * (1 - Math.exp(-14 * dt)) : gy;
       G.x = c.x;
       G.z = c.z;
       d.object.position.set(c.x, G.y, c.z);
@@ -957,8 +981,31 @@ export function createGame({ engine, dogs, levels, params }) {
       an.cheer = extras ? extras.cheer(n) : -1;
       an.extra = extras ? extras.extraAnim(n) : null;
       const W = c.wallDur > 0 ? c.wall : null;
-      an.jump = W ? 0 : c.y;
-      an.airK = c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : locks[n]?.airK ?? -1;
+      // por cima do que dá para pular, o corpo desenhado fica acima do alto da coisa (as patas passam por cima dela):
+      // sobe depressa, do alto em que está, e, passada a coisa, cai dela como no pulo (a gravidade do arco), até o arco
+      // do pulo ou o chão; o pouso (a pose e o som) espera o desenho chegar ao chão. Posta em outro lugar, na hora.
+      const under = c.jumpT > 0 && !(c.hopH > 0) && !W ? jumpableUnder(c) : 0;
+      const floor = under > 0 ? under + 0.05 : 0;
+      if (floor > 0 && G.jf <= floor) {
+        G.jf = Math.max(G.jf, c.y);
+        G.jf += (floor - G.jf) * (1 - Math.exp(-dt * 60));
+        G.jfV = 0;
+      } else if (G.jf > 0) {
+        G.jfV += (c.cfg.jumpHeight && c.cfg.jumpTime ? (8 * c.cfg.jumpHeight) / c.cfg.jumpTime ** 2 : 20) * dt;
+        G.jf -= G.jfV * dt;
+        if (G.jf <= floor) {
+          G.jf = floor;
+          G.jfV = 0;
+        }
+      }
+      // o arco do pulo de novo por cima (ou o chão): ele manda
+      if (G.jf > 0 && (G.jf <= c.y || W || placed)) G.jf = G.jfV = 0;
+      an.jump = W ? 0 : Math.max(c.y, G.jf);
+      // pousada no chão do jogo com o desenho ainda caindo da coisa: a pose do fim do arco (as dianteiras indo para o
+      // chão) fica até o desenho chegar
+      // (e o mesmo no pulo que segue no ar depois do fim do arco, por estar em cima da coisa: dogController.clearT)
+      if (c.jumpT > 0 && !(c.clearT > 0)) G.airK = Math.min(0.98, 1 - c.jumpT / c.jumpDur);
+      an.airK = c.jumpT > 0 && !(c.clearT > 0) ? 1 - c.jumpT / c.jumpDur : c.jumpT > 0 || G.jf > 0 ? G.airK : locks[n]?.airK ?? -1;
       an.crouch = locks[n]?.crouch ?? 0;
       // apertando um botão com a pata (lock.press, no mundo): o alto dele no referencial do objeto da dog
       const PR = locks[n]?.press;
@@ -1011,8 +1058,8 @@ export function createGame({ engine, dogs, levels, params }) {
           if (state === 'playing') puzzle.onWallTouch?.(c, spot);
         }
       }
-      if (c.landed) {
-        // Pouso (ativa ou companheira, até depois de trocar de dog no ar).
+      if (c.landed && !(gnd[n].jf > 0)) {
+        // Pouso (ativa ou companheira, até depois de trocar de dog no ar); caindo da caixa, quando o desenho chega
         c.landed = false;
         if (state === 'playing' || state === 'celebrating') emit('dog:land', { name: n, x: c.x, z: c.z, hop: c.landedHop });
       }

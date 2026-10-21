@@ -123,8 +123,26 @@ export function createGround(objects) {
       maxOf.set(m, Math.max(maxOf.get(m) ?? 0, typeof w === 'number' ? w : GROUND_MAX));
       if (rim) rims.add(m);
     }
-    return { meshes, rim, x: sphere.center.x, z: sphere.center.z, r: sphere.radius };
+    // o que muda de lugar (userData.moving: as almofadas que saem da caixa na fase 5, a caixa empurrada): o círculo
+    // acompanha o objeto (o centro a partir da posição dele; o raio, com folga para o que gira)
+    const moving = !!obj.userData.moving;
+    const o = moving ? obj.getWorldPosition(new THREE.Vector3()) : null;
+    return {
+      meshes, rim, x: sphere.center.x, z: sphere.center.z, r: sphere.radius + (moving ? 0.1 : 0),
+      obj: moving ? obj : null, dx: o ? sphere.center.x - o.x : 0, dz: o ? sphere.center.z - o.z : 0,
+    };
   });
+  const movingItems = items.filter((it) => it.obj);
+  const _o = new THREE.Vector3();
+  /** Os círculos do que muda de lugar, onde estão agora. */
+  function follow() {
+    for (const it of movingItems) {
+      it.obj.updateWorldMatrix(true, true); // o raio usa as malhas onde estão agora (antes do desenho do quadro)
+      it.obj.getWorldPosition(_o);
+      it.x = _o.x + it.dx;
+      it.z = _o.z + it.dz;
+    }
+  }
   const rimItems = items.filter((it) => it.rim);
   /** @type {{ x: number, z: number, r: number, t: number }[]} anéis das bordas (pushOffRims), no mundo */
   const rings = [];
@@ -145,6 +163,7 @@ export function createGround(objects) {
     top.h = 0;
     top.rim = false;
     near.length = 0;
+    if (movingItems.length) follow();
     for (const it of items) if (Math.hypot(x - it.x, z - it.z) < it.r + 0.02) near.push(...it.meshes);
     if (!near.length) return top;
     from.set(x, TOP + 0.5, z);

@@ -160,3 +160,95 @@ test('fase 5: ?stage= pula para cada etapa', async () => {
     assert.equal(h.info().stage, s);
   }
 });
+
+test('fase 5: pulando a barricada, o corpo desenhado passa por cima da caixa (nada atravessa); desmontada, as almofadas viram chão', async () => {
+  // retorno do usuário: "o pulo está atravessando a caixa, as patas traseiras às vezes boa parte do corpo"; "as
+  // almofadas da caixa quebrada não têm colisão, as dogs ficam atravessando"
+  const h = await createHeadlessGame({ level: 5, query: 'dog=rhaenyra' });
+  const c = h.ctrls.rhaenyra;
+  const box = h.world.dynamics.find((k) => k.id === 'caixa-almofadas');
+  const b = c.cfg.body;
+  /** O alto da caixa (a de almofadas ou a de livros, lado a lado na porta) em que o tronco entrou em cima; 0 se nenhuma. */
+  const over = () => h.world.jumpableTop(c.x, c.z, c.yaw, b, b.r, c.size, 0.04);
+  // o quadro do pouso (som, poeira)
+  let frame = -1, landI = -1;
+  const off = h.events.on('dog:land', ({ name }) => {
+    if (name === 'rhaenyra' && landI < 0) landI = frame;
+  });
+  // de pertinho e de longe (de 0,8 m o arco acaba com a garupa em cima da caixa: ela segue no ar até sair) e de
+  // viés na porta (o batente no caminho: bate de lado na caixa ou escorrega de cima dela); `across`: ela passa para a
+  // cozinha
+  const cases = [[0, 0.3, true], [0, 0.36, true], [0, 0.5, true], [0, 0.8, true], [0, 1.0, true], [-0.5, 1.0, false], [0.5, 0.9, false]];
+  for (const [ang, back, across] of cases) {
+    const tag = `de ${back} m${ang ? ` (de viés, ${ang} rad)` : ''}`;
+    const dx = Math.cos(ang), dz = Math.sin(ang);
+    h.teleport('rhaenyra', box.x - dx * (box.hx + back), box.z - dz * (box.hx + back), Math.atan2(dx, dz));
+    h.run(0.3);
+    h.hold([dx, dz]);
+    h.run(0.06);
+    landI = frame = -1;
+    h.tap('Space');
+    let worst = Infinity, frames = 0, left = -1, down = -1, poseLanded = 0, shove = 0, px = c.x, pz = c.z;
+    for (let i = 0; i < 70; i++) {
+      frame = i;
+      h.step();
+      const A = h.dogs.rhaenyra.anim;
+      const on = over();
+      // em cima da caixa (os 3 primeiros quadros são o corpo subindo, quando ela sai rente à caixa)
+      if (c.jumpT > 0 && on && ++frames > 3) worst = Math.min(worst, A.jump - on);
+      if (frames && !on && left < 0) left = i;
+      // o desenho chegou ao chão (depois de sair do chão)
+      if (i > 0 && down < 0 && A.jump === 0) down = i;
+      // ainda no alto, a pose é a do ar: pousa (as patas, o som) quando o desenho chega ao chão
+      if (A.jump > 0.02 && !(A.airK >= 0)) poseLanded++;
+      // a colisão nunca a joga para fora da caixa de uma vez (antes: meio metro num quadro)
+      shove = Math.max(shove, Math.hypot(c.x - px, c.z - pz));
+      px = c.x;
+      pz = c.z;
+    }
+    h.hold(null);
+    h.run(0.4);
+    if (across) assert.ok(frames > 3, `${tag}: pulou por cima da caixa`);
+    if (frames > 3) assert.ok(worst >= 0.03, `${tag}: em cima da caixa, o corpo ficou só ${(worst * 100).toFixed(1)} cm acima do alto dela`);
+    assert.ok(shove < 0.07, `${tag}: num quadro ela andou ${(shove * 100).toFixed(0)} cm (empurrada para fora da caixa)`);
+    assert.ok(!over(), `${tag}: pousou fora da caixa`);
+    assert.equal(poseLanded, 0, `${tag}: no alto, a pose ficou a do ar`);
+    assert.equal(landI, down, `${tag}: o pouso (som, poeira) veio quando o desenho chegou ao chão`);
+    if (!across) continue;
+    assert.ok(c.x > B.start.x + B.half, `${tag}: passou para a cozinha (x=${c.x.toFixed(2)})`);
+    // passada a caixa, cai dela como num pulo (sem ficar planando e descendo devagar)
+    assert.ok(left > 0 && down > left && (down - left) / 60 <= 0.3, `${tag}: passada a caixa, chegou ao chão em ${((down - left) / 60).toFixed(2)} s`);
+  }
+  off();
+  h.dispose?.();
+
+  // desmontada: a caixa achatada, as abas e as almofadas espalhadas são chão de pisar (o tampo da caixa inteira, alto,
+  // não); elas saem de onde a caixa foi empurrada (o chão as acompanha)
+  const THREE = await import('three');
+  const { buildLevelWorld } = await import('./helpers/worldBuild.mjs');
+  const { createGround, walkablesOf } = await import('../src/game/ground.js');
+  const fx = await buildLevelWorld(fase5);
+  try {
+    const P = fx.built.props.pillowBox;
+    const ground = createGround(walkablesOf(fx.root));
+    const pillows = P.object.children.filter((o) => o.userData.to);
+    assert.ok(pillows.length >= 3, 'as almofadas da caixa');
+    const v = new THREE.Vector3();
+    for (const [x, z] of [[B.start.x, B.start.z], [B.start.x + 0.6, B.start.z - 0.4]]) {
+      P.setPos(x, z);
+      P.setCollapse(0);
+      fx.root.updateMatrixWorld(true);
+      assert.equal(ground.heightAt(x, z), 0, 'inteira, o tampo alto da caixa não é chão de pisar');
+      P.setCollapse(1);
+      fx.root.updateMatrixWorld(true);
+      assert.ok(ground.heightAt(x, z) > 0.02, `desmontada, a caixa achatada é chão (${ground.heightAt(x, z)})`);
+      for (const p of pillows) {
+        p.getWorldPosition(v);
+        const top = ground.heightAt(v.x, v.z);
+        assert.ok(top > 0.04, `a almofada em (${v.x.toFixed(2)}, ${v.z.toFixed(2)}) é chão de pisar (alto ${top.toFixed(3)} m)`);
+      }
+    }
+  } finally {
+    fx.dispose();
+  }
+});

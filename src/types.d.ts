@@ -62,19 +62,24 @@ export interface CollisionWorld {
   getDynamic(id: string): Collider | null;
   setCompanionMode(on: boolean): void;
   readonly companionMode: boolean;
-  contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string>; airborne?: boolean }): Contact[];
-  resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
+  contacts(x: number, z: number, r: number, size: DogSize, opts?: { margin?: number; ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): Contact[];
+  resolve(x: number, z: number, r: number, size: DogSize, opts?: { iterations?: number; ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): { x: number; z: number; hits: Contact[] };
   /**
    * Peito e garupa (dois círculos menores presos ao rumo `yaw`, DogStats.body) para fora do que invadem; o círculo do
    * meio (r) manda. Devolve o centro corrigido e os contatos dos três.
    */
-  resolveBody(x: number, z: number, yaw: number, body: DogBody, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
+  resolveBody(x: number, z: number, yaw: number, body: DogBody, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): { x: number; z: number; hits: Contact[] };
   /** Move com sub-passos (nunca atravessa paredes finas). */
-  move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): { x: number; z: number; hits: Contact[] };
-  overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): boolean;
+  move(x: number, z: number, dx: number, dz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): { x: number; z: number; hits: Contact[] };
+  overlaps(x: number, z: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): boolean;
   /** Linha de visão "gorda": um círculo de raio r vai de A a B em linha reta? */
-  segmentClear(ax: number, az: number, bx: number, bz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean }): boolean;
+  segmentClear(ax: number, az: number, bx: number, bz: number, r: number, size: DogSize, opts?: { ignore?: Set<string>; airborne?: boolean; lowY?: number; over?: Set<string> }): boolean;
   clampBounds(x: number, z: number, r: number): XZ;
+  /**
+   * O alto do mais alto dos colisores jumpable em que o corpo (o círculo do meio de raio r, o peito e a garupa) entra
+   * mais de `depth` m; 0 se nenhum. `out` junta os ids deles.
+   */
+  jumpableTop(x: number, z: number, yaw: number, body: DogBody | null | undefined, r: number, size: DogSize, depth?: number, out?: Set<string> | null): number;
 }
 
 // =====================================================================================================
@@ -405,6 +410,14 @@ export interface DogController {
   hopH: number;
   /** O pouso deste quadro foi de um pulinho. */
   landedHop: boolean;
+  /** No ar: o alto do que ela pula embaixo do corpo agora (integrate; 0 = nada): o arco não pousa dentro da coisa. */
+  overJump: number;
+  /** Quanto o pulo já seguiu no ar depois do fim do arco, por estar em cima do que ela pula (s; até JUMP_CLEAR). */
+  clearT: number;
+  /** Escorregando de cima do que ela pula (seguindo em frente não sairia a tempo): vai para fora pelo lado mais perto. */
+  slideOff: boolean;
+  /** Até a próxima simulação do caminho em frente (s): ela pesa no celular. */
+  clearChk: number;
 }
 
 /**

@@ -314,7 +314,10 @@ meia-espessura `t`). Opções:
 - `companionOnly`: só a IA da companheira desvia (o disco do irrigador ligado);
 - `kind`: informativo (`'water'`, `'gate'`…), aparece nos contatos;
 - `jumpable`: obstáculo baixo (tronco, mureta baixa) que não bloqueia quem está no ar, ou seja, a Rhaenyra pulando.
-  Sem essa marca, nada é pulável: as paredes, cercas e portões das fases continuam bloqueando no ar.
+  Sem essa marca, nada é pulável: as paredes, cercas e portões das fases continuam bloqueando no ar. Com `height`
+  (o alto dele), descendo do pulo abaixo desse alto (`opts.lowY`), ele só deixa passar quem já o tem embaixo do corpo
+  (`opts.over`): chegando baixa demais, a dog bate na lateral. `world.jumpableTop(x, z, yaw, body, r, size, depth)` é
+  o alto do mais alto deles em que o corpo entra (o pulo e o desenho usam).
 
 Colisores dinâmicos são registrados pelo puzzle com `world.addDynamic({...})`, que devolve o próprio objeto: mova
 `x/z/ax…` e ligue/desligue com `enabled`. O movimento usa sub-passos de no máximo 0,45 × raio, então nem a arrancada
@@ -342,7 +345,9 @@ por cima (`ground.planRimHop` decide, `game.js` `hopOverRim` chama `startHop` do
 arco de topo largo; as duas pulam, sem `dog:jump`; o pouso sai em `dog:land` com `hop`, baixinho e sem poeira). Indo
 para um lugar antes da borda (a comemoração perto dela), não pula. Com o anel da borda (`rim: { r, t }`), do lado de
 fora ela segura o corpo de quem está no chão (`ground.pushOffRims`, `game.js` `keepOffRims` depois de cada movimento):
-ninguém fica parado em cima dela; dentro, livre. O chão mede cada desenho com a posição dos pais (`updateWorldMatrix`):
+ninguém fica parado em cima dela; dentro, livre. O que muda de lugar (`userData.moving`: a caixa de almofadas da fase
+5, que é empurrada, e as almofadas que saem dela desmontada) leva o círculo junto a cada consulta. O chão mede cada
+desenho com a posição dos pais (`updateWorldMatrix`):
 o jogo o monta antes do primeiro quadro. As caminhas pequenas para as duas (fase 2 e Arena do Empurrão) são sólidas
 (colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
 por raios horizontais na largura do peito (`src/game/pushRest.js`: cinco raios; a face, a beirada e a altura das
@@ -421,6 +426,15 @@ pressão; não pula na postura de empurrar. A companheira não pula: arestas do 
 exigem uma flag que nunca liga, e ela espera do lado de cá. Colisores dinâmicos também podem ser puláveis: a fase 5
 marca o portãozinho e a caixa de almofadas com `col.jumpable = true`. Quem não pula (a Radhija) ganha a dica
 "Só a Rhaenyra pula! (Q)". Eventos: `dog:jump` e `dog:land`.
+
+Na descida (a segunda metade do arco), o que ela pula é sólido de lado abaixo do alto dele, menos o que ela já tem
+embaixo do corpo (collision.js). O arco não acaba dentro de uma coisa: com o corpo em cima dela, se seguindo em frente
+(com as paredes, `clearsAhead`) sai de cima em até `JUMP_CLEAR` (0,3 s) depois do fim do arco, ela segue no ar até lá
+(`c.clearT`); senão escorrega de cima pelo lado mais perto (`c.slideOff`). Antes, a colisão a jogava para fora de uma
+vez (até meio metro num quadro). No desenho (`game.js`, `jumpableUnder`), o corpo fica acima do alto da coisa em que o
+tronco entra e, passada ela, cai com a gravidade do pulo; o pouso (`dog:land`, a pose) espera o desenho chegar ao
+chão. A pose é de quadrúpede (`dogAnimation.js`): decolando, gira sobre o quadril (a frente sobe primeiro, as
+traseiras empurram); descendo, sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois).
 
 **Impulso na parede** (`dogController.js` + `src/game/mechanics/wallButton.js`): o mesmo pulo, de frente para uma
 parede marcada com patinhas pintadas. A fase oferece os pontos em `puzzle.wallSpots()` (`WallSpot`: pé da parede,
