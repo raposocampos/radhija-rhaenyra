@@ -1,23 +1,27 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-21, Claude** (#58, etapa 5 dos modelos novos, entregue em v0.10.9 · build 101;
-diagnóstico da queda de desempenho empurrando em andamento). Ler primeiro [AGENTS.md](../AGENTS.md) e
+Última atualização: **2026-10-21, Claude** (#61, empurrar sem queda de desempenho, entregue em v0.10.10 · build 102; #58, etapa 5
+dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e
 [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: queda de desempenho empurrando (Claude, branch `claude/medir-empurrar`, só diagnóstico)
+## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 
-- Retorno do usuário ao testar a prévia do #58 (pelo orquestrador): "toda vez que eu vou empurrar algum item tem uma
-  queda de performance grande. Além de ficar engasgando sempre que vou pra alguma parte nova a primeira vez". O
-  engasgo na primeira vez numa área nova (compilação de shaders e texturas) ficou com outra sessão.
-- Medida no GitHub: `tools/scripts/measure-push.mjs` e a medida `empurrar` do `desempenho.yml` (workflow_dispatch,
-  `medida=empurrar`, `outro=<commit do PR>`), só no branch `claude/medir-empurrar` (não vai para o main). Compara, no
-  mesmo runner, o main publicado e o head do PR, com cada modelo, empurrando o carrinho (fase 1), o caixote (fase 2)
-  e o ventilador (fase 4): tempo de `game.update`, render, animação da dog e raios do three.js por quadro, e o perfil de
-  CPU por função.
-- Suspeito principal (lido no código, antes dos números): `game.js` `pushFace` → `pushRest.js` dispara 85 raios (5
-  na largura do peito × 17 alturas) contra todas as malhas do objeto sempre que a dog anda 1 cm ou gira 0,03 rad em
-  relação a ele, o que empurrando acontece quase todo quadro. Isso existe desde antes do #58. A cabeça do modelo novo
-  (`v2/head.js`) desliga a consulta ao mundo empurrando (`pushGap`), então não entra nessa queda.
+- Retorno do usuário ao testar a prévia do #58: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar
+  algo". O engasgo na primeira passagem por uma área nova (compilação de shaders e texturas) ficou com outra sessão
+  (PR #60).
+- Medida no GitHub (`tools/scripts/measure-push.mjs` e a medida `empurrar` do `desempenho.yml`, só no branch
+  `claude/medir-empurrar`, que não vai para o main; execução 39548900185): controle falso com o R1 e o analógico,
+  v0.10.8 e v0.10.9 com os dois modelos, em A/B/A/B no mesmo runner. Empurrando o carrinho, o caixote e o ventilador,
+  o `pushRest` (~110 raios contra todas as malhas do objeto) era refeito 1 a 2 vezes por segundo: um quadro com 40 a
+  90 ms de CPU no runner (28 a 38 ms no PC do usuário). Igual em v0.10.8 e v0.10.9 (não veio do #58); o R1 sem nada à
+  frente e a arrancada não custam nada a mais; o modelo novo só soma ~0,1–0,2 ms de animação por quadro.
+- Correção: `pushRest.nearestHit` (cada raio só testa as malhas cuja caixa ele cruza, até o primeiro acerto; o mesmo
+  resultado do Raycaster) e `pushFace` guardando a medida por objeto e lugar (lado, posição na face, rumo; um lugar
+  novo no máximo a cada 0,25 s). Por medida: carrinho 28,5 → 3,4 ms, caixote 37,9 → 3,9 ms, ventilador 32 → 16,5 ms.
+  Testes em `test/chao.test.mjs`. Aprovado pelo usuário no chat ("não teve nenhum travamento segurando o R1 pode
+  integrar") na versão `f61856b`. A medida de confirmação no navegador (v0.10.8 × correção) é a execução 39684301271.
+- Para outra rodada, se o ventilador ainda pesar no celular: a grade de aros finos ainda é testada inteira por raio
+  (16 ms por medida no PC); dá para medir o lado dele uma vez na carga da fase.
 
 ## Entregue: modelos novos das dogs, etapa 5: o novo como padrão (PR #58, squash `401f01a`, deploy `39548092269`, v0.10.9 · build 101)
 
