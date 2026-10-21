@@ -129,6 +129,26 @@ test('modelo novo: mesma API do atual e orçamento de malha (ossos ≤ 40; triâ
   assert.ok(v2.rhaenyra.markerAnchor.position.y > v2.radhija.markerAnchor.position.y, 'Rhaenyra é mais alta');
 });
 
+test('modelo novo no celular: o pelo com menos cascas (o mesmo comprimento) e o PC com as de sempre', async () => {
+  const { furShellsFor, MOBILE_FUR_SHELLS } = await import('../src/core/quality.js');
+  assert.equal(furShellsFor('desktop'), 10, 'PC: as 10 cascas de sempre');
+  assert.equal(furShellsFor('phone'), MOBILE_FUR_SHELLS);
+  assert.equal(furShellsFor('tablet'), MOBILE_FUR_SHELLS);
+  assert.ok(MOBILE_FUR_SHELLS < 10 && MOBILE_FUR_SHELLS >= 5);
+  for (const kind of KINDS) {
+    const pc = createDogV2(kind), cel = createDogV2(kind, { shells: MOBILE_FUR_SHELLS });
+    const tri = (d) => d.meshes.fur.geometry.index.count / 3;
+    // a mesma camada de pelo, menos vezes
+    assert.equal(tri(cel) * 10, tri(pc) * MOBILE_FUR_SHELLS, `${kind}: triângulos do pelo ${tri(cel)} × ${tri(pc)}`);
+    const top = (d) => Math.max(...d.meshes.fur.geometry.attributes.aShell.array);
+    assert.equal(top(cel), 1, `${kind}: a casca de fora no comprimento todo do pelo`);
+    assert.equal(top(pc), 1);
+    // o corpo e as orelhas são os mesmos
+    for (const part of ['body', 'ears']) assert.equal(cel.meshes[part].geometry.index.count, pc.meshes[part].geometry.index.count, `${kind}: ${part}`);
+    console.log(`[v2] ${kind}: pelo ${tri(pc)} triângulos no PC, ${tri(cel)} no celular (${MOBILE_FUR_SHELLS} cascas)`);
+  }
+});
+
 // ------------------------------------------------------------------ poses
 const wall = { wallGap: 0.45, wallTop: 1.1, wallOut: 0.05, wallPaws: 1.03, wallSide: 0.165, wallLat: 0.14 };
 /** [nome, duração (s), anim(t, k)] — todas as ações e extras do jogo. */
