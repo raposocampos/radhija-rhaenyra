@@ -84,6 +84,8 @@ function buildBarricade(root, layout) {
   const box = new THREE.Group();
   box.name = 'caixa-almofadas';
   const body = movingBox(B.half * 2, B.height, B.half * 2, 'ALMOFADAS', 22, { onTop: true });
+  // desmontada (achatada no chão, sem colisor), a caixa é chão de pisar; inteira, o tampo fica alto demais para contar
+  Object.assign(body.userData, { walkable: true, moving: true });
   box.add(body);
   const flapMat = new THREE.MeshStandardMaterial({ color: '#c49a64', roughness: 0.92, side: THREE.DoubleSide });
   const flaps = [];
@@ -92,6 +94,8 @@ function buildBarricade(root, layout) {
   for (const [dx, dz, ax] of flapDirs) {
     const f = new THREE.Group();
     f.position.set(dx * B.half, B.height, dz * B.half);
+    // aberta no chão, a aba é chão de pisar (escondida, nem conta)
+    Object.assign(f.userData, { walkable: true, moving: true });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(ax === 'z' ? B.half : B.half * 2, ax === 'z' ? B.half * 2 : B.half).rotateX(-Math.PI / 2), flapMat);
     m.position.set(-dx * B.half / 2, 0.002, -dz * B.half / 2);
     f.add(m);
@@ -105,6 +109,9 @@ function buildBarricade(root, layout) {
     p.visible = false;
     p.userData.to = new THREE.Vector3(-0.55 - i * 0.12, 0.05 + (i === 1 ? 0.06 : 0), (i - 1) * 0.3);
     p.userData.rot = (i - 1) * 0.6;
+    // espalhadas no chão, as almofadas são chão de pisar (retorno do usuário: as dogs as atravessavam); elas mudam de
+    // lugar (o chão as acompanha)
+    Object.assign(p.userData, { walkable: true, moving: true });
     box.add(p);
     return p;
   });

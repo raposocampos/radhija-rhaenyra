@@ -9,7 +9,9 @@
 // blocks: 'all' (padrão) | 'large' (só bloqueia dogs de tamanho 'large')
 // blocks: 'small' também é aceito (só bloqueia a Radhija). except: { minX, maxX, minZ, maxZ } —
 // colisor ignorado quando o centro da dog está dentro (água sob uma ponte, por exemplo).
-// jumpable: true — obstáculo baixo (tronco, mureta baixa) ignorado por quem está no ar (opts.airborne).
+// jumpable: true — obstáculo baixo (tronco, mureta baixa) ignorado por quem está no ar (opts.airborne). Descendo abaixo
+// do alto dele (opts.lowY < height), só deixa passar quem já tem ele embaixo do corpo (opts.over, os ids): quem chega
+// baixa demais bate na lateral, em vez de entrar nele (dogController).
 // Dinâmicos: registrados por cada fase via world.addDynamic(colisor) — o objeto devolvido é
 // mutável (mova x/z/ax/bz…, ligue/desligue com enabled). Ex.: portão, carrinho, caixotes, água.
 
@@ -138,6 +140,8 @@ export function createCollisionWorld(layout) {
   const getDynamic = (id) => dynamics.find((d) => d.id === id) || null;
 
   const applies = (c, size) => c.enabled !== false && (c.blocks === 'all' || c.blocks === size) && (!c.companionOnly || companionMode);
+  /** No ar, o que ela pula não bloqueia; descendo abaixo do alto dele, só o que ela já tem embaixo do corpo. */
+  const passes = (c, opts) => !!opts.airborne && !!c.jumpable && !(opts.lowY != null && opts.lowY < (c.height || 0.01) && !opts.over?.has(c.id));
   // except: retângulo onde o colisor é ignorado (centro da dog dentro dele) — ex.: água sob a ponte.
   const excepted = (c, x, z) => !!c.except && x >= c.except.minX && x <= c.except.maxX && z >= c.except.minZ && z <= c.except.maxZ;
 
@@ -147,7 +151,7 @@ export function createCollisionWorld(layout) {
     const rr = r + (opts.margin || 0);
     for (const list of [statics, dynamics]) {
       for (const c of list) {
-        if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
+        if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
         const p = penCollider(x, z, rr, c);
         if (p && p.depth > 1e-6) out.push({ id: c.id, kind: c.kind, nx: p.nx, nz: p.nz, depth: p.depth });
@@ -168,7 +172,7 @@ export function createCollisionWorld(layout) {
       let any = false;
       for (const list of [statics, dynamics]) {
         for (const c of list) {
-          if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
+          if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
           if (opts.ignore && opts.ignore.has(c.id)) continue;
           const p = penCollider(x, z, r, c);
           if (p && p.depth > 1e-6) {
@@ -237,7 +241,7 @@ export function createCollisionWorld(layout) {
       for (const o of offs) {
         for (const list of [statics, dynamics]) {
           for (const c of list) {
-            if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
+            if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
             if (opts.ignore && opts.ignore.has(c.id)) continue;
             const p = penCollider(x + sx * o, z + sz * o, br, c);
             if (p && p.depth > 1e-6) {
@@ -267,12 +271,40 @@ export function createCollisionWorld(layout) {
     return { x, z, hits: [...hits.values()] };
   }
 
+  /**
+   * O alto do mais alto dos colisores jumpable (o que ela pula) em que o corpo em (x, z), olhando para `yaw`, entra mais
+   * de `depth` m: o círculo do meio (raio r) ou o do peito ou o da garupa (body.r); 0 se nenhum (o colisor sem alto
+   * conta como 0,01). O pulo não pousa dentro deles (dogController) e o desenho passa por cima (game.js). `out`: junta os
+   * ids de todos eles.
+   */
+  function jumpableTop(x, z, yaw, body, r, size, depth = 0, out = null) {
+    const sx = Math.sin(yaw);
+    const sz = Math.cos(yaw);
+    const parts = body ? [[0, r], [body.front - body.r, body.r], [body.r - body.back, body.r]] : [[0, r]];
+    let top = 0;
+    for (const list of [statics, dynamics]) {
+      for (const c of list) {
+        const h = c.height || 0.01;
+        if (!c.jumpable || (h <= top && !out) || !applies(c, size) || excepted(c, x, z)) continue;
+        for (const [o, pr] of parts) {
+          const p = penCollider(x + sx * o, z + sz * o, pr, c);
+          if (p && p.depth > depth) {
+            top = Math.max(top, h);
+            out?.add(c.id);
+            break;
+          }
+        }
+      }
+    }
+    return top;
+  }
+
   /** O círculo encosta (penetra) em algo? */
   function overlaps(x, z, r, size, opts = {}) {
     if (x < bounds.minX + r || x > bounds.maxX - r || z < bounds.minZ + r || z > bounds.maxZ - r) return true;
     for (const list of [statics, dynamics]) {
       for (const c of list) {
-        if (!applies(c, size) || excepted(c, x, z) || (opts.airborne && c.jumpable)) continue;
+        if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
         const p = penCollider(x, z, r, c);
         if (p && p.depth > 1e-4) return true;
@@ -298,6 +330,6 @@ export function createCollisionWorld(layout) {
     addDynamic, removeDynamic, getDynamic,
     setCompanionMode(on) { companionMode = !!on; },
     get companionMode() { return companionMode; },
-    contacts, resolve, resolveBody, move, overlaps, segmentClear, clampBounds,
+    contacts, resolve, resolveBody, move, overlaps, segmentClear, clampBounds, jumpableTop,
   };
 }

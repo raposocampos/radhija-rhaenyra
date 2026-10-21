@@ -91,8 +91,13 @@ export const PANTRY = { x0: WALL_LK.x, x1: HOUSE.x1, zN: HOUSE.zS, zS: 2.2, door
  */
 export const CUPBOARD = { x: -5.5, z: HOUSE.zS + WALLS.t / 2 + 0.23, hx: 0.45, hz: 0.23, top: 1.0 };
 const CUP_FRONT = CUPBOARD.z + CUPBOARD.hz;
+// Os caixotes começam a 0,75 m da marca: a oeste deles, os sacos de farinha e a cestinha (colisor do #53) deixavam só
+// 36 cm entre a cestinha e o caixote baixo, e ninguém chegava ao lado das alças (retorno do usuário: "não me deixa
+// passar pro outro lado"); assim sobram uns 60 cm ao sul deles.
+// (retorno do usuário: "diminuir um pouco as caixas, fica muito perto da parede, às vezes não dá para terminar de puxar":
+// menores, e a marca 12 cm para dentro da frente do armário, longe da parede leste; pullSpeed: a ré dela puxando)
 export const PANTRY_CRATES = {
-  hx: 0.26, hz: 0.18, x0: -6.5, x1: CUPBOARD.x, pullSpeed: 0.85, grabR: 0.55,
+  hx: 0.22, hz: 0.15, x0: -6.25, x1: CUPBOARD.x - 0.12, pullSpeed: 0.6, grabR: 0.55,
   list: [
     { id: 'alto', label: 'Ração', h: 0.76, z: CUP_FRONT + 0.19 },
     { id: 'medio', label: 'Batatas', h: 0.52, z: CUP_FRONT + 0.61 },
@@ -181,12 +186,13 @@ export const MANGO_SHOVE = {
 /** Cerca de ripas entre o quintal e o fundo (x fixo) com o portãozinho. */
 export const BACK_FENCE = { x: 5.4, h: 0.95, gate: { z0: -0.4, z1: 0.8 } };
 /**
- * O portãozinho fica pendurado na face de trás dos mourões (dobradiça 10 cm a leste da linha da cerca) e abre para o
- * fundo quase até encostar na cerca (162°): aberto, não forma bolsão com a cerca da horta.
+ * O portãozinho fica pendurado na face dos mourões do lado do quintal (dobradiça 10 cm a oeste da linha da cerca) e
+ * abre para o quintal, para o lado da cordinha (retorno do usuário: a dog puxa e ele vem junto), quase até encostar na
+ * cerca (162°): aberto, fica rente a ela ao sul do vão, longe do caminho da gansa, da trepadeira e do painel.
  */
 export const GATE = {
-  hinge: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x + 0.1, z: BACK_FENCE.gate.z0 },
-  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: -Math.PI * 0.9, openTime: 1.2, closeTime: 1.0,
+  hinge: { x: BACK_FENCE.x - 0.1, z: BACK_FENCE.gate.z1 }, latchPost: { x: BACK_FENCE.x - 0.1, z: BACK_FENCE.gate.z0 },
+  length: BACK_FENCE.gate.z1 - BACK_FENCE.gate.z0, closedYaw: 0, openYaw: Math.PI * 0.9, openTime: 1.2, closeTime: 1.0,
 };
 /** A cordinha da trava, pendurada no mourão do lado do quintal (E puxa). */
 export const CORD = { x: BACK_FENCE.x - 0.12, z: BACK_FENCE.gate.z0 - 0.16, top: 1.0, reach: 0.62 };

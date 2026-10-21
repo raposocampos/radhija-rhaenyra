@@ -71,7 +71,7 @@ export function locomotionGate(st, A, s) {
   // pelo usuário (a voltinha é fechada demais para a pata plantada sem passinhos acelerados)
   if (A.action === 'celebrate' || st.circling || (A.poopPre ?? -1) >= 0) return 0;
   let g = (1 - w.sit) * (1 - w.bow) * (1 - w.jump) * (1 - w.slide) * (1 - w.tug) * (1 - w.turn) * (1 - Math.max(w.aim, w.blow))
-    * (1 - w.push) * (1 - w.strain) * (1 - w.shake) * (1 - w.startled) * (1 - w.lick) * (1 - w.licked);
+    * (1 - w.push) * (1 - w.strain) * (1 - w.shake) * (1 - w.startled) * (1 - w.lick) * (1 - w.licked) * (1 - (w.press || 0));
   g *= 1 - clamp(st.hop / (0.012 * s), 0, 1); // pulinhos da comemoração: patas encolhidas (do guia)
   return clamp(g, 0, 1);
 }

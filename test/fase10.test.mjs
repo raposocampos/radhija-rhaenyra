@@ -58,14 +58,29 @@ function kickSpot(cfg) {
   const lat = WALL_BUTTON_SHAPE[cfg.kind].lat;
   return { x: cfg.x + cfg.nx * 0.5 + -cfg.nz * lat, z: cfg.z + cfg.nz * 0.5 + cfg.nx * lat };
 }
-/** A Rhaenyra (ativa) puxa a cordinha do gerador do painel e espera ele pegar. */
+/**
+ * A Rhaenyra (ativa) dá a partida no gerador do painel: morde a alça e puxa de ré (o direcional para longe dele); no
+ * primeiro puxão o motor engasga e a cordinha recolhe; morde de novo, puxa e ele pega.
+ */
 function startGenerator(h) {
   const G = L.GENERATOR;
   put(h, 'rhaenyra', G.cord.x + 0.3, G.cord.z, -Math.PI / 2);
   assert.equal(h.info().prompt, TEXT.prompt.gen, 'prompt do gerador');
-  h.tap('KeyE');
-  assert.equal(q(h).generator.pulling, true, 'puxando a cordinha');
-  assert.ok(h.run(G.pull + G.crank + 0.5, { until: (i) => i.quintal.generator.on }), 'o gerador pegou');
+  for (let pull = 1; pull <= 2; pull++) {
+    h.tap('KeyE');
+    assert.equal(q(h).generator.pulling, true, `indo até a alça (${pull}º puxão)`);
+    assert.ok(h.run(2, { until: (i) => i.quintal.generator.phase === 'hold' }), `mordeu a alça (${pull}º puxão)`);
+    assert.equal(h.info().prompt, TEXT.prompt.genLet, 'com a alça na boca, o E solta');
+    h.hold([1, 0]); // para longe do gerador (ele fica a oeste)
+    assert.ok(h.run(2, { until: (i) => i.quintal.generator.pulls === pull }), `puxou (${pull}º)`);
+    h.hold(null);
+    if (pull === 1) {
+      assert.ok(h.run(2, { until: (i) => !i.quintal.generator.pulling }), 'engasgou e parou');
+      assert.equal(q(h).generator.on, false, 'no primeiro puxão, não pega');
+      assert.ok(hints(h).includes(TEXT.hint.genAgain), 'dica: puxe mais uma vez');
+    }
+  }
+  assert.ok(h.run(G.crank + 0.5, { until: (i) => i.quintal.generator.on }), 'o gerador pegou');
 }
 /** A Rhaenyra (ativa) vai para a frente do botão `cfg`, de frente para a parede, e dá o impulso. */
 function wallJump(h, cfg) {
@@ -93,14 +108,32 @@ function bafo(h) {
   h.run(0.3);
   h.keyUp('KeyR');
 }
-/** A Rhaenyra (ativa) pega a alça do caixote i (no começo do trilho) e anda para trás até ele travar na marca. */
+/**
+ * A Rhaenyra (ativa) pega a alça do caixote i (no começo do trilho): anda até ela, morde e anda de ré até ele travar
+ * na marca. Retorno do usuário: puxando, "as patas não se mexem, o cachorro fica deslizando"; e, perto da parede, "às
+ * vezes não dá para terminar de puxar": de ré de verdade (o núcleo anda, as patas andam) e longe da parede leste.
+ */
 function pullCrate(h, i) {
   put(h, 'rhaenyra', q(h).crates[i].x + CR.hx + 0.03 + 0.3, CR.list[i].z, -Math.PI / 2);
   assert.equal(h.info().prompt, TEXT.prompt.crateGrab, `prompt do caixote ${i}`);
   h.tap('KeyE');
   assert.equal(q(h).crateHold, i, `segurando o caixote ${i}`);
   h.hold([1, 0]);
-  assert.ok(h.run(4, { until: (s) => s.quintal.crates[i].locked }), `o caixote ${i} chegou na marca ${JSON.stringify(q(h).crates[i])}`);
+  const c = h.ctrls.rhaenyra;
+  let pulling = 0, sliding = 0, east = -Infinity;
+  const locked = h.run(4, {
+    until: (s) => {
+      if (s.quintal.crateTug === 'hold' && Math.abs(c.vx) > 0.15) {
+        pulling++;
+        if (!(c.v < -0.02) || c.animSpeed < 0.1) sliding++;
+      }
+      east = Math.max(east, c.x);
+      return s.quintal.crates[i].locked;
+    },
+  });
+  assert.ok(locked, `o caixote ${i} chegou na marca ${JSON.stringify(q(h).crates[i])}`);
+  assert.ok(pulling > 20 && sliding <= 2, `caixote ${i}: puxando, ela anda de ré com as patas (${sliding} de ${pulling} quadros deslizando)`);
+  assert.ok(L.PANTRY.x1 - 0.1 - (east + c.r) > 0.08, `caixote ${i}: ela termina longe da parede leste (x ${east.toFixed(3)})`);
   h.hold(null);
   assert.equal(q(h).crateHold, null, 'na marca, ela solta a alça sozinha');
   assert.equal(q(h).crates[i].x, CR.x1);
@@ -248,7 +281,13 @@ seededTest('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cin
   h.run(0.1);
   assert.equal(h.info().prompt, TEXT.prompt.cord, 'prompt da cordinha');
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => i.quintal.gateOpen }), 'a cordinha destravou o portãozinho');
+  assert.ok(h.run(2, { until: (i) => i.quintal.cord.phase === 'hold' }), 'mordeu a cordinha');
+  h.run(0.3);
+  assert.equal(q(h).gateOpen, false, 'parada, segurando, o portãozinho não abre');
+  h.hold([-1, 0]); // para longe da cerca (a cordinha fica a leste dela)
+  assert.ok(h.run(3, { until: (i) => i.quintal.gate.t > 0.05 }), 'puxando, o portãozinho vem junto (para o quintal)');
+  assert.ok(h.run(3, { until: (i) => i.quintal.gateOpen }), 'a cordinha destravou o portãozinho');
+  h.hold(null);
   assert.equal(h.log('gate:open').length, 1);
   h.run(0.6); // termina de puxar (enquanto puxa, ela fica presa na cordinha)
 
@@ -333,7 +372,7 @@ seededTest('fase 10: partida completa (chapéu fora de ordem, o quadro, e os cin
   assert.equal(h.info().objective, TEXT.objective.genRh);
   h.clearLog();
   startGenerator(h);
-  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [2, 2, 1]);
   assert.ok(hints(h).includes(TEXT.hint.genOn));
   assert.equal(h.info().objective, TEXT.objective.buttonsRh);
   h.clearLog();
@@ -466,7 +505,10 @@ seededTest('fase 10: a gansa guarda a cordinha; latido de longe distrai; com o p
   h.hold(null);
   h.run(0.1);
   h.tap('KeyE');
-  assert.ok(h.run(1, { until: (i) => i.quintal.gateOpen }), 'abriu');
+  assert.ok(h.run(2, { until: (i) => i.quintal.cord.phase === 'hold' }), 'mordeu a cordinha');
+  h.hold([-1, 0]);
+  assert.ok(h.run(3, { until: (i) => i.quintal.gateOpen }), 'abriu');
+  h.hold(null);
   // depois do portão aberto, chegar perto da gansa não dá investida
   const hits = q(h).goose.hits;
   const g = q(h).goose;
@@ -902,7 +944,7 @@ seededTest('fase 10: lama sem arrancada; o gerador liga o painel; os dois botõe
   h.tap('KeyE');
   h.run(0.3);
   assert.ok(hints(h).includes(TEXT.hint.genHeavy));
-  assert.deepEqual(q(h).generator, { on: false, pulling: false });
+  assert.deepEqual(q(h).generator, { on: false, pulling: false, pulls: 0, phase: null });
   // a Rhaenyra: com o painel apagado, nada de impulso (o Espaço é um pulo comum) e nenhum botão afunda
   as(h, 'rhaenyra');
   const k0 = kickSpot(L.SHED_BUTTONS[0]);
@@ -918,7 +960,7 @@ seededTest('fase 10: lama sem arrancada; o gerador liga o painel; os dois botõe
   // a partida: puxa a cordinha, o motor engasga e pega; ligado, o "tá-tá-tá" e a fumacinha
   h.clearLog();
   startGenerator(h);
-  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [1, 1, 1]);
+  assert.deepEqual(['generator:pull', 'generator:crank', 'generator:start'].map((e) => h.log(e).length), [2, 2, 1]);
   assert.ok(h.run(1.2, { until: () => h.log('generator:hum').length > 0 }), 'ligado, o motor faz tá-tá-tá');
   // o primeiro botão abre o chiqueiro (a porta continua fechada); o segundo, a porta
   h.clearLog();
@@ -1355,4 +1397,40 @@ test('fase 10: varredura de sementes dos testes que dependem do sorteio', { skip
   }
   const summary = Object.fromEntries(Object.entries(bad).map(([k, v]) => [k, { falhas: v.length, primeiras: v.slice(0, 4) }]));
   assert.deepEqual(summary, {});
+});
+
+test('fase 10: a despensa — com os caixotes no começo do trilho, as duas chegam ao lado das alças (pela passagem ao sul deles)', async () => {
+  // retorno do usuário: "essa área do puzzle na fase 10 não me deixa passar pro outro lado" (o colisor dos sacos de
+  // farinha e da cestinha, do #53, fechava a passagem entre eles e o caixote baixo)
+  const h = await game();
+  h.run(0.2);
+  const w = h.world;
+  const S = 0.04, x0 = -8.25, x1 = -4.55, z0 = -0.6, z1 = 2.15;
+  const nx = Math.round((x1 - x0) / S), nz = Math.round((z1 - z0) / S);
+  for (const [kind, r, size] of [['radhija', L.DOGS.radhija.radius, 'small'], ['rhaenyra', L.DOGS.rhaenyra.radius, 'large']]) {
+    const free = (i, j) => !w.overlaps(x0 + i * S, z0 + j * S, r, size);
+    const seen = new Set();
+    // da cozinha, na frente da porta da despensa
+    const start = [Math.round((-7.35 - x0) / S), Math.round((-0.55 - z0) / S)];
+    const q = [start];
+    seen.add(start.join());
+    while (q.length) {
+      const [i, j] = q.shift();
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a > nx || b > nz || seen.has(a + ',' + b) || !free(a, b)) continue;
+        seen.add(a + ',' + b);
+        q.push([a, b]);
+      }
+    }
+    for (const cr of CR.list) {
+      // do lado leste do caixote, ao alcance da alça (o armário fica logo ao norte do caixote alto)
+      const ex = CR.x0 + CR.hx;
+      let ok = false;
+      for (let x = ex + r + 0.02; x <= ex + r + 0.3 && !ok; x += S) {
+        for (let z = cr.z - 0.08; z <= cr.z + 0.16 && !ok; z += S) ok = seen.has(Math.round((x - x0) / S) + ',' + Math.round((z - z0) / S));
+      }
+      assert.ok(ok, `${kind}: chega à alça do caixote ${cr.id}`);
+    }
+  }
 });

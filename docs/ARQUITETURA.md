@@ -253,7 +253,7 @@ E devolve um objeto com:
 | `update(dt, { active, comp, ctrls, stay })` | todo quadro em `playing`; devolva `'delivered'` para comemorar |
 | `updateAlways?(dt)` | todo quadro em `playing` e `celebrating` (animações) |
 | `interact(ctrl)` → bool | E / A; `false` faz a dog latir |
-| `lockFor(nome)` → `{ action, faceX, faceZ, drive?, slope? }` ou null | trava a entrada (puxando corda, girando registro); `drive` = pose roteirizada (a fase move a dog, como na subida do escorregador da fase 7) e `slope` inclina o corpo |
+| `lockFor(nome)` → `{ action, faceX, faceZ, drive?, slope?, move?, pull?, letGo?, press?, bite?, reach? }` ou null | trava a entrada (puxando corda, girando registro); `drive` = pose roteirizada (a fase move a dog, como na subida do escorregador da fase 7) e `slope` inclina o corpo; `move` = um passo que o núcleo anda com o controle e a colisão de sempre (indo até a corda ou o botão; `back`, de ré); `pull` = segurando uma corda com a boca, o direcional para longe dela puxa de ré (o eixo `ax/az` e a velocidade); `letGo` = o E ainda chega à fase (soltar); `press` = botão apertado com a pata (o alto dele no mundo e o progresso `k`); `bite` = a boca fechada numa corda; `reach` = ela vai de propósito até a coisa (a cabeça não desvia dela) |
 | `lookTarget(ctrl)` | para onde a dog ativa olha |
 | `modifyIntent?`, `assist?` | empurrar caixotes; "funis" que ajudam a entrar em passagens |
 | `navFlags()` → `{ flag: bool }` | libera arestas do grafo (`gateOpen`, `bridge`…) |
@@ -286,6 +286,13 @@ Peças prontas:
   Radhija nele faz força, `contact: 'strain'`, e o núcleo mostra o aviso de que só a Rhaenyra empurra enquanto ela
   insiste, `HEAVY_HINT` no `game.js`),
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
+  `createMouthTug` (`mouthTug.js`: no E, ela anda até a corda (`lock.move`), morde e segura; o jogador puxa de ré com o
+  direcional (`lock.pull`, `pulled()`), o E solta (`release`); a fase decide o que o puxão faz: os portões das fases 1
+  e 10 vêm junto e terminam de abrir no embalo, o gerador da fase 10 pega no segundo puxão, os caixotes da despensa
+  vêm atrás dela até a marca (`start({ yaw, speed })`: chegando pelo leste, de ré a 0,6 m/s); soltando, a trava já
+  sai; o prop recebe `setGrip(tug.grip)` e desenha o ponto mordido na boca, sem esticar além de `len`) com
+  `planStep`/`driveStep` (o
+  passo até a coisa, andando com o controle de sempre; a fase 9 usa para chegar à frente do botão do ventilador),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
   o Lambe-Lambe; liga `speedScale`/`canDash`/`onLick` do puzzle) e `createPigHerd` + `pigPenLayout` (porquinhos num
@@ -309,7 +316,10 @@ meia-espessura `t`). Opções:
 - `companionOnly`: só a IA da companheira desvia (o disco do irrigador ligado);
 - `kind`: informativo (`'water'`, `'gate'`…), aparece nos contatos;
 - `jumpable`: obstáculo baixo (tronco, mureta baixa) que não bloqueia quem está no ar, ou seja, a Rhaenyra pulando.
-  Sem essa marca, nada é pulável: as paredes, cercas e portões das fases continuam bloqueando no ar.
+  Sem essa marca, nada é pulável: as paredes, cercas e portões das fases continuam bloqueando no ar. Com `height`
+  (o alto dele), descendo do pulo abaixo desse alto (`opts.lowY`), ele só deixa passar quem já o tem embaixo do corpo
+  (`opts.over`): chegando baixa demais, a dog bate na lateral. `world.jumpableTop(x, z, yaw, body, r, size, depth)` é
+  o alto do mais alto deles em que o corpo entra (o pulo e o desenho usam).
 
 Colisores dinâmicos são registrados pelo puzzle com `world.addDynamic({...})`, que devolve o próprio objeto: mova
 `x/z/ax…` e ligue/desligue com `enabled`. O movimento usa sub-passos de no máximo 0,45 × raio, então nem a arrancada
@@ -337,7 +347,9 @@ por cima (`ground.planRimHop` decide, `game.js` `hopOverRim` chama `startHop` do
 arco de topo largo; as duas pulam, sem `dog:jump`; o pouso sai em `dog:land` com `hop`, baixinho e sem poeira). Indo
 para um lugar antes da borda (a comemoração perto dela), não pula. Com o anel da borda (`rim: { r, t }`), do lado de
 fora ela segura o corpo de quem está no chão (`ground.pushOffRims`, `game.js` `keepOffRims` depois de cada movimento):
-ninguém fica parado em cima dela; dentro, livre. O chão mede cada desenho com a posição dos pais (`updateWorldMatrix`):
+ninguém fica parado em cima dela; dentro, livre. O que muda de lugar (`userData.moving`: a caixa de almofadas da fase
+5, que é empurrada, e as almofadas que saem dela desmontada) leva o círculo junto a cada consulta. O chão mede cada
+desenho com a posição dos pais (`updateWorldMatrix`):
 o jogo o monta antes do primeiro quadro. As caminhas pequenas para as duas (fase 2 e Arena do Empurrão) são sólidas
 (colisor `caminha`). Empurrando de pé, as patas da frente apoiam no desenho do objeto, medido
 por raios horizontais na largura do peito (`src/game/pushRest.js`: cinco raios; a face, a beirada e a altura das
@@ -416,6 +428,22 @@ pressão; não pula na postura de empurrar. A companheira não pula: arestas do 
 exigem uma flag que nunca liga, e ela espera do lado de cá. Colisores dinâmicos também podem ser puláveis: a fase 5
 marca o portãozinho e a caixa de almofadas com `col.jumpable = true`. Quem não pula (a Radhija) ganha a dica
 "Só a Rhaenyra pula! (Q)". Eventos: `dog:jump` e `dog:land`.
+
+Na descida (a segunda metade do arco), o que ela pula é sólido de lado abaixo do alto dele, menos o que ela já tem
+embaixo do corpo (collision.js). O arco não acaba dentro de uma coisa: com o corpo em cima dela, se seguindo em frente
+(com as paredes, `clearsAhead`) sai de cima em até `JUMP_CLEAR` (0,3 s) depois do fim do arco, ela segue no ar até lá
+(`c.clearT`); senão escorrega de cima pelo lado mais perto, até um ponto decidido quando começa, com folga para as
+dianteiras esticadas (`c.slideOff`, `c.slideX/Z`). Antes, a colisão a jogava para fora de uma vez (até meio metro num
+quadro). No desenho (`game.js`, `jumpableUnder`), o corpo fica acima do alto da coisa em que o
+tronco entra e, passada ela, cai com a gravidade do pulo; o pouso (`dog:land`, a pose) espera o desenho chegar ao
+chão. A pose é de quadrúpede (`dogAnimation.js`): decolando, gira sobre o quadril (a frente sobe primeiro, as
+traseiras empurram); descendo, sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois). Uma pata de cada
+par vai na frente (`JUMP_LAG`, troca a cada pulo) e o corpo desenhado acelera para cima no empurrão (`TAKEOFF`, no
+`game.js`; o arco da colisão sai na hora).
+
+Logo depois de `startJump`, `fitJump` olha o caminho do pulo: havendo o que ela pula pela frente, o arco estica (até
+`FIT.time` do tempo, a coisa no meio dele) e sobe (até `FIT.height` da altura) o quanto o tronco precisa para passar por
+cima, numa parábola só (`c.jumpH`, a altura deste pulo).
 
 **Impulso na parede** (`dogController.js` + `src/game/mechanics/wallButton.js`): o mesmo pulo, de frente para uma
 parede marcada com patinhas pintadas. A fase oferece os pontos em `puzzle.wallSpots()` (`WallSpot`: pé da parede,
@@ -519,8 +547,10 @@ não faz parte deste contrato; só a posição é reaplicada ao trocar ou reinic
 
 **Dogs** (`createDog(nome)` em `src/dogs/dog.js`, tipo `DogModel`): `object`, `mouthSocket` (pendure o item aqui,
 com posição zerada), `markerAnchor`, `onFootstep(i)`, `update(dt, anim)`, `triggerBark()`, `setCarryPose(tipo|null)`,
-`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, action, lookAt, carrying, jump, airK }` (`jump` = altura do pulo,
-`airK` = progresso 0..1 no ar ou −1 no chão); ações: `none`, `sit`, `push`, `strain`, `tug`, `celebrate`, `sniff`,
+`carryKind` e `setWet(0..1)`. `anim` = `{ speed, turn, turnTo, action, lookAt, carrying, jump, airK }` (`jump` = altura
+do pulo, `airK` = progresso 0..1 no ar ou −1 no chão, `turnTo` = quanto falta virar até o rumo pedido, `c.wantYaw` do
+controle: a cabeça vai na frente na curva e o tronco vem atrás com mola; `pressAt`/`pressK`, a pata apertando um botão;
+`reach`, indo de propósito até a coisa); ações: `none`, `sit`, `push`, `strain`, `tug`, `press`, `celebrate`, `sniff`,
 `dash`, `turn`, `shake`, `startled`, `jump`, `bafoAim`, `bafo`, `proud`, `yuck`, `shove` (empurrão em pé: os campos
 `shove*` estão em `DogAnim`, `src/types.d.ts`). Empurrando um caixote ou carrinho (`push`, ou `strain` fazendo força
 nele), o núcleo manda `pushGap`/`pushTop` (distância do centro à face e altura dele, de `kind` `'crate'` ou `'cart'`
@@ -532,7 +562,12 @@ A pose de boca é detectada pelo nome
 
 Por dentro: `dogModel.js` e `sdf.js` geram a malha (SDF → Surface Nets → SkinnedMesh) e `furMaterial.js` o pelo;
 `dogRig.js` monta o esqueleto e a IK das pernas; `dogFace.js`, o rosto; `carryPose.js`, o item na boca;
-`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá).
+`dogAnimation.js` resolve a pose a cada quadro (é o arquivo para mexer em animações; o pulo está lá: decolando, as
+traseiras para trás e as dianteiras já dobrando; no meio, encolhida, com as patas dobradas e as costas arredondadas;
+descendo, as dianteiras desdobram e pousam primeiro, as traseiras dobradas até o fim; o pouso afunda e volta com mola,
+mais forte quanto mais alto o pulo. Na curva, o corpo tem inércia (`st.dev`, movida pelas mudanças do giro): o tronco
+fica um tiquinho para trás e, ao parar de virar, passa e volta, com a cabeça na frente; a inclinação e o "molejo" de
+arrancar e frear também são molas. De ré (`anim.back`, puxando uma corda), as patas andam ao contrário).
 
 **Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
 esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,

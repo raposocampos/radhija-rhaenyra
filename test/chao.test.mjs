@@ -290,7 +290,7 @@ test('caminha com borda (modelo novo, como no jogo): pulinho para entrar e para 
         G.y += (gy - G.y) * (1 - Math.exp(-14 * DT));
         d.object.position.set(c.x, G.y, c.z);
         d.object.rotation.y = c.yaw;
-        d.update(DT, { speed: c.animSpeed, turn: c.yawRate, action: c.jumpT > 0 ? 'jump' : 'none', jump: c.y, airK: c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1 });
+        d.update(DT, { speed: c.animSpeed, turn: c.yawRate, action: c.jumpT > 0 ? 'jump' : 'none', jump: c.y, airK: c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1, hop: c.jumpT > 0 && c.hopH > 0 });
         d.object.updateMatrixWorld(true);
         d.locomotion.legs.forEach((Lg, i) => {
           const p = d.bones.find((b) => b.name === PAWS[i]).getWorldPosition(new THREE.Vector3());
@@ -435,7 +435,7 @@ test('caminha com borda (modelo novo): passando de lado rente a ela e empurrada 
         }
         d.object.position.set(c.x, bodyGround(ground, c.x, c.z, c.yaw, c.cfg.body), c.z);
         d.object.rotation.y = c.yaw;
-        d.update(DT, { speed: c.animSpeed, turn: c.yawRate, action: c.jumpT > 0 ? 'jump' : 'none', jump: c.y, airK: c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1 });
+        d.update(DT, { speed: c.animSpeed, turn: c.yawRate, action: c.jumpT > 0 ? 'jump' : 'none', jump: c.y, airK: c.jumpT > 0 ? 1 - c.jumpT / c.jumpDur : -1, hop: c.jumpT > 0 && c.hopH > 0 });
       };
       // passando de lado, rente à caminha (o corpo raspa na borda)
       for (let f = 0; f < 90; f++) frame({ dx: 1, dz: 0, speed: c.cfg.walkSpeed });

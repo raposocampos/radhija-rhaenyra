@@ -83,6 +83,16 @@ try {
   const tap = (code) => page.evaluate((c) => window.__tap(c), code);
   const keyDown = (code) => page.evaluate((c) => window.__key(c, true), code);
   const keyUp = (code) => page.evaluate((c) => window.__key(c, false), code);
+  /** Segura o direcional para (dx, dz) do mundo até `pred` (puxando uma corda de ré, por exemplo). */
+  const holdDir = async (dx, dz, pred, max = 300) => {
+    const keys = await page.evaluate(([x, z]) => window.__keysFor(x, z), [dx, dz]);
+    for (const k of keys) await keyDown(k);
+    try {
+      await until(pred, max);
+    } finally {
+      for (const k of keys) await keyUp(k);
+    }
+  };
   const shot = async (name, cam = null) => {
     await page.evaluate((c) => window.__render(c), cam);
     await page.screenshot({ path: `${OUT}/${name}.png`, style: '#ui, #loading { display: none !important; }' });
@@ -250,9 +260,12 @@ try {
   await step(50);
   await shot('19-gansa-atraida', { pos: [3.0, 2.2, 3.2], look: [3.4, 0.3, 0.0] });
   await setup({ active: 'rhaenyra', place: { rhaenyra: { x: L.CORD.x - 0.48, z: L.CORD.z - 0.06, yaw: Math.PI / 2 } } });
+  // ela anda até a cordinha e morde; puxando de ré (para longe da cerca), o portãozinho vem junto, para o quintal
   await tap('KeyE');
-  await step(14);
+  await until((i) => i.quintal.cord.phase === 'hold', 200);
+  await holdDir(-1, 0, (i) => i.quintal.gate.t > 0.15, 200);
   await shot('20-puxando-a-cordinha', { pos: [L.CORD.x - 1.4, 1.2, L.CORD.z + 1.3], look: [L.CORD.x, 0.6, L.CORD.z] });
+  await holdDir(-1, 0, (i) => i.quintal.gateOpen, 200);
   await step(50);
   await shot('20b-portao-aberto', { pos: [3.8, 1.6, 2.0], look: [5.6, 0.5, 0.1] });
   await shot('20b2-portao-aberto-encostado', { pos: [6.9, 1.6, 2.6], look: [5.6, 0.4, 0.6] });
@@ -350,11 +363,15 @@ try {
   await setup({ stage: 'cake1', active: 'rhaenyra', place: { rhaenyra: { x: GEN.cord.x + 0.3, z: GEN.cord.z, yaw: -Math.PI / 2 }, radhija: { x: 6.5, z: 1.6, yaw: Math.PI } }, stay: 'radhija', settle: 40 });
   await shot('27a-painel-apagado-camera-do-jogo');
   await shot('27b-gerador-desligado', genCam);
+  // dois puxões: ela anda até a alça, morde e puxa de ré (para longe do gerador); o primeiro engasga, o segundo pega
   await tap('KeyE');
-  await step(18);
+  await until((i) => i.quintal.generator.phase === 'hold', 200);
+  await holdDir(1, 0, (i) => i.quintal.generator.pulls >= 1, 200);
   await shot('27c-puxando-a-cordinha', genCam);
-  await until((i) => !i.quintal.generator.pulling || i.quintal.generator.on, 120);
-  await step(1);
+  await until((i) => !i.quintal.generator.pulling, 200);
+  await tap('KeyE');
+  await until((i) => i.quintal.generator.phase === 'hold', 200);
+  await holdDir(1, 0, (i) => i.quintal.generator.pulls >= 2, 200);
   await until((i) => i.quintal.generator.on, 200);
   await step(50);
   await shot('27d-gerador-ligado-painel-aceso', genCam);

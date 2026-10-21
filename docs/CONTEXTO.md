@@ -1,11 +1,116 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (modelos das dogs, etapa 4: colisão do corpo, cabeça que desvia, empurrar
-de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e ao soltar o Shift, aviso de "pesado",
-caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
-e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55, 2ª rodada: ela anda até a coisa, o
+jogador puxa as cordas de ré, o portãozinho da fase 10 abre para o quintal, o gerador pega no segundo puxão, o pulo
+encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`, PR #56)
+## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`, PR #55)
+
+- Pedidos do usuário (2026-10-20, ao aprovar a prévia do #48): "o botão do ventilador, as dogs poderiam de fato
+  apertar o botão"; "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e
+  o realismo"; "dar um pouco mais de molejo, pouca coisa: quando andar e virar, a cabeça também vira, o tronco… ficar
+  mais natural"; e "deixa o pulo mais fluido, hoje está muito travado e duro, sem deixar aquele bug de quando
+  aterrissar o dog fica com as patas presas".
+- 1ª prévia (`637fcbe`, CI `39507380599` e E2E `todas` `39507375922` verdes), retorno do usuário: "não senti o
+  molejo"; o pulo "ainda está meio duro, pulando reto, esticado"; no botão, "o cachorro é meio que puxado para frente
+  do botão, como se tivesse sendo arrastado, ou como se tivesse um ímã"; e "nas cordas ficou ok, mas poderia ser
+  melhor: o player puxar ela; pro gerador, puxar 2 vezes até ligar; e pros portões… o player controla o cachorro até
+  abrir. No caso da fase 10, abrir pro lado da corda talvez, sem que atrapalhe nada".
+- Feito (2ª rodada; o branch está sincronizado com o main `196bf63`, que tem o #56):
+  - Ir até a coisa andando (`src/game/mechanics/mouthTug.js`, `planStep`/`driveStep`): a trava pede o passo
+    (`lock.move`) e o núcleo anda com o controle e a colisão de sempre (`game.js`); ela vira de frente e para; passou
+    um tiquinho do ponto, dá uns passinhos de ré (`intent.back` no `steer`). Antes era um deslize roteirizado.
+  - Puxar de ré: mordendo, a trava tem `pull` (o eixo, da corda para ela) e o direcional para longe puxa de ré, de
+    frente para a corda; para perto, dá folga; o E solta (`lock.letGo`). As patas andam ao contrário (`anim.back`,
+    `st.backK` no `dogAnimation.js`).
+  - Fase 1: a cordinha presa na ponta do portão (a argola gira junto, `world/props.js`); puxando, o trinco levanta
+    (8 cm) e o portão vem junto até 28%; puxou 42 cm, ela solta e ele termina de abrir no embalo; soltou antes, ele
+    volta. O brinquedo de corda deixa de ser colisor quando o portão abre.
+  - Fase 10: o portãozinho pende na face do lado do quintal e abre para lá, para o lado da cordinha (`layout.js`
+    `GATE`, `world/fences.js`); aberto, fica rente à cerca ao sul do vão (longe da gansa, da trepadeira e do painel;
+    a dog que puxa fica fora do giro e quem estiver no caminho dá um pulinho para fora, `sweepExit`). Puxando, o
+    ferrolho solta e ele vem junto até 30%; puxou 38 cm, termina de abrir. O gerador: puxou 24 cm, a cordinha corre e
+    o motor tenta; no primeiro puxão engasga (a cordinha recolhe, ela solta, dica "puxe de novo"), no segundo pega.
+  - Fase 9: ela anda até a frente do botão do ventilador e aperta com a pata (`lock.move`; a pata chega a menos de
+    1 cm do alto dele, com a colisão e a cabeça que desvia).
+  - Pulo encolhido: as dianteiras dobram já na decolagem, no meio as quatro dobradas (0,55–0,72 do comprimento de
+    pé) e as costas arredondadas; descendo, as dianteiras desdobram e pousam primeiro, as traseiras dobradas até o fim;
+    sem perna esticada para baixo.
+  - Molejo: o corpo tem inércia no giro (`st.dev`, movida pelas mudanças do giro, mola ω 13): andando e virando 90°, o
+    tronco fica até 11° atrás do corpo e, ao parar de virar, passa 6–7° e assenta em meio segundo; a cabeça vai na
+    frente. Girando parada, bem menos (a cabeça perto da parede não entra).
+  - Testes: `test/interacoes.test.mjs` (andar sem deslizar, a boca a até 5 cm da corda, a corda na boca puxando de ré
+    com passos das patas, o portão junto, a alça fora do gerador, a curva e o pulo), fases 1, 9 e 10 com o puxão de
+    ré e os dois puxões do gerador; E2E `playthrough`, `test-toque` (joystick), `test-quintal` e `capture-quintal`
+    puxando.
+- 2ª prévia (`b73ab0a`, CI `39518610795`; E2E `todas` `39518510410` no `2e84872`, o mesmo código), retorno do
+  usuário: "o resto funcionou perfeitamente", mas três pontos: o pulo "parecendo pulo de coelho, pulando com as duas
+  patas" (quer inclinar o corpo, as dianteiras subindo primeiro, o impulso das traseiras; pousar com as dianteiras e
+  depois as traseiras, natural e fluido); na fase 10, a área do puzzle da despensa "não me deixa passar pro outro
+  lado"; na fase 5, "o pulo está atravessando a caixa, as patas traseiras às vezes boa parte do corpo" e "as almofadas
+  da caixa quebrada não têm colisão, as dogs ficam atravessando".
+- Feito (3ª rodada):
+  - Pulo de quadrúpede (`dogAnimation.js`): decolando, o corpo gira sobre o quadril (`jTake`, a frente sobe primeiro)
+    e as traseiras ficam empurrando o chão; descendo, gira sobre os ombros (`jFall`) e as dianteiras pousam primeiro;
+    pousada, a garupa desce depois (`landFall`, ~0,1 s). O giro do corpo inteiro no ar saiu.
+  - Despensa (fase 10): o colisor dos sacos de farinha do #53 fechava a passagem ao sul dos caixotes; o trilho
+    começa em `x0 = -6,25` (era -6,5).
+  - Pulo por cima do que dá para pular (`collision.js`, `dogController.js`, `game.js`): o desenho fica acima do alto
+    da coisa em que o tronco entra (`jumpableUnder`, sobe depressa) e, passada ela, cai com a gravidade do pulo; o
+    pouso (a pose, o som e a poeira) espera o desenho chegar ao chão. Descendo, abaixo do alto da coisa, o que ela
+    ainda não tem embaixo do corpo é sólido de lado (`opts.lowY`/`over`): ela bate na lateral em vez de entrar. Com o
+    arco acabando em cima de uma caixa (de 0,8 m, a garupa ficava sobre ela e a colisão a jogava meio metro para fora
+    num quadro), ela segue no ar até sair de cima (`JUMP_CLEAR`, 0,3 s; `clearsAhead` simula com as paredes) ou,
+    com o batente da porta no caminho, escorrega de cima pelo lado mais perto, com 16 cm de folga para as dianteiras
+    esticadas (`slideOff`, `SLIDE_ROOM`). O portãozinho da fase 5 ganhou o alto (0,42 m) no colisor.
+  - Almofadas (fase 5): a caixa achatada, as abas e as almofadas espalhadas são chão de pisar (`walkable`); o chão
+    acompanha o que muda de lugar (`userData.moving`, `ground.js`). Inteira, o tampo (0,42 m) passa de `GROUND_MAX` e
+    não conta.
+  - Testes: `test/fase5.test.mjs` (pulos de 0,3 a 1 m e de viés na porta: o corpo desenhado acima da caixa, sem
+    empurrão de mais de 7 cm num quadro, pouso fora dela e com o som na hora em que o desenho chega; as almofadas como
+    chão, também com a caixa empurrada; falha sem a correção); na mesma fase, os modelos de verdade (o atual e o
+    novo) espelhando o jogo headless quadro a quadro, com a pele medida contra as duas caixas da porta em nove pulos:
+    no ar, nada entra (só o focinho do atual encosta 0,9 cm na beira ao decolar rente à caixa; com o código da 2ª
+    prévia, entrava de 3 a 26 cm); `test/interacoes.test.mjs` (a frente sobe primeiro na decolagem e a garupa desce
+    depois do pouso) e `test/fase10.test.mjs` (as duas chegam às alças da despensa).
+- 3ª prévia (`f949714`, CI `39525880259`, E2E `todas` `39525903344` verdes), retorno do usuário: "o resto ficou bom",
+  mas: na fase 10, "diminuir um pouco as caixas, fica muito perto da parede, às vezes buga e não dá pra terminar de
+  puxar", e puxando para trás "as patas não se mexem, o cachorro fica deslizando"; na fase 5, nada atravessa mais a
+  caixa, "porém o pulo dá um boost e parece que tá voando" (diminuir a caixa, largura e altura) e o pulo "ainda não tá
+  fluido" (as patas saindo do chão uma antes da outra).
+- Feito (4ª rodada):
+  - Caixotes da despensa (fase 10): menores (`hx` 0,22, `hz` 0,15) e a marca 12 cm para dentro da frente do armário
+    (`x1 = CUPBOARD.x - 0,12`): no fim do puxão ela fica a 11–13 cm da parede leste. A alça agora usa o `mouthTug`
+    das cordinhas (`crateTug`): no E ela anda até a alça chegando pelo leste (`start({ yaw })`), morde e o jogador
+    puxa de ré pelo núcleo (as patas andam de ré; antes a fase mudava o `c.x` direto e a animação ficava parada).
+    `pullSpeed` 0,6 m/s (`start({ speed })`). O `info` mantém `crateHold` (o caixote) e ganhou `crateTug` (a fase).
+  - `mouthTug`: soltando (`let`), a trava sai (ela anda e troca de dog na hora; a corda só termina de voltar no
+    desenho). Antes, o Q logo depois de travar um caixote era ignorado.
+  - Barricada (fase 5): as duas caixas com 0,5 × 0,5 m e 0,32 m de alto (eram 0,6 e 0,42) e a porta da cozinha com
+    1 m (`WALL_HK.gap` ±0,5): continua fechada pelas duas.
+  - Pulo por cima de coisa (`dogController.fitJump`, logo depois de `startJump`): olha o caminho; havendo o que ela
+    pula pela frente, o arco estica (até 1,25× o tempo, a coisa no meio dele) e sobe (até 1,25× a altura) o quanto o
+    tronco precisa, numa parábola só (`c.jumpH`). No desenho (`game.js`): passada a coisa, o corpo cai já com a
+    velocidade do arco (antes partia do repouso, ficava para trás e parecia planar); a subida do chão desenhado ficou
+    mais suave.
+  - Decolagem e patas (`game.js`, `dogAnimation.js`): o corpo desenhado acelera para cima no empurrão (0,12 s, o arco
+    da colisão sai na hora); a pose do pulo entra mais depressa; as traseiras ficam no chão empurrando já no primeiro
+    quadro; uma pata de cada par vai na frente (`JUMP_LAG`, `st.jLead`, troca a cada pulo): a outra dianteira sai do
+    chão um tiquinho depois e, no pouso, chega depois da outra; a garupa desce um pouco mais devagar.
+  - Medidas: na fase 5, de 0,2 a 0,6 m da caixa o desenho fica no arco (só sobe na decolagem rente à caixa) e pousa
+    com ele; de 0,8 m, uns 3 quadros depois; de 1 m ou mais (pulou cedo demais) ainda segue no ar um pouco. No modelo
+    atual, as patas saem do chão e pousam em quadros diferentes; no novo, a diferença é menor (a locomoção dele).
+  - Testes: `test/fase10.test.mjs` (puxando, ela anda de ré com as patas, e termina longe da parede); `test/fase5.test.mjs`
+    (a partida passa pela porta mais estreita por dentro da cozinha; pulos e pele com as caixas novas).
+- Validação: CI e E2E (`todas`) do commit desta rodada: conferir no PR #55. No PC, diagnósticos leves em Node e
+  testes dos arquivos afetados durante o trabalho; a bateria fica no CI.
+- Fica para depois (não é do pulo): encostada de viés numa caixa, uma pata ou a ponta da orelha passa um pouco da
+  face dela (o corpo é mais largo que os círculos da colisão nas pontas).
+- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar. Depois do #55 publicado, a
+  etapa 5 dos modelos novos (o novo como padrão), pedida pelo usuário ao orquestrador.
+
+## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`, deploy `39518235787`)
 
 - Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
   fumaça acaba saindo na parte de baixo, quando deveria sair na ponta do cano que está do lado do pombo"; fase 4, o duto
@@ -33,11 +138,10 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   (fase de desenvolvimento, com a caixa baixa de antes).
 - Validação: CI `39510626848` verde no código de `46e6a01` (573 testes, 0 falhas); E2E `fase4` e `quintal` e os do
   head final registrados no PR. No PC, só `node --check` e `git diff --check`.
-- Fila (orquestrador): o #55 entra antes; depois dele, sincronizar com o main, rodar CI e E2E de novo e apresentar a
-  prévia nova. Só o `docs/CONTEXTO.md` conflita com o #55 (`git merge-tree`).
-- Próximo passo: com CI e E2E verdes, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+- Integrado ao main com a aprovação do usuário (squash `196bf63`, deploy `39518235787`): produção em v0.10.6 · build 98
+  (conferido pelo orquestrador).
 
-## Em andamento: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (Claude, branch `claude/colisao-balde`, PR #54)
+## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
 
 - Pedido (seguimento do #53): o colisor do balde-elevador (`fase10/puzzle.js`) deixava a Rhaenyra entrar 18,8 cm no
   balde deitado, pela boca e por cima da alça (CI `39476688055`). Retornos do usuário nas prévias: 1ª (`a7574d8`), "a
@@ -72,8 +176,8 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   virando, 1,6 cm e 0,9 cm; nos pulos, de 3,0 a 4,7 cm da parede.
 - Branch atualizado com o main `38f5677` (#48: peito e garupa na colisão, cabeça que desvia). Validação: CI, prévia e
   E2E `todas` do head final registrados no PR #54. No PC, só `node --check` e `git diff --check`.
-- Próximo passo: com CI e E2E verdes, entregar a prévia nova e esperar a aprovação do usuário no chat desta sessão;
-  só então integrar.
+- Integrado ao main com a aprovação do usuário (squash `3bd1b7b`); a publicação (`39507237110`) foi liberada pela
+  sessão do balde: conferir o deploy e o `version.json` (previsto v0.10.5 · build 97).
 
 ## Entregue: modelos novos das dogs, etapa 4 de 5: colisão do corpo e da cabeça (PR #48, squash `38f5677`, deploy `39496742933`)
 
@@ -170,10 +274,13 @@ e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
   - thread do Codex no PR ("Apply body collision after forced displacements"): os empurrões das mecânicas
     (`dogEffects`: irrigador, gansa, porcos, portão da fase 7) e a irmã cedendo espaço moviam só o círculo do meio e a
     garupa entrava na parede; agora chamam `resolveDogBody`. Teste em `test/colisao.test.mjs`.
-  - Validação do head novo (CI e E2E `todas`): conferir no PR #48 pelo commit.
-- Integrado ao main e publicado (squash `38f5677`, deploy `39496742933`; produção v0.10.4 · build 96). Não repetir
-  merge/deploy do #48. Depois: as animações acima e a etapa 5 (troca nas 10 fases e cascas de pelo mais leves só no
-  celular). Ideia anotada: pular a borda alta da caminha com um pulinho (junto das animações de interação).
+  - Head final `1d8e00e`: CI `39492776642` e E2E `todas` `39492800353` verdes (a parte da fase 3 falhou uma vez na dica
+    do cantinho e passou ao repetir, `39494273942`).
+- Integrado com a aprovação do usuário ("Ta aprovado a prévia"): squash `38f5677`, CI do main `39496518317`, deploy
+  `39496742933`; produção em v0.10.4 · build 96 (`version.json` conferido). Não repetir merge/deploy do #48.
+- Depois: as interações de verdade (seção acima, em andamento) e a etapa 5 (troca nas 10 fases e cascas de pelo mais
+  leves só no celular); fechar o registro mordendo o volante e, parada muito tempo, coçar, xixi agachada, sentar e
+  deitar continuam anotados.
 
 ## Entregue: colisão dos objetos do cenário (PR #53, squash `acae42f`, deploy `39489612450`)
 

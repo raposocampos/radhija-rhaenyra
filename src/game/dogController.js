@@ -3,7 +3,8 @@
 // O corpo gira suavemente (ganho proporcional limitado por turnSpeed); inversões > 120° fazem um pivô
 // rápido com queda de velocidade; aceleração/desaceleração vêm do layout.
 // Pulo (só quem tem cfg.jumpHeight, a Rhaenyra): arco de altura fixa e duração cfg.jumpTime, com pouco
-// controle no ar; enquanto está no ar, os colisores marcados jumpable (troncos, muretas baixas) não bloqueiam.
+// controle no ar; enquanto está no ar, os colisores marcados jumpable (troncos, muretas baixas) não bloqueiam (na
+// descida, abaixo do alto deles, só o que ela já tem embaixo do corpo: JUMP_CLEAR, abaixo).
 // Impulso na parede (só quem tem cfg.wallJumpTime, a Rhaenyra): de frente para uma parede marcada (WallSpot que a
 // fase oferece em puzzle.wallSpots), o pulo vira um movimento roteirizado de cfg.wallJumpTime s: avança até a
 // parede, sobe apoiando as patas, alcança o alto (wallHit, uma vez, em WALL_TOUCH) e volta ao chão um pouco
@@ -25,6 +26,19 @@ export const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v
 const PIVOT_ANGLE = (120 * Math.PI) / 180;
 const TURN_GAIN = 12; // rad/s por rad de erro (suaviza o fim do giro)
 const BUMP_SPEED = 2.2; // m/s contra a normal para contar como "batida"
+// Descendo do pulo (a segunda metade do arco), o que ela pula (a caixa de almofadas, a mesa de centro, a mureta do
+// cercadinho) é sólido de lado: abaixo do alto da coisa, ela só passa pelo que já tem embaixo do corpo (chega baixa
+// demais, bate na lateral, collision.js). Com o arco acabando em cima de uma coisa, ela não pousa dentro dela (a colisão
+// a jogava para fora de uma vez, meio metro num quadro): se, seguindo em frente (com as paredes), sai de cima em até
+// JUMP_CLEAR s depois do fim do arco, segue no ar até lá; senão (uma parede no caminho, como o batente da porta)
+// escorrega de cima dela pelo lado mais perto, sem avançar, a pelo menos SLIDE_OFF m/s, e pousa fora, com SLIDE_ROOM m de
+// folga (as dianteiras esticadas para o pouso passam do círculo do peito). Conta o que entra mais de LAND_DEPTH m
+// embaixo dela (o círculo do meio, o peito ou a garupa).
+export const JUMP_CLEAR = 0.3;
+const LAND_DEPTH = 0.03;
+const SLIDE_OFF = 2;
+const SLIDE_ROOM = 0.16;
+const CLEAR_EVERY = 0.06; // s entre uma simulação do caminho em frente e outra (no celular, pesa)
 const sstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -77,6 +91,8 @@ export function createController(name, cfg) {
     vx: 0, // velocidade real medida (após colisão)
     vz: 0,
     yawRate: 0,
+    /** Rumo pedido (rad): para onde ela está virando (a animação põe a cabeça na frente, o tronco vem atrás). */
+    wantYaw: cfg.start.yaw,
     animSpeed: 0,
     pivoting: false,
     dashT: 0,
@@ -91,6 +107,7 @@ export function createController(name, cfg) {
     y: 0, // altura do pulo (m); 0 = no chão
     jumpT: 0, // tempo restante no ar (0 = no chão)
     jumpDur: 0,
+    jumpH: 0, // altura do arco deste pulo (m): cfg.jumpHeight, ou mais, ajustado à coisa que ela pula (fitJump)
     jumpCd: 0,
     jumpDx: 0,
     jumpDz: 1,
@@ -118,6 +135,12 @@ export function createController(name, cfg) {
     shoveHit: null, // empurrou neste quadro (o jogo emite dog:shove e zera)
     hopH: 0, // pulinho por cima de uma borda (startHop): altura do arco (0 = pulo comum ou no chão)
     landedHop: false, // o pouso deste quadro foi de um pulinho (som mais baixo, sem poeira)
+    overJump: 0, // no ar: o alto do que ela pula embaixo do corpo agora (integrate)
+    clearT: 0, // quanto o pulo seguiu no ar depois do fim do arco, por estar em cima do que ela pula (s)
+    slideOff: false, // escorregando de cima do que ela pula (não sai seguindo em frente)
+    slideX: 0, // aonde ela escorrega (decidido quando começa)
+    slideZ: 0,
+    clearChk: 0, // até a próxima simulação do caminho em frente (s)
   };
 }
 
@@ -125,6 +148,7 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.x = x;
   c.z = z;
   c.yaw = yaw;
+  c.wantYaw = yaw;
   c.v = 0;
   c.vx = 0;
   c.vz = 0;
@@ -140,6 +164,8 @@ export function placeController(c, x, z, yaw = c.yaw) {
   c.jumpT = 0;
   c.jumpCd = 0;
   c.hopH = 0;
+  c.overJump = c.clearT = c.clearChk = 0;
+  c.slideOff = false;
   c.landed = false;
   c.wall = null;
   c.wallT = 0;
@@ -424,10 +450,47 @@ export function startJump(c, dx, dz) {
     c.v = Math.max(c.v, c.cfg.jumpSpeed ?? c.cfg.walkSpeed);
   }
   c.jumpT = c.jumpDur = c.cfg.jumpTime ?? 0.5;
+  c.jumpH = c.cfg.jumpHeight ?? 0;
   c.hopH = 0;
   c.y = 0;
   c.landed = false;
   c.pivoting = false;
+  c.overJump = c.clearT = c.clearChk = 0;
+  c.slideOff = false;
+}
+
+/**
+ * Pulo por cima de uma coisa (a caixa da fase 5, a mureta do cercadinho): o arco de sempre muitas vezes acabava com o
+ * corpo em cima dela, e o desenho subia de repente e planava por cima (retorno do usuário: "o pulo dá um boost e parece
+ * que tá voando"). Logo depois de startJump, olha o caminho do pulo: havendo pela frente o que ela pula, o arco estica
+ * (até FIT.time do tempo, para a coisa ficar no meio dele e ela pousar depois dela) e sobe (até FIT.height da altura) o
+ * quanto o tronco precisa para passar FIT.clear acima dela, numa parábola só. Parada (pulo no lugar), o de sempre.
+ */
+export const FIT = { time: 1.25, height: 1.25, clear: 0.05, step: 0.05 };
+export function fitJump(c, world) {
+  const b = c.cfg.body;
+  if (!world?.jumpableTop || !b || !(c.jumpT > 0) || c.hopH > 0 || !(c.v > 0.3)) return;
+  const T0 = c.jumpDur, H0 = c.jumpH || c.cfg.jumpHeight;
+  const D0 = c.v * T0, Dmax = D0 * FIT.time;
+  const yaw = Math.atan2(c.jumpDx, c.jumpDz);
+  // o primeiro trecho do caminho com o tronco em cima de uma coisa (como o desenho a mede, game.js): de s0 a s1
+  let s0 = -1, s1 = -1, top = 0;
+  for (let s = 0; s <= Dmax + 1e-6; s += FIT.step) {
+    const h = world.jumpableTop(c.x + c.jumpDx * s, c.z + c.jumpDz * s, yaw, b, b.r, c.size, 0.04);
+    if (h > 0) {
+      if (s0 < 0) s0 = s;
+      s1 = s;
+      top = Math.max(top, h);
+    } else if (s0 >= 0) break;
+  }
+  if (s0 < 0) return;
+  // a coisa no meio do arco (s0 + s1) e o pouso depois dela (s1 + passo), sem encolher o pulo de sempre
+  const D = Math.min(Dmax, Math.max(D0, s0 + s1, s1 + FIT.step));
+  const k = (p) => (p <= 0 || p >= 1 ? 0 : 4 * p * (1 - p));
+  const kMin = Math.min(k(s0 / D), k(Math.min(s1, D) / D));
+  const H = Math.min(H0 * FIT.height, Math.max(H0, kMin > 1e-3 ? (top + FIT.clear) / kMin : Infinity));
+  c.jumpT = c.jumpDur = D / c.v;
+  c.jumpH = H;
 }
 
 /**
@@ -445,6 +508,8 @@ export function startHop(c, dx, dz, { time, speed, height }) {
   c.y = 0;
   c.dashT = 0;
   c.landed = false;
+  c.overJump = c.clearT = c.clearChk = 0;
+  c.slideOff = false;
   c.pivoting = false;
 }
 
@@ -468,11 +533,13 @@ export function startDash(c, dx, dz) {
 /**
  * Atualiza orientação e velocidade escalar a partir de uma intenção:
  *   { dx, dz } direção desejada (unitária ou zero), speed (m/s desejado), turnScale,
- *   faceX/faceZ: só girar para olhar um ponto (sem andar).
+ *   faceX/faceZ: só girar para olhar um ponto (sem andar);
+ *   back: anda de ré a speed m/s, de frente para faceX/faceZ (puxando uma corda com a boca).
  */
 export function steer(c, dt, intent) {
   const { cfg } = c;
   const prevYaw = c.yaw;
+  c.wantYaw = c.yaw; // sem rumo pedido (no ar, arrancando, parada): nada a virar
   c.dashCd = Math.max(0, c.dashCd - dt);
   c.bumpCd = Math.max(0, c.bumpCd - dt);
   if (c.jumpCd > 0) c.jumpCd = Math.max(0, c.jumpCd - dt);
@@ -500,8 +567,16 @@ export function steer(c, dt, intent) {
     const maxTurn = cfg.turnSpeed * 3 * dt;
     c.yaw = wrapAngle(c.yaw + Math.max(-maxTurn, Math.min(maxTurn, dy)));
     c.jumpT -= dt;
+    // o arco acabou em cima do que ela pula: não pousa dentro da coisa; segue no ar até sair de cima, em frente ou
+    // escorregando (integrate; o desenho fica por cima e cai dela, game.js)
+    if (c.jumpT <= 0 && c.overJump > 0 && !(c.hopH > 0) && c.clearT < JUMP_CLEAR) {
+      c.clearT += dt;
+      c.jumpT = 1e-4;
+    }
     if (c.jumpT <= 0) {
       c.jumpT = 0;
+      c.overJump = c.clearT = c.clearChk = 0;
+      c.slideOff = false;
       c.y = 0;
       c.jumpCd = cfg.jumpCooldown ?? 0.15;
       c.landed = true;
@@ -511,7 +586,7 @@ export function steer(c, dt, intent) {
     } else {
       const p = 1 - c.jumpT / c.jumpDur;
       // o pulinho por cima da borda sobe logo e só desce depois dela (um arco de topo largo); o pulo, uma parábola
-      c.y = c.hopH > 0 ? c.hopH * (1 - (2 * p - 1) ** 4) : 4 * cfg.jumpHeight * p * (1 - p);
+      c.y = c.hopH > 0 ? c.hopH * (1 - (2 * p - 1) ** 4) : 4 * (c.jumpH || cfg.jumpHeight) * p * (1 - p);
     }
     c.pivoting = false;
   } else if (c.dashT > 0) {
@@ -546,8 +621,17 @@ export function steer(c, dt, intent) {
     let target = 0;
     let decelScale = 1;
     c.pivoting = false;
-    if (has) {
+    if (has && intent.back) {
+      // de ré (puxando uma corda com a boca): de frente para o ponto faceX/faceZ, anda para trás devagar
+      const desiredYaw = intent.faceX != null ? Math.atan2(intent.faceX - c.x, intent.faceZ - c.z) : c.yaw;
+      c.wantYaw = desiredYaw;
+      const delta = wrapAngle(desiredYaw - c.yaw);
+      const turnMax = cfg.turnSpeed * 0.6;
+      c.yaw = wrapAngle(c.yaw + Math.max(-turnMax, Math.min(turnMax, delta * 8)) * dt);
+      target = -intent.speed;
+    } else if (has) {
       const desiredYaw = Math.atan2(intent.dx, intent.dz);
+      c.wantYaw = desiredYaw;
       const delta = wrapAngle(desiredYaw - c.yaw);
       const ad = Math.abs(delta);
       let turnMax = cfg.turnSpeed * turnScale;
@@ -566,6 +650,7 @@ export function steer(c, dt, intent) {
       c.yaw = Math.abs(step) >= ad ? desiredYaw : wrapAngle(c.yaw + step);
     } else if (intent.faceX != null) {
       const desiredYaw = Math.atan2(intent.faceX - c.x, intent.faceZ - c.z);
+      c.wantYaw = desiredYaw;
       const delta = wrapAngle(desiredYaw - c.yaw);
       const turnMax = cfg.turnSpeed * 0.6;
       const rate = Math.max(-turnMax, Math.min(turnMax, delta * 8));
@@ -596,6 +681,24 @@ export function integrate(c, dt, world, opts = {}) {
     dirX = Math.sin(c.yaw);
     dirZ = Math.cos(c.yaw);
   }
+  // descendo: o que ela já tem embaixo do corpo (o resto do que ela pula é sólido abaixo do alto dele); em cima de uma
+  // coisa sem sair dela seguindo em frente, escorrega de cima (sem avançar)
+  const watch = airborne && !(c.hopH > 0) && c.jumpT < c.jumpDur * 0.5 && !!world.jumpableTop;
+  if (watch) {
+    const over = new Set();
+    world.jumpableTop(c.x, c.z, c.yaw, c.cfg.body, c.r, c.size, LAND_DEPTH, over);
+    opts = { ...opts, lowY: c.y, over };
+    c.clearChk -= dt;
+    if (!c.slideOff && over.size && c.clearChk <= 0) {
+      c.clearChk = CLEAR_EVERY;
+      if (!clearsAhead(c, world, over)) {
+        c.slideOff = true;
+        c.v = 0;
+        slideTarget(c, world);
+      }
+    }
+  }
+  if (airborne && c.slideOff) return slideOff(c, dt, world);
   const px = c.x;
   const pz = c.z;
   if (!Number.isFinite(c.v)) c.v = 0;
@@ -611,6 +714,8 @@ export function integrate(c, dt, world, opts = {}) {
     if (i < 0) res.hits.push(h);
     else if (res.hits[i].depth < h.depth) res.hits[i] = h;
   }
+  // descendo, o que ela pula embaixo do corpo (o pouso espera sair de cima, steer)
+  c.overJump = watch ? world.jumpableTop(c.x, c.z, c.yaw, c.cfg.body, c.r, c.size, LAND_DEPTH) : 0;
   const idt = 1 / Math.max(dt, 1e-4);
   c.vx = (c.x - px) * idt;
   c.vz = (c.z - pz) * idt;
@@ -649,6 +754,74 @@ export function integrate(c, dt, world, opts = {}) {
   c.stillT = actual < 0.15 ? c.stillT + dt : 0;
   c.hits = res.hits;
   return { hits: res.hits, bump };
+}
+
+/**
+ * Seguindo em frente no ar (a direção do pulo, com as paredes e, de lado, o resto do que ela pula), ela sai de cima do
+ * que tem embaixo do corpo (`over`) no que falta do arco mais o que falta de JUMP_CLEAR?
+ */
+function clearsAhead(c, world, over) {
+  const far = Math.max(0, c.v) * (c.jumpT + JUMP_CLEAR - c.clearT);
+  const opts = { airborne: true, lowY: 0, over };
+  const step = 0.04;
+  let x = c.x, z = c.z;
+  for (let s = step; s <= far + 1e-6; s += step) {
+    const m = world.move(x, z, c.jumpDx * step, c.jumpDz * step, c.r, c.size, opts);
+    x = m.x;
+    z = m.z;
+    if (c.cfg.body && world.resolveBody) {
+      const b = world.resolveBody(x, z, c.yaw, c.cfg.body, c.r, c.size, opts);
+      x = b.x;
+      z = b.z;
+    }
+    if (!world.jumpableTop(x, z, c.yaw, c.cfg.body, c.r, c.size, LAND_DEPTH)) return true;
+  }
+  return false;
+}
+
+/**
+ * Aonde ela escorrega de cima do que pula (c.slideX/Z): onde a colisão a poria (fora da coisa, pelo lado mais perto) e,
+ * na mesma direção, mais SLIDE_ROOM (até onde não bate em nada).
+ */
+function slideTarget(c, world) {
+  const body = c.cfg.body && world.resolveBody ? c.cfg.body : null;
+  const out = (x, z) => (body ? world.resolveBody(x, z, c.yaw, body, c.r, c.size) : { x, z });
+  const t = world.resolve(c.x, c.z, c.r, c.size);
+  let p = out(t.x, t.z);
+  const ex = p.x - c.x, ez = p.z - c.z;
+  const L = Math.hypot(ex, ez);
+  if (L > 1e-4) {
+    const m = world.move(p.x, p.z, (ex / L) * SLIDE_ROOM, (ez / L) * SLIDE_ROOM, c.r, c.size);
+    p = out(m.x, m.z);
+  }
+  c.slideX = Number.isFinite(p.x) ? p.x : c.x;
+  c.slideZ = Number.isFinite(p.z) ? p.z : c.z;
+}
+
+/**
+ * Escorregando de cima do que ela pula (no ar): vai até c.slideX/Z a SLIDE_OFF m/s ou mais depressa, para chegar
+ * antes do fim de JUMP_CLEAR; o pouso espera ela chegar (overJump).
+ */
+function slideOff(c, dt, world) {
+  const px = c.x;
+  const pz = c.z;
+  const ex = c.slideX - c.x, ez = c.slideZ - c.z;
+  const L = Math.hypot(ex, ez);
+  const left = Math.max(dt, c.jumpT + JUMP_CLEAR - c.clearT);
+  const k = L > 1e-6 ? Math.min(1, (Math.max(SLIDE_OFF, L / left) * dt) / L) : 1;
+  if (Number.isFinite(ex) && Number.isFinite(ez)) {
+    c.x += ex * k;
+    c.z += ez * k;
+  }
+  c.overJump = L * (1 - k) > 0.005 ? 1 : 0;
+  const idt = 1 / Math.max(dt, 1e-4);
+  c.vx = (c.x - px) * idt;
+  c.vz = (c.z - pz) * idt;
+  c.animSpeed += (Math.hypot(c.vx, c.vz) - c.animSpeed) * (1 - Math.exp(-dt * 18));
+  c.stillT = 0;
+  c.hits = [];
+  c.prevHitIds = new Set();
+  return { hits: [], bump: null };
 }
 
 /**

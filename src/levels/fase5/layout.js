@@ -29,8 +29,8 @@ export const DOGS = {
 export const WALLS = { northH: 2.7, cutH: 1.25, t: 0.12 };
 // Divisória sala | corredor (x = -1,8) com a passagem do portãozinho (z de -0,2 a 1,0).
 export const WALL_SH = { x: -1.8, gap: { z0: -0.2, z1: 1.0 } };
-// Divisória corredor | cozinha (x = 2,0) com a porta da cozinha (z de -0,6 a 0,6).
-export const WALL_HK = { x: 2.0, gap: { z0: -0.6, z1: 0.6 } };
+// Divisória corredor | cozinha (x = 2,0) com a porta da cozinha (z de -0,5 a 0,5), fechada pelas duas caixas.
+export const WALL_HK = { x: 2.0, gap: { z0: -0.5, z1: 0.5 } };
 
 // Portãozinho de bebê (pulável): dobradiça no sul, abre para o leste (folha ao longo de -Z local).
 export const PET_GATE = {
@@ -42,10 +42,10 @@ export const LATCH = { x: WALL_SH.x + 0.24, z: WALL_SH.gap.z0 + 0.12, r: 0.6, du
 
 // Barricada na porta da cozinha: caixa de LIVROS (fixa, pulável) e caixa de ALMOFADAS (empurrável,
 // pulável). A de almofadas só anda para o oeste (encalha na soleira para o leste) e desmonta em minX.
-export const BOX_BOOKS = { x: WALL_HK.x, z: -0.3, half: 0.3, height: 0.42 };
+export const BOX_BOOKS = { x: WALL_HK.x, z: -0.25, half: 0.25, height: 0.32 };
 export const BOX_PILLOWS = {
-  start: { x: WALL_HK.x, z: 0.3 }, half: 0.3, height: 0.42,
-  minX: 1.25, maxX: WALL_HK.x, minZ: 0.3, maxZ: 0.3, pushSpeed: 0.75,
+  start: { x: WALL_HK.x, z: 0.25 }, half: 0.25, height: 0.32,
+  minX: 1.25, maxX: WALL_HK.x, minZ: 0.25, maxZ: 0.25, pushSpeed: 0.75,
 };
 export const THRESHOLD = { x: WALL_HK.x + 0.32, z0: WALL_HK.gap.z0, z1: WALL_HK.gap.z1 }; // soleira (visual)
 

@@ -53,6 +53,7 @@ export function createPuzzle(ctx) {
   const bear = createCarryItem({ obj: props.bear?.object || null, dogs, scene: root, name: 'bear', emit, world });
   const gate = createHingedGate({ id: 'portaozinho', cfg: PET_GATE, world, prop: props.petGate });
   gate.col.jumpable = true; // baixinho: a Rhaenyra passa por cima
+  gate.col.height = PET_GATE.height; // o desenho dela passa por cima e o pulo não pousa em cima dele (game.js, dogController)
   /** Largado, o ursinho não fica na caminha (lá ele é entregue). */
   const dropAvoid = inZones([GOAL]);
   const S = { stage: 'start', objKey: '', collapseT: -1, boxClear: false, crateUpdated: false, dropDeliver: false };

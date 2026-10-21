@@ -2,7 +2,7 @@
 // a trava de ferrolho e a cordinha que sobe pelo mourão até ela (o cabo é a ligação visível: ao puxar, um pulso corre
 // até o ferrolho, que salta, e o portão abre); o muro de madeira alto do terreno (norte e leste) com trepadeira e
 // arandelas, a cerca viva baixa ao sul e a oeste, as árvores dos vizinhos e os telhados com janelas acesas ao fundo.
-// API: buildFences(root, layout) → { group, gate: GateProp, cord: { setTug(k) }, seeThrough, update(dt, t) }
+// API: buildFences(root, layout) → { group, gate: GateProp, cord: { setTug(k), setGrip(src), bitePoint(), anchor }, seeThrough, update(dt, t) }
 import * as THREE from 'three';
 import { picketGeometry } from '../../../world/fence.js';
 import { makeTree } from '../../../world/background.js';
@@ -159,10 +159,12 @@ export function buildFences(root, layout) {
     hg.position.set(0.0, y, -0.02);
     leaf.add(hg);
   }
-  // o ferrolho fica do lado do quintal e a lingueta entra no mourão da trava (a folha pende na face de trás dele)
-  const boltX = BACK_FENCE.x + 0.042 - GATE.hinge.x;
+  // o ferrolho fica entre a folha e o mourão da trava, e a lingueta entra nele (a folha pende na face do mourão do lado
+  // do quintal; `side` é para onde fica o mourão, a partir da folha)
+  const side = Math.sign(fx - GATE.hinge.x) || 1;
+  const boltX = (fx - GATE.hinge.x) * 0.6;
   const boltBody = new THREE.Mesh(rbox(0.04, 0.05, 0.16, 0.006), iron);
-  boltBody.position.set(-0.052, ph - 0.36, -gl + 0.12);
+  boltBody.position.set(0.052 * side, ph - 0.36, -gl + 0.12);
   const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.14, 8).rotateX(Math.PI / 2), brassMat());
   bolt.position.set(boltX, ph - 0.36, -gl + 0.02);
   leaf.add(boltBody, bolt);
@@ -173,8 +175,8 @@ export function buildFences(root, layout) {
   seeThrough.push(gate);
   // as chapas das dobradiças: do mourão até o pino da folha
   for (const y of [0.3, ph - 0.25]) {
-    const strap = new THREE.Mesh(new THREE.BoxGeometry(GATE.hinge.x - fx - 0.03, 0.035, 0.02), iron);
-    strap.position.set((fx + 0.045 + GATE.hinge.x) / 2, y, GATE.hinge.z + 0.005);
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(GATE.hinge.x - fx) - 0.03, 0.035, 0.02), iron);
+    strap.position.set((fx - 0.045 * side + GATE.hinge.x) / 2, y, GATE.hinge.z + 0.005);
     group.add(strap);
   }
 
@@ -326,11 +328,20 @@ export function buildFences(root, layout) {
   // ================================================================ estado
   const st = { tug: 0, open: 0, boltOut: 0, pulsed: false };
   const handleRest = new THREE.Vector3(CORD.x, 0.42, CORD.z);
+  /** Mordida: a dog morde a cordinha logo acima do puxador (o meio dele fica KNOB m abaixo da boca). */
+  const KNOB = 0.07;
+  /** @type {null | (() => ({ pos: THREE.Vector3, k: number } | null))} */
+  let gripSrc = null;
+  const _hp = new THREE.Vector3();
   function layoutCord() {
     const hy = handleRest.y - st.tug * 0.1;
-    pullHandle.position.set(handleRest.x, hy, handleRest.z);
-    pullHandle.rotation.z = st.tug * 0.2;
-    const a = new THREE.Vector3(handleRest.x, hy + 0.05, handleRest.z);
+    _hp.set(handleRest.x, hy, handleRest.z);
+    // na boca: o puxador vai junto com ela (pendurado logo abaixo), a cordinha desce do mourão até ele
+    const g = gripSrc?.();
+    if (g && g.k > 0) _hp.lerp(new THREE.Vector3(g.pos.x, g.pos.y - KNOB, g.pos.z), g.k);
+    pullHandle.position.copy(_hp);
+    pullHandle.rotation.z = st.tug * 0.2 * (1 - (g?.k || 0));
+    const a = new THREE.Vector3(_hp.x, _hp.y + 0.05, _hp.z);
     const b = new THREE.Vector3(postTop.x, postTop.y - 0.02, postTop.z);
     cordDown.position.copy(a).add(b).multiplyScalar(0.5);
     cordDown.scale.y = a.distanceTo(b);
@@ -351,6 +362,13 @@ export function buildFences(root, layout) {
       st.tug = k;
       layoutCord();
     },
+    /** A dog mordendo a cordinha: src() → a boca (no mundo) e o quanto (0..1), ou null; null: ninguém. */
+    setGrip(src) { gripSrc = src || null; },
+    /** O ponto que a dog morde, parado: a cordinha logo acima do puxador (no mundo). */
+    bitePoint() { return { x: handleRest.x, y: handleRest.y + KNOB, z: handleRest.z }; },
+    /** Onde a cordinha sai do mourão (a roldana, no mundo). */
+    anchor: new THREE.Vector3(postTop.x, postTop.y - 0.02, postTop.z),
+    handle: pullHandle,
     reset() { st.pulsed = false; st.tug = 0; layoutCord(); cordUpper.setOn(false); },
   };
 
@@ -359,6 +377,7 @@ export function buildFences(root, layout) {
     group, gate: gateProp, cord, seeThrough,
     update(dt) {
       cordUpper.update(dt);
+      if (gripSrc) layoutCord(); // o puxador acompanha a boca (desenhado depois da animação das dogs)
       // a lingueta do ferrolho recolhe quando o portão abre
       const target = st.open > 0.02 || st.pulsed ? 1 : 0;
       st.boltOut += (target - st.boltOut) * (1 - Math.exp(-dt * 10));
