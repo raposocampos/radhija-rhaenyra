@@ -1,10 +1,25 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-21, Claude** (#55 entregue em v0.10.7 · build 99; começou a etapa 5 dos modelos
-novos: o novo como padrão). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
-antes de editar.
+Última atualização: **2026-10-21, Claude** (#58, etapa 5 dos modelos novos, entregue em v0.10.9 · build 101;
+diagnóstico da queda de desempenho empurrando em andamento). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: modelos novos das dogs, etapa 5: o novo como padrão (Claude, branch `claude/modelo-novo-padrao`)
+## Em andamento: queda de desempenho empurrando (Claude, branch `claude/medir-empurrar`, só diagnóstico)
+
+- Retorno do usuário ao testar a prévia do #58 (pelo orquestrador): "toda vez que eu vou empurrar algum item tem uma
+  queda de performance grande. Além de ficar engasgando sempre que vou pra alguma parte nova a primeira vez". O
+  engasgo na primeira vez numa área nova (compilação de shaders e texturas) ficou com outra sessão.
+- Medida no GitHub: `tools/scripts/measure-push.mjs` e a medida `empurrar` do `desempenho.yml` (workflow_dispatch,
+  `medida=empurrar`, `outro=<commit do PR>`), só no branch `claude/medir-empurrar` (não vai para o main). Compara, no
+  mesmo runner, o main publicado e o head do PR, com cada modelo, empurrando o carrinho (fase 1), o caixote (fase 2)
+  e o ventilador (fase 4): tempo de `game.update`, render, animação da dog e raios do three.js por quadro, e o perfil de
+  CPU por função.
+- Suspeito principal (lido no código, antes dos números): `game.js` `pushFace` → `pushRest.js` dispara 85 raios (5
+  na largura do peito × 17 alturas) contra todas as malhas do objeto sempre que a dog anda 1 cm ou gira 0,03 rad em
+  relação a ele, o que empurrando acontece quase todo quadro. Isso existe desde antes do #58. A cabeça do modelo novo
+  (`v2/head.js`) desliga a consulta ao mundo empurrando (`pushGap`), então não entra nessa queda.
+
+## Entregue: modelos novos das dogs, etapa 5: o novo como padrão (PR #58, squash `401f01a`, deploy `39548092269`, v0.10.9 · build 101)
 
 - Pedidos do usuário (2026-10-21, pelo orquestrador): "implementar o novo modelo das dogs em produção além de testar
   tudo e criar novos testes"; o plano aprovado: (1) o novo vira o padrão nas 10 fases e nas arenas, com um jeito de
@@ -47,8 +62,12 @@ antes de editar.
     jarrete. No modelo, sentada, o pescoço fica a ~0,31 m do quadril e a perna inteira tem ~0,285 m: a pata só chega à
     lateral do pescoço com a perna quase esticada ou com o pescoço descendo até ela; com o quadril muito dobrado, a pele
     da parte de dentro da coxa do modelo novo estica como uma vela. Vídeos e quadros só na máquina do usuário.
-- Próximo passo: prévia desta rodada para o usuário aprovar; depois, revisar as capturas das fases (E2E `todas` com o
-  modelo novo) e testes onde o novo ainda não tem cobertura.
+- Aprovado pelo usuário no chat ("pode integrar") na versão `769af34`, com CI e E2E `todas` (39545473391) verdes;
+  integrado e publicado (`version.json` v0.10.9 · build 101, commit `401f01a`). Na captura do E2E da fase 1, a
+  Rhaenyra espera sentada no portão fechado (o lugar alcançável mais perto), já no modelo novo.
+- Depois: as páginas das capturas também desligam o xixi sorteado (`page-guard.mjs`, `QUIET_IDLE_SCRIPT`).
+- Pendências da etapa 5 para outra rodada: a coceira (desligada, ver acima); a franja das orelhas em close e morder o
+  volante do registro (não couberam).
 
 ## Entregue: irmã que segue sem loop quando não alcança a outra (PR #57, squash `54a7116`)
 

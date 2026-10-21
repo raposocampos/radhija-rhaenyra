@@ -359,11 +359,21 @@ export function guardPage(page, { name = null, limits: overrides = {}, context =
 
 /** Abre uma página já protegida (a abertura também fica sob o vigia), com a sonda de travamento ligada antes da
  *  primeira navegação (`probe: false` desliga). → { page, guard } */
+/**
+ * O xixi da parada por muito tempo (src/game/idle.js) é sorteado e tira a dog do lugar: nas páginas das capturas, ele
+ * fica desligado (test/parada.test.mjs liga e confere). Script de página: o jogo nasce depois do primeiro quadro e as
+ * capturas congelam o laço do jogo, então confere com um relógio da página, não com o requestAnimationFrame.
+ */
+export const QUIET_IDLE_SCRIPT = () => {
+  setInterval(() => window.__game?.game?.debug?.idle?.setPee?.(false), 30);
+};
+
 export async function openPage(browser, options = {}, guardOptions = {}) {
   const limits = limitsFrom(guardOptions.limits);
   const tag = guardOptions.name ? `[${guardOptions.name}] ` : '';
   const watchOpts = { tag, limits, onOverdue: guardOptions.onOverdue };
   const page = await watched('browser.newPage()', () => browser.newPage(options), watchOpts);
+  await page.addInitScript(QUIET_IDLE_SCRIPT);
   const probe = guardOptions.probe === false ? null
     : guardOptions.probe || await watched('ligar a sonda de travamento', () => attachHangProbe(page), watchOpts);
   return { page, guard: guardPage(page, { ...guardOptions, probe }) };
