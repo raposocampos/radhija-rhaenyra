@@ -909,8 +909,27 @@ export function createGame({ engine, dogs, levels, params }) {
   }
 
   // ---------- aplicar às dogs ----------
-  /** Medidas do desenho do objeto empurrado por dog (recalculadas só quando ela muda de lugar em relação a ele). */
-  const pushCache = new Map();
+  /**
+   * Medidas do desenho do objeto empurrado (pushRest: ~110 raios), guardadas por objeto e pelo lugar da dog em relação
+   * a ele: o lado, a posição ao longo da face (de PUSH_MEASURE.along em PUSH_MEASURE.along m) e o rumo (de
+   * PUSH_MEASURE.yaw em PUSH_MEASURE.yaw rad). O desenho não muda de forma (só anda: nenhum objeto de empurrar gira),
+   * então cada lugar é medido uma vez; um lugar novo, no máximo a cada PUSH_MEASURE.every s (entre uma medida e outra,
+   * vale a última). A distância até a face acompanha a colisão a cada quadro (com a folga do desenho medida ali) e, no
+   * pé fino, o lado dele acompanha a dog (o ponto dele fica guardado no objeto). Retorno do usuário: "como se o fps
+   * baixasse muito quando eu aperto o R1 pra empurrar algo" — a medida inteira era refeita quase a cada movimento.
+   */
+  const PUSH_MEASURE = { along: 0.04, yaw: 0.1, every: 0.25 };
+  /**
+   * @typedef {{ off: number, top: number, y: number, round: boolean, lat: number, px: number | null, pz: number | null }} PushShape
+   * @type {Map<string, Map<string, PushShape>>}
+   */
+  const pushShapes = new Map();
+  /** A medida que cada dog está usando: de que objeto, quando foi a última medida nova (s) e qual. @type {Map<string, { id: string, t: number, rec: PushShape }>} */
+  const pushLast = new Map();
+  /** O resultado de cada dog (reaproveitado: nada alocado por quadro). */
+  const pushOut = {};
+  /** Quantas medidas novas desde o começo (debug.pushMeasures: os testes conferem que elas são raras). */
+  let pushMeasures = 0;
   /**
    * Caixote ou carrinho bem na frente da dog (empurrando ou fazendo força nele): distância do centro à face, alto da
    * face (a beirada) e a altura das patas nela, medidos no desenho do objeto (pushRest.js); sem desenho, a caixa de
@@ -931,14 +950,44 @@ export function createGame({ engine, dogs, levels, params }) {
     const col = world.getDynamic(best.id);
     const plain = { gap: best.gap, top: col?.height ?? 0.5, y: 0, round: false, lat: 0 };
     if (!col?.visual || col.shape !== 'box') return plain;
-    const prev = pushCache.get(c.name);
     const rx = c.x - col.x, rz = c.z - col.z;
-    if (prev && prev.id === best.id && Math.hypot(rx - prev.rx, rz - prev.rz) < 0.01 && Math.abs(c.yaw - prev.yaw) < 0.03) return prev.res;
-    const sc = (c.cfg.visual?.shoulder ?? 0.3) / 0.3;
-    const r = pushRest(col.visual, c, { near: best.gap, pref: 0.36 * sc, scale: sc });
-    const res = r ? { gap: r.gap, top: r.top, y: r.y, round: r.round, lat: r.lat } : plain;
-    pushCache.set(c.name, { id: best.id, rx, rz, yaw: c.yaw, res });
-    return res;
+    // o lugar: o lado da caixa em que ela está, onde ao longo da face e o rumo
+    const onX = Math.abs(rx) / Math.max(col.hx, 1e-3) >= Math.abs(rz) / Math.max(col.hz, 1e-3);
+    const side = onX ? (rx > 0 ? 'x+' : 'x-') : (rz > 0 ? 'z+' : 'z-');
+    const key = `${side}:${Math.round((onX ? rz : rx) / PUSH_MEASURE.along)}:${Math.round(c.yaw / PUSH_MEASURE.yaw)}`;
+    let shapes = pushShapes.get(best.id);
+    if (!shapes) pushShapes.set(best.id, (shapes = new Map()));
+    const last = pushLast.get(c.name);
+    let rec = shapes.get(key);
+    if (!rec && last && last.id === best.id && simTime - last.t < PUSH_MEASURE.every) rec = last.rec;
+    if (!rec) {
+      const sc = (c.cfg.visual?.shoulder ?? 0.3) / 0.3;
+      const r = pushRest(col.visual, c, { near: best.gap, pref: 0.36 * sc, scale: sc });
+      pushMeasures++;
+      const res = r || plain;
+      // o pé fino, no objeto: o ponto à frente dela (gap) e para o lado (lat; (fz, −fx) é a esquerda dela)
+      rec = {
+        off: res.gap - best.gap, top: res.top, y: res.y, round: res.round, lat: res.lat,
+        px: res.round ? c.x + fx * res.gap + fz * res.lat - col.x : null,
+        pz: res.round ? c.z + fz * res.gap - fx * res.lat - col.z : null,
+      };
+      shapes.set(key, rec);
+      pushLast.set(c.name, { id: best.id, t: simTime, rec });
+    } else if (!last || last.rec !== rec) pushLast.set(c.name, { id: best.id, t: last?.id === best.id ? last.t : -Infinity, rec });
+    const out = pushOut[c.name] || (pushOut[c.name] = { gap: 0, top: 0, y: 0, round: false, lat: 0 });
+    out.top = rec.top;
+    out.y = rec.y;
+    out.round = rec.round;
+    if (rec.round && rec.px !== null) {
+      // o pé (no objeto) visto da dog agora: à frente (gap) e para o lado (lat, + = a esquerda dela)
+      const dx = col.x + rec.px - c.x, dz = col.z + rec.pz - c.z;
+      out.gap = Math.max(0, dx * fx + dz * fz);
+      out.lat = dx * fz - dz * fx;
+    } else {
+      out.gap = Math.max(0, best.gap + rec.off);
+      out.lat = rec.lat;
+    }
+    return out;
   }
   /**
    * No ar, o desenho passa por cima do que dá para pular (as caixas da fase 5, a mesa de centro, o cercadinho…): a
@@ -1142,7 +1191,8 @@ export function createGame({ engine, dogs, levels, params }) {
     for (const n of NAMES) attempt(() => dogs[n]?.setWorld?.(null));
     for (const n of NAMES) attempt(() => dogs[n]?.setGround?.(null));
     ground = null;
-    pushCache.clear();
+    pushShapes.clear();
+    pushLast.clear();
     // Nenhum getter/closure do núcleo deve manter a montagem descartada viva.
     root = built = puzzle = scent = world = nav = dbg = resources = null;
     if (errors.length) throw new AggregateError(errors, 'Falha ao encerrar a fase');
@@ -1494,6 +1544,7 @@ export function createGame({ engine, dogs, levels, params }) {
       get ctrls() { return ctrls; },
       get puzzle() { return puzzle; },
       get idle() { return idle; },
+      get pushMeasures() { return pushMeasures; },
       brains,
       get cam() { return cam; },
     },
