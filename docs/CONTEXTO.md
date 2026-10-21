@@ -48,7 +48,7 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
   testes de um arquivo durante o trabalho; a bateria fica no CI.
 - Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar.
 
-## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`)
+## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`, deploy `39518235787`)
 
 - Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
   fumaça acaba saindo na parte de baixo, quando deveria sair na ponta do cano que está do lado do pombo"; fase 4, o duto
@@ -76,8 +76,8 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
   (fase de desenvolvimento, com a caixa baixa de antes).
 - Validação: CI `39510626848` verde no código de `46e6a01` (573 testes, 0 falhas); E2E `fase4` e `quintal` e os do
   head final registrados no PR. No PC, só `node --check` e `git diff --check`.
-- Integrado ao main com a aprovação do usuário (squash `196bf63`, previsto v0.10.6 · build 98); a publicação foi
-  liberada pela sessão do superbafo: conferir o deploy e o `version.json`.
+- Integrado ao main com a aprovação do usuário (squash `196bf63`, deploy `39518235787`): produção em v0.10.6 · build 98
+  (conferido pelo orquestrador).
 
 ## Entregue: o balde da fase 10 (colisão das duas, alça, pose lá dentro e pulos do deque) (PR #54, squash `3bd1b7b`, deploy `39507237110`)
 
