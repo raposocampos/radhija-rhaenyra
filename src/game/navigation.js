@@ -1,5 +1,6 @@
 // Navegação da companheira sobre NAV_NODES/NAV_EDGES (Dijkstra multi-origem).
 // Puro JS; usa o mundo de colisão para linha de visão. Testável em Node.
+import { penCollider } from './collision.js';
 // No modo da companheira (ctx.approach), onde o grafo não resolve — a irmã num cantinho sem nó à vista, ou ela mesma
 // num —, uma busca local em grade acha o caminho ou o lugar alcançável mais perto da irmã.
 
@@ -28,8 +29,10 @@ export function createNavigator(layout, world) {
     if (!na || !nb) continue;
     const w = Math.hypot(na.x - nb.x, na.z - nb.z);
     const req = opt?.requires || null;
-    adj.get(a).push({ to: b, w, req });
-    adj.get(b).push({ to: a, w, req });
+    // puzzle: a aresta depende de uma restrição da fase (portão, ponte, irrigador…), que decide quando ela vale
+    const puzzle = [].concat(req ?? []).some((r) => r !== 'small' && r !== 'large');
+    adj.get(a).push({ to: b, w, req, puzzle });
+    adj.get(b).push({ to: a, w, req, puzzle });
   }
 
   function edgeOk(req, ctx) {
@@ -86,6 +89,8 @@ export function createNavigator(layout, world) {
       done.add(u);
       for (const e of adj.get(u)) {
         if (!edgeOk(e.req, ctx)) continue;
+        // a companheira não planeja por dentro do caixote, do ventilador ou da escada que alguém empurrou para o caminho
+        if (ctx.approach && !e.puzzle && edgeBlocked(u, e.to, ctx)) continue;
         const nd = best + e.w;
         if (nd < dist.get(e.to)) {
           dist.set(e.to, nd);
@@ -161,11 +166,59 @@ export function createNavigator(layout, world) {
     return `${s}|${h}`;
   }
 
-  // ---------- busca local em grade ----------
+  // ---------- o que muda com o mundo (vale enquanto worldKey não muda) ----------
   let gridKey = '';
-  const freeMemo = new Map(); // célula livre? (por tamanho; vale enquanto o mundo não muda)
-  const searchMemo = new Map(); // buscas já feitas (de onde, para onde)
+  const freeMemo = new Map(); // célula livre? (por tamanho)
+  const searchMemo = new Map(); // buscas em grade já feitas (de onde, para onde)
+  const edgeMemo = new Map(); // aresta passando por dentro de um colisor que se mexe (por tamanho)
   let nodeNear = null; // célula → nós perto dela
+
+  function syncWorld(ctx) {
+    const wk = worldKey(ctx.flags);
+    if (wk !== gridKey || freeMemo.size > 300000) {
+      gridKey = wk;
+      freeMemo.clear();
+      searchMemo.clear();
+      edgeMemo.clear();
+    }
+  }
+
+  /**
+   * A aresta a–b passa por dentro de um colisor dinâmico (caixote, ventilador, escada, balde; os bichos andam e não
+   * contam)? Só os dinâmicos: os fixos já são conferidos pelos testes do grafo.
+   */
+  function edgeBlocked(a, b, ctx) {
+    syncWorld(ctx);
+    const k = `${a}|${b}|${ctx.size}`;
+    let v = edgeMemo.get(k);
+    if (v !== undefined) return v;
+    v = false;
+    const dyn = (world.dynamics || []).filter((d) => d.enabled !== false && d.kind !== 'npc' && (d.blocks === 'all' || d.blocks === ctx.size)
+      && (!d.companionOnly || world.companionMode));
+    if (dyn.length) {
+      const A = nodes.get(a);
+      const B = nodes.get(b);
+      const r = losR(ctx);
+      const n = Math.max(1, Math.ceil(Math.hypot(B.x - A.x, B.z - A.z) / Math.max(0.04, r * 0.5)));
+      for (let i = 0; i <= n && !v; i++) {
+        const x = A.x + ((B.x - A.x) * i) / n;
+        const z = A.z + ((B.z - A.z) * i) / n;
+        for (const d of dyn) {
+          if (d.except && x >= d.except.minX && x <= d.except.maxX && z >= d.except.minZ && z <= d.except.maxZ) continue;
+          const p = penCollider(x, z, r, d);
+          if (p && p.depth > 1e-4) {
+            v = true;
+            break;
+          }
+        }
+      }
+    }
+    edgeMemo.set(k, v);
+    edgeMemo.set(`${b}|${a}|${ctx.size}`, v);
+    return v;
+  }
+
+  // ---------- busca local em grade ----------
 
   function cellFree(ix, iz, ctx) {
     const k = cellKey(ix, iz) * 2 + (ctx.size === 'small' ? 0 : 1);
@@ -228,12 +281,7 @@ export function createNavigator(layout, world) {
    * ela alcança pela grade ({ id, k, cost }); route = waypoints até a célula k.
    */
   function gridSearch(from, goal, to, ctx) {
-    const wk = worldKey(ctx.flags);
-    if (wk !== gridKey || freeMemo.size > 300000) {
-      gridKey = wk;
-      freeMemo.clear();
-      searchMemo.clear();
-    }
+    syncWorld(ctx);
     let sx = Math.round(from.x / CELL);
     let sz = Math.round(from.z / CELL);
     if (!cellFree(sx, sz, ctx)) {
@@ -353,9 +401,13 @@ export function createNavigator(layout, world) {
       const g = bestGoal(goals, graph.dist);
       if (g) return { direct: false, reachable: true, waypoints: reconstruct(graph.prev, g.id), waitNode: null, waitPoint: null, cost: g.cost };
     }
+    // A irmã à vista do grafo, só que do outro lado do que uma restrição fecha (portão, ponte, irrigador): o grafo
+    // sabe o caminho, e ela espera no nó de onde ele vai abrir. A grade fica para os cantinhos que nenhum nó enxerga
+    // (e para quando ela mesma está num).
+    const behindGate = goals.length > 0;
     let G = null;
     let lead = null; // isolada: pela grade até o nó onde a cadeia do grafo começa
-    if (strict) {
+    if (strict && (isolated || !behindGate)) {
       G = gridSearch(from, goal, to, ctx);
       if (G && G.reached >= 0) {
         return { direct: false, reachable: true, waypoints: G.route(from, G.reached), waitNode: null, waitPoint: null };
@@ -372,7 +424,7 @@ export function createNavigator(layout, world) {
     const { near, nd } = nearestReached(graph.dist, to);
     let wps = near ? reconstruct(graph.prev, near) : [];
     if (lead) wps = lead(wps);
-    if (G && G.wait >= 0 && (G.waitD < nd || !wps.length)) wps = G.route(from, G.wait);
+    if (G && G.wait >= 0 && ((!behindGate && G.waitD < nd) || !wps.length)) wps = G.route(from, G.wait);
     const last = wps[wps.length - 1];
     return { direct: false, reachable: false, waypoints: wps, waitNode: near, waitPoint: last ? { x: last.x, z: last.z } : null };
   }
@@ -395,5 +447,5 @@ export function createNavigator(layout, world) {
     return near;
   }
 
-  return { nodes, adj, edgeOk, visibleNodes, findPath, nearestReachableNode, dijkstra, worldKey };
+  return { nodes, adj, edgeOk, edgeBlocked, visibleNodes, findPath, nearestReachableNode, dijkstra, worldKey };
 }

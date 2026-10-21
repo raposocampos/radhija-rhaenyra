@@ -82,44 +82,70 @@ for (const [id, L] of Object.entries(LAYOUTS)) {
   });
 }
 
-// Com o mundo do jogo de verdade (os colisores que cada puzzle registra: caixotes, portões, água, zonas da companheira),
-// os nós e as arestas sem restrição do puzzle continuam livres. Uma aresta por dentro de um colisor deixa a companheira
-// indo e voltando entre o nó e o obstáculo. Bichos (porcos, gansa, galinhas, gato) andam: não contam.
+// Com o mundo do jogo de verdade (os colisores que cada puzzle registra: caixotes, ventiladores, portões, água, zonas da
+// companheira), os nós continuam livres e a companheira nunca planeja por dentro de um colisor: uma aresta por dentro
+// de um deles a deixava indo e voltando entre o nó e o obstáculo. As arestas com restrição do puzzle (portão, ponte,
+// irrigador) valem quando o puzzle libera; uma aresta que um objeto empurrável fecha sai do plano enquanto ele está lá.
+// Bichos (porcos, gansa, galinhas, gato) andam: não contam.
 const ALL_DEFS = [...LEVELS, ...DEV_LEVELS];
 for (const [idx, def] of ALL_DEFS.entries()) {
-  test(`${def.id}: nós e arestas livres também com os colisores do puzzle (etapa inicial)`, async () => {
+  test(`${def.id}: com os colisores do puzzle, nós livres e a companheira não planeja por dentro de nada`, async () => {
     const h = await createHeadlessGame({ level: idx + 1, levels: ALL_DEFS });
     const L = h.layout;
     const world = h.world;
     const ignore = new Set(world.dynamics.filter((d) => d.kind === 'npc').map((d) => d.id));
+    const flags = h.puzzle.navFlags?.() || {};
     const bad = [];
+    const puzzleReq = (opt) => reqs(opt).some((r) => r !== 'small' && r !== 'large');
     world.setCompanionMode(true);
     try {
       for (const [name, p] of Object.entries(L.NAV_NODES)) {
         // nós que só servem a arestas com restrição do puzzle podem estar atrás do que a restrição libera
         const edges = L.NAV_EDGES.filter((e) => e[0] === name || e[1] === name);
-        if (edges.length && edges.every((e) => reqs(e[2]).some((r) => r !== 'small' && r !== 'large'))) continue;
+        if (edges.length && edges.every((e) => puzzleReq(e[2]))) continue;
         for (const size of ['small', 'large']) {
           if (size === 'large' && edges.length && edges.every((e) => reqs(e[2]).includes('small'))) continue;
           if (world.overlaps(p.x, p.z, radius(L, size), size, { ignore })) bad.push(`nó ${name} (${size})`);
         }
       }
       for (const [a, b, opt] of L.NAV_EDGES) {
-        if (reqs(opt).some((r) => r !== 'small' && r !== 'large')) continue; // portão, ponte, irrigador: o puzzle libera
+        if (puzzleReq(opt)) continue;
         for (const size of sizesFor(opt)) {
-          const key = `${def.id}:${a}-${b}:${size}`;
-          if (KNOWN_TIGHT_EDGES.has(key)) continue;
-          const A = L.NAV_NODES[a];
-          const B = L.NAV_NODES[b];
-          if (!world.segmentClear(A.x, A.z, B.x, B.z, radius(L, size) * 0.9, size, { ignore })) bad.push(`aresta ${key}`);
+          const r = radius(L, size);
+          const A = { id: a, ...L.NAV_NODES[a] };
+          const B = { id: b, ...L.NAV_NODES[b] };
+          const p = h.nav.findPath(A, B, { r, size, flags, approach: true });
+          if (!p.reachable) continue; // sem caminho: ela espera (test/companheira.test.mjs)
+          const pts = [A, ...p.waypoints, B];
+          for (let i = 1; i < pts.length; i++) {
+            const [P, Q] = [pts[i - 1], pts[i]];
+            const tight = [`${def.id}:${P.id}-${Q.id}:${size}`, `${def.id}:${Q.id}-${P.id}:${size}`].some((k) => KNOWN_TIGHT_EDGES.has(k));
+            if (tight || world.segmentClear(P.x, P.z, Q.x, Q.z, r * 0.9, size, { ignore })) continue;
+            bad.push(`${a}→${b} (${size}) por ${P.id}→${Q.id}`);
+            break;
+          }
         }
       }
     } finally {
       world.setCompanionMode(false);
     }
-    assert.deepEqual(bad, [], `atravessam colisores do puzzle: ${bad.join(', ')}`);
+    assert.deepEqual(bad, [], `planos por dentro de colisores do puzzle: ${bad.join(', ')}`);
   });
 }
+
+test('fase 9: o ventilador em cima da aresta J_mid–J_south sai do plano, e a Rhaenyra contorna pela porta', async () => {
+  const h = await createHeadlessGame({ level: 9 });
+  const N = h.layout.NAV_NODES;
+  const ctx = { r: h.layout.DOGS.rhaenyra.radius, size: 'large', flags: h.puzzle.navFlags(), approach: true };
+  h.world.setCompanionMode(true);
+  try {
+    assert.equal(h.nav.edgeBlocked('J_mid', 'J_south', ctx), true, 'o ventilador começa em cima da aresta');
+    const p = h.nav.findPath(N.J_mid, N.J_south, ctx);
+    assert.ok(p.reachable && p.waypoints.some((w) => w.id === 'J_door'), `contorna pela porta: ${p.waypoints.map((w) => w.id)}`);
+  } finally {
+    h.world.setCompanionMode(false);
+  }
+});
 
 // Os casos abaixo usam o mundo do jogo de verdade (headless): inclui os colisores dinâmicos que o puzzle
 // registra (portão fechado, caixote, água, irrigador) e as flags reais de puzzle.navFlags() em cada etapa.
