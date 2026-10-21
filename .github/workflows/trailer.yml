@@ -1,0 +1,171 @@
+name: Trailer da demo
+
+# Grava as cenas do jogo e monta o trailer (video/). Tudo roda aqui, nunca no PC do usuário (AGENTS.md).
+# Manual (workflow_dispatch) e, nos branches claude/trailer-*, a cada envio que mexe em video/ (o que rodar vem de
+# video/ciclo.json: um workflow novo só pode ser disparado à mão depois de existir no main).
+on:
+  workflow_dispatch:
+    inputs:
+      etapa:
+        description: cenas (só gravar), montagem (só montar) ou tudo
+        type: choice
+        default: tudo
+        options: [tudo, cenas, montagem]
+      cenas:
+        description: Grupos ou cenas a gravar, separados por vírgula (todas = todos os grupos)
+        type: string
+        default: todas
+      clipes_de:
+        description: Execuções anteriores (IDs separados por espaço) de onde vêm as cenas que esta não gravou
+        type: string
+        default: ''
+  push:
+    branches: ['claude/trailer-*']
+    paths: ['video/**', '.github/workflows/trailer.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: trailer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plano:
+    name: Plano da execução
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      etapa: ${{ steps.p.outputs.etapa }}
+      grupos: ${{ steps.p.outputs.grupos }}
+      clipes_de: ${{ steps.p.outputs.clipes_de }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - id: p
+        env:
+          IN_ETAPA: ${{ inputs.etapa }}
+          IN_CENAS: ${{ inputs.cenas }}
+          IN_CLIPES: ${{ inputs.clipes_de }}
+        run: node video/plan.mjs >> "$GITHUB_OUTPUT"
+
+  cenas:
+    name: Cenas — ${{ matrix.grupo }}
+    needs: plano
+    if: needs.plano.outputs.etapa != 'montagem'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        grupo: ${{ fromJSON(needs.plano.outputs.grupos) }}
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Instalar o codificador de vídeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Gravar as cenas (qualidade visual completa, quadro a quadro)
+        run: node video/capture/record.mjs "${{ matrix.grupo }}"
+      - name: Folhas de contato para revisão
+        if: always()
+        run: node video/sheets.mjs shots/trailer/clips shots/trailer/folhas
+      - name: Guardar as cenas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipe-${{ matrix.grupo }}
+          path: shots/trailer/clips/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Guardar folhas e diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: folhas-${{ matrix.grupo }}
+          path: |
+            shots/trailer/folhas/
+            shots/diagnostico/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  montagem:
+    name: Montagem do trailer
+    needs: [plano, cenas]
+    if: always() && needs.plano.result == 'success' && needs.plano.outputs.etapa != 'cenas'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CI: 'true'
+      GH_TOKEN: ${{ github.token }}
+      CLIPES_DE: ${{ needs.plano.outputs.clipes_de }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: video/package-lock.json
+      - name: Juntar as cenas (execuções anteriores primeiro; as desta execução por cima)
+        run: |
+          mkdir -p shots/trailer/clips
+          for id in $CLIPES_DE; do
+            gh run download "$id" --repo "$GITHUB_REPOSITORY" --pattern 'clipe-*' --dir "shots/trailer/baixados-$id"
+            find "shots/trailer/baixados-$id" -type f \( -name '*.mp4' -o -name '*.json' \) -exec cp {} shots/trailer/clips/ \;
+          done
+      - uses: actions/download-artifact@v4
+        if: needs.plano.outputs.etapa == 'tudo'
+        with:
+          pattern: clipe-*
+          merge-multiple: true
+          path: shots/trailer/clips/
+      - run: ls -la shots/trailer/clips/
+      - run: npm ci
+        working-directory: video
+      - name: Instalar Chromium e dependências Linux
+        run: node video/node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Instalar o codificador de vídeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Montar (16:9 e 9:16), trilha sintetizada e quadros-chave
+        run: node video/render.mjs
+      - name: Guardar o trailer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trailer
+          path: |
+            shots/trailer/final/*.mp4
+            shots/trailer/final/*.json
+            shots/trailer/final/*.md
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Guardar os quadros-chave para revisão
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trailer-revisao
+          path: |
+            shots/trailer/final/revisao/
+            shots/diagnostico/
+          if-no-files-found: ignore
+          retention-days: 7
