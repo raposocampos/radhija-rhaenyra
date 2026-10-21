@@ -7,6 +7,11 @@
 // cano do ventilador) só conta sem nenhuma face larga ao alcance, e aí as patas o abraçam (`round`, centradas nele,
 // `lat`); sem nada ao alcance (o cano passou entre os raios), elas abraçam o eixo do meio do desenho. Com um raio só,
 // no meio, o ventilador ora dava o cano, ora a grade, ora nada, e a pata ficava no ar (retorno do usuário).
+// Desempenho (retorno do usuário: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar algo"): uma medida
+// são ~110 raios, e cada raio do Raycaster testava os triângulos de todas as malhas do objeto (o carrinho tem 56 malhas
+// e 16 mil triângulos: 30 ms por medida). Agora cada raio só testa os triângulos das malhas cuja caixa ele cruza, da
+// mais perto para a mais longe, e para no primeiro acerto que nenhuma caixa mais à frente pode bater (nearestHit: o
+// mesmo resultado, test/chao.test.mjs confere contra o Raycaster).
 import * as THREE from 'three';
 
 const _ray = new THREE.Raycaster();
@@ -37,15 +42,69 @@ export function meshesOf(obj) {
   return out;
 }
 
+/**
+ * As malhas que aparecem e que o raio enxerga (camadas), cada uma com a caixa dela no mundo (onde estão agora), para os
+ * raios de uma medida. @param {THREE.Mesh[]} meshes @returns {{ m: THREE.Mesh, box: THREE.Box3 | null, e: number }[]}
+ */
+export function prepareHits(meshes, raycaster = _ray) {
+  const list = [];
+  for (const m of meshes) {
+    if (!shown(m) || !m.layers.test(raycaster.layers)) continue;
+    const any = /** @type {any} */ (m);
+    let box = null;
+    if (any.isInstancedMesh) {
+      // as instâncias espalhadas: a caixa de todas
+      if (!any.boundingBox) any.computeBoundingBox();
+      box = any.boundingBox ? new THREE.Box3().copy(any.boundingBox).applyMatrix4(m.matrixWorld) : null;
+    } else if (!any.isSkinnedMesh && m.geometry) {
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      box = new THREE.Box3().copy(m.geometry.boundingBox).applyMatrix4(m.matrixWorld);
+    }
+    list.push({ m, box, e: 0 }); // (sem caixa confiável, a malha é sempre testada)
+  }
+  return list;
+}
+const _hits = [];
+/** @type {{ m: THREE.Mesh, box: THREE.Box3 | null, e: number }[]} */
+const _cand = [];
+const _p = new THREE.Vector3();
+/**
+ * A distância do acerto mais perto do raio (raycaster, entre near e far) nas malhas preparadas, ou Infinity: só os
+ * triângulos das malhas cuja caixa o raio cruza, em ordem de distância da caixa, até a próxima caixa começar depois do
+ * acerto (o mesmo que o primeiro acerto do Raycaster.intersectObjects com todas). @param {ReturnType<typeof prepareHits>} list
+ */
+export function nearestHit(list, raycaster = _ray) {
+  const R = raycaster.ray;
+  _cand.length = 0;
+  for (const it of list) {
+    if (!it.box) it.e = 0;
+    else if (it.box.containsPoint(R.origin)) it.e = 0;
+    else {
+      const p = R.intersectBox(it.box, _p);
+      if (!p) continue;
+      it.e = p.distanceTo(R.origin);
+    }
+    if (it.e <= raycaster.far) _cand.push(it);
+  }
+  _cand.sort((a, b) => a.e - b.e);
+  let best = Infinity;
+  for (const it of _cand) {
+    if (it.e > best) break;
+    _hits.length = 0;
+    it.m.raycast(raycaster, _hits);
+    for (const h of _hits) if (h.distance < best && h.distance >= raycaster.near && h.distance <= raycaster.far) best = h.distance;
+  }
+  return best;
+}
+
 /** Distância (m) do ponto (x, y, z) até as malhas na direção (dx, dz); Infinity se não há nada até `far`. */
-function hitAt(meshes, x, y, z, dx, dz, far) {
+function hitAt(list, x, y, z, dx, dz, far) {
   _o.set(x, y, z);
   _d.set(dx, 0, dz);
   _ray.set(_o, _d);
   _ray.near = 0;
   _ray.far = far;
-  for (const h of _ray.intersectObjects(meshes, false)) if (shown(h.object)) return h.distance;
-  return Infinity;
+  return nearestHit(list, _ray);
 }
 
 /**
@@ -59,7 +118,7 @@ function hitAt(meshes, x, y, z, dx, dz, far) {
  */
 export function pushRest(obj, at, { near, pref, scale = 1 }) {
   obj.updateWorldMatrix(true, true);
-  const meshes = meshesOf(obj);
+  const meshes = prepareHits(meshesOf(obj));
   const dx = Math.sin(at.yaw), dz = Math.cos(at.yaw);
   const far = near + 0.6;
   const y0 = 0.14 * scale, y1 = 0.64 * scale, step = 0.03 * scale;

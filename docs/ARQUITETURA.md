@@ -369,6 +369,13 @@ patas, pulando frestas), não na caixa de colisão; um pé fino (o cano do venti
 e aí as patas o abraçam (`round`, centradas nele por `lat`); sem nada ao alcance, o eixo do meio do desenho. Na pose, a
 medida nova chega suave (sem a pata pular entre o cano e a grade) e, de pé, o joelho de trás aponta para a frente no
 chão (com o tronco inclinado, o "para a frente" da garupa ficava na direção da perna e o joelho abria para o lado).
+Desempenho (retorno do usuário: o fps caía segurando o R1 para empurrar): uma medida são ~110 raios; cada raio só testa
+os triângulos das malhas cuja caixa ele cruza, da mais perto para a mais longe, até o primeiro acerto (`nearestHit`,
+o mesmo resultado do Raycaster: de 30–38 ms para 3–4 ms no carrinho e no caixote, metade no ventilador, cuja grade
+de aros finos ainda é testada), e `game.js` (`pushFace`) guarda a medida por objeto e por lugar da dog (lado, posição
+na face de 4 em 4 cm e rumo de 0,1 em 0,1 rad: o desenho só anda, não gira), medindo um lugar novo no máximo a cada
+0,25 s; entre uma medida e outra, a distância até a face acompanha a colisão e o pé fino acompanha a dog
+(`debug.pushMeasures` conta as medidas; testes em `test/chao.test.mjs`).
 
 **Navegação** (`src/game/navigation.js`, `companion.js`): a companheira anda em linha reta quando enxerga a líder;
 senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cada aresta pode exigir
