@@ -1,8 +1,31 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-21, Claude** (#55 entregue em v0.10.7 · build 99; começou a etapa 5 dos modelos
-novos: o novo como padrão). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
-antes de editar.
+Última atualização: **2026-10-21, Claude** (engasgo na primeira passagem pelas áreas, PR #60, em andamento; #58
+no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
+
+- Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".
+- Causa: o `renderer.compile` da carga (`loadLevel`) rodava sem alvo, mas o jogo desenha no alvo do compositor
+  (perfis alta, média e baixa): ali o three r170 monta os programas sem tone mapping e em espaço linear, outra
+  variante. Os programas certos, as texturas e as geometrias só iam para a GPU quando cada coisa entrava na câmera.
+  Medido no código antigo: depois da carga, +28 a +95 programas, +30 a +137 texturas e +307 a +1222 geometrias por
+  fase; o primeiro superbafo, +1 programa.
+- Feito: `engine.prepare()` (`src/core/engine.js`), chamado no `loadLevel` atrás da cortina: compila a cena toda
+  com um alvo 16×16 do tipo do compositor ligado (`compileAsync`), desenha tudo uma vez nesse alvo sem recorte e com o
+  que está escondido (as luzes escondidas continuam apagadas), um quadro normal e espera a GPU (fence); marcas
+  `rr:gpu:*`. Trocar o perfil de qualidade recompila a fase em segundo plano. Bolha escondida `cheiro-aquecimento`
+  (`scentView.js`) para o superbafo; pool de ícones e de pegadas (`feedback.js`) começa com cada textura.
+- Medição: `tools/scripts/measure-first-pass.mjs`, suíte `primeira-passagem` do E2E manual (também em `todas`, um job
+  por fase e qualidade): navegador novo, a dog de nó em nó duas vezes pelo mesmo caminho e um superbafo; cada quadro
+  espera a GPU lendo um pixel (o `gl.finish()` do Chromium não espera). Reprova com programa, textura ou geometria
+  depois da carga ou com pico (1ª passagem > max(150 ms, 35%) do mesmo quadro da 2ª, com a mesma cena).
+- Validação: 1ª versão da correção (`7c587ff`, E2E `39548640688`): +0 programas, texturas e geometrias depois da carga
+  nas 10 fases (menos uma textura de ícone nas fases 3 e 10, corrigida depois), mas o 1º quadro ainda pagava o
+  trabalho do aquecimento (sem a fence). Medições atuais: antes `39684380232` (branch auxiliar
+  `claude/primeira-passagem-antes`, main sem a correção; apagar no fim) e depois `39684384893` (`40deb23`).
+- Próximo passo: conferir as duas medições, ajustar o critério de pico se preciso, rodar o E2E `todas` no head final,
+  entregar a prévia e esperar o "pode integrar" do usuário nesta sessão.
 
 ## Em andamento: modelos novos das dogs, etapa 5: o novo como padrão (Claude, branch `claude/modelo-novo-padrao`)
 

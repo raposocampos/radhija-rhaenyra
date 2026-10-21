@@ -25,6 +25,10 @@ const DT = 1 / 30;
 const START_FRAMES = 15; // na posição inicial (os primeiros quadros depois da carga)
 const NODE_FRAMES = 18; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta (96% em 0,6 s)
 const RETURN_FRAMES = 30; // volta ao início entre as passagens (não entra nas contas)
+// Antes da 1ª passagem, a página fica parada um pouco: no runner de 4 núcleos, logo depois da carga o navegador ainda
+// trabalha em segundo plano (os quadros saíam ~30% mais caros por 3–8 s e depois caíam de uma vez para o normal,
+// sem nada novo no renderer). Não é a primeira vez numa área, e o jogador também não sai andando antes da cortina abrir.
+const SETTLE_MS = Number(process.env.FIRST_PASS_SETTLE_MS || 3000);
 const LEVELS = (process.env.FIRST_PASS_LEVELS || '1,2,3,4,5,6,7,8,9,10').split(',').map((s) => s.trim()).filter(Boolean);
 const QUALITIES = (process.env.FIRST_PASS_QUALITY || 'alta,media').split(',').map((s) => s.trim()).filter(Boolean);
 const DOGS = process.env.FIRST_PASS_DOGS || '';
@@ -42,6 +46,7 @@ const report = {
   node: process.version,
   conditions: {
     viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES,
+    settleMs: SETTLE_MS,
     dogs: DOGS || 'padrao', strict: STRICT, peak: { ms: EXCESS_MS, relative: EXCESS_REL, sameDrawsWithin: 0.02, tolerated: MAX_PEAKS },
     tour: 'greedy nearest-neighbour tour of layout NAV_NODES from the active dog start; the active dog is teleported node to node, camera rig follows; same tour twice',
     frame: 'game.update + seeThrough + feedback + particles + engine.render + 1-pixel readPixels (waits for the GPU), driven by the measurement page (rAF loop paused)',
@@ -99,7 +104,7 @@ function pageSetup({ quality }) {
 }
 
 /** Na página: percorre a fase duas vezes e devolve os quadros. */
-async function pageTour({ dt, startFrames, nodeFrames, returnFrames }) {
+async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs }) {
   const { engine, game, THREE } = window.__game;
   const fp = window.__firstPass;
   const { renderer, scene } = engine;
@@ -156,6 +161,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames }) {
     return { mats, texs };
   }
   scan(false); // o que já estava pronto na carga
+  if (settleMs > 0) await new Promise((r) => setTimeout(r, settleMs));
 
   let t = 0;
   // gl.finish() não espera a GPU no Chromium (os quadros se enfileiram e o tempo sai em degraus de 5 e 600 ms):
@@ -275,7 +281,7 @@ try {
         const url = `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
         await page.goto(url, { waitUntil: 'load', timeout: 180000 });
         await page.waitForFunction(() => window.__firstPass && window.__game?.game.state === 'playing', null, { timeout: 180000 });
-        const run = await page.evaluate(pageTour, { dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES });
+        const run = await page.evaluate(pageTour, { dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES, settleMs: SETTLE_MS });
         const [p1, p2] = run.passes;
         const excess = p1.map((f, i) => +(f.ms - (p2[i]?.ms ?? f.ms)).toFixed(1));
         const worst = excess.map((e, i) => ({ e, i })).sort((a, b) => b.e - a.e).slice(0, 8)
