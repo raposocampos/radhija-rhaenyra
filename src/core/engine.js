@@ -331,18 +331,46 @@ export function createEngine(container, { params } = {}) {
     }
   }
   /**
+   * Espera a GPU terminar tudo o que já recebeu, sem travar a página: o WebGL só enfileira os comandos, e a
+   * compilação na hora do desenho, os envios e os desenhos do aquecimento ficariam para o primeiro quadro visível.
+   * @param {number} timeoutMs
+   */
+  function gpuIdle(timeoutMs) {
+    const gl = /** @type {WebGL2RenderingContext} */ (renderer.getContext());
+    const sync = gl.fenceSync?.(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!sync) return Promise.resolve();
+    gl.flush();
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      const check = () => {
+        const status = gl.clientWaitSync(sync, 0, 0);
+        // WAIT_FAILED: contexto perdido; também não espera para sempre
+        if (status !== gl.TIMEOUT_EXPIRED || performance.now() - t0 > timeoutMs) {
+          gl.deleteSync(sync);
+          resolve();
+        } else setTimeout(check, 4);
+      };
+      check();
+    });
+  }
+  const mark = (name) => globalThis.performance?.mark?.(`rr:gpu:${name}`);
+  /**
    * Prepara a GPU para a fase montada: programas (com KHR_parallel_shader_compile, sem travar a página enquanto
-   * compilam), texturas, geometrias, sombra e o compositor. Chamado no carregamento, com a fase já no lugar e a
-   * tela coberta (a cortina ou a tela de carregamento).
+   * compilam), texturas, geometrias, sombra e o compositor, e espera a GPU terminar. Chamado no carregamento, com a
+   * fase já no lugar e a tela coberta (a cortina ou a tela de carregamento).
    */
   async function prepare() {
     const target = warmTarget();
     try {
       // sem resposta da GPU (contexto perdido), segue: o desenho abaixo termina o que faltar
       await Promise.race([compileScene(target), new Promise((r) => setTimeout(r, 8000))]);
+      mark('compiled');
       drawEverything(target);
       // e um quadro de verdade, ainda coberto: os passes do compositor e o primeiro quadro já ficam prontos
       render(0);
+      mark('drawn');
+      await gpuIdle(10000);
+      mark('idle');
     } catch (error) {
       // o aquecimento só adianta trabalho: se falhar, a fase abre e o que faltou acontece no primeiro uso
       console.warn('[engine] aquecimento da GPU incompleto', error);

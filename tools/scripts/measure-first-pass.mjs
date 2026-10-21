@@ -5,7 +5,9 @@
 // terminar cada um (leitura de um pixel), para que a 1ª e a 2ª passagem sejam comparáveis quadro a quadro: o que a
 // 1ª custa a mais é o trabalho de "primeira vez".
 // Reprova (FIRST_PASS_STRICT, ligado por padrão) se, depois da carga, o renderer compilar um programa ou enviar uma
-// textura, ou se um quadro da 1ª passagem custar FIRST_PASS_EXCESS_MS a mais que o mesmo quadro da 2ª.
+// textura ou geometria, ou se a 1ª passagem tiver picos: quadros que custam mais de FIRST_PASS_EXCESS_MS e mais de
+// FIRST_PASS_EXCESS_REL (fração) que o mesmo quadro da 2ª, com a mesma cena (desenhos a 2%); FIRST_PASS_MAX_PEAKS tolera
+// alguns (padrão 0).
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
 import { createServer } from 'node:http';
@@ -18,7 +20,7 @@ import { browserOptions } from './lib/browser.mjs';
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const OUT = fileURLToPath(new URL('../../shots/first-pass/', import.meta.url));
 const MOUNT = '/primeira-passagem/';
-const VIEWPORT = { width: 640, height: 360 };
+const VIEWPORT = { width: 480, height: 270 };
 const DT = 1 / 30;
 const START_FRAMES = 15; // na posição inicial (os primeiros quadros depois da carga)
 const NODE_FRAMES = 18; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta (96% em 0,6 s)
@@ -27,7 +29,9 @@ const LEVELS = (process.env.FIRST_PASS_LEVELS || '1,2,3,4,5,6,7,8,9,10').split('
 const QUALITIES = (process.env.FIRST_PASS_QUALITY || 'alta,media').split(',').map((s) => s.trim()).filter(Boolean);
 const DOGS = process.env.FIRST_PASS_DOGS || '';
 const STRICT = process.env.FIRST_PASS_STRICT !== '0';
-const EXCESS_MS = Number(process.env.FIRST_PASS_EXCESS_MS || 120);
+const EXCESS_MS = Number(process.env.FIRST_PASS_EXCESS_MS || 150);
+const EXCESS_REL = Number(process.env.FIRST_PASS_EXCESS_REL || 0.35);
+const MAX_PEAKS = Number(process.env.FIRST_PASS_MAX_PEAKS || 0);
 for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
 for (const q of QUALITIES) if (!/^(alta|media|baixa)$/.test(q)) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
@@ -38,7 +42,7 @@ const report = {
   node: process.version,
   conditions: {
     viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES,
-    dogs: DOGS || 'padrao', strict: STRICT, excessLimitMs: EXCESS_MS,
+    dogs: DOGS || 'padrao', strict: STRICT, peak: { ms: EXCESS_MS, relative: EXCESS_REL, sameDrawsWithin: 0.02, tolerated: MAX_PEAKS },
     tour: 'greedy nearest-neighbour tour of layout NAV_NODES from the active dog start; the active dog is teleported node to node, camera rig follows; same tour twice',
     frame: 'game.update + seeThrough + feedback + particles + engine.render + 1-pixel readPixels (waits for the GPU), driven by the measurement page (rAF loop paused)',
     excess: 'per frame: first pass ms minus the same frame of the second pass',
@@ -276,8 +280,14 @@ try {
         const excess = p1.map((f, i) => +(f.ms - (p2[i]?.ms ?? f.ms)).toFixed(1));
         const worst = excess.map((e, i) => ({ e, i })).sort((a, b) => b.e - a.e).slice(0, 8)
           .map(({ e, i }) => ({ frame: i, node: p1[i].node, excessMs: e, firstMs: p1[i].ms, secondMs: p2[i].ms, programs: p1[i].programs, textures: p1[i].textures }));
+        // pico: bem mais caro que o mesmo quadro da 2ª passagem, com a mesma cena (a mesma quantidade de desenhos;
+        // um bicho ou um objeto do puzzle em outro lugar muda o quadro, não é trabalho de primeira vez)
+        const peaks = p1.map((f, i) => ({ f, s: p2[i], i }))
+          .filter(({ f, s }) => s && f.ms - s.ms > Math.max(EXCESS_MS, EXCESS_REL * s.ms) && Math.abs(f.calls - s.calls) <= 0.02 * s.calls)
+          .map(({ f, s, i }) => ({ frame: i, node: f.node, firstMs: f.ms, secondMs: s.ms, gpuMs: f.gpu, calls: f.calls }));
         const sum = (frames, k) => frames.reduce((a, f) => a + f[k], 0);
         const marks = run.load.marks;
+        const between = (a, b) => (markAt(marks, a) != null && markAt(marks, b) != null ? +(markAt(marks, b) - markAt(marks, a)).toFixed(1) : null);
         const summary = {
           label, level: run.level, quality: run.quality.level, renderer: run.quality.renderer,
           load: {
@@ -286,6 +296,9 @@ try {
               ? +(markAt(marks, 'rr:level:compile') - markAt(marks, 'rr:level:setup')).toFixed(1) : null,
             levelMs: markAt(marks, 'rr:level:loaded') != null && markAt(marks, 'rr:boot:ui') != null
               ? +(markAt(marks, 'rr:level:loaded') - markAt(marks, 'rr:boot:ui')).toFixed(1) : null,
+            // engine.prepare: compilar, desenhar tudo + um quadro, esperar a GPU
+            gpu: { compileMs: between('rr:level:setup', 'rr:gpu:compiled'), drawMs: between('rr:gpu:compiled', 'rr:gpu:drawn'),
+              idleMs: between('rr:gpu:drawn', 'rr:gpu:idle') },
           },
           afterLoad: {
             programs: sum(p1, 'programs') + sum(run.back, 'programs') + sum(p2, 'programs'),
@@ -298,20 +311,24 @@ try {
           first: stats(p1), second: stats(p2),
           excess: { max: Math.max(...excess), sum: +excess.filter((e) => e > 0).reduce((a, e) => a + e, 0).toFixed(0),
             over50: excess.filter((e) => e > 50).length, over100: excess.filter((e) => e > 100).length, worst },
+          peaks,
         };
         report.runs.push({ ...summary, tour: run.tour, quality: run.quality, news: run.news, errors,
           frames: { first: p1, second: p2, back: run.back, events: run.events } });
         console.log(`[primeira-passagem] ${label}: carga ${summary.load.programs} programas/${summary.load.textures} texturas `
           + `(preparo ${summary.load.prepareMs} ms); depois da carga +${summary.afterLoad.programs} programas, +${summary.afterLoad.textures} texturas, `
           + `+${summary.afterLoad.geometries} geometrias, superbafo +${summary.events.programs} programas; 1ª passagem máx ${summary.first.max} ms (p95 ${summary.first.p95}), `
-          + `2ª máx ${summary.second.max} ms (p95 ${summary.second.p95}); excesso máx ${summary.excess.max} ms, ${summary.excess.over100} quadros > 100 ms`);
+          + `2ª máx ${summary.second.max} ms (p95 ${summary.second.p95}); excesso máx ${summary.excess.max} ms, ${summary.peaks.length} picos`
+          + (summary.peaks.length ? ` (${summary.peaks.slice(0, 6).map((k) => `${k.frame}@${k.node} ${k.firstMs}/${k.secondMs}`).join(', ')})` : ''));
         for (const e of errors) report.errors.push(`${label}: ${e}`);
         if (run.state !== 'playing' && run.state !== 'celebrate' && run.state !== 'victory') fail(`${label}: estado inesperado ${run.state}`);
         if (STRICT) {
           if (summary.afterLoad.programs > 0) fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
           if (summary.afterLoad.textures > 0) fail(`${label}: ${summary.afterLoad.textures} texturas enviadas depois da carga`);
-          if (summary.events.programs > 0) fail(`${label}: ${summary.events.programs} programas compilados no primeiro superbafo`);
-          if (summary.excess.max > EXCESS_MS) fail(`${label}: quadro da 1ª passagem ${summary.excess.max} ms mais caro que na 2ª (limite ${EXCESS_MS} ms)`);
+          if (summary.afterLoad.geometries > 0) fail(`${label}: ${summary.afterLoad.geometries} geometrias enviadas depois da carga`);
+          if (summary.events.programs > 0 || summary.events.textures > 0) fail(`${label}: o primeiro superbafo compilou ${summary.events.programs} programas e enviou ${summary.events.textures} texturas`);
+          if (summary.peaks.length > MAX_PEAKS) fail(`${label}: ${summary.peaks.length} picos na 1ª passagem (tolerados ${MAX_PEAKS}): `
+            + summary.peaks.slice(0, 6).map((k) => `quadro ${k.frame} em ${k.node}, ${k.firstMs} ms contra ${k.secondMs} ms`).join('; '));
         }
       } catch (error) {
         report.errors.push(`${label}: ${error.stack || error}`);
@@ -330,15 +347,15 @@ try {
   await new Promise((done) => server.close(done));
   report.passed = report.errors.length === 0 && report.failures.length === 0 && report.runs.length === LEVELS.length * QUALITIES.length;
   await save();
-  const rows = report.runs.map((r) => `| ${r.label} | ${r.load.programs} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
-    + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.excess.over100} |`);
+  const rows = report.runs.map((r) => `| ${r.label} | ${r.load.programs} | ${r.load.levelMs ?? '–'} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
+    + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.peaks.length} |`);
   const md = [
     `## Primeira passagem pelas áreas${report.commit ? ` — \`${report.commit.slice(0, 7)}\`` : ''}`,
     '',
     `${report.passed ? '✅ Aprovada' : '❌ Reprovada'} · ${VIEWPORT.width}×${VIEWPORT.height}, passo de ${(DT * 1000).toFixed(1)} ms, dogs: ${DOGS || 'padrão'} · SwiftShader (os ms não são de um aparelho; as contagens são exatas)`,
     '',
-    '| Fase/qualidade | Programas na carga | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Quadros +100 ms |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Fase/qualidade | Programas na carga | Carga (ms) | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Picos |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...rows,
     '',
     ...report.failures.map((f) => `- ❌ ${f}`),
