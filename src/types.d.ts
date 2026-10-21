@@ -1128,6 +1128,11 @@ export interface DogAnim {
   celebrateLoop?: number;
   /** Extras: animação do cenário em andamento (k = progresso 0..1, t = segundos) ou null. */
   extra?: { kind: ExtraKind; k: number; t: number; h?: number } | null;
+  /**
+   * Parada por muito tempo (game/idle.js): coçando (sentada, a traseira do lado `side` atrás da orelha), deitada ou
+   * fazendo xixi agachada; k = 0..1 do que ela faz (deitada: a descida), t = s desde o começo.
+   */
+  idle?: { kind: 'scratch' | 'lie' | 'pee'; k: number; t: number; side: number } | null;
 }
 
 /**

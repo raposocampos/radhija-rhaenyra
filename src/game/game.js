@@ -18,6 +18,7 @@ import { applySeeThroughTo } from '../world/seeThrough.js';
 import { createScentField } from './mechanics/scent.js';
 import { createScentView } from '../fx/scentView.js';
 import { createExtras } from './extras.js';
+import { createIdle } from './idle.js';
 import { createShove } from './shove.js';
 import { planCelebrateLoop } from './celebrateLoop.js';
 import { DOG_PARAMS } from '../dogs/dogModel.js';
@@ -117,6 +118,9 @@ export function createGame({ engine, dogs, levels, params }) {
   const locks = { radhija: null, rhaenyra: null };
   /** Extras (src/game/extras.js): criados com os controladores, refeitos a cada fase. */
   let extras = null;
+  /** A parada por muito tempo de cada dog (idle.js) e há quanto tempo o jogador não mexe na ativa (s). */
+  let idle = null;
+  let touchedT = 0;
 
   /** @type {import('../types').GameState} */
   let state = 'loading';
@@ -544,6 +548,8 @@ export function createGame({ engine, dogs, levels, params }) {
 
   // ---------- jogo ----------
   function updatePlaying(dt) {
+    // a parada por muito tempo (idle.js) só conta sem o jogador mexer na ativa: algum toque neste quadro?
+    const poked = input.anyPressed();
     playTime += dt;
     barkCd = Math.max(0, barkCd - dt);
     jumpHintCd = Math.max(0, jumpHintCd - dt);
@@ -572,6 +578,7 @@ export function createGame({ engine, dogs, levels, params }) {
       dz /= Lm;
     }
     const shift = input.shift();
+    touchedT = poked || mag > 0.1 || shift || input.bafo() || input.lick() ? 0 : touchedT + dt;
     let action = 'none';
     let intent;
     const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog);
@@ -983,6 +990,16 @@ export function createGame({ engine, dogs, levels, params }) {
       an.party = extras ? extras.party(n) : null;
       an.cheer = extras ? extras.cheer(n) : -1;
       an.extra = extras ? extras.extraAnim(n) : null;
+      // parada por muito tempo (idle.js): coçar, deitar e, às vezes, xixi agachada (sentar vem da animação); só jogando,
+      // parada e livre (a ativa, sem o jogador mexer nela)
+      const back = (c.cfg.body?.back ?? 0.25) * 0.7;
+      an.idle = idle && state === 'playing' ? idle.step(n, dt, {
+        still: c.animSpeed < 0.05 && Math.abs(c.yawRate) < 0.4 && !airborne(c) && !c.shove && !locks[n] && !an.extra
+          && !(an.poopK >= 0) && !(an.poopPre >= 0) && !an.party && !(an.cheer >= 0)
+          && (an.action === 'none' || an.action === 'sit') && (n !== activeDog || touchedT > 0.4),
+        canPee: !carries(n) && G.y < 0.01,
+        at: { x: c.x - Math.sin(c.yaw) * back, z: c.z - Math.cos(c.yaw) * back },
+      }) : null;
       const W = c.wallDur > 0 ? c.wall : null;
       // por cima do que dá para pular, o corpo desenhado fica acima do alto da coisa (as patas passam por cima dela):
       // sobe depressa, do alto em que está, e, passada a coisa, cai dela como no pulo (a gravidade do arco), até o arco
@@ -1237,6 +1254,8 @@ export function createGame({ engine, dogs, levels, params }) {
           };
         } else cam.configure(L);
         if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
+        if (!idle) idle = createIdle({ emit });
+        idle.reset();
         if (!extras) {
           extras = createExtras({
             emit, ctrls, carries, camera: engine.camera,
@@ -1419,7 +1438,7 @@ export function createGame({ engine, dogs, levels, params }) {
       stay: { ...stay }, input: { device: input.device, pad: input.padConnected },
       bafo: { aiming: bafo.aiming, cd: +bafo.cd.toFixed(2) }, scent: scent?.info() ?? null,
       lick: { on: lick.on, by: lick.on ? lick.by : null, stage: lick.on ? lick.stage : null, solo: lick.solo, target: lick.target, strokes: lick.strokes, phase: lick.on ? +lick.phase.toFixed(3) : null },
-      extras: extras?.info() ?? null,
+      extras: extras?.info() ?? null, idle: idle?.info() ?? null,
       camera: { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), mode: cam?.mode ?? null, shot: cam?.shotActive ?? false },
     };
   }

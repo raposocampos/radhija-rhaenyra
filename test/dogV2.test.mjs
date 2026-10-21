@@ -169,6 +169,11 @@ const CASES = [
   ['festa', 1.5, () => ({ party: { glee: 1, bow: 0.6, hop: 0.05, air: -1, jump: 0, brace: 0.3, zoom: 0 } })],
   ['irmã vendo', 1.5, (t) => ({ cheer: t })],
   ...['drink', 'eat', 'dig', 'sneeze', 'nudge', 'roll'].map((x) => [x, EXTRA_TIME[x], (t, k) => ({ extra: { kind: x, k, t, h: 0 } })]),
+  // parada por muito tempo (game/idle.js): coçando atrás da orelha, deitando, deitada com a cabeça nas patas e o xixi
+  ['coçando', 2.6, (t, k) => ({ idle: { kind: 'scratch', k, t, side: 1 } })],
+  ['deitando', 3, (t) => ({ idle: { kind: 'lie', k: Math.min(1, t / 1.2), t, side: 1 } })],
+  ['deitada descansando', 6, (t) => ({ idle: { kind: 'lie', k: 1, t: 9 + t, side: 1 } })],
+  ['xixi', 3, (t, k) => ({ idle: { kind: 'pee', k, t, side: -1 } })],
 ];
 
 /** Região de cada vértice pelo osso de maior peso: rabo, orelha ou corpo. */
