@@ -1,7 +1,8 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-21, Claude** (engasgo na primeira passagem pelas áreas, PR #60, em andamento; #58
-no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-21, Claude** (engasgo na primeira passagem pelas áreas, PR #60, em andamento; #61,
+empurrar sem queda de desempenho, em v0.10.10 · build 102; #58, etapa 5 dos modelos novos, em v0.10.9 · build 101). Ler
+primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
 
@@ -20,14 +21,38 @@ no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); con
   por fase e qualidade): navegador novo, a dog de nó em nó duas vezes pelo mesmo caminho e um superbafo; cada quadro
   espera a GPU lendo um pixel (o `gl.finish()` do Chromium não espera). Reprova com programa, textura ou geometria
   depois da carga ou com pico (1ª passagem > max(150 ms, 35%) do mesmo quadro da 2ª, com a mesma cena).
-- Validação: 1ª versão da correção (`7c587ff`, E2E `39548640688`): +0 programas, texturas e geometrias depois da carga
-  nas 10 fases (menos uma textura de ícone nas fases 3 e 10, corrigida depois), mas o 1º quadro ainda pagava o
-  trabalho do aquecimento (sem a fence). Medições atuais: antes `39684380232` (branch auxiliar
-  `claude/primeira-passagem-antes`, main sem a correção; apagar no fim) e depois `39684384893` (`40deb23`).
-- Próximo passo: conferir as duas medições, ajustar o critério de pico se preciso, rodar o E2E `todas` no head final,
-  entregar a prévia e esperar o "pode integrar" do usuário nesta sessão.
+- Validação até aqui: 1ª versão (`7c587ff`, E2E `39548640688`): +0 programas, texturas e geometrias depois da carga
+  nas 10 fases (menos uma textura de ícone nas fases 3 e 10, corrigida em `feedback.js`), mas o 1º quadro ainda pagava
+  o trabalho do aquecimento. Com a fence (`40deb23`, E2E `39684384893`, parcial): o excesso do 1º quadro caiu de 5–10 s
+  (antes, `39684380232`) para 0,4–1,2 s, e sobrou um patamar de ~30% por alguns segundos logo depois da carga, sem nada
+  novo no renderer (trabalho de fundo do navegador no runner); o medidor passou a esperar 3 s parado antes da 1ª
+  passagem. O CI de `6577add` falhou nos tipos (promessa da fence), corrigido. Sincronizado com o main do #59.
+  Medições do head final: antes no branch auxiliar `claude/primeira-passagem-antes` (main + medidor, sem a correção;
+  apagar no fim) e depois no E2E `todas` do head; conferir no PR.
+- Próximo passo: conferir o CI e o E2E `todas` (com a primeira-passagem) do head sincronizado, entregar a prévia e
+  esperar o "pode integrar" do usuário nesta sessão. Se o main andar, sincronizar de novo e conferir que
+  `src/game/pushRest.js` e o `pushFace` de `game.js` continuam iguais aos do main.
 
-## Em andamento: modelos novos das dogs, etapa 5: o novo como padrão (Claude, branch `claude/modelo-novo-padrao`)
+## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
+
+- Retorno do usuário ao testar a prévia do #58: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar
+  algo". O engasgo na primeira passagem por uma área nova (compilação de shaders e texturas) ficou com outra sessão
+  (PR #60).
+- Medida no GitHub (`tools/scripts/measure-push.mjs` e a medida `empurrar` do `desempenho.yml`, só no branch
+  `claude/medir-empurrar`, que não vai para o main; execução 39548900185): controle falso com o R1 e o analógico,
+  v0.10.8 e v0.10.9 com os dois modelos, em A/B/A/B no mesmo runner. Empurrando o carrinho, o caixote e o ventilador,
+  o `pushRest` (~110 raios contra todas as malhas do objeto) era refeito 1 a 2 vezes por segundo: um quadro com 40 a
+  90 ms de CPU no runner (28 a 38 ms no PC do usuário). Igual em v0.10.8 e v0.10.9 (não veio do #58); o R1 sem nada à
+  frente e a arrancada não custam nada a mais; o modelo novo só soma ~0,1–0,2 ms de animação por quadro.
+- Correção: `pushRest.nearestHit` (cada raio só testa as malhas cuja caixa ele cruza, até o primeiro acerto; o mesmo
+  resultado do Raycaster) e `pushFace` guardando a medida por objeto e lugar (lado, posição na face, rumo; um lugar
+  novo no máximo a cada 0,25 s). Por medida: carrinho 28,5 → 3,4 ms, caixote 37,9 → 3,9 ms, ventilador 32 → 16,5 ms.
+  Testes em `test/chao.test.mjs`. Aprovado pelo usuário no chat ("não teve nenhum travamento segurando o R1 pode
+  integrar") na versão `f61856b`. A medida de confirmação no navegador (v0.10.8 × correção) é a execução 39684301271.
+- Para outra rodada, se o ventilador ainda pesar no celular: a grade de aros finos ainda é testada inteira por raio
+  (16 ms por medida no PC); dá para medir o lado dele uma vez na carga da fase.
+
+## Entregue: modelos novos das dogs, etapa 5: o novo como padrão (PR #58, squash `401f01a`, deploy `39548092269`, v0.10.9 · build 101)
 
 - Pedidos do usuário (2026-10-21, pelo orquestrador): "implementar o novo modelo das dogs em produção além de testar
   tudo e criar novos testes"; o plano aprovado: (1) o novo vira o padrão nas 10 fases e nas arenas, com um jeito de
@@ -70,8 +95,12 @@ no main). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); con
     jarrete. No modelo, sentada, o pescoço fica a ~0,31 m do quadril e a perna inteira tem ~0,285 m: a pata só chega à
     lateral do pescoço com a perna quase esticada ou com o pescoço descendo até ela; com o quadril muito dobrado, a pele
     da parte de dentro da coxa do modelo novo estica como uma vela. Vídeos e quadros só na máquina do usuário.
-- Próximo passo: prévia desta rodada para o usuário aprovar; depois, revisar as capturas das fases (E2E `todas` com o
-  modelo novo) e testes onde o novo ainda não tem cobertura.
+- Aprovado pelo usuário no chat ("pode integrar") na versão `769af34`, com CI e E2E `todas` (39545473391) verdes;
+  integrado e publicado (`version.json` v0.10.9 · build 101, commit `401f01a`). Na captura do E2E da fase 1, a
+  Rhaenyra espera sentada no portão fechado (o lugar alcançável mais perto), já no modelo novo.
+- Depois: as páginas das capturas também desligam o xixi sorteado (`page-guard.mjs`, `QUIET_IDLE_SCRIPT`).
+- Pendências da etapa 5 para outra rodada: a coceira (desligada, ver acima); a franja das orelhas em close e morder o
+  volante do registro (não couberam).
 
 ## Entregue: irmã que segue sem loop quando não alcança a outra (PR #57, squash `54a7116`)
 
