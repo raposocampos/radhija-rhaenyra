@@ -31,11 +31,13 @@ const BUMP_SPEED = 2.2; // m/s contra a normal para contar como "batida"
 // demais, bate na lateral, collision.js). Com o arco acabando em cima de uma coisa, ela não pousa dentro dela (a colisão
 // a jogava para fora de uma vez, meio metro num quadro): se, seguindo em frente (com as paredes), sai de cima em até
 // JUMP_CLEAR s depois do fim do arco, segue no ar até lá; senão (uma parede no caminho, como o batente da porta)
-// escorrega de cima dela pelo lado mais perto, sem avançar, a pelo menos SLIDE_OFF m/s, e pousa fora. Conta o que entra
-// mais de LAND_DEPTH m embaixo dela (o círculo do meio, o peito ou a garupa).
+// escorrega de cima dela pelo lado mais perto, sem avançar, a pelo menos SLIDE_OFF m/s, e pousa fora, com SLIDE_ROOM m de
+// folga (as dianteiras esticadas para o pouso passam do círculo do peito). Conta o que entra mais de LAND_DEPTH m
+// embaixo dela (o círculo do meio, o peito ou a garupa).
 export const JUMP_CLEAR = 0.3;
 const LAND_DEPTH = 0.03;
 const SLIDE_OFF = 2;
+const SLIDE_ROOM = 0.16;
 const CLEAR_EVERY = 0.06; // s entre uma simulação do caminho em frente e outra (no celular, pesa)
 const sstep = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -135,6 +137,8 @@ export function createController(name, cfg) {
     overJump: 0, // no ar: o alto do que ela pula embaixo do corpo agora (integrate)
     clearT: 0, // quanto o pulo seguiu no ar depois do fim do arco, por estar em cima do que ela pula (s)
     slideOff: false, // escorregando de cima do que ela pula (não sai seguindo em frente)
+    slideX: 0, // aonde ela escorrega (decidido quando começa)
+    slideZ: 0,
     clearChk: 0, // até a próxima simulação do caminho em frente (s)
   };
 }
@@ -654,6 +658,7 @@ export function integrate(c, dt, world, opts = {}) {
       if (!clearsAhead(c, world, over)) {
         c.slideOff = true;
         c.v = 0;
+        slideTarget(c, world);
       }
     }
   }
@@ -739,20 +744,32 @@ function clearsAhead(c, world, over) {
 }
 
 /**
- * Escorregando de cima do que ela pula (no ar): vai para onde a colisão a poria (fora da coisa, pelo lado mais perto),
- * a SLIDE_OFF m/s ou mais depressa, para sair antes do fim de JUMP_CLEAR; o pouso espera ela sair (overJump).
+ * Aonde ela escorrega de cima do que pula (c.slideX/Z): onde a colisão a poria (fora da coisa, pelo lado mais perto) e,
+ * na mesma direção, mais SLIDE_ROOM (até onde não bate em nada).
+ */
+function slideTarget(c, world) {
+  const body = c.cfg.body && world.resolveBody ? c.cfg.body : null;
+  const out = (x, z) => (body ? world.resolveBody(x, z, c.yaw, body, c.r, c.size) : { x, z });
+  const t = world.resolve(c.x, c.z, c.r, c.size);
+  let p = out(t.x, t.z);
+  const ex = p.x - c.x, ez = p.z - c.z;
+  const L = Math.hypot(ex, ez);
+  if (L > 1e-4) {
+    const m = world.move(p.x, p.z, (ex / L) * SLIDE_ROOM, (ez / L) * SLIDE_ROOM, c.r, c.size);
+    p = out(m.x, m.z);
+  }
+  c.slideX = Number.isFinite(p.x) ? p.x : c.x;
+  c.slideZ = Number.isFinite(p.z) ? p.z : c.z;
+}
+
+/**
+ * Escorregando de cima do que ela pula (no ar): vai até c.slideX/Z a SLIDE_OFF m/s ou mais depressa, para chegar
+ * antes do fim de JUMP_CLEAR; o pouso espera ela chegar (overJump).
  */
 function slideOff(c, dt, world) {
   const px = c.x;
   const pz = c.z;
-  const t = world.resolve(c.x, c.z, c.r, c.size);
-  let tx = t.x, tz = t.z;
-  if (c.cfg.body && world.resolveBody) {
-    const b = world.resolveBody(tx, tz, c.yaw, c.cfg.body, c.r, c.size);
-    tx = b.x;
-    tz = b.z;
-  }
-  const ex = tx - c.x, ez = tz - c.z;
+  const ex = c.slideX - c.x, ez = c.slideZ - c.z;
   const L = Math.hypot(ex, ez);
   const left = Math.max(dt, c.jumpT + JUMP_CLEAR - c.clearT);
   const k = L > 1e-6 ? Math.min(1, (Math.max(SLIDE_OFF, L / left) * dt) / L) : 1;

@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
+import { withSeedAsync } from './helpers/seeded.mjs';
 import fase5 from '../src/levels/fase5/index.js';
 
 const L = fase5.layout;
@@ -251,4 +252,84 @@ test('fase 5: pulando a barricada, o corpo desenhado passa por cima da caixa (na
   } finally {
     fx.dispose();
   }
+});
+
+test('fase 5: as dogs de verdade (o modelo atual e o novo) não atravessam as caixas da barricada no pulo', async () => {
+  // Retorno do usuário: "o pulo está atravessando a caixa, as patas traseiras às vezes boa parte do corpo". O jogo
+  // headless dá, a cada quadro, a posição, o rumo e o que a animação recebe (o dublê guarda tudo); isso vai para os
+  // modelos de verdade, e a pele deles é conferida contra as duas caixas lado a lado na porta (de almofadas e de
+  // livros): no ar, nenhum vértice entra nelas. Encostada de viés numa caixa, no chão, a pata ou a orelha passa um
+  // pouco da face (é outra coisa, fica para depois).
+  await withSeedAsync(1, async () => {
+    const h = await createHeadlessGame({ level: 5, query: 'dog=rhaenyra' });
+    const { createDog } = await import('../src/dogs/dog.js');
+    const { createDogV2 } = await import('../src/dogs/v2/dog.js');
+    const models = [['atual', createDog('rhaenyra')], ['novo', createDogV2('rhaenyra')]].map(([name, d]) => ({ name, d }));
+    for (const { d } of models) d.setWorld?.(h.world); // como o jogo faz (a cabeça do modelo novo desvia dos colisores)
+    const stub = h.dogs.rhaenyra;
+    const boxes = [h.world.getDynamic('caixa-almofadas'), h.world.statics.find((k) => k.id === 'caixa-livros')];
+    assert.ok(boxes.every(Boolean), 'as duas caixas da barricada');
+    const [box] = boxes;
+    const v = new (models[0].d.object.position.constructor)();
+    /** Um quadro do jogo, espelhado nos modelos de verdade. */
+    const frame = () => {
+      h.step();
+      for (const { d } of models) {
+        d.object.position.copy(stub.object.position);
+        d.object.rotation.y = stub.object.rotation.y;
+        d.update(1 / 60, stub.anim);
+      }
+    };
+    /** O quanto a pele de cada modelo entra nas caixas (o menor caminho para sair dela), com onde foi. */
+    const inside = () => models.map(({ name, d }) => {
+      d.object.updateMatrixWorld(true);
+      let w = 0, at = '';
+      for (const m of [d.meshes.body, d.meshes.ears]) {
+        const n = m.geometry.attributes.position.count;
+        for (let i = 0; i < n; i += 3) {
+          m.getVertexPosition(i, v).applyMatrix4(m.matrixWorld);
+          for (const k of boxes) {
+            const dx = k.hx - Math.abs(v.x - k.x), dz = k.hz - Math.abs(v.z - k.z), dy = k.height - v.y;
+            const dep = Math.min(dx, dz, dy);
+            if (dep > w) {
+              w = dep;
+              at = `${k.id} (${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)})`;
+            }
+          }
+        }
+      }
+      return { name, w, at };
+    });
+    const problems = [];
+    const report = [];
+    // de pertinho e de longe (de 0,8 m o arco acaba com a garupa em cima: segue no ar até sair) e de viés (de -0,5 rad,
+    // o batente da porta no caminho: bate na quina da caixa e escorrega de volta)
+    const cases = [[0, 0.3], [0, 0.36], [0, 0.5], [0, 0.8], [0, 1.0], [0.3, 0.6], [-0.3, 0.6], [0.5, 0.9], [-0.5, 1.0]];
+    for (const [ang, back] of cases) {
+      const dx = Math.cos(ang), dz = Math.sin(ang);
+      h.teleport('rhaenyra', box.x - dx * (box.hx + back), box.z - dz * (box.hx + back), Math.atan2(dx, dz));
+      for (let i = 0; i < 18; i++) frame();
+      h.hold([dx, dz]);
+      for (let i = 0; i < 4; i++) frame();
+      h.keyDown('Space');
+      const worst = { atual: { w: 0, at: '' }, novo: { w: 0, at: '' } };
+      let air = 0;
+      for (let i = 0; i < 70; i++) {
+        frame();
+        if (i === 1) h.keyUp('Space');
+        if (!(stub.anim.airK >= 0)) continue; // no ar (pousada, encostada na caixa, é outra coisa)
+        air++;
+        for (const r of inside()) if (r.w > worst[r.name].w) worst[r.name] = r;
+      }
+      h.hold(null);
+      for (let i = 0; i < 30; i++) frame();
+      const tag = `de ${back} m${ang ? ` (de viés, ${ang} rad)` : ''}`;
+      assert.ok(air > 10, `${tag}: pulou (${air} quadros no ar)`);
+      report.push(`${tag}: ${Object.entries(worst).map(([n, r]) => `${n} ${(r.w * 100).toFixed(1)} cm${r.at ? ` em ${r.at}` : ''}`).join('; ')}`);
+      // na decolagem rente à caixa, o focinho do modelo atual chega a encostar (menos de 1 cm) na beira de cima
+      for (const [n, r] of Object.entries(worst)) if (r.w > 0.015) problems.push(`${n} ${tag}: a pele entra ${(r.w * 100).toFixed(1)} cm em ${r.at}`);
+    }
+    console.log(`[barricada] no ar, o quanto a pele entra nas caixas: ${report.join(' | ')}`);
+    assert.deepEqual(problems, []);
+  });
 });

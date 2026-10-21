@@ -416,6 +416,9 @@ export interface DogController {
   clearT: number;
   /** Escorregando de cima do que ela pula (seguindo em frente não sairia a tempo): vai para fora pelo lado mais perto. */
   slideOff: boolean;
+  /** Aonde ela escorrega (decidido quando começa: fora da coisa, com folga para as patas). */
+  slideX: number;
+  slideZ: number;
   /** Até a próxima simulação do caminho em frente (s): ela pesa no celular. */
   clearChk: number;
 }

@@ -62,17 +62,18 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
     ainda não tem embaixo do corpo é sólido de lado (`opts.lowY`/`over`): ela bate na lateral em vez de entrar. Com o
     arco acabando em cima de uma caixa (de 0,8 m, a garupa ficava sobre ela e a colisão a jogava meio metro para fora
     num quadro), ela segue no ar até sair de cima (`JUMP_CLEAR`, 0,3 s; `clearsAhead` simula com as paredes) ou,
-    com o batente da porta no caminho, escorrega de cima pelo lado mais perto (`slideOff`). O portãozinho da fase 5
-    ganhou o alto (0,42 m) no colisor.
+    com o batente da porta no caminho, escorrega de cima pelo lado mais perto, com 16 cm de folga para as dianteiras
+    esticadas (`slideOff`, `SLIDE_ROOM`). O portãozinho da fase 5 ganhou o alto (0,42 m) no colisor.
   - Almofadas (fase 5): a caixa achatada, as abas e as almofadas espalhadas são chão de pisar (`walkable`); o chão
     acompanha o que muda de lugar (`userData.moving`, `ground.js`). Inteira, o tampo (0,42 m) passa de `GROUND_MAX` e
     não conta.
   - Testes: `test/fase5.test.mjs` (pulos de 0,3 a 1 m e de viés na porta: o corpo desenhado acima da caixa, sem
     empurrão de mais de 7 cm num quadro, pouso fora dela e com o som na hora em que o desenho chega; as almofadas como
-    chão, também com a caixa empurrada; falha sem a correção), `test/interacoes.test.mjs` (a frente sobe primeiro na
-    decolagem e a garupa desce depois do pouso) e `test/fase10.test.mjs` (as duas chegam às alças da despensa).
-    Diagnóstico com os modelos de verdade (v1 e v2): no ar, o osso mais baixo em cima da caixa fica de 7 a 16 cm
-    acima do tampo em todos os pulos medidos.
+    chão, também com a caixa empurrada; falha sem a correção); na mesma fase, os modelos de verdade (o atual e o
+    novo) espelhando o jogo headless quadro a quadro, com a pele medida contra as duas caixas da porta em nove pulos:
+    no ar, nada entra (só o focinho do atual encosta 0,9 cm na beira ao decolar rente à caixa; com o código da 2ª
+    prévia, entrava de 3 a 26 cm); `test/interacoes.test.mjs` (a frente sobe primeiro na decolagem e a garupa desce
+    depois do pouso) e `test/fase10.test.mjs` (as duas chegam às alças da despensa).
 - Validação: CI e E2E (`todas`) do commit desta rodada: conferir no PR #55. No PC, diagnósticos leves em Node e
   testes de alguns arquivos durante o trabalho (fases 5 e 10, pulo, interações); a bateria fica no CI.
 - Fica para depois (não é do pulo): encostada de viés numa caixa, uma pata ou a ponta da orelha passa um pouco da

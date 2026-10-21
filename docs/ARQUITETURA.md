@@ -430,8 +430,9 @@ marca o portãozinho e a caixa de almofadas com `col.jumpable = true`. Quem não
 Na descida (a segunda metade do arco), o que ela pula é sólido de lado abaixo do alto dele, menos o que ela já tem
 embaixo do corpo (collision.js). O arco não acaba dentro de uma coisa: com o corpo em cima dela, se seguindo em frente
 (com as paredes, `clearsAhead`) sai de cima em até `JUMP_CLEAR` (0,3 s) depois do fim do arco, ela segue no ar até lá
-(`c.clearT`); senão escorrega de cima pelo lado mais perto (`c.slideOff`). Antes, a colisão a jogava para fora de uma
-vez (até meio metro num quadro). No desenho (`game.js`, `jumpableUnder`), o corpo fica acima do alto da coisa em que o
+(`c.clearT`); senão escorrega de cima pelo lado mais perto, até um ponto decidido quando começa, com folga para as
+dianteiras esticadas (`c.slideOff`, `c.slideX/Z`). Antes, a colisão a jogava para fora de uma vez (até meio metro num
+quadro). No desenho (`game.js`, `jumpableUnder`), o corpo fica acima do alto da coisa em que o
 tronco entra e, passada ela, cai com a gravidade do pulo; o pouso (`dog:land`, a pose) espera o desenho chegar ao
 chão. A pose é de quadrúpede (`dogAnimation.js`): decolando, gira sobre o quadril (a frente sobe primeiro, as
 traseiras empurram); descendo, sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois).
