@@ -67,7 +67,7 @@ src/world/                 cenário da fase 1 + utilitários de modelagem (util.
                            veggies.js (milho, cenoura e aboborinha que os porcos comem), pigPen.js (o chiqueiro)
 src/dogs/                  as cachorrinhas (ver §7)
   config.js                atributos globais das personagens; withStart cria a configuração de cada layout
-  v2/                      modelo novo das dogs, em teste (esqueleto de 38 ossos; ?dogs=novo e ?level=canil)
+  v2/                      modelo novo das dogs, o padrão (esqueleto de 38 ossos; ?dogs=atual volta ao anterior; ?level=canil)
 src/characters/goose.js    a Dona Gansa
 src/characters/pig.js      os porquinhos (fase 10)
 src/ui/                    interface em DOM (ver §9)
@@ -569,7 +569,7 @@ mais forte quanto mais alto o pulo. Na curva, o corpo tem inércia (`st.dev`, mo
 fica um tiquinho para trás e, ao parar de virar, passa e volta, com a cabeça na frente; a inclinação e o "molejo" de
 arrancar e frear também são molas. De ré (`anim.back`, puxando uma corda), as patas andam ao contrário).
 
-**Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
+**Modelo novo (o padrão desde a etapa 5)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
 esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,
 orelhas em três gomos e rabo em cinco; os nomes antigos continuam valendo), desenho revisto pelas fotos (`design.js`:
 focinho mais comprido, orelhas mais longas na Rhaenyra e mais grossas nas duas, cabeça da Rhaenyra quase do
@@ -606,7 +606,8 @@ seguram a dog, mais altos que a cabeça (água, áreas da IA e a coisa em que el
 nas poses que vão de propósito até a coisa (empurrão em pé, parede, empurrando de pé, extras, Lambe-Lambe). Em
 `dog.js`, as camadas ficam numa lista em ordem (`LAYERS`: cabeça, locomoção e rolagem, cada uma devolve o peso do
 quadro em `d.layers`), por cima da base (as poses do modelo atual) e antes do contato com o chão e da física. Para ver:
-`?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
+o jogo usa o modelo novo (`main.js`); `?dogs=atual` volta ao anterior em qualquer fase (para comparar ou reverter; o
+`?dogs=novo` dos links antigos continua dando o novo) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola, arrancada),
 `test/cabeca.test.mjs` (a cabeça não entra na parede, o desenho freia aos poucos), suíte E2E `canil` e capturas
@@ -977,7 +978,7 @@ No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:cha
 
 **Parâmetros de URL**: `?level=2` ou `?level=fase2` (fase inicial, pela posição ou pelo id; os links por id das
 fases 6 e 7, do tempo de protótipo, continuam valendo), `?level=pulo` (fase de desenvolvimento pelo id, ver
-`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?dogs=novo` (modelo novo das dogs, §7),
+`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?dogs=atual` (o modelo anterior das dogs; o novo é o padrão, §7),
 `?stage=<etapa>`
 (se o puzzle suportar), `?debug` (colisores e grafo), `?cam=x,y,z&look=x,y,z` (câmera fixa), `?nopost`
 (sem pós-processamento).

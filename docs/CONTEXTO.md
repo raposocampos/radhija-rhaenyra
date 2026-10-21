@@ -1,11 +1,26 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55, 2ª rodada: ela anda até a coisa, o
-jogador puxa as cordas de ré, o portãozinho da fase 10 abre para o quintal, o gerador pega no segundo puxão, o pulo
-encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
-[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-21, Claude** (#55 entregue em v0.10.7 · build 99; começou a etapa 5 dos modelos
+novos: o novo como padrão). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
+antes de editar.
 
-## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`, PR #55)
+## Em andamento: modelos novos das dogs, etapa 5: o novo como padrão (Claude, branch `claude/modelo-novo-padrao`)
+
+- Pedidos do usuário (2026-10-21, pelo orquestrador): "implementar o novo modelo das dogs em produção além de testar
+  tudo e criar novos testes"; o plano aprovado: (1) o novo vira o padrão nas 10 fases e nas arenas, com um jeito de
+  voltar ao atual (`?dogs=atual`) e sem quebrar `?dogs=novo`; (2) cascas de pelo mais leves só no celular, sem mudar
+  o PC (Infinix Note 30 5G e iPhone 13, perfis de qualidade); (3) testes novos onde o novo ainda não tem cobertura,
+  revisão das capturas de todas as fases e E2E `todas` no head final; (4) conferir no novo o detalhe escondido, a pose
+  do cocô com corcunda e a irmã dando espaço (sem citar o detalhe em textos visíveis); (5) e, pedido seguinte: "Também
+  gostaria de incluir essas animações: parada muito tempo, coçar, xixi agachada, sentar e deitar" (no novo com
+  certeza; no atual se der; nada atravessa o chão e a irmã dá espaço). A franja das orelhas em close e morder o
+  volante do registro entram se couberem.
+- Feito até aqui: (1) `main.js` usa o modelo novo; `?dogs=atual` volta ao anterior; o painel do canil e o README
+  apontam para o padrão; o E2E `canil` confere o padrão e o `?dogs=atual`.
+- Próximo passo: (2) cascas do pelo no celular; (5) as animações paradas; (3) testes e capturas; prévia para o
+  usuário aprovar.
+
+## Entregue: interações de verdade, molejo na curva e pulo (PR #55, squash `1c61405`, deploy `39532803952`)
 
 - Pedidos do usuário (2026-10-20, ao aprovar a prévia do #48): "o botão do ventilador, as dogs poderiam de fato
   apertar o botão"; "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e
@@ -107,8 +122,9 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
   testes dos arquivos afetados durante o trabalho; a bateria fica no CI.
 - Fica para depois (não é do pulo): encostada de viés numa caixa, uma pata ou a ponta da orelha passa um pouco da
   face dela (o corpo é mais largo que os círculos da colisão nas pontas).
-- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar. Depois do #55 publicado, a
-  etapa 5 dos modelos novos (o novo como padrão), pedida pelo usuário ao orquestrador.
+- 4ª prévia (`1fcd4b1`, CI `39530179741`, E2E `todas` `39530176729` verdes): o usuário aprovou ("Aprovado!").
+  Integrado: squash `1c61405`, CI do main `39532679914`, deploy `39532803952` liberado; produção em v0.10.7 · build 99
+  (`version.json` conferido). Não repetir merge/deploy do #55.
 
 ## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`, deploy `39518235787`)
 

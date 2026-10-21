@@ -106,6 +106,14 @@ try {
   await H.hold(['KeyA'], 600);
   await shot('06-fase1-troca.png');
 
+  console.log('\n== O modelo novo é o padrão; ?dogs=atual volta ao anterior ==');
+  await load('?level=1&play');
+  const byDefault = await ev(() => Object.values(window.__game.dogs).map((d) => `${d.kind}:${d.model ?? 'v1'}:${d.bones.length}`));
+  check(byDefault.every((m) => m.endsWith(':v2:38')), 'sem parâmetro, as duas dogs com o modelo novo', byDefault.join(' '));
+  await load('?level=1&play&dogs=atual');
+  const legacy = await ev(() => Object.values(window.__game.dogs).map((d) => `${d.kind}:${d.model ?? 'v1'}:${d.bones.length}`));
+  check(legacy.every((m) => m.endsWith(':v1:28')), '?dogs=atual: as duas com o modelo anterior', legacy.join(' '));
+
   console.log('\n== Arena do Pulo com o modelo novo: pulo e impulso na parede ==');
   await load('?level=pulo&play&dog=rhaenyra&dogs=novo');
   const fence = await ev(() => window.__game.layout.LOG_FENCE);

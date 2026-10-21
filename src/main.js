@@ -39,8 +39,9 @@ async function boot() {
 
   const engine = createEngine(document.getElementById('app'), { params });
   mark('engine');
-  // ?dogs=novo: as duas dogs com o modelo novo (src/dogs/v2/, em teste; baixado só neste caso)
-  const makeDog = params.get('dogs') === 'novo' ? (await import('./dogs/v2/dog.js')).createDogV2 : createDog;
+  // as duas dogs com o modelo novo (src/dogs/v2/), o padrão desde a etapa 5; ?dogs=atual volta ao modelo anterior
+  // (para comparar ou reverter); ?dogs=novo, dos links antigos, continua dando o novo
+  const makeDog = params.get('dogs') === 'atual' ? createDog : (await import('./dogs/v2/dog.js')).createDogV2;
   const dogs = {
     radhija: makeDog('radhija'),
     rhaenyra: makeDog('rhaenyra'),
