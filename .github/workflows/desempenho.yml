@@ -2,6 +2,16 @@ name: Referência de desempenho
 
 on:
   workflow_dispatch:
+    inputs:
+      medida:
+        description: 'referencias (as cinco fases paradas) ou empurrar (empurrando carrinho, caixote e ventilador)'
+        type: choice
+        options: [referencias, empurrar]
+        default: referencias
+      outro:
+        description: 'empurrar: o commit comparado com este (o head do PR; este é o main publicado)'
+        type: string
+        default: ''
   # Permite validar a instalação antes de este workflow existir no main.
   # O código do PR é executado só em runner sem credenciais e com leitura.
   pull_request:
@@ -23,6 +33,7 @@ concurrency:
 jobs:
   build:
     name: Build único e infraestrutura de medição
+    if: github.event_name != 'workflow_dispatch' || inputs.medida != 'empurrar'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -97,10 +108,58 @@ jobs:
           path: shots/performance/
           if-no-files-found: error
           retention-days: 14
+  empurrar:
+    # Retorno do usuário: "toda vez que eu vou empurrar algum item tem uma queda de performance grande". Os dois builds
+    # (este commit, o main publicado, e o `outro`, o head do PR) no MESMO runner, sem minificar (o perfil de CPU com os
+    # nomes das funções), medidos em A/B/A/B com cada modelo das dogs (tools/scripts/measure-push.mjs).
+    name: Empurrando — tempo de quadro e perfil
+    if: github.event_name == 'workflow_dispatch' && inputs.medida == 'empurrar' && inputs.outro != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.outro }}
+          path: outro
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: outro
+      - name: Builds sem minificar (sem o prebuild de testes)
+        run: |
+          npx vite build --minify false --outDir dist-main
+          (cd outro && npx vite build --minify false --outDir ../dist-pr)
+      - name: Instalar Chromium fixado no lockfile
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: A — main publicado (modelo atual; ?dogs=novo, o novo)
+        run: node tools/scripts/measure-push.mjs --dist dist-main --label main-1 --queries "padrao,dogs=novo"
+      - name: B — PR (modelo novo; ?dogs=atual, o atual), com perfil de CPU
+        run: node tools/scripts/measure-push.mjs --dist dist-pr --label pr-1 --queries "padrao,dogs=atual" --profile
+      - name: A de novo
+        run: node tools/scripts/measure-push.mjs --dist dist-main --label main-2 --queries "padrao,dogs=novo" --profile
+      - name: B de novo
+        run: node tools/scripts/measure-push.mjs --dist dist-pr --label pr-2 --queries "padrao,dogs=atual"
+      - name: Guardar os relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desempenho-empurrar
+          path: shots/push/
+          if-no-files-found: warn
+          retention-days: 14
   agregar:
     name: Conferir cinco pares e gerar referência durável
     needs: [build, referencias]
-    if: always() && needs.build.result == 'success'
+    if: always() && needs.build.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.medida != 'empurrar')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
