@@ -2,11 +2,21 @@
 // - Segue a líder a 0,9–1,3 m (histerese), senta quando a líder fica parada, olha para ela.
 // - Cede passagem: se a líder vem na direção dela, sai de lado. Nunca empurra a líder.
 // - Linha de visão livre → vai direto; senão grafo de navegação (restrições small/gateOpen/cartMoved).
-// - Sem caminho → espera sentada no nó alcançável mais próximo da líder.
+// - Sem caminho → espera sentada no ponto alcançável mais perto da líder (fora do espaço dela), olhando para ela.
+//   Chegando por um caminho, para à mesma distância de quando segue em linha reta: nunca colada na irmã.
+// - Sem chegar mais perto por um tempo (o caminho do grafo não deu: corpo comprido, quina, vão estreito) → espera no
+//   lugar mais perto a que chegou; sem conseguir chegar ao ponto de espera → espera onde está. Volta a seguir quando a
+//   líder sai do lugar ou o cenário muda (portão, caixote, restrição do puzzle); se quem atrapalhou foi um bicho,
+//   tenta de novo depois de um tempo. Nada de ir e voltar.
 // - Detecta quando fica presa, recalcula; presa > 3 s fora da tela → pede reposicionamento.
 
 const FOLLOW_START = 1.3;
 const FOLLOW_STOP = 0.95;
+const BLOCK_T = 3.0; // tentando chegar à líder sem chegar mais perto por esse tempo: ela está fora de alcance daqui
+const SETTLE_T = 1.2; // indo para o ponto de espera sem chegar por esse tempo: espera onde está
+const PROGRESS_MIN = 0.2; // o que conta como chegar mais perto (m)
+const UNBLOCK_MOVE = 0.5; // a líder saiu desse tanto do lugar: tenta de novo
+const NPC_RETRY = 2.5; // quem atrapalhou foi um bicho (porco, gansa…): ele sai do caminho, tenta de novo
 
 export function createBrain() {
   return {
@@ -16,6 +26,9 @@ export function createBrain() {
     mode: 'idle',
     holdT: 0, // atraso antes de começar a seguir (logo depois de uma troca: dá tempo de apertar F)
     stayT: 0, stayTurning: false, // comando Fica
+    prog: null, // vigia do progresso: { kind 'f'|'w', ref, t, best, x, z, gx, gz, idle, npc }
+    block: null, // a líder fora de alcance de verdade: { x, z (onde esperar), lx, lz, key, retryT }
+    settle: null, // não chegou ao ponto de espera: espera onde está { lx, lz, key, retryT }
   };
 }
 
@@ -25,16 +38,17 @@ export function resetBrain(b) {
 
 /**
  * Planeja/segue o caminho até `goal`. Retorna o alvo imediato.
+ * approach: seguindo a irmã (findPath só dá como alcançável o que ela enxerga; sem caminho, leva ao ponto mais perto).
  * → { tx, tz, final, reachable, pathLen }
  */
-export function navigate(b, c, goal, ctx, dt) {
+export function navigate(b, c, goal, ctx, dt, approach = false) {
   const { nav, world } = ctx;
   b.pathT -= dt;
   b.forceGraphT -= dt;
   const goalMoved = !b.goal || Math.hypot(goal.x - b.goal.x, goal.z - b.goal.z) > 0.6;
   if (b.pathT <= 0 || goalMoved) {
     const res = nav.findPath({ x: c.x, z: c.z }, goal, {
-      r: c.r, size: c.size, flags: ctx.flags, allowDirect: b.forceGraphT <= 0,
+      r: c.r, size: c.size, flags: ctx.flags, allowDirect: b.forceGraphT <= 0, approach,
     });
     b.path = res.waypoints.slice();
     b.reachable = res.reachable;
@@ -50,9 +64,11 @@ export function navigate(b, c, goal, ctx, dt) {
     const isLast = b.path.length === 1;
     const holdHere = !b.reachable && isLast; // nó de espera: não descarta
     if (holdHere) break;
-    if (Math.hypot(w.x - c.x, w.z - c.z) < 0.3) { b.path.shift(); continue; }
+    // os pontos da busca em grade contornam quinas de perto (caixote, pé de móvel): chega mais perto antes de largar
+    const grid = w.id === 'grade';
+    if (Math.hypot(w.x - c.x, w.z - c.z) < (grid ? 0.15 : 0.3)) { b.path.shift(); continue; }
     const next = isLast ? goal : b.path[1];
-    if (b.forceGraphT <= 0.8 && world.segmentClear(c.x, c.z, next.x, next.z, losR, c.size)) { b.path.shift(); continue; }
+    if ((grid || b.forceGraphT <= 0.8) && world.segmentClear(c.x, c.z, next.x, next.z, losR, c.size)) { b.path.shift(); continue; }
     break;
   }
   let tx = goal.x;
@@ -161,16 +177,40 @@ export function companionIntent(b, c, leader, ctx, dt) {
     return out;
   }
 
-  // 2) Navegação até a líder
-  const navr = navigate(b, c, { x: lx, z: lz }, ctx, dt);
+  // 2) Navegação até a líder (ou até onde esperar por ela)
+  const key = ctx.nav.worldKey ? ctx.nav.worldKey(ctx.flags) : '';
+  const leaderLeft = (r) => Math.hypot(lx - r.lx, lz - r.lz) > UNBLOCK_MOVE || r.key !== key;
+  if (b.block) {
+    b.block.retryT -= dt;
+    // a líder saiu do lugar, um portão abriu, um caixote mudou de lugar, o bicho saiu do caminho: tenta de novo
+    if (leaderLeft(b.block) || b.block.retryT <= 0) {
+      b.block = null;
+      b.prog = null;
+      b.pathT = 0;
+    }
+  }
+  if (b.settle) {
+    b.settle.retryT -= dt;
+    // idem para a espera: um bicho parado no caminho até o ponto de espera sai dali
+    if (leaderLeft(b.settle) || b.settle.retryT <= 0) {
+      b.settle = null;
+      b.prog = null;
+      b.pathT = 0;
+    }
+  }
+  const navr = b.block
+    ? navigate(b, c, b.block, ctx, dt)
+    : navigate(b, c, { x: lx, z: lz }, ctx, dt, true);
   const dT = Math.hypot(navr.tx - c.x, navr.tz - c.z);
+  // Esperando: sem caminho até a líder (último trecho até o ponto de espera) ou depois de não conseguir chegar nela.
+  const waiting = b.block ? !b.path.length : !navr.reachable && navr.final;
   let speed = 0;
-  if (!navr.reachable && navr.final) {
-    // Esperando no nó alcançável mais próximo da líder
+  if (waiting || b.settle) {
     out.mode = 'wait';
-    speed = dT > 0.12 ? Math.min(maxSpeed, Math.max(0.5, dT * 2.5)) : 0;
+    speed = !b.settle && dT > 0.12 ? Math.min(maxSpeed, Math.max(0.5, dT * 2.5)) : 0;
     b.moving = speed > 0;
-  } else if (b.path.length) {
+  } else if (b.path.length && !(navr.reachable && !b.block && navr.pathLen < FOLLOW_STOP + 0.1)) {
+    // (perto da irmã pelo caminho, para como no seguir: o caminho da grade termina colado nela)
     out.mode = 'path';
     speed = maxSpeed * (navr.pathLen > 3.5 ? 1.1 : 1);
     b.moving = true;
@@ -186,6 +226,28 @@ export function companionIntent(b, c, leader, ctx, dt) {
       b.reactT = 0;
       speed = Math.min(maxSpeed * (distL > 3.5 ? 1.1 : 1), Math.max(0.45, (distL - 0.85) * 2.2));
     }
+  }
+
+  // Vigia do progresso: tentando andar sem chegar mais perto (da líder, ou do ponto de espera) por um tempo.
+  const toWait = !!b.block || !navr.reachable;
+  const wp = b.block || (b.path.length ? b.path[b.path.length - 1] : c);
+  const goal = toWait ? wp : leader;
+  const stalled = watchProgress(b, c, toWait ? 'w' : 'f', navr.pathLen, speed > 0.4, goal.x, goal.z, dt);
+  if (!toWait && stalled > BLOCK_T) {
+    // O caminho do grafo não leva até ela: espera no lugar mais perto a que chegou (e não volta para tentar).
+    const p = b.prog;
+    b.block = { x: p.x, z: p.z, lx, lz, key, retryT: p.npc ? NPC_RETRY : Infinity };
+    b.prog = null;
+    b.pathT = 0;
+    b.moving = false;
+    speed = 0;
+    out.mode = 'wait';
+  } else if (toWait && stalled > SETTLE_T && !b.settle) {
+    b.settle = { lx, lz, key, retryT: b.prog.npc ? NPC_RETRY : Infinity };
+    b.prog = null;
+    b.moving = false;
+    speed = 0;
+    out.mode = 'wait';
   }
 
   if (speed > 0 && dT > 1e-3) {
@@ -218,6 +280,40 @@ export function companionIntent(b, c, leader, ctx, dt) {
   }
   b.mode = out.mode;
   return out;
+}
+
+/**
+ * Vigia do progresso (kind 'f': até a líder; 'w': até o ponto de espera, em gx/gz): `metric` é quanto falta pelo
+ * caminho. Recomeça quando o destino muda. Guarda o lugar mais perto a que ela chegou.
+ * → segundos tentando andar (trying) sem chegar PROGRESS_MIN mais perto.
+ */
+function watchProgress(b, c, kind, metric, trying, gx, gz, dt) {
+  let p = b.prog;
+  const moved = kind === 'f' ? UNBLOCK_MOVE : 0.25; // o ponto de espera muda aos poucos (ela contorna o caixote)
+  if (p && (p.kind !== kind || Math.hypot(gx - p.gx, gz - p.gz) > moved)) p = b.prog = null;
+  if (!trying) {
+    // parou de tentar (chegou, cedeu passagem): o vigia recomeça
+    if (p && (p.idle += dt) > 0.5) b.prog = null;
+    return 0;
+  }
+  if (!p) {
+    b.prog = { kind, ref: metric, t: 0, best: metric, x: c.x, z: c.z, gx, gz, idle: 0, npc: false };
+    return 0;
+  }
+  p.idle = 0;
+  if (metric < p.best) {
+    p.best = metric;
+    p.x = c.x;
+    p.z = c.z;
+  }
+  if (metric < p.ref - PROGRESS_MIN) {
+    p.ref = metric;
+    p.t = 0;
+    p.npc = false;
+  } else p.t += dt;
+  // bicho no caminho (porco, gansa, galinha): ele sai, então vale tentar de novo depois
+  if (c.hits?.some((h) => h.kind === 'npc')) p.npc = true;
+  return p.t;
 }
 
 /**
