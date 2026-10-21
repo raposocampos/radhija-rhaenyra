@@ -1,0 +1,11 @@
+{
+  "version": "0.10.9",
+  "build": 101,
+  "pr": 59,
+  "label": "prévia PR #59 · sobre v0.10.9",
+  "commit": "417c76444ec74770f3cec46808b453ba8279299d",
+  "head": "9db059e9c7b86d27098214e16b5c02c708611dcf",
+  "base": "401f01a57896ecc5fed5d1adba6ae2f186f64980",
+  "run": "39548339352",
+  "attempt": "1"
+}
