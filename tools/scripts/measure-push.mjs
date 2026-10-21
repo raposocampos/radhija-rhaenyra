@@ -6,8 +6,9 @@
 //  • no aberto (fase 1, nada à frente): parada, andando, R1 segurado andando (a postura de empurrar sem nada), R1
 //    segurado parada; e a Radhija andando e dando arrancadas (R1).
 // Por quadro: game.update, engine.render (1 de cada DRAW quadros é desenhado: o SwiftShader do CI desenhando todos
-// deixaria o jogo lento demais para andar), a animação da dog ativa (dogs[n].update) e os raios do three.js
-// (Raycaster.intersectObjects: quantos e quanto tempo). Com --profile, o perfil de CPU (CDP) de cada fase, somado por
+// deixaria o jogo lento demais para andar), a animação da dog ativa (dogs[n].update), os raios do three.js em cada
+// malha (Mesh.raycast: quantos e quanto tempo; vale com o Raycaster e com o atalho nearestHit do pushRest) e as medidas
+// novas do desenho empurrado (debug.pushMeasures, quando o jogo tem). Com --profile, o perfil de CPU (CDP) de cada fase, somado por
 // função (build sem minificar: os nomes ficam legíveis). A irmã segue, como no jogo.
 //   node tools/scripts/measure-push.mjs --dist <pasta do build> --label <nome> [--queries "padrao,dogs=atual"] [--profile]
 // Saída: shots/push/<label>/report.json e uma tabela no log. Só no CI (o PC do usuário fica livre).
@@ -67,16 +68,17 @@ function probe(DRAW_EVERY) {
       engine.renderer.shadowMap.enabled = false;
       if (engine.bloom) engine.bloom.enabled = false;
       const M = window.__push = { on: false, frames: [], cur: null, phase: null };
-      const fresh = () => ({ rayN: 0, rayMs: 0, animMs: 0, action: null });
+      const fresh = () => ({ rayN: 0, rayMs: 0, animMs: 0, action: null, measures: 0 });
       M.cur = fresh();
-      const ray = THREE.Raycaster.prototype.intersectObjects;
-      THREE.Raycaster.prototype.intersectObjects = function (...a) {
+      const ray = THREE.Mesh.prototype.raycast;
+      THREE.Mesh.prototype.raycast = function (...a) {
         const t0 = performance.now();
         const r = ray.apply(this, a);
         M.cur.rayN++;
         M.cur.rayMs += performance.now() - t0;
         return r;
       };
+      let measures = null;
       for (const n of Object.keys(dogs)) {
         const up = dogs[n].update;
         dogs[n].update = function (...a) {
@@ -104,6 +106,11 @@ function probe(DRAW_EVERY) {
         const t0 = performance.now();
         const r = draw ? render.apply(this, a) : undefined;
         const rm = draw ? performance.now() - t0 : null;
+        const pm = game.debug.pushMeasures;
+        if (typeof pm === 'number') {
+          M.cur.measures = measures === null ? 0 : pm - measures;
+          measures = pm;
+        }
         if (M.on && M.phase) M.frames.push({ phase: M.phase, u, r: rm, ...M.cur });
         M.cur = fresh();
         return r;
@@ -131,7 +138,9 @@ function summarize(frames) {
       updateMs: { median: r2(pct(f.map((x) => x.u), 0.5)), p95: r2(pct(f.map((x) => x.u), 0.95)), mean: r2(mean(f.map((x) => x.u))) },
       renderMs: { median: r2(pct(drawn, 0.5)), mean: r2(mean(drawn)) },
       animMs: { mean: r2(mean(f.map((x) => x.animMs))) },
-      rays: { perFrame: r2(mean(f.map((x) => x.rayN))), ms: r2(mean(f.map((x) => x.rayMs))) },
+      rays: { perFrame: r2(mean(f.map((x) => x.rayN))), ms: r2(mean(f.map((x) => x.rayMs))), maxMs: r2(Math.max(0, ...f.map((x) => x.rayMs))) },
+      measures: f.reduce((a, x) => a + (x.measures || 0), 0),
+      updateMaxMs: r2(Math.max(0, ...f.map((x) => x.u))),
       actions: acts,
     };
   }
@@ -321,7 +330,7 @@ try {
       await page.close();
       if (run.summary) {
         for (const [ph, s] of Object.entries(run.summary)) {
-          console.log(`[push ${LABEL}] ${q.padEnd(10)} ${S.name.padEnd(10)} ${ph.padEnd(16)} update ms mediana ${String(s.updateMs.median).padStart(6)} p95 ${String(s.updateMs.p95).padStart(6)} | raios/quadro ${String(s.rays.perFrame).padStart(6)} (${s.rays.ms} ms) | animação ${s.animMs.mean} ms | render ${s.renderMs.median} ms | ${s.frames} quadros ${JSON.stringify(s.actions)}`);
+          console.log(`[push ${LABEL}] ${q.padEnd(10)} ${S.name.padEnd(10)} ${ph.padEnd(16)} update ms mediana ${String(s.updateMs.median).padStart(6)} p95 ${String(s.updateMs.p95).padStart(6)} máx ${String(s.updateMaxMs).padStart(6)} | malhas testadas/quadro ${String(s.rays.perFrame).padStart(7)} (${s.rays.ms} ms; pior quadro ${s.rays.maxMs} ms) | medidas ${s.measures} | animação ${s.animMs.mean} ms | render ${s.renderMs.median} ms | ${s.frames} quadros ${JSON.stringify(s.actions)}`);
           const pf = run.profiles?.[ph];
           if (pf) for (const t of pf.top.slice(0, 10)) console.log(`      ${String(t.ms).padStart(8)} ms ${String(t.pct).padStart(5)}%  ${t.fn}`);
         }
