@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { events } from './core/events.js';
 import { createEngine } from './core/engine.js';
-import { createFrameCap } from './core/quality.js';
+import { createFrameCap, furShellsFor } from './core/quality.js';
 import { createSettings } from './core/settings.js';
 import { createDog } from './dogs/dog.js';
 import { createGame } from './game/game.js';
@@ -39,8 +39,15 @@ async function boot() {
 
   const engine = createEngine(document.getElementById('app'), { params });
   mark('engine');
-  // ?dogs=novo: as duas dogs com o modelo novo (src/dogs/v2/, em teste; baixado só neste caso)
-  const makeDog = params.get('dogs') === 'novo' ? (await import('./dogs/v2/dog.js')).createDogV2 : createDog;
+  // as duas dogs com o modelo novo (src/dogs/v2/), o padrão desde a etapa 5; ?dogs=atual volta ao modelo anterior
+  // (para comparar ou reverter); ?dogs=novo, dos links antigos, continua dando o novo. No celular e no tablet, o pelo
+  // do novo tem menos cascas (furShellsFor; o PC fica com as de sempre)
+  let makeDog = createDog;
+  if (params.get('dogs') !== 'atual') {
+    const { createDogV2 } = await import('./dogs/v2/dog.js');
+    const shells = furShellsFor(engine.quality.device);
+    makeDog = (kind) => createDogV2(kind, { shells });
+  }
   const dogs = {
     radhija: makeDog('radhija'),
     rhaenyra: makeDog('rhaenyra'),

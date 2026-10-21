@@ -38,6 +38,8 @@ src/game/                  NÚCLEO genérico
   dogController.js         movimento de uma dog (aceleração, giro, arrancada, pulo, colisão)
   cameraRig.js             câmera de seguimento, planos de foco, tela inicial e comemoração
   celebrateLoop.js         lado e tamanho da voltinha da comemoração que cabem no cenário
+  idle.js                  parada por muito tempo: deitar, xixi raro e a volta depois dele (coçar, desligado)
+  walkPath.js              caminhos andados de verdade (curvas suaves, curva-reta-curva) e o perfil de velocidade
   puzzleKit.js             peças para puzzles: dicas, prompts, colecionáveis, item carregado, entrega
   mechanics/               mecânicas reutilizáveis (placa de pressão, portão, caixote, irrigador, gansa, porcos…)
   debugDraw.js             ?debug: colisores e grafo desenhados na cena
@@ -67,7 +69,7 @@ src/world/                 cenário da fase 1 + utilitários de modelagem (util.
                            veggies.js (milho, cenoura e aboborinha que os porcos comem), pigPen.js (o chiqueiro)
 src/dogs/                  as cachorrinhas (ver §7)
   config.js                atributos globais das personagens; withStart cria a configuração de cada layout
-  v2/                      modelo novo das dogs, em teste (esqueleto de 38 ossos; ?dogs=novo e ?level=canil)
+  v2/                      modelo novo das dogs, o padrão (esqueleto de 38 ossos; ?dogs=atual volta ao anterior; ?level=canil)
 src/characters/goose.js    a Dona Gansa
 src/characters/pig.js      os porquinhos (fase 10)
 src/ui/                    interface em DOM (ver §9)
@@ -517,7 +519,8 @@ depois de trocar (Q), a nova companheira espera 0,6 s antes de seguir, para dar 
 
 **Extras** (escondidos de propósito; não remover): pedido do responsável pelo projeto, que conta o segredo a quem
 quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquista ou texto, e nada no README
-(`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas.
+(`test/extras.test.mjs` confere a UI e o README). `src/game/extras.js` cuida de duas coisas (os caminhos andados, a
+voltinha e os zoomies, ficam em `walkPath.js`, junto com os da parada por muito tempo).
 - **Cocô**: código lógico `KeyC` (tecla C; R3 = `PAD.RS` no controle; o toque não tem). Só funciona com os ossinhos
   todos da fase pegos, uma vez por tentativa (reiniciar libera de novo) e com a dog ativa parada no chão, sem nada na
   boca. Três partes, com as poses em `dogAnimation.js`:
@@ -540,6 +543,31 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
   as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
+- **Parada por muito tempo** (`src/game/idle.js`, pedido do usuário na etapa 5): sentar já vem da animação (parada de
+  4 a 8,5 s, sorteado a cada parada e para cada dog); o módulo conta, por dog, quanto ela está parada e livre (a ativa
+  sem o jogador mexer nela, sem trava, extra nem cocô, no chão) e manda `anim.idle`. Os tempos são sorteados a cada
+  parada, e uma irmã não começa o que a outra acabou de começar (`IDLE.apart`; retorno do usuário: "as duas fazem a
+  mesma ação ao mesmo tempo"):
+  - deita entre 20 e 34 s e fica (a cabeça descansa nas patas depois de 9 s, de olhinho fechado);
+  - xixi agachada, raro (12% das paradas, entre 1,5 e 3,5 s; no máximo um a cada 4 min por dog e nunca até 90 s
+    depois do da irmã), em pé, no chão de verdade, sem nada na boca, sem o Fica, a companheira só seguindo a irmã de
+    perto (esperando por uma irmã que ela não alcança, nunca: a IA a levaria de volta) e só com espaço para sair dali
+    (`dog:pee`: a poça discreta que seca, `feedback.js`). Depois (retorno do usuário: "não deixe ela sentar no mijo, faz ela levantar,
+    dar uma cheirada no mijo e então ela senta em outro lugar, tudo andando naturalmente"), ela anda até a poça
+    (curva-reta-curva, `walkPath.dubinsPaths`: nada de girar parada), fica de frente com o focinho em cima dela e
+    cheira (`dog:sniff`), sai andando por um caminho que não passa por cima da poça e senta perto da irmã, de frente
+    para ela, a até `IDLE.after.near` m (ou num lugar livre em volta), longe da poça (`anim.idle.kind` 'sit'). Os caminhos não encostam em
+    colisores, bordas de caminha nem na irmã (`IDLE.after.pass` entre os centros); a trava `lockFor` pede `drive` (o
+    núcleo não a desloca; `idle.step` a anda antes de pôr o corpo no lugar, com a velocidade e o giro de verdade para
+    as patas). Algo entrou no caminho: ela para ali (perto da poça, fica em pé: 'stand');
+  - coçar está desligado (`IDLE.scratch.on`): o usuário pediu para deixar de fora por enquanto; a pose (sentada, a
+    traseira no pescoço) continua em `dogAnimation.js` e no sandbox (`idle=scratch`).
+  Qualquer movimento ou comando a levanta (a ativa solta a trava no mesmo quadro). O xixi é sorteado e tira a dog do
+  lugar: o jogo headless dos testes (`createHeadlessGame`, a não ser com `pee: true`) e as partidas E2E (o `load` do
+  harness) o desligam com `game.debug.idle.setPee(false)`. As poses ficam em `dogAnimation.js`
+  (os dois modelos; no novo, a locomoção sai no xixi: `w.pee`). Testes em `test/parada.test.mjs` (a agenda, a sequência
+  depois do xixi com e sem o jogo, as irmãs fora de compasso) e nos casos de `test/dogV2.test.mjs`; sandbox
+  `idle=scratch|lie|pee` e capturas 60–63.
 - Uma fase nova precisa de três ossinhos (a fase 10, a última, tem cinco) e de pelo menos um ponto em `extras`
   (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
@@ -577,7 +605,7 @@ mais forte quanto mais alto o pulo. Na curva, o corpo tem inércia (`st.dev`, mo
 fica um tiquinho para trás e, ao parar de virar, passa e volta, com a cabeça na frente; a inclinação e o "molejo" de
 arrancar e frear também são molas. De ré (`anim.back`, puxando uma corda), as patas andam ao contrário).
 
-**Modelo novo (em teste, troca em etapas)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
+**Modelo novo (o padrão desde a etapa 5)** (`src/dogs/v2/`, `createDogV2(nome)` com a mesma API de `createDog`):
 esqueleto de 38 ossos (`skeleton.js`: coluna e pescoço em dois gomos, escápulas, pulso separado da pata, mandíbula,
 orelhas em três gomos e rabo em cinco; os nomes antigos continuam valendo), desenho revisto pelas fotos (`design.js`:
 focinho mais comprido, orelhas mais longas na Rhaenyra e mais grossas nas duas, cabeça da Rhaenyra quase do
@@ -614,7 +642,8 @@ seguram a dog, mais altos que a cabeça (água, áreas da IA e a coisa em que el
 nas poses que vão de propósito até a coisa (empurrão em pé, parede, empurrando de pé, extras, Lambe-Lambe). Em
 `dog.js`, as camadas ficam numa lista em ordem (`LAYERS`: cabeça, locomoção e rolagem, cada uma devolve o peso do
 quadro em `d.layers`), por cima da base (as poses do modelo atual) e antes do contato com o chão e da física. Para ver:
-`?dogs=novo` troca as duas dogs em qualquer fase (`main.js`, baixado só nesse caso) e a fase de desenvolvimento
+o jogo usa o modelo novo (`main.js`); `?dogs=atual` volta ao anterior em qualquer fase (para comparar ou reverter; o
+`?dogs=novo` dos links antigos continua dando o novo) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola, arrancada),
 `test/cabeca.test.mjs` (a cabeça não entra na parede, o desenho freia aos poucos), suíte E2E `canil` e capturas
@@ -708,7 +737,8 @@ Quem emite e quem ouve:
   (opções salvas, §9).
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase), `dog:jumpBlocked` (pulo recusado pela fase),
-  `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
+  `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho), `dog:scratch {name}` e
+  `dog:pee {name, x, z}` e `dog:sniff {name, x, z}` (parada por muito tempo, `idle.js`).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
   `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
   (o pombo ignorou o latido).
@@ -801,7 +831,9 @@ Adreno 5xx/60x–61x, PowerVR; ex.: Infinix Note 30 5G) começa no `baixa`. O iP
 Por que esses cortes: cada fase tem ~800 a ~2.200 chamadas de desenho por quadro (a passada de sombra repete o
 cenário), e o céu calcula nuvens por ruído em cada pixel; desenhado por último, só roda nos pixels de céu que sobram.
 O celular/tablet também tem teto de 60 quadros por segundo (`createFrameCap` no laço de `main.js`): telas de 90/120 Hz
-desenhariam o dobro e esquentariam o aparelho.
+desenhariam o dobro e esquentariam o aparelho. E o pelo das dogs (modelo novo) tem menos cascas (`furShellsFor`: 10 no
+PC, 6 no celular e no tablet; o mesmo comprimento em menos camadas transparentes, 40% menos malha de pelo), escolhidas
+na criação das dogs.
 
 No modo automático do celular/tablet, o governador de FPS (`createFpsGovernor`, alimentado por `engine.quality.frame`
 a cada quadro desenhado da partida) mede a mediana dos intervalos em janelas de 1,5 s, depois de 2 s de aquecimento:
@@ -994,7 +1026,7 @@ No CI sem GPU, a redução gráfica do harness é reaplicada a cada `quality:cha
 
 **Parâmetros de URL**: `?level=2` ou `?level=fase2` (fase inicial, pela posição ou pelo id; os links por id das
 fases 6 e 7, do tempo de protótipo, continuam valendo), `?level=pulo` (fase de desenvolvimento pelo id, ver
-`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?dogs=novo` (modelo novo das dogs, §7),
+`src/levels/dev.js`), `?play` (pula a tela inicial), `?dog=rhaenyra`, `?dogs=atual` (o modelo anterior das dogs; o novo é o padrão, §7),
 `?stage=<etapa>`
 (se o puzzle suportar), `?debug` (colisores e grafo), `?cam=x,y,z&look=x,y,z` (câmera fixa), `?nopost`
 (sem pós-processamento).

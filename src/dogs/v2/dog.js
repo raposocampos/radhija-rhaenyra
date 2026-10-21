@@ -35,14 +35,18 @@ import { createHeadAvoid } from './head.js';
 export const GROUND_TOLERANCE = 0.004;
 
 const cache = new Map();
-/** Malhas do modelo novo (uma vez por dog; vivem com a aplicação, como as do atual). */
+/**
+ * Malhas do modelo novo (uma vez por dog e número de cascas do pelo; vivem com a aplicação, como as do atual).
+ * `shells`: as cascas do pelo (10 no PC; menos no celular, quality.furShellsFor).
+ */
 export function buildDogGeometryV2(kind, { shells = 10 } = {}) {
-  if (cache.has(kind)) return cache.get(kind);
+  const key = `${kind}:${shells}`;
+  if (cache.has(key)) return cache.get(key);
   const P = paramsV2(kind);
   const design = buildDesignV2(P);
   const G = buildGeometryFromDesign(design, P, { shells, boneIndex: BONE_INDEX_V2, exactBounds: true });
   for (const g of [G.bodyGeo, G.earGeo, G.furGeo]) shareResource(g);
-  cache.set(kind, G);
+  cache.set(key, G);
   return G;
 }
 
@@ -50,9 +54,9 @@ export function buildDogGeometryV2(kind, { shells = 10 } = {}) {
  * @param {import('../../types').DogName} kind
  * @returns {import('../../types').DogModel & { model: 'v2', lowest: number, driver: { rig: any, inner: THREE.Group } }}
  */
-export function createDogV2(kind) {
+export function createDogV2(kind, { shells = 10 } = {}) {
   const cfg = DOG_CONFIG[kind];
-  const G = buildDogGeometryV2(kind);
+  const G = buildDogGeometryV2(kind, { shells });
   const { P, design } = G;
   const s = P.s;
 

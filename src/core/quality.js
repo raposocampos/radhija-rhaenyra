@@ -47,6 +47,14 @@ export const QUALITY_MODES = ['auto', 'alta', 'media', 'baixa'];
 export const MOBILE_LADDER = ['media', 'baixa', 'minima'];
 /** Teto de quadros por segundo no celular/tablet (telas de 90/120 Hz desenhariam o dobro e esquentariam). */
 export const MOBILE_FPS_CAP = 60;
+/**
+ * Cascas do pelo das dogs (modelo novo): no PC as 10 de sempre; no celular e no tablet, 6 (o mesmo comprimento de pelo,
+ * em menos camadas transparentes: 40% menos malha de pelo e menos pintura por cima do corpo). Escolhidas uma vez, na
+ * criação das dogs (main.js).
+ */
+export const MOBILE_FUR_SHELLS = 6;
+/** @param {DeviceKind} device */
+export const furShellsFor = (device) => (device === 'desktop' ? 10 : MOBILE_FUR_SHELLS);
 
 /**
  * Aparelho a partir das mídias do navegador. Notebook com tela de toque continua 'desktop' (o ponteiro principal é o

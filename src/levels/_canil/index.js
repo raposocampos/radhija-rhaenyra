@@ -1,6 +1,6 @@
 // CANIL DAS DOGS (fase de desenvolvimento, fora do menu) — DEFINIÇÃO. Abra com ?level=canil&play.
 // Bancada da troca dos modelos das cachorrinhas: a vitrine mostra o modelo atual e o novo (src/dogs/v2/) lado a lado
-// em todas as poses. Para jogar qualquer fase com o modelo novo: ?level=1&play&dogs=novo.
+// em todas as poses. O modelo novo é o padrão das fases; para jogar com o anterior: ?level=1&play&dogs=atual.
 // Fica no pacote de desenvolvimento (dev.js), por isso o build é direto.
 import layout from './layout.js';
 import { createPuzzle } from './puzzle.js';

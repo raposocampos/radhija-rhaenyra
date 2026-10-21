@@ -171,6 +171,66 @@ function createMudPrints(scene) {
   };
 }
 
+/**
+ * Poças do xixi agachada (parada por muito tempo, game/idle.js, dog:pee; piscina fixa): uma mancha molhada e discreta
+ * que espalha em menos de um segundo e seca devagar.
+ */
+function createPuddles(scene) {
+  const N = 4;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const g = cv.getContext('2d');
+  if (g) {
+    const grad = g.createRadialGradient(32, 32, 3, 32, 32, 31);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.65, 'rgba(255,255,255,0.8)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const pool = [];
+  for (let i = 0; i < N; i++) {
+    const mat = new THREE.MeshBasicMaterial({ map: tex, color: '#6b5a1e', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const m = new THREE.Mesh(geo, mat);
+    m.visible = false;
+    m.renderOrder = 2;
+    m.name = 'fx-poca';
+    scene.add(m);
+    pool.push({ m, mat, age: 0, w: 0.16, d: 0.12 });
+  }
+  let cursor = 0;
+  const LIFE = 9;
+  return {
+    /** Uma poça em (x, z), alongada no rumo `yaw`. */
+    add(x, z, yaw = 0) {
+      const p = pool[cursor];
+      cursor = (cursor + 1) % N;
+      p.m.position.set(x, 0.012, z);
+      p.m.rotation.y = yaw;
+      p.w = 0.15 + Math.random() * 0.04;
+      p.d = 0.11 + Math.random() * 0.03;
+      p.age = 0;
+      p.m.scale.set(0.01, 1, 0.01);
+      p.m.visible = true;
+    },
+    update(dt) {
+      for (const p of pool) {
+        if (!p.m.visible) continue;
+        p.age += dt;
+        const k = p.age / LIFE;
+        if (k >= 1) { p.m.visible = false; continue; }
+        const grow = Math.min(1, p.age / 0.8);
+        const e = 1 - (1 - grow) * (1 - grow);
+        p.m.scale.set(p.d * e, 1, p.w * e);
+        p.mat.opacity = 0.32 * (1 - Math.max(0, (k - 0.45) / 0.55));
+      }
+    },
+    clear() { for (const p of pool) p.m.visible = false; },
+  };
+}
+
 const MUD_COLORS = ['#5a3d26', '#4a3020', '#6b4a2e'];
 const PAW_BONES = ['FLp', 'FRp', 'HLp', 'HRp'];
 
@@ -324,6 +384,7 @@ export function createFeedback(opts) {
   let lastRevealFx = -10;
 
   const prints = createMudPrints(scene);
+  const puddles = createPuddles(scene);
   /** Brilho de limpinha de cada dog: começo (s) do brilho; some em ~3 s. */
   const shine = { radhija: -10, rhaenyra: -10 };
   function resetFx() {
@@ -331,6 +392,7 @@ export function createFeedback(opts) {
     trails.length = 0;
     glowItem = null;
     prints.clear();
+    puddles.clear();
     for (const n of Object.keys(shine)) { shine[n] = -10; dogs[n]?.setShine?.(0); }
     lastCrate = null;
     particles.clear?.();
@@ -596,6 +658,7 @@ export function createFeedback(opts) {
     particles.dust({ x, y: 0.04, z }, { count: 6, size: 0.7, alpha: 0.6, dir: { x: dirX, z: dirZ }, strength: 1.2, spread: 0.06, color });
   });
   events.on('extra:sniff', ({ x, z }) => sfx('extraSniff', x, z));
+  events.on('dog:sniff', ({ x, z }) => sfx('extraSniff', x, z)); // cheirando a poça (idle.js)
   events.on('extra:sneeze', ({ x, y = 0.35, z, color = '#FFD36B' }) => {
     sfx('extraSneeze', x, z);
     particles.dust({ x, y, z }, { count: 8, size: 0.7, alpha: 0.55, strength: 0.8, spread: 0.06, color: '#F7F3EA' });
@@ -816,6 +879,8 @@ export function createFeedback(opts) {
     particles.dust({ x, y: y > 0 ? y : 0.3, z }, { count: 5, size: 1.0, alpha: 0.45, color: '#A8E07A', dir: { x: dirX, z: dirZ }, strength: 0.7 });
   });
   events.on('dog:yuck', ({ x, z }) => sfx('yuck', x, z));
+  // parada por muito tempo: o xixi agachada deixa uma poça discreta que seca (game/idle.js)
+  events.on('dog:pee', ({ name, x, z }) => puddles.add(x, z, dogs[name]?.object.rotation.y ?? 0));
   // pombo: y = altura de onde ele sai (padrão: poleiro); do chão, um voo curto (pigeonHop)
   events.on('pigeon:flee', ({ x, z, y = 1.3 }) => {
     sfx(y < 0.6 ? 'pigeonHop' : 'pigeonFlee', x, z);
@@ -1293,7 +1358,10 @@ export function createFeedback(opts) {
     }
 
     // pegadas de barro (congeladas na pausa) e brilho de limpinha sumindo
-    if (state !== 'paused') prints.update(dt);
+    if (state !== 'paused') {
+      prints.update(dt);
+      puddles.update(dt);
+    }
     for (const n of Object.keys(shine)) {
       const age = time - shine[n];
       if (age > 4) continue;
