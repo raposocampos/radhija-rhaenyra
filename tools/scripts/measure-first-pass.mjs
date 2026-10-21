@@ -30,14 +30,27 @@ const RETURN_FRAMES = 30; // volta ao início entre as passagens (não entra nas
 // sem nada novo no renderer). Não é a primeira vez numa área, e o jogador também não sai andando antes da cortina abrir.
 const SETTLE_MS = Number(process.env.FIRST_PASS_SETTLE_MS || 3000);
 const LEVELS = (process.env.FIRST_PASS_LEVELS || '1,2,3,4,5,6,7,8,9,10').split(',').map((s) => s.trim()).filter(Boolean);
-const QUALITIES = (process.env.FIRST_PASS_QUALITY || 'alta,media').split(',').map((s) => s.trim()).filter(Boolean);
+const QUALITIES = (process.env.FIRST_PASS_QUALITY || 'alta,celular-media,celular-baixa').split(',').map((s) => s.trim()).filter(Boolean);
+// Aparelhos: o PC (480×270 para caber no tempo do job; o programa não depende do tamanho) e os celulares-alvo emulados
+// (toque, sem mouse, tela de celular: o jogo escolhe o perfil e o pelo do celular), com o perfil fixo para o governador
+// de FPS não descer sozinho no SwiftShader lento. iPhone 13: 844×390, DPR 3, 'media'. Infinix Note 30 5G (Mali-G57,
+// começa no 'baixa'): 893×393, DPR 2,75.
+const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+const touchDevice = (w, h, dpr) => ({ viewport: { width: w, height: h }, screen: { width: w, height: h }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true, userAgent: MOBILE_UA });
+const DEVICES = {
+  alta: { level: 'alta', page: { viewport: VIEWPORT, deviceScaleFactor: 1 } },
+  media: { level: 'media', page: { viewport: VIEWPORT, deviceScaleFactor: 1 } },
+  baixa: { level: 'baixa', page: { viewport: VIEWPORT, deviceScaleFactor: 1 } },
+  'celular-media': { level: 'media', page: touchDevice(844, 390, 3), as: 'iPhone 13' },
+  'celular-baixa': { level: 'baixa', page: touchDevice(893, 393, 2.75), as: 'Infinix Note 30 5G' },
+};
 const DOGS = process.env.FIRST_PASS_DOGS || '';
 const STRICT = process.env.FIRST_PASS_STRICT !== '0';
 const EXCESS_MS = Number(process.env.FIRST_PASS_EXCESS_MS || 150);
 const EXCESS_REL = Number(process.env.FIRST_PASS_EXCESS_REL || 0.35);
 const MAX_PEAKS = Number(process.env.FIRST_PASS_MAX_PEAKS || 0);
 for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
-for (const q of QUALITIES) if (!/^(alta|media|baixa)$/.test(q)) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
+for (const q of QUALITIES) if (!DEVICES[q]) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
@@ -265,7 +278,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
     level: game.levelDef.id, state: game.state, active, tour: tour.map((n) => n.id),
     load: fp.load,
     after: { programs: renderer.info.programs.length, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries },
-    quality: { ...engine.qualityState, buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled && engine.sun.castShadow,
+    quality: { ...engine.qualityState, device: engine.quality.device, buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled && engine.sun.castShadow,
       shadowType: renderer.shadowMap.type, shadowSize: engine.sun.shadow.mapSize.x, bloom: engine.bloom.enabled,
       renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
     passes: [pass1, pass2], back, events, news, seenAtStart, appeared,
@@ -308,12 +321,12 @@ try {
       browser = await chromium.launch(options);
       const errors = [];
       try {
-        const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+        const page = await browser.newPage(DEVICES[quality].page);
         page.on('console', (m) => { if (m.type() === 'error') errors.push(`console.error: ${m.text()}`); });
         page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
         page.on('crash', () => errors.push('page crashed'));
         page.on('response', (r) => { if (r.status() >= 400) errors.push(`HTTP ${r.status()}: ${r.url()}`); });
-        await page.addInitScript(pageSetup, { quality });
+        await page.addInitScript(pageSetup, { quality: DEVICES[quality].level });
         const url = `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
         await page.goto(url, { waitUntil: 'load', timeout: 180000 });
         await page.waitForFunction(() => window.__firstPass && window.__game?.game.state === 'playing', null, { timeout: 180000 });
@@ -348,6 +361,9 @@ try {
             geometries: sum(p1, 'geometries') + sum(run.back, 'geometries') + sum(p2, 'geometries'),
             programsSecondPass: sum(p2, 'programs'), texturesSecondPass: sum(p2, 'textures'),
           },
+          // trabalho de compilação que não depende do aparelho: todos os programas criados até ver a fase inteira
+          programsTotal: run.load.programs + sum(p1, 'programs') + sum(run.back, 'programs') + sum(p2, 'programs') + sum(run.events, 'programs'),
+          device: run.quality.device, buffer: run.quality.buffer, as: DEVICES[quality].as || 'PC',
           events: { programs: sum(run.events, 'programs'), textures: sum(run.events, 'textures'), geometries: sum(run.events, 'geometries'),
             max: Math.max(...run.events.map((f) => f.ms)) },
           first: stats(p1), second: stats(p2),
@@ -366,6 +382,10 @@ try {
           + `2ª máx ${summary.second.max} ms (p95 ${summary.second.p95}); excesso máx ${summary.excess.max} ms, ${summary.peaks.length} picos`
           + (summary.peaks.length ? ` (${summary.peaks.slice(0, 6).map((k) => `${k.frame}@${k.node} ${k.firstMs}/${k.secondMs}`).join(', ')})` : ''));
         for (const e of errors) report.errors.push(`${label}: ${e}`);
+        const want = DEVICES[quality];
+        if (run.quality.level !== want.level || (want.as && run.quality.device !== 'phone') || (!want.as && run.quality.device !== 'desktop')) {
+          fail(`${label}: aparelho ou perfil errado (${run.quality.device}/${run.quality.level})`);
+        }
         if (run.state !== 'playing' && run.state !== 'celebrate' && run.state !== 'victory') fail(`${label}: estado inesperado ${run.state}`);
         if (STRICT) {
           if (summary.afterLoad.programs > 0) fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
@@ -392,15 +412,15 @@ try {
   await new Promise((done) => server.close(done));
   report.passed = report.errors.length === 0 && report.failures.length === 0 && report.runs.length === LEVELS.length * QUALITIES.length;
   await save();
-  const rows = report.runs.map((r) => `| ${r.label} | ${r.load.programs} | ${r.load.levelMs ?? '–'} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
+  const rows = report.runs.map((r) => `| ${r.label} (${r.as}, ${r.buffer.join('×')}) | ${r.programsTotal} | ${r.load.programs} | ${r.load.levelMs ?? '–'} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
     + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.peaks.length} |`);
   const md = [
     `## Primeira passagem pelas áreas${report.commit ? ` — \`${report.commit.slice(0, 7)}\`` : ''}`,
     '',
     `${report.passed ? '✅ Aprovada' : '❌ Reprovada'} · ${VIEWPORT.width}×${VIEWPORT.height}, passo de ${(DT * 1000).toFixed(1)} ms, dogs: ${DOGS || 'padrão'} · SwiftShader (os ms não são de um aparelho; as contagens são exatas)`,
     '',
-    '| Fase/qualidade | Programas na carga | Carga (ms) | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Picos |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Fase/qualidade | Programas no total | Programas na carga | Carga (ms) | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Picos |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...rows,
     '',
     ...report.failures.map((f) => `- ❌ ${f}`),

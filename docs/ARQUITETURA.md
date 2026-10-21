@@ -1007,12 +1007,14 @@ correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard
 resta página protegida aberta, e uma página nova o religa.
 
 **Primeira passagem pelas áreas** (suíte `primeira-passagem` do E2E manual, também em `todas`;
-`tools/scripts/measure-first-pass.mjs`, um job por fase e qualidade): cada fase abre com `?play` num navegador novo
-(nada compilado antes), com a qualidade do PC (`alta`) ou a do celular (`media`), e a dog ativa vai de nó em nó da navegação
+`tools/scripts/measure-first-pass.mjs`, um job por fase e aparelho): cada fase abre com `?play` num navegador novo
+(nada compilado antes, sem o cache de shaders em disco), no PC (`alta`, 480×270) ou num celular-alvo emulado (toque e
+tela de celular, pelo do celular: iPhone 13 em `media`, 844×390; Infinix Note 30 em `baixa`, 893×393; a entrada
+`qualidades` do workflow escolhe), e a dog ativa vai de nó em nó da navegação
 (`NAV_NODES`, do mais perto ao mais longe) com a câmera seguindo, duas vezes pelo mesmo caminho; depois, um superbafo.
 A página de medição fica 3 s parada depois da carga (no runner, o navegador ainda trabalha em segundo plano: os
 quadros saíam ~30% mais caros por alguns segundos, sem nada novo no renderer) e depois dá os quadros (passo fixo de
-1/30 s, 480×270); cada um espera a GPU lendo um pixel da tela (o
+1/30 s); cada um espera a GPU lendo um pixel da tela (o
 `gl.finish()` do Chromium não espera: os quadros se enfileiravam e o tempo saía em degraus de 5 e 600 ms), então a 1ª e a
 2ª passagem se comparam quadro a quadro. Reprova se, depois da carga, o renderer compilar um programa ou receber uma
 textura ou geometria (o relatório diz em que nó e de qual material) ou se houver um pico: um quadro da 1ª passagem

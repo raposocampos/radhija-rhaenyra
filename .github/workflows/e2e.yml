@@ -8,6 +8,10 @@ on:
         type: choice
         default: todas
         options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento, primeira-passagem]
+      qualidades:
+        description: 'Primeira passagem: aparelhos (lista JSON entre alta, celular-media e celular-baixa)'
+        type: string
+        default: '["alta","celular-media","celular-baixa"]'
 
 permissions:
   contents: read
@@ -133,7 +137,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
   # Primeira passagem pelas áreas (tools/scripts/measure-first-pass.mjs): cada fase num navegador novo, com a
-  # qualidade do PC (alta) e a do celular (media), um job para cada; a câmera percorre os nós de navegação duas vezes.
+  # qualidade do PC (alta) e os celulares-alvo emulados (iPhone 13 em media, Infinix Note 30 em baixa), um job para
+  # cada; a câmera percorre os nós de navegação duas vezes.
   # Reprova se a GPU ainda compilar programa ou receber textura ou geometria depois da carga, ou se um quadro da 1ª
   # passagem custar muito mais que o mesmo quadro da 2ª (o engasgo da primeira vez numa área nova).
   primeira-passagem:
@@ -145,7 +150,7 @@ jobs:
       fail-fast: false
       matrix:
         fase: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        qualidade: [alta, media]
+        qualidade: ${{ fromJSON(inputs.qualidades || '["alta","celular-media","celular-baixa"]') }}
     env:
       CI: 'true'
     steps:
