@@ -1,11 +1,11 @@
 {
-  "version": "0.10.8",
-  "build": 100,
+  "version": "0.10.9",
+  "build": 101,
   "pr": null,
-  "label": "v0.10.8 · build 100",
-  "commit": "54a7116851e1a77660ee163330db1ec3e1f84330",
-  "head": "54a7116851e1a77660ee163330db1ec3e1f84330",
+  "label": "v0.10.9 · build 101",
+  "commit": "401f01a57896ecc5fed5d1adba6ae2f186f64980",
+  "head": "401f01a57896ecc5fed5d1adba6ae2f186f64980",
   "base": null,
-  "run": "39539772680",
+  "run": "39547910080",
   "attempt": "1"
 }
