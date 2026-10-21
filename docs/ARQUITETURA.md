@@ -99,8 +99,9 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 7. Posiciona as dogs e aplica `?stage=` (só no carregamento inicial).
 8. Aquece a GPU com a fase inteira, ainda atrás da cortina (`engine.prepare()`, `src/core/engine.js`): compila os
    programas de toda a cena na variante em que o jogo desenha (no alvo do compositor, sem tone mapping; sem pós, com
-   ele), desenha uma vez tudo o que existe — fora da câmera e escondido também — num alvo de 16×16 (texturas,
-   geometrias e os programas da sombra vão para a GPU) e um quadro normal, e espera a GPU terminar (fence: o WebGL só
+   ele), desenha uma vez tudo o que existe — fora da câmera e escondido também — de uma vista geral da fase, num alvo
+   de 256×144 (texturas, geometrias e os programas da sombra vão para a GPU; com quase tudo cobrindo algum pixel, também
+   o que a GPU só prepara ao pintar, como no SwiftShader do CI) e um quadro normal, e espera a GPU terminar (fence: o WebGL só
    enfileira, e o resto cairia no primeiro quadro visível). Sem isso, cada área engasgava na primeira vez que entrava
    na câmera. Marcas `rr:gpu:compiled`, `rr:gpu:drawn` e `rr:gpu:idle` separam as etapas. Trocar o perfil de qualidade (tipo de sombra, compositor) recompila a fase em segundo
    plano. Coisas que só nascem num evento precisam existir escondidas desde a carga (a bolha `cheiro-aquecimento` do

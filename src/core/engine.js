@@ -207,6 +207,8 @@ export function createEngine(container, { params } = {}) {
   }
 
   let lighting = LIGHTING_DEFAULT;
+  /** Limites da fase atual (aplicados com a iluminação): a vista geral do aquecimento enquadra a fase. */
+  let levelBounds = null;
   let lightCastsShadow = true; // a fase quer sombra do sol (o perfil de qualidade pode desligar)
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
@@ -236,7 +238,10 @@ export function createEngine(container, { params } = {}) {
     bloom.strength = L.bloom.strength;
     bloom.radius = L.bloom.radius;
     bloom.threshold = L.bloom.threshold;
-    if (bounds) fitShadow(bounds);
+    if (bounds) {
+      levelBounds = bounds;
+      fitShadow(bounds);
+    }
     rebuildEnv(L);
   }
   applyLighting(LIGHTING_DEFAULT, { minX: -6, maxX: 6.8, minZ: -4.8, maxZ: 4.5 });
@@ -268,10 +273,27 @@ export function createEngine(container, { params } = {}) {
   // cada área nova. O programa depende de para onde se desenha: no alvo do compositor, sem tone mapping e em espaço
   // linear; direto na tela (sem pós), com os dois. Por isso compilar sem alvo não basta quando há compositor: a
   // variante do jogo ficava para o primeiro quadro em que cada coisa entrava na câmera.
+  // O desenho do aquecimento é uma vista geral da fase, num alvo pequeno: com quase tudo cobrindo algum pixel, também
+  // fica pronto o que a GPU só prepara ao pintar de verdade (no SwiftShader do CI, a pintura e a leitura de cada textura).
+  const WARM_W = 256, WARM_H = 144;
+  const warmCam = new THREE.PerspectiveCamera(38, WARM_W / WARM_H, 0.1, 400);
   /** Alvo do mesmo tipo do compositor (o programa não depende do tamanho), ou null quando se desenha na tela. */
   const warmTarget = () => (usePost && profile.post
-    ? new THREE.WebGLRenderTarget(16, 16, { type: THREE.HalfFloatType, samples: profile.msaa })
+    ? new THREE.WebGLRenderTarget(WARM_W, WARM_H, { type: THREE.HalfFloatType, samples: profile.msaa })
     : null);
+  /** Câmera alta, de frente e um pouco de lado, enquadrando os limites da fase (sem limites: a câmera do jogo). */
+  function overview() {
+    const b = levelBounds;
+    if (!b) return camera;
+    const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
+    const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+    warmCam.fov = camera.fov;
+    warmCam.position.set(cx + span * 0.3, span * 0.85, cz + span * 0.9);
+    warmCam.lookAt(cx, 0, cz);
+    warmCam.updateProjectionMatrix();
+    warmCam.updateMatrixWorld();
+    return warmCam;
+  }
   /** Compila os programas de toda a cena, inclusive do que está escondido, na variante de agora. */
   function compileScene(target) {
     const prev = renderer.getRenderTarget();
@@ -283,9 +305,9 @@ export function createEngine(container, { params } = {}) {
     }
   }
   /**
-   * Desenha a cena INTEIRA uma vez (sem o recorte pela câmera e com o que ainda está escondido), num alvo pequeno
-   * ou num pixel da tela: envia texturas e geometrias e prepara os programas da sombra. As luzes ficam como estão (a
-   * quantidade de luzes faz parte do programa).
+   * Desenha a cena INTEIRA uma vez, da vista geral (sem o recorte pela câmera e com o que ainda está escondido), num
+   * alvo pequeno ou num canto da tela: envia texturas e geometrias e prepara os programas da sombra. As luzes ficam
+   * como estão (a quantidade de luzes faz parte do programa).
    */
   function drawEverything(target) {
     const lights = new Set();
@@ -313,11 +335,12 @@ export function createEngine(container, { params } = {}) {
     try {
       renderer.setRenderTarget(target);
       if (!target) {
-        renderer.setViewport(0, 0, 1, 1);
-        renderer.setScissor(0, 0, 1, 1);
+        // na tela, só um canto (o quadro normal logo depois cobre tudo)
+        renderer.setViewport(0, 0, WARM_W, WARM_H);
+        renderer.setScissor(0, 0, WARM_W, WARM_H);
         renderer.setScissorTest(true);
       }
-      renderer.render(scene, camera);
+      renderer.render(scene, overview());
     } finally {
       for (const [o, visible, culled] of changed) { o.visible = visible; o.frustumCulled = culled; }
       if (!target) {
