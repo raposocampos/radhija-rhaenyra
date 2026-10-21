@@ -9,7 +9,8 @@
 //   · indo embora, tudo volta devagar (só se o que voltar não entrar em nada).
 // Contam os colisores que seguram a dog (porte, portões, bichos, caixotes), mais altos que a cabeça; água, áreas da IA e
 // a coisa em que ela está de propósito (subindo o escorregador, no balde) não. Desligada nas poses em que a cabeça vai
-// de propósito até a coisa (empurrão em pé, parede, empurrando de pé, extras, Lambe-Lambe, rolando).
+// de propósito até a coisa (empurrão em pé, parede, empurrando de pé, extras, Lambe-Lambe, rolando, indo morder a
+// corda ou apertar o botão: anim.reach).
 import * as THREE from 'three';
 import { penCollider } from '../../game/collision.js';
 
@@ -148,7 +149,7 @@ export function createHeadAvoid({ skel2, retarget, design, s, hs, cfg }) {
     }
     st.px = ox;
     st.pz = oz;
-    const off = !world || (A.shoveK || 0) > 0 || (A.wallK ?? -1) >= 0 || (A.pushGap || 0) > 0 || !!A.extra
+    const off = !world || (A.shoveK || 0) > 0 || (A.wallK ?? -1) >= 0 || (A.pushGap || 0) > 0 || !!A.extra || !!A.reach
       || A.action === 'lick' || A.action === 'licked' || A.action === 'shove' || A.action === 'wallJump';
     st.w += ((off ? 0 : 1) - st.w) * (1 - Math.exp(-(off ? 10 : 6) * dt));
     if (off && st.w < 0.01) st.w = 0;

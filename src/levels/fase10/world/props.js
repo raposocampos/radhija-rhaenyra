@@ -482,6 +482,10 @@ export function buildProps({ root, layout, house, porch, yard, fences, treehouse
       object: sty.generator.object,
       setPull: (k) => sty.generator.setPull(k),
       setState(state) { st.boardPower = state === 'on'; sty.generator.setState(state); },
+      setGrip: (src) => sty.generator.setGrip(src),
+      bitePoint: () => sty.generator.bitePoint(),
+      anchor: sty.generator.anchor,
+      handle: sty.generator.handle,
     },
     /** Os cabos da caixinha de força do galpão (pulso até a porta ou até a porteira). */
     shedLinks: sty.links,

@@ -89,7 +89,10 @@ export function stubFase1Props(root, layout) {
   /** @satisfies {import('../../src/types').Fase1Props} */
   const props = {
     gate: gate(root, 'fase1.gate'),
-    rope: checked('fase1.rope', { object: object(root, 'rope'), setTug(t) {} }),
+    rope: checked('fase1.rope', {
+      object: object(root, 'rope'), setTug(t) {}, setGrip(src) {},
+      bitePoint() { return { x: layout.ROPE.anchor.x + 0.03, y: layout.ROPE.anchor.y - 0.41, z: layout.ROPE.anchor.z }; },
+    }),
     cart: checked('fase1.cart', { object: object(root, 'cart'), setX(x) {} }),
     carrot: item(root, 'carrot', layout.CARROT),
     door: highlight(root, 'fase1.door'),
@@ -418,7 +421,11 @@ export function stubFase10Props(root, layout) {
     fan: checked('fase10.fan', { object: object(root, 'fan'), power: false, setPower(on) { this.power = on; } }),
     power: checked('fase10.power', { on: false, stage: /** @type {'off' | 'house' | 'painting' | 'porch' | 'on'} */ ('off'), setOn(on) { this.on = on; this.stage = on ? 'on' : 'off'; } }),
     gate: gate(root, 'fase10.gate'),
-    cord: checked('fase10.cord', { tug: 0, setTug(k) { this.tug = k; } }),
+    cord: checked('fase10.cord', {
+      tug: 0, setTug(k) { this.tug = k; }, setGrip(src) {},
+      bitePoint() { return { x: layout.CORD.x, y: 0.49, z: layout.CORD.z }; },
+      anchor: { x: layout.BACK_FENCE.x - 0.05, y: layout.BACK_FENCE.h + 0.13, z: layout.BACK_FENCE.gate.z0 - 0.05 },
+    }),
     pigeon: checked('fase10.pigeon', { object: object(root, 'pigeon'), pose: null, pecks: 0, setPose(p) { this.pose = { ...p }; }, peck() { this.pecks++; } }),
     tube: checked('fase10.tube', { object: object(root, 'tube'), puffs: [], setPuffs(list) { this.puffs = list; } }),
     bucket: checked('fase10.bucket', { object: object(root, 'bucket'), y: 0, tilt: 1, setY(y) { this.y = y; }, setTilt(k) { this.tilt = k; } }),
@@ -426,7 +433,11 @@ export function stubFase10Props(root, layout) {
     shedDoor: gate(root, 'fase10.shedDoor'),
     shedButtons: [wallButton(root, 'fase10.shedButton1'), wallButton(root, 'fase10.shedButton2')],
     shedLinks: { door: link('fase10.shedLinks.door'), gate: link('fase10.shedLinks.gate') },
-    generator: checked('fase10.generator', { object: object(root, 'gerador'), pull: 0, state: 'off', setPull(k) { this.pull = k; }, setState(s) { this.state = s; } }),
+    generator: checked('fase10.generator', {
+      object: object(root, 'gerador'), pull: 0, state: 'off', setPull(k) { this.pull = k; }, setState(s) { this.state = s; }, setGrip(src) {},
+      bitePoint() { return { ...layout.GENERATOR.cord }; },
+      anchor: { x: layout.GENERATOR.x + layout.GENERATOR.hx - 0.02, y: layout.GENERATOR.cord.y - 0.06, z: layout.GENERATOR.z },
+    }),
     styGate: gate(root, 'fase10.styGate'),
     crates: checked('fase10.crates', { list: layout.PANTRY_CRATES.list.map(() => ({ x: layout.PANTRY_CRATES.x0, locked: false })), setCrate(i, x, locked) { this.list[i] = { x, locked }; } }),
     pinata: checked('fase10.pinata', { pos: null, cracks: 0, open: false, setPos(x, y, z, tx, tz) { this.pos = { x, y, z }; }, setCracks(n) { this.cracks = n; }, burst() { this.open = true; }, reset() { this.cracks = 0; this.open = false; } }),

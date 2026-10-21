@@ -137,9 +137,18 @@ try {
   await walkPath([[2.8, -1.6], [4.5, -1.2], [L.CORD.x - 0.43, L.CORD.z - 0.06, { tol: 0.08 }]], { tol: 0.15 });
   await H.hold(keysFor(1, 0), 80);
   await page.keyboard.press('KeyE');
-  state = await waitFor((s) => s.quintal.gateOpen, { timeout: 2000 });
-  check(qt(state).gateOpen, 'a outra puxa a cordinha: o portãozinho abre');
-  await H.gsleep(700); // termina de puxar
+  // ela anda até a cordinha e morde; puxando de ré (para longe da cerca), o portãozinho vem junto, para o quintal
+  state = await waitFor((s) => s.quintal.cord.phase === 'hold', { timeout: 2500 });
+  check(qt(state).cord.phase === 'hold', 'a outra morde a cordinha e segura', JSON.stringify({
+    cord: qt(state).cord, dog: state.dogs[state.activeDog], active: state.activeDog, prompt: state.prompt, goose: qt(state).goose,
+    hints: (await logOf('hint')).map((x) => x.text), tug: (await logOf('rope:tug')).length,
+  }));
+  state = await H.holdUntil(keysFor(-1, 0), (s) => s.quintal.gate.t > 0.15, { timeout: 2500 });
+  check(qt(state).gate.t > 0.15 && !qt(state).gateOpen, 'puxando de ré, o portãozinho vem junto (para o quintal)', JSON.stringify(qt(state).gate));
+  await shot('05b-cordinha-na-boca.png'); // o puxador na boca, no meio do puxão
+  state = await H.holdUntil(keysFor(-1, 0), (s) => s.quintal.gateOpen, { timeout: 3000 });
+  check(qt(state).gateOpen, 'puxou o bastante: o portãozinho abre');
+  await H.gsleep(900); // termina de abrir
   await put('radhija', L.TUBE.inlet.x, L.TUBE.inlet.z + 0.85, Math.PI);
   await clearLog();
   await H.hold(['KeyR'], 350);
@@ -214,9 +223,20 @@ try {
   await as('rhaenyra');
   await put('rhaenyra', L.GENERATOR.cord.x + 0.3, L.GENERATOR.cord.z, -Math.PI / 2);
   await clearLog();
-  await page.keyboard.press('KeyE');
-  state = await waitFor((s) => s.quintal.generator.on, { timeout: 4000 });
-  check(qt(state).generator.on && (await logOf('generator:crank')).length === 1, 'a Rhaenyra puxa a cordinha: o gerador engasga e pega (o painel acende)');
+  // dois puxões: ela anda até a alça, morde e puxa de ré (para longe do gerador); o primeiro engasga, o segundo pega
+  for (const n of [1, 2]) {
+    await page.keyboard.press('KeyE');
+    state = await waitFor((s) => s.quintal.generator.phase === 'hold', { timeout: 2500 });
+    check(qt(state).generator.phase === 'hold', `a Rhaenyra morde a alça (${n}º puxão)`);
+    state = await H.holdUntil(keysFor(1, 0), (s, a) => s.quintal.generator.pulls >= a, { timeout: 2500, arg: n });
+    check(qt(state).generator.pulls === n, `puxou de ré (${n}º puxão)`);
+    if (n === 1) {
+      state = await waitFor((s) => !s.quintal.generator.pulling, { timeout: 2500 });
+      check(!qt(state).generator.on, 'no primeiro puxão, o motor engasga e não pega');
+    }
+  }
+  state = await waitFor((s) => s.quintal.generator.on, { timeout: 3000 });
+  check(qt(state).generator.on && (await logOf('generator:crank')).length === 2, 'no segundo puxão, o gerador pega (o painel acende)');
   state = await wallJump(L.SHED_BUTTONS[0]);
   state = await waitFor((s) => s.quintal.doorOpen, { timeout: 2500 });
   check(qt(state).doorOpen && !qt(state).shed.sty, 'impulso no botão alto do painel: a porta basculante do galpão sobe (o chiqueiro fica fechado)');

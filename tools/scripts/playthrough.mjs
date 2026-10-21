@@ -47,9 +47,16 @@ async function fullRun() {
   check(i.dogs.rhaenyra.sitting, 'Rhaenyra senta enquanto espera', i.dogs.rhaenyra.action);
   await shot('13-rhaenyra-esperando-portao.png');
   await page.keyboard.press('KeyE');
-  i = await waitFor((s) => s.dogs.radhija.action === 'tug', { timeout: 1000, step: 30 });
-  check(i.dogs.radhija.action === 'tug', 'Radhija puxa a cordinha (action tug)', i.dogs.radhija.action);
-  await sleep(700);
+  // ela anda até a cordinha, morde e segura; o jogador puxa de ré (para longe do portão) e o portão vem junto
+  i = await waitFor((s) => s.rope.phase === 'hold', { timeout: 2500, step: 30 });
+  check(i.rope.phase === 'hold' && i.dogs.radhija.action === 'tug', 'Radhija anda até a cordinha, morde e segura (action tug)', `${i.rope.phase} ${i.dogs.radhija.action}`);
+  await shot('13b-cordinha-na-boca.png');
+  i = await holdUntil(['KeyD'], (s) => s.gate.t > 0.15, { timeout: 2500 });
+  check(i.gate.t > 0.15 && i.stage === 'east', 'puxando de ré, o portão vem junto', `t=${i.gate.t} ${i.stage}`);
+  await shot('13c-puxando-o-portao.png');
+  i = await holdUntil(['KeyD'], (s) => s.stage === 'gateOpen', { timeout: 3000 });
+  check(i.stage === 'gateOpen', 'puxou o bastante: ela solta e o portão termina de abrir', i.stage);
+  await sleep(400);
   await shot('14-plano-portao-abrindo.png');
   i = await waitFor((s) => s.stage === 'gateOpen' && s.gate.open, { timeout: 2500 });
   check(i.stage === 'gateOpen' && i.gate.open, 'portão aberto → etapa gateOpen', `t=${i.gate.t}`);

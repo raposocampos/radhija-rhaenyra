@@ -269,8 +269,12 @@ try {
   check(pg?.touch && !pg.kb && !pg.pad && pg.tg[0] === 'act', 'prompt mostra o ícone do botão Agir', pg);
   await shot('03-prompt-agir.png');
   await tap('.rr-tbtn--act');
+  // Agir: ela anda até a cordinha e morde; o joystick para longe do portão puxa de ré até ele abrir
+  i = await waitFor((x) => x.rope.phase === 'hold', { timeout: 6000 });
+  check(i.rope.phase === 'hold', 'Agir: ela morde a cordinha e segura', i.rope.phase);
+  await stickWalkTo(2.15, 0.65, { tol: 0.15 });
   i = await waitFor((x) => x.stage === 'gateOpen', { timeout: 6000 });
-  check(i.stage === 'gateOpen', 'Agir puxou a cordinha → portão aberto', i.stage);
+  check(i.stage === 'gateOpen', 'joystick puxou a cordinha → portão aberto', i.stage);
   check((await logOf('rope:tug')).length === 1, 'rope:tug uma vez');
   await stickWalkTo(2.4, 0.9);
   i = await waitFor((x) => x.dogs.rhaenyra.x > 1.05, { timeout: 8000 });

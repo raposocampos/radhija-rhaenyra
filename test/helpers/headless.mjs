@@ -57,6 +57,8 @@ export function stubDog(name) {
   object.name = name;
   const mouthSocket = new THREE.Group();
   mouthSocket.name = `${name}:boca`;
+  // na frente do focinho, como nos modelos (a corda na boca mede a distância dela até o que ela morde)
+  mouthSocket.position.set(0, 0.32, 0.32);
   object.add(mouthSocket);
   return {
     object,
@@ -106,7 +108,7 @@ function stubEngine() {
  *         levels (definições; padrão: src/levels/index.js),
  *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga) }
  */
-export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null } = {}) {
+export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null } = {}) {
   installBrowserStubs();
   const [{ createGame }, { events }, LV] = await Promise.all([
     import('../../src/game/game.js'),
@@ -115,7 +117,8 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   ]);
   const defs = headlessLevels(levels || LV.LEVELS);
   const engine = stubEngine();
-  const dogs = { radhija: stubDog('radhija'), rhaenyra: stubDog('rhaenyra') };
+  // makeDog(nome): as dogs de verdade (modelo atual ou novo), para conferir o que depende do desenho (a boca, as patas)
+  const dogs = { radhija: (makeDog || stubDog)('radhija'), rhaenyra: (makeDog || stubDog)('rhaenyra') };
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
   const params = new URLSearchParams(query);
   const game = createGame({ engine, dogs, levels: defs, params });
