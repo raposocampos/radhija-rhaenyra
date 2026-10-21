@@ -2,9 +2,10 @@
 // grande"): no navegador do CI, com um build servido aqui, mede o tempo de CPU de cada quadro com a Rhaenyra parada de
 // frente para o objeto, empurrando-o (Shift + direção) e andando sem empurrar, no carrinho (fase 1), no caixote
 // (fase 2) e no ventilador (fase 4). Por quadro: game.update, engine.render, a animação da dog (dogs.rhaenyra.update)
-// e os raios do three.js (Raycaster.intersectObjects: quantos e quanto tempo). Com --profile, o perfil de CPU (CDP)
+// e os raios do three.js (Raycaster.intersectObjects: quantos e quanto tempo). A Radhija segue a irmã, como no jogo (a
+// IA dela e a navegação entram na conta; com --fica, ela fica parada). Com --profile, o perfil de CPU (CDP)
 // enquanto ela empurra, somado por função (build sem minificar: os nomes ficam legíveis).
-//   node tools/scripts/measure-push.mjs --dist <pasta do build> --label <nome> [--queries "padrao,dogs=atual"] [--profile]
+//   node tools/scripts/measure-push.mjs --dist <pasta do build> --label <nome> [--queries "padrao,dogs=atual"] [--profile] [--fica]
 // Saída: shots/push/<label>/report.json e uma tabela no log. Só no CI (o PC do usuário fica livre).
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -18,6 +19,7 @@ const DIST = resolve(String(args.dist || 'dist'));
 const LABEL = String(args.label || 'build');
 const QUERIES = String(args.queries || 'padrao').split(',').map((q) => q.trim()).filter(Boolean);
 const PROFILE = !!args.profile;
+const STAY = !!args.fica;
 const OUT = resolve(`shots/push/${LABEL}`);
 const MOUNT = '/medir/';
 const VIEWPORT = { width: 800, height: 450 };
@@ -160,10 +162,10 @@ try {
         await page.goto(`${base}?level=${S.level}&play&dog=rhaenyra${extra}`, { waitUntil: 'load' });
         await page.waitForFunction(() => window.__game?.game?.state === 'playing' && !document.getElementById('loading'), null, { timeout: 180000 });
         await page.waitForTimeout(1500);
-        return page.evaluate(({ id, dir: d }) => {
+        return page.evaluate(({ id, dir: d, stay }) => {
           const g = window.__game.game;
           g.debug.idle?.setPee?.(false);
-          g.setStay?.('radhija', true);
+          if (stay) g.setStay?.('radhija', true);
           const W = g.debug.world;
           const col = W.getDynamic(id);
           if (!col) return { error: `sem o colisor ${id}` };
@@ -175,11 +177,17 @@ try {
             if (W.overlaps(x, z, c.r + 0.02, c.size)) continue;
             g.debug.teleport('rhaenyra', x, z);
             c.yaw = Math.atan2(dx, dz);
-            g.debug.teleport('radhija', x - dx * 1.2 + dz * 0.6, z - dz * 1.2 - dx * 0.6);
+            // a irmã atrás dela, um pouco para o lado (segue, como no jogo)
+            for (const [bx, bz] of [[-1.1, 0.5], [-1.1, -0.5], [-1.4, 0], [-0.6, 1.0], [-0.6, -1.0]]) {
+              const px = x + dx * bx + dz * bz, pz = z + dz * bx - dx * bz;
+              if (W.overlaps(px, pz, g.debug.ctrls.radhija.r + 0.02, 'small')) continue;
+              g.debug.teleport('radhija', px, pz);
+              break;
+            }
             return { dir: [dx, dz], col: { x: col.x, z: col.z } };
           }
           return { error: 'sem lugar para empurrar' };
-        }, { id: S.id, dir });
+        }, { id: S.id, dir, stay: STAY });
       };
       /** As teclas (relativas à câmera) para andar na direção do mundo (dx, dz). */
       const keysFor = (dx, dz) => page.evaluate(([x, z]) => {
