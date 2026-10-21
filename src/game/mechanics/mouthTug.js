@@ -254,8 +254,8 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
     pulled: () => (T?.phase === 'hold' ? T.pulled : 0),
     /** Quem está com a corda (ou null). */
     get who() { return T?.who ?? null; },
-    /** A dog está mordendo (com a corda na boca)? */
-    biting: () => !!T && (T.phase === 'grip' || T.phase === 'hold') && T.grip > 0.3,
+    /** A dog (`name`, ou quem está com a corda) está mordendo (com a corda na boca)? */
+    biting: (name = null) => !!T && (name == null || T.who === name) && (T.phase === 'grip' || T.phase === 'hold') && T.grip > 0.3,
     /** Esquece a tentativa que não mordeu (a fase já deu a dica). */
     clearMiss() {
       if (T?.phase === 'miss') T = null;
