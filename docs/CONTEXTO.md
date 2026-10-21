@@ -5,6 +5,37 @@ de pé, Radhija mais devagar e arrancada; 2º retorno: patas presas no pouso e a
 caminhas de pisar e o corpo nos empurrões; etapa 3, #46, #47 e #49 a #53 no main). Ler primeiro [AGENTS.md](../AGENTS.md)
 e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: irmã que segue sem loop quando não alcança a outra (Claude, branch `claude/irma-inalcancavel`, PR #57)
+
+- Retorno do usuário (2026-10-20): "quando estamos em um lugar parado em que a irmã não consegue alcançar, a
+  inteligência artificial dela fica bugada, andando em círculos ou com comportamentos estranhos em looping". A imagem
+  é da **despensa da fase 10** (os caixotes da escadinha na frente do armário alto), não da fase 5.
+- Causa: sem nenhum nó à vista da líder, `findPath` usava "os dois nós mais próximos" sem conferir o último trecho e
+  dava o alvo como alcançável; a companheira batia no obstáculo, a detecção de "presa" forçava o grafo, ela voltava
+  ao nó e tentava de novo. A despensa só tem um nó (`D_mid`) e os caixotes mudam de lugar.
+- Feito:
+  - `navigation.js`: `ctx.approach` (só a companheira seguindo a irmã) só dá como alcançável o que ela enxerga, com a
+    posição da irmã assentada no círculo dela (`settleGoal`). Onde o grafo não resolve (nenhum nó vê a irmã, ou ela
+    mesma isolada num cantinho), busca local em grade (`gridSearch`: 15 cm, até 7 m, cache por `worldKey`) acha o
+    caminho ou o lugar alcançável mais perto. Atrás de restrição do puzzle (portão, ponte, irrigador), espera no nó do
+    grafo, como antes (`playthrough.mjs` confere isso na fase 1). Arestas sem restrição que passam por dentro de um
+    dinâmico que não é bicho (caixote, ventilador, escada) saem do Dijkstra enquanto ele está lá (`edgeBlocked`).
+    O modo antigo (gansa, comemoração, testes) não mudou.
+  - `companion.js`: `watchProgress`. 3 s tentando sem chegar 0,2 m mais perto da irmã → `block` (espera no lugar
+    mais perto a que chegou); 1,2 s sem chegar ao ponto de espera → `settle` (espera onde está). Os dois se desfazem
+    quando a irmã sai 0,5 m do lugar ou a `worldKey` muda; bicho no caminho → tenta de novo em 2,5 s. Pontos da
+    grade (`id: 'grade'`) chegam a 15 cm antes de largar.
+- Testes: `test/companheira.test.mjs` (casos do retorno e sorteio com semente em todas as fases e arenas: na janela
+  final, ≤ 0,45 m andados e ≤ 1 rad de giro); `test/navegacao.test.mjs` (nós livres e plano da companheira sem
+  atravessar os colisores dos puzzles; achados: ventilador da fase 9 em `J_mid–J_south`, trilho do ventilador da
+  arena do bafo em `W_fan–W_mid`).
+- Validação: CI `39530112422` (1º commit): testes da companheira verdes, 2 falhas do teste novo do grafo, corrigidas
+  no 2º commit. Reprodução: CI `39530573875` rodou só `companheira.test.mjs` sobre o código antigo (branch temporário,
+  já apagado): 4 casos falham com o loop (despensa: 7,1 m andados e 33 rad de giro em 5 s, 0,47 m de deslocamento
+  líquido; sofá, cercadinho e mesa parecidos). No PC, só `node --check` e `git diff --check`.
+- Próximo passo: CI do PR verde, E2E `todas` no head final, prévia ao usuário com o que testar (despensa da fase 10)
+  e "pode integrar" no chat desta sessão.
+
 ## Em andamento: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (Claude, branch `claude/superbafo-saida-dutos`, PR #56)
 
 - Pedido do usuário (2026-10-20, logo depois de aprovar o #54): fase 10, "quando o bafo sai do cano, o efeito de
