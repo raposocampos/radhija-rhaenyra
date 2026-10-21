@@ -12,7 +12,8 @@ import { buildLevelWorld } from './helpers/worldBuild.mjs';
 import { withSeed } from './helpers/seeded.mjs';
 import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS } from '../src/levels/dev.js';
-import { pushRest } from '../src/game/pushRest.js';
+import { pushRest, meshesOf, prepareHits, nearestHit, shown } from '../src/game/pushRest.js';
+import { mulberry32 } from './helpers/seeded.mjs';
 import { createGround, walkablesOf, bodyGround, planRimHop, pushOffRims } from '../src/game/ground.js';
 import { createCollisionWorld } from '../src/game/collision.js';
 import { createController, placeController, steer, integrate, startHop } from '../src/game/dogController.js';
@@ -69,6 +70,47 @@ test('empurrando de pé: as patas apoiam no desenho de cada objeto de empurrar (
   }
   console.log(`[chão] patas no desenho\n  ${report.join('\n  ')}`);
   assert.deepEqual(bad, []);
+});
+
+test('empurrando de pé: o raio mais perto (nearestHit, só as malhas que a caixa cruza) é o mesmo do Raycaster, em todos os objetos de empurrar', async () => {
+  // retorno do usuário: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar algo" — cada medida testava os
+  // triângulos de todas as malhas a cada raio; o atalho tem de dar exatamente o mesmo acerto
+  const cases = [['fase1', 'cart'], ['fase2', 'crate'], ['fase4', 'fan'], ['fase5', 'pillowBox'], ['fase8', 'basket'],
+    ['fase9', 'ladder'], ['fase9', 'globe'], ['fase9', 'fan'], ['fase9', 'planter'], ['fase10', 'crate']];
+  const rnd = mulberry32(17);
+  const worlds = new Map();
+  const bad = [];
+  let rays = 0, hits = 0;
+  try {
+    for (const [id, key] of cases) {
+      if (!worlds.has(id)) worlds.set(id, await buildLevelWorld(level(id)));
+      const fx = worlds.get(id);
+      const obj = fx.built.props[key].object;
+      fx.root.updateMatrixWorld(true);
+      const c = obj.getWorldPosition(new THREE.Vector3());
+      const ms = meshesOf(obj);
+      const list = prepareHits(ms);
+      const rc = new THREE.Raycaster();
+      for (let i = 0; i < 300; i++) {
+        const a = rnd() * Math.PI * 2, d = 0.35 + rnd() * 0.7, y = 0.03 + rnd() * 0.9;
+        const o = new THREE.Vector3(c.x + Math.sin(a) * d, y, c.z + Math.cos(a) * d);
+        const dir = new THREE.Vector3(c.x - o.x + (rnd() - 0.5) * 0.5, 0, c.z - o.z + (rnd() - 0.5) * 0.5).normalize();
+        rc.set(o, dir);
+        rc.near = 0;
+        rc.far = 1.3;
+        let ref = Infinity;
+        for (const h of rc.intersectObjects(ms, false)) if (shown(h.object)) { ref = h.distance; break; }
+        const got = nearestHit(list, rc);
+        rays++;
+        if (Number.isFinite(ref)) hits++;
+        if (got !== ref) bad.push(`${id} ${key}: raio ${i} deu ${got} (o Raycaster, ${ref})`);
+      }
+    }
+  } finally {
+    for (const fx of worlds.values()) fx.dispose();
+  }
+  assert.ok(hits > rays * 0.3, `a maioria dos raios acerta o desenho (${hits}/${rays})`);
+  assert.deepEqual(bad.slice(0, 10), []);
 });
 
 test('empurrando de pé: no ventilador (cano fino, grade no alto) as patas sempre acham onde apoiar, de qualquer lado, desviada ou torta', async () => {
@@ -448,4 +490,51 @@ test('caminha com borda (modelo novo): passando de lado rente a ela e empurrada 
     });
   }
   assert.deepEqual(bad, []);
+});
+
+test('empurrando de pé com o R1: o desenho do objeto é medido poucas vezes, mesmo com o analógico tremendo', async () => {
+  // retorno do usuário: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar algo". Cada medida são ~110
+  // raios; antes, qualquer giro de 0,03 rad (o dedo no analógico) refazia a medida inteira. Agora cada lugar do objeto
+  // (lado, posição na face, rumo) é medido uma vez, e um lugar novo no máximo a cada 0,25 s.
+  for (const [lv, id] of [[2, 'crate'], [1, 'cart'], [4, 'ventilador']]) {
+    const h = await createHeadlessGame({ level: lv, query: 'dog=rhaenyra' });
+    h.run(0.5);
+    const W = h.world;
+    const col = W.getDynamic(id);
+    const c = h.ctrls.rhaenyra;
+    /** O analógico (R1 seguro) para a direção do mundo (dx, dz), girado `wob` rad. */
+    const stick = (dx, dz, wob = 0) => {
+      const B = h.game.debug.cam.basis();
+      const a = Math.atan2(dx * B.rx + dz * B.rz, dx * B.fx + dz * B.fz) + wob;
+      return h.pad({ down: [5], axes: [Math.sin(a), -Math.cos(a), 0, 0] });
+    };
+    let dir = null;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ext = Math.abs(dx) * col.hx + Math.abs(dz) * col.hz;
+      const x = col.x - dx * (ext + c.r + 0.1), z = col.z - dz * (ext + c.r + 0.1);
+      if (W.overlaps(x, z, c.r + 0.02, c.size)) continue;
+      h.teleport('rhaenyra', x, z, Math.atan2(dx, dz));
+      const x0 = col.x, z0 = col.z;
+      h.run(0.2);
+      h.setPad(stick(dx, dz));
+      h.run(0.6);
+      h.setPad(null);
+      if (Math.hypot(col.x - x0, col.z - z0) > 0.05) { dir = [dx, dz]; break; }
+    }
+    assert.ok(dir, `fase ${lv}: um lado de onde a Rhaenyra empurra o objeto`);
+    const m0 = h.game.debug.pushMeasures;
+    const x0 = col.x, z0 = col.z;
+    let pushing = 0;
+    for (let i = 0; i < 180; i++) {
+      // o dedo de verdade: o analógico oscila ±7° (1,5 Hz)
+      h.setPad(stick(dir[0], dir[1], 0.12 * Math.sin((i / 60) * Math.PI * 2 * 1.5)));
+      h.step();
+      if (h.dogs.rhaenyra.anim?.action === 'push') pushing++;
+    }
+    h.setPad(null);
+    const n = h.game.debug.pushMeasures - m0;
+    assert.ok(pushing > 150, `fase ${lv}: empurrando (${pushing} quadros)`);
+    assert.ok(Math.hypot(col.x - x0, col.z - z0) > 0.2, `fase ${lv}: o objeto andou`);
+    assert.ok(n <= 8, `fase ${lv} (${id}): ${n} medidas em 3 s empurrando`);
+  }
 });
