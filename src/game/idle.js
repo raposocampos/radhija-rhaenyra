@@ -190,7 +190,10 @@ export function createIdle({ emit = () => {}, rand = () => Math.random(), ctrls 
     for (let i = 0; i < 10; i++) {
       const a = rand() * Math.PI * 2;
       const d = (0.7 + 0.35 * rand()) * k;
-      spots.push({ x: P.x + Math.sin(a) * d, z: P.z + Math.cos(a) * d, yaw: a + (rand() - 0.5) * 1.2 });
+      const x = P.x + Math.sin(a) * d, z = P.z + Math.cos(a) * d;
+      // com a irmã por perto, termina de frente para ela (a IA da companheira, parada, vira para a líder: virando ali,
+      // ela giraria parada e levantaria)
+      spots.push({ x, z, yaw: keepNear ? Math.atan2(o.x - x, o.z - z) : a + (rand() - 0.5) * 1.2 });
     }
     return shortest(from, spots, radii, 3.2 * L, ok);
   }

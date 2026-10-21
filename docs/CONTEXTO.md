@@ -34,7 +34,11 @@ antes de editar.
   - CI de `f22fa89` reprovado nos testes da companheira do #57 ("andando em loop"): o xixi sorteado tirava a irmã do
     lugar no meio da medida. Corrigido no jogo (sem xixi com o Fica nem esperando uma irmã que ela não alcança; o lugar
     novo fica a até 1,25 m da irmã) e nos testes (o headless e o E2E desligam o xixi sorteado; `test/parada.test.mjs`
-    liga e confere, com teste novo do Fica e da espera).
+    liga e confere, com teste novo do Fica e da espera). Os testes do #57 não mudaram (`b24a1cd`). Rodados com o xixi
+    ligado, só caíam onde o próprio xixi mexe em alguém (a volta depois dele, a da irmã ou a da líder), e um caso
+    mostrou um defeito de verdade: a companheira sentava de costas para a irmã e a IA a virava no lugar (girando
+    parada e levantando). Agora, com a irmã por perto, ela termina de frente para ela; nas 10 fases e arenas
+    (4 sorteios cada, xixi ligado) nenhuma levantou nem girou depois de sentar.
   - Coçar: DESLIGADO a pedido do usuário ("Não precisa mais ter a animação de coçar, pode deixar de fora, outro dia
     refinamos isso"; `IDLE.scratch.on`). A pose entregue em `3124772` ficou como estava (só no sandbox). Para a próxima
     vez: ele achou a perna "torta, parece quebrado" (o joelho esticava ao contrário). Na anatomia do cão, para a pata

@@ -256,13 +256,20 @@ test('xixi no jogo: ela anda até a poça, cheira e senta em outro lugar, sem at
     assert.ok(done > 0, 'terminou');
     assert.ok(minSis > IDLE.after.pass - 0.02, `nunca encostou na irmã (${minSis.toFixed(2)} m entre os centros)`);
     assert.ok(Math.hypot(c.x - P.x, c.z - P.z) >= 0.45, 'longe da poça');
-    // sentada no lugar novo, e fica (ninguém a chama de volta logo)
+    // a companheira termina de frente para a irmã (parada, a IA a viraria no lugar: giraria parada e levantaria)
+    if (who !== h.info().activeDog) {
+      const off = Math.abs(wrap(Math.atan2(o.x - c.x, o.z - c.z) - c.yaw));
+      assert.ok(off < 0.35, `de frente para a irmã (desvio ${off.toFixed(2)} rad)`);
+    }
+    // sentada no lugar novo, e fica (ninguém a chama de volta logo, nem a vira no lugar)
     const kinds = new Set();
-    for (let i = 0; i < Math.round(2 / DT); i++) {
+    const yaw0 = c.yaw;
+    for (let i = 0; i < Math.round(3 / DT); i++) {
       h.step();
       kinds.add(h.dogs[who].anim?.idle?.kind ?? 'nada');
     }
     assert.deepEqual([...kinds], ['sit'], `continua sentada (${[...kinds]})`);
+    assert.ok(Math.abs(wrap(c.yaw - yaw0)) < 0.05, 'sem girar no lugar');
   });
 });
 
