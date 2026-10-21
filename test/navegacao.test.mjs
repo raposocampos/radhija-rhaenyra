@@ -82,6 +82,45 @@ for (const [id, L] of Object.entries(LAYOUTS)) {
   });
 }
 
+// Com o mundo do jogo de verdade (os colisores que cada puzzle registra: caixotes, portões, água, zonas da companheira),
+// os nós e as arestas sem restrição do puzzle continuam livres. Uma aresta por dentro de um colisor deixa a companheira
+// indo e voltando entre o nó e o obstáculo. Bichos (porcos, gansa, galinhas, gato) andam: não contam.
+const ALL_DEFS = [...LEVELS, ...DEV_LEVELS];
+for (const [idx, def] of ALL_DEFS.entries()) {
+  test(`${def.id}: nós e arestas livres também com os colisores do puzzle (etapa inicial)`, async () => {
+    const h = await createHeadlessGame({ level: idx + 1, levels: ALL_DEFS });
+    const L = h.layout;
+    const world = h.world;
+    const ignore = new Set(world.dynamics.filter((d) => d.kind === 'npc').map((d) => d.id));
+    const bad = [];
+    world.setCompanionMode(true);
+    try {
+      for (const [name, p] of Object.entries(L.NAV_NODES)) {
+        // nós que só servem a arestas com restrição do puzzle podem estar atrás do que a restrição libera
+        const edges = L.NAV_EDGES.filter((e) => e[0] === name || e[1] === name);
+        if (edges.length && edges.every((e) => reqs(e[2]).some((r) => r !== 'small' && r !== 'large'))) continue;
+        for (const size of ['small', 'large']) {
+          if (size === 'large' && edges.length && edges.every((e) => reqs(e[2]).includes('small'))) continue;
+          if (world.overlaps(p.x, p.z, radius(L, size), size, { ignore })) bad.push(`nó ${name} (${size})`);
+        }
+      }
+      for (const [a, b, opt] of L.NAV_EDGES) {
+        if (reqs(opt).some((r) => r !== 'small' && r !== 'large')) continue; // portão, ponte, irrigador: o puzzle libera
+        for (const size of sizesFor(opt)) {
+          const key = `${def.id}:${a}-${b}:${size}`;
+          if (KNOWN_TIGHT_EDGES.has(key)) continue;
+          const A = L.NAV_NODES[a];
+          const B = L.NAV_NODES[b];
+          if (!world.segmentClear(A.x, A.z, B.x, B.z, radius(L, size) * 0.9, size, { ignore })) bad.push(`aresta ${key}`);
+        }
+      }
+    } finally {
+      world.setCompanionMode(false);
+    }
+    assert.deepEqual(bad, [], `atravessam colisores do puzzle: ${bad.join(', ')}`);
+  });
+}
+
 // Os casos abaixo usam o mundo do jogo de verdade (headless): inclui os colisores dinâmicos que o puzzle
 // registra (portão fechado, caixote, água, irrigador) e as flags reais de puzzle.navFlags() em cada etapa.
 async function navAt(level, stage) {
