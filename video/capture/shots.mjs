@@ -5,7 +5,7 @@
 // page-helpers.js (H.path, H.orbit, H.follow). `vertical`: grava também em 1080×1920 (corte 9:16), com `pull` (a
 // câmera recua) e `vfov` (campo vertical) próprios do retrato.
 const PI = Math.PI;
-const kick = (c) => ({ x: c.x + c.nx * 0.5 - c.nz * 0.14, z: c.z + c.nz * 0.5 + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
+const kick = (c, d = 0.5) => ({ x: c.x + c.nx * d - c.nz * 0.14, z: c.z + c.nz * d + c.nx * 0.14, yaw: Math.atan2(-c.nx, -c.nz) });
 const pathCam = (t, H, a) => H.path(t, a.keys, a.ease);
 
 /** Câmera de quadros-chave (o mais comum). */
@@ -132,7 +132,7 @@ export const SHOTS = {
     level: 'fase8',
     async run(r, L) {
       // lavanderia: a Rhaenyra já baixou o varal; a arrancada da Radhija solta a meia do pregador
-      await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: { x: L.RACK.x - 0.14, z: L.RACK.z + 0.6, yaw: PI }, radhija: { x: L.SOCK.x, z: L.SOCK.z + 1.25, yaw: PI } }, stay: 'radhija' });
+      await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: { x: L.RACK_BUTTON.x - 0.14, z: L.RACK_BUTTON.z + 0.6, yaw: PI }, radhija: { x: L.SOCK.x, z: L.SOCK.z + 1.25, yaw: PI } }, stay: 'radhija' });
       await r.tap('Space');
       await r.until((i) => i.lavanderia?.rackDown, 200);
       await r.setup({ active: 'radhija', place: { radhija: { x: L.SOCK.x, z: L.SOCK.z + 1.25, yaw: PI } }, settle: 6 });
@@ -172,7 +172,7 @@ export const SHOTS = {
     level: 'fase8',
     vertical: { pull: 1.3 },
     async run(r, L) {
-      const S = L.SPIN;
+      const S = L.SPIN_BUTTON;
       const W = L.WASHER;
       await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: { x: S.x - 0.14, z: S.z + 0.62, yaw: PI }, radhija: { x: -3.6, z: -0.5, yaw: 1.5 } }, stay: 'radhija' });
       await r.ev((c) => { window.__game.game.puzzle.placeBasket(c.x, c.z); window.__step(2); }, L.CATCH);
@@ -436,11 +436,11 @@ export const SHOTS = {
     level: 'fase9',
     async run(r, L) {
       // a Rhaenyra segura a escadinha (E) e a Radhija sobe para pegar os óculos do vovô
-      await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: kick(L.BRAKE), radhija: { x: 2.0, z: -0.8, yaw: 1.5 } }, stay: 'radhija' });
+      await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: kick(L.BRAKE_LEVER, 0.6), radhija: { x: 2.0, z: -0.8, yaw: 1.5 } }, stay: 'radhija' });
       await r.tap('Space');
-      await r.until((i) => !i.dogs.rhaenyra.wall && (i.biblioteca?.brake === false || true), 160);
+      await r.until((i) => !i.dogs.rhaenyra.wall, 160);
       await r.step(50);
-      const hold = { x: L.LADDER.minX + L.HOLD.side, z: L.HOLD.z + 0.02 };
+      const hold = { x: L.LADDER.minX + L.LADDER_HOLD.side, z: L.LADDER_HOLD.z + 0.02 };
       await r.setup({
         crates: [['globo', L.GLOBE.minX, L.GLOBE.start.z], ['escadinha', L.LADDER.minX, L.LADDER.start.z]],
         place: { rhaenyra: { ...hold, yaw: -PI / 2 }, radhija: { x: L.LADDER.minX, z: -1.98, yaw: PI } },
