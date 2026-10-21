@@ -11,8 +11,8 @@ const GOAL_SETTLE = 0.15;
 const CELL = 0.15;
 const GRID_SPAN = 7;
 const GRID_MAX = 2600;
-/** O lugar de espera fica pelo menos a isso da irmã (fora do espaço dela). */
-const WAIT_MIN = 0.5;
+/** O lugar de espera fica pelo menos a isso da irmã: o espaço de sempre (a companheira segue parando a ~0,95 m). */
+const WAIT_MIN = 0.85;
 const DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const cellKey = (ix, iz) => (ix + 8192) * 16384 + (iz + 8192);
 const cellIx = (k) => Math.floor(k / 16384) - 8192;
@@ -183,6 +183,46 @@ export function createNavigator(layout, world) {
     }
   }
 
+  // Bichos (gansa, porcos, galinhas, gato) andam e ficam fora da worldKey, mas ocupam células da grade: quando um deles
+  // se mexe, as células em volta de onde ele estava e de onde está agora saem do cache, e as buscas guardadas também
+  // (uma rota pelo corredor que ele acabou de fechar, ou uma espera que ele já liberou).
+  const npcFoot = new Map(); // bicho → { x, z, ext, on } da última busca
+  const NPC_REACH = 0.3; // além do bicho: raio da dog maior + folga
+
+  function forgetCells(f) {
+    const reach = f.ext + NPC_REACH;
+    const i0 = Math.floor((f.x - reach) / CELL);
+    const i1 = Math.ceil((f.x + reach) / CELL);
+    const k0 = Math.floor((f.z - reach) / CELL);
+    const k1 = Math.ceil((f.z + reach) / CELL);
+    for (let ix = i0; ix <= i1; ix++) {
+      for (let iz = k0; iz <= k1; iz++) {
+        const k = cellKey(ix, iz) * 2;
+        freeMemo.delete(k);
+        freeMemo.delete(k + 1);
+      }
+    }
+  }
+
+  function syncNpcs() {
+    let moved = false;
+    for (const d of world.dynamics || []) {
+      if (d.kind !== 'npc') continue;
+      const on = d.enabled !== false;
+      const x = d.x ?? d.ax ?? 0;
+      const z = d.z ?? d.az ?? 0;
+      const ext = d.shape === 'circle' ? d.r : d.shape === 'box' ? Math.hypot(d.hx, d.hz) : Math.hypot(d.bx - d.ax, d.bz - d.az) + (d.t ?? 0.05);
+      const prev = npcFoot.get(d.id);
+      if (prev && prev.on === on && Math.abs(prev.x - x) < 0.02 && Math.abs(prev.z - z) < 0.02 && prev.ext === ext) continue;
+      if (prev) forgetCells(prev);
+      const now = { x, z, ext, on };
+      forgetCells(now);
+      npcFoot.set(d.id, now);
+      moved = true;
+    }
+    if (moved) searchMemo.clear();
+  }
+
   /**
    * A aresta a–b passa por dentro de um colisor dinâmico (caixote, ventilador, escada, balde; os bichos andam e não
    * contam)? Só os dinâmicos: os fixos já são conferidos pelos testes do grafo.
@@ -282,6 +322,7 @@ export function createNavigator(layout, world) {
    */
   function gridSearch(from, goal, to, ctx) {
     syncWorld(ctx);
+    syncNpcs();
     let sx = Math.round(from.x / CELL);
     let sz = Math.round(from.z / CELL);
     if (!cellFree(sx, sz, ctx)) {

@@ -7,6 +7,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHeadlessGame } from './helpers/headless.mjs';
 import { mulberry32, withSeedAsync } from './helpers/seeded.mjs';
+import { createCollisionWorld } from '../src/game/collision.js';
+import { createNavigator } from '../src/game/navigation.js';
+import { createBrain, companionIntent } from '../src/game/companion.js';
 import { LEVELS } from '../src/levels/index.js';
 import { DEV_LEVELS } from '../src/levels/dev.js';
 
@@ -18,6 +21,8 @@ const DT = 1 / 60;
 /** Limites de "nada de loop" na janela de medida, com a líder parada: quase sem andar e sem ficar girando. */
 const MAX_PATH = 0.45; // m andados
 const MAX_TURN = 1.0; // rad de giro acumulado (virar para a irmã uma vez cabe)
+/** Espaço entre as duas quando uma enxerga a outra (centros; a companheira para a ~0,95 m): nada de corpos juntos. */
+const MIN_SPACE = 0.7;
 
 /** Fase pelo id, carregada no jogo headless com a dog ativa `leader`. */
 async function load(id, leader, query = '') {
@@ -64,6 +69,8 @@ function watch(h, comp, secs) {
     leaderMoved: Math.hypot(L.x - lx0, L.z - lz0),
     dist: Math.hypot(c.x - L.x, c.z - L.z),
     facing: Math.abs(wrap(Math.atan2(L.x - c.x, L.z - c.z) - c.yaw)),
+    // nada entre as duas (sem parede no meio, os corpos se tocariam se ficassem mais perto que MIN_SPACE)
+    los: h.world.segmentClear(c.x, c.z, L.x, L.z, 0.05, c.size),
     modes: [...modes],
     at: { x: +c.x.toFixed(2), z: +c.z.toFixed(2) },
   };
@@ -84,6 +91,7 @@ function assertCalm(m, what) {
   assert.equal(m.jumps, 0, `${what}: reposicionada no meio da espera ${info}`);
   assert.ok(m.path <= MAX_PATH, `${what}: andando em loop (${m.path.toFixed(2)} m na janela) ${info}`);
   assert.ok(m.turn <= MAX_TURN, `${what}: girando em loop (${m.turn.toFixed(2)} rad na janela) ${info}`);
+  assert.ok(!m.los || m.dist >= MIN_SPACE, `${what}: colada na irmã (${m.dist.toFixed(2)} m entre os centros) ${info}`);
 }
 
 /** Esperando: parada, olhando para a irmã. */
@@ -197,6 +205,89 @@ test('companheira: a irmã volta para perto — a que esperava volta a seguir na
     const m = watch(h, 'radhija', 5);
     assert.ok(m.dist < 1.5, `seguiu a irmã de novo (${m.dist.toFixed(2)} m, em ${JSON.stringify(m.at)})`);
   });
+});
+
+// ------------------------------------------------------------------------------------------------ bichos no caminho
+// Duas salas ligadas por um corredor estreito (60 cm de largura, 80 cm de comprimento), só um nó na sala oeste: a irmã
+// na sala leste não está à vista de nenhum nó, então quem acha o caminho é a busca em grade.
+const ROOMS = {
+  WORLD: { bounds: { minX: -4, maxX: 4, minZ: -3, maxZ: 3 } },
+  STATIC_COLLIDERS: [
+    { id: 'parede-norte', shape: 'box', x: 0, z: -1.65, hx: 0.4, hz: 1.35 },
+    { id: 'parede-sul', shape: 'box', x: 0, z: 1.65, hx: 0.4, hz: 1.35 },
+  ],
+  NAV_NODES: { A: { x: -2, z: 0 } },
+  NAV_EDGES: [],
+};
+
+test('companheira: bicho entrando e saindo de um corredor estreito — a busca em grade não fica com o caminho velho', () => {
+  const world = createCollisionWorld(ROOMS);
+  const nav = createNavigator(ROOMS, world);
+  const ctx = { r: 0.22, size: 'large', flags: {}, approach: true };
+  const from = { x: -2, z: -2 };
+  const to = { x: 2, z: 2 };
+  // a gansa começa num canto da sala oeste, longe do corredor
+  const goose = world.addDynamic({ id: 'gansa', kind: 'npc', shape: 'circle', x: -3.2, z: 2.4, r: 0.25 });
+  let p = nav.findPath(from, to, ctx);
+  assert.ok(p.reachable && p.waypoints.some((w) => w.id === 'grade'), 'corredor livre: passa (pela grade)');
+  // ela entra no corredor: a rota guardada não vale mais
+  goose.x = 0;
+  goose.z = 0;
+  p = nav.findPath(from, to, ctx);
+  assert.ok(!p.reachable, 'a gansa no corredor: sem caminho');
+  assert.ok(p.waitPoint && p.waitPoint.x < -0.4, `espera do lado de cá do corredor (${JSON.stringify(p.waitPoint)})`);
+  // ela sai: as células do corredor voltam a valer
+  goose.x = -3.2;
+  goose.z = 2.4;
+  p = nav.findPath(from, to, ctx);
+  assert.ok(p.reachable, 'a gansa saiu: passa de novo');
+  // e volta para o corredor
+  goose.x = 0.1;
+  goose.z = 0.05;
+  assert.ok(!nav.findPath(from, to, ctx).reachable, 'voltou: sem caminho de novo');
+  // desligada (o bicho foi embora da fase), não conta
+  goose.enabled = false;
+  assert.ok(nav.findPath(from, to, ctx).reachable, 'desligada: passa');
+});
+
+test('companheira: um bicho parado no caminho até onde ela espera — ela espera e tenta de novo; um móvel, não', () => {
+  // navegação de mentira: a irmã fora de alcance, o ponto de espera a 2 m, e nada se mexe (o bicho/móvel na frente)
+  const nav = {
+    findPath: () => ({ direct: false, reachable: false, waypoints: [{ id: 'perto', x: 2, z: 0 }], waitNode: null, waitPoint: { x: 2, z: 0 } }),
+    worldKey: () => 'k',
+    nearestReachableNode: () => null,
+  };
+  const ctx = { nav, world: { segmentClear: () => false, overlaps: () => false }, flags: {}, isVisible: () => true };
+  const leader = { x: 3, z: 1, vx: 0, vz: 0, r: 0.17, stillT: 5 };
+  const run = (kind, secs) => {
+    const b = createBrain();
+    const c = { x: 0, z: 0, yaw: Math.PI / 2, r: 0.22, size: 'large', cfg: { walkSpeed: 2 }, hits: [{ id: 'na-frente', kind, nx: -1, nz: 0, depth: 0.01 }] };
+    const speeds = [];
+    for (let i = 0; i < Math.round(secs / DT); i++) speeds.push(companionIntent(b, c, leader, ctx, DT).speed);
+    return (t0, t1) => speeds.slice(Math.round(t0 / DT), Math.round(t1 / DT));
+  };
+  const npc = run('npc', 6);
+  const wall = run('static', 6);
+  for (const [what, at] of [['bicho', npc], ['móvel', wall]]) {
+    assert.ok(at(0.2, 1.0).every((v) => v > 0), `${what}: primeiro ela tenta chegar`);
+    assert.ok(at(1.5, 3.4).every((v) => v === 0), `${what}: sem chegar, espera onde está`);
+  }
+  assert.ok(npc(3.5, 4.4).some((v) => v > 0), 'bicho: depois de um tempo, tenta de novo (ele sai do caminho)');
+  assert.ok(wall(1.5, 6).every((v) => v === 0), 'móvel: continua esperando (não fica indo e voltando)');
+
+  // seguindo a irmã (alcançável, mas sem progresso): o mesmo para o bloqueio
+  const navF = { findPath: () => ({ direct: true, reachable: true, waypoints: [], waitNode: null, waitPoint: null }), worldKey: () => 'k', nearestReachableNode: () => null };
+  const runF = (kind) => {
+    const b = createBrain();
+    const c = { x: 0, z: 0, yaw: Math.PI / 2, r: 0.22, size: 'large', cfg: { walkSpeed: 2 }, hits: [{ id: 'na-frente', kind, nx: -1, nz: 0, depth: 0.01 }] };
+    const speeds = [];
+    for (let i = 0; i < Math.round(8 / DT); i++) speeds.push(companionIntent(b, c, leader, { ...ctx, nav: navF }, DT).speed);
+    return (t0, t1) => speeds.slice(Math.round(t0 / DT), Math.round(t1 / DT));
+  };
+  const fNpc = runF('npc');
+  const fWall = runF('static');
+  assert.ok(fNpc(3.4, 5.4).every((v) => v === 0) && fWall(3.4, 8).every((v) => v === 0), 'sem chegar perto, para de tentar');
+  assert.ok(fNpc(5.6, 6.4).some((v) => v > 0), 'bicho: tenta de novo');
 });
 
 // ------------------------------------------------------------------------------------- sorteio em todas as fases

@@ -2,10 +2,12 @@
 // - Segue a líder a 0,9–1,3 m (histerese), senta quando a líder fica parada, olha para ela.
 // - Cede passagem: se a líder vem na direção dela, sai de lado. Nunca empurra a líder.
 // - Linha de visão livre → vai direto; senão grafo de navegação (restrições small/gateOpen/cartMoved).
-// - Sem caminho → espera sentada no ponto alcançável mais perto da líder, olhando para ela.
+// - Sem caminho → espera sentada no ponto alcançável mais perto da líder (fora do espaço dela), olhando para ela.
+//   Chegando por um caminho, para à mesma distância de quando segue em linha reta: nunca colada na irmã.
 // - Sem chegar mais perto por um tempo (o caminho do grafo não deu: corpo comprido, quina, vão estreito) → espera no
 //   lugar mais perto a que chegou; sem conseguir chegar ao ponto de espera → espera onde está. Volta a seguir quando a
-//   líder sai do lugar ou o cenário muda (portão, caixote, restrição do puzzle). Nada de ir e voltar.
+//   líder sai do lugar ou o cenário muda (portão, caixote, restrição do puzzle); se quem atrapalhou foi um bicho,
+//   tenta de novo depois de um tempo. Nada de ir e voltar.
 // - Detecta quando fica presa, recalcula; presa > 3 s fora da tela → pede reposicionamento.
 
 const FOLLOW_START = 1.3;
@@ -26,7 +28,7 @@ export function createBrain() {
     stayT: 0, stayTurning: false, // comando Fica
     prog: null, // vigia do progresso: { kind 'f'|'w', ref, t, best, x, z, gx, gz, idle, npc }
     block: null, // a líder fora de alcance de verdade: { x, z (onde esperar), lx, lz, key, retryT }
-    settle: null, // não chegou ao ponto de espera: espera onde está { lx, lz, key }
+    settle: null, // não chegou ao ponto de espera: espera onde está { lx, lz, key, retryT }
   };
 }
 
@@ -187,7 +189,15 @@ export function companionIntent(b, c, leader, ctx, dt) {
       b.pathT = 0;
     }
   }
-  if (b.settle && leaderLeft(b.settle)) b.settle = null;
+  if (b.settle) {
+    b.settle.retryT -= dt;
+    // idem para a espera: um bicho parado no caminho até o ponto de espera sai dali
+    if (leaderLeft(b.settle) || b.settle.retryT <= 0) {
+      b.settle = null;
+      b.prog = null;
+      b.pathT = 0;
+    }
+  }
   const navr = b.block
     ? navigate(b, c, b.block, ctx, dt)
     : navigate(b, c, { x: lx, z: lz }, ctx, dt, true);
@@ -199,7 +209,8 @@ export function companionIntent(b, c, leader, ctx, dt) {
     out.mode = 'wait';
     speed = !b.settle && dT > 0.12 ? Math.min(maxSpeed, Math.max(0.5, dT * 2.5)) : 0;
     b.moving = speed > 0;
-  } else if (b.path.length) {
+  } else if (b.path.length && !(navr.reachable && !b.block && navr.pathLen < FOLLOW_STOP + 0.1)) {
+    // (perto da irmã pelo caminho, para como no seguir: o caminho da grade termina colado nela)
     out.mode = 'path';
     speed = maxSpeed * (navr.pathLen > 3.5 ? 1.1 : 1);
     b.moving = true;
@@ -232,7 +243,7 @@ export function companionIntent(b, c, leader, ctx, dt) {
     speed = 0;
     out.mode = 'wait';
   } else if (toWait && stalled > SETTLE_T && !b.settle) {
-    b.settle = { lx, lz, key };
+    b.settle = { lx, lz, key, retryT: b.prog.npc ? NPC_RETRY : Infinity };
     b.prog = null;
     b.moving = false;
     speed = 0;
