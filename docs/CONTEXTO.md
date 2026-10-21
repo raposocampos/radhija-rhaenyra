@@ -20,21 +20,31 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
     caminho ou o lugar alcançável mais perto. Atrás de restrição do puzzle (portão, ponte, irrigador), espera no nó do
     grafo, como antes (`playthrough.mjs` confere isso na fase 1). Arestas sem restrição que passam por dentro de um
     dinâmico que não é bicho (caixote, ventilador, escada) saem do Dijkstra enquanto ele está lá (`edgeBlocked`).
-    O modo antigo (gansa, comemoração, testes) não mudou.
+    Bichos ficam fora da `worldKey`, mas ocupam a grade: `syncNpcs` tira do cache as células em volta de onde cada um
+    estava e de onde está e esvazia as buscas guardadas (revisão do Codex no #57). O lugar de espera fica a 0,85 m da
+    irmã ou mais (`WAIT_MIN`). O modo antigo (gansa, comemoração, testes) não mudou.
   - `companion.js`: `watchProgress`. 3 s tentando sem chegar 0,2 m mais perto da irmã → `block` (espera no lugar
     mais perto a que chegou); 1,2 s sem chegar ao ponto de espera → `settle` (espera onde está). Os dois se desfazem
-    quando a irmã sai 0,5 m do lugar ou a `worldKey` muda; bicho no caminho → tenta de novo em 2,5 s. Pontos da
-    grade (`id: 'grade'`) chegam a 15 cm antes de largar.
+    quando a irmã sai 0,5 m do lugar ou a `worldKey` muda; bicho no caminho → tenta de novo em 2,5 s (nos dois; o
+    `settle` ganhou isso na revisão). Pontos da grade (`id: 'grade'`) chegam a 15 cm antes de largar. Chegando por um
+    caminho, para quando falta menos que `FOLLOW_STOP` (retorno do usuário na 1ª prévia: o caminho da grade termina
+    colado na irmã, e as duas ficavam com os corpos uma dentro da outra no pé da escadinha).
 - Testes: `test/companheira.test.mjs` (casos do retorno e sorteio com semente em todas as fases e arenas: na janela
-  final, ≤ 0,45 m andados e ≤ 1 rad de giro); `test/navegacao.test.mjs` (nós livres e plano da companheira sem
+  final, ≤ 0,45 m andados, ≤ 1 rad de giro e ≥ 0,7 m entre os centros quando nada as separa; bicho entrando e saindo
+  de um corredor estreito; espera com bicho tenta de novo, com móvel não); `test/navegacao.test.mjs` (nós livres e plano da companheira sem
   atravessar os colisores dos puzzles; achados: ventilador da fase 9 em `J_mid–J_south`, trilho do ventilador da
   arena do bafo em `W_fan–W_mid`).
 - Validação: CI `39530112422` (1º commit): testes da companheira verdes, 2 falhas do teste novo do grafo, corrigidas
   no 2º commit. Reprodução: CI `39530573875` rodou só `companheira.test.mjs` sobre o código antigo (branch temporário,
   já apagado): 4 casos falham com o loop (despensa: 7,1 m andados e 33 rad de giro em 5 s, 0,47 m de deslocamento
-  líquido; sofá, cercadinho e mesa parecidos). No PC, só `node --check` e `git diff --check`.
-- Próximo passo: CI do PR verde, E2E `todas` no head final, prévia ao usuário com o que testar (despensa da fase 10)
-  e "pode integrar" no chat desta sessão.
+  líquido; sofá, cercadinho e mesa parecidos). 1ª prévia (`ff7b11c`, sobre o main com o #55): CI `39533171242` e E2E
+  `todas` `39533166415` verdes; o usuário viu as duas coladas e o Codex achou os bichos no cache. Correções em
+  `d312674`: CI `39535652405` e E2E `todas` `39535648210` verdes, as duas conversas da revisão respondidas e
+  resolvidas. Conferir no PR o CI e o E2E do commit que traz esta atualização. No PC, só `node --check` e
+  `git diff --check`.
+- Próximo passo: entregar a prévia corrigida e esperar o "pode integrar" do usuário no chat desta sessão (a da
+  1ª prévia não vale). Depois: squash com `--match-head-commit`, liberar só o deploy daquela execução, conferir o
+  `version.json`.
 
 ## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`, PR #55)
 
