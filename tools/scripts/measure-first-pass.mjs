@@ -1,8 +1,9 @@
 // Primeira passagem pelas áreas de cada fase: o que a GPU ainda prepara depois da carga e quanto isso custa.
 // Para cada fase e qualidade, um navegador novo (sem programas guardados de outra fase) abre a fase com ?play e a
 // câmera percorre os nós de navegação duas vezes pelo mesmo caminho (a dog ativa vai de nó em nó; a câmera segue
-// como no jogo). Os quadros são dados pela página de medição, com passo fixo e gl.finish(), para que a 1ª e a 2ª
-// passagem sejam comparáveis quadro a quadro: o que a 1ª custa a mais é o trabalho de "primeira vez".
+// como no jogo); no fim, um superbafo. Os quadros são dados pela página de medição, com passo fixo e esperando a GPU
+// terminar cada um (leitura de um pixel), para que a 1ª e a 2ª passagem sejam comparáveis quadro a quadro: o que a
+// 1ª custa a mais é o trabalho de "primeira vez".
 // Reprova (FIRST_PASS_STRICT, ligado por padrão) se, depois da carga, o renderer compilar um programa ou enviar uma
 // textura, ou se um quadro da 1ª passagem custar FIRST_PASS_EXCESS_MS a mais que o mesmo quadro da 2ª.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
@@ -17,10 +18,10 @@ import { browserOptions } from './lib/browser.mjs';
 const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const OUT = fileURLToPath(new URL('../../shots/first-pass/', import.meta.url));
 const MOUNT = '/primeira-passagem/';
-const VIEWPORT = { width: 800, height: 450 };
+const VIEWPORT = { width: 640, height: 360 };
 const DT = 1 / 30;
 const START_FRAMES = 15; // na posição inicial (os primeiros quadros depois da carga)
-const NODE_FRAMES = 24; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta
+const NODE_FRAMES = 18; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta (96% em 0,6 s)
 const RETURN_FRAMES = 30; // volta ao início entre as passagens (não entra nas contas)
 const LEVELS = (process.env.FIRST_PASS_LEVELS || '1,2,3,4,5,6,7,8,9,10').split(',').map((s) => s.trim()).filter(Boolean);
 const QUALITIES = (process.env.FIRST_PASS_QUALITY || 'alta,media').split(',').map((s) => s.trim()).filter(Boolean);
@@ -39,7 +40,7 @@ const report = {
     viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES,
     dogs: DOGS || 'padrao', strict: STRICT, excessLimitMs: EXCESS_MS,
     tour: 'greedy nearest-neighbour tour of layout NAV_NODES from the active dog start; the active dog is teleported node to node, camera rig follows; same tour twice',
-    frame: 'game.update + seeThrough + feedback + particles + engine.render + gl.finish, driven by the measurement page (rAF loop paused)',
+    frame: 'game.update + seeThrough + feedback + particles + engine.render + 1-pixel readPixels (waits for the GPU), driven by the measurement page (rAF loop paused)',
     excess: 'per frame: first pass ms minus the same frame of the second pass',
     limits: 'SwiftShader (software GL) on a CI runner: absolute ms are not a phone/PC GPU; counts of programs/textures/geometries are exact',
   },
@@ -153,7 +154,13 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames }) {
   scan(false); // o que já estava pronto na carga
 
   let t = 0;
-  const finish = () => gl.finish();
+  // gl.finish() não espera a GPU no Chromium (os quadros se enfileiram e o tempo sai em degraus de 5 e 600 ms):
+  // ler um pixel da tela obriga o quadro a terminar, então cada quadro mede o próprio custo
+  const px = new Uint8Array(4);
+  const finish = () => {
+    renderer.setRenderTarget(null);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  };
   function frame() {
     t += dt;
     const p0 = renderer.info.programs.length, x0 = renderer.info.memory.textures, g0 = renderer.info.memory.geometries;
@@ -178,30 +185,39 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames }) {
   const news = [];
   // devolve a vez ao navegador entre os nós (o laço do jogo está pausado; nada roda além do carimbo da UI)
   const breathe = () => new Promise((r) => setTimeout(r, 0));
+  function visit(frames, pass, node, count) {
+    for (let i = 0; i < count; i++) {
+      const f = frame();
+      f.node = node.id;
+      frames.push(f);
+      if (f.programs > 0 || f.textures > 0 || f.geometries > 0) {
+        const s = scan(true);
+        news.push({ pass, node: node.id, frame: frames.length - 1, programs: f.programs, textures: f.textures, geometries: f.geometries,
+          ms: f.ms, materials: s.mats.slice(0, 12), moreMaterials: Math.max(0, s.mats.length - 12), textureList: s.texs.slice(0, 8),
+          newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [] });
+      }
+    }
+  }
   async function runPass(pass) {
     const frames = [];
-    const visit = (node, count) => {
-      for (let i = 0; i < count; i++) {
-        const f = frame();
-        f.node = node.id;
-        frames.push(f);
-        if (f.programs > 0 || f.textures > 0 || f.geometries > 0) {
-          const s = scan(true);
-          news.push({ pass, node: node.id, frame: frames.length - 1, programs: f.programs, textures: f.textures, geometries: f.geometries,
-            ms: f.ms, materials: s.mats.slice(0, 12), moreMaterials: Math.max(0, s.mats.length - 12), textureList: s.texs.slice(0, 8),
-            newProgramNames: renderer.info.programs.slice(-f.programs).map((p) => p.name) });
-        }
-      }
-    };
-    visit(start, startFrames);
-    for (const n of tour) { await breathe(); tp(n); visit(n, nodeFrames); }
+    visit(frames, pass, start, startFrames);
+    for (const n of tour) { await breathe(); tp(n); visit(frames, pass, n, nodeFrames); }
     return frames;
   }
   const pass1 = await runPass(1);
+  const back = [];
   tp(start);
-  for (let i = 0; i < returnFrames; i++) frame();
+  visit(back, 'volta', start, returnFrames);
   game.debug.cam.snapFollow(start.x, start.z);
   const pass2 = await runPass(2);
+  // o que só aparece num evento da partida: a nuvem do superbafo e a mira
+  const events = [];
+  const scent = game.debug.scent;
+  const ctrl = game.debug.ctrls[active];
+  const shot = { x: ctrl.x, z: ctrl.z, dirX: 0, dirZ: 1, speed: 2.6, life: 5 };
+  scent.spawn(shot);
+  scent.showPreview(scent.preview(shot));
+  visit(events, 'eventos', { id: 'superbafo' }, 20);
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const dbg = gl.getExtension('WEBGL_debug_renderer_info');
   return {
@@ -211,7 +227,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames }) {
     quality: { ...engine.qualityState, buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled && engine.sun.castShadow,
       shadowType: renderer.shadowMap.type, shadowSize: engine.sun.shadow.mapSize.x, bloom: engine.bloom.enabled,
       renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
-    passes: [pass1, pass2], news,
+    passes: [pass1, pass2], back, events, news,
   };
 }
 
@@ -272,25 +288,29 @@ try {
               ? +(markAt(marks, 'rr:level:loaded') - markAt(marks, 'rr:boot:ui')).toFixed(1) : null,
           },
           afterLoad: {
-            programs: sum(p1, 'programs') + sum(p2, 'programs'), textures: sum(p1, 'textures') + sum(p2, 'textures'),
-            geometries: sum(p1, 'geometries') + sum(p2, 'geometries'),
+            programs: sum(p1, 'programs') + sum(run.back, 'programs') + sum(p2, 'programs'),
+            textures: sum(p1, 'textures') + sum(run.back, 'textures') + sum(p2, 'textures'),
+            geometries: sum(p1, 'geometries') + sum(run.back, 'geometries') + sum(p2, 'geometries'),
             programsSecondPass: sum(p2, 'programs'), texturesSecondPass: sum(p2, 'textures'),
           },
+          events: { programs: sum(run.events, 'programs'), textures: sum(run.events, 'textures'), geometries: sum(run.events, 'geometries'),
+            max: Math.max(...run.events.map((f) => f.ms)) },
           first: stats(p1), second: stats(p2),
           excess: { max: Math.max(...excess), sum: +excess.filter((e) => e > 0).reduce((a, e) => a + e, 0).toFixed(0),
             over50: excess.filter((e) => e > 50).length, over100: excess.filter((e) => e > 100).length, worst },
         };
         report.runs.push({ ...summary, tour: run.tour, quality: run.quality, news: run.news, errors,
-          frames: { first: p1, second: p2 } });
+          frames: { first: p1, second: p2, back: run.back, events: run.events } });
         console.log(`[primeira-passagem] ${label}: carga ${summary.load.programs} programas/${summary.load.textures} texturas `
           + `(preparo ${summary.load.prepareMs} ms); depois da carga +${summary.afterLoad.programs} programas, +${summary.afterLoad.textures} texturas, `
-          + `+${summary.afterLoad.geometries} geometrias; 1ª passagem máx ${summary.first.max} ms (p95 ${summary.first.p95}), `
+          + `+${summary.afterLoad.geometries} geometrias, superbafo +${summary.events.programs} programas; 1ª passagem máx ${summary.first.max} ms (p95 ${summary.first.p95}), `
           + `2ª máx ${summary.second.max} ms (p95 ${summary.second.p95}); excesso máx ${summary.excess.max} ms, ${summary.excess.over100} quadros > 100 ms`);
         for (const e of errors) report.errors.push(`${label}: ${e}`);
         if (run.state !== 'playing' && run.state !== 'celebrate' && run.state !== 'victory') fail(`${label}: estado inesperado ${run.state}`);
         if (STRICT) {
           if (summary.afterLoad.programs > 0) fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
           if (summary.afterLoad.textures > 0) fail(`${label}: ${summary.afterLoad.textures} texturas enviadas depois da carga`);
+          if (summary.events.programs > 0) fail(`${label}: ${summary.events.programs} programas compilados no primeiro superbafo`);
           if (summary.excess.max > EXCESS_MS) fail(`${label}: quadro da 1ª passagem ${summary.excess.max} ms mais caro que na 2ª (limite ${EXCESS_MS} ms)`);
         }
       } catch (error) {
@@ -310,15 +330,15 @@ try {
   await new Promise((done) => server.close(done));
   report.passed = report.errors.length === 0 && report.failures.length === 0 && report.runs.length === LEVELS.length * QUALITIES.length;
   await save();
-  const rows = report.runs.map((r) => `| ${r.label} | ${r.load.programs} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | `
+  const rows = report.runs.map((r) => `| ${r.label} | ${r.load.programs} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
     + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.excess.over100} |`);
   const md = [
     `## Primeira passagem pelas áreas${report.commit ? ` — \`${report.commit.slice(0, 7)}\`` : ''}`,
     '',
     `${report.passed ? '✅ Aprovada' : '❌ Reprovada'} · ${VIEWPORT.width}×${VIEWPORT.height}, passo de ${(DT * 1000).toFixed(1)} ms, dogs: ${DOGS || 'padrão'} · SwiftShader (os ms não são de um aparelho; as contagens são exatas)`,
     '',
-    '| Fase/qualidade | Programas na carga | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Quadros +100 ms |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Fase/qualidade | Programas na carga | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Quadros +100 ms |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...rows,
     '',
     ...report.failures.map((f) => `- ❌ ${f}`),
