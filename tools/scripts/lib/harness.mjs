@@ -411,6 +411,9 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
       await step('abrir a página', () => G.raw.goto(`${base}${query}`, { waitUntil: 'load', timeout: 120000 }));
       await step('esperar window.__game', () => G.raw.waitForFunction(() => window.__game?.game?.debug?.info, null, { timeout: 120000 }));
       await step('esperar o jogo começar (timeSec > 0,3 ou título)', () => G.raw.waitForFunction(() => window.__game.game.debug.info().timeSec > 0.3 || window.__game.game.state === 'title', null, { timeout: 120000 }));
+      // o xixi da parada por muito tempo é sorteado e tira a dog do lugar: desligado nas partidas (test/parada.test.mjs
+      // cuida dele)
+      await step('desligar o xixi sorteado', () => G.raw.evaluate(() => window.__game.game.debug.idle?.setPee(false)));
     } finally {
       page.off('framenavigated', onNav);
       if (navs > 1) console.log(`  [boot] ${what}: a página RECARREGOU ${navs - 1}× durante o boot (${navs} navegações)`);

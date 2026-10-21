@@ -978,9 +978,13 @@ export function createGame({ engine, dogs, levels, params }) {
         && !an.party && !(an.cheer >= 0) && (n !== activeDog || touchedT > 0.4)
         && (n === activeDog || !(L.animSpeed > 0.4 && Math.hypot(L.x - c.x, L.z - c.z) > 2));
       const settled = c.animSpeed < 0.05 && Math.abs(c.yawRate) < 0.4 && (an.action === 'none' || an.action === 'sit');
+      // xixi: no chão de verdade, sem nada na boca, sem o Fica (ela não sai do lugar em que foi deixada) e, a
+      // companheira, só seguindo a irmã de perto (esperando por uma irmã que ela não alcança, a IA a levaria de volta)
+      const B = brains[n];
+      const calm = n === activeDog || ((B.mode === 'follow' || B.mode === 'idle') && !B.block && !B.settle && Math.hypot(L.x - c.x, L.z - c.z) < 1.5);
       an.idle = idle && state === 'playing' ? idle.step(n, dt, {
         still: free && (idle.driving(n) || settled),
-        canPee: !carries(n) && G.y < 0.01,
+        canPee: !carries(n) && G.y < 0.01 && !stay[n] && calm,
         at: { x: c.x - Math.sin(c.yaw) * back, z: c.z - Math.cos(c.yaw) * back },
       }) : null;
       // em cima de uma coisa baixa de pisar (placa, pedal, caminha), o corpo sobe junto (suave; posta em outro lugar, na
@@ -1489,6 +1493,7 @@ export function createGame({ engine, dogs, levels, params }) {
       get scent() { return scent; },
       get ctrls() { return ctrls; },
       get puzzle() { return puzzle; },
+      get idle() { return idle; },
       brains,
       get cam() { return cam; },
     },

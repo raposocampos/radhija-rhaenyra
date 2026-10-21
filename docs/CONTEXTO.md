@@ -31,6 +31,10 @@ antes de editar.
     as irmãs fora de compasso (tempos sorteados por dog a cada parada; sentar sozinha de 4 a 8,5 s; uma não deita junto
     com a outra). Conferido nas 10 fases (3 sementes cada): a sequência inteira, sem colisor, sem encostar na irmã
     (≥ 0,63 m entre os centros) e ela continua sentada depois.
+  - CI de `f22fa89` reprovado nos testes da companheira do #57 ("andando em loop"): o xixi sorteado tirava a irmã do
+    lugar no meio da medida. Corrigido no jogo (sem xixi com o Fica nem esperando uma irmã que ela não alcança; o lugar
+    novo fica a até 1,25 m da irmã) e nos testes (o headless e o E2E desligam o xixi sorteado; `test/parada.test.mjs`
+    liga e confere, com teste novo do Fica e da espera).
   - Coçar: DESLIGADO a pedido do usuário ("Não precisa mais ter a animação de coçar, pode deixar de fora, outro dia
     refinamos isso"; `IDLE.scratch.on`). A pose entregue em `3124772` ficou como estava (só no sandbox). Para a próxima
     vez: ele achou a perna "torta, parece quebrado" (o joelho esticava ao contrário). Na anatomia do cão, para a pata

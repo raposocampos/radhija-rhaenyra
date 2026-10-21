@@ -29,9 +29,10 @@ export const IDLE = Object.freeze({
   /**
    * Depois do xixi: as velocidades (m/s, a passo) da voltinha até a poça e da saída, a cheirada (s), a folga da poça
    * (m: o meio do corpo nunca passa mais perto; × comprimento da dog / 0,6), a folga da irmã no caminho e no lugar novo
-   * (m entre os centros), onde parar perto dela (m) e de onde a parada continua (s, já sentada).
+   * (m entre os centros), onde parar perto dela (m; perto dela, no máximo `near` m) e de onde a parada continua (s, já
+   * sentada).
    */
-  after: Object.freeze({ loop: 0.8, away: 0.9, sniff: 1.4, clear: 0.17, pass: 0.62, space: 0.75, stop: [0.9, 1.1], sit: 5.5 }),
+  after: Object.freeze({ loop: 0.8, away: 0.9, sniff: 1.4, clear: 0.17, pass: 0.62, space: 0.75, stop: [0.9, 1.1], near: 1.25, sit: 5.5 }),
   /** A irmã começou a mesma coisa há menos disto (s): espera mais um pouco (s); xixi, só bem depois do dela (s). */
   apart: Object.freeze({ within: 2.5, wait: [1.5, 3.5], pee: 90 }),
 });
@@ -81,6 +82,8 @@ export function createIdle({ emit = () => {}, rand = () => Math.random(), ctrls 
   };
   /** @type {Record<string, { kind: 'scratch' | 'lie' | 'pee' | 'sit' | 'stand', k: number, t: number, side: number } | null>} */
   const now = {};
+  /** O xixi ligado (os testes que medem onde as dogs ficam o desligam: um sorteio não as tira do lugar; setPee). */
+  let peeOn = true;
   /** A irmã (o outro controle), ou null. */
   const sisterOf = (n) => {
     for (const m of Object.keys(ctrls)) if (m !== n) return ctrls[m];
@@ -161,11 +164,15 @@ export function createIdle({ emit = () => {}, rand = () => Math.random(), ctrls 
     const L = c.cfg?.visual?.length ?? 0.6;
     const k = scaleOf(c);
     const back = (c.cfg?.body?.back ?? 0.25) * 0.7;
+    // com a irmã por perto, o lugar novo continua perto dela (a companheira não é chamada de volta pela IA, que segue a
+    // líder a até ~1,3 m; a líder não faz a irmã levantar)
+    const keepNear = !!o && Math.hypot(o.x - from.x, o.z - from.z) < 1.6;
     const ok = (path) => {
       const e = lastOf(path);
       if (Math.hypot(e.x - P.x, e.z - P.z) < 0.55 * k) return false;
       if (Math.hypot(e.x - Math.sin(e.yaw) * back - P.x, e.z - Math.cos(e.yaw) * back - P.z) < 0.35 * k) return false;
       if (o && Math.hypot(e.x - o.x, e.z - o.z) < IDLE.after.space) return false;
+      if (keepNear && Math.hypot(e.x - o.x, e.z - o.z) > IDLE.after.near) return false;
       return fits(c, path, o, P, IDLE.after.clear * k);
     };
     const radii = [0.32 * L, 0.25 * L];
@@ -304,7 +311,7 @@ export function createIdle({ emit = () => {}, rand = () => Math.random(), ctrls 
       // para sair dali
       if (!D.rolled && D.t >= D.peeRoll) {
         D.rolled = true;
-        if (canPee && D.clock - D.last.pee >= IDLE.pee.every && !sisterJust(n, 'pee', IDLE.apart.pee) && rand() < IDLE.pee.chance && canLeave(n, at)) {
+        if (peeOn && canPee && D.clock - D.last.pee >= IDLE.pee.every && !sisterJust(n, 'pee', IDLE.apart.pee) && rand() < IDLE.pee.chance && canLeave(n, at)) {
           D.pee = 0;
           D.last.pee = D.clock;
           D.dropped = false;
@@ -383,6 +390,10 @@ export function createIdle({ emit = () => {}, rand = () => Math.random(), ctrls 
     },
     /** O que a dog `n` está fazendo agora (ou null). */
     anim: (n) => now[n] ?? null,
+    /** Liga ou desliga o xixi (os testes e as partidas automáticas que medem onde as dogs ficam o desligam). */
+    setPee(on) {
+      peeOn = !!on;
+    },
     /** Há quanto tempo a dog `n` está parada (s). */
     stillFor: (n) => S[n]?.t ?? 0,
     /** Troca de fase ou reinício: tudo do zero. */

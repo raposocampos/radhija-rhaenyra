@@ -542,18 +542,21 @@ voltinha e os zoomies, ficam em `walkPath.js`, junto com os da parada por muito 
   mesma ação ao mesmo tempo"):
   - deita entre 20 e 34 s e fica (a cabeça descansa nas patas depois de 9 s, de olhinho fechado);
   - xixi agachada, raro (12% das paradas, entre 1,5 e 3,5 s; no máximo um a cada 4 min por dog e nunca até 90 s
-    depois do da irmã), em pé, no chão de verdade, sem nada na boca e só com espaço para sair dali (`dog:pee`: a poça
-    discreta que seca, `feedback.js`). Depois (retorno do usuário: "não deixe ela sentar no mijo, faz ela levantar,
+    depois do da irmã), em pé, no chão de verdade, sem nada na boca, sem o Fica, a companheira só seguindo a irmã de
+    perto (esperando por uma irmã que ela não alcança, nunca: a IA a levaria de volta) e só com espaço para sair dali
+    (`dog:pee`: a poça discreta que seca, `feedback.js`). Depois (retorno do usuário: "não deixe ela sentar no mijo, faz ela levantar,
     dar uma cheirada no mijo e então ela senta em outro lugar, tudo andando naturalmente"), ela anda até a poça
     (curva-reta-curva, `walkPath.dubinsPaths`: nada de girar parada), fica de frente com o focinho em cima dela e
     cheira (`dog:sniff`), sai andando por um caminho que não passa por cima da poça e senta perto da irmã, de frente
-    para ela (ou num lugar livre em volta), longe da poça (`anim.idle.kind` 'sit'). Os caminhos não encostam em
+    para ela, a até `IDLE.after.near` m (ou num lugar livre em volta), longe da poça (`anim.idle.kind` 'sit'). Os caminhos não encostam em
     colisores, bordas de caminha nem na irmã (`IDLE.after.pass` entre os centros); a trava `lockFor` pede `drive` (o
     núcleo não a desloca; `idle.step` a anda antes de pôr o corpo no lugar, com a velocidade e o giro de verdade para
     as patas). Algo entrou no caminho: ela para ali (perto da poça, fica em pé: 'stand');
   - coçar está desligado (`IDLE.scratch.on`): o usuário pediu para deixar de fora por enquanto; a pose (sentada, a
     traseira no pescoço) continua em `dogAnimation.js` e no sandbox (`idle=scratch`).
-  Qualquer movimento ou comando a levanta (a ativa solta a trava no mesmo quadro). As poses ficam em `dogAnimation.js`
+  Qualquer movimento ou comando a levanta (a ativa solta a trava no mesmo quadro). O xixi é sorteado e tira a dog do
+  lugar: o jogo headless dos testes (`createHeadlessGame`, a não ser com `pee: true`) e as partidas E2E (o `load` do
+  harness) o desligam com `game.debug.idle.setPee(false)`. As poses ficam em `dogAnimation.js`
   (os dois modelos; no novo, a locomoção sai no xixi: `w.pee`). Testes em `test/parada.test.mjs` (a agenda, a sequência
   depois do xixi com e sem o jogo, as irmãs fora de compasso) e nos casos de `test/dogV2.test.mjs`; sandbox
   `idle=scratch|lie|pee` e capturas 60–63.

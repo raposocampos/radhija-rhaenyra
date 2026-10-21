@@ -203,7 +203,7 @@ test('parada por muito tempo no jogo: sem mexer na ativa, ela deita (a irmã tam
 
 test('xixi no jogo: ela anda até a poça, cheira e senta em outro lugar, sem atravessar nada nem a irmã', async () => {
   await withSeedAsync(11, async () => {
-    const h = await createHeadlessGame({ level: 1 });
+    const h = await createHeadlessGame({ level: 1, pee: true });
     // no gramado aberto (perto da casa, sem espaço para a voltinha, ela só sai andando dali, sem cheirar)
     h.teleport('radhija', -2.6, -2.6, 0.6);
     h.teleport('rhaenyra', -3.4, -2.8, 0.9);
@@ -263,5 +263,51 @@ test('xixi no jogo: ela anda até a poça, cheira e senta em outro lugar, sem at
       kinds.add(h.dogs[who].anim?.idle?.kind ?? 'nada');
     }
     assert.deepEqual([...kinds], ['sit'], `continua sentada (${[...kinds]})`);
+  });
+});
+
+test('xixi no jogo: com o Fica, ou esperando a irmã que ela não alcança, a companheira não faz xixi nem sai do lugar', async () => {
+  await withSeedAsync(13, async () => {
+    const h = await createHeadlessGame({ level: 1, query: 'dog=radhija', pee: true });
+    const comp = 'rhaenyra';
+    const c = h.ctrls[comp];
+    /** `sec` s com o sorteio do xixi passando (rand abaixo da chance) e a líder "mexida" (um toque a cada quadro). */
+    const run = (sec, what, { still = true, wantPee = false } = {}) => {
+      const x0 = c.x, z0 = c.z;
+      const seeded = Math.random;
+      Math.random = () => 0.05;
+      let peed = false;
+      try {
+        for (let i = 0; i < Math.round(sec / DT); i++) {
+          h.keyDown('KeyZ');
+          h.step();
+          h.keyUp('KeyZ');
+          if (h.dogs[comp].anim?.idle?.kind === 'pee') peed = true;
+        }
+      } finally {
+        Math.random = seeded;
+      }
+      assert.equal(peed, wantPee, `${what}: ${wantPee ? 'faz' : 'sem'} xixi`);
+      if (still) assert.ok(Math.hypot(c.x - x0, c.z - z0) < 0.05, `${what}: não saiu do lugar`);
+    };
+    // com o Fica, perto da irmã
+    h.teleport('radhija', -2.6, -2.6, 0.6);
+    h.teleport(comp, -3.4, -2.8, 0.9);
+    h.game.setStay(comp, true);
+    h.run(0.5);
+    run(8, 'com o Fica');
+    // a irmã do outro lado da cerca (o vão é só da Radhija): a Rhaenyra espera no lugar mais perto que alcança
+    h.game.setStay(comp, false);
+    const F = h.layout.FENCE;
+    h.teleport('radhija', F.x + 1.0, F.gap.center, 0);
+    h.teleport(comp, F.x - 1.6, F.gap.center + 0.6, Math.PI / 2);
+    run(6, 'indo esperar', { still: false });
+    assert.equal(h.game.debug.brains[comp].mode, 'wait', 'esperando a irmã');
+    run(8, 'esperando a irmã que ela não alcança');
+    // controle: seguindo a irmã de perto (o caso de sempre), com o mesmo sorteio, ela faz
+    h.teleport('radhija', -2.6, -2.6, 0.6);
+    h.teleport(comp, -3.4, -2.8, 0.9);
+    h.run(1);
+    run(8, 'seguindo a irmã de perto', { still: false, wantPee: true });
   });
 });
