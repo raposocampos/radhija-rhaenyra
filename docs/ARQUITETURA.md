@@ -532,6 +532,14 @@ quiser. Nada no jogo os anuncia: nenhuma dica, menu, tela de controles, conquist
   beber ou cheirar) e fora do superbafo e do Lambe-Lambe; o cocô também pede a dog parada. Ganchos do cenário em `LevelBuild.extras`: o balanço da fase
   7 e a bolinha da fase 6. Ao rolar, a altura do corpo vem do contato com o chão (`lowestY` em `dogAnimation.js`:
   as formas do desenho do modelo presas aos ossos, com a pose do quadro), então nada passa do chão em nenhum ângulo.
+- **Parada por muito tempo** (`src/game/idle.js`, pedido do usuário na etapa 5): sentar já vem da animação (5 s
+  parada); o módulo conta, por dog, quanto ela está parada e livre (a ativa sem o jogador mexer nela, sem trava, extra
+  nem cocô, no chão) e manda `anim.idle`: coça sentada aos 8 s e de 7 a 11 s depois (a pata alterna), deita aos 24 s e
+  fica (a cabeça descansa nas patas depois de 9 s, de olhinho fechado) e, às vezes (30% das paradas, no máximo uma a
+  cada 2 min, no chão de verdade e sem nada na boca), faz xixi agachada em pé antes de sentar (`dog:pee`: a poça
+  discreta que seca, `feedback.js`). Qualquer movimento a levanta; nada trava a dog (a companheira continua seguindo).
+  As poses ficam em `dogAnimation.js` (os dois modelos; no novo, a locomoção sai no xixi: `w.pee`). Testes em
+  `test/parada.test.mjs` e nos casos de `test/dogV2.test.mjs`; sandbox `idle=scratch|lie|pee` e capturas 60–63.
 - Uma fase nova precisa de três ossinhos (a fase 10, a última, tem cinco) e de pelo menos um ponto em `extras`
   (`test/extras.test.mjs`). A suíte E2E
   `extras` e `tools/scripts/capture-extras.mjs` mostram tudo na nuvem.
@@ -701,7 +709,8 @@ Quem emite e quem ouve:
   (opções salvas, §9).
 - **Dogs**: `dog:switch`, `dog:step`, `dog:dash`, `dog:jump`, `dog:wallJump {id, top}`, `dog:land`, `dog:bump`, `dog:bark`, `dog:pushStart`, `dog:pushEnd`,
   `companion:stay`, `bafo:aim`, `dog:bafo`, `dog:yuck`, `dog:dashBlocked` (arrancada recusada pela fase), `dog:jumpBlocked` (pulo recusado pela fase),
-  `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho).
+  `lick:start`/`lick:end`, `dog:lick {target, x, y, z, stroke}` (target null = lambidinha no focinho), `dog:scratch {name}` e
+  `dog:pee {name, x, z}` (parada por muito tempo, `idle.js`).
 - **Cheiro**: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`; fase 4 e Arena do Bafo:
   `fan:aligned`, `pigeon:flee {y?}` (y = altura de onde ele sai; do chão, um voo curto), `pigeon:land` e `pigeon:shrug`
   (o pombo ignorou o latido).
@@ -794,7 +803,9 @@ Adreno 5xx/60x–61x, PowerVR; ex.: Infinix Note 30 5G) começa no `baixa`. O iP
 Por que esses cortes: cada fase tem ~800 a ~2.200 chamadas de desenho por quadro (a passada de sombra repete o
 cenário), e o céu calcula nuvens por ruído em cada pixel; desenhado por último, só roda nos pixels de céu que sobram.
 O celular/tablet também tem teto de 60 quadros por segundo (`createFrameCap` no laço de `main.js`): telas de 90/120 Hz
-desenhariam o dobro e esquentariam o aparelho.
+desenhariam o dobro e esquentariam o aparelho. E o pelo das dogs (modelo novo) tem menos cascas (`furShellsFor`: 10 no
+PC, 6 no celular e no tablet; o mesmo comprimento em menos camadas transparentes, 40% menos malha de pelo), escolhidas
+na criação das dogs.
 
 No modo automático do celular/tablet, o governador de FPS (`createFpsGovernor`, alimentado por `engine.quality.frame`
 a cada quadro desenhado da partida) mede a mediana dos intervalos em janelas de 1,5 s, depois de 2 s de aquecimento:

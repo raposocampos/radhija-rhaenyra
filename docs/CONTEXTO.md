@@ -15,10 +15,18 @@ antes de editar.
   gostaria de incluir essas animações: parada muito tempo, coçar, xixi agachada, sentar e deitar" (no novo com
   certeza; no atual se der; nada atravessa o chão e a irmã dá espaço). A franja das orelhas em close e morder o
   volante do registro entram se couberem.
-- Feito até aqui: (1) `main.js` usa o modelo novo; `?dogs=atual` volta ao anterior; o painel do canil e o README
-  apontam para o padrão; o E2E `canil` confere o padrão e o `?dogs=atual`.
-- Próximo passo: (2) cascas do pelo no celular; (5) as animações paradas; (3) testes e capturas; prévia para o
-  usuário aprovar.
+- Feito até aqui (PR #58):
+  - (1) `main.js` usa o modelo novo; `?dogs=atual` volta ao anterior; o painel do canil e o README apontam para o
+    padrão; o E2E `canil` confere o padrão e o `?dogs=atual` (`19a6abf`).
+  - (2) Pelo no celular: `quality.furShellsFor` (10 cascas no PC, 6 no celular e no tablet; o mesmo comprimento, 40%
+    menos malha de pelo), `createDogV2(kind, { shells })`, teste em `test/dogV2.test.mjs` (`d3c3ac3`). Medido em Node:
+    a animação do novo custa 0,163 ms por quadro para as duas (o atual, 0,105); a malha é do mesmo tamanho.
+  - (5) Parada por muito tempo (`src/game/idle.js`, poses em `dogAnimation.js`, a poça em `feedback.js`): coça
+    sentada aos 8 s e de tempos em tempos, deita aos 24 s (a cabeça descansa nas patas depois) e, às vezes, faz xixi
+    agachada antes de sentar; qualquer movimento a levanta. Testes em `test/parada.test.mjs` e nos casos de
+    `test/dogV2.test.mjs` (nada passa do chão nos dois modelos); capturas 60–63 (`d64de82`).
+- Próximo passo: revisar as capturas das poses novas e as das fases (E2E `todas` com o modelo novo); testes onde o
+  novo ainda não tem cobertura; prévia para o usuário aprovar.
 
 ## Entregue: interações de verdade, molejo na curva e pulo (PR #55, squash `1c61405`, deploy `39532803952`)
 
