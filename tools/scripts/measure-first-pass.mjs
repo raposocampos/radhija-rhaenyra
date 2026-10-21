@@ -161,6 +161,33 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
     return { mats, texs };
   }
   scan(false); // o que já estava pronto na carga
+  // Diagnóstico dos picos: o que entra na câmera pela primeira vez em cada quadro da 1ª passagem (fora do tempo medido)
+  const seen = new WeakSet();
+  const frustum = new THREE.Frustum();
+  const pv = new THREE.Matrix4();
+  const describe = (o) => {
+    const m = [].concat(o.material)[0] || {};
+    const flags = [m.transparent && 'transparente', m.side === THREE.DoubleSide && 'dois lados', m.side === THREE.BackSide && 'verso',
+      m.blending !== THREE.NormalBlending && `mistura ${m.blending}`, m.map && 'mapa', o.isInstancedMesh && `instâncias ${o.count}`,
+      o.matrixWorld.determinant() < 0 && 'espelhado', o.castShadow && 'sombra'].filter(Boolean);
+    return `${pathOf(o)} · ${m.type || o.type}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+  };
+  function firstSeen() {
+    const camera = engine.camera;
+    camera.updateMatrixWorld();
+    pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(pv);
+    const out = [];
+    scene.traverseVisible((o) => {
+      if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite) || seen.has(o)) return;
+      if (o.frustumCulled && !(o.isSprite ? frustum.intersectsSprite(o) : frustum.intersectsObject(o))) return;
+      seen.add(o);
+      out.push(describe(o));
+    });
+    return out;
+  }
+  const seenAtStart = firstSeen().length;
+  const appeared = [];
   if (settleMs > 0) await new Promise((r) => setTimeout(r, settleMs));
 
   let t = 0;
@@ -200,6 +227,10 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
       const f = frame();
       f.node = node.id;
       frames.push(f);
+      if (pass === 1) {
+        const names = firstSeen();
+        if (names.length) appeared.push({ frame: frames.length - 1, node: node.id, count: names.length, names: names.slice(0, 20) });
+      }
       if (f.programs > 0 || f.textures > 0 || f.geometries > 0) {
         const s = scan(true);
         news.push({ pass, node: node.id, frame: frames.length - 1, programs: f.programs, textures: f.textures, geometries: f.geometries,
@@ -237,7 +268,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
     quality: { ...engine.qualityState, buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled && engine.sun.castShadow,
       shadowType: renderer.shadowMap.type, shadowSize: engine.sun.shadow.mapSize.x, bloom: engine.bloom.enabled,
       renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
-    passes: [pass1, pass2], back, events, news,
+    passes: [pass1, pass2], back, events, news, seenAtStart, appeared,
   };
 }
 
@@ -264,6 +295,11 @@ try {
   await new Promise((done, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', done); });
   const base = `http://127.0.0.1:${server.address().port}${MOUNT}`;
   const options = browserOptions();
+  // Cada medição já abre um perfil novo (cache de shaders em disco vazio); desligar o cache só tira a gravação em
+  // segundo plano dos programas recém-compilados, que no runner deixava os quadros ~30% mais caros por alguns segundos
+  // depois da carga. FIRST_PASS_SHADER_CACHE=1 mantém o cache.
+  if (process.env.FIRST_PASS_SHADER_CACHE !== '1') options.args = [...options.args, '--disable-gpu-shader-disk-cache'];
+  report.conditions.browserArguments = options.args;
   for (const level of LEVELS) {
     for (const quality of QUALITIES) {
       const label = `fase${level}/${quality}`;
@@ -319,7 +355,10 @@ try {
             over50: excess.filter((e) => e > 50).length, over100: excess.filter((e) => e > 100).length, worst },
           peaks,
         };
+        // para cada pico, o que tinha acabado de entrar na câmera (no quadro dele ou no anterior)
+        for (const k of summary.peaks) k.appeared = run.appeared.filter((a) => a.frame === k.frame || a.frame === k.frame - 1);
         report.runs.push({ ...summary, tour: run.tour, quality: run.quality, news: run.news, errors,
+          seenAtStart: run.seenAtStart, appeared: run.appeared,
           frames: { first: p1, second: p2, back: run.back, events: run.events } });
         console.log(`[primeira-passagem] ${label}: carga ${summary.load.programs} programas/${summary.load.textures} texturas `
           + `(preparo ${summary.load.prepareMs} ms); depois da carga +${summary.afterLoad.programs} programas, +${summary.afterLoad.textures} texturas, `
