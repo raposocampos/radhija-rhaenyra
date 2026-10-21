@@ -25,11 +25,12 @@ export function createScentView(root) {
   let time = 0;
   let disposed = false;
 
+  const cloudMaterial = () => new THREE.MeshStandardMaterial({
+    color: '#9BE36B', emissive: '#3F7A1C', emissiveIntensity: 0.35, roughness: 1, metalness: 0,
+    transparent: true, opacity: 0, depthWrite: false,
+  });
   function make() {
-    const mat = new THREE.MeshStandardMaterial({
-      color: '#9BE36B', emissive: '#3F7A1C', emissiveIntensity: 0.35, roughness: 1, metalness: 0,
-      transparent: true, opacity: 0, depthWrite: false,
-    });
+    const mat = cloudMaterial();
     const g = new THREE.Group();
     const puffs = PUFFS.map(([x, y, z, s], i) => {
       const m = new THREE.Mesh(sphere, mat);
@@ -40,6 +41,13 @@ export function createScentView(root) {
     group.add(g);
     return { g, mat, puffs };
   }
+  // Uma bolha escondida fica sempre na fase, longe de tudo: o aquecimento da carga (engine.prepare) compila o
+  // programa das nuvens e a GPU recebe a esfera, e o primeiro superbafo não engasga. Nunca aparece.
+  const warm = new THREE.Mesh(sphere, cloudMaterial());
+  warm.name = 'cheiro-aquecimento';
+  warm.visible = false;
+  warm.position.set(0, -500, 0);
+  group.add(warm);
 
   function sync(clouds, dt) {
     if (disposed) return;

@@ -1276,7 +1276,10 @@ export function createGame({ engine, dogs, levels, params }) {
         cam.snapFollow(a.x, a.z);
         applyDogs(0.016);
         markLoad('setup');
-        engine.renderer.compile?.(engine.scene, engine.camera);
+        // a GPU recebe a fase inteira agora, atrás da cortina: programas na variante do jogo, texturas, geometrias e
+        // sombra, inclusive do que está fora da câmera ou escondido (sem engasgo na 1ª passagem por cada área)
+        if (engine.prepare) await engine.prepare();
+        else engine.renderer.compile?.(engine.scene, engine.camera);
         markLoad('compile');
 
         const target = mode === 'play' ? 'playing' : mode === 'title' ? 'title' : 'intro';

@@ -2,6 +2,7 @@
 // API: createEngine(container, { params }) → {
 //   renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
 //   applyLighting(preset, bounds)  // por fase: sol/lua, hemisfério, névoa, céu, env map, grading, sombra
+//   prepare()                      // aquece a GPU com a fase inteira (sem engasgo na 1ª vez em cada área)
 //   quality                        // qualidade por aparelho (src/core/quality.js): PC 'alta' (a de sempre), celular mais leve
 //   render(dt, t)
 // }
@@ -261,6 +262,95 @@ export function createEngine(container, { params } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
+  // ------------------------------------------------ aquecimento da GPU (na carga da fase, atrás da cortina)
+  // Na primeira vez que um material aparece, o WebGL compila o programa dele (no Windows o ANGLE ainda traduz para
+  // HLSL) e a GPU recebe as texturas e as geometrias: um quadro de dezenas a centenas de ms na primeira passagem por
+  // cada área nova. O programa depende de para onde se desenha: no alvo do compositor, sem tone mapping e em espaço
+  // linear; direto na tela (sem pós), com os dois. Por isso compilar sem alvo não basta quando há compositor: a
+  // variante do jogo ficava para o primeiro quadro em que cada coisa entrava na câmera.
+  /** Alvo do mesmo tipo do compositor (o programa não depende do tamanho), ou null quando se desenha na tela. */
+  const warmTarget = () => (usePost && profile.post
+    ? new THREE.WebGLRenderTarget(16, 16, { type: THREE.HalfFloatType, samples: profile.msaa })
+    : null);
+  /** Compila os programas de toda a cena, inclusive do que está escondido, na variante de agora. */
+  function compileScene(target) {
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(target);
+    try {
+      return renderer.compileAsync(scene, camera);
+    } finally {
+      renderer.setRenderTarget(prev);
+    }
+  }
+  /**
+   * Desenha a cena INTEIRA uma vez (sem o recorte pela câmera e com o que ainda está escondido), num alvo pequeno
+   * ou num pixel da tela: envia texturas e geometrias e prepara os programas da sombra. As luzes ficam como estão (a
+   * quantidade de luzes faz parte do programa).
+   */
+  function drawEverything(target) {
+    const lights = new Set();
+    scene.traverseVisible((o) => { if (/** @type {THREE.Light} */ (o).isLight) lights.add(o); });
+    /** @type {[THREE.Object3D, boolean, boolean][]} */
+    const changed = [];
+    scene.traverse((o) => {
+      if (/** @type {THREE.Light} */ (o).isLight) {
+        // a luz dentro de um grupo escondido, que agora aparece, continua apagada
+        if (o.visible && !lights.has(o)) { changed.push([o, true, o.frustumCulled]); o.visible = false; }
+        return;
+      }
+      const drawable = /** @type {THREE.Mesh} */ (o).isMesh || /** @type {THREE.Points} */ (o).isPoints
+        || /** @type {THREE.Line} */ (o).isLine || /** @type {THREE.Sprite} */ (o).isSprite;
+      if (o.visible && !(drawable && o.frustumCulled)) return;
+      changed.push([o, o.visible, o.frustumCulled]);
+      o.visible = true;
+      if (drawable) o.frustumCulled = false;
+    });
+    const prev = renderer.getRenderTarget();
+    const viewport = renderer.getViewport(new THREE.Vector4());
+    const scissor = renderer.getScissor(new THREE.Vector4());
+    const scissorTest = renderer.getScissorTest();
+    renderer.shadowMap.needsUpdate = true;
+    try {
+      renderer.setRenderTarget(target);
+      if (!target) {
+        renderer.setViewport(0, 0, 1, 1);
+        renderer.setScissor(0, 0, 1, 1);
+        renderer.setScissorTest(true);
+      }
+      renderer.render(scene, camera);
+    } finally {
+      for (const [o, visible, culled] of changed) { o.visible = visible; o.frustumCulled = culled; }
+      if (!target) {
+        renderer.setViewport(viewport);
+        renderer.setScissor(scissor);
+        renderer.setScissorTest(scissorTest);
+      }
+      renderer.setRenderTarget(prev);
+      // o mapa de sombra saiu com o que estava escondido: o próximo quadro redesenha
+      renderer.shadowMap.needsUpdate = true;
+    }
+  }
+  /**
+   * Prepara a GPU para a fase montada: programas (com KHR_parallel_shader_compile, sem travar a página enquanto
+   * compilam), texturas, geometrias, sombra e o compositor. Chamado no carregamento, com a fase já no lugar e a
+   * tela coberta (a cortina ou a tela de carregamento).
+   */
+  async function prepare() {
+    const target = warmTarget();
+    try {
+      // sem resposta da GPU (contexto perdido), segue: o desenho abaixo termina o que faltar
+      await Promise.race([compileScene(target), new Promise((r) => setTimeout(r, 8000))]);
+      drawEverything(target);
+      // e um quadro de verdade, ainda coberto: os passes do compositor e o primeiro quadro já ficam prontos
+      render(0);
+    } catch (error) {
+      // o aquecimento só adianta trabalho: se falhar, a fase abre e o que faltou acontece no primeiro uso
+      console.warn('[engine] aquecimento da GPU incompleto', error);
+    } finally {
+      target?.dispose();
+    }
+  }
+
   let shadowFrame = 0;
   /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
   function setProfile(next, reason) {
@@ -272,26 +362,40 @@ export function createEngine(container, { params } = {}) {
     }, next, prev);
     qualityState.level = next.name;
     qualityState.reason = reason;
+    // outro tipo de sombra ou sem compositor muda a variante dos programas: compila a fase toda de novo agora, em
+    // segundo plano, em vez de engasgar em cada área (texturas e geometrias continuam na GPU)
+    const target = warmTarget();
+    try {
+      compileScene(target).finally(() => target?.dispose());
+    } catch (error) {
+      target?.dispose();
+      console.warn('[engine] recompilação da fase incompleta', error);
+    }
+  }
+
+  /** @param {number} dt @param {number} [t] */
+  function render(dt, t) {
+    shared.time.value = t ?? shared.time.value;
+    sky.material.uniforms.uTime.value = shared.time.value;
+    // o céu acompanha a câmera (sem paralaxe)
+    sky.position.copy(camera.position);
+    // perfis leves redesenham o mapa de sombra a cada N quadros (a passada de sombra repete o cenário inteiro)
+    if (profile.shadowEvery > 1 && ++shadowFrame % profile.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
+    if (usePost && profile.post) composer.render(dt);
+    else renderer.render(scene, camera);
   }
 
   return {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
+    /** Aquecimento da GPU para a fase montada (programas, texturas, geometrias, sombra): no carregamento. */
+    prepare,
     get lighting() { return lighting; },
     /** Controle da qualidade: device, mode, level, setMode(m) (menu), frame(now, active) (governador). Cada troca
      *  emite 'quality:change' no barramento de eventos. */
     quality,
     /** Perfil aplicado agora: { level, pixelRatio, reason }. */
     get qualityState() { return { ...qualityState }; },
-    render(dt, t) {
-      shared.time.value = t ?? shared.time.value;
-      sky.material.uniforms.uTime.value = shared.time.value;
-      // o céu acompanha a câmera (sem paralaxe)
-      sky.position.copy(camera.position);
-      // perfis leves redesenham o mapa de sombra a cada N quadros (a passada de sombra repete o cenário inteiro)
-      if (profile.shadowEvery > 1 && ++shadowFrame % profile.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
-      if (usePost && profile.post) composer.render(dt);
-      else renderer.render(scene, camera);
-    },
+    render,
   };
 }

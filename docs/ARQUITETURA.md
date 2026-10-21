@@ -94,7 +94,15 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 4. Descarta os recursos exclusivos da fase anterior e do debug (§3.1), preservando caches globais.
 5. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
 6. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
-7. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
+7. Posiciona as dogs e aplica `?stage=` (só no carregamento inicial).
+8. Aquece a GPU com a fase inteira, ainda atrás da cortina (`engine.prepare()`, `src/core/engine.js`): compila os
+   programas de toda a cena na variante em que o jogo desenha (no alvo do compositor, sem tone mapping; sem pós, com
+   ele), desenha uma vez tudo o que existe — fora da câmera e escondido também — num alvo de 16×16 (texturas,
+   geometrias e os programas da sombra vão para a GPU) e um quadro normal. Sem isso, cada área engasgava na primeira
+   vez que entrava na câmera. Trocar o perfil de qualidade (tipo de sombra, compositor) recompila a fase em segundo
+   plano. Coisas que só nascem num evento precisam existir escondidas desde a carga (a bolha `cheiro-aquecimento` do
+   superbafo). Medido por `tools/scripts/measure-first-pass.mjs` (§10).
+9. Emite `level:loaded` (a UI revela).
 
 **Pacote inicial**: o `main` do build leva o motor, o núcleo, as dogs, a UI, os efeitos e, de cada fase, só a
 definição, o layout, a iluminação e o puzzle (o menu e os testes em Node usam isso). O cenário de cada fase vira um
@@ -955,6 +963,15 @@ do Vite a cada rodada (`--cold-deps`: otimizador frio, como na primeira suíte d
 ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois, para confirmar uma
 correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para (`stopWatch`) quando não
 resta página protegida aberta, e uma página nova o religa.
+
+**Primeira passagem pelas áreas** (suíte `primeira-passagem` do E2E manual, também em `todas`;
+`tools/scripts/measure-first-pass.mjs`, um job por fase): cada fase abre com `?play` num navegador novo (nada
+compilado antes), com a qualidade do PC (`alta`) e a do celular (`media`), e a dog ativa vai de nó em nó da navegação
+(`NAV_NODES`, do mais perto ao mais longe) com a câmera seguindo, duas vezes pelo mesmo caminho; depois, um superbafo.
+A página de medição dá os quadros (passo fixo de 1/30 s e `gl.finish()`), então a 1ª e a 2ª passagem se comparam
+quadro a quadro. Reprova se, depois da carga, o renderer compilar um programa ou receber uma textura (o relatório diz
+em que nó e de qual material) ou se um quadro da 1ª passagem custar 120 ms a mais que o mesmo da 2ª. Os ms são do
+SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as contagens são exatas.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
