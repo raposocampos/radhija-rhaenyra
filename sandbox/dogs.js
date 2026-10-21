@@ -7,6 +7,8 @@
 //   orbit=1   carry=1|carrot|ball|slipper   bark=<s> (late no instante s)   look=1 (olha para a câmera)   yaw=<graus>
 //   wet=<0..1>   then=<ação depois de 'at' s>  at=<s>
 //   extra=drink|eat|dig|sneeze|nudge|roll  xk=<0..1> (progresso fixo; sem ele, repete a cada xdur s)
+//   idle=scratch|lie|pee (parada por muito tempo, game/idle.js)  ik=<0..1> (progresso fixo)  it=<s> (tempo somado:
+//   deitada há mais de 9 s, a cabeça descansa)  iside=1|-1 (a pata que coça)
 //   lick=1 (fase da lambida em ciclo)   airk=<0..1> + jumph=<m> (no ar)   slope=<rad>   poop=<0..1>
 //   wallk=<0..1> (impulso na parede, com a parede a 0,45 m à frente)   hop=1 (pula a cada 1 s: física das orelhas)
 //   wall=<m> (parede a m metros à frente: anda com o controle e a colisão do jogo, e a cabeça do modelo novo desvia)
@@ -77,6 +79,10 @@ function readConfig(src) {
     jumph: num('jumph', 0.3),
     slope: num('slope', 0),
     poop: src.poop !== undefined && src.poop !== null && src.poop !== '' ? Number(src.poop) : null,
+    idle: get('idle', ''),
+    ik: src.ik !== undefined && src.ik !== null && src.ik !== '' ? Number(src.ik) : null,
+    it: num('it', 0),
+    iside: num('iside', 1) < 0 ? -1 : 1,
     wallk: src.wallk !== undefined && src.wallk !== null && src.wallk !== '' ? Number(src.wallk) : null,
     hop: String(get('hop', '')) === '1',
     stopAt: src.stop !== undefined && src.stop !== null && src.stop !== '' ? Number(src.stop) : null,
@@ -296,6 +302,10 @@ function animAt(t) {
     a.jump = 4 * cfg.jumph * cfg.airk * (1 - cfg.airk);
   }
   if (cfg.poop !== null) a.poopK = cfg.poop;
+  if (cfg.idle) {
+    const dur = cfg.idle === 'pee' ? 3 : cfg.idle === 'scratch' ? 2.6 : 1.2;
+    a.idle = { kind: cfg.idle, k: cfg.ik !== null ? cfg.ik : Math.min(1, t / dur), t: cfg.it + t, side: cfg.iside };
+  }
   if (cfg.hop) {
     // pulo de verdade a cada 1 s (0,5 s no ar, 0,4 m): as orelhas reagem à física
     const u = t % 1;

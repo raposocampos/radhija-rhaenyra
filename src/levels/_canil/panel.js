@@ -92,8 +92,8 @@ export function createPanel(opts) {
   ]);
   const link = document.createElement('a');
   link.className = 'canil-link';
-  link.href = '?level=1&play&dogs=novo';
-  link.textContent = 'Jogar as fases com o modelo novo';
+  link.href = '?level=1&play';
+  link.textContent = 'Jogar as fases (modelo novo, o padrão)';
   link.dataset.link = 'fases-modelo-novo';
   body.append(link);
 

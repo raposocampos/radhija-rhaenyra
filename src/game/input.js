@@ -289,6 +289,8 @@ export function createInput({ onDevice } = {}) {
       }
       return hit;
     },
+    /** Algum toque (tecla, botão) desde o último endFrame, antes de consumir (a parada por muito tempo, idle.js). */
+    anyPressed: () => pressed.size > 0,
     shift: () => any(SHIFT) || pad.shiftHeld || touchHeld('shift'),
     /** Superbafo: segurando (teclado R, R2/RT ou o botão de toque Superbafo). */
     bafo: () => down.has('KeyR') || pad.bafo || touchHeld('bafo'),

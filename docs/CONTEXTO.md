@@ -1,11 +1,56 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-20, Claude** (interações de verdade, PR #55, 2ª rodada: ela anda até a coisa, o
-jogador puxa as cordas de ré, o portãozinho da fase 10 abre para o quintal, o gerador pega no segundo puxão, o pulo
-encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primeiro [AGENTS.md](../AGENTS.md) e
-[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-21, Claude** (#55 entregue em v0.10.7 · build 99; começou a etapa 5 dos modelos
+novos: o novo como padrão). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub
+antes de editar.
 
-## Em andamento: irmã que segue sem loop quando não alcança a outra (Claude, branch `claude/irma-inalcancavel`, PR #57)
+## Em andamento: modelos novos das dogs, etapa 5: o novo como padrão (Claude, branch `claude/modelo-novo-padrao`)
+
+- Pedidos do usuário (2026-10-21, pelo orquestrador): "implementar o novo modelo das dogs em produção além de testar
+  tudo e criar novos testes"; o plano aprovado: (1) o novo vira o padrão nas 10 fases e nas arenas, com um jeito de
+  voltar ao atual (`?dogs=atual`) e sem quebrar `?dogs=novo`; (2) cascas de pelo mais leves só no celular, sem mudar
+  o PC (Infinix Note 30 5G e iPhone 13, perfis de qualidade); (3) testes novos onde o novo ainda não tem cobertura,
+  revisão das capturas de todas as fases e E2E `todas` no head final; (4) conferir no novo o detalhe escondido, a pose
+  do cocô com corcunda e a irmã dando espaço (sem citar o detalhe em textos visíveis); (5) e, pedido seguinte: "Também
+  gostaria de incluir essas animações: parada muito tempo, coçar, xixi agachada, sentar e deitar" (no novo com
+  certeza; no atual se der; nada atravessa o chão e a irmã dá espaço). A franja das orelhas em close e morder o
+  volante do registro entram se couberem.
+- Feito até aqui (PR #58):
+  - (1) `main.js` usa o modelo novo; `?dogs=atual` volta ao anterior; o painel do canil e o README apontam para o
+    padrão; o E2E `canil` confere o padrão e o `?dogs=atual` (`19a6abf`).
+  - (2) Pelo no celular: `quality.furShellsFor` (10 cascas no PC, 6 no celular e no tablet; o mesmo comprimento, 40%
+    menos malha de pelo), `createDogV2(kind, { shells })`, teste em `test/dogV2.test.mjs` (`d3c3ac3`). Medido em Node:
+    a animação do novo custa 0,163 ms por quadro para as duas (o atual, 0,105); a malha é do mesmo tamanho.
+  - (5) Parada por muito tempo (`src/game/idle.js`, poses em `dogAnimation.js`, a poça em `feedback.js`): deita
+    depois de um tempo (a cabeça descansa nas patas depois) e, às vezes, faz xixi agachada antes de sentar; qualquer
+    movimento a levanta. Testes em `test/parada.test.mjs` e nos casos de `test/dogV2.test.mjs` (nada passa do chão nos
+    dois modelos); capturas 60–63 (`d64de82`).
+  - Rodada de retorno do usuário (2026-10-21, com dois vídeos de cachorros se coçando): xixi mais raro (12% das
+    paradas, um a cada 4 min por dog, nunca logo depois do da irmã); depois dele ela anda até a poça, cheira e senta em
+    outro lugar, andando (caminhos curva-reta-curva em `walkPath.js`, que agora também guarda os da voltinha do cocô);
+    as irmãs fora de compasso (tempos sorteados por dog a cada parada; sentar sozinha de 4 a 8,5 s; uma não deita junto
+    com a outra). Conferido nas 10 fases (3 sementes cada): a sequência inteira, sem colisor, sem encostar na irmã
+    (≥ 0,63 m entre os centros) e ela continua sentada depois.
+  - CI de `f22fa89` reprovado nos testes da companheira do #57 ("andando em loop"): o xixi sorteado tirava a irmã do
+    lugar no meio da medida. Corrigido no jogo (sem xixi com o Fica nem esperando uma irmã que ela não alcança; o lugar
+    novo fica a até 1,25 m da irmã) e nos testes (o headless e o E2E desligam o xixi sorteado; `test/parada.test.mjs`
+    liga e confere, com teste novo do Fica e da espera). Os testes do #57 não mudaram (`b24a1cd`). Rodados com o xixi
+    ligado, só caíam onde o próprio xixi mexe em alguém (a volta depois dele, a da irmã ou a da líder), e um caso
+    mostrou um defeito de verdade: a companheira sentava de costas para a irmã e a IA a virava no lugar (girando
+    parada e levantando). Agora, com a irmã por perto, ela termina de frente para ela; nas 10 fases e arenas
+    (4 sorteios cada, xixi ligado) nenhuma levantou nem girou depois de sentar.
+  - Coçar: DESLIGADO a pedido do usuário ("Não precisa mais ter a animação de coçar, pode deixar de fora, outro dia
+    refinamos isso"; `IDLE.scratch.on`). A pose entregue em `3124772` ficou como estava (só no sandbox). Para a próxima
+    vez: ele achou a perna "torta, parece quebrado" (o joelho esticava ao contrário). Na anatomia do cão, para a pata
+    chegar ao pescoço, a coxa sobe junto às costelas (o quadril dobra muito), o joelho fica para cima e para trás, a
+    canela vai para a frente até o jarrete (perto do cotovelo) e o pé sobe; o "joelho para a frente" dos vídeos é o
+    jarrete. No modelo, sentada, o pescoço fica a ~0,31 m do quadril e a perna inteira tem ~0,285 m: a pata só chega à
+    lateral do pescoço com a perna quase esticada ou com o pescoço descendo até ela; com o quadril muito dobrado, a pele
+    da parte de dentro da coxa do modelo novo estica como uma vela. Vídeos e quadros só na máquina do usuário.
+- Próximo passo: prévia desta rodada para o usuário aprovar; depois, revisar as capturas das fases (E2E `todas` com o
+  modelo novo) e testes onde o novo ainda não tem cobertura.
+
+## Entregue: irmã que segue sem loop quando não alcança a outra (PR #57, squash `54a7116`)
 
 - Retorno do usuário (2026-10-20): "quando estamos em um lugar parado em que a irmã não consegue alcançar, a
   inteligência artificial dela fica bugada, andando em círculos ou com comportamentos estranhos em looping". A imagem
@@ -42,11 +87,9 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
   `d312674`: CI `39535652405` e E2E `todas` `39535648210` verdes, as duas conversas da revisão respondidas e
   resolvidas. Conferir no PR o CI e o E2E do commit que traz esta atualização. No PC, só `node --check` e
   `git diff --check`.
-- Próximo passo: entregar a prévia corrigida e esperar o "pode integrar" do usuário no chat desta sessão (a da
-  1ª prévia não vale). Depois: squash com `--match-head-commit`, liberar só o deploy daquela execução, conferir o
-  `version.json`.
+- Integrado ao main (squash `54a7116`) pela sessão da irmã; conferir no GitHub o deploy e o `version.json`.
 
-## Em andamento: interações de verdade, molejo na curva e pulo (Claude, branch `claude/interacoes-dogs`, PR #55)
+## Entregue: interações de verdade, molejo na curva e pulo (PR #55, squash `1c61405`, deploy `39532803952`)
 
 - Pedidos do usuário (2026-10-20, ao aprovar a prévia do #48): "o botão do ventilador, as dogs poderiam de fato
   apertar o botão"; "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e
@@ -148,8 +191,9 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
   testes dos arquivos afetados durante o trabalho; a bateria fica no CI.
 - Fica para depois (não é do pulo): encostada de viés numa caixa, uma pata ou a ponta da orelha passa um pouco da
   face dela (o corpo é mais largo que os círculos da colisão nas pontas).
-- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar. Depois do #55 publicado, a
-  etapa 5 dos modelos novos (o novo como padrão), pedida pelo usuário ao orquestrador.
+- 4ª prévia (`1fcd4b1`, CI `39530179741`, E2E `todas` `39530176729` verdes): o usuário aprovou ("Aprovado!").
+  Integrado: squash `1c61405`, CI do main `39532679914`, deploy `39532803952` liberado; produção em v0.10.7 · build 99
+  (`version.json` conferido). Não repetir merge/deploy do #55.
 
 ## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`, deploy `39518235787`)
 

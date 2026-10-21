@@ -108,7 +108,7 @@ function stubEngine() {
  *         levels (definições; padrão: src/levels/index.js),
  *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga) }
  */
-export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null } = {}) {
+export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null, pee = false } = {}) {
   installBrowserStubs();
   const [{ createGame }, { events }, LV] = await Promise.all([
     import('../../src/game/game.js'),
@@ -124,6 +124,8 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   const game = createGame({ engine, dogs, levels: defs, params });
   configure?.({ game, levels: defs, engine, dogs });
   await game.loadLevel(level - 1, { mode, initial: true });
+  // o xixi (parada por muito tempo) é sorteado e tira a dog do lugar: desligado, a não ser no teste dele (pee: true)
+  game.debug.idle?.setPee(pee);
 
   const DT = 1 / 60;
   let t = 0;

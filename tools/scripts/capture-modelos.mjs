@@ -99,6 +99,19 @@ try {
     for (let k = 0; k < 6; k++) await pose(`46-empurrando-de-pe-${k}`, side({ action: 'push', speed: 0.8, move: '1', crate: 0.55, sim: 1.0 + k * 0.07 }));
     await pose('47-empurrando-cesto', side({ action: 'push', speed: 0.7, move: '1', crate: 0.42, sim: 1.5 }));
     await pose('48-forca-de-pe', side({ action: 'strain', crate: 0.5, sim: 1.5 }));
+    // parada por muito tempo (etapa 5; pedido do usuário: "coçar, xixi agachada, sentar e deitar"): coçando atrás da
+    // orelha, deitada (de cabeça erguida e descansando nas patas) e o xixi agachada
+    await pose('60-cocando', side({ idle: 'scratch', ik: 0.5, sim: 2 }));
+    await pose('60-cocando-frente', { view: 'front', idle: 'scratch', ik: 0.5, sim: 2 });
+    await pose('60-cocando-34', { view: '34', idle: 'scratch', ik: 0.5, iside: -1, sim: 2 });
+    await pose('61-deitada', side({ idle: 'lie', sim: 3 }));
+    await pose('61-deitada-34', { view: '34', idle: 'lie', sim: 3 });
+    await pose('61-deitada-frente', { view: 'front', idle: 'lie', sim: 3 });
+    await pose('62-deitada-descansando', side({ idle: 'lie', it: 9, sim: 5 }));
+    await pose('62-deitada-descansando-34', { view: '34', idle: 'lie', it: 9, sim: 5 });
+    await pose('63-xixi', side({ idle: 'pee', ik: 0.5, sim: 2 }));
+    await pose('63-xixi-34', { view: '34', idle: 'pee', ik: 0.5, sim: 2 });
+    await pose('63-xixi-tras', { view: 'back', idle: 'pee', ik: 0.5, sim: 2 });
     await page.close();
   }
 
