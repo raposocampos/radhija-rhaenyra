@@ -33,6 +33,26 @@ const sstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 const fract = (x) => x - Math.floor(x);
+/**
+ * As fases do pulo de uma pata no ponto `k` do arco dela (airK menos o atraso da pata; hopK: o pulinho da borda): as
+ * dianteiras dobram na decolagem e desdobram à frente para pousar; as traseiras empurram o chão e depois dobram.
+ */
+const _jp = { tuckF: 0, reachF: 0, pushH: 0, tuckH: 0 };
+function jumpPhases(k, hopK) {
+  _jp.tuckF = hopK ? sstep(0.04, 0.25, k) * (1 - sstep(0.8, 1, k)) : sstep(0, 0.14, k) * (1 - sstep(0.62, 0.86, k));
+  _jp.reachF = sstep(0.62, 0.92, k) * (1 - 0.6 * hopK);
+  _jp.pushH = (1 - sstep(0.03, 0.16, k)) * (1 - hopK);
+  _jp.tuckH = hopK ? sstep(0.04, 0.25, k) : sstep(0.1, 0.3, k) * (1 - sstep(0.9, 1, k));
+  return _jp;
+}
+/**
+ * No pulo, uma pata de cada par vai na frente (retorno do usuário: "as patas saindo do chão uma antes da outra"): na
+ * decolagem, a outra dianteira sai do chão JUMP_LAG.front do arco depois; a outra traseira, JUMP_LAG.hind (o atraso some
+ * até o meio do arco: as duas chegam juntas ao fim dele, senão a pata saltava no pouso; no pouso, a dianteira que não
+ * lidera chega um instante depois, no laço das patas). A que lidera troca a cada pulo (st.jLead); as traseiras lideram
+ * do lado oposto ao das dianteiras.
+ */
+const JUMP_LAG = { front: 0.09, hind: 0.07 };
 const SIT_PITCH = 0.62; // inclinação da coluna sentada (rad)
 const SIT_HIPS = 0.0; // flexão extra da garupa sentada
 
@@ -236,6 +256,7 @@ function createAnimState() {
     landAmp: 1,
     landFall: 0, // o nariz para baixo do pulo na hora do pouso (rad): a garupa desce depois das dianteiras
     prevFall: 0,
+    jLead: 1, // o lado da dianteira que vai na frente neste pulo (troca a cada pulo)
     wallTheta: 0, // corpo de pé no impulso na parede (rad)
     shoveTheta: 0, // corpo de pé no empurrão (rad)
     sb: { cock: 0, jolt: 0, press: 0, growl: 0 }, // ciclo do empurrão, suavizado
@@ -534,7 +555,7 @@ export function createDogAnimation(ctx) {
     const inAir = (A.airK ?? -1) >= 0 || pAir >= 0;
     const airK = (A.airK ?? -1) >= 0 ? A.airK : pAir >= 0 ? pAir : 1;
     // pousando andando (segurando o direcional), a pose do pulo sai depressa: as patas voltam a andar já (offK)
-    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 22 : 12 * offK);
+    w.jump = damp(w.jump, inAir ? (pAir >= 0 ? PY.jump || 0.7 : 1) : 0, inAir ? 40 : 12 * offK);
     // fases do pulo (airK 0 decolando … 1 pousando): subindo, encolhida no meio, descendo para pousar; no começo as
     // traseiras ainda empurram o chão
     // Retorno do usuário: o pulo estava "duro, pulando reto, esticado". Agora: decolando, as traseiras ficam para trás
@@ -550,11 +571,10 @@ export function createDogAnimation(ctx) {
     const jUp = 1 - sstep(0, 0.5, airK), jDown = sstep(0.5, 1, airK);
     const jTake = w.jump * 0.5 * (1 - sstep(0, 0.4, airK)) * (1 - 0.7 * hopK);
     const jFallAir = w.jump * 0.32 * sstep(0.55, 0.95, airK) * (1 - 0.5 * hopK);
-    const jTuckF = hopK ? sstep(0.04, 0.25, airK) * (1 - sstep(0.8, 1, airK)) : sstep(0, 0.14, airK) * (1 - sstep(0.62, 0.86, airK));
-    const jReachF = sstep(0.62, 0.92, airK) * (1 - 0.6 * hopK);
-    const jPushH = (1 - sstep(0.03, 0.16, airK)) * (1 - hopK);
-    const jTuckH = hopK ? sstep(0.04, 0.25, airK) : sstep(0.1, 0.3, airK) * (1 - sstep(0.9, 1, airK));
+    // (o corpo usa as fases do arco; cada pata, as dela, com o atraso de quem não lidera: jumpPhases, no laço das patas)
+    const { tuckF: jTuckF, reachF: jReachF, pushH: jPushH, tuckH: jTuckH } = jumpPhases(airK, hopK);
     const jTuck = Math.max(jTuckF, jTuckH);
+    if (inAir && !st.prevAir) st.jLead = -st.jLead;
     if (inAir) st.peakY = Math.max(st.peakY, jumpY);
     if (st.prevAir && !inAir) {
       st.landT = 0;
@@ -646,7 +666,7 @@ export function createDogAnimation(ctx) {
     const landK = st.landT < 0.7 ? ((Math.exp(-8.1 * st.landT) * Math.sin(16.1 * st.landT)) / 0.513) * st.landAmp : 0;
     const crouchIn = clamp(A.crouch || 0, 0, 1);
     const land = crouchIn > 0 ? Math.max(crouchIn, landK) : landK;
-    const jFall = Math.max(jFallAir, st.landT < 0.5 ? st.landFall * Math.exp(-st.landT / 0.065) : 0);
+    const jFall = Math.max(jFallAir, st.landT < 0.5 ? st.landFall * Math.exp(-st.landT / 0.085) : 0);
     // superbafo: aim = enche o peito mirando; blow = "HÁÁÁ!"; proud = toda orgulhosa; yuck = vira a cara
     w.aim = damp(w.aim, action === 'bafoAim' ? 1 : 0, 9);
     w.blow = damp(w.blow, action === 'bafo' ? 1 : 0, 20);
@@ -941,7 +961,14 @@ export function createDogAnimation(ctx) {
       // de pé no empurrão o passo some duas vezes (na amplitude e no alvo de pé, que não levanta o pé): a dobra da pata
       // some junto, senão a ponta da pata entra no chão enquanto ela sobe e desce
       curl *= gaitAmp * (1 - sk);
-      curl = Math.max(curl, w.jump * (leg.front ? jTuckF : jTuckH) * 0.9); // no meio do pulo, as patinhas dobradas
+      // pulando: as fases desta pata (a que não lidera vai um tiquinho depois: sai do chão e pousa depois da outra)
+      const jLag = inAir && leg.side !== (leg.front ? st.jLead : -st.jLead) ? (leg.front ? JUMP_LAG.front : JUMP_LAG.hind) * (1 - 0.5 * hopK) * (1 - sstep(0.3, 0.6, airK)) : 0;
+      const jp = jumpPhases(clamp(airK - jLag, 0, 1), hopK);
+      const lTuckF = jp.tuckF, lReachF = jp.reachF, lPushH = jp.pushH, lTuckH = jp.tuckH;
+      // a dianteira que não lidera ainda apoiada no chão na decolagem (a perna estica com o peito subindo); já no
+      // primeiro quadro no ar (não espera a pose do pulo entrar)
+      const lPlant = leg.front && jLag > 0 ? 1 - sstep(0, jLag, airK) : 0;
+      curl = Math.max(curl, w.jump * (leg.front ? lTuckF : lTuckH) * 0.9); // no meio do pulo, as patinhas dobradas
       // pisada
       if (leg.swing && !swing && v > 0.2 && gaitAmp > 0.3) onFootstep(li, v); // v: a passada (a voltinha anda parada no lugar)
       leg.swing = swing;
@@ -962,9 +989,12 @@ export function createDogAnimation(ctx) {
         T.y += w.bow * 0.004 * s;
         T.x += leg.side * w.bow * 0.006 * s;
         // no ar: dianteiras dobradas debaixo do peito e, descendo, desdobradas à frente (pousam primeiro)
-        T.z += w.jump * (0.01 - 0.012 * jTuckF + 0.045 * jReachF) * s;
-        // a frente subindo primeiro (o giro sobre o quadril): as dianteiras sobem dobradas junto com o peito
-        T.y += w.jump * 0.08 * jTuckF * s + 0.27 * s * Math.sin(jTake);
+        T.z += w.jump * (0.01 - 0.012 * lTuckF + 0.045 * lReachF) * s;
+        // a frente subindo primeiro (o giro sobre o quadril): as dianteiras sobem dobradas junto com o peito (a que não
+        // lidera fica um instante no chão)
+        T.y += w.jump * 0.08 * lTuckF * s + 0.27 * s * Math.sin(jTake) * (1 - lPlant) - Math.min(jumpY, 0.05 * s) * lPlant;
+        // pousando, a dianteira que não lidera chega um instante depois da outra
+        if (leg.side !== st.jLead && !inAir && st.landT < 0.08) T.y += 0.035 * s * w.jump * (1 - sstep(0.015, 0.06, st.landT)) * (1 - 0.5 * hopK);
         // escorregando de barriga: patas da frente esticadas para a frente
         T.z += w.slide * 0.09 * s;
         T.y += w.slide * 0.055 * s;
@@ -987,9 +1017,10 @@ export function createDogAnimation(ctx) {
         T.x += leg.side * (w.sit * 0.01 + shkEnv * 0.01 + ws * 0.006) * s;
         // no ar: traseiras empurrando o chão na decolagem (para trás e ainda no chão, enquanto a frente sobe) e depois
         // dobradas debaixo da barriga, até quase pousar
-        T.z += w.jump * (0.048 * jTuckH - 0.05 * jPushH) * s;
+        T.z += w.jump * (0.048 * lTuckH - 0.05 * lPushH) * s;
         // a garupa alta no pouso (o giro sobre os ombros): as traseiras ficam dobradas lá em cima e descem com ela
-        T.y += w.jump * (0.065 * jTuckH * s - Math.min(jumpY, 0.07 * s) * jPushH) + 0.27 * s * Math.sin(jFall);
+        // (empurrando, a pata fica no chão já no primeiro quadro no ar: não espera a pose do pulo entrar)
+        T.y += w.jump * 0.065 * lTuckH * s - (inAir ? Math.min(jumpY, 0.07 * s) * lPushH : 0) + 0.27 * s * Math.sin(jFall);
         // escorregando de barriga: traseiras esticadas para trás
         T.z -= w.slide * 0.075 * s;
         T.y += w.slide * 0.045 * s;

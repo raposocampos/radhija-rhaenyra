@@ -10,7 +10,7 @@ import { createCollisionWorld } from './collision.js';
 import { createNavigator } from './navigation.js';
 import { pushRest } from './pushRest.js';
 import { createGround, walkablesOf, bodyGround, planRimHop, pushOffRims } from './ground.js';
-import { createController, placeController, steer, integrate, resolveDogBody, startDash, canDash, startJump, canJump, startHop, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
+import { createController, placeController, steer, integrate, resolveDogBody, startDash, canDash, startJump, fitJump, canJump, startHop, airborne, pickWallSpot, startWallJump, SHOVE_GAP } from './dogController.js';
 import { createBrain, resetBrain, companionIntent, gotoIntent, stayIntent } from './companion.js';
 import { createCameraRig } from './cameraRig.js';
 import { createDebugDraw } from './debugDraw.js';
@@ -628,6 +628,7 @@ export function createGame({ engine, dogs, levels, params }) {
           emit('dog:wallJump', { name: A.name, id: spot.id, x: A.x, z: A.z, top: spot.top });
         } else {
           startJump(A, Lm > 1e-4 ? dx : 0, Lm > 1e-4 ? dz : 0);
+          fitJump(A, world); // por cima da coisa à frente, o arco estica e sobe o quanto precisa
           emit('dog:jump', { name: A.name, x: A.x, z: A.z, dirX: A.jumpDx, dirZ: A.jumpDz });
         }
       } else if (jumpPressed && !A.cfg.jumpHeight && jumpHintCd <= 0) {
@@ -939,6 +940,8 @@ export function createGame({ engine, dogs, levels, params }) {
    * JF_DEPTH): encostada na caixa, o peito passa um pouco da frente dela e o pulo no lugar fica o de sempre.
    */
   const JF_DEPTH = 0.04;
+  /** O empurrão da decolagem no desenho (s): o corpo desenhado sai devagar e alcança o arco do pulo. */
+  const TAKEOFF = 0.12;
   function jumpableUnder(c) {
     if (!world?.jumpableTop) return 0;
     const r = c.cfg.body ? c.cfg.body.r : c.r;
@@ -986,12 +989,20 @@ export function createGame({ engine, dogs, levels, params }) {
       // do pulo ou o chão; o pouso (a pose e o som) espera o desenho chegar ao chão. Posta em outro lugar, na hora.
       const under = c.jumpT > 0 && !(c.hopH > 0) && !W ? jumpableUnder(c) : 0;
       const floor = under > 0 ? under + 0.05 : 0;
+      // a decolagem: o corpo desenhado acelera para cima no empurrão das traseiras (TAKEOFF s) e depois segue o arco (o do
+      // jogo, da colisão, sai na hora): as patas saem do chão uma depois da outra, não as quatro de uma vez
+      const since = c.jumpDur - c.jumpT;
+      const arcY = c.jumpT > 0 && !(c.hopH > 0) && !(c.clearT > 0) && since < TAKEOFF ? c.y * (0.3 + 0.7 * sstep(0, TAKEOFF, since)) : c.y;
       if (floor > 0 && G.jf <= floor) {
-        G.jf = Math.max(G.jf, c.y);
-        G.jf += (floor - G.jf) * (1 - Math.exp(-dt * 60));
+        G.jf = Math.max(G.jf, arcY);
+        G.jf += (floor - G.jf) * (1 - Math.exp(-dt * 40));
         G.jfV = 0;
       } else if (G.jf > 0) {
-        G.jfV += (c.cfg.jumpHeight && c.cfg.jumpTime ? (8 * c.cfg.jumpHeight) / c.cfg.jumpTime ** 2 : 20) * dt;
+        // saindo de cima da coisa, cai já com a velocidade do arco (descendo, ele já vem caindo), não do repouso: senão
+        // o desenho fica para trás do arco e parece planar
+        const arc = c.jumpH > 0 && c.jumpDur > 0;
+        if (G.jfV === 0 && arc && c.jumpT > 0) G.jfV = Math.max(0, ((4 * c.jumpH) / c.jumpDur) * (1 - (2 * c.jumpT) / c.jumpDur));
+        G.jfV += (arc ? (8 * c.jumpH) / c.jumpDur ** 2 : 20) * dt;
         G.jf -= G.jfV * dt;
         if (G.jf <= floor) {
           G.jf = floor;
@@ -999,8 +1010,8 @@ export function createGame({ engine, dogs, levels, params }) {
         }
       }
       // o arco do pulo de novo por cima (ou o chão): ele manda
-      if (G.jf > 0 && (G.jf <= c.y || W || placed)) G.jf = G.jfV = 0;
-      an.jump = W ? 0 : Math.max(c.y, G.jf);
+      if (G.jf > 0 && (G.jf <= arcY || W || placed)) G.jf = G.jfV = 0;
+      an.jump = W ? 0 : Math.max(arcY, G.jf);
       // pousada no chão do jogo com o desenho ainda caindo da coisa: a pose do fim do arco (as dianteiras indo para o
       // chão) fica até o desenho chegar
       // (e o mesmo no pulo que segue no ar depois do fim do arco, por estar em cima da coisa: dogController.clearT)

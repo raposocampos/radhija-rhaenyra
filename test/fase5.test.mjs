@@ -86,7 +86,9 @@ test('fase 5: partida completa (portãozinho → trava → barricada → caixa d
   assert.equal(h.log('box:collapse').length, 1);
   assert.equal(i.objective, 'A Rhaenyra é grande demais para a mesa: troque para a Radhija (Q)');
 
-  // A Rhaenyra bate na toalha; a Radhija entra debaixo da mesa.
+  // A Rhaenyra bate na toalha; a Radhija entra debaixo da mesa (da porta, primeiro para dentro da cozinha: em linha
+  // reta, de viés, ela pegava o batente)
+  h.walkTo(B.start.x + B.half + 0.45, 0, { tol: 0.15 });
   h.walkTo(L.TABLE.x, N.K_table.z);
   h.hold([0, -1]);
   h.run(0.9);

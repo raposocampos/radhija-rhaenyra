@@ -1,4 +1,5 @@
-// Puxar com a boca: a cordinha do portão (fase 1), a cordinha do portãozinho e a alça do gerador (fase 10). Retornos
+// Puxar com a boca: a cordinha do portão (fase 1), a cordinha do portãozinho, a alça do gerador e as alças dos caixotes
+// da despensa (fase 10). Retornos
 // do usuário: "as cordas do portão elas de fato poderiam colocar na boca e puxar, sempre respeitando a física e o
 // realismo"; depois, "o player puxar ela" (o gerador com dois puxões; os portões abrindo enquanto ela puxa) e, do
 // passinho roteirizado, "como se tivesse sendo arrastado, ou como se tivesse um ímã".
@@ -12,7 +13,8 @@
 // O passinho (planStep/driveStep) também leva a dog até o botão que ela aperta com a pata (fase 9).
 //
 // Uso na fase: const tug = createMouthTug({ dogs, ctrls, world });
-//   no E: tug.start(c, { bite, anchor, len })   (bite: o ponto que ela morde, parado; anchor: onde a corda prende)
+//   no E: tug.start(c, { bite, anchor, len })   (bite: o ponto que ela morde, parado; anchor: onde a corda prende;
+//         yaw: chegando sempre por esse rumo, como na alça do caixote; speed: a ré com o direcional todo para trás)
 //   por quadro: tug.update(dt); tug.phase(), tug.pulled(); tug.release() para soltar
 //   no prop: setGrip(tug.grip) (o prop pede a boca na hora de desenhar, depois da animação das dogs)
 //   lockFor(name): tug.lockFor(name)   ·   reset(): tug.reset()
@@ -104,7 +106,8 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
   /**
    * @type {null | { who: string, bite: { x: number, y: number, z: number }, anchor: THREE.Vector3, face: { x: number, z: number },
    *   len: number, phase: 'step' | 'grip' | 'hold' | 'let' | 'miss', t: number, grip: number, free: boolean, reach: number,
-   *   carry: boolean, step: Step | null, back: boolean, x0: number, z0: number, ax: number, az: number, pulled: number }}
+   *   carry: boolean, step: Step | null, back: boolean, x0: number, z0: number, ax: number, az: number, pulled: number,
+   *   speed: number }}
    */
   let T = null;
   const _m = new THREE.Vector3();
@@ -136,11 +139,13 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
   return {
     /**
      * A dog `c` vai até a corda que prende em `anchor`, morde no ponto `bite` (onde ele está, parado) e segura; a corda
-     * alcança `len` m de `anchor`; segurando, ela fica de frente para `face` (padrão: anchor).
+     * alcança `len` m de `anchor`; segurando, ela fica de frente para `face` (padrão: anchor). `yaw`: ela chega sempre
+     * por esse rumo (a alça do caixote, de frente para ele); `speed`: a ré do puxão (m/s).
      * @param {any} c
-     * @param {{ bite: { x: number, y: number, z: number }, anchor: { x: number, y: number, z: number }, len: number, face?: { x: number, z: number } }} o
+     * @param {{ bite: { x: number, y: number, z: number }, anchor: { x: number, y: number, z: number }, len: number,
+     *   face?: { x: number, z: number }, yaw?: number, speed?: number }} o
      */
-    start(c, { bite, anchor, len, face = anchor }) {
+    start(c, { bite, anchor, len, face = anchor, yaw = undefined, speed = PULL.speed }) {
       endTug();
       const free = mouthFree(c.name);
       let step = null, reach = 0;
@@ -153,12 +158,12 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
         const oy = o.rotation.y;
         const back = dogs?.[c.name]?.head?.info?.back || 0;
         reach = clamp((m.x - o.position.x) * Math.sin(oy) + (m.z - o.position.z) * Math.cos(oy) + back, 0.2, 0.55);
-        step = planStep(c, bite, reach, world);
+        step = planStep(c, bite, reach, world, { yaw });
       } else if (c.dashT > 0) c.dashT = 0;
       T = {
         who: c.name, bite: { x: bite.x, y: bite.y, z: bite.z }, anchor: new THREE.Vector3(anchor.x, anchor.y, anchor.z),
         face: { x: face.x, z: face.z }, len, phase: step ? 'step' : 'grip', t: 0, grip: 0, free, reach, carry: false, step,
-        back: !!step?.back, x0: c.x, z0: c.z, ax: 0, az: 1, pulled: 0,
+        back: !!step?.back, x0: c.x, z0: c.z, ax: 0, az: 1, pulled: 0, speed,
       };
       // sem passinho (já está na corda, ou no ar): só morde se a boca está mesmo nela
       if (!step && (!free || c.jumpT > 0 || !mouthAt(c.name, bite))) T.phase = 'miss';
@@ -212,11 +217,12 @@ export function createMouthTug({ dogs, ctrls, world = null }) {
      * vai de propósito até a corda (reach: a cabeça não desvia dela). O E sempre chega à fase (soltar).
      */
     lockFor(name) {
-      if (!T || T.who !== name || T.phase === 'miss') return null;
+      // soltando, ela já está livre (anda, troca de dog); a corda só termina de voltar no desenho
+      if (!T || T.who !== name || T.phase === 'miss' || T.phase === 'let') return null;
       if (T.phase === 'step') return { action: 'none', faceX: T.step.P.x, faceZ: T.step.P.z, move: T.step.move, reach: true, letGo: true };
       /** @type {import('../../types').InputLock} */
       const L = { action: 'tug', faceX: T.face.x, faceZ: T.face.z, bite: T.grip > 0.3, reach: true, letGo: true };
-      if (T.phase === 'hold') L.pull = { ax: T.ax, az: T.az, speed: PULL.speed };
+      if (T.phase === 'hold') L.pull = { ax: T.ax, az: T.az, speed: T.speed };
       return L;
     },
     /**

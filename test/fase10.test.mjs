@@ -108,14 +108,32 @@ function bafo(h) {
   h.run(0.3);
   h.keyUp('KeyR');
 }
-/** A Rhaenyra (ativa) pega a alça do caixote i (no começo do trilho) e anda para trás até ele travar na marca. */
+/**
+ * A Rhaenyra (ativa) pega a alça do caixote i (no começo do trilho): anda até ela, morde e anda de ré até ele travar
+ * na marca. Retorno do usuário: puxando, "as patas não se mexem, o cachorro fica deslizando"; e, perto da parede, "às
+ * vezes não dá para terminar de puxar": de ré de verdade (o núcleo anda, as patas andam) e longe da parede leste.
+ */
 function pullCrate(h, i) {
   put(h, 'rhaenyra', q(h).crates[i].x + CR.hx + 0.03 + 0.3, CR.list[i].z, -Math.PI / 2);
   assert.equal(h.info().prompt, TEXT.prompt.crateGrab, `prompt do caixote ${i}`);
   h.tap('KeyE');
   assert.equal(q(h).crateHold, i, `segurando o caixote ${i}`);
   h.hold([1, 0]);
-  assert.ok(h.run(4, { until: (s) => s.quintal.crates[i].locked }), `o caixote ${i} chegou na marca ${JSON.stringify(q(h).crates[i])}`);
+  const c = h.ctrls.rhaenyra;
+  let pulling = 0, sliding = 0, east = -Infinity;
+  const locked = h.run(4, {
+    until: (s) => {
+      if (s.quintal.crateTug === 'hold' && Math.abs(c.vx) > 0.15) {
+        pulling++;
+        if (!(c.v < -0.02) || c.animSpeed < 0.1) sliding++;
+      }
+      east = Math.max(east, c.x);
+      return s.quintal.crates[i].locked;
+    },
+  });
+  assert.ok(locked, `o caixote ${i} chegou na marca ${JSON.stringify(q(h).crates[i])}`);
+  assert.ok(pulling > 20 && sliding <= 2, `caixote ${i}: puxando, ela anda de ré com as patas (${sliding} de ${pulling} quadros deslizando)`);
+  assert.ok(L.PANTRY.x1 - 0.1 - (east + c.r) > 0.08, `caixote ${i}: ela termina longe da parede leste (x ${east.toFixed(3)})`);
   h.hold(null);
   assert.equal(q(h).crateHold, null, 'na marca, ela solta a alça sozinha');
   assert.equal(q(h).crates[i].x, CR.x1);

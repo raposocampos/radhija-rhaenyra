@@ -249,6 +249,10 @@ export function createPuzzle(ctx) {
   // as cordinhas (do portãozinho e do gerador): a dog vai até elas, morde e puxa (a cordinha vai junto com a boca)
   const cordTug = createMouthTug({ dogs, ctrls, world });
   const genTug = createMouthTug({ dogs, ctrls, world });
+  // a alça do caixote da despensa: ela anda até ela, morde e puxa de ré (as patas andando, como nas cordinhas)
+  const crateTug = createMouthTug({ dogs, ctrls, world });
+  /** Indo até a alça, mordendo ou segurando (soltando, a boca já está livre para a próxima alça). */
+  const crateBusy = (name) => crateTug.busy(name) && crateTug.phase() !== 'let';
   props.cord.setGrip?.(cordTug.grip);
   props.generator.setGrip?.(genTug.grip);
   const mud = createMud({ dogs, emit, effects, licksToClean: MUD.licksToClean, slow: MUD.slow });
@@ -341,7 +345,8 @@ export function createPuzzle(ctx) {
     cordTugEmitted: false, cordHinted: false, cordFreed: false,
     // despensa: onde está cada caixote no trilho (e se travou), o que a Rhaenyra puxa e a subida da Radhija
     crates: CR.list.map(() => ({ x: CR.x0, locked: false })),
-    /** @type {null | { i: number, who: import('../../types').DogName, g: number }} */ crateHold: null,
+    /** O caixote da alça que a Rhaenyra vai pegar ou está puxando (crateTug) e a distância dela até ele, puxando. */
+    crateI: -1, /** @type {number | null} */ crateG: null,
     /** @type {null | { path: { x: number, y: number, z: number }[], down?: { x: number, y: number, z: number }[], i: number, t: number, phase: string, grabbed: boolean, yaw0?: number, action?: string, slope?: number, airK?: number, crouch?: number }} */ climb: null,
     // piñata: ângulos e velocidades do balanço, batidas
     pin: { stage: 'tree', st: 0, ax: 0, az: 0, vx: 0, vz: 0, hits: 0, broken: false, cd: 0, swingHint: false, /** @type {Set<number>} */ used: new Set() },
@@ -372,7 +377,7 @@ export function createPuzzle(ctx) {
   const doorOpen = () => S.doorT > 0.7;
   const nextThing = () => /** @type {Thing | undefined} */ (CAKE_ORDER[S.cake.length]);
   const carriedBy = (name) => THINGS.find((t) => items[t].holder === name) || null;
-  const mouthFree = (name) => !carriedBy(name) && handle.holder !== name && !S.veg.held[name] && S.crateHold?.who !== name;
+  const mouthFree = (name) => !carriedBy(name) && handle.holder !== name && !S.veg.held[name] && !crateBusy(name);
   const pigeonAround = () => S.pigeon === 'asleep';
   /** A gansa de guarda: perto da cordinha e sem nada que a distraia (latido). */
   const guarding = () => !S.gateOpen && goose.state !== 'lured' && goose.state !== 'curious' && Math.hypot(goose.x - CORD.x, goose.z - CORD.z) < 2.3;
@@ -1181,6 +1186,8 @@ export function createPuzzle(ctx) {
   // ------------------------------------------------------------------ biscoito: os caixotes da despensa (escadinha)
   /** A escadinha está pronta quando os três caixotes travaram nas marcas do chão. */
   const stairsReady = () => S.crates.every((k) => k.locked);
+  /** A alça do caixote i (a argola no lado leste, na altura da boca da Rhaenyra): onde ela morde. */
+  const crateBite = (i) => ({ x: S.crates[i].x + CR.hx + 0.05, y: Math.min(0.2, CR.list[i].h - 0.06), z: CR.list[i].z });
   /** O caixote cuja alça (no lado leste) está ao alcance da dog, ou −1. */
   function crateAt(c) {
     let best = -1, bd = CR.grabR;
@@ -1194,7 +1201,7 @@ export function createPuzzle(ctx) {
   }
   /** O que a dog faz na despensa com E (ou null): a Rhaenyra puxa e solta; a Radhija sobe pelo pé da escadinha. */
   function crateAction(c) {
-    if (S.crateHold?.who === c.name) return 'crateRelease';
+    if (crateBusy(c.name)) return 'crateRelease';
     if (S.place.cookie !== 'home' || S.climb || S.hop || S.riding || S.onDeck || S.deck || !mouthFree(c.name)) return null;
     if (c.name === 'radhija' && Math.hypot(c.x - STAIR_FOOT.x, c.z - STAIR_FOOT.z) < 0.5) return 'climb';
     if (crateAt(c) < 0) return null;
@@ -1202,17 +1209,19 @@ export function createPuzzle(ctx) {
   }
   function doCrate(c, act) {
     if (act === 'crateRelease') {
-      S.crateHold = null;
+      crateTug.release();
       emit('crate:release', { x: c.x, z: c.z });
       return true;
     }
     if (act === 'crateHeavy') { hints.now('crateHeavy', 3.4, 4); return true; }
     if (act === 'crateGrab') {
+      // ela anda até a alça (de frente para o caixote, chegando pelo leste), morde e segura; quem puxa é o jogador:
+      // andando de ré, o caixote vem junto (stepCrates)
       const i = crateAt(c);
-      // ela fica onde está: g é a distância da alça até ela (nunca encostada no caixote)
-      S.crateHold = { i, who: c.name, g: Math.max(CR.hx + c.r + 0.06, c.x - S.crates[i].x) };
-      emit('crate:grab', { x: c.x, z: c.z, i });
-      hints.now('cratePull', 3.6, 6);
+      const b = crateBite(i);
+      S.crateI = i;
+      S.crateG = null;
+      crateTug.start(c, { bite: b, anchor: b, len: 0.06, face: { x: b.x - 1, z: b.z }, yaw: -Math.PI / 2, speed: CR.pullSpeed });
       return true;
     }
     // a Radhija sobe: só com a escadinha pronta
@@ -1227,21 +1236,39 @@ export function createPuzzle(ctx) {
     return true;
   }
   function stepCrates(dt) {
-    void dt;
-    const h = S.crateHold;
-    if (h) {
-      const c = ctrls[h.who];
-      const k = S.crates[h.i];
+    crateTug.update(dt);
+    const ph = crateTug.phase();
+    if (ph === 'miss') {
+      crateTug.clearMiss();
+      S.crateI = -1;
+    }
+    const i = S.crateI;
+    if (ph === 'hold' && i >= 0) {
+      const c = ctrls[crateTug.who];
+      const k = S.crates[i];
+      if (S.crateG === null) {
+        // mordeu: a alça na boca; daqui o caixote vem junto quando ela anda de ré
+        S.crateG = c.x - k.x;
+        emit('crate:grab', { x: c.x, z: c.z, i });
+        hints.now('cratePull', 3.6, 6);
+      }
       // puxado, o caixote só vem para o leste, atrás dela; na marca, trava sozinho e ela solta a alça
-      k.x = Math.min(CR.x1, Math.max(k.x, c.x - h.g));
+      k.x = Math.min(CR.x1, Math.max(k.x, c.x - S.crateG));
+      const b = crateBite(i);
+      crateTug.setAnchor(b.x, b.y, b.z);
       if (k.x >= CR.x1 - 0.004) {
         k.x = CR.x1;
         k.locked = true;
-        S.crateHold = null;
-        emit('crate:lock', { x: CR.x1, z: CR.list[h.i].z, i: h.i });
+        crateTug.release();
+        S.crateI = -1;
+        S.crateG = null;
+        emit('crate:lock', { x: CR.x1, z: CR.list[i].z, i });
         hints.now(stairsReady() ? 'cratesDone' : 'crateLock', 3.2, 0);
         notifyStage();
       }
+    } else if (!crateTug.busy()) {
+      S.crateI = -1;
+      S.crateG = null;
     }
     CR.list.forEach((cr, i) => {
       crateCols[i].x = S.crates[i].x;
@@ -1617,8 +1644,8 @@ export function createPuzzle(ctx) {
     // a Rhaenyra que estava na placa fica lá quando o jogador troca para a irmã
     const activeName = /** @type {import('../../types').DogName} */ (active.name);
     if (activeName !== S.prevActive) {
-      // trocando, quem segurava a gaveta solta
-      if (S.crateHold && S.crateHold.who !== activeName) S.crateHold = null;
+      // trocando, quem segurava a alça do caixote solta
+      if (crateTug.busy() && crateTug.who !== activeName) crateTug.release();
       S.prevActive = activeName;
     }
 
@@ -1706,7 +1733,8 @@ export function createPuzzle(ctx) {
     if (handle.holder === k) hints.setPrompt('ropeDrop');
     else if (cordTug.holding(k)) hints.setPrompt('cordLet');
     else if (genTug.holding(k)) hints.setPrompt('genLet');
-    else if (cordTug.busy(k) || genTug.busy(k)) hints.setPrompt(null);
+    else if (crateTug.holding(k)) hints.setPrompt('crateRelease');
+    else if (cordTug.busy(k) || genTug.busy(k) || crateBusy(k)) hints.setPrompt(null);
     else if (up) hints.setPrompt(deckDo);
     else if (crateDo && TEXT.prompt[crateDo]) hints.setPrompt(crateDo);
     else if (vegDo) hints.setPrompt(vegDo);
@@ -1789,15 +1817,6 @@ export function createPuzzle(ctx) {
 
   // ------------------------------------------------------------------ entrada
   function modifyIntent(dt, c, intent, opts) {
-    // a Rhaenyra com a alça do caixote na boca: só anda para trás (para o leste), de frente para ele, na fileira dele
-    if (S.crateHold && S.crateHold.who === c.name) {
-      const h = S.crateHold, cr = CR.list[h.i];
-      const want = intent.speed > 1e-3 ? (intent.dx || 0) : 0;
-      const v = Math.max(0, Math.min(1, want)) * CR.pullSpeed;
-      c.x = Math.min(CR.x1 + h.g, c.x + v * dt);
-      c.z += (cr.z - c.z) * Math.min(1, dt * 6);
-      return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x - 1, faceZ: c.z }, action: v > 0.05 ? 'tug' : null };
-    }
     // dentro do balde (a Radhija ativa): deitada no balde deitado, sentada nele em pé (stepBucket); a câmera e a troca
     // continuam valendo
     if (S.riding && c.name === 'radhija') return { intent: { dx: 0, dz: 0, speed: 0, faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw) }, action: rideSeq.action || 'sit' };
@@ -1831,6 +1850,11 @@ export function createPuzzle(ctx) {
     }
     if (genTug.busy(c.name)) {
       genTug.release();
+      return true;
+    }
+    if (crateBusy(c.name)) {
+      crateTug.release();
+      emit('crate:release', { x: c.x, z: c.z });
       return true;
     }
     const carried = carriedBy(c.name);
@@ -1957,6 +1981,9 @@ export function createPuzzle(ctx) {
     // indo até a alça do gerador e puxando (a alça na boca, de frente para ele)
     const gt = genTug.lockFor(name);
     if (gt) return gt;
+    // indo até a alça do caixote e puxando de ré (a alça na boca, de frente para ele)
+    const kt = crateTug.lockFor(name);
+    if (kt) return kt;
     return null;
   }
 
@@ -1982,6 +2009,9 @@ export function createPuzzle(ctx) {
     Object.assign(S, fresh());
     cordTug.reset();
     genTug.reset();
+    crateTug.reset();
+    S.crateI = -1;
+    S.crateG = null;
     doorCol.enabled = true;
     fitBucketCol();
     boardCol.enabled = true;
@@ -2097,7 +2127,8 @@ export function createPuzzle(ctx) {
         sawPigeon: S.sawPigeon, ramp: S.ramp ? S.ramp.phase : null, door: +S.doorT.toFixed(3), doorOpen: doorOpen(),
         mud: mud.info('radhija'), mudRh: mud.info('rhaenyra'), inHorta: { radhija: inHorta(ctrls.radhija), rhaenyra: inHorta(ctrls.rhaenyra) },
         shed: { doorBtn: S.doorBtn, open: S.shedOpen, sty: S.styOpen }, generator: { on: S.gen.on, pulling: S.gen.t >= 0 || genTug.busy(), pulls: S.gen.pulls, phase: genTug.phase() }, cord: { phase: cordTug.phase(), pulled: +cordTug.pulled().toFixed(3) }, pigs: pigs.info(),
-        crates: S.crates.map((k) => ({ x: +k.x.toFixed(3), locked: k.locked })), crateHold: S.crateHold ? S.crateHold.i : null,
+        crates: S.crates.map((k) => ({ x: +k.x.toFixed(3), locked: k.locked })),
+        crateHold: crateTug.busy() && crateTug.phase() !== 'let' ? S.crateI : null, crateTug: crateTug.phase(),
         climb: S.climb ? S.climb.phase : null, stairs: stairsReady(),
         pinata: { stage: S.pin.stage, shoves: mangoShove.pushes, ax: +S.pin.ax.toFixed(3), az: +S.pin.az.toFixed(3), hits: S.pin.hits, broken: S.pin.broken, ...(() => { const p = pinataPos(); return { x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }; })() },
         veg: { held: { radhija: S.veg.held.radhija?.kind ?? null, rhaenyra: S.veg.held.rhaenyra?.kind ?? null }, floor: S.veg.floor.length },
@@ -2111,7 +2142,7 @@ export function createPuzzle(ctx) {
     }),
     get stage() { return stage(); },
     get carrier() { return THINGS.map((t) => items[t].holder).find(Boolean) || null; },
-    carries: (name) => !!carriedBy(name) || handle.holder === name || !!S.veg.held[name] || S.crateHold?.who === name,
+    carries: (name) => !!carriedBy(name) || handle.holder === name || !!S.veg.held[name] || crateTug.biting(name),
     get collected() { return cols.count; }, get total() { return cols.total; },
     set onStageChange(fn) { onStageChange = fn; },
   };

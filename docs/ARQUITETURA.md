@@ -288,8 +288,10 @@ Peças prontas:
   `createSprinkler` (jatos giratórios que molham e empurram), `createLockedInteractable` (alavanca, registro, corda),
   `createMouthTug` (`mouthTug.js`: no E, ela anda até a corda (`lock.move`), morde e segura; o jogador puxa de ré com o
   direcional (`lock.pull`, `pulled()`), o E solta (`release`); a fase decide o que o puxão faz: os portões das fases 1
-  e 10 vêm junto e terminam de abrir no embalo, o gerador da fase 10 pega no segundo puxão; o prop recebe
-  `setGrip(tug.grip)` e desenha o ponto mordido na boca, sem esticar além de `len`) com `planStep`/`driveStep` (o
+  e 10 vêm junto e terminam de abrir no embalo, o gerador da fase 10 pega no segundo puxão, os caixotes da despensa
+  vêm atrás dela até a marca (`start({ yaw, speed })`: chegando pelo leste, de ré a 0,6 m/s); soltando, a trava já
+  sai; o prop recebe `setGrip(tug.grip)` e desenha o ponto mordido na boca, sem esticar além de `len`) com
+  `planStep`/`driveStep` (o
   passo até a coisa, andando com o controle de sempre; a fase 9 usa para chegar à frente do botão do ventilador),
   `createGooseNPC` (patrulha, alerta, investida, atração por latido), `createDogEffects` (empurrão, ações que travam a
   entrada, pelo molhado), `createMud` (lama que enlameia numa área, deixa lenta e sem arrancada e sai em placas com
@@ -435,7 +437,13 @@ dianteiras esticadas (`c.slideOff`, `c.slideX/Z`). Antes, a colisão a jogava pa
 quadro). No desenho (`game.js`, `jumpableUnder`), o corpo fica acima do alto da coisa em que o
 tronco entra e, passada ela, cai com a gravidade do pulo; o pouso (`dog:land`, a pose) espera o desenho chegar ao
 chão. A pose é de quadrúpede (`dogAnimation.js`): decolando, gira sobre o quadril (a frente sobe primeiro, as
-traseiras empurram); descendo, sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois).
+traseiras empurram); descendo, sobre os ombros (as dianteiras pousam primeiro, a garupa desce depois). Uma pata de cada
+par vai na frente (`JUMP_LAG`, troca a cada pulo) e o corpo desenhado acelera para cima no empurrão (`TAKEOFF`, no
+`game.js`; o arco da colisão sai na hora).
+
+Logo depois de `startJump`, `fitJump` olha o caminho do pulo: havendo o que ela pula pela frente, o arco estica (até
+`FIT.time` do tempo, a coisa no meio dele) e sobe (até `FIT.height` da altura) o quanto o tronco precisa para passar por
+cima, numa parábola só (`c.jumpH`, a altura deste pulo).
 
 **Impulso na parede** (`dogController.js` + `src/game/mechanics/wallButton.js`): o mesmo pulo, de frente para uma
 parede marcada com patinhas pintadas. A fase oferece os pontos em `puzzle.wallSpots()` (`WallSpot`: pé da parede,

@@ -365,6 +365,8 @@ export interface DogController {
   /** Tempo restante no ar (s); 0 = no chão. */
   jumpT: number;
   jumpDur: number;
+  /** Altura do arco deste pulo (m): cfg.jumpHeight, ou mais, ajustado à coisa que ela pula (fitJump). */
+  jumpH: number;
   jumpCd: number;
   jumpDx: number;
   jumpDz: number;

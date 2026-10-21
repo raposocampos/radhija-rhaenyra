@@ -107,6 +107,7 @@ export function createController(name, cfg) {
     y: 0, // altura do pulo (m); 0 = no chão
     jumpT: 0, // tempo restante no ar (0 = no chão)
     jumpDur: 0,
+    jumpH: 0, // altura do arco deste pulo (m): cfg.jumpHeight, ou mais, ajustado à coisa que ela pula (fitJump)
     jumpCd: 0,
     jumpDx: 0,
     jumpDz: 1,
@@ -449,12 +450,47 @@ export function startJump(c, dx, dz) {
     c.v = Math.max(c.v, c.cfg.jumpSpeed ?? c.cfg.walkSpeed);
   }
   c.jumpT = c.jumpDur = c.cfg.jumpTime ?? 0.5;
+  c.jumpH = c.cfg.jumpHeight ?? 0;
   c.hopH = 0;
   c.y = 0;
   c.landed = false;
   c.pivoting = false;
   c.overJump = c.clearT = c.clearChk = 0;
   c.slideOff = false;
+}
+
+/**
+ * Pulo por cima de uma coisa (a caixa da fase 5, a mureta do cercadinho): o arco de sempre muitas vezes acabava com o
+ * corpo em cima dela, e o desenho subia de repente e planava por cima (retorno do usuário: "o pulo dá um boost e parece
+ * que tá voando"). Logo depois de startJump, olha o caminho do pulo: havendo pela frente o que ela pula, o arco estica
+ * (até FIT.time do tempo, para a coisa ficar no meio dele e ela pousar depois dela) e sobe (até FIT.height da altura) o
+ * quanto o tronco precisa para passar FIT.clear acima dela, numa parábola só. Parada (pulo no lugar), o de sempre.
+ */
+export const FIT = { time: 1.25, height: 1.25, clear: 0.05, step: 0.05 };
+export function fitJump(c, world) {
+  const b = c.cfg.body;
+  if (!world?.jumpableTop || !b || !(c.jumpT > 0) || c.hopH > 0 || !(c.v > 0.3)) return;
+  const T0 = c.jumpDur, H0 = c.jumpH || c.cfg.jumpHeight;
+  const D0 = c.v * T0, Dmax = D0 * FIT.time;
+  const yaw = Math.atan2(c.jumpDx, c.jumpDz);
+  // o primeiro trecho do caminho com o tronco em cima de uma coisa (como o desenho a mede, game.js): de s0 a s1
+  let s0 = -1, s1 = -1, top = 0;
+  for (let s = 0; s <= Dmax + 1e-6; s += FIT.step) {
+    const h = world.jumpableTop(c.x + c.jumpDx * s, c.z + c.jumpDz * s, yaw, b, b.r, c.size, 0.04);
+    if (h > 0) {
+      if (s0 < 0) s0 = s;
+      s1 = s;
+      top = Math.max(top, h);
+    } else if (s0 >= 0) break;
+  }
+  if (s0 < 0) return;
+  // a coisa no meio do arco (s0 + s1) e o pouso depois dela (s1 + passo), sem encolher o pulo de sempre
+  const D = Math.min(Dmax, Math.max(D0, s0 + s1, s1 + FIT.step));
+  const k = (p) => (p <= 0 || p >= 1 ? 0 : 4 * p * (1 - p));
+  const kMin = Math.min(k(s0 / D), k(Math.min(s1, D) / D));
+  const H = Math.min(H0 * FIT.height, Math.max(H0, kMin > 1e-3 ? (top + FIT.clear) / kMin : Infinity));
+  c.jumpT = c.jumpDur = D / c.v;
+  c.jumpH = H;
 }
 
 /**
@@ -550,7 +586,7 @@ export function steer(c, dt, intent) {
     } else {
       const p = 1 - c.jumpT / c.jumpDur;
       // o pulinho por cima da borda sobe logo e só desce depois dela (um arco de topo largo); o pulo, uma parábola
-      c.y = c.hopH > 0 ? c.hopH * (1 - (2 * p - 1) ** 4) : 4 * cfg.jumpHeight * p * (1 - p);
+      c.y = c.hopH > 0 ? c.hopH * (1 - (2 * p - 1) ** 4) : 4 * (c.jumpH || cfg.jumpHeight) * p * (1 - p);
     }
     c.pivoting = false;
   } else if (c.dashT > 0) {

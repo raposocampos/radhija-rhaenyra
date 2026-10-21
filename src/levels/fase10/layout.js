@@ -94,8 +94,10 @@ const CUP_FRONT = CUPBOARD.z + CUPBOARD.hz;
 // Os caixotes começam a 0,75 m da marca: a oeste deles, os sacos de farinha e a cestinha (colisor do #53) deixavam só
 // 36 cm entre a cestinha e o caixote baixo, e ninguém chegava ao lado das alças (retorno do usuário: "não me deixa
 // passar pro outro lado"); assim sobram uns 60 cm ao sul deles.
+// (retorno do usuário: "diminuir um pouco as caixas, fica muito perto da parede, às vezes não dá para terminar de puxar":
+// menores, e a marca 12 cm para dentro da frente do armário, longe da parede leste; pullSpeed: a ré dela puxando)
 export const PANTRY_CRATES = {
-  hx: 0.26, hz: 0.18, x0: -6.25, x1: CUPBOARD.x, pullSpeed: 0.85, grabR: 0.55,
+  hx: 0.22, hz: 0.15, x0: -6.25, x1: CUPBOARD.x - 0.12, pullSpeed: 0.6, grabR: 0.55,
   list: [
     { id: 'alto', label: 'Ração', h: 0.76, z: CUP_FRONT + 0.19 },
     { id: 'medio', label: 'Batatas', h: 0.52, z: CUP_FRONT + 0.61 },

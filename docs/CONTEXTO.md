@@ -74,11 +74,41 @@ encolhido e o corpo com inércia nas curvas; #48, #54 e #56 no main). Ler primei
     no ar, nada entra (só o focinho do atual encosta 0,9 cm na beira ao decolar rente à caixa; com o código da 2ª
     prévia, entrava de 3 a 26 cm); `test/interacoes.test.mjs` (a frente sobe primeiro na decolagem e a garupa desce
     depois do pouso) e `test/fase10.test.mjs` (as duas chegam às alças da despensa).
+- 3ª prévia (`f949714`, CI `39525880259`, E2E `todas` `39525903344` verdes), retorno do usuário: "o resto ficou bom",
+  mas: na fase 10, "diminuir um pouco as caixas, fica muito perto da parede, às vezes buga e não dá pra terminar de
+  puxar", e puxando para trás "as patas não se mexem, o cachorro fica deslizando"; na fase 5, nada atravessa mais a
+  caixa, "porém o pulo dá um boost e parece que tá voando" (diminuir a caixa, largura e altura) e o pulo "ainda não tá
+  fluido" (as patas saindo do chão uma antes da outra).
+- Feito (4ª rodada):
+  - Caixotes da despensa (fase 10): menores (`hx` 0,22, `hz` 0,15) e a marca 12 cm para dentro da frente do armário
+    (`x1 = CUPBOARD.x - 0,12`): no fim do puxão ela fica a 11–13 cm da parede leste. A alça agora usa o `mouthTug`
+    das cordinhas (`crateTug`): no E ela anda até a alça chegando pelo leste (`start({ yaw })`), morde e o jogador
+    puxa de ré pelo núcleo (as patas andam de ré; antes a fase mudava o `c.x` direto e a animação ficava parada).
+    `pullSpeed` 0,6 m/s (`start({ speed })`). O `info` mantém `crateHold` (o caixote) e ganhou `crateTug` (a fase).
+  - `mouthTug`: soltando (`let`), a trava sai (ela anda e troca de dog na hora; a corda só termina de voltar no
+    desenho). Antes, o Q logo depois de travar um caixote era ignorado.
+  - Barricada (fase 5): as duas caixas com 0,5 × 0,5 m e 0,32 m de alto (eram 0,6 e 0,42) e a porta da cozinha com
+    1 m (`WALL_HK.gap` ±0,5): continua fechada pelas duas.
+  - Pulo por cima de coisa (`dogController.fitJump`, logo depois de `startJump`): olha o caminho; havendo o que ela
+    pula pela frente, o arco estica (até 1,25× o tempo, a coisa no meio dele) e sobe (até 1,25× a altura) o quanto o
+    tronco precisa, numa parábola só (`c.jumpH`). No desenho (`game.js`): passada a coisa, o corpo cai já com a
+    velocidade do arco (antes partia do repouso, ficava para trás e parecia planar); a subida do chão desenhado ficou
+    mais suave.
+  - Decolagem e patas (`game.js`, `dogAnimation.js`): o corpo desenhado acelera para cima no empurrão (0,12 s, o arco
+    da colisão sai na hora); a pose do pulo entra mais depressa; as traseiras ficam no chão empurrando já no primeiro
+    quadro; uma pata de cada par vai na frente (`JUMP_LAG`, `st.jLead`, troca a cada pulo): a outra dianteira sai do
+    chão um tiquinho depois e, no pouso, chega depois da outra; a garupa desce um pouco mais devagar.
+  - Medidas: na fase 5, de 0,2 a 0,6 m da caixa o desenho fica no arco (só sobe na decolagem rente à caixa) e pousa
+    com ele; de 0,8 m, uns 3 quadros depois; de 1 m ou mais (pulou cedo demais) ainda segue no ar um pouco. No modelo
+    atual, as patas saem do chão e pousam em quadros diferentes; no novo, a diferença é menor (a locomoção dele).
+  - Testes: `test/fase10.test.mjs` (puxando, ela anda de ré com as patas, e termina longe da parede); `test/fase5.test.mjs`
+    (a partida passa pela porta mais estreita por dentro da cozinha; pulos e pele com as caixas novas).
 - Validação: CI e E2E (`todas`) do commit desta rodada: conferir no PR #55. No PC, diagnósticos leves em Node e
-  testes de alguns arquivos durante o trabalho (fases 5 e 10, pulo, interações); a bateria fica no CI.
+  testes dos arquivos afetados durante o trabalho; a bateria fica no CI.
 - Fica para depois (não é do pulo): encostada de viés numa caixa, uma pata ou a ponta da orelha passa um pouco da
   face dela (o corpo é mais largo que os círculos da colisão nas pontas).
-- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar.
+- Próximo passo: prévia nova para o usuário testar; aprovação explícita antes de integrar. Depois do #55 publicado, a
+  etapa 5 dos modelos novos (o novo como padrão), pedida pelo usuário ao orquestrador.
 
 ## Entregue: superbafo pelos dutos sai na boca, na altura dela (fases 10 e 4) (PR #56, squash `196bf63`, deploy `39518235787`)
 
