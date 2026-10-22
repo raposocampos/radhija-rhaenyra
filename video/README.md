@@ -47,5 +47,11 @@ que estiver em `ciclo.json`. Os artefatos `trailer` (MP4 e lista de cenas) e `tr
 | 0:58–1:04 | 30–32 | Festa: luzinhas, piñata, bolo |
 | 1:04–1:12 | 33–36 | Cartão final: logo, "Demo · 10 fases", link e plataformas |
 
-O corte vertical (9:16, 26 s) usa a mesma música encurtada: gancho do superbafo, logo, quatro habilidades, fases,
-"Juntas!" e o convite.
+O corte vertical (9:16, 26 s) usa a mesma música encurtada: gancho (o superbafo faz o trem espirrar), logo, quatro
+habilidades, porquinhos e o bolo ("10 fases"), "Juntas!" e o convite.
+
+## Gravação: renderizador
+
+Os runners não têm GPU. A bancada (`etapa: bancada`, `capture/gl-bench.mjs`) mediu 3,5–6 s por quadro em 1080p no
+SwiftShader (o padrão dos testes do jogo) e 1–1,8 s no lavapipe (Vulkan do Mesa), com a mesma imagem: a gravação do
+trailer usa o lavapipe (`TRAILER_GL=vulkan`, `capture/gl.mjs`). Cada cena roda num job próprio.

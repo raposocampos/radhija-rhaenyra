@@ -103,7 +103,7 @@ export default {
       type: 'endCard', start: B(33), end: B(37) + 0.6,
       portraits: [
         { clip: 'retrato-radhija', in: 2.4, speed: 0.25, name: 'Radhija', who: 'radhija', focus: [0.56, 0.36], zoom: 1.9 },
-        { clip: 'retrato-rhaenyra', in: 2.2, speed: 0.28, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.52, 0.38], zoom: 1.8 },
+        { clip: 'retrato-rhaenyra', in: 2.2, speed: 0.28, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.6, 0.36], zoom: 1.8 },
       ],
     },
     { type: 'fade', start: B(37) - 0.4, end: B(37) + 0.6, mode: 'out', layer: 1 },
