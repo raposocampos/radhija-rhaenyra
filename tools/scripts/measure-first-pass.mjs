@@ -6,8 +6,10 @@
 // 1ª custa a mais é o trabalho de "primeira vez".
 // Reprova (FIRST_PASS_STRICT, ligado por padrão) se, depois da carga, o renderer compilar um programa ou enviar uma
 // textura ou geometria, ou se a 1ª passagem tiver picos: quadros que custam mais de FIRST_PASS_EXCESS_MS e mais de
-// FIRST_PASS_EXCESS_REL (fração) que o mesmo quadro da 2ª, com a mesma cena (desenhos a 2%); FIRST_PASS_MAX_PEAKS tolera
-// alguns (padrão 0).
+// FIRST_PASS_EXCESS_REL (fração) que o mesmo quadro da 2ª, com a mesma cena (desenhos a 2%). Tolera até
+// FIRST_PASS_MAX_PEAKS (3) quadros isolados, nenhum acima de FIRST_PASS_MAX_RATIO (2,5×) o mesmo da 2ª: no SwiftShader,
+// alguns objetos ainda custam um pouco mais na primeira vez que pintam de perto, sem nada novo no renderer (o relatório
+// diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
 import { createServer } from 'node:http';
@@ -48,7 +50,8 @@ const DOGS = process.env.FIRST_PASS_DOGS || '';
 const STRICT = process.env.FIRST_PASS_STRICT !== '0';
 const EXCESS_MS = Number(process.env.FIRST_PASS_EXCESS_MS || 150);
 const EXCESS_REL = Number(process.env.FIRST_PASS_EXCESS_REL || 0.35);
-const MAX_PEAKS = Number(process.env.FIRST_PASS_MAX_PEAKS || 0);
+const MAX_PEAKS = Number(process.env.FIRST_PASS_MAX_PEAKS || 3);
+const MAX_RATIO = Number(process.env.FIRST_PASS_MAX_RATIO || 2.5);
 for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
 for (const q of QUALITIES) if (!DEVICES[q]) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
@@ -60,7 +63,7 @@ const report = {
   conditions: {
     viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES,
     settleMs: SETTLE_MS,
-    dogs: DOGS || 'padrao', strict: STRICT, peak: { ms: EXCESS_MS, relative: EXCESS_REL, sameDrawsWithin: 0.02, tolerated: MAX_PEAKS },
+    dogs: DOGS || 'padrao', strict: STRICT, peak: { ms: EXCESS_MS, relative: EXCESS_REL, sameDrawsWithin: 0.02, tolerated: MAX_PEAKS, maxRatio: MAX_RATIO },
     tour: 'greedy nearest-neighbour tour of layout NAV_NODES from the active dog start; the active dog is teleported node to node, camera rig follows; same tour twice',
     frame: 'game.update + seeThrough + feedback + particles + engine.render + 1-pixel readPixels (waits for the GPU), driven by the measurement page (rAF loop paused)',
     excess: 'per frame: first pass ms minus the same frame of the second pass',
@@ -392,8 +395,9 @@ try {
           if (summary.afterLoad.textures > 0) fail(`${label}: ${summary.afterLoad.textures} texturas enviadas depois da carga`);
           if (summary.afterLoad.geometries > 0) fail(`${label}: ${summary.afterLoad.geometries} geometrias enviadas depois da carga`);
           if (summary.events.programs > 0 || summary.events.textures > 0) fail(`${label}: o primeiro superbafo compilou ${summary.events.programs} programas e enviou ${summary.events.textures} texturas`);
-          if (summary.peaks.length > MAX_PEAKS) fail(`${label}: ${summary.peaks.length} picos na 1ª passagem (tolerados ${MAX_PEAKS}): `
-            + summary.peaks.slice(0, 6).map((k) => `quadro ${k.frame} em ${k.node}, ${k.firstMs} ms contra ${k.secondMs} ms`).join('; '));
+          const big = summary.peaks.filter((k) => k.firstMs > MAX_RATIO * k.secondMs);
+          if (summary.peaks.length > MAX_PEAKS || big.length) fail(`${label}: ${summary.peaks.length} picos na 1ª passagem (tolerados ${MAX_PEAKS}, `
+            + `nenhum acima de ${MAX_RATIO}×): ` + summary.peaks.slice(0, 6).map((k) => `quadro ${k.frame} em ${k.node}, ${k.firstMs} ms contra ${k.secondMs} ms`).join('; '));
         }
       } catch (error) {
         report.errors.push(`${label}: ${error.stack || error}`);

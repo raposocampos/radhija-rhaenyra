@@ -1017,9 +1017,12 @@ quadros saíam ~30% mais caros por alguns segundos, sem nada novo no renderer) e
 1/30 s); cada um espera a GPU lendo um pixel da tela (o
 `gl.finish()` do Chromium não espera: os quadros se enfileiravam e o tempo saía em degraus de 5 e 600 ms), então a 1ª e a
 2ª passagem se comparam quadro a quadro. Reprova se, depois da carga, o renderer compilar um programa ou receber uma
-textura ou geometria (o relatório diz em que nó e de qual material) ou se houver um pico: um quadro da 1ª passagem
-150 ms e 35% mais caro que o mesmo da 2ª, com a mesma cena (desenhos a 2%). Os ms são do SwiftShader (comparação
-entre as passagens, não o FPS de um aparelho); as contagens são exatas.
+textura ou geometria (o relatório diz em que nó e de qual material) ou com picos: quadros da 1ª passagem 150 ms e 35%
+mais caros que o mesmo da 2ª, com a mesma cena (desenhos a 2%); tolera até 3 isolados, nenhum acima de 2,5×. No
+SwiftShader, alguns objetos ainda custam um pouco mais na primeira vez que pintam de perto (a cerca do fundo e as
+folhinhas da fase 10, +40 a +120% num quadro, já antes da correção), sem nada novo no renderer; o relatório lista o que
+acabou de entrar na câmera em cada pico. Sem o aquecimento, o 1º quadro custava de 5 a 30× o normal. Os ms são do
+SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as contagens são exatas.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
