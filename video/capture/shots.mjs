@@ -88,10 +88,21 @@ export const SHOTS = {
       const P = L.NAP_PIGEON;
       await r.setup({ active: 'radhija', place: { radhija: { x: P.x - 0.95, z: P.z, yaw: PI / 2 }, rhaenyra: { x: P.x - 2.3, z: P.z + 0.3, yaw: PI / 2 } }, stay: 'rhaenyra', settle: 40 });
       const m = [P.x - 0.45, 0.2, P.z];
-      await keysCam(r, [
-        { at: 0, pos: [m[0] - 0.35, 0.5, m[2] + 1.25], look: m, fov: 36 },
-        { at: 4.5, pos: [m[0] + 0.05, 0.62, m[2] + 1.1], look: [m[0] + 0.25, 0.32, m[2]], fov: 38 },
-      ]);
+      // depois do sopro, a câmera recua um pouco e acompanha o pombo fugindo
+      await r.camera((t, H, a) => {
+        const base = H.path(t, [
+          { at: 0, pos: [a.m[0] - 0.35, 0.5, a.m[2] + 1.25], look: a.m, fov: 36 },
+          { at: 1.3, pos: [a.m[0] - 0.25, 0.52, a.m[2] + 1.22], look: a.m, fov: 36 },
+          { at: 2.6, pos: [a.m[0] - 0.1, 0.75, a.m[2] + 1.7], look: [a.m[0] + 0.2, 0.45, a.m[2]], fov: 40 },
+        ]);
+        const bird = H.G.props?.napPigeon?.object?.position;
+        if (!bird || t < 1.3) return base;
+        const s = a.s || (a.s = { k: 0, p: [bird.x, bird.y + 0.1, bird.z] });
+        const k = 1 - Math.exp(-(1 / 30) / 0.25);
+        s.p = H.mix3(s.p, [bird.x, bird.y + 0.1, bird.z], k);
+        const w = 0.55 * H.smooth(H.clamp((t - 1.3) / 0.7)) * (1 - H.smooth(H.clamp((t - 2.6) / 0.8)));
+        return { ...base, look: H.mix3(base.look, s.p, w) };
+      }, { m });
       await r.record(0.8);
       await r.key('KeyR', true);
       r.mark('mira');
@@ -126,30 +137,6 @@ export const SHOTS = {
       await r.recordUntil((i) => i.lambe?.slide?.phase === 'grab', 3);
       r.mark('frisbee');
       await r.recordUntil((i) => !i.lambe?.slide, 4, 0.7);
-    },
-  },
-  'arrancada-meia': {
-    level: 'fase8',
-    async run(r, L) {
-      // lavanderia: a Rhaenyra já baixou o varal; a arrancada da Radhija solta a meia do pregador
-      await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: { x: L.RACK_BUTTON.x - 0.14, z: L.RACK_BUTTON.z + 0.6, yaw: PI }, radhija: { x: L.SOCK.x, z: L.SOCK.z + 1.25, yaw: PI } }, stay: 'radhija' });
-      await r.tap('Space');
-      await r.until((i) => i.lavanderia?.rackDown, 200);
-      await r.setup({ active: 'radhija', place: { radhija: { x: L.SOCK.x, z: L.SOCK.z + 1.25, yaw: PI } }, settle: 6 });
-      await keysCam(r, [
-        { at: 0, pos: [L.SOCK.x + 1.4, 0.75, L.SOCK.z + 1.3], look: [L.SOCK.x, 0.42, L.SOCK.z + 0.35], fov: 38 },
-        { at: 3, pos: [L.SOCK.x + 1.15, 0.7, L.SOCK.z + 1.0], look: [L.SOCK.x, 0.42, L.SOCK.z + 0.2], fov: 38 },
-      ]);
-      await r.record(0.4);
-      await r.key('KeyW', true);
-      await r.record(0.15);
-      await r.key('ShiftLeft', true);
-      await r.record(1 / 30);
-      await r.up('ShiftLeft');
-      r.mark('arrancada');
-      await r.recordUntil((i) => i.sock?.holder === 'radhija', 2);
-      await r.up('KeyW');
-      await r.record(1.4);
     },
   },
   vao: {
@@ -220,10 +207,11 @@ export const SHOTS = {
   pulo: {
     level: '5',
     async run(r, L) {
-      // a Rhaenyra pula o portãozinho de bebê (câmera do jogo)
+      // a Rhaenyra pula o portãozinho de bebê (câmera atrás dela, mais perto que a do jogo; o "ver através" do jogo
+      // apaga a parede da frente)
       const W = L.WALL_SH;
       await r.setup({ active: 'rhaenyra', place: { rhaenyra: { x: W.x - 1.3, z: 0.4, yaw: PI / 2 }, radhija: { x: W.x - 1.9, z: 0.95, yaw: PI / 2 } }, stay: 'radhija', settle: 40 });
-      await r.camera(null);
+      await r.camera((t, H, a) => ({ ...H.follow('rhaenyra', [0.15, 1.05, 1.85], [0.35, 0.3, 0], 0.18), fov: 38 }));
       const keys = await r.keysFor(1, 0);
       await r.record(0.3);
       await r.keys(keys, true);
@@ -327,7 +315,6 @@ export const SHOTS = {
   },
   luzes: {
     level: 'fase10',
-    vertical: { pull: 1.15, vfov: 46 },
     async run(r, L) {
       // o disjuntor: a energia chega à varanda e as luzinhas da festa acendem em onda
       await r.setup({ stage: 'start', active: 'rhaenyra', place: { rhaenyra: kick(L.BREAKER), radhija: { x: -2.2, z: 0.6, yaw: PI } }, stay: 'radhija' });
@@ -343,7 +330,6 @@ export const SHOTS = {
   },
   bolo: {
     level: 'fase10',
-    vertical: { pull: 1.25 },
     async run(r, L) {
       // o bolo completo e a comemoração das duas
       const K = L.CAKE;
@@ -405,15 +391,13 @@ export const SHOTS = {
   'fase3-gansa': {
     level: '3',
     async run(r, L) {
-      // noite no jardim do lago: a Dona Gansa guarda a ponte
+      // noite no jardim do lago: a Radhija vai até a ponte e a Dona Gansa vem tirar satisfação (câmera por cima do
+      // ombro dela)
       const g = L.GOOSE.home;
-      await r.setup({ active: 'radhija', place: { radhija: { x: g.x - 2.0, z: g.z - 0.4, yaw: PI / 2 }, rhaenyra: { x: g.x - 2.7, z: g.z + 0.2, yaw: PI / 2 } }, settle: 60 });
-      await keysCam(r, [
-        { at: 0, pos: [g.x - 1.6, 0.85, g.z + 1.9], look: [g.x - 0.2, 0.3, g.z - 0.3], fov: 38 },
-        { at: 5, pos: [g.x - 1.2, 0.75, g.z + 1.6], look: [g.x, 0.3, g.z - 0.3], fov: 36 },
-      ]);
-      await r.drive(g.x - 0.75, g.z - 0.3, { tol: 0.15, maxSec: 3 });
-      await r.record(5.0);
+      await r.setup({ active: 'radhija', place: { radhija: { x: g.x - 2.2, z: g.z - 0.3, yaw: PI / 2 }, rhaenyra: { x: g.x - 2.9, z: g.z + 0.3, yaw: PI / 2 } }, settle: 60 });
+      await r.camera((t, H) => ({ ...H.follow('radhija', [-1.25, 0.75, 0.75], [0.75, 0.22, -0.1], 0.2), fov: 40 }));
+      await r.drive(g.x - 0.8, g.z - 0.4, { tol: 0.15, maxSec: 3 });
+      await r.record(4.2);
     },
   },
   'fase2-irrigador': {
@@ -475,18 +459,23 @@ export const SHOTS = {
       await r.setup({ active: 'rhaenyra', place: { rhaenyra: { x: L.ROPE.rest.x, z: L.ROPE.rest.z + 0.5, yaw: PI } } });
       await r.tap('KeyE');
       await r.step(4);
+      // as duas no quadro (a Rhaenyra na corda, a Radhija no balde) e a câmera sobe com o balde até o deque
+      const rh = await r.dog('rhaenyra');
+      const mx = (rh.cx + B.x) / 2;
+      const mz = Math.max(rh.cz, B.z);
       await keysCam(r, [
-        { at: 0, pos: [B.x - 1.1, 1.2, B.z + 1.85], look: [B.x, 0.45, B.z], fov: 38 },
-        { at: 2.4, pos: [B.x - 1.4, 1.9, B.z + 2.3], look: [B.x + 0.2, 1.3, B.z - 0.4], fov: 40 },
-        { at: 5.5, pos: [5.9, 3.0, -0.9], look: [7.1, 2.2, -3.7], fov: 40 },
+        { at: 0, pos: [mx - 0.3, 1.2, mz + 2.8], look: [mx, 0.5, (rh.cz + B.z) / 2], fov: 40 },
+        { at: 0.6, pos: [mx - 0.3, 1.25, mz + 2.85], look: [mx, 0.6, (rh.cz + B.z) / 2], fov: 40 },
+        { at: 1.5, pos: [mx - 0.25, 1.7, mz + 3.1], look: [(mx + B.x) / 2, 1.55, B.z - 0.3], fov: 40 },
+        { at: 2.4, pos: [mx - 0.2, 1.9, mz + 3.2], look: [B.x + 0.1, 2.1, B.z - 0.6], fov: 40 },
       ]);
-      await r.record(0.3);
+      await r.record(0.6);
       await r.key('KeyS', true);
       r.mark('puxa');
       await r.recordUntil((i) => i.quintal?.deck === 'hop', 6);
       await r.up('KeyS');
       r.mark('deque');
-      await r.recordUntil((i) => i.quintal?.onDeck, 2, 0.6);
+      await r.recordUntil((i) => i.quintal?.onDeck, 2, 1.2);
     },
   },
 };
@@ -496,7 +485,8 @@ for (let n = 1; n <= 10; n++) {
   SHOTS[`estab-${n}`] = {
     level: String(n),
     async run(r, L) {
-      await r.step(240);
+      // passa da apresentação da fase (a câmera mostra o objetivo antes de voltar para as dogs)
+      await r.step(n === 9 || n === 10 ? 720 : 300);
       const d = await r.dog(await r.ev(() => window.__game.game.activeDog));
       const f = [Math.sin(d.yaw), Math.cos(d.yaw)];
       await r.camera(null);
@@ -511,7 +501,7 @@ export const GROUPS = {
   'fase1': ['abertura', 'retrato-radhija', 'retrato-rhaenyra', 'coop-portao'],
   'fase4': ['superbafo', 'fase4-pombo'],
   'fase7': ['arrancada', 'vao', 'lambe'],
-  'fase8': ['parede', 'arrancada-meia'],
+  'fase8': ['parede'],
   'fase10-a': ['empurrao', 'pinata'],
   'fase10-b': ['porcos', 'coop-balde'],
   'fase10-c': ['luzes', 'bolo', 'final-fundo'],

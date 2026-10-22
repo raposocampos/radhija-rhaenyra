@@ -145,7 +145,7 @@ export function installRecorder() {
   window.__setCam = (src, args) => {
     R.cam = src ? new Function(`return (${src})`)() : null;
     R.camArgs = args ?? null;
-    R.camT0 = R.frameT;
+    R.camT0 = R.camClock ?? 0;
     R.camState = {};
   };
   window.__setBrain = (src, args) => {
@@ -159,7 +159,7 @@ export function installRecorder() {
       if (cam.fov !== R.fov0) { cam.fov = R.fov0; cam.updateProjectionMatrix(); }
       return null;
     }
-    const c = R.cam(R.frameT - R.camT0, H, R.camArgs);
+    const c = R.cam((R.camClock ?? 0) - R.camT0, H, R.camArgs);
     if (!c) return null;
     let pos = c.pos;
     const look = c.look;
@@ -186,25 +186,39 @@ export function installRecorder() {
       R.sounds.push({ t: +R.frameT.toFixed(4), name, loop: true, speed: +(opts.speed ?? 0.8).toFixed(3) });
       return;
     }
+    // as outras opções do som (força, velocidade...) vão junto, só os valores simples
+    const extra = {};
+    for (const [k, v] of Object.entries(opts)) {
+      if (['pan', 'volume', 'pitch'].includes(k)) continue;
+      if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') extra[k] = v;
+    }
     R.sounds.push({
       t: +R.frameT.toFixed(4),
       name,
       pan: +(opts.pan ?? 0).toFixed(3),
       volume: +(opts.volume ?? 1).toFixed(3),
       pitch: +(opts.pitch ?? 1).toFixed(3),
+      opts: extra,
     });
   };
 
-  /** Um quadro do vídeo: avança o jogo (exceto no primeiro), aplica a câmera, desenha e devolve o JPEG. */
-  window.__frame = (index, fps, quality) => {
-    R.recording = true;
+  /**
+   * Um quadro do vídeo: avança o jogo (exceto no primeiro), aplica a câmera, desenha e devolve o JPEG. Com
+   * render = false (trecho pulado), o jogo e a câmera andam, mas nada é desenhado nem anotado: na cena gravada vira um
+   * corte seco. index: quadros já gravados (o tempo da cena, para os sons).
+   */
+  window.__frame = (index, fps, quality, render = true) => {
+    R.recording = render;
     R.frameT = index / fps;
-    if (index > 0) window.__step(Math.round(60 / fps));
+    if (R.started) window.__step(Math.round(60 / fps));
+    R.started = true;
+    R.camClock = (R.camClock ?? 0) + (R.camTicked ? 1 / fps : 0);
+    R.camTicked = true;
     const c = applyCam();
+    if (!render) return null;
     G.engine.render(1 / fps, R.t);
     const url = G.engine.renderer.domElement.toDataURL('image/jpeg', quality);
-    const i = G.game.debug.info();
-    return { url, cam: c, stage: i.stage, active: i.activeDog };
+    return { url, cam: c };
   };
   window.__stopRecording = () => {
     R.recording = false;

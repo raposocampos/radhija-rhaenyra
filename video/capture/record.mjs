@@ -9,6 +9,7 @@ import { chromium } from 'playwright-core';
 import { browserOptions } from '../../tools/scripts/lib/browser.mjs';
 import { closeBrowser, openPage } from '../../tools/scripts/lib/page-guard.mjs';
 import { Recorder } from './recorder.mjs';
+import { glArgs } from './gl.mjs';
 import { GROUPS, SHOTS } from './shots.mjs';
 
 if (!process.env.CI) throw new Error('A gravação das cenas roda no GitHub Actions, conforme AGENTS.md.');
@@ -16,8 +17,14 @@ const OUT = 'shots/trailer/clips';
 mkdirSync(OUT, { recursive: true });
 const args = process.argv.slice(2);
 const onlyH = args.includes('--so-horizontal');
-const wanted = (args.find((a) => !a.startsWith('--')) || '').split(',').filter(Boolean);
-const ids = [...new Set(wanted.flatMap((w) => GROUPS[w] || [w]))];
+// cada item: um grupo, uma cena, ou "cena@h" / "cena@v" (só a versão 16:9 ou só a 9:16; o @ vale no nome do artefato)
+const wanted = (args.find((a) => !a.startsWith('--')) || '').split(/[,+]/).filter(Boolean);
+const only = {};
+const ids = [...new Set(wanted.flatMap((w) => {
+  const [name, v] = w.split('@');
+  if (v) only[name] = v;
+  return GROUPS[name] || [name];
+}))];
 for (const id of ids) if (!SHOTS[id]) throw new Error(`cena desconhecida: ${id}`);
 if (!ids.length) throw new Error(`nenhuma cena; grupos: ${Object.keys(GROUPS).join(', ')}`);
 const DPR = Number(process.env.TRAILER_DPR || 1);
@@ -30,11 +37,12 @@ try {
   server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 } });
   await server.listen();
   const url = server.resolvedUrls.local[0];
-  browser = await chromium.launch(browserOptions());
+  browser = await chromium.launch(glArgs(browserOptions()));
   for (const id of ids) {
     const shot = SHOTS[id];
-    const variants = [{ v: 'h', w: 1920, h: 1080 }];
+    let variants = [{ v: 'h', w: 1920, h: 1080 }];
     if (shot.vertical && !onlyH) variants.push({ v: 'v', w: 1080, h: 1920 });
+    if (only[id]) variants = variants.filter((x) => x.v === only[id]);
     for (const { v, w, h } of variants) {
       const t0 = Date.now();
       const errors = [];

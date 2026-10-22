@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       etapa:
-        description: cenas (só gravar), montagem (só montar) ou tudo
+        description: cenas (só gravar), montagem (só montar), tudo, ou bancada (mede os renderizadores)
         type: choice
         default: tudo
-        options: [tudo, cenas, montagem]
+        options: [tudo, cenas, montagem, bancada]
       cenas:
         description: Grupos ou cenas a gravar, separados por vírgula (todas = todos os grupos)
         type: string
@@ -19,6 +19,11 @@ on:
         description: Execuções anteriores (IDs separados por espaço) de onde vêm as cenas que esta não gravou
         type: string
         default: ''
+      gl:
+        description: Renderizador por software das cenas
+        type: choice
+        default: swiftshader
+        options: [swiftshader, gl, vulkan]
   push:
     branches: ['claude/trailer-*']
     paths: ['video/**', '.github/workflows/trailer.yml']
@@ -40,6 +45,7 @@ jobs:
       etapa: ${{ steps.p.outputs.etapa }}
       grupos: ${{ steps.p.outputs.grupos }}
       clipes_de: ${{ steps.p.outputs.clipes_de }}
+      gl: ${{ steps.p.outputs.gl }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -52,20 +58,24 @@ jobs:
           IN_ETAPA: ${{ inputs.etapa }}
           IN_CENAS: ${{ inputs.cenas }}
           IN_CLIPES: ${{ inputs.clipes_de }}
+          IN_GL: ${{ inputs.gl }}
         run: node video/plan.mjs >> "$GITHUB_OUTPUT"
 
   cenas:
     name: Cenas — ${{ matrix.grupo }}
     needs: plano
-    if: needs.plano.outputs.etapa != 'montagem'
+    if: needs.plano.outputs.etapa == 'tudo' || needs.plano.outputs.etapa == 'cenas'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      # deixa vagas de runner para o CI e o E2E das outras sessões
+      max-parallel: 12
       matrix:
         grupo: ${{ fromJSON(needs.plano.outputs.grupos) }}
     env:
       CI: 'true'
+      TRAILER_GL: ${{ needs.plano.outputs.gl }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -77,12 +87,15 @@ jobs:
       - run: npm ci
       - name: Instalar Chromium e dependências Linux
         run: node node_modules/playwright-core/cli.js install --with-deps chromium
-      - name: Instalar o codificador de vídeo
+      - name: Instalar o codificador de vídeo e os renderizadores do Mesa
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libegl-mesa0 libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
       - name: Gravar as cenas (qualidade visual completa, quadro a quadro)
         run: node video/capture/record.mjs "${{ matrix.grupo }}"
+        env:
+          LP_NUM_THREADS: '4'
+          EGL_PLATFORM: surfaceless
       - name: Folhas de contato para revisão
         if: always()
         run: node video/sheets.mjs shots/trailer/clips shots/trailer/folhas
@@ -105,10 +118,53 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  bancada:
+    name: Bancada do renderizador — ${{ matrix.gl }}
+    needs: plano
+    if: needs.plano.outputs.etapa == 'bancada'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        gl: [swiftshader, gl, vulkan]
+    env:
+      CI: 'true'
+      TRAILER_GL: ${{ matrix.gl }}
+      LP_NUM_THREADS: '4'
+      EGL_PLATFORM: surfaceless
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Renderizadores do Mesa
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri mesa-vulkan-drivers libvulkan1 vulkan-tools mesa-utils
+          ls /usr/share/vulkan/icd.d/ || true
+      - name: Medir
+        run: node video/capture/gl-bench.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bancada-${{ matrix.gl }}
+          path: |
+            shots/trailer/bancada/
+            shots/diagnostico/
+          if-no-files-found: ignore
+          retention-days: 7
+
   montagem:
     name: Montagem do trailer
     needs: [plano, cenas]
-    if: always() && needs.plano.result == 'success' && needs.plano.outputs.etapa != 'cenas'
+    if: always() && needs.plano.result == 'success' && (needs.plano.outputs.etapa == 'tudo' || needs.plano.outputs.etapa == 'montagem')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:

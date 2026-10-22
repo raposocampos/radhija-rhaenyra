@@ -139,6 +139,21 @@ export class Recorder {
     if (after > 0) await this.record(after);
     return ok;
   }
+  /** Avança `seconds` sem desenhar nem gravar (jogo e câmera seguem): vira um corte seco na cena gravada. */
+  async skip(seconds) {
+    const n = Math.round(seconds * FPS);
+    for (let k = 0; k < n; k++) await this.page.evaluate(([i, fps]) => window.__frame(i, fps, 0, false), [this.frames, FPS]);
+  }
+  /** Avança sem desenhar até pred(info) (no máximo maxSec), quadro a quadro como na gravação. */
+  async skipUntil(pred, maxSec = 6) {
+    const src = pred.toString();
+    for (let k = 0; k < Math.round(maxSec * FPS); k++) {
+      await this.page.evaluate(([i, fps]) => window.__frame(i, fps, 0, false), [this.frames, FPS]);
+      if (await this.page.evaluate((s) => !!new Function(`return (${s})`)()(window.__game.game.debug.info(), window.__H), src)) return true;
+    }
+    this.warn(`pulou sem alcançar: ${src.slice(0, 120)}`);
+    return false;
+  }
   /** Marca um instante da cena (para a montagem: por exemplo, o pombo voando). */
   mark(name) { this.marks.push({ name, t: +(this.frames / FPS).toFixed(3) }); }
 

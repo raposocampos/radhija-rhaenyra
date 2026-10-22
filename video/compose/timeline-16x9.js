@@ -44,7 +44,7 @@ export default {
     // ---- 10 fases (o mosaico desenha as próprias cenas) e o passeio pelas fases
     { clip: 'fase2-irrigador', start: B(18), end: B(19), in: 2.0 },
     { clip: 'fase3-gansa', start: B(19), end: B(20), in: 1.5, kb: kbIn(1.0, 1.05), tr: { type: 'slide', dur: 0.3 } },
-    { clip: 'fase4-pombo', start: B(20), end: B(21), in: 1.8, tr: { type: 'slide', dur: 0.3, dir: -1 } },
+    { clip: 'fase4-pombo', start: B(20), end: B(21), in: 2.6, tr: { type: 'slide', dur: 0.3, dir: -1 } },
     { clip: 'estab-5', start: B(21), end: B(22), in: 0.8, kb: kbIn(1.0, 1.06), tr: { type: 'slide', dur: 0.3 } },
     { clip: 'fase6-trem', start: B(22), end: B(23), sync: { mark: 'partiu', at: B(22, 1) }, tr: { type: 'slide', dur: 0.3, dir: -1 } },
     { clip: 'parede', start: B(23), end: B(24), sync: { mark: 'mantinha', at: B(23, 1.5) }, tr: { type: 'slide', dur: 0.3 } },
@@ -103,8 +103,8 @@ export default {
     {
       type: 'endCard', start: B(33), end: B(37) + 0.6,
       portraits: [
-        { clip: 'retrato-radhija', in: 0.6, speed: 0.55, name: 'Radhija', who: 'radhija', focus: [0.5, 0.5] },
-        { clip: 'retrato-rhaenyra', in: 0.6, speed: 0.55, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.5] },
+        { clip: 'retrato-radhija', in: 0.6, speed: 0.48, name: 'Radhija', who: 'radhija', focus: [0.5, 0.5] },
+        { clip: 'retrato-rhaenyra', in: 0.6, speed: 0.48, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.5] },
       ],
     },
     { type: 'fade', start: B(37) - 0.4, end: B(37) + 0.6, mode: 'out', layer: 1 },

@@ -579,9 +579,9 @@ export function createComposer({ canvas, timeline, index, base }) {
       const s = spring(lt - 0.45 - i * 0.12, { freq: 1.7, damp: 0.6 });
       if (s <= 0) return;
       const who = WHO[p.who] || WHO.radhija;
-      const r = portrait ? 150 : 165;
-      const x = portrait ? W / 2 + (i ? 190 : -190) : i ? W - 290 : 290;
-      const y = portrait ? H * 0.2 : H * 0.42;
+      const r = 150;
+      const x = portrait ? W / 2 + (i ? 190 : -190) : i ? W - 300 : 300;
+      const y = portrait ? H * 0.2 : H * 0.62;
       const xx = x + (1 - s) * (i ? 1 : -1) * 260;
       const img = imgOf(p.clip, (p.in ?? 0) + lt * (p.speed ?? 1));
       ctx.save();
@@ -611,22 +611,22 @@ export function createComposer({ canvas, timeline, index, base }) {
       softText(ctx, p.name, xx, y + r + 62, { size: 40, weight: 900, alpha: clamp(s * 2), color: C.cream });
     });
     const S = portrait ? 1 : 1;
-    const yLogo = portrait ? H * 0.42 : H * 0.36;
+    const yLogo = portrait ? H * 0.42 : H * 0.27;
     drawLogo({ start: o.start, end: o.end + 10, size: portrait ? 118 : 118, y: yLogo / H, lines: portrait ? ['Radhija &', 'Rhaenyra'] : null, noBurst: false }, t);
-    const yDemo = portrait ? H * 0.555 : H * 0.53;
+    const yDemo = portrait ? H * 0.555 : H * 0.45;
     const sDemo = spring(lt - 0.9, { freq: 1.9, damp: 0.55 });
     if (sDemo > 0) pill(ctx, 'DEMO · 10 FASES', W / 2, yDemo, { size: 40 * S, weight: 900, tracking: 4, bg: C.orange, fg: C.cream, scale: lerp(0.6, 1, sDemo), alpha: clamp(sDemo * 2), icon: (c, x, y, r, col) => bone(c, x, y, r * 0.85, col, -0.4), iconColor: C.cream });
     const sPlay = ease.outCubic(prog(lt, 1.35, 1.75));
-    softText(ctx, 'Jogue grátis no navegador', W / 2, (portrait ? H * 0.635 : H * 0.655) + (1 - sPlay) * 16, { size: portrait ? 50 : 50, weight: 900, alpha: sPlay });
+    softText(ctx, 'Jogue grátis no navegador', W / 2, (portrait ? H * 0.635 : H * 0.585) + (1 - sPlay) * 16, { size: portrait ? 50 : 50, weight: 900, alpha: sPlay });
     const sUrl = spring(lt - 1.7, { freq: 1.8, damp: 0.6 });
     if (sUrl > 0) {
-      pill(ctx, o.url || 'raposocampos.github.io/radhija-rhaenyra', W / 2, portrait ? H * 0.69 : H * 0.745, {
+      pill(ctx, o.url || 'raposocampos.github.io/radhija-rhaenyra', W / 2, portrait ? H * 0.69 : H * 0.675, {
         size: portrait ? 34 : 40, weight: 800, bg: C.cream, fg: C.ink, border: C.orange, borderW: 5, scale: lerp(0.7, 1, sUrl), alpha: clamp(sUrl * 2),
       });
     }
     // teclado · controle · celular
     const items = [['Teclado', keyboardIcon], ['Controle', gamepadIcon], ['Celular', phoneIcon]];
-    const yI = portrait ? H * 0.79 : H * 0.875;
+    const yI = portrait ? H * 0.79 : H * 0.855;
     const gapI = portrait ? 300 : 280;
     items.forEach(([label, icon], i) => {
       const s = spring(lt - 2.1 - i * 0.12, { freq: 2, damp: 0.55 });

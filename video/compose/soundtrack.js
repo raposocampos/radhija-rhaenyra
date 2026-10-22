@@ -118,7 +118,7 @@ export async function renderSoundtrack({ duration, form, musicStart = 0, cues = 
       sv.connect(G.verbSend);
     }
     try {
-      fn(G, g, Math.max(0.001, s.t), s.pitch ?? 1, {});
+      fn(G, g, Math.max(0.001, s.t), s.pitch ?? 1, { ...(s.opts || {}) });
       played++;
     } catch (e) {
       console.warn('som do jogo', s.name, e);
