@@ -13,25 +13,32 @@ primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitH
   Medido no código antigo: depois da carga, +28 a +95 programas, +30 a +137 texturas e +307 a +1222 geometrias por
   fase; o primeiro superbafo, +1 programa.
 - Feito: `engine.prepare()` (`src/core/engine.js`), chamado no `loadLevel` atrás da cortina: compila a cena toda
-  com um alvo 16×16 do tipo do compositor ligado (`compileAsync`), desenha tudo uma vez nesse alvo sem recorte e com o
-  que está escondido (as luzes escondidas continuam apagadas), um quadro normal e espera a GPU (fence); marcas
-  `rr:gpu:*`. Trocar o perfil de qualidade recompila a fase em segundo plano. Bolha escondida `cheiro-aquecimento`
-  (`scentView.js`) para o superbafo; pool de ícones e de pegadas (`feedback.js`) começa com cada textura.
-- Medição: `tools/scripts/measure-first-pass.mjs`, suíte `primeira-passagem` do E2E manual (também em `todas`, um job
-  por fase e qualidade): navegador novo, a dog de nó em nó duas vezes pelo mesmo caminho e um superbafo; cada quadro
-  espera a GPU lendo um pixel (o `gl.finish()` do Chromium não espera). Reprova com programa, textura ou geometria
-  depois da carga ou com pico (1ª passagem > max(150 ms, 35%) do mesmo quadro da 2ª, com a mesma cena).
-- Validação até aqui: 1ª versão (`7c587ff`, E2E `39548640688`): +0 programas, texturas e geometrias depois da carga
-  nas 10 fases (menos uma textura de ícone nas fases 3 e 10, corrigida em `feedback.js`), mas o 1º quadro ainda pagava
-  o trabalho do aquecimento. Com a fence (`40deb23`, E2E `39684384893`, parcial): o excesso do 1º quadro caiu de 5–10 s
-  (antes, `39684380232`) para 0,4–1,2 s, e sobrou um patamar de ~30% por alguns segundos logo depois da carga, sem nada
-  novo no renderer (trabalho de fundo do navegador no runner); o medidor passou a esperar 3 s parado antes da 1ª
-  passagem. O CI de `6577add` falhou nos tipos (promessa da fence), corrigido. Sincronizado com o main do #59.
-  Medições do head final: antes no branch auxiliar `claude/primeira-passagem-antes` (main + medidor, sem a correção;
-  apagar no fim) e depois no E2E `todas` do head; conferir no PR.
-- Próximo passo: conferir o CI e o E2E `todas` (com a primeira-passagem) do head sincronizado, entregar a prévia e
-  esperar o "pode integrar" do usuário nesta sessão. Se o main andar, sincronizar de novo e conferir que
-  `src/game/pushRest.js` e o `pushFace` de `game.js` continuam iguais aos do main.
+  com um alvo do tipo do compositor ligado (`compileAsync`), desenha tudo uma vez — sem recorte e com o que está
+  escondido (as luzes escondidas continuam apagadas) — de uma vista geral da fase num alvo de 256×144, um quadro normal
+  e espera a GPU (fence); marcas `rr:gpu:*`. Trocar o perfil de qualidade recompila a fase em segundo plano. Bolha
+  escondida `cheiro-aquecimento` (`scentView.js`) para o superbafo; pool de ícones e de pegadas (`feedback.js`) começa
+  com cada textura. `game.js`: só a linha do compile no `loadLevel`.
+- Medição: `tools/scripts/measure-first-pass.mjs`, suíte `primeira-passagem` do E2E manual (também em `todas`): um
+  job por fase e aparelho (PC `alta`; iPhone 13 emulado em `media`; Infinix Note 30 emulado em `baixa`; entrada
+  `qualidades` do workflow), navegador novo sem cache de shaders em disco, 3 s parado depois da carga, a dog de nó em
+  nó duas vezes e um superbafo; cada quadro espera a GPU lendo um pixel (o `gl.finish()` do Chromium não espera).
+  Reprova com programa, textura ou geometria depois da carga, com mais de 3 picos (quadro da 1ª passagem > max(150 ms,
+  35%) do mesmo da 2ª, com a mesma cena) ou com um pico acima de 2,5×. O relatório lista o que entrou na câmera em
+  cada pico. Smoke do build com 8 min (cada carga prepara a GPU).
+- Achados: (1) a variante errada da carga e a certa no 1º uso somavam ~1,7× os programas de uma passagem (fase 10:
+  176 → 99); (2) no SwiftShader, o resto do custo era na hora do desenho (por isso a vista geral cobrindo pixels e a
+  fence); (3) a fase 10 tem dois quadros (cerca do fundo em `Y_south`, folhinhas em `Y_pinata`) +40 a +120% na
+  primeira vez, já antes da correção, sem nada novo no renderer; (4) o perfil `baixa` redesenha a sombra a cada 2
+  quadros: as passagens precisam começar na mesma paridade.
+- Troca: no SwiftShader a carga ficou bem mais longa (PC 0,6–3,6 s → 6,7–14,7 s; celulares emulados até ~19 s na
+  fase 10), em troca do 1º quadro (2,5–9,8 s → normal) e dos engasgos nas áreas novas. Em aparelho real, o que manda é
+  a compilação (−40% de programas); o usuário decide pela prévia. Se a carga pesar no celular: progresso real na
+  cortina, ou preparar primeiro a câmera inicial e o resto em fatias.
+- Validação: CI e E2E `todas` do head no PR (a primeira-passagem com os três aparelhos). Antes (sem a correção, mesmo
+  código do jogo): branch auxiliar `claude/primeira-passagem-antes` (main `e2bcd61` + medidor; apagar no fim).
+- Próximo passo: entregar a prévia com a tabela por aparelho e esperar o "pode integrar" do usuário nesta sessão. Se o
+  main andar, sincronizar de novo e conferir que `src/game/pushRest.js` e o `pushFace` de `game.js` continuam iguais aos
+  do main.
 
 ## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 
