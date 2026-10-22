@@ -118,7 +118,7 @@ try {
     const af = `loudnorm=I=-14:TP=-1.0:LRA=11:measured_I=${meas.input_i}:measured_TP=${meas.input_tp}:measured_LRA=${meas.input_lra}:measured_thresh=${meas.input_thresh}:offset=${meas.target_offset}:linear=true,aresample=48000,afade=t=out:st=${fadeAt}:d=1.2`;
     const mp4 = `${OUT}/trailer-${fmt}.mp4`;
     ffmpeg(['-framerate', String(FPS), '-i', join(dir, '%05d.jpg'), '-i', wav, '-filter_complex', `[1:a]${af}[a]`, '-map', '0:v', '-map', '[a]',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(FPS),
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-maxrate', '9M', '-bufsize', '18M', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(FPS),
       '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', '-t', plan.duration.toFixed(3), mp4]);
     const loud = spawnSync('ffmpeg', ['-hide_banner', '-i', mp4, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
     const summary = loud.slice(loud.lastIndexOf('Summary:')).replace(/\s+/g, ' ').trim();

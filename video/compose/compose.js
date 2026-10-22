@@ -661,7 +661,7 @@ export function createComposer({ canvas, timeline, index, base }) {
       case 'flash': {
         const k = prog(t, o.start, o.end);
         ctx.fillStyle = o.color || '#FFF8EC';
-        ctx.globalAlpha = Math.pow(1 - k, 2) * (o.k ?? 0.85);
+        ctx.globalAlpha = Math.pow(1 - k, 2) * (o.k ?? 0.5);
         ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = 1;
         return null;

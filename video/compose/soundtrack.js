@@ -26,7 +26,7 @@ function impulse(ctx, sec = 2.4, decay = 3.0) {
  *   gameGain?: number }} o
  * → { wav (base64), stats }
  */
-export async function renderSoundtrack({ duration, form, musicStart = 0, cues = [], gameSounds = [], sampleRate = 48000, gameGain = 0.5 }) {
+export async function renderSoundtrack({ duration, form, musicStart = 0, cues = [], gameSounds = [], sampleRate = 48000, gameGain = 0.62 }) {
   const ctx = new OfflineAudioContext(2, Math.ceil(duration * sampleRate), sampleRate);
   const gain = (v, dest) => {
     const g = ctx.createGain();
@@ -62,13 +62,14 @@ export async function renderSoundtrack({ duration, form, musicStart = 0, cues = 
     return n;
   };
   const out = {
-    pluck: bus(0.5, duck, 0.22),
-    mallet: bus(0.55, music, 0.3),
-    bell: bus(0.7, music, 0.42),
-    pad: bus(1.6, duck, 0.35),
-    bass: bus(0.62, duck, 0),
-    lead: bus(0.9, music, 0.4),
-    drums: bus(0.72, music, 0.04),
+    // equilíbrio: melodia (glock, marimba) na frente; baixo e pad atrás (o RMS da 1ª versão era quase só grave)
+    pluck: bus(0.6, duck, 0.22),
+    mallet: bus(0.75, music, 0.3),
+    bell: bus(0.9, music, 0.42),
+    pad: bus(1.25, duck, 0.35),
+    bass: bus(0.42, duck, 0),
+    lead: bus(1.0, music, 0.4),
+    drums: bus(0.66, music, 0.04),
     fx: bus(0.6, comp, 0.18),
   };
   // "bombeado" leve do bumbo no pad, na corda e no baixo

@@ -159,6 +159,7 @@ export function createInstruments(ctx, out) {
       const f = hz(midi);
       const dest = pan(out.bell, p);
       for (const [k, a, dec] of [[1, 1, len], [2.756, 0.32, len * 0.35], [5.404, 0.16, len * 0.18], [8.933, 0.06, 0.12]]) {
+        if (f * k > 18000) continue;
         const o = ctx.createOscillator();
         o.type = 'sine';
         o.frequency.value = f * k;
@@ -173,6 +174,7 @@ export function createInstruments(ctx, out) {
       const f = hz(midi);
       const dest = pan(out.bell, p);
       for (const [k, a, dec, det] of [[1, 1, 1.1, 0], [1, 0.5, 0.9, 7], [4.02, 0.22, 0.2, 0], [6.1, 0.08, 0.08, 0]]) {
+        if (f * k > 18000) continue;
         const o = ctx.createOscillator();
         o.type = 'sine';
         o.frequency.value = f * k;
@@ -560,7 +562,7 @@ export function playForm(ctx, I, form, t0 = 0) {
         I.clap(at(b, 12), 0.4);
         for (let s = 0; s < 16; s += 2) I.shaker(at(b, s + 1), 0.13);
       } else if (T === 'soft') {
-        I.kick(at(b, 0), 0.55);
+        I.kick(at(b, 0), 0.4);
         for (let s = 0; s < 16; s += 2) I.shaker(at(b, s + 1), 0.08);
       } else if (T === 'break') {
         I.kick(at(b, 0), 0.75);

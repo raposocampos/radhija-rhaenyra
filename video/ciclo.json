@@ -1,6 +1,6 @@
 {
-  "etapa": "tudo",
-  "cenas": "arrancada@h,arrancada@v,fase2-irrigador,pulo,superbafo@h,superbafo@v,final-fundo@h,final-fundo@v",
-  "clipes_de": "39691066117 39698714913",
+  "etapa": "montagem",
+  "cenas": "",
+  "clipes_de": "39691066117 39698714913 39703424428",
   "gl": "vulkan"
 }
