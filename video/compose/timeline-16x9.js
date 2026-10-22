@@ -26,14 +26,14 @@ export default {
   clips: [
     // ---- abertura
     { clip: 'abertura', start: 0, end: B(4), in: 0, kb: kbIn(1.02, 1.08) },
-    { clip: 'retrato-radhija', start: B(4), end: B(4, 2), in: 1.2, tr: { type: 'zoom', dur: 0.25 } },
-    { clip: 'retrato-rhaenyra', start: B(4, 2), end: B(5), in: 1.4, tr: { type: 'zoom', dur: 0.25 } },
+    { clip: 'retrato-radhija', start: B(4), end: B(4, 2), in: 2.7, tr: { type: 'zoom', dur: 0.25 } },
+    { clip: 'retrato-rhaenyra', start: B(4, 2), end: B(5), in: 1.6, tr: { type: 'zoom', dur: 0.25 } },
     // ---- logo (as duas no fim da descida da câmera, desfocadas)
     { clip: 'abertura', start: B(5), end: B(7), in: 5.0, blur: [5, 9], dark: 0.32, kb: kbIn(1.06, 1.12), mute: true, tr: { type: 'cut', dur: 0 } },
     // ---- Radhija
     { clip: 'superbafo', start: B(7), end: B(8, 3), in: 0, kb: kbIn(1.0, 1.05), tr: { type: 'paw', dur: 0.5, at: [0.5, 0.55], color: C.honey } },
     { clip: 'arrancada', start: B(8, 3), end: B(10), sync: { mark: 'arrancada', at: B(9) }, tr: { type: 'slide', dur: 0.32 } },
-    { clip: 'vao', start: B(10), end: B(11), in: 2.6, kb: kbIn(1.0, 1.04), tr: { type: 'whip', dur: 0.28 } },
+    { clip: 'vao', start: B(10), end: B(11), in: 1.5, kb: kbIn(1.0, 1.04), tr: { type: 'whip', dur: 0.28 } },
     // ---- Rhaenyra
     { clip: 'parede', start: B(11), end: B(12, 2), in: 0.05, kb: kbIn(1.0, 1.04), tr: { type: 'paw', dur: 0.5, at: [0.5, 0.55], color: C.teal } },
     { clip: 'empurrao', start: B(12, 2), end: B(14), in: 0.2, tr: { type: 'slide', dur: 0.32 } },
@@ -55,11 +55,11 @@ export default {
     { clip: 'coop-escada', start: B(27, 1), end: B(28, 2), sync: { mark: 'oculos', at: B(28, 1) }, tr: { type: 'slide', dur: 0.32 } },
     { clip: 'coop-balde', start: B(28, 2), end: B(30), sync: { mark: 'deque', at: B(29, 3) }, tr: { type: 'slide', dur: 0.32, dir: -1 } },
     // ---- final
-    { clip: 'luzes', start: B(30), end: B(31), in: 0.4, kb: kbIn(1.0, 1.06), tr: { type: 'zoom', dur: 0.3 } },
+    { clip: 'luzes', start: B(30), end: B(31), in: 1.3, kb: kbIn(1.0, 1.06), tr: { type: 'zoom', dur: 0.3 } },
     { clip: 'pinata', start: B(31), end: B(31, 3), sync: { mark: 'abriu', at: B(31, 1) }, shakes: [B(31, 1)], tr: { type: 'whip', dur: 0.26 } },
-    { clip: 'bolo', start: B(31, 3), end: B(33), in: 0.6, kb: kbIn(1.0, 1.07), tr: { type: 'zoom', dur: 0.3 } },
+    { clip: 'bolo', start: B(31, 3), end: B(33), in: 0.5, kb: kbIn(1.0, 1.07), tr: { type: 'zoom', dur: 0.3 } },
     // ---- cartão final
-    { clip: 'final-fundo', start: B(33), end: B(37) + 0.6, in: 0, blur: [2, 7], dark: [0.15, 0.48], mute: true, tr: { type: 'fade', dur: 0.5 } },
+    { clip: 'final-fundo', start: B(33), end: B(37) + 0.6, in: 0, speed: 0.5, blur: [2, 7], dark: [0.15, 0.48], mute: true, tr: { type: 'fade', dur: 0.5 } },
   ],
   overlays: [
     { type: 'fade', start: 0, end: 1.3, mode: 'in', layer: 1 },
@@ -103,8 +103,8 @@ export default {
     {
       type: 'endCard', start: B(33), end: B(37) + 0.6,
       portraits: [
-        { clip: 'retrato-radhija', in: 0.6, speed: 0.48, name: 'Radhija', who: 'radhija', focus: [0.5, 0.5] },
-        { clip: 'retrato-rhaenyra', in: 0.6, speed: 0.48, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.5] },
+        { clip: 'retrato-radhija', in: 2.4, speed: 0.25, name: 'Radhija', who: 'radhija', focus: [0.5, 0.5] },
+        { clip: 'retrato-rhaenyra', in: 2.2, speed: 0.28, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.5] },
       ],
     },
     { type: 'fade', start: B(37) - 0.4, end: B(37) + 0.6, mode: 'out', layer: 1 },

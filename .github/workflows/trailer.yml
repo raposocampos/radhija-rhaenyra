@@ -22,8 +22,8 @@ on:
       gl:
         description: Renderizador por software das cenas
         type: choice
-        default: swiftshader
-        options: [swiftshader, gl, vulkan]
+        default: vulkan
+        options: [vulkan, swiftshader, gl]
   push:
     branches: ['claude/trailer-*']
     paths: ['video/**', '.github/workflows/trailer.yml']

@@ -18,7 +18,7 @@ export default {
   ],
   clips: [
     { clip: 'superbafo-v', start: 0, end: B(2), in: 0.55, kb: kbIn(1.0, 1.06) },
-    { clip: 'retrato-radhija-v', start: B(2), end: B(3), in: 1.0, blur: 4, dark: 0.3, mute: true, tr: { type: 'zoom', dur: 0.3 } },
+    { clip: 'retrato-radhija-v', start: B(2), end: B(3), in: 2.4, blur: 4, dark: 0.3, mute: true, tr: { type: 'zoom', dur: 0.3 } },
     { clip: 'retrato-rhaenyra-v', start: B(3), end: B(4), in: 1.2, blur: 4, dark: 0.3, mute: true, tr: { type: 'fade', dur: 0.25 } },
     { clip: 'arrancada-v', start: B(4), end: B(5), sync: { mark: 'arrancada', at: B(4, 0.5) }, tr: { type: 'paw', dur: 0.45, color: C.honey } },
     { clip: 'parede-v', start: B(5), end: B(6), in: 0.1, tr: { type: 'slide', dur: 0.3 } },
@@ -27,7 +27,7 @@ export default {
     { clip: 'porcos-v', start: B(8), end: B(9), in: 2.2, kb: kbIn(1.0, 1.05), tr: { type: 'whip', dur: 0.28 } },
     { clip: 'fase6-trem-v', start: B(9), end: B(10), sync: { mark: 'partiu', at: B(9, 1) }, tr: { type: 'slide', dur: 0.3 } },
     { clip: 'coop-balde-v', start: B(10), end: B(11), sync: { mark: 'deque', at: B(10, 3) }, tr: { type: 'slide', dur: 0.3, dir: -1 } },
-    { clip: 'final-fundo-v', start: B(11), end: B(14) + 0.4, in: 0, blur: [2, 7], dark: [0.15, 0.5], mute: true, tr: { type: 'fade', dur: 0.4 } },
+    { clip: 'final-fundo-v', start: B(11), end: B(14) + 0.4, in: 0, speed: 0.5, blur: [2, 7], dark: [0.15, 0.5], mute: true, tr: { type: 'fade', dur: 0.4 } },
   ],
   overlays: [
     { type: 'fade', start: 0, end: 0.35, mode: 'in', layer: 1 },
@@ -43,8 +43,8 @@ export default {
     {
       type: 'endCard', start: B(11), end: B(14) + 0.4,
       portraits: [
-        { clip: 'retrato-radhija-v', in: 0.6, speed: 0.6, name: 'Radhija', who: 'radhija', focus: [0.5, 0.45] },
-        { clip: 'retrato-rhaenyra-v', in: 0.6, speed: 0.6, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.45] },
+        { clip: 'retrato-radhija-v', in: 2.6, speed: 0.35, name: 'Radhija', who: 'radhija', focus: [0.5, 0.45] },
+        { clip: 'retrato-rhaenyra-v', in: 2.4, speed: 0.38, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.45] },
       ],
     },
     { type: 'fade', start: B(14) - 0.3, end: B(14) + 0.4, mode: 'out', layer: 1 },

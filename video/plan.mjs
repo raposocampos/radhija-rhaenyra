@@ -8,7 +8,8 @@ const cfg = manual
   ? { etapa: process.env.IN_ETAPA, cenas: process.env.IN_CENAS, clipes_de: process.env.IN_CLIPES, gl: process.env.IN_GL }
   : JSON.parse(readFileSync(new URL('./ciclo.json', import.meta.url), 'utf8'));
 const etapa = ['tudo', 'cenas', 'montagem', 'bancada'].includes(cfg.etapa) ? cfg.etapa : 'tudo';
-const gl = ['swiftshader', 'gl', 'vulkan'].includes(cfg.gl) ? cfg.gl : 'swiftshader';
+// vulkan: o lavapipe do Mesa desenha ~4× mais rápido que o SwiftShader no runner, com a mesma imagem (bancada)
+const gl = ['swiftshader', 'gl', 'vulkan'].includes(cfg.gl) ? cfg.gl : 'vulkan';
 const wanted = String(cfg.cenas || 'todas').split(',').map((s) => s.trim()).filter(Boolean);
 // todas: um job por cena e formato (os planos de cada fase, de dois em dois), para o tempo total ficar curto
 const todas = () => {

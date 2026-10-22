@@ -1,6 +1,6 @@
 {
-  "etapa": "bancada",
-  "cenas": "",
-  "clipes_de": "",
-  "gl": "swiftshader"
+  "etapa": "tudo",
+  "cenas": "parede@h,parede@v,arrancada@h,arrancada@v,lambe@h,lambe@v,retrato-rhaenyra@v,coop-portao,superbafo@h,superbafo@v,fase2-irrigador,fase3-gansa,pinata,final-fundo@h,final-fundo@v,coop-escada,coop-balde@h,coop-balde@v,pulo,estab-5+estab-9",
+  "clipes_de": "39691066117",
+  "gl": "vulkan"
 }

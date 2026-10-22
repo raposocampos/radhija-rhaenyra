@@ -69,14 +69,14 @@ export const SHOTS = {
         { at: 0, pos: [2.9, 1.25, 3.3], look: [1.0, 0.42, 1.25], fov: 38 },
         { at: 5, pos: [2.5, 1.05, 3.0], look: [0.8, 0.38, 1.3], fov: 36 },
       ]);
-      await r.record(0.4);
       await r.tap('KeyE');
-      await r.recordUntil((i) => i.rope?.phase === 'hold', 2.5);
+      await r.skipUntil((i) => i.rope?.phase === 'hold', 2.5);
+      await r.record(0.4);
       await r.keys(['KeyD'], true);
       await r.recordUntil((i) => i.stage === 'gateOpen', 3.0);
       await r.up('KeyD');
       r.mark('aberto');
-      await r.record(2.4);
+      await r.record(1.8);
     },
   },
 
@@ -120,11 +120,7 @@ export const SHOTS = {
     async run(r, L) {
       // escorregador: sobe com a arrancada, pega o frisbee e desce de barriga
       await r.setup({ stage: 'clean', active: 'radhija', place: { radhija: { x: L.SLIDE_ENTRY.minX - 0.25, z: L.SLIDE.z, yaw: PI / 2 } }, stay: 'rhaenyra', settle: 20 });
-      const cx = (L.SLIDE.x0 + L.SLIDE.x1) / 2 + 0.3;
-      await keysCam(r, [
-        { at: 0, pos: [cx - 0.5, 1.0, L.SLIDE.z + 2.3], look: [cx - 0.5, 0.5, L.SLIDE.z], fov: 38 },
-        { at: 4.5, pos: [cx + 0.2, 1.15, L.SLIDE.z + 2.1], look: [cx + 0.2, 0.62, L.SLIDE.z], fov: 38 },
-      ]);
+      await r.camera((t, H) => ({ ...H.follow('radhija', [-0.35, 0.5, 2.5], [0.25, 0.3, 0], 0.16), fov: 40 }));
       await r.record(0.5);
       await r.key('KeyD', true);
       await r.record(1 / 30);
@@ -243,7 +239,10 @@ export const SHOTS = {
       await r.record(0.3);
       await r.key('KeyL', true);
       r.mark('lambe');
-      await r.recordUntil((i) => i.lambe?.mud?.radhija?.k === 0, 10);
+      await r.record(2.6);
+      await r.skipUntil((i) => (i.lambe?.mud?.radhija?.k ?? 0) <= 0.2, 12);
+      r.mark('corte');
+      await r.recordUntil((i) => i.lambe?.mud?.radhija?.k === 0, 6);
       await r.up('KeyL');
       r.mark('limpa');
       await r.record(2.2);
@@ -338,7 +337,7 @@ export const SHOTS = {
         { at: 0, pos: [K.x + 1.15, 1.5, K.z + 1.95], look: [K.x, 0.9, K.z], fov: 38 },
         { at: 5, pos: [K.x + 0.8, 1.25, K.z + 1.45], look: [K.x, 0.85, K.z], fov: 36 },
       ]);
-      await r.record(5.0);
+      await r.record(3.4);
     },
   },
   'final-fundo': {
@@ -349,9 +348,9 @@ export const SHOTS = {
       await r.setup({ stage: 'done', set: [['power', true]], settle: 120 });
       await keysCam(r, [
         { at: 0, pos: [3.8, 5.2, 9.2], look: [-1.0, 0.8, -1.5], fov: 40 },
-        { at: 9, pos: [1.2, 4.4, 8.4], look: [-2.2, 0.9, -1.8], fov: 40 },
+        { at: 4.6, pos: [2.5, 4.8, 8.8], look: [-1.6, 0.85, -1.65], fov: 40 },
       ], { ease: 'linear' });
-      await r.record(9.0);
+      await r.record(4.6);
     },
   },
   pinata: {
@@ -385,7 +384,9 @@ export const SHOTS = {
         if (g.activeDog !== 'rhaenyra' || q.pinata.broken) return;
         if (!c.jumpT && Math.hypot(q.pinata.x - c.x, q.pinata.z - c.z) < 0.5) { H.key('Space', true); s.release = true; }
       });
-      await r.recordUntil((i) => i.quintal?.pinata?.broken, 7, 2.2);
+      await r.recordUntil((i) => i.quintal?.pinata?.broken, 7);
+      r.mark('abriu');
+      await r.record(1.8);
     },
   },
   'fase3-gansa': {
@@ -404,14 +405,15 @@ export const SHOTS = {
     level: '2',
     async run(r, L) {
       // crepúsculo na área de serviço: o irrigador girando no meio do caminho
+      // câmera no gramado, do lado leste: os jatos girando na frente e as duas na beira do piso
       const S = L.SPRINKLER;
-      await r.setup({ active: 'radhija', place: { radhija: { x: S.x - 2.6, z: S.z + 0.3, yaw: PI / 2 }, rhaenyra: { x: S.x - 3.2, z: S.z + 0.7, yaw: PI / 2 } }, settle: 60 });
+      await r.setup({ active: 'radhija', place: { radhija: { x: S.x - 2.4, z: S.z + 0.2, yaw: PI / 2 }, rhaenyra: { x: S.x - 2.9, z: S.z + 0.6, yaw: PI / 2 } }, settle: 60 });
       await keysCam(r, [
-        { at: 0, pos: [S.x - 2.6, 1.3, S.z + 2.7], look: [S.x - 0.5, 0.3, S.z], fov: 40 },
-        { at: 5, pos: [S.x - 1.9, 1.1, S.z + 2.4], look: [S.x - 0.2, 0.3, S.z], fov: 38 },
+        { at: 0, pos: [S.x + 1.7, 1.15, S.z + 2.5], look: [S.x - 0.6, 0.4, S.z - 0.1], fov: 40 },
+        { at: 4.2, pos: [S.x + 1.3, 1.0, S.z + 2.2], look: [S.x - 0.8, 0.38, S.z - 0.1], fov: 38 },
       ]);
-      await r.drive(S.x - 2.15, S.z + 0.2, { tol: 0.12, maxSec: 2 });
-      await r.record(5.0);
+      await r.drive(S.x - 2.0, S.z + 0.15, { tol: 0.12, maxSec: 2 });
+      await r.record(4.2);
     },
   },
 
@@ -438,12 +440,12 @@ export const SHOTS = {
         { at: 2.6, pos: [x + 1.2, 1.45, -1.35], look: [x + 0.05, 1.35, -2.75], fov: 38 },
         { at: 4.2, pos: [x + 1.0, 1.75, -1.7], look: [L.GLASSES.x, L.GLASSES.y - 0.15, L.GLASSES.z], fov: 38 },
       ]);
-      await r.record(0.4);
+      await r.record(0.3);
       await r.tap('KeyE');
       r.mark('sobe');
       await r.recordUntil((i) => i.biblioteca?.climb?.phase === 'grab', 5);
       r.mark('oculos');
-      await r.record(1.4);
+      await r.record(1.2);
     },
   },
   'coop-balde': {
