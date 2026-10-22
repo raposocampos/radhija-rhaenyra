@@ -100,8 +100,9 @@ export const SHOTS = {
         const s = a.s || (a.s = { k: 0, p: [bird.x, bird.y + 0.1, bird.z] });
         const k = 1 - Math.exp(-(1 / 30) / 0.25);
         s.p = H.mix3(s.p, [bird.x, bird.y + 0.1, bird.z], k);
-        const w = 0.55 * H.smooth(H.clamp((t - 1.3) / 0.7)) * (1 - H.smooth(H.clamp((t - 2.6) / 0.8)));
-        return { ...base, look: H.mix3(base.look, s.p, w) };
+        const w = 0.3 * H.smooth(H.clamp((t - 1.3) / 0.7)) * (1 - H.smooth(H.clamp((t - 2.6) / 0.8)));
+        const tgt = [H.clamp(s.p[0], a.m[0] - 0.6, a.m[0] + 1.4), H.clamp(s.p[1], 0, 0.9), H.clamp(s.p[2], a.m[2] - 0.8, a.m[2] + 0.8)];
+        return { ...base, look: H.mix3(base.look, tgt, w) };
       }, { m });
       await r.record(0.8);
       await r.key('KeyR', true);
@@ -120,7 +121,11 @@ export const SHOTS = {
     async run(r, L) {
       // escorregador: sobe com a arrancada, pega o frisbee e desce de barriga
       await r.setup({ stage: 'clean', active: 'radhija', place: { radhija: { x: L.SLIDE_ENTRY.minX - 0.25, z: L.SLIDE.z, yaw: PI / 2 } }, stay: 'rhaenyra', settle: 20 });
-      await r.camera((t, H) => ({ ...H.follow('radhija', [-0.35, 0.5, 2.5], [0.25, 0.3, 0], 0.16), fov: 40 }));
+      const cx = (L.SLIDE.x0 + L.SLIDE.x1) / 2;
+      await keysCam(r, [
+        { at: 0, pos: [cx + 0.2, 1.45, L.SLIDE.z + 3.3], look: [cx + 0.25, 0.75, L.SLIDE.z], fov: 40 },
+        { at: 4.5, pos: [cx + 0.55, 1.5, L.SLIDE.z + 3.15], look: [cx + 0.5, 0.8, L.SLIDE.z], fov: 40 },
+      ]);
       await r.record(0.5);
       await r.key('KeyD', true);
       await r.record(1 / 30);
@@ -207,7 +212,7 @@ export const SHOTS = {
       // apaga a parede da frente)
       const W = L.WALL_SH;
       await r.setup({ active: 'rhaenyra', place: { rhaenyra: { x: W.x - 1.3, z: 0.4, yaw: PI / 2 }, radhija: { x: W.x - 1.9, z: 0.95, yaw: PI / 2 } }, stay: 'radhija', settle: 40 });
-      await r.camera((t, H, a) => ({ ...H.follow('rhaenyra', [0.15, 1.05, 1.85], [0.35, 0.3, 0], 0.18), fov: 38 }));
+      await r.camera((t, H, a) => ({ ...H.follow('rhaenyra', [0.1, 1.45, 2.5], [0.35, 0.42, 0], 0.2), fov: 40 }));
       const keys = await r.keysFor(1, 0);
       await r.record(0.3);
       await r.keys(keys, true);
@@ -347,8 +352,8 @@ export const SHOTS = {
       // plano aberto do quintal em festa, para o fundo do cartão final
       await r.setup({ stage: 'done', set: [['power', true]], settle: 120 });
       await keysCam(r, [
-        { at: 0, pos: [3.8, 5.2, 9.2], look: [-1.0, 0.8, -1.5], fov: 40 },
-        { at: 4.6, pos: [2.5, 4.8, 8.8], look: [-1.6, 0.85, -1.65], fov: 40 },
+        { at: 0, pos: [1.0, 2.9, 1.7], look: [-2.1, 1.35, -3.6], fov: 42 },
+        { at: 4.6, pos: [0.4, 2.6, 1.05], look: [-2.2, 1.35, -3.6], fov: 42 },
       ], { ease: 'linear' });
       await r.record(4.6);
     },
@@ -407,12 +412,11 @@ export const SHOTS = {
       // crepúsculo na área de serviço: o irrigador girando no meio do caminho
       // câmera no gramado, do lado leste: os jatos girando na frente e as duas na beira do piso
       const S = L.SPRINKLER;
-      await r.setup({ active: 'radhija', place: { radhija: { x: S.x - 2.4, z: S.z + 0.2, yaw: PI / 2 }, rhaenyra: { x: S.x - 2.9, z: S.z + 0.6, yaw: PI / 2 } }, settle: 60 });
+      await r.setup({ active: 'radhija', place: { radhija: { x: S.x + 0.1, z: S.z + 2.75, yaw: PI }, rhaenyra: { x: S.x + 0.75, z: S.z + 2.65, yaw: PI + 0.3 } }, stay: 'rhaenyra', settle: 60 });
       await keysCam(r, [
-        { at: 0, pos: [S.x + 1.7, 1.15, S.z + 2.5], look: [S.x - 0.6, 0.4, S.z - 0.1], fov: 40 },
-        { at: 4.2, pos: [S.x + 1.3, 1.0, S.z + 2.2], look: [S.x - 0.8, 0.38, S.z - 0.1], fov: 38 },
+        { at: 0, pos: [S.x + 2.1, 0.95, S.z + 3.9], look: [S.x - 0.2, 0.45, S.z + 0.6], fov: 40 },
+        { at: 4.2, pos: [S.x + 1.8, 0.9, S.z + 3.7], look: [S.x - 0.35, 0.45, S.z + 0.5], fov: 38 },
       ]);
-      await r.drive(S.x - 2.0, S.z + 0.15, { tol: 0.12, maxSec: 2 });
       await r.record(4.2);
     },
   },

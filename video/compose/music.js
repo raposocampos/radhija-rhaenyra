@@ -498,7 +498,7 @@ export function playForm(ctx, I, form, t0 = 0) {
       const T = sec.type;
       const intoBig = lastBar && next && ['logo', 'chorus', 'final', 'verse'].includes(next.type) && T !== 'chorus';
       // ---- pad (todas as seções, mais aberto no refrão)
-      const padVel = { intro: 0.2, build: 0.24, logo: 0.22, verse: 0.15, soft: 0.2, fill: 0.16, chorus: 0.17, break: 0.22, final: 0.2, outro: 0.22 }[T] ?? 0.18;
+      const padVel = { intro: 0.34, build: 0.3, logo: 0.22, verse: 0.15, soft: 0.24, fill: 0.16, chorus: 0.17, break: 0.24, final: 0.2, outro: 0.28 }[T] ?? 0.18;
       const cutoff = { intro: 1100, build: 1800, chorus: 2600, final: 2800, verse: 1700, outro: 1300 }[T] ?? 1500;
       const padLen = T === 'outro' && sec.end && lastBar ? BAR * 2.5 : BAR;
       I.pad(at(b), ch.pad, padLen, padVel, cutoff);
@@ -510,7 +510,7 @@ export function playForm(ctx, I, form, t0 = 0) {
         const steps = T === 'outro' && sec.end && lastBar ? [0] : [0, 1, 2, 3, 4, 5, 6, 7];
         for (const s of steps) {
           if (T === 'intro' && s % 2 && k === 0 && s > 4) continue;
-          I.musicbox(at(b, s * 2), arp[pat[s]] + (T === 'soft' ? 0 : 12), T === 'outro' ? 0.32 : 0.28, (s % 2 ? 0.35 : -0.35));
+          I.musicbox(at(b, s * 2), arp[pat[s]] + (T === 'soft' ? 0 : 12), { intro: 0.46, build: 0.42, outro: 0.4, soft: 0.3 }[T], (s % 2 ? 0.35 : -0.35));
         }
       }
 

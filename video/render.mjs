@@ -118,7 +118,7 @@ try {
     const af = `loudnorm=I=-14:TP=-1.0:LRA=11:measured_I=${meas.input_i}:measured_TP=${meas.input_tp}:measured_LRA=${meas.input_lra}:measured_thresh=${meas.input_thresh}:offset=${meas.target_offset}:linear=true,aresample=48000,afade=t=out:st=${fadeAt}:d=1.2`;
     const mp4 = `${OUT}/trailer-${fmt}.mp4`;
     ffmpeg(['-framerate', String(FPS), '-i', join(dir, '%05d.jpg'), '-i', wav, '-filter_complex', `[1:a]${af}[a]`, '-map', '0:v', '-map', '[a]',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(FPS),
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(FPS),
       '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', '-t', plan.duration.toFixed(3), mp4]);
     const loud = spawnSync('ffmpeg', ['-hide_banner', '-i', mp4, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
     const summary = loud.slice(loud.lastIndexOf('Summary:')).replace(/\s+/g, ' ').trim();
@@ -131,7 +131,15 @@ try {
       const f = Math.min(n - 1, Math.round(t * FPS));
       copyFileSync(join(dir, `${String(f + 1).padStart(5, '0')}.jpg`), `${REV}/${fmt}-${tc(t).replace(':', 'm').replace('.', 's')}.jpg`);
     }
-    ffmpeg(['-i', mp4, '-vf', `fps=1,scale=${fmt === '16x9' ? 320 : 180}:-2,tile=${fmt === '16x9' ? '8x10' : '13x2'}`, '-frames:v', '1', '-q:v', '3', `${REV}/${fmt}-folha.jpg`]);
+    // folha de contato: 1 quadro por segundo (o filtro tile só entrega folhas cheias: completa com o último)
+    const tmp = `${OUT}/.folha-${fmt}`;
+    mkdirSync(tmp, { recursive: true });
+    const cols = fmt === '16x9' ? 8 : 9;
+    let k = 0;
+    for (let f = 0; f < n; f += FPS) copyFileSync(join(dir, `${String(f + 1).padStart(5, '0')}.jpg`), join(tmp, `${String(++k).padStart(4, '0')}.jpg`));
+    const last = k;
+    while (k % cols) copyFileSync(join(tmp, `${String(last).padStart(4, '0')}.jpg`), join(tmp, `${String(++k).padStart(4, '0')}.jpg`));
+    ffmpeg(['-framerate', '1', '-i', join(tmp, '%04d.jpg'), '-vf', `scale=${fmt === '16x9' ? 320 : 180}:-2,tile=${cols}x${k / cols}`, '-frames:v', '1', '-q:v', '3', `${REV}/${fmt}-folha.jpg`]);
     ffmpeg(['-i', mp4, '-filter_complex', 'showwavespic=s=1800x300:split_channels=1:colors=#F28C38|#4FB3A9', '-frames:v', '1', `${REV}/${fmt}-onda.png`]);
     ffmpeg(['-i', mp4, '-lavfi', 'showspectrumpic=s=1600x500:legend=1:scale=log', `${REV}/${fmt}-espectro.png`]);
 

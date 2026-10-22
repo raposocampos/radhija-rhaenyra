@@ -1,6 +1,6 @@
 {
   "etapa": "tudo",
-  "cenas": "parede@h,parede@v,arrancada@h,arrancada@v,lambe@h,lambe@v,retrato-rhaenyra@v,coop-portao,superbafo@h,superbafo@v,fase2-irrigador,fase3-gansa,pinata,final-fundo@h,final-fundo@v,coop-escada,coop-balde@h,coop-balde@v,pulo,estab-5+estab-9",
-  "clipes_de": "39691066117",
+  "cenas": "arrancada@h,arrancada@v,fase2-irrigador,pulo,superbafo@h,superbafo@v,final-fundo@h,final-fundo@v",
+  "clipes_de": "39691066117 39698714913",
   "gl": "vulkan"
 }

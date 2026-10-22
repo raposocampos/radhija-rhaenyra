@@ -43,7 +43,7 @@ export default {
     { clip: 'lambe', start: B(16), end: B(17), sync: { mark: 'limpa', at: B(16, 0.5) }, kb: kbIn(1.05, 1.1), tr: { type: 'fade', dur: 0.2 } },
     // ---- 10 fases (o mosaico desenha as próprias cenas) e o passeio pelas fases
     { clip: 'fase2-irrigador', start: B(18), end: B(19), in: 2.0 },
-    { clip: 'fase3-gansa', start: B(19), end: B(20), in: 1.5, kb: kbIn(1.0, 1.05), tr: { type: 'slide', dur: 0.3 } },
+    { clip: 'estab-3', start: B(19), end: B(20), in: 0.8, kb: kbIn(1.0, 1.06), tr: { type: 'slide', dur: 0.3 } },
     { clip: 'fase4-pombo', start: B(20), end: B(21), in: 2.6, tr: { type: 'slide', dur: 0.3, dir: -1 } },
     { clip: 'estab-5', start: B(21), end: B(22), in: 0.8, kb: kbIn(1.0, 1.06), tr: { type: 'slide', dur: 0.3 } },
     { clip: 'fase6-trem', start: B(22), end: B(23), sync: { mark: 'partiu', at: B(22, 1) }, tr: { type: 'slide', dur: 0.3, dir: -1 } },
@@ -56,8 +56,7 @@ export default {
     { clip: 'coop-balde', start: B(28, 2), end: B(30), sync: { mark: 'deque', at: B(29, 3) }, tr: { type: 'slide', dur: 0.32, dir: -1 } },
     // ---- final
     { clip: 'luzes', start: B(30), end: B(31), in: 1.3, kb: kbIn(1.0, 1.06), tr: { type: 'zoom', dur: 0.3 } },
-    { clip: 'pinata', start: B(31), end: B(31, 3), sync: { mark: 'abriu', at: B(31, 1) }, shakes: [B(31, 1)], tr: { type: 'whip', dur: 0.26 } },
-    { clip: 'bolo', start: B(31, 3), end: B(33), in: 0.5, kb: kbIn(1.0, 1.07), tr: { type: 'zoom', dur: 0.3 } },
+    { clip: 'bolo', start: B(31), end: B(33), in: 0.1, kb: kbIn(1.0, 1.08), shakes: [B(31, 0.75)], tr: { type: 'whip', dur: 0.28 } },
     // ---- cartão final
     { clip: 'final-fundo', start: B(33), end: B(37) + 0.6, in: 0, speed: 0.5, blur: [2, 7], dark: [0.15, 0.48], mute: true, tr: { type: 'fade', dur: 0.5 } },
   ],
@@ -97,14 +96,14 @@ export default {
     { type: 'shade', start: B(26), end: B(27, 3), side: 'top', k: 0.55, size: 0.45 },
     { type: 'bigTitle', start: B(26, 0.5), end: B(27, 3), text: 'Juntas, elas resolvem!', sub: 'cada irmã faz a sua parte', size: 104, y: 0.17 },
     // final
-    { type: 'flash', start: B(31, 1), end: B(31, 1) + 0.3, layer: 1 },
-    { type: 'particles', start: B(31, 1), end: B(33), kind: 'confetti', mode: 'burst', seed: 3, n: 90, x: 0.5, y: 0.45, speed: 1300, gravity: 1500, size: 18, life: 2.2 },
+    { type: 'flash', start: B(31, 0.75), end: B(31, 0.75) + 0.3, layer: 1 },
+    { type: 'particles', start: B(31, 0.75), end: B(33), kind: 'confetti', mode: 'burst', seed: 3, n: 90, x: 0.5, y: 0.4, speed: 1300, gravity: 1500, size: 18, life: 2.2 },
     { type: 'particles', start: B(32), end: B(33), kind: 'confetti', mode: 'rain', seed: 8, n: 70, y: 0, speed: 700, size: 16, life: 2 },
     {
       type: 'endCard', start: B(33), end: B(37) + 0.6,
       portraits: [
-        { clip: 'retrato-radhija', in: 2.4, speed: 0.25, name: 'Radhija', who: 'radhija', focus: [0.5, 0.5] },
-        { clip: 'retrato-rhaenyra', in: 2.2, speed: 0.28, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.5, 0.5] },
+        { clip: 'retrato-radhija', in: 2.4, speed: 0.25, name: 'Radhija', who: 'radhija', focus: [0.56, 0.36], zoom: 1.9 },
+        { clip: 'retrato-rhaenyra', in: 2.2, speed: 0.28, name: 'Rhaenyra', who: 'rhaenyra', focus: [0.52, 0.38], zoom: 1.8 },
       ],
     },
     { type: 'fade', start: B(37) - 0.4, end: B(37) + 0.6, mode: 'out', layer: 1 },

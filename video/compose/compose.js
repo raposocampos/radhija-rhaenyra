@@ -334,7 +334,7 @@ export function createComposer({ canvas, timeline, index, base }) {
     const col = o.color || who?.color || C.orange;
     const out = prog(t, o.end - 0.3, o.end);
     const pos = o.pos || (portrait ? 'bc' : 'bl');
-    const size = o.size ?? (portrait ? 64 : 58);
+    const size = o.size ?? (portrait ? 78 : 58);
     const h = size * 1.7;
     let x = pos === 'bl' || pos === 'tl' ? 110 : pos === 'br' ? W - 110 : W / 2;
     const y = pos.startsWith('t') ? (portrait ? H * 0.16 : 150) : portrait ? H - 360 : H - 140;
@@ -406,7 +406,7 @@ export function createComposer({ canvas, timeline, index, base }) {
     const s = spring(lt, { freq: 1.9, damp: 0.62 });
     const out = ease.inCubic(prog(t, o.end - 0.28, o.end));
     if (s <= 0) return;
-    const size = portrait ? 40 : 40;
+    const size = portrait ? 48 : 40;
     const h = size * 1.9;
     const x = portrait ? W / 2 : 90;
     const y = portrait ? H * 0.12 : 100;
@@ -432,12 +432,9 @@ export function createComposer({ canvas, timeline, index, base }) {
     ctx.arc(x0 + h / 2, y, h / 2 - 7, 0, Math.PI * 2);
     ctx.fillStyle = C.orange;
     ctx.fill();
-    ctx.fillStyle = C.cream;
-    ctx.font = font(700, size * 0.95);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(o.n), x0 + h / 2, y + size * 0.06);
+    paw(ctx, x0 + h / 2, y + 1, h * 0.27, C.cream);
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.font = font(900, size * 0.62, FONT_BODY);
     ctx.fillStyle = C.orangeDeep;
     let cx = x0 + h * 0.9;
@@ -497,8 +494,15 @@ export function createComposer({ canvas, timeline, index, base }) {
       const pulse = count ? spring(lt - 0.12 - (count - 1) * (o.step ?? 0.11), { freq: 3, damp: 0.4 }) : 0;
       ctx.save();
       ctx.globalAlpha = fade;
-      titleText(ctx, String(Math.max(1, count)), W / 2 - (portrait ? 170 : 210), ty + 20, { size: 190 * (0.9 + 0.1 * pulse), colors: null, fill: C.orange, strokeW: 22, alpha: clamp(lt * 4) });
-      titleText(ctx, 'FASES', W / 2 + (portrait ? 90 : 120), ty, { size: 120, strokeW: 16, alpha: clamp(lt * 4), letterFx: lettersPop(lt - 0.1, { stagger: 0.05 }) });
+      const num = String(Math.max(1, count));
+      ctx.font = font(700, 190);
+      const nw = ctx.measureText('10').width;
+      ctx.font = font(700, 120);
+      const fw = ctx.measureText('FASES').width;
+      const gap = 34;
+      const left = W / 2 - (nw + gap + fw) / 2;
+      titleText(ctx, num, left + nw / 2, ty + 22, { size: 190 * (0.9 + 0.1 * pulse), fill: C.orange, strokeW: 22, alpha: clamp(lt * 4) });
+      titleText(ctx, 'FASES', left + nw + gap, ty, { size: 120, strokeW: 16, align: 'left', alpha: clamp(lt * 4), letterFx: lettersPop(lt - 0.1, { stagger: 0.05 }) });
       if (o.sub) {
         const s = ease.outCubic(prog(lt, 0.6, 1.0));
         softText(ctx, o.sub, W / 2, gy + gh + 95, { size: 46, weight: 800, alpha: s });
@@ -603,8 +607,8 @@ export function createComposer({ canvas, timeline, index, base }) {
       if (img) {
         const iw = img.naturalWidth;
         const ih = img.naturalHeight;
-        const k = (r * 2.6) / Math.min(iw, ih) * (iw > ih ? 1.15 : 1);
-        const f = p.focus || [0.5, 0.5];
+        const k = ((r * 2) / Math.min(iw, ih)) * (p.zoom ?? 1.6);
+        const f = p.focus || [0.5, 0.4];
         ctx.drawImage(img, xx - iw * k * f[0], y - ih * k * f[1], iw * k, ih * k);
       }
       ctx.restore();
@@ -612,7 +616,7 @@ export function createComposer({ canvas, timeline, index, base }) {
     });
     const S = portrait ? 1 : 1;
     const yLogo = portrait ? H * 0.42 : H * 0.27;
-    drawLogo({ start: o.start, end: o.end + 10, size: portrait ? 118 : 118, y: yLogo / H, lines: portrait ? ['Radhija &', 'Rhaenyra'] : null, noBurst: false }, t);
+    drawLogo({ start: o.start, end: o.end + 10, size: portrait ? 140 : 118, y: yLogo / H, lines: portrait ? ['Radhija &', 'Rhaenyra'] : null, noBurst: false }, t);
     const yDemo = portrait ? H * 0.555 : H * 0.45;
     const sDemo = spring(lt - 0.9, { freq: 1.9, damp: 0.55 });
     if (sDemo > 0) pill(ctx, 'DEMO · 10 FASES', W / 2, yDemo, { size: 40 * S, weight: 900, tracking: 4, bg: C.orange, fg: C.cream, scale: lerp(0.6, 1, sDemo), alpha: clamp(sDemo * 2), icon: (c, x, y, r, col) => bone(c, x, y, r * 0.85, col, -0.4), iconColor: C.cream });
@@ -689,7 +693,7 @@ export function createComposer({ canvas, timeline, index, base }) {
     for (const o of layers) if (t >= o.start && t < o.end) { ctx.save(); drawOverlay(o, t); ctx.restore(); }
     vignette(ctx, W, H, timeline.vignette ?? 0.28);
     for (const o of overlays.filter((q) => (q.layer ?? 0) === 1)) if (t >= o.start && t < o.end) { ctx.save(); drawOverlay(o, t); ctx.restore(); }
-    grain(ctx, W, H, frame, timeline.grain ?? 0.035);
+    grain(ctx, W, H, frame, timeline.grain ?? 0.014);
     ctx.restore();
   }
 

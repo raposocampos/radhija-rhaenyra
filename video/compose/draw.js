@@ -56,15 +56,15 @@ export function titleText(ctx, text, x, y, {
   ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
   ctx.miterLimit = 2;
+  // posições pelas larguras dos prefixos: respeita o kerning da fonte (o "FA" de FASES não fica separado)
   const chars = [...text];
-  const widths = chars.map((ch) => ctx.measureText(ch).width);
-  const total = widths.reduce((a, b) => a + b, 0) + tracking * (chars.length - 1);
-  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  const prefix = (i) => ctx.measureText(chars.slice(0, i).join('')).width + tracking * i;
+  const total = prefix(chars.length) - tracking;
+  const x0 = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
   const placed = chars.map((ch, i) => {
-    const w = widths[i];
-    const p = { ch, x: cx + w / 2, w, i };
-    cx += w + tracking;
-    return p;
+    const a = prefix(i);
+    const b = prefix(i + 1) - tracking;
+    return { ch, x: x0 + (a + b) / 2, w: ctx.measureText(ch).width, i };
   });
   // três passadas (sombra, contorno, preenchimento) para o contorno de uma letra não cobrir a vizinha
   for (const pass of ['shadow', 'stroke', 'fill']) {
