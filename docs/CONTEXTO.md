@@ -30,12 +30,18 @@ primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitH
   fence); (3) a fase 10 tem dois quadros (cerca do fundo em `Y_south`, folhinhas em `Y_pinata`) +40 a +120% na
   primeira vez, já antes da correção, sem nada novo no renderer; (4) o perfil `baixa` redesenha a sombra a cada 2
   quadros: as passagens precisam começar na mesma paridade.
-- Troca: no SwiftShader a carga ficou bem mais longa (PC 0,6–3,6 s → 6,7–14,7 s; celulares emulados até ~19 s na
-  fase 10), em troca do 1º quadro (2,5–9,8 s → normal) e dos engasgos nas áreas novas. Em aparelho real, o que manda é
-  a compilação (−40% de programas); o usuário decide pela prévia. Se a carga pesar no celular: progresso real na
-  cortina, ou preparar primeiro a câmera inicial e o resto em fatias.
-- Validação: CI e E2E `todas` do head no PR (a primeira-passagem com os três aparelhos). Antes (sem a correção, mesmo
-  código do jogo): branch auxiliar `claude/primeira-passagem-antes` (main `e2bcd61` + medidor; apagar no fim).
+- Números (SwiftShader do CI; antes → depois): depois da carga, 29–96 programas, 30–138 texturas e 307–1222 geometrias
+  por fase → 0/0/0 nos três aparelhos; programas compilados no total −40% (fase 10: 176 → 99 no PC); o 1º quadro de
+  2,5–9,8 s (normal 0,2–1,9 s) → o normal; o pior quadro do percurso de 1,2–3,7× → 1,0–1,9× o mesmo da 2ª passagem.
+  Em troca, a carga: PC 0,6–3,6 s → 6,5–21 s; iPhone 13 emulado 0,4–3,0 s → 5,4–18,6 s; Infinix emulado 0,4–2,7 s →
+  6,5–14,9 s. No SwiftShader um quadro normal leva 0,2–2 s; em aparelho real o que manda é a compilação (−40%), então
+  o usuário decide pela prévia. Se a carga pesar no celular: progresso real na cortina, ou preparar primeiro a câmera
+  inicial e o resto em fatias.
+- Validação: `858cd5b` (sobre o main `c9848e4`): CI `39701913894` verde e prévia publicada; E2E `todas`
+  `39701942844` com os 52 jobs verdes (partidas, smoke, recursos e os 30 da primeira-passagem). Antes, sem a correção
+  e com o mesmo código do jogo (branch auxiliar `claude/primeira-passagem-antes`, main `e2bcd61` + medidor; apagar no
+  fim): PC `39686929789`, iPhone `39695409535`, Infinix `39701939928`. Os commits seguintes só mudam este arquivo;
+  conferir o CI deles no PR. No PC do usuário, só `node --check` e `git diff --check`.
 - Próximo passo: entregar a prévia com a tabela por aparelho e esperar o "pode integrar" do usuário nesta sessão. Se o
   main andar, sincronizar de novo e conferir que `src/game/pushRest.js` e o `pushFace` de `game.js` continuam iguais aos
   do main.
