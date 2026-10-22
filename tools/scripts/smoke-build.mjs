@@ -33,13 +33,14 @@ const server = createServer(async (request, response) => {
 
 let H;
 let timedOut = false;
-// Também interrompe um import pendurado dentro de evaluate(); o finally libera tudo.
+// Também interrompe um import pendurado dentro de evaluate(); o finally libera tudo. Oito minutos: cada carga prepara
+// a GPU com a fase inteira (engine.prepare), e no SwiftShader isso leva alguns segundos por fase; o smoke abre 15.
 const watchdog = setTimeout(() => {
   timedOut = true;
-  console.error('[smoke] excedeu o limite de quatro minutos');
+  console.error('[smoke] excedeu o limite de oito minutos');
   void H?.browser.close();
   server.closeAllConnections();
-}, 240000);
+}, 480000);
 watchdog.unref();
 
 try {

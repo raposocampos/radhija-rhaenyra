@@ -24,7 +24,9 @@ const OUT = fileURLToPath(new URL('../../shots/first-pass/', import.meta.url));
 const MOUNT = '/primeira-passagem/';
 const VIEWPORT = { width: 480, height: 270 };
 const DT = 1 / 30;
-const START_FRAMES = 15; // na posição inicial (os primeiros quadros depois da carga)
+// Na posição inicial (os primeiros quadros depois da carga). Par, como os 18 de cada nó e os 30 da volta: no 'baixa' a
+// sombra é redesenhada a cada 2 quadros, e a 2ª passagem precisa começar na mesma paridade para os quadros se compararem.
+const START_FRAMES = 16;
 const NODE_FRAMES = 18; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta (96% em 0,6 s)
 const RETURN_FRAMES = 30; // volta ao início entre as passagens (não entra nas contas)
 // Antes da 1ª passagem, a página fica parada um pouco: no runner de 4 núcleos, logo depois da carga o navegador ainda
