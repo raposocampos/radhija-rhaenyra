@@ -1,8 +1,50 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-21, Claude** (#61, empurrar sem queda de desempenho, entregue em v0.10.10 · build 102; #58, etapa 5
-dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e
-[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-21, Claude** (engasgo na primeira passagem pelas áreas, PR #60, em andamento; #61,
+empurrar sem queda de desempenho, em v0.10.10 · build 102; #58, etapa 5 dos modelos novos, em v0.10.9 · build 101). Ler
+primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
+
+- Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".
+- Causa: o `renderer.compile` da carga (`loadLevel`) rodava sem alvo, mas o jogo desenha no alvo do compositor
+  (perfis alta, média e baixa): ali o three r170 monta os programas sem tone mapping e em espaço linear, outra
+  variante. Os programas certos, as texturas e as geometrias só iam para a GPU quando cada coisa entrava na câmera.
+  Medido no código antigo: depois da carga, +28 a +95 programas, +30 a +137 texturas e +307 a +1222 geometrias por
+  fase; o primeiro superbafo, +1 programa.
+- Feito: `engine.prepare()` (`src/core/engine.js`), chamado no `loadLevel` atrás da cortina: compila a cena toda
+  com um alvo do tipo do compositor ligado (`compileAsync`), desenha tudo uma vez — sem recorte e com o que está
+  escondido (as luzes escondidas continuam apagadas) — de uma vista geral da fase num alvo de 256×144, um quadro normal
+  e espera a GPU (fence); marcas `rr:gpu:*`. Trocar o perfil de qualidade recompila a fase em segundo plano. Bolha
+  escondida `cheiro-aquecimento` (`scentView.js`) para o superbafo; pool de ícones e de pegadas (`feedback.js`) começa
+  com cada textura. `game.js`: só a linha do compile no `loadLevel`.
+- Medição: `tools/scripts/measure-first-pass.mjs`, suíte `primeira-passagem` do E2E manual (também em `todas`): um
+  job por fase e aparelho (PC `alta`; iPhone 13 emulado em `media`; Infinix Note 30 emulado em `baixa`; entrada
+  `qualidades` do workflow), navegador novo sem cache de shaders em disco, 3 s parado depois da carga, a dog de nó em
+  nó duas vezes e um superbafo; cada quadro espera a GPU lendo um pixel (o `gl.finish()` do Chromium não espera).
+  Reprova com programa, textura ou geometria depois da carga, com mais de 3 picos (quadro da 1ª passagem > max(150 ms,
+  35%) do mesmo da 2ª, com a mesma cena) ou com um pico acima de 2,5×. O relatório lista o que entrou na câmera em
+  cada pico. Smoke do build com 8 min (cada carga prepara a GPU).
+- Achados: (1) a variante errada da carga e a certa no 1º uso somavam ~1,7× os programas de uma passagem (fase 10:
+  176 → 99); (2) no SwiftShader, o resto do custo era na hora do desenho (por isso a vista geral cobrindo pixels e a
+  fence); (3) a fase 10 tem dois quadros (cerca do fundo em `Y_south`, folhinhas em `Y_pinata`) +40 a +120% na
+  primeira vez, já antes da correção, sem nada novo no renderer; (4) o perfil `baixa` redesenha a sombra a cada 2
+  quadros: as passagens precisam começar na mesma paridade.
+- Números (SwiftShader do CI; antes → depois): depois da carga, 29–96 programas, 30–138 texturas e 307–1222 geometrias
+  por fase → 0/0/0 nos três aparelhos; programas compilados no total −40% (fase 10: 176 → 99 no PC); o 1º quadro de
+  2,5–9,8 s (normal 0,2–1,9 s) → o normal; o pior quadro do percurso de 1,2–3,7× → 1,0–1,9× o mesmo da 2ª passagem.
+  Em troca, a carga: PC 0,6–3,6 s → 6,5–21 s; iPhone 13 emulado 0,4–3,0 s → 5,4–18,6 s; Infinix emulado 0,4–2,7 s →
+  6,5–14,9 s. No SwiftShader um quadro normal leva 0,2–2 s; em aparelho real o que manda é a compilação (−40%), então
+  o usuário decide pela prévia. Se a carga pesar no celular: progresso real na cortina, ou preparar primeiro a câmera
+  inicial e o resto em fatias.
+- Validação: `858cd5b` (sobre o main `c9848e4`): CI `39701913894` verde e prévia publicada; E2E `todas`
+  `39701942844` com os 52 jobs verdes (partidas, smoke, recursos e os 30 da primeira-passagem). Antes, sem a correção
+  e com o mesmo código do jogo (branch auxiliar `claude/primeira-passagem-antes`, main `e2bcd61` + medidor; apagar no
+  fim): PC `39686929789`, iPhone `39695409535`, Infinix `39701939928`. Os commits seguintes só mudam este arquivo;
+  conferir o CI deles no PR. No PC do usuário, só `node --check` e `git diff --check`.
+- Próximo passo: entregar a prévia com a tabela por aparelho e esperar o "pode integrar" do usuário nesta sessão. Se o
+  main andar, sincronizar de novo e conferir que `src/game/pushRest.js` e o `pushFace` de `game.js` continuam iguais aos
+  do main.
 
 ## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 

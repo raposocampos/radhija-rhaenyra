@@ -96,7 +96,18 @@ O `dt` é limitado a 1/20 s (quedas de FPS deixam o jogo mais lento, não instá
 4. Descarta os recursos exclusivos da fase anterior e do debug (§3.1), preservando caches globais.
 5. Aplica `def.lighting`, chama `def.build({ engine, root, layout, params })` e aplica o "ver através" aos objetos de `seeThrough`.
 6. Cria o mundo de colisão e a navegação a partir de `def.layout`, depois o puzzle com `def.createPuzzle(ctx)`.
-7. Posiciona as dogs, aplica `?stage=` (só no carregamento inicial) e emite `level:loaded` (a UI revela).
+7. Posiciona as dogs e aplica `?stage=` (só no carregamento inicial).
+8. Aquece a GPU com a fase inteira, ainda atrás da cortina (`engine.prepare()`, `src/core/engine.js`): compila os
+   programas de toda a cena na variante em que o jogo desenha (no alvo do compositor, sem tone mapping; sem pós, com
+   ele), desenha uma vez tudo o que existe — fora da câmera e escondido também — de uma vista geral da fase, num alvo
+   de 256×144 (texturas, geometrias e os programas da sombra vão para a GPU; com quase tudo cobrindo algum pixel, também
+   o que a GPU só prepara ao pintar, como no SwiftShader do CI) e um quadro normal, e espera a GPU terminar (fence: o WebGL só
+   enfileira, e o resto cairia no primeiro quadro visível). Sem isso, cada área engasgava na primeira vez que entrava
+   na câmera. Marcas `rr:gpu:compiled`, `rr:gpu:drawn` e `rr:gpu:idle` separam as etapas. Trocar o perfil de qualidade (tipo de sombra, compositor) recompila a fase em segundo
+   plano. Coisas que só nascem num evento precisam existir escondidas desde a carga (a bolha `cheiro-aquecimento` do
+   superbafo), e uma textura trocada no material depois precisa já estar em algum objeto da cena (os ícones e as
+   pegadas de `feedback.js` começam com cada uma das texturas). Medido por `tools/scripts/measure-first-pass.mjs` (§10).
+9. Emite `level:loaded` (a UI revela).
 
 **Pacote inicial**: o `main` do build leva o motor, o núcleo, as dogs, a UI, os efeitos e, de cada fase, só a
 definição, o layout, a iluminação e o puzzle (o menu e os testes em Node usam isso). O cenário de cada fase vira um
@@ -994,6 +1005,24 @@ do Vite a cada rodada (`--cold-deps`: otimizador frio, como na primeira suíte d
 ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda e, depois, para confirmar uma
 correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para (`stopWatch`) quando não
 resta página protegida aberta, e uma página nova o religa.
+
+**Primeira passagem pelas áreas** (suíte `primeira-passagem` do E2E manual, também em `todas`;
+`tools/scripts/measure-first-pass.mjs`, um job por fase e aparelho): cada fase abre com `?play` num navegador novo
+(nada compilado antes, sem o cache de shaders em disco), no PC (`alta`, 480×270) ou num celular-alvo emulado (toque e
+tela de celular, pelo do celular: iPhone 13 em `media`, 844×390; Infinix Note 30 em `baixa`, 893×393; a entrada
+`qualidades` do workflow escolhe), e a dog ativa vai de nó em nó da navegação
+(`NAV_NODES`, do mais perto ao mais longe) com a câmera seguindo, duas vezes pelo mesmo caminho; depois, um superbafo.
+A página de medição fica 3 s parada depois da carga (no runner, o navegador ainda trabalha em segundo plano: os
+quadros saíam ~30% mais caros por alguns segundos, sem nada novo no renderer) e depois dá os quadros (passo fixo de
+1/30 s); cada um espera a GPU lendo um pixel da tela (o
+`gl.finish()` do Chromium não espera: os quadros se enfileiravam e o tempo saía em degraus de 5 e 600 ms), então a 1ª e a
+2ª passagem se comparam quadro a quadro. Reprova se, depois da carga, o renderer compilar um programa ou receber uma
+textura ou geometria (o relatório diz em que nó e de qual material) ou com picos: quadros da 1ª passagem 150 ms e 35%
+mais caros que o mesmo da 2ª, com a mesma cena (desenhos a 2%); tolera até 3 isolados, nenhum acima de 2,5×. No
+SwiftShader, alguns objetos ainda custam um pouco mais na primeira vez que pintam de perto (a cerca do fundo e as
+folhinhas da fase 10, +40 a +120% num quadro, já antes da correção), sem nada novo no renderer; o relatório lista o que
+acabou de entrar na câmera em cada pico. Sem o aquecimento, o 1º quadro custava de 5 a 30× o normal. Os ms são do
+SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as contagens são exatas.
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo

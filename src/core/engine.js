@@ -2,6 +2,7 @@
 // API: createEngine(container, { params }) → {
 //   renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
 //   applyLighting(preset, bounds)  // por fase: sol/lua, hemisfério, névoa, céu, env map, grading, sombra
+//   prepare()                      // aquece a GPU com a fase inteira (sem engasgo na 1ª vez em cada área)
 //   quality                        // qualidade por aparelho (src/core/quality.js): PC 'alta' (a de sempre), celular mais leve
 //   render(dt, t)
 // }
@@ -206,6 +207,8 @@ export function createEngine(container, { params } = {}) {
   }
 
   let lighting = LIGHTING_DEFAULT;
+  /** Limites da fase atual (aplicados com a iluminação): a vista geral do aquecimento enquadra a fase. */
+  let levelBounds = null;
   let lightCastsShadow = true; // a fase quer sombra do sol (o perfil de qualidade pode desligar)
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
@@ -235,7 +238,10 @@ export function createEngine(container, { params } = {}) {
     bloom.strength = L.bloom.strength;
     bloom.radius = L.bloom.radius;
     bloom.threshold = L.bloom.threshold;
-    if (bounds) fitShadow(bounds);
+    if (bounds) {
+      levelBounds = bounds;
+      fitShadow(bounds);
+    }
     rebuildEnv(L);
   }
   applyLighting(LIGHTING_DEFAULT, { minX: -6, maxX: 6.8, minZ: -4.8, maxZ: 4.5 });
@@ -261,6 +267,141 @@ export function createEngine(container, { params } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
+  // ------------------------------------------------ aquecimento da GPU (na carga da fase, atrás da cortina)
+  // Na primeira vez que um material aparece, o WebGL compila o programa dele (no Windows o ANGLE ainda traduz para
+  // HLSL) e a GPU recebe as texturas e as geometrias: um quadro de dezenas a centenas de ms na primeira passagem por
+  // cada área nova. O programa depende de para onde se desenha: no alvo do compositor, sem tone mapping e em espaço
+  // linear; direto na tela (sem pós), com os dois. Por isso compilar sem alvo não basta quando há compositor: a
+  // variante do jogo ficava para o primeiro quadro em que cada coisa entrava na câmera.
+  // O desenho do aquecimento é uma vista geral da fase, num alvo pequeno: com quase tudo cobrindo algum pixel, também
+  // fica pronto o que a GPU só prepara ao pintar de verdade (no SwiftShader do CI, a pintura e a leitura de cada textura).
+  const WARM_W = 256, WARM_H = 144;
+  const warmCam = new THREE.PerspectiveCamera(38, WARM_W / WARM_H, 0.1, 400);
+  /** Alvo do mesmo tipo do compositor (o programa não depende do tamanho), ou null quando se desenha na tela. */
+  const warmTarget = () => (usePost && profile.post
+    ? new THREE.WebGLRenderTarget(WARM_W, WARM_H, { type: THREE.HalfFloatType, samples: profile.msaa })
+    : null);
+  /** Câmera alta, de frente e um pouco de lado, enquadrando os limites da fase (sem limites: a câmera do jogo). */
+  function overview() {
+    const b = levelBounds;
+    if (!b) return camera;
+    const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
+    const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+    warmCam.fov = camera.fov;
+    warmCam.position.set(cx + span * 0.3, span * 0.85, cz + span * 0.9);
+    warmCam.lookAt(cx, 0, cz);
+    warmCam.updateProjectionMatrix();
+    warmCam.updateMatrixWorld();
+    return warmCam;
+  }
+  /** Compila os programas de toda a cena, inclusive do que está escondido, na variante de agora. */
+  function compileScene(target) {
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(target);
+    try {
+      return renderer.compileAsync(scene, camera);
+    } finally {
+      renderer.setRenderTarget(prev);
+    }
+  }
+  /**
+   * Desenha a cena INTEIRA uma vez, da vista geral (sem o recorte pela câmera e com o que ainda está escondido), num
+   * alvo pequeno ou num canto da tela: envia texturas e geometrias e prepara os programas da sombra. As luzes ficam
+   * como estão (a quantidade de luzes faz parte do programa).
+   */
+  function drawEverything(target) {
+    const lights = new Set();
+    scene.traverseVisible((o) => { if (/** @type {THREE.Light} */ (o).isLight) lights.add(o); });
+    /** @type {[THREE.Object3D, boolean, boolean][]} */
+    const changed = [];
+    scene.traverse((o) => {
+      if (/** @type {THREE.Light} */ (o).isLight) {
+        // a luz dentro de um grupo escondido, que agora aparece, continua apagada
+        if (o.visible && !lights.has(o)) { changed.push([o, true, o.frustumCulled]); o.visible = false; }
+        return;
+      }
+      const drawable = /** @type {THREE.Mesh} */ (o).isMesh || /** @type {THREE.Points} */ (o).isPoints
+        || /** @type {THREE.Line} */ (o).isLine || /** @type {THREE.Sprite} */ (o).isSprite;
+      if (o.visible && !(drawable && o.frustumCulled)) return;
+      changed.push([o, o.visible, o.frustumCulled]);
+      o.visible = true;
+      if (drawable) o.frustumCulled = false;
+    });
+    const prev = renderer.getRenderTarget();
+    const viewport = renderer.getViewport(new THREE.Vector4());
+    const scissor = renderer.getScissor(new THREE.Vector4());
+    const scissorTest = renderer.getScissorTest();
+    renderer.shadowMap.needsUpdate = true;
+    try {
+      renderer.setRenderTarget(target);
+      if (!target) {
+        // na tela, só um canto (o quadro normal logo depois cobre tudo)
+        renderer.setViewport(0, 0, WARM_W, WARM_H);
+        renderer.setScissor(0, 0, WARM_W, WARM_H);
+        renderer.setScissorTest(true);
+      }
+      renderer.render(scene, overview());
+    } finally {
+      for (const [o, visible, culled] of changed) { o.visible = visible; o.frustumCulled = culled; }
+      if (!target) {
+        renderer.setViewport(viewport);
+        renderer.setScissor(scissor);
+        renderer.setScissorTest(scissorTest);
+      }
+      renderer.setRenderTarget(prev);
+      // o mapa de sombra saiu com o que estava escondido: o próximo quadro redesenha
+      renderer.shadowMap.needsUpdate = true;
+    }
+  }
+  /**
+   * Espera a GPU terminar tudo o que já recebeu, sem travar a página: o WebGL só enfileira os comandos, e a
+   * compilação na hora do desenho, os envios e os desenhos do aquecimento ficariam para o primeiro quadro visível.
+   * @param {number} timeoutMs
+   */
+  function gpuIdle(timeoutMs) {
+    const gl = /** @type {WebGL2RenderingContext} */ (renderer.getContext());
+    const sync = gl.fenceSync?.(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!sync) return Promise.resolve();
+    gl.flush();
+    const t0 = performance.now();
+    return /** @type {Promise<void>} */ (new Promise((resolve) => {
+      const check = () => {
+        const status = gl.clientWaitSync(sync, 0, 0);
+        // WAIT_FAILED: contexto perdido; também não espera para sempre
+        if (status !== gl.TIMEOUT_EXPIRED || performance.now() - t0 > timeoutMs) {
+          gl.deleteSync(sync);
+          resolve();
+        } else setTimeout(check, 4);
+      };
+      check();
+    }));
+  }
+  const mark = (name) => globalThis.performance?.mark?.(`rr:gpu:${name}`);
+  /**
+   * Prepara a GPU para a fase montada: programas (com KHR_parallel_shader_compile, sem travar a página enquanto
+   * compilam), texturas, geometrias, sombra e o compositor, e espera a GPU terminar. Chamado no carregamento, com a
+   * fase já no lugar e a tela coberta (a cortina ou a tela de carregamento).
+   */
+  async function prepare() {
+    const target = warmTarget();
+    try {
+      // sem resposta da GPU (contexto perdido), segue: o desenho abaixo termina o que faltar
+      await Promise.race([compileScene(target), new Promise((r) => setTimeout(r, 8000))]);
+      mark('compiled');
+      drawEverything(target);
+      // e um quadro de verdade, ainda coberto: os passes do compositor e o primeiro quadro já ficam prontos
+      render(0);
+      mark('drawn');
+      await gpuIdle(10000);
+      mark('idle');
+    } catch (error) {
+      // o aquecimento só adianta trabalho: se falhar, a fase abre e o que faltou acontece no primeiro uso
+      console.warn('[engine] aquecimento da GPU incompleto', error);
+    } finally {
+      target?.dispose();
+    }
+  }
+
   let shadowFrame = 0;
   /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
   function setProfile(next, reason) {
@@ -272,26 +413,40 @@ export function createEngine(container, { params } = {}) {
     }, next, prev);
     qualityState.level = next.name;
     qualityState.reason = reason;
+    // outro tipo de sombra ou sem compositor muda a variante dos programas: compila a fase toda de novo agora, em
+    // segundo plano, em vez de engasgar em cada área (texturas e geometrias continuam na GPU)
+    const target = warmTarget();
+    try {
+      compileScene(target).finally(() => target?.dispose());
+    } catch (error) {
+      target?.dispose();
+      console.warn('[engine] recompilação da fase incompleta', error);
+    }
+  }
+
+  /** @param {number} dt @param {number} [t] */
+  function render(dt, t) {
+    shared.time.value = t ?? shared.time.value;
+    sky.material.uniforms.uTime.value = shared.time.value;
+    // o céu acompanha a câmera (sem paralaxe)
+    sky.position.copy(camera.position);
+    // perfis leves redesenham o mapa de sombra a cada N quadros (a passada de sombra repete o cenário inteiro)
+    if (profile.shadowEvery > 1 && ++shadowFrame % profile.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
+    if (usePost && profile.post) composer.render(dt);
+    else renderer.render(scene, camera);
   }
 
   return {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
+    /** Aquecimento da GPU para a fase montada (programas, texturas, geometrias, sombra): no carregamento. */
+    prepare,
     get lighting() { return lighting; },
     /** Controle da qualidade: device, mode, level, setMode(m) (menu), frame(now, active) (governador). Cada troca
      *  emite 'quality:change' no barramento de eventos. */
     quality,
     /** Perfil aplicado agora: { level, pixelRatio, reason }. */
     get qualityState() { return { ...qualityState }; },
-    render(dt, t) {
-      shared.time.value = t ?? shared.time.value;
-      sky.material.uniforms.uTime.value = shared.time.value;
-      // o céu acompanha a câmera (sem paralaxe)
-      sky.position.copy(camera.position);
-      // perfis leves redesenham o mapa de sombra a cada N quadros (a passada de sombra repete o cenário inteiro)
-      if (profile.shadowEvery > 1 && ++shadowFrame % profile.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
-      if (usePost && profile.post) composer.render(dt);
-      else renderer.render(scene, camera);
-    },
+    render,
   };
 }

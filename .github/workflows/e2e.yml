@@ -7,7 +7,11 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento, primeira-passagem]
+      qualidades:
+        description: 'Primeira passagem: aparelhos (lista JSON entre alta, celular-media e celular-baixa)'
+        type: string
+        default: '["alta","celular-media","celular-baixa"]'
 
 permissions:
   contents: read
@@ -132,8 +136,52 @@ jobs:
           path: shots/
           if-no-files-found: ignore
           retention-days: 7
+  # Primeira passagem pelas áreas (tools/scripts/measure-first-pass.mjs): cada fase num navegador novo, com a
+  # qualidade do PC (alta) e os celulares-alvo emulados (iPhone 13 em media, Infinix Note 30 em baixa), um job para
+  # cada; a câmera percorre os nós de navegação duas vezes.
+  # Reprova se a GPU ainda compilar programa ou receber textura ou geometria depois da carga, ou se um quadro da 1ª
+  # passagem custar muito mais que o mesmo quadro da 2ª (o engasgo da primeira vez numa área nova).
+  primeira-passagem:
+    if: inputs.suite == 'todas' || inputs.suite == 'primeira-passagem'
+    name: Primeira passagem — fase ${{ matrix.fase }} (${{ matrix.qualidade }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        fase: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        qualidade: ${{ fromJSON(inputs.qualidades || '["alta","celular-media","celular-baixa"]') }}
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # tipos e testes rápidos já rodam no CI do PR; aqui só o build
+      - name: Gerar build de produção desta medição
+        run: npx vite build
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Percorrer a fase duas vezes e comparar a primeira passagem com a segunda
+        env:
+          FIRST_PASS_LEVELS: ${{ matrix.fase }}
+          FIRST_PASS_QUALITY: ${{ matrix.qualidade }}
+        run: node tools/scripts/measure-first-pass.mjs
+      - name: Guardar medições mesmo em falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: primeira-passagem-fase${{ matrix.fase }}-${{ matrix.qualidade }}
+          path: shots/first-pass/
+          if-no-files-found: error
+          retention-days: 7
   partidas:
-    if: inputs.suite != 'recursos' && inputs.suite != 'carregamento'
+    if: inputs.suite != 'recursos' && inputs.suite != 'carregamento' && inputs.suite != 'primeira-passagem'
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30

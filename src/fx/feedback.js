@@ -134,7 +134,8 @@ function createMudPrints(scene) {
   const tex = { paw: makeMudTexture('paw'), splat: makeMudTexture('splat') };
   const pool = [];
   for (let i = 0; i < N; i++) {
-    const mat = new THREE.MeshBasicMaterial({ map: tex.paw, color: '#4a3020', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    // metade começa com cada textura: as duas vão para a GPU no aquecimento da carga (engine.prepare), não na 1ª mancha
+    const mat = new THREE.MeshBasicMaterial({ map: i % 2 ? tex.splat : tex.paw, color: '#4a3020', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const m = new THREE.Mesh(geo, mat);
     m.visible = false;
     m.renderOrder = 2;
@@ -345,7 +346,8 @@ export function createFeedback(opts) {
   const iconTex = { paw: makeIconTexture('paw'), alert: makeIconTexture('alert'), curious: makeIconTexture('curious') };
   const icons = [];
   for (let i = 0; i < 5; i++) {
-    const mat = new THREE.SpriteMaterial({ map: iconTex.paw, transparent: true, depthTest: false, depthWrite: false, opacity: 0 });
+    // cada ícone começa com uma das texturas: todas vão para a GPU no aquecimento da carga, não no 1º "?" ou "!"
+    const mat = new THREE.SpriteMaterial({ map: Object.values(iconTex)[i % 3], transparent: true, depthTest: false, depthWrite: false, opacity: 0 });
     const sp = new THREE.Sprite(mat);
     sp.renderOrder = 30;
     sp.visible = false;
