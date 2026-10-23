@@ -28,7 +28,7 @@ ou nas dependências do jogo.
 ## Rodar
 
 No GitHub: Actions → **Trailer da demo** → Run workflow. `etapa`: `tudo` (grava e monta), `cenas` (só grava) ou
-`montagem` (só monta, com as cenas de execuções anteriores em `clipes_de`). `cenas` aceita grupos ou cenas de
+`montagem` (só monta, com as cenas de execuções anteriores em `clipes_de`); em `ciclo.json`, `nada` não roda nada. `cenas` aceita grupos ou cenas de
 `capture/shots.mjs` (`todas` = todos os grupos). Nos branches `claude/trailer-*`, um envio que mexe em `video/` roda o
 que estiver em `ciclo.json`. Os artefatos `trailer` (MP4 e lista de cenas) e `trailer-revisao` ficam 7 dias.
 
@@ -42,9 +42,9 @@ que estiver em `ciclo.json`. Os artefatos `trailer` (MP4 e lista de cenas) e `tr
 | 0:20–0:28 | 11–14 | Rhaenyra: pulo na parede, empurrão em pé, pulo |
 | 0:28–0:32 | 15–16 | Lambe-Lambe |
 | 0:32–0:34 | 17 | Mosaico "10 fases" |
-| 0:34–0:50 | 18–25 | As fases: irrigador, gansa, pombo, ursinho, trem, lavanderia, biblioteca, porquinhos |
+| 0:34–0:50 | 18–25 | As fases: irrigador, a ponte da gansa, pombo, ursinho, trem, lavanderia, biblioteca, porquinhos |
 | 0:50–0:58 | 26–29 | Juntas: portão, escada, balde |
-| 0:58–1:04 | 30–32 | Festa: luzinhas, piñata, bolo |
+| 0:58–1:04 | 30–32 | Festa: as luzinhas acendem e o bolo pronto, com confete |
 | 1:04–1:12 | 33–36 | Cartão final: logo, "Demo · 10 fases", link e plataformas |
 
 O corte vertical (9:16, 26 s) usa a mesma música encurtada: gancho (o superbafo faz o trem espirrar), logo, quatro
