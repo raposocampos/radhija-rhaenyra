@@ -1,0 +1,15 @@
+{
+  "name": "radhija-rhaenyra-trailer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Trailer da demo: cenas gravadas do jogo, motion graphics em Canvas e trilha sintetizada (roda no GitHub Actions).",
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@fontsource/fredoka": "5.1.0",
+    "@fontsource/nunito": "5.1.0",
+    "playwright-core": "1.49.0"
+  }
+}

@@ -4,6 +4,31 @@
 dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e
 [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: trailer da demo (PR #62, branch `claude/trailer-da-demo`, Claude, 2026-10-21)
+
+- Pedido do usuário (pelo orquestrador): um vídeo de apresentação profissional da demo, com motion graphics; a
+  ferramenta e a edição ficam a critério do agente. Limites: só imagens do jogo (nunca as fotos de `referencias/`),
+  música e sons próprios, nada do que o jogo esconde, tudo pesado no GitHub Actions, perguntar antes de publicar o
+  vídeo em qualquer lugar público.
+- Feito: `video/` (pacote próprio, fora do build, dos testes e das dependências do jogo) e o workflow manual
+  **Trailer da demo** (`.github/workflows/trailer.yml`). Ver `video/README.md`.
+  - Cenas reais gravadas quadro a quadro no Chromium do Playwright (servidor Vite dos scripts de captura, qualidade
+    completa), um job por cena, com os sons do jogo anotados. A bancada mostrou o lavapipe (Vulkan do Mesa) ~4× mais
+    rápido que o SwiftShader no runner, com a mesma imagem: 1–1,8 s por quadro em 1080p.
+  - Montagem em Canvas (`video/compose/`) com `seek(t)` puro; música original sintetizada (ré maior, 120 BPM, cortes
+    nas batidas) com os sons do jogo; volume em -14 LUFS. 16:9 (72,6 s) e 9:16 (26,4 s).
+  - Ciclo de crítica: três versões revisadas por quadros-chave, folhas de contato, forma de onda, espectrograma e
+    nível por segundo (kerning, selo das fases, rostos no cartão final, câmeras refeitas, mistura com a melodia na
+    frente, abertura 5 dB abaixo do corpo em vez de 11).
+- Execuções: cenas `39691066117`, `39698714913`, `39703424428`; montagens `39705971011` (2ª versão), `39707519091`
+  (3ª, a entregue, commit `9a559db`) e `39876951554` (a mesma edição com a cópia leve de 27 MB do 16:9). Nos branches `claude/trailer-*`, um envio que mexe em `video/` roda o que estiver em
+  `video/ciclo.json` (`nada` não roda nada).
+- Ficou de fora: a piñata abrindo (o robô da cena não acertou a piñata em 10 s; a festa fecha com o bolo e o confete
+  do próprio jogo) e a cena noturna da gansa (escura demais: a fase 3 entra com a câmera do jogo).
+- Entregues ao usuário (2026-10-22): o MP4 16:9 (72 MB), a cópia leve (27 MB), o 9:16 e a lista de cenas.
+- Próximo passo: o retorno do usuário sobre o vídeo; integrar o PR só com o "pode integrar" dele no chat desta
+  sessão; publicar o vídeo em qualquer lugar público só se ele pedir.
+
 ## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 
 - Retorno do usuário ao testar a prévia do #58: "como se o fps baixasse muito quando eu aperto o R1 pra empurrar
