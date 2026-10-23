@@ -124,7 +124,7 @@ try {
     const leve = `${OUT}/trailer-${fmt}-leve.mp4`;
     const kbps = Math.max(800, Math.floor((27 * 8 * 1024) / plan.duration - 128));
     const pass = `${OUT}/.passe-${fmt}`;
-    for (const p of [1, 2]) {
+    for (const p of statSync(mp4).size > 27 * 1024 * 1024 ? [1, 2] : []) {
       ffmpeg(['-i', mp4, '-c:v', 'libx264', '-preset', 'slow', '-b:v', `${kbps}k`, '-pass', String(p), '-passlogfile', pass, '-pix_fmt', 'yuv420p',
         ...(p === 1 ? ['-an', '-f', 'mp4', '/dev/null'] : ['-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', leve])]);
     }

@@ -20,13 +20,14 @@ dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.
   - Ciclo de crítica: três versões revisadas por quadros-chave, folhas de contato, forma de onda, espectrograma e
     nível por segundo (kerning, selo das fases, rostos no cartão final, câmeras refeitas, mistura com a melodia na
     frente, abertura 5 dB abaixo do corpo em vez de 11).
-- Execuções: cenas `39691066117`, `39698714913`, `39703424428`; montagens `39705971011` (2ª versão) e a da 3ª
-  (conferir no PR). Nos branches `claude/trailer-*`, um envio que mexe em `video/` roda o que estiver em
+- Execuções: cenas `39691066117`, `39698714913`, `39703424428`; montagens `39705971011` (2ª versão), `39707519091`
+  (3ª, a entregue, commit `9a559db`) e `39876951554` (a mesma edição com a cópia leve de 27 MB do 16:9). Nos branches `claude/trailer-*`, um envio que mexe em `video/` roda o que estiver em
   `video/ciclo.json` (`nada` não roda nada).
 - Ficou de fora: a piñata abrindo (o robô da cena não acertou a piñata em 10 s; a festa fecha com o bolo e o confete
   do próprio jogo) e a cena noturna da gansa (escura demais: a fase 3 entra com a câmera do jogo).
-- Próximo passo: entregar o MP4 e a lista de cenas ao usuário; integrar o PR só com o "pode integrar" dele no chat
-  desta sessão; publicar o vídeo em qualquer lugar público só se ele pedir.
+- Entregues ao usuário (2026-10-22): o MP4 16:9 (72 MB), a cópia leve (27 MB), o 9:16 e a lista de cenas.
+- Próximo passo: o retorno do usuário sobre o vídeo; integrar o PR só com o "pode integrar" dele no chat desta
+  sessão; publicar o vídeo em qualquer lugar público só se ele pedir.
 
 ## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 
