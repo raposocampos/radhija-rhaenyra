@@ -120,6 +120,14 @@ try {
     ffmpeg(['-framerate', String(FPS), '-i', join(dir, '%05d.jpg'), '-i', wav, '-filter_complex', `[1:a]${af}[a]`, '-map', '0:v', '-map', '[a]',
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-maxrate', '9M', '-bufsize', '18M', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(FPS),
       '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', '-t', plan.duration.toFixed(3), mp4]);
+    // cópia leve para compartilhar (celular, mensagens): até ~27 MB, duas passadas no bitrate que cabe
+    const leve = `${OUT}/trailer-${fmt}-leve.mp4`;
+    const kbps = Math.max(800, Math.floor((27 * 8 * 1024) / plan.duration - 128));
+    const pass = `${OUT}/.passe-${fmt}`;
+    for (const p of [1, 2]) {
+      ffmpeg(['-i', mp4, '-c:v', 'libx264', '-preset', 'slow', '-b:v', `${kbps}k`, '-pass', String(p), '-passlogfile', pass, '-pix_fmt', 'yuv420p',
+        ...(p === 1 ? ['-an', '-f', 'mp4', '/dev/null'] : ['-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', leve])]);
+    }
     const loud = spawnSync('ffmpeg', ['-hide_banner', '-i', mp4, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
     const summary = loud.slice(loud.lastIndexOf('Summary:')).replace(/\s+/g, ' ').trim();
 
