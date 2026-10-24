@@ -23,10 +23,14 @@ primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitH
   da Arena só aceitam a nuvem do duto (fase 4: a nuvem do chão perto do poleiro dá a dica "alto demais… duto"). Tipos e
   ARQUITETURA §5.1.
 - Testes: `test/duto-sem-atalho.test.mjs` (10 testes, sementes 404–410 e 41–53): o campo de cheiro (parede, ponta da
-  parede, obstáculo baixo, boca virada); na fase 4, encostada na boca do duto, na mureta, no portão e pela lateral, com o
-  ventilador no começo, fora da marca e na marca; o caminho certo (até encostada na boca); refazer depois de errar; a
-  nuvem do chão perto do poleiro; a Arena do Bafo. Reprodução: CI `40140693699` no `664261a` (só os testes, sem a
-  correção): 9 dos 10 reprovaram, com a nuvem do outro lado da mureta e o pombo sentindo o cheiro.
+  parede, obstáculo baixo, boca virada); na fase 4, encostada na boca do duto, na mureta, no portão, pela lateral
+  (aparelhos, mureta baixa) e por trás da grade (entre o ventilador encaixado e ela), com o ventilador no começo, fora
+  da marca e na marca; o caminho certo (até encostada na boca); refazer depois de errar; a nuvem do chão perto do
+  poleiro; a Arena do Bafo. Reprodução: CI `40140693699` no `664261a` (só os testes, sem a correção): 9 dos 10
+  reprovaram, com a nuvem do outro lado da mureta e o pombo sentindo o cheiro.
+- O vão embaixo dos canos (`CORRIDOR.door`) é passagem, não parede: soprando em cima dele, a nuvem sai ou entra no
+  corredor por ali, como a Radhija (de fora, só com o ventilador na marca ela chega ao duto). Os sorteios ficam longe
+  dele (o CI `40141093564` reprovou um sorteio assim no caminho certo).
 - Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
 
