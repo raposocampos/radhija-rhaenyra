@@ -23,9 +23,10 @@ export const GATE = { hinge: { x: 1.2, z: 0.6 }, latchPost: { x: 1.2, z: -0.6 },
 // Corredor de manutenção (oeste): de x -1,7 a 1,1 em z = 2,4; entrada estreita no lado norte (x -0,65 a -0,15),
 // virada para o centro da arena. Paredes baixas (0,35 m) para a câmera enxergar a Radhija lá dentro.
 export const CORRIDOR = { x0: -1.7, x1: 1.1, z: 2.4, half: 0.32, door: { x0: -0.65, x1: -0.15 } };
-// Duto: boca no fundo do corredor, sai do outro lado da mureta, soprando para o poleiro A.
+// Duto: boca no fundo do corredor, sai do outro lado da mureta, soprando para o poleiro A. A boca abre para o oeste (o
+// corredor e o vento): só engole o cheiro que chega pela frente dela. O pombo só sente o cheiro que veio pelo duto.
 export const DUCT = {
-  inlet: { x: 0.85, z: 2.4, r: 0.32 },
+  inlet: { x: 0.85, z: 2.4, r: 0.32, dirX: -1, dirZ: 0 },
   // exit: a nuvem sai pela boca da caixa da saída (que tem colisor), não de dentro dela
   outlet: { x: 1.65, z: 2.4, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.25 },
   travel: 1.0,

@@ -1,6 +1,7 @@
 // FASE 4 · Operação Patinho — puzzle (ver o cabeçalho de ./layout.js).
 // Cadeia: superbafo no pombo da passagem → vão das floreiras livre → ventilador alinhado → vento no
 // corredor → duto → cheiro no poleiro A → pombo voa para o B → placa → portão abre e trava → patinho → casa.
+// O pombo do portão só sai com o cheiro que passou pelo duto (o duto só funciona com o ventilador na marca).
 // E larga o patinho no chão (E perto pega de volta); largado no capacho, entrega.
 import { createHints, createCollectibles, createCarryItem, reach, deliveredAt, inZones, mouthPoint } from '../../game/puzzleKit.js';
 import { createPushCrate, createHingedGate } from '../../game/mechanics/index.js';
@@ -106,11 +107,17 @@ export function createPuzzle(ctx) {
 
   // ---------- beat 2: vento do ventilador, duto e o nariz do pombo do portão ----------
   const wind = scent.addWind({ id: 'ventilador', x: FAN.start.x + FAN.wind.offset, z: FAN.start.z, dirX: 1, dirZ: 0, ...FAN.wind });
-  scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => S.aligned });
+  const duct = scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => S.aligned });
+  // o pombo está lá em cima, no poleiro: só o cheiro que saiu do duto, na altura dele, o alcança (como o pombo da fase
+  // 10 e o Bichano da fase 9); uma nuvem do chão perto do poleiro não conta
   const nose = scent.addNose({
     id: 'pombo', x: PERCH_A.x, z: PERCH_A.z, r: PERCH_A.smellR,
-    onSmell: () => {
+    onSmell: (cloud) => {
       if (S.pigeon !== 'A') return;
+      if (/** @type {any} */ (cloud).duct !== duct) {
+        hints.now('gateBark', 3.4, 6);
+        return;
+      }
       S.pigeon = 'flying';
       S.flyT = -FLIGHT_LEAD / FLY_TIME;
       nose.enabled = false;

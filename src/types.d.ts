@@ -494,7 +494,11 @@ export interface ScentCloud { id: number; x: number; y: number; z: number; vx: n
 export interface ScentWind { id?: string; x: number; z: number; dirX: number; dirZ: number; length?: number; halfWidth?: number; strength?: number; funnel?: number; enabled?: boolean }
 export interface ScentDuct {
   id?: string;
-  inlet: { x: number; z: number; r: number };
+  /**
+   * A boca de entrada: engole a nuvem que chega a menos de r de (x, z). dirX/dirZ: para onde a boca abre; só engole a
+   * nuvem desse lado (sem direção, de qualquer lado, como um funil no chão).
+   */
+  inlet: { x: number; z: number; r: number; dirX?: number; dirZ?: number };
   /**
    * exit: a nuvem sai a essa distância de (x, z), na direção (dirX, dirZ): a boca, fora do colisor da caixa (m).
    * y: altura da boca (padrão 0, no chão); a nuvem sai e fica nessa altura.
@@ -506,7 +510,11 @@ export interface ScentDuct {
   active?: () => boolean;
 }
 export interface ScentNose { id: string; x: number; z: number; r?: number; enabled?: boolean; onSmell?(cloud: ScentCloud, nose: ScentNose): void }
-export interface ScentShot { x: number; z: number; dirX?: number; dirZ?: number; speed?: number; life?: number }
+/**
+ * (x, z): onde a nuvem nasce (a boca de quem sopra). fromX/fromZ: a origem do sopro (o centro de quem sopra); com ela,
+ * a nuvem vai dali até a boca sem atravessar nada e nasce do lado de quem soprou.
+ */
+export interface ScentShot { x: number; z: number; fromX?: number; fromZ?: number; dirX?: number; dirZ?: number; speed?: number; life?: number }
 export interface ScentField {
   spawn(shot: ScentShot): ScentCloud;
   update(dt: number): void;

@@ -50,11 +50,12 @@ export function createPuzzle(ctx) {
   // ---------- cheiro: vento do ventilador, duto e o nariz do pombo ----------
   const S = { stage: 'start', objKey: '', aligned: false, pigeon: 'A', flyT: 0, lingerT: 0, ductHint: false };
   const wind = scent.addWind({ id: 'ventilador', x: FAN.start.x + FAN.wind.offset, z: FAN.start.z, dirX: 1, dirZ: 0, ...FAN.wind });
-  scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => S.aligned });
+  const duct = scent.addDuct({ id: 'duto', inlet: DUCT.inlet, outlet: DUCT.outlet, travel: DUCT.travel, active: () => S.aligned });
+  // só o cheiro que veio pelo duto conta (como na fase 4): uma nuvem do chão perto do poleiro, não
   const nose = scent.addNose({
     id: 'pombo', x: PERCH_A.x, z: PERCH_A.z, r: PERCH_A.smellR,
-    onSmell: () => {
-      if (S.pigeon !== 'A') return;
+    onSmell: (cloud) => {
+      if (S.pigeon !== 'A' || /** @type {any} */ (cloud).duct !== duct) return;
       S.pigeon = 'flying';
       S.flyT = 0;
       nose.enabled = false;

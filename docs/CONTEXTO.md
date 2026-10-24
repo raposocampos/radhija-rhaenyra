@@ -4,6 +4,32 @@
 empurrar sem queda de desempenho, em v0.10.10 · build 102; #58, etapa 5 dos modelos novos, em v0.10.9 · build 101). Ler
 primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+
+- Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
+  atingindo o pombo, sem precisar fazer a mecânica do ventilador."
+- Causa: a nuvem nascia na boca (0,36 m à frente do centro da Radhija) sem olhar o caminho. Encostada na caixa do duto,
+  a boca ficava 0,16 m dentro da caixa, depois do meio dela; a colisão da nuvem a empurrava para a mureta e dali para o
+  lado do pombo (x = 2,68 em dois quadros), e o nariz do pombo do portão só media a distância no chão. O mesmo pela
+  mureta e pelo portão fechado (zona B → C), pela lateral do corredor (aparelhos e mureta baixa → dentro do corredor; com
+  o ventilador na marca, duto e pombo) e na Arena do Bafo. Encostada na boca com o ventilador na marca, a nuvem também
+  passava direto e o duto não a engolia.
+- Fase 10 sem o furo: o pombo só aceita a nuvem que veio pelo cano (`cloud.duct`), e o funil no chão abre para todos os
+  lados. Fase 9: o Bichano também só aceita a do duto, e a boca fica na parede do fundo. Não mexidas.
+- Correção: `scent.js` (`birthPlace`): o sopro leva a origem (`fromX`, `fromZ`, o centro dela, `game.js` `bafoShot`) e a
+  nuvem vai dali até a boca com a colisão dela (o que já envolve a origem, um obstáculo baixo embaixo dela, não conta);
+  a mira usa o mesmo; a poeirinha do sopro (`dog:bafo`) sai onde a nuvem nasce. Boca de duto virada para um lado
+  (`inlet.dirX/dirZ`; fase 4 e Arena do Bafo, para o oeste) só engole a nuvem da frente. O pombo do portão da fase 4 e o
+  da Arena só aceitam a nuvem do duto (fase 4: a nuvem do chão perto do poleiro dá a dica "alto demais… duto"). Tipos e
+  ARQUITETURA §5.1.
+- Testes: `test/duto-sem-atalho.test.mjs` (10 testes, sementes 404–410 e 41–53): o campo de cheiro (parede, ponta da
+  parede, obstáculo baixo, boca virada); na fase 4, encostada na boca do duto, na mureta, no portão e pela lateral, com o
+  ventilador no começo, fora da marca e na marca; o caminho certo (até encostada na boca); refazer depois de errar; a
+  nuvem do chão perto do poleiro; a Arena do Bafo. Reprodução: CI `40140693699` no `664261a` (só os testes, sem a
+  correção): 9 dos 10 reprovaram, com a nuvem do outro lado da mureta e o pombo sentindo o cheiro.
+- Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
+- Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+
 ## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
 
 - Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".
