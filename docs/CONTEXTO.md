@@ -31,6 +31,11 @@ primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitH
 - O vão embaixo dos canos (`CORRIDOR.door`) é passagem, não parede: soprando em cima dele, a nuvem sai ou entra no
   corredor por ali, como a Radhija (de fora, só com o ventilador na marca ela chega ao duto). Os sorteios ficam longe
   dele (o CI `40141093564` reprovou um sorteio assim no caminho certo).
+- E2E `todas` `40141363602` (no `56fad30`): partidas `fase4` 17/17, `quintal` e `bafo` verdes; reprovou a captura dos
+  pombos (`capture-pigeons.mjs` chamava a reação do pombo sem nuvem; agora passa a do duto, `mech.duct`) e, sem
+  ligação com o cheiro, `fase3` ("dica do cantinho", página lentíssima no runner) e a primeira passagem da fase 10
+  (`celular-baixa`: 5 picos de tempo; `celular-media`: 1 programa e 1 textura antes do superbafo). Refeito no head
+  seguinte.
 - Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
 

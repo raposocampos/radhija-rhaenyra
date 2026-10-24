@@ -391,7 +391,7 @@ export function createPuzzle(ctx) {
       duck: { holder: duck.holder, floor: duck.floor ? { x: +duck.floor.x.toFixed(3), z: +duck.floor.z.toFixed(3) } : null, falling: duck.falling },
       objective: objective(ctx.activeDog).text,
     }),
-    mech: { fan, gate, wind, nose, napNose, napBlock },
+    mech: { fan, gate, wind, duct, nose, napNose, napBlock },
     set onStageChange(fn) { onStageChange = fn; },
     get stage() { return S.stage; },
     get carrier() { return duck.holder; },
