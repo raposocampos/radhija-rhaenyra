@@ -30,10 +30,19 @@ const sstep = (a, b, x) => {
 const fract = (x) => x - Math.floor(x);
 const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-/** Fases de cada pata (FL, FR, HL, HR), as mesmas do guia: passo (lateral), trote (diagonais) e galope. */
-const OFF_WALK = [0.25, 0.75, 0.0, 0.5];
-const OFF_TROT = [0.0, 0.5, 0.5, 0.0];
-const OFF_BOUND = [0.0, 0.08, 0.5, 0.58];
+/**
+ * Fases de cada pata (FL, FR, HL, HR), as mesmas do guia: passo (lateral), trote (diagonais) e galope. A fase é de
+ * um ciclo (1 é o mesmo que 0). Os valores estão escritos para que, na mistura (lerp, gaitRhythm), as duas patas de
+ * cada par fiquem sempre meio ciclo uma da outra (no galope, a distância cai até a dele, sem passar por zero) e para
+ * que, do passo ao trote, nenhuma pata precise atrasar: as traseiras ficam onde estão e as dianteiras adiantam um
+ * quarto de ciclo (o passo está meio ciclo adiante do de antes, o mesmo passo; o balanço de lado do corpo vai junto,
+ * dogAnimation.js). Antes, do passo [0,25; 0,75; 0; 0,5] ao trote [0; 0,5; 0,5; 0], as duas traseiras iam uma ao
+ * encontro da outra e, no meio da troca (arrancando, ou com o analógico pela metade), andavam juntas (retorno do
+ * usuário: "saem iguais no movimento, fica parecendo um trote de cavalo").
+ */
+const OFF_WALK = [0.75, 0.25, 0.5, 0.0];
+const OFF_TROT = [1.0, 0.5, 0.5, 0.0];
+const OFF_BOUND = [1.0, 0.08, 0.5, -0.42];
 
 /**
  * Ritmo da passada do guia (dogAnimation.js, "passada"): frequência (ciclos/s), fração de apoio (beta) e a fase de
@@ -313,13 +322,21 @@ export function createGait({ skel2, retarget, s }) {
     // velocidade menor
     const acc = clamp((mv.v - st.speed) / 0.3, 0, 1);
     // a fase de cada pata vai para a do ritmo no máximo 0,8 ciclo por segundo (do passo ao trote a pata não pula); na
-    // arrancada, depressa e adiantando a pata (atrasada, a de trás ficaria plantada até esticar a perna)
-    const offRate = lerp(0.8, 3, acc);
+    // arrancada, depressa e adiantando a pata (atrasada, a de trás ficaria plantada até esticar a perna).
+    // Atrasar a pata, só no balanço (ou parada): no apoio, atrasar é alongar o apoio, e a traseira trotando termina o
+    // apoio a ~90% do alcance. Ela passava do alcance e saía no passo de conforto (fora do ritmo), a fase recomeçava no
+    // pouso e a correção nunca terminava: a pata ficava em qualquer lugar do ciclo, às vezes junto com a outra traseira
+    // (retorno do usuário: "saem iguais no movimento, fica parecendo um trote de cavalo")
+    // (no galope da arrancada e logo depois dele, também depressa: freando de volta ao trote, as duas de cada par, quase
+    // juntas no galope, ficavam meio segundo perto uma da outra)
+    const offRate = lerp(0.8, 3, Math.max(acc, st.w.dash));
     for (let li = 0; li < 4; li++) {
       const leg = legs[li];
       let e = fract(R.off[li] - leg.off + 0.5) - 0.5;
       if (acc > 0.3 && e < -0.45) e += 1;
-      leg.off = fract(leg.off + clamp(e, -offRate * dt, offRate * dt));
+      // (galopando, como antes: o galope se forma atrasando as patas da direita, e o apoio dele é curto)
+      const late = !wasMoving || st.w.dash > 0.3 ? offRate : leg.swing && !leg.timed ? Math.min(offRate, 0.2 * R.f) : 0;
+      leg.off = fract(leg.off + clamp(e, -late * dt, offRate * dt));
     }
     if (weight < 0.02) {
       // as patas estão na pose do guia (sentada, no ar...): a locomoção recomeça de onde elas estiverem
@@ -351,11 +368,21 @@ export function createGait({ skel2, retarget, s }) {
     pivotK = demand > 1.35 ? clamp(1.35 / demand, 0.35, 1) : 1;
     info.boost = boost;
     ph = fract(ph + fract(st.phase - lastG) * boost);
-    lastG = st.phase;
-    if (boost < 1.02) ph = fract(ph + (fract(st.phase - ph + 0.5) - 0.5) * (1 - Math.exp(-4 * dt)));
     const f = R.f * boost;
     // acelerando, o apoio também já é o desta velocidade (mais curto: a passada cabe no alcance da pata)
     const beta = lerp(R.beta, Math.min(R.beta, RN.beta), acc);
+    // saindo de parada com as duas traseiras apoiadas, o ritmo começa com a mais perto do balanço saindo já (a outra,
+    // meio ciclo depois). Parada, as quatro patas estão debaixo do corpo e a fase de cada uma é só a do relógio: a
+    // primeira traseira esperava a vez dela e a outra chegava ao fim do alcance logo depois; as duas saíam juntas
+    if (started && own && !legs.some((l) => l.swing)) {
+      const pH = legs.filter((l) => !l.front).map((l) => fract(ph + l.off));
+      if (pH.every((p) => p < beta)) ph = fract(ph + beta - Math.max(...pH));
+    }
+    // o corpo do guia (sobe e desce, balanço) fica no compasso das patas: a fase dele passa a ser a delas. Antes, as
+    // patas é que voltavam ao compasso do guia depois de uma arrancada ou de uma curva fechada (onde o compasso delas
+    // acelera), atrasando até ~1 ciclo por segundo: o apoio passava do alcance da traseira e ela saía fora do ritmo
+    st.phase = ph;
+    lastG = ph;
     info.beta = beta;
     info.acc = acc;
     const swingDur = (1 - beta) / f;
@@ -396,8 +423,10 @@ export function createGait({ skel2, retarget, s }) {
       const lift = (leg.front ? 0.03 : 0.025) * s * (0.75 + 0.45 * fast) + dash * 0.02 * s;
       // decola na virada da fase (andando; não logo depois de um passo extra); se a locomoção acabou de assumir, a pata
       // que está no tempo do balanço já sai no ar (senão ela ficaria para trás, plantada no meio da passada)
-      // (também logo que ela começa a andar: a pata parada no tempo do balanço não espera a volta seguinte)
-      if (!leg.swing && moving && phSwing && (edge || uPh < (resumed || started ? 0.9 : 0.35)) && leg.stanceT > 0.35 * stanceDur) {
+      // (também logo que ela começa a andar: a pata parada no tempo do balanço não espera a volta seguinte, nem no fim
+      // dele: esperando, ela ficava plantada uma passada a mais e, saindo virando, era esticada pelo giro e saía num
+      // passo extra junto com a outra do par)
+      if (!leg.swing && moving && phSwing && (edge || uPh < (started ? 1 : resumed ? 0.9 : 0.35)) && leg.stanceT > 0.35 * stanceDur) {
         if (edge || uPh < 0.35) {
           startSwing(leg, false, lift, 0, 'fase');
           leg.u0 = uPh;
@@ -462,9 +491,26 @@ export function createGait({ skel2, retarget, s }) {
         if (leg.u >= 1) {
           // pisada: som e pegada no pouso (os passinhos de ajuste, parada, quase não fazem barulho)
           if (weight > 0.5 && (stepSpeed > 0.2 || leg.settle)) steps.push([li, leg.settle ? 0.1 : stepSpeed]);
-          // um passo fora do ritmo (por tempo, andando): a fase da pata recomeça do apoio agora e volta devagar para a do
-          // ritmo (senão o apoio seguinte ia até a próxima virada da fase, longo demais, e a pata ia longe para trás)
-          if (leg.timed && !leg.settle && moving) leg.off = fract(-ph);
+          // um passo fora do ritmo (por tempo, andando): a pata volta já ao lugar dela no ritmo se ainda couber um apoio
+          // (curto) até a vez dela; senão a fase recomeça do apoio agora e volta para a do ritmo aos poucos (no lugar do
+          // ritmo com a vez dela já passada, o apoio seguinte ia até a próxima virada da fase, longo demais, e a pata ia
+          // longe para trás). O lugar é o da outra do par, se ela está no ritmo (meio ciclo dela, no passo e no trote):
+          // recomeçando sempre do apoio, a pata ficava em qualquer lugar do ciclo, às vezes junto com a outra do par
+          // (as duas pousando no mesmo quadro depois da arrancada recomeçavam juntas)
+          if (leg.timed && !leg.settle && moving) {
+            const mi = li ^ 1; // a outra do par: FL ↔ FR, HL ↔ HR
+            const mate = legs[mi];
+            const want = fract(ph + (mate.timed ? R.off[li] : mate.off + R.off[li] - R.off[mi])); // 0 = pousando, beta = decolando
+            const kMax = 0.55 * beta; // mais adiante, o apoio até a vez dela seria curto demais (stanceT > 0,35 do apoio)
+            let p = want <= kMax ? want : want < (1 + kMax) / 2 ? kMax : 0;
+            if (p !== want && !mate.timed) {
+              // presa numa ponta do apoio, em cima da outra do par: a outra ponta
+              const pm = fract(ph + mate.off), q = p === kMax ? 0 : kMax;
+              const gap = (a) => Math.min(fract(a - pm), fract(pm - a));
+              if (gap(p) < 0.15 && gap(q) > gap(p)) p = q;
+            }
+            leg.off = fract(p - ph);
+          }
           leg.swing = false;
           leg.timed = false;
           leg.settle = false;
