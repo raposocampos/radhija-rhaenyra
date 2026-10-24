@@ -6,7 +6,7 @@
 // toque (dedos reais no celular deitado).
 //   node tools/scripts/test-menu.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
-import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs } from './lib/screens.mjs';
+import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs, settle } from './lib/screens.mjs';
 
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -77,7 +77,8 @@ async function screenSizes() {
       await p.goto(BASE, { waitUntil: 'load', timeout: 120000 });
       await p.evaluate(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
       await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
-      await p.waitForTimeout(1800);
+      await p.waitForTimeout(800);
+      await settle(p);
       const { width: vw, height: vh } = scr.opts.viewport;
       const snap = async (name) => {
         await p.evaluate(() => window.__e2eRender?.());
@@ -93,7 +94,7 @@ async function screenSizes() {
       check(root.mobile === scr.mobile, `${scr.id}: aparelho ${scr.mobile ?? 'PC'}`, root);
       if (!scr.compact) check(root.u === '1px', `${scr.id}: medidas de sempre (--u = 1px)`, root.u);
 
-      const go = async (sel, settle = 450) => { await p.evaluate((s) => document.querySelector(s).click(), sel); await p.waitForTimeout(settle); };
+      const go = async (sel) => { await p.evaluate((s) => document.querySelector(s).click(), sel); await p.waitForTimeout(150); await settle(p); };
       /** Elementos visíveis inteiros na tela e sem sobreposição entre si. */
       const fits = async (what, sels, ignore = []) => {
         const bx = await boxesIn(p, sels);
@@ -136,9 +137,10 @@ async function screenSizes() {
       await go('.rr-title .rr-back');
       await go('.rr-btn--play');
       await go('.rr-mode--levels');
-      await go('.rr-btn--continue', 200);
+      await go('.rr-btn--continue');
       await p.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
-      await p.waitForTimeout(1600);
+      await p.waitForTimeout(600);
+      await settle(p);
       // o selo do item sobe por cima da borda do cartão (de propósito): só precisa caber na tela
       await fits('cartão de abertura da fase', ['.rr-intro .rr-back', '.rr-introcard', '.rr-introcard__badge'], [['.rr-introcard', '.rr-introcard__badge']]);
       await snap('05-abertura');

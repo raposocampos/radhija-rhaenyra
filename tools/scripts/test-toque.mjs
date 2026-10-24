@@ -9,7 +9,7 @@
 // a API de tela cheia, como o de verdade) conferem a dica de "Adicionar à Tela de Início" e o modo aplicativo.
 //   node tools/scripts/test-toque.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
-import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs as pairsOf } from './lib/screens.mjs';
+import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs as pairsOf, settle } from './lib/screens.mjs';
 
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -154,7 +154,8 @@ async function screenSizes() {
       });
       await p.waitForFunction(() => window.__game.game.debug.info().prompt === 'Puxar a cordinha', null, { timeout: 60000 }).catch(() => {});
       await p.evaluate(() => window.__game.events.emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 60 }));
-      await p.waitForTimeout(700);
+      await p.waitForTimeout(300);
+      await settle(p);
       const i = await pinfo();
       check(i.prompt === 'Puxar a cordinha', `${scr.id}: prompt da cordinha na tela`, i.prompt);
 
@@ -186,7 +187,9 @@ async function screenSizes() {
       await snap('01-jogando');
 
       await p.evaluate(() => window.__game.events.emit('ui:pause', {}));
-      await p.waitForTimeout(700);
+      await p.waitForFunction(() => window.__game.game.state === 'paused', null, { timeout: 30000 }).catch(() => {});
+      await p.waitForTimeout(300);
+      await settle(p);
       const pause = await boxesIn(p, ['.rr-card--pause']);
       check(pause[0] && outside(pause, vw, vh).length === 0, `${scr.id}: menu de pausa inteiro na tela`, pause[0]);
       await snap('02-pausa');
@@ -201,7 +204,8 @@ async function screenSizes() {
         g.debug.teleport('rhaenyra', z.x, z.z);
       });
       await p.waitForFunction(() => window.__game.game.state === 'victory', null, { timeout: 120000 });
-      await p.waitForTimeout(2600);
+      await p.waitForTimeout(1200);
+      await settle(p);
       const vic = await boxesIn(p, ['.rr-card--victory', '.rr-victory__badge', '.rr-victory__actions']);
       check(vic.every(Boolean) && outside(vic, vw, vh).length === 0, `${scr.id}: vitória inteira na tela (selo, cartão e botões)`, outside(vic, vw, vh));
       await snap('03-vitoria');

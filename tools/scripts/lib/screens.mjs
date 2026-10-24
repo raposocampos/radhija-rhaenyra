@@ -41,6 +41,17 @@ export function fakeHoverScript() {
   };
 }
 
+/**
+ * Espera as animações e transições de CSS com fim terminarem (entrada do logotipo, camadas, dica e prompt), para
+ * medir o layout parado. As infinitas (halo do Jogar, patinhas da cortina) não contam. No CI sem GPU o quadro pode
+ * demorar e uma transição de 0,25 s levar bem mais que isso.
+ */
+export const settle = (page, timeout = 20000) => page.waitForFunction(() => document.getAnimations().every((a) => {
+  if (a.playState !== 'running') return true;
+  const end = a.effect?.getComputedTiming?.().endTime;
+  return typeof end === 'number' && !Number.isFinite(end);
+}), null, { timeout, polling: 100 }).catch(() => {});
+
 /** Caixas dos elementos visíveis (seletor → caixa, null se escondido ou sem tamanho). Roda na página. */
 export const boxesIn = (page, sels) => page.evaluate((list) => list.map((sel) => {
   const el = document.querySelector(sel);
