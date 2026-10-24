@@ -4,7 +4,7 @@
 dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e
 [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: trailer da demo (PR #62, branch `claude/trailer-da-demo`, Claude, 2026-10-21)
+## Encerrado sem merge: trailer da demo (PR #62 fechado, branch `claude/trailer-da-demo` mantido, Claude, 2026-10-21 a 24)
 
 - Pedido do usuário (pelo orquestrador): um vídeo de apresentação profissional da demo, com motion graphics; a
   ferramenta e a edição ficam a critério do agente. Limites: só imagens do jogo (nunca as fotos de `referencias/`),
@@ -26,8 +26,12 @@ dos modelos novos, em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.
 - Ficou de fora: a piñata abrindo (o robô da cena não acertou a piñata em 10 s; a festa fecha com o bolo e o confete
   do próprio jogo) e a cena noturna da gansa (escura demais: a fase 3 entra com a câmera do jogo).
 - Entregues ao usuário (2026-10-22): o MP4 16:9 (72 MB), a cópia leve (27 MB), o 9:16 e a lista de cenas.
-- Próximo passo: o retorno do usuário sobre o vídeo; integrar o PR só com o "pode integrar" dele no chat desta
-  sessão; publicar o vídeo em qualquer lugar público só se ele pedir.
+- Decisão do usuário (2026-10-24): o vídeo foi aprovado e entregue, sem merge no main ("já peguei o vídeo"). O PR
+  #62 foi fechado sem integrar; o código fica neste branch para um trailer futuro (não apagar o branch).
+- Para refazer: partir deste branch (ou trazer `video/` e o workflow para um branch novo `claude/trailer-*`), ajustar
+  `video/compose/timeline-*.js` e `video/capture/shots.mjs` e rodar por `video/ciclo.json`; os artefatos das execuções
+  acima expiram em 7 a 14 dias, então uma montagem nova precisa regravar as cenas. Publicar o vídeo em qualquer lugar
+  público só se o usuário pedir.
 
 ## Entregue: empurrar sem queda de desempenho (PR #61, squash `e2bcd61`, deploy `39686660421`, v0.10.10 · build 102)
 
