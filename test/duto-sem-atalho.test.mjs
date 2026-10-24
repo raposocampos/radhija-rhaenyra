@@ -131,6 +131,7 @@ const WALL_FACE = L4.WALL.x - L4.WALL.half; // a face oeste da mureta B|C (o lad
 const BOX4 = L4.STATIC_COLLIDERS.find((c) => c.id === 'duto-boca');
 const AC4 = L4.STATIC_COLLIDERS.find((c) => c.id === 'aparelhos-leste');
 const SOUTH4 = L4.STATIC_COLLIDERS.find((c) => c.id === 'corredor-sul');
+const GRADE4 = L4.STATIC_COLLIDERS.find((c) => c.id === 'grade');
 const EAST = Math.PI / 2;
 const fase4Game = (query = 'stage=passOpen') => createHeadlessGame({ level: LEVELS.indexOf(fase4) + 1, query });
 const inCorridor4 = (c) => c.x > L4.CORRIDOR.x0 && c.x < L4.CORRIDOR.x1 && Math.abs(c.z - L4.CORRIDOR.z) < L4.CORRIDOR.half;
@@ -188,16 +189,21 @@ test('fase 4: encostada na mureta e no portão, antes do portão abrir, o cheiro
   }
 }));
 
-test('fase 4: pela lateral do corredor (aparelhos e mureta baixa), mesmo com o ventilador na marca, o cheiro não entra', () => withSeedAsync(406, async () => {
+test('fase 4: pela lateral e por trás do corredor (aparelhos, mureta baixa, grade), com o ventilador na marca, o cheiro não entra', () => withSeedAsync(406, async () => {
   const h = await fase4Game();
   setFan(h, 'marca');
   const north = AC4.z - AC4.hz - 0.15; // do lado de cá dos aparelhos (norte), olhando para o sul
   const south = SOUTH4.z + SOUTH4.hz + 0.15; // atrás da mureta baixa (sul), olhando para o norte
+  const behind = GRADE4.x - GRADE4.hx - 0.15; // entre o ventilador encaixado e a grade, olhando para o leste (no vento)
+  // (o vão embaixo dos canos, de CORRIDOR.door.x0 a x1, é a passagem da Radhija, não parede: lá o cheiro passa, como
+  // ela; por isso os sorteios do lado norte ficam longe dele)
   const cases = [
     { x: 2.0, z: north, yaw: 0 }, { x: 2.0, z: south, yaw: Math.PI }, { x: 1.3, z: south, yaw: Math.PI },
-    ...samples(45, 5, (s) => ({ x: s(1.05, 2.1), z: north, yaw: s(-0.6, 0.6) })),
-    ...samples(46, 3, (s) => ({ x: s(-0.45, 0.35), z: north, yaw: s(-0.6, 0.6) })),
+    ...samples(45, 5, (s) => ({ x: s(1.35, 2.1), z: north, yaw: s(-0.6, 0.6) })),
+    ...samples(46, 3, (s) => ({ x: s(-0.45, 0.05), z: north, yaw: s(-0.6, 0.6) })),
     ...samples(47, 8, (s) => ({ x: s(-0.4, 2.1), z: south, yaw: Math.PI + s(-0.6, 0.6) })),
+    { x: behind, z: L4.CORRIDOR.z, yaw: EAST },
+    ...samples(50, 3, (s) => ({ x: behind, z: s(2.2, 2.4), yaw: EAST + s(-0.4, 0.4) })),
   ];
   for (const k of cases) {
     const at = pressAndBlow(h, k.x, k.z, k.yaw);
@@ -210,7 +216,8 @@ test('fase 4: o caminho certo continua funcionando (ventilador na marca, a Radhi
   const cases = [
     { x: 0.7, z: 2.27, yaw: EAST }, // como na partida completa
     { x: BOX4.x - BOX4.hx - 0.15, z: 2.27, yaw: EAST }, // encostada na boca do duto: sopra dentro dela
-    ...samples(48, 4, (s) => ({ x: s(0.2, 1.5), z: s(2.2, 2.34), yaw: EAST + s(-0.8, 0.8) })),
+    // a leste do vão dos canos (soprando para o norte em cima do vão, a nuvem sai do corredor por ele)
+    ...samples(48, 4, (s) => ({ x: s(1.0, 1.6), z: s(2.2, 2.34), yaw: EAST + s(-0.6, 0.6) })),
     ...samples(49, 2, (s) => ({ x: BOX4.x - BOX4.hx - 0.15, z: s(2.18, 2.36), yaw: EAST + s(-0.5, 0.5) })),
   ];
   for (const k of cases) {
