@@ -8,6 +8,8 @@ import { readFileSync } from 'node:fs';
 import { COMPACT_QUERY, COMPACT_MAX_HEIGHT, COMPACT_MAX_WIDTH, isCompact } from '../src/ui/screenFit.js';
 
 const css = readFileSync(new URL('../src/ui/ui.css', import.meta.url), 'utf8');
+/** O CSS sem os comentários (eles citam seletores e medidas de exemplo). */
+const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 const PHONES = {
   'Android compacto deitado': [640, 360],
@@ -82,7 +84,7 @@ test('botões de toque: escala proporcional, sem ficar pequenos demais para o de
 });
 
 test('regras do layout compacto: nada de px fixo (tudo proporcional) e sem depender do celular reconhecido', () => {
-  const rules = [...css.matchAll(/([^{}]*\.rr\[data-compact\][^{}]*)\{([^}]*)\}/g)];
+  const rules = [...code.matchAll(/([^{}]*\.rr\[data-compact\][^{}]*)\{([^}]*)\}/g)];
   assert.ok(rules.length > 100, `regras compactas: ${rules.length}`);
   const fixed = [];
   for (const [, sel, body] of rules) {
@@ -93,6 +95,6 @@ test('regras do layout compacto: nada de px fixo (tudo proporcional) e sem depen
   }
   assert.deepEqual(fixed, [], 'medidas fixas no layout compacto (usar N * var(--u))');
   // o layout do celular deitado não depende mais de o navegador entregar o aparelho como celular
-  const phoneOnly = [...css.matchAll(/\.rr\[data-mobile="phone"\][^{]*\{/g)].map((m) => m[0]);
+  const phoneOnly = [...code.matchAll(/\.rr\[data-mobile="phone"\][^{]*\{/g)].map((m) => m[0]);
   assert.deepEqual(phoneOnly, ['.rr[data-mobile="phone"] .rr-rotate {'], 'só o aviso de girar usa data-mobile="phone"');
 });
