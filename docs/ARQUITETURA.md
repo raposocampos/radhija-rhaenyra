@@ -811,10 +811,20 @@ modo sem dicas. A raiz ganha `data-hints="off"` e o CSS esconde o objetivo escri
 ignora `hint` e um selo "sem dicas" aparece); `fx/feedback.js` esconde o marcador do objetivo. Os puzzles não mudam
 e a tabela de controles segue na pausa.
 
-**Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): layout compacto do HUD, da tela
-inicial, do cartão da fase, da pausa (duas colunas, sem a tabela de teclas) e da vitória; áreas seguras do entalhe
+**Layout compacto** (`.rr[data-compact]`, `src/ui/screenFit.js`): liga pelo TAMANHO da janela (altura até 500 px ou
+largura até 700 px; o celular reconhecido sempre), não por o navegador entregar o aparelho como celular, então um
+Android que não se diz celular ou uma janela pequena no PC também o recebem. HUD, tela inicial, cartão da fase, pausa
+(duas colunas, sem a tabela de teclas) e vitória compactos, com as medidas em `N × var(--u)`: `--u` (`@property`
+<length>) vale 1 px na tela deitada de 390 px de altura (iPhone 13, onde o layout foi desenhado) e acompanha a tela,
+`clamp(.82px, min(vmin/390, vw/720), 1.12px)` (0,89 em 640×360, 0,82 em 568×320, 1,01 no Infinix); os textos pequenos
+têm piso de 9 px e os botões de toque usam a mesma escala (`--s`, piso de 0,82). Fora do compacto, `--u` = 1 px e
+o PC fica como sempre. `test/responsivo.test.mjs` trava os limites, a escala por aparelho e a regra "nada de px
+fixo no compacto"; as suítes `menu` e `toque` conferem cada tela em 11 tamanhos (`tools/scripts/lib/screens.mjs`).
+
+**Celular** (`.rr[data-mobile="phone"|"tablet"]`, vindo de `engine.quality.device`): áreas seguras do entalhe
 (`env(safe-area-inset-*)`, `viewport-fit=cover`); sem desfoque de fundo sobre o 3D (custa caro na GPU do celular);
-transições mais curtas. Celular de pé: aviso "Gire o celular" (`.rr-rotate`) e a partida pausa. No Android, o
+transições mais curtas. Celular de pé: aviso "Gire o celular" (`.rr-rotate`) e a partida pausa (também, de reserva,
+num celular não reconhecido já jogando com o dedo). No Android, o
 primeiro toque num botão do menu pede tela cheia, e a pausa tem o botão Tela cheia. O Safari do iPhone não deixa uma
 página ocupar a tela inteira (`requestFullscreen` só vale para vídeo): lá a tela cheia é o app da tela inicial
 (`public/manifest.webmanifest` com `display: standalone` e `display_override: [fullscreen, standalone]`, metas
@@ -823,10 +833,13 @@ página ocupar a tela inteira (`requestFullscreen` só vale para vídeo): lá a 
 (Compartilhar → "Adicionar à Tela de Início"), uma linha no aviso de girar e uma nota com o passo a passo na pausa
 (só texto: nada focável que o teclado ou o controle ativariam sem efeito). O app da tela inicial guarda o progresso à parte do Safari (o iOS separa os dados).
 `index.html` impede zoom e rolagem por gesto (`touch-action`, `overscroll-behavior`).
-Nada disso existe no PC: sem `data-mobile` e com teclado ou controle, a interface é a de sempre.
+Nada disso existe no PC de tamanho normal: sem `data-mobile` nem `data-compact` e com teclado ou controle, a interface
+é a de sempre.
 
 **Qualidade gráfica por aparelho** (`src/core/quality.js`, aplicada pelo engine): `detectDevice` (dedo como ponteiro
-principal, `pointer: coarse` sem `hover`; celular se o lado menor da tela tem até 600 px) escolhe o perfil inicial; no
+principal, `pointer: coarse`, ou um ponteiro de toque qualquer num navegador de celular, `isMobileUA`; celular se o
+lado menor da tela tem até 600 px, mesmo que o navegador diga ter hover, como alguns Android; tela grande com hover e
+sem navegador de celular é o notebook com tela de toque, PC) escolhe o perfil inicial; no
 celular/tablet o nome da GPU (`readGpuName`) também conta: GPU de entrada (`isLowEndGpu`: Mali-G57/G52/G68…,
 Adreno 5xx/60x–61x, PowerVR; ex.: Infinix Note 30 5G) começa no `baixa`. O iPhone informa "Apple GPU" e começa no
 `media`. No PC a GPU nem é consultada.

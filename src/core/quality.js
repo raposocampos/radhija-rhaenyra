@@ -57,14 +57,28 @@ export const MOBILE_FUR_SHELLS = 6;
 export const furShellsFor = (device) => (device === 'desktop' ? 10 : MOBILE_FUR_SHELLS);
 
 /**
- * Aparelho a partir das mídias do navegador. Notebook com tela de toque continua 'desktop' (o ponteiro principal é o
- * mouse/touchpad); celular é o aparelho de toque com o lado menor da tela até 600 px.
- * @param {{ coarse?: boolean, hover?: boolean, screenW?: number, screenH?: number }} [env]
+ * Aparelho a partir das mídias do navegador. Celular é o aparelho de toque com o lado menor da tela até 600 px; o
+ * tablet, o de toque com a tela maior. Notebook com tela de toque continua 'desktop' (o ponteiro principal é o
+ * mouse/touchpad; com a tela grande, mesmo se o navegador disser que o dedo é o principal e que há hover).
+ * Alguns Android dizem que têm hover ou que o ponteiro principal é fino (um "mouse" fantasma, como o leitor de
+ * digital ou a caneta): com tela pequena e um ponteiro de toque qualquer (anyCoarse) num navegador de celular
+ * (mobileUA), ainda é celular. Antes só valia `pointer: coarse` sem hover, e esses celulares caíam no layout e na
+ * qualidade do PC.
+ * @param {{ coarse?: boolean, anyCoarse?: boolean, hover?: boolean, mobileUA?: boolean, screenW?: number,
+ *           screenH?: number }} [env]
  * @returns {DeviceKind}
  */
-export function detectDevice({ coarse = false, hover = true, screenW = 0, screenH = 0 } = {}) {
-  if (!coarse || hover) return 'desktop';
-  return Math.min(screenW || Infinity, screenH || Infinity) <= 600 ? 'phone' : 'tablet';
+export function detectDevice({ coarse = false, anyCoarse = false, hover = true, mobileUA = false, screenW = 0, screenH = 0 } = {}) {
+  const small = Math.min(screenW || Infinity, screenH || Infinity) <= 600;
+  if (!coarse && !(anyCoarse && mobileUA)) return 'desktop';
+  if (small) return 'phone';
+  return hover && !mobileUA ? 'desktop' : 'tablet';
+}
+
+/** Navegador de celular pelo próprio navegador (userAgentData.mobile) ou pelo user agent ("Mobile", iPhone). */
+export function isMobileUA(nav = /** @type {any} */ ({})) {
+  if (typeof nav.userAgentData?.mobile === 'boolean' && nav.userAgentData.mobile) return true;
+  return /Android.+Mobile|iPhone|iPod|Mobi/i.test(String(nav.userAgent || ''));
 }
 
 /** Lê o ambiente para detectDevice (no navegador). */
@@ -74,7 +88,9 @@ export function readDeviceEnv(win = globalThis) {
   };
   return {
     coarse: mm('(pointer: coarse)'),
+    anyCoarse: mm('(any-pointer: coarse)'),
     hover: mm('(hover: hover)'),
+    mobileUA: isMobileUA(/** @type {any} */ (win).navigator),
     screenW: win.screen?.width || win.innerWidth || 0,
     screenH: win.screen?.height || win.innerHeight || 0,
   };

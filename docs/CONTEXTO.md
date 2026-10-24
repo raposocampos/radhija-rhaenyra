@@ -4,6 +4,31 @@
 empurrar sem queda de desempenho, em v0.10.10 · build 102; #58, etapa 5 dos modelos novos, em v0.10.9 · build 101). Ler
 primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 de 4 no branch `claude/responsivo-hud`)
+
+- Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
+  da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
+  navegador"; (2) menu com cara de game divertido, arcade e aventura, não "AI slop"; (3) escolher as fases andando
+  livre com as dogs num mini mapa coerente (estrelas/biscoitos por fase, próxima liberada, entrar com E ou toque;
+  teste para o mapa do Modo História, com "loads invisíveis"); (4) repaginar o menu principal com a mesma identidade.
+  Uma etapa por PR, com prévia e aprovação: 1) responsividade; 2) conceito do mapinha para aprovar antes de construir;
+  3) mapinha jogável; 4) menu principal.
+- Etapa 1 (este branch): causa provável do "HUD de navegador": o layout compacto só ligava com o celular reconhecido
+  (`data-mobile`, `detectDevice` exigia `pointer: coarse` sem `hover`) e alguns Android dizem ter hover ou ponteiro
+  fino; aí vinham o HUD e a qualidade do PC numa tela de 640×360. Feito: `src/ui/screenFit.js` liga `data-compact`
+  pelo tamanho da janela (altura ≤ 500 ou largura ≤ 700); as regras do celular em `ui.css` viraram `.rr[data-compact]`
+  com medidas `N × var(--u)` (1 px no iPhone 13 deitado; 0,89 em 640×360; 0,82 em 568×320; 1,01 no Infinix), pisos de
+  9 px nos textos e a mesma escala nos botões de toque; `detectDevice` aceita toque + hover em tela pequena e ponteiro
+  de toque secundário em navegador de celular (`isMobileUA`); aviso de girar de reserva; dica e prompt entre os
+  controles também no tablet; tela de carregamento fluida. O PC de tamanho normal não muda (`--u` = 1 px).
+- Testes: `test/responsivo.test.mjs` e casos novos em `test/qualidade.test.mjs`; as suítes `menu` e `toque` conferem
+  11 tamanhos (`tools/scripts/lib/screens.mjs`: Android 640×360 e 568×320 deitado e de pé, Infinix 893×393, iPhone 13,
+  tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
+  `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
+  `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
+- Próximo passo: PR da etapa 1, CI e E2E `menu` e `toque`, revisar as capturas, prévia e aprovação do usuário nesta
+  sessão. Depois, a etapa 2 (conceito do mapinha) sem código.
+
 ## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
 
 - Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".

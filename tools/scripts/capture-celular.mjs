@@ -1,5 +1,6 @@
 // Capturas de revisão do celular e do PC, cada aparelho com a SUA qualidade gráfica (sem a redução do harness):
-// celular deitado (844×390, DPR 3, perfil médio), celular pequeno (667×375, DPR 2), tablet (1180×820, DPR 2) e PC
+// celular deitado (844×390, DPR 3, perfil médio, como o iPhone 13), Infinix Note 30 5G (893×393, DPR 2,75, perfil
+// baixo), Android compacto (640×360 e 568×320, DPR 2, deitado e de pé), tablet (1180×820, DPR 2) e PC
 // (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (modos, fases, Opções), partida com os
 // controles de toque, prompt e dica com ícones de toque, pausa com o menu de qualidade, vitória, cartão de abertura,
 // aviso de girar o celular e a fase 4.
@@ -21,7 +22,10 @@ const touchDevice = (w, h, dpr) => ({ viewport: { width: w, height: h }, screen:
 const DEVICES = [
   // celular: perfil médio fixo (o automático começa nele; o governador mudaria no SwiftShader lento)
   { id: 'celular', opts: touchDevice(844, 390, 3), touch: true, quality: 'media', full: true },
-  { id: 'celular-pequeno', opts: touchDevice(667, 375, 2), touch: true, quality: 'media' },
+  // Infinix Note 30 5G (GPU de entrada: o automático começa no baixo) e o Android compacto, deitado e de pé
+  { id: 'infinix', opts: touchDevice(893, 393, 2.75), touch: true, quality: 'baixa' },
+  { id: 'android-640x360', opts: touchDevice(640, 360, 2), touch: true, quality: 'media', full: true, portrait: true },
+  { id: 'android-568x320', opts: touchDevice(568, 320, 2), touch: true, quality: 'media', portrait: true },
   { id: 'tablet', opts: touchDevice(1180, 820, 2), touch: true, quality: 'media' },
   { id: 'pc', opts: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }, touch: false, quality: null, full: true },
   // iPhone no Safari (sem a API de tela cheia, como o de verdade): a dica de "Adicionar à Tela de Início"
@@ -240,6 +244,14 @@ async function captureDevice(dev, url) {
       await page.evaluate(() => { window.__freezeReview = true; });
       await step(60);
       await shot('06-abertura', 2500);
+    }
+
+    if (dev.portrait) {
+      // de pé: o aviso de girar cobre a tela
+      const { width, height } = dev.opts.viewport;
+      await page.setViewportSize({ width: height, height: width });
+      await step(2);
+      await shot('07-de-pe', 900);
     }
 
     if (dev.id === 'celular') {
