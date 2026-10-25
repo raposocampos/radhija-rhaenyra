@@ -216,7 +216,7 @@ try {
   await load('');
   await page.click('.rr-btn--play');
   await page.click('.rr-mode--levels');
-  i = await waitFor((x) => x.state === 'playing' && x.hub, { timeout: 60000 });
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near != null, { timeout: 60000 });
   check(i.hub && i.near === 2, 'Fases abre o mapa na frente da próxima (2)', i.near);
   // a pausa do mapa: Menu inicial leva à tela inicial sobre o mapa
   await press('Escape', 300);

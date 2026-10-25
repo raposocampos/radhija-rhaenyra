@@ -710,8 +710,12 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     const hubMode = !!puzzle.hub;
     if (hubMode) {
       const nx = input.bafo(), pv = input.lick();
-      if (nx && !hubHeld.next) hubTravel({ dir: 1 });
-      else if (pv && !hubHeld.prev) hubTravel({ dir: -1 });
+      // a borda: R/L tocados (mesmo que soltos antes do quadro: consume) ou o R2/L2 que acabou de descer; segurados
+      // desde a fase anterior não contam (hubHeld começa ligado na carga do mapa)
+      const goNext = input.consume('KeyR') || (nx && !hubHeld.next);
+      const goPrev = input.consume('KeyL') || (pv && !hubHeld.prev);
+      if (goNext) hubTravel({ dir: 1 });
+      else if (goPrev) hubTravel({ dir: -1 });
       hubHeld.next = nx;
       hubHeld.prev = pv;
       for (let n = 1; n <= 10; n++) if (input.consume(`Digit${n % 10}`, `Numpad${n % 10}`)) hubTravel({ n });

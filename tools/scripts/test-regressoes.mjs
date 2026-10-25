@@ -1,7 +1,7 @@
 // Regressões no navegador (UI, modelos e câmera reais). A lógica das mesmas regressões roda em Node em
 // test/regressoes.test.mjs; aqui ficam as partes que dependem da tela:
-//   - ✕ do controle que confirma "Começar" (tela inicial: Jogar → Fases → Continuar → Começar, UI de verdade) não
-//     vira pulo nem latido;
+//   - ✕ do controle que confirma "Começar" (tela inicial: Jogar → Fases → o mapa → ○ na bandeirinha → Começar, UI de
+//     verdade) não vira pulo nem latido;
 //   - o calço VISUAL da fase 2 trava embaixo da folha aberta do portão (prop 3D, não só o colisor);
 //   - a dog atrasada chega ao lugar da comemoração andando, com a câmera de verdade.
 // (Item na boca ao trocar de fase e A da pausa: tools/scripts/test-gamepad.mjs. Arrancada contra a
@@ -34,16 +34,21 @@ try {
   await sleep(400);
   let i = await info();
   check(i.state === 'title', 'tela inicial', i.state);
-  // ✕ em Jogar, em Fases e em Continuar: o cartão de abertura da fase 1
-  for (let n = 0; n < 3; n++) {
+  // ✕ em Jogar e em Fases: o mapa das fases; ○ (interagir) na frente da bandeirinha 1: o cartão de abertura da fase 1
+  for (let n = 0; n < 2; n++) {
     await btn(PAD_A, true);
     await sleep(150);
     await btn(PAD_A, false);
     await sleep(300);
   }
+  i = await waitFor((x) => x.state === 'playing' && x.level === -1 && x.near === 1, { timeout: 60000 });
+  check(i.level === -1 && i.near === 1, '✕ em Jogar e em Fases: o mapa, na frente da bandeirinha 1', { state: i.state, level: i.level, near: i.near });
+  await btn(PAD_B, true);
+  await sleep(150);
+  await btn(PAD_B, false);
+  i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 60000 });
+  check(i.state === 'intro' && i.level === 0, '○ na bandeirinha 1: cartão da fase 1', i.state);
   await sleep(600);
-  i = await info();
-  check(i.state === 'intro' && i.level === 0, '✕ em Jogar, Fases e Continuar: cartão da fase 1', i.state);
   await clearLog();
   await btn(PAD_A, true); // segura o ✕: a UI confirma "Começar"
   await sleep(2200);

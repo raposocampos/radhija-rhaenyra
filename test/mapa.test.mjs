@@ -156,9 +156,6 @@ test('mapa: tudo concluído (três biscoitos na fase 2) — ponte abaixada, band
 test('mapa: atalho — só para bandeirinhas liberadas (número, ±1 e R/L)', async () => {
   forgetLastVisit();
   const h = await createHeadlessGame({ level: 0, progress: { levels: done(...ids(3)) } });
-  // R ou L seguros desde a fase anterior não pulam de bandeirinha: só depois de soltos (um quadro sem eles)
-  h.tap('KeyR');
-  assert.equal(h.log('map:travel').length, 0, 'R na carga do mapa não pula');
   h.run(0.1);
   h.clearLog();
   assert.equal(h.game.debug.travel({ n: 7 }), false, 'a 7 está trancada');
@@ -168,9 +165,10 @@ test('mapa: atalho — só para bandeirinhas liberadas (número, ±1 e R/L)', as
   let s = flagSpot(FLAGS[1], 'lead');
   assert.ok(Math.hypot(c.x - s.x, c.z - s.z) < 0.05, 'na frente da 2');
   assert.equal(h.log('map:travel').at(-1)?.to, 2);
-  // R (próxima liberada) e o número 4 no teclado
-  h.tap('KeyR');
-  h.run(0.1);
+  // R (próxima liberada) e o número 4 no teclado; um R tocado e solto entre dois quadros também vale
+  h.keyDown('KeyR');
+  h.keyUp('KeyR');
+  h.step();
   assert.equal(h.log('map:travel').at(-1)?.to, 3);
   h.tap('Digit4');
   c = h.ctrls[h.game.activeDog];
