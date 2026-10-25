@@ -4,6 +4,29 @@
 passagem, está no main `81165a7`, publicado em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 ·
 build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
+## Em andamento: E2E `fase3` intermitente na dica do cantinho (Claude, 2026-10-24, branch `claude/dica-cantinho-deterministica`)
+
+- Pedido (pelo orquestrador): a suíte `fase3` do E2E às vezes reprovava em "dica do cantinho" e passava ao repetir
+  (E2E `todas` `39492800353` do #48, head `1d8e00e`; `40141363602` do #63, que não mexe na fase 3).
+- Evidência: nas duas falhas a Rhaenyra termina em (-3,66, -2,61) e (-3,67, -2,61); nas verdes, com x de -3,29 a
+  -3,48. Sempre encostada na cerca-viva baixa, a oeste do vão (x de -3,27 a -2,81). Histórico: 2 falhas em 44
+  execuções completas da suíte.
+- Causa (o roteiro do teste, não o jogo): o passo parava no meio do vão, em (-3,04, -2,45), com 10 cm de tolerância e o
+  rumo que sobrasse da aproximação, e segurava W 0,9 s. O W da câmera da fase 3 puxa 17° para oeste e, virando de um
+  rumo qualquer, ela faz uma curva: conforme o ponto e o rumo da chegada, encostava na cerca-viva com o centro já a
+  oeste do vão, só na cerca comum (`cantinho-sul-a`), escorregava para oeste e nunca tocava o colisor do vão
+  (`cantinho-vao-grande`, que dá a dica). Medido no jogo headless (9 pontos da tolerância × 24 rumos × 20, 30 e 60 fps):
+  11% das chegadas sem dica, de 8,8% a 12,5% em cada ritmo (não é o FPS); igual sem o peito e a garupa do #48. O jogo
+  está certo: a dica sai quando ela empurra com o centro na frente do vão.
+- Correção (`tools/scripts/playthrough-fase3.mjs`): ela chega a leste do vão, em (-2,66, -2,3), e segura W até o centro
+  passar a oeste dele (`holdUntil`, solto pela página; prazo de 4 s de jogo): encosta na cerca-viva e escorrega rente a
+  ela pela frente do vão inteiro, sempre empurrando para dentro. As conferências ficaram mais fortes: "não entra no
+  cantinho" vale para todos os quadros gravados (antes, só a posição final) e uma nova confere que ela passou
+  empurrando a cerca na frente do vão. Teste novo em `test/fase3.test.mjs`: a mesma varredura de 9 pontos × 8 rumos ×
+  20 e 60 fps (com o ponto antigo, reprova).
+- Não mexido: o jogo; `tools/scripts/lib/harness.mjs` (também está no #64).
+- Validação: em andamento (CI do PR, varredura temporária da suíte `fase3` e E2E `todas`); conferir no PR.
+
 ## Em andamento: patas alternadas na arrancada (Claude, branch `claude/arrancada-patas-alternadas`)
 
 - Retorno do usuário (2026-10-24, pelo orquestrador): "quando você tá parado e sai correndo com as dogs, elas mexem as

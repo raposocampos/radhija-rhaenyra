@@ -192,12 +192,26 @@ async function fullRun() {
 async function sideTests() {
   console.log('\n== Fase 3: casos de borda ==');
   // --- Rhaenyra não cabe no cantinho
+  // Ela chega a LESTE do vão e segura W (a frente da câmera puxa 17° para oeste): encosta na cerca-viva baixa e
+  // escorrega rente a ela pela frente do vão inteiro, sempre empurrando para dentro. A página solta o W quando o centro
+  // dela passa a oeste do vão (prazo em tempo de jogo). Antes ela parava no meio do vão e segurava W 0,9 s: conforme o
+  // ponto (tolerância de 10 cm) e o rumo em que chegava, encostava já a oeste do vão, só na cerca comum, e a dica não
+  // saía (~11% das chegadas no jogo headless, igual a 20, 30 e 60 fps; 2 de 44 execuções da suíte no CI).
   await load('?level=3&play&dog=rhaenyra');
   await clearLog();
-  await walkPath([[-3.1, -1.6], [-3.04, -2.45, { tol: 0.1 }]]);
-  await H.hold(['KeyW'], 900);
-  let i = await info();
-  check(i.dogs.rhaenyra.z > -2.975 + 0.1, 'Rhaenyra não entra no cantinho', `(${i.dogs.rhaenyra.x}, ${i.dogs.rhaenyra.z})`);
+  const gap = await ev(() => window.__game.layout.NOOK.gap);
+  await walkPath([[-3.1, -1.6], [-2.66, -2.3, { tol: 0.1 }]]);
+  const sweep = await record((g) => {
+    const c = g.debug.ctrls.rhaenyra;
+    return { x: c.x, z: c.z };
+  });
+  let i = await H.holdUntil(['KeyW'], (s, a) => s.dogs.rhaenyra.x < a.xMin - 0.05, { timeout: 4000, arg: gap, label: 'W rente à cerca-viva pela frente do vão' });
+  const path = await sweep.stop();
+  const deepest = path.reduce((m, p) => (p.z < m.z ? p : m), { x: 0, z: Infinity });
+  // encostada na cerca-viva (o peito a 0,36 m da linha do vão) com o centro na frente do vão
+  const atGap = path.filter((p) => p.x > gap.xMin && p.x < gap.xMax && p.z < gap.z + 0.4).length;
+  check(atGap > 0 && i.dogs.rhaenyra.x < gap.xMin - 0.05, 'Rhaenyra empurra a cerca-viva pela frente do vão inteiro', `${atGap} quadros no vão; fim (${i.dogs.rhaenyra.x}, ${i.dogs.rhaenyra.z})`);
+  check(path.length > 0 && deepest.z > gap.z + 0.1, 'Rhaenyra não entra no cantinho', `mais funda (${deepest.x.toFixed(3)}, ${deepest.z.toFixed(3)}) em ${path.length} quadros`);
   check((await logOf('hint')).some((h) => h.text.startsWith('A Rhaenyra não cabe no cantinho')), 'dica do cantinho');
   await shot('f3-20-rhaenyra-cantinho.png');
 
