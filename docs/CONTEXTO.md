@@ -1,34 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (patas alternadas na arrancada, em andamento; o #60, engasgo na primeira
-passagem, está no main `81165a7`, publicado em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 ·
-build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
-
-## Em andamento: patas alternadas na arrancada (Claude, branch `claude/arrancada-patas-alternadas`)
-
-- Retorno do usuário (2026-10-24, pelo orquestrador): "quando você tá parado e sai correndo com as dogs, elas mexem as
-  duas patas, principalmente a traseira (...), saem iguais no movimento, fica parecendo um trote de cavalo".
-- Medida (`test/patas-alternadas.test.mjs`): em que ponto da passada da outra do par cada pata sai do chão (0,5 =
-  alternadas; 0 = juntas), saindo de parada como o controle do jogo (aceleração, giro, arrancada), 12 sementes. No main
-  `81165a7`: no modelo novo, 17–77% das decolagens das traseiras abaixo de 0,25 (trote, corrida, curvas, analógico
-  pela metade; mínimo 0), também no trote firme; no atual, 99–100% com o analógico pela metade (~0,8 m/s).
-- Causas: (1) fases do passo [0,25; 0,75; 0; 0,5] e do trote [0; 0,5; 0,5; 0]: na mistura, as traseiras iam uma ao
-  encontro da outra e no meio da troca ficavam juntas (nos dois modelos); (2) no novo, a fase de cada pata atrasava
-  no apoio: a traseira trotando termina o apoio a ~90% do alcance, passava dele, saía no passo de conforto fora do
-  ritmo, a fase recomeçava no pouso e a correção nunca terminava (laço estável, às vezes com as duas juntas); (3)
-  depois da arrancada as patas voltavam ao compasso do guia atrasando até ~1 ciclo/s; (4) parada, a fase de cada pata
-  é a do relógio: a primeira traseira esperava a vez dela e a outra chegava ao fim do alcance logo depois.
-- Feito (`src/dogs/v2/gait.js`, `src/dogs/dogAnimation.js`): fases reescritas (o passo meio ciclo adiante, o mesmo
-  passo; o balanço de lado do guia vai junto); a fase só atrasa no balanço (parada e no galope, como antes); o passo
-  fora do ritmo pousa no lugar dele contado da outra do par; saindo de parada, uma traseira já sai; o corpo do guia
-  segue a fase das patas; no galope e logo depois, a fase acompanha a 3 ciclos/s.
-- Resultado (12 sementes): no novo, traseiras com mínimo 0,21–0,40 e 0–1% abaixo de 0,25 em todos os casos;
-  dianteiras com mínimo ≥ 0,11; no atual, traseiras ≥ 0,40. `test/locomocao.test.mjs` continua passando (arrancada:
-  a pata de trás vai até 9,3 cm para trás, perna nunca reta nem arrastada, primeiro passo de cada pata até 0,12 s).
-- Validação: CI e E2E `todas` (tiras do trote e da arrancada em `capture-modelos.mjs`, suíte `canil`) do PR; conferir
-  pelo commit no GitHub. No PC do usuário, só os testes da locomoção e `git diff --check`.
-- Fora daqui: o porquinho (`src/characters/pig.js`) usa as fases antigas (as traseiras se encontram do passo ao trote).
-- Próximo passo: prévia para o usuário e o "pode integrar" dele nesta sessão.
+Última atualização: **2026-10-24, Claude** (superbafo sem atalho pelo duto, PR #63, em andamento; #65, patas
+alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 ·
+build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
+Git/GitHub antes de editar.
 
 ## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
 
@@ -60,10 +35,38 @@ build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
 - E2E `todas` `40141363602` (no `56fad30`): partidas `fase4` 17/17, `quintal` e `bafo` verdes; reprovou a captura dos
   pombos (`capture-pigeons.mjs` chamava a reação do pombo sem nuvem; agora passa a do duto, `mech.duct`) e, sem
   ligação com o cheiro, `fase3` ("dica do cantinho", página lentíssima no runner) e a primeira passagem da fase 10
-  (`celular-baixa`: 5 picos de tempo; `celular-media`: 1 programa e 1 textura antes do superbafo). Refeito no head
-  seguinte.
+  (`celular-baixa`: 5 picos de tempo; `celular-media`: 1 programa e 1 textura antes do superbafo). A dica do cantinho
+  já tinha falhado uma vez no #48 e passado ao repetir. O E2E do `8a46e80` foi cancelado: o main andou (#65) e o
+  branch foi sincronizado com o `60dc88c` (merge, sem conflito).
 - Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
 - Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+
+## Entregue: patas alternadas na arrancada (PR #65, squash `60dc88c`, v0.10.13 · build 105)
+
+- Retorno do usuário (2026-10-24, pelo orquestrador): "quando você tá parado e sai correndo com as dogs, elas mexem as
+  duas patas, principalmente a traseira (...), saem iguais no movimento, fica parecendo um trote de cavalo".
+- Medida (`test/patas-alternadas.test.mjs`): em que ponto da passada da outra do par cada pata sai do chão (0,5 =
+  alternadas; 0 = juntas), saindo de parada como o controle do jogo (aceleração, giro, arrancada), 12 sementes. No main
+  `81165a7`: no modelo novo, 17–77% das decolagens das traseiras abaixo de 0,25 (trote, corrida, curvas, analógico
+  pela metade; mínimo 0), também no trote firme; no atual, 99–100% com o analógico pela metade (~0,8 m/s).
+- Causas: (1) fases do passo [0,25; 0,75; 0; 0,5] e do trote [0; 0,5; 0,5; 0]: na mistura, as traseiras iam uma ao
+  encontro da outra e no meio da troca ficavam juntas (nos dois modelos); (2) no novo, a fase de cada pata atrasava
+  no apoio: a traseira trotando termina o apoio a ~90% do alcance, passava dele, saía no passo de conforto fora do
+  ritmo, a fase recomeçava no pouso e a correção nunca terminava (laço estável, às vezes com as duas juntas); (3)
+  depois da arrancada as patas voltavam ao compasso do guia atrasando até ~1 ciclo/s; (4) parada, a fase de cada pata
+  é a do relógio: a primeira traseira esperava a vez dela e a outra chegava ao fim do alcance logo depois.
+- Feito (`src/dogs/v2/gait.js`, `src/dogs/dogAnimation.js`): fases reescritas (o passo meio ciclo adiante, o mesmo
+  passo; o balanço de lado do guia vai junto); a fase só atrasa no balanço (parada e no galope, como antes); o passo
+  fora do ritmo pousa no lugar dele contado da outra do par; saindo de parada, uma traseira já sai; o corpo do guia
+  segue a fase das patas; no galope e logo depois, a fase acompanha a 3 ciclos/s.
+- Resultado (12 sementes): no novo, traseiras com mínimo 0,21–0,40 e 0–1% abaixo de 0,25 em todos os casos;
+  dianteiras com mínimo ≥ 0,11; no atual, traseiras ≥ 0,40. `test/locomocao.test.mjs` continua passando (arrancada:
+  a pata de trás vai até 9,3 cm para trás, perna nunca reta nem arrastada, primeiro passo de cada pata até 0,12 s).
+- Validação: CI e E2E `todas` (tiras do trote e da arrancada em `capture-modelos.mjs`, suíte `canil`) do PR; conferir
+  pelo commit no GitHub. No PC do usuário, só os testes da locomoção e `git diff --check`.
+- Fora daqui: o porquinho (`src/characters/pig.js`) usa as fases antigas (as traseiras se encontram do passo ao trote).
+- Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
+  (`version.json` conferido).
 
 ## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
 
