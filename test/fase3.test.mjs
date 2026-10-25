@@ -132,6 +132,51 @@ test('fase 3: Rhaenyra não cabe no cantinho; Radhija não pega a pantufa', asyn
   assert.ok(h.log('hint').some((x) => x.text === 'A pantufa é pesada demais para a Radhija!'));
 });
 
+// O passo do cantinho na partida do navegador (tools/scripts/playthrough-fase3.mjs): a Rhaenyra chega a leste do vão e
+// segura W até passar a oeste dele. A chegada varia (tolerância, rumo, ritmo do quadro com a máquina carregada): de
+// qualquer uma, ela escorrega rente à cerca-viva pela frente do vão inteiro, não entra e a dica sai.
+test('fase 3: dica do cantinho de qualquer chegada a leste do vão (rumo, ponto e ritmo do quadro)', async () => {
+  const h = await createHeadlessGame({ level: 3, query: 'dog=rhaenyra' });
+  const GAP = h.layout.NOOK.gap;
+  const STAGE = { x: -2.66, z: -2.3, tol: 0.1 }; // o ponto de chegada da partida
+
+  // o caminho da partida chega lá
+  const p = h.walkPath([[-3.1, -1.6], [STAGE.x, STAGE.z, { tol: STAGE.tol }]]);
+  assert.ok(Math.hypot(p.x - STAGE.x, p.z - STAGE.z) < STAGE.tol + 0.05, `chegada (${p.x.toFixed(3)}, ${p.z.toFixed(3)})`);
+
+  const offs = [[0, 0], ...Array.from({ length: 8 }, (_, k) => [Math.cos((k * Math.PI) / 4), Math.sin((k * Math.PI) / 4)])];
+  const bad = [];
+  for (const dt of [1 / 60, 1 / 20]) {
+    for (let k = 0; k < 8; k++) {
+      const yaw = (k * Math.PI) / 4 + 0.2;
+      for (const [ux, uz] of offs) {
+        h.events.emit('ui:restart', {}); // zera também a espera entre duas dicas iguais
+        h.run(0.3);
+        h.teleport('rhaenyra', STAGE.x + ux * STAGE.tol, STAGE.z + uz * STAGE.tol, yaw);
+        h.teleport('radhija', -3.4, -1.7);
+        h.run(0.2, { dt });
+        h.clearLog();
+        h.hold([0, -1]); // W (a frente da câmera)
+        let deepest = Infinity;
+        let atGap = 0;
+        const passed = h.run(4, { dt, until: (s) => {
+          const c = h.ctrls.rhaenyra;
+          deepest = Math.min(deepest, c.z);
+          if (c.x > GAP.xMin && c.x < GAP.xMax && c.z < GAP.z + 0.4) atGap++;
+          return s.dogs.rhaenyra.x < GAP.xMin - 0.05;
+        } });
+        h.hold(null);
+        h.run(0.2, { dt });
+        const hint = h.log('hint').some((x) => x.text.startsWith('A Rhaenyra não cabe no cantinho'));
+        if (!passed || !atGap || !hint || !(deepest > GAP.z + 0.1)) {
+          bad.push({ dt: +dt.toFixed(3), yaw: +yaw.toFixed(2), ux: +ux.toFixed(2), uz: +uz.toFixed(2), passed, atGap, hint, deepest: +deepest.toFixed(3) });
+        }
+      }
+    }
+  }
+  assert.deepEqual(bad, []);
+});
+
 test('fase 3: investida da gansa em vários pontos nunca joga a dog na água', async () => {
   const h = await createHeadlessGame({ level: 3, query: 'stage=gateOpen' });
   let hits = 0;
