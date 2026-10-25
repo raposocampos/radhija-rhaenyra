@@ -329,7 +329,7 @@ export function buildDetails(kit, root, L) {
   kit.add(cyl(0.3, 0.38, 1.2, 12), { color: '#d9cfc2', x: F.x, y: 0.55, z: F.z });
   kit.add(cyl(0.7, 0.4, 0.25, 18), { color: '#d9cfc2', x: F.x, y: 1.75, z: F.z });
   const fw = new THREE.Mesh(new THREE.CircleGeometry(F.r - 0.12, 28).rotateX(-Math.PI / 2), lakeMat);
-  fw.position.set(F.x, 0.5, F.z);
+  fw.position.set(F.x, 0.57, F.z); // acima do tampo da bacia (0,55 m)
   root.add(fw);
   const jetMat = mat('mapa-jet', () => new THREE.MeshStandardMaterial({ color: '#cfeefc', roughness: 0.1, transparent: true, opacity: 0.85 }));
   const jets = Array.from({ length: 10 }, (_, i) => {
