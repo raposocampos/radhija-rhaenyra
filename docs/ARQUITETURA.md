@@ -651,6 +651,15 @@ Saindo de uma pose do guia já andando (pousou do pulo, soltou o empurrar segura
 mais depressa (`dogAnimation.js`, `offK`) e a locomoção assume com ela quase fora (peso 0,9 em vez de 0,98): seguindo
 o guia com atraso, a perna de trás ficava apoiada e reta. Correndo ou arrancando, a traseira dá o passo extra mesmo
 com as outras três no ar, e a pata que ficou embaixo de um degrau (o corpo subiu numa placa) também.
+As duas patas de cada par se alternam (no passo e no trote, meio ciclo uma da outra): as fases do passo, do trote e do
+galope (as mesmas no guia) estão escritas para que, na mistura, os pares nunca se encontrem e nenhuma pata atrase do
+passo ao trote (as traseiras ficam, as dianteiras adiantam um quarto de ciclo; o passo ficou meio ciclo adiante, o
+mesmo passo, e o balanço de lado do corpo do guia vai junto); a fase de cada pata só atrasa no balanço (no apoio,
+atrasar alongava o apoio além do alcance da traseira, que saía num passo de conforto fora do ritmo e nunca voltava ao
+lugar dela); um passo fora do ritmo pousa de volta no lugar dela no ritmo, contado da outra do par (nunca em cima
+dela); saindo de parada, o ritmo começa com uma traseira já saindo, e a pata no tempo do balanço sai mesmo no fim
+dele; e o corpo do guia (sobe e desce, balanço) segue a fase das patas, em vez de as patas voltarem ao compasso dele
+depois de uma arrancada ou de uma curva fechada (o que as atrasava).
 A cabeça que desvia (`head.js`, etapa 4) usa o mundo de colisão da fase (`d.setWorld(world)`, chamado pelo
 `game.js`): chegando de frente numa parede ou móvel, o desenho inteiro freia antes do centro do jogo (prevê onde o
 peito vai parar e freia aos poucos, chegando parado com o focinho encostado; até 24 cm na escala) e a cabeça vira um
@@ -663,6 +672,8 @@ o jogo usa o modelo novo (`main.js`); `?dogs=atual` volta ao anterior em qualque
 `?dogs=novo` dos links antigos continua dando o novo) e a fase de desenvolvimento
 `?level=canil` mostra o atual e o novo lado a lado em todas as poses. Testes: `test/dogV2.test.mjs` (esqueleto, pesos,
 guia, chão e orçamento), `test/locomocao.test.mjs` (pata plantada, parada, esteira, pata que rola, arrancada),
+`test/patas-alternadas.test.mjs` (nos dois modelos, as duas de cada par não saem juntas: saindo de parada, virando,
+com o analógico pela metade e depois da arrancada; e as fases do ritmo),
 `test/cabeca.test.mjs` (a cabeça não entra na parede, o desenho freia aos poucos), suíte E2E `canil` e capturas
 `tools/scripts/capture-modelos.mjs` (sandbox `dogs.html?model=both`; `wall=<m>` anda com o controle e a colisão do
 jogo até uma parede, `crate=<altura>` empurra de pé um caixote).
