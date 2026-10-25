@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (superbafo sem atalho pelo duto, PR #63, em andamento; #65, patas
-alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 ·
-build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
-Git/GitHub antes de editar.
+Última atualização: **2026-10-24, Claude** (E2E `fase3` sem a falha da dica do cantinho, PR #66, em andamento; #63,
+superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo
+na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 · build 101). Ler primeiro
+[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: E2E `fase3` intermitente na dica do cantinho (Claude, 2026-10-24, branch `claude/dica-cantinho-deterministica`)
 
@@ -35,7 +35,7 @@ Git/GitHub antes de editar.
   abertura); não é desta mudança. Depois veio a sincronização com o main `1b4ea05` (#63): CI e E2E do head no PR.
   No PC, só o diagnóstico headless, o teste novo e `node --check`/`git diff --check`.
 
-## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+## Entregue: superbafo sem atalho pelo duto da fase 4 (PR #63, squash `1b4ea05`, deploy `40151033873`, v0.10.14 · build 106)
 
 - Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
   atingindo o pombo, sem precisar fazer a mecânica do ventilador."
@@ -69,7 +69,8 @@ Git/GitHub antes de editar.
   já tinha falhado uma vez no #48 e passado ao repetir. O E2E do `8a46e80` foi cancelado: o main andou (#65) e o
   branch foi sincronizado com o `60dc88c` (merge, sem conflito).
 - Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
-- Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+- Integrado ao main (squash `1b4ea05`); o deploy `40151033873` (Publicar versão validada) terminou
+  com sucesso; produção em v0.10.14 · build 106 (`version.json` conferido). Não repetir merge/deploy do #63.
 
 ## Entregue: patas alternadas na arrancada (PR #65, squash `60dc88c`, v0.10.13 · build 105)
 
