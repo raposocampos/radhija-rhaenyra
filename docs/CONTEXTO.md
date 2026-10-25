@@ -99,7 +99,7 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 no PR #64, etapa 3 no branch `claude/mapa-pandoropolis`)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 entregue no PR #64, etapa 3 no PR #67)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -121,8 +121,9 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
   `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
   `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
-- Etapa 1: PR #64, sincronizado com o `main` (#66, `1b288c0`) no head `286f508`; CI e E2E `menu` e `toque` de novo, depois a
-  prévia e o "pode integrar" do usuário.
+- Etapa 1 entregue: PR #64, head `286f508` aprovado pelo usuário ("Pode integrar essa"), squash `75a3b1a`, CI do
+  main `40159408003`, deploy `40159530565`, v0.10.16 · build 108 (version.json conferido). Validação do head: CI
+  `40154272590`, E2E `menu` `40154270396` e `toque` `40154272256`.
 - Capturas do celular (`capture-celular.mjs`): os toques em Continuar e Começar esperam o botão pronto (camada
   visível, sem animação de CSS em curso, por cima de tudo) e conferem o efeito, repetindo um toque perdido (no E2E
   do #66 o toque em Começar caía antes de o cartão de abertura terminar de entrar).
@@ -149,7 +150,7 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
 - Testes da etapa 3: `test/mapa.test.mjs` (layout, caminhos livres, grade = lista inteira, estados, atalho, entrar e
   voltar, nuvens, pré-carga); suíte E2E nova `mapa` (`tools/scripts/test-mapa.mjs`) e capturas em qualidade de cada
   aparelho (`capture-mapa.mjs`); suítes `menu`, `toque`, `expresso` e `capture-celular.mjs` passaram a ir pelo mapa.
-- Próximo passo: PR #67 (rascunho, sobre o #64 sincronizado com o `main` `1b288c0`): CI e E2E `mapa`, `menu`, `toque`,
+- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `mapa`, `menu`, `toque`,
   `expresso` e `controle`, revisar as capturas, prévia e aprovação do usuário nesta sessão (depois do #64). Depois,
   a etapa 4 (menu principal).
 
