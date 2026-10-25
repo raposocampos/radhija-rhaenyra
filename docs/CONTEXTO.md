@@ -1,11 +1,41 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (superbafo sem atalho pelo duto, PR #63, em andamento; #65, patas
-alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 ·
-build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
-Git/GitHub antes de editar.
+Última atualização: **2026-10-24, Claude** (E2E `fase3` sem a falha da dica do cantinho, PR #66, em andamento; #63,
+superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo
+na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 · build 101). Ler primeiro
+[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+## Em andamento: E2E `fase3` intermitente na dica do cantinho (Claude, 2026-10-24, branch `claude/dica-cantinho-deterministica`)
+
+- Pedido (pelo orquestrador): a suíte `fase3` do E2E às vezes reprovava em "dica do cantinho" e passava ao repetir
+  (E2E `todas` `39492800353` do #48, head `1d8e00e`; `40141363602` do #63, que não mexe na fase 3).
+- Evidência: nas duas falhas a Rhaenyra termina em (-3,66, -2,61) e (-3,67, -2,61); nas verdes, com x de -3,29 a
+  -3,48. Sempre encostada na cerca-viva baixa, a oeste do vão (x de -3,27 a -2,81). Histórico: 2 falhas em 44
+  execuções completas da suíte.
+- Causa (o roteiro do teste, não o jogo): o passo parava no meio do vão, em (-3,04, -2,45), com 10 cm de tolerância e o
+  rumo que sobrasse da aproximação, e segurava W 0,9 s. O W da câmera da fase 3 puxa 17° para oeste e, virando de um
+  rumo qualquer, ela faz uma curva: conforme o ponto e o rumo da chegada, encostava na cerca-viva com o centro já a
+  oeste do vão, só na cerca comum (`cantinho-sul-a`), escorregava para oeste e nunca tocava o colisor do vão
+  (`cantinho-vao-grande`, que dá a dica). Medido no jogo headless (9 pontos da tolerância × 24 rumos × 20, 30 e 60 fps):
+  11% das chegadas sem dica, de 8,8% a 12,5% em cada ritmo (não é o FPS); igual sem o peito e a garupa do #48. O jogo
+  está certo: a dica sai quando ela empurra com o centro na frente do vão.
+- Correção (`tools/scripts/playthrough-fase3.mjs`): ela chega a leste do vão, em (-2,66, -2,3), e segura W até o centro
+  passar a oeste dele (`holdUntil`, solto pela página; prazo de 4 s de jogo): encosta na cerca-viva e escorrega rente a
+  ela pela frente do vão inteiro, sempre empurrando para dentro. As conferências ficaram mais fortes: "não entra no
+  cantinho" vale para todos os quadros gravados (antes, só a posição final) e uma nova confere que ela passou
+  empurrando a cerca na frente do vão. Teste novo em `test/fase3.test.mjs`: a mesma varredura de 9 pontos × 8 rumos ×
+  20 e 60 fps (com o ponto antigo, reprova).
+- Não mexido: o jogo; `tools/scripts/lib/harness.mjs` (também está no #64).
+- Validação do código (`a221084`, sobre o main `60dc88c`), PR #66: varredura temporária `40146842803` (branch auxiliar
+  `claude/dica-cantinho-varredura`, só o workflow e um script; apagar no fim): a suíte `fase3` inteira 6× em paralelo,
+  todas verdes (52 checks cada), e 6 lotes A/B no mesmo runner (roteiro antigo × novo, 8 cargas cada): o antigo perdeu
+  a dica 1 vez em 48 (chegou virado para o sul em (-3,10, -2,47) e terminou em x = -3,68, a mesma assinatura das
+  falhas), o novo 0 em 48. E2E `todas` `40146733563`: tudo verde menos `toque`, que passou nos 99 checks e falhou depois,
+  nas capturas do celular (`capture-celular.mjs`: o "Começar" da abertura da fase 1 não pegou e a partida ficou na
+  abertura); não é desta mudança. Depois veio a sincronização com o main `1b4ea05` (#63): CI e E2E do head no PR.
+  No PC, só o diagnóstico headless, o teste novo e `node --check`/`git diff --check`.
+
+## Entregue: superbafo sem atalho pelo duto da fase 4 (PR #63, squash `1b4ea05`, deploy `40151033873`, v0.10.14 · build 106)
 
 - Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
   atingindo o pombo, sem precisar fazer a mecânica do ventilador."
@@ -39,7 +69,8 @@ Git/GitHub antes de editar.
   já tinha falhado uma vez no #48 e passado ao repetir. O E2E do `8a46e80` foi cancelado: o main andou (#65) e o
   branch foi sincronizado com o `60dc88c` (merge, sem conflito).
 - Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
-- Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+- Integrado ao main (squash `1b4ea05`); o deploy `40151033873` (Publicar versão validada) terminou
+  com sucesso; produção em v0.10.14 · build 106 (`version.json` conferido). Não repetir merge/deploy do #63.
 
 ## Entregue: patas alternadas na arrancada (PR #65, squash `60dc88c`, v0.10.13 · build 105)
 
