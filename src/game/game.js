@@ -425,17 +425,19 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
 
   /** Boca da dog (onde nasce a nuvem do bafo). */
   const mouthOf = (c) => ({ x: c.x + Math.sin(c.yaw) * 0.36, z: c.z + Math.cos(c.yaw) * 0.36 });
+  /** O sopro sai do centro dela até a boca: encostada numa parede ou num duto, a nuvem nasce do lado dela (scent.js). */
   const bafoShot = (c) => {
     const m = mouthOf(c);
-    return { x: m.x, z: m.z, dirX: Math.sin(c.yaw), dirZ: Math.cos(c.yaw), speed: c.cfg.bafoSpeed, life: c.cfg.bafoLife ?? 5 };
+    return { x: m.x, z: m.z, fromX: c.x, fromZ: c.z, dirX: Math.sin(c.yaw), dirZ: Math.cos(c.yaw), speed: c.cfg.bafoSpeed, life: c.cfg.bafoLife ?? 5 };
   };
 
   function blow(c) {
     bafo.aiming = false;
     scent.hidePreview();
     const shot = bafoShot(c);
-    scent.spawn(shot);
-    emit('dog:bafo', { name: c.name, x: shot.x, z: shot.z, dirX: shot.dirX, dirZ: shot.dirZ });
+    const cloud = scent.spawn(shot);
+    // a poeirinha do sopro sai onde a nuvem nasce (encostada numa parede, não dentro dela)
+    emit('dog:bafo', { name: c.name, x: cloud.x, z: cloud.z, dirX: shot.dirX, dirZ: shot.dirZ });
     bafo.cd = c.cfg.bafoCooldown ?? 0.8;
     bafo.blowT = 0.45;
     bafo.proudT = 1.9;

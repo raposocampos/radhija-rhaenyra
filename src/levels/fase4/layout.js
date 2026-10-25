@@ -51,8 +51,10 @@ export const PERCH_A = { x: 3.5, z: 2.3, y: 1.25, smellR: 0.55 };
 export const PERCH_B = { x: 3.5, z: -2.2, y: 1.25 };
 // Duto de exaustão: boca no fundo do corredor, sobe, passa por cima da mureta e sai ao lado do poleiro A, na altura do
 // pombo: a caixa da saída fica num pé, com o centro da boca (y) no peito dele.
+// A boca abre para o oeste (o corredor e o vento): só engole o cheiro que chega pela frente dela (scent.js). O pombo do
+// portão só sente o cheiro que veio pelo duto (puzzle.js).
 export const DUCT = {
-  inlet: { x: 2.0, z: 2.3, r: 0.32 },
+  inlet: { x: 2.0, z: 2.3, r: 0.32, dirX: -1, dirZ: 0 },
   // exit: a nuvem sai pela boca da caixa (a face leste fica a 0,13 m do centro dela), não de dentro dela
   outlet: { x: 2.85, y: PERCH_A.y + 0.15, z: 2.3, dirX: 1, dirZ: 0, speed: 1.3, exit: 0.2 },
   travel: 1.0,

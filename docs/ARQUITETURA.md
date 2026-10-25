@@ -417,17 +417,24 @@ mapa das fases (206 colisores) liga, e `test/mapa.test.mjs` confere que o result
 (desenho em `src/fx/scentView.js`). Regras, todas determinísticas:
 
 - **Nuvem**: nasce com um empurrão, desacelera e se espalha devagar (o raio cresce) até sumir (~5 s). Não atravessa
-  paredes: colide como um círculo pequeno e passa onde a Radhija passa.
+  paredes: colide como um círculo pequeno e passa onde a Radhija passa. O sopro leva a origem (`fromX`, `fromZ`, o
+  centro dela): a nuvem vai dali até a boca, 0,36 m à frente, sem atravessar nada. Com o focinho encostado numa parede
+  ou num duto, a boca fica dentro dele, e antes a colisão podia empurrar a nuvem para o outro lado (o furo do duto da
+  fase 4, `test/duto-sem-atalho.test.mjs`).
 - **Vento** (`scent.addWind({ x, z, dirX, dirZ, length, halfWidth, strength })`): faixa a partir de uma origem; dentro
   dela a nuvem é levada pela corrente e fica compacta. O objeto devolvido é mutável: mova a origem junto com o
   ventilador ou desligue com `enabled`.
 - **Duto** (`scent.addDuct({ inlet: {x, z, r}, outlet: {x, z, dirX, dirZ}, travel, active() })`): com `active()`
-  verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois. Saída no alto
+  verdadeiro, a nuvem que chega à boca some e sai pela outra ponta `travel` segundos depois. A boca virada para um
+  lado (`inlet.dirX`, `inlet.dirZ`, como as caixas da fase 4 e da Arena do Bafo) só engole a nuvem que está na frente
+  dela; sem direção, de qualquer lado (o funil da fase 10). Saída no alto
   (`outlet.y`, a altura da boca, como o cano da fase 10 e o duto da fase 4): a nuvem sai e fica nessa altura (o
   desenho e a poeirinha da saída também); lá em cima ela passa por cima dos colisores, do vento e das bocas do chão, e
   quem está no chão não a alcança (`near`).
 - **Nariz** (`scent.addNose({ id, x, z, r, onSmell(nuvem) })`): alvo que reage uma vez por nuvem. É aqui que entram
   os tipos de alvo: animais que fogem (os pombos da fase 4 e da Arena do Bafo), mecanismos que espirram, plantas que recolhem.
+  O nariz mede só a distância no chão: um alvo que só deve reagir ao cheiro de um duto confere `nuvem.duct` no
+  `onSmell` (o pombo do portão da fase 4 e o da Arena do Bafo, o pombo da fase 10, o Bichano da fase 9).
 - **Prévia**: `scent.preview(tiro)` roda a mesma simulação sem efeitos; é o que a mira desenha.
 
 Eventos: `scent:spawn`, `scent:duct`, `scent:exit`, `scent:smell`, `scent:fade`. Fases que não registram vento,
