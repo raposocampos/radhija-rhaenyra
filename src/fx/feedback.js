@@ -497,15 +497,15 @@ export function createFeedback(opts) {
   });
 
   // ---------- mapa das fases (src/levels/mapa/puzzle.js) ----------
-  events.on('map:sign', ({ n, state } = {}) => {
+  events.on('map:sign', ({ n, state }) => {
     if (Number.isFinite(n)) audio.play(state === 'locked' ? 'uiHover' : 'uiMove', { volume: 0.6 });
   });
-  events.on('map:travel', ({ toX, toZ } = {}) => {
+  events.on('map:travel', ({ toX, toZ }) => {
     audio.play('slideWhoosh', { volume: 0.7 });
     if (Number.isFinite(toX)) later(0.05, () => particles.sparkle(v3.set(toX, 1.6, toZ), { count: 16, radius: 0.6, height: 2 }));
   });
   events.on('map:enter', () => audio.play('uiClick'));
-  events.on('map:denied', ({ n } = {}) => audio.play('gateLocked', { volume: 0.7, n }));
+  events.on('map:denied', ({ n }) => audio.play('gateLocked', { volume: 0.7, n }));
   events.on('map:unlock', () => later(0.7, () => audio.play('reveal', { volume: 0.9 })));
   events.on('map:newFlag', () => later(1.3, () => audio.play('paintingChime', { volume: 0.7 })));
 

@@ -79,7 +79,7 @@ export const HOUSE = {
   line: { x0: -20.2, x1: -16.9, z: 16.8 }, // varal com a meia listrada
   /** Canteiro na frente da casa (oeste da porta) e os soltos do jardim: [x, z, tipo]. */
   bed: { minX: -26.45, maxX: -22.95, minZ: 10.2, maxZ: 10.95 },
-  flowers: [[-26.8, 13, 'ger2'], [-26.6, 16.4, 'lav'], [-15.4, 17.6, 'ger'], [-24.8, 20.6, 'flw'], [-17.8, 20.8, 'flw'], [-19.4, 12.3, 'ger2']],
+  flowers: /** @type {[number, number, string][]} */ ([[-26.8, 13, 'ger2'], [-26.6, 16.4, 'lav'], [-15.4, 17.6, 'ger'], [-24.8, 20.6, 'flw'], [-17.8, 20.8, 'flw'], [-19.4, 12.3, 'ger2']]),
   /** Cenoura de brinquedo esquecida na grama. */
   carrot: { x: -24.5, z: 18.2 },
 };
@@ -222,11 +222,15 @@ export const CAMERA = {
 };
 
 // ---------------------------------------------------------------- colisão
+/** @returns {import('../../types').BoxCollider} */
 const box = (id, minX, minZ, maxX, maxZ, extra = {}) => ({ id, shape: 'box', x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, hx: (maxX - minX) / 2, hz: (maxZ - minZ) / 2, ...extra });
+/** @returns {import('../../types').BoxCollider} */
 const rect = (id, r, pad = 0, extra = {}) => box(id, r.x - r.w / 2 - pad, r.z - r.d / 2 - pad, r.x + r.w / 2 + pad, r.z + r.d / 2 + pad, extra);
+/** @returns {import('../../types').CircleCollider} */
 const circle = (id, x, z, r) => ({ id, shape: 'circle', x, z, r });
 /** Meia-espessura do muro na colisão: a dos pilares (0,5 m), que saem um pouco do muro. */
 const W = 0.26;
+/** @returns {import('../../types').SegmentCollider} */
 const seg = (id, ax, az, bx, bz, t = 0.08, extra = {}) => ({ id, shape: 'segment', ax, az, bx, bz, t, ...extra });
 const G = CONDO.gate;
 /** Árvores das calçadas e jardins (o cenário planta as copas; o tronco colide). */

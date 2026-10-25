@@ -36,6 +36,7 @@ export function forgetLastVisit() { lastVisit = null; }
 /** @param {import('../../types').PuzzleContext<import('../../types').MapaProps>} ctx */
 export function createPuzzle(ctx) {
   const { emit, props, world, cam } = ctx;
+  /** @type {import('../../types').HubContext} */
   const hub = ctx.hub || { levels: [], progress: () => ({ levels: {} }), from: null, enter() {}, unlockAll: false };
   const S = { time: 0, prompt: undefined, sign: null, near: null, preloading: null, preBuild: false, nextHint: 0 };
   /** Índice no catálogo de cada bandeirinha (fases que não estão no catálogo ficam de fora). */
@@ -44,6 +45,7 @@ export function createPuzzle(ctx) {
   const metaOf = (f) => hub.levels[f.index];
 
   // ---------- progresso → estado das bandeirinhas, nuvens e ponte ----------
+  /** @type {{ levels?: Record<string, any> }} */
   let prog = { levels: {} };
   const rec = (f) => (Object.hasOwn(prog.levels || {}, f.level) ? prog.levels[f.level] : null);
   const isDone = (f) => !!rec(f)?.done;
@@ -64,9 +66,9 @@ export function createPuzzle(ctx) {
   // bloqueios dinâmicos: as áreas fechadas e o rio embaixo da ponte levantada
   const blockers = Object.fromEntries(Object.entries(ZONES).map(([k, z]) => {
     const b = z.box;
-    return [k, world.addDynamic({ id: `nuvens-${k}`, shape: 'box', x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, hx: (b.maxX - b.minX) / 2, hz: (b.maxZ - b.minZ) / 2, enabled: true })];
+    return [k, world.addDynamic({ id: `nuvens-${k}`, shape: 'box', x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, hx: (b.maxX - b.minX) / 2, hz: (b.maxZ - b.minZ) / 2 })];
   }));
-  const bridgeBlock = world.addDynamic({ id: 'ponte-levantada', shape: 'box', x: (RIVER.minX + RIVER.maxX) / 2, z: BRIDGE.z, hx: (RIVER.maxX - RIVER.minX) / 2, hz: BRIDGE.w / 2, enabled: true });
+  const bridgeBlock = world.addDynamic({ id: 'ponte-levantada', shape: 'box', x: (RIVER.minX + RIVER.maxX) / 2, z: BRIDGE.z, hx: (RIVER.maxX - RIVER.minX) / 2, hz: BRIDGE.w / 2 });
 
   function applyProgress({ animate = false } = {}) {
     prog = hub.progress?.() || { levels: {} };

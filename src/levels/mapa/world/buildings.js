@@ -20,7 +20,7 @@ const tiles = (hex) => {
 };
 
 /**
- * @param {ReturnType<import('./kit.js').createKit>} kit
+ * @param {ReturnType<typeof import('./kit.js').createKit>} kit
  * @param {THREE.Group} root
  * @param {import('../../../types').LevelLayout} L
  * @returns {{ signs: { redraw(): void }[], seeThrough: THREE.Object3D[], trackPoint(t: number): { x: number, z: number, yaw: number } }}

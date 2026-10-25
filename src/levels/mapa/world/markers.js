@@ -17,6 +17,7 @@ const FONT = '"Fredoka", "Nunito", system-ui, sans-serif';
 
 /** Biscoito em forma de osso, leve (o do jogo tem detalhe demais para 30 cópias pequenas). */
 function boneGeo() {
+  /** @type {THREE.BufferGeometry[]} */
   const parts = [new THREE.CapsuleGeometry(0.055, 0.26, 2, 8).rotateZ(Math.PI / 2)];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.075, 10, 6).translate(sx * 0.17, 0, sz * 0.055));
   const g = mergeGeometries(parts.map((p) => { const n = p.index ? p.toNonIndexed() : p; n.deleteAttribute('uv'); return n; }));
@@ -46,7 +47,7 @@ function numberAtlas() {
 }
 
 /**
- * @param {ReturnType<import('./kit.js').createKit>} kit
+ * @param {ReturnType<typeof import('./kit.js').createKit>} kit
  * @param {THREE.Group} root
  * @param {import('../../../types').LevelLayout} L
  */

@@ -33,7 +33,7 @@ function crown(kind, variant) {
 }
 
 /**
- * @param {ReturnType<import('./kit.js').createKit>} kit
+ * @param {ReturnType<typeof import('./kit.js').createKit>} kit
  * @param {THREE.Group} root
  * @param {import('../../../types').LevelLayout} L
  */
@@ -277,7 +277,7 @@ export function buildDetails(kit, root, L) {
   kit.add(rb(Tb.w, 0.08, Tb.d, 0.03, 1), { color: '#fffaf0', x: Tb.x, y: 0.72, z: Tb.z });
   kit.add(rb(Tb.w + 0.05, 0.42, Tb.d + 0.05, 0.03, 1), { color: (p) => new THREE.Color(Math.floor((p.x + 9) / 0.22) % 2 ? '#f7c3d0' : '#fffaf0'), x: Tb.x, y: 0.36, z: Tb.z });
   for (const [dx, dz] of [[-0.95, -0.5], [0.95, -0.5], [-0.95, 0.5], [0.95, 0.5]]) kit.add(cyl(0.04, 0.04, 0.72, 6), { color: '#c98a55', x: Tb.x + dx, z: Tb.z + dz });
-  [[0.42, 0.26, '#f7c3d0'], [0.31, 0.24, '#fff0d6'], [0.2, 0.22, '#f7c3d0']].reduce((y, [r, h, c]) => {
+  /** @type {[number, number, string][]} */ ([[0.42, 0.26, '#f7c3d0'], [0.31, 0.24, '#fff0d6'], [0.2, 0.22, '#f7c3d0']]).reduce((y, [r, h, c]) => {
     kit.add(cyl(r, r, h, 20), { color: c, x: Tb.x, y, z: Tb.z });
     return y + h;
   }, 0.8);

@@ -89,7 +89,7 @@ function drawBillboard(g) {
 }
 
 /**
- * @param {ReturnType<import('./kit.js').createKit>} kit
+ * @param {ReturnType<typeof import('./kit.js').createKit>} kit
  * @param {THREE.Group} root
  * @param {import('../../../types').LevelLayout} L
  */
