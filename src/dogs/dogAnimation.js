@@ -879,15 +879,21 @@ export function createDogAnimation(ctx) {
     stroke *= 1 - w.tug * (1 - 0.7 * st.backK);
     const lift = (0.026 * s * Math.min(1, 0.45 + v / 1.4) * Math.max(st.move, turning) + w.strain * 0.024 * s + w.push * 0.01 * s + w.dash * 0.02 * s) * (1 - w.sit);
     // fases de cada pata (FL, FR, HL, HR): passo (lateral), trote (diagonais), galope (bound)
-    const offWalk = [0.25, 0.75, 0.0, 0.5];
-    const offTrot = [0.0, 0.5, 0.5, 0.0];
-    const offBound = [0.0, 0.08, 0.5, 0.58];
+    // (a fase é de um ciclo: 1 é o mesmo que 0. Escritas assim, na mistura do passo para o trote e o galope as duas
+    // patas de cada par ficam sempre meio ciclo uma da outra, e do passo ao trote nenhuma pata atrasa; antes, do passo
+    // [0,25; 0,75; 0; 0,5] ao trote [0; 0,5; 0,5; 0], as duas traseiras andavam juntas no meio da troca: v2/gait.js)
+    const offWalk = [0.75, 0.25, 0.5, 0.0];
+    const offTrot = [1.0, 0.5, 0.5, 0.0];
+    const offBound = [1.0, 0.08, 0.5, -0.42];
 
     // ---------------- corpo (raiz)
     const sp2 = st.phase * TAU;
+    // o passo está escrito meio ciclo adiante do de antes (o mesmo passo): o balanço de lado, uma vez por ciclo, vai
+    // junto com as patas (o sobe e desce, duas vezes por ciclo, não muda)
+    const sp1 = sp2 + Math.PI * walk * (1 - w.dash);
     const trotK = (1 - w.dash) * gaitAmp;
     const bob = -0.0065 * s * Math.min(1, v / 1.2) * trotK * Math.cos(2 * (sp2 - beta * Math.PI));
-    const sway = 0.003 * s * Math.sin(sp2) * trotK;
+    const sway = 0.003 * s * Math.sin(sp1) * trotK;
     const boundPitch = 0.15 * Math.sin(sp2 - 0.9) * w.dash;
     const boundY = 0.022 * s * (0.5 + 0.5 * Math.sin(sp2 - 2.4)) * w.dash;
     // inclina para dentro da curva com mola (passa um tiquinho e volta: o molejo)
@@ -912,7 +918,7 @@ export function createDogAnimation(ctx) {
       + scratchK * 0.012 * s + xNudge * 0.07 * s + (xDrink + xEat) * 0.02 * s - pBrace * 0.012 * s - wow * 0.014 * s
       + pressGo * (0.05 * s + pressFar);
     const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s - lr * lSide * 0.004 * s;
-    qE(_q, pitch, st.dev * (1 - sk) * (1 - wEnv), st.lean + Math.sin(sp2) * 0.025 * trotK + shk(2) * 0.16);
+    qE(_q, pitch, st.dev * (1 - sk) * (1 - wEnv), st.lean + Math.sin(sp1) * 0.025 * trotK + shk(2) * 0.16);
     _rootPos.set(rest[0].x + rootX, rest[0].y + rootY, rest[0].z + rootZ);
     _m.compose(_rootPos, _q, _v.set(1, 1, 1));
     // sentar: gira em torno do peito; play bow: gira em torno do quadril
