@@ -402,7 +402,7 @@ try {
   check(i.state === 'intro' && i.levelId === 'fase1', '○ na frente da bandeirinha: cartão da fase 1', i.levelId);
   await sleep(600);
   await tap(B.B);
-  i = await waitFor((x) => x.state === 'playing' && x.hub, { timeout: 60000 });
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near != null, { timeout: 60000 });
   check(i.hub && i.near === 1, '○ no cartão de abertura: de volta ao mapa', { near: i.near, state: i.state });
   await tap(B.B);
   i = await waitFor((x) => x.state === 'intro', { timeout: 60000 });
