@@ -153,6 +153,33 @@ async function captureDevice(dev, url) {
         await page.click(sel);
       }
     };
+    /**
+     * Espera o botão pronto para o toque: com caixa, a camada dele visível por inteiro, sem animação de CSS em curso
+     * (a entrada do cartão de abertura) e por cima de tudo no centro dele. O laço do jogo está congelado, mas as
+     * transições de CSS correm em tempo real: tocar antes de o cartão terminar de entrar perdia o toque.
+     */
+    const ready = (sel) => page.waitForFunction((s) => {
+      const el = document.querySelector(s);
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return false;
+      const layer = el.closest('.rr-layer');
+      if (layer && (!layer.classList.contains('is-on') || Number(getComputedStyle(layer).opacity) < 0.99)) return false;
+      if (document.getAnimations().some((a) => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming?.().endTime))) return false;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!hit && (hit === el || el.contains(hit));
+    }, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false);
+    /** Toca no botão quando ele estiver pronto e confere o efeito (done: no estado do jogo); um toque perdido repete. */
+    const pressInto = async (sel, done, label) => {
+      for (let k = 0; k < 3; k++) {
+        await ready(sel);
+        await press(sel);
+        await page.waitForTimeout(300);
+        if (await page.evaluate(done)) return;
+        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}); de novo`);
+      }
+      errors.push(`[${dev.id}] ${label}: o toque em ${sel} não pegou em 3 tentativas; ${await guard.peek()}`);
+    };
     /** Um botão de ação do jogo, pelo dispositivo do aparelho. */
     const action = async (touchId, key) => {
       if (dev.touch) await page.evaluate((id) => { const t = window.__game.game.input.touch; t.press(id); window.__step(1); t.release(id); }, touchId);
@@ -169,11 +196,11 @@ async function captureDevice(dev, url) {
       await shot('01b-opcoes-tela-cheia');
       await press('.rr-title .rr-back');
       await press('.rr-btn--play');
-      await thaw(() => press('.rr-mode--levels'), (i) => i.state === 'playing' && i.level === -1);
+      await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
       await step(30);
       await thaw(() => action('act', 'KeyE'), (i) => i.state === 'intro');
       await step(60);
-      await press('[data-action="start"]');
+      await pressInto('[data-action="start"]', () => window.__game.game.state === 'playing', 'Começar');
       await step(150);
       await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
       await step(2);
@@ -197,14 +224,14 @@ async function captureDevice(dev, url) {
     await press('.rr-title .rr-hopt[data-hints="on"]');
     await press('.rr-title .rr-back');
     await press('.rr-btn--play');
-    await thaw(() => press('.rr-mode--levels'), (i) => i.state === 'playing' && i.level === -1);
+    await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
     // um toque na tela (como a jogadora faria) liga os controles de toque
     if (dev.touch) await page.touchscreen.tap(dev.opts.viewport.width / 2, 40);
     await step(90);
     await shot('01c-mapa');
     await thaw(() => action('act', 'KeyE'), (i) => i.state === 'intro');
     await step(60);
-    await press('[data-action="start"]');
+    await pressInto('[data-action="start"]', () => window.__game.game.state === 'playing', 'Começar');
     await step(150);
     await shot('02-jogando');
 

@@ -5,7 +5,7 @@ alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0
 build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
 Git/GitHub antes de editar.
 
-## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+## Entregue: superbafo sem atalho pelo duto da fase 4 (PR #63, squash `1b4ea05`, deploy `40151033873`, v0.10.14 · build 106)
 
 - Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
   atingindo o pombo, sem precisar fazer a mecânica do ventilador."
@@ -90,8 +90,11 @@ Git/GitHub antes de editar.
   tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
   `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
   `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
-- Etapa 1: PR #64 (prévia apresentada; aguarda o "pode integrar" do usuário; o `main` andou depois, então a versão
-  a aprovar precisa ser reatualizada com CI/E2E novos).
+- Etapa 1: PR #64, sincronizado com o `main` (#63) no head `b7dcbac`; CI e E2E `menu` e `toque` de novo, depois a
+  prévia e o "pode integrar" do usuário.
+- Capturas do celular (`capture-celular.mjs`): os toques em Continuar e Começar esperam o botão pronto (camada
+  visível, sem animação de CSS em curso, por cima de tudo) e conferem o efeito, repetindo um toque perdido (no E2E
+  do #66 o toque em Começar caía antes de o cartão de abertura terminar de entrar).
 - Etapa 2 (conceito, sem código): maquete isométrica aprovada pelo usuário na versão 4 — cidade "Pandorópolis" (a
   cachorra da cunhada), outdoor desenhado em código da golden Amora candidata a prefeita ("Vote 1313"), biscoitos por
   fase, enfeites, nuvens nas áreas fechadas, atalho entre bandeirinhas, barrinha de carregamento perto da bandeirinha.
@@ -118,7 +121,7 @@ Git/GitHub antes de editar.
 - Próximo passo: commit, juntar o `main`, PR da etapa 3, CI e E2E `mapa`, `menu`, `toque`, `expresso` e `controle`,
   revisar as capturas, prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
 
-## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
+## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 
 - Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".
 - Causa: o `renderer.compile` da carga (`loadLevel`) rodava sem alvo, mas o jogo desenha no alvo do compositor
