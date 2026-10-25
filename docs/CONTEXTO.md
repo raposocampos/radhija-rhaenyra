@@ -1,10 +1,47 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (patas alternadas na arrancada, em andamento; o #60, engasgo na primeira
-passagem, está no main `81165a7`, publicado em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 ·
-build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-24, Claude** (superbafo sem atalho pelo duto, PR #63, em andamento; #65, patas
+alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 ·
+build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
+Git/GitHub antes de editar.
 
-## Em andamento: patas alternadas na arrancada (Claude, branch `claude/arrancada-patas-alternadas`)
+## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+
+- Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
+  atingindo o pombo, sem precisar fazer a mecânica do ventilador."
+- Causa: a nuvem nascia na boca (0,36 m à frente do centro da Radhija) sem olhar o caminho. Encostada na caixa do duto,
+  a boca ficava 0,16 m dentro da caixa, depois do meio dela; a colisão da nuvem a empurrava para a mureta e dali para o
+  lado do pombo (x = 2,68 em dois quadros), e o nariz do pombo do portão só media a distância no chão. O mesmo pela
+  mureta e pelo portão fechado (zona B → C), pela lateral do corredor (aparelhos e mureta baixa → dentro do corredor; com
+  o ventilador na marca, duto e pombo) e na Arena do Bafo. Encostada na boca com o ventilador na marca, a nuvem também
+  passava direto e o duto não a engolia.
+- Fase 10 sem o furo: o pombo só aceita a nuvem que veio pelo cano (`cloud.duct`), e o funil no chão abre para todos os
+  lados. Fase 9: o Bichano também só aceita a do duto, e a boca fica na parede do fundo. Não mexidas.
+- Correção: `scent.js` (`birthPlace`): o sopro leva a origem (`fromX`, `fromZ`, o centro dela, `game.js` `bafoShot`) e a
+  nuvem vai dali até a boca com a colisão dela (o que já envolve a origem, um obstáculo baixo embaixo dela, não conta);
+  a mira usa o mesmo; a poeirinha do sopro (`dog:bafo`) sai onde a nuvem nasce. Boca de duto virada para um lado
+  (`inlet.dirX/dirZ`; fase 4 e Arena do Bafo, para o oeste) só engole a nuvem da frente. O pombo do portão da fase 4 e o
+  da Arena só aceitam a nuvem do duto (fase 4: a nuvem do chão perto do poleiro dá a dica "alto demais… duto"). Tipos e
+  ARQUITETURA §5.1.
+- Testes: `test/duto-sem-atalho.test.mjs` (10 testes, sementes 404–410 e 41–53): o campo de cheiro (parede, ponta da
+  parede, obstáculo baixo, boca virada); na fase 4, encostada na boca do duto, na mureta, no portão, pela lateral
+  (aparelhos, mureta baixa) e por trás da grade (entre o ventilador encaixado e ela), com o ventilador no começo, fora
+  da marca e na marca; o caminho certo (até encostada na boca); refazer depois de errar; a nuvem do chão perto do
+  poleiro; a Arena do Bafo. Reprodução: CI `40140693699` no `664261a` (só os testes, sem a correção): 9 dos 10
+  reprovaram, com a nuvem do outro lado da mureta e o pombo sentindo o cheiro.
+- O vão embaixo dos canos (`CORRIDOR.door`) é passagem, não parede: soprando em cima dele, a nuvem sai ou entra no
+  corredor por ali, como a Radhija (de fora, só com o ventilador na marca ela chega ao duto). Os sorteios ficam longe
+  dele (o CI `40141093564` reprovou um sorteio assim no caminho certo).
+- E2E `todas` `40141363602` (no `56fad30`): partidas `fase4` 17/17, `quintal` e `bafo` verdes; reprovou a captura dos
+  pombos (`capture-pigeons.mjs` chamava a reação do pombo sem nuvem; agora passa a do duto, `mech.duct`) e, sem
+  ligação com o cheiro, `fase3` ("dica do cantinho", página lentíssima no runner) e a primeira passagem da fase 10
+  (`celular-baixa`: 5 picos de tempo; `celular-media`: 1 programa e 1 textura antes do superbafo). A dica do cantinho
+  já tinha falhado uma vez no #48 e passado ao repetir. O E2E do `8a46e80` foi cancelado: o main andou (#65) e o
+  branch foi sincronizado com o `60dc88c` (merge, sem conflito).
+- Validação: CI e E2E (`fase4`, `quintal`, `todas`) do head final no PR. No PC, só `node --check` e `git diff --check`.
+- Próximo passo: com tudo verde, entregar a prévia e esperar o "pode integrar" do usuário no chat desta sessão.
+
+## Entregue: patas alternadas na arrancada (PR #65, squash `60dc88c`, v0.10.13 · build 105)
 
 - Retorno do usuário (2026-10-24, pelo orquestrador): "quando você tá parado e sai correndo com as dogs, elas mexem as
   duas patas, principalmente a traseira (...), saem iguais no movimento, fica parecendo um trote de cavalo".
@@ -28,7 +65,8 @@ build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
 - Validação: CI e E2E `todas` (tiras do trote e da arrancada em `capture-modelos.mjs`, suíte `canil`) do PR; conferir
   pelo commit no GitHub. No PC do usuário, só os testes da locomoção e `git diff --check`.
 - Fora daqui: o porquinho (`src/characters/pig.js`) usa as fases antigas (as traseiras se encontram do passo ao trote).
-- Próximo passo: prévia para o usuário e o "pode integrar" dele nesta sessão.
+- Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
+  (`version.json` conferido).
 
 ## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 de 4 no branch `claude/responsivo-hud`)
 
