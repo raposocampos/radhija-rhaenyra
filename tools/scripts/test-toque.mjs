@@ -1,7 +1,8 @@
 // Celular (suíte 'toque'): Chromium emulando um celular deitado (844×390, DPR 3, toque, isMobile) e DEDOS REAIS pelo
 // protocolo do navegador (Input.dispatchTouchEvent → touch + pointer events, como num celular de verdade).
-// Confere o perfil de qualidade do celular, o menu inicial pelo toque (Jogar → modos → Fases → Continuar; Opções com o
-// modo sem dicas; Voltar), os controles que só aparecem depois de um toque, o layout compacto sem
+// Confere o perfil de qualidade do celular, o menu inicial pelo toque (Jogar → modos → Fases → o mapa das fases →
+// Agir na frente da bandeirinha; Opções com o modo sem dicas; Voltar), o HUD do mapa com os controles de toque (sem
+// Superbafo nem Lamber, com o atalho ◀ ▶), os controles que só aparecem depois de um toque, o layout compacto sem
 // sobreposição com o HUD, um trecho da fase 1 jogado só com o joystick e os botões virtuais (abertura, cordinha,
 // troca, carrinho empurrado com dois dedos, cenoura), multitoque, dicas com ícones de toque, menu de qualidade,
 // aviso de girar o celular, volta ao teclado e o cartão de abertura. No fim, uma página de PC (sem toque) confirma
@@ -109,7 +110,9 @@ const overlapPairs = (list) => {
   for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) if (overlaps(list[a], list[b])) out.push([list[a].sel, list[b].sel]);
   return out;
 };
-const menuState = () => ev(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen, level: window.__game.game.level }));
+const menuState = () => ev(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen, level: window.__game.game.level, hub: window.__game.game.isHub }));
+/** Espera o mapa das fases na frente da bandeirinha n (passeando). */
+const untilMap = (n = 1) => waitFor((x) => x.state === 'playing' && x.level === -1 && x.near === n, { timeout: 60000 });
 
 /**
  * Tamanhos de tela (lib/screens.mjs) deitados, na partida: HUD compacto e proporcional (sem o HUD do PC numa tela
@@ -315,18 +318,38 @@ try {
   await tap('.rr-title .rr-back');
   await tap('.rr-btn--play');
   await tap('.rr-mode--levels');
-  m = await menuState();
-  check(m.screen === 'levels', 'toque em Fases: tela das fases', m);
-  await sleep(700);
-  const levels = await boxes(['.rr-logo__svg', '.rr-title .rr-back', '.rr-btn--continue', '.rr-levels']);
-  check(levels.every((r) => inView(r)), 'Continuar e cartões inteiros na tela deitada', levels);
-  check(overlapPairs(levels).length === 0, 'logotipo, Voltar, Continuar e cartões sem sobreposição', levels);
-  await shot('01d-fases-celular.png');
+  let mi = await untilMap(1);
+  check(mi.state === 'playing' && mi.level === -1 && mi.near === 1, 'toque em Fases: o mapa das fases, na frente da bandeirinha 1', { state: mi.state, level: mi.level, near: mi.near });
+  await sleep(900);
+  const mapHud = await ev(() => {
+    const box = (sel) => {
+      const el = document.querySelector(sel);
+      if (!el || !el.getClientRects().length || getComputedStyle(el).display === 'none') return null;
+      const r = el.getBoundingClientRect();
+      return { sel, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    };
+    const shownBtn = (id) => !!box(`.rr-tbtn[data-touch="${id}"]`);
+    return {
+      hud: ['.rr-hud__dogs', '.rr-objective', '.rr-mapplate', '.rr-sign', '.rr-prompt', '.rr-travel'].map(box).filter(Boolean),
+      controls: [...document.querySelectorAll('.rr-tbtn')].map((b) => box(`.rr-tbtn[data-touch="${b.dataset.touch}"]`)).filter(Boolean).concat([box('.rr-touch__stick')].filter(Boolean)),
+      bafo: shownBtn('bafo'), lick: shownBtn('lick'), act: shownBtn('act'),
+    };
+  });
+  check(mapHud.act && !mapHud.bafo && !mapHud.lick, 'no mapa: Agir sim, Superbafo e Lamber não', mapHud);
+  check(mapHud.hud.length >= 5 && mapHud.hud.every((r) => inView(r)), 'HUD do mapa inteiro na tela deitada', mapHud.hud.map((r) => r.sel));
+  const mapHits = [];
+  for (const c of mapHud.controls) for (const h of mapHud.hud) if (overlaps(c, h)) mapHits.push([c.sel, h.sel]);
+  check(overlapPairs(mapHud.hud).length === 0 && mapHits.length === 0, 'HUD do mapa sem sobreposição (nem com os controles)', { pairs: overlapPairs(mapHud.hud), mapHits });
+  await shot('01d-mapa-celular.png');
+  // atalho na tela: ▶ (só a 1 liberada: continua na 1)
+  await tap('.rr-travel__next');
+  mi = await untilMap(1);
+  check(mi.near === 1, 'toque em ▶ com só a fase 1 liberada: continua na 1', mi.near);
 
-  console.log('\n== Continuar pelo toque ==');
-  await tap('.rr-btn--continue');
-  m = await menuState();
-  check(m.state === 'intro' && m.level === 0, 'toque em Continuar (save novo): cartão da fase 1', m);
+  console.log('\n== Agir na bandeirinha pelo toque ==');
+  await tap('.rr-tbtn--act');
+  m = await waitFor((x) => x.state === 'intro', { timeout: 60000 }).then(() => menuState());
+  check(m.state === 'intro' && m.level === 0, 'toque em Agir na frente da bandeirinha 1: cartão da fase 1', m);
   await sleep(1200);
   await tap('[data-action="start"]');
   await waitFor((x) => x.state === 'playing', { timeout: 8000 });
@@ -572,18 +595,22 @@ try {
   check((await menuState()).screen === 'main', 'Menu inicial: volta à tela principal');
   await tap('.rr-btn--play');
   await tap('.rr-mode--levels');
-  // a fase 2 só libera depois da 1: o cartão da fase 1 abre o cartão de abertura dela
-  await tap('.rr-lvcard[data-index="0"]');
+  // o mapa: as dogs na frente da bandeirinha 1 (a da fase de onde saíram); Agir abre o cartão de abertura dela
+  await untilMap(1);
+  await sleep(600);
+  await tap('.rr-tbtn--act');
   i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 60000 });
   await sleep(1500);
   const intro = await boxes(['.rr-introcard', '.rr-intro .rr-back']);
   check(i.state === 'intro' && intro.every((r) => inView(r)) && !overlaps(intro[0], intro[1]), 'cartão de abertura e Voltar inteiros na tela', intro);
   await shot('10-abertura.png');
   await tap('.rr-intro .rr-back');
+  i = await untilMap(1);
   m = await menuState();
-  check(m.state === 'title' && m.screen === 'levels', 'toque em Voltar no cartão de abertura: de volta às fases', m);
-  await tap('.rr-lvcard[data-index="0"]');
-  i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 10000 });
+  check(m.state === 'playing' && m.hub, 'toque em Voltar no cartão de abertura: de volta ao mapa', m);
+  await sleep(600);
+  await tap('.rr-tbtn--act');
+  i = await waitFor((x) => x.state === 'intro' && x.level === 0, { timeout: 60000 });
   await sleep(1200);
   await tap('[data-action="start"]');
   i = await waitFor((x) => x.state === 'playing', { timeout: 5000 });
@@ -689,18 +716,21 @@ try {
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
-  // a pausa mostra o passo a passo: Jogar → Fases → Continuar → Começar. Cada toque só quando o botão aparece: com o
-  // SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque caía
-  // em (0, 0) (o cartão de abertura não vinha).
+  // a pausa mostra o passo a passo: Jogar → Fases → (o mapa) Agir → Começar. Cada toque só quando o botão aparece: com
+  // o SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque
+  // caía em (0, 0) (o cartão de abertura não vinha).
   const tapShown = async (sel) => {
     await ip.waitForFunction((s) => (document.querySelector(s)?.getClientRects().length ?? 0) > 0, sel, { timeout: 30000 });
     const b = await center(ip, sel);
     await ip.touchscreen.tap(b.x, b.y);
   };
-  for (const sel of ['.rr-btn--play', '.rr-mode--levels', '.rr-btn--continue']) {
+  for (const sel of ['.rr-btn--play', '.rr-mode--levels']) {
     await tapShown(sel);
     await ip.waitForTimeout(400);
   }
+  await ip.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
+  await ip.waitForTimeout(800);
+  await tapShown('.rr-tbtn--act');
   await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
   await ip.waitForTimeout(1200);
   await tapShown('[data-action="start"]');

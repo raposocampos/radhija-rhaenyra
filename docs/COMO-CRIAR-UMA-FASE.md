@@ -191,6 +191,12 @@ ambiente vem de `ambience` (`'day'`, `'dusk'`, `'night'`, `'city'` ou `'rain'`).
 - som e cor de pegar em `pickupFx` (`src/fx/feedback.js`);
 - o modelo: veja `src/world/toys.js` (eixo mais longo em X, `name` e `userData.carryKind` com o tipo).
 
+**Bandeirinha no mapa das fases**: cada fase do catálogo precisa de uma entrada em `FLAGS` de
+`src/levels/mapa/layout.js` (mesma ordem, `n` = número da fase), na frente do lugar onde ela acontece, com a frente
+(`face`) livre de colisores e ligada ao grafo da companheira (`NAV_NODES`/`NAV_EDGES`, nó `F<n>`). Se o lugar ficar
+numa área coberta de nuvens (`ZONES`), a área precisa abrir até a vez da fase. `test/mapa.test.mjs` confere ordem,
+lugares livres, caminhos e áreas (arquitetura em [ARQUITETURA.md](ARQUITETURA.md) §4.6).
+
 Preserve IDs existentes e acrescente a nova fase ao fim. `src/ui/progress.js` normaliza saves v1 e conserva
 registros desconhecidos; acrescentar uma fase não exige limpar o save nem mudar a versão. Teste carregar um save
 válido anterior, manter medalhas/conclusões, liberar a fase nova após a anterior e concluí-la sem apagar outros

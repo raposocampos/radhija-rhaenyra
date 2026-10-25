@@ -1,6 +1,10 @@
 // Núcleo do jogo: gerenciador de fases + estados, entrada → controle das dogs, companheira, câmera e depuração.
 // Tudo o que é específico de uma fase (layout, cenário, props, puzzle) vem da definição da fase
 // (src/levels/<fase>/index.js). Ver docs/ARQUITETURA.md §3.
+// O mapa das fases (src/levels/mapa/, opção hub) é uma fase especial fora da lista (índice HUB = −1): as dogs
+// passeiam pela cidade e entram numa fase pela bandeirinha dela (ctx.hub.enter); a fase da bandeirinha mais perto vai
+// sendo carregada por baixo (levelPreload.js). Ao sair de uma fase pelo mapa (ui:openMap), elas voltam na frente da
+// bandeirinha dela.
 import * as THREE from 'three';
 import { events } from '../core/events.js';
 import { createResourceScope } from '../core/resources.js';
@@ -19,6 +23,7 @@ import { createScentField } from './mechanics/scent.js';
 import { createScentView } from '../fx/scentView.js';
 import { createExtras } from './extras.js';
 import { createIdle } from './idle.js';
+import { createLevelPreload } from './levelPreload.js';
 import { createShove } from './shove.js';
 import { planCelebrateLoop } from './celebrateLoop.js';
 import { DOG_PARAMS } from '../dogs/dogModel.js';
@@ -56,11 +61,14 @@ const sstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
+/** Índice do mapa das fases (fora da lista das fases). */
+export const HUB = -1;
+
 /**
  * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
- *           levels: import('../types').LevelDef[], params?: URLSearchParams }} opts
+ *           levels: import('../types').LevelDef[], params?: URLSearchParams, hub?: import('../types').LevelDef | null }} opts
  */
-export function createGame({ engine, dogs, levels, params }) {
+export function createGame({ engine, dogs, levels, params, hub = null }) {
   params = params || new URLSearchParams(location.search);
 
   // ---------- eventos (com registro para testes) ----------
@@ -136,6 +144,16 @@ export function createGame({ engine, dogs, levels, params }) {
   let heavyHintCd = 0; // aviso "pesado demais para a Radhija" (HEAVY_HINT)
   let loadingPromise = null;
   let loadFailure = null;
+  // ---------- mapa das fases (hub) ----------
+  /** De qual fase as dogs voltaram (o mapa as põe na frente da bandeirinha dela); null = a próxima fase. */
+  let hubFrom = null;
+  /** Progresso salvo (quem tem é a UI: setProgressSource) e o catálogo de desenvolvimento (tudo liberado). */
+  /** @type {() => { levels?: Record<string, any> }} */
+  let progressSource = () => ({ levels: {} });
+  let hubUnlockAll = false;
+  const preload = createLevelPreload({ engine, params, emit });
+  /** R/R2 e L/L2 no mapa: a próxima e a anterior bandeirinha (borda). */
+  const hubHeld = { next: false, prev: false };
   const cel = { radhija: {}, rhaenyra: {} };
   // Superbafo (só quem tem cfg.bafoSpeed, a Radhija; R / R2): segurar mira, soltar sopra.
   const bafo = { held: false, aiming: false, cd: 0, blowT: 0, proudT: 0, hintCd: 0 };
@@ -174,11 +192,13 @@ export function createGame({ engine, dogs, levels, params }) {
   // ---------- info pública da fase ----------
   /** @returns {import('../types').LevelInfo} */
   function levelInfo() {
+    const isHub = levelIndex === HUB;
     return {
       index: levelIndex,
       count: levels.length,
       id: def.id,
-      number: def.number ?? levelIndex + 1,
+      hub: isHub,
+      number: isHub ? 0 : def.number ?? levelIndex + 1,
       name: def.name,
       subtitle: def.subtitle,
       intro: def.intro,
@@ -186,8 +206,33 @@ export function createGame({ engine, dogs, levels, params }) {
       ambience: def.ambience,
       texts: def.texts || {},
       total: puzzle?.total ?? 0,
-      hasNext: levelIndex < levels.length - 1,
+      hasNext: !isHub && levelIndex < levels.length - 1,
     };
+  }
+
+  /** O que o mapa recebe do núcleo (ctx.hub): o catálogo, o progresso, a volta, entrar numa fase e a pré-carga. */
+  function hubContext() {
+    return {
+      levels: levels.map((d, i) => ({ id: d.id, index: i, number: d.number ?? i + 1, name: d.name, item: d.item, total: d.layout?.COLLECTIBLES?.length ?? 0 })),
+      progress: () => progressSource() || { levels: {} },
+      from: hubFrom,
+      unlockAll: hubUnlockAll,
+      enter: (i) => {
+        if (state !== 'playing' || !Number.isFinite(i) || !levels[i]) return;
+        loadLevel(i, { mode: 'intro' });
+      },
+      preload: (i, opts) => preload.want(Number.isFinite(i) ? i : null, Number.isFinite(i) ? levels[i] : null, opts),
+    };
+  }
+
+  /** Atalho do mapa: as duas direto para outra bandeirinha ({ n } número da fase, { dir } ±1). */
+  function hubTravel(to) {
+    if (!puzzle?.hub || state !== 'playing') return false;
+    extras?.cancel();
+    cancelLick();
+    const went = !!puzzle.travel?.(to);
+    if (went) for (const n of NAMES) resetBrain(brains[n]);
+    return went;
   }
 
   // ---------- estados ----------
@@ -658,10 +703,24 @@ export function createGame({ engine, dogs, levels, params }) {
         }
       }
     }
+    // No mapa das fases não tem superbafo nem lambida: R / R2 e L / L2 (e os números, [ e ]) levam à próxima e à
+    // anterior bandeirinha liberada; parada na frente de uma, a fase dela vai sendo montada por baixo.
+    const hubMode = !!puzzle.hub;
+    if (hubMode) {
+      const nx = input.bafo(), pv = input.lick();
+      if (nx && !hubHeld.next) hubTravel({ dir: 1 });
+      else if (pv && !hubHeld.prev) hubTravel({ dir: -1 });
+      hubHeld.next = nx;
+      hubHeld.prev = pv;
+      for (let n = 1; n <= 10; n++) if (input.consume(`Digit${n % 10}`, `Numpad${n % 10}`)) hubTravel({ n });
+      if (input.consume('BracketRight')) hubTravel({ dir: 1 });
+      if (input.consume('BracketLeft')) hubTravel({ dir: -1 });
+      preload.update(dt, { moving: A.animSpeed > 0.25 });
+    }
     // Superbafo (R / R2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
     // Lambendo, o bafo não começa (e mirando ou soprando, a lambida também não).
-    const bafoHeld = input.bafo();
-    const lickHeld = input.lick();
+    const bafoHeld = hubMode ? false : input.bafo();
+    const lickHeld = hubMode ? false : input.lick();
     bafo.cd = Math.max(0, bafo.cd - dt);
     bafo.hintCd = Math.max(0, bafo.hintCd - dt);
     if (A.cfg.bafoSpeed && !lock) {
@@ -678,7 +737,7 @@ export function createGame({ engine, dogs, levels, params }) {
         scent.showPreview(scent.preview(bafoShot(A)));
         if (!bafoHeld) blow(A);
       }
-    } else if (bafoHeld && !bafo.held && !A.cfg.bafoSpeed && bafo.hintCd <= 0) {
+    } else if (bafoHeld && !bafo.held && !A.cfg.bafoSpeed && bafo.hintCd <= 0 && !hubMode) {
       bafo.hintCd = 6;
       emit('hint', { text: 'Só a Radhija tem o superbafo! (Q)', duration: 2.6 });
     }
@@ -1206,16 +1265,22 @@ export function createGame({ engine, dogs, levels, params }) {
 
   function placeStart() {
     for (const n of NAMES) {
-      const s = L.DOGS[n].start;
-      place(n, s.x, s.z, s.yaw);
       anims[n].action = 'none';
       anims[n].lookAt = null;
+    }
+    // o mapa das fases põe as dogs ele mesmo (puzzle.reset: na frente da bandeirinha de onde vieram, ou da próxima)
+    if (puzzle?.hub) return;
+    for (const n of NAMES) {
+      const s = L.DOGS[n].start;
+      place(n, s.x, s.z, s.yaw);
     }
   }
 
   function reset() {
     for (const n of NAMES) setStay(n, false, { silent: true });
     extras?.reset();
+    // no mapa, quem lidera na hora de pôr as duas é a de sempre (o puzzle lê ctx.activeDog)
+    if (puzzle.hub) activeDog = initialDog;
     puzzle.reset();
     scent.reset();
     cancelBafo();
@@ -1250,25 +1315,29 @@ export function createGame({ engine, dogs, levels, params }) {
    * A UI cobre a tela no 'level:loading', revela no 'level:loaded' e recupera no 'level:error'.
    * Resolve true ao concluir ou false em falha; chamadas da UI não deixam rejeições soltas.
    */
-  async function loadLevel(index, { mode = 'intro', initial = false } = {}) {
+  async function loadLevel(index, { mode = 'intro', initial = false, from = undefined } = {}) {
     if (loadingPromise) return loadingPromise;
     // Após uma montagem parcial só a recarga da página é segura. Para uma
     // falha anterior ao descarte, a UI primeiro retorna à fase intacta.
     if (state === 'load-error') return false;
-    index = Math.max(0, Math.min(levels.length - 1, index | 0));
+    const toHub = index === HUB && !!hub;
+    if (!toHub) index = Math.max(0, Math.min(levels.length - 1, index | 0));
     loadingPromise = (async () => {
-      const baseDef = levels[index];
+      const baseDef = toHub ? hub : levels[index];
       const prevState = state;
       const hadLevel = !!root && !!puzzle;
       let previousUntouched = true;
+      // o que o mapa já adiantou desta fase: o código e, parada na frente da bandeirinha, o cenário montado
+      const staged = toHub ? (preload.cancel(), null) : preload.take(index);
+      let stagedUsed = false;
       try {
         state = 'loading';
         emit('game:state', { state: 'loading', prev: prevState, level: index });
-        emit('level:loading', { index, count: levels.length, id: baseDef.id, number: baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial });
+        emit('level:loading', { index, count: levels.length, id: baseDef.id, number: toHub ? 0 : baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial, hub: toHub });
         // Promise.all observa a rejeição imediatamente, inclusive antes dos 420 ms
         // da cortina. Promise.resolve().then também captura um load() síncrono.
         const [lazy] = await Promise.all([
-          Promise.resolve().then(() => baseDef.load?.()),
+          staged?.module ? Promise.resolve(staged.module) : Promise.resolve().then(() => baseDef.load?.()),
           initial ? Promise.resolve() : sleep(FADE_MS),
         ]);
         /** @type {import('../types').LevelDef} */
@@ -1281,14 +1350,24 @@ export function createGame({ engine, dogs, levels, params }) {
         disposeLevel();
 
         levelIndex = index;
+        if (toHub) hubFrom = from === undefined ? hubFrom : from;
         def = nextDef;
         L = def.layout;
         engine.applyLighting(def.lighting, L.WORLD.bounds);
-        root = new THREE.Group();
-        root.name = `fase:${def.id}`;
-        resources = createResourceScope(root);
-        engine.scene.add(root);
-        built = def.build({ engine, root, layout: L, params });
+        if (staged?.root && staged.built) {
+          // montada no mapa (fora da cena): só entra
+          root = staged.root;
+          resources = staged.resources;
+          built = staged.built;
+          stagedUsed = true;
+          engine.scene.add(root);
+        } else {
+          root = new THREE.Group();
+          root.name = `fase:${def.id}`;
+          resources = createResourceScope(root);
+          engine.scene.add(root);
+          built = def.build({ engine, root, layout: L, params });
+        }
         markLoad('build');
         applySeeThroughTo(...(built.seeThrough || []).filter(Boolean));
 
@@ -1335,13 +1414,16 @@ export function createGame({ engine, dogs, levels, params }) {
           brains,
           // a animação escondida desta fase já aconteceu? (as fases podem guardar algo para depois dela)
           extrasUsed: () => !!extras?.info().used,
+          hub: toHub ? hubContext() : undefined,
         });
         puzzle.onStageChange = () => {
           if (state === 'playing') emitObjective();
         };
         dbg = params.has('debug') ? createDebugDraw(engine.scene, L, world, nav) : null;
 
-        // Estado inicial da fase
+        // Estado inicial da fase (no mapa, a líder na hora de pôr as duas é a de sempre)
+        if (puzzle.hub) activeDog = initialDog;
+        hubHeld.next = hubHeld.prev = true; // R/L seguros desde a fase anterior não pulam de bandeirinha
         puzzle.reset();
         activeDog = initialDog;
         placeStart();
@@ -1369,6 +1451,10 @@ export function createGame({ engine, dogs, levels, params }) {
         markLoad('loaded');
         return true;
       } catch (error) {
+        // o cenário adiantado que não chegou a entrar
+        if (staged?.root && !stagedUsed) {
+          try { staged.built?.dispose?.(); staged.resources?.dispose(); } catch (_) { /* segue para o erro */ }
+        }
         const canReturn = hadLevel && previousUntouched;
         if (!previousUntouched) {
           // Depois do ponto irreversível só há recarga, mas a montagem parcial
@@ -1435,9 +1521,24 @@ export function createGame({ engine, dogs, levels, params }) {
   });
   events.on('ui:menu', () => {
     if (state === 'loading' || state === 'load-error') return;
+    preload.cancel();
     reset();
     setState('title');
   });
+  // O mapa das fases: do menu (Fases), da pausa ou da vitória. Já no mapa (tela inicial sobre ele), só começa a passear.
+  events.on('ui:openMap', () => {
+    if (!hub || state === 'loading' || state === 'load-error') return;
+    if (levelIndex === HUB) {
+      if (state === 'title' || state === 'intro') setState('playing');
+      else if (state === 'paused') setState('playing');
+      return;
+    }
+    // de uma fase (o cartão dela, a pausa, a vitória): na frente da bandeirinha dela; do menu inicial (a fase do fundo
+    // não foi escolhida): na frente da próxima
+    loadLevel(HUB, { mode: 'play', from: state === 'title' || levelIndex < 0 ? null : levelIndex });
+  });
+  // Atalho do mapa pelos botões da tela (◀ ▶) ou por número.
+  events.on('ui:mapTravel', (/** @type {{ n?: number, dir?: number }} */ to = {}) => { hubTravel(to); });
 
   // ---------- quadro ----------
   function update(dt, t) {
@@ -1492,7 +1593,7 @@ export function createGame({ engine, dogs, levels, params }) {
     };
     const p = engine.camera.position;
     return {
-      state, stage: puzzle?.stage ?? null, activeDog, level: levelIndex, levelId: def?.id,
+      state, stage: puzzle?.stage ?? null, activeDog, level: levelIndex, levelId: def?.id, preload: preload.info(),
       dogs: { radhija: dogInfo('radhija'), rhaenyra: dogInfo('rhaenyra') },
       ...(puzzle?.info?.() || {}),
       carrier: puzzle?.carrier ?? null, collected: puzzle?.collected ?? null, total: puzzle?.total ?? null,
@@ -1511,6 +1612,16 @@ export function createGame({ engine, dogs, levels, params }) {
     get stage() { return puzzle?.stage; },
     get level() { return levelIndex; },
     get levelDef() { return def; },
+    /** O mapa das fases está montado (a tela inicial sobre ele ou passeando)? */
+    get isHub() { return levelIndex === HUB; },
+    /** Há mapa das fases neste jogo? */
+    get hasHub() { return !!hub; },
+    /** De onde o mapa lê o progresso salvo (a UI: ui.progress). */
+    setProgressSource(fn) { if (typeof fn === 'function') progressSource = fn; },
+    /** Catálogo de desenvolvimento: no mapa, todas as bandeirinhas liberadas. */
+    setUnlockAll(on) { hubUnlockAll = !!on; },
+    /** Abre o mapa das fases (como o ui:openMap). */
+    openMap() { events.emit('ui:openMap', {}); },
     get levels() { return levels; },
     get puzzle() { return puzzle; },
     get built() { return built; },
@@ -1538,6 +1649,9 @@ export function createGame({ engine, dogs, levels, params }) {
       },
       setStage,
       info,
+      /** Atalho do mapa ({ n } ou { dir }). */
+      travel: (to) => hubTravel(to),
+      get preload() { return preload; },
       log: gameEvents.log,
       events: gameEvents.events,
       clearLog: gameEvents.clearLog,

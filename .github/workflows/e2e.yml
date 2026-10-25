@@ -7,7 +7,7 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, recursos, carregamento, primeira-passagem]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, mapa, recursos, carregamento, primeira-passagem]
       qualidades:
         description: 'Primeira passagem: aparelhos (lista JSON entre alta, celular-media e celular-baixa)'
         type: string
@@ -188,7 +188,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil","empurra"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil","empurra","mapa"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -243,6 +243,9 @@ jobs:
       - name: Capturas do celular e do PC para revisão (qualidade de cada aparelho)
         if: always() && matrix.suite == 'toque'
         run: node tools/scripts/capture-celular.mjs
+      - name: Capturas do mapa das fases para revisão (qualidade de cada aparelho)
+        if: always() && matrix.suite == 'mapa'
+        run: node tools/scripts/capture-mapa.mjs
       - name: Guardar capturas para diagnóstico
         if: always()
         uses: actions/upload-artifact@v4

@@ -123,7 +123,8 @@ export function createEngine(container, { params } = {}) {
   sun.shadow.mapSize.set(profile.shadowSize, profile.shadowSize);
 
   /** Ajusta o frustum ortográfico da sombra só à área da fase (+ margem), no espaço da luz. */
-  function fitShadow(b) {
+  /** @param {import('../types').Bounds} b @param {number} [topY] altura do que faz sombra (padrão: 3,3 m, as fases) */
+  function fitShadow(b, topY = 3.3) {
     sunTarget.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
     sun.position.copy(sunTarget).addScaledVector(SUN_DIR, 30);
     sun.target.position.copy(sunTarget);
@@ -136,7 +137,7 @@ export function createEngine(container, { params } = {}) {
     const inv = look.matrixWorld.clone().invert();
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     const p = new THREE.Vector3();
-    for (const x of [b.minX - 1.2, b.maxX + 0.6]) for (const z of [b.minZ - 0.6, b.maxZ + 0.9]) for (const y of [0, 3.3]) {
+    for (const x of [b.minX - 1.2, b.maxX + 0.6]) for (const z of [b.minZ - 0.6, b.maxZ + 0.9]) for (const y of [0, topY]) {
       p.set(x, y, z).applyMatrix4(inv);
       minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
       minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
@@ -209,6 +210,8 @@ export function createEngine(container, { params } = {}) {
   let lighting = LIGHTING_DEFAULT;
   /** Limites da fase atual (aplicados com a iluminação): a vista geral do aquecimento enquadra a fase. */
   let levelBounds = null;
+  /** Ponto que a sombra acompanha agora (focusShadow), vazio com a sombra da fase inteira. */
+  let shadowFocusKey = '';
   let lightCastsShadow = true; // a fase quer sombra do sol (o perfil de qualidade pode desligar)
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
@@ -240,6 +243,7 @@ export function createEngine(container, { params } = {}) {
     bloom.threshold = L.bloom.threshold;
     if (bounds) {
       levelBounds = bounds;
+      shadowFocusKey = '';
       fitShadow(bounds);
     }
     rebuildEnv(L);
@@ -402,6 +406,51 @@ export function createEngine(container, { params } = {}) {
     }
   }
 
+  /**
+   * Uma fase montada FORA da cena (o mapa das fases adiantando a próxima, src/game/levelPreload.js): compila os
+   * programas dela na variante do jogo, com as luzes de agora mais as dela (compileAsync, sem travar a página), e
+   * envia as texturas aos poucos (um pedaço por quadro). Geometrias e sombra ficam para o prepare() da entrada, que
+   * assim fica curto.
+   * @param {THREE.Object3D} stagedRoot @param {{ onProgress?: (k: number) => void, budgetMs?: number }} [opts]
+   */
+  async function precompile(stagedRoot, { onProgress, budgetMs = 5 } = {}) {
+    const target = warmTarget();
+    try {
+      const prev = renderer.getRenderTarget();
+      let job;
+      renderer.setRenderTarget(target);
+      try {
+        job = renderer.compileAsync(stagedRoot, camera, scene);
+      } finally {
+        renderer.setRenderTarget(prev);
+      }
+      await Promise.race([job, new Promise((r) => setTimeout(r, 8000))]);
+      onProgress?.(0.6);
+      /** @type {Set<THREE.Texture>} */
+      const textures = new Set();
+      stagedRoot.traverse((o) => {
+        const m = /** @type {THREE.Mesh} */ (o).material;
+        for (const mm of Array.isArray(m) ? m : m ? [m] : []) {
+          for (const v of Object.values(mm)) if (v && /** @type {THREE.Texture} */ (v).isTexture) textures.add(v);
+        }
+      });
+      let i = 0;
+      let t0 = performance.now();
+      for (const t of textures) {
+        renderer.initTexture(t);
+        i++;
+        if (performance.now() - t0 > budgetMs) {
+          onProgress?.(0.6 + (0.4 * i) / textures.size);
+          await new Promise((r) => requestAnimationFrame(() => r(undefined)));
+          t0 = performance.now();
+        }
+      }
+      onProgress?.(1);
+    } finally {
+      target?.dispose();
+    }
+  }
+
   let shadowFrame = 0;
   /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
   function setProfile(next, reason) {
@@ -436,9 +485,25 @@ export function createEngine(container, { params } = {}) {
     else renderer.render(scene, camera);
   }
 
+  /**
+   * Num cenário grande (o mapa das fases), a sombra do sol cobre só a vizinhança de (x, z): a caixa do mapa de sombra
+   * acompanha o ponto em passos de `step` m (refeita só quando ele anda: sem tremer a cada quadro).
+   */
+  function focusShadow(x, z, { half = 16, top = 12, step = 4 } = {}) {
+    const cx = Math.round(x / step) * step;
+    const cz = Math.round(z / step) * step;
+    const key = `${cx},${cz},${half},${top}`;
+    if (key === shadowFocusKey) return;
+    shadowFocusKey = key;
+    fitShadow({ minX: cx - half, maxX: cx + half, minZ: cz - half, maxZ: cz + half }, top);
+    renderer.shadowMap.needsUpdate = true;
+  }
+
   return {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
+    focusShadow,
+    precompile,
     /** Aquecimento da GPU para a fase montada (programas, texturas, geometrias, sombra): no carregamento. */
     prepare,
     get lighting() { return lighting; },

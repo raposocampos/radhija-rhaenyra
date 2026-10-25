@@ -601,8 +601,35 @@ export function stubProps(id, root, layout) {
     case 'canil': return stubCanilProps(root);
     case 'porcos': return stubPorcosProps(root, layout);
     case 'empurra': return stubEmpurraProps(root, layout);
+    case 'mapa': return stubMapaProps(root);
     default: throw new Error(`Fase sem fábrica explícita de props: ${id}`);
   }
+}
+
+/** Mapa das fases: bandeirinhas, nuvens e ponte só guardam o estado (os testes leem). @param {THREE.Group} root */
+export function stubMapaProps(root) {
+  /** @type {Record<number, { state: string, treats: number, total: number }>} */
+  const flagState = {};
+  /** @type {Record<string, boolean>} */
+  const open = {};
+  const B = { down: false };
+  void root;
+  return checked('mapa', {
+    flags: checked('mapa.flags', {
+      setState(n, state, treats = 0, total = 3) { flagState[n] = { state, treats, total }; },
+      stateOf: (n) => flagState[n] ?? null,
+    }),
+    clouds: checked('mapa.clouds', {
+      setOpen(zone, on) { open[zone] = !!on; },
+      isOpen: (zone) => !!open[zone],
+    }),
+    bridge: checked('mapa.bridge', {
+      setDown(down) { B.down = !!down; },
+      get down() { return B.down; },
+    }),
+    update() {},
+    reset() {},
+  });
 }
 
 /** Canil das Dogs: a vitrine sem os modelos (pose, vista e câmera ficam só no estado).

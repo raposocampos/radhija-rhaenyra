@@ -30,7 +30,7 @@ build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
 - Fora daqui: o porquinho (`src/characters/pig.js`) usa as fases antigas (as traseiras se encontram do passo ao trote).
 - Próximo passo: prévia para o usuário e o "pode integrar" dele nesta sessão.
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 de 4 no branch `claude/responsivo-hud`)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 no PR #64, etapa 3 no branch `claude/mapa-pandoropolis`)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -52,8 +52,33 @@ build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
   tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
   `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
   `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
-- Próximo passo: PR da etapa 1, CI e E2E `menu` e `toque`, revisar as capturas, prévia e aprovação do usuário nesta
-  sessão. Depois, a etapa 2 (conceito do mapinha) sem código.
+- Etapa 1: PR #64 (prévia apresentada; aguarda o "pode integrar" do usuário; o `main` andou depois, então a versão
+  a aprovar precisa ser reatualizada com CI/E2E novos).
+- Etapa 2 (conceito, sem código): maquete isométrica aprovada pelo usuário na versão 4 — cidade "Pandorópolis" (a
+  cachorra da cunhada), outdoor desenhado em código da golden Amora candidata a prefeita ("Vote 1313"), biscoitos por
+  fase, enfeites, nuvens nas áreas fechadas, atalho entre bandeirinhas, barrinha de carregamento perto da bandeirinha.
+  Pedido final: colisão melhor, gráfico melhor e as dogs de verdade (no protótipo a dog tinha o tamanho de um carro),
+  sem pesar.
+- Etapa 3 (branch `claude/mapa-pandoropolis`, a partir da etapa 1): o mapa é uma fase especial fora da lista
+  (`src/levels/mapa/`, índice `HUB = −1` em `game.js`, opção `hub` do `createGame`). Cidade em escala das dogs (~0,7 m;
+  carro 2,3 m; casa 8 m; torre 11 m): condomínio com ruas em grade, centro na Av. Pandora (padaria, banca, pet shop,
+  sorveteria, ponto e ônibus, chafariz, outdoor), rio com ponte levadiça e a chácara do vovô; uma bandeirinha por fase
+  na frente do lugar dela. Peças fixas fundidas por material e região de 20 m (`world/kit.js`: ~190 malhas para a
+  cidade, montagem ~0,5 s no PC), caixas arredondadas por molde, sombra do sol só em volta da câmera
+  (`engine.focusShadow`). Colisão de tudo o que está em pé (206 colisores) e grade de colisão (`layout.COLLISION_GRID`,
+  `world.staticsNear`; sem a grade, as fases continuam com a lista inteira). Lógica (`puzzle.js`): estados das
+  bandeirinhas pelo progresso da UI (`game.setProgressSource`), nuvens e ponte por área (leste abre na 6, chácara na 9),
+  atalho (R/L, L2/R2, 1–0, [ ], ◀ ▶), E/Agir entra (cartão de abertura), Voltar do cartão, pausa e vitória (botão
+  Mapa) voltam na frente da bandeirinha; do menu, abre na próxima fase. Pré-carga (`src/game/levelPreload.js` +
+  `engine.precompile`): perto da bandeirinha importa o código; parada na frente, monta o cenário fora da cena e
+  compila os programas e as texturas sem travar; entrar usa a montagem pronta (a barrinha da plaquinha mostra).
+  HUD do mapa em `src/ui/mapHud.js` (`.rr[data-hub]`); `?mapa` abre direto no mapa. Catálogo de desenvolvimento
+  continua com a lista de cartões (sem o mapa).
+- Testes da etapa 3: `test/mapa.test.mjs` (layout, caminhos livres, grade = lista inteira, estados, atalho, entrar e
+  voltar, nuvens, pré-carga); suíte E2E nova `mapa` (`tools/scripts/test-mapa.mjs`) e capturas em qualidade de cada
+  aparelho (`capture-mapa.mjs`); suítes `menu`, `toque`, `expresso` e `capture-celular.mjs` passaram a ir pelo mapa.
+- Próximo passo: commit, juntar o `main`, PR da etapa 3, CI e E2E `mapa`, `menu`, `toque`, `expresso` e `controle`,
+  revisar as capturas, prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
 
 ## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
 
