@@ -107,7 +107,8 @@ try {
     for (let i = 0; i < 240; i++) g.game.update(1 / 60, 4 + i / 60);
     d.cam.snapFollow(1.1, g.layout.CORRIDOR.z);
     d.clearLog();
-    d.puzzle.mech.nose.onSmell();
+    // o pombo do portão só sai com o cheiro que veio pelo duto (uma nuvem do chão só dá a dica)
+    d.puzzle.mech.nose.onSmell({ duct: d.puzzle.mech.duct });
   });
   await setupMechanism();
   mkdirSync('shots/pombos/mecanismo', { recursive: true });

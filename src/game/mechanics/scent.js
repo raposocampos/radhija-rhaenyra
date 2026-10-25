@@ -1,11 +1,14 @@
 // Cheiro: as nuvens do superbafo da Radhija e o que o cenário faz com elas.
 // - Nuvem: nasce na frente da Radhija com um empurrão, desacelera e se espalha devagar (raio cresce) até
-//   sumir. Não atravessa paredes (colide como um círculo pequeno, passa onde a Radhija passa).
+//   sumir. Não atravessa paredes (colide como um círculo pequeno, passa onde a Radhija passa). Com a origem do
+//   sopro (fromX, fromZ: o centro dela), nasce do lado dela: com o focinho encostado numa parede ou num duto, a boca
+//   fica dentro dele, e a nuvem vai do centro até a boca sem atravessar nada (birthPlace).
 // - Vento (addWind): faixa retangular a partir de uma origem, numa direção. Dentro dela a nuvem é levada
 //   pela corrente e fica compacta. Mova o objeto devolvido (x, z, dirX, dirZ) ou desligue com enabled.
 //   funnel (opcional, 1/s): também puxa a nuvem de volta para o eixo da faixa (não escapa pelos lados).
 // - Duto (addDuct): uma nuvem que chega à boca (inlet) com o duto ativo é engolida e sai pela outra ponta
-//   (outlet) depois de `travel` segundos, soprada na direção da saída. Saída no alto (outlet.y): a nuvem sai na
+//   (outlet) depois de `travel` segundos, soprada na direção da saída. Boca virada para um lado (inlet.dirX/dirZ):
+//   só engole a nuvem que está na frente dela. Saída no alto (outlet.y): a nuvem sai na
 //   altura da boca e fica lá em cima (y); nessa altura ela passa por cima dos colisores do chão, e quem está no
 //   chão não a alcança (near).
 // - Nariz (addNose): alvo que reage quando uma nuvem o alcança (onSmell), uma vez por nuvem.
@@ -17,6 +20,12 @@ const CALM_R = 1.05; // raio máximo parado (o cheiro se espalha por perto)
 const WIND_R = 0.38; // no vento a nuvem fica compacta
 const COLLIDE_R = 0.12;
 const HIGH = 0.8; // m: nuvem mais alta que isso passa por cima do que está no chão (colisores, dogs)
+
+/**
+ * A nuvem está na frente da boca de entrada de um duto? Boca virada para (dirX, dirZ): só a nuvem desse lado do centro
+ * dela (não a de trás nem a do lado de dentro da caixa). Sem direção, a boca abre para todos os lados (um funil no chão).
+ */
+const inFrontOf = (inlet, c) => (!inlet.dirX && !inlet.dirZ) || (c.x - inlet.x) * (inlet.dirX ?? 0) + (c.z - inlet.z) * (inlet.dirZ ?? 0) >= 0;
 
 /**
  * opts: { world (colisão; opcional), emit(nome, dados), view (desenho; opcional) }
@@ -60,8 +69,26 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     return { x: wx, z: wz };
   }
 
+  /**
+   * Onde a nuvem nasce: em (x, z) (a boca de quem sopra) ou, com a origem do sopro (fromX, fromZ: o centro de quem
+   * sopra, que nunca está dentro de uma parede), o mais perto da boca que ela chega indo dali em linha reta, colidindo
+   * como no resto da vida dela. Com o focinho encostado numa parede ou num duto, a boca fica dentro dele: sem isso, a
+   * colisão empurrava a nuvem para o lado mais perto, às vezes o de lá. O que já envolve a origem (um obstáculo baixo
+   * embaixo dela) não segura a nuvem aqui, como antes.
+   * @param {import('../../types').ScentShot} shot
+   */
+  function birthPlace({ x, z, fromX, fromZ }) {
+    if (!world || !Number.isFinite(fromX) || !Number.isFinite(fromZ)) return { x, z };
+    const under = world.contacts(fromX, fromZ, COLLIDE_R, 'small');
+    const opts = under.length ? { ignore: new Set(under.map((h) => h.id)) } : {};
+    const res = world.move(fromX, fromZ, x - fromX, z - fromZ, COLLIDE_R, 'small', opts);
+    return { x: res.x, z: res.z };
+  }
+
   /** @param {import('../../types').ScentShot} shot @returns {any} */
-  function makeCloud({ x, z, dirX = 0, dirZ = 1, speed = 2.6, life = 5 }) {
+  function makeCloud(shot) {
+    const { dirX = 0, dirZ = 1, speed = 2.6, life = 5 } = shot;
+    const { x, z } = birthPlace(shot);
     const L = Math.hypot(dirX, dirZ) || 1;
     // y: altura (0 = no chão; ao sair de um duto, a da boca); exitAge: idade ao sair do último duto (-1: não saiu)
     return {
@@ -121,7 +148,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     if (high) return;
     for (const d of ducts) {
       if (!d.active()) continue;
-      if (Math.hypot(c.x - d.inlet.x, c.z - d.inlet.z) < d.inlet.r) {
+      if (Math.hypot(c.x - d.inlet.x, c.z - d.inlet.z) < d.inlet.r && inFrontOf(d.inlet, c)) {
         c.state = 'duct';
         c.duct = d;
         c.ductT = 0;
@@ -205,7 +232,7 @@ export function createScentField({ world = null, emit = () => {}, view = null } 
     winds.push(o);
     return o;
   }
-  /** Duto: { id, inlet: {x, z, r}, outlet: {x, z, dirX, dirZ, speed?, exit?, y?}, travel (s), active() }. */
+  /** Duto: { id, inlet: {x, z, r, dirX?, dirZ?}, outlet: {x, z, dirX, dirZ, speed?, exit?, y?}, travel (s), active() }. */
   function addDuct(d) {
     const o = Object.assign({ travel: 1.2, active: () => true }, d);
     ducts.push(o);
