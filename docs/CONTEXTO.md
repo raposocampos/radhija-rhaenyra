@@ -5,7 +5,7 @@ alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0
 build 102; #58 em v0.10.9 · build 101). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir
 Git/GitHub antes de editar.
 
-## Em andamento: superbafo sem atalho pelo duto da fase 4 (Claude, 2026-10-24, branch `claude/duto-sem-atalho`, PR #63)
+## Entregue: superbafo sem atalho pelo duto da fase 4 (PR #63, squash `1b4ea05`, deploy `40151033873`, v0.10.14 · build 106)
 
 - Retorno do usuário (PC e celular): "Na parte do duto, se você encosta e usa o superbafo, acaba atravessando e
   atingindo o pombo, sem precisar fazer a mecânica do ventilador."
@@ -90,10 +90,13 @@ Git/GitHub antes de editar.
   tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
   `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
   `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
-- Próximo passo: PR da etapa 1, CI e E2E `menu` e `toque`, revisar as capturas, prévia e aprovação do usuário nesta
-  sessão. Depois, a etapa 2 (conceito do mapinha) sem código.
+- Capturas do celular (`capture-celular.mjs`): os toques em Continuar e Começar esperam o botão pronto (camada
+  visível, sem animação de CSS em curso, por cima de tudo) e conferem o efeito, repetindo um toque perdido (no E2E
+  do #66 o toque em Começar caía antes de o cartão de abertura terminar de entrar).
+- Próximo passo: PR #64 sincronizado com o `main` (#63); CI e E2E `menu` e `toque` no head novo, prévia e aprovação
+  do usuário nesta sessão. A etapa 2 (conceito) foi aprovada; a etapa 3 está no PR #67.
 
-## Em andamento: sem engasgo na primeira passagem pelas áreas (Claude, branch `claude/primeira-passagem-sem-engasgo`, PR #60)
+## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 
 - Retorno do usuário na prévia do #58: "fica engasgando sempre que vou pra alguma parte nova a primeira vez".
 - Causa: o `renderer.compile` da carga (`loadLevel`) rodava sem alvo, mas o jogo desenha no alvo do compositor
