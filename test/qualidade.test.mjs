@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
-  QUALITY_PROFILES, QUALITY_MODES, MOBILE_LADDER, SKY_FIRST, SKY_LAST, detectDevice, readDeviceEnv, initialLevel,
+  QUALITY_PROFILES, QUALITY_MODES, MOBILE_LADDER, SKY_FIRST, SKY_LAST, detectDevice, readDeviceEnv, isMobileUA, initialLevel,
   isAdaptive, isLowEndGpu, pixelRatioFor, createFrameCap, createFpsGovernor, applyQualityProfile, createQualityControl,
   loadQualityMode, saveQualityMode, needsInstallTip, readInstallEnv,
 } from '../src/core/quality.js';
@@ -52,8 +52,38 @@ test('detecção do aparelho: só o dedo como ponteiro principal muda o perfil',
   assert.equal(detectDevice({ coarse: true, hover: false, screenW: 1024, screenH: 1366 }), 'tablet');
   assert.equal(detectDevice(), 'desktop');
   const env = readDeviceEnv({ matchMedia: (q) => ({ matches: q === '(pointer: coarse)' }), screen: { width: 412, height: 915 } });
-  assert.deepEqual(env, { coarse: true, hover: false, screenW: 412, screenH: 915 });
+  assert.deepEqual(env, { coarse: true, anyCoarse: false, hover: false, mobileUA: false, screenW: 412, screenH: 915 });
   assert.equal(readDeviceEnv({}).coarse, false, 'sem matchMedia: PC');
+});
+
+test('celular Android que diz ter hover ou ponteiro fino continua celular (layout e qualidade do celular)', () => {
+  // o "HUD de navegador" num Android compacto: o navegador dizia hover (ou ponteiro principal fino) e o jogo caía no PC
+  assert.equal(detectDevice({ coarse: true, anyCoarse: true, hover: true, screenW: 360, screenH: 640 }), 'phone', 'toque + hover, tela pequena');
+  assert.equal(detectDevice({ coarse: false, anyCoarse: true, hover: true, mobileUA: true, screenW: 640, screenH: 360 }), 'phone', 'ponteiro fino fantasma, navegador de celular');
+  assert.equal(detectDevice({ coarse: false, anyCoarse: true, hover: false, mobileUA: true, screenW: 320, screenH: 568 }), 'phone');
+  // sem toque nenhum, ou toque só como secundário num navegador de PC: PC
+  assert.equal(detectDevice({ coarse: false, anyCoarse: false, hover: true, mobileUA: true, screenW: 360, screenH: 640 }), 'desktop', 'sem ponteiro de toque');
+  assert.equal(detectDevice({ coarse: false, anyCoarse: true, hover: true, mobileUA: false, screenW: 1366, screenH: 768 }), 'desktop', 'notebook com tela de toque');
+  assert.equal(detectDevice({ coarse: false, anyCoarse: true, hover: true, mobileUA: false, screenW: 1280, screenH: 600 }), 'desktop');
+  // tablet: tela grande e toque como principal; com o user agent de celular (tela grande), tablet
+  assert.equal(detectDevice({ coarse: true, anyCoarse: true, hover: false, screenW: 1180, screenH: 820 }), 'tablet');
+  assert.equal(detectDevice({ coarse: true, anyCoarse: true, hover: true, mobileUA: true, screenW: 1180, screenH: 820 }), 'tablet');
+
+  const uaPixel = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  const uaTab = 'Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+  const uaIphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const uaPc = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+  assert.ok(isMobileUA({ userAgent: uaPixel }));
+  assert.ok(isMobileUA({ userAgent: uaIphone }));
+  assert.ok(!isMobileUA({ userAgent: uaTab }), 'tablet Android não tem "Mobile"');
+  assert.ok(!isMobileUA({ userAgent: uaPc }));
+  assert.ok(isMobileUA({ userAgent: uaPc, userAgentData: { mobile: true } }), 'o próprio navegador diz que é celular');
+  assert.ok(!isMobileUA({}));
+  const fake = readDeviceEnv({
+    matchMedia: (q) => ({ matches: q === '(any-pointer: coarse)' || q === '(hover: hover)' }),
+    navigator: { userAgent: uaPixel }, screen: { width: 360, height: 640 },
+  });
+  assert.equal(detectDevice(fake), 'phone', 'ambiente completo de um Android com hover');
 });
 
 test('GPU de entrada de celular começa no perfil baixa', () => {

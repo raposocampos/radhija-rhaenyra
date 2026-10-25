@@ -9,6 +9,7 @@
 // a API de tela cheia, como o de verdade) conferem a dica de "Adicionar à Tela de Início" e o modo aplicativo.
 //   node tools/scripts/test-toque.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
+import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs as pairsOf, settle } from './lib/screens.mjs';
 
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -109,6 +110,112 @@ const overlapPairs = (list) => {
   return out;
 };
 const menuState = () => ev(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen, level: window.__game.game.level }));
+
+/**
+ * Tamanhos de tela (lib/screens.mjs) deitados, na partida: HUD compacto e proporcional (sem o HUD do PC numa tela
+ * pequena, o "HUD de navegador" do Android compacto), controles de toque inteiros, sem se encostar nem cobrir o HUD,
+ * botões de pelo menos 39 px, prompt e dica entre os controles, pausa e vitória inteiras na tela. O iPhone 13
+ * (844×390) é o da partida principal desta suíte. Capturas em shots/toque/telas-*.png.
+ */
+async function screenSizes() {
+  for (const scr of SCREENS.filter((s) => !s.portrait && s.id !== 'iphone13-844x390')) {
+    const { width: vw, height: vh } = scr.opts.viewport;
+    console.log(`\n== Tamanho de tela na partida: ${scr.label} (${vw}×${vh}) ==`);
+    const p = await H.newPage(scr.opts, scr.id, { lowGfx: true });
+    try {
+      if (scr.fakeHover) await p.addInitScript(fakeHoverScript);
+      await p.goto(`${BASE}?level=1&play`, { waitUntil: 'load', timeout: 120000 });
+      await p.waitForFunction(() => window.__game?.game?.state === 'playing', null, { timeout: 120000 });
+      await p.evaluate(() => window.__game.game.debug.idle?.setPee(false));
+      await p.waitForTimeout(1500);
+      const pinfo = () => p.evaluate(() => window.__game.game.debug.info());
+      const snap = async (name) => {
+        await p.evaluate(() => window.__e2eRender?.());
+        await p.screenshot({ path: `shots/toque/telas-${scr.id}-${name}.png` });
+        console.log(`  captura: shots/toque/telas-${scr.id}-${name}.png`);
+      };
+      if (scr.touch) {
+        // um toque no cenário liga os controles, como a jogadora faria
+        await p.touchscreen.tap(vw / 2, vh * 0.4);
+        await p.waitForTimeout(500);
+      }
+      const st = await p.evaluate(() => {
+        const r = document.querySelector('.rr');
+        return { compact: r.hasAttribute('data-compact'), mobile: r.dataset.mobile ?? null, device: r.dataset.device, touchOn: document.querySelector('.rr-touch').classList.contains('is-on'), u: getComputedStyle(r).getPropertyValue('--u').trim() };
+      });
+      check(st.compact === scr.compact && st.mobile === scr.mobile, `${scr.id}: layout ${scr.compact ? 'compacto' : 'normal'}, aparelho ${scr.mobile ?? 'PC'}`, st);
+      check(st.touchOn === scr.touch, `${scr.id}: controles de toque ${scr.touch ? 'depois do toque' : 'escondidos (teclado)'}`, st);
+
+      // prompt da cordinha (Agir pulsando) e uma dica com o ícone do dispositivo
+      await p.evaluate(() => {
+        const g = window.__game.game;
+        g.debug.setStage('east', 'radhija');
+        g.debug.teleport('radhija', 1.5, 0.9);
+      });
+      await p.waitForFunction(() => window.__game.game.debug.info().prompt === 'Puxar a cordinha', null, { timeout: 60000 }).catch(() => {});
+      await p.evaluate(() => window.__game.events.emit('hint', { text: 'Só a Rhaenyra pula! (Q)', duration: 60 }));
+      await p.waitForTimeout(300);
+      await settle(p);
+      const i = await pinfo();
+      check(i.prompt === 'Puxar a cordinha', `${scr.id}: prompt da cordinha na tela`, i.prompt);
+
+      const HUD = ['.rr-chip', '.rr-comp', '.rr-objective', '.rr-level', '.rr-treats', '.rr-hint', '.rr-prompt'];
+      const BTN = ['act', 'jump', 'dash', 'lick', 'bafo', 'swap', 'stay', 'pause'].map((id) => `.rr-tbtn[data-touch="${id}"]`);
+      const hud = await boxesIn(p, HUD);
+      const ctl = scr.touch ? await boxesIn(p, [...BTN, '.rr-touch__stick']) : [];
+      const shownHud = hud.filter(Boolean).map((b) => b.sel);
+      check(['.rr-chip', '.rr-comp', '.rr-objective', '.rr-level', '.rr-treats', '.rr-hint', '.rr-prompt'].every((s) => shownHud.includes(s)), `${scr.id}: HUD completo (dogs, objetivo, fase, petiscos, dica e prompt)`, shownHud);
+      check(outside([...hud, ...ctl], vw, vh).length === 0, `${scr.id}: HUD e controles inteiros na tela`, outside([...hud, ...ctl], vw, vh));
+      check(pairsOf(hud).length === 0, `${scr.id}: HUD sem sobreposição`, pairsOf(hud));
+      if (scr.touch) {
+        check(ctl.every(Boolean), `${scr.id}: joystick e os oito botões visíveis`, ctl.map((b) => b?.sel ?? null));
+        check(pairsOf(ctl).length === 0, `${scr.id}: botões sem sobreposição entre si`, pairsOf(ctl));
+        const hits = [];
+        for (const c of ctl.filter(Boolean)) for (const h of hud.filter(Boolean)) if (pairsOf([c, h]).length) hits.push([c.sel, h.sel]);
+        check(hits.length === 0, `${scr.id}: controles fora do HUD (prompt e dica entre o joystick e os botões)`, hits);
+        const sizes = ctl.filter((b) => b && !b.sel.includes('pause') && !b.sel.includes('stick')).map((b) => Math.round(b.w));
+        check(Math.min(...sizes) >= 39, `${scr.id}: botões fáceis de apertar (≥ 39 px)`, sizes);
+      }
+      // proporção: o HUD do PC numa tela pequena ocupava quase um quinto da altura só no chip da cachorrinha
+      const chip = hud[0];
+      const fonts = await p.evaluate(() => ({
+        objective: parseFloat(getComputedStyle(document.querySelector('.rr-objective__text')).fontSize),
+        name: parseFloat(getComputedStyle(document.querySelector('.rr-chip__name')).fontSize),
+      }));
+      check(chip && chip.h <= vh * 0.1, `${scr.id}: HUD proporcional à tela (chip com ${chip && Math.round(chip.h)} px de ${vh})`, chip);
+      check(fonts.objective >= 9 && fonts.name >= 10, `${scr.id}: textos do HUD legíveis (≥ 9 px)`, fonts);
+      await snap('01-jogando');
+
+      await p.evaluate(() => window.__game.events.emit('ui:pause', {}));
+      await p.waitForFunction(() => window.__game.game.state === 'paused', null, { timeout: 30000 }).catch(() => {});
+      await p.waitForTimeout(300);
+      await settle(p);
+      const pause = await boxesIn(p, ['.rr-card--pause']);
+      check(pause[0] && outside(pause, vw, vh).length === 0, `${scr.id}: menu de pausa inteiro na tela`, pause[0]);
+      await snap('02-pausa');
+      await p.evaluate(() => window.__game.events.emit('ui:resume', {}));
+      await p.waitForTimeout(400);
+
+      // vitória: a Rhaenyra leva a cenoura até a porta
+      await p.evaluate(() => {
+        const g = window.__game.game;
+        const z = window.__game.layout.DOOR.zone;
+        g.debug.setStage('carrying', 'rhaenyra');
+        g.debug.teleport('rhaenyra', z.x, z.z);
+      });
+      await p.waitForFunction(() => window.__game.game.state === 'victory', null, { timeout: 120000 });
+      await p.waitForTimeout(1200);
+      await settle(p);
+      const vic = await boxesIn(p, ['.rr-card--victory', '.rr-victory__badge', '.rr-victory__actions']);
+      check(vic.every(Boolean) && outside(vic, vw, vh).length === 0, `${scr.id}: vitória inteira na tela (selo, cartão e botões)`, outside(vic, vw, vh));
+      await snap('03-vitoria');
+    } catch (err) {
+      check(false, `${scr.id}: erro inesperado: ${err.stack || err.message}`);
+    } finally {
+      await p.close().catch(() => {});
+    }
+  }
+}
 
 // ---------- joystick em malha fechada ----------
 let ring = null;
@@ -629,6 +736,8 @@ try {
   check(appState.mobile === 'phone' && appState.mark === null && !appState.tip && !appState.iosBtn && !appState.rotateLine, 'iPhone pelo ícone (modo aplicativo): sem dica nenhuma', appState);
   await snap(app, 'shots/toque/15-iphone-app.png');
   await app.close();
+
+  await screenSizes();
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {

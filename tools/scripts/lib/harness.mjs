@@ -19,6 +19,41 @@ export function parseArgs(argv = process.argv.slice(2)) {
 // também nas páginas extras das suítes (H.newPage) e nos scripts de captura.
 export { DEFAULT_LIMITS, HarnessAbort, closeBrowser, guardPage, openPage } from './page-guard.mjs';
 
+/**
+ * Redução gráfica do CI sem GPU (SwiftShader), como script de início da página: só o custo visual dos testes, antes do
+ * primeiro quadro. A lógica, a entrada, as animações e o WebGL continuam reais; o jogo publicado não muda. Também nas
+ * páginas extras das suítes que pedem (H.newPage(..., { lowGfx: true })): tamanhos de tela, outros aparelhos.
+ */
+export function ciLowGfx() {
+  Object.defineProperty(window, '__game', {
+    configurable: true,
+    set(value) {
+      const { renderer, composer, bloom } = value.engine;
+      const lowGfx = () => {
+        renderer.setPixelRatio(0.25);
+        composer.setPixelRatio(0.25);
+        renderer.shadowMap.enabled = false;
+        bloom.enabled = false;
+      };
+      lowGfx();
+      // uma troca de qualidade (menu ou governador do celular) reaplica o perfil: volta à redução do teste
+      value.events?.on?.('quality:change', lowGfx);
+      // A fase 1 tem milhares de objetos: até em baixa resolução desenhar todo quadro
+      // satura a CPU do runner. A simulação/entrada continua em todo rAF; desenha 1/30
+      // dos quadros e sempre força um desenho real antes de capturar a tela.
+      const render = value.engine.render.bind(value.engine);
+      let frame = 0;
+      let last = [0, 0];
+      value.engine.render = (dt, t) => {
+        last = [dt, t];
+        if (frame++ % 30 === 0) render(dt, t);
+      };
+      window.__e2eRender = () => render(...last);
+      Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
+    },
+  });
+}
+
 /** device: opções extras da página do Playwright (ex.: celular: isMobile, hasTouch, deviceScaleFactor, screen).
  *  limits: tetos de relógio (ver DEFAULT_LIMITS). */
 export async function createHarness({ base, outDir, initScript = null, viewport = { width: 1280, height: 720 }, device = {}, limits: limitOverrides = {} }) {
@@ -71,35 +106,7 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   if (process.env.CI) {
     // SwiftShader não tem GPU: reduz só o custo visual dos testes, antes do primeiro quadro.
     // A lógica, a entrada, as animações e o WebGL continuam reais; o jogo publicado não muda.
-    await page.addInitScript(() => {
-      Object.defineProperty(window, '__game', {
-        configurable: true,
-        set(value) {
-          const { renderer, composer, bloom } = value.engine;
-          const lowGfx = () => {
-            renderer.setPixelRatio(0.25);
-            composer.setPixelRatio(0.25);
-            renderer.shadowMap.enabled = false;
-            bloom.enabled = false;
-          };
-          lowGfx();
-          // uma troca de qualidade (menu ou governador do celular) reaplica o perfil: volta à redução do teste
-          value.events?.on?.('quality:change', lowGfx);
-          // A fase 1 tem milhares de objetos: até em baixa resolução desenhar todo quadro
-          // satura a CPU do runner. A simulação/entrada continua em todo rAF; desenha 1/30
-          // dos quadros e sempre força um desenho real antes de capturar a tela.
-          const render = value.engine.render.bind(value.engine);
-          let frame = 0;
-          let last = [0, 0];
-          value.engine.render = (dt, t) => {
-            last = [dt, t];
-            if (frame++ % 30 === 0) render(dt, t);
-          };
-          window.__e2eRender = () => render(...last);
-          Object.defineProperty(window, '__game', { value, writable: true, configurable: true });
-        },
-      });
-    });
+    await page.addInitScript(ciLowGfx);
     console.log('[e2e] CI sem GPU: desenho a cada 30 quadros, resolução 3D reduzida, sem sombras/bloom. Simulação e controles reais a cada quadro.');
     console.log(`[e2e] CPU do runner: ${cpuModel()}`); // para cruzar travamentos com o hardware (hang-probe.mjs)
     page.setDefaultTimeout(120000);
@@ -118,8 +125,17 @@ export async function createHarness({ base, outDir, initScript = null, viewport 
   /** Página extra da suíte (outro aparelho, outra janela) com as mesmas redes da principal: tetos de relógio, vigia
    *  (opMaxMs) e escuta de queda, com `[nome]` nas mensagens. Os erros do navegador nela reprovam a suíte, e uma espera
    *  abortada reprova mesmo se a suíte engolir a exceção. */
-  async function newPage(options = {}, name = 'extra') {
+  async function newPage(options = {}, name = 'extra', { lowGfx = false } = {}) {
     const { page: p } = await openPage(browser, options, { name, limits, onAbort, onOverdue });
+    // lowGfx: a mesma redução gráfica da página principal no CI (desenho a cada 30 quadros; window.__e2eRender antes de
+    // capturar) e o controle falso, para páginas que jogam ou ficam abertas junto com a principal
+    if (lowGfx) {
+      await p.addInitScript(() => {
+        window.__fakePads = window.__fakePads || [];
+        Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value() { return window.__fakePads; } });
+      });
+      if (process.env.CI) await p.addInitScript(ciLowGfx);
+    }
     p.on('console', (m) => { if (m.type() === 'error') errors.push(`[${name} console.error] ${m.text()}`); });
     p.on('pageerror', (e) => errors.push(`[${name} pageerror] ${e.message}`));
     if (process.env.CI) p.setDefaultTimeout(120000);

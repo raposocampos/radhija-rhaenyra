@@ -6,6 +6,7 @@
 // toque (dedos reais no celular deitado).
 //   node tools/scripts/test-menu.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
+import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs, settle } from './lib/screens.mjs';
 
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -60,6 +61,96 @@ const connect = () => ev(() => {
 const btn = (i, on) => ev(([ii, o]) => { const p = window.__fakePads[0]; p.buttons[ii] = { pressed: o, touched: o, value: o ? 1 : 0 }; p.timestamp = performance.now(); }, [i, on]);
 const axes = (x, y) => ev(([xx, yy]) => { const p = window.__fakePads[0]; p.axes = [xx, yy, 0, 0]; p.timestamp = performance.now(); }, [x, y]);
 async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn(i, false); await sleep(160); }
+
+/**
+ * Tamanhos de tela (lib/screens.mjs): em cada aparelho, a tela principal, os modos, as fases, as Opções e o cartão de
+ * abertura cabem inteiros na tela e sem sobreposição; o layout compacto liga pelo tamanho (também numa janela pequena
+ * no PC e num Android cujo navegador diz ter mouse), e o PC de tamanho normal fica com o layout de sempre. De pé, o
+ * celular mostra o aviso de girar. Capturas em shots/menu/telas-*.png.
+ */
+async function screenSizes() {
+  for (const scr of SCREENS) {
+    console.log(`\n== Tamanho de tela: ${scr.label} (${scr.opts.viewport.width}×${scr.opts.viewport.height}) ==`);
+    const p = await H.newPage(scr.opts, scr.id, { lowGfx: true });
+    try {
+      if (scr.fakeHover) await p.addInitScript(fakeHoverScript);
+      await p.goto(BASE, { waitUntil: 'load', timeout: 120000 });
+      await p.evaluate(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
+      await p.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
+      await p.waitForTimeout(800);
+      await settle(p);
+      const { width: vw, height: vh } = scr.opts.viewport;
+      const snap = async (name) => {
+        await p.evaluate(() => window.__e2eRender?.());
+        await p.screenshot({ path: `shots/menu/telas-${scr.id}-${name}.png` });
+        console.log(`  captura: shots/menu/telas-${scr.id}-${name}.png`);
+      };
+      const root = await p.evaluate(() => {
+        const r = document.querySelector('.rr');
+        const g = window.__game;
+        return { compact: r.hasAttribute('data-compact'), mobile: r.dataset.mobile ?? null, uiCompact: g.ui.compact, device: g.engine.quality.device, u: getComputedStyle(r).getPropertyValue('--u').trim() };
+      });
+      check(root.compact === scr.compact && root.uiCompact === scr.compact, `${scr.id}: layout ${scr.compact ? 'compacto' : 'normal'}`, root);
+      check(root.mobile === scr.mobile, `${scr.id}: aparelho ${scr.mobile ?? 'PC'}`, root);
+      if (!scr.compact) check(root.u === '1px', `${scr.id}: medidas de sempre (--u = 1px)`, root.u);
+
+      const go = async (sel) => { await p.evaluate((s) => document.querySelector(s).click(), sel); await p.waitForTimeout(150); await settle(p); };
+      /** Elementos visíveis inteiros na tela e sem sobreposição entre si. */
+      const fits = async (what, sels, ignore = []) => {
+        const bx = await boxesIn(p, sels);
+        const shownSels = bx.filter(Boolean).map((b) => b.sel);
+        const out = outside(bx, vw, vh);
+        const pairs = overlapPairs(bx, ignore);
+        check(out.length === 0, `${scr.id}: ${what} inteiro na tela`, out.length ? { out, vw, vh, bx: bx.filter(Boolean) } : shownSels.length);
+        check(pairs.length === 0, `${scr.id}: ${what} sem sobreposição`, pairs);
+        return bx;
+      };
+
+      if (scr.portrait) {
+        // de pé: o aviso de girar cobre tudo, com o texto inteiro
+        const rot = await p.evaluate(() => getComputedStyle(document.querySelector('.rr-rotate')).display);
+        check(rot === 'grid', `${scr.id}: de pé, o aviso de girar o celular`, rot);
+        await fits('aviso de girar', ['.rr-rotate .ico-rotate', '.rr-rotate strong', '.rr-rotate__box > span']);
+        await snap('01-de-pe');
+        continue;
+      }
+
+      const logo = ['.rr-logo__svg', '.rr-logo__ribbon'];
+      await fits('tela principal (logotipo, Jogar, Opções, versão)', [...logo, '.rr-btn--play', '.rr-btn--options', '.rr-version'], [['.rr-logo__svg', '.rr-logo__ribbon']]);
+      await snap('01-principal');
+      await go('.rr-btn--play');
+      await fits('escolha do modo', ['.rr-title .rr-back', '.rr-logo__svg', '.rr-mode--story', '.rr-mode--levels']);
+      await snap('02-modos');
+      await go('.rr-mode--levels');
+      const cards = await p.evaluate(() => [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((_, i) => `.rr-levels .rr-lvcard:nth-child(${i + 1})`));
+      check(cards.length === 10, `${scr.id}: as 10 fases na tela das fases`, cards.length);
+      await fits('tela das fases (Voltar, Continuar e os cartões)', ['.rr-title .rr-back', '.rr-logo__svg', '.rr-btn--continue', ...cards]);
+      await snap('03-fases');
+      await go('.rr-title .rr-back');
+      await go('.rr-title .rr-back');
+      await go('.rr-btn--options');
+      await fits('Opções', ['.rr-title .rr-back', '.rr-card--options']);
+      // o cartão rola (se precisar) em vez de cortar: a última linha alcançável
+      const optScroll = await p.evaluate(() => { const c = document.querySelector('.rr-card--options'); return { sh: c.scrollHeight, ch: c.clientHeight, oy: getComputedStyle(c).overflowY }; });
+      check(optScroll.sh <= optScroll.ch + 1 || optScroll.oy === 'auto', `${scr.id}: Opções cabem ou rolam`, optScroll);
+      await snap('04-opcoes');
+      await go('.rr-title .rr-back');
+      await go('.rr-btn--play');
+      await go('.rr-mode--levels');
+      await go('.rr-btn--continue');
+      await p.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
+      await p.waitForTimeout(600);
+      await settle(p);
+      // o selo do item sobe por cima da borda do cartão (de propósito): só precisa caber na tela
+      await fits('cartão de abertura da fase', ['.rr-intro .rr-back', '.rr-introcard', '.rr-introcard__badge'], [['.rr-introcard', '.rr-introcard__badge']]);
+      await snap('05-abertura');
+    } catch (err) {
+      check(false, `${scr.id}: erro inesperado: ${err.stack || err.message}`);
+    } finally {
+      await p.close().catch(() => {});
+    }
+  }
+}
 
 try {
   console.log('\n== Teclado: tela principal, modos e fases ==');
@@ -332,6 +423,8 @@ try {
   await tap(B.A);
   i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });
   check(i.state === 'playing' && (await logOf('dog:jump')).length === 0, '✕ em Começar: partida (o ✕ do menu não vira pulo)', i.state);
+
+  await screenSizes();
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {

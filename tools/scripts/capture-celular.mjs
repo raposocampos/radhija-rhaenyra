@@ -1,5 +1,6 @@
 // Capturas de revisão do celular e do PC, cada aparelho com a SUA qualidade gráfica (sem a redução do harness):
-// celular deitado (844×390, DPR 3, perfil médio), celular pequeno (667×375, DPR 2), tablet (1180×820, DPR 2) e PC
+// celular deitado (844×390, DPR 3, perfil médio, como o iPhone 13), Infinix Note 30 5G (893×393, DPR 2,75, perfil
+// baixo), Android compacto (640×360 e 568×320, DPR 2, deitado e de pé), tablet (1180×820, DPR 2) e PC
 // (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (modos, fases, Opções), partida com os
 // controles de toque, prompt e dica com ícones de toque, pausa com o menu de qualidade, vitória, cartão de abertura,
 // aviso de girar o celular e a fase 4.
@@ -21,7 +22,10 @@ const touchDevice = (w, h, dpr) => ({ viewport: { width: w, height: h }, screen:
 const DEVICES = [
   // celular: perfil médio fixo (o automático começa nele; o governador mudaria no SwiftShader lento)
   { id: 'celular', opts: touchDevice(844, 390, 3), touch: true, quality: 'media', full: true },
-  { id: 'celular-pequeno', opts: touchDevice(667, 375, 2), touch: true, quality: 'media' },
+  // Infinix Note 30 5G (GPU de entrada: o automático começa no baixo) e o Android compacto, deitado e de pé
+  { id: 'infinix', opts: touchDevice(893, 393, 2.75), touch: true, quality: 'baixa' },
+  { id: 'android-640x360', opts: touchDevice(640, 360, 2), touch: true, quality: 'media', full: true, portrait: true },
+  { id: 'android-568x320', opts: touchDevice(568, 320, 2), touch: true, quality: 'media', portrait: true },
   { id: 'tablet', opts: touchDevice(1180, 820, 2), touch: true, quality: 'media' },
   { id: 'pc', opts: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }, touch: false, quality: null, full: true },
   // iPhone no Safari (sem a API de tela cheia, como o de verdade): a dica de "Adicionar à Tela de Início"
@@ -142,6 +146,33 @@ async function captureDevice(dev, url) {
         await page.click(sel);
       }
     };
+    /**
+     * Espera o botão pronto para o toque: com caixa, a camada dele visível por inteiro, sem animação de CSS em curso
+     * (a entrada do cartão de abertura) e por cima de tudo no centro dele. O laço do jogo está congelado, mas as
+     * transições de CSS correm em tempo real: tocar antes de o cartão terminar de entrar perdia o toque.
+     */
+    const ready = (sel) => page.waitForFunction((s) => {
+      const el = document.querySelector(s);
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return false;
+      const layer = el.closest('.rr-layer');
+      if (layer && (!layer.classList.contains('is-on') || Number(getComputedStyle(layer).opacity) < 0.99)) return false;
+      if (document.getAnimations().some((a) => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming?.().endTime))) return false;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!hit && (hit === el || el.contains(hit));
+    }, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false);
+    /** Toca no botão quando ele estiver pronto e confere o efeito (done: no estado do jogo); um toque perdido repete. */
+    const pressInto = async (sel, done, label) => {
+      for (let k = 0; k < 3; k++) {
+        await ready(sel);
+        await press(sel);
+        await page.waitForTimeout(300);
+        if (await page.evaluate(done)) return;
+        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}); de novo`);
+      }
+      errors.push(`[${dev.id}] ${label}: o toque em ${sel} não pegou em 3 tentativas; ${await guard.peek()}`);
+    };
     /** Um botão de ação do jogo, pelo dispositivo do aparelho. */
     const action = async (touchId, key) => {
       if (dev.touch) await page.evaluate((id) => { const t = window.__game.game.input.touch; t.press(id); window.__step(1); t.release(id); }, touchId);
@@ -159,9 +190,9 @@ async function captureDevice(dev, url) {
       await press('.rr-title .rr-back');
       await press('.rr-btn--play');
       await press('.rr-mode--levels');
-      await press('.rr-btn--continue');
+      await pressInto('.rr-btn--continue', () => window.__game.game.state === 'intro', 'Continuar');
       await step(60);
-      await press('[data-action="start"]');
+      await pressInto('[data-action="start"]', () => window.__game.game.state === 'playing', 'Começar');
       await step(150);
       await page.evaluate(() => window.__game.events.emit('ui:pause', {}));
       await step(2);
@@ -190,9 +221,9 @@ async function captureDevice(dev, url) {
     await press('.rr-title .rr-back');
     await press('.rr-btn--play');
     await press('.rr-mode--levels');
-    await press('.rr-btn--continue');
+    await pressInto('.rr-btn--continue', () => window.__game.game.state === 'intro', 'Continuar');
     await step(60);
-    await press('[data-action="start"]');
+    await pressInto('[data-action="start"]', () => window.__game.game.state === 'playing', 'Começar');
     await step(150);
     await shot('02-jogando');
 
@@ -240,6 +271,14 @@ async function captureDevice(dev, url) {
       await page.evaluate(() => { window.__freezeReview = true; });
       await step(60);
       await shot('06-abertura', 2500);
+    }
+
+    if (dev.portrait) {
+      // de pé: o aviso de girar cobre a tela
+      const { width, height } = dev.opts.viewport;
+      await page.setViewportSize({ width: height, height: width });
+      await step(2);
+      await shot('07-de-pe', 900);
     }
 
     if (dev.id === 'celular') {

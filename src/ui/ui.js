@@ -7,7 +7,9 @@
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
 // input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade);
 // settings: opções salvas (src/core/settings.js; modo sem dicas: .rr[data-hints="off"] esconde objetivo e dicas).
-// No celular/tablet (quality.device), a raiz ganha data-mobile e o CSS usa o layout compacto; o PC não muda.
+// No celular/tablet (quality.device), a raiz ganha data-mobile (menos custo de GPU, aviso de girar). Numa janela
+// pequena (celular deitado ou em pé, ou janela pequena no PC), data-compact: HUD e telas compactos, proporcionais à
+// tela (screenFit.js, ui.css). No PC de tamanho normal nada muda.
 // Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
 //       interact:prompt, hint, collectible:pickup, victory, input:device, quality:change, settings:change.
 // Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
@@ -27,6 +29,7 @@ import { createHud, retrigger } from './hud.js';
 import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
 import { createTouchControls } from './touchControls.js';
+import { watchCompact } from './screenFit.js';
 
 /** Telas do menu inicial e a tela de onde cada uma é aberta (Voltar). */
 const SCREEN_PARENT = { main: null, modes: 'main', levels: 'modes', options: 'main' };
@@ -47,9 +50,11 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   root.dataset.device = 'keyboard';
   root.dataset.pad = 'ps'; // desenho dos botões: 'ps' (padrão) ou 'xbox', conforme o controle conectado
   root.dataset.dog = 'radhija'; // cachorrinha ativa: a Arrancada vira Empurrar e o Superbafo apaga com a Rhaenyra
-  // Celular ou tablet: layout compacto (ui.css, .rr[data-mobile]); no PC o atributo não existe e nada muda.
+  // Celular ou tablet: menos custo de GPU na interface e o aviso de girar (ui.css, .rr[data-mobile]); no PC o
+  // atributo não existe. O layout compacto vem do tamanho da janela (data-compact, screenFit.js), e não só daqui.
   const mobile = quality?.device && quality.device !== 'desktop' ? quality.device : null;
   if (mobile) root.dataset.mobile = mobile;
+  watchCompact(root, { mobile });
   root.innerHTML = template();
   host.appendChild(root);
 
@@ -443,8 +448,13 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   const portrait = (() => {
     try { return matchMedia('(orientation: portrait)'); } catch { return null; }
   })();
+  // o aviso também aparece num celular que o navegador não entrega como celular (ui.css, reserva do data-compact)
+  const rotateEl = $('.rr-rotate');
+  const rotateShown = () => {
+    try { return getComputedStyle(rotateEl).display !== 'none'; } catch { return false; }
+  };
   function checkOrientation() {
-    if (mobile === 'phone' && portrait?.matches && uiState === 'playing') events.emit('ui:pause', {});
+    if (uiState === 'playing' && ((mobile === 'phone' && portrait?.matches) || rotateShown())) events.emit('ui:pause', {});
   }
   portrait?.addEventListener?.('change', checkOrientation);
   // iOS ignora user-scalable=no: a pinça não pode dar zoom na página do jogo (só no celular/tablet)
@@ -712,6 +722,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     /** Controles de toque (diagnóstico e testes: state(), releaseAll()). */
     touch,
     get mobile() { return mobile; },
+    /** Layout compacto ligado (janela pequena ou celular; screenFit.js). */
+    get compact() { return root.hasAttribute('data-compact'); },
     get progress() { return prog; },
     resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderModes(); },
     get curtain() { return curtain.phase; },

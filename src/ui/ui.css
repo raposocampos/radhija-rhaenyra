@@ -1244,7 +1244,10 @@
 }
 @media (max-width: 760px) {
   .rr-levels { --gap: 6px; width: 94vw; bottom: calc(clamp(16px, 3.4vh, 30px) + 92px); }
-  .rr-lvcard { width: auto; flex: 0 1 calc((100% - (var(--per-row, 5) - 1) * var(--gap)) / var(--per-row, 5)); padding: 5px 8px 5px 5px; gap: 6px; }
+  /* min-width 0 e quebra em qualquer ponto: um nome longo ("Lavanderia de Domingo") alargava o cartão e a 10ª fase
+     caía numa terceira linha, fora da tela */
+  .rr-lvcard { width: auto; min-width: 0; flex: 0 1 calc((100% - (var(--per-row, 5) - 1) * var(--gap)) / var(--per-row, 5)); padding: 5px 8px 5px 5px; gap: 6px; }
+  .rr-lvcard__name { overflow-wrap: anywhere; hyphens: auto; }
   .rr-lvcard__icon { width: 38px; height: 38px; }
   .rr-lvcard__icon > .ico { width: 26px; height: 26px; }
   .rr-lvcard__eyebrow, .rr-lvcard__stats { display: none; }
@@ -1270,9 +1273,10 @@
 .rr-boot-reload:focus-visible { outline: 3px solid white; outline-offset: 4px; }
 
 /* =========================================================================
-   Toque e celular. Tudo aqui depende de .rr[data-device="touch"] (último dispositivo usado foi o dedo) ou de
-   .rr[data-mobile] (celular/tablet, detectado em src/core/quality.js). No PC com teclado ou controle nada muda,
-   exceto a linha de qualidade gráfica do menu de pausa.
+   Toque e celular. Tudo aqui depende de .rr[data-device="touch"] (último dispositivo usado foi o dedo), de
+   .rr[data-mobile] (celular/tablet, detectado em src/core/quality.js) ou de .rr[data-compact] (janela pequena,
+   src/ui/screenFit.js). No PC de tamanho normal, com teclado ou controle, nada muda, exceto a linha de qualidade
+   gráfica do menu de pausa.
    ========================================================================= */
 .rr {
   /* áreas seguras (entalhe da câmera, barra de gestos): zero fora do celular */
@@ -1282,6 +1286,18 @@
   --sa-l: env(safe-area-inset-left, 0px);
   /* escala dos controles de toque: 1 px no celular deitado (~390 px de altura), até 1,45 px no tablet */
   --s: clamp(1px, .26vmin, 1.45px);
+  /* unidade do layout compacto (abaixo): fora dele, 1 px e nada muda */
+  --u: 1px;
+}
+/* Layout compacto (data-compact, src/ui/screenFit.js): janela baixa ou estreita — celular deitado ou em pé, ou uma
+   janela pequena no PC —, mesmo se o navegador não disser que é celular. As medidas dele são N × --u: 1 px na tela
+   deitada de 390 px de altura (iPhone 13, onde o layout foi desenhado), menos no Android compacto (0,89 em 640×360,
+   0,82 em 568×320) e um pouco mais no Infinix (1,01 em 893×393); a largura também conta (720 px = 1). Os botões de
+   toque usam a mesma escala (--s), com piso para continuarem fáceis de apertar. */
+@property --u { syntax: '<length>'; inherits: true; initial-value: 1px; }
+.rr[data-compact] {
+  --u: clamp(.82px, min(.2564vmin, .1389vw), 1.12px);
+  --s: clamp(.82px, min(.2564vmin, .1429vw), 1.12px);
 }
 
 /* Ícone de toque no lugar da tecla/botão (dicas, objetivo, prompt, HUD) ------- */
@@ -1472,8 +1488,10 @@
 /* com o toque, a pausa vira o botão do canto: o canto superior direito do HUD abre espaço para ele */
 .rr[data-device="touch"] .rr-esc { display: none; }
 .rr[data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 62 * var(--s)); }
-.rr[data-mobile="phone"] .rr-tbtn--pause { --d: 36; top: calc(var(--sa-t) + 6px); }
-.rr[data-mobile="phone"][data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 54 * var(--s)); }
+/* dica e prompt entre o joystick e os botões também no tablet (o compacto tem a própria largura, abaixo) */
+.rr[data-device="touch"] .rr-hud__bottom { width: min(620px, calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r))))); }
+.rr[data-compact] .rr-tbtn--pause { --d: 36; top: calc(var(--sa-t) + 6 * var(--u)); }
+.rr[data-compact][data-device="touch"] .rr-hud__tr { right: calc(var(--sa-r) + 54 * var(--s)); }
 
 /* Aviso de girar o celular (celular de pé) --------------------------------- */
 .rr-rotate {
@@ -1492,10 +1510,14 @@
 @media (orientation: portrait) {
   .rr[data-mobile="phone"] .rr-rotate { display: grid; }
 }
-.rr-rotate__box { display: grid; justify-items: center; gap: 12px; text-shadow: 0 2px 0 #4A3426; }
-.rr-rotate .ico-rotate { width: 104px; height: 104px; filter: drop-shadow(0 2px 0 #4A3426); animation: rr-rotate-hint 2.6s ease-in-out infinite; }
-.rr-rotate strong { font: 700 28px/1.1 'Fredoka', sans-serif; }
-.rr-rotate span { max-width: 17em; font-size: 16px; font-weight: 700; line-height: 1.4; }
+/* reserva: um celular que o navegador não entrega como celular, de pé e já jogando com o dedo */
+@media (orientation: portrait) and (any-pointer: coarse) and (max-width: 600px) {
+  .rr[data-compact][data-device="touch"] .rr-rotate { display: grid; }
+}
+.rr-rotate__box { display: grid; justify-items: center; gap: clamp(8px, 3vmin, 12px); text-shadow: 0 2px 0 #4A3426; }
+.rr-rotate .ico-rotate { width: clamp(76px, 28vmin, 104px); height: clamp(76px, 28vmin, 104px); filter: drop-shadow(0 2px 0 #4A3426); animation: rr-rotate-hint 2.6s ease-in-out infinite; }
+.rr-rotate strong { font: 700 clamp(22px, 7.5vmin, 28px)/1.1 'Fredoka', sans-serif; }
+.rr-rotate span { max-width: 17em; font-size: clamp(14px, 4.4vmin, 16px); font-weight: 700; line-height: 1.4; }
 @keyframes rr-rotate-hint { 0%, 15%, 100% { transform: rotate(0); } 45%, 70% { transform: rotate(-14deg); } }
 
 /* Celular e tablet: menos custo de GPU (sem desfoque do fundo sobre o 3D) ---- */
@@ -1522,62 +1544,62 @@
 .rr[data-mobile] .rr-btn--primary:hover { transform: none; filter: none; box-shadow: 0 4px 0 var(--carrot-lo), 0 10px 22px rgba(130, 62, 18, .28); }
 .rr[data-mobile] .rr-btn--soft:hover { transform: none; }
 
-/* Celular deitado: layout compacto ------------------------------------------ */
-.rr[data-mobile="phone"] .rr-layer { transition-duration: .3s; }
+/* Layout compacto (celular deitado ou janela pequena): medidas em N × --u, proporcionais à tela ---------- */
+.rr[data-compact] .rr-layer { transition-duration: .3s; }
 /* tela inicial */
-.rr[data-mobile="phone"] .rr-title__center { top: calc(var(--sa-t) + 10px); gap: 8px; width: min(76vw, 560px); }
-.rr[data-mobile="phone"] .rr-logo__svg { width: min(100%, 440px); }
-.rr[data-mobile="phone"] .rr-logo__ribbon { font-size: 13px; padding: .42em 1.05em .42em .6em; }
-.rr[data-mobile="phone"] .rr-btn--play { font-size: 20px; margin-top: 0; }
-.rr[data-mobile="phone"] .rr-screen--main { gap: 8px; }
-.rr[data-mobile="phone"] .rr-btn--options { font-size: 16px; }
+.rr[data-compact] .rr-title__center { top: calc(var(--sa-t) + 10 * var(--u)); gap: calc(8 * var(--u)); width: min(76vw, calc(560 * var(--u))); }
+.rr[data-compact] .rr-logo__svg { width: min(100%, calc(440 * var(--u))); }
+.rr[data-compact] .rr-logo__ribbon { font-size: calc(13 * var(--u)); padding: .42em 1.05em .42em .6em; }
+.rr[data-compact] .rr-btn--play { font-size: calc(20 * var(--u)); margin-top: 0; }
+.rr[data-compact] .rr-screen--main { gap: calc(8 * var(--u)); }
+.rr[data-compact] .rr-btn--options { font-size: calc(16 * var(--u)); }
 /* nas outras telas o logotipo encolhe (sem a fita) para o Voltar e os cartões caberem */
-.rr[data-mobile="phone"] .rr-title:not([data-screen="main"]) .rr-title__center { width: min(54vw, 400px); }
-.rr[data-mobile="phone"] .rr-title:not([data-screen="main"]) .rr-logo__ribbon { display: none; }
-.rr[data-mobile="phone"] .rr-back { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); font-size: 14px; padding: 6px 11px 6px 8px; }
-.rr[data-mobile="phone"] .rr-back > .ico { width: 15px; height: 15px; }
-.rr[data-mobile="phone"] .rr-title[data-screen="modes"] .rr-screen--modes { gap: 12px; }
-.rr[data-mobile="phone"] .rr-mode { width: min(272px, 40vw); padding: 12px 14px 10px; border-radius: 20px; }
-.rr[data-mobile="phone"] .rr-mode__art { width: 58px; height: 58px; box-shadow: 0 0 0 3px #FFFFFF, 0 4px 10px rgba(54, 32, 16, .16); }
-.rr[data-mobile="phone"] .rr-mode__art .ico { width: 42px; height: 42px; }
-.rr[data-mobile="phone"] .rr-mode__art--items { width: auto; padding-left: 12px; box-shadow: none; }
-.rr[data-mobile="phone"] .rr-mode__art--items i { width: 46px; height: 46px; margin-left: -12px; box-shadow: 0 0 0 3px #FFFFFF, 0 4px 10px rgba(54, 32, 16, .16); }
-.rr[data-mobile="phone"] .rr-mode__art--items i:nth-child(2) { width: 56px; height: 56px; }
-.rr[data-mobile="phone"] .rr-mode__art--items .ico { width: 32px; height: 32px; }
-.rr[data-mobile="phone"] .rr-mode__art--items i:nth-child(2) .ico { width: 40px; height: 40px; }
-.rr[data-mobile="phone"] .rr-mode__badge { top: 10px; right: 10px; font-size: 10.5px; padding: 5px 9px; }
-.rr[data-mobile="phone"] .rr-mode__eyebrow { margin-top: 8px; font-size: 10px; }
-.rr[data-mobile="phone"] .rr-mode__name { font-size: 20px; }
-.rr[data-mobile="phone"] .rr-mode__text { font-size: 12.5px; line-height: 1.3; margin-top: 4px; }
-.rr[data-mobile="phone"] .rr-mode__progress { font-size: 11.5px; padding-top: 6px; }
-.rr[data-mobile="phone"] .rr-btn--continue { font-size: 19px; margin-top: 0; }
-.rr[data-mobile="phone"] .rr-card--options {
-  width: min(680px, calc(100vw - 24px - var(--sa-l) - var(--sa-r)));
-  max-height: calc(100vh - 110px - var(--sa-t) - var(--sa-b));
+.rr[data-compact] .rr-title:not([data-screen="main"]) .rr-title__center { width: min(54vw, calc(400 * var(--u))); }
+.rr[data-compact] .rr-title:not([data-screen="main"]) .rr-logo__ribbon { display: none; }
+.rr[data-compact] .rr-back { top: calc(var(--sa-t) + 8 * var(--u)); left: calc(var(--sa-l) + 8 * var(--u)); font-size: calc(14 * var(--u)); padding: calc(6 * var(--u)) calc(11 * var(--u)) calc(6 * var(--u)) calc(8 * var(--u)); }
+.rr[data-compact] .rr-back > .ico { width: calc(15 * var(--u)); height: calc(15 * var(--u)); }
+.rr[data-compact] .rr-title[data-screen="modes"] .rr-screen--modes { gap: calc(12 * var(--u)); }
+.rr[data-compact] .rr-mode { width: min(calc(272 * var(--u)), 40vw); padding: calc(12 * var(--u)) calc(14 * var(--u)) calc(10 * var(--u)); border-radius: calc(20 * var(--u)); }
+.rr[data-compact] .rr-mode__art { width: calc(58 * var(--u)); height: calc(58 * var(--u)); box-shadow: 0 0 0 calc(3 * var(--u)) #FFFFFF, 0 calc(4 * var(--u)) calc(10 * var(--u)) rgba(54, 32, 16, .16); }
+.rr[data-compact] .rr-mode__art .ico { width: calc(42 * var(--u)); height: calc(42 * var(--u)); }
+.rr[data-compact] .rr-mode__art--items { width: auto; padding-left: calc(12 * var(--u)); box-shadow: none; }
+.rr[data-compact] .rr-mode__art--items i { width: calc(46 * var(--u)); height: calc(46 * var(--u)); margin-left: calc(-12 * var(--u)); box-shadow: 0 0 0 calc(3 * var(--u)) #FFFFFF, 0 calc(4 * var(--u)) calc(10 * var(--u)) rgba(54, 32, 16, .16); }
+.rr[data-compact] .rr-mode__art--items i:nth-child(2) { width: calc(56 * var(--u)); height: calc(56 * var(--u)); }
+.rr[data-compact] .rr-mode__art--items .ico { width: calc(32 * var(--u)); height: calc(32 * var(--u)); }
+.rr[data-compact] .rr-mode__art--items i:nth-child(2) .ico { width: calc(40 * var(--u)); height: calc(40 * var(--u)); }
+.rr[data-compact] .rr-mode__badge { top: calc(10 * var(--u)); right: calc(10 * var(--u)); font-size: max(9px, calc(10.5 * var(--u))); padding: calc(5 * var(--u)) calc(9 * var(--u)); }
+.rr[data-compact] .rr-mode__eyebrow { margin-top: calc(8 * var(--u)); font-size: max(9px, calc(10 * var(--u))); }
+.rr[data-compact] .rr-mode__name { font-size: calc(20 * var(--u)); }
+.rr[data-compact] .rr-mode__text { font-size: calc(12.5 * var(--u)); line-height: 1.3; margin-top: calc(4 * var(--u)); }
+.rr[data-compact] .rr-mode__progress { font-size: calc(11.5 * var(--u)); padding-top: calc(6 * var(--u)); }
+.rr[data-compact] .rr-btn--continue { font-size: calc(19 * var(--u)); margin-top: 0; }
+.rr[data-compact] .rr-card--options {
+  width: min(calc(680 * var(--u)), calc(100vw - 24 * var(--u) - var(--sa-l) - var(--sa-r)));
+  max-height: calc(100vh - 110 * var(--u) - var(--sa-t) - var(--sa-b));
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  padding: 12px 18px 12px;
-  border-radius: 22px;
+  padding: calc(12 * var(--u)) calc(18 * var(--u)) calc(12 * var(--u));
+  border-radius: calc(22 * var(--u));
 }
-.rr[data-mobile="phone"] .rr-card--options .rr-card__head { margin: 0 0 6px; }
-.rr[data-mobile="phone"] .rr-card--options .rr-card__head h2 { font-size: 21px; }
-.rr[data-mobile="phone"] .rr-card--options .rr-settings { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: start; }
+.rr[data-compact] .rr-card--options .rr-card__head { margin: 0 0 calc(6 * var(--u)); }
+.rr[data-compact] .rr-card--options .rr-card__head h2 { font-size: calc(21 * var(--u)); }
+.rr[data-compact] .rr-card--options .rr-settings { display: grid; grid-template-columns: 1fr 1fr; column-gap: calc(22 * var(--u)); align-items: start; }
 /* a nota de tela cheia do iPhone (installHint.js) ocupa as duas colunas */
-.rr[data-mobile="phone"] .rr-card--options .rr-ios-fs__how { grid-column: 1 / -1; margin-top: 8px; }
-.rr[data-mobile="phone"] .rr-nohints { gap: 4px; padding: 2px 8px 2px 5px; font-size: 10.5px; }
-.rr[data-mobile="phone"] .rr-nohints .ico { width: 12px; height: 12px; }
-.rr[data-mobile="phone"] .rr-title__controls { display: none; }
+.rr[data-compact] .rr-card--options .rr-ios-fs__how { grid-column: 1 / -1; margin-top: calc(8 * var(--u)); }
+.rr[data-compact] .rr-nohints { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)) calc(8 * var(--u)) calc(2 * var(--u)) calc(5 * var(--u)); font-size: max(9px, calc(10.5 * var(--u))); }
+.rr[data-compact] .rr-nohints .ico { width: calc(12 * var(--u)); height: calc(12 * var(--u)); }
+.rr[data-compact] .rr-title__controls { display: none; }
 /* no celular deitado o logotipo chega perto do topo: a versão desce para o canto de baixo, livre sem a barra de teclas */
-.rr[data-mobile="phone"] .rr-version { top: auto; bottom: calc(var(--sa-b) + 8px); right: calc(var(--sa-r) + 12px); font-size: 10px; }
-.rr[data-mobile="phone"] .rr-levels { bottom: calc(var(--sa-b) + 10px); }
-.rr[data-mobile="phone"] .rr-lvcard__eyebrow, .rr[data-mobile="phone"] .rr-lvcard__stats { display: none; }
-.rr[data-mobile="phone"] .rr-lvcard__icon { width: 36px; height: 36px; }
-.rr[data-mobile="phone"] .rr-lvcard__icon > .ico { width: 25px; height: 25px; }
-.rr[data-mobile="phone"] .rr-lvcard { gap: 8px; padding: 5px 10px 5px 5px; }
-.rr[data-mobile="phone"] .rr-lvcard__name {
+.rr[data-compact] .rr-version { top: auto; bottom: calc(var(--sa-b) + 8 * var(--u)); right: calc(var(--sa-r) + 12 * var(--u)); font-size: max(9px, calc(10 * var(--u))); }
+.rr[data-compact] .rr-levels { bottom: calc(var(--sa-b) + 10 * var(--u)); }
+.rr[data-compact] .rr-lvcard__eyebrow, .rr[data-compact] .rr-lvcard__stats { display: none; }
+.rr[data-compact] .rr-lvcard__icon { width: calc(36 * var(--u)); height: calc(36 * var(--u)); }
+.rr[data-compact] .rr-lvcard__icon > .ico { width: calc(25 * var(--u)); height: calc(25 * var(--u)); }
+.rr[data-compact] .rr-lvcard { gap: calc(8 * var(--u)); padding: calc(5 * var(--u)) calc(10 * var(--u)) calc(5 * var(--u)) calc(5 * var(--u)); }
+.rr[data-compact] .rr-lvcard__name {
   /* nomes longos ("Lambe-Lambe na Pracinha") em até duas linhas em vez de cortados */
-  font-size: 13px;
+  font-size: calc(13 * var(--u));
   line-height: 1.12;
   white-space: normal;
   display: -webkit-box;
@@ -1586,121 +1608,121 @@
 }
 /* HUD: pequeno e discreto no celular. O chip mostra só a cachorrinha ativa (o botão Trocar faz o resto), a
    companheira só o avatar e o estado, o objetivo em até duas linhas; dica e prompt finos entre os controles. */
-.rr[data-mobile="phone"] .rr-hud__tl { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); gap: 4px; }
-.rr[data-mobile="phone"] .rr-hud__tr { top: calc(var(--sa-t) + 8px); gap: 4px; }
-.rr[data-mobile="phone"] .rr-hud__dogs { gap: 5px; }
-.rr[data-mobile="phone"] .rr-chip { gap: 5px; padding: 2px 10px 2px 2px; }
-.rr[data-mobile="phone"] .rr-chip__avatar { width: 26px; height: 26px; box-shadow: inset 0 0 0 2px var(--acc); }
-.rr[data-mobile="phone"] .rr-chip__avatar .ico-dog { width: 22px; height: 22px; }
-.rr[data-mobile="phone"] .rr-chip__name { font-size: 12.5px; gap: 4px; }
-.rr[data-mobile="phone"] .rr-chip__trait { font-size: 10.5px; }
-.rr[data-mobile="phone"] .rr-chip__swap { display: none; }
-.rr[data-mobile="phone"] .rr-comp { gap: 4px; padding: 2px 6px 2px 2px; }
-.rr[data-mobile="phone"] .rr-comp__avatar { width: 22px; height: 22px; }
-.rr[data-mobile="phone"] .rr-comp__avatar .ico-dog { width: 18px; height: 18px; }
-.rr[data-mobile="phone"] .rr-comp__text { display: none; }
-.rr[data-mobile="phone"] .rr-comp__key { display: none; }
-.rr[data-mobile="phone"] .rr-comp::after {
+.rr[data-compact] .rr-hud__tl { top: calc(var(--sa-t) + 8 * var(--u)); left: calc(var(--sa-l) + 8 * var(--u)); gap: calc(4 * var(--u)); }
+.rr[data-compact] .rr-hud__tr { top: calc(var(--sa-t) + 8 * var(--u)); gap: calc(4 * var(--u)); }
+.rr[data-compact] .rr-hud__dogs { gap: calc(5 * var(--u)); }
+.rr[data-compact] .rr-chip { gap: calc(5 * var(--u)); padding: calc(2 * var(--u)) calc(10 * var(--u)) calc(2 * var(--u)) calc(2 * var(--u)); }
+.rr[data-compact] .rr-chip__avatar { width: calc(26 * var(--u)); height: calc(26 * var(--u)); box-shadow: inset 0 0 0 calc(2 * var(--u)) var(--acc); }
+.rr[data-compact] .rr-chip__avatar .ico-dog { width: calc(22 * var(--u)); height: calc(22 * var(--u)); }
+.rr[data-compact] .rr-chip__name { font-size: calc(12.5 * var(--u)); gap: calc(4 * var(--u)); }
+.rr[data-compact] .rr-chip__trait { font-size: max(9px, calc(10.5 * var(--u))); }
+.rr[data-compact] .rr-chip__swap { display: none; }
+.rr[data-compact] .rr-comp { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)) calc(6 * var(--u)) calc(2 * var(--u)) calc(2 * var(--u)); }
+.rr[data-compact] .rr-comp__avatar { width: calc(22 * var(--u)); height: calc(22 * var(--u)); }
+.rr[data-compact] .rr-comp__avatar .ico-dog { width: calc(18 * var(--u)); height: calc(18 * var(--u)); }
+.rr[data-compact] .rr-comp__text { display: none; }
+.rr[data-compact] .rr-comp__key { display: none; }
+.rr[data-compact] .rr-comp::after {
   /* estado da companheira num pontinho: verde seguindo, laranja esperando */
   content: '';
-  width: 7px;
-  height: 7px;
+  width: calc(7 * var(--u));
+  height: calc(7 * var(--u));
   border-radius: 50%;
   background: var(--sage);
-  margin-right: 1px;
+  margin-right: calc(1 * var(--u));
 }
-.rr[data-mobile="phone"] .rr-comp[data-stay="1"]::after { background: var(--carrot); }
-.rr[data-mobile="phone"] .rr-objective {
-  max-width: min(32vw, 270px);
-  gap: 6px;
-  padding: 4px 9px 4px 4px;
-  border-radius: 11px;
-  font-size: 11px;
+.rr[data-compact] .rr-comp[data-stay="1"]::after { background: var(--carrot); }
+.rr[data-compact] .rr-objective {
+  max-width: min(32vw, calc(270 * var(--u)));
+  gap: calc(6 * var(--u));
+  padding: calc(4 * var(--u)) calc(9 * var(--u)) calc(4 * var(--u)) calc(4 * var(--u));
+  border-radius: calc(11 * var(--u));
+  font-size: max(9px, calc(11 * var(--u)));
   line-height: 1.25;
 }
-.rr[data-mobile="phone"] .rr-objective__text {
+.rr[data-compact] .rr-objective__text {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.rr[data-mobile="phone"] .rr-objective__icon { width: 17px; height: 17px; box-shadow: 0 1.5px 0 var(--carrot-lo); }
-.rr[data-mobile="phone"] .rr-objective__icon .ico { width: 10px; height: 10px; }
-.rr[data-mobile="phone"] .rr-objective__label { display: none; }
-.rr[data-mobile="phone"] .rr-objective .rr-tg, .rr[data-mobile="phone"] .rr-objective .rr-key,
-.rr[data-mobile="phone"] .rr-objective .rr-pad { font-size: 9.5px; }
-.rr[data-mobile="phone"] .rr-level { gap: 4px; padding: 2px 8px 2px 3px; font-size: 10.5px; }
-.rr[data-mobile="phone"] .rr-level__num { font-size: 10px; }
-.rr[data-mobile="phone"] .rr-level__item .ico { width: 16px; height: 16px; }
-.rr[data-mobile="phone"] .rr-level__name, .rr[data-mobile="phone"] .rr-level__sep { display: none; }
-.rr[data-mobile="phone"] .rr-treats { gap: 4px; padding: 2px 9px 2px 4px; font-size: 13.5px; }
-.rr[data-mobile="phone"] .rr-treats .ico-bone { width: 20px; height: 20px; }
-.rr[data-mobile="phone"] .rr-hud__bottom {
+.rr[data-compact] .rr-objective__icon { width: calc(17 * var(--u)); height: calc(17 * var(--u)); box-shadow: 0 calc(1.5 * var(--u)) 0 var(--carrot-lo); }
+.rr[data-compact] .rr-objective__icon .ico { width: calc(10 * var(--u)); height: calc(10 * var(--u)); }
+.rr[data-compact] .rr-objective__label { display: none; }
+.rr[data-compact] .rr-objective .rr-tg, .rr[data-compact] .rr-objective .rr-key,
+.rr[data-compact] .rr-objective .rr-pad { font-size: calc(9.5 * var(--u)); }
+.rr[data-compact] .rr-level { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)) calc(8 * var(--u)) calc(2 * var(--u)) calc(3 * var(--u)); font-size: max(9px, calc(10.5 * var(--u))); }
+.rr[data-compact] .rr-level__num { font-size: max(9px, calc(10 * var(--u))); }
+.rr[data-compact] .rr-level__item .ico { width: calc(16 * var(--u)); height: calc(16 * var(--u)); }
+.rr[data-compact] .rr-level__name, .rr[data-compact] .rr-level__sep { display: none; }
+.rr[data-compact] .rr-treats { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)) calc(9 * var(--u)) calc(2 * var(--u)) calc(4 * var(--u)); font-size: calc(13.5 * var(--u)); }
+.rr[data-compact] .rr-treats .ico-bone { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
+.rr[data-compact] .rr-hud__bottom {
   /* entre o joystick e os botões */
-  bottom: calc(var(--sa-b) + 8px);
-  gap: 4px;
-  width: min(380px, calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r)))));
+  bottom: calc(var(--sa-b) + 8 * var(--u));
+  gap: calc(4 * var(--u));
+  width: min(calc(380 * var(--u)), calc(100vw - 2 * (205 * var(--s) + max(var(--sa-l), var(--sa-r)))));
 }
-.rr[data-mobile="phone"] .rr-hint { gap: 5px; padding: 4px 10px 4px 7px; border-radius: 10px; font-size: 11px; line-height: 1.25; }
-.rr[data-mobile="phone"] .rr-hint .ico { width: 12px; height: 12px; }
-.rr[data-mobile="phone"] .rr-hint .rr-tg, .rr[data-mobile="phone"] .rr-hint .rr-key,
-.rr[data-mobile="phone"] .rr-hint .rr-pad { font-size: 9.5px; }
-.rr[data-mobile="phone"] .rr-prompt { gap: 6px; padding: 3px 11px 3px 3px; font-size: 12.5px; }
-.rr[data-mobile="phone"] .rr-prompt .rr-tg, .rr[data-mobile="phone"] .rr-prompt .rr-key,
-.rr[data-mobile="phone"] .rr-prompt .rr-pad { font-size: 11px; }
-.rr[data-mobile="phone"] .rr-celebrate__banner { top: calc(var(--sa-t) + 8vh); gap: 8px; font-size: 15px; padding: 5px 14px 5px 6px; }
-.rr[data-mobile="phone"] .rr-celebrate__banner .rr-celebrate__item .ico { width: 30px; height: 30px; margin: -4px 0; }
+.rr[data-compact] .rr-hint { gap: calc(5 * var(--u)); padding: calc(4 * var(--u)) calc(10 * var(--u)) calc(4 * var(--u)) calc(7 * var(--u)); border-radius: calc(10 * var(--u)); font-size: max(9px, calc(11 * var(--u))); line-height: 1.25; }
+.rr[data-compact] .rr-hint .ico { width: calc(12 * var(--u)); height: calc(12 * var(--u)); }
+.rr[data-compact] .rr-hint .rr-tg, .rr[data-compact] .rr-hint .rr-key,
+.rr[data-compact] .rr-hint .rr-pad { font-size: calc(9.5 * var(--u)); }
+.rr[data-compact] .rr-prompt { gap: calc(6 * var(--u)); padding: calc(3 * var(--u)) calc(11 * var(--u)) calc(3 * var(--u)) calc(3 * var(--u)); font-size: calc(12.5 * var(--u)); }
+.rr[data-compact] .rr-prompt .rr-tg, .rr[data-compact] .rr-prompt .rr-key,
+.rr[data-compact] .rr-prompt .rr-pad { font-size: calc(11 * var(--u)); }
+.rr[data-compact] .rr-celebrate__banner { top: calc(var(--sa-t) + 8vh); gap: calc(8 * var(--u)); font-size: calc(15 * var(--u)); padding: calc(5 * var(--u)) calc(14 * var(--u)) calc(5 * var(--u)) calc(6 * var(--u)); }
+.rr[data-compact] .rr-celebrate__banner .rr-celebrate__item .ico { width: calc(30 * var(--u)); height: calc(30 * var(--u)); margin: calc(-4 * var(--u)) 0; }
 /* cartão de abertura */
-.rr[data-mobile="phone"] .rr-introcard { width: min(400px, calc(100vw - 32px)); padding: 12px 18px 14px; border-radius: 22px; bottom: calc(var(--sa-b) + 14px); }
-.rr[data-mobile="phone"] .rr-introcard__badge { width: 54px; height: 54px; margin-top: -26px; }
-.rr[data-mobile="phone"] .rr-introcard__badge .ico { width: 36px; height: 36px; }
-.rr[data-mobile="phone"] .rr-introcard__name { font-size: 23px; }
-.rr[data-mobile="phone"] .rr-introcard__sub { font-size: 12.5px; }
-.rr[data-mobile="phone"] .rr-introcard__text { margin: 8px 0 10px; font-size: 13.5px; line-height: 1.4; }
-.rr[data-mobile="phone"] .rr-btn--start { font-size: 18px; }
+.rr[data-compact] .rr-introcard { width: min(calc(400 * var(--u)), calc(100vw - 32 * var(--u))); padding: calc(12 * var(--u)) calc(18 * var(--u)) calc(14 * var(--u)); border-radius: calc(22 * var(--u)); bottom: calc(var(--sa-b) + 14 * var(--u)); }
+.rr[data-compact] .rr-introcard__badge { width: calc(54 * var(--u)); height: calc(54 * var(--u)); margin-top: calc(-26 * var(--u)); }
+.rr[data-compact] .rr-introcard__badge .ico { width: calc(36 * var(--u)); height: calc(36 * var(--u)); }
+.rr[data-compact] .rr-introcard__name { font-size: calc(23 * var(--u)); }
+.rr[data-compact] .rr-introcard__sub { font-size: calc(12.5 * var(--u)); }
+.rr[data-compact] .rr-introcard__text { margin: calc(8 * var(--u)) 0 calc(10 * var(--u)); font-size: calc(13.5 * var(--u)); line-height: 1.4; }
+.rr[data-compact] .rr-btn--start { font-size: calc(18 * var(--u)); }
 /* pausa: duas colunas (ações | volume, qualidade e tela cheia), sem a tabela de controles */
-.rr[data-mobile="phone"] .rr-card--pause {
-  width: min(700px, calc(100vw - 24px - var(--sa-l) - var(--sa-r)));
-  max-height: calc(100% - 16px - var(--sa-t) - var(--sa-b));
+.rr[data-compact] .rr-card--pause {
+  width: min(calc(700 * var(--u)), calc(100vw - 24 * var(--u) - var(--sa-l) - var(--sa-r)));
+  max-height: calc(100% - 16 * var(--u) - var(--sa-t) - var(--sa-b));
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: start;
-  column-gap: 22px;
-  padding: 14px 18px;
-  border-radius: 22px;
+  column-gap: calc(22 * var(--u));
+  padding: calc(14 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(22 * var(--u));
 }
-.rr[data-mobile="phone"] .rr-card--pause .rr-card__head { grid-column: 1; grid-row: 1; justify-content: flex-start; margin: 0 0 10px; }
-.rr[data-mobile="phone"] .rr-card__head h2 { font-size: 23px; }
-.rr[data-mobile="phone"] .rr-card__head .ico-paw { width: 22px; height: 22px; }
-.rr[data-mobile="phone"] .rr-pause__level { grid-column: 2; grid-row: 1; justify-content: flex-end; margin: 0 0 10px; align-self: center; font-size: 13px; }
-.rr[data-mobile="phone"] .rr-card--pause .rr-card__actions { grid-column: 1; grid-row: 2; gap: 8px; }
-.rr[data-mobile="phone"] .rr-card__actions .rr-btn { font-size: 16.5px; padding: .62em 1em; }
-.rr[data-mobile="phone"] .rr-card__actions .rr-card__pair .rr-btn { font-size: 14.5px; padding: .66em .6em; }
-.rr[data-mobile="phone"] .rr-pause__settings { grid-column: 2; grid-row: 2; }
-.rr[data-mobile="phone"] .rr-volume { margin: 0 2px 2px; font-size: 14px; }
-.rr[data-mobile="phone"] .rr-quality { margin-top: 8px; font-size: 14px; }
-.rr[data-mobile="phone"] .rr-qopt { font-size: 12.5px; padding: .5em .66em; }
-.rr[data-mobile="phone"] .rr-fullscreen { margin-top: 8px; font-size: 14.5px; padding: .55em 1em; }
-.rr[data-mobile="phone"] .rr-ctl-table { display: none; }
+.rr[data-compact] .rr-card--pause .rr-card__head { grid-column: 1; grid-row: 1; justify-content: flex-start; margin: 0 0 calc(10 * var(--u)); }
+.rr[data-compact] .rr-card__head h2 { font-size: calc(23 * var(--u)); }
+.rr[data-compact] .rr-card__head .ico-paw { width: calc(22 * var(--u)); height: calc(22 * var(--u)); }
+.rr[data-compact] .rr-pause__level { grid-column: 2; grid-row: 1; justify-content: flex-end; margin: 0 0 calc(10 * var(--u)); align-self: center; font-size: calc(13 * var(--u)); }
+.rr[data-compact] .rr-card--pause .rr-card__actions { grid-column: 1; grid-row: 2; gap: calc(8 * var(--u)); }
+.rr[data-compact] .rr-card__actions .rr-btn { font-size: calc(16.5 * var(--u)); padding: .62em 1em; }
+.rr[data-compact] .rr-card__actions .rr-card__pair .rr-btn { font-size: calc(14.5 * var(--u)); padding: .66em .6em; }
+.rr[data-compact] .rr-pause__settings { grid-column: 2; grid-row: 2; }
+.rr[data-compact] .rr-volume { margin: 0 calc(2 * var(--u)) calc(2 * var(--u)); font-size: calc(14 * var(--u)); }
+.rr[data-compact] .rr-quality { margin-top: calc(8 * var(--u)); font-size: calc(14 * var(--u)); }
+.rr[data-compact] .rr-qopt { font-size: calc(12.5 * var(--u)); padding: .5em .66em; }
+.rr[data-compact] .rr-fullscreen { margin-top: calc(8 * var(--u)); font-size: calc(14.5 * var(--u)); padding: .55em 1em; }
+.rr[data-compact] .rr-ctl-table { display: none; }
 /* vitória */
-.rr[data-mobile="phone"] .rr-card--victory { width: min(480px, 92vw); padding: 38px 20px 14px; }
-.rr[data-mobile="phone"] .rr-victory__badge { width: 70px; height: 70px; margin: -35px 0 0 -35px; }
-.rr[data-mobile="phone"] .rr-victory__badge .ico { width: 46px; height: 46px; }
-.rr[data-mobile="phone"] .rr-victory__end { margin-bottom: 8px; font-size: 13.5px; padding: 5px 12px; }
-.rr[data-mobile="phone"] .rr-victory h2 { font-size: 21px; }
-.rr[data-mobile="phone"] .rr-victory__sub { margin-top: 4px; font-size: 13px; }
-.rr[data-mobile="phone"] .rr-stats { margin: 10px 0 8px; }
-.rr[data-mobile="phone"] .rr-stat { padding: 7px 8px 8px; gap: 3px; }
-.rr[data-mobile="phone"] .rr-stat strong { font-size: 24px; }
-.rr[data-mobile="phone"] .rr-victory__msg { margin: 2px 6px 10px; font-size: 13px; }
-.rr[data-mobile="phone"] .rr-victory__actions { grid-template-columns: 1fr 1fr; gap: 8px; }
-.rr[data-mobile="phone"] .rr-victory .rr-btn { font-size: 16px; padding: .62em .8em; }
-.rr[data-mobile="phone"] .rr-victory__actions .rr-btn--soft { font-size: 15px; }
+.rr[data-compact] .rr-card--victory { width: min(calc(480 * var(--u)), 92vw); padding: calc(38 * var(--u)) calc(20 * var(--u)) calc(14 * var(--u)); }
+.rr[data-compact] .rr-victory__badge { width: calc(70 * var(--u)); height: calc(70 * var(--u)); margin: calc(-35 * var(--u)) 0 0 calc(-35 * var(--u)); }
+.rr[data-compact] .rr-victory__badge .ico { width: calc(46 * var(--u)); height: calc(46 * var(--u)); }
+.rr[data-compact] .rr-victory__end { margin-bottom: calc(8 * var(--u)); font-size: calc(13.5 * var(--u)); padding: calc(5 * var(--u)) calc(12 * var(--u)); }
+.rr[data-compact] .rr-victory h2 { font-size: calc(21 * var(--u)); }
+.rr[data-compact] .rr-victory__sub { margin-top: calc(4 * var(--u)); font-size: calc(13 * var(--u)); }
+.rr[data-compact] .rr-stats { margin: calc(10 * var(--u)) 0 calc(8 * var(--u)); }
+.rr[data-compact] .rr-stat { padding: calc(7 * var(--u)) calc(8 * var(--u)) calc(8 * var(--u)); gap: calc(3 * var(--u)); }
+.rr[data-compact] .rr-stat strong { font-size: calc(24 * var(--u)); }
+.rr[data-compact] .rr-victory__msg { margin: calc(2 * var(--u)) calc(6 * var(--u)) calc(10 * var(--u)); font-size: calc(13 * var(--u)); }
+.rr[data-compact] .rr-victory__actions { grid-template-columns: 1fr 1fr; gap: calc(8 * var(--u)); }
+.rr[data-compact] .rr-victory .rr-btn { font-size: calc(16 * var(--u)); padding: .62em .8em; }
+.rr[data-compact] .rr-victory__actions .rr-btn--soft { font-size: calc(15 * var(--u)); }
 /* transição e erro de carregamento */
-.rr[data-mobile="phone"] .rr-curtain__badge { width: 80px; height: 80px; margin-bottom: 8px; }
-.rr[data-mobile="phone"] .rr-curtain__badge .ico { width: 50px; height: 50px; }
-.rr[data-mobile="phone"] .rr-curtain__paws { margin-top: 14px; }
-.rr[data-mobile="phone"] .rr-load-error__card p { font-size: 15px; margin-bottom: 16px; }
+.rr[data-compact] .rr-curtain__badge { width: calc(80 * var(--u)); height: calc(80 * var(--u)); margin-bottom: calc(8 * var(--u)); }
+.rr[data-compact] .rr-curtain__badge .ico { width: calc(50 * var(--u)); height: calc(50 * var(--u)); }
+.rr[data-compact] .rr-curtain__paws { margin-top: calc(14 * var(--u)); }
+.rr[data-compact] .rr-load-error__card p { font-size: calc(15 * var(--u)); margin-bottom: calc(16 * var(--u)); }
