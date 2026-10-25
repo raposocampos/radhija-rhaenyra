@@ -149,7 +149,7 @@ async function captureDevice(dev, url) {
     await shot(name);
   }
   await travel(7);
-  await walk(3, 2);
+  await walk(3, 0);
   await walk(13.2, 0);
   await walk(13.2, 4);
   await step(30);

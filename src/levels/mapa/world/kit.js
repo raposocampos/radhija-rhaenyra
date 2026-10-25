@@ -305,16 +305,22 @@ export function textPlate(text, w, h, { bg = '#4a3426', color = '#fff6e6', strok
   return { mesh, redraw };
 }
 
-/** Textura de grama com variação (repete a cada `tile` m no chão). */
+/**
+ * Textura de grama com variação, sem emenda: o ruído de cada ponto mistura o dele com o das cópias deslocadas de uma
+ * largura e de uma altura (pesos pela distância às bordas), então a borda da direita continua a da esquerda e a de
+ * baixo a de cima (antes, os quadrados de 9 m apareciam no chão).
+ */
 export function grassTexture() {
   return mat('mapa-grass-tex', () => canvasTexture(256, 256, (g, w, h) => {
     const img = g.createImageData(w, h);
+    const N = (x, y) => fbm2(x / 38, y / 38, 4) * 1.25 + (vnoise2(x / 3.1, y / 3.1) - 0.5) * 0.18;
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        const n = fbm2(x / 38, y / 38, 4);
-        const fine = vnoise2(x / 3.1, y / 3.1);
+        const u = x / w, v = y / h;
+        const n = N(x, y) * (1 - u) * (1 - v) + N(x - w, y) * u * (1 - v) + N(x, y - h) * (1 - u) * v + N(x - w, y - h) * u * v;
+        // a mistura achata o meio: realça de novo em volta do médio
         const k = (y * w + x) * 4;
-        const t = Math.min(1, Math.max(0, n * 1.25 - 0.1 + (fine - 0.5) * 0.18));
+        const t = Math.min(1, Math.max(0, (n - 0.62) * 1.5 + 0.5));
         img.data[k] = 108 + t * 44;
         img.data[k + 1] = 160 + t * 40;
         img.data[k + 2] = 60 + t * 18;
