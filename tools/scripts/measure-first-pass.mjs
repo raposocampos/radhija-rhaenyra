@@ -57,7 +57,7 @@ const MAX_RATIO = Number(process.env.FIRST_PASS_MAX_RATIO || 2.5);
 for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
 for (const q of QUALITIES) if (!DEVICES[q]) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
 const report = {
   commit: process.env.GITHUB_SHA || null, run: process.env.GITHUB_RUN_ID || null, attempt: process.env.GITHUB_RUN_ATTEMPT || null,
