@@ -146,18 +146,19 @@ export function buildBuildings(kit, root, L) {
     kit.add(sphere(0.22, 12, 8), { color: '#ffd36a', x: L.AVENUE_X + s * 2.1, y: 3.8, z: Tn.arch.z });
   }
   kit.add(rb(5.0, 0.95, 0.3, 0.06, 1), { color: '#c98a55', x: L.AVENUE_X, y: 2.85, z: Tn.arch.z });
-  plate('Bem-vindos a Pandorópolis', 4.6, 0.62, L.AVENUE_X, 3.32, Tn.arch.z + 0.16, 0, { bg: '#8e5a33', color: '#fff6e6' });
+  // na frente dos pilares (atrás deles, as pontas da placa sumiam)
+  plate('Bem-vindos a Pandorópolis', 4.6, 0.62, L.AVENUE_X, 3.32, Tn.arch.z + 0.32, 0, { bg: '#8e5a33', color: '#fff6e6' });
   for (let i = 0; i < 6; i++) {
     const x = L.CONDO.maxX + 1.2 + i * 3.05;
     for (const s of [-1, 1]) kit.add(rb(0.08, 0.8, 0.08, 0.02, 1), { color: '#4a3426', x: x + s * 0.6, z: Tn.barrier.z, rz: s * 0.18 });
     kit.add(rb(1.5, 0.22, 0.08, 0.02, 1), { color: (p) => new THREE.Color(Math.floor((p.x + 2) / 0.3) % 2 ? '#fffaf0' : '#d93a3a'), x, y: 0.6, z: Tn.barrier.z });
   }
   kit.add(cyl(0.05, 0.05, 1.8, 8), { color: '#4a3426', x: L.AVENUE_X + 1.6, z: Tn.barrier.z + 0.4 });
-  const soon = plate('Modo História · em breve', 2.4, 0.48, L.AVENUE_X + 1.6, 1.95, Tn.barrier.z + 0.42, Math.PI / 4, { bg: '#4a3426' });
+  const soon = plate('Modo História · em breve', 2.4, 0.48, L.AVENUE_X + 1.66, 1.95, Tn.barrier.z + 0.46, Math.PI / 4, { bg: '#4a3426' });
   /** @type {THREE.Material} */ (soon.mesh.material).side = THREE.DoubleSide;
   // placa da avenida e semáforo
   kit.add(cyl(0.04, 0.04, 2.3, 8), { color: '#4a3426', x: Tn.sign.x, z: Tn.sign.z });
-  plate('Av. Pandora', 1.5, 0.36, Tn.sign.x, 2.3, Tn.sign.z, Math.PI / 4, { bg: '#2f6b3a' });
+  plate('Av. Pandora', 1.5, 0.36, Tn.sign.x + 0.06, 2.3, Tn.sign.z + 0.06, Math.PI / 4, { bg: '#2f6b3a' });
   const Lt = Tn.light;
   kit.add(cyl(0.06, 0.07, 3, 10), { color: '#3a3a40', x: Lt.x, z: Lt.z });
   kit.add(rb(0.34, 0.95, 0.3, 0.06, 1), { color: '#2b2b30', x: Lt.x, y: 2.55, z: Lt.z + 0.12 });

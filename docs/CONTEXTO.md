@@ -167,6 +167,20 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   "nada atravessa" (`findLooseObstacles`, grade mais grossa) sem achados nos lugares das fases (ajustes: alça do
   carrinho, cadeiras do lago, braços do irrigador, roldana, folha do portão da pracinha, bocas da manilha,
   galinhas). Capturas novas `30-perto-faseNN` em `capture-mapa.mjs`.
+- Segunda prévia apresentada no head `8da4467` (CI `40365461048`, E2E `todas` `40365451228` ok na tentativa 2; a 1ª
+  teve o Chromium demorando 11 min para instalar e o intermitente da primeira passagem da fase 10, que ficou numa
+  sessão própria). Retorno do usuário (2026-10-26): pracinha com coisas "meio fora" (balanço, gangorra) e a manilha
+  saindo na rua; placa "Bem-vindos a Pandorópolis" cortada; z-fighting nos cruzamentos, nos vasos da Av. Pandora e
+  nas pedrinhas sobre o número da fase 5; o poste cobrindo a placa da avenida; biscoitos pouco claros; em algumas
+  fases, "quando eu chego perto da bandeira, não está aparecendo" (a plaquinha aparece em todas no teste sem
+  navegador: perguntar qual fase). Para depois: VFX do mapa mais caprichado, musiquinha no menu e a etapa 4 (menu
+  repaginado como no artefato do conceito).
+- Feito (terceira rodada): morrinho com a manilha de norte a sul dentro da cerca (a cerca oeste inteira), balanço em
+  A, gangorra com as alças na prancha; placa do portal na frente dos pilares; ruas leste-oeste 4 mm mais baixas que as
+  norte-sul (o cruzamento não pisca), terra dos vasos acima da borda, pedrinhas fora do número pintado, placas de rua
+  na frente do poste, poças acima do piso emborrachado; o selo dos biscoitos (sprite com um ossinho por biscoito da
+  fase, os ganhos dourados) no lugar dos ossinhos 3D, com o total de cada fase (a 10 tem 5); bandeira, selo e
+  cadeado fora do "ver através".
 - Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `todas` no head novo, revisar as capturas,
   prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
 

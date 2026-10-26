@@ -342,21 +342,23 @@ export function buildCondominio(kit, root, L) {
   // o piso emborrachado (placas em três cores suaves)
   const rub = ['#d98b73', '#8fbf8a', '#86b9d6'].map((c) => new THREE.Color(c));
   kit.add(tiles(Yd.maxX - Yd.minX, Yd.maxZ - Yd.minZ, 1.0, 1.0, (p) => rub[Math.abs(Math.floor((p.x + 50) / 1.0) + 2 * Math.floor((p.z + 50) / 1.0)) % 3]), { color: null, slot: 'ground', x: (Yd.minX + Yd.maxX) / 2, y: 0.022, z: (Yd.minZ + Yd.maxZ) / 2 });
-  // a cerca de lápis de cor, com o portão (ao sul, aberto) e o vão do morrinho (a oeste)
+  // a cerca de lápis de cor, com o portão (ao sul, aberto)
   pencilFence(kit, { x0: Yd.minX, z0: Yd.minZ, x1: Yd.maxX, z1: Yd.minZ, seed: 0 });
   pencilFence(kit, { x0: Yd.maxX, z0: Yd.minZ, x1: Yd.maxX, z1: Yd.maxZ, seed: 2 });
   pencilFence(kit, { x0: Yd.minX, z0: Yd.maxZ, x1: P.gate.x0 - 0.08, z1: Yd.maxZ, seed: 4 });
   pencilFence(kit, { x0: P.gate.x1 + 0.08, z0: Yd.maxZ, x1: Yd.maxX, z1: Yd.maxZ, seed: 1 });
-  pencilFence(kit, { x0: Yd.minX, z0: Yd.minZ, x1: Yd.minX, z1: P.hill.z - 1.2, seed: 3 });
-  pencilFence(kit, { x0: Yd.minX, z0: P.hill.z + 1.2, x1: Yd.minX, z1: Yd.maxZ, seed: 5 });
+  pencilFence(kit, { x0: Yd.minX, z0: Yd.minZ, x1: Yd.minX, z1: Yd.maxZ, seed: 3 });
   pencilFence(kit, { x0: P.gate.x0, z0: Yd.maxZ, x1: P.gate.x0 + 0.45, z1: Yd.maxZ + 1.25, h: 0.75, seed: 2 });
   // o morrinho com a manilha (o túnel, com lama no fundo)
   const hl = P.hill;
-  kit.add(sphere(hl.r, 18, 10), { color: '#7db356', x: hl.x, y: -0.45, z: hl.z, sy: 0.55, sx: 1.05 });
-  const pipe = new THREE.CylinderGeometry(0.42, 0.42, 3.6, 16, 1, true).rotateZ(Math.PI / 2);
-  kit.add(pipe, { color: (p, n) => new THREE.Color(n.y > 0.3 && Math.abs(p.x) < 1.9 ? '#5f5a54' : '#b7afa6'), x: hl.x, y: 0.4, z: hl.z });
-  for (const s of [-1, 1]) kit.add(new THREE.TorusGeometry(0.42, 0.06, 6, 18).rotateY(Math.PI / 2), { color: '#a39a90', x: hl.x + s * 1.8, y: 0.4, z: hl.z, ao: false });
-  kit.add(slab(3.2, 0.03, 0.55), { color: '#6f4a2c', slot: 'ground', x: hl.x, y: 0.0, z: hl.z });
+  kit.add(sphere(1, 20, 12), { color: '#7db356', x: hl.x, y: -0.1, z: hl.z, sx: hl.r * 0.96, sy: 1.2, sz: 1.35 });
+  kit.add(new THREE.CylinderGeometry(0.42, 0.42, 3.2, 16, 1, true).rotateX(Math.PI / 2), { color: '#b7afa6', x: hl.x, y: 0.42, z: hl.z });
+  for (const s of [-1, 1]) {
+    kit.add(new THREE.TorusGeometry(0.42, 0.06, 6, 18), { color: '#a39a90', x: hl.x, y: 0.42, z: hl.z + s * 1.6, ao: false });
+    // o escuro de dentro do túnel e a lama na saída
+    kit.add(new THREE.CircleGeometry(0.4, 18).rotateY(s > 0 ? 0 : Math.PI), { color: '#3a3330', x: hl.x, y: 0.42, z: hl.z + s * 1.4, ao: false });
+    kit.add(new THREE.CircleGeometry(0.5, 16).rotateX(-Math.PI / 2), { color: '#7a5434', slot: 'ground', x: hl.x, y: 0.03, z: hl.z + s * 2.0, sz: 0.75 });
+  }
   // o escorregador com casinha (e o frisbee lá em cima), o balanço
   const sl = P.slide;
   kit.add(rb(1.0, 1.7, 1.0, 0.06, 1), { color: '#6ec3e8', x: sl.x, z: sl.z });
@@ -369,7 +371,8 @@ export function buildCondominio(kit, root, L) {
   kit.add(cyl(0.2, 0.2, 0.04, 16), { color: '#f28ca2', x: sl.x + 0.2, y: 1.86, z: sl.z - 0.1, ao: false });
   for (let k = 0; k < 5; k++) kit.add(rb(0.7, 0.05, 0.1, 0.015, 1), { color: '#fffaf0', x: sl.x, y: 0.3 + k * 0.32, z: sl.z - 0.6 - k * 0.04, rx: -0.2, ao: false });
   const sw = P.swing;
-  for (const s of [-1, 1]) for (const t of [-0.35, 0.35]) kit.add(cyl(0.05, 0.05, 2.3, 8), { color: '#8e5a33', x: sw.x + s * 1.0, z: sw.z + t, rx: t * 0.5 });
+  // o cavalete em A: as pernas de cada lado se encontram na trave
+  for (const s of [-1, 1]) for (const t of [-1, 1]) kit.add(cyl(0.05, 0.05, 2.25, 8), { color: '#8e5a33', x: sw.x + s * 1.0, z: sw.z + t * 0.45, rx: -t * 0.2 });
   kit.add(cyl(0.05, 0.05, 2.1, 8).rotateZ(Math.PI / 2), { color: '#8e5a33', x: sw.x, y: 2.18, z: sw.z });
   for (const k of [-0.45, 0.45]) {
     for (const t of [-0.18, 0.18]) kit.add(cyl(0.01, 0.01, 1.7, 4), { color: '#4a3426', x: sw.x + k + t, y: 0.48, z: sw.z, ao: false });
@@ -378,8 +381,13 @@ export function buildCondominio(kit, root, L) {
   // a gangorra, a caixa de areia com o baldinho e a pazinha, a joaninha de mola, a bolinha
   const ss = P.seesaw;
   kit.add(rb(0.3, 0.4, 0.3, 0.04, 1), { color: '#9677c6', x: ss.x, z: ss.z });
-  kit.add(rb(ss.len, 0.08, 0.3, 0.03, 1), { color: '#ffd15c', x: ss.x, y: 0.42, z: ss.z, rz: 0.22 });
-  for (const s of [-1, 1]) kit.add(new THREE.TorusGeometry(0.1, 0.02, 4, 10, Math.PI), { color: '#d93a3a', x: ss.x + s * (ss.len / 2 - 0.25), y: 0.55 - s * 0.27, z: ss.z, ao: false });
+  const tilt = 0.22;
+  kit.add(rb(ss.len, 0.08, 0.3, 0.03, 1).translate(0, -0.04, 0), { color: '#ffd15c', x: ss.x, y: 0.44, z: ss.z, rz: tilt });
+  // as alças presas na prancha (acompanham a inclinação)
+  for (const s of [-1, 1]) {
+    const d = s * (ss.len / 2 - 0.32);
+    kit.add(new THREE.TorusGeometry(0.1, 0.02, 4, 10, Math.PI).rotateY(Math.PI / 2), { color: '#d93a3a', x: ss.x + d * Math.cos(tilt), y: 0.48 + d * Math.sin(tilt), z: ss.z, ao: false });
+  }
   const sb = P.sandbox;
   for (const [dx, dz, w, d] of [[0, -sb.s / 2, sb.s, 0.12], [0, sb.s / 2, sb.s, 0.12], [-sb.s / 2, 0, 0.12, sb.s], [sb.s / 2, 0, 0.12, sb.s]]) kit.add(rb(w, 0.25, d, 0.03, 1), { color: '#c98a55', x: sb.x + dx, z: sb.z + dz });
   kit.add(slab(sb.s - 0.12, 0.16, sb.s - 0.12), { color: '#f0d9a6', slot: 'ground', x: sb.x, z: sb.z });
@@ -393,8 +401,8 @@ export function buildCondominio(kit, root, L) {
   kit.add(sphere(0.14, 14, 10), { color: '#d8f065', x: P.ball.x, y: 0.15, z: P.ball.z, ao: false });
   // as poças (e a lama) no gramado, a toalha do piquenique com a cesta
   for (const pd of P.puddles) {
-    kit.add(new THREE.CircleGeometry(pd.r * 1.15, 22).rotateX(-Math.PI / 2), { color: '#7a5434', slot: 'ground', x: pd.x, y: 0.01, z: pd.z, sz: 0.7 });
-    kit.add(new THREE.CircleGeometry(pd.r * 0.85, 22).rotateX(-Math.PI / 2), { color: '#86aac0', slot: 'glass', x: pd.x, y: 0.014, z: pd.z, sz: 0.66, ao: false });
+    kit.add(new THREE.CircleGeometry(pd.r * 1.15, 22).rotateX(-Math.PI / 2), { color: '#7a5434', slot: 'ground', x: pd.x, y: 0.03, z: pd.z, sz: 0.7 }); // acima do piso emborrachado (0,022)
+    kit.add(new THREE.CircleGeometry(pd.r * 0.85, 22).rotateX(-Math.PI / 2), { color: '#86aac0', slot: 'glass', x: pd.x, y: 0.036, z: pd.z, sz: 0.66, ao: false });
   }
   const tw = P.towel;
   const xad = [new THREE.Color('#e8577a'), new THREE.Color('#fffaf0')];

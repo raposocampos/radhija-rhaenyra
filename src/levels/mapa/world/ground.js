@@ -151,7 +151,8 @@ export function buildGround(kit, root, L) {
     const len = b - a + ea + eb;
     const mid = (a - ea + b + eb) / 2;
     const cx = horiz ? mid : fixed, cz = horiz ? fixed : mid;
-    kit.add(slab(horiz ? len : W, Y.road, horiz ? W : len), { color: noisy('#5d5c66', 0.035, 0.25, cx, cz), slot: 'ground', x: cx, z: cz });
+    // no cruzamento as duas ruas se sobrepõem: alturas diferentes, senão uma pisca sobre a outra
+    kit.add(slab(horiz ? len : W, horiz ? Y.road - 0.004 : Y.road, horiz ? W : len), { color: noisy('#5d5c66', 0.035, 0.25, cx, cz), slot: 'ground', x: cx, z: cz });
     // faixas entre os cruzamentos
     const inner = L.CROSSINGS.filter(([nx, nz]) => (horiz ? Math.abs(nz - fixed) < 0.01 && nx > a && nx < b : Math.abs(nx - fixed) < 0.01 && nz > a && nz < b)).map(([nx, nz]) => (horiz ? nx : nz));
     const stops = [a, ...inner, b].sort((p, q) => p - q);

@@ -74,7 +74,7 @@ export function createPuzzle(ctx) {
     prog = hub.progress?.() || { levels: {} };
     for (const f of flags) {
       const r = rec(f);
-      props?.flags?.setState?.(f.n, stateOf(f), r?.treats ?? 0, r?.total ?? 3);
+      props?.flags?.setState?.(f.n, stateOf(f), r?.treats ?? 0, r?.total ?? metaOf(f)?.total ?? 3);
     }
     for (const k of Object.keys(ZONES)) {
       zones[k] = zoneOpen(k);

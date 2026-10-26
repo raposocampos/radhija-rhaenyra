@@ -73,8 +73,8 @@ export function buildDetails(kit, root, L) {
   const F = L.TOWN.fountain;
   L.FOUNTAIN_BEDS.forEach(([x, z], i) => {
     kit.add(cyl(0.3, 0.24, 0.42, 14), { color: '#c9764f', x, z });
-    kit.add(cyl(0.26, 0.26, 0.02, 14), { color: '#6f4a2c', x, y: 0.4, z });
-    kit.add(i % 2 ? plants.ger : plants.ger2, { color: null, slot: 'plant', x, y: 0.41, z });
+    kit.add(cyl(0.26, 0.26, 0.03, 14), { color: '#6f4a2c', x, y: 0.405, z, ao: false });
+    kit.add(i % 2 ? plants.ger : plants.ger2, { color: null, slot: 'plant', x, y: 0.43, z });
   });
 
   // ---------- postes ----------

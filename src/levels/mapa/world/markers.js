@@ -1,8 +1,9 @@
 // PANDORÓPOLIS — as bandeirinhas das fases. Cada uma: o mastro com a bola dourada (no kit, junto com a cidade), a
 // bandeira tremulando com o número (a cor diz o estado: laranja = a próxima, verde = concluída, dourada = com os três
-// biscoitos, cinza = trancada), o número pintado no chão na frente, os três biscoitos girando em cima (os ganhos
-// dourados, os que faltam claros) e o cadeado das trancadas. Tudo em poucas malhas: as bandeiras numa geometria só
-// (cores por vértice, a onda calculada no processador), os números do chão em outra, biscoitos e cadeados instanciados.
+// biscoitos, cinza = trancada), o número pintado no chão na frente, o selo dos biscoitos em cima (três ossinhos num
+// fundo escuro, sempre de frente para a câmera: os ganhos dourados, os que faltam vazados) e o cadeado das trancadas.
+// Tudo em poucas malhas: as bandeiras numa geometria só (cores por vértice, a onda calculada no processador), os números
+// do chão em outra, os cadeados instanciados e os selos em sprites (quatro desenhos: 0 a 3 biscoitos).
 // API: buildMarkers(kit, root, L) → { setState(n, state, treats, total), redraw(), update(dt, t), seeThrough }
 import * as THREE from 'three';
 import { canvasTexture, mat, paint, mergeGeometries } from '../../../world/util.js';
@@ -15,13 +16,49 @@ const CLOTH = { w: 0.95, h: 0.62, sx: 8, sy: 4 };
 const WIND = new THREE.Vector3(1, 0, -1).normalize();
 const FONT = '"Fredoka", "Nunito", system-ui, sans-serif';
 
-/** Biscoito em forma de osso, leve (o do jogo tem detalhe demais para 30 cópias pequenas). */
-function boneGeo() {
-  /** @type {THREE.BufferGeometry[]} */
-  const parts = [new THREE.CapsuleGeometry(0.055, 0.26, 2, 8).rotateZ(Math.PI / 2)];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(new THREE.SphereGeometry(0.075, 10, 6).translate(sx * 0.17, 0, sz * 0.055));
-  const g = mergeGeometries(parts.map((p) => { const n = p.index ? p.toNonIndexed() : p; n.deleteAttribute('uv'); return n; }));
-  return g.scale(1, 0.62, 1);
+/** Selo dos biscoitos: 256 × 96 px, um por bandeirinha (cada fase tem o seu total de biscoitos). */
+const BADGE = { w: 256, h: 96, world: 1.2 };
+/** Contorno de um ossinho centrado em (cx, cy), comprimento len e espessura th (px). */
+function bonePath(g, cx, cy, len, th) {
+  const r = th * 0.62, hx = len / 2 - r * 0.7;
+  g.beginPath();
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    g.moveTo(cx + sx * hx + r, cy + sy * r * 0.72);
+    g.arc(cx + sx * hx, cy + sy * r * 0.72, r, 0, Math.PI * 2);
+  }
+  g.rect(cx - hx, cy - th / 2, hx * 2, th);
+}
+/** Desenha o selo: pílula escura e um ossinho por biscoito da fase (os ganhos dourados, os que faltam vazados). */
+function drawBadge(g, treats, total) {
+  const { w, h } = BADGE;
+  const n = Math.max(1, Math.min(5, total | 0));
+  g.clearRect(0, 0, w, h);
+  // pílula feita à mão (roundRect não existe em navegadores mais antigos)
+  const pad = 6, rad = (h - pad * 2) / 2;
+  g.beginPath();
+  g.arc(pad + rad, h / 2, rad, Math.PI / 2, Math.PI * 1.5);
+  g.arc(w - pad - rad, h / 2, rad, -Math.PI / 2, Math.PI / 2);
+  g.closePath();
+  g.fillStyle = 'rgba(58, 38, 28, 0.88)';
+  g.fill();
+  g.lineWidth = 5;
+  g.strokeStyle = treats >= n ? '#ffd15c' : '#fff3dc';
+  g.stroke();
+  const step = Math.min(72, 190 / Math.max(1, n - 1));
+  const len = Math.min(66, step * 0.92), th = len * 0.35;
+  for (let b = 0; b < n; b++) {
+    g.save();
+    g.translate(w / 2 + (b - (n - 1) / 2) * step, h / 2);
+    g.rotate(-0.35);
+    // contorno: o osso maior por baixo, o miolo por cima (sem as linhas de dentro que o traço faria)
+    bonePath(g, 0, 0, len, th * 1.4);
+    g.fillStyle = b < treats ? '#fff1c2' : 'rgba(255, 243, 220, 0.8)';
+    g.fill();
+    bonePath(g, 0, 0, len - 8, th);
+    g.fillStyle = b < treats ? '#f2b24c' : '#3a261c';
+    g.fill();
+    g.restore();
+  }
 }
 
 /** Atlas dos números 1..10 (célula de 128 px): disco claro, borda e o número escuro (a cor vem do vértice). */
@@ -147,14 +184,29 @@ export function buildMarkers(kit, root, L) {
   root.add(decals);
   const decalPer = decalGeos[0].attributes.position.count;
 
-  // ---------- biscoitos (3 por bandeira) e cadeados ----------
-  const bGeo = boneGeo();
-  const boneMat = mat('mapa-biscoito', () => new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.1 }));
-  const bones = new THREE.InstancedMesh(bGeo, boneMat, flags.length * 3);
-  bones.name = 'mapa:biscoitos';
-  bones.castShadow = true;
-  bones.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  root.add(bones);
+  // ---------- selo dos biscoitos (um sprite por bandeirinha) e cadeados ----------
+  const badges = flags.map(() => {
+    const tex = canvasTexture(BADGE.w, BADGE.h, (g) => drawBadge(g, 0, 3), { repeat: false });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+    sp.name = 'mapa:biscoitos';
+    sp.scale.set(BADGE.world, (BADGE.world * BADGE.h) / BADGE.w, 1);
+    sp.renderOrder = 3;
+    sp.visible = false;
+    root.add(sp);
+    return sp;
+  });
+  /** Redesenha o selo de uma bandeirinha (só quando muda). */
+  const badgeKey = flags.map(() => '');
+  function paintBadge(k, treats, total) {
+    const key = `${treats}/${total}`;
+    if (badgeKey[k] === key) return;
+    badgeKey[k] = key;
+    const tex = /** @type {THREE.CanvasTexture} */ (/** @type {THREE.SpriteMaterial} */ (badges[k].material).map);
+    const g = /** @type {HTMLCanvasElement} */ (tex.image)?.getContext?.('2d');
+    if (!g) return;
+    drawBadge(g, treats, total);
+    tex.needsUpdate = true;
+  }
   const lockGeo = mergeGeometries([
     paint(rb(0.3, 0.24, 0.12, 0.04, 2).toNonIndexed(), '#d9a63a'),
     paint(new THREE.TorusGeometry(0.09, 0.025, 8, 16, Math.PI).translate(0, 0.24, 0).toNonIndexed(), '#8a8f96'),
@@ -176,7 +228,7 @@ export function buildMarkers(kit, root, L) {
 
   /** estado de cada bandeirinha */
   const st = flags.map(() => ({ state: 'locked', treats: 0, total: 3 }));
-  const cGold = new THREE.Color('#f2b24c'), cDim = new THREE.Color('#fff3dc'), cTmp = new THREE.Color();
+  const cTmp = new THREE.Color();
   function paintFlag(k) {
     const s = st[k];
     const hex = s.state === 'done' && s.treats >= s.total ? FLAG_COLORS.gold : FLAG_COLORS[s.state];
@@ -186,8 +238,8 @@ export function buildMarkers(kit, root, L) {
     const dc = decalGeo.attributes.color;
     for (let v = k * decalPer; v < (k + 1) * decalPer; v++) dc.setXYZ(v, cTmp.r, cTmp.g, cTmp.b);
     dc.needsUpdate = true;
-    for (let b = 0; b < 3; b++) bones.setColorAt(k * 3 + b, b < s.treats ? cGold : cDim);
-    if (bones.instanceColor) bones.instanceColor.needsUpdate = true;
+    paintBadge(k, s.treats, s.total);
+    badges[k].visible = s.state !== 'locked';
   }
   flags.forEach((_, k) => paintFlag(k));
 
@@ -197,17 +249,8 @@ export function buildMarkers(kit, root, L) {
     flags.forEach((f, k) => {
       const s = st[k];
       const locked = s.state === 'locked';
-      for (let b = 0; b < 3; b++) {
-        if (locked) { bones.setMatrixAt(k * 3 + b, zero); continue; }
-        const a = (b - 1) * 0.36;
-        const y = POLE_H + 0.42 + (b === 1 ? 0.1 : 0) + Math.sin(t * 2 + k + b * 0.8) * 0.04;
-        p3.set(f.x + Math.cos(Math.PI / 4) * a * 1.0, y, f.z - Math.sin(Math.PI / 4) * a * 1.0);
-        e.set(0.25, Math.PI / 4 + Math.sin(t * 1.3 + k) * 0.35, (b - 1) * -0.35);
-        q.setFromEuler(e);
-        const big = b < s.treats ? 1 : 0.86;
-        m4.compose(p3, q, sc.set(big, big, big));
-        bones.setMatrixAt(k * 3 + b, m4);
-      }
+      // o selo flutua acima da bola do mastro
+      if (!locked) badges[k].position.set(f.x, POLE_H + 0.5 + Math.sin(t * 1.8 + k) * 0.05, f.z);
       if (locked) {
         p3.set(f.x, POLE_H * 0.55 + Math.sin(t * 1.6 + k) * 0.03, f.z);
         // pendurado no mastro, virado para a câmera
@@ -218,7 +261,6 @@ export function buildMarkers(kit, root, L) {
         locks.setMatrixAt(k, m4);
       } else locks.setMatrixAt(k, zero);
     });
-    bones.instanceMatrix.needsUpdate = true;
     locks.instanceMatrix.needsUpdate = true;
   }
 
@@ -226,7 +268,8 @@ export function buildMarkers(kit, root, L) {
   function setState(n, state, treats = 0, total = 3) {
     const k = idx.get(n);
     if (k == null) return;
-    st[k] = { state, treats: Math.max(0, Math.min(3, treats | 0)), total: total || 3 };
+    const tot = Math.max(1, Math.min(5, total | 0 || 3));
+    st[k] = { state, treats: Math.max(0, Math.min(tot, treats | 0)), total: tot };
     paintFlag(k);
     const nextK = st.findIndex((s) => s.state === 'next');
     ringFlag = nextK;
@@ -253,6 +296,7 @@ export function buildMarkers(kit, root, L) {
         ringMat.opacity = 0.45 + 0.4 * (1 - k);
       }
     },
-    seeThrough: [cloth, bones, locks],
+    // a bandeira, o selo e o cadeado ficam sempre inteiros (são finos e é o que se procura no mapa)
+    seeThrough: [],
   };
 }

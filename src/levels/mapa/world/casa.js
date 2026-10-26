@@ -168,9 +168,13 @@ export function buildCasa(kit, root, L) {
   kit.add(sphere(0.06, 8, 6), { color: '#6b8fb8', x: bb.x + 0.22, y: 0.82, z: bb.z, sx: 1.4, ao: false });
   kit.add(new THREE.CircleGeometry(0.42, 16).rotateX(-Math.PI / 2), { color: '#7d9cb0', slot: 'ground', x: bb.x + 0.3, y: 0.012, z: bb.z + 0.4, sx: 1.4 });
   // caminho de pedrinhas do portão até a porta
+  const decals = L.FLAGS.map((f) => [f.x + f.face[0] * 1.05, f.z + f.face[1] * 1.05]);
   for (let k = 0; k < 7; k++) {
     const t = k / 6;
-    kit.add(cyl(0.34, 0.36, 0.05, 9), { color: '#e3d9c9', slot: 'ground', x: -21 + (Hs.door.x + 21) * t + (k % 2 ? 0.12 : -0.12), y: 0.006, z: 21.1 - t * 9.9 });
+    const x = -21 + (Hs.door.x + 21) * t + (k % 2 ? 0.12 : -0.12), z = 21.1 - t * 9.9;
+    // o número da bandeirinha no chão fica sozinho (uma pedra por cima dele piscava)
+    if (decals.some(([dx, dz]) => Math.hypot(x - dx, z - dz) < 1.05)) continue;
+    kit.add(cyl(0.34, 0.36, 0.05, 9), { color: '#e3d9c9', slot: 'ground', x, y: 0.006, z });
   }
   // as lanternas nos mourões do portãozinho (fim de tarde)
   for (const gx of [Hs.fence.gate.x0, Hs.fence.gate.x1]) lantern(kit, { x: gx, y: 0.86, z: Hs.fence.z, post: false });
