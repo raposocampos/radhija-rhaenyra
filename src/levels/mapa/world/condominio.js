@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { foliageCluster } from '../../../world/util.js';
 import { boxwood } from '../../../world/plants.js';
 import { rb, cyl, rod, sphere, slab, gableRoof, windowAt, doorAt, textPlate, tiles } from './kit.js';
-import { openHouse, stringLights, pencilFence, lantern, waterMat, flowerBush } from './pecas.js';
+import { openHouse, stringLights, pencilFence, lantern, waterMat, flowerBush, puddle } from './pecas.js';
 
 const tone = (hex, step = 0.16) => {
   const base = new THREE.Color(hex), c = new THREE.Color();
@@ -400,10 +400,11 @@ export function buildCondominio(kit, root, L) {
   for (const [dx, dz] of [[-0.12, 0.18], [0.1, -0.2], [-0.05, -0.08], [0.12, 0.12]]) kit.add(sphere(0.06, 8, 6), { color: '#2b2b30', x: lb.x + dx, y: 0.77, z: lb.z + dz, sy: 0.4, ao: false });
   kit.add(sphere(0.14, 14, 10), { color: '#d8f065', x: P.ball.x, y: 0.15, z: P.ball.z, ao: false });
   // as poças (e a lama) no gramado, a toalha do piquenique com a cesta
-  for (const pd of P.puddles) {
-    kit.add(new THREE.CircleGeometry(pd.r * 1.15, 22).rotateX(-Math.PI / 2), { color: '#7a5434', slot: 'ground', x: pd.x, y: 0.03, z: pd.z, sz: 0.7 }); // acima do piso emborrachado (0,022)
-    kit.add(new THREE.CircleGeometry(pd.r * 0.85, 22).rotateX(-Math.PI / 2), { color: '#86aac0', slot: 'glass', x: pd.x, y: 0.036, z: pd.z, sz: 0.66, ao: false });
-  }
+  // as poças: dentro do parquinho em cima do piso emborrachado (0,022 m), fora dele na grama
+  P.puddles.forEach((pd, i) => {
+    const inYard = pd.x > Yd.minX && pd.x < Yd.maxX && pd.z > Yd.minZ && pd.z < Yd.maxZ;
+    puddle(kit, { x: pd.x, z: pd.z, r: pd.r, y: inYard ? 0.024 : 0, seed: i * 2.7 + 1 });
+  });
   const tw = P.towel;
   const xad = [new THREE.Color('#e8577a'), new THREE.Color('#fffaf0')];
   kit.add(tiles(1.8, 1.3, 0.2, 0.2, (p) => xad[Math.abs(Math.floor((p.x + 5) / 0.2) + Math.floor((p.z + 5) / 0.2)) % 2]), { color: null, slot: 'ground', x: tw.x, y: 0.03, z: tw.z });

@@ -10,7 +10,7 @@
 // API: buildCasa(kit, root, L) → { update(dt, t) }
 import * as THREE from 'three';
 import { rb, cyl, rod, sphere, slab, picketFence } from './kit.js';
-import { openHouse, rainCloud, lantern } from './pecas.js';
+import { openHouse, rainCloud, lantern, puddle } from './pecas.js';
 import { carrotTops } from '../../../world/plants.js';
 
 const tiles = (hex, under = '#f3e9d8') => {
@@ -166,7 +166,7 @@ export function buildCasa(kit, root, L) {
   kit.add(cyl(0.34, 0.2, 0.14, 18), { color: '#d9cfc2', x: bb.x, y: 0.62, z: bb.z });
   kit.add(cyl(0.29, 0.29, 0.02, 18), { color: '#8ec9ea', slot: 'glass', x: bb.x, y: 0.74, z: bb.z, ao: false });
   kit.add(sphere(0.06, 8, 6), { color: '#6b8fb8', x: bb.x + 0.22, y: 0.82, z: bb.z, sx: 1.4, ao: false });
-  kit.add(new THREE.CircleGeometry(0.42, 16).rotateX(-Math.PI / 2), { color: '#7d9cb0', slot: 'ground', x: bb.x + 0.3, y: 0.012, z: bb.z + 0.4, sx: 1.4 });
+  puddle(kit, { x: bb.x + 0.35, z: bb.z + 0.45, r: 0.36, y: 0.007, seed: 4 });
   // caminho de pedrinhas do portão até a porta
   const decals = L.FLAGS.map((f) => [f.x + f.face[0] * 1.05, f.z + f.face[1] * 1.05]);
   for (let k = 0; k < 7; k++) {

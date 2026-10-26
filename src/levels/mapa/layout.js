@@ -146,7 +146,8 @@ export const PLAYGROUND = {
   /** O morrinho com a manilha (o túnel corre de norte a sul), todo dentro da cerca de lápis. */
   hill: { x: -7.1, z: 8.3, r: 1.2 },
   towel: { x: -3.0, z: 20.2 }, basket: { x: -1.8, z: 20.9 },
-  puddles: [{ x: -6.0, z: 18.4, r: 0.9 }, { x: -10.2, z: 12.6, r: 0.7 }, { x: -4.2, z: 13.8, r: 0.5 }],
+  /** Poças (a do oeste fica na grama entre a calçada e a cerca: na calçada, piscava). */
+  puddles: [{ x: -6.0, z: 18.4, r: 0.9 }, { x: -9.7, z: 12.4, r: 0.55 }, { x: -4.2, z: 13.8, r: 0.5 }],
   bucket: { x: -1.3, z: 12.3 },
   ball: { x: -1.0, z: 9.4 },
 };

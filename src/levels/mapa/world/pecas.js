@@ -208,6 +208,34 @@ export function flowerBush({ r = 0.2, seed = 1, flower = '#ff6a55', n = 6 } = {}
   return g;
 }
 
+/** Contorno irregular de poça (raio r com ondulações), deitado no chão (plano xz, voltado para cima). */
+function blob(r, seed, n = 28) {
+  const s = new THREE.Shape();
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const rr = r * (1 + 0.14 * Math.sin(3 * a + seed) + 0.07 * Math.sin(7 * a + seed * 2.3) + 0.04 * Math.sin(11 * a - seed));
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    if (i === 0) s.moveTo(x, y); else s.lineTo(x, y);
+  }
+  return new THREE.ShapeGeometry(s, 1).rotateX(-Math.PI / 2);
+}
+/**
+ * Poça depois da chuva: a borda de lama úmida (irregular, mais escura na beirada), a água refletindo o céu e uns
+ * respingos de lama em volta. y: a altura do chão onde ela fica (o piso emborrachado é mais alto que a grama).
+ * @param {ReturnType<typeof import('./kit.js').createKit>} kit
+ */
+export function puddle(kit, { x, z, r, y = 0, seed = 1, sz = 0.72 }) {
+  const R = rng(seed * 7 + 3);
+  const ry = R() * Math.PI;
+  kit.add(blob(r * 1.22, seed), { color: '#8a6a4c', slot: 'ground', x, y: y + 0.008, z, sz, ry, ao: false });
+  kit.add(blob(r * 1.06, seed + 1.7), { color: '#6f5238', slot: 'ground', x, y: y + 0.011, z, sz, ry, ao: false });
+  kit.add(blob(r * 0.86, seed + 3.1), { color: '#a8cfe2', slot: 'glass', x, y: y + 0.014, z, sz, ry, ao: false });
+  for (let k = 0; k < 3; k++) {
+    const a = R() * Math.PI * 2, d = r * (1.35 + R() * 0.35);
+    kit.add(blob(r * (0.12 + R() * 0.1), seed + k * 5), { color: '#7a5c40', slot: 'ground', x: x + Math.cos(a) * d, y: y + 0.005, z: z + Math.sin(a) * d * sz, ao: false }); // abaixo da borda: onde encosta nela, some embaixo
+  }
+}
+
 /** Cor das lombadas de livro (faixas verticais de cores) para estantes. */
 export function bookSpines(seed = 1) {
   const cols = ['#c2483a', '#2f6fb8', '#e9b064', '#5d8350', '#8e5a33', '#9677c6', '#fffaf0'].map((c) => new THREE.Color(c));
