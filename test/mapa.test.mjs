@@ -230,64 +230,64 @@ test('mapa: a área aberta desde a última visita abre animada (map:unlock) e mo
   assert.equal(h.props.clouds.isOpen('leste'), true);
 });
 
+test('mapa: olhar a cidade sem andar (analógico direito); andando, o olhar volta para a dog', async () => {
+  forgetLastVisit();
+  const h = await createHeadlessGame({ level: 0 });
+  h.run(0.1);
+  const c = h.ctrls[h.game.activeDog];
+  const x0 = c.x, z0 = c.z;
+  h.setPad(h.pad({ axes: [0, 0, 1, 0] }));
+  h.run(1);
+  let l = h.info().look;
+  assert.ok(Math.hypot(l.x, l.z) > 5, `o olhar foi longe (${l.x}, ${l.z})`);
+  assert.ok(Math.hypot(c.x - x0, c.z - z0) < 0.05, 'as dogs ficaram paradas');
+  h.setPad(h.pad({ axes: [0, 0, 0, 0] }));
+  h.run(0.3);
+  l = h.info().look;
+  assert.ok(Math.hypot(l.x, l.z) > 5, 'solto o analógico, o olhar fica onde estava');
+  h.hold([1, 0]);
+  h.run(1.5);
+  h.hold(null);
+  l = h.info().look;
+  assert.ok(Math.hypot(l.x, l.z) < 1, `andando, volta para a dog (${l.x}, ${l.z})`);
+  h.setPad(null);
+});
+
 // ---------------------------------------------------------------------------------------------- pré-carga
-test('pré-carga: importa perto, monta parada na frente, prepara a GPU e entrega a montagem ao entrar', async () => {
+test('pré-carga: só baixa o código da fase (sem montar nada durante o passeio) e entrega ao entrar', async () => {
   const events = [];
+  let loads = 0;
   let builds = 0;
-  let precompiled = 0;
-  let disposed = 0;
-  const def = {
-    id: 'teste', layout: { WORLD: { bounds: {} } },
-    load: async () => ({
-      build: ({ root }) => {
-        builds++;
-        return { props: {}, dispose() { disposed++; }, marker: root };
-      },
-    }),
-  };
-  const engine = { precompile: async () => { precompiled++; } };
-  const pre = createLevelPreload({ engine, params: new URLSearchParams(), emit: (name, p) => events.push([name, p]) });
-  pre.want(3, def, { build: false });
+  const def = { id: 'teste', layout: { WORLD: { bounds: {} } }, load: async () => { loads++; return { build: () => { builds++; return { props: {} }; } }; } };
+  const pre = createLevelPreload({ emit: (name, p) => events.push([name, p]) });
+  pre.want(3, def);
+  assert.equal(pre.info().status, 'import');
   await new Promise((r) => setTimeout(r, 0));
-  assert.equal(pre.info().status, 'imported');
-  pre.update(1, { moving: false });
-  assert.equal(builds, 0, 'sem estar na frente, não monta');
-  pre.want(3, def, { build: true });
-  pre.update(0.2, { moving: true });
-  pre.update(0.2, { moving: false });
-  assert.equal(builds, 0, 'ainda andando há pouco');
-  pre.update(0.4, { moving: false });
-  assert.equal(builds, 1, 'parada na frente: monta');
-  await new Promise((r) => setTimeout(r, 0));
-  await new Promise((r) => setTimeout(r, 0));
-  assert.equal(precompiled, 1);
   assert.equal(pre.info().status, 'ready');
+  assert.equal(loads, 1);
+  assert.equal(builds, 0, 'nada é montado durante o passeio (montar trava o navegador)');
   assert.ok(events.some(([n, p]) => n === 'map:preload' && p.status === 'ready' && p.progress === 1));
+  pre.want(3, def);
+  assert.equal(loads, 1, 'a mesma fase não baixa de novo');
   const got = pre.take(3);
-  assert.ok(got.root && got.built, 'entrega o cenário montado');
+  assert.equal(typeof got.module.build, 'function', 'entrega o código baixado');
   assert.equal(pre.info(), null);
-  // outra fase, e depois nenhuma: a montagem adiantada é descartada
-  pre.want(4, def, { build: true });
-  await new Promise((r) => setTimeout(r, 0));
-  pre.update(1, { moving: false });
-  assert.equal(builds, 2);
+  // outra fase e depois nenhuma: esquece
+  pre.want(4, def);
   pre.want(null, null);
-  assert.equal(disposed, 1, 'afastou: descarta');
+  assert.equal(pre.info(), null);
   assert.equal(pre.take(4), null);
 });
 
-test('pré-carga no jogo: perto da bandeirinha o mapa pede a fase; parada na frente, a montagem', async () => {
+test('pré-carga no jogo: perto da bandeirinha o mapa pede o código da fase; entrar usa ele', async () => {
   forgetLastVisit();
   const h = await createHeadlessGame({ level: 0 });
   h.run(0.1);
   await new Promise((r) => setTimeout(r, 0));
-  h.run(0.6);
+  h.run(0.2);
   const p = h.info().preload;
   assert.equal(p?.index, 0, 'a fase 1');
-  assert.ok(['build', 'gpu', 'ready'].includes(p.status), `montada parada na frente (${p.status})`);
-  // entra: usa a montagem adiantada
-  const staged = h.game.debug.preload.info();
-  assert.ok(staged);
+  assert.equal(p.status, 'ready');
   h.tap('KeyE');
   await untilLoaded(h);
   assert.equal(h.game.levelDef.id, 'fase1');

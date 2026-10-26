@@ -406,51 +406,6 @@ export function createEngine(container, { params } = {}) {
     }
   }
 
-  /**
-   * Uma fase montada FORA da cena (o mapa das fases adiantando a próxima, src/game/levelPreload.js): compila os
-   * programas dela na variante do jogo, com as luzes de agora mais as dela (compileAsync, sem travar a página), e
-   * envia as texturas aos poucos (um pedaço por quadro). Geometrias e sombra ficam para o prepare() da entrada, que
-   * assim fica curto.
-   * @param {THREE.Object3D} stagedRoot @param {{ onProgress?: (k: number) => void, budgetMs?: number }} [opts]
-   */
-  async function precompile(stagedRoot, { onProgress, budgetMs = 5 } = {}) {
-    const target = warmTarget();
-    try {
-      const prev = renderer.getRenderTarget();
-      let job;
-      renderer.setRenderTarget(target);
-      try {
-        job = renderer.compileAsync(stagedRoot, camera, scene);
-      } finally {
-        renderer.setRenderTarget(prev);
-      }
-      await Promise.race([job, new Promise((r) => setTimeout(r, 8000))]);
-      onProgress?.(0.6);
-      /** @type {Set<THREE.Texture>} */
-      const textures = new Set();
-      stagedRoot.traverse((o) => {
-        const m = /** @type {THREE.Mesh} */ (o).material;
-        for (const mm of Array.isArray(m) ? m : m ? [m] : []) {
-          for (const v of Object.values(mm)) if (v && /** @type {THREE.Texture} */ (v).isTexture) textures.add(v);
-        }
-      });
-      let i = 0;
-      let t0 = performance.now();
-      for (const t of textures) {
-        renderer.initTexture(t);
-        i++;
-        if (performance.now() - t0 > budgetMs) {
-          onProgress?.(0.6 + (0.4 * i) / textures.size);
-          await new Promise((r) => requestAnimationFrame(() => r(undefined)));
-          t0 = performance.now();
-        }
-      }
-      onProgress?.(1);
-    } finally {
-      target?.dispose();
-    }
-  }
-
   let shadowFrame = 0;
   /** @param {import('./quality.js').QualityProfile} next @param {string} reason */
   function setProfile(next, reason) {
@@ -503,7 +458,6 @@ export function createEngine(container, { params } = {}) {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
     focusShadow,
-    precompile,
     /** Aquecimento da GPU para a fase montada (programas, texturas, geometrias, sombra): no carregamento. */
     prepare,
     get lighting() { return lighting; },

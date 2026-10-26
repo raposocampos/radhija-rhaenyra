@@ -47,7 +47,7 @@ export function createMapHud({ $, levels, getProgress }) {
     const ready = mine && load.status === 'ready';
     bar.classList.toggle('is-ready', ready);
     /** @type {HTMLElement} */ (bar.querySelector('i')).style.setProperty('--k', String(Math.max(0.04, Math.min(1, k))));
-    bar.querySelector('span').textContent = ready ? 'Pronta para entrar!' : mine && load.status === 'error' ? 'A fase carrega ao entrar' : 'Preparando a fase…';
+    bar.querySelector('span').textContent = ready ? 'Pronta para entrar!' : mine && load.status === 'error' ? 'A fase carrega ao entrar' : 'Baixando a fase…';
   }
 
   function render(s) {
@@ -103,10 +103,11 @@ const SIGN = `<div class="rr-sign rr-glass" role="status" aria-live="polite" dat
     <span class="rr-sign__text"><span class="rr-sign__eyebrow"></span><span class="rr-sign__name"></span><span class="rr-sign__place"></span></span>
   </div>
   <div class="rr-sign__row"></div>
-  <div class="rr-sign__load" hidden><i></i><span>Preparando a fase…</span></div>
+  <div class="rr-sign__load" hidden><i></i><span>Baixando a fase…</span></div>
 </div>`;
 const TRAVEL = () => `<div class="rr-travel rr-glass">
   <button class="rr-travel__prev" type="button" aria-label="Bandeirinha anterior">◀</button>
   <span class="rr-travel__label">${glyph('L', { pad: ['LT'], touch: [] })}<span>Ir para fase</span>${glyph('R', { pad: ['RT'], touch: [] })}</span>
   <button class="rr-travel__next" type="button" aria-label="Próxima bandeirinha">▶</button>
+  <span class="rr-travel__look"><span class="k-kb">arraste: olhar · rodinha: zoom</span><span class="k-pad">analógico direito: olhar</span><span class="k-touch">arraste: olhar · pinça: zoom</span></span>
 </div>`;

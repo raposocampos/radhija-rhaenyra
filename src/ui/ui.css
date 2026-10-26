@@ -440,6 +440,7 @@
 .rr-travel__label { display: inline-flex; align-items: center; gap: 7px; padding: 0 2px; white-space: nowrap; }
 .rr-travel .rr-key, .rr-travel .rr-pad { font-size: 11px; }
 .rr[data-device="touch"] .rr-travel .rr-g { display: none; }
+.rr-travel__look { padding: 0 10px 0 4px; font: 600 12px/1 'Fredoka', sans-serif; color: var(--choco-a); white-space: nowrap; border-left: 1.5px solid rgba(74, 52, 38, .15); }
 .rr-sign {
   grid-template-columns: 1fr;
   gap: 8px;
@@ -1875,6 +1876,7 @@
 .rr[data-compact] .rr-travel { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)); font-size: max(9px, calc(11 * var(--u))); }
 .rr[data-compact] .rr-travel button { width: calc(28 * var(--u)); height: calc(28 * var(--u)); font-size: calc(11 * var(--u)); }
 .rr[data-compact] .rr-travel .rr-key, .rr[data-compact] .rr-travel .rr-pad { font-size: calc(9.5 * var(--u)); }
+.rr[data-compact] .rr-travel__look { padding: 0 calc(6 * var(--u)) 0 calc(2 * var(--u)); font-size: max(9px, calc(9.5 * var(--u))); }
 .rr[data-compact] .rr-sign { gap: calc(4 * var(--u)); width: 100%; padding: calc(5 * var(--u)) calc(9 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u)); border-radius: calc(14 * var(--u)); }
 .rr[data-compact] .rr-sign__head { gap: calc(7 * var(--u)); }
 .rr[data-compact] .rr-sign__badge { width: calc(30 * var(--u)); height: calc(30 * var(--u)); box-shadow: inset 0 0 0 calc(2 * var(--u)) var(--carrot); }

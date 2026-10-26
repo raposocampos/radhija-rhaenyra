@@ -3,8 +3,11 @@
 // e o recorte da câmera ainda funciona por região. Peças que precisam ficar à parte (a torre, que fica transparente
 // quando as dogs passam atrás dela) usam um grupo com nome. Também as formas prontas: caixas arredondadas, telhados,
 // toldos, janelas, cerquinhas e o texto em canvas (placas, números do chão, outdoor).
+// As peças ficam com índice (vértices compartilhados: a cidade tem centenas de milhares de triângulos e, sem índice, o
+// triplo de vértices para a GPU) e as sólidas ganham o "sombreado de maquete": a base um pouco mais escura, como a
+// sombra de contato do chão.
 import * as THREE from 'three';
-import { paint, mat, addFoliageWind, canvasTexture, vnoise2, fbm2, mergeGeometries, RoundedBoxGeometry } from '../../../world/util.js';
+import { paint, mat, addFoliageWind, canvasTexture, vnoise2, fbm2, mergeGeometries, mergeVertices, RoundedBoxGeometry } from '../../../world/util.js';
 
 /** Tamanho das regiões (m) em que as peças fixas são agrupadas. */
 export const CELL = 20;
@@ -19,8 +22,10 @@ export const SLOTS = {
   /** Plantinhas de folha fina (lavanda, gerânio, ramas): as duas faces. */
   plant: () => mat('mapa-plant', () => addFoliageWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, side: THREE.DoubleSide }), { amp: 0.018, freq: 1.6 })),
 };
-/** Baldes que não fazem sombra (o chão). */
-const NO_CAST = new Set(['ground']);
+/** Baldes que não fazem sombra (o chão e as plantinhas baixas: a sombra delas mal aparece e custa uma passada). */
+const NO_CAST = new Set(['ground', 'plant']);
+/** Baldes com o sombreado de maquete (base mais escura). */
+const AO_SLOTS = new Set(['solid']);
 
 const KEEP = ['position', 'normal', 'color'];
 const _m = new THREE.Matrix4();
@@ -43,16 +48,18 @@ export function createKit(root) {
    * @param {THREE.BufferGeometry} geo
    * @param {{ color?: string | ((p: THREE.Vector3, n: THREE.Vector3) => THREE.Color) | null, slot?: keyof typeof SLOTS,
    *           x?: number, y?: number, z?: number, rx?: number, ry?: number, rz?: number, sx?: number, sy?: number, sz?: number,
-   *           group?: string }} [o]
+   *           group?: string, ao?: boolean }} [o]
    */
-  function add(geo, { color = '#ffffff', slot = 'solid', x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1, group = null } = {}) {
+  function add(geo, { color = '#ffffff', slot = 'solid', x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1, group = null, ao = AO_SLOTS.has(slot) } = {}) {
     // o que o balde não usa sai antes da cópia (a peça é só do cenário: uv e afins não servem a ninguém)
     for (const k of Object.keys(geo.attributes)) if (!KEEP.includes(k)) geo.deleteAttribute(k);
-    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    const g = geo.clone();
+    if (!g.index) g.setIndex(trivialIndex(g.attributes.position.count));
     g.boundingBox = null;
     g.boundingSphere = null;
     if (!g.attributes.normal) g.computeVertexNormals();
     if (color !== null || !g.attributes.color) paint(g, color ?? '#ffffff');
+    if (ao) shadeBase(g, sy);
     _e.set(rx, ry, rz);
     _q.setFromEuler(_e);
     _m.compose(_p.set(x, y, z), _q, _s.set(sx, sy, sz));
@@ -92,23 +99,51 @@ export function createKit(root) {
   return { add, finish };
 }
 
+/** Índice 0, 1, 2… (peças sem índice entram no balde junto com as indexadas). */
+function trivialIndex(n) {
+  const a = n > 65535 ? new Uint32Array(n) : new Uint16Array(n);
+  for (let i = 0; i < n; i++) a[i] = i;
+  return new THREE.BufferAttribute(a, 1);
+}
+/**
+ * Sombreado de maquete: escurece a base da peça (até 20 %, nos primeiros ~0,9 m ou na metade dela, o que for menor),
+ * como a sombra de contato do chão; as peças baixas quase não mudam. Antes da escala/posição (sy: a escala em y).
+ */
+function shadeBase(g, sy = 1) {
+  const pos = g.attributes.position, col = g.attributes.color;
+  let minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  const h = (maxY - minY) * Math.abs(sy);
+  if (!(h > 0.12)) return;
+  const reach = Math.min(0.9, h * 0.5) / Math.abs(sy);
+  const depth = Math.min(0.2, 0.06 + h * 0.08);
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, (pos.getY(i) - minY) / reach);
+    const k = 1 - depth * (1 - t * t * (3 - 2 * t));
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * k);
+  }
+}
+
 // ---------------------------------------------------------------- formas
 /**
  * Modelos de caixa arredondada por número de segmentos: cada vértice guarda o canto (sinal de x, y, z) e a normal. Uma
  * caixa w × h × d de raio r é só canto × (meia medida − r) + normal × r: igual à RoundedBoxGeometry e muito mais rápida
  * (a cidade tem milhares de caixas).
- * @type {Map<number, { sign: Float32Array, normal: Float32Array, count: number }>}
+ * Com índice: os vértices iguais (mesma posição e normal) viram um só.
+ * @type {Map<number, { sign: Float32Array, normal: Float32Array, count: number, index: Uint16Array | Uint32Array }>}
  */
 const RB = new Map();
 function rbTemplate(seg) {
   let t = RB.get(seg);
   if (t) return t;
   const g0 = new RoundedBoxGeometry(1, 1, 1, seg, 0.25);
-  const g = g0.index ? g0.toNonIndexed() : g0;
+  g0.deleteAttribute('uv');
+  const g = mergeVertices(g0.index ? g0.toNonIndexed() : g0, 1e-5);
   const pos = g.attributes.position.array;
   const sign = new Float32Array(pos.length);
   for (let i = 0; i < pos.length; i++) sign[i] = pos[i] < 0 ? -1 : 1;
-  t = { sign, normal: Float32Array.from(g.attributes.normal.array), count: g.attributes.position.count };
+  const idx = g.index.array;
+  t = { sign, normal: Float32Array.from(g.attributes.normal.array), count: g.attributes.position.count, index: idx.length > 65535 ? Uint32Array.from(idx) : Uint16Array.from(idx) };
   g0.dispose();
   RB.set(seg, t);
   return t;
@@ -127,6 +162,7 @@ export function rb(w, h, d, r = 0.06, seg = 2) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(t.normal.slice(), 3));
+  g.setIndex(new THREE.BufferAttribute(t.index.slice(), 1));
   return g;
 }
 /** Cilindro (ou tronco de cone) com a base em y = 0. */
@@ -239,7 +275,7 @@ export function picketFence(kit, { x0, z0, x1, z1, h = 0.62, color = '#fffaf0', 
   const len = Math.hypot(x1 - x0, z1 - z0);
   const ry = -Math.atan2(z1 - z0, x1 - x0);
   const n = Math.max(1, Math.round(len / step));
-  const post = rb(0.08, h - 0.06, 0.035, 0.012, 1);
+  const post = slab(0.08, h - 0.06, 0.035); // reta: de longe não se vê o arredondado (e são centenas)
   const tip = new THREE.ConeGeometry(0.058, 0.09, 4);
   tip.rotateY(Math.PI / 4);
   tip.translate(0, h - 0.06 + 0.045, 0);

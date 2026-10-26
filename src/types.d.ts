@@ -588,8 +588,8 @@ export interface HubContext {
   unlockAll: boolean;
   /** Entra na fase `index` (o cartão de abertura dela). */
   enter(index: number): void;
-  /** Adianta a fase `index` (null: nenhuma). build: as dogs estão na frente da bandeirinha (pode montar o cenário). */
-  preload?(index: number | null, opts?: { build?: boolean }): void;
+  /** Baixa por baixo o código da fase `index` (null: nenhuma). */
+  preload?(index: number | null): void;
 }
 
 /** Estado de uma bandeirinha do mapa: concluída, a próxima (liberada) ou trancada. */

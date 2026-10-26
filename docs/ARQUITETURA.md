@@ -324,19 +324,27 @@ Jogar → Fases abre o mapa: uma fase especial fora de `LEVELS` (`createGame({ h
 mesmo núcleo (dogs, companheira, câmera isométrica, colisão, navegação) e um puzzle que nunca termina. Cada fase do
 catálogo tem uma bandeirinha em `FLAGS` (mesma ordem; `test/mapa.test.mjs` cobra), na frente do lugar onde acontece.
 O puzzle recebe `ctx.hub` (`HubContext`: o catálogo, o progresso salvo — `game.setProgressSource`, ligado ao da UI
-—, de qual fase as dogs voltaram, `enter(index)` e `preload(index, { build })`) e cuida dos estados das
+—, de qual fase as dogs voltaram, `enter(index)` e `preload(index)`) e cuida dos estados das
 bandeirinhas, das nuvens e da ponte (bloqueios dinâmicos por área), do atalho (`puzzle.travel`: R/L, L2/R2, 1–0,
 [ ], ◀ ▶ no HUD) e da plaquinha (`map:sign`). Entrar abre o cartão de abertura da fase; o Voltar dele, a pausa e a
 vitória (`ui:openMap`) voltam na frente da bandeirinha; do menu, na da próxima fase.
 
-**Pré-carga** (`src/game/levelPreload.js`): perto de uma bandeirinha liberada o código da fase é importado; parada na
-frente dela, o cenário é montado num Group fora da cena e `engine.precompile` compila os programas (como se ela já
-estivesse na cena, com as luzes de agora e as dela) e envia as texturas aos poucos; `loadLevel` usa essa montagem
-(`preload.take`) e o `engine.prepare()` da entrada fica curto. A barrinha da plaquinha mostra o andamento
-(`map:preload`). Afastou-se: a montagem é descartada.
+**Pré-carga** (`src/game/levelPreload.js`): perto de uma bandeirinha liberada o código da fase é importado (só o
+import, que roda fora do quadro); a montagem do cenário fica para a entrada, atrás da cortina de carregamento.
+Montar e compilar ali mesmo, com as dogs andando, travava o mapa (0,05 a 1 s por fase no PC). A barrinha da plaquinha
+mostra o andamento (`map:preload`) e `loadLevel` usa o módulo já importado (`preload.take`).
 
-**Cenário**: `world/kit.js` junta as peças fixas (cores por vértice) por material e por região de 20 m (poucas malhas
-para a cidade inteira, com recorte da câmera por região); caixas arredondadas saem de um molde por número de segmentos.
+**Câmera livre** (`src/game/mapLook.js`): no mapa dá para olhar em volta sem andar: arrastar o dedo ou o mouse na
+tela, o analógico direito, a rodinha ou a pinça (aproximar e afastar, `cameraRig.setZoom`). O deslocamento soma ao
+alvo da câmera (até 45 m) e volta para as dogs quando elas andam ou com o atalho.
+
+**Cenário**: cada lugar de fase é a fase em miniatura, com as peças que a fazem (`world/casa.js`: fases 1, 5 e 8;
+`world/condominio.js`: 2, 3, 4, 6 e 7; `world/chacara.js`: 9 e 10). As casas das fases que acontecem dentro de casa
+ficam em corte de maquete (`pecas.openHouse`: as paredes do lado da câmera baixas e o telhado aberto como tampa, com o
+mobiliário da fase dentro). `world/kit.js` junta as peças fixas (cores por vértice, com índice e a base um pouco mais
+escura) por material e por região de 20 m (poucas malhas para a cidade inteira, com recorte da câmera por região);
+caixas arredondadas saem de um molde por número de segmentos; as plantinhas de vaso e floreira são moitas leves
+(`pecas.flowerBush`) e as coisas repetidas que se mexem (gotas de chuva, jatos do chafariz) são instâncias.
 A sombra do sol cobre só a vizinhança do que a câmera olha (`engine.focusShadow`). Tudo o que fica em pé colide
 (`STATIC_COLLIDERS`), e o mapa liga a grade de colisão (`COLLISION_GRID`, §5).
 

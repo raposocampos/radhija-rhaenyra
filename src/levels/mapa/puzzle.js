@@ -38,7 +38,7 @@ export function createPuzzle(ctx) {
   const { emit, props, world, cam } = ctx;
   /** @type {import('../../types').HubContext} */
   const hub = ctx.hub || { levels: [], progress: () => ({ levels: {} }), from: null, enter() {}, unlockAll: false };
-  const S = { time: 0, prompt: undefined, sign: null, near: null, preloading: null, preBuild: false, nextHint: 0 };
+  const S = { time: 0, prompt: undefined, sign: null, near: null, preloading: null, nextHint: 0 };
   /** Índice no catálogo de cada bandeirinha (fases que não estão no catálogo ficam de fora). */
   const flags = FLAGS.map((f) => ({ ...f, index: hub.levels.findIndex((l) => l.id === f.level) }))
     .filter((f) => f.index >= 0);
@@ -168,14 +168,11 @@ export function createPuzzle(ctx) {
     }
     S.near = near;
     setPrompt(near && stateOf(near) !== 'locked' ? 'enter' : null);
-    // carga por baixo: a bandeirinha liberada mais perto, a até FLAG_PRELOAD m (o código); parada na frente dela, a
-    // montagem do cenário (build)
+    // o código da fase da bandeirinha liberada mais perto, a até FLAG_PRELOAD m, vai sendo baixado por baixo
     const want = f && d < FLAG_PRELOAD && stateOf(f) !== 'locked' ? f.index : null;
-    const build = !!near && near.index === want;
-    if (want !== S.preloading || build !== S.preBuild) {
+    if (want !== S.preloading) {
       S.preloading = want;
-      S.preBuild = build;
-      hub.preload?.(want, { build });
+      hub.preload?.(want);
     }
     // encostou nas nuvens (área fechada): uma dica de vez em quando
     if (S.time > S.nextHint) {
@@ -211,7 +208,6 @@ export function createPuzzle(ctx) {
     S.sign = undefined;
     S.near = null;
     S.preloading = undefined;
-    S.preBuild = false;
     S.prompt = undefined;
     const before = lastVisit;
     applyProgress({ animate: false });

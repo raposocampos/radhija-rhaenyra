@@ -137,22 +137,38 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   carro 2,3 m; casa 8 m; torre 11 m): condomínio com ruas em grade, centro na Av. Pandora (padaria, banca, pet shop,
   sorveteria, ponto e ônibus, chafariz, outdoor), rio com ponte levadiça e a chácara do vovô; uma bandeirinha por fase
   na frente do lugar dela. Peças fixas fundidas por material e região de 20 m (`world/kit.js`: ~190 malhas para a
-  cidade, montagem ~0,5 s no PC), caixas arredondadas por molde, sombra do sol só em volta da câmera
-  (`engine.focusShadow`). Colisão de tudo o que está em pé (206 colisores) e grade de colisão (`layout.COLLISION_GRID`,
+  cidade, montagem ~0,7 s no PC), caixas arredondadas por molde, sombra do sol só em volta da câmera
+  (`engine.focusShadow`). Colisão de tudo o que está em pé (232 colisores) e grade de colisão (`layout.COLLISION_GRID`,
   `world.staticsNear`; sem a grade, as fases continuam com a lista inteira). Lógica (`puzzle.js`): estados das
   bandeirinhas pelo progresso da UI (`game.setProgressSource`), nuvens e ponte por área (leste abre na 6, chácara na 9),
   atalho (R/L, L2/R2, 1–0, [ ], ◀ ▶), E/Agir entra (cartão de abertura), Voltar do cartão, pausa e vitória (botão
-  Mapa) voltam na frente da bandeirinha; do menu, abre na próxima fase. Pré-carga (`src/game/levelPreload.js` +
-  `engine.precompile`): perto da bandeirinha importa o código; parada na frente, monta o cenário fora da cena e
-  compila os programas e as texturas sem travar; entrar usa a montagem pronta (a barrinha da plaquinha mostra).
+  Mapa) voltam na frente da bandeirinha; do menu, abre na próxima fase. Pré-carga (`src/game/levelPreload.js`): perto
+  da bandeirinha só importa o código (a barrinha da plaquinha mostra); a montagem fica para a entrada.
   HUD do mapa em `src/ui/mapHud.js` (`.rr[data-hub]`); `?mapa` abre direto no mapa. Catálogo de desenvolvimento
   continua com a lista de cartões (sem o mapa).
 - Testes da etapa 3: `test/mapa.test.mjs` (layout, caminhos livres, grade = lista inteira, estados, atalho, entrar e
   voltar, nuvens, pré-carga); suíte E2E nova `mapa` (`tools/scripts/test-mapa.mjs`) e capturas em qualidade de cada
   aparelho (`capture-mapa.mjs`); suítes `menu`, `toque`, `expresso` e `capture-celular.mjs` passaram a ir pelo mapa.
-- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `mapa`, `menu`, `toque`,
-  `expresso` e `controle`, revisar as capturas, prévia e aprovação do usuário nesta sessão (depois do #64). Depois,
-  a etapa 4 (menu principal).
+- Retorno do usuário na primeira prévia do #67: "O mapa não ficou muito fiel as fases que existem, além de estar
+  travando um pouco, quando ta carregando as fases da umas travadas... Por opção de movimentar a camera para ver sem
+  ter que andar com as dogs ou pular no atalho. Mas foco no visual do mapa". Feito (2026-10-26, Claude): (a) a
+  pré-carga não monta mais o cenário perto da bandeirinha (era a trava: 0,05–1 s por fase no PC); só importa o código
+  e `engine.precompile` saiu; (b) câmera livre no mapa (`src/game/mapLook.js`: arrastar, analógico direito, rodinha,
+  pinça; dica no HUD); (c) cada lugar refeito com as peças da fase (`world/casa.js`, `condominio.js`, `chacara.js`,
+  `pecas.js`): casas em corte de maquete com o interior das fases 5, 8 e 9, jardim da fase 1 (cerca divisória, portão
+  da cordinha, carrinho, bebedouro), área de serviço da 2 (lavanderia, mureta com o portão, irrigador girando, canal),
+  quintal do lago da 3 (prédio, cerca-viva com treliça e lanternas, ponte, cordões de luz), terraço da 4 (casa da
+  escada, floreiras com o vão, ventilador no trilho, cantinho dos pombos), brinquedoteca da 6 em corte (trilho no
+  feltro, estação, cancela, pórtico com a lua, foguete), pracinha da 7 (cerca de lápis, piso emborrachado, morrinho com
+  a manilha, brinquedos, poças) e o quintal da 10 (deque com pergolado, luzinhas e a faixa "FELIZ 3 ANOS", mangueira
+  com a piñata, milharal com espantalho, girassóis, casa na árvore com balde e escorregador); kit com índice e sombra
+  de base; moitas leves e instâncias (jatos, chuva). Medidas no Node: ~297 mil triângulos fixos e ~346 mil vértices
+  (antes ~335 mil vértices), 170 malhas, montagem ~0,7 s; `chk-mapa` sem bloqueio nos caminhos; a varredura do
+  "nada atravessa" (`findLooseObstacles`, grade mais grossa) sem achados nos lugares das fases (ajustes: alça do
+  carrinho, cadeiras do lago, braços do irrigador, roldana, folha do portão da pracinha, bocas da manilha,
+  galinhas). Capturas novas `30-perto-faseNN` em `capture-mapa.mjs`.
+- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `todas` no head novo, revisar as capturas,
+  prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 

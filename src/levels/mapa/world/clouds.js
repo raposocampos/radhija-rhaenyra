@@ -117,7 +117,7 @@ export function buildClouds(root, L) {
   for (const hx of [B.x0 - 0.25, B.x1 + 0.25]) {
     for (const s of [-1, 1]) {
       towerParts.push(paint(rb(0.4, 2.2, 0.4, 0.05, 1).translate(hx, 0, B.z + s * (B.w / 2 + 0.3)), '#8e5a33'));
-      towerParts.push(paint(new THREE.ConeGeometry(0.34, 0.4, 4).rotateY(Math.PI / 4).translate(hx, 2.4, B.z + s * (B.w / 2 + 0.3)).toNonIndexed(), '#c2483a'));
+      towerParts.push(paint(new THREE.ConeGeometry(0.34, 0.4, 4).rotateY(Math.PI / 4).translate(hx, 2.4, B.z + s * (B.w / 2 + 0.3)), '#c2483a'));
     }
     towerParts.push(paint(rb(0.3, 0.2, B.w + 1.0, 0.04, 1).translate(hx, 2.0, B.z), '#8e5a33'));
   }

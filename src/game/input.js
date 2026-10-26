@@ -106,7 +106,7 @@ export function touchStick(dx, dy, radius) {
  */
 export function readGamepad() {
   const pads = connectedPads();
-  const out = { connected: pads.length > 0, pad: null, down: new Array(17).fill(false), rt: 0, lt: 0, stick: { x: 0, y: 0, m: 0 }, dpad: { x: 0, y: 0 }, count: pads.length };
+  const out = { connected: pads.length > 0, pad: null, down: new Array(17).fill(false), rt: 0, lt: 0, stick: { x: 0, y: 0, m: 0 }, stick2: { x: 0, y: 0, m: 0 }, dpad: { x: 0, y: 0 }, count: pads.length };
   let bestM = 0;
   let bestTs = -Infinity;
   for (const p of pads) {
@@ -120,6 +120,10 @@ export function readGamepad() {
     const s = shapeStick(p.axes?.[0] || 0, p.axes?.[1] || 0);
     if (s.m > bestM) { bestM = s.m; out.stick = s; }
     if (s.m > 0) active = true;
+    // analógico direito: olhar o mapa das fases (game.js)
+    const s2 = shapeStick(p.axes?.[2] || 0, p.axes?.[3] || 0);
+    if (s2.m > out.stick2.m) out.stick2 = s2;
+    if (s2.m > 0) active = true;
     const ts = (active ? 1e12 : 0) + (p.timestamp || 0);
     if (ts > bestTs) { bestTs = ts; out.pad = p; }
   }
@@ -185,6 +189,7 @@ export function createInput({ onDevice } = {}) {
     cur: new Array(17).fill(false),
     latched: new Set(), // botões ignorados até soltar (não vazam do menu para o jogo)
     stick: { x: 0, y: 0, m: 0 },
+    stick2: { x: 0, y: 0, m: 0 },
     dpad: { x: 0, y: 0 },
     shiftHeld: false,
     bafo: false,
@@ -216,6 +221,7 @@ export function createInput({ onDevice } = {}) {
       pad.cur.fill(false);
       pad.prev.fill(false);
       pad.stick = { x: 0, y: 0, m: 0 };
+      pad.stick2 = { x: 0, y: 0, m: 0 };
       pad.dpad = { x: 0, y: 0 };
       pad.shiftHeld = false;
       pad.bafo = false;
@@ -235,6 +241,7 @@ export function createInput({ onDevice } = {}) {
         pad.cur.fill(false);
         pad.prev.fill(false);
         pad.stick = { x: 0, y: 0, m: 0 };
+        pad.stick2 = { x: 0, y: 0, m: 0 };
         pad.dpad = { x: 0, y: 0 };
         pad.shiftHeld = false;
         pad.bafo = false;
@@ -263,6 +270,8 @@ export function createInput({ onDevice } = {}) {
     if (shiftNow && !pad.shiftHeld) { pressed.add(PAD_SHIFT); activity = true; }
     pad.shiftHeld = shiftNow;
     pad.stick = g.stick;
+    pad.stick2 = g.stick2;
+    if (g.stick2.m > 0.25) activity = true;
     pad.dpad = {
       x: (isDown(PAD.RIGHT) ? 1 : 0) - (isDown(PAD.LEFT) ? 1 : 0),
       y: (isDown(PAD.UP) ? 1 : 0) - (isDown(PAD.DOWN) ? 1 : 0),
@@ -316,6 +325,8 @@ export function createInput({ onDevice } = {}) {
       y = Math.max(-1, Math.min(1, y));
       return { x, y, m: x || y ? 1 : 0 };
     },
+    /** Analógico direito do controle (x direita +, y frente +, m 0..1): olhar o mapa das fases. */
+    look: () => ({ x: pad.stick2.x, y: pad.stick2.y, m: pad.stick2.m }),
     /** Ignora os botões do controle que estão segurados agora até serem soltos (ao voltar a jogar). */
     latchPad() {
       // relê o controle agora (a UI pode ter visto o botão neste quadro antes do jogo)

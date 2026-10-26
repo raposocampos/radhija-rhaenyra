@@ -1,12 +1,12 @@
 // PANDORÓPOLIS — o chão: os dois platôs da maquete (grama com textura, barranco de terra e pedra), o mar com
 // ondinhas, as ruas (asfalto, faixas que param nos cruzamentos, faixas de pedestre), calçadas em volta dos
-// quarteirões, vagas, pisos (área de serviço, praça, frente da torre), areia da pracinha, jardim da casa e a estrada
-// de terra da chácara. Alturas em camadas (grama 0, asfalto 0,012, faixas 0,016, calçada 0,03): nada no mesmo plano.
+// quarteirões, vagas, pisos (área de serviço, praça, frente da torre), o gramado do jardim da casa e a estrada de
+// terra da chácara. Alturas em camadas (grama 0, asfalto 0,012, faixas 0,016, calçada 0,03): nada no mesmo plano.
 import * as THREE from 'three';
 import { rippleNormalTexture, vnoise2, fbm2, mat } from '../../../world/util.js';
 import { rb, slab, grassTexture } from './kit.js';
 
-const Y = { road: 0.012, mark: 0.0165, walk: 0.03, pave: 0.022, lawn: 0.007, sand: 0.02, dirt: 0.011 };
+const Y = { road: 0.012, mark: 0.0165, walk: 0.03, pave: 0.022, lawn: 0.007, dirt: 0.011 };
 
 /** Cor com ruído suave (posição do mundo = local + deslocamento). */
 const noisy = (hex, amp = 0.06, freq = 0.35, ox = 0, oz = 0) => {
@@ -211,8 +211,11 @@ export function buildGround(kit, root, L) {
     const g = slab(b.maxX - b.minX, y, b.maxZ - b.minZ);
     kit.add(g, { color: (p) => ((Math.floor((p.x + cx) / size) + Math.floor((p.z + cz) / size)) % 2 ? ca : cb), slot: 'ground', x: cx, z: cz });
   };
-  const S = L.BLOCKS.servico;
-  tiles({ minX: S.minX + L.WALK_W, maxX: S.maxX - L.WALK_W, minZ: S.minZ + L.WALK_W, maxZ: S.maxZ - L.WALK_W });
+  // a área de serviço (fase 2): piso na frente da lavanderia (até a mureta) e no fundo (depois do canal); o meio é o
+  // gramado do irrigador
+  const S = L.BLOCKS.servico, Sv = L.SERVICE;
+  tiles({ minX: S.minX + L.WALK_W, maxX: S.maxX - L.WALK_W, minZ: S.minZ + L.WALK_W, maxZ: Sv.wall.z + 0.15 });
+  tiles({ minX: S.minX + L.WALK_W, maxX: S.maxX - L.WALK_W, minZ: Sv.canal.maxZ, maxZ: S.maxZ - L.WALK_W }, '#e2d6c2', '#d3c5ae', 0.75);
   const T = L.BLOCKS.torre;
   tiles({ minX: T.minX + L.WALK_W, maxX: T.maxX - L.WALK_W, minZ: L.TOWER.z + L.TOWER.d / 2, maxZ: T.maxZ - L.WALK_W }, '#e9dfcf', '#dccfbb', 1.2);
   const N = L.TOWN_BLOCKS.norte;
@@ -222,16 +225,9 @@ export function buildGround(kit, root, L) {
   const ring = new THREE.RingGeometry(F.r + 0.2, F.r + 1.6, 40, 3).rotateX(-Math.PI / 2);
   kit.add(ring, { color: (p) => (Math.floor(Math.hypot(p.x, p.z) / 0.55) % 2 ? new THREE.Color('#e3d6c1') : new THREE.Color('#d2c2a8')), slot: 'ground', x: F.x, y: Y.pave, z: F.z });
 
-  // ---------- areia da pracinha, jardim da casa, horta e estrada de terra ----------
-  const sand = L.PLAYGROUND.sand;
-  kit.add(rb(sand.maxX - sand.minX, Y.sand, sand.maxZ - sand.minZ, 0.012, 1), { color: noisy('#f0d9a6', 0.05, 1.8, -5, 13), slot: 'ground', x: (sand.minX + sand.maxX) / 2, z: (sand.minZ + sand.maxZ) / 2 });
-  for (const p of L.PLAYGROUND.puddles) {
-    kit.add(new THREE.CircleGeometry(p.r, 22).rotateX(-Math.PI / 2), { color: '#7a5434', slot: 'ground', x: p.x, y: Y.sand + 0.004, z: p.z, sz: 0.7 });
-  }
+  // ---------- jardim da casa e estrada de terra (o piso da pracinha e a horta estão em condominio.js e chacara.js) ----------
   const gd = L.HOUSE.garden;
   kit.add(slab(gd.maxX - gd.minX - 0.1, Y.lawn, gd.maxZ - gd.minZ - 0.1), { color: noisy('#92c45a', 0.05, 0.9, -21, 16), slot: 'ground', x: (gd.minX + gd.maxX) / 2, z: (gd.minZ + gd.maxZ) / 2 });
-  const H = L.GRANDPA.garden;
-  kit.add(slab(H.maxX - H.minX, Y.dirt, H.maxZ - H.minZ), { color: (p) => (Math.floor((p.z + 100) / 0.9) % 2 ? new THREE.Color('#8a5e3c') : new THREE.Color('#9d6c46')), slot: 'ground', x: (H.minX + H.maxX) / 2, z: (H.minZ + H.maxZ) / 2 });
   const D = L.DIRT;
   kit.add(rb(D.x1 - D.x0, Y.dirt, D.w, 0.01, 1), { color: noisy('#c9a172', 0.06, 0.8, 41, 0), slot: 'ground', x: (D.x0 + D.x1) / 2, z: D.z });
   kit.add(rb(D.drive.w, Y.dirt, D.drive.z1 - D.drive.z0, 0.01, 1), { color: noisy('#c9a172', 0.06, 0.8, 39, -3), slot: 'ground', x: D.drive.x, y: 0.0005, z: (D.drive.z0 + D.drive.z1) / 2 });

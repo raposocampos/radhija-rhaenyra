@@ -70,40 +70,84 @@ export const TOWN_BLOCKS = {
 };
 
 // ---------------------------------------------------------------- lugares (as fases e os enfeites)
-/** Casa das dogs: corpo, anexo da lavanderia, jardim da frente com a cerca e o portãozinho. */
+/**
+ * Casa das dogs, em corte de maquete como as fases (paredes da frente baixas e o telhado aberto como tampa): dentro, a
+ * sala e a cozinha da fase 5 (caixas da mudança, o ursinho); no anexo, a lavanderia da fase 8; no jardim da frente, a
+ * fase 1 (a cerca divisória com o portão da cordinha, o carrinho de jardim e a cenoura do outro lado).
+ */
 export const HOUSE = {
   x: -22.2, z: 7.2, w: 9, d: 6, h: 3.1, door: { x: -22.2 },
   annex: { x: -16.5, z: 7.2, w: 2.4, d: 4.2, h: 2.4 },
   garden: { minX: -27.9, maxX: -14.7, minZ: 10.2, maxZ: 21.9 },
   fence: { z: 21.9, gate: { x0: -22.1, x1: -19.9 }, h: 0.62, back: 4.2 },
-  line: { x0: -20.2, x1: -16.9, z: 16.8 }, // varal com a meia listrada
+  /** Fase 1: cerca divisória (x fixo) com o portão aberto entre z0 e z1, a cordinha no trinco. */
+  divider: { x: -18.6, z0: 15.0, z1: 21.9, gate: { z0: 13.2, z1: 15.0 } },
+  /** Carrinho de jardim (o vagão de madeira da fase 1) e o bebedouro dos passarinhos. */
+  cart: { x: -17.3, z: 18.3, w: 1.1, d: 0.62 },
+  birdbath: { x: -25.8, z: 14.8, r: 0.32 },
   /** Canteiro na frente da casa (oeste da porta) e os soltos do jardim: [x, z, tipo]. */
   bed: { minX: -26.45, maxX: -22.95, minZ: 10.2, maxZ: 10.95 },
   flowers: /** @type {[number, number, string][]} */ ([[-26.8, 13, 'ger2'], [-26.6, 16.4, 'lav'], [-15.4, 17.6, 'ger'], [-24.8, 20.6, 'flw'], [-17.8, 20.8, 'flw'], [-19.4, 12.3, 'ger2']]),
-  /** Cenoura de brinquedo esquecida na grama. */
-  carrot: { x: -24.5, z: 18.2 },
+  /** A cenoura de pelúcia da fase 1, no nicho do outro lado da cerca divisória. */
+  carrot: { x: -16.3, z: 19.5 },
 };
 /** Torre do condomínio (o terraço da fase 4). */
 export const TOWER = { x: -21.3, z: -12.9, w: 6.6, d: 6.6, h: 11 };
-/** Jardim do lago (fase 3). */
+/** Jardim do lago (fase 3): o lago com a ilha e a ponte (plank). */
 export const LAKE = { x: -38, z: -13.2, r: 5.2, island: { x: -38.6, z: -13.6, r: 1.55 }, plank: { x0: -36.9, x1: -32.6, z: -13.6, w: 0.85 } };
-/** Área de serviço do condomínio (fase 2): varal comprido, irrigador, o canal e o caixote. */
+/**
+ * O quintal do apartamento da fase 3, ao norte do lago: o prédio com a porta de vidro (luz quente), a cerca-viva com o
+ * portão de treliça e as duas lanternas, as duas pedras (a pesada e a leve, no cantinho), a mesinha com o lampião. Os
+ * cordões de luz vão de poste em poste (GARDEN_LAMPS) em volta do lago.
+ */
+export const LAKE_YARD = {
+  building: { x: -37.5, z: -22.3, w: 12, d: 2.6, h: 4.6 },
+  door: { x: -37.5, w: 1.6 },
+  hedge: { z: -19.4, x0: -44.1, x1: -30.9, h: 0.9, gate: { x0: -38.2, x1: -36.8 } },
+  plates: [{ x: -35.9, z: -20.3, r: 0.34 }, { x: -43.1, z: -20.2, r: 0.22 }],
+  table: { x: -33.4, z: -20.3, r: 0.45 },
+};
+/**
+ * Área de serviço do condomínio (fase 2), no crepúsculo: a lavanderia (a porta com a luz acesa) e o varal (zona A), a
+ * mureta com o portão de ferro aberto e a tábua de pressão com a roldana, o gramado com o irrigador de três jatos e o
+ * registro (zona B), o caixote e o canal com o vão do meio-fio (zona C), a bolinha e a caminha.
+ */
 export const SERVICE = {
-  line: { x0: -43, x1: -33.4, z: 4.8 },
-  sprinkler: { x: -39.6, z: 10.2 },
-  canal: { minX: -44.1, maxX: -31.5, minZ: 17.7, maxZ: 19.5 },
+  laundry: { x: -41.3, z: 3.9, w: 4.6, d: 2.8, h: 2.6 },
+  line: { x0: -38.0, x1: -32.6, z: 3.4 },
+  wall: { z: 7.6, x0: -44.1, x1: -30.9, h: 0.7, gate: { x0: -37.4, x1: -36.0 } },
+  plank: { x: -38.5, z: 6.7, w: 1.1, d: 0.45 },
+  sprinkler: { x: -39.6, z: 11.6 },
+  valve: { x: -33.2, z: 9.3 },
+  canal: { minX: -44.1, maxX: -31.5, minZ: 17.7, maxZ: 19.5, slot: -34.2 },
   crate: { x: -36, z: 16.6, s: 0.9 },
   ball: { x: -33.9, z: 21.6 },
-  basket: { x: -41.6, z: 7.4, w: 0.7, d: 0.5 },
+  bed: { x: -42.6, z: 21.2, w: 0.8, d: 0.6 },
+  basket: { x: -42.8, z: 6.5, w: 0.7, d: 0.5 },
 };
-/** Brinquedoteca com o trenzinho em volta (fase 6). */
-export const TOYHOUSE = { x: -5.1, z: -14.4, w: 5.2, d: 4.2, h: 2.7, track: { rx: 4.3, rz: 3.4 } };
-/** Pracinha (fase 7). */
+/**
+ * Brinquedoteca (fase 6): a oficina em corte, com o trenzinho no trilho de madeira em volta (sobre o feltro), a estação,
+ * a cancela, o pórtico com a lua pendurada e o foguete de dois berços no tapete.
+ */
+export const TOYHOUSE = {
+  x: -5.1, z: -14.4, w: 5.2, d: 4.2, h: 2.7, track: { rx: 4.3, rz: 3.4 },
+  rocket: { x: -9.0, z: -11.3 }, station: { x: -5.1, z: -11.75, w: 1.6, d: 0.45 },
+};
+/**
+ * Pracinha (fase 7), na manhã depois da chuva: o parquinho cercado de lápis de cor (piso emborrachado, escorregador com
+ * casinha e o frisbee lá em cima, balanço, gangorra, caixa de areia, joaninha de mola, a bolinha) com o portão ao sul e,
+ * na cerca oeste, o morrinho com a manilha; em volta, o gramado molhado com poças e a toalha do piquenique com a cesta.
+ */
 export const PLAYGROUND = {
-  sand: { minX: -10.5, maxX: 0.3, minZ: 3.6, maxZ: 22.2 },
-  slide: { x: -3.6, z: 8.6 }, swing: { x: -8.1, z: 16.8 }, towel: { x: -1.6, z: 20.2 },
-  puddles: [{ x: -6.6, z: 12.6, r: 0.9 }, { x: -2.1, z: 16.2, r: 0.7 }],
-  bucket: { x: -8.6, z: 6.4 },
+  yard: { minX: -8.6, maxX: 0.4, minZ: 2.6, maxZ: 15.4 },
+  gate: { x0: -3.1, x1: -1.7 },
+  slide: { x: -2.4, z: 5.6 }, swing: { x: -6.4, z: 4.6 },
+  seesaw: { x: -6.0, z: 11.4, len: 2.4 }, sandbox: { x: -1.6, z: 12.0, s: 1.8 }, ladybug: { x: -4.0, z: 8.9 },
+  hill: { x: -9.4, z: 9.0, r: 1.5 },
+  towel: { x: -3.0, z: 20.2 }, basket: { x: -1.8, z: 20.9 },
+  puddles: [{ x: -6.0, z: 18.4, r: 0.9 }, { x: -10.2, z: 12.6, r: 0.7 }, { x: -4.2, z: 13.8, r: 0.5 }],
+  bucket: { x: -1.3, z: 12.3 },
+  ball: { x: -1.0, z: 9.4 },
 };
 /** Centro: padaria, banca, pet shop, ponto de ônibus, praça com chafariz, sorveteria e o outdoor da Amora. */
 export const TOWN = {
@@ -135,13 +179,25 @@ export const GRANDPA = {
   house: { x: 39.6, z: -8.4, w: 7.2, d: 6, h: 2.8 },
   garden: { minX: 33.2, maxX: 38.4, minZ: -21.6, maxZ: -16.2 },
   barn: { x: 46.8, z: -18.6, w: 4.2, d: 3.6, h: 2.4 },
-  sty: { minX: 44.4, maxX: 50.4, minZ: -13.2, maxZ: -7.6 },
+  sty: { minX: 46.2, maxX: 51.8, minZ: -13.2, maxZ: -7.6 },
+  /** Fase 9: o jardim de inverno, de vidro, encostado na casa (plantas, a poltrona de vime e o varal de luzinhas). */
+  conservatory: { x: 44.5, z: -8.6, w: 2.2, d: 3.6, h: 2.3 },
   table: { x: 41, z: 8.6, w: 2.2, d: 1.3 },
   pool: { x: 35.8, z: 14.6, r: 1.15 },
   treehouse: { x: 47.4, z: 17, r: 0.32 },
   bunting: { x0: 37, x1: 45, z: 5.4 },
-  /** Varanda da casa (piso e colunas) e o embrulho de presente perto da piscininha. */
-  porch: { minX: 36.6, maxX: 42.6, minZ: -5.4, maxZ: -3.8, posts: [-2.6, -0.9, 0.9, 2.6] },
+  /** Varanda da casa (o piso; a casa em corte não tem o telhado da varanda) e o embrulho de presente perto da piscininha. */
+  porch: { minX: 36.6, maxX: 42.6, minZ: -5.4, maxZ: -3.8, posts: [] },
+  /** Fase 10: o deque da festa com o pergolado (luzinhas e a faixa "FELIZ 3 ANOS"), a mangueira com a piñata, o
+   * campinho de milho com o espantalho e os girassóis da horta. */
+  deck: { x: 41, z: 8.5, w: 4.8, d: 3.2 },
+  pergola: { posts: [[38.8, 7.1], [43.2, 7.1], [38.8, 9.9], [43.2, 9.9]], h: 2.5 },
+  mango: { x: 38.4, z: 15.6 }, rosebush: { x: 37.3, z: 16.7, r: 0.5 },
+  /** O escorregador da casa na árvore (desce para o leste, da plataforma ao chão). */
+  treeSlide: { x0: 48.25, x1: 50.0, z: 17.2 },
+  corn: { minX: 44.6, maxX: 50.6, minZ: 19.6, maxZ: 25.8 },
+  scarecrow: { x: 47.6, z: 22.6 },
+  sunflowers: { x0: 44.4, x1: 49.2, z: -15.6 },
   gift: { x: 44.6, z: 13.6, s: 0.9 },
   hens: [[48.6, 9.8, 0.6], [49.4, 10.6, 2.4], [47.6, 11.2, -1.8]],
 };
@@ -152,11 +208,12 @@ export const BENCHES = [
   { x: 22.2, z: 13.6, yaw: -Math.PI / 2 - 0.3 },
   { x: -36, z: -2.0, yaw: 0 },
   { x: -24, z: -6.6, yaw: 0 },
-  { x: -1.2, z: 4.4, yaw: 0 },
+  { x: -9.9, z: 19.0, yaw: Math.PI / 2 },
 ];
 export const HYDRANTS = [[11.0, 9.4], [11.0, -19.6], [-16.4, 1.95], [20.6, -1.95]];
 export const BINS = [[16.0, -1.95], [-26.6, -1.95], [20.8, 1.95], [-16.6, 23.25]];
-export const GARDEN_LAMPS = [[-43.0, -2.8], [-31.9, -2.7], [-42.9, -21.3], [-31.9, -21.4]];
+/** Postes do jardim do lago, que seguram os cordões de luz da fase 3. */
+export const GARDEN_LAMPS = [[-43.4, -2.8], [-31.8, -2.8], [-43.4, -18.4], [-31.8, -18.4]];
 /** Vasos de flores no piso da praça, ao norte e ao sul do chafariz (os bancos ficam a leste e a oeste). */
 export const FOUNTAIN_BEDS = [-115, -90, -65, 65, 90, 115].map((deg) => {
   const a = (deg * Math.PI) / 180;
@@ -246,7 +303,8 @@ export const TREES = [
   { x: 9.4, z: 9.6, kind: 'verde', s: 0.9 }, { x: 9.4, z: 21.6, kind: 'ipe-amarelo', s: 0.85 },
   { x: 16, z: 9.4, kind: 'ipe-roxo', s: 0.75 }, { x: 21.3, z: 15.6, kind: 'ipe-roxo', s: 0.75 },
   { x: 21.9, z: -12.2, kind: 'verde', s: 0.8 },
-  { x: 47.4, z: 17, kind: 'casa-na-arvore', s: 1.25 }, { x: 50.4, z: 24, kind: 'ipe-rosa', s: 1 },
+  { x: 47.4, z: 17, kind: 'casa-na-arvore', s: 1.25 }, { x: 51.4, z: 15.0, kind: 'ipe-rosa', s: 1 },
+  { x: 38.4, z: 15.6, kind: 'mangueira', s: 1.15 },
   { x: 34.2, z: 25.2, kind: 'verde', s: 1 }, { x: 50.6, z: 3.6, kind: 'ipe-amarelo', s: 0.9 },
   { x: 33.6, z: -11.4, kind: 'verde', s: 0.95 },
 ];
@@ -296,27 +354,58 @@ export const STATIC_COLLIDERS = [
   // os mourões do portãozinho e a folha aberta
   circle('portaozinho-a', HOUSE.fence.gate.x0, HOUSE.fence.z, 0.1), circle('portaozinho-b', HOUSE.fence.gate.x1, HOUSE.fence.z, 0.1),
   seg('portaozinho-folha', HOUSE.fence.gate.x1, HOUSE.fence.z + 0.05, HOUSE.fence.gate.x1 + 0.45, HOUSE.fence.z + 1.0, 0.05),
-  // varandinha da porta, canteiros e a cenoura de brinquedo
-  circle('varanda-a', HOUSE.door.x - 0.85, HOUSE.z + HOUSE.d / 2 + 0.95, 0.09), circle('varanda-b', HOUSE.door.x + 0.85, HOUSE.z + HOUSE.d / 2 + 0.95, 0.09),
+  // canteiros, e a fase 1 no jardim: a cerca divisória, a folha do portão da cordinha, o carrinho, a cenoura, o bebedouro
   box('canteiro-casa', HOUSE.bed.minX, HOUSE.bed.minZ, HOUSE.bed.maxX, HOUSE.bed.maxZ, { height: 0.4 }),
   ...HOUSE.flowers.map(([x, z], i) => circle(`canteiro-${i + 1}`, x, z, 0.3)),
-  circle('cenoura', HOUSE.carrot.x, HOUSE.carrot.z, 0.18),
-  circle('varal-casa-a', HOUSE.line.x0, HOUSE.line.z, 0.08), circle('varal-casa-b', HOUSE.line.x1, HOUSE.line.z, 0.08),
+  box('cerca-divisoria', HOUSE.divider.x - 0.08, HOUSE.divider.z0, HOUSE.divider.x + 0.08, HOUSE.divider.z1, { height: HOUSE.fence.h }),
+  seg('portao-da-cordinha', HOUSE.divider.x, HOUSE.divider.gate.z0, HOUSE.divider.x + 0.85, HOUSE.divider.gate.z0 - 0.45, 0.05),
+  box('carrinho', HOUSE.cart.x - HOUSE.cart.w / 2 - 0.36, HOUSE.cart.z - HOUSE.cart.d / 2, HOUSE.cart.x + HOUSE.cart.w / 2, HOUSE.cart.z + HOUSE.cart.d / 2),
+  circle('cenoura', HOUSE.carrot.x, HOUSE.carrot.z, 0.34),
+  circle('bebedouro', HOUSE.birdbath.x, HOUSE.birdbath.z, HOUSE.birdbath.r),
   // torre, lago, área de serviço, brinquedoteca e o trilho, pracinha
   rect('torre', TOWER),
   circle('lago', LAKE.x, LAKE.z, LAKE.r + 0.42),
+  // o quintal do apartamento (fase 3): o prédio, a cerca-viva com o portão de treliça, a mesinha
+  rect('predio-do-lago', LAKE_YARD.building, 0.12),
+  box('cerca-viva-oeste', LAKE_YARD.hedge.x0, LAKE_YARD.hedge.z - 0.36, LAKE_YARD.hedge.gate.x0, LAKE_YARD.hedge.z + 0.36, { height: LAKE_YARD.hedge.h }),
+  box('cerca-viva-leste', LAKE_YARD.hedge.gate.x1, LAKE_YARD.hedge.z - 0.36, LAKE_YARD.hedge.x1, LAKE_YARD.hedge.z + 0.36, { height: LAKE_YARD.hedge.h }),
+  // a mesinha com as duas cadeiras
+  box('mesinha-do-lago', LAKE_YARD.table.x - 0.98, LAKE_YARD.table.z - LAKE_YARD.table.r, LAKE_YARD.table.x + 0.98, LAKE_YARD.table.z + LAKE_YARD.table.r),
   ...[-1, 1].map((s) => circle(`marquise-${s < 0 ? 'a' : 'b'}`, TOWER.x + s * 1.35, TOWER.z + TOWER.d / 2 + 1.2, 0.08)),
   ...GARDEN_LAMPS.map(([x, z], i) => circle(`poste-do-lago-${i + 1}`, x, z, 0.1)),
-  box('cerca-viva-do-lago', BLOCKS.lago.minX + 0.2, BLOCKS.lago.minZ + 0.1, BLOCKS.lago.maxX - 0.2, BLOCKS.lago.minZ + 1.1, { height: 0.75 }),
   box('canal', SERVICE.canal.minX, SERVICE.canal.minZ, SERVICE.canal.maxX, SERVICE.canal.maxZ),
   box('caixote', SERVICE.crate.x - SERVICE.crate.s / 2, SERVICE.crate.z - SERVICE.crate.s / 2, SERVICE.crate.x + SERVICE.crate.s / 2, SERVICE.crate.z + SERVICE.crate.s / 2, { height: SERVICE.crate.s }),
   circle('varal-servico-a', SERVICE.line.x0, SERVICE.line.z, 0.08), circle('varal-servico-b', SERVICE.line.x1, SERVICE.line.z, 0.08),
-  circle('irrigador', SERVICE.sprinkler.x, SERVICE.sprinkler.z, 0.2), circle('bolinha', SERVICE.ball.x, SERVICE.ball.z, 0.2),
+  circle('irrigador', SERVICE.sprinkler.x, SERVICE.sprinkler.z, 0.4), circle('bolinha', SERVICE.ball.x, SERVICE.ball.z, 0.2),
   rect('cesto', SERVICE.basket),
+  // fase 2: a lavanderia, a mureta (com o vão do portão e a folha aberta), o registro e a caminha
+  rect('lavanderia-do-condominio', SERVICE.laundry, 0.12),
+  // o poste da roldana que puxa o portão (ao lado da tábua de pressão)
+  circle('roldana', SERVICE.plank.x + 0.8, SERVICE.plank.z + 0.5, 0.09),
+  box('mureta-oeste', SERVICE.wall.x0, SERVICE.wall.z - 0.15, SERVICE.wall.gate.x0, SERVICE.wall.z + 0.15, { height: SERVICE.wall.h }),
+  box('mureta-leste', SERVICE.wall.gate.x1, SERVICE.wall.z - 0.15, SERVICE.wall.x1, SERVICE.wall.z + 0.15, { height: SERVICE.wall.h }),
+  seg('portao-da-mureta', SERVICE.wall.gate.x1, SERVICE.wall.z, SERVICE.wall.gate.x1 - 0.55, SERVICE.wall.z - 1.2, 0.05),
+  circle('registro', SERVICE.valve.x, SERVICE.valve.z, 0.2),
+  rect('caminha-da-area', SERVICE.bed),
   box('brinquedoteca-e-trilho', TOYHOUSE.x - TOYHOUSE.track.rx - 0.35, TOYHOUSE.z - TOYHOUSE.track.rz - 0.35, TOYHOUSE.x + TOYHOUSE.track.rx + 0.35, TOYHOUSE.z + TOYHOUSE.track.rz + 0.35),
-  box('escorregador', PLAYGROUND.slide.x - 0.55, PLAYGROUND.slide.z - 0.55, PLAYGROUND.slide.x + 0.55, PLAYGROUND.slide.z + 2.4),
+  // fase 7: a cerca de lápis do parquinho (o portão ao sul, o morrinho com a manilha a oeste) e os brinquedos
+  box('lapis-norte', PLAYGROUND.yard.minX, PLAYGROUND.yard.minZ - 0.1, PLAYGROUND.yard.maxX, PLAYGROUND.yard.minZ + 0.1, { height: 0.9 }),
+  box('lapis-leste', PLAYGROUND.yard.maxX - 0.1, PLAYGROUND.yard.minZ, PLAYGROUND.yard.maxX + 0.1, PLAYGROUND.yard.maxZ, { height: 0.9 }),
+  box('lapis-sul-oeste', PLAYGROUND.yard.minX, PLAYGROUND.yard.maxZ - 0.1, PLAYGROUND.gate.x0, PLAYGROUND.yard.maxZ + 0.1, { height: 0.9 }),
+  box('lapis-sul-leste', PLAYGROUND.gate.x1, PLAYGROUND.yard.maxZ - 0.1, PLAYGROUND.yard.maxX, PLAYGROUND.yard.maxZ + 0.1, { height: 0.9 }),
+  box('lapis-oeste-norte', PLAYGROUND.yard.minX - 0.1, PLAYGROUND.yard.minZ, PLAYGROUND.yard.minX + 0.1, PLAYGROUND.hill.z - 1.2, { height: 0.9 }),
+  box('lapis-oeste-sul', PLAYGROUND.yard.minX - 0.1, PLAYGROUND.hill.z + 1.2, PLAYGROUND.yard.minX + 0.1, PLAYGROUND.yard.maxZ, { height: 0.9 }),
+  circle('morrinho', PLAYGROUND.hill.x, PLAYGROUND.hill.z, PLAYGROUND.hill.r),
+  // a manilha atravessa o morrinho (as bocas ficam para fora dele) e a folha aberta do portão de lápis
+  box('manilha', PLAYGROUND.hill.x - 1.95, PLAYGROUND.hill.z - 0.52, PLAYGROUND.hill.x + 1.95, PLAYGROUND.hill.z + 0.52),
+  seg('portao-da-pracinha', PLAYGROUND.gate.x0, PLAYGROUND.yard.maxZ, PLAYGROUND.gate.x0 + 0.45, PLAYGROUND.yard.maxZ + 1.25, 0.1),
+  circle('bolinha-da-pracinha', PLAYGROUND.ball.x, PLAYGROUND.ball.z, 0.16),
+  box('escorregador', PLAYGROUND.slide.x - 0.55, PLAYGROUND.slide.z - 0.85, PLAYGROUND.slide.x + 0.55, PLAYGROUND.slide.z + 2.4),
   box('balanco', PLAYGROUND.swing.x - 1.08, PLAYGROUND.swing.z - 0.42, PLAYGROUND.swing.x + 1.08, PLAYGROUND.swing.z + 0.42),
-  circle('baldinho', PLAYGROUND.bucket.x, PLAYGROUND.bucket.z, 0.15),
+  box('gangorra', PLAYGROUND.seesaw.x - PLAYGROUND.seesaw.len / 2, PLAYGROUND.seesaw.z - 0.22, PLAYGROUND.seesaw.x + PLAYGROUND.seesaw.len / 2, PLAYGROUND.seesaw.z + 0.22),
+  box('caixa-de-areia', PLAYGROUND.sandbox.x - PLAYGROUND.sandbox.s / 2 - 0.07, PLAYGROUND.sandbox.z - PLAYGROUND.sandbox.s / 2 - 0.07, PLAYGROUND.sandbox.x + PLAYGROUND.sandbox.s / 2 + 0.07, PLAYGROUND.sandbox.z + PLAYGROUND.sandbox.s / 2 + 0.07),
+  circle('joaninha', PLAYGROUND.ladybug.x, PLAYGROUND.ladybug.z, 0.42),
+  circle('cesta-do-piquenique', PLAYGROUND.basket.x, PLAYGROUND.basket.z, 0.26),
   // centro
   rect('padaria', TOWN.bakery), rect('banca', TOWN.newsstand), rect('pet-shop', TOWN.petshop),
   box('ponto-de-onibus', TOWN.busStop.x - 0.35, TOWN.busStop.z - 1.2, TOWN.busStop.x + 0.45, TOWN.busStop.z + 1.2),
@@ -332,18 +421,26 @@ export const STATIC_COLLIDERS = [
     ? box(`carro-${i + 1}`, c.x - 0.8, c.z - 1.2, c.x + 0.8, c.z + 1.2)
     : box(`carro-${i + 1}`, c.x - 1.2, c.z - 0.8, c.x + 1.2, c.z + 0.8))),
   // chácara do vovô
-  rect('casa-do-vovo', GRANDPA.house), rect('galpao', GRANDPA.barn),
+  rect('casa-do-vovo', GRANDPA.house), rect('galpao', GRANDPA.barn, 0.15),
   box('horta', GRANDPA.garden.minX, GRANDPA.garden.minZ, GRANDPA.garden.maxX, GRANDPA.garden.maxZ, { jumpable: true, height: 0.3 }),
   box('chiqueiro-norte', GRANDPA.sty.minX, GRANDPA.sty.minZ - 0.08, GRANDPA.sty.maxX, GRANDPA.sty.minZ + 0.08),
   box('chiqueiro-sul', GRANDPA.sty.minX, GRANDPA.sty.maxZ - 0.08, GRANDPA.sty.maxX, GRANDPA.sty.maxZ + 0.08),
   box('chiqueiro-leste', GRANDPA.sty.maxX - 0.08, GRANDPA.sty.minZ, GRANDPA.sty.maxX + 0.08, GRANDPA.sty.maxZ),
   box('chiqueiro-oeste', GRANDPA.sty.minX - 0.08, GRANDPA.sty.minZ, GRANDPA.sty.minX + 0.08, GRANDPA.sty.maxZ),
-  rect('mesa-do-bolo', GRANDPA.table), circle('piscininha', GRANDPA.pool.x, GRANDPA.pool.z, GRANDPA.pool.r),
+  // os porquinhos do mapa só passeiam lá dentro (as dogs não entram)
+  box('dentro-do-chiqueiro', GRANDPA.sty.minX, GRANDPA.sty.minZ, GRANDPA.sty.maxX, GRANDPA.sty.maxZ),
+  rect('mesa-do-bolo', GRANDPA.table), circle('piscininha', GRANDPA.pool.x, GRANDPA.pool.z, GRANDPA.pool.r + 0.2),
   circle('bandeirolas-a', GRANDPA.bunting.x0, GRANDPA.bunting.z, 0.1), circle('bandeirolas-b', GRANDPA.bunting.x1, GRANDPA.bunting.z, 0.1),
   box('varanda-do-vovo', GRANDPA.porch.minX, GRANDPA.porch.minZ, GRANDPA.porch.maxX, GRANDPA.porch.maxZ),
   ...GRANDPA.porch.posts.map((k, i) => circle(`coluna-do-vovo-${i + 1}`, GRANDPA.house.x + k, GRANDPA.porch.maxZ - 0.15, 0.1)),
+  rect('jardim-de-inverno', GRANDPA.conservatory),
+  ...GRANDPA.pergola.posts.map(([x, z], i) => circle(`pergolado-${i + 1}`, x, z, 0.1)),
+  box('milharal', GRANDPA.corn.minX, GRANDPA.corn.minZ, GRANDPA.corn.maxX, GRANDPA.corn.maxZ, { height: 1.4 }),
+  box('girassois', GRANDPA.sunflowers.x0, GRANDPA.sunflowers.z - 0.3, GRANDPA.sunflowers.x1, GRANDPA.sunflowers.z + 0.3, { height: 1.6 }),
   circle('presente', GRANDPA.gift.x, GRANDPA.gift.z, GRANDPA.gift.s * 0.66),
-  ...GRANDPA.hens.map(([x, z], i) => circle(`galinha-${i + 1}`, x, z, 0.24)),
+  ...GRANDPA.hens.map(([x, z], i) => circle(`galinha-${i + 1}`, x, z, 0.36)),
+  box('escorregador-da-casa-na-arvore', GRANDPA.treeSlide.x0, GRANDPA.treeSlide.z - 0.3, GRANDPA.treeSlide.x1 + 0.3, GRANDPA.treeSlide.z + 0.3),
+  circle('roseira', GRANDPA.rosebush.x, GRANDPA.rosebush.z, GRANDPA.rosebush.r),
   box('escada-da-casa-na-arvore', GRANDPA.treehouse.x + 0.62, GRANDPA.treehouse.z + 0.62, GRANDPA.treehouse.x + 1.18, GRANDPA.treehouse.z + 0.8),
   box('cerca-da-chacara', FARM.minX + 0.6, FARM.maxZ - 0.8, FARM.maxX - 0.3, FARM.maxZ - 0.6),
   // enfeites de rua
@@ -407,7 +504,7 @@ export const GOAL = {
 /** @type {import('../../types').LevelLayout} */
 const LAYOUT = {
   WORLD, DOGS, CITY, FARM, RIVER, CONDO, ROAD_W, WALK_W, STREET_X, STREET_Z, AVENUE_X, RIVERSIDE_X, TOWN_Z, ROADS, CROSSINGS, DIRT,
-  BLOCKS, TOWN_BLOCKS, HOUSE, TOWER, LAKE, SERVICE, TOYHOUSE, PLAYGROUND, TOWN, CARS, GRANDPA, FLAGS, FLAG_NEAR, FLAG_PRELOAD,
+  BLOCKS, TOWN_BLOCKS, HOUSE, TOWER, LAKE, LAKE_YARD, SERVICE, TOYHOUSE, PLAYGROUND, TOWN, CARS, GRANDPA, FLAGS, FLAG_NEAR, FLAG_PRELOAD,
   ZONES, BRIDGE, TREES, TREE_TRUNK_R, LAMPS, BENCHES, HYDRANTS, BINS, GARDEN_LAMPS, FOUNTAIN_BEDS, STATIC_COLLIDERS, COLLISION_GRID: 4, NAV_NODES, NAV_EDGES, COLLECTIBLES: [], GOAL, CAMERA,
 };
 export default LAYOUT;

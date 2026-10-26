@@ -156,7 +156,7 @@ export function buildMarkers(kit, root, L) {
   bones.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   root.add(bones);
   const lockGeo = mergeGeometries([
-    paint(rb(0.3, 0.24, 0.12, 0.04, 2), '#d9a63a'),
+    paint(rb(0.3, 0.24, 0.12, 0.04, 2).toNonIndexed(), '#d9a63a'),
     paint(new THREE.TorusGeometry(0.09, 0.025, 8, 16, Math.PI).translate(0, 0.24, 0).toNonIndexed(), '#8a8f96'),
     paint(new THREE.CircleGeometry(0.035, 10).translate(0, 0.12, 0.061).toNonIndexed(), '#4a3426'),
   ].map((g) => { g.deleteAttribute('uv'); return g; }));
