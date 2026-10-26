@@ -46,7 +46,10 @@ export function openHouse(kit, { x, z, w, d, h, low = 1.0, t = 0.16, wall = '#f6
     kit.add(slab(w - 0.02, 0.06, d - 0.02), { color: () => c0, x, z, group });
     kit.add(tiles(w - 0.04, d - 0.04, floorCell[0], floorCell[1], floor), { color: null, x, y: 0.061, z, group, ao: false });
   } else kit.add(slab(w - 0.02, 0.06, d - 0.02), { color: floor, x, z, group });
-  kit.add(rb(w + 0.1, 0.22, d + 0.1, 0.03, 1), { color: '#d9c4a6', x, z, group });
+  // a barra da base só por fora das paredes (uma caixa inteira cobriria o piso)
+  for (const [bw, bd, bx, bz] of [[w + 0.1, 0.06, x, z0 - 0.02], [w + 0.1, 0.06, x, z1 + 0.02], [0.06, d, x0 - 0.02, z], [0.06, d, x1 + 0.02, z]]) {
+    kit.add(rb(bw, 0.22, bd, 0.02, 1), { color: '#d9c4a6', x: bx, z: bz, group });
+  }
   const full = (side) => !cut.includes(side);
   // norte e oeste inteiras; sul e leste cortadas (com o arremate claro no topo do corte)
   const wallN = full('n') ? h : low, wallW = full('w') ? h : low, wallS = full('s') ? h : low, wallE = full('e') ? h : low;
