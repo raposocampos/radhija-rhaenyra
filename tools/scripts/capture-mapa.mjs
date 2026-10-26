@@ -169,8 +169,8 @@ async function captureDevice(dev, url) {
     ]) await shot(name, { cam, hideUi: true });
     // de perto, cada lugar de fase (do jeito que a câmera do jogo olha, só que mais perto)
     for (const [n, x, y, z] of [[1, -21, 0.5, 16.5], [2, -37.5, 0.5, 11], [3, -37.5, 0.5, -16], [4, -21.3, 11, -12.9], [5, -22.2, 0.8, 7.2],
-      [6, -5.1, 0.5, -14.4], [7, -4, 0.5, 9], [8, -16.5, 0.8, 7.2], [9, 40.6, 0.8, -8.2], [10, 41.5, 0.8, 11.5]]) {
-      await shot(`30-perto-fase${String(n).padStart(2, '0')}`, { cam: { pos: [x + 7, y + 8.5, z + 7], look: [x, y, z] }, hideUi: true });
+      [6, -5.1, 0.5, -14.4], [7, -4, 0.5, 9], [8, -16.5, 0.8, 7.2], [9, 40.6, 0.8, -8.2], [10, 40.5, 0.8, 10.5]]) {
+      await shot(`30-perto-fase${String(n).padStart(2, '0')}`, { cam: { pos: [x + 9, y + 11, z + 9], look: [x, y, z] }, hideUi: true });
     }
     // save novo de novo: as nuvens fechadas, vistas de cima
     await open(null);

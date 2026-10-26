@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { mat, mergeGeometries, foliageCluster, paint } from '../../../world/util.js';
 import { lettuce, carrotTops, succulent } from '../../../world/plants.js';
-import { rb, cyl, sphere, slab, textPlate } from './kit.js';
+import { rb, cyl, sphere, slab, textPlate, tiles as tilesTop, tilesV } from './kit.js';
 import { openHouse, stringLights, rainCloud, bookSpines, waterMat, flowerBush } from './pecas.js';
 
 const tiles = (hex, under = '#efe1c8') => {
@@ -60,7 +60,7 @@ export function buildChacara(kit, root, L) {
   const Hh = Gp.house;
   const H = openHouse(kit, {
     x: Hh.x, z: Hh.z, w: Hh.w, d: Hh.d, h: Hh.h, low: 1.0, wall: bricks('#b8704f', '#a8613f'), inside: '#f3e3c8',
-    floor: planks('#a87a52', '#9a6c46', 0.22), door: { x: Hh.x, w: 1.1 }, windows: [39.7, 42.6],
+    floor: planks('#a87a52', '#9a6c46', 0.22), floorCell: [0.22, Hh.d], door: { x: Hh.x, w: 1.1 }, windows: [39.7, 42.6],
     roof: { kind: 'hip', h: 1.7, color: tiles('#6b3b2a'), open: 0.82, over: 0.4 },
   });
   // divisórias baixas: sala | hall | escritório (com a passagem no meio)
@@ -71,7 +71,8 @@ export function buildChacara(kit, root, L) {
   // a biblioteca: estantes cheias na parede do fundo
   kit.add(rb(2.3, 2.1, 0.36, 0.03, 1), { color: '#6b3b2a', x: 37.6, y: 0.06, z: H.z0 + 0.36 });
   for (let k = 0; k < 4; k++) {
-    kit.add(rb(2.1, 0.36, 0.26, 0.01, 1), { color: bookSpines(k + 2), x: 37.6, y: 0.18 + k * 0.48, z: H.z0 + 0.42, ao: false });
+    kit.add(rb(2.1, 0.36, 0.26, 0.01, 1), { color: '#5a3a26', x: 37.6, y: 0.18 + k * 0.48, z: H.z0 + 0.42, ao: false });
+    kit.add(tilesV(2.06, 0.34, 0.07, 0.34, bookSpines(k + 2)), { color: null, x: 37.6, y: 0.36 + k * 0.48, z: H.z0 + 0.556, ao: false });
   }
   // a lareira acesa (parede oeste) e a chaminé
   kit.add(rb(0.5, 1.15, 1.6, 0.04, 1), { color: bricks('#c9b5a0', '#b39e88'), x: H.x0 + 0.4, z: Hh.z });
@@ -140,7 +141,8 @@ export function buildChacara(kit, root, L) {
   const Cv = Gp.conservatory;
   const cx0 = Cv.x - Cv.w / 2, cx1 = Cv.x + Cv.w / 2, cz0 = Cv.z - Cv.d / 2, cz1 = Cv.z + Cv.d / 2;
   kit.add(rb(Cv.w, 0.3, Cv.d, 0.03, 1), { color: bricks('#b8704f', '#a8613f'), x: Cv.x, z: Cv.z });
-  kit.add(slab(Cv.w - 0.12, 0.02, Cv.d - 0.12), { color: (p) => new THREE.Color((Math.floor((p.x + 50) / 0.3) + Math.floor((p.z + 50) / 0.3)) % 2 ? '#e9dcc4' : '#c9764f'), x: Cv.x, y: 0.3, z: Cv.z, ao: false });
+  const ladrilho = [new THREE.Color('#e9dcc4'), new THREE.Color('#c9764f')];
+  kit.add(tilesTop(Cv.w - 0.12, Cv.d - 0.12, 0.3, 0.3, (p) => ladrilho[Math.abs(Math.floor((p.x + 50) / 0.3) + Math.floor((p.z + 50) / 0.3)) % 2]), { color: null, x: Cv.x, y: 0.31, z: Cv.z, ao: false });
   const frame = '#fffaf0', ridge = Cv.h + 0.75;
   for (const x of [cx0, Cv.x, cx1]) for (const z of [cz0, cz0 + Cv.d / 3, cz1 - Cv.d / 3, cz1]) {
     if (x === Cv.x && z !== cz0 && z !== cz1) continue;
@@ -197,7 +199,8 @@ export function buildChacara(kit, root, L) {
   // o deque e o pergolado com as luzinhas e a faixa
   const Dk = Gp.deck;
   const dy = 0.07; // baixinho: as dogs sobem andando
-  kit.add(rb(Dk.w, dy, Dk.d, 0.02, 1), { color: planks('#c99a6c', '#b98a5e', 0.24), slot: 'ground', x: Dk.x, z: Dk.z });
+  kit.add(rb(Dk.w, dy, Dk.d, 0.02, 1), { color: '#b98a5e', slot: 'ground', x: Dk.x, z: Dk.z });
+  kit.add(tilesTop(Dk.w - 0.04, Dk.d - 0.04, 0.24, Dk.d, planks('#c99a6c', '#b98a5e', 0.24)), { color: null, slot: 'ground', x: Dk.x, y: dy + 0.001, z: Dk.z });
   const Pg = Gp.pergola;
   const pxs = Pg.posts.map((p) => p[0]), pzs = Pg.posts.map((p) => p[1]);
   const px0 = Math.min(...pxs), px1 = Math.max(...pxs), pz0 = Math.min(...pzs), pz1 = Math.max(...pzs);
@@ -209,10 +212,10 @@ export function buildChacara(kit, root, L) {
   for (let k = 0; k <= 4; k++) zig.push([px0 + ((px1 - px0) * k) / 4, ly, k % 2 ? pz0 : pz1]);
   stringLights(kit, zig, { sag: 0.3 });
   const banner = textPlate('FELIZ 3 ANOS', 3.0, 0.5, { bg: '#e8577a' });
-  banner.mesh.position.set((px0 + px1) / 2, dy + Pg.h - 0.42, pz1 + 0.08);
+  banner.mesh.position.set((px0 + px1) / 2, dy + Pg.h - 0.42, pz0 + 0.08); // na viga do fundo: o bolo fica na frente
   root.add(banner.mesh);
   signs.push(banner);
-  for (const s of [-1, 1]) kit.add(cyl(0.008, 0.008, 0.18, 3), { color: '#4a3426', x: (px0 + px1) / 2 + s * 1.3, y: dy + Pg.h - 0.17, z: pz1 + 0.08, ao: false });
+  for (const s of [-1, 1]) kit.add(cyl(0.008, 0.008, 0.18, 3), { color: '#4a3426', x: (px0 + px1) / 2 + s * 1.3, y: dy + Pg.h - 0.17, z: pz0 + 0.08, ao: false });
   // a mesa do bolo (bolo de três andares com a vela do 3), os pratinhos
   const Tb = Gp.table;
   kit.add(rb(Tb.w, 0.08, Tb.d, 0.03, 1), { color: '#fffaf0', x: Tb.x, y: dy + 0.72, z: Tb.z });
@@ -328,8 +331,8 @@ export function buildChacara(kit, root, L) {
   // o escorregador desce para o leste
   const Ts = Gp.treeSlide;
   const sdx = Ts.x1 - Ts.x0, sdy = 1.5 - 0.1, slen = Math.hypot(sdx, sdy), sang = Math.atan2(sdy, sdx);
-  const chute = new THREE.CylinderGeometry(0.26, 0.26, slen, 12, 1, true, Math.PI, Math.PI).rotateZ(Math.PI / 2 - sang);
-  kit.add(chute, { color: '#ffd15c', x: (Ts.x0 + Ts.x1) / 2, y: 0.1 + sdy / 2 + 0.05, z: Ts.z });
+  kit.add(rb(slen, 0.05, 0.5, 0.02, 1), { color: '#ffd15c', x: (Ts.x0 + Ts.x1) / 2, y: 0.1 + sdy / 2 - 0.02, z: Ts.z, rz: -sang });
+  for (const s of [-1, 1]) kit.add(rb(slen, 0.12, 0.05, 0.02, 1), { color: '#f2b24c', x: (Ts.x0 + Ts.x1) / 2, y: 0.1 + sdy / 2 + 0.02, z: Ts.z + s * 0.25, rz: -sang, ao: false });
   kit.add(rb(0.35, 0.05, 0.5, 0.02, 1), { color: '#ffd15c', x: Ts.x1 + 0.12, y: 0.06, z: Ts.z, ao: false });
 
   // ---------- a horta, os porquinhos, as galinhas, a cerquinha

@@ -11,6 +11,11 @@ import { rb, cyl } from './kit.js';
 const PUFF_SPACING = 4.2;
 /** Lado de onde cada área começa a abrir (quem chega vem do oeste). */
 const OPEN_FROM = { leste: 'minX', chacara: 'minX', breve: 'maxZ' };
+/**
+ * Recuo dos bolos na borda que encosta numa área aberta (m): as nuvens são altas e, vistas pela câmera, cobririam a
+ * lavanderia da fase 8 e o jardim da casa do outro lado da rua.
+ */
+const INSET = { leste: 2.6 };
 
 /** Um bolo de nuvem (três ou quatro bolhas brancas, sombreado de cima). */
 function puffGeometry(seed) {
@@ -40,9 +45,10 @@ export function buildClouds(root, L) {
     const nx = Math.max(1, Math.round((b.maxX - b.minX) / PUFF_SPACING));
     const nz = Math.max(1, Math.round((b.maxZ - b.minZ) / PUFF_SPACING));
     const from = OPEN_FROM[key] || 'minX';
+    const x0 = b.minX + (INSET[key] ?? 0);
     for (let i = 0; i <= nx; i++) {
       for (let j = 0; j <= nz; j++) {
-        const x = b.minX + ((i + (R() - 0.5) * 0.7) / nx) * (b.maxX - b.minX);
+        const x = x0 + ((i + (R() - 0.5) * 0.7) / nx) * (b.maxX - x0);
         const zz = b.minZ + ((j + (R() - 0.5) * 0.7) / nz) * (b.maxZ - b.minZ);
         // ordem da onda de abertura (0 = a borda de quem chega)
         const order = from === 'minX' ? (x - b.minX) / (b.maxX - b.minX) : (b.maxZ - zz) / (b.maxZ - b.minZ);

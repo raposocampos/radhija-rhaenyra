@@ -37,7 +37,7 @@ export function buildCasa(kit, root, L) {
 
   // ====================================================== fase 5: a casa em corte
   const H = openHouse(kit, {
-    x: Hs.x, z: Hs.z, w: Hs.w, d: Hs.d, h: Hs.h, low: 1.05, wall: '#f6e6cb', inside: '#fbf1e1', floor: planks('#c99a6c', '#bf8f62'),
+    x: Hs.x, z: Hs.z, w: Hs.w, d: Hs.d, h: Hs.h, low: 1.05, wall: '#f6e6cb', inside: '#fbf1e1', floor: planks('#c99a6c', '#bf8f62'), floorCell: [0.18, Hs.d],
     door: { x: Hs.door.x, w: 1.1 }, windows: [-24.6, -19.4], roof: { kind: 'gable', h: 1.7, color: tiles('#d9733a'), open: 0.78, over: 0.4 },
   });
   // divisórias baixas (corte a meia altura): sala | corredor (vão do portãozinho), corredor | cozinha (vão das caixas)
@@ -99,7 +99,7 @@ export function buildCasa(kit, root, L) {
   // ====================================================== fase 8: a lavanderia em corte (o anexo)
   const ax0 = A.x - A.w / 2, ax1 = A.x + A.w / 2, az0 = A.z - A.d / 2;
   openHouse(kit, {
-    x: A.x, z: A.z, w: A.w, d: A.d, h: A.h, low: 0.9, wall: '#fff0d6', inside: '#e9f4f8', floor: check('#e6eef2', '#d4dfe6', 0.3),
+    x: A.x, z: A.z, w: A.w, d: A.d, h: A.h, low: 0.9, wall: '#fff0d6', inside: '#e9f4f8', floor: check('#e6eef2', '#d4dfe6', 0.3), floorCell: [0.3, 0.3],
     door: { x: A.x + 0.35, w: 0.85 }, windows: [A.x + 0.2], roof: { kind: 'flat', color: '#c98a55', open: 0.95, over: 0.2 },
   });
   // na parede do fundo: armário de limpeza, secadora, máquina (com a mantinha dobrada em cima) e o tanque

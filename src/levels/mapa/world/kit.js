@@ -179,6 +179,48 @@ export function slab(w, h, d) {
   return g;
 }
 
+/**
+ * Ladrilhos: um plano deitado w × d (centrado, voltado para cima) cortado em quadrados de cw × cd, cada um com a cor que
+ * fn dá para o centro dele (pisos de tábua, xadrez, emborrachado, toalhas). A cor por vértice de uma caixa só tem os
+ * cantos: um desenho nela vira degradê; aqui cada quadrado tem os seus vértices.
+ * @param {number} w @param {number} d @param {number} cw @param {number} cd
+ * @param {(p: THREE.Vector3, n: THREE.Vector3) => THREE.Color} fn
+ */
+export function tiles(w, d, cw, cd, fn) {
+  const g = new THREE.PlaneGeometry(w, d, Math.max(1, Math.round(w / cw)), Math.max(1, Math.round(d / cd))).rotateX(-Math.PI / 2);
+  return paintQuads(g, fn, true);
+}
+/**
+ * O mesmo, em pé (plano w × h voltado para +z, centrado): lombadas de livros, listras.
+ * @param {number} w @param {number} h @param {number} cw @param {number} ch
+ * @param {(p: THREE.Vector3, n: THREE.Vector3) => THREE.Color} fn
+ */
+export function tilesV(w, h, cw, ch, fn) {
+  return paintQuads(new THREE.PlaneGeometry(w, h, Math.max(1, Math.round(w / cw)), Math.max(1, Math.round(h / ch))), fn, false);
+}
+/**
+ * @param {THREE.BufferGeometry} g0
+ * @param {(p: THREE.Vector3, n: THREE.Vector3) => THREE.Color} fn
+ * @param {boolean} flat
+ */
+function paintQuads(g0, fn, flat) {
+  const g = g0.toNonIndexed();
+  g0.dispose();
+  g.deleteAttribute('uv');
+  const pos = g.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const p = new THREE.Vector3(), n = flat ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+  // cada quadrado são dois triângulos seguidos (6 vértices): a cor sai do centro dele
+  for (let i = 0; i < pos.count; i += 6) {
+    p.set(0, 0, 0);
+    for (let k = 0; k < 6; k++) p.set(p.x + pos.getX(i + k) / 6, p.y + pos.getY(i + k) / 6, p.z + pos.getZ(i + k) / 6);
+    const c = fn(p, n);
+    for (let k = 0; k < 6; k++) col.set([c.r, c.g, c.b], (i + k) * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
 /** Monta uma geometria de triângulos (lista de [x,y,z] por triângulo), com normais por face. */
 function tris(list) {
   const g = new THREE.BufferGeometry();

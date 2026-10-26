@@ -4,7 +4,7 @@
 // só (instâncias).
 import * as THREE from 'three';
 import { mat, rng, foliageCluster, rippleNormalTexture, paint, mergeGeometries, mergeVertices } from '../../../world/util.js';
-import { rb, cyl, sphere, slab, gableRoof, hipRoof, windowAt } from './kit.js';
+import { rb, cyl, sphere, slab, gableRoof, hipRoof, windowAt, tiles } from './kit.js';
 
 /** Água dos lagos e piscinas (compartilhada). */
 export const waterMat = () => mat('mapa-lake', () => {
@@ -33,14 +33,19 @@ function twoTone(out, inside, dx, dz) {
  * O telhado gira na beirada do fundo (dobradiça) e fica aberto para trás.
  * @param {ReturnType<typeof import('./kit.js').createKit>} kit
  * @param {{ x: number, z: number, w: number, d: number, h: number, low?: number, t?: number, wall?: Paint, inside?: string,
- *   trim?: string, floor?: Paint, door?: { x: number, w: number } | null, windows?: number[], cut?: string[], group?: string | null,
+ *   trim?: string, floor?: Paint, floorCell?: number[], door?: { x: number, w: number } | null, windows?: number[], cut?: string[], group?: string | null,
  *   roof?: { kind?: 'gable' | 'hip' | 'flat', h?: number, color?: Paint, open?: number, over?: number } | null }} o
  */
-export function openHouse(kit, { x, z, w, d, h, low = 1.0, t = 0.16, wall = '#f6e6cb', inside = '#fff8ec', trim = '#fffaf0', floor = '#c9a27a',
+export function openHouse(kit, { x, z, w, d, h, low = 1.0, t = 0.16, wall = '#f6e6cb', inside = '#fff8ec', trim = '#fffaf0', floor = '#c9a27a', floorCell = [0.3, 0.3],
   door = null, roof = { kind: 'gable', h: 1.6, color: '#d9733a', open: 1.05, over: 0.35 }, windows = [], cut = ['s', 'e'], group = null }) {
   const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
   // piso (um pouco acima do chão) e a barra da base por fora
-  kit.add(slab(w - 0.02, 0.06, d - 0.02), { color: floor, x, z, group });
+  if (typeof floor === 'function') {
+    // o desenho do piso (tábuas, xadrez) em ladrilhos por cima do contrapiso
+    const c0 = floor(new THREE.Vector3(), new THREE.Vector3(0, 1, 0)).clone();
+    kit.add(slab(w - 0.02, 0.06, d - 0.02), { color: () => c0, x, z, group });
+    kit.add(tiles(w - 0.04, d - 0.04, floorCell[0], floorCell[1], floor), { color: null, x, y: 0.061, z, group, ao: false });
+  } else kit.add(slab(w - 0.02, 0.06, d - 0.02), { color: floor, x, z, group });
   kit.add(rb(w + 0.1, 0.22, d + 0.1, 0.03, 1), { color: '#d9c4a6', x, z, group });
   const full = (side) => !cut.includes(side);
   // norte e oeste inteiras; sul e leste cortadas (com o arremate claro no topo do corte)

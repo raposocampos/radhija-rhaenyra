@@ -17,7 +17,7 @@
 import * as THREE from 'three';
 import { foliageCluster } from '../../../world/util.js';
 import { boxwood } from '../../../world/plants.js';
-import { rb, cyl, sphere, slab, gableRoof, windowAt, doorAt, textPlate } from './kit.js';
+import { rb, cyl, sphere, slab, gableRoof, windowAt, doorAt, textPlate, tiles } from './kit.js';
 import { openHouse, stringLights, pencilFence, lantern, waterMat, flowerBush } from './pecas.js';
 
 const tone = (hex, step = 0.16) => {
@@ -75,7 +75,7 @@ export function buildCondominio(kit, root, L) {
   kit.add(cyl(0.14, 0.18, 0.22, 12), { color: '#2f6fb8', x: sp.x, z: sp.z });
   const sprk = new THREE.Group();
   sprk.position.set(sp.x, 0.26, sp.z);
-  const sprMat = new THREE.MeshStandardMaterial({ color: '#cfeefc', roughness: 0.1, transparent: true, opacity: 0.55, depthWrite: false });
+  const sprMat = new THREE.MeshStandardMaterial({ color: '#d8f2ff', emissive: '#9fd6ef', emissiveIntensity: 0.25, roughness: 0.1, transparent: true, opacity: 0.45, depthWrite: false });
   const armMat = new THREE.MeshStandardMaterial({ color: '#d9dde0', roughness: 0.5 });
   for (let k = 0; k < 3; k++) {
     const a = (k / 3) * Math.PI * 2;
@@ -84,7 +84,7 @@ export function buildCondominio(kit, root, L) {
     sprk.add(arm);
     // o arco d'água de cada jato
     const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.36, 0, 0), new THREE.Vector3(1.4, 0.9, 0), new THREE.Vector3(2.4, -0.25, 0));
-    const jet = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.035, 5, false), sprMat);
+    const jet = new THREE.Mesh(new THREE.TubeGeometry(curve, 14, 0.06, 6, false), sprMat);
     jet.rotation.y = a;
     sprk.add(jet);
   }
@@ -212,7 +212,8 @@ export function buildCondominio(kit, root, L) {
   const tg = 'torre';
   const y0 = T.h;
   const tx0 = T.x - T.w / 2, tx1 = T.x + T.w / 2, tz0 = T.z - T.d / 2, tz1 = T.z + T.d / 2;
-  kit.add(slab(T.w - 0.3, 0.03, T.d - 0.3), { color: (p) => new THREE.Color((Math.floor((p.x + 20) / 0.6) + Math.floor((p.z + 20) / 0.6)) % 2 ? '#d9cbb3' : '#cfc0a6'), x: T.x, y: y0, z: T.z, group: tg, ao: false });
+  const lajota = [new THREE.Color('#d9cbb3'), new THREE.Color('#cfc0a6')];
+  kit.add(tiles(T.w - 0.3, T.d - 0.3, 0.6, 0.6, (p) => lajota[Math.abs(Math.floor((p.x + 20) / 0.6) + Math.floor((p.z + 20) / 0.6)) % 2]), { color: null, x: T.x, y: y0 + 0.02, z: T.z, group: tg, ao: false });
   for (const [w, d, x, z] of [[T.w, 0.2, T.x, tz0 + 0.1], [T.w, 0.2, T.x, tz1 - 0.1], [0.2, T.d, tx0 + 0.1, T.z], [0.2, T.d, tx1 - 0.1, T.z]]) {
     kit.add(rb(w, 0.55, d, 0.04, 1), { color: '#e2d3ba', x, y: y0, z, group: tg });
   }
@@ -223,7 +224,7 @@ export function buildCondominio(kit, root, L) {
   for (const [k, c] of /** @type {[number, string][]} */ ([[0, '#6ec3e8'], [1, '#ffd15c']])) {
     const cx = tx0 + 0.75 + k * 0.85, cz = tz0 + 3.3;
     kit.add(rb(0.55, 0.06, 1.3, 0.02, 1), { color: (p) => new THREE.Color(Math.floor((p.z + 9) / 0.22) % 2 ? c : '#fffaf0'), x: cx, y: y0 + 0.25, z: cz, group: tg });
-    kit.add(rb(0.55, 0.06, 0.5, 0.02, 1), { color: c, x: cx, y: y0 + 0.4, z: cz - 0.75, rx: -0.9, group: tg });
+    kit.add(rb(0.55, 0.06, 0.5, 0.02, 1).translate(0, 0, -0.25), { color: c, x: cx, y: y0 + 0.3, z: cz - 0.6, rx: 0.9, group: tg });
     for (const t of [-0.5, 0.5]) kit.add(rb(0.5, 0.25, 0.04, 0.01, 1), { color: '#fffaf0', x: cx, y: y0, z: cz + t, group: tg });
   }
   // a fileira de floreiras com um vão só (onde o pombo cochila)
@@ -275,7 +276,7 @@ export function buildCondominio(kit, root, L) {
   const roofStripes = (p, n) => new THREE.Color(n.y < -0.5 ? '#fff3dc' : Math.floor((p.x + 10) / 0.62) % 2 ? '#f08a3c' : '#ffd15c');
   openHouse(kit, {
     x: B.x, z: B.z, w: B.w, d: B.d, h: B.h, low: 0.85, wall: '#fff3dc', inside: '#e6f2f8', floor: (p) => new THREE.Color((Math.floor((p.x + 20) / 0.5) + Math.floor((p.z + 20) / 0.5)) % 2 ? '#d9b98a' : '#cfa978'),
-    door: { x: B.x, w: 1.1 }, windows: [B.x - 1.4, B.x + 1.4], roof: { kind: 'gable', h: 1.2, color: roofStripes, open: 0.8, over: 0.35 },
+    floorCell: [0.5, 0.5], door: { x: B.x, w: 1.1 }, windows: [B.x - 1.4, B.x + 1.4], roof: { kind: 'gable', h: 1.2, color: roofStripes, open: 0.8, over: 0.35 },
   });
   // dentro: a bancada com ferramentas, a estante de brinquedos, o baú
   const bz0 = B.z - B.d / 2;
@@ -285,11 +286,11 @@ export function buildCondominio(kit, root, L) {
   kit.add(rb(1.4, 1.6, 0.4, 0.03, 1), { color: '#fffaf0', x: B.x + 1.5, y: 0.06, z: bz0 + 0.36 });
   ['#e8577a', '#6ec3e8', '#ffd15c', '#7fd36b', '#9677c6', '#f08a3c'].forEach((c, i) => kit.add(rb(0.3, 0.3, 0.3, 0.05, 1), { color: c, x: B.x + 1.0 + (i % 3) * 0.48, y: 0.5 + Math.floor(i / 3) * 0.55, z: bz0 + 0.42, ry: i * 0.2, ao: false }));
   kit.add(rb(0.9, 0.5, 0.55, 0.06, 2), { color: '#7fa36b', x: B.x + 1.6, y: 0.06, z: B.z + 0.9 });
-  const sign = textPlate('BRINQUEDOTECA', 3.0, 0.48, { bg: '#e8577a' });
-  sign.mesh.position.set(B.x, 1.65, tz1h + 0.45);
+  // a placa na parede do fundo, entre as janelas (vista por cima da parede cortada)
+  const sign = textPlate('BRINQUEDOTECA', 1.7, 0.34, { bg: '#e8577a' });
+  sign.mesh.position.set(B.x, B.h - 0.42, bz0 + 0.19);
   root.add(sign.mesh);
   signs.push(sign);
-  for (const s of [-1, 1]) kit.add(cyl(0.04, 0.04, 1.9, 8), { color: '#4a3426', x: B.x + s * 1.45, z: tz1h + 0.42 });
   // o trilho em elipse: dormentes e dois trilhos
   const trackPoint = (t) => {
     const x = B.x + Math.cos(t) * B.track.rx, z = B.z + Math.sin(t) * B.track.rz;
@@ -340,7 +341,7 @@ export function buildCondominio(kit, root, L) {
   const Yd = P.yard;
   // o piso emborrachado (placas em três cores suaves)
   const rub = ['#d98b73', '#8fbf8a', '#86b9d6'].map((c) => new THREE.Color(c));
-  kit.add(slab(Yd.maxX - Yd.minX, 0.022, Yd.maxZ - Yd.minZ), { color: (p) => rub[Math.abs(Math.floor((p.x + 50) / 1.1) + 2 * Math.floor((p.z + 50) / 1.1)) % 3], slot: 'ground', x: (Yd.minX + Yd.maxX) / 2, z: (Yd.minZ + Yd.maxZ) / 2 });
+  kit.add(tiles(Yd.maxX - Yd.minX, Yd.maxZ - Yd.minZ, 1.0, 1.0, (p) => rub[Math.abs(Math.floor((p.x + 50) / 1.0) + 2 * Math.floor((p.z + 50) / 1.0)) % 3]), { color: null, slot: 'ground', x: (Yd.minX + Yd.maxX) / 2, y: 0.022, z: (Yd.minZ + Yd.maxZ) / 2 });
   // a cerca de lápis de cor, com o portão (ao sul, aberto) e o vão do morrinho (a oeste)
   pencilFence(kit, { x0: Yd.minX, z0: Yd.minZ, x1: Yd.maxX, z1: Yd.minZ, seed: 0 });
   pencilFence(kit, { x0: Yd.maxX, z0: Yd.minZ, x1: Yd.maxX, z1: Yd.maxZ, seed: 2 });
@@ -362,9 +363,9 @@ export function buildCondominio(kit, root, L) {
   kit.add(rb(1.2, 0.12, 1.2, 0.04, 1), { color: '#e8577a', x: sl.x, y: 1.7, z: sl.z });
   kit.add(new THREE.ConeGeometry(0.85, 0.7, 4).rotateY(Math.PI / 4), { color: '#ffd15c', x: sl.x, y: 2.75, z: sl.z });
   for (const s of [-0.45, 0.45]) kit.add(cyl(0.04, 0.04, 1.3, 6), { color: '#fffaf0', x: sl.x + s, y: 1.82, z: sl.z });
-  const chute = new THREE.CylinderGeometry(0.42, 0.42, 2.4, 14, 1, true, Math.PI / 2, Math.PI);
-  chute.rotateX(-(Math.PI / 2 - 0.62)); // a calha sobe para o norte, até a casinha
-  kit.add(chute, { color: '#e8577a', x: sl.x, y: 0.95, z: sl.z + 1.4 });
+  // a prancha do escorregador desce para o sul, com os corrimãos
+  kit.add(rb(0.62, 0.05, 2.4, 0.02, 1), { color: '#e8577a', x: sl.x, y: 0.93, z: sl.z + 1.4, rx: 0.62 });
+  for (const s of [-1, 1]) kit.add(rb(0.05, 0.14, 2.4, 0.02, 1), { color: '#f28ca2', x: sl.x + s * 0.31, y: 0.97, z: sl.z + 1.4, rx: 0.62, ao: false });
   kit.add(cyl(0.2, 0.2, 0.04, 16), { color: '#f28ca2', x: sl.x + 0.2, y: 1.86, z: sl.z - 0.1, ao: false });
   for (let k = 0; k < 5; k++) kit.add(rb(0.7, 0.05, 0.1, 0.015, 1), { color: '#fffaf0', x: sl.x, y: 0.3 + k * 0.32, z: sl.z - 0.6 - k * 0.04, rx: -0.2, ao: false });
   const sw = P.swing;
@@ -396,7 +397,8 @@ export function buildCondominio(kit, root, L) {
     kit.add(new THREE.CircleGeometry(pd.r * 0.85, 22).rotateX(-Math.PI / 2), { color: '#86aac0', slot: 'glass', x: pd.x, y: 0.014, z: pd.z, sz: 0.66, ao: false });
   }
   const tw = P.towel;
-  kit.add(slab(1.8, 0.012, 1.3), { color: (p) => new THREE.Color((Math.floor((p.x + 5) / 0.2) + Math.floor((p.z + 5) / 0.2)) % 2 ? '#e8577a' : '#fffaf0'), slot: 'ground', x: tw.x, y: 0.022, z: tw.z });
+  const xad = [new THREE.Color('#e8577a'), new THREE.Color('#fffaf0')];
+  kit.add(tiles(1.8, 1.3, 0.2, 0.2, (p) => xad[Math.abs(Math.floor((p.x + 5) / 0.2) + Math.floor((p.z + 5) / 0.2)) % 2]), { color: null, slot: 'ground', x: tw.x, y: 0.03, z: tw.z });
   const bs = P.basket;
   kit.add(cyl(0.24, 0.2, 0.3, 14), { color: '#c99a5e', x: bs.x, z: bs.z });
   kit.add(new THREE.TorusGeometry(0.2, 0.025, 4, 14, Math.PI), { color: '#a87a52', x: bs.x, y: 0.3, z: bs.z, ao: false });
