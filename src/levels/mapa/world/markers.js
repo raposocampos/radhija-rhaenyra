@@ -215,6 +215,8 @@ export function buildMarkers(kit, root, L) {
   const lockMat = mat('mapa-cadeado', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.35 }));
   const locks = new THREE.InstancedMesh(lockGeo, lockMat, flags.length);
   locks.name = 'mapa:cadeados';
+  // as instâncias ficam espalhadas pela cidade: o recorte da câmera pela esfera da malha esconderia as de longe
+  locks.frustumCulled = false;
   locks.castShadow = true;
   locks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   root.add(locks);

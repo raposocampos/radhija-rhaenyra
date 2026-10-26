@@ -173,7 +173,7 @@ export function buildClouds(root, L) {
         a.open = !!open;
         a.target = open ? 1 : 0;
         a.delay = instant ? 0 : delay;
-        if (instant) { a.k = a.target; pose(a, 0); }
+        if (instant) { a.k = a.target; pose(a, 0); a.mesh.boundingSphere = null; }
       },
       isOpen: (zone) => !!areas[zone]?.open,
     },
@@ -188,7 +188,11 @@ export function buildClouds(root, L) {
     update(dt, t) {
       for (const a of Object.values(areas)) {
         if (a.delay > 0) { a.delay -= dt; continue; }
-        if (a.k !== a.target) a.k = THREE.MathUtils.clamp(a.k + Math.sign(a.target - a.k) * dt / 2.4, 0, 1);
+        if (a.k !== a.target) {
+          a.k = THREE.MathUtils.clamp(a.k + Math.sign(a.target - a.k) * dt / 2.4, 0, 1);
+          // abrindo, os bolos sobem e espalham: a esfera do recorte da câmera é refeita
+          a.mesh.boundingSphere = null;
+        }
         if (a.k < 0.999) pose(a, t);
         else a.mesh.visible = false;
       }
