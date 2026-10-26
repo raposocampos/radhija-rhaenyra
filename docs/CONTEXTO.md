@@ -33,9 +33,17 @@ build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
   (ganchos em cada desenho) também produz na base. Também achado: com mistura ou offset desligados, o WebGL guarda os
   valores do último transparente (aditivo), e a assinatura crua do estado tem ~150 combinações novas no jogo; zerá-los
   não muda os picos no CI. Proposta separada, sem commit (pode ajudar ANGLE-Metal/Vulkan em aparelho; sem medição).
-- No PC: só `node --check`, `git diff --check` e o teste novo em Node. Próximo passo: PR, CI e prévia; E2E
-  `primeira-passagem` e `todas` no head e uma varredura só da fase 10 para confirmar a estabilidade; depois o "pode
-  integrar" do usuário nesta sessão.
+- Validação do código (`b5169f6`, sobre o main `75a3b1a`), PR #68: CI `40410857436` verde e prévia publicada
+  (`previews/pr-68/40410857436-1/`); E2E `primeira-passagem` `40410883024` 30/30 (26 sem pico; a fase 10 com 0 nos três
+  aparelhos, 134/145 texturas na carga e nada depois); E2E `todas` `40410887071` 52/52; varredura temporária
+  `40410952359` (branch auxiliar `claude/fase10-primeira-passagem-varredura`, só o workflow; apagado): a fase 10 12×,
+  4 por aparelho, todas aprovadas e sem pico. Antes: 2 a 5 picos por medição da fase 10. Os branches auxiliares
+  foram apagados; as execuções e os artefatos (7 dias) continuam no GitHub. Os commits seguintes só mudam este arquivo:
+  conferir o CI deles no PR.
+- Observação, sem relação com esta mudança: a fase 9 no `celular-baixa` tem 2 picos em `O_flap` (#92, #93) em 2 de 6
+  medições, já antes; com um pico de ruído, chega ao limite de 3.
+- No PC: só `node --check`, `git diff --check` e o teste novo em Node. Próximo passo: entregar a prévia e esperar o
+  "pode integrar" do usuário nesta sessão; depois, merge squash com o SHA esperado e liberar o deploy correspondente.
 
 ## Entregue: E2E `fase3` intermitente na dica do cantinho (PR #66, squash `1b288c0`)
 
