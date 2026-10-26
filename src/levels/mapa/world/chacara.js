@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { mat, mergeGeometries, foliageCluster, paint } from '../../../world/util.js';
 import { lettuce, carrotTops, succulent } from '../../../world/plants.js';
-import { rb, cyl, sphere, slab, textPlate, tiles as tilesTop, tilesV } from './kit.js';
+import { rb, cyl, rod, sphere, slab, textPlate, tiles as tilesTop, tilesV } from './kit.js';
 import { openHouse, stringLights, rainCloud, bookSpines, waterMat, flowerBush } from './pecas.js';
 
 const tiles = (hex, under = '#efe1c8') => {
@@ -238,7 +238,7 @@ export function buildChacara(kit, root, L) {
     const y = 2.3 - Math.sin(t * Math.PI) * 0.45;
     kit.add(new THREE.ConeGeometry(0.16, 0.3, 3).rotateX(Math.PI), { color: flagCols[i % 4], x: bt.x0 + (bt.x1 - bt.x0) * t, y: y - 0.15, z: bt.z, sz: 0.25, ao: false });
   }
-  kit.add(cyl(0.008, 0.008, bt.x1 - bt.x0, 3).rotateZ(Math.PI / 2), { color: '#4a3426', x: (bt.x0 + bt.x1) / 2, y: 2.12, z: bt.z, ao: false });
+  kit.add(rod(0.008, bt.x1 - bt.x0, 3).rotateZ(Math.PI / 2), { color: '#4a3426', x: (bt.x0 + bt.x1) / 2, y: 2.12, z: bt.z, ao: false });
   // a piscininha com o barquinho, o presente
   const Pl = Gp.pool;
   kit.add(new THREE.TorusGeometry(Pl.r, 0.2, 10, 28).rotateX(Math.PI / 2), { color: (p) => new THREE.Color(Math.floor(Math.atan2(p.y, p.x) * 3) % 2 ? '#6ec3e8' : '#fffaf0'), x: Pl.x, y: 0.2, z: Pl.z });
@@ -295,7 +295,7 @@ export function buildChacara(kit, root, L) {
   }
   const Sc = Gp.scarecrow;
   kit.add(cyl(0.04, 0.05, 1.9, 8), { color: '#8e5a33', x: Sc.x, z: Sc.z });
-  kit.add(cyl(0.035, 0.035, 1.3, 8).rotateZ(Math.PI / 2), { color: '#8e5a33', x: Sc.x, y: 1.35, z: Sc.z });
+  kit.add(rod(0.035, 1.3, 8).rotateZ(Math.PI / 2), { color: '#8e5a33', x: Sc.x, y: 1.35, z: Sc.z });
   kit.add(rb(0.5, 0.6, 0.26, 0.08, 2), { color: (p) => new THREE.Color(Math.floor((p.x + 5) / 0.1) % 2 ? '#c2483a' : '#a83a30'), x: Sc.x, y: 0.9, z: Sc.z });
   for (const s of [-1, 1]) kit.add(rb(0.42, 0.16, 0.16, 0.05, 2), { color: '#c2483a', x: Sc.x + s * 0.42, y: 1.28, z: Sc.z });
   kit.add(sphere(0.2, 14, 10), { color: '#e9cf9a', x: Sc.x, y: 1.72, z: Sc.z });

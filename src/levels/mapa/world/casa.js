@@ -9,7 +9,7 @@
 //     caminha e a parede com as patinhas e os dois botões.
 // API: buildCasa(kit, root, L) → { update(dt, t) }
 import * as THREE from 'three';
-import { rb, cyl, sphere, slab, picketFence } from './kit.js';
+import { rb, cyl, rod, sphere, slab, picketFence } from './kit.js';
 import { openHouse, rainCloud, lantern } from './pecas.js';
 import { carrotTops } from '../../../world/plants.js';
 
@@ -115,7 +115,7 @@ export function buildCasa(kit, root, L) {
   kit.add(rb(0.5, 0.82, 0.48, 0.04, 1), { color: '#e3e8ec', x: ax1 - 0.36, y: 0.06, z: az0 + 0.42 });
   kit.add(rb(0.4, 0.05, 0.36, 0.02, 1), { color: '#9fb6c2', x: ax1 - 0.36, y: 0.86, z: az0 + 0.42, ao: false });
   // o varal de teto: dois trilhos, as roupas e a meia listrada no pregador
-  for (const zz of [az0 + 1.5, az0 + 1.85]) kit.add(cyl(0.015, 0.015, A.w - 0.4, 6).rotateZ(Math.PI / 2), { color: '#9a8f86', x: A.x, y: 2.05, z: zz, ao: false });
+  for (const zz of [az0 + 1.5, az0 + 1.85]) kit.add(rod(0.015, A.w - 0.4, 6).rotateZ(Math.PI / 2), { color: '#9a8f86', x: A.x, y: 2.05, z: zz, ao: false });
   [['#fffaf0', -0.6], ['#f2b24c', 0.1], ['#6ec3e8', 0.55]].forEach(([c, dx]) => kit.add(rb(0.42, 0.48, 0.03, 0.01, 1), { color: /** @type {string} */ (c), x: A.x + /** @type {number} */ (dx), y: 1.55, z: az0 + 1.5 }));
   for (let k = 0; k < 6; k++) kit.add(rb(0.12, 0.09, 0.06, 0.02, 1), { color: k % 2 ? '#e8577a' : '#fffaf0', x: A.x - 0.15, y: 1.92 - k * 0.09, z: az0 + 1.86 });
   kit.add(rb(0.22, 0.1, 0.06, 0.04, 1), { color: '#e8577a', x: A.x - 0.08, y: 1.4, z: az0 + 1.86 });

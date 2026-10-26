@@ -17,7 +17,7 @@
 import * as THREE from 'three';
 import { foliageCluster } from '../../../world/util.js';
 import { boxwood } from '../../../world/plants.js';
-import { rb, cyl, sphere, slab, gableRoof, windowAt, doorAt, textPlate, tiles } from './kit.js';
+import { rb, cyl, rod, sphere, slab, gableRoof, windowAt, doorAt, textPlate, tiles } from './kit.js';
 import { openHouse, stringLights, pencilFence, lantern, waterMat, flowerBush } from './pecas.js';
 
 const tone = (hex, step = 0.16) => {
@@ -45,7 +45,7 @@ export function buildCondominio(kit, root, L) {
   kit.add(rb(0.22, 0.14, 0.14, 0.03, 1), { color: '#ffd36a', slot: 'lit', x: Ld.x + 0.9, y: 2.05, z: Ld.z + Ld.d / 2 + 0.1, ao: false });
   const line = (ln, cols) => {
     for (const x of [ln.x0, ln.x1]) kit.add(cyl(0.06, 0.07, 2.1, 8), { color: '#8e5a33', x, z: ln.z });
-    kit.add(cyl(0.012, 0.012, ln.x1 - ln.x0, 4).rotateZ(Math.PI / 2), { color: '#4a3426', x: (ln.x0 + ln.x1) / 2, y: 2.0, z: ln.z, ao: false });
+    kit.add(rod(0.012, ln.x1 - ln.x0, 4).rotateZ(Math.PI / 2), { color: '#4a3426', x: (ln.x0 + ln.x1) / 2, y: 2.0, z: ln.z, ao: false });
     cols.forEach((c, i) => {
       const x = ln.x0 + ((i + 0.5) / cols.length) * (ln.x1 - ln.x0);
       kit.add(rb(0.58, 0.7, 0.04, 0.02, 1), { color: c, x, y: 1.28, z: ln.z, rz: (i % 2 ? 0.05 : -0.04) });
@@ -69,7 +69,7 @@ export function buildCondominio(kit, root, L) {
   kit.add(rb(Pk.w, 0.07, Pk.d, 0.02, 1), { color: '#b77a48', x: Pk.x, z: Pk.z });
   kit.add(cyl(0.05, 0.06, 1.4, 8), { color: '#6b4a34', x: Pk.x + 0.8, z: Pk.z + 0.5 });
   kit.add(new THREE.TorusGeometry(0.12, 0.035, 6, 14), { color: '#9a8f86', x: Pk.x + 0.8, y: 1.42, z: Pk.z + 0.5, ao: false });
-  kit.add(cyl(0.008, 0.008, 1.3, 3).rotateZ(1.15), { color: '#c98a55', x: Pk.x + 1.3, y: 1.0, z: Pk.z + 0.35, ao: false });
+  kit.add(rod(0.008, 1.3, 3).rotateZ(1.15), { color: '#c98a55', x: Pk.x + 1.3, y: 1.0, z: Pk.z + 0.35, ao: false });
   // o irrigador de três jatos (gira) e o registro
   const sp = S.sprinkler;
   kit.add(cyl(0.14, 0.18, 0.22, 12), { color: '#2f6fb8', x: sp.x, z: sp.z });
@@ -257,7 +257,7 @@ export function buildCondominio(kit, root, L) {
   kit.add(sphere(0.07, 10, 8), { color: '#ffd33f', x: tx1 - 0.48, y: y0 + 0.36, z: T.z + 1.85, group: tg });
   for (const [pz, sign] of [[T.z - 0.6, false], [T.z + 0.6, true]]) {
     kit.add(cyl(0.035, 0.035, 1.0, 6), { color: '#8e5a33', x: tx1 - 0.5, y: y0, z: pz, group: tg });
-    kit.add(cyl(0.025, 0.025, 0.6, 6).rotateX(Math.PI / 2), { color: '#8e5a33', x: tx1 - 0.5, y: y0 + 1.0, z: pz, group: tg });
+    kit.add(rod(0.025, 0.6, 6).rotateX(Math.PI / 2), { color: '#8e5a33', x: tx1 - 0.5, y: y0 + 1.0, z: pz, group: tg });
     if (sign) kit.add(rb(0.04, 0.22, 0.32, 0.01, 1), { color: '#ffd15c', x: tx1 - 0.44, y: y0 + 0.55, z: pz, group: tg, ao: false });
   }
   for (const [x, y, z, ry] of [[tx1 - 0.5, y0 + 1.1, T.z - 0.75, 0.4], [tx1 - 0.5, y0 + 1.1, T.z + 0.45, -0.8], [T.x + 0.2, y0 + 0.62, tz1 - 0.1, 2.2]]) {
@@ -373,7 +373,7 @@ export function buildCondominio(kit, root, L) {
   const sw = P.swing;
   // o cavalete em A: as pernas de cada lado se encontram na trave
   for (const s of [-1, 1]) for (const t of [-1, 1]) kit.add(cyl(0.05, 0.05, 2.25, 8), { color: '#8e5a33', x: sw.x + s * 1.0, z: sw.z + t * 0.45, rx: -t * 0.2 });
-  kit.add(cyl(0.05, 0.05, 2.1, 8).rotateZ(Math.PI / 2), { color: '#8e5a33', x: sw.x, y: 2.18, z: sw.z });
+  kit.add(rod(0.06, 2.2, 10).rotateZ(Math.PI / 2), { color: '#8e5a33', x: sw.x, y: 2.2, z: sw.z });
   for (const k of [-0.45, 0.45]) {
     for (const t of [-0.18, 0.18]) kit.add(cyl(0.01, 0.01, 1.7, 4), { color: '#4a3426', x: sw.x + k + t, y: 0.48, z: sw.z, ao: false });
     kit.add(rb(0.44, 0.05, 0.22, 0.02, 1), { color: k < 0 ? '#ffd15c' : '#6ec3e8', x: sw.x + k, y: 0.46, z: sw.z, ao: false });

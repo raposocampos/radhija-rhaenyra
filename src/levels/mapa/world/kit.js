@@ -172,6 +172,8 @@ export function cyl(rTop, rBot, h, seg = 14) {
   return g;
 }
 export const sphere = (r, w = 14, h = 10) => new THREE.SphereGeometry(r, w, h);
+/** Haste centrada na origem (ao longo de y): para deitar com rotate e pôr pelo meio (varais, traves, cordões). */
+export const rod = (r, len, seg = 8) => new THREE.CylinderGeometry(r, r, len, seg);
 /** Caixa reta com a base em y = 0 (chão, faixas). */
 export function slab(w, h, d) {
   const g = new THREE.BoxGeometry(w, h, d);
