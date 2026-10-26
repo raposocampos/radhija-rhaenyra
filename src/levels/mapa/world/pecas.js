@@ -209,11 +209,12 @@ export function flowerBush({ r = 0.2, seed = 1, flower = '#ff6a55', n = 6 } = {}
 }
 
 /** Contorno irregular de poça (raio r com ondulações), deitado no chão (plano xz, voltado para cima). */
-function blob(r, seed, n = 28) {
+function blob(r, seed, n = 48) {
   const s = new THREE.Shape();
   for (let i = 0; i <= n; i++) {
     const a = (i / n) * Math.PI * 2;
-    const rr = r * (1 + 0.14 * Math.sin(3 * a + seed) + 0.07 * Math.sin(7 * a + seed * 2.3) + 0.04 * Math.sin(11 * a - seed));
+    // só ondulações largas: o contorno fica macio (as finas deixavam a borda serrilhada, de papel rasgado)
+    const rr = r * (1 + 0.1 * Math.sin(2 * a + seed) + 0.06 * Math.sin(3 * a + seed * 2.3) + 0.025 * Math.sin(5 * a - seed));
     const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
     if (i === 0) s.moveTo(x, y); else s.lineTo(x, y);
   }
@@ -227,12 +228,14 @@ function blob(r, seed, n = 28) {
 export function puddle(kit, { x, z, r, y = 0, seed = 1, sz = 0.72 }) {
   const R = rng(seed * 7 + 3);
   const ry = R() * Math.PI;
-  kit.add(blob(r * 1.22, seed), { color: '#8a6a4c', slot: 'ground', x, y: y + 0.008, z, sz, ry, ao: false });
-  kit.add(blob(r * 1.06, seed + 1.7), { color: '#6f5238', slot: 'ground', x, y: y + 0.011, z, sz, ry, ao: false });
-  kit.add(blob(r * 0.86, seed + 3.1), { color: '#a8cfe2', slot: 'glass', x, y: y + 0.014, z, sz, ry, ao: false });
-  for (let k = 0; k < 3; k++) {
-    const a = R() * Math.PI * 2, d = r * (1.35 + R() * 0.35);
-    kit.add(blob(r * (0.12 + R() * 0.1), seed + k * 5), { color: '#7a5c40', slot: 'ground', x: x + Math.cos(a) * d, y: y + 0.005, z: z + Math.sin(a) * d * sz, ao: false }); // abaixo da borda: onde encosta nela, some embaixo
+  // a lama úmida em volta (larga e clara), a beirada escura fininha e a água (o mesmo contorno, só menor)
+  kit.add(blob(r * 1.16, seed), { color: '#9a7a58', slot: 'ground', x, y: y + 0.008, z, sz, ry, ao: false });
+  kit.add(blob(r * 1.0, seed), { color: '#6f5238', slot: 'ground', x, y: y + 0.011, z, sz, ry, ao: false });
+  kit.add(blob(r * 0.93, seed), { color: '#93bfd9', slot: 'glass', x, y: y + 0.014, z, sz, ry, ao: false });
+  // dois pinguinhos de lama perto da borda
+  for (let k = 0; k < 2; k++) {
+    const a = R() * Math.PI * 2, d = r * (1.32 + R() * 0.2);
+    kit.add(new THREE.CircleGeometry(r * (0.07 + R() * 0.05), 12).rotateX(-Math.PI / 2), { color: '#9a7a58', slot: 'ground', x: x + Math.cos(a) * d, y: y + 0.005, z: z + Math.sin(a) * d * sz, ao: false });
   }
 }
 
