@@ -225,7 +225,7 @@ export function buildChacara(kit, root, L) {
   }, dy + 0.8);
   kit.add(cyl(0.03, 0.03, 0.18, 6), { color: '#6ec3e8', x: Tb.x, y: dy + 1.52, z: Tb.z });
   kit.add(sphere(0.04, 8, 6), { color: '#ffd77a', slot: 'lit', x: Tb.x, y: dy + 1.74, z: Tb.z });
-  for (const [ddx, c] of [[-0.75, '#6ec3e8'], [0.75, '#ffd15c'], [-0.5, '#7fd36b'], [0.55, '#e8577a']]) kit.add(cyl(0.12, 0.1, 0.02, 12), { color: c, x: Tb.x + ddx, y: dy + 0.8, z: Tb.z + (ddx > 0 ? 0.35 : -0.3), ao: false });
+  for (const [ddx, c] of /** @type {[number, string][]} */ ([[-0.75, '#6ec3e8'], [0.75, '#ffd15c'], [-0.5, '#7fd36b'], [0.55, '#e8577a']])) kit.add(cyl(0.12, 0.1, 0.02, 12), { color: c, x: Tb.x + ddx, y: dy + 0.8, z: Tb.z + (ddx > 0 ? 0.35 : -0.3), ao: false });
   // as bandeirolas
   const bt = Gp.bunting;
   for (const x of [bt.x0, bt.x1]) kit.add(cyl(0.05, 0.06, 2.4, 8), { color: '#8e5a33', x, z: bt.z });

@@ -13,10 +13,12 @@ export const waterMat = () => mat('mapa-lake', () => {
   return new THREE.MeshStandardMaterial({ color: '#4fa6d8', roughness: 0.14, metalness: 0.05, normalMap: n, normalScale: new THREE.Vector2(0.3, 0.3) });
 });
 
+/** Cor de uma peça: sólida (string) ou por posição local e normal. @typedef {string | ((p: THREE.Vector3, n: THREE.Vector3) => THREE.Color)} Paint */
+
 /**
  * Cor que muda pela direção da face: `inside` na face de dentro (normal · dir < −0,5), `out` no resto (cor ou função,
  * como os tijolos da casa do vovô).
- * @param {string | ((p: THREE.Vector3, n: THREE.Vector3) => THREE.Color)} out
+ * @param {Paint} out
  * @param {string} inside
  */
 function twoTone(out, inside, dx, dz) {
@@ -30,6 +32,9 @@ function twoTone(out, inside, dx, dz) {
  * roof: { kind: 'gable' | 'hip' | 'flat', h, color, open (rad), over }; windows: posições x na parede do fundo (norte).
  * O telhado gira na beirada do fundo (dobradiça) e fica aberto para trás.
  * @param {ReturnType<typeof import('./kit.js').createKit>} kit
+ * @param {{ x: number, z: number, w: number, d: number, h: number, low?: number, t?: number, wall?: Paint, inside?: string,
+ *   trim?: string, floor?: Paint, door?: { x: number, w: number } | null, windows?: number[], cut?: string[], group?: string | null,
+ *   roof?: { kind?: 'gable' | 'hip' | 'flat', h?: number, color?: Paint, open?: number, over?: number } | null }} o
  */
 export function openHouse(kit, { x, z, w, d, h, low = 1.0, t = 0.16, wall = '#f6e6cb', inside = '#fff8ec', trim = '#fffaf0', floor = '#c9a27a',
   door = null, roof = { kind: 'gable', h: 1.6, color: '#d9733a', open: 1.05, over: 0.35 }, windows = [], cut = ['s', 'e'], group = null }) {

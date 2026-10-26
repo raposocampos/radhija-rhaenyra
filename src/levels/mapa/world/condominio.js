@@ -220,7 +220,7 @@ export function buildCondominio(kit, root, L) {
   kit.add(rb(1.5, 1.8, 1.3, 0.06, 2), { color: '#efe2cc', x: tx0 + 1.0, y: y0, z: tz0 + 0.9, group: tg });
   kit.add(rb(1.7, 0.12, 1.5, 0.03, 1), { color: '#c98a55', x: tx0 + 1.0, y: y0 + 1.8, z: tz0 + 0.9, group: tg });
   doorAt(kit, { x: tx0 + 1.0, z: tz0 + 1.55, w: 0.7, h: 1.5, color: '#a0603a', group: tg });
-  for (const [k, c] of [[0, '#6ec3e8'], [1, '#ffd15c']]) {
+  for (const [k, c] of /** @type {[number, string][]} */ ([[0, '#6ec3e8'], [1, '#ffd15c']])) {
     const cx = tx0 + 0.75 + k * 0.85, cz = tz0 + 3.3;
     kit.add(rb(0.55, 0.06, 1.3, 0.02, 1), { color: (p) => new THREE.Color(Math.floor((p.z + 9) / 0.22) % 2 ? c : '#fffaf0'), x: cx, y: y0 + 0.25, z: cz, group: tg });
     kit.add(rb(0.55, 0.06, 0.5, 0.02, 1), { color: c, x: cx, y: y0 + 0.4, z: cz - 0.75, rx: -0.9, group: tg });
@@ -331,7 +331,7 @@ export function buildCondominio(kit, root, L) {
     const a = (k / 3) * Math.PI * 2 + 0.5;
     kit.add(rb(0.04, 0.42, 0.3, 0.01, 1), { color: '#d93a3a', x: rk.x + Math.cos(a) * 0.32, y: 0.12, z: rk.z + Math.sin(a) * 0.32, ry: -a });
   }
-  for (const [a, c] of [[2.6, '#6ec3e8'], [3.7, '#f7c3d0']]) {
+  for (const [a, c] of /** @type {[number, string][]} */ ([[2.6, '#6ec3e8'], [3.7, '#f7c3d0']])) {
     kit.add(cyl(0.13, 0.1, 0.12, 12), { color: c, x: rk.x + Math.cos(a) * 0.5, y: 0.62, z: rk.z + Math.sin(a) * 0.5, ao: false });
   }
 

@@ -135,7 +135,7 @@ export function buildCasa(kit, root, L) {
   paw(0.5, az0 + 2.2);
   paw(0.85, az0 + 2.45);
   paw(1.2, az0 + 2.2);
-  for (const [y, c] of [[1.6, '#e8577a'], [1.95, '#7fd36b']]) {
+  for (const [y, c] of /** @type {[number, string][]} */ ([[1.6, '#e8577a'], [1.95, '#7fd36b']])) {
     kit.add(rb(0.04, 0.2, 0.2, 0.02, 1), { color: '#fffaf0', x: ax0 + 0.18, y: y - 0.1, z: az0 + 2.75, ao: false });
     kit.add(sphere(0.06, 10, 8), { color: c, slot: 'lit', x: ax0 + 0.22, y, z: az0 + 2.75, ao: false });
   }
