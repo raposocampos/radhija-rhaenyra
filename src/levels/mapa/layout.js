@@ -94,7 +94,7 @@ export const HOUSE = {
 /** Torre do condomínio (o terraço da fase 4). */
 export const TOWER = { x: -21.3, z: -12.9, w: 6.6, d: 6.6, h: 11 };
 /** Jardim do lago (fase 3): o lago com a ilha e a ponte (plank). */
-export const LAKE = { x: -38, z: -13.2, r: 5.2, island: { x: -38.6, z: -13.6, r: 1.55 }, plank: { x0: -36.9, x1: -32.6, z: -13.6, w: 0.85 } };
+export const LAKE = { x: -38, z: -12.6, r: 5.2, island: { x: -38.6, z: -13.0, r: 1.55 }, plank: { x0: -36.9, x1: -32.6, z: -13.0, w: 0.85 } };
 /**
  * O quintal do apartamento da fase 3, ao norte do lago: o prédio com a porta de vidro (luz quente), a cerca-viva com o
  * portão de treliça e as duas lanternas, as duas pedras (a pesada e a leve, no cantinho), a mesinha com o lampião. Os
@@ -369,8 +369,8 @@ export const STATIC_COLLIDERS = [
   rect('predio-do-lago', LAKE_YARD.building, 0.12),
   box('cerca-viva-oeste', LAKE_YARD.hedge.x0, LAKE_YARD.hedge.z - 0.36, LAKE_YARD.hedge.gate.x0, LAKE_YARD.hedge.z + 0.36, { height: LAKE_YARD.hedge.h }),
   box('cerca-viva-leste', LAKE_YARD.hedge.gate.x1, LAKE_YARD.hedge.z - 0.36, LAKE_YARD.hedge.x1, LAKE_YARD.hedge.z + 0.36, { height: LAKE_YARD.hedge.h }),
-  // a mesinha com as duas cadeiras
-  box('mesinha-do-lago', LAKE_YARD.table.x - 0.98, LAKE_YARD.table.z - LAKE_YARD.table.r, LAKE_YARD.table.x + 0.98, LAKE_YARD.table.z + LAKE_YARD.table.r),
+  // a mesinha com as duas cadeiras (do prédio até a cerca-viva: não sobra vão estreito em volta dela)
+  box('mesinha-do-lago', LAKE_YARD.table.x - 0.98, LAKE_YARD.building.z + LAKE_YARD.building.d / 2, LAKE_YARD.table.x + 0.98, LAKE_YARD.hedge.z),
   ...[-1, 1].map((s) => circle(`marquise-${s < 0 ? 'a' : 'b'}`, TOWER.x + s * 1.35, TOWER.z + TOWER.d / 2 + 1.2, 0.08)),
   ...GARDEN_LAMPS.map(([x, z], i) => circle(`poste-do-lago-${i + 1}`, x, z, 0.1)),
   box('canal', SERVICE.canal.minX, SERVICE.canal.minZ, SERVICE.canal.maxX, SERVICE.canal.maxZ),
