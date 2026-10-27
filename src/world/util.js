@@ -286,12 +286,14 @@ export function paint(geo, colorOrFn) {
   const pos = geo.attributes.position, nor = geo.attributes.normal;
   const arr = new Float32Array(pos.count * 3);
   const c = new THREE.Color(), p = new THREE.Vector3(), n = new THREE.Vector3();
+  const fn = typeof colorOrFn === 'function' ? colorOrFn : null;
+  if (!fn) c.set(colorOrFn);
   for (let i = 0; i < pos.count; i++) {
-    if (typeof colorOrFn === 'function') {
+    if (fn) {
       p.fromBufferAttribute(pos, i);
       if (nor) n.fromBufferAttribute(nor, i);
-      c.copy(colorOrFn(p, n, i));
-    } else c.set(colorOrFn);
+      c.copy(fn(p, n, i));
+    }
     arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));

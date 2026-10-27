@@ -321,6 +321,36 @@ reverência) anda a voltinha só no visual, com o controle parado; ao chegar, `c
 da irmã) e o tamanho que cabem sem encostar em colisor nem na irmã e sem passar por cima da borda de uma caminha
 (`GOAL.celebrateRim`). Sem espaço (as duas dentro da caminha da fase 5), ela fica nos pulinhos.
 
+### 4.6 O mapa das fases (Pandorópolis, `src/levels/mapa/`)
+
+Jogar → Fases abre o mapa: uma fase especial fora de `LEVELS` (`createGame({ hub })`, índice `HUB = −1`), com o
+mesmo núcleo (dogs, companheira, câmera isométrica, colisão, navegação) e um puzzle que nunca termina. Cada fase do
+catálogo tem uma bandeirinha em `FLAGS` (mesma ordem; `test/mapa.test.mjs` cobra), na frente do lugar onde acontece.
+O puzzle recebe `ctx.hub` (`HubContext`: o catálogo, o progresso salvo — `game.setProgressSource`, ligado ao da UI
+—, de qual fase as dogs voltaram, `enter(index)` e `preload(index)`) e cuida dos estados das
+bandeirinhas, das nuvens e da ponte (bloqueios dinâmicos por área), do atalho (`puzzle.travel`: R/L, L2/R2, 1–0,
+[ ], ◀ ▶ no HUD) e da plaquinha (`map:sign`). Entrar abre o cartão de abertura da fase; o Voltar dele, a pausa e a
+vitória (`ui:openMap`) voltam na frente da bandeirinha; do menu, na da próxima fase.
+
+**Pré-carga** (`src/game/levelPreload.js`): perto de uma bandeirinha liberada o código da fase é importado (só o
+import, que roda fora do quadro); a montagem do cenário fica para a entrada, atrás da cortina de carregamento.
+Montar e compilar ali mesmo, com as dogs andando, travava o mapa (0,05 a 1 s por fase no PC). A barrinha da plaquinha
+mostra o andamento (`map:preload`) e `loadLevel` usa o módulo já importado (`preload.take`).
+
+**Câmera livre** (`src/game/mapLook.js`): no mapa dá para olhar em volta sem andar: arrastar o dedo ou o mouse na
+tela, o analógico direito, a rodinha ou a pinça (aproximar e afastar, `cameraRig.setZoom`). O deslocamento soma ao
+alvo da câmera (até 45 m) e volta para as dogs quando elas andam ou com o atalho.
+
+**Cenário**: cada lugar de fase é a fase em miniatura, com as peças que a fazem (`world/casa.js`: fases 1, 5 e 8;
+`world/condominio.js`: 2, 3, 4, 6 e 7; `world/chacara.js`: 9 e 10). As casas das fases que acontecem dentro de casa
+ficam em corte de maquete (`pecas.openHouse`: as paredes do lado da câmera baixas e o telhado aberto como tampa, com o
+mobiliário da fase dentro). `world/kit.js` junta as peças fixas (cores por vértice, com índice e a base um pouco mais
+escura) por material e por região de 20 m (poucas malhas para a cidade inteira, com recorte da câmera por região);
+caixas arredondadas saem de um molde por número de segmentos; as plantinhas de vaso e floreira são moitas leves
+(`pecas.flowerBush`) e as coisas repetidas que se mexem (gotas de chuva, jatos do chafariz) são instâncias.
+A sombra do sol cobre só a vizinhança do que a câmera olha (`engine.focusShadow`). Tudo o que fica em pé colide
+(`STATIC_COLLIDERS`), e o mapa liga a grade de colisão (`COLLISION_GRID`, §5).
+
 ## 5. Colisão e navegação
 
 **Colisão** (`src/game/collision.js`): o corpo de cada dog é um círculo no plano XZ. Formatos de colisor:
@@ -386,6 +416,11 @@ senão segue o grafo `NAV_NODES`/`NAV_EDGES` (Dijkstra com várias origens). Cad
 `{ requires: 'small' | 'large' | flag }`, e as flags vêm de `puzzle.navFlags()`. Sem caminho, ela espera no nó
 alcançável mais próximo da líder e senta. Os testes de navegação conferem, para toda fase registrada, que os nós
 estão livres, que as arestas não atravessam colisores e que o grafo é conexo com todas as flags ligadas.
+
+**Grade de colisão** (mapas grandes): com `layout.COLLISION_GRID` (lado da célula, em m), os estáticos ficam numa grade
+e cada consulta (`contacts`, `resolve`, `resolveBody`, `overlaps`, `jumpableTop` e a cabeça do modelo novo, por
+`world.staticsNear`) só olha os das células em volta. As fases não ligam a grade e continuam com a lista inteira; o
+mapa das fases (206 colisores) liga, e `test/mapa.test.mjs` confere que o resultado é o mesmo da lista inteira.
 
 ### 5.1 Cheiro (superbafo)
 

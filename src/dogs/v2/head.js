@@ -61,7 +61,7 @@ export function createHeadAvoid({ skel2, retarget, design, s, hs, cfg }) {
     near = [];
     nearBody = [];
     const reach = 0.75 * s + 0.3;
-    for (const list of [world.statics, world.dynamics]) {
+    for (const list of [world.staticsNear ? world.staticsNear(ox, oz, reach) : world.statics, world.dynamics]) {
       for (const c of list) {
         if (c.enabled === false || c.companionOnly || !(c.blocks === 'all' || c.blocks === cfg.size)) continue;
         if (c.except && ox >= c.except.minX && ox <= c.except.maxX && oz >= c.except.minZ && oz <= c.except.maxZ) continue;

@@ -25,6 +25,9 @@ function damp3(cur, target, vel, smoothTime, dt) {
 export function createCameraRig(camera, layout) {
   // Tudo o que depende da fase vem de layout.CAMERA (ver configure). Valores padrão = fase 1.
   const offset = new THREE.Vector3();
+  // aproximar/afastar no seguimento (o mapa das fases: rodinha e pinça); 1 = a distância da fase
+  let zoom = 1;
+  let zoomTarget = 1;
   let baseFov = 38;
   let lookHeight = 0.3;
   // Limites do ponto de foco (evita mostrar o vazio além do cenário).
@@ -48,6 +51,7 @@ export function createCameraRig(camera, layout) {
     if (C.limits) Object.assign(limits, C.limits);
     zones = C.zones || [];
     zoneOff.clear();
+    zoom = zoomTarget = 1;
     zoneBias.set(0, 0, 0);
     if (C.title) {
       const T = C.title;
@@ -108,8 +112,8 @@ export function createCameraRig(camera, layout) {
 
   function followPose(outPos, outLook) {
     outLook.set(focus.x, lookHeight, focus.z);
-    outPos.copy(outLook).add(offset);
-    outPos.y = offset.y; // altura absoluta (chão plano)
+    outPos.copy(outLook).addScaledVector(offset, zoom);
+    outPos.y = offset.y * zoom; // altura absoluta (chão plano)
     outLook.y = lookHeight;
     // zona: a câmera fica no mesmo lugar e o olhar sobe/avança (dx, dz deslocam os dois)
     outPos.x += zoneBias.x;
@@ -192,6 +196,7 @@ export function createCameraRig(camera, layout) {
    * ctx: { t, target: {x,z,vx,vz} } (alvo = dog ativa)
    */
   function update(dt, ctx) {
+    zoom += (zoomTarget - zoom) * (1 - Math.exp(-dt * 8));
     // Seguimento sempre atualizado (para que as transições terminem numa pose viva).
     if (ctx.target) {
       const tv = ctx.target;
@@ -254,6 +259,9 @@ export function createCameraRig(camera, layout) {
 
   return {
     update, setMode, snapFollow, focusShot, onSwitch, setZone, limits, configure,
+    /** Aproximar (< 1) ou afastar (> 1) no seguimento, suave. */
+    setZoom(k) { zoomTarget = Math.max(0.45, Math.min(2.2, k)); },
+    get zoom() { return zoom; },
     get mode() { return mode; },
     get shotActive() { return !!shot; },
     get position() { return pos; },

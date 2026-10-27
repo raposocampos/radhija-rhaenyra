@@ -389,6 +389,141 @@
   animation: rr-key-tap 1.6s ease-in-out infinite;
 }
 
+/* Mapa das fases (Pandorópolis, mapHud.js): só com .rr[data-hub]. Sem o mapa (catálogo de desenvolvimento), sem o
+   botão Mapa; no próprio mapa, sem Reiniciar fase nem Mapa na pausa, sem a fase e os petiscos no canto e sem os
+   botões de toque do superbafo e da lambida (lá, R/L e L2/R2 levam a outra bandeirinha). */
+.rr:not([data-map]) [data-action="map"] { display: none; }
+.rr[data-hub] .rr-pause [data-action="restart"], .rr[data-hub] .rr-pause [data-action="map"] { display: none; }
+.rr[data-hub] .rr-level, .rr[data-hub] .rr-treats { display: none; }
+.rr[data-hub] .rr-tbtn--bafo, .rr[data-hub] .rr-tbtn--lick { display: none; }
+.rr-mapplate, .rr-travel, .rr-sign { display: none; }
+.rr[data-hub] .rr-mapplate, .rr[data-hub] .rr-travel { display: flex; }
+.rr[data-hub] .rr-sign { display: grid; }
+.rr-mapplate {
+  align-items: center;
+  gap: 12px;
+  padding: 7px 16px 7px 14px;
+  border-radius: 999px;
+  font: 600 17px/1 'Fredoka', sans-serif;
+  color: var(--choco);
+}
+.rr-mapplate__city { font-weight: 700; color: var(--carrot-lo); letter-spacing: .01em; }
+.rr-mapplate__done, .rr-mapplate__bones { display: inline-flex; align-items: center; gap: 4px; }
+.rr-mapplate .ico { width: 20px; height: 20px; }
+.rr-mapplate .ico-bone { width: 28px; height: 28px; margin: -4px -2px; }
+.rr-mapplate__done .ico { color: var(--sage-lo); }
+.rr-mapplate small { opacity: .55; font-size: .82em; }
+.rr-travel {
+  pointer-events: auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  font: 600 14px/1 'Fredoka', sans-serif;
+  color: var(--choco-2);
+}
+.rr-travel button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 700 14px/1 'Fredoka', sans-serif;
+  color: #FFF8EC;
+  background: linear-gradient(180deg, var(--carrot-hi), #EC7C30);
+  box-shadow: 0 2px 0 var(--carrot-lo);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.rr-travel button:active { transform: translateY(2px); box-shadow: 0 0 0 var(--carrot-lo); }
+.rr-travel__label { display: inline-flex; align-items: center; gap: 7px; padding: 0 2px; white-space: nowrap; }
+.rr-travel .rr-key, .rr-travel .rr-pad { font-size: 11px; }
+.rr[data-device="touch"] .rr-travel .rr-g { display: none; }
+.rr-travel__look { padding: 0 10px 0 4px; font: 600 12px/1 'Fredoka', sans-serif; color: var(--choco-a); white-space: nowrap; border-left: 1.5px solid rgba(74, 52, 38, .15); }
+.rr-sign {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  width: min(100%, 400px);
+  padding: 10px 14px 11px;
+  border-radius: 20px;
+  opacity: 0;
+  transform: translateY(10px) scale(.96);
+  transition: opacity .2s ease, transform .3s var(--ease-back);
+}
+.rr-sign.is-on { opacity: 1; transform: none; }
+.rr-sign__head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.rr-sign__badge {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #FFF6E6;
+  box-shadow: inset 0 0 0 3px var(--carrot);
+}
+.rr-sign[data-state="done"] .rr-sign__badge { box-shadow: inset 0 0 0 3px var(--sage); }
+.rr-sign[data-state="locked"] .rr-sign__badge { box-shadow: inset 0 0 0 3px #B9B1A6; filter: grayscale(.8); }
+.rr-sign__item .ico { width: 30px; height: 30px; }
+.rr-sign__num {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font: 700 13px/1 'Fredoka', sans-serif;
+  color: #FFF8EC;
+  background: var(--carrot);
+  box-shadow: 0 2px 0 var(--carrot-lo);
+}
+.rr-sign[data-state="done"] .rr-sign__num { background: var(--sage); box-shadow: 0 2px 0 var(--sage-lo); }
+.rr-sign[data-state="locked"] .rr-sign__num { background: #9C948A; box-shadow: 0 2px 0 #7B746B; }
+.rr-sign__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rr-sign__eyebrow { font: 600 11px/1 'Fredoka', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--carrot-lo); }
+.rr-sign__name { font: 600 20px/1.05 'Fredoka', sans-serif; color: var(--choco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-sign__place { font-size: 13px; font-weight: 700; color: var(--choco-a); }
+.rr-sign__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 600 14px/1 'Fredoka', sans-serif; color: var(--choco-2); }
+.rr-sign__row > span { display: inline-flex; align-items: center; gap: 5px; }
+.rr-sign__row .ico { width: 17px; height: 17px; }
+.rr-sign__bones { gap: 2px !important; }
+.rr-sign__bones i { display: inline-flex; opacity: .32; filter: grayscale(1); }
+.rr-sign__bones i.is-got { opacity: 1; filter: none; }
+.rr-sign__bones .ico-bone { width: 27px; height: 27px; margin: -5px -2px; }
+.rr-sign__state.is-done { color: var(--sage-lo); }
+.rr-sign__state.is-new { color: var(--carrot-lo); }
+.rr-sign__state.is-locked { color: var(--choco-a); }
+.rr-sign__load { display: flex; align-items: center; gap: 9px; font: 600 12.5px/1 'Fredoka', sans-serif; color: var(--choco-a); }
+.rr-sign__load[hidden] { display: none; }
+.rr-sign__load i {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(74, 52, 38, .14);
+}
+.rr-sign__load i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transform: scaleX(var(--k, .04));
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--carrot-hi), var(--carrot));
+  transition: transform .35s ease;
+}
+.rr-sign__load span { flex: none; min-width: 9.5em; }
+.rr-sign__load.is-ready { color: var(--sage-lo); }
+.rr-sign__load.is-ready i::after { background: linear-gradient(90deg, #A9C98F, var(--sage)); }
+.rr-sign.is-pop.is-on { animation: rr-sign-in .45s var(--ease-back); }
+@keyframes rr-sign-in { 0% { transform: translateY(10px) scale(.96); } 60% { transform: translateY(-2px) scale(1.01); } 100% { transform: none; } }
+
 .rr-celebrate__banner {
   position: absolute;
   top: 12vh;
@@ -1113,6 +1248,12 @@
 .rr-pause__level { display: flex; justify-content: center; align-items: center; gap: 7px; margin-bottom: 14px; font: 600 14px/1 'Fredoka', sans-serif; color: var(--choco-a); }
 .rr-pause__level .ico { width: 22px; height: 22px; }
 .rr-card__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Continuar e, com o mapa das fases (fora dele), o botão Mapa ao lado; sozinho, o Continuar ocupa a linha */
+.rr-card__row { display: flex; gap: 10px; }
+.rr-card__row > .rr-btn--primary { flex: 2 1 0; }
+.rr-card__row > .rr-btn--map { flex: 1 1 0; }
+/* no mapa só o Menu inicial fica na linha de baixo */
+.rr[data-hub] .rr-pause .rr-card__pair { grid-template-columns: 1fr; }
 .rr-card__actions .rr-card__pair .rr-btn { font-size: 16.5px; padding: .72em .8em; }
 .rr-ctl-table {
   margin-top: 12px;
@@ -1726,3 +1867,26 @@
 .rr[data-compact] .rr-curtain__badge .ico { width: calc(50 * var(--u)); height: calc(50 * var(--u)); }
 .rr[data-compact] .rr-curtain__paws { margin-top: calc(14 * var(--u)); }
 .rr[data-compact] .rr-load-error__card p { font-size: calc(15 * var(--u)); margin-bottom: calc(16 * var(--u)); }
+
+/* mapa das fases (compacto): a plaquinha numa faixa curta, o atalho só com as setas */
+.rr[data-compact] .rr-mapplate { gap: calc(7 * var(--u)); padding: calc(3 * var(--u)) calc(10 * var(--u)) calc(3 * var(--u)) calc(9 * var(--u)); font-size: max(9px, calc(11.5 * var(--u))); }
+.rr[data-compact] .rr-mapplate .ico { width: calc(13 * var(--u)); height: calc(13 * var(--u)); }
+.rr[data-compact] .rr-mapplate .ico-bone { width: calc(19 * var(--u)); height: calc(19 * var(--u)); }
+.rr[data-compact] .rr-mapplate__city { display: none; }
+.rr[data-compact] .rr-travel { gap: calc(4 * var(--u)); padding: calc(2 * var(--u)); font-size: max(9px, calc(11 * var(--u))); }
+.rr[data-compact] .rr-travel button { width: calc(28 * var(--u)); height: calc(28 * var(--u)); font-size: calc(11 * var(--u)); }
+.rr[data-compact] .rr-travel .rr-key, .rr[data-compact] .rr-travel .rr-pad { font-size: calc(9.5 * var(--u)); }
+.rr[data-compact] .rr-travel__look { padding: 0 calc(6 * var(--u)) 0 calc(2 * var(--u)); font-size: max(9px, calc(9.5 * var(--u))); }
+.rr[data-compact] .rr-sign { gap: calc(4 * var(--u)); width: 100%; padding: calc(5 * var(--u)) calc(9 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u)); border-radius: calc(14 * var(--u)); }
+.rr[data-compact] .rr-sign__head { gap: calc(7 * var(--u)); }
+.rr[data-compact] .rr-sign__badge { width: calc(30 * var(--u)); height: calc(30 * var(--u)); box-shadow: inset 0 0 0 calc(2 * var(--u)) var(--carrot); }
+.rr[data-compact] .rr-sign__item .ico { width: calc(19 * var(--u)); height: calc(19 * var(--u)); }
+.rr[data-compact] .rr-sign__num { min-width: calc(15 * var(--u)); height: calc(15 * var(--u)); font-size: max(9px, calc(9.5 * var(--u))); right: calc(-5 * var(--u)); bottom: calc(-3 * var(--u)); }
+.rr[data-compact] .rr-sign__eyebrow, .rr[data-compact] .rr-sign__place { display: none; }
+.rr[data-compact] .rr-sign__name { font-size: calc(14 * var(--u)); }
+.rr[data-compact] .rr-sign__row { gap: calc(3 * var(--u)) calc(8 * var(--u)); font-size: max(9px, calc(11 * var(--u))); }
+.rr[data-compact] .rr-sign__row .ico { width: calc(12 * var(--u)); height: calc(12 * var(--u)); }
+.rr[data-compact] .rr-sign__bones .ico-bone { width: calc(18 * var(--u)); height: calc(18 * var(--u)); margin: calc(-3 * var(--u)) calc(-1 * var(--u)); }
+.rr[data-compact] .rr-sign__load { gap: calc(6 * var(--u)); font-size: max(9px, calc(10 * var(--u))); }
+.rr[data-compact] .rr-sign__load i { height: calc(5 * var(--u)); }
+.rr[data-compact] .rr-victory__actions .rr-btn:nth-child(3):last-child { grid-column: span 2; }

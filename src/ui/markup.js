@@ -5,7 +5,7 @@ import {
   boneIcon, dogIcon, pawIcon, clockIcon, speakerIcon, sparkIcon, playIcon, restartIcon,
   heartIcon, homeIcon, followIcon, stayIcon, keyboardIcon, gamepadIcon,
   jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, pauseIcon, stickIcon, fullscreenIcon, qualityIcon,
-  rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, mapArt, itemIcon,
+  rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, mapArt, itemIcon, mapIcon,
 } from './icons.js';
 import { VERSION_LABEL } from '../core/version.js';
 
@@ -158,7 +158,7 @@ export const HINTS_NOTE = { on: 'objetivo, marcador e dicas na tela', off: 'desa
  */
 export const MODES = {
   story: { name: 'Modo História', badge: 'Em breve', eyebrow: 'Mapa aberto', text: 'Mapas abertos para explorar, a começar pelo Condomínio.' },
-  levels: { name: 'Fases', text: 'Escolha uma fase ou continue de onde parou.' },
+  levels: { name: 'Fases', text: 'Passeie por Pandorópolis e entre numa fase pela bandeirinha dela.' },
 };
 /** Voltar nos menus: Esc no teclado, ○ · B no controle (no toque, o próprio botão). */
 export const backGlyph = () => glyph('Esc', { pad: ['B'], touch: [] });
@@ -326,7 +326,10 @@ export function template() {
       <div class="rr-card__head">${pawIcon()}<h2>Pausa</h2></div>
       <div class="rr-pause__level"></div>
       <div class="rr-card__actions">
-        <button class="rr-btn rr-btn--primary" data-action="resume" data-nav data-default>${playIcon()}<span>Continuar</span></button>
+        <div class="rr-card__row">
+          <button class="rr-btn rr-btn--primary" data-action="resume" data-nav data-default>${playIcon()}<span>Continuar</span></button>
+          <button class="rr-btn rr-btn--soft rr-btn--map" data-action="map" data-nav>${mapIcon()}<span>Mapa</span></button>
+        </div>
         <div class="rr-card__pair">
           <button class="rr-btn rr-btn--soft" data-action="restart" data-nav>${restartIcon()}<span>Reiniciar fase</span></button>
           <button class="rr-btn rr-btn--soft" data-action="menu" data-nav>${homeIcon()}<span>Menu inicial</span></button>

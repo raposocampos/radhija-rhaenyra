@@ -69,14 +69,13 @@ try {
   await wait(2600);
   await shot('v2-01-titulo');
 
-  // Jogar → Fases; card bloqueado → aviso; Continuar → Começar
+  // Jogar → Fases (o mapa das fases); na frente da bandeirinha 1, E → cartão → Começar
   await page.click('.rr-btn--play');
   await page.click('.rr-mode--levels');
-  await wait(600);
-  await page.click('.rr-lvcard[data-index="2"]');
-  await wait(400);
-  await shot('v2-02-titulo-bloqueada');
-  await page.click('.rr-btn--continue');
+  await page.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing', null, { timeout: 150000 });
+  await wait(1200);
+  await shot('v2-02-mapa');
+  await page.keyboard.press('KeyE');
   await waitState('intro');
   await page.click('.rr-intro [data-action="start"]');
   await waitState('playing');

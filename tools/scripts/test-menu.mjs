@@ -1,9 +1,9 @@
-// Menu inicial (suíte 'menu'): Jogar → Modo História (em breve) ou Fases → Continuar e os cartões; Opções (volume,
-// qualidade, dicas). Navegação com TECLAS REAIS (setas, Enter, Esc) e com o CONTROLE simulado (D-pad, analógico,
-// ✕ confirma, ○ volta), como na suíte controle. Também: o Continuar segue o save (próxima fase não concluída ou a
-// última escolhida), o Voltar do cartão de abertura, e o modo sem dicas salvo no navegador: sem objetivo escrito,
-// marcador do objetivo e dicas em balão, valendo depois de recarregar e religável na pausa. O toque fica na suíte
-// toque (dedos reais no celular deitado).
+// Menu inicial (suíte 'menu'): Jogar → Modo História (em breve) ou Fases → o mapa das fases (Pandorópolis); Opções
+// (volume, qualidade, dicas). Navegação com TECLAS REAIS (setas, Enter, Esc) e com o CONTROLE simulado (D-pad,
+// analógico, ✕ confirma, ○ volta), como na suíte controle. Também: o mapa abre na frente da próxima fase do save, a
+// bandeirinha abre o cartão de abertura, o Voltar dele volta ao mapa, a pausa do mapa (só Menu inicial), e o modo sem
+// dicas salvo no navegador: sem objetivo escrito, marcador do objetivo e dicas em balão, valendo depois de recarregar e
+// religável na pausa. O toque fica na suíte toque (dedos reais no celular deitado); o mapa em si, na suíte mapa.
 //   node tools/scripts/test-menu.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs, settle } from './lib/screens.mjs';
@@ -28,7 +28,7 @@ const ui = () => ev(() => {
     else if (a === 'select') focus = `select:${f.dataset.index}`;
     else focus = a ?? null;
   }
-  return { state: g.game.state, screen: g.ui.screen, level: g.game.level, focus, device: document.querySelector('.rr').dataset.device };
+  return { state: g.game.state, screen: g.ui.screen, level: g.game.level, hub: g.game.isHub, focus, device: document.querySelector('.rr').dataset.device };
 });
 /** Ações visíveis (com caixa na tela) dentro da camada da tela inicial. */
 const visibleActions = () => ev(() => [...document.querySelectorAll('.rr-title [data-action]')]
@@ -63,8 +63,8 @@ const axes = (x, y) => ev(([xx, yy]) => { const p = window.__fakePads[0]; p.axes
 async function tap(i, ms = 110) { await btn(i, true); await sleep(ms); await btn(i, false); await sleep(160); }
 
 /**
- * Tamanhos de tela (lib/screens.mjs): em cada aparelho, a tela principal, os modos, as fases, as Opções e o cartão de
- * abertura cabem inteiros na tela e sem sobreposição; o layout compacto liga pelo tamanho (também numa janela pequena
+ * Tamanhos de tela (lib/screens.mjs): em cada aparelho, a tela principal, os modos, as Opções, o HUD do mapa das fases
+ * e o cartão de abertura cabem inteiros na tela e sem sobreposição; o layout compacto liga pelo tamanho (também numa janela pequena
  * no PC e num Android cujo navegador diz ter mouse), e o PC de tamanho normal fica com o layout de sempre. De pé, o
  * celular mostra o aviso de girar. Capturas em shots/menu/telas-*.png.
  */
@@ -121,12 +121,6 @@ async function screenSizes() {
       await go('.rr-btn--play');
       await fits('escolha do modo', ['.rr-title .rr-back', '.rr-logo__svg', '.rr-mode--story', '.rr-mode--levels']);
       await snap('02-modos');
-      await go('.rr-mode--levels');
-      const cards = await p.evaluate(() => [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((_, i) => `.rr-levels .rr-lvcard:nth-child(${i + 1})`));
-      check(cards.length === 10, `${scr.id}: as 10 fases na tela das fases`, cards.length);
-      await fits('tela das fases (Voltar, Continuar e os cartões)', ['.rr-title .rr-back', '.rr-logo__svg', '.rr-btn--continue', ...cards]);
-      await snap('03-fases');
-      await go('.rr-title .rr-back');
       await go('.rr-title .rr-back');
       await go('.rr-btn--options');
       await fits('Opções', ['.rr-title .rr-back', '.rr-card--options']);
@@ -137,7 +131,13 @@ async function screenSizes() {
       await go('.rr-title .rr-back');
       await go('.rr-btn--play');
       await go('.rr-mode--levels');
-      await go('.rr-btn--continue');
+      // Fases: o mapa das fases, com as dogs na frente da bandeirinha 1 (a plaquinha aparece)
+      await p.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
+      await p.waitForTimeout(900);
+      await settle(p);
+      await fits('HUD do mapa (dogs, objetivo, placa da cidade, plaquinha, Entrar e o atalho)', ['.rr-hud__dogs', '.rr-objective', '.rr-mapplate', '.rr-sign', '.rr-prompt', '.rr-travel', '.rr-esc']);
+      await snap('03-mapa');
+      await p.keyboard.press('KeyE');
       await p.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
       await p.waitForTimeout(600);
       await settle(p);
@@ -190,29 +190,26 @@ try {
   const note = await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '');
   check(u.state === 'title' && u.screen === 'modes' && /em breve/i.test(note), 'Modo História não abre nada: aviso "em breve"', { u, note });
   await shot('menu-03-historia-em-breve.png');
-  await press('ArrowRight', 150);
+  await press('Escape', 250);
+  u = await ui();
+  check(u.screen === 'main' && u.focus === 'play', 'Esc nos modos: volta à tela principal com o foco em Jogar', u);
   await press('Enter', 300);
-  u = await ui();
-  check(u.screen === 'levels' && u.focus === 'continue', 'Enter em Fases: tela das fases com foco em Continuar', u);
-  const fresh = await ev(() => ({
-    label: document.querySelector('.rr-continue__label').textContent,
-    level: document.querySelector('.rr-continue__level').textContent,
-    cards: [...document.querySelectorAll('.rr-levels .rr-lvcard')].filter((el) => el.getClientRects().length > 0).length,
-    total: window.__game.levels.length,
-  }));
-  check(fresh.label === 'Começar' && /^Fase 1 · /.test(fresh.level), 'save novo: Começar pela fase 1', fresh);
-  check(fresh.cards === fresh.total && fresh.total >= 7, 'grade com todas as fases', fresh);
+  await press('Enter', 300);
+  let i = await waitFor((x) => x.state === 'playing' && x.level === -1 && x.near === 1, { timeout: 60000 });
+  check(i.state === 'playing' && i.hub && i.near === 1, 'Enter em Fases: o mapa das fases, na frente da bandeirinha 1 (save novo)', { state: i.state, level: i.level, near: i.near });
+  const sign = await ev(() => ({ on: document.querySelector('.rr-sign').classList.contains('is-on'), text: document.querySelector('.rr-sign__name').textContent, prompt: document.querySelector('.rr-prompt__text').textContent }));
+  check(sign.on && sign.text.length > 0 && sign.prompt === 'Entrar', 'plaquinha da fase 1 e o prompt Entrar', sign);
   await sleep(500);
-  await shot('menu-04-fases.png');
-  await press('ArrowDown', 150);
+  await shot('menu-04-mapa.png');
+  // pausa do mapa: Continuar e Menu inicial (sem Reiniciar fase nem Mapa)
+  await press('Escape', 300);
   u = await ui();
-  check(/^select:/.test(u.focus || ''), 'seta para baixo: um cartão de fase', u);
-  await press('Escape', 250);
-  u = await ui();
-  check(u.screen === 'modes' && u.focus === 'levels', 'Esc: volta aos modos com o foco em Fases', u);
-  await press('Escape', 250);
-  u = await ui();
-  check(u.screen === 'main' && u.focus === 'play', 'Esc: volta à tela principal com o foco em Jogar', u);
+  const pauseActs = await ev(() => [...document.querySelectorAll('.rr-pause [data-action]')].filter((el) => el.getClientRects().length > 0).map((el) => el.dataset.action));
+  check(u.state === 'paused' && u.focus === 'resume' && !pauseActs.includes('restart') && !pauseActs.includes('map') && pauseActs.includes('menu'), 'pausa no mapa: Continuar e Menu inicial', { u, pauseActs });
+  u = await pressUntil('ArrowDown', (f) => f === 'menu', 4);
+  await press('Enter', 400);
+  u = await waitFor((x) => x.state === 'title', { timeout: 10000 }).then(() => ui());
+  check(u.state === 'title' && u.screen === 'main' && u.hub, 'Menu inicial: a tela inicial sobre o mapa', u);
   await press('Escape', 250);
   u = await ui();
   check(u.state === 'title' && u.screen === 'main', 'Esc na tela principal não faz nada', u);
@@ -250,39 +247,31 @@ try {
   u = await ui();
   check(u.screen === 'main' && u.focus === 'options', 'Esc: volta à tela principal com o foco em Opções', u);
 
-  console.log('\n== Continuar pelo save e o modo sem dicas depois de recarregar ==');
+  console.log('\n== O mapa segue o save; o modo sem dicas depois de recarregar ==');
   await ev((saved) => localStorage.setItem('rr-progress-v1', saved), JSON.stringify({ v: 1, levels: { fase1: DONE, fase2: DONE }, last: 'fase2' }));
   await load('');
   const kept = await ev(() => ({ noHints: window.__game.settings.noHints, hints: document.querySelector('.rr').dataset.hints }));
   check(kept.noHints === true && kept.hints === 'off', 'recarregou: o modo sem dicas continua ligado', kept);
   await press('Enter', 300);
+  const modeProgress = await ev(() => document.querySelector('.rr-mode__progress').textContent);
+  check(/2 de \d+ concluídas/.test(modeProgress), 'o cartão do modo Fases mostra as fases concluídas', modeProgress);
   await press('Enter', 300);
-  u = await ui();
-  const cont = await ev(() => ({
-    label: document.querySelector('.rr-continue__label').textContent,
-    level: document.querySelector('.rr-continue__level').textContent,
-    index: document.querySelector('.rr-btn--continue').dataset.index,
-    current: [...document.querySelectorAll('.rr-levels .rr-lvcard.is-current')].map((el) => el.dataset.index),
-    progress: document.querySelector('.rr-mode__progress').textContent,
-  }));
-  check(u.screen === 'levels' && cont.label === 'Continuar' && /^Fase 3 · /.test(cont.level) && cont.index === '2', 'fases 1 e 2 concluídas: Continuar na fase 3', cont);
-  check(cont.current.join() === '2', 'o cartão da fase 3 tem o realce do Continuar', cont.current);
-  check(/2 de \d+ concluídas/.test(cont.progress), 'o cartão do modo mostra as fases concluídas', cont.progress);
-  await shot('menu-07-continuar.png');
-  await press('Enter', 200);
-  let i = await waitFor((x) => x.state === 'intro' && x.level === 2, { timeout: 60000 });
-  check(i.state === 'intro' && i.levelId === 'fase3', 'Continuar abre o cartão da fase 3', i.levelId);
-  const last = await ev(() => JSON.parse(localStorage.getItem('rr-progress-v1')).last);
-  check(last === 'fase3', 'a fase escolhida fica salva como a última', last);
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near === 3, { timeout: 60000 });
+  check(i.hub && i.near === 3 && i.next === 3, 'fases 1 e 2 concluídas: o mapa abre na frente da bandeirinha 3', { near: i.near, next: i.next });
+  const plate = await ev(() => document.querySelector('.rr-mapplate__done').textContent);
+  check(/^2\/\d+/.test(plate.replace(/\s/g, '')), 'a placa da cidade conta as fases concluídas', plate);
+  await shot('menu-07-mapa-fase3.png');
+  await press('KeyE', 200);
+  i = await waitFor((x) => x.state === 'intro' && x.level === 2, { timeout: 60000 });
+  check(i.state === 'intro' && i.levelId === 'fase3', 'E na bandeirinha: o cartão da fase 3', i.levelId);
   await sleep(1200);
   check(await shown('.rr-intro .rr-back'), 'cartão de abertura com Voltar');
   await press('Escape', 300);
-  u = await ui();
-  check(u.state === 'title' && u.screen === 'levels' && u.focus === 'continue', 'Esc no cartão de abertura: de volta às fases', u);
-  await clearLog();
-  await press('Enter', 300);
-  i = await waitFor((x) => x.state === 'intro', { timeout: 10000 });
-  check(i.state === 'intro' && i.levelId === 'fase3' && (await logOf('level:loading')).length === 0, 'Continuar de novo: a fase já montada abre o cartão sem recarregar', i.levelId);
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near === 3, { timeout: 60000 });
+  check(i.hub && i.near === 3, 'Esc no cartão de abertura: de volta ao mapa, na frente da bandeirinha 3', { near: i.near, level: i.level });
+  await press('KeyE', 200);
+  i = await waitFor((x) => x.state === 'intro', { timeout: 60000 });
+  check(i.state === 'intro' && i.levelId === 'fase3', 'E de novo: o cartão da fase 3', i.levelId);
   await sleep(800);
   await press('Enter', 300);
   i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });
@@ -382,9 +371,8 @@ try {
   u = await ui();
   check(u.screen === 'main' && u.focus === 'play', '○ volta à tela principal', u);
   await tap(B.A);
-  await tap(B.A);
   u = await ui();
-  check(u.screen === 'levels' && u.focus === 'continue', '✕ em Jogar e em Fases: tela das fases', u);
+  check(u.screen === 'modes' && u.focus === 'levels', '✕ em Jogar: os modos', u);
   const glyphs = await ev(() => {
     const g = document.querySelector('.rr-title .rr-back .rr-g');
     const vis = (s) => { const e = g.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; };
@@ -392,14 +380,10 @@ try {
   });
   check(glyphs.pad && !glyphs.kb && glyphs.circle, 'Voltar mostra o ○ do controle', glyphs);
   await sleep(400);
-  await shot('menu-11-fases-controle.png');
-  await tap(B.DOWN);
-  u = await ui();
-  check(/^select:/.test(u.focus || ''), 'D-pad baixo: um cartão de fase', u);
+  await shot('menu-11-modos-controle.png');
   await tap(B.B);
   u = await ui();
-  check(u.screen === 'modes' && u.focus === 'levels', '○ volta aos modos', u);
-  await tap(B.B);
+  check(u.screen === 'main' && u.focus === 'play', '○ volta à tela principal (de novo)', u);
   await tap(B.DOWN);
   await tap(B.A);
   u = await ui();
@@ -407,18 +391,21 @@ try {
   await tap(B.B);
   u = await ui();
   check(u.screen === 'main' && u.focus === 'options', '○ volta de Opções com o foco em Opções', u);
-  // Fases → Continuar → cartão: ○ no cartão de abertura volta às fases
+  // Fases → o mapa; na frente da bandeirinha, ○ (interagir) abre o cartão; ○ no cartão volta ao mapa
   await tap(B.UP);
   await tap(B.A);
   await tap(B.A);
-  await tap(B.A);
-  i = await waitFor((x) => x.state === 'intro', { timeout: 10000 });
-  check(i.state === 'intro' && i.levelId === 'fase1', '✕ em Continuar: cartão da fase 1', i);
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near === 1, { timeout: 60000 });
+  check(i.hub && i.near === 1, '✕ em Jogar e em Fases: o mapa, na frente da bandeirinha 1', { near: i.near });
+  await tap(B.B);
+  i = await waitFor((x) => x.state === 'intro', { timeout: 60000 });
+  check(i.state === 'intro' && i.levelId === 'fase1', '○ na frente da bandeirinha: cartão da fase 1', i.levelId);
   await sleep(600);
   await tap(B.B);
-  u = await ui();
-  check(u.state === 'title' && u.screen === 'levels', '○ no cartão de abertura: de volta às fases', u);
-  await tap(B.A);
+  i = await waitFor((x) => x.state === 'playing' && x.hub && x.near != null, { timeout: 60000 });
+  check(i.hub && i.near === 1, '○ no cartão de abertura: de volta ao mapa', { near: i.near, state: i.state });
+  await tap(B.B);
+  i = await waitFor((x) => x.state === 'intro', { timeout: 60000 });
   await sleep(600);
   await tap(B.A);
   i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });

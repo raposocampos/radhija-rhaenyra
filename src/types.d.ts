@@ -59,6 +59,8 @@ export interface CollisionWorld {
   /** Registra um colisor dinâmico e devolve o PRÓPRIO objeto (mova x/z/ax…, ligue com enabled). */
   addDynamic<T extends Collider>(c: T): T & { enabled: boolean; blocks: 'all' | DogSize; kind: string };
   removeDynamic(c: Collider): void;
+  /** Os estáticos que podem tocar um círculo de raio r em (x, z). Com layout.COLLISION_GRID, a lista é reaproveitada (vale até a próxima consulta); sem, é a lista inteira. */
+  staticsNear(x: number, z: number, r: number): Collider[];
   getDynamic(id: string): Collider | null;
   setCompanionMode(on: boolean): void;
   readonly companionMode: boolean;
@@ -196,6 +198,8 @@ export interface LevelLayout {
   NAV_EDGES: NavEdge[];
   COLLECTIBLES: Collectible[];
   COLLECTIBLE_PICKUP_R?: number;
+  /** Mapas grandes: lado (m) das células da grade de colisão (consultas só olham as células em volta). */
+  COLLISION_GRID?: number;
   GOAL: Goal;
   CAMERA: CameraConfig;
   [k: string]: any;
@@ -300,6 +304,8 @@ export interface LevelLoadingInfo {
   name: string;
   subtitle?: string;
   initial: boolean;
+  /** O mapa das fases (índice −1, fora da lista). */
+  hub?: boolean;
 }
 export interface LevelInfo extends Omit<LevelLoadingInfo, 'initial'> {
   intro?: string;
@@ -566,6 +572,34 @@ export interface PuzzleContext<P extends LevelProps = LevelProps> {
   brains: Record<DogName, any>;
   /** A animação escondida (extras) desta fase já aconteceu? */
   extrasUsed?(): boolean;
+  /** Só no mapa das fases (src/levels/mapa/): o catálogo, o progresso e como entrar numa fase. */
+  hub?: HubContext;
+}
+
+/** O que o núcleo entrega ao mapa das fases (ctx.hub). */
+export interface HubContext {
+  /** As fases da campanha, na ordem (index = posição na lista do jogo). */
+  levels: { id: string; index: number; number: number; name: string; item?: ItemKind; total: number }[];
+  /** O progresso salvo agora (v1: levels[id] = { done, best, treats, total, clears }). */
+  progress(): { levels?: Record<string, { done?: boolean; best?: number | null; treats?: number; total?: number | null }> };
+  /** De qual fase as dogs voltaram (índice), ou null (abrindo pelo menu: a próxima fase). */
+  from: number | null;
+  /** Catálogo de desenvolvimento: tudo liberado. */
+  unlockAll: boolean;
+  /** Entra na fase `index` (o cartão de abertura dela). */
+  enter(index: number): void;
+  /** Baixa por baixo o código da fase `index` (null: nenhuma). */
+  preload?(index: number | null): void;
+}
+
+/** Estado de uma bandeirinha do mapa: concluída, a próxima (liberada) ou trancada. */
+export type FlagState = 'done' | 'next' | 'locked';
+
+/** Props do mapa das fases (src/levels/mapa/world/). */
+export interface MapaProps extends LevelProps {
+  flags: { setState(n: number, state: FlagState, treats?: number, total?: number): void; stateOf?(n: number): { state: string; treats: number; total: number } | null; [k: string]: any };
+  clouds: { setOpen(zone: string, open: boolean, opts?: { instant?: boolean; delay?: number }): void; isOpen?(zone: string): boolean };
+  bridge: { setDown(down: boolean, opts?: { instant?: boolean; delay?: number }): void; readonly down?: boolean };
 }
 
 export interface Objective {
