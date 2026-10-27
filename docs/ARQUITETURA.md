@@ -1078,6 +1078,15 @@ resta página protegida aberta, e uma página nova o religa.
 tela de celular, pelo do celular: iPhone 13 em `media`, 844×390; Infinix Note 30 em `baixa`, 893×393; a entrada
 `qualidades` do workflow escolhe), e a dog ativa vai de nó em nó da navegação
 (`NAV_NODES`, do mais perto ao mais longe) com a câmera seguindo, duas vezes pelo mesmo caminho; depois, um superbafo.
+As duas passagens mostram a mesma cena. Cada uma começa com as dogs no lugar e no rumo da carga e a câmera assentada
+no início (sem a transição de 1,7 s que o `?play` deixa na carga). O começo dura enquanto houver um plano de câmera no
+ar: a apresentação da fase (os óculos e o Bichano da fase 9, 6,9 s; o bolo da fase 10) passa com as dogs no início,
+como no jogo, e o passeio fica com a câmera seguindo a dog. Cada plano que o jogo pede na 1ª passagem (também os de
+primeira vez, como o pombo do fundo do quintal da fase 10) é refeito na 2ª no mesmo quadro, e o xixi sorteado fica
+desligado. Antes, a apresentação da fase 9 tomava os quadros 21 a 207 só da 1ª passagem: os picos de `O_flap` eram a
+saída do plano dos óculos contra a câmera seguindo a dog, 5,5 m dali, e a companheira começava a 2ª passagem onde a 1ª
+a deixou. O relatório conta os quadros com a mesma cena (desenhos a 2%) e com a câmera em outro lugar (deve dar 0);
+`FIRST_PASS_REPLAY=0` volta ao roteiro anterior, para comparar.
 A página de medição fica 3 s parada depois da carga (no runner, o navegador ainda trabalha em segundo plano: os
 quadros saíam ~30% mais caros por alguns segundos, sem nada novo no renderer) e depois dá os quadros (passo fixo de
 1/30 s); cada um espera a GPU lendo um pixel da tela (o

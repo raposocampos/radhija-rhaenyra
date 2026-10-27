@@ -1,9 +1,40 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (E2E `fase3` sem a falha da dica do cantinho, PR #66, em andamento; #63,
-superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo
-na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 · build 101). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (picos de `O_flap` na primeira passagem da fase 9, branch
+`claude/fase9-primeira-passagem`, em andamento; o PR #68, primeira passagem da fase 10, em outra sessão; #67, #66 e #64
+já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build
+105; o #60, engasgo na primeira passagem, em v0.10.12 · build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: picos de `O_flap` na primeira passagem da fase 9 (branch `claude/fase9-primeira-passagem`)
+
+- Pedido (pelo orquestrador, sessão do PR #68): os quadros #92 e #93 de `O_flap` na "Primeira passagem — fase 9"
+  (`celular-baixa`, ~610/430 e ~585/395 ms, 1ª contra 2ª passagem), em 2 de 6 medições, antes e depois do #68; com um
+  pico de ruído, a medição chega ao limite de 3 (E2E `40410883024`, `40165191820`, `40143064425`).
+- Causa (o medidor, não o jogo nem o SwiftShader): as duas passagens não mostravam a mesma cena. A apresentação da fase
+  9 (`puzzle.js`: plano dos óculos aos 0,7 s, do Bichano aos 3,3 s, 6,9 s ao todo) acontecia só na 1ª passagem, do
+  quadro 21 ao 207 (de `H_mid` a `J_mid`), e o `snapFollow` antes da 2ª apagava o plano. Nos quadros #92/#93 a 1ª
+  passagem saía do plano dos óculos (câmera em x = 1,12) e a 2ª seguia a dog (x = −4,35); os desenhos coincidiam a 2% e
+  o quadro mais caro da 1ª virava "pico". Nos relatórios: do `H_door` ao `O_mid` a 1ª tem ~1226 desenhos fixos (o plano
+  dos óculos parado) e de `L_arch` a `J_door` 1037 fixos (o do Bichano), contra 1160–1650 da 2ª; de `J_north` em diante,
+  iguais. Também em todas as fases: a 1ª passagem herdava a transição de 1,7 s da carga (`?play`), a câmera diferia nos
+  ~30 primeiros quadros dos nós, e a companheira começava a 2ª onde a 1ª a deixou (até 1,6–6,3 m de diferença). A fase
+  10 tinha o mesmo com o bolo e o pombo (208 quadros com a câmera em outro lugar).
+- O excesso de ~100–170 ms nos 9–20 primeiros quadros do `inicio` (o `inicio#3` do `40410883024`) é outro: aparece ao
+  acaso em várias fases e para de uma vez num quadro qualquer, sem ligação com nó ou cena (trabalho do navegador depois
+  da carga). Não mexido.
+- Correção (`tools/scripts/measure-first-pass.mjs`; limites iguais): cada passagem começa com as dogs no lugar e no rumo
+  da carga e a câmera assentada; o começo (24 quadros, antes 16) continua enquanto houver plano de câmera no ar, então a
+  apresentação passa no início e o passeio fica com a câmera seguindo a dog; cada plano pedido pelo jogo na 1ª passagem é
+  refeito na 2ª no mesmo quadro; o xixi sorteado fica desligado. O relatório conta os quadros com a mesma cena e com a
+  câmera em outro lugar. `FIRST_PASS_REPLAY=0` volta ao roteiro anterior. ARQUITETURA §10.
+- Conferido no jogo headless (roteiro do medidor sem desenhar, script de diagnóstico fora do repositório): câmera em
+  outro lugar entre as passagens 27–31 quadros nas fases 1–8, 188 na 9 e 208 na 10 → 0 em todas; companheira idêntica nas
+  fases 1–9 (na 10, até 0,66 m: o estado do puzzle muda na 1ª passagem).
+- Validação em curso: varredura temporária `40428061193` (branch auxiliar `claude/fase9-primeira-passagem-varredura` =
+  esta correção + o #68 + só o workflow; apagar no fim): fase 9 4× em cada aparelho, o roteiro anterior 4× no
+  `celular-baixa` e a fase 10 2× em cada aparelho. Depois, PR para `main`, CI e E2E `primeira-passagem` no head.
+- No PC: só `node --check`, `git diff --check` e o diagnóstico headless.
 
 ## Entregue: E2E `fase3` intermitente na dica do cantinho (PR #66, squash `1b288c0`)
 
