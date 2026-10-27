@@ -7,11 +7,11 @@
 // Reprova (FIRST_PASS_STRICT, ligado por padrão) se, depois da carga, o renderer compilar um programa ou enviar uma
 // textura ou geometria, ou se a 1ª passagem tiver picos: quadros que custam mais de FIRST_PASS_EXCESS_MS e mais de
 // FIRST_PASS_EXCESS_REL (fração) que o mesmo quadro da 2ª, com a mesma cena (desenhos a 2%). Tolera até
-// FIRST_PASS_MAX_PEAKS (3) quadros isolados, nenhum acima de FIRST_PASS_MAX_RATIO (2,5×) o mesmo da 2ª: no SwiftShader,
-// alguns objetos ainda custam um pouco mais na primeira vez que pintam de perto, sem nada novo no renderer (o relatório
-// diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
+// FIRST_PASS_MAX_PEAKS (3) quadros isolados, nenhum acima de FIRST_PASS_MAX_RATIO (2,5×) o mesmo da 2ª (oscilação do
+// runner; o relatório diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
+//   FIRST_PASS_VERTEX_INPUT_DYNAMIC=1 (o padrão do Chromium no SwiftShader; ver os argumentos do navegador abaixo)
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
@@ -57,7 +57,7 @@ const MAX_RATIO = Number(process.env.FIRST_PASS_MAX_RATIO || 2.5);
 for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
 for (const q of QUALITIES) if (!DEVICES[q]) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
 const report = {
   commit: process.env.GITHUB_SHA || null, run: process.env.GITHUB_RUN_ID || null, attempt: process.env.GITHUB_RUN_ATTEMPT || null,
@@ -317,6 +317,16 @@ try {
   // segundo plano dos programas recém-compilados, que no runner deixava os quadros ~30% mais caros por alguns segundos
   // depois da carga. FIRST_PASS_SHADER_CACHE=1 mantém o cache.
   if (process.env.FIRST_PASS_SHADER_CACHE !== '1') options.args = [...options.args, '--disable-gpu-shader-disk-cache'];
+  // O SwiftShader (a GPU por software do CI) compila uma rotina de vértices por combinação de formatos dos 16 locais de
+  // atributo, e o vkCmdSetVertexInputEXT dele só escreve os locais da lista nova: os outros guardam o formato do desenho
+  // anterior. Com o estado dinâmico de entrada de vértices do ANGLE, a mesma malha pedia uma rotina nova conforme o que
+  // foi desenhado antes dela (o three ordena pela câmera): 150–500 ms de compilação no quadro, nas duas passagens, sem
+  // nada novo no WebGL. Eram os picos fixos da fase 10 (cerca do fundo, folhinhas da mangueira) e boa parte dos
+  // isolados. GPU de verdade não compila por ordem de desenho. Sem esse estado dinâmico, o ANGLE põe os atributos no
+  // pipeline e a rotina é a do aquecimento. FIRST_PASS_VERTEX_INPUT_DYNAMIC=1 volta ao padrão do Chromium.
+  if (process.env.FIRST_PASS_VERTEX_INPUT_DYNAMIC !== '1') {
+    options.args = [...options.args, '--disable-angle-features=supportsVertexInputDynamicState'];
+  }
   report.conditions.browserArguments = options.args;
   for (const level of LEVELS) {
     for (const quality of QUALITIES) {
