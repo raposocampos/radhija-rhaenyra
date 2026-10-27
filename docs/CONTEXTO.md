@@ -201,7 +201,12 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   salvos); `test-gamepad.mjs` também (dois sliders na pausa; ↓ no Jogar vai à História), com o ok do orquestrador.
   Toques do menu na suíte toque e no capture-celular esperam o botão pronto (camada acesa, sem animação de entrada,
   nada por cima) e repetem um toque perdido: no E2E do #68, o iPhone ficou parado na tela inicial (toque em Jogar
-  perdido). Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
+  perdido). O relatório no fim conta os toques repetidos por aparelho, e o primeiro toque de cada página tem de pegar
+  de primeira (destravando o áudio no mesmo gesto). E2E manual (`e2e.yml`, com o ok do orquestrador): as capturas
+  de revisão (`capture-celular.mjs`, `capture-mapa.mjs`) saíram das partidas para o job "Capturas para revisão",
+  em paralelo; partidas com `timeout-minutes: 40` (medido no E2E `40429824990`: menu 16 min, toque 10 min, capturas
+  do celular 7 min; o job do toque do #68 estourou os 30 min com o Chromium levando 10 min para instalar). No PC, o
+  `capture-celular` clica com o mouse no centro (o `page.click` travava no `aria-disabled` da História). Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
 - Próximo passo: CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
   do usuário nesta sessão (se o #68 ou o #69 entrarem antes, sincronizar e revalidar).
 

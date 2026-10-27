@@ -163,12 +163,11 @@ async function captureDevice(dev, url) {
     }, sel);
     /** Toque (celular) ou Enter/clique (PC) num botão do menu. */
     const press = async (sel) => {
-      if (dev.touch) {
-        const c = await center(sel);
-        await page.touchscreen.tap(c.x, c.y);
-      } else {
-        await page.click(sel);
-      }
+      const c = await center(sel);
+      if (dev.touch) await page.touchscreen.tap(c.x, c.y);
+      // no PC, o mouse de verdade no centro: o page.click espera o botão "habilitado" e travava no aria-disabled da
+      // História (que responde com o aviso "em breve")
+      else await page.mouse.click(c.x, c.y);
     };
     /**
      * Espera o botão pronto para o toque: com caixa, a camada dele visível por inteiro, sem animação de CSS em curso

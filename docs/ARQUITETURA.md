@@ -1106,12 +1106,15 @@ SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as con
 protocolo do navegador (`Input.dispatchTouchEvent`, com multitoque): perfil do celular, controles que aparecem com o
 toque e somem com o teclado, layout sem sobreposição, um trecho da fase 1 só com joystick e botões, menu de qualidade,
 aviso de girar e, no fim, uma página de PC confirmando o perfil `alta` de sempre. O joystick anda em malha fechada
-com uma trava na página (`ui.touch.releaseStick()`), como a do `walkTo`. Depois da partida, `capture-celular.mjs`
-grava celular, celular pequeno, tablet e PC, cada um com a sua qualidade gráfica (`shots/celular-revisao/`),
-inclusive as telas do menu inicial.
+com uma trava na página (`ui.touch.releaseStick()`), como a do `walkTo`. Num job próprio do E2E manual
+("Capturas para revisão", em paralelo com as partidas), `capture-celular.mjs` grava celular, celular pequeno, tablet,
+PC e iPhone, cada um com a sua qualidade gráfica (`shots/celular-revisao/`), inclusive as telas do menu inicial; e
+`capture-mapa.mjs`, o mapa das fases em cada aparelho. Os toques de menu esperam o botão pronto, repetem um toque
+perdido e contam as repetições por aparelho no relatório; o primeiro toque de cada página tem de pegar de primeira.
 
-**Menu no E2E** (suíte `menu`, `tools/scripts/test-menu.mjs`): teclas reais e o controle simulado percorrem Jogar,
-os modos (Modo História "em breve"), Fases, Opções e Voltar; o Continuar segue um save preparado; o modo sem dicas
+**Menu no E2E** (suíte `menu`, `tools/scripts/test-menu.mjs`): teclas reais e o controle simulado percorrem a tela
+inicial (História "em breve", a nota da música, Opções com os volumes de efeitos e música, Voltar) e o Jogar, que
+abre o mapa na frente da próxima fase de um save preparado; a música começa ligada com o tema de cada tela; o modo sem dicas
 fica salvo depois de recarregar, esconde objetivo, marcador e dicas na partida e volta pela pausa. O toque fica na
 suíte `toque`. Em Node, `test/menu.test.mjs` cobre `continueTarget`, `last`, as opções salvas, o template e o atalho
 do núcleo.

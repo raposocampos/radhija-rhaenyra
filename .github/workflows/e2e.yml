@@ -184,7 +184,10 @@ jobs:
     if: inputs.suite != 'recursos' && inputs.suite != 'carregamento' && inputs.suite != 'primeira-passagem'
     name: Partida — ${{ matrix.suite }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # medido (E2E 40429824990): as suítes mais longas (menu, toque) jogam em 10–16 min; a instalação do Chromium
+    # levou de 20 s a 10 min nos runners. 40 min dá folga sem esconder uma suíte travada (o runner corta após 5 min
+    # sem saída).
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -240,17 +243,47 @@ jobs:
       - name: Capturas dos modelos das dogs (atual × novo) para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'canil'
         run: node tools/scripts/capture-modelos.mjs
-      - name: Capturas do celular e do PC para revisão (qualidade de cada aparelho)
-        if: always() && matrix.suite == 'toque'
-        run: node tools/scripts/capture-celular.mjs
-      - name: Capturas do mapa das fases para revisão (qualidade de cada aparelho)
-        if: always() && matrix.suite == 'mapa'
-        run: node tools/scripts/capture-mapa.mjs
       - name: Guardar capturas para diagnóstico
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: capturas-${{ matrix.suite }}
+          path: shots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Capturas de revisão de cada aparelho (celular, Infinix, Android compacto, tablet, PC e iPhone) num job próprio,
+  # em paralelo com as partidas: somadas à suíte toque (ou mapa), passavam do limite do job.
+  capturas:
+    if: inputs.suite == 'todas' || inputs.suite == 'toque' || inputs.suite == 'mapa'
+    name: Capturas para revisão — ${{ matrix.alvo }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        alvo: ${{ fromJSON(inputs.suite == 'todas' && '["celular","mapa"]' || (inputs.suite == 'toque' && '["celular"]' || '["mapa"]')) }}
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Capturas de ${{ matrix.alvo }} para revisão (qualidade de cada aparelho)
+        run: node tools/scripts/capture-${{ matrix.alvo }}.mjs
+      - name: Guardar capturas para revisão
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-revisao-${{ matrix.alvo }}
           path: shots/
           if-no-files-found: ignore
           retention-days: 7
