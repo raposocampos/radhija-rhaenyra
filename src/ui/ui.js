@@ -7,7 +7,7 @@
 // botão do canto; do cartão de abertura, Voltar leva de novo ao mapa (ou à tela das fases).
 // API: createUI({ audio, layout, levels, params, unlockAll, input, quality, settings, map }) → { update(dt), state, screen, ... }
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
-// map: há o mapa das fases (Pandorópolis): Fases abre o mapa (ui:openMap) em vez dos cartões; a pausa e a vitória
+// map: há o mapa das fases (Pandorópolis): Jogar abre o mapa (ui:openMap) em vez dos cartões; a pausa e a vitória
 // ganham o botão Mapa; o Voltar do cartão de abertura volta ao mapa. No mapa (level:loaded com hub), .rr[data-hub]
 // troca o HUD (mapHud.js: placa da cidade, plaquinha da bandeirinha com a barrinha de carregamento e o atalho).
 // input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade);
@@ -827,7 +827,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     get compact() { return root.hasAttribute('data-compact'); },
     get progress() { return prog; },
     resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderHome(); mapHud.refresh(); },
-    /** Há o mapa das fases (Fases abre o mapa). */
+    /** Há o mapa das fases (Jogar abre o mapa). */
     get map() { return map; },
     get curtain() { return curtain.phase; },
     get level() { return cur; },

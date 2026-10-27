@@ -1,7 +1,7 @@
 // Celular (suíte 'toque'): Chromium emulando um celular deitado (844×390, DPR 3, toque, isMobile) e DEDOS REAIS pelo
 // protocolo do navegador (Input.dispatchTouchEvent → touch + pointer events, como num celular de verdade).
-// Confere o perfil de qualidade do celular, o menu inicial pelo toque (Jogar → modos → Fases → o mapa das fases →
-// Agir na frente da bandeirinha; Opções com o modo sem dicas; Voltar), o HUD do mapa com os controles de toque (sem
+// Confere o perfil de qualidade do celular, o menu inicial pelo toque (História "em breve", a nota da música, Opções
+// com o modo sem dicas, Voltar, Jogar → o mapa das fases → Agir na frente da bandeirinha), o HUD do mapa com os controles de toque (sem
 // Superbafo nem Lamber, com o atalho ◀ ▶), os controles que só aparecem depois de um toque, o layout compacto sem
 // sobreposição com o HUD, um trecho da fase 1 jogado só com o joystick e os botões virtuais (abertura, cordinha,
 // troca, carrinho empurrado com dois dedos, cenoura), multitoque, dicas com ícones de toque, menu de qualidade,
@@ -282,27 +282,28 @@ try {
   check(q.state.pixelRatio === 1 && q.shadow === 1024 && !q.soft && q.samples === 0 && q.everyFrame, 'perfil médio aplicado: pixel ratio 1, sombras PCF 1024 a cada quadro, sem MSAA', q);
   check(q.sky > 0 && q.cap && !q.lowGpu, 'celular: céu depois do cenário e teto de 60 quadros (GPU do teste não é de entrada)', q);
   check(s.device === 'keyboard' && !s.touchOn, 'antes do primeiro toque: sem controles de toque', s);
-  const title = await boxes(['.rr-logo__svg', '.rr-logo__ribbon', '.rr-btn--play', '.rr-btn--options']);
-  check(title.every((r) => inView(r)), 'tela inicial (logotipo, Jogar e Opções) cabe na tela deitada', title);
-  check(overlapPairs(title).filter((p) => p.join() !== '.rr-logo__svg,.rr-logo__ribbon').length === 0, 'logotipo, Jogar e Opções sem sobreposição', title);
+  const title = await boxes(['.rr-logo__svg', '.rr-logo__ribbon', '.rr-home__stats', '.rr-btn--play', '.rr-tile--story', '.rr-tile--options', '.rr-music-toggle']);
+  check(title.every((r) => r && inView(r)), 'tela inicial (logotipo, progresso, Jogar, História, Opções e a nota da música) cabe na tela deitada', title);
+  check(overlapPairs(title.filter(Boolean)).filter((p) => p.join() !== '.rr-logo__svg,.rr-logo__ribbon').length === 0, 'tela inicial sem sobreposição', title);
   check(await ev(() => getComputedStyle(document.querySelector('.rr-title__controls')).display === 'none'), 'barra de teclas escondida no celular');
   await shot('01-titulo-celular.png');
 
-  console.log('\n== Menu pelo toque: Jogar, modos, Opções, Fases ==');
-  await tap('.rr-btn--play');
+  console.log('\n== Menu pelo toque: História, música, Opções, Jogar ==');
+  await tap('.rr-tile--story');
   let m = await menuState();
-  check(m.state === 'title' && m.screen === 'modes', 'toque em Jogar: escolha do modo', m);
-  await sleep(600);
-  const modes = await boxes(['.rr-logo__svg', '.rr-title .rr-back', '.rr-mode--story', '.rr-mode--levels']);
-  check(modes.every((r) => inView(r)), 'modos inteiros na tela deitada', modes);
-  check(overlapPairs(modes).length === 0, 'logotipo, Voltar e os dois modos sem sobreposição', modes);
-  await shot('01b-modos-celular.png');
-  await tap('.rr-mode--story');
-  m = await menuState();
-  check(m.screen === 'modes' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque no Modo História: aviso "em breve", sem sair dos modos', m);
-  await tap('.rr-title .rr-back');
-  m = await menuState();
-  check(m.screen === 'main', 'toque em Voltar: tela principal', m);
+  check(m.state === 'title' && m.screen === 'main' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque na História: aviso "em breve", sem sair da tela principal', m);
+  await sleep(300);
+  // o primeiro toque destrava o áudio (no iOS, ao soltar o dedo): a música do menu começa
+  const musicNow = () => ev(() => ({ on: window.__game.audio.musicOn, playing: window.__game.audio.musicPlaying, pressed: document.querySelector('.rr-music-toggle').getAttribute('aria-pressed') }));
+  let mu = await musicNow();
+  check(mu.on && mu.playing === 'menu', 'o primeiro toque começa a música do menu', mu);
+  await shot('01b-historia-celular.png');
+  await tap('.rr-music-toggle');
+  mu = await musicNow();
+  check(!mu.on && mu.pressed === 'false', 'toque na nota: música desligada', mu);
+  await tap('.rr-music-toggle');
+  mu = await musicNow();
+  check(mu.on && mu.pressed === 'true', 'toque de novo: música ligada', mu);
   await tap('.rr-btn--options');
   m = await menuState();
   check(m.screen === 'options', 'toque em Opções', m);
@@ -317,9 +318,8 @@ try {
   check(await ev(() => !window.__game.settings.noHints), 'toque em Dicas ligadas: dicas de volta');
   await tap('.rr-title .rr-back');
   await tap('.rr-btn--play');
-  await tap('.rr-mode--levels');
   let mi = await untilMap(1);
-  check(mi.state === 'playing' && mi.level === -1 && mi.near === 1, 'toque em Fases: o mapa das fases, na frente da bandeirinha 1', { state: mi.state, level: mi.level, near: mi.near });
+  check(mi.state === 'playing' && mi.level === -1 && mi.near === 1, 'toque em Jogar: o mapa das fases, na frente da bandeirinha 1', { state: mi.state, level: mi.level, near: mi.near });
   await sleep(900);
   const mapHud = await ev(() => {
     const box = (sel) => {
@@ -594,7 +594,6 @@ try {
   await shot('09-titulo-depois-de-jogar.png');
   check((await menuState()).screen === 'main', 'Menu inicial: volta à tela principal');
   await tap('.rr-btn--play');
-  await tap('.rr-mode--levels');
   // o mapa: as dogs na frente da bandeirinha 1 (a da fase de onde saíram); Agir abre o cartão de abertura dela
   await untilMap(1);
   await sleep(600);
@@ -716,7 +715,7 @@ try {
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
-  // a pausa mostra o passo a passo: Jogar → Fases → (o mapa) Agir → Começar. Cada toque só quando o botão aparece: com
+  // a pausa mostra o passo a passo: Jogar → (o mapa) Agir → Começar. Cada toque só quando o botão aparece: com
   // o SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque
   // caía em (0, 0) (o cartão de abertura não vinha).
   const tapShown = async (sel) => {
@@ -724,10 +723,8 @@ try {
     const b = await center(ip, sel);
     await ip.touchscreen.tap(b.x, b.y);
   };
-  for (const sel of ['.rr-btn--play', '.rr-mode--levels']) {
-    await tapShown(sel);
-    await ip.waitForTimeout(400);
-  }
+  await tapShown('.rr-btn--play');
+  await ip.waitForTimeout(400);
   await ip.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
   await ip.waitForTimeout(800);
   await tapShown('.rr-tbtn--act');

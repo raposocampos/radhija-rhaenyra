@@ -678,9 +678,9 @@
   font-size: 15px;
 }
 .rr-volume .ico { width: 20px; height: 20px; color: var(--choco-2); }
-/* música e efeitos numa linha só (a pausa não cresce) */
-.rr-volumes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin: 18px 2px 2px; }
-.rr-volumes .rr-volume { margin: 0; grid-template-columns: auto auto 1fr 2.8em; gap: 7px; }
+/* efeitos e música, um embaixo do outro: ←/→ mexem no volume, ↑/↓ passam de um para o outro (teclado e controle) */
+.rr-volumes { display: grid; gap: 2px; margin: 14px 2px 2px; }
+.rr-volumes .rr-volume { margin: 0 -6px; grid-template-columns: auto 4.4em 1fr 2.8em; gap: 8px; }
 .rr-volume output { text-align: right; font: 600 15px/1 'Fredoka', sans-serif; color: var(--choco-2); }
 .rr-range {
   --pct: 70%;

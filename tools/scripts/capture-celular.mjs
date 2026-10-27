@@ -1,7 +1,7 @@
 // Capturas de revisão do celular e do PC, cada aparelho com a SUA qualidade gráfica (sem a redução do harness):
 // celular deitado (844×390, DPR 3, perfil médio, como o iPhone 13), Infinix Note 30 5G (893×393, DPR 2,75, perfil
 // baixo), Android compacto (640×360 e 568×320, DPR 2, deitado e de pé), tablet (1180×820, DPR 2) e PC
-// (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (modos, Opções), o mapa das fases (Fases), partida
+// (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (História, Opções), o mapa das fases (Jogar), partida
 // com os controles de toque, prompt e dica com ícones de toque, pausa com o menu de qualidade, vitória, cartão de abertura,
 // aviso de girar o celular e a fase 4.
 // Roda no GitHub Actions (E2E manual, suíte toque), depois da partida. O laço do jogo fica congelado e o script
@@ -190,13 +190,12 @@ async function captureDevice(dev, url) {
     await step(20);
     await shot('01-titulo', 1500);
     if (dev.ios) {
-      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → Fases → mapa → Agir → Começar)
+      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → mapa → Agir → Começar)
       await press('.rr-btn--options');
       await step(5);
       await shot('01b-opcoes-tela-cheia');
       await press('.rr-title .rr-back');
-      await press('.rr-btn--play');
-      await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
+      await thaw(async () => { await ready('.rr-btn--play'); await press('.rr-btn--play'); }, (i) => i.state === 'playing' && i.level === -1);
       await step(30);
       await thaw(() => action('act', 'KeyE'), (i) => i.state === 'intro');
       await step(60);
@@ -212,19 +211,17 @@ async function captureDevice(dev, url) {
       return;
     }
 
-    // menu: Jogar → modos; Voltar; Opções (com as dicas desligadas e religadas); Fases → o mapa → Agir → Começar
-    await press('.rr-btn--play');
+    // menu: História (em breve); Opções (com as dicas desligadas e religadas); Jogar → o mapa → Agir → Começar
+    await press('.rr-tile--story');
     await step(5);
-    await shot('01b-modos');
-    await press('.rr-title .rr-back');
+    await shot('01b-historia');
     await press('.rr-btn--options');
     await step(5);
     await press('.rr-title .rr-hopt[data-hints="off"]');
     await shot('01d-opcoes-sem-dicas');
     await press('.rr-title .rr-hopt[data-hints="on"]');
     await press('.rr-title .rr-back');
-    await press('.rr-btn--play');
-    await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
+    await thaw(async () => { await ready('.rr-btn--play'); await press('.rr-btn--play'); }, (i) => i.state === 'playing' && i.level === -1);
     // um toque na tela (como a jogadora faria) liga os controles de toque
     if (dev.touch) await page.touchscreen.tap(dev.opts.viewport.width / 2, 40);
     await step(90);

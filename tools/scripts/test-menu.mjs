@@ -1,9 +1,11 @@
-// Menu inicial (suíte 'menu'): Jogar → Modo História (em breve) ou Fases → o mapa das fases (Pandorópolis); Opções
-// (volume, qualidade, dicas). Navegação com TECLAS REAIS (setas, Enter, Esc) e com o CONTROLE simulado (D-pad,
-// analógico, ✕ confirma, ○ volta), como na suíte controle. Também: o mapa abre na frente da próxima fase do save, a
-// bandeirinha abre o cartão de abertura, o Voltar dele volta ao mapa, a pausa do mapa (só Menu inicial), e o modo sem
-// dicas salvo no navegador: sem objetivo escrito, marcador do objetivo e dicas em balão, valendo depois de recarregar e
-// religável na pausa. O toque fica na suíte toque (dedos reais no celular deitado); o mapa em si, na suíte mapa.
+// Menu inicial (suíte 'menu'): a tela principal (logotipo e progresso | Jogar, História "em breve" e Opções; a nota da
+// música no canto), Jogar → o mapa das fases (Pandorópolis) na frente da próxima fase; Opções (efeitos, música,
+// qualidade, dicas). Navegação com TECLAS REAIS (setas, Enter, Esc) e com o CONTROLE simulado (D-pad, analógico,
+// ✕ confirma, ○ volta), como na suíte controle. Também: a música começa ligada no primeiro gesto, com o tema de cada
+// tela (menu, mapa, fase), a nota liga e desliga; o mapa abre na frente da próxima fase do save, a bandeirinha abre o
+// cartão de abertura, o Voltar dele volta ao mapa, a pausa do mapa (só Menu inicial), e o modo sem dicas salvo no
+// navegador: sem objetivo escrito, marcador do objetivo e dicas em balão, valendo depois de recarregar e religável na
+// pausa. O toque fica na suíte toque (dedos reais no celular deitado); o mapa em si, na suíte mapa.
 //   node tools/scripts/test-menu.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 import { SCREENS, boxesIn, fakeHoverScript, outside, overlapPairs, settle } from './lib/screens.mjs';
@@ -22,7 +24,7 @@ const ui = () => ev(() => {
   let focus = null;
   if (f) {
     const a = f.dataset.action;
-    if (f.hasAttribute('data-slider')) focus = 'volume';
+    if (f.hasAttribute('data-slider')) focus = f.classList.contains('rr-volume--music') ? 'music-volume' : 'volume';
     else if (a === 'quality') focus = `quality:${f.dataset.quality}`;
     else if (a === 'hints') focus = `hints:${f.dataset.hints}`;
     else if (a === 'select') focus = `select:${f.dataset.index}`;
@@ -34,6 +36,18 @@ const ui = () => ev(() => {
 const visibleActions = () => ev(() => [...document.querySelectorAll('.rr-title [data-action]')]
   .filter((el) => el.getClientRects().length > 0)
   .map((el) => el.dataset.action + (el.dataset.index ? `:${el.dataset.index}` : '')));
+/** Música: ligada, tema pedido e o que toca, volume (0–100), a nota do canto e o que ficou salvo. */
+const music = () => ev(() => {
+  const a = window.__game.audio;
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('operacao-cenoura:musica') || 'null'); } catch (_) {}
+  return { on: a.musicOn, theme: a.musicTheme, playing: a.musicPlaying, vol: Math.round(a.musicVolume * 100), pressed: document.querySelector('.rr-music-toggle').getAttribute('aria-pressed'), stored };
+});
+/** Progresso ao lado do logotipo e o subtítulo do Jogar. */
+const home = () => ev(() => ({
+  stats: [...document.querySelectorAll('.rr-home__stats .rr-stat-chip')].map((e) => e.getAttribute('aria-label')),
+  sub: document.querySelector('.rr-play__sub').textContent,
+}));
 const shown = (sel) => ev((s) => {
   const el = document.querySelector(s);
   return !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
@@ -116,22 +130,20 @@ async function screenSizes() {
       }
 
       const logo = ['.rr-logo__svg', '.rr-logo__ribbon'];
-      await fits('tela principal (logotipo, Jogar, Opções, versão)', [...logo, '.rr-btn--play', '.rr-btn--options', '.rr-version'], [['.rr-logo__svg', '.rr-logo__ribbon']]);
+      await fits('tela principal (logotipo, progresso, Jogar, História, Opções, nota da música, versão)', [...logo, '.rr-home__stats', '.rr-btn--play', '.rr-tile--story', '.rr-tile--options', '.rr-music-toggle', '.rr-version'], [['.rr-logo__svg', '.rr-logo__ribbon']]);
+      // o texto do Jogar (a fase em que continua) cabe no botão, sem cortar
+      const sub = await p.evaluate(() => { const s = document.querySelector('.rr-play__sub'); return { sw: s.scrollWidth, cw: s.clientWidth, text: s.textContent }; });
+      check(sub.sw <= sub.cw + 1, `${scr.id}: o subtítulo do Jogar cabe`, sub);
       await snap('01-principal');
-      await go('.rr-btn--play');
-      await fits('escolha do modo', ['.rr-title .rr-back', '.rr-logo__svg', '.rr-mode--story', '.rr-mode--levels']);
-      await snap('02-modos');
-      await go('.rr-title .rr-back');
       await go('.rr-btn--options');
-      await fits('Opções', ['.rr-title .rr-back', '.rr-card--options']);
+      await fits('Opções', ['.rr-title .rr-back', '.rr-music-toggle', '.rr-card--options']);
       // o cartão rola (se precisar) em vez de cortar: a última linha alcançável
       const optScroll = await p.evaluate(() => { const c = document.querySelector('.rr-card--options'); return { sh: c.scrollHeight, ch: c.clientHeight, oy: getComputedStyle(c).overflowY }; });
       check(optScroll.sh <= optScroll.ch + 1 || optScroll.oy === 'auto', `${scr.id}: Opções cabem ou rolam`, optScroll);
-      await snap('04-opcoes');
+      await snap('02-opcoes');
       await go('.rr-title .rr-back');
       await go('.rr-btn--play');
-      await go('.rr-mode--levels');
-      // Fases: o mapa das fases, com as dogs na frente da bandeirinha 1 (a plaquinha aparece)
+      // Jogar: o mapa das fases, com as dogs na frente da bandeirinha 1 (a plaquinha aparece)
       await p.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
       await p.waitForTimeout(900);
       await settle(p);
@@ -153,52 +165,63 @@ async function screenSizes() {
 }
 
 try {
-  console.log('\n== Teclado: tela principal, modos e fases ==');
+  console.log('\n== Teclado: tela principal, música e Jogar → mapa ==');
   await page.goto(BASE, { waitUntil: 'load', timeout: 120000 });
-  await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
+  await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); localStorage.removeItem('operacao-cenoura:musica'); });
   await load('');
   let u = await ui();
   check(u.state === 'title' && u.screen === 'main', 'tela inicial abre na tela principal', u);
   let acts = await visibleActions();
-  check(acts.join() === 'play,options', 'tela principal: só Jogar e Opções (sem cartões nem Voltar)', acts);
+  check(acts.join() === 'music,play,story,options', 'tela principal: a nota da música, Jogar, História e Opções (sem cartões nem Voltar)', acts);
   check(!(await shown('.rr-levels .rr-lvcard')), 'cartões das fases fora da tela principal');
+  let hm = await home();
+  check(hm.stats.length === 2 && /^0 de \d+ biscoitos$/.test(hm.stats[0]) && /^0 de \d+ fases concluídas$/.test(hm.stats[1]), 'progresso ao lado do logotipo: biscoitos e fases (save novo)', hm.stats);
+  check(/^Começar · Fase 1 · /.test(hm.sub), 'o Jogar diz onde começa: Fase 1', hm.sub);
+  const story = await ev(() => {
+    const t = document.querySelector('.rr-tile--story');
+    return { badge: t.querySelector('.rr-tile__badge').textContent, disabled: t.getAttribute('aria-disabled'), label: t.getAttribute('aria-label') };
+  });
+  check(story.badge === 'Em breve' && story.disabled === 'true' && /Modo História/.test(story.label), 'História visível com o selo "Em breve"', story);
   await shot('menu-01-principal.png');
 
-  u = await pressUntil('ArrowDown', (f) => f === 'options');
-  check(u.focus === 'options', 'seta para baixo: Jogar → Opções', u);
-  await press('ArrowUp', 150);
-  u = await ui();
-  check(u.focus === 'play', 'seta para cima: Opções → Jogar', u);
-  await press('Enter', 300);
-  u = await ui();
-  check(u.state === 'title' && u.screen === 'modes' && u.focus === 'levels', 'Enter em Jogar: escolha do modo, foco em Fases', u);
-  acts = await visibleActions();
-  check(acts.join() === 'back,story,levels', 'modos: Voltar, Modo História e Fases', acts);
-  const story = await ev(() => {
-    const card = document.querySelector('.rr-mode--story');
-    return { badge: card.querySelector('.rr-mode__badge').textContent, disabled: card.getAttribute('aria-disabled'), name: card.querySelector('.rr-mode__name').textContent };
-  });
-  check(story.name === 'Modo História' && story.badge === 'Em breve' && story.disabled === 'true', 'Modo História visível com o selo "Em breve"', story);
-  await sleep(500);
-  await shot('menu-02-modos.png');
-
+  // a primeira tecla destrava o áudio: a música (ligada por padrão) começa com o tema do menu
+  u = await pressUntil('ArrowDown', (f) => f === 'story' || f === 'options');
+  check(u.focus === 'story', 'seta para baixo: Jogar → História (a primeira da linha de baixo)', u);
+  await sleep(300);
+  let m = await music();
+  check(m.on && m.pressed === 'true' && m.theme === 'menu' && m.playing === 'menu', 'música ligada por padrão: o tema do menu toca depois da primeira tecla', m);
+  u = await pressUntil('ArrowRight', (f) => f === 'options', 2);
+  check(u.focus === 'options', 'seta para a direita: Opções', u);
   await press('ArrowLeft', 150);
   u = await ui();
-  check(u.focus === 'story', 'seta para a esquerda: Modo História', u);
+  check(u.focus === 'story', 'seta para a esquerda: História', u);
   await press('Enter', 300);
   u = await ui();
   const note = await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '');
-  check(u.state === 'title' && u.screen === 'modes' && /em breve/i.test(note), 'Modo História não abre nada: aviso "em breve"', { u, note });
-  await shot('menu-03-historia-em-breve.png');
-  await press('Escape', 250);
+  check(u.state === 'title' && u.screen === 'main' && /em breve/i.test(note), 'História não abre nada: aviso "em breve"', { u, note });
+  await shot('menu-02-historia-em-breve.png');
+  await press('ArrowUp', 150);
   u = await ui();
-  check(u.screen === 'main' && u.focus === 'play', 'Esc nos modos: volta à tela principal com o foco em Jogar', u);
-  await press('Enter', 300);
+  check(u.focus === 'play', 'seta para cima: Jogar', u);
+  u = await pressUntil('ArrowUp', (f) => f === 'music', 2);
+  check(u.focus === 'music', 'seta para cima de novo: a nota da música, no canto', u);
+  await press('Enter', 250);
+  m = await music();
+  check(!m.on && m.pressed === 'false' && m.stored?.on === false && m.playing === 'menu', 'Enter na nota: música desligada (o tema segue mudo) e salva', m);
+  await shot('menu-03-musica-desligada.png');
+  await press('Enter', 250);
+  m = await music();
+  check(m.on && m.pressed === 'true' && m.stored?.on === true, 'Enter de novo: música ligada', m);
+  await press('ArrowDown', 150);
+  u = await ui();
+  check(u.focus === 'play', 'seta para baixo: de volta ao Jogar', u);
   await press('Enter', 300);
   let i = await waitFor((x) => x.state === 'playing' && x.level === -1 && x.near === 1, { timeout: 60000 });
-  check(i.state === 'playing' && i.hub && i.near === 1, 'Enter em Fases: o mapa das fases, na frente da bandeirinha 1 (save novo)', { state: i.state, level: i.level, near: i.near });
+  check(i.state === 'playing' && i.hub && i.near === 1, 'Enter em Jogar: o mapa das fases, na frente da bandeirinha 1 (save novo)', { state: i.state, level: i.level, near: i.near });
   const sign = await ev(() => ({ on: document.querySelector('.rr-sign').classList.contains('is-on'), text: document.querySelector('.rr-sign__name').textContent, prompt: document.querySelector('.rr-prompt__text').textContent }));
   check(sign.on && sign.text.length > 0 && sign.prompt === 'Entrar', 'plaquinha da fase 1 e o prompt Entrar', sign);
+  m = await music();
+  check(m.theme === 'mapa' && m.playing === 'mapa', 'no mapa, o tema do mapa', m);
   await sleep(500);
   await shot('menu-04-mapa.png');
   // pausa do mapa: Continuar e Menu inicial (sem Reiniciar fase nem Mapa)
@@ -210,23 +233,38 @@ try {
   await press('Enter', 400);
   u = await waitFor((x) => x.state === 'title', { timeout: 10000 }).then(() => ui());
   check(u.state === 'title' && u.screen === 'main' && u.hub, 'Menu inicial: a tela inicial sobre o mapa', u);
+  m = await music();
+  check(m.theme === 'menu', 'de volta à tela inicial: o tema do menu', m);
   await press('Escape', 250);
   u = await ui();
   check(u.state === 'title' && u.screen === 'main', 'Esc na tela principal não faz nada', u);
 
-  console.log('\n== Teclado: Opções ==');
-  await press('ArrowDown', 150);
+  console.log('\n== Teclado: Opções (efeitos e música) ==');
+  u = await pressUntil('ArrowDown', (f) => f === 'story' || f === 'options');
+  u = await pressUntil('ArrowRight', (f) => f === 'options', 2);
+  check(u.focus === 'options', 'setas: Opções', u);
   await press('Enter', 300);
   u = await ui();
-  check(u.screen === 'options' && u.focus === 'volume', 'Opções abre com o foco no volume', u);
+  check(u.screen === 'options' && u.focus === 'volume', 'Opções abre com o foco no volume dos efeitos', u);
   acts = await visibleActions();
   check(['back', 'quality:', 'hints'].every((a) => acts.some((x) => x.startsWith(a.replace(':', '')))), 'Opções: Voltar, qualidade e dicas', acts);
   check(!(await shown('.rr-title__controls')), 'barra de teclas escondida em Opções');
   const vol0 = await ev(() => Math.round(window.__game.audio.getVolume() * 100));
   await press('ArrowRight', 150);
-  const vol = await ev(() => ({ audio: Math.round(window.__game.audio.getVolume() * 100), ranges: [...document.querySelectorAll('.rr-range')].map((r) => Number(r.value)) }));
-  check(vol.audio === Math.min(100, vol0 + 5) && vol.ranges.every((v) => v === vol.audio), 'seta para a direita no volume: +5 e as duas cópias (Opções e pausa) iguais', { vol0, vol });
+  const vol = await ev(() => ({ audio: Math.round(window.__game.audio.getVolume() * 100), ranges: [...document.querySelectorAll('.rr-range--sfx')].map((r) => Number(r.value)) }));
+  check(vol.audio === Math.min(100, vol0 + 5) && vol.ranges.length === 2 && vol.ranges.every((v) => v === vol.audio), 'seta para a direita nos efeitos: +5 e as duas cópias (Opções e pausa) iguais', { vol0, vol });
   await press('ArrowLeft', 150);
+  // os dois volumes um embaixo do outro: ↓ passa para o da música, ←/→ mexem só nele
+  await press('ArrowDown', 150);
+  u = await ui();
+  check(u.focus === 'music-volume', 'seta para baixo: o volume da música', u);
+  const mv0 = (await music()).vol;
+  await press('ArrowLeft', 150);
+  const mv = await ev(() => ({ music: Math.round(window.__game.audio.musicVolume * 100), sfx: Math.round(window.__game.audio.getVolume() * 100), ranges: [...document.querySelectorAll('.rr-range--music')].map((r) => Number(r.value)) }));
+  check(mv.music === Math.max(0, mv0 - 5) && mv.sfx === vol0 && mv.ranges.length === 2 && mv.ranges.every((v) => v === mv.music), 'seta para a esquerda na música: −5 só na música, nas duas cópias', { mv0, vol0, mv });
+  m = await music();
+  check(m.stored?.volume === mv.music / 100, 'volume da música salvo no navegador', m.stored);
+  await press('ArrowRight', 150);
   await shot('menu-05-opcoes.png');
   u = await pressUntil('ArrowDown', (f) => /^hints:/.test(f || ''));
   check(/^hints:/.test(u.focus || ''), 'setas para baixo alcançam a linha das dicas', u);
@@ -252,9 +290,9 @@ try {
   await load('');
   const kept = await ev(() => ({ noHints: window.__game.settings.noHints, hints: document.querySelector('.rr').dataset.hints }));
   check(kept.noHints === true && kept.hints === 'off', 'recarregou: o modo sem dicas continua ligado', kept);
-  await press('Enter', 300);
-  const modeProgress = await ev(() => document.querySelector('.rr-mode__progress').textContent);
-  check(/2 de \d+ concluídas/.test(modeProgress), 'o cartão do modo Fases mostra as fases concluídas', modeProgress);
+  hm = await home();
+  check(/^4 de \d+ biscoitos$/.test(hm.stats[0]) && /^2 de \d+ fases concluídas$/.test(hm.stats[1]), 'a tela inicial conta os biscoitos e as fases do save', hm.stats);
+  check(/^Continuar · Fase 3 · /.test(hm.sub), 'o Jogar continua na Fase 3', hm.sub);
   await press('Enter', 300);
   i = await waitFor((x) => x.state === 'playing' && x.hub && x.near === 3, { timeout: 60000 });
   check(i.hub && i.near === 3 && i.next === 3, 'fases 1 e 2 concluídas: o mapa abre na frente da bandeirinha 3', { near: i.near, next: i.next });
@@ -277,6 +315,8 @@ try {
   i = await waitFor((x) => x.state === 'playing', { timeout: 10000 });
   check(i.state === 'playing', 'Começar: partida da fase 3');
   await H.gsleep(1500);
+  m = await music();
+  check(m.theme === 'fase3' && m.playing === 'fase3', 'na fase 3, o tema dela', m);
 
   // marcador: com a dog longe do alvo do objetivo (perto dele o marcador some de qualquer jeito)
   const away = async () => {
@@ -342,7 +382,7 @@ try {
   check(where.dist > 1.6 && h.marker === true, 'com dicas: marcador do objetivo de volta', { ...where, marker: h.marker });
   await shot('menu-10-jogando-com-dicas.png');
 
-  console.log('\n== Controle: tela principal, modos, fases e Opções ==');
+  console.log('\n== Controle: tela principal, Opções e Jogar → mapa ==');
   await ev(() => localStorage.removeItem('rr-progress-v1'));
   await load('');
   await connect();
@@ -351,28 +391,34 @@ try {
   check(u.device === 'gamepad' && u.screen === 'main' && u.focus === 'play', 'controle conectado: foco em Jogar', u);
   await tap(B.DOWN);
   u = await ui();
-  check(u.focus === 'options', 'D-pad baixo: Opções', u);
+  check(u.focus === 'story', 'D-pad baixo: História', u);
+  await tap(B.RIGHT);
+  u = await ui();
+  check(u.focus === 'options', 'D-pad: Opções', u);
+  await tap(B.LEFT);
+  u = await ui();
+  check(u.focus === 'story', 'D-pad esquerda: História', u);
   await tap(B.UP);
   await axes(0, 1);
   await sleep(120);
   await axes(0, 0);
   await sleep(160);
   u = await ui();
-  check(u.focus === 'options', 'analógico para baixo: Opções', u);
-  await tap(B.UP);
-  await tap(B.A);
-  u = await ui();
-  check(u.screen === 'modes' && u.focus === 'levels', '✕ em Jogar: modos, foco em Fases', u);
+  check(u.focus === 'story', 'analógico para baixo: História', u);
   await tap(B.LEFT);
   await tap(B.A);
   u = await ui();
-  check(u.screen === 'modes' && u.focus === 'story' && u.state === 'title', '✕ no Modo História: continua nos modos (em breve)', u);
+  check(u.screen === 'main' && u.focus === 'story' && u.state === 'title', '✕ na História: continua na tela principal (em breve)', u);
   await tap(B.B);
   u = await ui();
-  check(u.screen === 'main' && u.focus === 'play', '○ volta à tela principal', u);
+  check(u.screen === 'main' && u.state === 'title', '○ na tela principal não faz nada', u);
+  await tap(B.RIGHT);
   await tap(B.A);
   u = await ui();
-  check(u.screen === 'modes' && u.focus === 'levels', '✕ em Jogar: os modos', u);
+  check(u.screen === 'options' && u.focus === 'volume', '✕ em Opções: foco no volume dos efeitos', u);
+  await tap(B.DOWN);
+  u = await ui();
+  check(u.focus === 'music-volume', 'D-pad baixo: o volume da música', u);
   const glyphs = await ev(() => {
     const g = document.querySelector('.rr-title .rr-back .rr-g');
     const vis = (s) => { const e = g.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; };
@@ -380,23 +426,17 @@ try {
   });
   check(glyphs.pad && !glyphs.kb && glyphs.circle, 'Voltar mostra o ○ do controle', glyphs);
   await sleep(400);
-  await shot('menu-11-modos-controle.png');
-  await tap(B.B);
-  u = await ui();
-  check(u.screen === 'main' && u.focus === 'play', '○ volta à tela principal (de novo)', u);
-  await tap(B.DOWN);
-  await tap(B.A);
-  u = await ui();
-  check(u.screen === 'options' && u.focus === 'volume', '✕ em Opções: foco no volume', u);
+  await shot('menu-11-opcoes-controle.png');
   await tap(B.B);
   u = await ui();
   check(u.screen === 'main' && u.focus === 'options', '○ volta de Opções com o foco em Opções', u);
-  // Fases → o mapa; na frente da bandeirinha, ○ (interagir) abre o cartão; ○ no cartão volta ao mapa
+  // Jogar → o mapa; na frente da bandeirinha, ○ (interagir) abre o cartão; ○ no cartão volta ao mapa
   await tap(B.UP);
-  await tap(B.A);
+  u = await ui();
+  check(u.focus === 'play', 'D-pad cima: Jogar', u);
   await tap(B.A);
   i = await waitFor((x) => x.state === 'playing' && x.hub && x.near === 1, { timeout: 60000 });
-  check(i.hub && i.near === 1, '✕ em Jogar e em Fases: o mapa, na frente da bandeirinha 1', { near: i.near });
+  check(i.hub && i.near === 1, '✕ em Jogar: o mapa, na frente da bandeirinha 1', { near: i.near });
   await tap(B.B);
   i = await waitFor((x) => x.state === 'intro', { timeout: 60000 });
   check(i.state === 'intro' && i.levelId === 'fase1', '○ na frente da bandeirinha: cartão da fase 1', i.levelId);

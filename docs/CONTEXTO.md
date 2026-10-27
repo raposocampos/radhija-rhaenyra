@@ -191,13 +191,17 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   (sai a tela de modos); música sintetizada com um tema para o menu, um para o mapa e "cada fase tem um tema de música",
   combinando com a fase; "a música pode começar ligada, tendo a opção de... desligar a música nas opções". Feito: tela
   inicial em duas colunas (logotipo e progresso | Jogar com a fase em que continua, Modo História "em breve" e Opções),
-  nota de música no canto, sliders de Efeitos e Música lado a lado (Opções e pausa), contorno de chocolate e sombra
+  nota de música no canto, sliders de Efeitos e Música um embaixo do outro (Opções e pausa; lado a lado, as setas
+  ←/→ mexiam no volume e o teclado e o controle não chegavam ao da Música), contorno de chocolate e sombra
   dura nos botões e cartões; `src/fx/audio/music.js` e `themes.js` (12 temas), `audio.setMusic` com cruzamento,
   `main.js` escolhendo o tema pela tela, o áudio destravando no primeiro gesto também na tela inicial;
-  `test/musica.test.mjs`. Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
-- Próximo passo: atualizar os E2E que passavam pela tela de modos (menu, toque, mapa, expresso, capture-celular,
-  fx-v2-flow; aguardando o orquestrador por causa da sessão "E2E: tirar o JIT por ordem de desenho"), CI e E2E,
-  prévia e aprovação do usuário nesta sessão.
+  `test/musica.test.mjs`. Na navegação, um empate entre dois vizinhos fica com o primeiro na ordem de leitura (↓ no
+  Jogar → História). E2E atualizados para o fluxo novo (menu, toque, mapa, expresso, capture-celular, fx-v2-flow),
+  com o ok do orquestrador; o menu confere também a música (tema do menu, do mapa e da fase, a nota, os dois volumes
+  salvos). `test-gamepad.mjs` também precisa de ajuste (dois sliders na pausa; ↓ no Jogar vai à História): pedido ao
+  orquestrador. Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
+- Próximo passo: ok do `test-gamepad.mjs`, CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
+  do usuário nesta sessão (se o #68 ou o #69 entrarem antes, sincronizar e revalidar).
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 
