@@ -323,7 +323,7 @@ da irmã) e o tamanho que cabem sem encostar em colisor nem na irmã e sem passa
 
 ### 4.6 O mapa das fases (Pandorópolis, `src/levels/mapa/`)
 
-Jogar → Fases abre o mapa: uma fase especial fora de `LEVELS` (`createGame({ hub })`, índice `HUB = −1`), com o
+Jogar abre o mapa: uma fase especial fora de `LEVELS` (`createGame({ hub })`, índice `HUB = −1`), com o
 mesmo núcleo (dogs, companheira, câmera isométrica, colisão, navegação) e um puzzle que nunca termina. Cada fase do
 catálogo tem uma bandeirinha em `FLAGS` (mesma ordem; `test/mapa.test.mjs` cobra), na frente do lugar onde acontece.
 O puzzle recebe `ctx.hub` (`HubContext`: o catálogo, o progresso salvo — `game.setProgressSource`, ligado ao da UI
@@ -331,6 +331,14 @@ O puzzle recebe `ctx.hub` (`HubContext`: o catálogo, o progresso salvo — `gam
 bandeirinhas, das nuvens e da ponte (bloqueios dinâmicos por área), do atalho (`puzzle.travel`: R/L, L2/R2, 1–0,
 [ ], ◀ ▶ no HUD) e da plaquinha (`map:sign`). Entrar abre o cartão de abertura da fase; o Voltar dele, a pausa e a
 vitória (`ui:openMap`) voltam na frente da bandeirinha; do menu, na da próxima fase.
+
+**Ponte levadiça** (`layout.js` `BRIDGE`, `world/clouds.js`, `puzzle.js`): deitada, as tábuas ficam em `BRIDGE.deck` e um piso
+sem desenho (`userData.walkable`, `src/game/ground.js`) põe as patas em cima delas; ele só conta com a ponte deitada de vez.
+Rampinhas fixas nas margens (`BRIDGE.ramp`, também de pisar) levam da rua até as tábuas, sem degrau na ponta.
+Na descida animada (a chácara acabou de abrir), o bloqueio `ponte-levantada` segue ligado até ela deitar
+(`BRIDGE.lowerSec`) e cobre também o pé das folhas, nas margens. Torres e guarda-corpo colidem (`BRIDGE_TOWERS`,
+`ponte-guarda-*`). `test/mapa-ponte.test.mjs` atravessa com os modelos de verdade espelhando o jogo headless.
+Numa prévia de PR (só lá), `?mapa&tudo` libera o mapa inteiro (`previewUnlockAll`): o progresso da prévia começa zerado.
 
 **Pré-carga** (`src/game/levelPreload.js`): perto de uma bandeirinha liberada o código da fase é importado (só o
 import, que roda fora do quadro); a montagem do cenário fica para a entrada, atrás da cortina de carregamento.
