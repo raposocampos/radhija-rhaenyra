@@ -386,9 +386,17 @@ try {
   await ev(() => localStorage.removeItem('rr-progress-v1'));
   await load('');
   await connect();
+  // o primeiro toque no controle já move o foco (↑ no Jogar iria à nota da música): ↓ e ↑ voltam ao Jogar
+  await tap(B.DOWN);
   await tap(B.UP);
   u = await ui();
   check(u.device === 'gamepad' && u.screen === 'main' && u.focus === 'play', 'controle conectado: foco em Jogar', u);
+  await tap(B.UP);
+  u = await ui();
+  check(u.focus === 'music', 'D-pad cima: a nota da música', u);
+  await tap(B.DOWN);
+  u = await ui();
+  check(u.focus === 'play', 'D-pad baixo: de volta ao Jogar', u);
   await tap(B.DOWN);
   u = await ui();
   check(u.focus === 'story', 'D-pad baixo: História', u);

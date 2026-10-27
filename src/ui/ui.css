@@ -679,8 +679,8 @@
 }
 .rr-volume .ico { width: 20px; height: 20px; color: var(--choco-2); }
 /* efeitos e música, um embaixo do outro: ←/→ mexem no volume, ↑/↓ passam de um para o outro (teclado e controle) */
-.rr-volumes { display: grid; gap: 2px; margin: 14px 2px 2px; }
-.rr-volumes .rr-volume { margin: 0 -6px; grid-template-columns: auto 4.4em 1fr 2.8em; gap: 8px; }
+.rr-volumes { display: grid; gap: 0; margin: 8px 2px 2px; }
+.rr-volumes .rr-volume { margin: 0 -6px; padding: 2px 8px; grid-template-columns: auto 4.4em 1fr 2.8em; gap: 8px; }
 .rr-volume output { text-align: right; font: 600 15px/1 'Fredoka', sans-serif; color: var(--choco-2); }
 .rr-range {
   --pct: 70%;
@@ -1733,6 +1733,10 @@
 .rr[data-compact] .rr-play__txt { gap: calc(4 * var(--u)); }
 .rr[data-compact] .rr-play__label { font-size: calc(31 * var(--u)); -webkit-text-stroke-width: calc(2 * var(--u)); text-shadow: 0 calc(3 * var(--u)) 0 var(--choco); }
 .rr[data-compact] .rr-play__sub { font-size: max(9px, calc(11.5 * var(--u))); }
+/* numa janela estreita de PC, o atalho (Enter) ocupa o lugar do verbo: fica só a fase */
+@media (max-width: 700px) {
+  .rr[data-compact]:not([data-mobile]) .rr-play__verb { display: none; }
+}
 .rr[data-compact] .rr-home__row { gap: calc(9 * var(--u)); }
 .rr[data-compact] .rr-tile { gap: calc(8 * var(--u)); padding: calc(7 * var(--u)) calc(9 * var(--u)) calc(7 * var(--u)) calc(7 * var(--u)); border-radius: calc(15 * var(--u)); border-width: calc(2.5 * var(--u)); box-shadow: 0 calc(4 * var(--u)) 0 var(--choco); }
 .rr[data-compact] .rr-tile__ico { width: calc(32 * var(--u)); height: calc(32 * var(--u)); border-width: calc(2 * var(--u)); }
@@ -1885,18 +1889,21 @@
 .rr[data-compact] .rr-fullscreen { margin-top: calc(8 * var(--u)); font-size: calc(14.5 * var(--u)); padding: .55em 1em; }
 .rr[data-compact] .rr-ctl-table { display: none; }
 /* vitória */
-.rr[data-compact] .rr-card--victory { width: min(calc(480 * var(--u)), 92vw); padding: calc(38 * var(--u)) calc(20 * var(--u)) calc(14 * var(--u)); }
+/* contorno de chocolate proporcional: cartões e botões não crescem numa tela pequena */
+.rr[data-compact] .rr-card { border-width: calc(2.5 * var(--u)); box-shadow: 0 calc(5 * var(--u)) 0 var(--choco), 0 calc(12 * var(--u)) calc(24 * var(--u)) rgba(54, 32, 16, .22); }
+.rr[data-compact] .rr-card .rr-btn--primary, .rr[data-compact] .rr-card .rr-btn--soft { border-width: calc(2.5 * var(--u)); }
+.rr[data-compact] .rr-card--victory { width: min(calc(480 * var(--u)), 92vw); padding: calc(34 * var(--u)) calc(20 * var(--u)) calc(14 * var(--u)); }
 .rr[data-compact] .rr-victory__badge { width: calc(70 * var(--u)); height: calc(70 * var(--u)); margin: calc(-35 * var(--u)) 0 0 calc(-35 * var(--u)); }
 .rr[data-compact] .rr-victory__badge .ico { width: calc(46 * var(--u)); height: calc(46 * var(--u)); }
 .rr[data-compact] .rr-victory__end { margin-bottom: calc(8 * var(--u)); font-size: calc(13.5 * var(--u)); padding: calc(5 * var(--u)) calc(12 * var(--u)); }
 .rr[data-compact] .rr-victory h2 { font-size: calc(21 * var(--u)); }
 .rr[data-compact] .rr-victory__sub { margin-top: calc(4 * var(--u)); font-size: calc(13 * var(--u)); }
-.rr[data-compact] .rr-stats { margin: calc(10 * var(--u)) 0 calc(8 * var(--u)); }
-.rr[data-compact] .rr-stat { padding: calc(7 * var(--u)) calc(8 * var(--u)) calc(8 * var(--u)); gap: calc(3 * var(--u)); }
+.rr[data-compact] .rr-stats { margin: calc(8 * var(--u)) 0 calc(6 * var(--u)); }
+.rr[data-compact] .rr-stat { padding: calc(6 * var(--u)) calc(8 * var(--u)) calc(6 * var(--u)); gap: calc(3 * var(--u)); }
 .rr[data-compact] .rr-stat strong { font-size: calc(24 * var(--u)); }
-.rr[data-compact] .rr-victory__msg { margin: calc(2 * var(--u)) calc(6 * var(--u)) calc(10 * var(--u)); font-size: calc(13 * var(--u)); }
+.rr[data-compact] .rr-victory__msg { margin: calc(2 * var(--u)) calc(6 * var(--u)) calc(8 * var(--u)); font-size: calc(13 * var(--u)); }
 .rr[data-compact] .rr-victory__actions { grid-template-columns: 1fr 1fr; gap: calc(8 * var(--u)); }
-.rr[data-compact] .rr-victory .rr-btn { font-size: calc(16 * var(--u)); padding: .62em .8em; }
+.rr[data-compact] .rr-victory .rr-btn { font-size: calc(16 * var(--u)); padding: .5em .8em; }
 .rr[data-compact] .rr-victory__actions .rr-btn--soft { font-size: calc(15 * var(--u)); }
 /* transição e erro de carregamento */
 .rr[data-compact] .rr-curtain__badge { width: calc(80 * var(--u)); height: calc(80 * var(--u)); margin-bottom: calc(8 * var(--u)); }

@@ -297,8 +297,12 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     const { index, fresh } = continueInfo();
     const m = meta(index);
     const all = done >= LV.length;
-    const sub = all && map ? 'Pandorópolis · escolha uma fase' : `${fresh ? 'Começar' : 'Continuar'} · Fase ${m.number} · ${m.name}`;
-    $('.rr-play__sub').textContent = sub;
+    const verb = `${fresh ? 'Começar' : 'Continuar'} · `;
+    const where = `Fase ${m.number} · ${m.name}`;
+    const anyFlag = all && map;
+    const sub = anyFlag ? 'Pandorópolis · escolha uma fase' : verb + where;
+    // o verbo num pedaço próprio: numa tela estreita ele some e fica só a fase (ui.css)
+    $('.rr-play__sub').innerHTML = anyFlag ? esc(sub) : `<span class="rr-play__verb">${verb}</span>${esc(where)}`;
     $('.rr-btn--play').setAttribute('aria-label', `Jogar: ${sub}`);
   }
 

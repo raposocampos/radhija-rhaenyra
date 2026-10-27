@@ -65,12 +65,17 @@ try {
     check(result.action === expectedAction && result.state === 'title', `${label}: navega sem iniciar a fase`, result);
     check(result.samples > 1 && result.visible && result.minOpacity >= 0.99, `${label}: Jogar continua visível durante toda a navegação`, result);
   };
-  await page.keyboard.press('ArrowUp'); // ativa o realce com Jogar selecionado
+  // ativa o realce e volta ao Jogar (↑ no Jogar iria à nota da música, no canto)
+  await page.keyboard.press('ArrowDown');
+  await sleep(150);
+  await page.keyboard.press('ArrowUp');
   await sleep(200);
   await checkPlay(() => page.keyboard.press('ArrowDown'), 'story', 'teclado baixo');
   await checkPlay(() => page.keyboard.press('ArrowUp'), 'play', 'teclado cima');
   await connect();
-  await tap(B.UP); // ativa o dispositivo com Jogar selecionado
+  // ativa o controle e volta ao Jogar
+  await tap(B.DOWN);
+  await tap(B.UP);
   await checkPlay(() => tap(B.DOWN), 'story', 'D-pad baixo');
   await checkPlay(() => tap(B.UP), 'play', 'D-pad cima');
   await checkPlay(async () => { await axes(0, 1); await sleep(110); await axes(0, 0); }, 'story', 'analógico baixo');
