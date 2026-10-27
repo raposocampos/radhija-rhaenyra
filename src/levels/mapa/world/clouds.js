@@ -1,7 +1,8 @@
 // PANDORÓPOLIS — as nuvens que cobrem as áreas ainda fechadas (o leste e o centro até a fase 6, a chácara até a 9 e
 // a estrada do norte, o Modo História) e a ponte levadiça do rio (levantada até a vez da chácara).
 // Nuvens: bolos fofos instanciados (uma malha por área); ao abrir, sobem, espalham e somem em onda a partir da borda
-// do lado de quem chega. Ponte: duas folhas de madeira com dobradiça em cada margem, que descem juntas.
+// do lado de quem chega. Ponte: duas folhas de madeira com dobradiça em cada margem, que descem juntas; deitada, as
+// patas pisam no alto das tábuas (um piso de pisar sem desenho, src/game/ground.js), e torres e guarda-corpo colidem.
 // API: buildClouds(root, L) → { clouds: { setOpen(zone, open, { instant, delay }), isOpen(zone) },
 //                                bridge: { setDown(down, { instant, delay }), get down() }, update(dt, t) }
 import * as THREE from 'three';
@@ -101,17 +102,21 @@ export function buildClouds(root, L) {
       parts.push(paint(g, i % 2 ? '#c98a55' : '#b77a48'));
     }
     for (const s of [-1, 1]) {
-      parts.push(paint(rb(half, 0.08, 0.1, 0.02, 1).translate(half / 2, 0.42, s * (B.w / 2 - 0.05)), '#8e5a33'));
-      for (let k = 0; k <= 3; k++) parts.push(paint(rb(0.08, 0.42, 0.08, 0.02, 1).translate(0.1 + (k / 3) * (half - 0.2), 0.0, s * (B.w / 2 - 0.05)), '#8e5a33'));
+      parts.push(paint(rb(half, 0.08, 0.1, 0.02, 1).translate(half / 2, 0.42, s * B.rail), '#8e5a33'));
+      for (let k = 0; k <= 3; k++) parts.push(paint(rb(0.08, 0.42, 0.08, 0.02, 1).translate(0.1 + (k / 3) * (half - 0.2), 0.0, s * B.rail), '#8e5a33'));
     }
     return mergeGeometries(parts);
   })();
-  /** Folha: dobradiça na margem (x0 ou x1), a folha deitada em direção ao meio do rio. */
+  /**
+   * Folha: dobradiça na margem (x0 ou x1), a folha deitada em direção ao meio do rio. As tábuas vão de -0,04 a +0,04
+   * da dobradiça: deitada, o alto delas fica em B.deck, onde as patas pisam (o piso invisível logo abaixo).
+   */
   const leaves = [B.x0, B.x1].map((hx, i) => {
     const pivot = new THREE.Group();
-    pivot.position.set(hx, 0.07, B.z);
+    pivot.position.set(hx, B.deck - 0.04, B.z);
     if (i === 1) pivot.rotation.y = Math.PI;
     const leaf = new THREE.Mesh(leafGeo, woodMat);
+    leaf.name = 'mapa:ponte-folha';
     leaf.castShadow = true;
     leaf.receiveShadow = true;
     pivot.add(leaf);
@@ -119,14 +124,13 @@ export function buildClouds(root, L) {
     return pivot;
   });
   // torres das margens com as correntes
+  // (as torres e o guarda-corpo têm colisão: layout.js, BRIDGE_TOWERS e ponte-guarda-*)
   const towerParts = [];
-  for (const hx of [B.x0 - 0.25, B.x1 + 0.25]) {
-    for (const s of [-1, 1]) {
-      towerParts.push(paint(rb(0.4, 2.2, 0.4, 0.05, 1).translate(hx, 0, B.z + s * (B.w / 2 + 0.3)), '#8e5a33'));
-      towerParts.push(paint(new THREE.ConeGeometry(0.34, 0.4, 4).rotateY(Math.PI / 4).translate(hx, 2.4, B.z + s * (B.w / 2 + 0.3)), '#c2483a'));
-    }
-    towerParts.push(paint(rb(0.3, 0.2, B.w + 1.0, 0.04, 1).translate(hx, 2.0, B.z), '#8e5a33'));
+  for (const t of L.BRIDGE_TOWERS) {
+    towerParts.push(paint(rb(0.4, 2.2, 0.4, 0.05, 1).translate(t.x, 0, t.z), '#8e5a33'));
+    towerParts.push(paint(new THREE.ConeGeometry(0.34, 0.4, 4).rotateY(Math.PI / 4).translate(t.x, 2.4, t.z), '#c2483a'));
   }
+  for (const hx of [B.x0 - 0.25, B.x1 + 0.25]) towerParts.push(paint(rb(0.3, 0.2, B.w + 1.0, 0.04, 1).translate(hx, 2.0, B.z), '#8e5a33'));
   for (const p of towerParts) p.deleteAttribute('uv');
   const towers = new THREE.Mesh(mergeGeometries(towerParts), woodMat);
   towers.castShadow = true;
@@ -139,9 +143,21 @@ export function buildClouds(root, L) {
     for (const s of [-1, 1]) {
       const m = new THREE.Mesh(cyl(0.018, 0.018, 1, 5), chainMat);
       bridge.add(m);
-      chains.push({ m, i, top: new THREE.Vector3(hx, 2.05, B.z + s * (B.w / 2 - 0.05)) });
+      chains.push({ m, i, top: new THREE.Vector3(hx, 2.05, B.z + s * B.rail) });
     }
   }
+  // O piso de pisar da ponte deitada (src/game/ground.js): uma tampa sem desenho no alto das tábuas, de dobradiça a
+  // dobradiça, entre os guarda-corpos. Só conta com a ponte deitada de vez (descendo, o rio segue fechado: puzzle.js).
+  // Não gira com as folhas: o círculo de busca do chão (ground.js) cobre a ponte inteira, de margem a margem.
+  const deckFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(span, 0.02, 2 * B.rail - 0.1).translate(0, -0.01, 0),
+    mat('mapa-ponte-piso', () => new THREE.MeshBasicMaterial({ visible: false })),
+  );
+  deckFloor.name = 'mapa:ponte-piso';
+  deckFloor.position.set((B.x0 + B.x1) / 2, B.deck, B.z);
+  deckFloor.userData.walkable = B.deck + 0.05;
+  deckFloor.visible = false;
+  root.add(deckFloor);
   const bState = { k: 0, target: 0, delay: 0 }; // k: 0 = levantada, 1 = abaixada
   const tipLocal = new THREE.Vector3(half - 0.05, 0.0, 0);
   const tipW = new THREE.Vector3();
@@ -150,6 +166,7 @@ export function buildClouds(root, L) {
     const ease = bState.k * bState.k * (3 - 2 * bState.k);
     const ang = (1 - ease) * 1.22; // levantada ~70°
     leaves.forEach((p) => { p.children[0].rotation.z = ang; });
+    deckFloor.visible = bState.k >= 1;
     bridge.updateMatrixWorld(true);
     for (const c of chains) {
       const leaf = leaves[c.i].children[0];
@@ -198,7 +215,7 @@ export function buildClouds(root, L) {
       }
       if (bState.delay > 0) bState.delay -= dt;
       else if (bState.k !== bState.target) {
-        bState.k = THREE.MathUtils.clamp(bState.k + Math.sign(bState.target - bState.k) * dt / 1.8, 0, 1);
+        bState.k = THREE.MathUtils.clamp(bState.k + Math.sign(bState.target - bState.k) * dt / B.lowerSec, 0, 1);
         poseBridge();
       }
     },

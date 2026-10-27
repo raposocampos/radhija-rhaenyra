@@ -1,10 +1,28 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-27, Claude** (menu novo e trilha, etapa 4 de 4 da interface, branch `claude/menu-musica`,
-PR #71, em andamento; #70, picos de `O_flap` na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader
-sem o estado dinâmico de entrada de vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da
-fase 10, em v0.10.18 · build 110; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 ·
-build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (colisão da ponte levadiça do mapa, branch `claude/mapa-ponte`, em
+andamento; #71, menu novo e trilha, etapa 4 de 4 da interface, em v0.10.21 · build 113; #70, picos de `O_flap`
+na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader sem o estado dinâmico de entrada de
+vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fase 10, em v0.10.18 · build 110;
+#67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler primeiro
+[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: a ponte levadiça do mapa sem as patas atravessando (Claude, branch `claude/mapa-ponte`)
+
+- Pedido do usuário (2026-10-27, junto com o "pode integrar" do #71): "depois precisa melhorar a colisão da ponte,
+  quando ela desce e passamos por cima dela, as patas ficam atravessando". Fila liberada pelo orquestrador: só
+  `src/levels/mapa/**` e a colisão do mapa (game.js, ground.js, collision.js e compartilhados, consultar antes).
+- Causa: deitada, o alto das tábuas ficava em 0,11 m e as dogs andavam no chão do mapa (0): as patas afundavam 11 cm
+  na madeira. Também: o rio abria no instante em que a chácara abria, com a ponte ainda levantada (descida de 3 s), e
+  as quatro torres e o começo do guarda-corpo, na beira da rua, não colidiam.
+- Feito: `BRIDGE.deck` (0,05, logo acima da calçada) com as folhas deitadas nesse alto e um piso de pisar sem desenho
+  (`mapa:ponte-piso`, `userData.walkable`, só com a ponte deitada de vez); `bridgeHold` em `puzzle.js` mantém o
+  bloqueio `ponte-levantada` até a ponte deitar (`BRIDGE.lowerSec`), e o bloqueio cobre de dobradiça a dobradiça;
+  colisões `ponte-torre-1..4` e `ponte-guarda-norte/sul`. `test/mapa-ponte.test.mjs`: colisões, a descida com o rio
+  fechado e a travessia com os modelos de verdade (o novo das duas e o atual da Radhija) espelhando o jogo headless,
+  com o chão do cenário de verdade: sobre o rio, a pele afunda no máximo 1 cm a mais do que na rua.
+- No PC: só `node --check`, `git diff --check` e uma checagem leve de geometria (nós, arestas e bandeirinhas livres).
+- Próximo passo: PR, CI e E2E (`mapa`, `menu`, `toque`), prévia e o "pode integrar" do usuário nesta sessão.
 
 ## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
 
@@ -212,7 +230,7 @@ build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapas 1 e 3 entregues nos PRs #64 e #67; etapa 4 no PR #71)
+## Entregue: interface responsiva, menu e mapa das fases (Claude; PRs #64, #67 e #71; o #71 com squash `756eef1`, deploy `40535758663`, v0.10.21 · build 113)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -326,9 +344,9 @@ build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
   disse "gostei dessas músicas aí e do menu novo"; o "pode integrar" vale para a versão sincronizada.
 - Sincronizado com o main `eb75f18` (#68, #69 e #70), sem conflito. Para depois (pedido do usuário): efeitos visuais
   do mapa mais caprichados e o Modo História.
-- Próximo passo: CI e E2E `todas` no head sincronizado, prévia nova e o "pode integrar" do usuário nesta sessão;
-  depois, merge squash com o SHA esperado, liberar só aquele deploy (deve virar v0.10.21 · build 113), conferir o
-  `version.json` e avisar o orquestrador.
+- Etapa 4 entregue: head `659c291` (CI `40527736572`, E2E `todas` `40527757462` verdes; toques de menu sem repetição),
+  "pode integrar" do usuário nesta sessão, squash `756eef1`, CI do main `40535464810`, deploy `40535758663`,
+  v0.10.21 · build 113 (version.json e link principal conferidos).
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 

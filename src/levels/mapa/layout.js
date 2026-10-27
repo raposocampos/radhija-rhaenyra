@@ -259,8 +259,15 @@ export const ZONES = {
   chacara: { unlock: 9, box: { minX: FARM.minX, maxX: FARM.maxX + 1.5, minZ: FARM.minZ - 1.5, maxZ: FARM.maxZ + 1.5 } },
   breve: { unlock: Infinity, box: { minX: CONDO.maxX + 0.2, maxX: RIVER.minX + 0.1, minZ: CITY.minZ, maxZ: TOWN.barrier.z - 0.2 } },
 };
-/** Ponte levadiça do rio (desce na vez da chácara). */
-export const BRIDGE = { x0: RIVER.minX - 0.3, x1: RIVER.maxX + 0.3, z: 0, w: 2.8 };
+/**
+ * Ponte levadiça do rio (desce na vez da chácara): as folhas vão de x0 e x1 (as dobradiças, em terra) ao meio do rio.
+ * deck: o alto das tábuas com a ponte deitada (as patas pisam nele: um pouco acima da calçada, 0,03); lowerSec: quanto
+ * ela leva para descer (clouds.js), enquanto o rio segue fechado (puzzle.js); rail: onde fica o guarda-corpo (meia
+ * largura, do meio da ponte).
+ */
+export const BRIDGE = { x0: RIVER.minX - 0.3, x1: RIVER.maxX + 0.3, z: 0, w: 2.8, deck: 0.05, lowerSec: 1.8, rail: 1.35 };
+/** As quatro torres das correntes, nas margens (centro; 0,4 m de lado). */
+export const BRIDGE_TOWERS = [BRIDGE.x0 - 0.25, BRIDGE.x1 + 0.25].flatMap((x) => [-1, 1].map((s) => ({ x, z: BRIDGE.z + s * (BRIDGE.w / 2 + 0.3) })));
 
 // ---------------------------------------------------------------- as dogs, a câmera
 /** @type {Record<import('../../types').DogName, import('../../types').DogStats>} */
@@ -331,6 +338,12 @@ export const STATIC_COLLIDERS = [
   box('mar-sul', CITY.minX - 2, CITY.maxZ, FARM.maxX + 2, CITY.maxZ + 2),
   box('rio-norte', RIVER.minX, CITY.minZ - 2, RIVER.maxX, BRIDGE.z - BRIDGE.w / 2 + 0.25),
   box('rio-sul', RIVER.minX, BRIDGE.z + BRIDGE.w / 2 - 0.25, RIVER.maxX, CITY.maxZ + 2),
+  // a ponte: o guarda-corpo de ponta a ponta (em terra também, nas dobradiças) e as quatro torres das correntes
+  ...[-1, 1].map((s) => {
+    const inner = BRIDGE.z + s * (BRIDGE.w / 2 - 0.25), outer = BRIDGE.z + s * (BRIDGE.rail + 0.1);
+    return box(`ponte-guarda-${s < 0 ? 'norte' : 'sul'}`, BRIDGE.x0 - 0.05, Math.min(inner, outer), BRIDGE.x1 + 0.05, Math.max(inner, outer));
+  }),
+  ...BRIDGE_TOWERS.map((t, i) => box(`ponte-torre-${i + 1}`, t.x - 0.2, t.z - 0.2, t.x + 0.2, t.z + 0.2)),
   box('chacara-norte', RIVER.maxX, CITY.minZ - 2, FARM.maxX + 2, FARM.minZ),
   box('chacara-sul', RIVER.maxX, FARM.maxZ, FARM.maxX + 2, CITY.maxZ + 2),
   box('mar-leste', FARM.maxX, CITY.minZ - 2, FARM.maxX + 2, CITY.maxZ + 2),
@@ -506,6 +519,6 @@ export const GOAL = {
 const LAYOUT = {
   WORLD, DOGS, CITY, FARM, RIVER, CONDO, ROAD_W, WALK_W, STREET_X, STREET_Z, AVENUE_X, RIVERSIDE_X, TOWN_Z, ROADS, CROSSINGS, DIRT,
   BLOCKS, TOWN_BLOCKS, HOUSE, TOWER, LAKE, LAKE_YARD, SERVICE, TOYHOUSE, PLAYGROUND, TOWN, CARS, GRANDPA, FLAGS, FLAG_NEAR, FLAG_PRELOAD,
-  ZONES, BRIDGE, TREES, TREE_TRUNK_R, LAMPS, BENCHES, HYDRANTS, BINS, GARDEN_LAMPS, FOUNTAIN_BEDS, STATIC_COLLIDERS, COLLISION_GRID: 4, NAV_NODES, NAV_EDGES, COLLECTIBLES: [], GOAL, CAMERA,
+  ZONES, BRIDGE, BRIDGE_TOWERS, TREES, TREE_TRUNK_R, LAMPS, BENCHES, HYDRANTS, BINS, GARDEN_LAMPS, FOUNTAIN_BEDS, STATIC_COLLIDERS, COLLISION_GRID: 4, NAV_NODES, NAV_EDGES, COLLECTIBLES: [], GOAL, CAMERA,
 };
 export default LAYOUT;

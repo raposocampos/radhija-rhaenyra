@@ -2,11 +2,11 @@
 // Lê o progresso salvo (ctx.hub.progress()) e põe cada bandeirinha no estado dela: trancada (cinza, com cadeado),
 // a próxima (laranja, brilhando) ou concluída (verde; dourada com os três biscoitos). As áreas embaixo das nuvens
 // (o leste e o centro a partir da fase 6, a chácara na 9) ficam bloqueadas até a vez delas, e a ponte do rio desce na
-// vez da chácara. Perto de uma bandeirinha: a plaquinha (evento map:sign), o prompt "Entrar" (E · ✕ · Agir) e a carga
+// vez da chácara (enquanto desce, o rio segue fechado). Perto de uma bandeirinha: a plaquinha (evento map:sign), o prompt "Entrar" (E · ✕ · Agir) e a carga
 // por baixo da fase (ctx.hub.preload). O atalho (travel) leva as duas direto a outra bandeirinha liberada.
 // Eventos: map:sign { n, id, name, place, when, state, treats, total, best } | { n: null } · map:travel { from, to,
 // x, z } · map:unlock { zone, n } · hint.
-import { FLAGS, FLAG_NEAR, FLAG_PRELOAD, ZONES, BRIDGE, RIVER, flagSpot } from './layout.js';
+import { FLAGS, FLAG_NEAR, FLAG_PRELOAD, ZONES, BRIDGE, flagSpot } from './layout.js';
 
 export const STAGES = ['explorar'];
 export const TEXT = {
@@ -23,6 +23,8 @@ export const TEXT = {
 };
 /** Velocidade de andar no mapa (a cidade é maior que uma fase). */
 export const MAP_SPEED = 1.6;
+/** A ponte que acabou de abrir começa a descer depois disto (s): a câmera já foi olhar a novidade. */
+const BRIDGE_DELAY = 1.2;
 
 /**
  * Memória da sessão (o puzzle é recriado a cada visita ao mapa): o que estava aberto na visita anterior, para a
@@ -68,7 +70,11 @@ export function createPuzzle(ctx) {
     const b = z.box;
     return [k, world.addDynamic({ id: `nuvens-${k}`, shape: 'box', x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2, hx: (b.maxX - b.minX) / 2, hz: (b.maxZ - b.minZ) / 2 })];
   }));
-  const bridgeBlock = world.addDynamic({ id: 'ponte-levantada', shape: 'box', x: (RIVER.minX + RIVER.maxX) / 2, z: BRIDGE.z, hx: (RIVER.maxX - RIVER.minX) / 2, hz: BRIDGE.w / 2 });
+  // levantada (ou ainda descendo), a ponte fecha o rio e o pé das folhas, nas margens (de dobradiça a dobradiça)
+  const bridgeBlock = world.addDynamic({ id: 'ponte-levantada', shape: 'box', x: (BRIDGE.x0 + BRIDGE.x1) / 2, z: BRIDGE.z, hx: (BRIDGE.x1 - BRIDGE.x0) / 2, hz: BRIDGE.w / 2 });
+  /** Descida animada da ponte (s até ela deitar de vez): enquanto isso, ninguém entra nela. */
+  let bridgeHold = 0;
+  const syncBridge = () => { bridgeBlock.enabled = !zones.chacara || bridgeHold > 0; };
 
   function applyProgress({ animate = false } = {}) {
     prog = hub.progress?.() || { levels: {} };
@@ -81,7 +87,8 @@ export function createPuzzle(ctx) {
       blockers[k].enabled = !zones[k];
       props?.clouds?.setOpen?.(k, zones[k], { instant: !animate });
     }
-    bridgeBlock.enabled = !zones.chacara;
+    bridgeHold = 0;
+    syncBridge();
     props?.bridge?.setDown?.(zones.chacara, { instant: !animate });
   }
 
@@ -160,6 +167,10 @@ export function createPuzzle(ctx) {
 
   function update(dt, { active }) {
     S.time += dt;
+    if (bridgeHold > 0) {
+      bridgeHold = Math.max(0, bridgeHold - dt);
+      if (!bridgeHold) syncBridge();
+    }
     const { f, d } = nearest(active);
     const near = f && d < FLAG_NEAR ? f : null;
     if (near !== S.sign) {
@@ -223,7 +234,9 @@ export function createPuzzle(ctx) {
         props?.clouds?.setOpen?.(k, true, { instant: false, delay: 0.6 });
         if (k === 'chacara') {
           props?.bridge?.setDown?.(false, { instant: true });
-          props?.bridge?.setDown?.(true, { instant: false, delay: 1.2 });
+          props?.bridge?.setDown?.(true, { instant: false, delay: BRIDGE_DELAY });
+          bridgeHold = BRIDGE_DELAY + BRIDGE.lowerSec;
+          syncBridge();
         }
         emit('map:unlock', { zone: k, n: ZONES[k].unlock });
       }
