@@ -199,7 +199,9 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   Jogar → História). E2E atualizados para o fluxo novo (menu, toque, mapa, expresso, capture-celular, fx-v2-flow),
   com o ok do orquestrador; o menu confere também a música (tema do menu, do mapa e da fase, a nota, os dois volumes
   salvos); `test-gamepad.mjs` também (dois sliders na pausa; ↓ no Jogar vai à História), com o ok do orquestrador.
-  Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
+  Toques do menu na suíte toque e no capture-celular esperam o botão pronto (camada acesa, sem animação de entrada,
+  nada por cima) e repetem um toque perdido: no E2E do #68, o iPhone ficou parado na tela inicial (toque em Jogar
+  perdido). Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
 - Próximo passo: CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
   do usuário nesta sessão (se o #68 ou o #69 entrarem antes, sincronizar e revalidar).
 

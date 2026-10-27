@@ -191,11 +191,11 @@ async function captureDevice(dev, url) {
     await shot('01-titulo', 1500);
     if (dev.ios) {
       // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → mapa → Agir → Começar)
-      await press('.rr-btn--options');
+      await pressInto('.rr-btn--options', () => window.__game.ui.screen === 'options', 'Opções');
       await step(5);
       await shot('01b-opcoes-tela-cheia');
-      await press('.rr-title .rr-back');
-      await thaw(async () => { await ready('.rr-btn--play'); await press('.rr-btn--play'); }, (i) => i.state === 'playing' && i.level === -1);
+      await pressInto('.rr-title .rr-back', () => window.__game.ui.screen === 'main', 'Voltar');
+      await thaw(() => pressInto('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar'), (i) => i.state === 'playing' && i.level === -1);
       await step(30);
       await thaw(() => action('act', 'KeyE'), (i) => i.state === 'intro');
       await step(60);
@@ -212,16 +212,17 @@ async function captureDevice(dev, url) {
     }
 
     // menu: História (em breve); Opções (com as dicas desligadas e religadas); Jogar → o mapa → Agir → Começar
-    await press('.rr-tile--story');
+    // cada toque espera o botão pronto e confere o efeito (pressInto): um toque perdido repete
+    await pressInto('.rr-tile--story', () => !!document.querySelector('.rr-levels__note.is-on'), 'História');
     await step(5);
     await shot('01b-historia');
-    await press('.rr-btn--options');
+    await pressInto('.rr-btn--options', () => window.__game.ui.screen === 'options', 'Opções');
     await step(5);
-    await press('.rr-title .rr-hopt[data-hints="off"]');
+    await pressInto('.rr-title .rr-hopt[data-hints="off"]', () => window.__game.settings.noHints === true, 'Dicas desligadas');
     await shot('01d-opcoes-sem-dicas');
-    await press('.rr-title .rr-hopt[data-hints="on"]');
-    await press('.rr-title .rr-back');
-    await thaw(async () => { await ready('.rr-btn--play'); await press('.rr-btn--play'); }, (i) => i.state === 'playing' && i.level === -1);
+    await pressInto('.rr-title .rr-hopt[data-hints="on"]', () => window.__game.settings.noHints === false, 'Dicas ligadas');
+    await pressInto('.rr-title .rr-back', () => window.__game.ui.screen === 'main', 'Voltar');
+    await thaw(() => pressInto('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar'), (i) => i.state === 'playing' && i.level === -1);
     // um toque na tela (como a jogadora faria) liga os controles de toque
     if (dev.touch) await page.touchscreen.tap(dev.opts.viewport.width / 2, 40);
     await step(90);
