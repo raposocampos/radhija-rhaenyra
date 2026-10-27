@@ -28,8 +28,13 @@ import { buildPantry } from './pantry.js';
 import { buildFarm } from './farm.js';
 import { buildPinata } from './pinata.js';
 import { buildSty } from './sty.js';
-import { buildSecret } from './secret.js';
+import { buildSecret, preloadSecret } from './secret.js';
 import { buildProps } from './props.js';
+
+/** O que vem da rede antes da montagem (no load() da fase): a foto do cantinho entra no aquecimento da GPU. */
+export function preloadWorld() {
+  return preloadSecret();
+}
 
 /**
  * Peças minúsculas (pregos, contas, confeitos, botões…) não fazem sombra: a sombra delas mal aparece e cada uma é mais

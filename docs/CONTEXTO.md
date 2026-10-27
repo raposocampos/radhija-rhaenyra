@@ -1,9 +1,50 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (E2E `fase3` sem a falha da dica do cantinho, PR #66, em andamento; #63,
-superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo
-na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 · build 101). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-26, Claude** (E2E "Primeira passagem — fase 10" intermitente, branch
+`claude/fase10-primeira-passagem`, PR #68, em andamento; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em
+v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 ·
+build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: E2E "Primeira passagem — fase 10" intermitente (branch `claude/fase10-primeira-passagem`)
+
+- Pedido (pelo orquestrador, sessão do PR #67, que não mexe na fase 10): a suíte reprovava às vezes em `celular-baixa`
+  e `celular-media` por "1 programas / 1 texturas depois da carga" ou "4 picos na 1ª passagem (tolerados 3)" e passava
+  ao repetir. Histórico de 37 medições da fase 10 (E2E de 22 a 26/10): foto atrasada em 3 (8%); mais de 3 picos em 5
+  de 13 no `celular-baixa` e 1 de 12 no `celular-media`; dois picos fixos em toda medição e perfil (cerca do fundo em
+  `Y_south`, folhinhas da mangueira em `Y_pinata`) gastavam a margem.
+- Causa 1 (o jogo): a foto do quadro do cantinho era baixada na montagem pelo `TextureLoader`; se o `onload` não
+  disparasse antes do `drawEverything` do aquecimento (que trava a página 8–15 s no CI), o material só ganhava o mapa
+  depois, e o programa com mapa e a textura 512×640 subiam ao entrar no cantinho (nó `H_mid`). Medições verdes têm 134
+  texturas/91 programas na carga; as reprovadas, 133/90. Correção: o `load()` da fase baixa a foto junto com o código do
+  cenário (`preloadWorld()` → `preloadSecret()`, prazo de 5 s, nunca rejeita; sem a foto a tempo, ela entra quando
+  chegar, como antes) e o quadro nasce com a textura. Teste `test/fase10-foto.test.mjs`.
+- Causa 2 (o CI): os picos são compilações de rotinas de vértices do SwiftShader (perf no runner: `sw::VertexProcessor::
+  routine` → JIT Subzero, 150–500 ms, nas duas passagens), sem nada novo no WebGL (programas, texturas, geometrias e
+  todo o estado de desenho iguais aos do aquecimento). O `vkCmdSetVertexInputEXT` do SwiftShader só escreve os locais de
+  atributo da lista nova, os outros guardam o formato do desenho anterior, e a chave da rotina inclui os 16 locais: a
+  mesma malha pede uma rotina nova conforme o que foi desenhado antes dela, e o three ordena pela câmera. Correção no
+  medidor: `--disable-angle-features=supportsVertexInputDynamicState` (o ANGLE põe os atributos no pipeline);
+  limites do teste iguais. `FIRST_PASS_VERTEX_INPUT_DYNAMIC=1` volta ao padrão. Explicado na ARQUITETURA (§4.1 e §10).
+- Descartado no diagnóstico (branch auxiliar `claude/fase10-primeira-passagem-diag`, só workflow e script; apagar no
+  fim): a troca para o pipeline monolítico do ANGLE (`CreateMonolithicPipelineTask` aparece nos picos, mas desligá-la
+  com `preferMonolithicPipelinesOverLibraries`/`supportsGraphicsPipelineLibrary` não tira os picos); alvo do aquecimento
+  maior; "ver através"; aquecer de cada nó do passeio (reduz por acaso; preparo vai a 23–45 s). Com o estado dinâmico de
+  entrada de vértices desligado (run `40407785329`, 3 aparelhos): nenhum pico fixo; só o quadro 0, que o diagnóstico
+  (ganchos em cada desenho) também produz na base. Também achado: com mistura ou offset desligados, o WebGL guarda os
+  valores do último transparente (aditivo), e a assinatura crua do estado tem ~150 combinações novas no jogo; zerá-los
+  não muda os picos no CI. Proposta separada, sem commit (pode ajudar ANGLE-Metal/Vulkan em aparelho; sem medição).
+- Validação do código (`b5169f6`, sobre o main `75a3b1a`), PR #68: CI `40410857436` verde e prévia publicada
+  (`previews/pr-68/40410857436-1/`); E2E `primeira-passagem` `40410883024` 30/30 (26 sem pico; a fase 10 com 0 nos três
+  aparelhos, 134/145 texturas na carga e nada depois); E2E `todas` `40410887071` 52/52; varredura temporária
+  `40410952359` (branch auxiliar `claude/fase10-primeira-passagem-varredura`, só o workflow; apagado): a fase 10 12×,
+  4 por aparelho, todas aprovadas e sem pico. Antes: 2 a 5 picos por medição da fase 10. Os branches auxiliares
+  foram apagados; as execuções e os artefatos (7 dias) continuam no GitHub. Os commits seguintes só mudam este arquivo:
+  conferir o CI deles no PR. Depois veio a sincronização com o main `0b80ae4` (#67, merge sem conflito; o PR segue
+  mexendo só nos seus 7 arquivos): CI e E2E `primeira-passagem` e `todas` do head no PR.
+- Observação, sem relação com esta mudança: a fase 9 no `celular-baixa` tem 2 picos em `O_flap` (#92, #93) em 2 de 6
+  medições, já antes; com um pico de ruído, chega ao limite de 3.
+- No PC: só `node --check`, `git diff --check` e o teste novo em Node. Próximo passo: entregar a prévia e esperar o
+  "pode integrar" do usuário nesta sessão; depois, merge squash com o SHA esperado e liberar o deploy correspondente.
 
 ## Entregue: E2E `fase3` intermitente na dica do cantinho (PR #66, squash `1b288c0`)
 

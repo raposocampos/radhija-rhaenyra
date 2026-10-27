@@ -21,19 +21,62 @@ function plaqueTexture(text) {
   }, { repeat: false });
 }
 
-/** A foto (a imagem limpa em public/img; no Node, sem carregador de imagens, fica a cor de fundo). */
+// A foto (a imagem limpa em public/img). Ela é baixada no load() da fase, junto com o código do cenário: o quadro já
+// nasce com a textura, e o aquecimento da GPU na carga (engine.prepare) compila o material com mapa e envia a textura
+// com o resto. Chegando depois do aquecimento, o programa e a textura só subiam quando a dog entrava no cantinho.
+const PHOTO_URL = 'img/quintal-quadro.jpg';
+/** @type {HTMLImageElement | null} */
+let photoImage = null;
+/** @type {Promise<HTMLImageElement | null> | null} */
+let photoRequest = null;
+/** No Node (testes), sem carregador de imagens: fica a cor de fundo. */
+const canLoadImages = () => typeof document !== 'undefined' && typeof document.createElementNS === 'function';
+
+/** @returns {Promise<HTMLImageElement | null>} a foto, ou null sem ela (nunca rejeita) */
+function requestPhoto() {
+  if (!photoRequest) {
+    photoRequest = new Promise((done) => {
+      try {
+        new THREE.ImageLoader().load(PHOTO_URL, (img) => { photoImage = img; done(img); }, undefined, () => {
+          photoRequest = null; // falhou: a próxima carga da fase tenta de novo
+          done(null);
+        });
+      } catch { done(null); }
+    });
+  }
+  return photoRequest;
+}
+
+/**
+ * Baixa a foto antes de montar o cantinho. Nunca rejeita e não segura a carga mais que `timeoutMs`: se ela demorar,
+ * o quadro entra sem a foto e ela aparece quando chegar.
+ * @param {number} [timeoutMs]
+ * @returns {Promise<void>}
+ */
+export function preloadSecret(timeoutMs = 5000) {
+  if (photoImage || !canLoadImages()) return Promise.resolve();
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
+  return Promise.race([
+    requestPhoto(),
+    new Promise((resolve) => { timer = setTimeout(resolve, timeoutMs); }),
+  ]).then(() => { clearTimeout(timer); });
+}
+
 function photoMaterial() {
   const m = new THREE.MeshBasicMaterial({ color: '#f6e6d6' });
-  try {
-    if (typeof document !== 'undefined' && typeof document.createElementNS === 'function') {
-      new THREE.TextureLoader().load('img/quintal-quadro.jpg', (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        m.map = tex;
-        m.color.set('#ffffff');
-        m.needsUpdate = true;
-      }, undefined, () => {});
-    }
-  } catch { /* sem imagem: fica a moldura com o fundo claro */ }
+  /** @param {HTMLImageElement} img */
+  const show = (img) => {
+    const tex = new THREE.Texture(img);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    m.map = tex;
+    m.color.set('#ffffff');
+    m.needsUpdate = true;
+  };
+  if (photoImage) show(photoImage);
+  // sem o preloadSecret (ou ele desistiu): a foto entra quando chegar; sem imagem, fica a moldura com o fundo claro
+  else if (canLoadImages()) void requestPhoto().then((img) => { if (img) show(img); });
   return m;
 }
 
