@@ -1,5 +1,8 @@
 // Áudio 100% sintetizado em WebAudio (sem arquivos).
 // API: createAudio() → { unlock(), setVolume(v), getVolume(), play(name, opts) }
+// Música (audio/music.js, temas em audio/themes.js), num canal próprio: setMusic(id | null) escolhe o tema (menu, mapa
+// ou o id da fase; pode ser chamado antes do unlock e começa nele), setMusicVolume(v)/musicVolume e setMusicOn(on)/musicOn
+// (salvos no navegador; a música começa ligada).
 // Extras: stop(name), setMuffled(on), setAmbience('day'|'dusk'|'night'|'city'|'rain'), names, analyze(name, opts).
 // Loops por velocidade: play('cartRoll', {speed}) e play('crateDrag', {speed}) — chame a cada quadro; somem sozinhos.
 // As partes moram em ./audio/: graph.js (mixagem), synth.js (primitivas), soundsV1.js/soundsV2.js (sons),
@@ -9,11 +12,14 @@ import { buildGraph } from './audio/graph.js';
 import { SOUNDS, MIN_GAP, PITCH_VAR, VERB, UI_SOUNDS, LOW_PRIORITY, SOUND_NAMES } from './audio/sounds.js';
 import { startAmbient } from './audio/ambience.js';
 import { createRoll } from './audio/loops.js';
+import { createMusic } from './audio/music.js';
+import { themeFor } from './audio/themes.js';
 import { storageKey } from '../game/storageKey.js';
 
 export { SOUND_NAMES };
 
 const VOL_KEY = storageKey('operacao-cenoura:volume');
+const MUSIC_KEY = storageKey('operacao-cenoura:musica');
 
 // ---------------------------------------------------------------------------
 //  API
@@ -24,6 +30,18 @@ export function createAudio() {
     const v = parseFloat(localStorage.getItem(VOL_KEY));
     if (Number.isFinite(v)) volume = clamp(v, 0, 1);
   } catch (_) { /* sem storage */ }
+  // música: ligada por padrão, num volume médio (a jogadora desliga ou muda nas Opções)
+  let musicVol = 0.6;
+  let musicOn = true;
+  try {
+    const m = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null');
+    if (m && Number.isFinite(m.volume)) musicVol = clamp(m.volume, 0, 1);
+    if (m && typeof m.on === 'boolean') musicOn = m.on;
+  } catch (_) { /* sem storage ou JSON estragado: o padrão */ }
+  let musicTheme = null;
+  let music = null;
+  const musicLevel = () => (musicOn ? musicVol : 0);
+  const saveMusic = () => { try { localStorage.setItem(MUSIC_KEY, JSON.stringify({ volume: musicVol, on: musicOn })); } catch (_) {} };
 
   let ctx = null;
   let G = null;
@@ -43,6 +61,9 @@ export function createAudio() {
         G = buildGraph(ctx, volume);
         G.ambience = ambience;
         startAmbient(G, () => !!ctx);
+        music = createMusic(ctx, { noise: G.noise, volume: musicLevel() });
+        if (muffled) music.setMuffled(true);
+        if (musicTheme) music.play(musicTheme);
       }
       if (ctx.state !== 'running') ctx.resume().catch(() => {});
     } catch (_) { /* áudio indisponível: jogo segue mudo */ }
@@ -63,6 +84,23 @@ export function createAudio() {
     G.amb.gain.cancelScheduledValues(t);
     G.amb.gain.setTargetAtTime(muffled ? 0.3 : 0.55, t, 0.2);
     if (muffled) { roll?.stop(); drag?.stop(); }
+    music?.setMuffled(muffled);
+  }
+
+  /** Tema da música: 'menu', 'mapa' ou o id da fase (sem tema próprio: silêncio). Antes do unlock, fica guardado. */
+  function setMusic(id) {
+    musicTheme = themeFor(id);
+    music?.play(musicTheme);
+  }
+  function setMusicVolume(v) {
+    musicVol = clamp(Number(v) || 0, 0, 1);
+    music?.setVolume(musicLevel());
+    saveMusic();
+  }
+  function setMusicOn(on) {
+    musicOn = !!on;
+    music?.setVolume(musicLevel());
+    saveMusic();
   }
 
   /** Ambiente sonoro da fase: 'day' | 'dusk' | 'night' | 'city' | 'rain'. Pode ser chamado antes do unlock. */
@@ -169,6 +207,14 @@ export function createAudio() {
     setMuffled,
     setAmbience,
     get ambience() { return ambience; },
+    setMusic,
+    setMusicVolume,
+    setMusicOn,
+    get musicVolume() { return musicVol; },
+    get musicOn() { return musicOn; },
+    /** O tema pedido (toca depois do unlock) e o que está tocando agora. */
+    get musicTheme() { return musicTheme; },
+    get musicPlaying() { return music?.theme ?? null; },
     get unlocked() { return !!ctx && ctx.state === 'running'; },
     get context() { return ctx; },
     names: SOUND_NAMES,

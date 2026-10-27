@@ -850,11 +850,14 @@ o progresso salvo (`localStorage` `rr-progress-v1`: melhor tempo, petiscos e con
 máximo cinco por linha; com mais fases, `renderCards` reparte em linhas equilibradas (`--per-row`; sete fases =
 4 + 3). Estilos em `ui.css`, ícones SVG em `icons.js`.
 
-**Menu inicial** (`data-screen` da camada `.rr-title`): `main` (Jogar e Opções) → `modes` (Modo História, que só
-mostra "Em breve" e tem a visão registrada em [MODO-HISTORIA.md](MODO-HISTORIA.md), e Fases; nomes e textos em
-`MODES`) → `levels` (Continuar e os cartões) e `options` (o mesmo `settingsBlock()` da pausa: volume, qualidade,
-dicas e tela cheia). Voltar sobe uma tela (Esc, ○ · B ou o botão do canto) e devolve o foco ao botão que a abriu; no
-cartão de abertura, volta à tela das fases. Continuar usa `continueTarget` (`progress.js`): a última fase escolhida
+**Menu inicial** (camada `.rr-title`, em duas colunas: o logotipo e o progresso — biscoitos e fases — à esquerda, o
+menu à direita; uma coluna só em tela de pé). `data-screen`: `main` (Jogar, que abre o mapa das fases na bandeirinha
+da próxima fase; Modo História, que só mostra "Em breve" e tem a visão registrada em [MODO-HISTORIA.md](MODO-HISTORIA.md);
+Opções) → `options` (o mesmo `settingsBlock()` da pausa: efeitos, música, qualidade, dicas e tela cheia). Sem o mapa
+(catálogo de desenvolvimento), o Jogar abre `levels` (Continuar e os cartões). A nota no canto (`.rr-music-toggle`)
+liga e desliga a música. Voltar sobe uma tela (Esc, ○ · B ou o botão do canto) e devolve o foco ao botão que a abriu;
+no cartão de abertura, volta ao mapa (ou à tela das fases). Visual: contorno de chocolate e sombra dura nos botões e
+cartões, a mesma cara do mapa. Continuar usa `continueTarget` (`progress.js`): a última fase escolhida
 se ainda não foi concluída e está liberada, senão a primeira liberada pendente (com tudo concluído, a última
 escolhida); escolher uma fase (Continuar, cartão ou Próxima fase) grava `last`. Escolher na tela inicial a fase que já
 está montada abre o cartão dela sem recarregar (`ui:selectLevel` no núcleo).
@@ -925,6 +928,14 @@ sons novos entram em `soundsV1.js`, `soundsV2.js`, `soundsBafo.js` ou `soundsV3.
 biblioteca `sounds.js`. O ambiente por fase vem de `def.ambience` (`src/fx/audio/ambience.js`): `day` (passarinhos),
 `dusk` (grilos começando e vento), `night` (grilos, sapinhos e sino de vento), `city` (passarinhos e o trânsito lá
 embaixo) e `rain` (chuva, gotas no vidro, relógio da sala e trovão longe). Vagalumes automáticos só em `dusk` e `night`.
+
+**Música** (`src/fx/audio/music.js` + `themes.js`): também sintetizada, num canal próprio (volume e liga/desliga
+separados dos efeitos, salvos no navegador; começa ligada). Um tema para o menu, um para o mapa e um para cada fase,
+combinando com o lugar e a hora dela: 8 compassos escritos nota a nota, acordes e estilos de baixo, acompanhamento e
+percussão (`themes.js`); `stepEvents()` diz o que toca em cada semicolcheia (puro, testado em `test/musica.test.mjs`)
+e o tocador agenda 150 ms à frente no relógio do áudio. `audio.setMusic(id)` troca com um cruzamento suave; `main.js`
+escolhe o tema pela tela (`game:state`, `level:loaded`: título → menu, mapa → mapa, fase → o id dela). Na pausa, a
+música fica abafada como os outros sons. Tema novo: uma entrada em `THEMES` com o id da fase.
 
 **Partículas** (`src/fx/particles.js`) e **feedback** (`src/fx/feedback.js`): poeira, gotas, estrelas, confete,
 ícones sobre as cabeças, marcador do objetivo, vibração.

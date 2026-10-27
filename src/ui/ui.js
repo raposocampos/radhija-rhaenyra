@@ -1,8 +1,10 @@
 // Interface (DOM em #ui): tela inicial com o menu, transição entre fases, cartão de abertura,
 // HUD, pausa, comemoração e vitória. Navegação por teclado e controle (gamepad); menus também por ponteiro/toque.
-// Telas do menu inicial (data-screen da camada .rr-title): main (Jogar, Opções) → modes (Modo História "em breve",
-// Fases) → levels (Continuar e os cartões das fases); options (volume, qualidade, dicas, tela cheia). Voltar com
-// Esc, ○ · B ou o botão do canto; do cartão de abertura, Voltar leva de novo à tela das fases.
+// Tela inicial (.rr-title): o logotipo e o progresso (biscoitos e fases) à esquerda, o menu à direita. Telas do menu
+// (data-screen): main (Jogar, que abre o mapa das fases na bandeirinha da próxima fase; Modo História "em breve";
+// Opções) → options (música, efeitos, qualidade, dicas, tela cheia); sem o mapa (catálogo de desenvolvimento), o Jogar
+// abre levels (Continuar e os cartões das fases). A nota no canto liga e desliga a música. Voltar com Esc, ○ · B ou o
+// botão do canto; do cartão de abertura, Voltar leva de novo ao mapa (ou à tela das fases).
 // API: createUI({ audio, layout, levels, params, unlockAll, input, quality, settings, map }) → { update(dt), state, screen, ... }
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
 // map: há o mapa das fases (Pandorópolis): Fases abre o mapa (ui:openMap) em vez dos cartões; a pausa e a vitória
@@ -37,9 +39,9 @@ import { watchCompact } from './screenFit.js';
 import { createMapHud } from './mapHud.js';
 
 /** Telas do menu inicial e a tela de onde cada uma é aberta (Voltar). */
-const SCREEN_PARENT = { main: null, modes: 'main', levels: 'modes', options: 'main' };
+const SCREEN_PARENT = { main: null, levels: 'main', options: 'main' };
 /** Botão que abre cada tela: ganha o foco ao voltar dela. */
-const SCREEN_OPENER = { modes: 'play', levels: 'levels', options: 'options' };
+const SCREEN_OPENER = { levels: 'play', options: 'options' };
 
 /**
  * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams,
@@ -76,8 +78,9 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   };
   /** @param {string} s */
   const $$ = (s) => /** @type {HTMLElement[]} */ ([...root.querySelectorAll(s)]);
-  // volume, qualidade, dicas e tela cheia existem na tela Opções e na pausa (settingsBlock): todas as cópias juntas
-  const ranges = /** @type {HTMLInputElement[]} */ ($$('.rr-range'));
+  // música, efeitos, qualidade, dicas e tela cheia existem na tela Opções e na pausa (settingsBlock): todas as cópias juntas
+  const ranges = /** @type {HTMLInputElement[]} */ ($$('.rr-range--sfx'));
+  const musicRanges = /** @type {HTMLInputElement[]} */ ($$('.rr-range--music'));
   $('.rr-curtain__pattern').style.backgroundImage = pawPattern('rgba(196, 132, 74, 0.13)');
 
   // Ajusta o viewBox do logotipo ao texto real (depois que a fonte carregar).
@@ -137,7 +140,13 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   }
   const focus = createMenuFocus({
     root, audio, getLayer: menuLayer,
-    slider: { step: (dx, el) => setVolumePct(Number(el.querySelector('input')?.value ?? 70) + dx * 5) },
+    slider: {
+      step: (dx, el) => {
+        const v = Number(el.querySelector('input')?.value ?? 70) + dx * 5;
+        if (el.classList.contains('rr-volume--music')) setMusicPct(v);
+        else setVolumePct(v);
+      },
+    },
   });
   const { setFocus, defaultFocus } = focus;
 
@@ -241,7 +250,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   const levelIds = () => LV.map((d) => d.id);
   const continueInfo = () => continueTarget(levelIds(), prog, { unlockAll });
 
-  /** Mostra uma tela do menu inicial (main, modes, levels, options) e põe o foco no padrão dela. */
+  /** Mostra uma tela do menu inicial (main, levels, options) e põe o foco no padrão dela. */
   function showScreen(name) {
     const next = Object.hasOwn(SCREEN_PARENT, name) ? name : 'main';
     // depois da primeira troca de tela, as entradas do Jogar e do Opções ficam rápidas (ui.css, .is-moved)
@@ -249,7 +258,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     menuScreen = next;
     L.title.dataset.screen = menuScreen;
     hideTitleNote();
-    if (menuScreen === 'modes') renderModes();
+    if (menuScreen === 'main') renderHome();
     if (menuScreen === 'levels') { renderContinue(); renderCards(); }
     if (menuScreen === 'options') renderSettings();
     if (uiState === 'title') setFocus(defaultFocus(), { silent: true });
@@ -278,13 +287,19 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     }
   }
 
-  function renderModes() {
+  /** Tela principal: o progresso ao lado do logotipo e, no Jogar, a fase em que ele continua. */
+  function renderHome() {
     const done = LV.filter((d) => prog.levels[d.id]?.done).length;
     const treats = LV.reduce((n, d) => n + (prog.levels[d.id]?.treats ?? 0), 0);
-    $('.rr-mode__count').textContent = `${LV.length} fases`;
-    const bits = [`<span>${checkIcon()}${done} de ${LV.length} concluídas</span>`];
-    if (treats > 0) bits.push(`<span>${boneIcon()}${treats}</span>`);
-    $('.rr-mode__progress').innerHTML = bits.join('');
+    const total = LV.reduce((n, d, i) => n + (prog.levels[d.id]?.total ?? meta(i).total), 0);
+    $('.rr-home__stats').innerHTML = `<span class="rr-stat-chip" aria-label="${treats} de ${total} biscoitos">${boneIcon()}<b>${treats}</b><small>/${total}</small></span>`
+      + `<span class="rr-stat-chip" aria-label="${done} de ${LV.length} fases concluídas">${checkIcon()}<b>${done}</b><small>/${LV.length} fases</small></span>`;
+    const { index, fresh } = continueInfo();
+    const m = meta(index);
+    const all = done >= LV.length;
+    const sub = all && map ? 'Pandorópolis · escolha uma fase' : `${fresh ? 'Começar' : 'Continuar'} · Fase ${m.number} · ${m.name}`;
+    $('.rr-play__sub').textContent = sub;
+    $('.rr-btn--play').setAttribute('aria-label', `Jogar: ${sub}`);
   }
 
   function renderContinue() {
@@ -376,7 +391,36 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     if (uiState === 'victory') setFocus(defaultFocus(), { silent: true });
   }
 
-  // ---------- volume ----------
+  // ---------- volume (efeitos) e música ----------
+  function paintRanges(list, v) {
+    for (const range of list) {
+      range.value = String(v);
+      range.style.setProperty('--pct', `${v}%`);
+      const out = range.parentElement?.querySelector('output');
+      if (out) out.textContent = `${v}%`;
+    }
+  }
+  function syncMusic() {
+    paintRanges(musicRanges, Math.round((audio?.musicVolume ?? 0.6) * 100));
+    const on = audio?.musicOn ?? true;
+    const t = $('.rr-music-toggle');
+    t.setAttribute('aria-pressed', String(on));
+    t.setAttribute('aria-label', on ? 'Música ligada' : 'Música desligada');
+  }
+  function setMusicPct(v) {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    audio?.setMusicVolume?.(v / 100);
+    // mexer no volume religa a música desligada pela nota
+    if (v > 0 && audio && !audio.musicOn) audio.setMusicOn?.(true);
+    syncMusic();
+  }
+  syncMusic();
+  for (const range of musicRanges) {
+    range.addEventListener('input', () => setMusicPct(Number(range.value)));
+    range.addEventListener('change', () => range.blur());
+    range.addEventListener('pointerup', () => setTimeout(() => range.blur(), 0));
+    range.addEventListener('keydown', (e) => { if (!['ArrowLeft', 'ArrowRight'].includes(e.code)) range.blur(); });
+  }
   function paintVolume(v) {
     for (const range of ranges) {
       range.value = String(v);
@@ -436,9 +480,10 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   events.on('settings:change', () => renderHints());
   renderHints();
 
-  /** Volume, qualidade, dicas e tela cheia em dia (ao abrir Opções ou a pausa). */
+  /** Música, efeitos, qualidade, dicas e tela cheia em dia (ao abrir Opções ou a pausa). */
   function renderSettings() {
     syncVolume();
+    syncMusic();
     renderQuality();
     renderHints();
     renderFullscreen();
@@ -541,6 +586,14 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       return;
     }
     if (a === 'back') { goBack(); return; }
+    if (a === 'music') {
+      // a nota do canto: liga e desliga a música (o volume fica nas Opções)
+      audio?.unlock?.();
+      audio?.setMusicOn?.(!(audio?.musicOn ?? true));
+      audio?.play?.('uiClick');
+      syncMusic();
+      return;
+    }
     maybeAutoFullscreen();
     audio?.unlock?.();
     if (uiState === 'title') {
@@ -550,15 +603,16 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
         showTitleNote(`${MODES.story.name}: em breve! Ainda está em desenvolvimento.`, { below: b, icon: sparkIcon() });
         return;
       }
-      if (a === 'levels' && map) {
-        // Fases: o mapa da cidade (as dogs aparecem na frente da próxima fase)
+      if (a === 'play' && map) {
+        // Jogar: o mapa da cidade, com as dogs na frente da bandeirinha da próxima fase
         audio?.play?.('uiClick');
         events.emit('ui:openMap', {});
         return;
       }
-      if (a === 'play' || a === 'options' || a === 'levels') {
+      if (a === 'play' || a === 'options') {
+        // sem o mapa (catálogo de desenvolvimento), o Jogar abre os cartões das fases
         audio?.play?.('uiClick');
-        showScreen(a === 'play' ? 'modes' : a);
+        showScreen(a === 'play' ? 'levels' : a);
         return;
       }
       if (a === 'continue') {
@@ -648,10 +702,11 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     syncTouch();
   }
 
-  // Teclado: setas/Tab navegam, Enter confirma. Qualquer gesto destrava o áudio.
+  // Teclado: setas/Tab navegam, Enter confirma. Qualquer gesto destrava o áudio (na tela inicial também: a música
+  // do menu começa no primeiro toque, clique ou tecla).
   const gestureUnlock = (e) => {
     if (e.type === 'keydown' && (e.code === 'Escape' || e.repeat)) return;
-    if (audio && !audio.unlocked && uiState && uiState !== 'title') audio.unlock();
+    if (audio && !audio.unlocked && uiState) audio.unlock();
   };
   addEventListener('pointerdown', (e) => {
     gestureUnlock(e);
@@ -761,7 +816,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       menuPad.frameState = gm?.state ?? uiState;
     },
     get state() { return uiState; },
-    /** Tela do menu inicial: 'main', 'modes', 'levels' ou 'options'. */
+    /** Tela do menu inicial: 'main', 'levels' ou 'options'. */
     get screen() { return menuScreen; },
     get device() { return device; },
     setDevice,
@@ -771,7 +826,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     /** Layout compacto ligado (janela pequena ou celular; screenFit.js). */
     get compact() { return root.hasAttribute('data-compact'); },
     get progress() { return prog; },
-    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderModes(); mapHud.refresh(); },
+    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderHome(); mapHud.refresh(); },
     /** Há o mapa das fases (Fases abre o mapa). */
     get map() { return map; },
     get curtain() { return curtain.phase; },

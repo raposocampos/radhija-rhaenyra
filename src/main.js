@@ -74,6 +74,18 @@ async function boot() {
   // o mapa lê o progresso salvo pela UI (e, no catálogo de desenvolvimento, libera todas as bandeirinhas)
   game.setProgressSource(() => ui.progress);
   game.setUnlockAll(!!dev);
+  // trilha: o tema da tela inicial, o do mapa das fases e o de cada fase (src/fx/audio/themes.js). Na troca de fase,
+  // o tema anterior segue tocando sob a cortina até a nova fase carregar.
+  const musicFor = () => {
+    if (game.state === 'title') return 'menu';
+    if (game.state === 'load-error') return null;
+    if (game.isHub) return 'mapa';
+    return game.levelDef?.id ?? null;
+  };
+  const syncMusic = () => { if (game.state !== 'loading') audio.setMusic(musicFor()); };
+  events.on('game:state', syncMusic);
+  events.on('level:loaded', syncMusic);
+
   // iPhone no Safari: como jogar em tela cheia (pelo app da tela inicial); nada no PC nem no Android
   const installHint = createInstallHint({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), device: engine.quality.device, audio });
 
@@ -82,6 +94,7 @@ async function boot() {
   mark('ui');
   if (params.has('mapa') && !dev) await game.loadLevel(HUB, { mode: 'play', initial: true });
   else await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
+  syncMusic();
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.
   const camFix = params.get('cam')?.split(',').map(Number);

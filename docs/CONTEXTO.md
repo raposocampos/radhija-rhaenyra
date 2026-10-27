@@ -99,7 +99,7 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 entregue no PR #64, etapa 3 no PR #67)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapas 1 e 3 entregues nos PRs #64 e #67; etapa 4 em andamento)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -181,8 +181,23 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   na frente do poste, poças acima do piso emborrachado; o selo dos biscoitos (sprite com um ossinho por biscoito da
   fase, os ganhos dourados) no lugar dos ossinhos 3D, com o total de cada fase (a 10 tem 5); bandeira, selo e
   cadeado fora do "ver através".
-- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `todas` no head novo, revisar as capturas,
-  prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
+- Etapa 3 entregue: PR #67, head `9f99182` aprovado pelo usuário ("pode integrar"), squash `0b80ae4`, CI do main
+  `40426101632`, deploy `40426317565`, v0.10.17 · build 109 (version.json conferido). Rodadas depois da segunda
+  prévia: hastes centradas (`kit.rod`: trave do balanço, varais, bandeirolas), poças com contorno irregular
+  (`pecas.puddle`, a do oeste fora da calçada). A primeira passagem da fase 10 nos celulares falhava também no `main`
+  (E2E `40401427308`); a correção ficou no PR #68 (sessão própria).
+- Etapa 4 (branch `claude/menu-musica`, a partir do `main` `0b80ae4`): decisões do usuário (2026-10-26) sobre o
+  conceito https://claude.ai/artifact/967r1tPorcV75SXUUFcuv3 — "Jogar" abre o mapa na bandeirinha da próxima fase
+  (sai a tela de modos); música sintetizada com um tema para o menu, um para o mapa e "cada fase tem um tema de música",
+  combinando com a fase; "a música pode começar ligada, tendo a opção de... desligar a música nas opções". Feito: tela
+  inicial em duas colunas (logotipo e progresso | Jogar com a fase em que continua, Modo História "em breve" e Opções),
+  nota de música no canto, sliders de Efeitos e Música lado a lado (Opções e pausa), contorno de chocolate e sombra
+  dura nos botões e cartões; `src/fx/audio/music.js` e `themes.js` (12 temas), `audio.setMusic` com cruzamento,
+  `main.js` escolhendo o tema pela tela, o áudio destravando no primeiro gesto também na tela inicial;
+  `test/musica.test.mjs`. Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
+- Próximo passo: atualizar os E2E que passavam pela tela de modos (menu, toque, mapa, expresso, capture-celular,
+  fx-v2-flow; aguardando o orquestrador por causa da sessão "E2E: tirar o JIT por ordem de desenho"), CI e E2E,
+  prévia e aprovação do usuário nesta sessão.
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 
