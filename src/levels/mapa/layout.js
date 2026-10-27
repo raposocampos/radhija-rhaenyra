@@ -261,11 +261,11 @@ export const ZONES = {
 };
 /**
  * Ponte levadiça do rio (desce na vez da chácara): as folhas vão de x0 e x1 (as dobradiças, em terra) ao meio do rio.
- * deck: o alto das tábuas com a ponte deitada (as patas pisam nele: um pouco acima da calçada, 0,03); lowerSec: quanto
- * ela leva para descer (clouds.js), enquanto o rio segue fechado (puzzle.js); rail: onde fica o guarda-corpo (meia
- * largura, do meio da ponte).
+ * deck: o alto das tábuas com a ponte deitada (as patas pisam nele: um pouco acima da calçada, 0,03); ramp: o
+ * comprimento das rampinhas fixas nas margens, da rua até as tábuas; lowerSec: quanto ela leva para descer (clouds.js),
+ * enquanto o rio segue fechado (puzzle.js); rail: onde fica o guarda-corpo (meia largura, do meio da ponte).
  */
-export const BRIDGE = { x0: RIVER.minX - 0.3, x1: RIVER.maxX + 0.3, z: 0, w: 2.8, deck: 0.05, lowerSec: 1.8, rail: 1.35 };
+export const BRIDGE = { x0: RIVER.minX - 0.3, x1: RIVER.maxX + 0.3, z: 0, w: 2.8, deck: 0.05, ramp: 0.35, lowerSec: 1.8, rail: 1.35 };
 /** As quatro torres das correntes, nas margens (centro; 0,4 m de lado). */
 export const BRIDGE_TOWERS = [BRIDGE.x0 - 0.25, BRIDGE.x1 + 0.25].flatMap((x) => [-1, 1].map((s) => ({ x, z: BRIDGE.z + s * (BRIDGE.w / 2 + 0.3) })));
 

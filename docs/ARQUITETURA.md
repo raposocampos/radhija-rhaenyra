@@ -334,6 +334,7 @@ vitória (`ui:openMap`) voltam na frente da bandeirinha; do menu, na da próxima
 
 **Ponte levadiça** (`layout.js` `BRIDGE`, `world/clouds.js`, `puzzle.js`): deitada, as tábuas ficam em `BRIDGE.deck` e um piso
 sem desenho (`userData.walkable`, `src/game/ground.js`) põe as patas em cima delas; ele só conta com a ponte deitada de vez.
+Rampinhas fixas nas margens (`BRIDGE.ramp`, também de pisar) levam da rua até as tábuas, sem degrau na ponta.
 Na descida animada (a chácara acabou de abrir), o bloqueio `ponte-levantada` segue ligado até ela deitar
 (`BRIDGE.lowerSec`) e cobre também o pé das folhas, nas margens. Torres e guarda-corpo colidem (`BRIDGE_TOWERS`,
 `ponte-guarda-*`). `test/mapa-ponte.test.mjs` atravessa com os modelos de verdade espelhando o jogo headless.

@@ -16,7 +16,8 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
   na madeira. Também: o rio abria no instante em que a chácara abria, com a ponte ainda levantada (descida de 3 s), e
   as quatro torres e o começo do guarda-corpo, na beira da rua, não colidiam.
 - Feito: `BRIDGE.deck` (0,05, logo acima da calçada) com as folhas deitadas nesse alto e um piso de pisar sem desenho
-  (`mapa:ponte-piso`, `userData.walkable`, só com a ponte deitada de vez); `bridgeHold` em `puzzle.js` mantém o
+  (`mapa:ponte-piso`, `userData.walkable`, só com a ponte deitada de vez) e rampinhas fixas nas margens
+  (`BRIDGE.ramp`; sem elas, no 1º CI a pata da Rhaenyra raspava 2,4 cm na quina das tábuas); `bridgeHold` em `puzzle.js` mantém o
   bloqueio `ponte-levantada` até a ponte deitar (`BRIDGE.lowerSec`), e o bloqueio cobre de dobradiça a dobradiça;
   colisões `ponte-torre-1..4` e `ponte-guarda-norte/sul`. `test/mapa-ponte.test.mjs`: colisões, a descida com o rio
   fechado e a travessia com os modelos de verdade (o novo das duas e o atual da Radhija) espelhando o jogo headless,

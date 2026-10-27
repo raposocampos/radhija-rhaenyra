@@ -158,6 +158,24 @@ export function buildClouds(root, L) {
   deckFloor.userData.walkable = B.deck + 0.05;
   deckFloor.visible = false;
   root.add(deckFloor);
+  // Rampinhas de madeira nas margens, da rua até o alto das tábuas (fixas, em terra, antes das dobradiças): sem o
+  // degrau de 5 cm na ponta da ponte, a pata que vem da rua sobe por elas em vez de raspar na quina das tábuas.
+  // Também são chão de pisar (o alto delas sobe junto com a pata).
+  const rampW = 2 * B.rail - 0.1;
+  /** Cunha na largura da ponte: base no chão, de `outer` (alto ~0) a `inner` (alto B.deck). */
+  const rampGeo = (outer, inner) => {
+    const g = new THREE.BoxGeometry(Math.abs(inner - outer), B.deck, rampW).translate((outer + inner) / 2, B.deck / 2, B.z);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) > B.deck / 2 && Math.abs(p.getX(i) - outer) < 1e-6) p.setY(i, 0.001);
+    g.computeVertexNormals();
+    g.deleteAttribute('uv');
+    return paint(g, '#a86f40');
+  };
+  const ramps = new THREE.Mesh(mergeGeometries([rampGeo(B.x0 - B.ramp, B.x0), rampGeo(B.x1 + B.ramp, B.x1)]), woodMat);
+  ramps.name = 'mapa:ponte-rampa';
+  ramps.receiveShadow = true;
+  ramps.userData.walkable = B.deck + 0.05;
+  bridge.add(ramps);
   const bState = { k: 0, target: 0, delay: 0 }; // k: 0 = levantada, 1 = abaixada
   const tipLocal = new THREE.Vector3(half - 0.05, 0.0, 0);
   const tipW = new THREE.Vector3();

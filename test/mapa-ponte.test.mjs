@@ -22,8 +22,14 @@ const done = (...ids) => Object.fromEntries(ids.map((id) => [id, { done: true, b
 const ids = (n) => LEVELS.slice(0, n).map((d) => d.id);
 const MID = (BRIDGE.x0 + BRIDGE.x1) / 2;
 const HALF = (BRIDGE.x1 - BRIDGE.x0) / 2;
-/** Dentro do vão da ponte (de dobradiça a dobradiça, entre os guarda-corpos). */
-const onBridge = (x, z) => Math.abs(x - MID) < HALF && Math.abs(z - BRIDGE.z) < BRIDGE.w / 2;
+/** O alto da ponte deitada em x (as tábuas e as rampinhas das margens); null fora dela. */
+const surface = (x) => {
+  const R = BRIDGE.ramp;
+  if (x >= BRIDGE.x0 && x <= BRIDGE.x1) return BRIDGE.deck;
+  if (x > BRIDGE.x0 - R && x < BRIDGE.x0) return (BRIDGE.deck * (x - (BRIDGE.x0 - R))) / R;
+  if (x > BRIDGE.x1 && x < BRIDGE.x1 + R) return (BRIDGE.deck * (BRIDGE.x1 + R - x)) / R;
+  return null;
+};
 async function untilLoaded(h, timeout = 5000) {
   const t0 = Date.now();
   while (h.game.state === 'loading' && Date.now() - t0 < timeout) await new Promise((r) => setTimeout(r, 10));
@@ -48,11 +54,12 @@ test('ponte: abrindo a chácara, o rio segue fechado enquanto ela desce; deitada
   forgetLastVisit();
   const h = await createHeadlessGame({ level: 0, progress: { levels: done(...ids(7)) } });
   assert.equal(h.info().zones.chacara, false);
-  // concluiu a 8 (a UI grava): ao voltar ao mapa, a chácara abre e a ponte desce animada
-  Object.assign(h.save.levels, done('fase8'));
+  // entra na 8 e conclui lá (a UI grava): ao voltar ao mapa, a chácara abre e a ponte desce animada
   h.events.emit('ui:menu', {});
   h.events.emit('ui:selectLevel', { index: 7 });
   await untilLoaded(h);
+  Object.assign(h.save.levels, done('fase8'));
+  h.clearLog();
   h.events.emit('ui:openMap', {});
   await untilLoaded(h);
   assert.equal(h.log('map:unlock').at(-1)?.zone, 'chacara');
@@ -105,6 +112,12 @@ test('ponte: deitada, as patas da Radhija e da Rhaenyra (modelos de verdade) pis
         }
       }
 
+      // as rampinhas das margens: o chão sobe da rua até as tábuas
+      for (const x of [BRIDGE.x0 - BRIDGE.ramp / 2, BRIDGE.x1 + BRIDGE.ramp / 2]) {
+        const g = ground.heightAt(x, BRIDGE.z);
+        assert.ok(Math.abs(g - BRIDGE.deck / 2) < 0.003, `rampinha em x ${x.toFixed(2)}: ${g.toFixed(3)}`);
+      }
+
       // os modelos de verdade, espelhando o jogo headless (com tudo concluído, a ponte já deitada)
       const { createDog } = await import('../src/dogs/dog.js');
       const { createDogV2 } = await import('../src/dogs/v2/dog.js');
@@ -136,8 +149,8 @@ test('ponte: deitada, as patas da Radhija e da Rhaenyra (modelos de verdade) pis
         }
       };
       /**
-       * A pele de cada modelo (de 3 em 3 vértices): o quanto afunda no chão da rua ('flat') ou nas tábuas: em cima do rio,
-       * com o corpo inteiro na ponte ('core'), e na ponte toda, com a subida de 5 cm nas pontas ('span').
+       * A pele de cada modelo (de 3 em 3 vértices): o quanto afunda no chão da rua ('flat') ou na ponte: em cima do rio,
+       * com o corpo inteiro nas tábuas ('core'), e na ponte toda, com as rampinhas das margens ('span').
        */
       const measure = (where) => {
         for (const m of models) {
@@ -148,8 +161,8 @@ test('ponte: deitada, as patas da Radhija e da Rhaenyra (modelos de verdade) pis
             mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld);
             const dz = Math.abs(v.z - BRIDGE.z);
             if (where === 'flat') m.flat = Math.max(m.flat, -v.y);
-            else if (Math.abs(v.x - MID) < HALF - 0.02 && dz < BRIDGE.rail - 0.06) {
-              m.span = Math.max(m.span, BRIDGE.deck - v.y);
+            else if (dz < BRIDGE.rail - 0.06 && surface(v.x) != null) {
+              m.span = Math.max(m.span, /** @type {number} */ (surface(v.x)) - v.y);
               if (v.x > RIVER.minX + 0.5 && v.x < RIVER.maxX - 0.5) {
                 m.core = Math.max(m.core, BRIDGE.deck - v.y);
                 m.coreN++;
@@ -180,7 +193,7 @@ test('ponte: deitada, as patas da Radhija e da Rhaenyra (modelos de verdade) pis
         assert.ok(m.coreN > 100, `${m.kind}/${m.name} passou pela ponte (${report})`);
         // sobre o rio, as patas ficam como na rua (no máximo 1 cm a mais do que a pele encosta no chão)
         assert.ok(m.core <= m.flat + 0.01, `${m.kind}/${m.name}: as patas afundam nas tábuas (${report})`);
-        // o modelo novo (o do jogo) pisa pata por pata: nem na subida das pontas elas entram na madeira
+        // o modelo novo (o do jogo) pisa pata por pata: nem nas rampinhas das pontas elas entram na madeira
         if (m.kind === 'novo') assert.ok(m.span <= m.flat + 0.02, `${m.kind}/${m.name}: na subida da ponte as patas entram nas tábuas (${report})`);
         assert.equal(m.rail, 0, `${m.kind}/${m.name}: a pele atravessa o guarda-corpo (${report})`);
       }
