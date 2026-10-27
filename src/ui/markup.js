@@ -5,7 +5,7 @@ import {
   boneIcon, dogIcon, pawIcon, clockIcon, speakerIcon, sparkIcon, playIcon, restartIcon,
   heartIcon, homeIcon, followIcon, stayIcon, keyboardIcon, gamepadIcon,
   jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, pauseIcon, stickIcon, fullscreenIcon, qualityIcon,
-  rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, mapArt, itemIcon, mapIcon,
+  rotatePhoneIcon, gearIcon, backIcon, bulbIcon, noBulbIcon, itemIcon, mapIcon, bookIcon, noteIcon,
 } from './icons.js';
 import { VERSION_LABEL } from '../core/version.js';
 
@@ -160,11 +160,13 @@ export const MODES = {
   story: { name: 'Modo História', badge: 'Em breve', eyebrow: 'Mapa aberto', text: 'Mapas abertos para explorar, a começar pelo Condomínio.' },
   levels: { name: 'Fases', text: 'Passeie por Pandorópolis e entre numa fase pela bandeirinha dela.' },
 };
+/** Volume da música e dos efeitos (Opções e pausa): a mesma marcação de slider. */
+const slider = (kind, icon, label, value, def = false) => `<label class="rr-volume rr-volume--${kind}" data-nav data-slider${def ? ' data-default' : ''}>${icon}<span>${label}</span><input class="rr-range rr-range--${kind}" type="range" min="0" max="100" step="1" value="${value}" tabindex="-1" aria-label="Volume ${kind === 'music' ? 'da música' : 'dos efeitos'}"><output>${value}%</output></label>`;
 /** Voltar nos menus: Esc no teclado, ○ · B no controle (no toque, o próprio botão). */
 export const backGlyph = () => glyph('Esc', { pad: ['B'], touch: [] });
 
 /**
- * Volume, qualidade gráfica, dicas (modo desafio) e tela cheia: a mesma marcação na tela Opções e na pausa.
+ * Música, efeitos, qualidade gráfica, dicas (modo desafio) e tela cheia: a mesma marcação na tela Opções e na pausa.
  * A UI atualiza todas as cópias juntas (ui.js).
  */
 export function settingsBlock() {
@@ -172,7 +174,7 @@ export function settingsBlock() {
   const hintOpts = [['on', 'Ligadas'], ['off', 'Desligadas']]
     .map(([v, label]) => `<button class="rr-qopt rr-hopt" data-action="hints" data-hints="${v}" data-nav aria-pressed="${v === 'on'}">${label}</button>`).join('');
   // data-default: foco inicial da tela Opções (na pausa, o Continuar vem antes e continua sendo o padrão)
-  return `<label class="rr-volume" data-nav data-slider data-default>${speakerIcon()}<span>Volume</span><input class="rr-range" type="range" min="0" max="100" step="1" value="70" tabindex="-1" aria-label="Volume"><output>70%</output></label>
+  return `<div class="rr-volumes">${slider('sfx', speakerIcon(), 'Efeitos', 70, true)}${slider('music', noteIcon(), 'Música', 60)}</div>
         <div class="rr-quality" role="group" aria-label="Qualidade gráfica">
           <span class="rr-quality__label">${qualityIcon()}<span>Qualidade</span></span>
           <span class="rr-quality__opts">${qualityOpts}</span>
@@ -201,16 +203,18 @@ export function template() {
     return `<span class="rr-ctl-table__label">${esc(label)}</span><span class="rr-ctl-table__kb">${kb}</span><span class="rr-ctl-table__pad">${pads.map((p) => PAD_BTN[p]).join('')}</span><span class="rr-ctl-table__touch">${tc}</span>`;
   }).join('');
   const back = `<button class="rr-back rr-glass" data-action="back" data-nav aria-label="Voltar">${backIcon()}<span>Voltar</span>${backGlyph()}</button>`;
-  const fanItems = ['carrot', 'ball', 'duck'].map((item) => `<i>${itemIcon(item)}</i>`).join('');
 
-  // Tela inicial: data-screen na seção escolhe a tela visível (ui.css): main (Jogar e Opções), modes (Modo
-  // História e Fases), levels (Continuar e os cartões das fases) e options. Voltar (canto) fora da principal;
-  // a versão do jogo (src/core/version.js), discreta no canto, só na principal.
+  // Tela inicial (ui.css): o logotipo e o progresso à esquerda, o menu à direita. data-screen na seção escolhe o que a
+  // coluna do menu mostra: main (Jogar, que continua pelo mapa das fases; Modo História "em breve"; Opções), levels
+  // (só sem o mapa, no catálogo de desenvolvimento: Continuar e os cartões das fases) e options. A nota no canto liga
+  // e desliga a música; Voltar (canto) fora da principal; a versão do jogo (src/core/version.js) só na principal.
   return `
   <section class="rr-layer rr-title" data-screen="main" aria-label="Tela inicial">
     <div class="rr-title__shade"></div>
     ${back}
-    <div class="rr-title__center">
+    <button class="rr-music-toggle" data-action="music" data-nav aria-pressed="true" aria-label="Música ligada">${noteIcon()}</button>
+    <div class="rr-home">
+      <div class="rr-home__brand">
       <div class="rr-logo">
         <svg class="rr-logo__svg" viewBox="0 0 1000 150" role="img" aria-label="Radhija &amp; Rhaenyra">
           <g class="rr-logo__words" text-anchor="middle" font-size="108" stroke-linejoin="round" letter-spacing="1">
@@ -220,25 +224,25 @@ export function template() {
         </svg>
         <div class="rr-logo__ribbon"><span class="rr-logo__item"></span><span class="rr-logo__name">Operação Cenoura</span><span class="rr-logo__dogs">${dogIcon('radhija')}${dogIcon('rhaenyra')}</span></div>
       </div>
-      <div class="rr-screen rr-screen--main" role="group" aria-label="Menu inicial">
-        <button class="rr-btn rr-btn--primary rr-btn--play" data-action="play" data-nav data-default>${playIcon()}<span>Jogar</span>${glyph('Enter')}</button>
-        <button class="rr-btn rr-btn--glass rr-btn--options" data-action="options" data-nav>${gearIcon()}<span>Opções</span></button>
+      <div class="rr-home__stats" aria-live="polite"></div>
       </div>
-      <div class="rr-screen rr-screen--modes" role="group" aria-label="Modos de jogo">
-        <button class="rr-mode rr-mode--story" data-action="story" data-nav aria-disabled="true" aria-label="${MODES.story.name} (${MODES.story.badge.toLowerCase()})">
-          <span class="rr-mode__art">${mapArt()}</span>
-          <span class="rr-mode__badge">${MODES.story.badge}</span>
-          <span class="rr-mode__eyebrow">${MODES.story.eyebrow}</span>
-          <span class="rr-mode__name">${MODES.story.name}</span>
-          <span class="rr-mode__text">${MODES.story.text}</span>
+      <div class="rr-home__menu">
+      <div class="rr-screen rr-screen--main" role="group" aria-label="Menu inicial">
+        <button class="rr-btn rr-btn--primary rr-btn--play" data-action="play" data-nav data-default>
+          <span class="rr-play__ico">${playIcon()}</span>
+          <span class="rr-play__txt"><span class="rr-play__label">Jogar</span><span class="rr-play__sub"></span></span>
+          ${glyph('Enter')}
         </button>
-        <button class="rr-mode rr-mode--levels" data-action="levels" data-nav data-default aria-label="${MODES.levels.name}">
-          <span class="rr-mode__art rr-mode__art--items">${fanItems}</span>
-          <span class="rr-mode__eyebrow rr-mode__count"></span>
-          <span class="rr-mode__name">${MODES.levels.name}</span>
-          <span class="rr-mode__text">${MODES.levels.text}</span>
-          <span class="rr-mode__progress"></span>
-        </button>
+        <div class="rr-home__row">
+          <button class="rr-btn rr-tile rr-tile--story" data-action="story" data-nav aria-disabled="true" aria-label="${MODES.story.name} (${MODES.story.badge.toLowerCase()})">
+            <span class="rr-tile__ico">${bookIcon()}</span>
+            <span class="rr-tile__txt"><span class="rr-tile__name">História</span><span class="rr-tile__badge">${MODES.story.badge}</span></span>
+          </button>
+          <button class="rr-btn rr-tile rr-tile--options rr-btn--options" data-action="options" data-nav>
+            <span class="rr-tile__ico">${gearIcon()}</span>
+            <span class="rr-tile__txt"><span class="rr-tile__name">Opções</span><span class="rr-tile__sub">Som, tela e dicas</span></span>
+          </button>
+        </div>
       </div>
       <div class="rr-screen rr-screen--levels" role="group" aria-label="${MODES.levels.name}">
         <button class="rr-btn rr-btn--primary rr-btn--continue" data-action="continue" data-nav data-default>
@@ -252,6 +256,7 @@ export function template() {
           <div class="rr-card__head">${gearIcon()}<h2>Opções</h2></div>
           <div class="rr-settings">${settingsBlock()}</div>
         </div>
+      </div>
       </div>
     </div>
     <div class="rr-levels" role="group" aria-label="${MODES.levels.name}"></div>

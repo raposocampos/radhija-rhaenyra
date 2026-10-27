@@ -59,7 +59,9 @@ export function createMenuFocus({ root, audio, getLayer, slider }) {
       // O centro de um botão largo na linha de cima pode estar mais perto,
       // mas não deve capturar esquerda/direita entre os botões lado a lado.
       const aligned = ortho === 0;
-      if ((aligned && !bestAligned) || (aligned === bestAligned && score < bestScore)) {
+      // empate (dois botões lado a lado sob um botão largo, como História e Opções sob o Jogar): fica o primeiro na
+      // ordem de leitura, sem depender de frações de pixel do layout
+      if ((aligned && !bestAligned) || (aligned === bestAligned && score < bestScore - 0.5)) {
         bestAligned = aligned;
         bestScore = score;
         best = el;

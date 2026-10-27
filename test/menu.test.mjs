@@ -1,4 +1,5 @@
-// Menu inicial (Jogar → Modo História "em breve" / Fases → Continuar e cartões; Opções), modo sem dicas e o atalho
+// Menu inicial (Jogar → mapa das fases; Modo História "em breve"; Opções com música e efeitos; sem o mapa, Jogar →
+// Continuar e cartões), modo sem dicas e o atalho
 // do núcleo que abre o cartão da fase já montada. Sem navegador: o save (src/ui/progress.js), as opções
 // (src/core/settings.js), o template (src/ui/markup.js) e o jogo headless. A navegação por teclado, controle e
 // toque é conferida no E2E (suíte menu, tools/scripts/test-menu.mjs).
@@ -169,32 +170,35 @@ test('opções: o modo sem dicas fica salvo, vale ao recarregar e avisa a interf
 });
 
 // ---------------------------------------------------------------------------------------------- template
-test('template: Jogar e Opções na tela principal; Modo História em breve e Fases; Voltar em Esc · ○', () => {
+test('template: a tela principal tem Jogar, Modo História em breve e Opções; a nota da música; Voltar em Esc · ○', () => {
   const html = template();
   const title = html.slice(html.indexOf('rr-layer rr-title'), html.indexOf('rr-layer rr-intro'));
-  const main = title.slice(title.indexOf('rr-screen--main'), title.indexOf('rr-screen--modes'));
-  assert.deepEqual([...main.matchAll(/data-action="([a-z]+)"/g)].map((m) => m[1]), ['play', 'options'], 'só Jogar e Opções');
+  const main = title.slice(title.indexOf('rr-screen--main'), title.indexOf('rr-screen--levels'));
+  assert.deepEqual([...main.matchAll(/data-action="([a-z]+)"/g)].map((m) => m[1]), ['play', 'story', 'options'], 'Jogar, Modo História e Opções');
+  assert.match(main, /data-action="play"[^>]*data-default/, 'Jogar é o foco inicial');
+  assert.match(main, /data-action="story"[^>]*aria-disabled="true"/, 'Modo História aparece, mas não abre');
+  assert.ok(main.includes(MODES.story.badge) && MODES.story.badge === 'Em breve');
+  assert.ok(!title.includes('rr-screen--modes'), 'a tela dos modos saiu (o Jogar vai direto ao mapa)');
   assert.match(title, /data-screen="main"/);
-  const modes = title.slice(title.indexOf('rr-screen--modes'), title.indexOf('rr-screen--levels'));
-  assert.match(modes, /data-action="story"[^>]*aria-disabled="true"/, 'Modo História aparece, mas não abre');
-  assert.ok(modes.includes(MODES.story.badge) && MODES.story.badge === 'Em breve');
-  assert.match(modes, /data-action="levels"[^>]*data-default/, 'o modo das fases é o foco inicial');
-  assert.ok(modes.includes(`>${MODES.levels.name}<`));
+  // a nota no canto liga e desliga a música; o progresso fica ao lado do logotipo
+  assert.match(title, /class="rr-music-toggle"[^>]*data-action="music"[^>]*aria-pressed="true"/);
+  assert.match(title, /class="rr-home__stats"/);
+  // sem o mapa (catálogo de desenvolvimento): o Continuar e a grade de cartões continuam
   assert.match(title, /data-action="continue"[^>]*data-default/, 'Continuar é o foco inicial da tela das fases');
   assert.match(title, /class="rr-levels"/, 'a grade de cartões continua na tela das fases');
   // Voltar: na tela inicial e no cartão de abertura, com Esc (teclado) e ○ · B (controle), sem ícone de toque
   const backs = [...html.matchAll(/<button class="rr-back[^"]*"[\s\S]*?<\/button>/g)].map((m) => m[0]);
   assert.equal(backs.length, 2);
-  for (const b of backs) {
-    assert.ok(b.includes('>Esc<') && b.includes('rr-pad--b') && !b.includes('rr-tg'), b);
+  for (const bk of backs) {
+    assert.ok(bk.includes('>Esc<') && bk.includes('rr-pad--b') && !bk.includes('rr-tg'), bk);
   }
 });
 
-test('template: Opções e pausa têm o mesmo bloco (volume, qualidade, dicas, tela cheia)', () => {
+test('template: Opções e pausa têm o mesmo bloco (música, efeitos, qualidade, dicas, tela cheia)', () => {
   const html = template();
   const block = settingsBlock();
   assert.equal(html.split(block).length - 1, 2, 'tela Opções e pausa');
-  for (const sel of ['rr-range', 'data-quality="auto"', 'data-hints="on"', 'data-hints="off"', 'rr-fullscreen']) {
+  for (const sel of ['rr-range--music', 'rr-range--sfx', 'data-quality="auto"', 'data-hints="on"', 'data-hints="off"', 'rr-fullscreen']) {
     assert.ok(block.includes(sel), sel);
   }
   assert.ok(block.includes(HINTS_NOTE.on));

@@ -1,7 +1,7 @@
 // Celular (suíte 'toque'): Chromium emulando um celular deitado (844×390, DPR 3, toque, isMobile) e DEDOS REAIS pelo
 // protocolo do navegador (Input.dispatchTouchEvent → touch + pointer events, como num celular de verdade).
-// Confere o perfil de qualidade do celular, o menu inicial pelo toque (Jogar → modos → Fases → o mapa das fases →
-// Agir na frente da bandeirinha; Opções com o modo sem dicas; Voltar), o HUD do mapa com os controles de toque (sem
+// Confere o perfil de qualidade do celular, o menu inicial pelo toque (História "em breve", a nota da música, Opções
+// com o modo sem dicas, Voltar, Jogar → o mapa das fases → Agir na frente da bandeirinha), o HUD do mapa com os controles de toque (sem
 // Superbafo nem Lamber, com o atalho ◀ ▶), os controles que só aparecem depois de um toque, o layout compacto sem
 // sobreposição com o HUD, um trecho da fase 1 jogado só com o joystick e os botões virtuais (abertura, cordinha,
 // troca, carrinho empurrado com dois dedos, cenoura), multitoque, dicas com ícones de toque, menu de qualidade,
@@ -69,6 +69,66 @@ async function tap(sel, { id = 9, hold = 90 } = {}) {
   await sleep(hold);
   await finger.up(id);
   await sleep(150);
+}
+/**
+ * Pronto para o dedo (roda na página): com caixa, a camada dele acesa e opaca, nenhuma animação de CSS em curso (a
+ * entrada da tela inicial e do cartão) e ele mesmo por cima de tudo no centro. Tocar antes disso perdia o toque: no
+ * iPhone (SwiftShader ocupado), a página ficava parada na tela inicial.
+ */
+const readyFn = (s) => {
+  const el = document.querySelector(s);
+  if (!el || !el.getClientRects().length) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width < 4 || r.height < 4) return false;
+  const layer = el.closest('.rr-layer');
+  if (layer && (!layer.classList.contains('is-on') || Number(getComputedStyle(layer).opacity) < 0.99)) return false;
+  if (document.getAnimations().some((a) => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming?.().endTime))) return false;
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return !!hit && (hit === el || el.contains(hit));
+};
+/**
+ * Registro dos toques de menu, por aparelho: quantas tentativas cada um precisou e se o botão estava pronto em cada uma.
+ * A repetição é só uma rede contra o tempo do teste (SwiftShader); o relatório no fim mostra os números, e o primeiro
+ * toque de cada página tem de pegar de primeira (é o gesto que também destrava o áudio).
+ * @type {{ device: string, label: string, tries: number, ready: boolean[], ok: boolean }[]}
+ */
+const tapLog = [];
+/**
+ * Toca no botão quando ele estiver pronto e espera o efeito (`done`, na página); um toque sem efeito repete (até 3
+ * vezes) e fica no registro.
+ * @param {any} p @param {string} device @param {string} sel @param {() => boolean} done @param {string} label
+ * @param {(sel: string) => Promise<void>} touch
+ */
+async function tapInto(p, device, sel, done, label, touch, wait = 15000) {
+  const entry = { device, label, tries: 0, ready: [], ok: false };
+  tapLog.push(entry);
+  for (let k = 1; k <= 3; k++) {
+    entry.tries = k;
+    entry.ready.push(await p.waitForFunction(readyFn, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false));
+    await touch(sel);
+    if (await p.waitForFunction(done, null, { timeout: wait, polling: 100 }).then(() => true, () => false)) {
+      entry.ok = true;
+      return entry;
+    }
+    console.log(`  [${device}] ${label}: toque em ${sel} sem efeito (tentativa ${k}, botão ${entry.ready[k - 1] ? 'pronto' : 'NÃO pronto'}); de novo`);
+  }
+  const now = await p.evaluate(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen })).catch(() => null);
+  check(false, `[${device}] ${label}: o toque em ${sel} não pegou em 3 tentativas`, { now, ready: entry.ready });
+  return entry;
+}
+/** Toque de menu na página principal (dedo pelo protocolo), esperando o botão pronto e o efeito. */
+const tapMenu = (sel, done, label) => tapInto(page, 'celular 844×390', sel, done, label, (s) => tap(s));
+/** Relatório dos toques de menu: os repetidos e os perdidos com o botão pronto (esses apontam defeito no jogo). */
+function tapReport() {
+  console.log('\n== Toques de menu: tentativas por aparelho ==');
+  const by = new Map();
+  for (const e of tapLog) by.set(e.device, [...(by.get(e.device) || []), e]);
+  for (const [device, list] of by) {
+    const again = list.filter((e) => e.tries > 1);
+    const lostReady = list.reduce((n, e) => n + e.ready.slice(0, e.ok ? e.tries - 1 : e.tries).filter(Boolean).length, 0);
+    console.log(`  ${device}: ${list.length} toques, ${again.length} repetidos, ${lostReady} perdidos com o botão pronto`
+      + (again.length ? ` → ${again.map((e) => `${e.label} ×${e.tries} [${e.ready.map((r) => (r ? 'pronto' : 'não pronto')).join(', ')}]`).join('; ')}` : ''));
+  }
 }
 const uiState = () => ev(() => {
   const root = document.querySelector('.rr');
@@ -282,44 +342,46 @@ try {
   check(q.state.pixelRatio === 1 && q.shadow === 1024 && !q.soft && q.samples === 0 && q.everyFrame, 'perfil médio aplicado: pixel ratio 1, sombras PCF 1024 a cada quadro, sem MSAA', q);
   check(q.sky > 0 && q.cap && !q.lowGpu, 'celular: céu depois do cenário e teto de 60 quadros (GPU do teste não é de entrada)', q);
   check(s.device === 'keyboard' && !s.touchOn, 'antes do primeiro toque: sem controles de toque', s);
-  const title = await boxes(['.rr-logo__svg', '.rr-logo__ribbon', '.rr-btn--play', '.rr-btn--options']);
-  check(title.every((r) => inView(r)), 'tela inicial (logotipo, Jogar e Opções) cabe na tela deitada', title);
-  check(overlapPairs(title).filter((p) => p.join() !== '.rr-logo__svg,.rr-logo__ribbon').length === 0, 'logotipo, Jogar e Opções sem sobreposição', title);
+  const title = await boxes(['.rr-logo__svg', '.rr-logo__ribbon', '.rr-home__stats', '.rr-btn--play', '.rr-tile--story', '.rr-tile--options', '.rr-music-toggle']);
+  check(title.every((r) => r && inView(r)), 'tela inicial (logotipo, progresso, Jogar, História, Opções e a nota da música) cabe na tela deitada', title);
+  check(overlapPairs(title.filter(Boolean)).filter((p) => p.join() !== '.rr-logo__svg,.rr-logo__ribbon').length === 0, 'tela inicial sem sobreposição', title);
   check(await ev(() => getComputedStyle(document.querySelector('.rr-title__controls')).display === 'none'), 'barra de teclas escondida no celular');
   await shot('01-titulo-celular.png');
 
-  console.log('\n== Menu pelo toque: Jogar, modos, Opções, Fases ==');
-  await tap('.rr-btn--play');
+  console.log('\n== Menu pelo toque: História, música, Opções, Jogar ==');
+  // o primeiro toque da página tem de pegar de primeira: é ele que também destrava o áudio (a música do menu)
+  const first = await tapMenu('.rr-tile--story', () => !!document.querySelector('.rr-levels__note.is-on'), 'História');
+  check(first.ok && first.tries === 1 && first.ready[0], 'primeiro toque (História) pega de primeira, com o botão pronto', first);
   let m = await menuState();
-  check(m.state === 'title' && m.screen === 'modes', 'toque em Jogar: escolha do modo', m);
-  await sleep(600);
-  const modes = await boxes(['.rr-logo__svg', '.rr-title .rr-back', '.rr-mode--story', '.rr-mode--levels']);
-  check(modes.every((r) => inView(r)), 'modos inteiros na tela deitada', modes);
-  check(overlapPairs(modes).length === 0, 'logotipo, Voltar e os dois modos sem sobreposição', modes);
-  await shot('01b-modos-celular.png');
-  await tap('.rr-mode--story');
-  m = await menuState();
-  check(m.screen === 'modes' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque no Modo História: aviso "em breve", sem sair dos modos', m);
-  await tap('.rr-title .rr-back');
-  m = await menuState();
-  check(m.screen === 'main', 'toque em Voltar: tela principal', m);
-  await tap('.rr-btn--options');
+  check(m.state === 'title' && m.screen === 'main' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque na História: aviso "em breve", sem sair da tela principal', m);
+  await sleep(300);
+  // o primeiro toque destrava o áudio (no iOS, ao soltar o dedo): a música do menu começa
+  const musicNow = () => ev(() => ({ on: window.__game.audio.musicOn, playing: window.__game.audio.musicPlaying, pressed: document.querySelector('.rr-music-toggle').getAttribute('aria-pressed') }));
+  let mu = await musicNow();
+  check(mu.on && mu.playing === 'menu', 'o primeiro toque começa a música do menu', mu);
+  await shot('01b-historia-celular.png');
+  await tapMenu('.rr-music-toggle', () => document.querySelector('.rr-music-toggle').getAttribute('aria-pressed') === 'false', 'nota da música');
+  mu = await musicNow();
+  check(!mu.on && mu.pressed === 'false', 'toque na nota: música desligada', mu);
+  await tapMenu('.rr-music-toggle', () => document.querySelector('.rr-music-toggle').getAttribute('aria-pressed') === 'true', 'nota da música');
+  mu = await musicNow();
+  check(mu.on && mu.pressed === 'true', 'toque de novo: música ligada', mu);
+  await tapMenu('.rr-btn--options', () => window.__game.ui.screen === 'options', 'Opções');
   m = await menuState();
   check(m.screen === 'options', 'toque em Opções', m);
   await sleep(600);
   const opts = await boxes(['.rr-title .rr-back', '.rr-card--options', '.rr-title .rr-hopt[data-hints="off"]', '.rr-title .rr-qopt[data-quality="baixa"]']);
   check(opts.every((r) => inView(r)), 'cartão de Opções inteiro na tela deitada', opts);
   check(!overlaps(opts[0], opts[1]), 'Voltar fora do cartão de Opções', opts);
-  await tap('.rr-title .rr-hopt[data-hints="off"]');
+  await tapMenu('.rr-title .rr-hopt[data-hints="off"]', () => window.__game.settings.noHints === true, 'Dicas desligadas');
   check(await ev(() => window.__game.settings.noHints && document.querySelector('.rr').dataset.hints === 'off'), 'toque em Dicas desligadas: modo sem dicas');
   await shot('01c-opcoes-celular.png');
-  await tap('.rr-title .rr-hopt[data-hints="on"]');
+  await tapMenu('.rr-title .rr-hopt[data-hints="on"]', () => window.__game.settings.noHints === false, 'Dicas ligadas');
   check(await ev(() => !window.__game.settings.noHints), 'toque em Dicas ligadas: dicas de volta');
-  await tap('.rr-title .rr-back');
-  await tap('.rr-btn--play');
-  await tap('.rr-mode--levels');
+  await tapMenu('.rr-title .rr-back', () => window.__game.ui.screen === 'main', 'Voltar');
+  await tapMenu('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar');
   let mi = await untilMap(1);
-  check(mi.state === 'playing' && mi.level === -1 && mi.near === 1, 'toque em Fases: o mapa das fases, na frente da bandeirinha 1', { state: mi.state, level: mi.level, near: mi.near });
+  check(mi.state === 'playing' && mi.level === -1 && mi.near === 1, 'toque em Jogar: o mapa das fases, na frente da bandeirinha 1', { state: mi.state, level: mi.level, near: mi.near });
   await sleep(900);
   const mapHud = await ev(() => {
     const box = (sel) => {
@@ -593,8 +655,7 @@ try {
   await sleep(900);
   await shot('09-titulo-depois-de-jogar.png');
   check((await menuState()).screen === 'main', 'Menu inicial: volta à tela principal');
-  await tap('.rr-btn--play');
-  await tap('.rr-mode--levels');
+  await tapMenu('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar');
   // o mapa: as dogs na frente da bandeirinha 1 (a da fase de onde saíram); Agir abre o cartão de abertura dela
   await untilMap(1);
   await sleep(600);
@@ -716,24 +777,24 @@ try {
   await ip.waitForFunction(() => window.__game?.game?.state === 'title', null, { timeout: 120000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.querySelector('.rr-ios-tip') && !!document.querySelector('.rr-ios-fs__how')), 'recarregando: a dica não volta, a nota da pausa continua');
-  // a pausa mostra o passo a passo: Jogar → Fases → (o mapa) Agir → Começar. Cada toque só quando o botão aparece: com
+  // a pausa mostra o passo a passo: Jogar → (o mapa) Agir → Começar. Cada toque só quando o botão aparece: com
   // o SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque
   // caía em (0, 0) (o cartão de abertura não vinha).
-  const tapShown = async (sel) => {
-    await ip.waitForFunction((s) => (document.querySelector(s)?.getClientRects().length ?? 0) > 0, sel, { timeout: 30000 });
-    const b = await center(ip, sel);
+  // cada toque espera o botão pronto (readyFn) e confere o efeito; um toque perdido repete
+  const ipTap = (sel, done, label) => tapInto(ip, 'iPhone', sel, done, label, async (s) => {
+    const b = await center(ip, s);
     await ip.touchscreen.tap(b.x, b.y);
-  };
-  for (const sel of ['.rr-btn--play', '.rr-mode--levels']) {
-    await tapShown(sel);
-    await ip.waitForTimeout(400);
-  }
+  }, 30000);
+  // o primeiro toque desta página (Jogar) pega de primeira e destrava o áudio no mesmo gesto
+  const ipFirst = await ipTap('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar');
+  const ipAudio = await ip.evaluate(() => { const a = window.__game.audio; return { context: a.context?.state ?? null, playing: a.musicPlaying }; });
+  check(ipFirst.ok && ipFirst.tries === 1 && ipFirst.ready[0] && ipAudio.context != null && ipAudio.playing != null, 'iPhone: o primeiro toque (Jogar) pega de primeira e destrava o áudio no mesmo gesto', { ipFirst, ipAudio });
   await ip.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
   await ip.waitForTimeout(800);
-  await tapShown('.rr-tbtn--act');
+  await ipTap('.rr-tbtn--act', () => !(window.__game.game.isHub && window.__game.game.state === 'playing'), 'Agir');
   await ip.waitForFunction(() => window.__game.game.state === 'intro', null, { timeout: 60000 });
   await ip.waitForTimeout(1200);
-  await tapShown('[data-action="start"]');
+  await ipTap('[data-action="start"]', () => window.__game.game.state === 'playing', 'Começar');
   await ip.waitForFunction(() => window.__game.game.state === 'playing', null, { timeout: 60000 });
   await ip.waitForTimeout(1500);
   check(await ip.evaluate(() => !document.fullscreenElement), 'iPhone: Jogar não tenta a tela cheia (o Safari não deixa)');
@@ -771,6 +832,7 @@ try {
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {
+  tapReport();
   const failed = await H.close();
   process.exit(failed ? 1 : 0);
 }

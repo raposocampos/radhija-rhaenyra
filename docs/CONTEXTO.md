@@ -1,12 +1,12 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-27, Claude** (picos de `O_flap` na primeira passagem da fase 9, branch
-`claude/fase9-primeira-passagem`, PR #70, em andamento; #69, SwiftShader sem o estado dinâmico de entrada de vértices em
-todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fase 10, em v0.10.18 · build 110; #67, #66 e #64 já
-integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e
-[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (menu novo e trilha, etapa 4 de 4 da interface, branch `claude/menu-musica`,
+PR #71, em andamento; #70, picos de `O_flap` na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader
+sem o estado dinâmico de entrada de vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da
+fase 10, em v0.10.18 · build 110; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 ·
+build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: picos de `O_flap` na primeira passagem da fase 9 (PR #70, branch `claude/fase9-primeira-passagem`)
+## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
 
 - Pedido (pelo orquestrador, sessão do PR #68): os quadros #92 e #93 de `O_flap` na "Primeira passagem — fase 9"
   (`celular-baixa`, ~610/430 e ~585/395 ms, 1ª contra 2ª passagem), em 2 de 6 medições, antes e depois do #68; com um
@@ -38,8 +38,8 @@ integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler 
   juntou sozinho (o SwiftShader sem o estado dinâmico vem do `browserOptions()`, o roteiro novo ficou igual). CI e E2E
   `primeira-passagem` do head no PR.
 - No PC: só `node --check`, `git diff --check` e o diagnóstico headless.
-- Próximo passo: entregar a prévia e esperar o "pode integrar" do usuário nesta sessão; depois, merge squash com o SHA
-  esperado, liberar o deploy correspondente e apagar o branch auxiliar. Fila do orquestrador: #70, #71.
+- Integrado com o "pode integrar" do usuário: squash `eb75f18` (head `5af388f`), deploy `40526974118`,
+  v0.10.20 · build 112. O branch auxiliar `claude/fase9-primeira-passagem-varredura` já não existe no GitHub.
 
 ## Entregue: SwiftShader sem recompilar por ordem de desenho em todo o E2E (PR #69, squash `87f1b75`, deploy `40518303970`, v0.10.19 · build 111)
 
@@ -212,7 +212,7 @@ integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler 
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 entregue no PR #64, etapa 3 no PR #67)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapas 1 e 3 entregues nos PRs #64 e #67; etapa 4 no PR #71)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -294,8 +294,41 @@ integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler 
   na frente do poste, poças acima do piso emborrachado; o selo dos biscoitos (sprite com um ossinho por biscoito da
   fase, os ganhos dourados) no lugar dos ossinhos 3D, com o total de cada fase (a 10 tem 5); bandeira, selo e
   cadeado fora do "ver através".
-- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `todas` no head novo, revisar as capturas,
-  prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
+- Etapa 3 entregue: PR #67, head `9f99182` aprovado pelo usuário ("pode integrar"), squash `0b80ae4`, CI do main
+  `40426101632`, deploy `40426317565`, v0.10.17 · build 109 (version.json conferido). Rodadas depois da segunda
+  prévia: hastes centradas (`kit.rod`: trave do balanço, varais, bandeirolas), poças com contorno irregular
+  (`pecas.puddle`, a do oeste fora da calçada). A primeira passagem da fase 10 nos celulares falhava também no `main`
+  (E2E `40401427308`); a correção ficou no PR #68 (sessão própria).
+- Etapa 4 (branch `claude/menu-musica`, a partir do `main` `0b80ae4`): decisões do usuário (2026-10-26) sobre o
+  conceito https://claude.ai/artifact/967r1tPorcV75SXUUFcuv3 — "Jogar" abre o mapa na bandeirinha da próxima fase
+  (sai a tela de modos); música sintetizada com um tema para o menu, um para o mapa e "cada fase tem um tema de música",
+  combinando com a fase; "a música pode começar ligada, tendo a opção de... desligar a música nas opções". Feito: tela
+  inicial em duas colunas (logotipo e progresso | Jogar com a fase em que continua, Modo História "em breve" e Opções),
+  nota de música no canto, sliders de Efeitos e Música um embaixo do outro (Opções e pausa; lado a lado, as setas
+  ←/→ mexiam no volume e o teclado e o controle não chegavam ao da Música), contorno de chocolate e sombra
+  dura nos botões e cartões; `src/fx/audio/music.js` e `themes.js` (12 temas), `audio.setMusic` com cruzamento,
+  `main.js` escolhendo o tema pela tela, o áudio destravando no primeiro gesto também na tela inicial;
+  `test/musica.test.mjs`. Na navegação, um empate entre dois vizinhos fica com o primeiro na ordem de leitura (↓ no
+  Jogar → História). E2E atualizados para o fluxo novo (menu, toque, mapa, expresso, capture-celular, fx-v2-flow),
+  com o ok do orquestrador; o menu confere também a música (tema do menu, do mapa e da fase, a nota, os dois volumes
+  salvos); `test-gamepad.mjs` também (dois sliders na pausa; ↓ no Jogar vai à História), com o ok do orquestrador.
+  Toques do menu na suíte toque e no capture-celular esperam o botão pronto (camada acesa, sem animação de entrada,
+  nada por cima) e repetem um toque perdido: no E2E do #68, o iPhone ficou parado na tela inicial (toque em Jogar
+  perdido). O relatório no fim conta os toques repetidos por aparelho, e o primeiro toque de cada página tem de pegar
+  de primeira (destravando o áudio no mesmo gesto). E2E manual (`e2e.yml`, com o ok do orquestrador): as capturas
+  de revisão (`capture-celular.mjs`, `capture-mapa.mjs`) saíram das partidas para o job "Capturas para revisão",
+  em paralelo; partidas com `timeout-minutes: 40` (medido no E2E `40429824990`: menu 16 min, toque 10 min, capturas
+  do celular 7 min; o job do toque do #68 estourou os 30 min com o Chromium levando 10 min para instalar). No PC, o
+  `capture-celular` clica com o mouse no centro (o `page.click` travava no `aria-disabled` da História).
+- E2E `todas` `40439533571` (head `c10f301`, antes da sincronização): tudo verde menos a primeira passagem da fase 10
+  no `celular-baixa` (corrigida pelo #68, que o branch ainda não tinha); toques de menu: 0 repetidos e 0 perdidos em
+  todos os aparelhos (suíte toque e capture-celular). Prévia `pr-71/40439524495-1`: o usuário (pelo orquestrador)
+  disse "gostei dessas músicas aí e do menu novo"; o "pode integrar" vale para a versão sincronizada.
+- Sincronizado com o main `eb75f18` (#68, #69 e #70), sem conflito. Para depois (pedido do usuário): efeitos visuais
+  do mapa mais caprichados e o Modo História.
+- Próximo passo: CI e E2E `todas` no head sincronizado, prévia nova e o "pode integrar" do usuário nesta sessão;
+  depois, merge squash com o SHA esperado, liberar só aquele deploy (deve virar v0.10.21 · build 113), conferir o
+  `version.json` e avisar o orquestrador.
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 

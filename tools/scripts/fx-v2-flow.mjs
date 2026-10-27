@@ -69,9 +69,8 @@ try {
   await wait(2600);
   await shot('v2-01-titulo');
 
-  // Jogar → Fases (o mapa das fases); na frente da bandeirinha 1, E → cartão → Começar
+  // Jogar → o mapa das fases; na frente da bandeirinha 1, E → cartão → Começar
   await page.click('.rr-btn--play');
-  await page.click('.rr-mode--levels');
   await page.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing', null, { timeout: 150000 });
   await wait(1200);
   await shot('v2-02-mapa');
@@ -155,16 +154,16 @@ try {
   await waitState('title', 30000);
   await wait(1500);
   await shot('v2-18-titulo-progresso');
-  // seleção com o controle: A em Jogar e em Fases, baixo → cartões, direita, A → fase 2
+  // seleção com o controle: o foco em Jogar; A → o mapa, na frente da próxima bandeirinha; B (interagir) → o cartão dela
   await ev(`window.__pad.connected = true`);
-  await padPress(0);
-  await padPress(0);
-  await padPress(13);
-  await padPress(15);
+  await padPress(12);
   await wait(300);
   console.log('foco no título:', JSON.stringify(await info()));
   await shot('v2-19-titulo-controle');
   await padPress(0);
+  await page.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near != null, null, { timeout: 150000 });
+  await wait(1200);
+  await padPress(1);
   await waitState('intro', 90000);
   await wait(1800);
   console.log('seleção → ', JSON.stringify(await info()));

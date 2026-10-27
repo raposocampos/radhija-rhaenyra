@@ -1,7 +1,7 @@
 // Capturas de revisão do celular e do PC, cada aparelho com a SUA qualidade gráfica (sem a redução do harness):
 // celular deitado (844×390, DPR 3, perfil médio, como o iPhone 13), Infinix Note 30 5G (893×393, DPR 2,75, perfil
 // baixo), Android compacto (640×360 e 568×320, DPR 2, deitado e de pé), tablet (1180×820, DPR 2) e PC
-// (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (modos, Opções), o mapa das fases (Fases), partida
+// (1280×720, perfil alta, como sempre). Tela inicial e as telas do menu (História, Opções), o mapa das fases (Jogar), partida
 // com os controles de toque, prompt e dica com ícones de toque, pausa com o menu de qualidade, vitória, cartão de abertura,
 // aviso de girar o celular e a fase 4.
 // Roda no GitHub Actions (E2E manual, suíte toque), depois da partida. O laço do jogo fica congelado e o script
@@ -41,6 +41,13 @@ const DEVICES = [
 let server, browser;
 const errors = [];
 let shots = 0;
+/**
+ * Toques de menu por aparelho (pressInto): tentativas e se o botão estava pronto em cada uma. A repetição é só uma rede
+ * contra o tempo do teste; o relatório no fim mostra os números, e o primeiro toque de cada aparelho tem de pegar de
+ * primeira (é o gesto que também destrava o áudio).
+ * @type {{ device: string, label: string, tries: number, ready: boolean[], ok: boolean }[]}
+ */
+const tapLog = [];
 try {
   server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 } });
   await server.listen();
@@ -59,6 +66,16 @@ try {
   await server?.close();
 }
 console.log(`\n${shots} capturas em ${OUT}`);
+console.log('\n== Toques de menu: tentativas por aparelho ==');
+for (const device of [...new Set(tapLog.map((e) => e.device))]) {
+  const list = tapLog.filter((e) => e.device === device);
+  const again = list.filter((e) => e.tries > 1);
+  const lostReady = list.reduce((n, e) => n + e.ready.slice(0, e.ok ? e.tries - 1 : e.tries).filter(Boolean).length, 0);
+  console.log(`  ${device}: ${list.length} toques, ${again.length} repetidos, ${lostReady} perdidos com o botão pronto`
+    + (again.length ? ` → ${again.map((e) => `${e.label} ×${e.tries} [${e.ready.map((r) => (r ? 'pronto' : 'não pronto')).join(', ')}]`).join('; ')}` : ''));
+  const first = list[0];
+  if (first && !(first.ok && first.tries === 1 && first.ready[0])) errors.push(`[${device}] o primeiro toque (${first.label}) não pegou de primeira com o botão pronto: ${JSON.stringify(first)}`);
+}
 if (errors.length) {
   console.log(`ERROS (${errors.length}):`);
   for (const e of errors.slice(0, 20)) console.log(e);
@@ -146,12 +163,11 @@ async function captureDevice(dev, url) {
     }, sel);
     /** Toque (celular) ou Enter/clique (PC) num botão do menu. */
     const press = async (sel) => {
-      if (dev.touch) {
-        const c = await center(sel);
-        await page.touchscreen.tap(c.x, c.y);
-      } else {
-        await page.click(sel);
-      }
+      const c = await center(sel);
+      if (dev.touch) await page.touchscreen.tap(c.x, c.y);
+      // no PC, o mouse de verdade no centro: o page.click espera o botão "habilitado" e travava no aria-disabled da
+      // História (que responde com o aviso "em breve")
+      else await page.mouse.click(c.x, c.y);
     };
     /**
      * Espera o botão pronto para o toque: com caixa, a camada dele visível por inteiro, sem animação de CSS em curso
@@ -171,12 +187,15 @@ async function captureDevice(dev, url) {
     }, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false);
     /** Toca no botão quando ele estiver pronto e confere o efeito (done: no estado do jogo); um toque perdido repete. */
     const pressInto = async (sel, done, label) => {
+      const entry = { device: dev.id, label, tries: 0, ready: [], ok: false };
+      tapLog.push(entry);
       for (let k = 0; k < 3; k++) {
-        await ready(sel);
+        entry.tries = k + 1;
+        entry.ready.push(await ready(sel));
         await press(sel);
         await page.waitForTimeout(300);
-        if (await page.evaluate(done)) return;
-        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}); de novo`);
+        if (await page.evaluate(done)) { entry.ok = true; return; }
+        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}, botão ${entry.ready[k] ? 'pronto' : 'NÃO pronto'}); de novo`);
       }
       errors.push(`[${dev.id}] ${label}: o toque em ${sel} não pegou em 3 tentativas; ${await guard.peek()}`);
     };
@@ -190,13 +209,12 @@ async function captureDevice(dev, url) {
     await step(20);
     await shot('01-titulo', 1500);
     if (dev.ios) {
-      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → Fases → mapa → Agir → Começar)
-      await press('.rr-btn--options');
+      // Opções com a nota, pausa com o passo a passo e o aviso de girar com a dica (Jogar → mapa → Agir → Começar)
+      await pressInto('.rr-btn--options', () => window.__game.ui.screen === 'options', 'Opções');
       await step(5);
       await shot('01b-opcoes-tela-cheia');
-      await press('.rr-title .rr-back');
-      await press('.rr-btn--play');
-      await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
+      await pressInto('.rr-title .rr-back', () => window.__game.ui.screen === 'main', 'Voltar');
+      await thaw(() => pressInto('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar'), (i) => i.state === 'playing' && i.level === -1);
       await step(30);
       await thaw(() => action('act', 'KeyE'), (i) => i.state === 'intro');
       await step(60);
@@ -212,19 +230,18 @@ async function captureDevice(dev, url) {
       return;
     }
 
-    // menu: Jogar → modos; Voltar; Opções (com as dicas desligadas e religadas); Fases → o mapa → Agir → Começar
-    await press('.rr-btn--play');
+    // menu: História (em breve); Opções (com as dicas desligadas e religadas); Jogar → o mapa → Agir → Começar
+    // cada toque espera o botão pronto e confere o efeito (pressInto): um toque perdido repete
+    await pressInto('.rr-tile--story', () => !!document.querySelector('.rr-levels__note.is-on'), 'História');
     await step(5);
-    await shot('01b-modos');
-    await press('.rr-title .rr-back');
-    await press('.rr-btn--options');
+    await shot('01b-historia');
+    await pressInto('.rr-btn--options', () => window.__game.ui.screen === 'options', 'Opções');
     await step(5);
-    await press('.rr-title .rr-hopt[data-hints="off"]');
+    await pressInto('.rr-title .rr-hopt[data-hints="off"]', () => window.__game.settings.noHints === true, 'Dicas desligadas');
     await shot('01d-opcoes-sem-dicas');
-    await press('.rr-title .rr-hopt[data-hints="on"]');
-    await press('.rr-title .rr-back');
-    await press('.rr-btn--play');
-    await thaw(async () => { await ready('.rr-mode--levels'); await press('.rr-mode--levels'); }, (i) => i.state === 'playing' && i.level === -1);
+    await pressInto('.rr-title .rr-hopt[data-hints="on"]', () => window.__game.settings.noHints === false, 'Dicas ligadas');
+    await pressInto('.rr-title .rr-back', () => window.__game.ui.screen === 'main', 'Voltar');
+    await thaw(() => pressInto('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar'), (i) => i.state === 'playing' && i.level === -1);
     // um toque na tela (como a jogadora faria) liga os controles de toque
     if (dev.touch) await page.touchscreen.tap(dev.opts.viewport.width / 2, 40);
     await step(90);

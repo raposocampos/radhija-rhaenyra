@@ -212,12 +212,11 @@ try {
   check((await logOf('map:newFlag')).at(-1)?.n === 2, 'a novidade (a 2) ganha uma olhadinha da câmera', await logOf('map:newFlag'));
   await shot('06-mapa-depois-da-vitoria.png');
 
-  console.log('\n== Pelo menu: Jogar → Fases ==');
+  console.log('\n== Pelo menu: Jogar ==');
   await load('');
   await page.click('.rr-btn--play');
-  await page.click('.rr-mode--levels');
   i = await waitFor((x) => x.state === 'playing' && x.hub && x.near != null, { timeout: 60000 });
-  check(i.hub && i.near === 2, 'Fases abre o mapa na frente da próxima (2)', i.near);
+  check(i.hub && i.near === 2, 'Jogar abre o mapa na frente da próxima (2)', i.near);
   // a pausa do mapa: Menu inicial leva à tela inicial sobre o mapa
   await press('Escape', 300);
   check((await info()).state === 'paused', 'Esc pausa no mapa');
@@ -227,9 +226,8 @@ try {
   check(i.hub && ribbon === 'Pandorópolis', 'Menu inicial: a tela inicial sobre o mapa (fita "Pandorópolis")', ribbon);
   await clearLog();
   await page.click('.rr-btn--play');
-  await page.click('.rr-mode--levels');
   i = await waitFor((x) => x.state === 'playing' && x.hub, { timeout: 10000 });
-  check(i.hub && (await logOf('level:loading')).length === 0, 'Fases de novo: o mapa já montado, sem carregar', i.state);
+  check(i.hub && (await logOf('level:loading')).length === 0, 'Jogar de novo: o mapa já montado, sem carregar', i.state);
 
   await screenSizes();
 } catch (err) {

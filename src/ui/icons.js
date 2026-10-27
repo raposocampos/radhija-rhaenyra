@@ -383,6 +383,10 @@ export function rotatePhoneIcon() {
 export function gearIcon() {
   return stroke('<path d="M18.53 9.76L21.07 10.44V13.56L18.53 14.24L18.2 15.03L19.51 17.31L17.31 19.51L15.03 18.2L14.24 18.53L13.56 21.07H10.44L9.76 18.53L8.97 18.2L6.69 19.51L4.49 17.31L5.8 15.03L5.47 14.24L2.93 13.56V10.44L5.47 9.76L5.8 8.97L4.49 6.69L6.69 4.49L8.97 5.8L9.76 5.47L10.44 2.93H13.56L14.24 5.47L15.03 5.8L17.31 4.49L19.51 6.69L18.2 8.97Z" fill="currentColor" fill-opacity=".16"/><circle cx="12" cy="12" r="3"/>', 1.8);
 }
+/** Música: duas colcheias; desligada, riscadas (o risco só aparece com aria-pressed="false", ui.css). */
+export function noteIcon() {
+  return stroke('<path d="M9 17.5V6l10-2.2v11.5"/><circle cx="6.6" cy="17.6" r="2.6" fill="currentColor" fill-opacity=".22"/><circle cx="16.6" cy="15.4" r="2.6" fill="currentColor" fill-opacity=".22"/><path class="ico-slash" d="M3.6 3.6l16.8 16.8"/>', 2.1);
+}
 /** Voltar: seta para a esquerda. */
 export function backIcon() {
   return stroke('<path d="M19.5 12H5.5"/><path d="M11 6.2L5.2 12l5.8 5.8"/>', 2.4);
