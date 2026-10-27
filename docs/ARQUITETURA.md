@@ -187,7 +187,10 @@ usa o que vier no lugar dos campos da definição (§3). Assim o Vite põe cada 
 sem baixar as outras fases. Metadados, `layout`, `lighting` e `createPuzzle` ficam estáticos, porque a UI (cartões
 do menu, total de petiscos) e os testes em Node os usam sem montar cenário; o jogo headless troca o `build` por
 dublês e descarta o `load`. Uma fase com cenário provisório e leve (o modelo e as arenas, com `_placeholder.js`)
-pode passar `build` direto, sem `load`.
+pode passar `build` direto, sem `load`. O que o cenário baixa da rede também vem no `load()`, antes da montagem: a
+foto do quadro da fase 10 (`preloadWorld()` → `preloadSecret()`, prazo de 5 s, nunca rejeita). Assim o material já
+nasce com a textura e o aquecimento da GPU (§3, passo 8) a leva junto; chegando depois, o programa com mapa e a textura
+subiam na primeira vez que a dog entrava ali.
 
 Fases registradas (`src/levels/index.js`):
 
@@ -1072,6 +1075,23 @@ ao mesmo tempo (disputa de CPU). Serve para reproduzir o travamento com a sonda 
 correção. Como várias rodadas rodam no mesmo processo, o vigia do `page-guard.mjs` só para (`stopWatch`) quando não
 resta página protegida aberta, e uma página nova o religa.
 
+*SwiftShader sem recompilar por ordem de desenho* (`angleArgs()` em `tools/scripts/lib/browser.mjs`): no CI, o
+Chromium de todas as suítes, capturas e medições sobe com `--use-angle=swiftshader` e
+`--disable-angle-features=supportsVertexInputDynamicState`. O SwiftShader compila (JIT Subzero) uma rotina de vértices
+para cada combinação de formatos dos 16 locais de atributo. O `vkCmdSetVertexInputEXT` dele só escreve os locais da
+lista nova; os outros guardam o formato do desenho anterior. Com o estado dinâmico de entrada de vértices do ANGLE (o
+padrão), a mesma malha pedia uma rotina nova conforme o que tinha sido desenhado antes dela, e o three ordena os
+desenhos pela câmera. Isso custava de 150 a 500 ms num quadro qualquer, sem nada novo no WebGL. O PR #68 achou a causa
+com trace do Chromium e `perf` no runner: `sw::VertexProcessor::routine`. Sem esse estado, o ANGLE põe os atributos no
+pipeline e a rotina deixa de depender da ordem. O estado que o WebGL pede é o mesmo e a imagem não muda. Numa GPU de
+verdade nada disso existe, e fora do CI (Chrome do sistema) a chave não entra. `E2E_VERTEX_INPUT_DYNAMIC=1` volta ao
+padrão do Chromium, para comparar. Medido no PR #69, cada job comparado com jobs anteriores na mesma CPU de runner:
+- As partidas ficaram ~3% mais rápidas (21 jobs, nenhum mais lento). Entre execuções iguais, a variação vai de −6% a +8%.
+- Na primeira passagem, as medições com algum pico caíram de 32% para 12%.
+- As capturas só variam o que já variava entre execuções: há quadros idênticos bit a bit, e o resto muda com o momento
+  da animação.
+- Os avisos de teto de relógio logo depois do `ui:restart` (acima) continuam iguais: são outra recompilação.
+
 **Primeira passagem pelas áreas** (suíte `primeira-passagem` do E2E manual, também em `todas`;
 `tools/scripts/measure-first-pass.mjs`, um job por fase e aparelho): cada fase abre com `?play` num navegador novo
 (nada compilado antes, sem o cache de shaders em disco), no PC (`alta`, 480×270) ou num celular-alvo emulado (toque e
@@ -1093,11 +1113,13 @@ quadros saíam ~30% mais caros por alguns segundos, sem nada novo no renderer) e
 `gl.finish()` do Chromium não espera: os quadros se enfileiravam e o tempo saía em degraus de 5 e 600 ms), então a 1ª e a
 2ª passagem se comparam quadro a quadro. Reprova se, depois da carga, o renderer compilar um programa ou receber uma
 textura ou geometria (o relatório diz em que nó e de qual material) ou com picos: quadros da 1ª passagem 150 ms e 35%
-mais caros que o mesmo da 2ª, com a mesma cena (desenhos a 2%); tolera até 3 isolados, nenhum acima de 2,5×. No
-SwiftShader, alguns objetos ainda custam um pouco mais na primeira vez que pintam de perto (a cerca do fundo e as
-folhinhas da fase 10, +40 a +120% num quadro, já antes da correção), sem nada novo no renderer; o relatório lista o que
-acabou de entrar na câmera em cada pico. Sem o aquecimento, o 1º quadro custava de 5 a 30× o normal. Os ms são do
-SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as contagens são exatas.
+mais caros que o mesmo da 2ª, com a mesma cena (desenhos a 2%); tolera até 3 isolados, nenhum acima de 2,5×; o
+relatório lista o que acabou de entrar na câmera em cada pico. Sem o aquecimento, o 1º quadro custava de 5 a 30× o
+normal. Os ms são do SwiftShader (comparação entre as passagens, não o FPS de um aparelho); as contagens são exatas.
+Como todo o E2E, a medição roda sem o estado dinâmico de entrada de vértices do ANGLE (*SwiftShader sem recompilar por
+ordem de desenho*, acima). Com esse estado, que é o padrão, a mesma malha recompilava nas duas passagens. Daí vinham os
+picos fixos da fase 10, a cerca do fundo e as folhinhas da mangueira, com +40 a +120% num quadro, em toda medição. Daí
+vinha também boa parte dos picos isolados (PR #68).
 
 **Celular no E2E** (suíte `toque`, `tools/scripts/test-toque.mjs`): o harness aceita opções de aparelho
 (`createHarness({ device: { isMobile, hasTouch, deviceScaleFactor, screen } })`) e a suíte usa dedos reais pelo
