@@ -1,11 +1,31 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-26, Claude** (E2E "Primeira passagem — fase 10" intermitente, branch
-`claude/fase10-primeira-passagem`, PR #68, em andamento; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em
-v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 ·
-build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (todas as suítes do E2E com o SwiftShader sem o estado dinâmico de entrada
+de vértices, branch `claude/swiftshader-sem-estado-dinamico`, PR #69, em andamento; #68, primeira passagem da fase 10,
+em v0.10.18 · build 110; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106).
+Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: E2E "Primeira passagem — fase 10" intermitente (branch `claude/fase10-primeira-passagem`)
+## Em andamento: SwiftShader sem recompilar por ordem de desenho em todo o E2E (PR #69)
+
+- Pedido (pela sessão do #68, escopo aprovado pelo orquestrador): levar a correção do #68 do medidor da primeira
+  passagem para todas as suítes, capturas e medições do CI. O motivo é que a recompilação por ordem de desenho deixa
+  quadros lentos aleatórios em qualquer suíte.
+- Feito: `angleArgs()` em `tools/scripts/lib/browser.mjs`. Com `CI`, entram `--use-angle=swiftshader` e
+  `--disable-angle-features=supportsVertexInputDynamicState`; `E2E_VERTEX_INPUT_DYNAMIC=1` volta ao padrão. A chave
+  local do `measure-first-pass.mjs` saiu (só as linhas dela; o `FIRST_PASS_VERTEX_INPUT_DYNAMIC` do #68 virou
+  `E2E_VERTEX_INPUT_DYNAMIC`). Há um teste em `test/e2e-runner.test.mjs`. ARQUITETURA §10 ganhou o parágrafo
+  *SwiftShader sem recompilar por ordem de desenho*, e o parágrafo da primeira passagem remete a ele. O jogo não muda.
+- Validação: commit do código `9e23958`, CI `40426790272` verde. Os E2E `todas` do branch (`40426732349`) e do
+  controle no main (`40426736430`) foram cancelados a pedido do orquestrador, por falta de máquinas. Depois veio a
+  sincronização com o main `f534f89` (#68, sem conflito). Falta o CI e um único E2E `todas` no head sincronizado.
+- Comparação de tempos: o "antes" é o E2E `todas` final do #68 (mesmo código, sem a chave nas partidas) mais o
+  histórico. A soma do passo "Jogar e verificar" das partidas subiu de ~3.500 s para ~5.000 s a partir do #64, que pôs
+  mais telas em `menu` e `toque`; por isso não se comparam execuções de antes e depois dele. As métricas por suíte são a
+  duração do passo, o `ritmo do jogo`, os avisos de teto de relógio, o tempo de `load()` e os picos da primeira passagem.
+- Próximo passo: comparar e registrar no PR e aqui; pedir o "pode integrar" ao usuário. Fila do orquestrador: #69, #70,
+  #71.
+
+## Entregue: E2E "Primeira passagem — fase 10" intermitente (PR #68, squash `f534f89`, deploy `40442109759`, v0.10.18 · build 110)
 
 - Pedido (pelo orquestrador, sessão do PR #67, que não mexe na fase 10): a suíte reprovava às vezes em `celular-baixa`
   e `celular-media` por "1 programas / 1 texturas depois da carga" ou "4 picos na 1ª passagem (tolerados 3)" e passava
@@ -25,6 +45,8 @@ build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
   mesma malha pede uma rotina nova conforme o que foi desenhado antes dela, e o three ordena pela câmera. Correção no
   medidor: `--disable-angle-features=supportsVertexInputDynamicState` (o ANGLE põe os atributos no pipeline);
   limites do teste iguais. `FIRST_PASS_VERTEX_INPUT_DYNAMIC=1` volta ao padrão. Explicado na ARQUITETURA (§4.1 e §10).
+  Desde o #69, a chave vale para todo o E2E (`angleArgs()` em `lib/browser.mjs`), e a variável é
+  `E2E_VERTEX_INPUT_DYNAMIC`.
 - Descartado no diagnóstico (branch auxiliar `claude/fase10-primeira-passagem-diag`, só workflow e script; apagar no
   fim): a troca para o pipeline monolítico do ANGLE (`CreateMonolithicPipelineTask` aparece nos picos, mas desligá-la
   com `preferMonolithicPipelinesOverLibraries`/`supportsGraphicsPipelineLibrary` não tira os picos); alvo do aquecimento

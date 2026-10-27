@@ -11,7 +11,7 @@
 // runner; o relatório diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
-//   FIRST_PASS_VERTEX_INPUT_DYNAMIC=1 (o padrão do Chromium no SwiftShader; ver os argumentos do navegador abaixo)
+//   E2E_VERTEX_INPUT_DYNAMIC=1 (o padrão do Chromium no SwiftShader; ver angleArgs em lib/browser.mjs)
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
@@ -317,16 +317,9 @@ try {
   // segundo plano dos programas recém-compilados, que no runner deixava os quadros ~30% mais caros por alguns segundos
   // depois da carga. FIRST_PASS_SHADER_CACHE=1 mantém o cache.
   if (process.env.FIRST_PASS_SHADER_CACHE !== '1') options.args = [...options.args, '--disable-gpu-shader-disk-cache'];
-  // O SwiftShader (a GPU por software do CI) compila uma rotina de vértices por combinação de formatos dos 16 locais de
-  // atributo, e o vkCmdSetVertexInputEXT dele só escreve os locais da lista nova: os outros guardam o formato do desenho
-  // anterior. Com o estado dinâmico de entrada de vértices do ANGLE, a mesma malha pedia uma rotina nova conforme o que
-  // foi desenhado antes dela (o three ordena pela câmera): 150–500 ms de compilação no quadro, nas duas passagens, sem
-  // nada novo no WebGL. Eram os picos fixos da fase 10 (cerca do fundo, folhinhas da mangueira) e boa parte dos
-  // isolados. GPU de verdade não compila por ordem de desenho. Sem esse estado dinâmico, o ANGLE põe os atributos no
-  // pipeline e a rotina é a do aquecimento. FIRST_PASS_VERTEX_INPUT_DYNAMIC=1 volta ao padrão do Chromium.
-  if (process.env.FIRST_PASS_VERTEX_INPUT_DYNAMIC !== '1') {
-    options.args = [...options.args, '--disable-angle-features=supportsVertexInputDynamicState'];
-  }
+  // No CI, o browserOptions() já sobe o SwiftShader sem o estado dinâmico de entrada de vértices (angleArgs, em
+  // lib/browser.mjs): com ele, a mesma malha recompilava a rotina de vértices conforme o desenho anterior (150–500 ms no
+  // quadro). Eram os picos fixos da fase 10 (cerca do fundo, folhinhas da mangueira) e boa parte dos isolados.
   report.conditions.browserArguments = options.args;
   for (const level of LEVELS) {
     for (const quality of QUALITIES) {
