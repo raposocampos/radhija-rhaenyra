@@ -1,11 +1,47 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-27, Claude** (todas as suítes do E2E com o SwiftShader sem o estado dinâmico de entrada
-de vértices, branch `claude/swiftshader-sem-estado-dinamico`, PR #69, em andamento; #68, primeira passagem da fase 10,
-em v0.10.18 · build 110; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106).
-Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (picos de `O_flap` na primeira passagem da fase 9, branch
+`claude/fase9-primeira-passagem`, PR #70, em andamento; #69, SwiftShader sem o estado dinâmico de entrada de vértices em
+todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fase 10, em v0.10.18 · build 110; #67, #66 e #64 já
+integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e
+[ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: SwiftShader sem recompilar por ordem de desenho em todo o E2E (PR #69)
+## Em andamento: picos de `O_flap` na primeira passagem da fase 9 (PR #70, branch `claude/fase9-primeira-passagem`)
+
+- Pedido (pelo orquestrador, sessão do PR #68): os quadros #92 e #93 de `O_flap` na "Primeira passagem — fase 9"
+  (`celular-baixa`, ~610/430 e ~585/395 ms, 1ª contra 2ª passagem), em 2 de 6 medições, antes e depois do #68; com um
+  pico de ruído, a medição chega ao limite de 3 (E2E `40410883024`, `40165191820`, `40143064425`).
+- Causa (o medidor, não o jogo nem o SwiftShader): as duas passagens não mostravam a mesma cena. A apresentação da fase
+  9 (`puzzle.js`: plano dos óculos aos 0,7 s, do Bichano aos 3,3 s, 6,9 s ao todo) acontecia só na 1ª passagem, do
+  quadro 21 ao 207 (de `H_mid` a `J_mid`), e o `snapFollow` antes da 2ª apagava o plano. Nos quadros #92/#93 a 1ª
+  passagem saía do plano dos óculos (câmera em x = 1,12) e a 2ª seguia a dog (x = −4,35); os desenhos coincidiam a 2% e
+  o quadro mais caro da 1ª virava "pico". Nos relatórios: do `H_door` ao `O_mid` a 1ª tem ~1226 desenhos fixos (o plano
+  dos óculos parado) e de `L_arch` a `J_door` 1037 fixos (o do Bichano), contra 1160–1650 da 2ª; de `J_north` em diante,
+  iguais. Também em todas as fases: a 1ª passagem herdava a transição de 1,7 s da carga (`?play`), a câmera diferia nos
+  ~30 primeiros quadros dos nós, e a companheira começava a 2ª onde a 1ª a deixou (até 1,6–6,3 m de diferença). A fase
+  10 tinha o mesmo com o bolo e o pombo (208 quadros com a câmera em outro lugar).
+- O excesso de ~100–170 ms nos 9–20 primeiros quadros do `inicio` (o `inicio#3` do `40410883024`) é outro: aparece ao
+  acaso em várias fases e para de uma vez num quadro qualquer, sem ligação com nó ou cena (trabalho do navegador depois
+  da carga). Não mexido.
+- Correção (`tools/scripts/measure-first-pass.mjs`; limites iguais): cada passagem começa com as dogs no lugar e no rumo
+  da carga e a câmera assentada; o começo (24 quadros, antes 16) continua enquanto houver plano de câmera no ar, então a
+  apresentação passa no início e o passeio fica com a câmera seguindo a dog; cada plano pedido pelo jogo na 1ª passagem é
+  refeito na 2ª no mesmo quadro; o xixi sorteado fica desligado. O relatório conta os quadros com a mesma cena e com a
+  câmera em outro lugar. `FIRST_PASS_REPLAY=0` volta ao roteiro anterior. ARQUITETURA §10.
+- Conferido no jogo headless (roteiro do medidor sem desenhar, script de diagnóstico fora do repositório): câmera em
+  outro lugar entre as passagens 27–31 quadros nas fases 1–8, 188 na 9 e 208 na 10 → 0 em todas; companheira idêntica nas
+  fases 1–9 (na 10, até 0,66 m: o estado do puzzle muda na 1ª passagem).
+- Validação: a varredura temporária `40428061193` (branch auxiliar `claude/fase9-primeira-passagem-varredura`, só o
+  workflow; apagar no fim) e o E2E `primeira-passagem` `40428326688` foram cancelados a pedido do orquestrador, com a
+  fila do GitHub travada, sem resultado. O CI `40428261106` do head `87f6b6c` (sobre o main `0b80ae4`) ficou verde.
+  Depois veio a sincronização com o main `87f1b75` (#68 e #69): só este arquivo conflitou; o `measure-first-pass.mjs`
+  juntou sozinho (o SwiftShader sem o estado dinâmico vem do `browserOptions()`, o roteiro novo ficou igual). CI e E2E
+  `primeira-passagem` do head no PR.
+- No PC: só `node --check`, `git diff --check` e o diagnóstico headless.
+- Próximo passo: entregar a prévia e esperar o "pode integrar" do usuário nesta sessão; depois, merge squash com o SHA
+  esperado, liberar o deploy correspondente e apagar o branch auxiliar. Fila do orquestrador: #70, #71.
+
+## Entregue: SwiftShader sem recompilar por ordem de desenho em todo o E2E (PR #69, squash `87f1b75`, deploy `40518303970`, v0.10.19 · build 111)
 
 - Pedido (pela sessão do #68, escopo aprovado pelo orquestrador): levar a correção do #68 do medidor da primeira
   passagem para todas as suítes, capturas e medições do CI. O motivo é que a recompilação por ordem de desenho deixa
@@ -37,8 +73,7 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     e não há geometria quebrada.
   - Avisos de teto de relógio: continuam os mesmos, nas esperas logo depois do `ui:restart` (`fase1`, `fase3`, `menu`).
     A recompilação depois do restart descrita na ARQUITETURA §10 não é esta.
-- Próximo passo: o usuário aprovar ("pode integrar") e o orquestrador liberar a vez; depois integrar com squash e o SHA
-  esperado. Fila do orquestrador: #69, #70, #71.
+- Integrado: squash `87f1b75`, deploy `40518303970` (v0.10.19 · build 111).
 
 ## Entregue: E2E "Primeira passagem — fase 10" intermitente (PR #68, squash `f534f89`, deploy `40442109759`, v0.10.18 · build 110)
 
@@ -79,9 +114,9 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   conferir o CI deles no PR. Depois veio a sincronização com o main `0b80ae4` (#67, merge sem conflito; o PR segue
   mexendo só nos seus 7 arquivos): CI e E2E `primeira-passagem` e `todas` do head no PR.
 - Observação, sem relação com esta mudança: a fase 9 no `celular-baixa` tem 2 picos em `O_flap` (#92, #93) em 2 de 6
-  medições, já antes; com um pico de ruído, chega ao limite de 3.
-- No PC: só `node --check`, `git diff --check` e o teste novo em Node. Próximo passo: entregar a prévia e esperar o
-  "pode integrar" do usuário nesta sessão; depois, merge squash com o SHA esperado e liberar o deploy correspondente.
+  medições, já antes; com um pico de ruído, chega ao limite de 3 (tratado no PR #70).
+- No PC: só `node --check`, `git diff --check` e o teste novo em Node.
+- Integrado: squash `f534f89`, deploy `40442109759` (v0.10.18 · build 110).
 
 ## Entregue: E2E `fase3` intermitente na dica do cantinho (PR #66, squash `1b288c0`)
 

@@ -3,7 +3,9 @@
 // câmera percorre os nós de navegação duas vezes pelo mesmo caminho (a dog ativa vai de nó em nó; a câmera segue
 // como no jogo); no fim, um superbafo. Os quadros são dados pela página de medição, com passo fixo e esperando a GPU
 // terminar cada um (leitura de um pixel), para que a 1ª e a 2ª passagem sejam comparáveis quadro a quadro: o que a
-// 1ª custa a mais é o trabalho de "primeira vez".
+// 1ª custa a mais é o trabalho de "primeira vez". As duas passagens mostram a mesma cena: começam iguais (as dogs no
+// lugar do início, a câmera assentada), a apresentação da fase passa no início e cada plano de câmera da 1ª é refeito
+// na 2ª, no mesmo quadro (ver pageTour).
 // Reprova (FIRST_PASS_STRICT, ligado por padrão) se, depois da carga, o renderer compilar um programa ou enviar uma
 // textura ou geometria, ou se a 1ª passagem tiver picos: quadros que custam mais de FIRST_PASS_EXCESS_MS e mais de
 // FIRST_PASS_EXCESS_REL (fração) que o mesmo quadro da 2ª, com a mesma cena (desenhos a 2%). Tolera até
@@ -24,9 +26,15 @@ const OUT = fileURLToPath(new URL('../../shots/first-pass/', import.meta.url));
 const MOUNT = '/primeira-passagem/';
 const VIEWPORT = { width: 480, height: 270 };
 const DT = 1 / 30;
+// FIRST_PASS_REPLAY=0 volta ao roteiro anterior, para comparar: a 1ª passagem com a câmera da carga, os planos de
+// câmera só nela, o xixi ligado e um começo fixo de 16 quadros.
+const REPLAY = process.env.FIRST_PASS_REPLAY !== '0';
 // Na posição inicial (os primeiros quadros depois da carga). Par, como os 18 de cada nó e os 30 da volta: no 'baixa' a
 // sombra é redesenhada a cada 2 quadros, e a 2ª passagem precisa começar na mesma paridade para os quadros se compararem.
-const START_FRAMES = 16;
+// 24 quadros (0,8 s) passam do 0,7 s em que começa a apresentação das fases 9 e 10; enquanto um plano de câmera dela
+// estiver no ar, o começo continua (de 2 em 2 quadros, até START_FRAMES_MAX).
+const START_FRAMES = REPLAY ? 24 : 16;
+const START_FRAMES_MAX = 600; // 20 s
 const NODE_FRAMES = 18; // em cada nó: a câmera (amortecimento de 0,24 s) chega e assenta (96% em 0,6 s)
 const RETURN_FRAMES = 30; // volta ao início entre as passagens (não entra nas contas)
 // Antes da 1ª passagem, a página fica parada um pouco: no runner de 4 núcleos, logo depois da carga o navegador ainda
@@ -63,8 +71,11 @@ const report = {
   commit: process.env.GITHUB_SHA || null, run: process.env.GITHUB_RUN_ID || null, attempt: process.env.GITHUB_RUN_ATTEMPT || null,
   node: process.version,
   conditions: {
-    viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES,
-    settleMs: SETTLE_MS,
+    viewport: VIEWPORT, deviceScaleFactor: 1, dt: DT, startFrames: START_FRAMES, startFramesMax: START_FRAMES_MAX, nodeFrames: NODE_FRAMES,
+    returnFrames: RETURN_FRAMES, settleMs: SETTLE_MS, replay: REPLAY,
+    sameScene: REPLAY
+      ? 'each pass starts with both dogs teleported to their start (start yaw) and the camera snapped there; the start lasts while a camera shot is on (the level opening); every camera shot of the 1st pass is replayed in the 2nd at the same frame; idle pee off'
+      : 'legacy: the 1st pass starts with the camera of the load (title→follow blend) and its camera shots are not replayed in the 2nd',
     dogs: DOGS || 'padrao', strict: STRICT, peak: { ms: EXCESS_MS, relative: EXCESS_REL, sameDrawsWithin: 0.02, tolerated: MAX_PEAKS, maxRatio: MAX_RATIO },
     tour: 'greedy nearest-neighbour tour of layout NAV_NODES from the active dog start; the active dog is teleported node to node, camera rig follows; same tour twice',
     frame: 'game.update + seeThrough + feedback + particles + engine.render + 1-pixel readPixels (waits for the GPU), driven by the measurement page (rAF loop paused)',
@@ -122,7 +133,7 @@ function pageSetup({ quality }) {
 }
 
 /** Na página: percorre a fase duas vezes e devolve os quadros. */
-async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs }) {
+async function pageTour({ dt, startFrames, startFramesMax, nodeFrames, returnFrames, settleMs, replay }) {
   const { engine, game, THREE } = window.__game;
   const fp = window.__firstPass;
   const { renderer, scene } = engine;
@@ -133,6 +144,12 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
   const active = game.activeDog;
   const c0 = game.debug.ctrls[active];
   const start = { id: 'inicio', x: c0.x, z: c0.z };
+  const cam = game.debug.cam;
+  // onde e para onde cada dog estava na carga: o começo de cada passagem as põe de volta assim
+  const dogStarts = Object.entries(game.debug.ctrls).map(([name, c]) => ({ name, x: c.x, z: c.z, yaw: c.yaw }));
+  // o xixi (raro e sorteado) faria uma dog sair andando numa passagem e não na outra; as partidas automáticas que medem
+  // onde as dogs ficam também o desligam
+  if (replay) game.debug.idle?.setPee(false);
   // caminho guloso: sempre o nó mais perto ainda não visitado
   const tour = [];
   let at = start;
@@ -230,18 +247,45 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
     const r1 = performance.now();
     finish();
     const t1 = performance.now();
+    const p = cam.position;
     return {
       ms: +(t1 - t0).toFixed(1), render: +(r1 - r0).toFixed(1), gpu: +(t1 - r1).toFixed(1),
       programs: renderer.info.programs.length - p0, textures: renderer.info.memory.textures - x0,
       geometries: renderer.info.memory.geometries - g0, calls: renderer.info.render.calls,
+      cam: [+p.x.toFixed(3), +p.y.toFixed(3), +p.z.toFixed(3)], ...(cam.shotActive ? { shot: true } : {}),
     };
   }
   const tp = (n) => game.debug.teleport(active, n.x, n.z);
   const news = [];
   // devolve a vez ao navegador entre os nós (o laço do jogo está pausado; nada roda além do carimbo da UI)
   const breathe = () => new Promise((r) => setTimeout(r, 0));
+
+  // Planos de câmera (focusShot). A apresentação da fase (fase 9: os óculos e o Bichano, 6,9 s; fase 10: o bolo) e os
+  // de primeira vez (fase 10: o pombo do fundo do quintal) acontecem uma vez por carga. Sem refazê-los, a 2ª passagem
+  // comparava outra cena: na fase 9, do quadro 21 ao 207 a 1ª mostrava os óculos e o Bichano e a 2ª seguia a dog (os
+  // "picos" de O_flap eram a saída do plano dos óculos contra a câmera normal, sem nada de primeira vez). Cada plano
+  // pedido na 1ª passagem é refeito na 2ª no mesmo quadro, antes do quadro do jogo (o jogo o pede dentro do quadro,
+  // antes de a câmera andar: dá no mesmo); os que o jogo pedir em outra hora ficam no relatório.
+  const camShots = { first: [], second: [], other: [] };
+  const replayAt = new Map(); // quadro da passagem → planos a refazer na 2ª
+  const gameShot = cam.focusShot;
+  let cur = null; // o quadro em curso: { pass, frame, node }
+  const point = (q) => q && { x: q.x, y: q.y, z: q.z };
+  cam.focusShot = (x, z, opts) => {
+    const entry = { pass: cur?.pass ?? null, frame: cur?.frame ?? null, node: cur?.node ?? null, x: +x.toFixed(2), z: +z.toFixed(2) };
+    (entry.pass === 1 ? camShots.first : entry.pass === 2 ? camShots.second : camShots.other).push(entry);
+    if (replay && entry.pass === 1) {
+      const list = replayAt.get(entry.frame) || [];
+      list.push({ x, z, opts: opts && { ...opts, target: point(opts.target), from: point(opts.from) } });
+      replayAt.set(entry.frame, list);
+    }
+    return gameShot(x, z, opts);
+  };
+
   function visit(frames, pass, node, count) {
     for (let i = 0; i < count; i++) {
+      cur = { pass, frame: frames.length, node: node.id };
+      if (pass === 2) for (const s of replayAt.get(frames.length) || []) gameShot(s.x, s.z, s.opts);
       const f = frame();
       f.node = node.id;
       frames.push(f);
@@ -256,10 +300,35 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
           newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [] });
       }
     }
+    cur = null;
+  }
+  /**
+   * O começo de cada passagem, igual nas duas: as dogs no lugar e no rumo da carga (a companheira tinha ficado onde a
+   * 1ª passagem a deixou) e a câmera assentada no início, sem plano nem transição (na carga, o ?play deixa uma transição
+   * de 1,7 s para o seguimento, que atrasava a câmera no 1º nó só na 1ª passagem).
+   */
+  function startOver() {
+    for (const d of dogStarts) {
+      game.debug.ctrls[d.name].yaw = d.yaw; // o teleporte mantém o rumo de agora
+      game.debug.teleport(d.name, d.x, d.z);
+    }
+    cam.snapFollow(start.x, start.z);
+  }
+  // A apresentação da fase passa com as dogs no início, como no jogo: na 1ª passagem o começo dura até acabarem os
+  // planos dela (de 2 em 2 quadros, pela paridade), e a 2ª usa o mesmo tanto de quadros, do mesmo jeito. Assim o
+  // passeio fica com a câmera seguindo a dog nas duas.
+  let startCount = startFrames;
+  async function runStart(frames, pass) {
+    visit(frames, pass, start, startFrames);
+    const more = () => (pass === 1 ? replay && cam.shotActive && frames.length < startFramesMax : frames.length < startCount);
+    while (more()) { await breathe(); visit(frames, pass, start, 2); }
+    if (pass === 1) startCount = frames.length;
   }
   async function runPass(pass) {
     const frames = [];
-    visit(frames, pass, start, startFrames);
+    if (replay) startOver();
+    else if (pass === 2) cam.snapFollow(start.x, start.z);
+    await runStart(frames, pass);
     for (const n of tour) { await breathe(); tp(n); visit(frames, pass, n, nodeFrames); }
     return frames;
   }
@@ -267,7 +336,6 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
   const back = [];
   tp(start);
   visit(back, 'volta', start, returnFrames);
-  game.debug.cam.snapFollow(start.x, start.z);
   const pass2 = await runPass(2);
   // o que só aparece num evento da partida: a nuvem do superbafo e a mira
   const events = [];
@@ -277,6 +345,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
   scent.spawn(shot);
   scent.showPreview(scent.preview(shot));
   visit(events, 'eventos', { id: 'superbafo' }, 20);
+  cam.focusShot = gameShot;
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const dbg = gl.getExtension('WEBGL_debug_renderer_info');
   return {
@@ -286,7 +355,7 @@ async function pageTour({ dt, startFrames, nodeFrames, returnFrames, settleMs })
     quality: { ...engine.qualityState, device: engine.quality.device, buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled && engine.sun.castShadow,
       shadowType: renderer.shadowMap.type, shadowSize: engine.sun.shadow.mapSize.x, bloom: engine.bloom.enabled,
       renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
-    passes: [pass1, pass2], back, events, news, seenAtStart, appeared,
+    passes: [pass1, pass2], back, events, news, seenAtStart, appeared, startFrames: startCount, camShots,
   };
 }
 
@@ -338,15 +407,23 @@ try {
         const url = `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
         await page.goto(url, { waitUntil: 'load', timeout: 180000 });
         await page.waitForFunction(() => window.__firstPass && window.__game?.game.state === 'playing', null, { timeout: 180000 });
-        const run = await page.evaluate(pageTour, { dt: DT, startFrames: START_FRAMES, nodeFrames: NODE_FRAMES, returnFrames: RETURN_FRAMES, settleMs: SETTLE_MS });
+        const run = await page.evaluate(pageTour, { dt: DT, startFrames: START_FRAMES, startFramesMax: START_FRAMES_MAX, nodeFrames: NODE_FRAMES,
+          returnFrames: RETURN_FRAMES, settleMs: SETTLE_MS, replay: REPLAY });
         const [p1, p2] = run.passes;
+        // quantos quadros mostram a mesma cena nas duas passagens: desenhos a 2% (o critério do pico) e a câmera no mesmo
+        // lugar (a 1 cm)
+        const sameDraws = (f, s) => s && Math.abs(f.calls - s.calls) <= 0.02 * s.calls;
+        const sameCamera = (f, s) => s && Math.hypot(f.cam[0] - s.cam[0], f.cam[1] - s.cam[1], f.cam[2] - s.cam[2]) <= 0.01;
+        const scene = { frames: p1.length, sameDraws: p1.filter((f, i) => sameDraws(f, p2[i])).length,
+          cameraDiffers: p1.filter((f, i) => !sameCamera(f, p2[i])).length,
+          shotFrames: { first: p1.filter((f) => f.shot).length, second: p2.filter((f) => f.shot).length } };
         const excess = p1.map((f, i) => +(f.ms - (p2[i]?.ms ?? f.ms)).toFixed(1));
         const worst = excess.map((e, i) => ({ e, i })).sort((a, b) => b.e - a.e).slice(0, 8)
           .map(({ e, i }) => ({ frame: i, node: p1[i].node, excessMs: e, firstMs: p1[i].ms, secondMs: p2[i].ms, programs: p1[i].programs, textures: p1[i].textures }));
         // pico: bem mais caro que o mesmo quadro da 2ª passagem, com a mesma cena (a mesma quantidade de desenhos;
         // um bicho ou um objeto do puzzle em outro lugar muda o quadro, não é trabalho de primeira vez)
         const peaks = p1.map((f, i) => ({ f, s: p2[i], i }))
-          .filter(({ f, s }) => s && f.ms - s.ms > Math.max(EXCESS_MS, EXCESS_REL * s.ms) && Math.abs(f.calls - s.calls) <= 0.02 * s.calls)
+          .filter(({ f, s }) => s && f.ms - s.ms > Math.max(EXCESS_MS, EXCESS_REL * s.ms) && sameDraws(f, s))
           .map(({ f, s, i }) => ({ frame: i, node: f.node, firstMs: f.ms, secondMs: s.ms, gpuMs: f.gpu, calls: f.calls }));
         const sum = (frames, k) => frames.reduce((a, f) => a + f[k], 0);
         const marks = run.load.marks;
@@ -378,12 +455,19 @@ try {
           excess: { max: Math.max(...excess), sum: +excess.filter((e) => e > 0).reduce((a, e) => a + e, 0).toFixed(0),
             over50: excess.filter((e) => e > 50).length, over100: excess.filter((e) => e > 100).length, worst },
           peaks,
+          // o começo (com a apresentação da fase) e os planos de câmera: pedidos pelo jogo na 1ª passagem (refeitos na 2ª),
+          // pelo jogo na 2ª e fora delas (volta, superbafo)
+          startFrames: run.startFrames, scene,
+          cameraShots: { first: run.camShots.first.length, second: run.camShots.second.length, other: run.camShots.other.length },
         };
         // para cada pico, o que tinha acabado de entrar na câmera (no quadro dele ou no anterior)
         for (const k of summary.peaks) k.appeared = run.appeared.filter((a) => a.frame === k.frame || a.frame === k.frame - 1);
         report.runs.push({ ...summary, tour: run.tour, quality: run.quality, news: run.news, errors,
-          seenAtStart: run.seenAtStart, appeared: run.appeared,
+          seenAtStart: run.seenAtStart, appeared: run.appeared, cameraShotList: run.camShots,
           frames: { first: p1, second: p2, back: run.back, events: run.events } });
+        console.log(`[primeira-passagem] ${label}: começo de ${run.startFrames} quadros, ${run.camShots.first.length} planos de câmera na 1ª passagem `
+          + `(${REPLAY ? 'refeitos na 2ª' : 'não refeitos'}), ${run.camShots.second.length} pedidos pelo jogo na 2ª; mesma cena (desenhos) em `
+          + `${scene.sameDraws}/${scene.frames} quadros, câmera diferente em ${scene.cameraDiffers}`);
         console.log(`[primeira-passagem] ${label}: carga ${summary.load.programs} programas/${summary.load.textures} texturas `
           + `(preparo ${summary.load.prepareMs} ms); depois da carga +${summary.afterLoad.programs} programas, +${summary.afterLoad.textures} texturas, `
           + `+${summary.afterLoad.geometries} geometrias, superbafo +${summary.events.programs} programas; 1ª passagem máx ${summary.first.max} ms (p95 ${summary.first.p95}), `
@@ -422,14 +506,14 @@ try {
   report.passed = report.errors.length === 0 && report.failures.length === 0 && report.runs.length === LEVELS.length * QUALITIES.length;
   await save();
   const rows = report.runs.map((r) => `| ${r.label} (${r.as}, ${r.buffer.join('×')}) | ${r.programsTotal} | ${r.load.programs} | ${r.load.levelMs ?? '–'} | ${r.load.prepareMs ?? '–'} | ${r.afterLoad.programs} | ${r.afterLoad.textures} | ${r.afterLoad.geometries} | ${r.events.programs} | `
-    + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.peaks.length} |`);
+    + `${r.first.max} / ${r.first.p95} | ${r.second.max} / ${r.second.p95} | ${r.excess.max} | ${r.scene.sameDraws}/${r.scene.frames} | ${r.peaks.length} |`);
   const md = [
     `## Primeira passagem pelas áreas${report.commit ? ` — \`${report.commit.slice(0, 7)}\`` : ''}`,
     '',
     `${report.passed ? '✅ Aprovada' : '❌ Reprovada'} · ${VIEWPORT.width}×${VIEWPORT.height}, passo de ${(DT * 1000).toFixed(1)} ms, dogs: ${DOGS || 'padrão'} · SwiftShader (os ms não são de um aparelho; as contagens são exatas)`,
     '',
-    '| Fase/qualidade | Programas no total | Programas na carga | Carga (ms) | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Picos |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Fase/qualidade | Programas no total | Programas na carga | Carga (ms) | Preparo (ms) | Programas depois | Texturas depois | Geometrias depois | Programas no superbafo | 1ª passagem máx / p95 (ms) | 2ª passagem máx / p95 (ms) | Excesso máx (ms) | Quadros com a mesma cena | Picos |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...rows,
     '',
     ...report.failures.map((f) => `- ❌ ${f}`),
