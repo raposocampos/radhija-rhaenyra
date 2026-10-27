@@ -41,6 +41,26 @@ export function disabledFeaturesOptions(defaultArg = playwrightDisabledFeaturesA
   return { ignoreDefaultArgs: [defaultArg], args: [`--disable-features=${all.join(',')}`] };
 }
 
+/**
+ * A GPU dos testes no CI: o SwiftShader (renderização por software) pelo ANGLE em Vulkan, sem o estado dinâmico de
+ * entrada de vértices (supportsVertexInputDynamicState). O SwiftShader compila uma rotina de vértices para cada
+ * combinação de formatos dos 16 locais de atributo, e o vkCmdSetVertexInputEXT dele só escreve os locais da lista
+ * nova: os outros guardam o formato do desenho anterior. Com esse estado dinâmico, a mesma malha pedia uma rotina nova
+ * conforme o que foi desenhado antes dela (o three ordena os desenhos pela câmera): 150–500 ms de compilação (JIT
+ * Subzero) num quadro qualquer, sem nada novo no WebGL. Sem ele, o ANGLE põe os atributos no pipeline e a rotina não
+ * depende da ordem. GPU de verdade não compila por ordem de desenho, e fora do CI (Chrome do sistema, D3D/Metal) a
+ * chave nem existe. E2E_VERTEX_INPUT_DYNAMIC=1 volta ao padrão do Chromium (para comparar). Ver ARQUITETURA §10.
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {string[]}
+ */
+export function angleArgs(env = process.env) {
+  if (!env.CI) return [];
+  return [
+    '--use-angle=swiftshader',
+    ...(env.E2E_VERTEX_INPUT_DYNAMIC === '1' ? [] : ['--disable-angle-features=supportsVertexInputDynamicState']),
+  ];
+}
+
 // No CI, usa a versão do Chromium instalada pelo Playwright do package-lock.
 // Localmente, mantém Chrome/Edge do sistema; CHROME_PATH permite escolher outro.
 export function browserOptions() {
@@ -65,8 +85,8 @@ export function browserOptions() {
       '--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader',
       '--autoplay-policy=no-user-gesture-required',
       ...features.args,
-      // Os runners Linux não têm GPU física; WebGL usa renderização por software.
-      ...(process.env.CI ? ['--use-angle=swiftshader'] : []),
+      // Os runners Linux não têm GPU física; WebGL usa renderização por software (angleArgs, acima).
+      ...angleArgs(),
       // Registro do próprio Chromium (queda/travamento da GPU, processos, OOM) no stderr do navegador, que o
       // browser-log.mjs desvia para shots/diagnostico/ (ver hang-probe.mjs).
       ...(process.env.CI || process.env.E2E_BROWSER_LOG ? ['--enable-logging=stderr'] : []),

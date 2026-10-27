@@ -17,7 +17,12 @@ export default {
     victorySub: 'Um balde na roldana, uma piscininha cheia e o bolo igualzinho ao do ano passado.',
   },
   layout, lighting,
-  load: async () => ({ build: (await import('./world/index.js')).buildWorld }),
+  // o código do cenário e o que ele baixa da rede (a foto), antes da montagem e do aquecimento da GPU
+  load: async () => {
+    const world = await import('./world/index.js');
+    await world.preloadWorld();
+    return { build: world.buildWorld };
+  },
   createPuzzle,
   extras,
 };

@@ -1,9 +1,122 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-24, Claude** (E2E `fase3` sem a falha da dica do cantinho, PR #66, em andamento; #63,
-superbafo sem atalho pelo duto, em v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo
-na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #58 em v0.10.9 · build 101). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-27, Claude** (menu novo e trilha, etapa 4 de 4 da interface, branch `claude/menu-musica`,
+PR #71, em andamento; #70, picos de `O_flap` na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader
+sem o estado dinâmico de entrada de vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da
+fase 10, em v0.10.18 · build 110; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 ·
+build 106). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
+
+- Pedido (pelo orquestrador, sessão do PR #68): os quadros #92 e #93 de `O_flap` na "Primeira passagem — fase 9"
+  (`celular-baixa`, ~610/430 e ~585/395 ms, 1ª contra 2ª passagem), em 2 de 6 medições, antes e depois do #68; com um
+  pico de ruído, a medição chega ao limite de 3 (E2E `40410883024`, `40165191820`, `40143064425`).
+- Causa (o medidor, não o jogo nem o SwiftShader): as duas passagens não mostravam a mesma cena. A apresentação da fase
+  9 (`puzzle.js`: plano dos óculos aos 0,7 s, do Bichano aos 3,3 s, 6,9 s ao todo) acontecia só na 1ª passagem, do
+  quadro 21 ao 207 (de `H_mid` a `J_mid`), e o `snapFollow` antes da 2ª apagava o plano. Nos quadros #92/#93 a 1ª
+  passagem saía do plano dos óculos (câmera em x = 1,12) e a 2ª seguia a dog (x = −4,35); os desenhos coincidiam a 2% e
+  o quadro mais caro da 1ª virava "pico". Nos relatórios: do `H_door` ao `O_mid` a 1ª tem ~1226 desenhos fixos (o plano
+  dos óculos parado) e de `L_arch` a `J_door` 1037 fixos (o do Bichano), contra 1160–1650 da 2ª; de `J_north` em diante,
+  iguais. Também em todas as fases: a 1ª passagem herdava a transição de 1,7 s da carga (`?play`), a câmera diferia nos
+  ~30 primeiros quadros dos nós, e a companheira começava a 2ª onde a 1ª a deixou (até 1,6–6,3 m de diferença). A fase
+  10 tinha o mesmo com o bolo e o pombo (208 quadros com a câmera em outro lugar).
+- O excesso de ~100–170 ms nos 9–20 primeiros quadros do `inicio` (o `inicio#3` do `40410883024`) é outro: aparece ao
+  acaso em várias fases e para de uma vez num quadro qualquer, sem ligação com nó ou cena (trabalho do navegador depois
+  da carga). Não mexido.
+- Correção (`tools/scripts/measure-first-pass.mjs`; limites iguais): cada passagem começa com as dogs no lugar e no rumo
+  da carga e a câmera assentada; o começo (24 quadros, antes 16) continua enquanto houver plano de câmera no ar, então a
+  apresentação passa no início e o passeio fica com a câmera seguindo a dog; cada plano pedido pelo jogo na 1ª passagem é
+  refeito na 2ª no mesmo quadro; o xixi sorteado fica desligado. O relatório conta os quadros com a mesma cena e com a
+  câmera em outro lugar. `FIRST_PASS_REPLAY=0` volta ao roteiro anterior. ARQUITETURA §10.
+- Conferido no jogo headless (roteiro do medidor sem desenhar, script de diagnóstico fora do repositório): câmera em
+  outro lugar entre as passagens 27–31 quadros nas fases 1–8, 188 na 9 e 208 na 10 → 0 em todas; companheira idêntica nas
+  fases 1–9 (na 10, até 0,66 m: o estado do puzzle muda na 1ª passagem).
+- Validação: a varredura temporária `40428061193` (branch auxiliar `claude/fase9-primeira-passagem-varredura`, só o
+  workflow; apagar no fim) e o E2E `primeira-passagem` `40428326688` foram cancelados a pedido do orquestrador, com a
+  fila do GitHub travada, sem resultado. O CI `40428261106` do head `87f6b6c` (sobre o main `0b80ae4`) ficou verde.
+  Depois veio a sincronização com o main `87f1b75` (#68 e #69): só este arquivo conflitou; o `measure-first-pass.mjs`
+  juntou sozinho (o SwiftShader sem o estado dinâmico vem do `browserOptions()`, o roteiro novo ficou igual). CI e E2E
+  `primeira-passagem` do head no PR.
+- No PC: só `node --check`, `git diff --check` e o diagnóstico headless.
+- Integrado com o "pode integrar" do usuário: squash `eb75f18` (head `5af388f`), deploy `40526974118`,
+  v0.10.20 · build 112. O branch auxiliar `claude/fase9-primeira-passagem-varredura` já não existe no GitHub.
+
+## Entregue: SwiftShader sem recompilar por ordem de desenho em todo o E2E (PR #69, squash `87f1b75`, deploy `40518303970`, v0.10.19 · build 111)
+
+- Pedido (pela sessão do #68, escopo aprovado pelo orquestrador): levar a correção do #68 do medidor da primeira
+  passagem para todas as suítes, capturas e medições do CI. O motivo é que a recompilação por ordem de desenho deixa
+  quadros lentos aleatórios em qualquer suíte.
+- Feito: `angleArgs()` em `tools/scripts/lib/browser.mjs`. Com `CI`, entram `--use-angle=swiftshader` e
+  `--disable-angle-features=supportsVertexInputDynamicState`; `E2E_VERTEX_INPUT_DYNAMIC=1` volta ao padrão. A chave
+  local do `measure-first-pass.mjs` saiu (só as linhas dela; o `FIRST_PASS_VERTEX_INPUT_DYNAMIC` do #68 virou
+  `E2E_VERTEX_INPUT_DYNAMIC`). Há um teste em `test/e2e-runner.test.mjs`. ARQUITETURA §10 ganhou o parágrafo
+  *SwiftShader sem recompilar por ordem de desenho*, e o parágrafo da primeira passagem remete a ele. O jogo não muda.
+- Validação: o primeiro commit do código, `9e23958`, teve o CI `40426790272` verde. Os E2E `todas` do branch
+  (`40426732349`) e do controle no main (`40426736430`) foram cancelados a pedido do orquestrador, por falta de
+  máquinas; 15 jobs do primeiro já tinham passado. Depois veio a sincronização com o main `f534f89` (#68, sem
+  conflito). No head `32ded6f`, o CI `40442608556` ficou verde (prévia `previews/pr-69/40442608556-1/`) e o E2E `todas`
+  `40442615825` passou em 53/53. Os commits seguintes só mudam a documentação. No PC, rodei só `node --check`,
+  `git diff --check` e `test/e2e-runner.test.mjs`.
+- Comparação. O "antes" das partidas é o E2E `todas` final do #68 (`40426503232`, mesmo código sem a chave) mais 5
+  execuções `todas` posteriores ao #64. A soma das partidas subiu de ~3.500 s para ~5.000 s com o #64, que pôs mais telas
+  em `menu` e `toque`, então não se compara com execuções anteriores a ele. Os runners têm CPUs diferentes (EPYC 7763,
+  9V45, 9V74, Xeon 8573C e outras), e cada job foi comparado com os anteriores na mesma CPU.
+  - Passo "Jogar e verificar": −3,3% em média geométrica (21 jobs; 5 mais rápidos que −5%, 16 dentro de ±5%, nenhum
+    mais lento). O controle "antes contra antes" dá 0%, com p10 −6% e p90 +8%.
+  - Capturas: −0,8%. Ritmo do jogo: +1,7%.
+  - Primeira passagem: sem a chave, 105 de 330 medições tinham algum pico (32%; 173 picos, 7 reprovadas). Com a
+    chave, somando as 3 execuções do #68 e as deste PR, 16 de 129 (12%; 24 picos, nenhuma reprovada). A fase 10 foi de
+    90 picos em 33 medições para 0.
+  - Capturas de `lambe`, `biblioteca`, `lavanderia`, `pulo`, `porcos` e `empurra`, pixel a pixel contra o #68: 22 de
+    224 idênticas bit a bit, e o resto muda pelo momento da animação. Duas execuções com a chave diferem tanto quanto:
+    `lambe` 2,4% × 2,7% de pixels medianos; `empurra` 0,5% × 0,3%. Os quadros com mais diferença foram conferidos a olho
+    e não há geometria quebrada.
+  - Avisos de teto de relógio: continuam os mesmos, nas esperas logo depois do `ui:restart` (`fase1`, `fase3`, `menu`).
+    A recompilação depois do restart descrita na ARQUITETURA §10 não é esta.
+- Integrado: squash `87f1b75`, deploy `40518303970` (v0.10.19 · build 111).
+
+## Entregue: E2E "Primeira passagem — fase 10" intermitente (PR #68, squash `f534f89`, deploy `40442109759`, v0.10.18 · build 110)
+
+- Pedido (pelo orquestrador, sessão do PR #67, que não mexe na fase 10): a suíte reprovava às vezes em `celular-baixa`
+  e `celular-media` por "1 programas / 1 texturas depois da carga" ou "4 picos na 1ª passagem (tolerados 3)" e passava
+  ao repetir. Histórico de 37 medições da fase 10 (E2E de 22 a 26/10): foto atrasada em 3 (8%); mais de 3 picos em 5
+  de 13 no `celular-baixa` e 1 de 12 no `celular-media`; dois picos fixos em toda medição e perfil (cerca do fundo em
+  `Y_south`, folhinhas da mangueira em `Y_pinata`) gastavam a margem.
+- Causa 1 (o jogo): a foto do quadro do cantinho era baixada na montagem pelo `TextureLoader`; se o `onload` não
+  disparasse antes do `drawEverything` do aquecimento (que trava a página 8–15 s no CI), o material só ganhava o mapa
+  depois, e o programa com mapa e a textura 512×640 subiam ao entrar no cantinho (nó `H_mid`). Medições verdes têm 134
+  texturas/91 programas na carga; as reprovadas, 133/90. Correção: o `load()` da fase baixa a foto junto com o código do
+  cenário (`preloadWorld()` → `preloadSecret()`, prazo de 5 s, nunca rejeita; sem a foto a tempo, ela entra quando
+  chegar, como antes) e o quadro nasce com a textura. Teste `test/fase10-foto.test.mjs`.
+- Causa 2 (o CI): os picos são compilações de rotinas de vértices do SwiftShader (perf no runner: `sw::VertexProcessor::
+  routine` → JIT Subzero, 150–500 ms, nas duas passagens), sem nada novo no WebGL (programas, texturas, geometrias e
+  todo o estado de desenho iguais aos do aquecimento). O `vkCmdSetVertexInputEXT` do SwiftShader só escreve os locais de
+  atributo da lista nova, os outros guardam o formato do desenho anterior, e a chave da rotina inclui os 16 locais: a
+  mesma malha pede uma rotina nova conforme o que foi desenhado antes dela, e o three ordena pela câmera. Correção no
+  medidor: `--disable-angle-features=supportsVertexInputDynamicState` (o ANGLE põe os atributos no pipeline);
+  limites do teste iguais. `FIRST_PASS_VERTEX_INPUT_DYNAMIC=1` volta ao padrão. Explicado na ARQUITETURA (§4.1 e §10).
+  Desde o #69, a chave vale para todo o E2E (`angleArgs()` em `lib/browser.mjs`), e a variável é
+  `E2E_VERTEX_INPUT_DYNAMIC`.
+- Descartado no diagnóstico (branch auxiliar `claude/fase10-primeira-passagem-diag`, só workflow e script; apagar no
+  fim): a troca para o pipeline monolítico do ANGLE (`CreateMonolithicPipelineTask` aparece nos picos, mas desligá-la
+  com `preferMonolithicPipelinesOverLibraries`/`supportsGraphicsPipelineLibrary` não tira os picos); alvo do aquecimento
+  maior; "ver através"; aquecer de cada nó do passeio (reduz por acaso; preparo vai a 23–45 s). Com o estado dinâmico de
+  entrada de vértices desligado (run `40407785329`, 3 aparelhos): nenhum pico fixo; só o quadro 0, que o diagnóstico
+  (ganchos em cada desenho) também produz na base. Também achado: com mistura ou offset desligados, o WebGL guarda os
+  valores do último transparente (aditivo), e a assinatura crua do estado tem ~150 combinações novas no jogo; zerá-los
+  não muda os picos no CI. Proposta separada, sem commit (pode ajudar ANGLE-Metal/Vulkan em aparelho; sem medição).
+- Validação do código (`b5169f6`, sobre o main `75a3b1a`), PR #68: CI `40410857436` verde e prévia publicada
+  (`previews/pr-68/40410857436-1/`); E2E `primeira-passagem` `40410883024` 30/30 (26 sem pico; a fase 10 com 0 nos três
+  aparelhos, 134/145 texturas na carga e nada depois); E2E `todas` `40410887071` 52/52; varredura temporária
+  `40410952359` (branch auxiliar `claude/fase10-primeira-passagem-varredura`, só o workflow; apagado): a fase 10 12×,
+  4 por aparelho, todas aprovadas e sem pico. Antes: 2 a 5 picos por medição da fase 10. Os branches auxiliares
+  foram apagados; as execuções e os artefatos (7 dias) continuam no GitHub. Os commits seguintes só mudam este arquivo:
+  conferir o CI deles no PR. Depois veio a sincronização com o main `0b80ae4` (#67, merge sem conflito; o PR segue
+  mexendo só nos seus 7 arquivos): CI e E2E `primeira-passagem` e `todas` do head no PR.
+- Observação, sem relação com esta mudança: a fase 9 no `celular-baixa` tem 2 picos em `O_flap` (#92, #93) em 2 de 6
+  medições, já antes; com um pico de ruído, chega ao limite de 3 (tratado no PR #70).
+- No PC: só `node --check`, `git diff --check` e o teste novo em Node.
+- Integrado: squash `f534f89`, deploy `40442109759` (v0.10.18 · build 110).
 
 ## Entregue: E2E `fase3` intermitente na dica do cantinho (PR #66, squash `1b288c0`)
 
@@ -99,7 +212,7 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapas 1 e 3 entregues nos PRs #64 e #67; etapa 4 em andamento)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapas 1 e 3 entregues nos PRs #64 e #67; etapa 4 no PR #71)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -206,9 +319,16 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   de revisão (`capture-celular.mjs`, `capture-mapa.mjs`) saíram das partidas para o job "Capturas para revisão",
   em paralelo; partidas com `timeout-minutes: 40` (medido no E2E `40429824990`: menu 16 min, toque 10 min, capturas
   do celular 7 min; o job do toque do #68 estourou os 30 min com o Chromium levando 10 min para instalar). No PC, o
-  `capture-celular` clica com o mouse no centro (o `page.click` travava no `aria-disabled` da História). Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
-- Próximo passo: CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
-  do usuário nesta sessão (se o #68 ou o #69 entrarem antes, sincronizar e revalidar).
+  `capture-celular` clica com o mouse no centro (o `page.click` travava no `aria-disabled` da História).
+- E2E `todas` `40439533571` (head `c10f301`, antes da sincronização): tudo verde menos a primeira passagem da fase 10
+  no `celular-baixa` (corrigida pelo #68, que o branch ainda não tinha); toques de menu: 0 repetidos e 0 perdidos em
+  todos os aparelhos (suíte toque e capture-celular). Prévia `pr-71/40439524495-1`: o usuário (pelo orquestrador)
+  disse "gostei dessas músicas aí e do menu novo"; o "pode integrar" vale para a versão sincronizada.
+- Sincronizado com o main `eb75f18` (#68, #69 e #70), sem conflito. Para depois (pedido do usuário): efeitos visuais
+  do mapa mais caprichados e o Modo História.
+- Próximo passo: CI e E2E `todas` no head sincronizado, prévia nova e o "pode integrar" do usuário nesta sessão;
+  depois, merge squash com o SHA esperado, liberar só aquele deploy (deve virar v0.10.21 · build 113), conferir o
+  `version.json` e avisar o orquestrador.
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 
