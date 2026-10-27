@@ -87,23 +87,49 @@ const readyFn = (s) => {
   return !!hit && (hit === el || el.contains(hit));
 };
 /**
- * Toca no botão quando ele estiver pronto e espera o efeito (`done`, na página); um toque perdido repete (até 3 vezes).
- * @param {import('playwright').Page} p @param {string} sel @param {() => boolean} done @param {string} label
+ * Registro dos toques de menu, por aparelho: quantas tentativas cada um precisou e se o botão estava pronto em cada uma.
+ * A repetição é só uma rede contra o tempo do teste (SwiftShader); o relatório no fim mostra os números, e o primeiro
+ * toque de cada página tem de pegar de primeira (é o gesto que também destrava o áudio).
+ * @type {{ device: string, label: string, tries: number, ready: boolean[], ok: boolean }[]}
+ */
+const tapLog = [];
+/**
+ * Toca no botão quando ele estiver pronto e espera o efeito (`done`, na página); um toque sem efeito repete (até 3
+ * vezes) e fica no registro.
+ * @param {any} p @param {string} device @param {string} sel @param {() => boolean} done @param {string} label
  * @param {(sel: string) => Promise<void>} touch
  */
-async function tapInto(p, sel, done, label, touch, wait = 15000) {
+async function tapInto(p, device, sel, done, label, touch, wait = 15000) {
+  const entry = { device, label, tries: 0, ready: [], ok: false };
+  tapLog.push(entry);
   for (let k = 1; k <= 3; k++) {
-    await p.waitForFunction(readyFn, sel, { timeout: 30000, polling: 100 }).catch(() => {});
+    entry.tries = k;
+    entry.ready.push(await p.waitForFunction(readyFn, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false));
     await touch(sel);
-    if (await p.waitForFunction(done, null, { timeout: wait, polling: 100 }).then(() => true, () => false)) return true;
-    console.log(`  ${label}: toque em ${sel} sem efeito (tentativa ${k}); de novo`);
+    if (await p.waitForFunction(done, null, { timeout: wait, polling: 100 }).then(() => true, () => false)) {
+      entry.ok = true;
+      return entry;
+    }
+    console.log(`  [${device}] ${label}: toque em ${sel} sem efeito (tentativa ${k}, botão ${entry.ready[k - 1] ? 'pronto' : 'NÃO pronto'}); de novo`);
   }
   const now = await p.evaluate(() => ({ state: window.__game.game.state, screen: window.__game.ui.screen })).catch(() => null);
-  check(false, `${label}: o toque em ${sel} não pegou em 3 tentativas`, now);
-  return false;
+  check(false, `[${device}] ${label}: o toque em ${sel} não pegou em 3 tentativas`, { now, ready: entry.ready });
+  return entry;
 }
 /** Toque de menu na página principal (dedo pelo protocolo), esperando o botão pronto e o efeito. */
-const tapMenu = (sel, done, label) => tapInto(page, sel, done, label, (s) => tap(s));
+const tapMenu = (sel, done, label) => tapInto(page, 'celular 844×390', sel, done, label, (s) => tap(s));
+/** Relatório dos toques de menu: os repetidos e os perdidos com o botão pronto (esses apontam defeito no jogo). */
+function tapReport() {
+  console.log('\n== Toques de menu: tentativas por aparelho ==');
+  const by = new Map();
+  for (const e of tapLog) by.set(e.device, [...(by.get(e.device) || []), e]);
+  for (const [device, list] of by) {
+    const again = list.filter((e) => e.tries > 1);
+    const lostReady = list.reduce((n, e) => n + e.ready.slice(0, e.ok ? e.tries - 1 : e.tries).filter(Boolean).length, 0);
+    console.log(`  ${device}: ${list.length} toques, ${again.length} repetidos, ${lostReady} perdidos com o botão pronto`
+      + (again.length ? ` → ${again.map((e) => `${e.label} ×${e.tries} [${e.ready.map((r) => (r ? 'pronto' : 'não pronto')).join(', ')}]`).join('; ')}` : ''));
+  }
+}
 const uiState = () => ev(() => {
   const root = document.querySelector('.rr');
   const touch = document.querySelector('.rr-touch');
@@ -323,7 +349,9 @@ try {
   await shot('01-titulo-celular.png');
 
   console.log('\n== Menu pelo toque: História, música, Opções, Jogar ==');
-  await tapMenu('.rr-tile--story', () => !!document.querySelector('.rr-levels__note.is-on'), 'História');
+  // o primeiro toque da página tem de pegar de primeira: é ele que também destrava o áudio (a música do menu)
+  const first = await tapMenu('.rr-tile--story', () => !!document.querySelector('.rr-levels__note.is-on'), 'História');
+  check(first.ok && first.tries === 1 && first.ready[0], 'primeiro toque (História) pega de primeira, com o botão pronto', first);
   let m = await menuState();
   check(m.state === 'title' && m.screen === 'main' && /em breve/i.test(await ev(() => document.querySelector('.rr-levels__note.is-on')?.textContent || '')), 'toque na História: aviso "em breve", sem sair da tela principal', m);
   await sleep(300);
@@ -753,11 +781,14 @@ try {
   // o SwiftShader ocupado, o clique do toque anterior chega atrasado, a tela seguinte ainda está escondida e o toque
   // caía em (0, 0) (o cartão de abertura não vinha).
   // cada toque espera o botão pronto (readyFn) e confere o efeito; um toque perdido repete
-  const ipTap = (sel, done, label) => tapInto(ip, sel, done, `iPhone: ${label}`, async (s) => {
+  const ipTap = (sel, done, label) => tapInto(ip, 'iPhone', sel, done, label, async (s) => {
     const b = await center(ip, s);
     await ip.touchscreen.tap(b.x, b.y);
   }, 30000);
-  await ipTap('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar');
+  // o primeiro toque desta página (Jogar) pega de primeira e destrava o áudio no mesmo gesto
+  const ipFirst = await ipTap('.rr-btn--play', () => window.__game.game.state !== 'title', 'Jogar');
+  const ipAudio = await ip.evaluate(() => { const a = window.__game.audio; return { context: a.context?.state ?? null, playing: a.musicPlaying }; });
+  check(ipFirst.ok && ipFirst.tries === 1 && ipFirst.ready[0] && ipAudio.context != null && ipAudio.playing != null, 'iPhone: o primeiro toque (Jogar) pega de primeira e destrava o áudio no mesmo gesto', { ipFirst, ipAudio });
   await ip.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing' && window.__game.game.debug.info().near === 1, null, { timeout: 120000 });
   await ip.waitForTimeout(800);
   await ipTap('.rr-tbtn--act', () => !(window.__game.game.isHub && window.__game.game.state === 'playing'), 'Agir');
@@ -801,6 +832,7 @@ try {
 } catch (err) {
   check(false, `erro inesperado: ${err.stack || err.message}`);
 } finally {
+  tapReport();
   const failed = await H.close();
   process.exit(failed ? 1 : 0);
 }

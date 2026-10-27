@@ -41,6 +41,13 @@ const DEVICES = [
 let server, browser;
 const errors = [];
 let shots = 0;
+/**
+ * Toques de menu por aparelho (pressInto): tentativas e se o botão estava pronto em cada uma. A repetição é só uma rede
+ * contra o tempo do teste; o relatório no fim mostra os números, e o primeiro toque de cada aparelho tem de pegar de
+ * primeira (é o gesto que também destrava o áudio).
+ * @type {{ device: string, label: string, tries: number, ready: boolean[], ok: boolean }[]}
+ */
+const tapLog = [];
 try {
   server = await createServer({ configFile: 'tools/scripts/vite.nohmr.config.mjs', server: { port: 0 } });
   await server.listen();
@@ -59,6 +66,16 @@ try {
   await server?.close();
 }
 console.log(`\n${shots} capturas em ${OUT}`);
+console.log('\n== Toques de menu: tentativas por aparelho ==');
+for (const device of [...new Set(tapLog.map((e) => e.device))]) {
+  const list = tapLog.filter((e) => e.device === device);
+  const again = list.filter((e) => e.tries > 1);
+  const lostReady = list.reduce((n, e) => n + e.ready.slice(0, e.ok ? e.tries - 1 : e.tries).filter(Boolean).length, 0);
+  console.log(`  ${device}: ${list.length} toques, ${again.length} repetidos, ${lostReady} perdidos com o botão pronto`
+    + (again.length ? ` → ${again.map((e) => `${e.label} ×${e.tries} [${e.ready.map((r) => (r ? 'pronto' : 'não pronto')).join(', ')}]`).join('; ')}` : ''));
+  const first = list[0];
+  if (first && !(first.ok && first.tries === 1 && first.ready[0])) errors.push(`[${device}] o primeiro toque (${first.label}) não pegou de primeira com o botão pronto: ${JSON.stringify(first)}`);
+}
 if (errors.length) {
   console.log(`ERROS (${errors.length}):`);
   for (const e of errors.slice(0, 20)) console.log(e);
@@ -171,12 +188,15 @@ async function captureDevice(dev, url) {
     }, sel, { timeout: 30000, polling: 100 }).then(() => true, () => false);
     /** Toca no botão quando ele estiver pronto e confere o efeito (done: no estado do jogo); um toque perdido repete. */
     const pressInto = async (sel, done, label) => {
+      const entry = { device: dev.id, label, tries: 0, ready: [], ok: false };
+      tapLog.push(entry);
       for (let k = 0; k < 3; k++) {
-        await ready(sel);
+        entry.tries = k + 1;
+        entry.ready.push(await ready(sel));
         await press(sel);
         await page.waitForTimeout(300);
-        if (await page.evaluate(done)) return;
-        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}); de novo`);
+        if (await page.evaluate(done)) { entry.ok = true; return; }
+        console.log(`  [${dev.id}] toque em ${sel} sem efeito (tentativa ${k + 1}, botão ${entry.ready[k] ? 'pronto' : 'NÃO pronto'}); de novo`);
       }
       errors.push(`[${dev.id}] ${label}: o toque em ${sel} não pegou em 3 tentativas; ${await guard.peek()}`);
     };
