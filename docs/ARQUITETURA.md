@@ -1085,7 +1085,12 @@ desenhos pela câmera. Isso custava de 150 a 500 ms num quadro qualquer, sem nad
 com trace do Chromium e `perf` no runner: `sw::VertexProcessor::routine`. Sem esse estado, o ANGLE põe os atributos no
 pipeline e a rotina deixa de depender da ordem. O estado que o WebGL pede é o mesmo e a imagem não muda. Numa GPU de
 verdade nada disso existe, e fora do CI (Chrome do sistema) a chave não entra. `E2E_VERTEX_INPUT_DYNAMIC=1` volta ao
-padrão do Chromium, para comparar.
+padrão do Chromium, para comparar. Medido no PR #69, cada job comparado com jobs anteriores na mesma CPU de runner:
+- As partidas ficaram ~3% mais rápidas (21 jobs, nenhum mais lento). Entre execuções iguais, a variação vai de −6% a +8%.
+- Na primeira passagem, as medições com algum pico caíram de 32% para 12%.
+- As capturas só variam o que já variava entre execuções: há quadros idênticos bit a bit, e o resto muda com o momento
+  da animação.
+- Os avisos de teto de relógio logo depois do `ui:restart` (acima) continuam iguais: são outra recompilação.
 
 **Primeira passagem pelas áreas** (suíte `primeira-passagem` do E2E manual, também em `todas`;
 `tools/scripts/measure-first-pass.mjs`, um job por fase e aparelho): cada fase abre com `?play` num navegador novo

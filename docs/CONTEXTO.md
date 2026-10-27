@@ -15,15 +15,30 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   local do `measure-first-pass.mjs` saiu (só as linhas dela; o `FIRST_PASS_VERTEX_INPUT_DYNAMIC` do #68 virou
   `E2E_VERTEX_INPUT_DYNAMIC`). Há um teste em `test/e2e-runner.test.mjs`. ARQUITETURA §10 ganhou o parágrafo
   *SwiftShader sem recompilar por ordem de desenho*, e o parágrafo da primeira passagem remete a ele. O jogo não muda.
-- Validação: commit do código `9e23958`, CI `40426790272` verde. Os E2E `todas` do branch (`40426732349`) e do
-  controle no main (`40426736430`) foram cancelados a pedido do orquestrador, por falta de máquinas. Depois veio a
-  sincronização com o main `f534f89` (#68, sem conflito). Falta o CI e um único E2E `todas` no head sincronizado.
-- Comparação de tempos: o "antes" é o E2E `todas` final do #68 (mesmo código, sem a chave nas partidas) mais o
-  histórico. A soma do passo "Jogar e verificar" das partidas subiu de ~3.500 s para ~5.000 s a partir do #64, que pôs
-  mais telas em `menu` e `toque`; por isso não se comparam execuções de antes e depois dele. As métricas por suíte são a
-  duração do passo, o `ritmo do jogo`, os avisos de teto de relógio, o tempo de `load()` e os picos da primeira passagem.
-- Próximo passo: comparar e registrar no PR e aqui; pedir o "pode integrar" ao usuário. Fila do orquestrador: #69, #70,
-  #71.
+- Validação: o primeiro commit do código, `9e23958`, teve o CI `40426790272` verde. Os E2E `todas` do branch
+  (`40426732349`) e do controle no main (`40426736430`) foram cancelados a pedido do orquestrador, por falta de
+  máquinas; 15 jobs do primeiro já tinham passado. Depois veio a sincronização com o main `f534f89` (#68, sem
+  conflito). No head `32ded6f`, o CI `40442608556` ficou verde (prévia `previews/pr-69/40442608556-1/`) e o E2E `todas`
+  `40442615825` passou em 53/53. Os commits seguintes só mudam a documentação. No PC, rodei só `node --check`,
+  `git diff --check` e `test/e2e-runner.test.mjs`.
+- Comparação. O "antes" das partidas é o E2E `todas` final do #68 (`40426503232`, mesmo código sem a chave) mais 5
+  execuções `todas` posteriores ao #64. A soma das partidas subiu de ~3.500 s para ~5.000 s com o #64, que pôs mais telas
+  em `menu` e `toque`, então não se compara com execuções anteriores a ele. Os runners têm CPUs diferentes (EPYC 7763,
+  9V45, 9V74, Xeon 8573C e outras), e cada job foi comparado com os anteriores na mesma CPU.
+  - Passo "Jogar e verificar": −3,3% em média geométrica (21 jobs; 5 mais rápidos que −5%, 16 dentro de ±5%, nenhum
+    mais lento). O controle "antes contra antes" dá 0%, com p10 −6% e p90 +8%.
+  - Capturas: −0,8%. Ritmo do jogo: +1,7%.
+  - Primeira passagem: sem a chave, 105 de 330 medições tinham algum pico (32%; 173 picos, 7 reprovadas). Com a
+    chave, somando as 3 execuções do #68 e as deste PR, 16 de 129 (12%; 24 picos, nenhuma reprovada). A fase 10 foi de
+    90 picos em 33 medições para 0.
+  - Capturas de `lambe`, `biblioteca`, `lavanderia`, `pulo`, `porcos` e `empurra`, pixel a pixel contra o #68: 22 de
+    224 idênticas bit a bit, e o resto muda pelo momento da animação. Duas execuções com a chave diferem tanto quanto:
+    `lambe` 2,4% × 2,7% de pixels medianos; `empurra` 0,5% × 0,3%. Os quadros com mais diferença foram conferidos a olho
+    e não há geometria quebrada.
+  - Avisos de teto de relógio: continuam os mesmos, nas esperas logo depois do `ui:restart` (`fase1`, `fase3`, `menu`).
+    A recompilação depois do restart descrita na ARQUITETURA §10 não é esta.
+- Próximo passo: o usuário aprovar ("pode integrar") e o orquestrador liberar a vez; depois integrar com squash e o SHA
+  esperado. Fila do orquestrador: #69, #70, #71.
 
 ## Entregue: E2E "Primeira passagem — fase 10" intermitente (PR #68, squash `f534f89`, deploy `40442109759`, v0.10.18 · build 110)
 
