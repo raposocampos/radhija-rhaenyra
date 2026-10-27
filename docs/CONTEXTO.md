@@ -1,7 +1,7 @@
 # Contexto para retomar o projeto
 
 Última atualização: **2026-10-26, Claude** (E2E "Primeira passagem — fase 10" intermitente, branch
-`claude/fase10-primeira-passagem`, em andamento; #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em
+`claude/fase10-primeira-passagem`, PR #68, em andamento; #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em
 v0.10.14 · build 106; #65, patas alternadas, em v0.10.13 · build 105; o #60, engasgo na primeira passagem, em v0.10.12 ·
 build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
@@ -39,7 +39,8 @@ build 104). Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); c
   `40410952359` (branch auxiliar `claude/fase10-primeira-passagem-varredura`, só o workflow; apagado): a fase 10 12×,
   4 por aparelho, todas aprovadas e sem pico. Antes: 2 a 5 picos por medição da fase 10. Os branches auxiliares
   foram apagados; as execuções e os artefatos (7 dias) continuam no GitHub. Os commits seguintes só mudam este arquivo:
-  conferir o CI deles no PR.
+  conferir o CI deles no PR. Depois veio a sincronização com o main `0b80ae4` (#67, merge sem conflito; o PR segue
+  mexendo só nos seus 7 arquivos): CI e E2E `primeira-passagem` e `todas` do head no PR.
 - Observação, sem relação com esta mudança: a fase 9 no `celular-baixa` tem 2 picos em `O_flap` (#92, #93) em 2 de 6
   medições, já antes; com um pico de ruído, chega ao limite de 3.
 - No PC: só `node --check`, `git diff --check` e o teste novo em Node. Próximo passo: entregar a prévia e esperar o
