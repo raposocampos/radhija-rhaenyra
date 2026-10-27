@@ -198,9 +198,9 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   `test/musica.test.mjs`. Na navegação, um empate entre dois vizinhos fica com o primeiro na ordem de leitura (↓ no
   Jogar → História). E2E atualizados para o fluxo novo (menu, toque, mapa, expresso, capture-celular, fx-v2-flow),
   com o ok do orquestrador; o menu confere também a música (tema do menu, do mapa e da fase, a nota, os dois volumes
-  salvos). `test-gamepad.mjs` também precisa de ajuste (dois sliders na pausa; ↓ no Jogar vai à História): pedido ao
-  orquestrador. Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
-- Próximo passo: ok do `test-gamepad.mjs`, CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
+  salvos); `test-gamepad.mjs` também (dois sliders na pausa; ↓ no Jogar vai à História), com o ok do orquestrador.
+  Para depois (pedido do usuário): efeitos visuais do mapa mais caprichados e o Modo História.
+- Próximo passo: CI e E2E `todas` no head novo, revisar as capturas, prévia e aprovação
   do usuário nesta sessão (se o #68 ou o #69 entrarem antes, sincronizar e revalidar).
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
