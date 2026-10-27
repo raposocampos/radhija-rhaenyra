@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import mapa from '../src/levels/mapa/index.js';
 import { BRIDGE, BRIDGE_TOWERS, RIVER } from '../src/levels/mapa/layout.js';
-import { forgetLastVisit } from '../src/levels/mapa/puzzle.js';
+import { forgetLastVisit, previewUnlockAll } from '../src/levels/mapa/puzzle.js';
 import { LEVELS } from '../src/levels/index.js';
 import { createGround, walkablesOf, bodyGround } from '../src/game/ground.js';
 import { createCollisionWorld } from '../src/game/collision.js';
@@ -48,6 +48,13 @@ test('ponte: as quatro torres e o guarda-corpo colidem (em terra também); o mei
     }
   }
   assert.deepEqual(w.contacts(MID, BRIDGE.z, 0.22, 'large').map((c) => c.id), []);
+});
+
+test('prévia: ?mapa&tudo libera o mapa inteiro só numa prévia de PR (para testar a ponte sem jogar as fases)', () => {
+  assert.equal(previewUnlockAll({ pathname: '/radhija-rhaenyra/previews/pr-72/40541339705-1/', search: '?mapa&tudo' }), true);
+  assert.equal(previewUnlockAll({ pathname: '/radhija-rhaenyra/previews/pr-72/40541339705-1/', search: '?mapa' }), false);
+  assert.equal(previewUnlockAll({ pathname: '/radhija-rhaenyra/', search: '?mapa&tudo' }), false, 'em produção, nada');
+  assert.equal(previewUnlockAll(undefined), false);
 });
 
 test('ponte: abrindo a chácara, o rio segue fechado enquanto ela desce; deitada, dá para atravessar', async () => {

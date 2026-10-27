@@ -35,6 +35,16 @@ let lastVisit = null;
 /** Só para os testes: esquecer a visita anterior. */
 export function forgetLastVisit() { lastVisit = null; }
 
+/**
+ * Numa prévia de PR (só lá), `?mapa&tudo` libera o mapa inteiro, para testar a chácara e a ponte sem jogar as fases
+ * antes (o progresso da prévia começa zerado). Em produção não faz nada.
+ * @param {{ pathname?: string, search?: string } | undefined} [loc]
+ */
+export function previewUnlockAll(loc = globalThis.location) {
+  const preview = /\/previews\/pr-[1-9]\d*\/\d+-\d+(?:\/|$)/.test(loc?.pathname ?? '');
+  return preview && new URLSearchParams(loc?.search ?? '').has('tudo');
+}
+
 /** @param {import('../../types').PuzzleContext<import('../../types').MapaProps>} ctx */
 export function createPuzzle(ctx) {
   const { emit, props, world, cam } = ctx;
@@ -52,7 +62,8 @@ export function createPuzzle(ctx) {
   const rec = (f) => (Object.hasOwn(prog.levels || {}, f.level) ? prog.levels[f.level] : null);
   const isDone = (f) => !!rec(f)?.done;
   const prevOf = (f) => flags.find((g) => g.index === f.index - 1);
-  const isOpen = (f) => !!hub.unlockAll || f.index === 0 || isDone(f) || (prevOf(f) ? isDone(prevOf(f)) : false);
+  const unlockAll = !!hub.unlockAll || previewUnlockAll();
+  const isOpen = (f) => unlockAll || f.index === 0 || isDone(f) || (prevOf(f) ? isDone(prevOf(f)) : false);
   /** @returns {'done' | 'next' | 'locked'} */
   const stateOf = (f) => (isDone(f) ? 'done' : isOpen(f) ? 'next' : 'locked');
   const nextFlag = () => flags.find((f) => !isDone(f) && isOpen(f)) || null;
@@ -61,7 +72,7 @@ export function createPuzzle(ctx) {
     const z = ZONES[key];
     if (!Number.isFinite(z.unlock)) return false;
     const f = flags.find((g) => g.n === z.unlock);
-    return !!hub.unlockAll || (f ? isOpen(f) : false);
+    return unlockAll || (f ? isOpen(f) : false);
   };
   const zones = Object.fromEntries(Object.keys(ZONES).map((k) => [k, false]));
 

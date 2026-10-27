@@ -338,6 +338,7 @@ Rampinhas fixas nas margens (`BRIDGE.ramp`, também de pisar) levam da rua até 
 Na descida animada (a chácara acabou de abrir), o bloqueio `ponte-levantada` segue ligado até ela deitar
 (`BRIDGE.lowerSec`) e cobre também o pé das folhas, nas margens. Torres e guarda-corpo colidem (`BRIDGE_TOWERS`,
 `ponte-guarda-*`). `test/mapa-ponte.test.mjs` atravessa com os modelos de verdade espelhando o jogo headless.
+Numa prévia de PR (só lá), `?mapa&tudo` libera o mapa inteiro (`previewUnlockAll`): o progresso da prévia começa zerado.
 
 **Pré-carga** (`src/game/levelPreload.js`): perto de uma bandeirinha liberada o código da fase é importado (só o
 import, que roda fora do quadro); a montagem do cenário fica para a entrada, atrás da cortina de carregamento.

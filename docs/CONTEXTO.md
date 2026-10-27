@@ -22,7 +22,10 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
   colisões `ponte-torre-1..4` e `ponte-guarda-norte/sul`. `test/mapa-ponte.test.mjs`: colisões, a descida com o rio
   fechado e a travessia com os modelos de verdade (o novo das duas e o atual da Radhija) espelhando o jogo headless,
   com o chão do cenário de verdade: sobre o rio, a pele afunda no máximo 1 cm a mais do que na rua.
-- No PC: só `node --check`, `git diff --check` e uma checagem leve de geometria (nós, arestas e bandeirinhas livres).
+- Prévia: o progresso dela começa zerado; `?mapa&tudo` (só em prévia, `previewUnlockAll` em `puzzle.js`) libera o mapa
+  inteiro para testar a ponte. CI `40541339705` (`a90a22b`): sobre o rio 0,0 cm nas duas; ponte toda com as rampinhas,
+  Radhija 0,2 cm e Rhaenyra 1,3 cm (limite 2); guarda-corpo, nada. E2E `mapa` `40541331508` verde.
+- No PC: só `node --check`, `git diff --check` e checagens leves (geometria das colisões, o `previewUnlockAll`).
 - Próximo passo: PR, CI e E2E (`mapa`, `menu`, `toque`), prévia e o "pode integrar" do usuário nesta sessão.
 
 ## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
