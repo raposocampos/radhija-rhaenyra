@@ -99,7 +99,7 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
 - Integrado com a aprovação do usuário (squash `60dc88c`, CI do main `40146255256`): produção em v0.10.13 · build 105
   (`version.json` conferido).
 
-## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 de 4 no branch `claude/responsivo-hud`)
+## Em andamento: interface responsiva, menu e mapa das fases (Claude; etapa 1 entregue no PR #64, etapa 3 no PR #67)
 
 - Pedido do usuário (2026-10-24, pelo orquestrador): (1) "o game não está totalmente responsivo... no celular android
   da minha cunhada, ele é menor a tela, estava meio desproporcional. O HUD estava grande demais, como se fosse o de
@@ -121,11 +121,68 @@ na primeira passagem, em v0.10.12 · build 104; #61 em v0.10.10 · build 102; #5
   tablet, PC 1280×720, notebook 1366×630, janela pequena no PC e um Android que diz ter mouse) com capturas
   `shots/menu/telas-*` e `shots/toque/telas-*`; `capture-celular.mjs` ganhou Infinix e o Android compacto.
   `H.newPage(..., { lowGfx: true })` aplica a redução gráfica do CI (`ciLowGfx` no harness).
+- Etapa 1 entregue: PR #64, head `286f508` aprovado pelo usuário ("Pode integrar essa"), squash `75a3b1a`, CI do
+  main `40159408003`, deploy `40159530565`, v0.10.16 · build 108 (version.json conferido). Validação do head: CI
+  `40154272590`, E2E `menu` `40154270396` e `toque` `40154272256`.
 - Capturas do celular (`capture-celular.mjs`): os toques em Continuar e Começar esperam o botão pronto (camada
   visível, sem animação de CSS em curso, por cima de tudo) e conferem o efeito, repetindo um toque perdido (no E2E
   do #66 o toque em Começar caía antes de o cartão de abertura terminar de entrar).
-- Próximo passo: PR #64 sincronizado com o `main` (#66, `1b288c0`); CI e E2E `menu` e `toque` no head novo, prévia e aprovação
-  do usuário nesta sessão. A etapa 2 (conceito) foi aprovada; a etapa 3 está no PR #67.
+- Etapa 2 (conceito, sem código): maquete isométrica aprovada pelo usuário na versão 4 — cidade "Pandorópolis" (a
+  cachorra da cunhada), outdoor desenhado em código da golden Amora candidata a prefeita ("Vote 1313"), biscoitos por
+  fase, enfeites, nuvens nas áreas fechadas, atalho entre bandeirinhas, barrinha de carregamento perto da bandeirinha.
+  Pedido final: colisão melhor, gráfico melhor e as dogs de verdade (no protótipo a dog tinha o tamanho de um carro),
+  sem pesar.
+- Etapa 3 (branch `claude/mapa-pandoropolis`, a partir da etapa 1): o mapa é uma fase especial fora da lista
+  (`src/levels/mapa/`, índice `HUB = −1` em `game.js`, opção `hub` do `createGame`). Cidade em escala das dogs (~0,7 m;
+  carro 2,3 m; casa 8 m; torre 11 m): condomínio com ruas em grade, centro na Av. Pandora (padaria, banca, pet shop,
+  sorveteria, ponto e ônibus, chafariz, outdoor), rio com ponte levadiça e a chácara do vovô; uma bandeirinha por fase
+  na frente do lugar dela. Peças fixas fundidas por material e região de 20 m (`world/kit.js`: ~190 malhas para a
+  cidade, montagem ~0,7 s no PC), caixas arredondadas por molde, sombra do sol só em volta da câmera
+  (`engine.focusShadow`). Colisão de tudo o que está em pé (232 colisores) e grade de colisão (`layout.COLLISION_GRID`,
+  `world.staticsNear`; sem a grade, as fases continuam com a lista inteira). Lógica (`puzzle.js`): estados das
+  bandeirinhas pelo progresso da UI (`game.setProgressSource`), nuvens e ponte por área (leste abre na 6, chácara na 9),
+  atalho (R/L, L2/R2, 1–0, [ ], ◀ ▶), E/Agir entra (cartão de abertura), Voltar do cartão, pausa e vitória (botão
+  Mapa) voltam na frente da bandeirinha; do menu, abre na próxima fase. Pré-carga (`src/game/levelPreload.js`): perto
+  da bandeirinha só importa o código (a barrinha da plaquinha mostra); a montagem fica para a entrada.
+  HUD do mapa em `src/ui/mapHud.js` (`.rr[data-hub]`); `?mapa` abre direto no mapa. Catálogo de desenvolvimento
+  continua com a lista de cartões (sem o mapa).
+- Testes da etapa 3: `test/mapa.test.mjs` (layout, caminhos livres, grade = lista inteira, estados, atalho, entrar e
+  voltar, nuvens, pré-carga); suíte E2E nova `mapa` (`tools/scripts/test-mapa.mjs`) e capturas em qualidade de cada
+  aparelho (`capture-mapa.mjs`); suítes `menu`, `toque`, `expresso` e `capture-celular.mjs` passaram a ir pelo mapa.
+- Retorno do usuário na primeira prévia do #67: "O mapa não ficou muito fiel as fases que existem, além de estar
+  travando um pouco, quando ta carregando as fases da umas travadas... Por opção de movimentar a camera para ver sem
+  ter que andar com as dogs ou pular no atalho. Mas foco no visual do mapa". Feito (2026-10-26, Claude): (a) a
+  pré-carga não monta mais o cenário perto da bandeirinha (era a trava: 0,05–1 s por fase no PC); só importa o código
+  e `engine.precompile` saiu; (b) câmera livre no mapa (`src/game/mapLook.js`: arrastar, analógico direito, rodinha,
+  pinça; dica no HUD); (c) cada lugar refeito com as peças da fase (`world/casa.js`, `condominio.js`, `chacara.js`,
+  `pecas.js`): casas em corte de maquete com o interior das fases 5, 8 e 9, jardim da fase 1 (cerca divisória, portão
+  da cordinha, carrinho, bebedouro), área de serviço da 2 (lavanderia, mureta com o portão, irrigador girando, canal),
+  quintal do lago da 3 (prédio, cerca-viva com treliça e lanternas, ponte, cordões de luz), terraço da 4 (casa da
+  escada, floreiras com o vão, ventilador no trilho, cantinho dos pombos), brinquedoteca da 6 em corte (trilho no
+  feltro, estação, cancela, pórtico com a lua, foguete), pracinha da 7 (cerca de lápis, piso emborrachado, morrinho com
+  a manilha, brinquedos, poças) e o quintal da 10 (deque com pergolado, luzinhas e a faixa "FELIZ 3 ANOS", mangueira
+  com a piñata, milharal com espantalho, girassóis, casa na árvore com balde e escorregador); kit com índice e sombra
+  de base; moitas leves e instâncias (jatos, chuva). Medidas no Node: ~297 mil triângulos fixos e ~346 mil vértices
+  (antes ~335 mil vértices), 170 malhas, montagem ~0,7 s; `chk-mapa` sem bloqueio nos caminhos; a varredura do
+  "nada atravessa" (`findLooseObstacles`, grade mais grossa) sem achados nos lugares das fases (ajustes: alça do
+  carrinho, cadeiras do lago, braços do irrigador, roldana, folha do portão da pracinha, bocas da manilha,
+  galinhas). Capturas novas `30-perto-faseNN` em `capture-mapa.mjs`.
+- Segunda prévia apresentada no head `8da4467` (CI `40365461048`, E2E `todas` `40365451228` ok na tentativa 2; a 1ª
+  teve o Chromium demorando 11 min para instalar e o intermitente da primeira passagem da fase 10, que ficou numa
+  sessão própria). Retorno do usuário (2026-10-26): pracinha com coisas "meio fora" (balanço, gangorra) e a manilha
+  saindo na rua; placa "Bem-vindos a Pandorópolis" cortada; z-fighting nos cruzamentos, nos vasos da Av. Pandora e
+  nas pedrinhas sobre o número da fase 5; o poste cobrindo a placa da avenida; biscoitos pouco claros; em algumas
+  fases, "quando eu chego perto da bandeira, não está aparecendo" (a plaquinha aparece em todas no teste sem
+  navegador: perguntar qual fase). Para depois: VFX do mapa mais caprichado, musiquinha no menu e a etapa 4 (menu
+  repaginado como no artefato do conceito).
+- Feito (terceira rodada): morrinho com a manilha de norte a sul dentro da cerca (a cerca oeste inteira), balanço em
+  A, gangorra com as alças na prancha; placa do portal na frente dos pilares; ruas leste-oeste 4 mm mais baixas que as
+  norte-sul (o cruzamento não pisca), terra dos vasos acima da borda, pedrinhas fora do número pintado, placas de rua
+  na frente do poste, poças acima do piso emborrachado; o selo dos biscoitos (sprite com um ossinho por biscoito da
+  fase, os ganhos dourados) no lugar dos ossinhos 3D, com o total de cada fase (a 10 tem 5); bandeira, selo e
+  cadeado fora do "ver através".
+- Próximo passo: PR #67 (rascunho, com o `main` `75a3b1a`): CI e E2E `todas` no head novo, revisar as capturas,
+  prévia e aprovação do usuário nesta sessão. Depois, a etapa 4 (menu principal).
 
 ## Entregue: sem engasgo na primeira passagem pelas áreas (PR #60, squash `81165a7`, v0.10.12 · build 104)
 

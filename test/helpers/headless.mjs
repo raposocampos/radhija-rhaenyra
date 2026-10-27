@@ -104,26 +104,32 @@ function stubEngine() {
 // ---------------------------------------------------------------------------------------------
 /**
  * Cria um jogo headless já carregado.
- * opts: { level (1-based, padrão 1), mode 'play'|'intro'|'title', query (ex.: 'dog=rhaenyra&stage=east'),
+ * opts: { level (1-based, padrão 1; 0 = o mapa das fases), mode 'play'|'intro'|'title', query (ex.: 'dog=rhaenyra&stage=east'),
  *         levels (definições; padrão: src/levels/index.js),
- *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga) }
+ *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga),
+ *         progress (o save que o mapa lê: { levels: { fase1: { done, treats, ... } } }) }
  */
-export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null, pee = false } = {}) {
+export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null, pee = false, progress = null } = {}) {
   installBrowserStubs();
-  const [{ createGame }, { events }, LV] = await Promise.all([
+  const [{ createGame, HUB }, { events }, LV, MAPA] = await Promise.all([
     import('../../src/game/game.js'),
     import('../../src/core/events.js'),
     levels ? Promise.resolve(null) : import('../../src/levels/index.js'),
+    import('../../src/levels/mapa/index.js'),
   ]);
   const defs = headlessLevels(levels || LV.LEVELS);
+  const [hub] = headlessLevels([MAPA.default]);
   const engine = stubEngine();
   // makeDog(nome): as dogs de verdade (modelo atual ou novo), para conferir o que depende do desenho (a boca, as patas)
   const dogs = { radhija: (makeDog || stubDog)('radhija'), rhaenyra: (makeDog || stubDog)('rhaenyra') };
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
   const params = new URLSearchParams(query);
-  const game = createGame({ engine, dogs, levels: defs, params });
+  const game = createGame({ engine, dogs, levels: defs, params, hub });
+  // o progresso que o mapa lê (no jogo, o da UI)
+  const save = { levels: {}, ...(progress || {}) };
+  game.setProgressSource(() => save);
   configure?.({ game, levels: defs, engine, dogs });
-  await game.loadLevel(level - 1, { mode, initial: true });
+  await game.loadLevel(level === 0 ? HUB : level - 1, { mode, initial: true });
   // o xixi (parada por muito tempo) é sorteado e tira a dog do lugar: desligado, a não ser no teste dele (pee: true)
   game.debug.idle?.setPee(pee);
 
@@ -139,7 +145,7 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   };
 
   const h = {
-    game, events, engine, dogs, levels: defs,
+    game, events, engine, dogs, levels: defs, save,
     get ctrls() { return game.debug.ctrls; },
     get world() { return game.debug.world; },
     get nav() { return game.debug.nav; },

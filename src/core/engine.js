@@ -123,7 +123,8 @@ export function createEngine(container, { params } = {}) {
   sun.shadow.mapSize.set(profile.shadowSize, profile.shadowSize);
 
   /** Ajusta o frustum ortográfico da sombra só à área da fase (+ margem), no espaço da luz. */
-  function fitShadow(b) {
+  /** @param {import('../types').Bounds} b @param {number} [topY] altura do que faz sombra (padrão: 3,3 m, as fases) */
+  function fitShadow(b, topY = 3.3) {
     sunTarget.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
     sun.position.copy(sunTarget).addScaledVector(SUN_DIR, 30);
     sun.target.position.copy(sunTarget);
@@ -136,7 +137,7 @@ export function createEngine(container, { params } = {}) {
     const inv = look.matrixWorld.clone().invert();
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     const p = new THREE.Vector3();
-    for (const x of [b.minX - 1.2, b.maxX + 0.6]) for (const z of [b.minZ - 0.6, b.maxZ + 0.9]) for (const y of [0, 3.3]) {
+    for (const x of [b.minX - 1.2, b.maxX + 0.6]) for (const z of [b.minZ - 0.6, b.maxZ + 0.9]) for (const y of [0, topY]) {
       p.set(x, y, z).applyMatrix4(inv);
       minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
       minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
@@ -209,6 +210,8 @@ export function createEngine(container, { params } = {}) {
   let lighting = LIGHTING_DEFAULT;
   /** Limites da fase atual (aplicados com a iluminação): a vista geral do aquecimento enquadra a fase. */
   let levelBounds = null;
+  /** Ponto que a sombra acompanha agora (focusShadow), vazio com a sombra da fase inteira. */
+  let shadowFocusKey = '';
   let lightCastsShadow = true; // a fase quer sombra do sol (o perfil de qualidade pode desligar)
   function applyLighting(preset, bounds) {
     const L = merge(LIGHTING_DEFAULT, preset || {});
@@ -240,6 +243,7 @@ export function createEngine(container, { params } = {}) {
     bloom.threshold = L.bloom.threshold;
     if (bounds) {
       levelBounds = bounds;
+      shadowFocusKey = '';
       fitShadow(bounds);
     }
     rebuildEnv(L);
@@ -436,9 +440,24 @@ export function createEngine(container, { params } = {}) {
     else renderer.render(scene, camera);
   }
 
+  /**
+   * Num cenário grande (o mapa das fases), a sombra do sol cobre só a vizinhança de (x, z): a caixa do mapa de sombra
+   * acompanha o ponto em passos de `step` m (refeita só quando ele anda: sem tremer a cada quadro).
+   */
+  function focusShadow(x, z, { half = 16, top = 12, step = 4 } = {}) {
+    const cx = Math.round(x / step) * step;
+    const cz = Math.round(z / step) * step;
+    const key = `${cx},${cz},${half},${top}`;
+    if (key === shadowFocusKey) return;
+    shadowFocusKey = key;
+    fitShadow({ minX: cx - half, maxX: cx + half, minZ: cz - half, maxZ: cz + half }, top);
+    renderer.shadowMap.needsUpdate = true;
+  }
+
   return {
     renderer, scene, camera, sun, hemi, sky, composer, bloom, grade,
     applyLighting,
+    focusShadow,
     /** Aquecimento da GPU para a fase montada (programas, texturas, geometrias, sombra): no carregamento. */
     prepare,
     get lighting() { return lighting; },

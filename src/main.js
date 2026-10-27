@@ -6,7 +6,7 @@ import { createEngine } from './core/engine.js';
 import { createFrameCap, furShellsFor } from './core/quality.js';
 import { createSettings } from './core/settings.js';
 import { createDog } from './dogs/dog.js';
-import { createGame } from './game/game.js';
+import { createGame, HUB } from './game/game.js';
 import { createAudio } from './fx/audio.js';
 import { createParticles } from './fx/particles.js';
 import { createFeedback } from './fx/feedback.js';
@@ -14,6 +14,7 @@ import { createUI } from './ui/ui.js';
 import { createInstallHint } from './ui/installHint.js';
 import { updateSeeThrough } from './world/seeThrough.js';
 import { LEVELS as ALL_LEVELS, publishedLevelIndex } from './levels/index.js';
+import MAPA from './levels/mapa/index.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -55,7 +56,8 @@ async function boot() {
   mark('dogs');
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
 
-  const game = createGame({ engine, dogs, levels: LEVELS, params });
+  // o mapa das fases (Pandorópolis): Jogar → Fases, a pausa e a vitória levam a ele
+  const game = createGame({ engine, dogs, levels: LEVELS, params, hub: MAPA });
   const audio = createAudio();
   const particles = createParticles(engine);
   // opções salvas (modo sem dicas): a UI esconde objetivo e dicas, o feedback esconde o marcador do objetivo
@@ -68,14 +70,18 @@ async function boot() {
   });
   // no catálogo de desenvolvimento (prévias dos protótipos) o menu libera todas as fases para teste
   // input: controles de toque; quality: menu de qualidade gráfica e layout do celular (engine.quality.device)
-  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality, settings });
+  const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality, settings, map: !dev });
+  // o mapa lê o progresso salvo pela UI (e, no catálogo de desenvolvimento, libera todas as bandeirinhas)
+  game.setProgressSource(() => ui.progress);
+  game.setUnlockAll(!!dev);
   // iPhone no Safari: como jogar em tela cheia (pelo app da tela inicial); nada no PC nem no Android
   const installHint = createInstallHint({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), device: engine.quality.device, audio });
 
-  // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial.
+  // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial; ?mapa abre direto no mapa das fases.
   const lv = dev ? dev.index : published ?? 0;
   mark('ui');
-  await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
+  if (params.has('mapa') && !dev) await game.loadLevel(HUB, { mode: 'play', initial: true });
+  else await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
 
   // ?cam=x,y,z&look=x,y,z — câmera fixa (capturas de cenário). Aplicada depois do game.update.
   const camFix = params.get('cam')?.split(',').map(Number);

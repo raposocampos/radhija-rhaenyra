@@ -1,7 +1,7 @@
 // Fase 6 (Expresso do Superbafo): teleporte prepara estações; ações do puzzle usam entrada real.
 // Fluxo: volta → pedal (lua) → o trem busca a lua no pórtico → pedal (estrela) → cancela fechada barra →
 // Rhaenyra fica na placa → as duas cargas descem até a bandeja → uma em cada boca até o foguete, que decola.
-// No fim, o menu da campanha: dez fases em linhas equilibradas e o save liberando a 6, a 7, a 8, a 9 e a 10 em ordem.
+// No fim, o mapa da campanha (Jogar → Fases): dez bandeirinhas em ordem e o save liberando a 6, a 7, a 8, a 9 e a 10.
 import { createHarness, parseArgs } from './lib/harness.mjs';
 const args = parseArgs();
 const BASE = (args.url || 'http://127.0.0.1:5176/').replace(/\?.*$/, '');
@@ -19,36 +19,24 @@ const station = async (name, point) => {
 const blow = () => H.hold(['KeyR'], 450);
 const CAMPAIGN = 'fase1,fase2,fase3,fase4,fase5,fase6,fase7,fase8,fase9,fase10';
 const done = (id) => [id, { done: true, best: 95.5, treats: 1, total: 3, clears: 1 }];
-/** Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre Jogar → Fases e lê os cartões. */
+/**
+ * Grava um save v1 (chave de produção: o servidor do E2E não é uma prévia), abre Jogar → Fases (o mapa das fases) e lê
+ * as bandeirinhas (cada uma 'done', 'next' ou 'locked').
+ */
 const menuWith = async (ids) => {
   const saved = JSON.stringify({ v: 1, levels: Object.fromEntries(ids.map(done)) });
   await ev((saved) => localStorage.setItem('rr-progress-v1', saved), saved);
   await load('');
   await page.click('.rr-btn--play');
   await page.click('.rr-mode--levels');
-  await H.sleep(700);
+  await page.waitForFunction(() => window.__game.game.isHub && window.__game.game.state === 'playing', null, { timeout: 120000 });
+  await H.sleep(300);
   return ev((saved) => ({
     state: window.__game.game.state,
+    hub: window.__game.game.isHub,
     unchanged: localStorage.getItem('rr-progress-v1') === saved,
-    cards: [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => ({
-      num: card.querySelector('.rr-lvcard__num')?.textContent,
-      locked: card.classList.contains('is-locked'),
-      top: card.offsetTop, // posição de layout (sem o transform do foco)
-    })),
+    cards: window.__game.game.puzzle.flagStates().map((f) => ({ num: String(f.n), locked: f.state === 'locked', state: f.state })),
   }), saved);
-};
-/** Quantos cartões em cada linha, pela posição de layout (sem o transform do foco). */
-const rowsOf = (cards) => [...new Set(cards.map((card) => card.top))].map((top) => cards.filter((card) => card.top === top).length).join();
-const layoutCards = () => ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => ({ top: card.offsetTop })));
-/** Clica num cartão bloqueado: o aviso aparece acima da linha de cima, sem cobrir nenhum cartão. */
-const lockedNote = async () => {
-  await page.click('.rr-levels .rr-lvcard.is-locked');
-  await H.sleep(400);
-  return ev(() => {
-    const note = document.querySelector('.rr-levels__note.is-on')?.getBoundingClientRect();
-    const top = Math.min(...[...document.querySelectorAll('.rr-levels .rr-lvcard')].map((card) => card.getBoundingClientRect().top));
-    return { shown: !!note, bottom: note?.bottom, top, clear: !!note && note.bottom <= top - 4 };
-  });
 };
 try {
   await load('?level=fase6&play');
@@ -212,31 +200,26 @@ try {
   state = await info();
   check(state.levelId === 'fase6' && (await ev(() => window.__game.levels.map((level) => level.id).join())) === CAMPAIGN, 'posição na lista (?level=6) também abre a fase 6');
 
-  // ---------------------------------------------------------------- menu da campanha e save v1
+  // ---------------------------------------------------------------- mapa da campanha e save v1
   let menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5']);
   const nums = menu.cards.map((card) => card.num).join();
-  check(menu.state === 'title' && nums === '1,2,3,4,5,6,7,8,9,10', 'menu com as dez fases em ordem', nums);
-  check(rowsOf(menu.cards) === '5,5', 'cartões em duas linhas equilibradas (5 + 5)', rowsOf(menu.cards));
-  check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true,true,true,true', 'fase 5 concluída libera a 6; a 7, a 8, a 9 e a 10 continuam bloqueadas', JSON.stringify(menu.cards));
-  check(menu.unchanged, 'abrir o menu não reescreve o save antigo (medalhas e conclusões preservadas)');
-  await page.evaluate(() => document.fonts.ready);
-  check(await ev(() => [...document.querySelectorAll('.rr-levels .rr-lvcard__name')].every((name) => name.scrollWidth <= name.clientWidth && name.scrollHeight <= name.clientHeight + 1)), 'nomes das dez fases inteiros nos cartões (no máximo duas linhas, sem cortar) em 1280 px');
-  await shot('00-menu-dez-fases.png');
-  let note = await lockedNote();
-  check(note.clear, 'aviso de fase bloqueada acima das duas linhas, sem cobrir cartões', JSON.stringify(note));
-  await shot('00b-aviso-fase-bloqueada.png');
-  // perto do modo compacto (761–800 px) os cartões encolhem e as linhas continuam 5 + 5
-  for (const width of [780, 1024]) {
-    await page.setViewportSize({ width, height: 720 });
-    await H.sleep(400);
-    const cards = await layoutCards();
-    check(rowsOf(cards) === '5,5', `${width} px: cartões em 5 + 5`, rowsOf(cards));
-    note = await lockedNote();
-    check(note.clear, `${width} px: aviso acima dos cartões`, JSON.stringify(note));
-    if (width === 780) await shot('00c-menu-780px.png');
-  }
-  await page.setViewportSize({ width: 1280, height: 720 });
+  check(menu.state === 'playing' && menu.hub && nums === '1,2,3,4,5,6,7,8,9,10', 'Fases abre o mapa com as dez bandeirinhas em ordem', nums);
+  check(menu.cards.map((card) => card.locked).join() === 'false,false,false,false,false,false,true,true,true,true', 'fase 5 concluída libera a 6; a 7, a 8, a 9 e a 10 continuam trancadas', JSON.stringify(menu.cards));
+  check(menu.cards[5].state === 'next', 'a 6 é a próxima (laranja)', menu.cards[5]);
+  check(menu.unchanged, 'abrir o mapa não reescreve o save antigo (medalhas e conclusões preservadas)');
+  // na frente da 6 (as dogs aparecem na próxima): Entrar abre o cartão da fase 6
+  const near6 = await H.waitFor((x) => x.near === 6, { timeout: 10000 });
+  check(near6.near === 6, 'as dogs aparecem na frente da bandeirinha 6', near6.near);
+  await shot('00-mapa-dez-fases.png');
+  // uma trancada: E dá a dica (e não carrega nada)
+  await ev(() => { const g = window.__game.game; const f = window.__game.layout.FLAGS[6]; g.debug.teleport(g.activeDog, f.x + f.face[0] * 2.2, f.z + f.face[1] * 2.2); });
+  await H.waitFor((x) => x.near === 7, { timeout: 10000 });
+  await H.clearLog();
+  await H.press('KeyE');
   await H.sleep(300);
+  const hint = (await H.logOf('hint')).at(-1)?.text ?? '';
+  check(/Trancada/.test(hint) && (await info()).state === 'playing', 'bandeirinha trancada: dica e nada de carregar', hint);
+  await shot('00b-mapa-trancada.png');
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4']);
   check(menu.cards[5]?.locked === true && menu.cards[6]?.locked === true && menu.cards[7]?.locked === true && menu.cards[8]?.locked === true && menu.cards[9]?.locked === true, 'sem a fase 5 concluída, da 6 à 10 ficam bloqueadas');
   menu = await menuWith(['fase1', 'fase2', 'fase3', 'fase4', 'fase5', 'fase6']);

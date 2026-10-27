@@ -3,8 +3,11 @@
 // Telas do menu inicial (data-screen da camada .rr-title): main (Jogar, Opções) → modes (Modo História "em breve",
 // Fases) → levels (Continuar e os cartões das fases); options (volume, qualidade, dicas, tela cheia). Voltar com
 // Esc, ○ · B ou o botão do canto; do cartão de abertura, Voltar leva de novo à tela das fases.
-// API: createUI({ audio, layout, levels, params, unlockAll, input, quality, settings }) → { update(dt), state, screen, ... }
+// API: createUI({ audio, layout, levels, params, unlockAll, input, quality, settings, map }) → { update(dt), state, screen, ... }
 // unlockAll: catálogo de desenvolvimento (?level=<id>), com todas as fases liberadas no menu para teste.
+// map: há o mapa das fases (Pandorópolis): Fases abre o mapa (ui:openMap) em vez dos cartões; a pausa e a vitória
+// ganham o botão Mapa; o Voltar do cartão de abertura volta ao mapa. No mapa (level:loaded com hub), .rr[data-hub]
+// troca o HUD (mapHud.js: placa da cidade, plaquinha da bandeirinha com a barrinha de carregamento e o atalho).
 // input: a entrada do jogo (controles de toque, touchControls.js); quality: engine.quality (menu de qualidade);
 // settings: opções salvas (src/core/settings.js; modo sem dicas: .rr[data-hints="off"] esconde objetivo e dicas).
 // No celular/tablet (quality.device), a raiz ganha data-mobile (menos custo de GPU, aviso de girar). Numa janela
@@ -12,7 +15,8 @@
 // tela (screenFit.js, ui.css). No PC de tamanho normal nada muda.
 // Ouve: game:state, game:reset, level:loading, level:loaded, level:error, objective, dog:switch, companion:stay,
 //       interact:prompt, hint, collectible:pickup, victory, input:device, quality:change, settings:change.
-// Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad.
+// Emite: ui:play, ui:pause, ui:resume, ui:restart, ui:nextLevel, ui:selectLevel {index}, ui:menu, ui:cancelLoad,
+//       ui:openMap, ui:mapTravel {dir}.
 // Partes: markup.js (template e HTML gerado), hud.js, curtain.js (transição), menuNav.js (foco e
 // controle nos menus), touchControls.js (joystick e botões de toque), progress.js (progresso salvo), icons.js e ui.css.
 import '@fontsource/fredoka/500.css';
@@ -22,7 +26,7 @@ import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/700.css';
 import './ui.css';
 import { events } from '../core/events.js';
-import { boneIcon, clockIcon, restartIcon, itemIcon, lockIcon, checkIcon, trophyIcon, homeIcon, nextIcon, sparkIcon } from './icons.js';
+import { boneIcon, clockIcon, restartIcon, itemIcon, lockIcon, checkIcon, trophyIcon, homeIcon, nextIcon, sparkIcon, mapIcon } from './icons.js';
 import { esc, fmtTime, treatMessage, pawPattern, template, QUALITY_NAMES, HINTS_NOTE, MODES } from './markup.js';
 import { loadProgress, saveProgress, recordLevelClear, recordLastPlayed, continueTarget } from './progress.js';
 import { createHud, retrigger } from './hud.js';
@@ -30,6 +34,7 @@ import { createCurtain } from './curtain.js';
 import { createMenuFocus, createMenuPad } from './menuNav.js';
 import { createTouchControls } from './touchControls.js';
 import { watchCompact } from './screenFit.js';
+import { createMapHud } from './mapHud.js';
 
 /** Telas do menu inicial e a tela de onde cada uma é aberta (Voltar). */
 const SCREEN_PARENT = { main: null, modes: 'main', levels: 'modes', options: 'main' };
@@ -38,9 +43,9 @@ const SCREEN_OPENER = { modes: 'play', levels: 'levels', options: 'options' };
 
 /**
  * @param {{ audio?: any, layout?: import('../types').LevelLayout, levels?: import('../types').LevelDef[], params?: URLSearchParams,
- *           unlockAll?: boolean, input?: any, quality?: any, settings?: { noHints: boolean, setNoHints(on: boolean): void } }} [opts]
+ *           unlockAll?: boolean, input?: any, quality?: any, settings?: { noHints: boolean, setNoHints(on: boolean): void }, map?: boolean }} [opts]
  */
-export function createUI({ audio, layout, levels, params, unlockAll = false, input = null, quality = null, settings = null } = {}) {
+export function createUI({ audio, layout, levels, params, unlockAll = false, input = null, quality = null, settings = null, map = false } = {}) {
   /** @type {Partial<import('../types').LevelDef>[]} */
   const LV = levels?.length ? levels : [{ id: 'fase1', number: 1, name: 'Operação Cenoura', item: 'carrot', layout, texts: {} }];
   const host = document.getElementById('ui');
@@ -56,6 +61,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   if (mobile) root.dataset.mobile = mobile;
   watchCompact(root, { mobile });
   root.innerHTML = template();
+  if (map) root.dataset.map = '1';
   host.appendChild(root);
 
   const $ = (s) => root.querySelector(s);
@@ -111,6 +117,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
 
   // ---------- partes ----------
   const hud = createHud({ $, getTotal: () => cur.total });
+  const mapHud = createMapHud({ $, levels: LV, getProgress: () => prog });
   const curtain = createCurtain({
     $, audio,
     levelMeta: (info) => ({ ...meta(info.index ?? cur.index), ...info }),
@@ -185,6 +192,19 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
 
   // ---------- informação da fase ----------
   function applyLevel(info) {
+    // o mapa das fases: HUD próprio (mapHud.js) e nada de "Fase 0"
+    if (info.hub) {
+      root.dataset.hub = '1';
+      mapHud.reset();
+      $('.rr-pause__level').innerHTML = `${mapIcon()}<span>Pandorópolis · mapa das fases</span>`;
+      // a tela inicial sobre o mapa (Menu inicial na pausa do mapa): a fita do logotipo com o mapa
+      $('.rr-logo__item').innerHTML = mapIcon();
+      $('.rr-logo__name').textContent = 'Pandorópolis';
+      cur = Object.assign({}, cur, { id: info.id, total: 0, hasNext: false });
+      root.dataset.level = info.id || '';
+      return;
+    }
+    delete root.dataset.hub;
     cur = { ...meta(info.index ?? cur.index), ...info };
     cur.texts = info.texts || cur.texts || {};
     cur.total = Number.isFinite(info.total) ? info.total : cur.total;
@@ -249,8 +269,12 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     }
     if (uiState === 'intro' && !blocking()) {
       audio?.play?.('uiBack');
-      nextTitleScreen = 'levels';
-      events.emit('ui:menu', {});
+      // com o mapa, de volta à bandeirinha da fase; sem ele, à tela das fases
+      if (map) events.emit('ui:openMap', {});
+      else {
+        nextTitleScreen = 'levels';
+        events.emit('ui:menu', {});
+      }
     }
   }
 
@@ -332,11 +356,23 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     $('.rr-victory__msg').textContent = treatMessage(got, total, cur.item);
     L.victory.classList.toggle('is-final', !hasNext);
     const acts = $('.rr-victory__actions');
-    acts.innerHTML = hasNext
-      ? `<button class="rr-btn rr-btn--primary" data-action="next" data-nav data-default><span>Próxima fase</span>${nextIcon()}</button>
-         <button class="rr-btn rr-btn--soft" data-action="restart" data-nav>${restartIcon()}<span>Jogar novamente</span></button>`
-      : `<button class="rr-btn rr-btn--primary" data-action="restart" data-nav data-default>${restartIcon()}<span>Jogar novamente</span></button>
-         <button class="rr-btn rr-btn--soft" data-action="menu" data-nav>${homeIcon()}<span>Menu inicial</span></button>`;
+    const mapBtn = (primary = false) => `<button class="rr-btn ${primary ? 'rr-btn--primary' : 'rr-btn--soft'} rr-btn--map" data-action="map" data-nav${primary ? ' data-default' : ''}>${mapIcon()}<span>Mapa</span></button>`;
+    if (map) {
+      // com o mapa: a próxima fase (ou, na última, o mapa) em destaque; voltar ao mapa mostra o progresso na cidade
+      acts.innerHTML = hasNext
+        ? `<button class="rr-btn rr-btn--primary" data-action="next" data-nav data-default><span>Próxima fase</span>${nextIcon()}</button>
+           ${mapBtn()}
+           <button class="rr-btn rr-btn--soft" data-action="restart" data-nav>${restartIcon()}<span>Jogar novamente</span></button>`
+        : `${mapBtn(true)}
+           <button class="rr-btn rr-btn--soft" data-action="restart" data-nav>${restartIcon()}<span>Jogar novamente</span></button>
+           <button class="rr-btn rr-btn--soft" data-action="menu" data-nav>${homeIcon()}<span>Menu inicial</span></button>`;
+    } else {
+      acts.innerHTML = hasNext
+        ? `<button class="rr-btn rr-btn--primary" data-action="next" data-nav data-default><span>Próxima fase</span>${nextIcon()}</button>
+           <button class="rr-btn rr-btn--soft" data-action="restart" data-nav>${restartIcon()}<span>Jogar novamente</span></button>`
+        : `<button class="rr-btn rr-btn--primary" data-action="restart" data-nav data-default>${restartIcon()}<span>Jogar novamente</span></button>
+           <button class="rr-btn rr-btn--soft" data-action="menu" data-nav>${homeIcon()}<span>Menu inicial</span></button>`;
+    }
     if (uiState === 'victory') setFocus(defaultFocus(), { silent: true });
   }
 
@@ -514,6 +550,12 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
         showTitleNote(`${MODES.story.name}: em breve! Ainda está em desenvolvimento.`, { below: b, icon: sparkIcon() });
         return;
       }
+      if (a === 'levels' && map) {
+        // Fases: o mapa da cidade (as dogs aparecem na frente da próxima fase)
+        audio?.play?.('uiClick');
+        events.emit('ui:openMap', {});
+        return;
+      }
       if (a === 'play' || a === 'options' || a === 'levels') {
         audio?.play?.('uiClick');
         showScreen(a === 'play' ? 'modes' : a);
@@ -546,6 +588,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
       if (nextId) prog = recordLastPlayed(nextId, prog).prog;
       events.emit('ui:nextLevel', {});
     } else if (a === 'menu') events.emit('ui:menu', {});
+    else if (a === 'map') events.emit('ui:openMap', {});
   }
 
   let noteTimer = 0;
@@ -668,6 +711,8 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     hud.clearObjective();
     curtain.loaded();
   });
+  // o mapa recebe o progresso salvo agora (outra aba, o resetProgress dos testes)
+  events.on('map:refresh', () => mapHud.refresh());
   events.on('level:error', ({ message, canReturn }) => {
     $('#rr-load-error-message').textContent = message;
     const back = /** @type {HTMLButtonElement} */ ($('[data-action="cancel-load"]'));
@@ -694,13 +739,14 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
   events.on('victory', (d = {}) => {
     victoryData = { ...d };
     victoryRec = recordVictory(d);
+    mapHud.refresh();
     if (uiState === 'victory') renderVictory();
   });
 
   applyLevel(cur);
   hud.setDog('radhija');
-  // Com ?play, o jogo entra direto em 'playing': não pisca a tela inicial.
-  if (!params?.has?.('play')) setState('title');
+  // Com ?play (ou ?mapa), o jogo entra direto em 'playing': não pisca a tela inicial.
+  if (!params?.has?.('play') && !(map && params?.has?.('mapa'))) setState('title');
 
   return {
     update(dt) {
@@ -725,7 +771,9 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     /** Layout compacto ligado (janela pequena ou celular; screenFit.js). */
     get compact() { return root.hasAttribute('data-compact'); },
     get progress() { return prog; },
-    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderModes(); },
+    resetProgress() { prog = { v: 1, levels: {} }; saveProgress(prog); renderCards(); renderContinue(); renderModes(); mapHud.refresh(); },
+    /** Há o mapa das fases (Fases abre o mapa). */
+    get map() { return map; },
     get curtain() { return curtain.phase; },
     get level() { return cur; },
     get focus() { return focus.el; },

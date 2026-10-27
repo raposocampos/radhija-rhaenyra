@@ -122,6 +122,57 @@ export function createCollisionWorld(layout) {
   const { STATIC_COLLIDERS, WORLD } = layout;
   const bounds = WORLD.bounds;
   const statics = STATIC_COLLIDERS.map((c) => ({ ...c, blocks: c.blocks || 'all', kind: c.kind || 'static' }));
+  // Mapas grandes (layout.COLLISION_GRID = lado da célula, m): os estáticos ficam numa grade e cada consulta só olha os
+  // das células em volta. Sem a grade (as fases), a lista inteira, como sempre.
+  const G = layout.COLLISION_GRID || 0;
+  /** @type {Map<number, number[]> | null} */
+  const grid = G > 0 ? new Map() : null;
+  const cellKey = (ix, iz) => (ix + 2048) * 4096 + (iz + 2048);
+  const marks = new Uint32Array(statics.length);
+  /** @type {any[]} */
+  const scratch = [];
+  let stamp = 0;
+  if (grid) {
+    statics.forEach((c, i) => {
+      const t = c.shape === 'segment' ? (c.t ?? 0.05) : 0;
+      const [x0, z0, x1, z1] = c.shape === 'box' ? [c.x - c.hx, c.z - c.hz, c.x + c.hx, c.z + c.hz]
+        : c.shape === 'circle' ? [c.x - c.r, c.z - c.r, c.x + c.r, c.z + c.r]
+          : [Math.min(c.ax, c.bx) - t, Math.min(c.az, c.bz) - t, Math.max(c.ax, c.bx) + t, Math.max(c.az, c.bz) + t];
+      for (let ix = Math.floor(x0 / G); ix <= Math.floor(x1 / G); ix++) {
+        for (let iz = Math.floor(z0 / G); iz <= Math.floor(z1 / G); iz++) {
+          const k = cellKey(ix, iz);
+          const cell = grid.get(k);
+          if (cell) cell.push(i);
+          else grid.set(k, [i]);
+        }
+      }
+    });
+  }
+  /**
+   * Os estáticos que podem tocar um círculo de raio r em (x, z) (com folga). Com a grade, a lista é reaproveitada:
+   * vale até a próxima consulta.
+   */
+  function staticsNear(x, z, r) {
+    if (!grid) return statics;
+    stamp = (stamp + 1) >>> 0 || 1;
+    scratch.length = 0;
+    const pad = r + 0.6;
+    const ix1 = Math.floor((x + pad) / G);
+    const iz0 = Math.floor((z - pad) / G);
+    const iz1 = Math.floor((z + pad) / G);
+    for (let ix = Math.floor((x - pad) / G); ix <= ix1; ix++) {
+      for (let iz = iz0; iz <= iz1; iz++) {
+        const cell = grid.get(cellKey(ix, iz));
+        if (!cell) continue;
+        for (const i of cell) {
+          if (marks[i] === stamp) continue;
+          marks[i] = stamp;
+          scratch.push(statics[i]);
+        }
+      }
+    }
+    return scratch;
+  }
   const dynamics = [];
   // companionOnly: colisor que só vale para a companheira (ex.: área do irrigador ligado, que a IA
   // deve contornar). O jogo liga o modo durante a atualização da companheira (setCompanionMode).
@@ -149,7 +200,7 @@ export function createCollisionWorld(layout) {
   function contacts(x, z, r, size, opts = {}) {
     const out = [];
     const rr = r + (opts.margin || 0);
-    for (const list of [statics, dynamics]) {
+    for (const list of [staticsNear(x, z, rr), dynamics]) {
       for (const c of list) {
         if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
@@ -170,7 +221,7 @@ export function createCollisionWorld(layout) {
     const iters = opts.iterations || 6;
     for (let it = 0; it < iters; it++) {
       let any = false;
-      for (const list of [statics, dynamics]) {
+      for (const list of [staticsNear(x, z, r), dynamics]) {
         for (const c of list) {
           if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
           if (opts.ignore && opts.ignore.has(c.id)) continue;
@@ -239,7 +290,7 @@ export function createCollisionWorld(layout) {
     for (let it = 0; it < 3; it++) {
       let any = false;
       for (const o of offs) {
-        for (const list of [statics, dynamics]) {
+        for (const list of [staticsNear(x + sx * o, z + sz * o, br), dynamics]) {
           for (const c of list) {
             if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
             if (opts.ignore && opts.ignore.has(c.id)) continue;
@@ -282,7 +333,8 @@ export function createCollisionWorld(layout) {
     const sz = Math.cos(yaw);
     const parts = body ? [[0, r], [body.front - body.r, body.r], [body.r - body.back, body.r]] : [[0, r]];
     let top = 0;
-    for (const list of [statics, dynamics]) {
+    const reach = body ? Math.max(r, body.front, body.back) : r;
+    for (const list of [staticsNear(x, z, reach), dynamics]) {
       for (const c of list) {
         const h = c.height || 0.01;
         if (!c.jumpable || (h <= top && !out) || !applies(c, size) || excepted(c, x, z)) continue;
@@ -302,7 +354,7 @@ export function createCollisionWorld(layout) {
   /** O círculo encosta (penetra) em algo? */
   function overlaps(x, z, r, size, opts = {}) {
     if (x < bounds.minX + r || x > bounds.maxX - r || z < bounds.minZ + r || z > bounds.maxZ - r) return true;
-    for (const list of [statics, dynamics]) {
+    for (const list of [staticsNear(x, z, r), dynamics]) {
       for (const c of list) {
         if (!applies(c, size) || excepted(c, x, z) || passes(c, opts)) continue;
         if (opts.ignore && opts.ignore.has(c.id)) continue;
@@ -326,7 +378,7 @@ export function createCollisionWorld(layout) {
   }
 
   return {
-    statics, dynamics, bounds,
+    statics, dynamics, bounds, staticsNear,
     addDynamic, removeDynamic, getDynamic,
     setCompanionMode(on) { companionMode = !!on; },
     get companionMode() { return companionMode; },

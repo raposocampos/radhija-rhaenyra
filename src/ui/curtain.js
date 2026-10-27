@@ -17,7 +17,7 @@ export function createCurtain({ $, audio, levelMeta, itemOf, onCover, onChange }
     clearCurtainTimers();
     const m = levelMeta(info);
     $('.rr-curtain__badge').innerHTML = itemIcon(itemOf(m));
-    $('.rr-curtain__eyebrow').textContent = `Fase ${m.number}`;
+    $('.rr-curtain__eyebrow').textContent = m.hub ? 'Mapa das fases' : `Fase ${m.number}`;
     $('.rr-curtain__name').textContent = m.name || '';
     $('.rr-curtain__sub').textContent = m.subtitle || '';
     curtainEl.classList.remove('is-revealing');

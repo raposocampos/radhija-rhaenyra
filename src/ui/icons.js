@@ -284,6 +284,13 @@ export function homeIcon() {
   <path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.3 9.5v9.3a1 1 0 0 0 1 1h3.4v-5.2h2.6v5.2h3.4a1 1 0 0 0 1-1V9.5"/></svg>`;
 }
 
+/** Mapa dobrado com o alfinete (o mapa das fases). */
+export function mapIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3.5 6.5l5-2 7 2.5 5-2v13l-5 2-7-2.5-5 2z"/><path d="M8.5 4.5v13M15.5 7v13"/>
+  <circle cx="12" cy="10.5" r="1.4" fill="currentColor" stroke="none"/></svg>`;
+}
+
 export function nextIcon() {
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
   <path d="M5 12h12.5"/><path d="M12.5 6.5L18 12l-5.5 5.5"/></svg>`;
