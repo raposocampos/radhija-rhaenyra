@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { suiteResult } from '../tools/scripts/lib/suite-runner.mjs';
-import { browserOptions, disabledFeaturesOptions, playwrightDisabledFeaturesArg } from '../tools/scripts/lib/browser.mjs';
+import { angleArgs, browserOptions, disabledFeaturesOptions, playwrightDisabledFeaturesArg } from '../tools/scripts/lib/browser.mjs';
 import { summarizeStacks } from '../tools/scripts/lib/hang-probe.mjs';
 
 test('E2E: exige processo bem-sucedido, resumo presente e ausência de erros', () => {
@@ -45,6 +45,29 @@ test('E2E: o Chromium dos testes desliga o streaming de scripts sem apagar a lis
   assert.equal(merged.length, 1);
   assert.ok(merged[0].split('=')[1].split(',').includes('ScriptStreaming'));
   for (const f of real.split('=')[1].split(',')) assert.ok(merged[0].includes(f), f);
+});
+
+test('E2E: no CI, o SwiftShader sobe sem o estado dinâmico de entrada de vértices (todas as suítes)', () => {
+  const off = '--disable-angle-features=supportsVertexInputDynamicState';
+  assert.deepEqual(angleArgs({ CI: 'true' }), ['--use-angle=swiftshader', off]);
+  // a variável volta ao padrão do Chromium, para comparar
+  assert.deepEqual(angleArgs({ CI: 'true', E2E_VERTEX_INPUT_DYNAMIC: '1' }), ['--use-angle=swiftshader']);
+  // fora do CI fica o Chrome do sistema com a GPU de verdade
+  assert.deepEqual(angleArgs({}), []);
+  // e é o browserOptions (suítes, capturas e medições) que leva a chave
+  const ci = process.env.CI;
+  const dyn = process.env.E2E_VERTEX_INPUT_DYNAMIC;
+  process.env.CI = 'true';
+  delete process.env.E2E_VERTEX_INPUT_DYNAMIC;
+  try {
+    const { args } = browserOptions();
+    assert.equal(args.filter((a) => a === off).length, 1);
+    assert.equal(args.filter((a) => a.startsWith('--disable-angle-features=')).length, 1);
+    assert.ok(args.includes('--use-angle=swiftshader'));
+  } finally {
+    if (ci === undefined) delete process.env.CI; else process.env.CI = ci;
+    if (dyn === undefined) delete process.env.E2E_VERTEX_INPUT_DYNAMIC; else process.env.E2E_VERTEX_INPUT_DYNAMIC = dyn;
+  }
 });
 
 test('E2E: resumo das pilhas nativas do gdb agrupa threads iguais e marca a biblioteca', () => {
