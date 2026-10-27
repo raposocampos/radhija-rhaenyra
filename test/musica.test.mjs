@@ -27,7 +27,7 @@ test('trilha: notas, compassos e acordes se leem', () => {
   assert.equal(noteToMidi('Bb4'), 70);
   assert.equal(noteToMidi('H4'), null);
   assert.equal(parseBar('C5 . . . E5 . . . G5 . . . . . . .').filter((n) => n != null).length, 3);
-  assert.throws(() => parseBar('C5 . .'), /16 posições/);
+  assert.throws(() => parseBar('C5 . .'), /precisa de 16/);
   assert.deepEqual(chordNotes('C').notes, [60, 64, 67]);
   assert.deepEqual(chordNotes('Am').notes, [57, 60, 64]);
   assert.equal(chordNotes('G7').notes.length, 4);

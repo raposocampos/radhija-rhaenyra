@@ -1739,7 +1739,7 @@
 .rr[data-compact] .rr-tile .rr-tile__ico .ico { width: calc(19 * var(--u)); height: calc(19 * var(--u)); }
 .rr[data-compact] .rr-tile__name { font-size: calc(17 * var(--u)); }
 .rr[data-compact] .rr-tile__sub { display: none; }
-.rr[data-compact] .rr-tile__badge { font-size: max(8px, calc(9 * var(--u))); padding: calc(4 * var(--u)) calc(7 * var(--u)); }
+.rr[data-compact] .rr-tile__badge { font-size: max(9px, calc(9 * var(--u))); padding: calc(4 * var(--u)) calc(7 * var(--u)); }
 .rr[data-compact] .rr-music-toggle { top: calc(var(--sa-t) + 8 * var(--u)); right: calc(var(--sa-r) + 10 * var(--u)); width: calc(38 * var(--u)); height: calc(38 * var(--u)); border-width: calc(2.5 * var(--u)); box-shadow: 0 calc(3 * var(--u)) 0 var(--choco); }
 .rr[data-compact] .rr-music-toggle .ico { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
 /* nas Opções o cartão ocupa a tela (sem o logotipo ao lado) */
