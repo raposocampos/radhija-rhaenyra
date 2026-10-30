@@ -1,13 +1,26 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-27, Claude** (colisão da ponte levadiça do mapa, branch `claude/mapa-ponte`, em
-andamento; #71, menu novo e trilha, etapa 4 de 4 da interface, em v0.10.21 · build 113; #70, picos de `O_flap`
+Última atualização: **2026-10-29, Claude** (privacidade: um trecho deste resumo dizia de quem é uma das cachorras,
+branch `claude/privacidade-dono-pandora`, aguardando aprovação; colisão da ponte levadiça do mapa, branch
+`claude/mapa-ponte`, integrada no #72, `b83f4f4`; #71, menu novo e trilha, etapa 4 de 4 da interface, em v0.10.21 · build 113; #70, picos de `O_flap`
 na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader sem o estado dinâmico de entrada de
 vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fase 10, em v0.10.18 · build 110;
 #67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler primeiro
 [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: a ponte levadiça do mapa sem as patas atravessando (Claude, branch `claude/mapa-ponte`)
+## Em andamento: privacidade, os docs sem dizer de quem são as cachorras (Claude, branch `claude/privacidade-dono-pandora`)
+
+- Pedido (2026-10-29, pelo orquestrador, depois da revisão do plano do Modo História): a seção da interface
+  responsiva, na etapa 2 do mapa, dizia de quem é a Pandora. A regra do projeto: Pandora e Amora aparecem só como
+  personagens, sem dono citado.
+- Feito: o trecho saiu; o resto do texto ficou igual. Varredura no `origin/main` (`b83f4f4`) em docs, README e
+  código atrás de outras menções a donos: nenhuma. As menções a um parente do usuário que restam (o Android compacto
+  em `test/responsivo.test.mjs`, `tools/scripts/lib/screens.mjs` e na mesma seção) falam do aparelho, não de dono.
+- O histórico do Git continua com o texto antigo; não foi reescrito (sem force push).
+- Validação: só documentação, sem teste local nem E2E; checks `testes-e-build` e `publicar-site` no PR.
+- Próximo passo: PR, checks, prévia e o "pode integrar" do usuário nesta sessão.
+
+## Entregue: a ponte levadiça do mapa sem as patas atravessando (Claude, PR #72, squash `b83f4f4`)
 
 - Pedido do usuário (2026-10-27, junto com o "pode integrar" do #71): "depois precisa melhorar a colisão da ponte,
   quando ela desce e passamos por cima dela, as patas ficam atravessando". Fila liberada pelo orquestrador: só
@@ -26,7 +39,7 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
   inteiro para testar a ponte. CI `40541339705` (`a90a22b`): sobre o rio 0,0 cm nas duas; ponte toda com as rampinhas,
   Radhija 0,2 cm e Rhaenyra 1,3 cm (limite 2); guarda-corpo, nada. E2E `mapa` `40541331508` verde.
 - No PC: só `node --check`, `git diff --check` e checagens leves (geometria das colisões, o `previewUnlockAll`).
-- Próximo passo: PR, CI e E2E (`mapa`, `menu`, `toque`), prévia e o "pode integrar" do usuário nesta sessão.
+- Integrado: PR #72, squash `b83f4f4` (deploy e versão: conferir no GitHub).
 
 ## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
 
@@ -262,8 +275,8 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
 - Capturas do celular (`capture-celular.mjs`): os toques em Continuar e Começar esperam o botão pronto (camada
   visível, sem animação de CSS em curso, por cima de tudo) e conferem o efeito, repetindo um toque perdido (no E2E
   do #66 o toque em Começar caía antes de o cartão de abertura terminar de entrar).
-- Etapa 2 (conceito, sem código): maquete isométrica aprovada pelo usuário na versão 4 — cidade "Pandorópolis" (a
-  cachorra da cunhada), outdoor desenhado em código da golden Amora candidata a prefeita ("Vote 1313"), biscoitos por
+- Etapa 2 (conceito, sem código): maquete isométrica aprovada pelo usuário na versão 4 — cidade "Pandorópolis",
+  outdoor desenhado em código da golden Amora candidata a prefeita ("Vote 1313"), biscoitos por
   fase, enfeites, nuvens nas áreas fechadas, atalho entre bandeirinhas, barrinha de carregamento perto da bandeirinha.
   Pedido final: colisão melhor, gráfico melhor e as dogs de verdade (no protótipo a dog tinha o tamanho de um carro),
   sem pesar.
