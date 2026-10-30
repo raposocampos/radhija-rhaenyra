@@ -1,78 +1,154 @@
 # Modo História: visão de design
 
-Situação: **proposta registrada em 2026-10-18, ainda não implementada.** No menu (Jogar), o cartão "Modo História"
-aparece com o selo "Em breve" e não abre nada (`MODES.story` em `src/ui/markup.js`). Este documento guarda a visão
-do usuário para quando o modo for construído; os detalhes marcados como proposta precisam do ok dele antes.
+Situação: **enredo aprovado no plano em 2026-10-29. O storyboard e as seis decisões padrão aguardam confirmação, e
+nada foi implementado.**
+- O roteiro completo ("As Aventuras de Radhija & Rhaenyra": enredo, elenco, casos, capítulos e mapa-múndi) está em
+  [HISTORIA.md](HISTORIA.md).
+- Este documento trata da estrutura, do desempenho, do progresso e das etapas de entrega.
+- No menu (Jogar), o cartão "Modo História" ainda mostra o selo "Em breve" e não abre nada (`MODES.story` em
+  `src/ui/markup.js`).
 
 ## O que o usuário pediu
 
-- Um **mapa-múndi** no estilo de Super Mario World: um mapa maior com áreas, que podem ser ilhas ou cidades.
-- A primeira área é o **Condomínio**. Entrando nela, abre-se um **mapa aberto** do jogo.
-- Dentro de cada área há **vários puzzles** como os do modo Fases, **colecionáveis**, **easter eggs** e uma
-  **missão principal**, que libera o próximo mapa.
-- O motivo do mapa-múndi é o desempenho: áreas separadas em vez de um mapa aberto gigantesco.
+**Em 2026-10-18:**
+- um **mapa-múndi** no estilo de Super Mario World, com áreas;
+- áreas que guardam puzzles, colecionáveis, segredos e uma **missão principal** que libera o próximo mapa;
+- o Condomínio como primeira área;
+- áreas separadas por causa do desempenho.
+
+**Em 2026-10-29, com o roteiro:**
+- **O mapa-múndi é próprio e separado do mapa das fases.** Pandorópolis, o mapa livre isométrico, continua sendo o
+  mapa das fases. O Modo História tem uma maquete leve com caminhos, como no Mario World, e cada área abre um mapa
+  maior, com carregamentos escondidos.
+- **O Condomínio é o Recanto das Patinhas** (cap. 1).
+- **8 capítulos, com um núcleo de 4** (1, 2, 6 e 8), que conta a história completa sozinho.
+- **Sem palavras nas cenas:** só desenhos e gestos. Os humanos aparecem só de relance.
+- **Investigação:** Faro, Reconstrução, pistas, mural de pistas e enigmas.
+- **Sem ligação de enredo com as 10 fases.** Personagens e peças podem ser reaproveitados.
 
 ## Estrutura
 
-1. **Mapa-múndi**: uma maquete pequena e leve, na mesma direção artística das fases (procedural, cores quentes,
-   brinquedos e casinhas em miniatura). Cada área é um ponto do mapa ligado por caminhos. Como no Mario World, as
-   cachorrinhas andam pelos caminhos (não livremente) e um caminho só se abre quando a missão principal da área
-   anterior termina. Em cada ponto aparecem o estado da missão, os puzzles resolvidos e os colecionáveis achados.
-2. **Área**: um mapa aberto de **tamanho limitado** (proposta: o equivalente a três a cinco fases atuais, dividido em
-   zonas), carregado sob demanda quando a jogadora entra e descartado ao sair, como as fases hoje.
-3. **Conteúdo de cada área**:
-   - **Missão principal**: uma sequência de etapas com objetivo (como as fases), que termina num acontecimento que
-     abre o caminho seguinte no mapa-múndi.
-   - **Puzzles**: desafios independentes espalhados pelas zonas, com as mecânicas que já existem (cordinha, tábua de
-     pressão, ventilador e superbafo, trem, pulo e impulso na parede, Lambe-Lambe) e mecânicas novas. Cada puzzle
-     tem a própria recompensa.
-   - **Colecionáveis**: os petiscos de sempre e um colecionável próprio da área.
-   - **Easter eggs**: segredos sem dica, que não aparecem em nenhum menu, contador ou texto do jogo.
+### 1. Mapa-múndi
 
-## Primeira área: Condomínio (proposta, a confirmar)
+Uma maquete pequena e leve, na direção artística das fases.
+- As irmãs andam pela trilha entre os nós, a ativa na frente e a irmã atrás.
+- Um caminho só abre quando a missão da área anterior termina. Às vezes também depende do enigma do mapa do Capitão.
+- Cada nó mostra o estado da missão, as pistas e os colecionáveis achados.
+- O mural de pistas abre a partir do mapa.
 
-O condomínio junta lugares que as fases já visitaram, agora conectados: a portaria, o jardim com o lago, a pracinha,
-a lavanderia coletiva, a garagem e o terraço do prédio. Ideias de missão principal para o usuário escolher: achar o
-que impede o portão da garagem de abrir para chegar à próxima área, ou ajudar um vizinho a recuperar algo que mudou
-de lugar pelo condomínio, passando por várias zonas. O cenário e os objetos devem ser apresentados ao usuário em
-poucas linhas antes da construção, como nas fases.
+### 2. Área
+
+- **Tamanho.** Um mapa aberto do tamanho de **uma a duas fases atuais**, dividido em zonas.
+- **Carregamento.** Ela carrega inteira atrás do cartão "Capítulo N" e é descartada ao sair, como as fases hoje.
+
+### 3. Conteúdo de cada área
+
+- **Missão principal:** uma sequência de etapas que termina num acontecimento e abre o caminho seguinte.
+- **Pistas:** 1 obrigatória na missão e 2 escondidas, achadas com Faro, enigma ou observação.
+- **Puzzles paralelos:** 2 ou 3, com as mecânicas atuais e as novas da história.
+- **Colecionáveis:** o colecionável próprio da área e os petiscos de sempre.
+- **Segredos:** sem dica, sem aparecer em nenhum menu, contador ou texto do jogo.
 
 ## Desempenho (celular incluído)
 
-- **Mapa-múndi**: cena pequena, poucas luzes, sem física; usa os mesmos perfis de qualidade (`src/core/quality.js`).
-- **Áreas**: orçamento medido com `tools/scripts/measure-resources.mjs`, com teto de desenho e de triângulos
-  definido a partir da fase mais pesada. Zonas fora de vista não desenham (culling por zona), objetos repetidos
-  usam instâncias e as sombras ficam limitadas à vizinhança das cachorrinhas. Nada de streaming contínuo na primeira
-  versão: a área inteira carrega na entrada, atrás da cortina.
-- Precisa rodar bem nos aparelhos de referência (Infinix Note 30 5G e iPhone 13) sem mudar o perfil do PC.
+- **Aparelhos-alvo.** Precisa rodar bem no Infinix Note 30 5G, no iPhone 13 e no Android pequeno, inclusive no perfil
+  `minima` (sem pós-processamento e sem sombras), sem mudar o perfil do PC.
+- **Mapa-múndi.** Cena pequena, com poucas luzes e sem física. Usa os perfis de `src/core/quality.js`.
+- **Áreas.** O orçamento é medido com `tools/scripts/measure-resources.mjs`.
+  - O teto de desenho e de triângulos é o da fase 10.
+  - Zonas fora de vista não desenham.
+  - Objetos repetidos usam instâncias.
+  - As sombras ficam limitadas à vizinhança das cachorrinhas.
+- **Carregamentos escondidos.** A área inteira monta e compila (`compileAsync`) atrás do cartão, como o PR #60 faz
+  nas fases.
+  - Nada é montado nem compilado com a câmera andando.
+  - Mudanças de luz, maré e chuva acontecem só nas transições.
+- **Faro.** Funciona sem pós-processamento: trilhas emissivas e um véu leve à frente da câmera.
 
 ## Progresso
 
-- Save próprio do modo (proposta: chave `rr-story-v1`), sem tocar no save das fases (`rr-progress-v1`).
-- Por área: missão concluída, puzzles resolvidos, colecionáveis e segredos achados (por id, para sobreviver a
-  mudanças de versão), e o caminho do mapa-múndi já aberto.
-- Continuar no modo leva ao mapa-múndi, no ponto da última área visitada.
-- O modo sem dicas (Opções) também vale aqui: sem objetivo escrito, marcador e dicas em balão.
+- **Save próprio.** O modo tem a chave `rr-story-v1`, separada do save das fases (`rr-progress-v1`), e usa
+  `storageKey()` nas prévias.
+- **O que se guarda, sempre por id para sobreviver a mudanças de versão:**
+  - o capítulo atual;
+  - os nós e caminhos abertos;
+  - a etapa da missão de cada área;
+  - as pistas achadas;
+  - os casos fechados, com o carimbo comum ou dourado;
+  - os puzzles resolvidos, os colecionáveis e os segredos;
+  - as cenas já vistas.
+- **Continuar** leva ao mapa-múndi, no nó da última área visitada.
+- **O modo sem dicas.** Vale também aqui:
+  - esconde o objetivo do HUD, o marcador e os balões de dica;
+  - mantém os títulos de capítulo, as cenas e o mural, onde a pergunta aberta continua como pictograma.
 
 ## Arquitetura (proposta)
 
-- Pasta própria (`src/story/`): o mapa-múndi e as áreas (`areas/condominio/` com layout, cenário e puzzles).
-- Reaproveitar o que existe: mecânicas de `src/game/mechanics/`, `puzzleKit`, HUD, cortina, câmera de seguimento,
-  colisão e navegação por layout (`createCollisionWorld`, `createNavigator`) e o descarte de recursos por escopo.
-- O núcleo hoje trata a fase como uma unidade com uma vitória. A área precisa de vários objetivos ao mesmo tempo,
-  uma missão que atravessa zonas e salvar no meio. Proposta: um "puzzle de área" que compõe puzzles de zona (cada
-  um com o contrato de `Puzzle` atual) e emite eventos `story:*` para o progresso e o HUD.
-- No menu, trocar o "Em breve" do cartão Modo História pela abertura do mapa-múndi.
+- **Pasta própria, `src/story/`:**
+  - o controlador do modo;
+  - o mapa-múndi;
+  - o save;
+  - o kit de cenas: sequenciador com botão de pular (segurar), gestos, balões de ícone, faixas de cinema e íris;
+  - a investigação: Faro, Reconstrução e mural;
+  - as áreas, por exemplo `areas/recanto/`, com layout, cenário e puzzles.
+- **O que se reaproveita:**
+  - as mecânicas de `src/game/mechanics/` e o `puzzleKit`;
+  - o HUD e a cortina;
+  - a câmera de seguimento e o `focusShot` de `src/game/cameraRig.js`;
+  - o `walkPath` e o `InputLock.drive`;
+  - a colisão e a navegação por layout;
+  - o descarte de recursos por escopo;
+  - o padrão do mapa das fases (`src/levels/mapa/`, `levelPreload`).
+- **O "puzzle de área".** O núcleo hoje trata a fase como uma unidade com uma vitória. A área precisa de vários
+  objetivos ao mesmo tempo, de uma missão que atravessa zonas e de salvar no meio. A proposta é um "puzzle de área"
+  que compõe puzzles de zona, cada um com o contrato de `Puzzle` atual, e emite eventos `story:*` para o progresso, o
+  mural e o HUD.
+- **Sistemas novos:**
+  - o Faro e a Reconstrução;
+  - os NPCs cachorros, Pandora e Amora (`npcDog` sobre `src/dogs/v2/`);
+  - as mãos e os pés humanos.
+- **No menu,** o "Em breve" do cartão Modo História dá lugar à abertura do mapa-múndi.
 
-## Entregas sugeridas (um PR cada, com prévia e aprovação)
+## Entregas (um PR cada, com prévia e aprovação)
 
-1. Mapa-múndi navegável com o Condomínio e um caminho ainda fechado; entrar e sair da área (só o cenário).
-2. Condomínio com o cenário completo, dois puzzles, colecionáveis e o save do modo.
-3. Missão principal do Condomínio abrindo o caminho; os segredos da área.
-4. Segunda área.
+Cada etapa começa depois de o usuário aprovar a anterior. **A etapa 2 é um portão:** se a fatia jogável não divertir
+ou não se entender, a história volta para revisão antes de seguir.
+
+| Etapa | O que entrega |
+|---|---|
+| 1 | O roteiro ([HISTORIA.md](HISTORIA.md)) e um storyboard visual para aprovação. |
+| 2 | **Fatia jogável.** Inclui:<br>• a abertura e o cap. 1 completo;<br>• o Faro em pulso e a Reconstrução da piscina;<br>• a lupa do HUD guardando as pistas;<br>• um mural provisório, aberto no fim do cap. 1, só com o caso 3 e um tutorial curto sem a Pandora (a etapa 4 o troca pelo empréstimo e pelo tutorial dela);<br>• o kit de cenas, só no que essas cenas pedem.<br>É testada nos três aparelhos e mostrada a alguém que não leu o roteiro. |
+| 3 | Mapa-múndi, save `rr-story-v1`, mural completo e cartão do menu ativo. Na prévia, `?historia&tudo` libera tudo. |
+| 4 | Cap. 2: Pandora e Amora, o latidão e o tutorial completo do mural. |
+| 5 | Cap. 6: lanterna, equilíbrio nos raios, roda-gigante e a virada do meio. |
+| 6 | Cap. 8, final e créditos, com o cabrestante. No núcleo, a escada usa o empurrão no lugar do quebra-vento, e o caso 2 fecha na porta da torre. Com isso o núcleo fica jogável de ponta a ponta e pode ser publicado. |
+| 7 a 10 | Caps. 3, 4, 5 e 7, na ordem que o usuário preferir, cada um cortável. Uma mecânica nova (tirolesa, nado, cavar, quebra-vento) ganha antes um PR de protótipo numa arena. |
+| 11 | Polimento de desempenho e créditos com todos os capítulos. |
+
+**Verificação de cada etapa:**
+- **Testes unitários:**
+  - estado final igual com e sem pular a cena;
+  - nenhuma trava de controle sobrando;
+  - ninguém atravessando;
+  - regras do mural: a ligação errada volta, e o caso só fecha com as pistas necessárias.
+- **E2E** do capítulo pelo workflow manual.
+- **Capturas** nos 11 tamanhos de tela.
+- **Orçamento** com `measure-resources.mjs`.
+- **Fluidez:** nenhum quadro longo com a câmera andando, e Faro legível no perfil `minima`.
+- **Teste do usuário** nos três aparelhos.
 
 ## Em aberto com o usuário
 
-- Os lugares do Condomínio e a missão principal.
-- Como as cachorrinhas aparecem no mapa-múndi (as duas juntas, em miniatura?) e o ângulo da câmera.
-- O tema das próximas áreas (ilhas, cidades, bairros).
+**As seis decisões padrão do roteiro,** listadas em [HISTORIA.md](HISTORIA.md):
+- mistério de verdade;
+- prazo visível;
+- fatia jogável primeiro;
+- núcleo de 4 capítulos;
+- Faro em pulso;
+- custo do erro no mural.
+
+**Ainda por decidir:**
+- a voz "uá-uá" dos humanos;
+- a duração de cada capítulo (proposta: 12 a 20 minutos);
+- o botão do Faro;
+- o ângulo de câmera do mapa-múndi.

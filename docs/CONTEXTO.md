@@ -1,14 +1,65 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-29, Claude** (privacidade: um trecho deste resumo dizia de quem é uma das cachorras,
-branch `claude/privacidade-dono-pandora`, aguardando aprovação; colisão da ponte levadiça do mapa, branch
-`claude/mapa-ponte`, integrada no #72, `b83f4f4`; #71, menu novo e trilha, etapa 4 de 4 da interface, em v0.10.21 · build 113; #70, picos de `O_flap`
-na primeira passagem da fase 9, em v0.10.20 · build 112; #69, SwiftShader sem o estado dinâmico de entrada de
-vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fase 10, em v0.10.18 · build 110;
-#67, #66 e #64 já integrados; #63, superbafo sem atalho pelo duto, em v0.10.14 · build 106). Ler primeiro
-[AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+Última atualização: **2026-10-30, Claude**.
+- **Modo História, etapa 1:** o roteiro de "As Aventuras de Radhija & Rhaenyra" (branch `claude/historia-do-jogo`,
+  aguardando aprovação).
+- **#73, privacidade:** em v0.10.23 · build 115.
+- **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
+- **#71, menu novo e trilha:** etapa 4 de 4 da interface, em v0.10.21 · build 113.
+- **#70, picos de `O_flap`** na primeira passagem da fase 9: em v0.10.20 · build 112.
+- **#69, SwiftShader** sem o estado dinâmico de entrada de vértices em todo o E2E: em v0.10.19 · build 111.
+- **#68, primeira passagem da fase 10:** em v0.10.18 · build 110.
+- **#67, #66 e #64:** já integrados.
+- **#63, superbafo sem atalho pelo duto:** em v0.10.14 · build 106.
 
-## Em andamento: privacidade, os docs sem dizer de quem são as cachorras (Claude, branch `claude/privacidade-dono-pandora`)
+Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
+
+## Em andamento: Modo História, etapa 1, o roteiro (Claude, branch `claude/historia-do-jogo`)
+
+- **Pedido do usuário (2026-10-29):** "Vamos escrever a história do Game".
+- **Como o roteiro foi decidido:**
+  - O usuário escolheu tom, premissa, culpados, elenco, virada e título, em perguntas no chat.
+  - Cinco críticas e um julgamento, em sessões separadas, reescreveram a proposta.
+  - O usuário aprovou essa versão 2 como plano.
+- **Feito:**
+  - [HISTORIA.md](HISTORIA.md) traz o roteiro completo:
+    - as regras do mundo e a linha do tempo;
+    - os três casos do mural, com as pistas necessárias e as extras, e o porquê de a virada não ser adivinhada cedo;
+    - a abertura e o flashback;
+    - o elenco, com o vocabulário de gestos e os ícones;
+    - Faro, Reconstrução, mural, acareação e enigmas;
+    - os 8 capítulos, com o núcleo 1, 2, 6 e 8;
+    - o final, o epílogo e o mapa-múndi.
+  - [MODO-HISTORIA.md](MODO-HISTORIA.md) registra as decisões de 29/10: mapa-múndi próprio e separado do mapa das
+    fases, áreas do tamanho de 1 a 2 fases, save, modo sem dicas e as novas etapas de entrega (a etapa 2, a fatia
+    jogável, é um portão).
+- **Revisão do texto:** duas revisoras conferiram, uma pela fidelidade ao plano e a linha do tempo, outra pelas
+  restrições e a linguagem. Os pontos achados foram corrigidos no roteiro:
+  - cada pergunta do mural tem um cartão certo vindo do núcleo, e o caso 3 fecha com uma linha do tempo de 5 cartões;
+  - os pelos brancos saíram da pista do cap. 1, porque entregavam a Rhaenyra;
+  - os tipos de pista ganharam nomes únicos;
+  - o vento passou a ser o vento sul;
+  - a goteira passou a ser redonda, no telhado da torre;
+  - a cenoura fica fora de alcance nas noites da balsa e da roda-gigante;
+  - o cap. 8 ganhou um bloco "No núcleo";
+  - o latidão foi para o começo do cap. 8, e a Rhaenyra sobe por uma escadinha de corda;
+  - os paralelos viraram cadeias de causa e efeito;
+  - saíram as frases com duplo sentido.
+- **Storyboard visual para a aprovação:** uma página privada, fora do repositório e sem fotos.
+- **Regras seguidas:**
+  - nenhum dono citado para Pandora e Amora;
+  - segredos só citados de forma genérica;
+  - nenhum nome com duplo sentido. O usuário reprovou um nome por isso; a mãe dos pombos é a Dona Pluma e o filhote,
+    o Fiapo.
+- **Validação:** só documentação, sem teste local nem E2E. Os checks `testes-e-build` e `publicar-site` rodam no PR.
+- **Para o usuário confirmar no storyboard:**
+  - as 6 decisões padrão do roteiro;
+  - a voz "uá-uá";
+  - a duração dos capítulos;
+  - o botão do Faro.
+- **Próximo passo:** PR, checks e o "pode integrar" do usuário. Depois, a etapa 2 (fatia jogável) numa sessão própria.
+
+## Entregue: privacidade, os docs sem dizer de quem são as cachorras (Claude, PR #73, squash `c379e0f`, deploy `40994221500`, v0.10.23 · build 115)
 
 - Pedido (2026-10-29, pelo orquestrador, depois da revisão do plano do Modo História): a seção da interface
   responsiva, na etapa 2 do mapa, dizia de quem é a Pandora. A regra do projeto: Pandora e Amora aparecem só como
@@ -18,9 +69,9 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
   em `test/responsivo.test.mjs`, `tools/scripts/lib/screens.mjs` e na mesma seção) falam do aparelho, não de dono.
 - O histórico do Git continua com o texto antigo; não foi reescrito (sem force push).
 - Validação: só documentação, sem teste local nem E2E; checks `testes-e-build` e `publicar-site` no PR.
-- Próximo passo: PR, checks, prévia e o "pode integrar" do usuário nesta sessão.
+- Integrado: PR #73, squash `c379e0f`; CI do `main` `40994104947`, deploy `40994221500`, v0.10.23 · build 115.
 
-## Entregue: a ponte levadiça do mapa sem as patas atravessando (Claude, PR #72, squash `b83f4f4`)
+## Entregue: a ponte levadiça do mapa sem as patas atravessando (Claude, PR #72, squash `b83f4f4`, deploy `40571217722`, v0.10.22 · build 114)
 
 - Pedido do usuário (2026-10-27, junto com o "pode integrar" do #71): "depois precisa melhorar a colisão da ponte,
   quando ela desce e passamos por cima dela, as patas ficam atravessando". Fila liberada pelo orquestrador: só
@@ -39,7 +90,7 @@ vértices em todo o E2E, em v0.10.19 · build 111; #68, primeira passagem da fas
   inteiro para testar a ponte. CI `40541339705` (`a90a22b`): sobre o rio 0,0 cm nas duas; ponte toda com as rampinhas,
   Radhija 0,2 cm e Rhaenyra 1,3 cm (limite 2); guarda-corpo, nada. E2E `mapa` `40541331508` verde.
 - No PC: só `node --check`, `git diff --check` e checagens leves (geometria das colisões, o `previewUnlockAll`).
-- Integrado: PR #72, squash `b83f4f4` (deploy e versão: conferir no GitHub).
+- Integrado: PR #72, squash `b83f4f4`; CI do `main` `40570894463`, deploy `40571217722`, v0.10.22 · build 114.
 
 ## Entregue: picos de `O_flap` na primeira passagem da fase 9 (PR #70, squash `eb75f18`, deploy `40526974118`, v0.10.20 · build 112)
 
