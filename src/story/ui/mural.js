@@ -98,13 +98,13 @@ export function createMuralUI({ host, emit, sfx = () => {} }) {
 
   // ---------------------------------------------------------------- toque e mouse
   tray.addEventListener('click', (e) => {
-    const c = /** @type {HTMLElement} */ (e.target).closest?.('.rr-mural__card');
+    const c = /** @type {HTMLElement | null} */ ((/** @type {HTMLElement} */ (e.target)).closest?.('.rr-mural__card'));
     if (!c) return;
     sel = sel === c.dataset.id ? null : c.dataset.id;
     render();
   });
   line.addEventListener('click', (e) => {
-    const s = /** @type {HTMLElement} */ (e.target).closest?.('.rr-mural__slot');
+    const s = /** @type {HTMLElement | null} */ ((/** @type {HTMLElement} */ (e.target)).closest?.('.rr-mural__slot'));
     if (s && sel) tryPlace(sel, s.dataset.slot);
   });
   tray.addEventListener('pointerdown', (e) => {

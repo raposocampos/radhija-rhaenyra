@@ -147,7 +147,7 @@ export function buildCasa(kit, root, L) {
   lever.name = 'alavanca';
   lever.position.set(ww / 2 - 0.1, 0.18, 0.05);
   leaf.add(lever);
-  leaf.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  leaf.traverse((o) => { if (/** @type {any} */ (o).isMesh) o.castShadow = true; });
   keep(leaf);
   const setWindow = (k) => {
     const a = Math.max(0, Math.min(1, k)) * W.openAngle;

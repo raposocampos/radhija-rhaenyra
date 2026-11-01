@@ -12,6 +12,10 @@ on:
         description: 'Primeira passagem: aparelhos (lista JSON entre alta, celular-media e celular-baixa)'
         type: string
         default: '["alta","celular-media","celular-baixa"]'
+      fases:
+        description: 'Primeira passagem: fases (lista JSON de 1 a 10; "historia" é a área do Modo História)'
+        type: string
+        default: '[1,2,3,4,5,6,7,8,9,10,"historia"]'
 
 permissions:
   contents: read
@@ -149,7 +153,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fase: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        fase: ${{ fromJSON(inputs.fases || '[1,2,3,4,5,6,7,8,9,10,"historia"]') }}
         qualidade: ${{ fromJSON(inputs.qualidades || '["alta","celular-media","celular-baixa"]') }}
     env:
       CI: 'true'

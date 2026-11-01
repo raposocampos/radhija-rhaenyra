@@ -337,7 +337,7 @@ export function buildBase(kit, root, L) {
     b.position.set(-20 + i * 3.4, b.geometry.parameters.height / 2, -27 - R() * 8);
     city.add(b);
   }
-  city.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+  city.traverse((o) => { if (/** @type {any} */ (o).isMesh) { o.castShadow = false; o.receiveShadow = false; } });
   keep(city);
 
   // ---------------------------------------------------------------- árvores, postes, bancos, canteiros

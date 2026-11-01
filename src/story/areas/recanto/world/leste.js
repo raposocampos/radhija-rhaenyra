@@ -455,7 +455,7 @@ function buildBooth(kit, root, L, live) {
   root.add(glassMesh);
   for (const g of glass) g.dispose();
   // cortinas (a do leste fechada; a do guichê puxada para o canto) e os varões
-  const CUR = ['#efcd7c', '#fbf1d6'], ROD = { color: '#8a6a48', ...o };
+  const CUR = /** @type {[string, string]} */ (['#efcd7c', '#fbf1d6']), ROD = { color: '#8a6a48', ...o };
   put(curtain(WE.z1 - WE.z0 + 0.06, 0.72, 5, 0.022, CUR), null, wx1 - T - 0.05, 1.17, emid, { ry: Math.PI / 2, ao: false });
   addLink(kit, [wx1 - T - 0.05, 1.545, WE.z0 - 0.06], [wx1 - T - 0.05, 1.545, WE.z1 + 0.06], 0.008, ROD);
   put(curtain(0.34, 0.68, 4, 0.03, CUR), null, WIN.x0 + 0.18, 1.16, wz1 - T - 0.05, { ao: false });

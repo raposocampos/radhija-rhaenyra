@@ -474,7 +474,7 @@ export function createFeedback(opts) {
     cinema = false;
   });
   // cenas do Modo História (src/story/scene/sequencer.js): sem marcador nem anéis enquanto a câmera conta a cena
-  events.on('story:cinema', ({ on } = {}) => { cinema = !!on; });
+  events.on('story:cinema', (/** @type {{ on?: boolean }} */ p = {}) => { cinema = !!p.on; });
   events.on('level:loaded', (info = {}) => {
     stay.radhija = stay.rhaenyra = false;
     // o ambiente vem no próprio evento (na carga inicial window.__game ainda não existe)

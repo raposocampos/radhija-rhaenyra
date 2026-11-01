@@ -56,7 +56,7 @@ export function sampleKeys(keys, t) {
 }
 
 /**
- * @param {{ root: THREE.Object3D, actors: { id: string, object: THREE.Object3D, keys: object[], pose?: (o: THREE.Object3D, key: any, dt: number) => void }[],
+ * @param {{ root: THREE.Object3D, actors: { id: string, object: THREE.Object3D, keys: { t: number, [k: string]: any }[], pose?: (o: THREE.Object3D, key: any, dt: number) => void }[],
  *   dur?: number, fadeIn?: number, fadeOut?: number, material?: THREE.Material }} opts
  */
 export function createReconstruction({ root, actors, dur = null, fadeIn = 0.35, fadeOut = 0.6, material = null }) {

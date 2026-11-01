@@ -55,6 +55,9 @@ const HINTS = {
   porta: 'A porta do depósito está travada por dentro.',
 };
 
+/** @type {import('../../../types').DogName[]} */
+const DOG_NAMES = ['radhija', 'rhaenyra'];
+
 /** @param {import('../../../types').PuzzleContext<any>} ctx */
 export function createPuzzle(ctx) {
   const { layout: L, props, world, dogs, ctrls, emit, root, engine } = ctx;
@@ -199,16 +202,16 @@ export function createPuzzle(ctx) {
       return s ? { x: s.x, y: s.y ?? 0.3, z: s.z } : {};
     },
     placeStart() {
-      for (const n of ['radhija', 'rhaenyra']) {
+      for (const n of DOG_NAMES) {
         const s = L.DOGS[n].start;
         ctx.place(n, s.x, s.z, s.yaw);
       }
-      for (const n of ['radhija', 'rhaenyra']) ctx.setStay(n, false);
+      for (const n of DOG_NAMES) ctx.setStay(n, false);
     },
     placeAt(rad, rha) {
       ctx.place('radhija', rad.x, rad.z, rad.yaw ?? 0);
       ctx.place('rhaenyra', rha.x, rha.z, rha.yaw ?? 0);
-      for (const n of ['radhija', 'rhaenyra']) ctx.setStay(n, false);
+      for (const n of DOG_NAMES) ctx.setStay(n, false);
     },
     setStage,
     closeTowerDoor() { towerDoor.setTarget(0); towerDoor.set?.(0); },

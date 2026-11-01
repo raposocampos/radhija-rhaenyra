@@ -167,7 +167,7 @@ export function createBalloons({ root, poolSize = 8 }) {
     group.add(s);
     return s;
   };
-  const pool = Array.from({ length: poolSize }, (_, i) => ({ id: 0, bg: mk(60 + i * 2), icon: mk(61 + i * 2), t: 0, life: 0, size: 0.4, kind: 'fala', at: new THREE.Vector3(), follow: null, bob: i * 1.7 }));
+  const pool = Array.from({ length: poolSize }, (_, i) => ({ id: 0, bg: mk(60 + i * 2), icon: mk(61 + i * 2), t: 0, life: 0, size: 0.4, kind: 'fala', at: new THREE.Vector3(), follow: null, bob: i * 1.7, flip: false }));
   let nextId = 1;
   let rr = 0;
 

@@ -177,6 +177,7 @@ export function createDirector({ ctx, balloons = null, emit }) {
 
     // ---------------------------------------------------------------- efeitos
     /** Balão de ícone em cima da cabeça de uma dog (who) ou num ponto (at). */
+    /** @param {string} icon @param {{ who?: string | null, at?: { x: number, y: number, z: number } | null, kind?: 'fala' | 'pensamento' | 'solto', life?: number, size?: number, up?: number, flip?: boolean }} [o] */
     balloon(icon, { who = null, at = null, kind = 'fala', life = 2, size = 0.42, up = 0.3, flip = false } = {}) {
       if (!balloons) return 0;
       return balloons.show(icon, { kind, life, size, flip, at, follow: who ? () => head(who, up) : null });
