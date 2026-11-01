@@ -188,7 +188,7 @@ export function createPuzzle(ctx) {
       kitchenOpen: false, branchFree: false, serviceOpen: false, reconDone: false, varalDone: false, terraceDone: false,
       porterDone: false, gateOpen: false, closingDone: false, muralDone: false,
       boatDocked: false, dockT: -1, bucketT: -1, ballClear: false, storageOpen: false,
-      towerPush: false, storagePush: false, lastActive: null, socks: new Set(), climb: null,
+      towerPush: false, towerHeld: false, storagePush: false, lastActive: null, socks: new Set(), climb: null,
       snoreT: 1.5, radioT: 0.6, radioOn: true, prompt: null, music: null, mandaCd: 0, rattleCd: 0, mural: null,
     };
   }
@@ -514,7 +514,9 @@ export function createPuzzle(ctx) {
       handle.update?.(dt);
       kitchenDoor.update(dt, { ctrls: C });
       serviceDoor.update(dt, { ctrls: C });
-      towerDoor.setTarget(S.towerPush ? 1 : 0);
+      // a mola fecha sozinha: aberta enquanto a Rhaenyra empurra ou segura (no Fica, encostada na folha aberta)
+      if (S.towerHeld && (!ctx.isStaying('rhaenyra') || !near(R('rhaenyra'), towerHoldSpot, 0.5))) S.towerHeld = false;
+      towerDoor.setTarget(S.towerPush || S.towerHeld ? 1 : 0);
       S.towerPush = false;
       towerDoor.update(dt, { ctrls: C });
       if (S.ballClear && S.storagePush && !S.storageOpen) storageDoor.setTarget(1);
@@ -600,7 +602,12 @@ export function createPuzzle(ctx) {
       // a Rhaenyra segurando a porta de mola: trocar de cachorrinha com ela no vão a deixa no Fica
       if (S.lastActive !== ctx.activeDog) {
         const rha = R('rhaenyra');
-        if (ctx.activeDog === 'radhija' && towerDoor.t > 0.45 && inDoorway(rha, L.TOWER_DOOR)) ctx.setStay('rhaenyra', true);
+        if (ctx.activeDog === 'radhija' && towerDoor.t > 0.45 && inDoorway(rha, L.TOWER_DOOR)) {
+          // ela fica segurando: encosta na folha aberta, do lado da dobradiça, e o vão fica livre para a irmã passar
+          ctx.setStay('rhaenyra', true);
+          S.towerHeld = true;
+          effects.pushTo(rha, towerHoldSpot.x, towerHoldSpot.z, { dur: 0.45, action: 'push', face: { x: towerHoldSpot.x, z: L.TOWER_DOOR.hinge.z - 0.6 } });
+        }
         S.lastActive = ctx.activeDog;
       }
       // a borboleta bate as asas
@@ -854,6 +861,8 @@ export function createPuzzle(ctx) {
     emit('door:open', { id: 'servico', x: L.SERVICE_DOOR.hinge.x, z: L.SERVICE_DOOR.hinge.z });
     setStage('piscina');
   }
+  /** Onde a Rhaenyra segura a porta de mola: logo depois do vão, encostada na folha aberta (do lado da dobradiça). */
+  const towerHoldSpot = { x: L.TOWER_DOOR.hinge.x + 0.36, z: L.TOWER_DOOR.hinge.z + 0.29 };
   /** A folha vai abrir por cima de quem está no caminho: a dog dá um pulinho para fora dele (como na fase 7). */
   function clearSweep(door, face) {
     for (const n of ['radhija', 'rhaenyra']) {

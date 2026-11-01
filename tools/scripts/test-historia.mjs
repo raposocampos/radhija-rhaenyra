@@ -151,7 +151,8 @@ try {
   check(i.activeDog === 'radhija' && i.stay.rhaenyra, 'trocando com a irmã no vão, ela fica segurando (Fica automático)', { active: i.activeDog, stay: i.stay });
   await H.sleep(800);
   check((await story()).doors.tower > 0.3, 'com a irmã no vão, a mola não fecha', (await story()).doors);
-  await walkPath([[3.1, -5.95], [4.5, -5.95]], { timeout: 12000 });
+  // a irmã segura encostada na folha (do lado da dobradiça): a Radhija passa pelo lado do batente e entra no saguão
+  await walkPath([[3.1, -6.0], [3.76, -5.95], [4.4, -5.6]], { timeout: 12000 });
   i = await waitFor((x) => x.story.scene === 'terraco' || x.story.stage === 'portaria', { timeout: 6000 });
   check(i.story.scene === 'terraco' || i.story.stage === 'portaria', 'a Radhija passa pela irmã e entra no saguão: o terraço', i.story);
   if (i.story.scene) {
