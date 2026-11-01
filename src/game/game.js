@@ -5,6 +5,9 @@
 // passeiam pela cidade e entram numa fase pela bandeirinha dela (ctx.hub.enter); o código da fase da bandeirinha mais
 // perto vai sendo baixado por baixo (levelPreload.js). Ao sair de uma fase pelo mapa (ui:openMap), elas voltam na frente da
 // bandeirinha dela.
+// A área do Modo História (src/story/, opção story; por enquanto só nas prévias, ?historia) é outra fase especial fora
+// da lista (índice STORY = −2): a fase avisa as cenas por puzzle.cinematic() (o núcleo segura a entrada e as dogs) e
+// recebe o botão do Faro (V, L3 ou o do focinho no toque) em puzzle.onFaro.
 import * as THREE from 'three';
 import { events } from '../core/events.js';
 import { createResourceScope } from '../core/resources.js';
@@ -64,12 +67,17 @@ const sstep = (a, b, x) => {
 
 /** Índice do mapa das fases (fora da lista das fases). */
 export const HUB = -1;
+/** Índice da área do Modo História (fora da lista das fases). */
+export const STORY = -2;
+/** Durante uma cena (puzzle.cinematic): a dog fica onde está, sem andar nem agir (a cena é quem a move). */
+const stillLock = (c) => ({ action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ: c.z + Math.cos(c.yaw) });
 
 /**
  * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
- *           levels: import('../types').LevelDef[], params?: URLSearchParams, hub?: import('../types').LevelDef | null }} opts
+ *           levels: import('../types').LevelDef[], params?: URLSearchParams, hub?: import('../types').LevelDef | null,
+ *           story?: import('../types').LevelDef | null }} opts
  */
-export function createGame({ engine, dogs, levels, params, hub = null }) {
+export function createGame({ engine, dogs, levels, params, hub = null, story = null }) {
   params = params || new URLSearchParams(location.search);
 
   // ---------- eventos (com registro para testes) ----------
@@ -196,6 +204,7 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
   /** @returns {import('../types').LevelInfo} */
   function levelInfo() {
     const isHub = levelIndex === HUB;
+    const isStory = levelIndex === STORY;
     return {
       index: levelIndex,
       count: levels.length,
@@ -209,7 +218,8 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
       ambience: def.ambience,
       texts: def.texts || {},
       total: puzzle?.total ?? 0,
-      hasNext: !isHub && levelIndex < levels.length - 1,
+      hasNext: !isHub && !isStory && levelIndex < levels.length - 1,
+      story: isStory,
     };
   }
 
@@ -607,12 +617,14 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     barkCd = Math.max(0, barkCd - dt);
     jumpHintCd = Math.max(0, jumpHintCd - dt);
     heavyHintCd = Math.max(0, heavyHintCd - dt);
-    if (input.consume('KeyQ') && !puzzle.lockFor(activeDog) && !extras.busy(activeDog)) switchDog();
+    // uma cena do Modo História rodando: nada de trocar, Fica, extras, pulo, latido... (a cena move as dogs)
+    const cine = !!puzzle.cinematic?.();
+    if (input.consume('KeyQ') && !cine && !puzzle.lockFor(activeDog) && !extras.busy(activeDog)) switchDog();
     const A = ctrls[activeDog];
     const compName = other(activeDog);
     const C = ctrls[compName];
-    if (input.consume('KeyF')) setStay(compName, !stay[compName]);
-    if (input.consume('KeyC')) {
+    if (input.consume('KeyF') && !cine) setStay(compName, !stay[compName]);
+    if (input.consume('KeyC') && !cine) {
       extras.tryPoop(A, {
         allTreats: puzzle.total > 0 && puzzle.collected >= puzzle.total,
         free: !puzzle.lockFor(activeDog) && !lick.on && !bafo.aiming && !(bafo.blowT > 0) && !A.shove,
@@ -635,7 +647,7 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     let action = 'none';
     let intent;
     // (a menor das travas: a da parada por muito tempo, depois do xixi, idle.js; o jogador mexeu nela, sai na hora)
-    const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog) || (touchedT > 0 ? idle?.lockFor(activeDog) : null) || null;
+    const lock = extras.lockFor(activeDog) || puzzle.lockFor(activeDog) || (cine ? stillLock(A) : null) || (touchedT > 0 ? idle?.lockFor(activeDog) : null) || null;
     locks[activeDog] = lock;
     let standing = false;
     if (lock) {
@@ -730,8 +742,8 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     }
     // Superbafo (R / R2): segurando, a Radhija para e mira (gira com o analógico, prévia no chão); soltou, sopra.
     // Lambendo, o bafo não começa (e mirando ou soprando, a lambida também não).
-    const bafoHeld = hubMode ? false : input.bafo();
-    const lickHeld = hubMode ? false : input.lick();
+    const bafoHeld = hubMode || cine ? false : input.bafo();
+    const lickHeld = hubMode || cine ? false : input.lick();
     bafo.cd = Math.max(0, bafo.cd - dt);
     bafo.hintCd = Math.max(0, bafo.hintCd - dt);
     if (A.cfg.bafoSpeed && !lock) {
@@ -793,14 +805,14 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
 
     // Companheira (modo companheira: colisores companionOnly valem só para ela)
     world.setCompanionMode?.(true);
-    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName) || idle?.lockFor(compName) || null;
+    const compLock = extras.lockFor(compName) || puzzle.lockFor(compName) || (cine ? stillLock(C) : null) || idle?.lockFor(compName) || null;
     locks[compName] = compLock;
     const licked = lick.on && lick.target === compName;
     let ci;
     if (compLock) {
       // uma trava pode pedir um passo (compLock.move: a irmã dando espaço no cocô), com colisão normal
       const mv = compLock.move;
-      ci = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, back: !!mv?.back, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: null };
+      ci = { dx: mv?.dx ?? 0, dz: mv?.dz ?? 0, speed: mv?.speed ?? 0, back: !!mv?.back, faceX: compLock.faceX, faceZ: compLock.faceZ, action: compLock.action, lookAt: compLock.look ?? null };
       resetBrain(brains[compName]);
     } else if (licked) {
       // Recebendo o Lambe-Lambe: para onde está, vira a cabeça um pouco para a irmã (sem esconder o lugar
@@ -849,6 +861,8 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
       if (!puzzle.interact(A) && !extras.interact(A, puzzle.navFlags?.() || {}, !bafo.aiming && !(bafo.blowT > 0) && !lick.on)) bark(A);
     }
     if (input.consume('Bark') && !lock) bark(A);
+    // Faro (Modo História: V, L3 ou o botão do focinho): a fase decide (na abertura, a cena espera por ele)
+    if (input.consume('Faro', 'KeyV')) puzzle.onFaro?.(A);
     const ev = puzzle.update(dt, { active: A, comp: C, ctrls, stay });
     extras.update(dt);
     setLook(activeDog, lick.on && !lick.solo ? lick.point : A.shove?.look || puzzle.lookTarget(A));
@@ -1101,11 +1115,13 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
       // companheira, só seguindo a irmã de perto (esperando por uma irmã que ela não alcança, a IA a levaria de volta)
       const B = brains[n];
       const calm = n === activeDog || ((B.mode === 'follow' || B.mode === 'idle') && !B.block && !B.settle && Math.hypot(L.x - c.x, L.z - c.z) < 1.5);
-      an.idle = idle && state === 'playing' ? idle.step(n, dt, {
+      const rest = idle && state === 'playing' ? idle.step(n, dt, {
         still: free && (idle.driving(n) || settled),
         canPee: !carries(n) && G.y < 0.01 && !stay[n] && calm,
         at: { x: c.x - Math.sin(c.yaw) * back, z: c.z - Math.cos(c.yaw) * back },
       }) : null;
+      // deitada numa cena (lock.lie, Modo História): a mesma pose de deitar da parada longa
+      an.idle = locks[n]?.lie ?? rest;
       // em cima de uma coisa baixa de pisar (placa, pedal, caminha), o corpo sobe junto (suave; posta em outro lugar, na
       // hora), apoiado no que está embaixo das patas da frente e das de trás
       let gy = !ground ? 0 : c.cfg.body ? bodyGround(ground, c.x, c.z, c.yaw, c.cfg.body) : ground.heightAt(c.x, c.z);
@@ -1332,18 +1348,19 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     // falha anterior ao descarte, a UI primeiro retorna à fase intacta.
     if (state === 'load-error') return false;
     const toHub = index === HUB && !!hub;
-    if (!toHub) index = Math.max(0, Math.min(levels.length - 1, index | 0));
+    const toStory = index === STORY && !!story;
+    if (!toHub && !toStory) index = Math.max(0, Math.min(levels.length - 1, index | 0));
     loadingPromise = (async () => {
-      const baseDef = toHub ? hub : levels[index];
+      const baseDef = toHub ? hub : toStory ? story : levels[index];
       const prevState = state;
       const hadLevel = !!root && !!puzzle;
       let previousUntouched = true;
       // o código desta fase que o mapa já baixou (perto da bandeirinha)
-      const staged = toHub ? (preload.cancel(), null) : preload.take(index);
+      const staged = toHub || toStory ? (preload.cancel(), null) : preload.take(index);
       try {
         state = 'loading';
         emit('game:state', { state: 'loading', prev: prevState, level: index });
-        emit('level:loading', { index, count: levels.length, id: baseDef.id, number: toHub ? 0 : baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial, hub: toHub });
+        emit('level:loading', { index, count: levels.length, id: baseDef.id, number: toHub ? 0 : baseDef.number ?? index + 1, name: baseDef.name, subtitle: baseDef.subtitle, initial, hub: toHub, story: toStory });
         // Promise.all observa a rejeição imediatamente, inclusive antes dos 420 ms
         // da cortina. Promise.resolve().then também captura um load() síncrono.
         const [lazy] = await Promise.all([
@@ -1504,7 +1521,7 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     setState('playing', { force: true });
   });
   events.on('ui:nextLevel', () => {
-    if (state === 'loading' || state === 'load-error') return;
+    if (state === 'loading' || state === 'load-error' || levelIndex === STORY) return;
     if (levelIndex < levels.length - 1) loadLevel(levelIndex + 1, { mode: 'intro' });
     else loadLevel(0, { mode: 'title' });
   });
@@ -1628,6 +1645,10 @@ export function createGame({ engine, dogs, levels, params, hub = null }) {
     get isHub() { return levelIndex === HUB; },
     /** Há mapa das fases neste jogo? */
     get hasHub() { return !!hub; },
+    /** A área do Modo História está montada? (só nas prévias: ?historia) */
+    get isStory() { return levelIndex === STORY; },
+    /** Há Modo História neste jogo? */
+    get hasStory() { return !!story; },
     /** De onde o mapa lê o progresso salvo (a UI: ui.progress). */
     setProgressSource(fn) { if (typeof fn === 'function') progressSource = fn; },
     /** Catálogo de desenvolvimento: no mapa, todas as bandeirinhas liberadas. */

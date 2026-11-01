@@ -243,6 +243,7 @@ export function createFeedback(opts) {
 
   let state = 'title';
   let active = 'radhija';
+  let cinema = false; // cena do Modo História rodando (story:cinema)
   let time = 0;
   let playingSince = -10;
   const queue = []; // ações adiadas [{at, fn}]
@@ -470,7 +471,10 @@ export function createFeedback(opts) {
   events.on('level:loading', () => {
     resetFx();
     setTarget(null);
+    cinema = false;
   });
+  // cenas do Modo História (src/story/scene/sequencer.js): sem marcador nem anéis enquanto a câmera conta a cena
+  events.on('story:cinema', ({ on } = {}) => { cinema = !!on; });
   events.on('level:loaded', (info = {}) => {
     stay.radhija = stay.rhaenyra = false;
     // o ambiente vem no próprio evento (na carga inicial window.__game ainda não existe)
@@ -1404,7 +1408,7 @@ export function createFeedback(opts) {
       particles.sparkle({ x: tmp.x, y: Math.max(0.12, tmp.y) + 0.05, z: tmp.z }, { count: 1, radius: 0.28, size: 0.75, rise: 0.6, alpha: 0.8 });
     }
 
-    const showWorldUi = state === 'playing' || state === 'paused';
+    const showWorldUi = (state === 'playing' || state === 'paused') && !cinema;
 
     // marcador de objetivo (escondido no modo desafio)
     const ap = dogPos(active);

@@ -1639,6 +1639,11 @@
 .rr-tbtn--swap .rr-tbtn__label, .rr-tbtn--stay .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
 .rr-tbtn--stay:not([data-stay="1"]) .tg-vem, .rr-tbtn--stay[data-stay="1"] .tg-fica { display: none; }
 .rr-tbtn--stay[data-stay="1"] { --c: 194, 96, 31; }
+/* Faro: só no Modo História (.rr[data-story], src/story/ui/storyHud.js) e só da Radhija (com a Rhaenyra, apagado) */
+.rr-tbtn--faro { --d: 52; --x: 174; --y: 196; --c: 240, 138, 60; }
+.rr-tbtn--faro .rr-tbtn__label { font-size: calc(9.5 * var(--s)); }
+.rr:not([data-story]) .rr-tbtn--faro { display: none; }
+.rr[data-dog="rhaenyra"] .rr-tbtn--faro { opacity: .45; }
 .rr-tbtn--pause {
   --d: 42;
   right: auto;

@@ -9,10 +9,11 @@
 //   R1/RB → Shift (segurar = empurrar; borda = arrancada)
 //   R2/RT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
 //   L2/LT → lick() (segurar = Lambe-Lambe, as duas dogs; teclado L)
+//   L3 (apertar o analógico esquerdo) → 'Faro' (o pulso do Faro da Radhija no Modo História; teclado V)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
 // Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Superbafo → bafo() (segurar) · Lamber → lick() (segurar) ·
 //   Arrancada/Empurrar → Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' ·
-//   Pausa → 'Escape'; joystick virtual (touchStick) → axis().
+//   Pausa → 'Escape' · Faro (só no Modo História) → 'Faro'; joystick virtual (touchStick) → axis().
 // Dispositivo atual ('keyboard' | 'gamepad' | 'touch'): tecla, controle ou dedo na tela (pointerType touch/pen).
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -40,6 +41,7 @@ const PAD_EDGE_CODES = [
   [PAD.LB, 'KeyQ'],
   [PAD.START, 'Escape'],
   [PAD.RS, 'KeyC'], // extra (docs/ARQUITETURA.md, "Extras")
+  [PAD.LS, 'Faro'], // o pulso do Faro (Modo História, src/story/faro/faro.js)
 ];
 
 function connectedPads() {
@@ -87,6 +89,7 @@ export const TOUCH_BUTTONS = {
   swap: { code: 'KeyQ' }, // Trocar de cachorrinha
   stay: { code: 'KeyF' }, // Fica / Vem (companheira)
   pause: { code: 'Escape' }, // Pausar
+  faro: { code: 'Faro' }, // Faro (Modo História: o botão do focinho, só com a Radhija)
 };
 export const TOUCH_DEADZONE = 0.14;
 

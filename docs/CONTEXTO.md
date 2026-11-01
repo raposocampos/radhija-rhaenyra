@@ -1,8 +1,8 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-30, Claude**.
-- **Modo História, etapa 1:** o roteiro de "As Aventuras de Radhija & Rhaenyra" (branch `claude/historia-do-jogo`,
-  aguardando aprovação).
+Última atualização: **2026-11-01, Claude**.
+- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), branch `claude/historia-fatia`, em construção.
+- **#74, Modo História, etapa 1 (o roteiro):** integrado (squash `00d393d`).
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
 - **#71, menu novo e trilha:** etapa 4 de 4 da interface, em v0.10.21 · build 113.
@@ -14,7 +14,38 @@
 
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: Modo História, etapa 1, o roteiro (Claude, branch `claude/historia-do-jogo`)
+## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+- **Pedido (2026-10-31, pelo orquestrador, com o roteiro do #74):** a abertura "A noite da garoa" e o cap. 1 "Cadê a
+  Cenoura?" jogáveis, só pela entrada das prévias. A etapa é um portão: se não divertir ou não se entender, a história
+  volta para revisão.
+- **Decisões do usuário nesta sessão (2026-11-01):**
+  - o Faro fica no V, no L3 e num botão de focinho no toque;
+  - as seis decisões padrão do roteiro valem.
+  - O conceito (abertura, planta da área, puzzles, Faro, Reconstrução, HUD, mural e trilha) foi mostrado numa página
+    privada, fora do repositório.
+- **Feito (sem commit até este registro):**
+  - `src/story/`: kit de cenas, Faro e Reconstrução, lupa, regras do mural, HUD, entrada (`gate.js`) e a área
+    `areas/recanto/`.
+    - O cenário foi feito em seis zonas; três delas (`comum`, `leste` e `garagem`) por subagentes.
+    - São seis cenas, a missão de 7 passos, 3 puzzles paralelos, 3 meias, 4 petiscos e 2 pistas escondidas.
+  - Sons da história em `src/fx/audio/soundsHistoria.js` e dois temas novos em `themes.js`: `recanto` (clarinete) e
+    `misterio`.
+  - Núcleo, só acréscimos, avisados ao orquestrador:
+    - `game.js`: índice `STORY`, `cinematic()`, `onFaro` e `lie`/`look` na trava;
+    - `main.js`: `?historia` só em prévia ou desenvolvimento;
+    - `input.js`: L3 e o toque viram `Faro`;
+    - `touchControls`, `ui.js`, `ui.css`, `feedback.js` e `types.d.ts`;
+    - `test/helpers/headless.mjs`: opção `story`;
+    - `run-e2e.mjs` e `e2e.yml`: suíte `historia`.
+  - Testes: `test/historia-{regras,layout,cenas,missao,cenario}.test.mjs`, a suíte `tools/scripts/test-historia.mjs`
+    (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
+- **Validação:** nada rodou ainda no CI. Localmente, só `node --check` e verificações leves de geometria.
+- **Próximo passo:** commit, PR com prévia, CI e a suíte E2E `historia`. Depois, revisar as capturas, corrigir o que
+  aparecer e entregar a prévia ao usuário, com o que testar nos três aparelhos. Integrar só com o "pode integrar" do
+  próprio usuário nesta sessão.
+
+## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`)
 
 - **Pedido do usuário (2026-10-29):** "Vamos escrever a história do Game".
 - **Como o roteiro foi decidido:**

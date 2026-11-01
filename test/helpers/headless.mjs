@@ -6,6 +6,8 @@
 //
 //   const h = await createHeadlessGame({ level: 1, mode: 'play' });
 //   h.tap('KeyQ'); h.run(1.5); await h.walkTo(1.7, -2.05); h.info().stage;
+// A área do Modo História (opção story: a definição, ex. src/story/areas/recanto/index.js) roda com o cenário de
+// verdade (os props dela são objetos do Three, sem GPU; as texturas em canvas viram dublês).
 import * as THREE from 'three';
 import { stubProps } from './props.mjs';
 
@@ -102,16 +104,24 @@ function stubEngine() {
 // ---------------------------------------------------------------------------------------------
 // Jogo headless
 // ---------------------------------------------------------------------------------------------
+/** A definição da área da história com o cenário de verdade já trazido (sem o import dinâmico no meio da carga). */
+async function realStory(def) {
+  const build = def.build ?? (await def.load?.())?.build;
+  if (typeof build !== 'function') throw new Error(`${def.id}: sem build`);
+  return { ...def, load: undefined, build };
+}
+
 /**
  * Cria um jogo headless já carregado.
  * opts: { level (1-based, padrão 1; 0 = o mapa das fases), mode 'play'|'intro'|'title', query (ex.: 'dog=rhaenyra&stage=east'),
+ *         story (a definição da área do Modo História: carrega ela, com o cenário de verdade, no lugar da fase),
  *         levels (definições; padrão: src/levels/index.js),
  *         configure({ game, levels, engine, dogs }) (injeção controlada antes da primeira carga),
  *         progress (o save que o mapa lê: { levels: { fase1: { done, treats, ... } } }) }
  */
-export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null, pee = false, progress = null } = {}) {
+export async function createHeadlessGame({ level = 1, mode = 'play', query = '', levels = null, configure = null, makeDog = null, pee = false, progress = null, story = null } = {}) {
   installBrowserStubs();
-  const [{ createGame, HUB }, { events }, LV, MAPA] = await Promise.all([
+  const [{ createGame, HUB, STORY }, { events }, LV, MAPA] = await Promise.all([
     import('../../src/game/game.js'),
     import('../../src/core/events.js'),
     levels ? Promise.resolve(null) : import('../../src/levels/index.js'),
@@ -124,12 +134,12 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   const dogs = { radhija: (makeDog || stubDog)('radhija'), rhaenyra: (makeDog || stubDog)('rhaenyra') };
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
   const params = new URLSearchParams(query);
-  const game = createGame({ engine, dogs, levels: defs, params, hub });
+  const game = createGame({ engine, dogs, levels: defs, params, hub, story: story ? await realStory(story) : null });
   // o progresso que o mapa lê (no jogo, o da UI)
   const save = { levels: {}, ...(progress || {}) };
   game.setProgressSource(() => save);
   configure?.({ game, levels: defs, engine, dogs });
-  await game.loadLevel(level === 0 ? HUB : level - 1, { mode, initial: true });
+  await game.loadLevel(story ? STORY : level === 0 ? HUB : level - 1, { mode, initial: true });
   // o xixi (parada por muito tempo) é sorteado e tira a dog do lugar: desligado, a não ser no teste dele (pee: true)
   game.debug.idle?.setPee(pee);
 

@@ -1,7 +1,8 @@
 # As Aventuras de Radhija & Rhaenyra: o roteiro do Modo História
 
-Situação: **enredo aprovado no plano em 2026-10-29. O storyboard e as seis decisões padrão aguardam confirmação, e
-nada foi construído no jogo.**
+Situação: **enredo aprovado no plano em 2026-10-29 e roteiro integrado (PR #74). Em 2026-11-01 o usuário confirmou as
+seis decisões padrão e escolheu o botão do Faro; a fatia jogável (abertura e cap. 1) está sendo construída na etapa 2
+([MODO-HISTORIA.md](MODO-HISTORIA.md)).**
 - Esta é a versão 2. Ela foi reescrita depois de cinco críticas (mistério, personagens, jogabilidade, narrativa sem
   palavras e escopo) e de uma avaliação final.
 - A estrutura técnica e as etapas de entrega estão em [MODO-HISTORIA.md](MODO-HISTORIA.md).
@@ -27,9 +28,9 @@ nada foi construído no jogo.**
   - a cenoura fica com o filhote dos pombos, e as irmãs ganham uma nova;
   - nenhum nome, nem frase, pode ter duplo sentido.
 
-### Decisões padrão, a confirmar pelo usuário
+### Decisões padrão (confirmadas pelo usuário em 2026-11-01)
 
-Cada uma pode ser trocada sem refazer o resto do roteiro.
+As seis valem para a fatia jogável e para o resto da história. Cada uma ainda pode ser trocada sem refazer o roteiro.
 
 1. **Mistério de verdade.** A jogadora não vê a autora até o cap. 8. As pistas são justas, mas ambíguas.
    Alternativa: ironia assumida, mostrando o sonambulismo e tirando a dedução final.
@@ -41,10 +42,13 @@ Cada uma pode ser trocada sem refazer o resto do roteiro.
    botão.
 6. **Erro no mural tem reação e custo.** O cartão volta, e só o caso fechado sem erro ganha o carimbo dourado.
 
+**O botão do Faro (escolhido em 2026-11-01):** V no teclado, L3 no controle (apertar o analógico esquerdo) e um botão
+de focinho nos controles de toque, que só aparece no Modo História. O Faro é só da Radhija: com a Rhaenyra, uma dica
+lembra disso.
+
 **Ainda em aberto:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o botão do Faro;
 - o ângulo de câmera do mapa-múndi.
 
 ---

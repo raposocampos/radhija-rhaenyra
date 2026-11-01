@@ -28,6 +28,7 @@ src/main.js                integração: monta motor, dogs, jogo, UI, áudio e e
 src/types.d.ts             tipos das APIs públicas (checados pelo TypeScript, ver §11)
 src/core/engine.js         renderer, céu, névoa, luz e pós-processamento; applyLighting(preset)
 src/core/events.js         barramento de eventos (on/off/once/emit)
+src/story/                 Modo História (§4.7): kit de cenas, Faro, pistas, mural, HUD e as áreas dos capítulos
 src/game/                  NÚCLEO genérico
   game.js                  estados, carregamento de fases, entrada → dogs, companheira, comemoração, depuração
   gameEvents.js            emissão, padrões de vibração e histórico de diagnóstico por instância
@@ -358,6 +359,40 @@ caixas arredondadas saem de um molde por número de segmentos; as plantinhas de 
 (`pecas.flowerBush`) e as coisas repetidas que se mexem (gotas de chuva, jatos do chafariz) são instâncias.
 A sombra do sol cobre só a vizinhança do que a câmera olha (`engine.focusShadow`). Tudo o que fica em pé colide
 (`STATIC_COLLIDERS`), e o mapa liga a grade de colisão (`COLLISION_GRID`, §5).
+
+### 4.7 O Modo História (`src/story/`, etapa 2: a fatia jogável)
+
+A área de um capítulo é outra fase especial fora de `LEVELS` (`createGame({ story })`, índice `STORY = −2`): o mesmo
+núcleo, com o puzzle da área no contrato de `Puzzle`. Por enquanto só abre com `?historia` numa prévia de PR ou no
+desenvolvimento (`src/story/gate.js`); o card do menu segue "Em breve". Roteiro em [HISTORIA.md](HISTORIA.md),
+estrutura e etapas em [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- **O que o núcleo sabe da história** (`game.js`, tudo opcional no puzzle):
+  - `puzzle.cinematic()` verdadeiro, durante uma cena, no mural e no fim, segura a entrada: nada de trocar, Fica,
+    extras, pulo, latido, superbafo ou lambida. As dogs ficam paradas, ou a cena as move pela trava `drive`;
+  - `puzzle.onFaro(ativa)` recebe o Faro (`input.consume('Faro', 'KeyV')`: V, L3 = `PAD.LS` ou o botão `faro` do toque);
+  - a trava aceita `lie` (a pose de deitar da parada longa, `idle.js`) e `look` (para onde a dog olha), também na
+    companheira.
+- **Cenas** (`src/story/scene/`): `sequencer.js` toca beats (`dur` ou `until`/`max`, `noSkip`). O que a cena deixa
+  de permanente fica no `commit` e o caminho é desfeito no `cleanup`. No fim normal e no pulo rodam os dois, nessa
+  ordem: pular dá no mesmo estado (`test/historia-cenas.test.mjs`).
+  - `director.js` segura as dogs (`lockFor` com `drive`), anda com elas por pontos e faz os planos de câmera pelo
+    `focusShot` do `cameraRig`, com alvo por referência e `hold: Infinity`.
+  - `mood.js` troca noite e manhã escrevendo nos uniformes, sem o `applyLighting` (que recompila sombreadores).
+  - `balloons.js` faz os balões de ícone, todos num atlas 5 × 5; `skip.js` é o pular segurando (E, Espaço, Enter,
+    ✕/○ ou o ⏩ do toque) e `humans.js` desenha as mãos e a botina.
+- **Investigação** (`src/story/faro/`, `clues.js`, `mural/rules.js`):
+  - o Faro não usa pós-processamento: um véu em tela e trilhas e pontos aditivos, então funciona no perfil
+    `minima`;
+  - a Reconstrução mostra silhuetas translúcidas com animação gravada;
+  - a lupa guarda as pistas por id; as regras do mural são puras (a ligação errada volta, e o caso só fecha com as
+    pistas necessárias).
+- **HUD** (`src/story/ui/`, carregado só com a história): faixas de cinema, preto, anel do pular, cartela do capítulo,
+  aviso do primeiro Faro (tocável), lupa e meias, mural provisório e fim do capítulo. Ouve os eventos `story:*` do
+  puzzle; a música troca por `story:music` (`main.js`).
+- **A área** (`src/story/areas/recanto/`): `layout.js` (coordenadas, colisores, grafo e câmera, com a grade de
+  colisão), `lighting.js` (manhã e noite), `world/` (cenário em zonas no kit do mapa: `base`, `casa`, `comum`, `leste`,
+  `garagem`, `atores`), `scenes.js` (as seis cenas) e `puzzle.js` (a missão, os paralelos e as pistas). Nos testes,
+  `createHeadlessGame({ story })` roda a área com o cenário de verdade (`test/helpers/historia.mjs`).
 
 ## 5. Colisão e navegação
 

@@ -291,6 +291,8 @@ export interface LevelDef<P extends LevelProps = LevelProps> {
   createPuzzle(ctx: PuzzleContext<P>): Puzzle;
   /** Pontos das animações do cenário (extras escondidos; docs/ARQUITETURA.md, "Extras"). */
   extras?: ExtraSpot[];
+  /** Área do Modo História (src/story/; índice STORY no núcleo): o capítulo e o tema da trilha. */
+  story?: { chapter: number; music?: string };
 }
 
 // Eventos da fronteira de carregamento. Eventos específicos de mecânicas continuam abertos;
@@ -306,6 +308,8 @@ export interface LevelLoadingInfo {
   initial: boolean;
   /** O mapa das fases (índice −1, fora da lista). */
   hub?: boolean;
+  /** A área do Modo História (índice −2, fora da lista; só nas prévias por enquanto). */
+  story?: boolean;
 }
 export interface LevelInfo extends Omit<LevelLoadingInfo, 'initial'> {
   intro?: string;
@@ -637,6 +641,10 @@ export interface InputLock {
   bite?: boolean;
   /** Indo de propósito até a coisa (a corda, o botão): a cabeça não desvia dela (v2/head.js). */
   reach?: boolean;
+  /** Deitada numa cena (Modo História): a pose de deitar da parada longa (idle.js); t > 9 s apoia a cabeça. */
+  lie?: { kind: 'lie'; t: number; k: number; side: number } | null;
+  /** Para onde a dog olha numa cena roteirizada (Modo História). */
+  look?: XYZ | null;
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick; quem lambeu é o ctrl recebido). */
