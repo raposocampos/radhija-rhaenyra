@@ -19,7 +19,7 @@ import { PICTOS } from '../src/story/ui/pictos.js';
 import { SOUND_NAMES } from '../src/fx/audio/sounds.js';
 import { THEMES, compileTheme } from '../src/fx/audio/themes.js';
 import { installBrowserStubs } from './helpers/headless.mjs';
-import { storyAllowed } from '../src/story/gate.js';
+import { storyAllowed, storyEnabled } from '../src/story/gate.js';
 import { TOUCH_BUTTONS, STORY_TOUCH_BUTTONS } from '../src/game/input.js';
 
 // ---------------------------------------------------------------------------------------------- mural
@@ -262,6 +262,13 @@ test('entrada: ?historia só abre nas prévias de PR e no desenvolvimento, nunca
   // desenvolvimento (Vite local, servidor do E2E, testes): sem versão
   assert.equal(storyAllowed({ version: null, build: null, pr: null }, '/'), true);
   assert.equal(storyAllowed(null, '/'), true);
+  // a decisão inteira (a do main.js): no link principal, ?historia não abre nada
+  const prod = { version: '0.10.24', build: 116, pr: null };
+  assert.equal(storyEnabled(new URLSearchParams('historia'), false, prod, '/radhija-rhaenyra/'), false, 'produção ignora ?historia');
+  assert.equal(storyEnabled(new URLSearchParams('historia&stage=varal'), false, prod, '/radhija-rhaenyra/'), false);
+  assert.equal(storyEnabled(new URLSearchParams('historia'), false, { version: '0.10.24', build: null, pr: 75 }, '/radhija-rhaenyra/previews/pr-75/1-1/'), true, 'prévia do PR abre');
+  assert.equal(storyEnabled(new URLSearchParams(''), false, { version: null, build: null, pr: null }, '/'), false, 'sem o parâmetro, nada');
+  assert.equal(storyEnabled(new URLSearchParams('historia'), true, { version: null, build: null, pr: null }, '/'), false, 'no catálogo de desenvolvimento das fases, não');
 });
 
 test('toque: o botão do focinho fica num mapa só do Modo História (os botões de sempre não mudam)', () => {

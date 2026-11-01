@@ -89,7 +89,8 @@ test('recanto: petiscos e meias ficam onde a dog certa alcança, por um caminho 
   assert.ok(ant.y > L.BOOTH.roof, 'meia da antena acima do telhado da guarita');
   // a da casinha: só a Radhija entra (a porta da casinha é estreita para a Rhaenyra)
   const dh = L.DOGHOUSE;
-  assert.ok(dh.door > 2 * R.radhija && dh.door < 2 * R.rhaenyra, `porta da casinha (${dh.door} m) só para a pequena`);
+  const vao = dh.door - 2 * 0.05;
+  assert.ok(vao > 2 * R.radhija && vao < 2 * R.rhaenyra, `porta da casinha (vão útil ${vao.toFixed(2)} m) só para a pequena`);
 });
 
 test('recanto: o grafo liga o quarto a cada etapa da missão quando as portas abrem (e não antes)', () => {

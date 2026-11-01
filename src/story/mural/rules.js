@@ -1,4 +1,4 @@
-// Regras do mural de pistas (puras: sem DOM, sem three; testadas em Node, test/historia-mural.test.mjs).
+// Regras do mural de pistas (puras: sem DOM, sem three; testadas em Node, test/historia-regras.test.mjs).
 // Roteiro em docs/HISTORIA.md ("Mural de pistas" e "Como se fecha um caso"):
 //  - os casos 1 e 2 fecham ligando um cartão a cada pergunta (quem, como, por quê);
 //  - o caso 3 fecha com a linha do tempo da noite da garoa: cinco cartões em ordem, da lua ao sol;

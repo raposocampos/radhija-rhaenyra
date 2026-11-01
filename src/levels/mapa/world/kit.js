@@ -292,7 +292,8 @@ export function windowAt(kit, { x, y, z, w = 0.9, h = 1.0, nx = 0, nz = 1, frame
   const ry = Math.atan2(nx, nz);
   const o = 0.03;
   kit.add(rb(w + 0.16, h + 0.16, 0.06, 0.025, 1), { color: frame, x: x + nx * o, y: y - h / 2 - 0.08, z: z + nz * o, ry, group });
-  kit.add(slab(w, h, 0.02), { color: lit ? '#ffe2a0' : '#8ec1df', slot: lit ? 'lit' : 'glass', x: x + nx * (o + 0.03), y: y - h / 2, z: z + nz * (o + 0.03), ry, group });
+  // o vidro fica 3 mm para dentro da moldura: nenhuma face dele no mesmo plano das pontas das travessas
+  kit.add(slab(w - 0.006, h - 0.006, 0.02), { color: lit ? '#ffe2a0' : '#8ec1df', slot: lit ? 'lit' : 'glass', x: x + nx * (o + 0.03), y: y - h / 2 + 0.003, z: z + nz * (o + 0.03), ry, group });
   kit.add(slab(0.05, h, 0.03), { color: frame, x: x + nx * (o + 0.045), y: y - h / 2, z: z + nz * (o + 0.045), ry, group });
   kit.add(slab(w, 0.05, 0.03), { color: frame, x: x + nx * (o + 0.045), y: y - 0.025, z: z + nz * (o + 0.045), ry, group });
   kit.add(rb(w + 0.3, 0.07, 0.16, 0.02, 1), { color: frame, x: x + nx * (o + 0.06), y: y - h / 2 - 0.13, z: z + nz * (o + 0.06), ry, group });

@@ -40,10 +40,26 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     - `run-e2e.mjs` e `e2e.yml`: suíte `historia`.
   - Testes: `test/historia-{regras,layout,cenas,missao,cenario}.test.mjs`, a suíte `tools/scripts/test-historia.mjs`
     (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
-- **Validação:** nada rodou ainda no CI. Localmente, só `node --check` e verificações leves de geometria.
-- **Próximo passo:** commit, PR com prévia, CI e a suíte E2E `historia`. Depois, revisar as capturas, corrigir o que
-  aparecer e entregar a prévia ao usuário, com o que testar nos três aparelhos. Integrar só com o "pode integrar" do
-  próprio usuário nesta sessão.
+- **PR #75** (branch `claude/historia-fatia`). Rodadas do CI:
+  - `41277097555`: 17 erros de tipo, corrigidos;
+  - `41277384381`: 10 testes falhando, corrigidos;
+  - `41321935257`: 3 testes falhando (o z-fighting das janelas da torre, a conta da porta da casinha e o
+    portãozinho, que só abria a colisão 1,4 s depois do porteiro), corrigidos no commit seguinte.
+  - O resultado do CI desse último commit deve ser conferido no GitHub.
+- **Revisão do orquestrador (sobre o `a16c1a8`, conferida no `b47c4e3`):** as condições dos arquivos compartilhados
+  estão cumpridas. Ajustes feitos:
+  - a medição da história só com `MEASURE_STORY=1`, no job próprio `recursos-historia`;
+  - a decisão inteira da entrada em `storyEnabled` (`src/story/gate.js`), com teste da produção;
+  - o Faro na tabela de entrada da ARQUITETURA;
+  - o cabeçalho das regras do mural.
+- **Validação local:** só `node --check` e uma verificação curta da área no Node (carrega, pula a abertura e passa
+  pelas etapas sem ninguém atravessar nada).
+- **Próximo passo:**
+  1. CI verde;
+  2. E2E `historia` (com `recursos-historia`) e, se der, a primeira passagem `historia`;
+  3. revisar as capturas;
+  4. entregar a prévia ao usuário, com o que testar nos três aparelhos.
+  - Integrar só com o "pode integrar" do próprio usuário nesta sessão.
 
 ## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`, deploy `41268345237`, v0.10.24 · build 116)
 
@@ -91,12 +107,8 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   - nenhum nome com duplo sentido. O usuário reprovou um nome por isso; a mãe dos pombos é a Dona Pluma e o filhote,
     o Fiapo.
 - **Validação:** só documentação, sem teste local nem E2E. Os checks `testes-e-build` e `publicar-site` rodam no PR.
-- **Para o usuário confirmar no storyboard:**
-  - as 6 decisões padrão do roteiro;
-  - a voz "uá-uá";
-  - a duração dos capítulos;
-  - o botão do Faro.
-- **Próximo passo:** PR, checks e o "pode integrar" do usuário. Depois, a etapa 2 (fatia jogável) numa sessão própria.
+- **Confirmado em 2026-11-01:** as 6 decisões padrão do roteiro e o botão do Faro (V, L3 e o focinho no toque).
+- **Ainda em aberto:** a voz "uá-uá", a duração dos capítulos e o ângulo de câmera do mapa-múndi.
 
 ## Entregue: privacidade, os docs sem dizer de quem são as cachorras (Claude, PR #73, squash `c379e0f`, deploy `40994221500`, v0.10.23 · build 115)
 

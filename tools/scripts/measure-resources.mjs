@@ -12,6 +12,8 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const OUT = fileURLToPath(new URL('../../shots/resources/', import.meta.url));
 const MOUNT = '/previews/pr-resources/1-1/';
 const DEV_LEVEL = process.env.MEASURE_DEV_LEVEL || '';
+// MEASURE_STORY=1: só a fase 10 (o teto) e a área do Modo História (job próprio no E2E manual: recursos-historia)
+const STORY_MODE = process.env.MEASURE_STORY === '1';
 if (DEV_LEVEL && !/^[a-z][a-z0-9_-]*$/i.test(DEV_LEVEL)) throw new Error('MEASURE_DEV_LEVEL inválido');
 const WARMUP = 2;
 const MEASURED = 3;
@@ -110,12 +112,14 @@ try {
   await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.state === 'title', null, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
   // As capturas do cenário ocultam overlays só durante screenshot (abaixo).
-  const levels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
+  const allLevels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
+  const levels = STORY_MODE ? allLevels.filter((id) => id === 'fase10') : allLevels;
   report.levels = levels;
   if (!levels.length) throw new Error('empty level catalog');
   if (DEV_LEVEL && !levels.includes(DEV_LEVEL)) throw new Error(`missing development level: ${DEV_LEVEL}`);
   for (let cycle = 1; cycle <= WARMUP + MEASURED; cycle++) {
     for (let index = 0; index < levels.length; index++) {
+      const catalogIndex = allLevels.indexOf(levels[index]);
       const sample = await page.evaluate(async ({ index, cycle, warmup }) => {
         const { engine, game, dogs, THREE } = window.__game;
         const measurement = window.__resourceMeasurement;
@@ -172,7 +176,7 @@ try {
             renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
           camera: { position: engine.camera.position.toArray(), fov: engine.camera.fov },
         };
-      }, { index, cycle, warmup: WARMUP });
+      }, { index: catalogIndex, cycle, warmup: WARMUP });
       report.samples.push(sample);
       const label = `cycle ${cycle} ${levels[index]}`;
       check(sample.level === levels[index] && sample.state === 'title', `${label}: wrong level/state`);
@@ -226,7 +230,7 @@ try {
       check(stable, `${level} ${metric} did not plateau: ${values.join(' -> ')}`);
     }
   }
-  if (!DEV_LEVEL) await measureStory(page, base);
+  if (STORY_MODE) await measureStory(page, base);
 } catch (error) {
   report.errors.push(error.stack || String(error));
 } finally {

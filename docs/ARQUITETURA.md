@@ -508,6 +508,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar | `shift()` |
 | Empurrão em pé (Rhaenyra, de frente para algo empurrável no alto), segurar | Shift | R1 · RB | Empurrar (segurar) | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
+| Faro (Radhija, só no Modo História): o pulso | V | L3 (apertar o analógico esquerdo) | botão do focinho | `Faro` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
 | Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
 
@@ -521,7 +522,9 @@ o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira
 **Toque** (`src/ui/touchControls.js` → `input.touch`): joystick à esquerda (flutuante: tocando fora do aro, ele vem
 para baixo do dedo; `touchStick` usa a mesma zona morta e curva do analógico) e botões à direita (`TOUCH_BUTTONS`):
 Agir no canto e, em volta, Pular, Arrancada/Empurrar (toque = arrancada, segurar = empurrar), Lamber (segurar) e
-Superbafo (segurar e soltar); acima, Trocar e Fica/Vem; a pausa no canto de cima. Os rótulos acompanham a dog ativa
+Superbafo (segurar e soltar); acima, Trocar e Fica/Vem; a pausa no canto de cima. No Modo História entra também o
+botão do focinho (o Faro), de um mapa à parte (`STORY_TOUCH_BUTTONS`): ele só existe com a área da história carregada
+e o `TOUCH_BUTTONS` das fases não muda. Os rótulos acompanham a dog ativa
 (`.rr[data-dog]`): Arrancada vira Empurrar, o Superbafo fica apagado com a Rhaenyra (apertar dá a dica) e o Fica vira
 Vem. O teste `toque` confere que nenhuma caixa de botão encosta em outra nem no HUD. Multitoque por Pointer
 Events: um dedo no joystick e outro nos botões; arrastar o dedo de um botão para outro troca. O dispositivo atual

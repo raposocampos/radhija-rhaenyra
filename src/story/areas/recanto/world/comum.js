@@ -1267,8 +1267,8 @@ function buildTower({ kit, L, anim, drips, keep }) {
   for (const wx of [5.75, 7.4]) windowAt(kit, { x: wx, y: 1.5, z: z1, w: 0.9, h: 0.9, nx: 0, nz: 1, group: g });
   for (const wz2 of [-6.95, -8.1]) windowAt(kit, { x: x1, y: 1.5, z: wz2, w: 0.8, h: 0.9, nx: 1, nz: 0, group: g });
   const bars = '#3a3f44';
-  for (const wx of [5.75, 7.4]) for (let k = 0; k < 5; k++) add(stick(V(wx - 0.36 + k * 0.18, 1.06, z1 + 0.1), V(wx - 0.36 + k * 0.18, 1.95, z1 + 0.1), 0.008, 4), { color: bars, ao: false });
-  for (const wz2 of [-6.95, -8.1]) for (let k = 0; k < 4; k++) add(stick(V(x1 + 0.1, 1.06, wz2 - 0.3 + k * 0.2), V(x1 + 0.1, 1.95, wz2 - 0.3 + k * 0.2), 0.008, 4), { color: bars, ao: false });
+  for (const wx of [5.75, 7.4]) for (let k = 0; k < 5; k++) add(stick(V(wx - 0.36 + k * 0.18, 1.07, z1 + 0.1), V(wx - 0.36 + k * 0.18, 1.94, z1 + 0.1), 0.008, 4), { color: bars, ao: false });
+  for (const wz2 of [-6.95, -8.1]) for (let k = 0; k < 4; k++) add(stick(V(x1 + 0.1, 1.07, wz2 - 0.3 + k * 0.2), V(x1 + 0.1, 1.94, wz2 - 0.3 + k * 0.2), 0.008, 4), { color: bars, ao: false });
   // o buzinote da laje na fachada leste (a água da chuva da noite ainda pinga): a mancha escorrida na parede e a
   // poça na grama, embaixo (nada em pé onde as dogs andam)
   const bz2 = -8.45;

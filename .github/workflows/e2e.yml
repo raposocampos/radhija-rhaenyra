@@ -103,6 +103,40 @@ jobs:
           path: shots/resources*/
           if-no-files-found: error
           retention-days: 7
+  # Recursos da área do Modo História (tools/scripts/measure-resources.mjs com MEASURE_STORY=1): a área do Recanto
+  # alternando com a fase 1 (o platô dos recursos a cada visita) e o teto da fase 10 em chamadas de desenho e
+  # triângulos. Job próprio, em paralelo: o de "recursos" das fases fica como estava.
+  recursos-historia:
+    name: Recursos gráficos do Modo História
+    if: inputs.suite == 'todas' || inputs.suite == 'historia'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      MEASURE_STORY: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Gerar build de produção desta medição
+        run: npm run build
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Medir a área da história contra o teto da fase 10
+        run: node tools/scripts/measure-resources.mjs
+      - name: Guardar medições e capturas mesmo em falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recursos-historia
+          path: shots/resources/
+          if-no-files-found: error
+          retention-days: 7
   # Estresse do primeiro boot (fora de "todas"): cada rodada sobe Vite e navegador novos e abre uma fase frio e
   # quente. Lotes 0–3: 25 rodadas, uma por vez, com o cache de dependências do Vite apagado a cada rodada (otimizador
   # frio, como na primeira suíte de cada job); lotes 4–7: 36 rodadas, três ao mesmo tempo (disputa de CPU). Reproduz

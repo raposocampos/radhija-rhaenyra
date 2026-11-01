@@ -13,3 +13,13 @@ export function storyAllowed(build, pathname = '') {
   if (build.pr != null) return true;
   return build.version == null;
 }
+
+/**
+ * A decisão que o main.js usa: ?historia, fora do catálogo de desenvolvimento das fases, numa prévia ou no
+ * desenvolvimento.
+ * @param {URLSearchParams} params @param {boolean} dev catálogo de desenvolvimento (?level=<protótipo>)
+ * @param {{ version?: string | null, pr?: number | null } | null | undefined} build @param {string} [pathname]
+ */
+export function storyEnabled(params, dev, build, pathname = '') {
+  return params.has('historia') && !dev && storyAllowed(build, pathname);
+}

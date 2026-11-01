@@ -16,7 +16,7 @@ import { updateSeeThrough } from './world/seeThrough.js';
 import { LEVELS as ALL_LEVELS, publishedLevelIndex } from './levels/index.js';
 import MAPA from './levels/mapa/index.js';
 import { BUILD_INFO } from './core/version.js';
-import { storyAllowed } from './story/gate.js';
+import { storyEnabled } from './story/gate.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -60,7 +60,7 @@ async function boot() {
 
   // Modo História (só nas prévias): a área do capítulo e o HUD dela vêm sob demanda, fora do pacote inicial
   // (?historia só numa prévia de PR ou no desenvolvimento: src/story/gate.js)
-  const storyOn = params.has('historia') && !dev && storyAllowed(BUILD_INFO, location.pathname);
+  const storyOn = storyEnabled(params, !!dev, BUILD_INFO, location.pathname);
   const storyMods = storyOn
     ? await Promise.all([import('./story/areas/recanto/index.js'), import('./story/ui/storyHud.js')])
     : null;

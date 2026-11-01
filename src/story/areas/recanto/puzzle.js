@@ -215,7 +215,7 @@ export function createPuzzle(ctx) {
     },
     setStage,
     closeTowerDoor() { towerDoor.setTarget(0); towerDoor.set?.(0); },
-    gateOpened() { S.gateOpen = true; clearSweep(gate, { x: (L.GATE.x0 + L.GATE.x1) / 2, z: L.GATE.z }); gate.lock(); },
+    gateOpened() { S.gateOpen = true; clearSweep(gate, { x: (L.GATE.x0 + L.GATE.x1) / 2, z: L.GATE.z }); gate.lock(); gate.set?.(1); },
     set snoring(on) { S.snoreT = on ? 1.5 : Infinity; },
   };
   let scenes = null;
