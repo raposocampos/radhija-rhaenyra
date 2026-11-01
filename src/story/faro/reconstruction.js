@@ -115,8 +115,8 @@ export function createReconstruction({ root, actors, dur = null, fadeIn = 0.35, 
     get duration() { return total; },
     group,
     material: mat,
+    // o grupo fica na árvore da área: o escopo de recursos (src/core/resources.js) libera os atores depois deste dispose
     dispose() {
-      group.removeFromParent();
       if (!material) mat.dispose();
     },
   };
