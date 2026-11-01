@@ -25,8 +25,12 @@ function skipScene(h, id) {
 }
 /** Troca para a dog `name` (Q) se ainda não for ela. */
 function become(h, name) {
-  if (h.game.activeDog !== name) h.tap('KeyQ');
-  assert.equal(h.game.activeDog, name, `${name} ativa`);
+  for (let i = 0; i < 8 && h.game.activeDog !== name; i++) {
+    h.tap('KeyQ');
+    if (h.game.activeDog !== name) h.run(0.2);
+  }
+  const why = { cine: h.puzzle.cinematic(), lock: !!h.puzzle.lockFor(h.game.activeDog), extras: h.info().extras?.act ?? null, scene: storyInfo(h).scene };
+  assert.equal(h.game.activeDog, name, `${name} ativa ${JSON.stringify(why)}`);
 }
 
 test('missão do capítulo 1: os sete passos, do quarto ao portãozinho, o mural e o fim', async () => {
@@ -336,4 +340,14 @@ test('meia da casinha e petiscos: só a Radhija entra na casinha do quintal; os 
   assert.ok(S().socks.includes('casinha'), 'a meia da casinha');
   assert.equal(h.puzzle.total, 4, 'quatro petiscos no capítulo');
   assert.deepEqual(intrusions(h), []);
+});
+
+test('o botão do focinho (toque, só no Modo História) solta o Faro da Radhija', async () => {
+  const h = await createStoryGame({ query: 'stage=cozinha' });
+  h.clearLog();
+  assert.equal(h.game.input.touch.press('faro'), true, 'o botão existe no Modo História');
+  h.step();
+  h.game.input.touch.release('faro');
+  h.step();
+  assert.ok(h.log('story:faro').length >= 1, 'o pulso saiu pelo botão do focinho');
 });

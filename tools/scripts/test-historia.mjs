@@ -34,7 +34,8 @@ const noOverlap = () => ev(() => {
 });
 /** Troca para a dog (Q) se preciso. */
 async function become(name) {
-  if ((await info()).activeDog !== name) await press('KeyQ', 400);
+  // logo depois de uma arrancada um extra pode ocupar a dog por um instante: tenta de novo
+  for (let k = 0; k < 4 && (await info()).activeDog !== name; k++) await press('KeyQ', 400);
   const i = await info();
   check(i.activeDog === name, `${name} ativa`, i.activeDog);
 }

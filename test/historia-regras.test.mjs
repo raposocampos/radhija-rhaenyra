@@ -20,6 +20,7 @@ import { SOUND_NAMES } from '../src/fx/audio/sounds.js';
 import { THEMES, compileTheme } from '../src/fx/audio/themes.js';
 import { installBrowserStubs } from './helpers/headless.mjs';
 import { storyAllowed } from '../src/story/gate.js';
+import { TOUCH_BUTTONS, STORY_TOUCH_BUTTONS } from '../src/game/input.js';
 
 // ---------------------------------------------------------------------------------------------- mural
 test('mural: a ligação errada volta, conta um erro e não ocupa a casa', () => {
@@ -261,4 +262,10 @@ test('entrada: ?historia só abre nas prévias de PR e no desenvolvimento, nunca
   // desenvolvimento (Vite local, servidor do E2E, testes): sem versão
   assert.equal(storyAllowed({ version: null, build: null, pr: null }, '/'), true);
   assert.equal(storyAllowed(null, '/'), true);
+});
+
+test('toque: o botão do focinho fica num mapa só do Modo História (os botões de sempre não mudam)', () => {
+  assert.deepEqual(STORY_TOUCH_BUTTONS, { faro: { code: 'Faro' } });
+  assert.equal(TOUCH_BUTTONS.faro, undefined, 'o mapa dos botões de sempre continua o mesmo');
+  for (const id of Object.keys(STORY_TOUCH_BUTTONS)) assert.equal(TOUCH_BUTTONS[id], undefined, `${id} não repete um botão de sempre`);
 });

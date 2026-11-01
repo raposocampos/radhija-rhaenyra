@@ -311,12 +311,17 @@ export const STATIC_COLLIDERS = [
   seg('cozinha-sala-leste', DOORWAYS.cozinhaSala.x1, ROOMS.cozinha.z1, HOUSE.x1, ROOMS.cozinha.z1, wt),
   // móveis
   circle('caminha', BED.x, BED.z, BED.r + 0.02),
-  circle('pote', BOWL.x, BOWL.z, BOWL.r + 0.02),
+  // o pote de pé ou virado (depois da abertura ele fica deitado, um pouco para o leste)
+  circle('pote', BOWL.x + 0.07, BOWL.z, BOWL.r + 0.09),
   box('guarda-roupa', WARDROBE.x - WARDROBE.hx, WARDROBE.z - WARDROBE.hz, WARDROBE.x + WARDROBE.hx, WARDROBE.z + WARDROBE.hz),
   circle('cesto-de-brinquedos', TOY_BASKET.x, TOY_BASKET.z, TOY_BASKET.r),
   box('bancada', COUNTER.x0, COUNTER.z0, COUNTER.x1, COUNTER.z1),
   box('geladeira', FRIDGE.x - FRIDGE.hx, FRIDGE.z - FRIDGE.hz, FRIDGE.x + FRIDGE.hx, FRIDGE.z + FRIDGE.hz),
   box('mesa-cozinha', KITCHEN_TABLE.x - KITCHEN_TABLE.hx, KITCHEN_TABLE.z - KITCHEN_TABLE.hz, KITCHEN_TABLE.x + KITCHEN_TABLE.hx, KITCHEN_TABLE.z + KITCHEN_TABLE.hz, { blocks: 'large' }),
+  // as pernas da mesa (a Radhija passa por baixo, entre elas)
+  ...[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz], i) => circle(`mesa-perna-${i + 1}`, KITCHEN_TABLE.x + sx * 0.4, KITCHEN_TABLE.z + sz * 0.33, 0.04)),
+  // a quina de fora da casa (o pilar da esquina do quintal)
+  box('casa-quina', HOUSE.x1 - 0.25, HOUSE.z0 - 0.17, HOUSE.x1 + 0.12, HOUSE.z0 + 0.15),
   box('sofa', SOFA.x - SOFA.hx, SOFA.z - SOFA.hz, SOFA.x + SOFA.hx, SOFA.z + SOFA.hz),
   box('rack', TV_RACK.x - TV_RACK.hx, TV_RACK.z - TV_RACK.hz, TV_RACK.x + TV_RACK.hx, TV_RACK.z + TV_RACK.hz),
   // quintal (a porta da área de serviço é dinâmica)
@@ -332,6 +337,8 @@ export const STATIC_COLLIDERS = [
   // piscina: a água bloqueia (a borda é o deque de andar)
   box('piscina', POOL.x0, POOL.z0, POOL.x1, POOL.z1, { kind: 'water' }),
   ...LOUNGERS.map((l, i) => box(`espreguicadeira-${i + 1}`, l.x - l.hx, l.z - l.hz, l.x + l.hx, l.z + l.hz, { blocks: 'large' })),
+  // as cabeceiras e os pés baixos das espreguiçadeiras (a Radhija entra por baixo pelos lados compridos)
+  ...LOUNGERS.flatMap((l, i) => [-1, 1].map((s) => seg(`espreguicadeira-${i + 1}-ponta-${s < 0 ? 'n' : 's'}`, l.x - l.hx + 0.01, l.z + s * 0.86, l.x + l.hx - 0.01, l.z + s * 0.86, 0.05))),
   circle('guarda-sol', UMBRELLA.x, UMBRELLA.z, UMBRELLA.r),
   // o filtro da piscina, a ducha e os vasos do deque (src/story/areas/recanto/world/comum.js)
   box('filtro-piscina', -4.82, -5.86, -4.18, -5.38),

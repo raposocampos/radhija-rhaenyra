@@ -13,7 +13,7 @@
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
 // Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Superbafo → bafo() (segurar) · Lamber → lick() (segurar) ·
 //   Arrancada/Empurrar → Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' ·
-//   Pausa → 'Escape' · Faro (só no Modo História) → 'Faro'; joystick virtual (touchStick) → axis().
+//   Pausa → 'Escape'; joystick virtual (touchStick) → axis(). No Modo História (STORY_TOUCH_BUTTONS): Faro → 'Faro'.
 // Dispositivo atual ('keyboard' | 'gamepad' | 'touch'): tecla, controle ou dedo na tela (pointerType touch/pen).
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -89,8 +89,16 @@ export const TOUCH_BUTTONS = {
   swap: { code: 'KeyQ' }, // Trocar de cachorrinha
   stay: { code: 'KeyF' }, // Fica / Vem (companheira)
   pause: { code: 'Escape' }, // Pausar
-  faro: { code: 'Faro' }, // Faro (Modo História: o botão do focinho, só com a Radhija)
 };
+/**
+ * Botões de toque que só existem no Modo História (src/ui/touchControls.js cria o do focinho com a área da história).
+ * @type {Record<string, { code?: string, hold?: 'bafo' | 'lick' | 'shift' }>}
+ */
+export const STORY_TOUCH_BUTTONS = {
+  faro: { code: 'Faro' }, // Faro: o botão do focinho, só com a Radhija
+};
+/** O botão de toque pelo id (os de sempre e os do Modo História). */
+const touchButton = (id) => TOUCH_BUTTONS[id] ?? STORY_TOUCH_BUTTONS[id];
 export const TOUCH_DEADZONE = 0.14;
 
 /**
@@ -183,7 +191,7 @@ export function createInput({ onDevice } = {}) {
   // ---------- toque (botões e joystick virtuais) ----------
   const virt = { held: new Set(), stick: { x: 0, y: 0, m: 0 } }; // estado dos controles virtuais
   const touchHeld = (kind) => {
-    for (const id of virt.held) if (TOUCH_BUTTONS[id].hold === kind) return true;
+    for (const id of virt.held) if (touchButton(id)?.hold === kind) return true;
     return false;
   };
   // ---------- controle ----------
@@ -356,7 +364,7 @@ export function createInput({ onDevice } = {}) {
     touch: {
       /** @param {string} id */
       press(id) {
-        const b = TOUCH_BUTTONS[id];
+        const b = touchButton(id);
         if (!b) return false;
         setDevice('touch');
         if (virt.held.has(id)) return true;

@@ -70,7 +70,7 @@ export function createPuzzle(ctx) {
   const mood = createMood(engine, { base: MORNING });
   const faro = createFaro({ root, engine, world });
   const book = createClueBook({ emit });
-  const hints = createHints(emit, HINTS);
+  const hints = createHints(emit, { hint: HINTS, prompt: {} });
 
   // trilhas de cheiro e pistas do Faro
   faro.addTrail('cenoura', L.CARROT_TRAIL, { color: SCENT.cenoura, fadeEnd: true, spacing: 0.1, size: 1.15 });

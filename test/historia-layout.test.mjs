@@ -12,6 +12,31 @@ import { createNavigator } from '../src/game/navigation.js';
 
 const world = createCollisionWorld(L);
 const nav = createNavigator(L, world);
+/** As portas de dobradiça fechadas (ou abertas, pelo nome) e o canal, como o puzzle põe no mundo. */
+const DOORS = { kitchenOpen: L.KITCHEN_DOOR, serviceOpen: L.SERVICE_DOOR, towerOpen: L.TOWER_DOOR, storageOpen: L.STORAGE_DOOR, gateOpen: L.GATE_LEAF };
+function makeWorld(open = {}) {
+  const w = createCollisionWorld(L);
+  for (const [flag, D] of Object.entries(DOORS)) {
+    if (open[flag]) continue;
+    w.addDynamic({ id: `porta-${flag}`, kind: 'gate', shape: 'segment', ax: D.hinge.x, az: D.hinge.z, bx: D.latchPost.x, bz: D.latchPost.z, t: 0.05 });
+  }
+  const CH = L.CHANNEL;
+  w.addDynamic({ id: 'canal-boca', kind: 'water', shape: 'segment', ax: CH.x0 - 0.05, az: CH.z1, bx: CH.x1 + 0.05, bz: CH.z1, t: 0.1, enabled: !open.boatDocked });
+  w.addDynamic({ id: 'barquinho-ponte', kind: 'static', shape: 'box', x: (CH.x0 + CH.x1) / 2, z: (CH.z0 + CH.z1) / 2, hx: (CH.x1 - CH.x0) / 2, hz: (CH.z1 - CH.z0) / 2, blocks: 'large', enabled: !!open.boatDocked });
+  return { w, n: createNavigator(L, w) };
+}
+/** Um lugar livre para a dog a até `r` m do ponto (meia ou petisco em cima de um móvel), ou null. */
+function freeNear(w, p, r, who) {
+  if (!w.overlaps(p.x, p.z, R[who] * 0.6, SIZE[who])) return { x: p.x, z: p.z };
+  for (let d = 0.05; d <= r; d += 0.05) {
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * Math.PI * 2;
+      const x = p.x + Math.sin(a) * d, z = p.z + Math.cos(a) * d;
+      if (!w.overlaps(x, z, R[who], SIZE[who])) return { x, z };
+    }
+  }
+  return null;
+}
 const R = { radhija: L.DOGS.radhija.radius, rhaenyra: L.DOGS.rhaenyra.radius };
 const SIZE = { radhija: L.DOGS.radhija.size, rhaenyra: L.DOGS.rhaenyra.size };
 /** Todas as etapas feitas: portas abertas, barquinho encaixado. */
@@ -47,14 +72,17 @@ test('recanto: as dogs começam em lugar livre, no quarto, perto da caminha', ()
 test('recanto: petiscos e meias ficam onde a dog certa alcança, por um caminho do grafo', () => {
   const from = L.DOGS.radhija.start;
   const ctx = { r: R.radhija, size: SIZE.radhija, flags: { ...ALL_OPEN, small: true } };
+  const { w, n } = makeWorld({ ...ALL_OPEN, gateOpen: true });
   for (const c of L.COLLECTIBLES) {
-    assert.equal(world.overlaps(c.x, c.z, R.radhija * 0.6, 'small'), false, `petisco ${c.id} fora de colisor`);
-    const p = nav.findPath(from, c, ctx);
+    assert.equal(w.overlaps(c.x, c.z, R.radhija * 0.6, 'small'), false, `petisco ${c.id} fora de colisor`);
+    const p = n.findPath(from, c, ctx);
     assert.ok(p.reachable, `petisco ${c.id}: a Radhija chega lá`);
   }
+  // a do depósito fica em cima da caixa de brinquedos: um lugar livre ao alcance da pegada basta
   for (const s of L.SOCKS.filter((x) => x.id !== 'antena')) {
-    assert.equal(world.overlaps(s.x, s.z, R.radhija * 0.6, 'small'), false, `meia ${s.id} fora de colisor`);
-    assert.ok(nav.findPath(from, s, ctx).reachable, `meia ${s.id}: a Radhija chega lá`);
+    const spot = freeNear(w, s, L.SOCK_PICKUP_R - 0.05, 'radhija');
+    assert.ok(spot, `meia ${s.id}: um lugar livre a menos de ${L.SOCK_PICKUP_R} m`);
+    assert.ok(n.findPath(from, spot, ctx).reachable, `meia ${s.id}: a Radhija chega lá`);
   }
   // a meia da antena fica no alto da guarita (a subida é pela lixeira, com a irmã segurando)
   const ant = L.SOCKS.find((x) => x.id === 'antena');
@@ -68,12 +96,14 @@ test('recanto: o grafo liga o quarto a cada etapa da missão quando as portas ab
   const from = L.DOGS.rhaenyra.start;
   const big = (flags) => ({ r: R.rhaenyra, size: SIZE.rhaenyra, flags });
   const yard = L.NAV_NODES.Y_mid;
-  assert.equal(nav.findPath(from, yard, big({})).reachable, false, 'com a cozinha fechada, o quintal não');
-  assert.ok(nav.findPath(from, yard, big({ kitchenOpen: true })).reachable, 'aberta a cozinha, o quintal sim');
+  // as portas como no jogo: fechadas até a etapa delas
+  assert.equal(makeWorld({}).n.findPath(from, yard, big({})).reachable, false, 'com a cozinha fechada, o quintal não');
+  assert.ok(makeWorld({ kitchenOpen: true }).n.findPath(from, yard, big({ kitchenOpen: true })).reachable, 'aberta a cozinha, o quintal sim');
   const pool = L.NAV_NODES.P_west;
-  assert.equal(nav.findPath(from, pool, big({ kitchenOpen: true })).reachable, false, 'com a área de serviço fechada, a piscina não');
+  assert.equal(makeWorld({ kitchenOpen: true }).n.findPath(from, pool, big({ kitchenOpen: true })).reachable, false, 'com a área de serviço fechada, a piscina não');
+  const all = makeWorld({ ...ALL_OPEN, gateOpen: true }).n;
   for (const id of ['P_north', 'V_mid', 'T_door', 'E_booth', 'E_gate', 'L_pier', 'L_south', 'G_door']) {
-    assert.ok(nav.findPath(from, L.NAV_NODES[id], big(ALL_OPEN)).reachable, `com tudo aberto, a Rhaenyra chega a ${id}`);
+    assert.ok(all.findPath(from, L.NAV_NODES[id], big(ALL_OPEN)).reachable, `com tudo aberto, a Rhaenyra chega a ${id}`);
   }
 });
 

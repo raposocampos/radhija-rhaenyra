@@ -566,7 +566,7 @@ export function createTerraceScene(K) {
     ],
     cleanup() { dir.cleanup({ snap: true }); dir.fade(0, 0.4); },
     commit() {
-      downstairs();
+      // só o lugar (K.placeAt): uma pose do diretor aqui seguraria as dogs de novo, depois do cleanup
       hideSquad(K);
       props.carrot.object.visible = false;
       K.closeTowerDoor();

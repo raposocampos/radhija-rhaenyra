@@ -2,7 +2,7 @@
 
 Última atualização: **2026-11-01, Claude**.
 - **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), branch `claude/historia-fatia`, em construção.
-- **#74, Modo História, etapa 1 (o roteiro):** integrado (squash `00d393d`).
+- **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
 - **#71, menu novo e trilha:** etapa 4 de 4 da interface, em v0.10.21 · build 113.
@@ -45,7 +45,15 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   aparecer e entregar a prévia ao usuário, com o que testar nos três aparelhos. Integrar só com o "pode integrar" do
   próprio usuário nesta sessão.
 
-## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`)
+## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`, deploy `41268345237`, v0.10.24 · build 116)
+
+- Integrado com o "pode integrar" do usuário (no chat do orquestrador): squash `00d393d`, CI do `main` `41268192608`,
+  deploy `41268345237`. O `version.json` no ar mostra v0.10.24 · build 116, commit `00d393d` (conferido pelo
+  orquestrador).
+- O usuário confirmou as seis decisões padrão ("pode manter as decisões padrão"). O registro está em
+  [HISTORIA.md](HISTORIA.md) e [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- O histórico abaixo é o da entrega.
+
 
 - **Pedido do usuário (2026-10-29):** "Vamos escrever a história do Game".
 - **Como o roteiro foi decidido:**

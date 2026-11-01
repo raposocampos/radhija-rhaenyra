@@ -624,7 +624,7 @@ function buildBooth(kit, root, L, live) {
   addLink(kit, tw1, tw2, 0.006, { color: '#6b4a2e', ...o }, 5);
   kit.add(LEAF, { color: '#6f8f3e', slot: 'plant', x: tw2[0] + 0.02, y: RY + 0.016, z: tw2[2] - 0.01, sx: 0.035, sz: 0.018, ry: 0.4, ...o, ao: false });
   addLink(kit, [rx1 - 0.06, RY + 0.025, z0 + 0.35], [rx1 + 0.12, RY + 0.005, z0 + 0.35], 0.022, { color: '#8e959b', ...o }, 8);
-  puddleAt(kit, rx1 + 0.17, 0.007, z0 + 0.35, 0.15, 7, GB);
+  puddleAt(kit, rx1 + 0.17, 0.012, z0 + 0.35, 0.15, 7, GB);
 
   // ---------- a antena espinha-de-peixe com os estais (a meia fica no mastro, abaixo da braçadeira) ----------
   const An = L.ANTENNA, top = An.top;

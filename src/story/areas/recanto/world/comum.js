@@ -1259,7 +1259,7 @@ function buildTower({ kit, L, anim, drips, keep }) {
   potAt(add, { x: 5.8, z: tz1 - 0.16, y: TOP, r: 0.11, h: 0.26, color: '#b5583a', plant: bushes[1], plantSlot: 'foliage' });
   potAt(add, { x: tx0 + 0.6, z: tz0 + 0.3, y: TOP, r: 0.2, h: 0.42, color: '#9a8f86', plant: flowerBush({ r: 0.26, seed: 44, flower: '#f6f0e6', n: 6 }), plantSlot: 'foliage' });
   add(grate(0.16, 3), { color: null, slot: 'ground', x: 6.8, y: TOP + 0.003, z: -5.95, ao: false });
-  add(blob(0.24, 8), { color: '#b9a88e', slot: 'glass', x: 6.55, y: TOP + 0.003, z: -6.12, sz: 0.6, ao: false });
+  add(blob(0.24, 8), { color: '#b9a88e', slot: 'glass', x: 6.55, y: TOP + 0.0055, z: -6.12, sz: 0.6, ao: false });
   add(blob(0.16, 11), { color: '#b9a88e', slot: 'glass', x: 4.6, y: TOP + 0.003, z: -8.2, sz: 0.7, ao: false });
 
   // ---------- as fachadas: janelas (a do saguão acesa) com grade, o buzinote, o medidor, a placa, o interfone, a luminária
