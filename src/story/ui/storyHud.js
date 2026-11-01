@@ -51,6 +51,11 @@ export function createStoryHud({ root, audio = null }) {
   const meias = $('.rr-story__meias');
   const end = $('.rr-story__end');
   const skipBtn = $('.rr-story__skip');
+  const nPistas = $('[data-n="pistas"]');
+  const nMeias = $('[data-n="meias"]');
+  // a lupa e as meias entram na coluna do canto do HUD do jogo (abaixo dos petiscos e da pausa): nada se sobrepõe
+  const counters = $('.rr-story__counters');
+  root.querySelector('.rr-hud__tr')?.appendChild(counters);
   const mural = createMuralUI({ host, emit: (n, p) => events.emit(n, p), sfx: (n) => audio?.play?.(n) });
 
   /** As pistas na lupa, na ordem em que chegaram, e a fila dos cartões voando. */
@@ -89,7 +94,7 @@ export function createStoryHud({ root, audio = null }) {
         card.style.opacity = '0.2';
         setTimeout(() => {
           card.remove();
-          $('[data-n="pistas"]').textContent = String(found.length);
+          nPistas.textContent = String(found.length);
           pop(lupa);
         }, 650);
       }, 700);
@@ -131,7 +136,7 @@ export function createStoryHud({ root, audio = null }) {
     }),
     events.on('story:sock', (/** @type {any} */ p) => {
       socks = p.count ?? socks + 1;
-      $('[data-n="meias"]').textContent = String(socks);
+      nMeias.textContent = String(socks);
       pop(meias);
       play('meia');
     }),
@@ -151,8 +156,8 @@ export function createStoryHud({ root, audio = null }) {
       found = [];
       queue.length = 0;
       socks = 0;
-      $('[data-n="pistas"]').textContent = '0';
-      $('[data-n="meias"]').textContent = '0';
+      nPistas.textContent = '0';
+      nMeias.textContent = '0';
       panel.classList.remove('is-on');
       panel.innerHTML = '';
       end.hidden = true;
@@ -198,6 +203,7 @@ export function createStoryHud({ root, audio = null }) {
     dispose() {
       for (const off of offs) off();
       mural.dispose();
+      counters.remove();
       host.remove();
     },
   };

@@ -67,6 +67,9 @@
 /* a lupa e as meias, no canto de cima à direita (junto do contador de petiscos) */
 .rr-story__counters { position: absolute; top: calc(78px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; pointer-events: none; }
 .rr[data-cinema] .rr-story__counters { opacity: 0; }
+/* dentro da coluna do canto do HUD (storyHud.js), em fluxo; fora da história, some */
+.rr-hud__tr .rr-story__counters { position: static; }
+.rr:not([data-story]) .rr-story__counters { display: none; }
 .rr-story__chip {
   display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 8px; border-radius: 999px;
   background: var(--glass); border: 3px solid var(--choco); box-shadow: 0 3px 0 var(--choco);
@@ -156,6 +159,17 @@
 .rr[data-compact] .rr-story__chip .ico { width: calc(22 * var(--u)); height: calc(22 * var(--u)); }
 .rr[data-compact] .rr-story__skip { width: calc(46 * var(--u)); height: calc(46 * var(--u)); }
 .rr[data-compact] .rr-story__title .t-name { font-size: calc(30 * var(--u)); }
-.rr[data-compact] .rr-mural__card { min-width: 52px; }
+/* o mural no celular deitado: tudo cabe na altura da tela (as casas pelo vh, as cartas de apoio no canto) */
+.rr[data-compact] .rr-mural { padding: calc(6 * var(--u)); }
+.rr[data-compact] .rr-mural__board { border-width: 8px; padding: calc(8 * var(--u)); gap: calc(6 * var(--u)); max-height: 96vh; }
+.rr[data-compact] .rr-mural__case { font-size: calc(17 * var(--u)); }
+.rr[data-compact] .rr-mural__line { grid-template-columns: calc(30 * var(--u)) repeat(5, minmax(0, 1fr)) calc(30 * var(--u)); gap: calc(6 * var(--u)); width: min(100%, 118vh); margin: 0 auto; }
+.rr[data-compact] .rr-mural__end svg { width: calc(28 * var(--u)); height: calc(28 * var(--u)); }
+.rr[data-compact] .rr-mural__tray { min-height: 0; gap: calc(8 * var(--u)); }
+.rr[data-compact] .rr-mural__card { width: calc(60 * var(--u)); min-width: 44px; }
+.rr[data-compact] .rr-mural__side { position: absolute; left: calc(8 * var(--u)); bottom: calc(8 * var(--u)); gap: 4px; }
+.rr[data-compact] .rr-mural__side .rr-mural__card { width: calc(36 * var(--u)); min-width: 30px; }
+.rr[data-compact] .rr-mural__foot { min-height: calc(36 * var(--u)); gap: 8px; }
+.rr[data-compact] .rr-mural__face { width: calc(34 * var(--u)); height: calc(34 * var(--u)); }
 .rr[data-compact] .rr-story__fly { width: 88px; height: 88px; left: calc(50% - 44px); }
 @media (prefers-reduced-motion: reduce) { .rr-story *, .rr-mural * { animation: none !important; transition: none !important; } }

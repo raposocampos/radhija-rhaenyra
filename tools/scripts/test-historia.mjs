@@ -93,7 +93,9 @@ try {
   check(i.story.stage === 'cozinha', 'a abertura termina na missão da cozinha', i.story.stage);
   hs = await hudState();
   check(!hs.cinema, 'as faixas saem e o HUD volta', hs);
-  check((await ev(() => document.querySelector('[data-n="pistas"]').textContent)) === '5', 'a lupa conta 5 pistas', await ev(() => document.querySelector('[data-n="pistas"]').textContent));
+  check(hs.clues.length === 5, 'a lupa guarda 5 pistas', hs.clues);
+  await H.sleep(3000); // os cartões voam até a lupa, um por vez
+  check((await ev(() => document.querySelector('[data-n="pistas"]').textContent)) === '5', 'o contador da lupa mostra 5', await ev(() => document.querySelector('[data-n="pistas"]').textContent));
   check((await noOverlap()).length === 0, 'ninguém dentro de nada', await noOverlap());
 
   console.log('\n== Passo 1: a maçaneta da cozinha (impulso da Rhaenyra) ==');
@@ -107,7 +109,8 @@ try {
   await shot('05-cozinha-porta.png');
 
   console.log('\n== Passo 2: o galho e a porta da área de serviço ==');
-  await walkPath([[-6.2, 2.85], [-5.55, 1.95]], { timeout: 20000 });
+  // pela porta aberta e em volta da ponta da folha (ela abre para o quintal) até a face oeste do galho
+  await walkPath([[-6.0, 2.95], [-5.35, 2.75], [-5.55, 1.95]], { timeout: 20000 });
   i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.branchFree, { timeout: 12000, label: 'empurrar o galho' });
   check(i.story.flags.branchFree, 'a Rhaenyra empurra o galho para longe da porta', i.story.flags);
   check(i.story.clues.includes('telhas'), 'as telhas da tempestade (caso 2) na lupa', i.story.clues);
