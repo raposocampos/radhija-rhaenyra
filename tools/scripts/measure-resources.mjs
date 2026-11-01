@@ -319,7 +319,12 @@ async function measureStory(page, base) {
     console.log(`[resources] ${label}: geometry=${sample.geometries} texture=${sample.textures} programs=${sample.programs} calls=${sample.draws[1].calls} triangles=${sample.draws[1].triangles} worst=${sample.worst.calls}@${sample.worst.at}`);
     await save();
     if (cycle === WARMUP + MEASURED) {
-      await page.locator('canvas').first().screenshot({ path: resolve(OUT, 'historia-recanto.png'), timeout: 60000, style: '#ui, #loading { display: none !important; }' });
+      // captura de revisão (a tela inteira: o canvas ocupa tudo); não reprova a medição se demorar
+      try {
+        await page.screenshot({ path: resolve(OUT, 'historia-recanto.png'), timeout: 60000, style: '#ui, #loading { display: none !important; }' });
+      } catch (error) {
+        report.warnings.push(`historia: captura não saiu (${String(error.message || error).split(/\r?\n/)[0]})`);
+      }
     }
   }
   const measured = samples.filter((s) => s.measured);

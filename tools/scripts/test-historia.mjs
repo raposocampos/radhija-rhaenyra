@@ -268,6 +268,8 @@ try {
     });
     check(faroBtn?.shown, 'iPhone: o botão do focinho nos controles de toque', faroBtn);
     if (faroBtn?.shown) {
+      // o primeiro pulso (o da abertura) dura uns 6 s: o botão só solta outro depois que ele acaba
+      await p.waitForFunction(() => !window.__game.game.debug.info().story.faro.active, null, { timeout: 30000 }).catch(() => {});
       await p.evaluate(() => window.__game.game.debug.clearLog());
       await p.touchscreen.tap(faroBtn.x, faroBtn.y);
       await p.waitForTimeout(600);
@@ -287,7 +289,8 @@ try {
     const q = await H.newPage(scr.opts, scr.id, { lowGfx: true });
     try {
       await q.goto(`${BASE}?historia&stage=cozinha`, { waitUntil: 'load', timeout: 120000 });
-      await q.waitForFunction(() => window.__game?.game?.isStory && window.__game.game.state === 'playing' && window.__game.game.debug.info().story?.stage === 'cozinha', null, { timeout: 120000 });
+      // de pé, o aviso de girar pausa o jogo: ali só a etapa conta
+      await q.waitForFunction((portrait) => window.__game?.game?.isStory && (portrait || window.__game.game.state === 'playing') && window.__game.game.debug.info().story?.stage === 'cozinha', !!scr.portrait, { timeout: 120000 });
       if (scr.touch) await q.touchscreen.tap(scr.opts.viewport.width / 2, scr.opts.viewport.height / 2);
       await q.waitForTimeout(800);
       await settle(q);
