@@ -64,6 +64,9 @@ export function createStoryHud({ root, audio = null }) {
   let flyT = 0;
   let titleT = 0;
   let socks = 0;
+  /** O Faro recarregando: o pulso dura 6 s e some em 0,6 s (FARO em src/story/faro/faro.js); o botão do focinho apaga. */
+  let faroCool = 0;
+  const coolFaro = (on) => root.querySelector('.rr-tbtn--faro')?.classList.toggle('is-cool', on);
 
   const play = (name, opts = {}) => { try { audio?.play?.(name, opts); } catch (_) { /* sem áudio */ } };
   const setStory = (on) => { if (on) root.dataset.story = '1'; else { delete root.dataset.story; delete root.dataset.cinema; } };
@@ -129,6 +132,7 @@ export function createStoryHud({ root, audio = null }) {
       titleT = 3.4;
     }),
     events.on('story:prompt', (/** @type {any} */ p) => { prompt.classList.toggle('is-on', !!p.on); }),
+    events.on('story:faro', () => { faroCool = 6.6; coolFaro(true); }),
     events.on('story:clue', (/** @type {any} */ p) => {
       if (!found.includes(p.id)) found.push(p.id);
       queue.push(p.id);
@@ -153,6 +157,8 @@ export function createStoryHud({ root, audio = null }) {
       /** @type {HTMLElement} */ (end.querySelector('[data-act="again"]')).focus?.();
     }),
     events.on('story:reset', () => {
+      faroCool = 0;
+      coolFaro(false);
       found = [];
       queue.length = 0;
       socks = 0;
@@ -189,6 +195,7 @@ export function createStoryHud({ root, audio = null }) {
   return {
     update(dt) {
       mural.update(dt);
+      if (faroCool > 0) { faroCool -= dt; if (faroCool <= 0) coolFaro(false); }
       if (titleT > 0) { titleT -= dt; if (titleT <= 0) title.classList.remove('is-on'); }
       if (queue.length) {
         flyT -= dt;
