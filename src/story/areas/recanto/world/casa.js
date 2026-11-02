@@ -70,15 +70,17 @@ export function buildCasa(kit, root, L) {
   // ---------------------------------------------------------------- paredes
   const lilac = '#e7dcf2', mint = '#e5f1e1', yellow = '#f6e8c4', plaster = '#f3d9bf';
   /** Parede ao longo de x (de x0 a x1, em z), da altura y0 até y1: `out` no lado `dir` (±1 em z) e `inside` no outro. */
+  // em 3ª pessoa a casa é inteira (paredes até o forro, telhado por cima): o corte escuro de maquete só aparece numa
+  // parede que não chega ao alto
   const wallX = (x0, x1, z, y0, y1, out, inside, insideDir, cut = false) => {
     if (x1 - x0 < 0.01 || y1 - y0 < 0.01) return;
     add(rb(x1 - x0, y1 - y0, t, 0.025, 1), { color: twoTone(out, inside, 0, insideDir), x: (x0 + x1) / 2, y: y0, z });
-    if (cut) add(rb(x1 - x0 + 0.01, 0.035, t + 0.012, 0.01, 1), { color: CUT, x: (x0 + x1) / 2, y: y1, z });
+    if (cut && y1 < WL.h - 0.01) add(rb(x1 - x0 + 0.01, 0.035, t + 0.012, 0.01, 1), { color: CUT, x: (x0 + x1) / 2, y: y1, z });
   };
   const wallZ = (z0, z1, x, y0, y1, out, inside, insideDir, cut = false) => {
     if (z1 - z0 < 0.01 || y1 - y0 < 0.01) return;
     add(rb(t, y1 - y0, z1 - z0, 0.025, 1), { color: twoTone(out, inside, insideDir, 0), x, y: y0, z: (z0 + z1) / 2 });
-    if (cut) add(rb(t + 0.012, 0.035, z1 - z0 + 0.01, 0.01, 1), { color: CUT, x, y: y1, z: (z0 + z1) / 2 });
+    if (cut && y1 < WL.h - 0.01) add(rb(t + 0.012, 0.035, z1 - z0 + 0.01, 0.01, 1), { color: CUT, x, y: y1, z: (z0 + z1) / 2 });
   };
   const W = L.WINDOW;
   // norte (inteira; o lado de fora é o −z): o vão do basculante no quarto
@@ -95,16 +97,33 @@ export function buildCasa(kit, root, L) {
   wallZ(H.z0, KD.hinge.z, H.x1, 0, WL.h, plaster, mint, 1, true);
   wallZ(KD.latchPost.z, RM.cozinha.z1, H.x1, 0, WL.h, plaster, mint, 1, true);
   wallZ(KD.hinge.z, KD.latchPost.z, H.x1, KD.h + 0.04, WL.h, plaster, mint, 1, true);
-  wallZ(RM.cozinha.z1, H.z1, H.x1, 0, WL.low, plaster, yellow, 1, true);
-  // sul (cortada)
-  wallX(H.x0, H.x1, H.z1, 0, WL.low, plaster, yellow, 1, true);
-  // de dentro (cortadas), com as passagens
+  wallZ(RM.cozinha.z1, H.z1, H.x1, 0, WL.h, plaster, yellow, 1, true);
+  // sul (inteira)
+  wallX(H.x0, H.x1, H.z1, 0, WL.h, plaster, yellow, 1, true);
+  // de dentro (inteiras), com as passagens e a verga em cima de cada uma
   const DQ = L.DOORWAYS.quartoCozinha, DS = L.DOORWAYS.cozinhaSala;
-  wallZ(H.z0, DQ.z0, DQ.x, 0, WL.low, mint, lilac, 1, true);
-  wallZ(DQ.z1, RM.quarto.z1, DQ.x, 0, WL.low, mint, lilac, 1, true);
-  wallX(H.x0, RM.quarto.x1, RM.quarto.z1, 0, WL.low, yellow, lilac, 1, true);
-  wallX(RM.cozinha.x0, DS.x0, RM.cozinha.z1, 0, WL.low, yellow, mint, 1, true);
-  wallX(DS.x1, H.x1, RM.cozinha.z1, 0, WL.low, yellow, mint, 1, true);
+  const PASS_H = 2.05;
+  wallZ(H.z0, DQ.z0, DQ.x, 0, WL.h, mint, lilac, 1, true);
+  wallZ(DQ.z1, RM.quarto.z1, DQ.x, 0, WL.h, mint, lilac, 1, true);
+  wallZ(DQ.z0, DQ.z1, DQ.x, PASS_H, WL.h, mint, lilac, 1, true);
+  wallX(H.x0, RM.quarto.x1, RM.quarto.z1, 0, WL.h, yellow, lilac, 1, true);
+  wallX(RM.cozinha.x0, DS.x0, RM.cozinha.z1, 0, WL.h, yellow, mint, 1, true);
+  wallX(DS.x1, H.x1, RM.cozinha.z1, 0, WL.h, yellow, mint, 1, true);
+  wallX(DS.x0, DS.x1, RM.cozinha.z1, PASS_H, WL.h, yellow, mint, 1, true);
+  // o forro (de dentro) e o telhado de duas águas (por fora): sem sombra própria, para o sol da cena continuar
+  // entrando nos cômodos (as cenas do quarto foram compostas assim)
+  const hw = H.x1 - H.x0, hd = H.z1 - H.z0;
+  const ceiling = new THREE.Mesh(new THREE.BoxGeometry(hw - t, 0.04, hd - t), new THREE.MeshStandardMaterial({ color: '#f6efe4', roughness: 0.9 }));
+  ceiling.name = 'recanto:forro';
+  ceiling.position.set((H.x0 + H.x1) / 2, WL.h - 0.02, (H.z0 + H.z1) / 2);
+  ceiling.receiveShadow = true;
+  keep(ceiling);
+  const roofGeo = gableRoof(hw + 0.6, hd + 0.6, 1.35);
+  const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ color: '#c4643f', roughness: 0.82 }));
+  roof.name = 'recanto:telhado';
+  roof.position.set((H.x0 + H.x1) / 2, WL.h, (H.z0 + H.z1) / 2);
+  roof.receiveShadow = true;
+  keep(roof);
   // rodapés de dentro (encostados nas paredes: dentro da colisão delas)
   const base = (x0, x1, z0, z1) => add(slab(Math.max(0.02, x1 - x0), 0.07, Math.max(0.02, z1 - z0)), { color: TRIM, x: (x0 + x1) / 2, y: 0.006, z: (z0 + z1) / 2 });
   base(H.x0 + t / 2, W.x0, H.z0 + t / 2, H.z0 + t / 2 + 0.018);
@@ -460,7 +479,7 @@ export function buildCasa(kit, root, L) {
         lever: () => lever.getWorldPosition(new THREE.Vector3()),
       },
     },
-    seeThrough: [door, sdoor, branch],
+    seeThrough: [door, sdoor, branch, ceiling, roof],
     signs: [],
     update(dt, tt) { handle.update?.(dt, tt); },
     reset() {

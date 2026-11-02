@@ -75,9 +75,10 @@ const stillLock = (c) => ({ action: 'none', faceX: c.x + Math.sin(c.yaw), faceZ:
 /**
  * @param {{ engine: import('../types').Engine, dogs: Record<import('../types').DogName, import('../types').DogModel>,
  *           levels: import('../types').LevelDef[], params?: URLSearchParams, hub?: import('../types').LevelDef | null,
- *           story?: import('../types').LevelDef | null }} opts
+ *           story?: import('../types').LevelDef | null, cameraRigs?: Record<string, (camera: any, layout: any, opts?: any) => any> }} opts
+ *   cameraRigs: câmeras além da de cima, pelo nome em layout.CAMERA.rig (o Modo História: 'third', a 3ª pessoa)
  */
-export function createGame({ engine, dogs, levels, params, hub = null, story = null }) {
+export function createGame({ engine, dogs, levels, params, hub = null, story = null, cameraRigs = {} }) {
   params = params || new URLSearchParams(location.search);
 
   // ---------- eventos (com registro para testes) ----------
@@ -1401,8 +1402,11 @@ export function createGame({ engine, dogs, levels, params, hub = null, story = n
         cancelBafo();
         cancelLick();
         locks.radhija = locks.rhaenyra = null;
-        if (!cam) {
-          cam = createCameraRig(engine.camera, L);
+        // a câmera da fase: a de cima (cameraRig) ou outra pelo nome no layout (a 3ª pessoa do Modo História)
+        const rigKind = cameraRigs[L.CAMERA?.rig] ? L.CAMERA.rig : 'iso';
+        if (!cam || (cam.kind || 'iso') !== rigKind) {
+          cam?.dispose?.();
+          cam = rigKind === 'iso' ? createCameraRig(engine.camera, L) : cameraRigs[rigKind](engine.camera, L, { element: engine.renderer?.domElement ?? null });
           // Planos de foco duram ~2 s: os testes conferem no log de depuração (não passa pelo barramento).
           const focusShot = cam.focusShot;
           cam.focusShot = (x, z, opts) => {
@@ -1410,6 +1414,7 @@ export function createGame({ engine, dogs, levels, params, hub = null, story = n
             focusShot(x, z, opts);
           };
         } else cam.configure(L);
+        cam.setWorld?.(world);
         if (!ctrls) ctrls = { radhija: createController('radhija', L.DOGS.radhija), rhaenyra: createController('rhaenyra', L.DOGS.rhaenyra) };
         if (!idle) idle = createIdle({ emit, ctrls, world: () => world, rims: () => ground?.rings ?? [] });
         idle.reset();
@@ -1598,7 +1603,8 @@ export function createGame({ engine, dogs, levels, params, hub = null, story = n
       cam.setZoom?.(look.zoom);
     }
     const away = look.enabled && look.away;
-    cam.update(dt, { t, target: { x: a.x + (look.enabled ? look.x : 0), z: a.z + (look.enabled ? look.z : 0), vx: away ? 0 : a.vx, vz: away ? 0 : a.vz } });
+    // y: a altura da dog (no terraço, no telhado, no pulo); só a câmera em 3ª pessoa usa
+    cam.update(dt, { t, target: { x: a.x + (look.enabled ? look.x : 0), y: (gnd[activeDog]?.y || 0) + Math.max(0, a.y || 0), z: a.z + (look.enabled ? look.z : 0), vx: away ? 0 : a.vx, vz: away ? 0 : a.vz } });
     dbg?.update(ctrls, brains, activeDog);
     input.endFrame();
   }

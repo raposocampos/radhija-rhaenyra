@@ -239,8 +239,7 @@ export function buildBase(kit, root, L) {
   wallRun(W.minX, W.minZ, L.GATE.x0, W.minZ, W.hNorth);
   wallRun(L.GATE.x1, W.minZ, W.maxX, W.minZ, W.hNorth);
   wallRun(W.maxX, W.minZ, W.maxX, W.maxZ, W.h);
-  // o do sul, cortado baixo: a câmera olha por cima dele para a garagem, a sala e o lago
-  wallRun(W.minX, W.maxZ, W.maxX, W.maxZ, W.hSouth ?? W.h);
+  wallRun(W.minX, W.maxZ, W.maxX, W.maxZ, W.h);
   // o oeste: do canto norte até a casa (a parede da casa faz o resto)
   wallRun(W.minX, W.minZ, W.minX, L.HOUSE.z0, W.h);
   // os pilares do portãozinho, mais altos, com luminárias acesas

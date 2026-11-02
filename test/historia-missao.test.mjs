@@ -9,11 +9,24 @@ import assert from 'node:assert/strict';
 import { createStoryGame, storyInfo, playScene, intrusions } from './helpers/historia.mjs';
 
 const near = (c, p, r) => Math.hypot(c.x - p.x, c.z - p.z) <= r;
+/**
+ * Segura uma direção do MUNDO (com as teclas extras) até `until` ou `sec` s, recalculando as teclas a cada quadro: em
+ * 3ª pessoa a câmera gira e a mesma tecla aponta para outro lado.
+ */
+function holdWorld(h, dir, sec, until, extra = []) {
+  const n = Math.max(1, Math.round(sec * 60));
+  let ok = false;
+  for (let i = 0; i < n; i++) {
+    h.hold(dir, extra);
+    h.step();
+    if (until(h)) { ok = true; break; }
+  }
+  h.hold(null);
+  return ok;
+}
 /** Segura a direção (do mundo) com Shift (empurrar) até `until` ou `sec` s. */
 function push(h, dir, sec, until) {
-  h.hold(dir, ['ShiftLeft']);
-  const ok = h.run(sec, { until: () => until(h) });
-  h.hold(null);
+  const ok = holdWorld(h, dir, sec, until, ['ShiftLeft']);
   h.run(0.2);
   return ok;
 }
@@ -96,8 +109,8 @@ test('missão do capítulo 1: os sete passos, do quarto ao portãozinho, o mural
   h.teleport('rhaenyra', TD.hinge.x - 0.36, (TD.hinge.z + TD.latchPost.z) / 2, Math.PI / 2);
   h.run(0.2);
   assert.ok(push(h, [1, 0], 4, () => h.puzzle.navFlags().towerOpen), 'a porta de mola abre com o empurrão');
+  holdWorld(h, [1, 0], 0.3, () => false, ['ShiftLeft']);
   h.hold([1, 0], ['ShiftLeft']);
-  h.run(0.3);
   h.tap('KeyQ'); // segurando: troca para a Radhija
   h.hold(null);
   assert.equal(h.game.activeDog, 'radhija');
@@ -298,9 +311,7 @@ test('paralelo C: a corda debaixo da caminhonete derruba o balde na bola; a port
   // ela vai até a corda (o passinho), morde e segura
   assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a corda na boca (fase ${storyInfo(h).tug})`);
   const lock = h.puzzle.lockFor('radhija');
-  h.hold([lock.pull.ax, lock.pull.az]);
-  assert.ok(h.run(6, { until: () => S().flags.ballClear }), 'puxando, o balde cai e a bola rola para longe da porta');
-  h.hold(null);
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.ballClear), 'puxando, o balde cai e a bola rola para longe da porta');
   h.run(0.3);
   assert.equal(h.puzzle.lockFor('radhija'), null, 'a corda solta sozinha');
   // agora a porta abre

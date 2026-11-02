@@ -137,7 +137,19 @@ ou não se entender, a história volta para revisão antes de seguir.
 - **Fluidez:** nenhum quadro longo com a câmera andando, e Faro legível no perfil `minima`.
 - **Teste do usuário** nos três aparelhos.
 
-## Etapa 2: a fatia jogável (abertura e cap. 1)
+## Câmera em 3ª pessoa (decisão de 2026-11-01)
+
+Depois de ver a prévia da fatia, o usuário mudou o escopo: **o Modo História é um jogo em 3ª pessoa.** Na câmera de
+cima, havia pontos do mapa ruins de enxergar.
+- **Como funciona:** a câmera fica atrás da cachorrinha ativa e gira livre: analógico direito, arrastar com o mouse ou
+  com o dedo na parte livre da tela, rodinha e pinça para aproximar. Ela desvia das paredes (o braço encurta) e não
+  passa do forro dentro dos cômodos. Quando a dog anda sem que a jogadora mexa na câmera, ela volta devagar para trás.
+- **Só no Modo História:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **No cenário:** a casa ficou inteira (paredes até o forro, vergas nas passagens, telhado), o muro do sul voltou à
+  altura e o depósito ganhou laje. As paredes da casa não projetam sombra, para o sol continuar entrando nos cômodos.
+  O recorte que deixa ver as dogs através do que as tapa continua valendo.
+- **Para depois, sem decisão:** levar o jogo para C++/engine, com build jogável.
+
 
 **Como abrir.** `?historia` numa prévia de PR ou na versão de desenvolvimento (`src/story/gate.js`). No link principal
 não abre nada. `?historia&stage=varal` começa numa etapa da missão (testes e revisão).
@@ -157,6 +169,8 @@ Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o pr
   (`scenes.js`) e a missão (`puzzle.js`).
 - No núcleo: a área carrega como fase especial fora da lista (`STORY = −2`, em `src/game/game.js`). Durante uma cena,
   `puzzle.cinematic()` segura a entrada e as dogs, e `puzzle.onFaro` recebe o botão do Faro.
+- `src/story/camera/thirdPerson.js`: a câmera em 3ª pessoa. O núcleo escolhe a câmera pelo layout
+  (`CAMERA.rig = 'third'`, com `createGame({ cameraRigs })`).
 
 **O capítulo 1.**
 - **A abertura**, com 6 beats e o primeiro Faro.

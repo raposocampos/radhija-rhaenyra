@@ -26,8 +26,7 @@ import { withStart } from '../../../dogs/config.js';
 /** Limites onde as dogs andam (a rua do lado de fora é só cenário: as cenas levam as dogs até lá). */
 export const WORLD = { bounds: { minX: -14.0, maxX: 14.0, minZ: -8.8, maxZ: 8.6 } };
 /** O muro do condomínio: as linhas de centro e a espessura; a altura (o do norte é mais baixo: a cidade aparece). */
-/** O do sul fica cortado baixo, como as paredes de maquete: a câmera olha sempre do sul, por cima dele. */
-export const WALL = { minX: -14.2, maxX: 14.2, minZ: -9.0, maxZ: 8.8, t: 0.24, h: 1.85, hNorth: 1.5, hSouth: 0.62 };
+export const WALL = { minX: -14.2, maxX: 14.2, minZ: -9.0, maxZ: 8.8, t: 0.24, h: 1.85, hNorth: 1.5 };
 /** O portãozinho de pedestres no muro norte (fechado até o porteiro abrir), ao lado da guarita. */
 export const GATE = { x0: 12.5, x1: 13.5, z: WALL.minZ, h: 1.45 };
 /** A folha do portãozinho: abre para dentro (para o sul), como as outras dobradiças (folha ao longo de −Z local). */
@@ -438,6 +437,20 @@ export const SUN = { direction: [0.62, 0.48, 0.42], color: '#ffd9a8', intensity:
 
 /** @type {import('../../../types').CameraConfig} */
 export const CAMERA = {
+  // Modo História em 3ª pessoa (src/story/camera/thirdPerson.js): atrás da dog, girando livre. offset/zones ficam para
+  // a câmera de cima (não usada aqui) e para os planos que não dizem de onde olham.
+  rig: 'third',
+  third: {
+    distance: 3.1, pitch: 0.34, fov: 54, pivotY: 0.5, lookY: 0.42,
+    heading: Math.atan2(-1.3, -4.8), // começa olhando para onde a câmera de cima olhava (o norte, um pouco a oeste)
+    // tetos: dentro deles a câmera não sobe além (casa, depósito, saguão da torre, guarita, casinha)
+    ceilings: [
+      { minX: HOUSE.x0, maxX: HOUSE.x1, minZ: HOUSE.z0, maxZ: HOUSE.z1, y: WALLS.h },
+      { minX: STORAGE.x0, maxX: STORAGE.x1, minZ: STORAGE.z0, maxZ: STORAGE.z1, y: STORAGE.h },
+      { minX: TOWER.x0, maxX: TOWER.x1, minZ: TOWER.z0, maxZ: TOWER.z1, y: TOWER.h },
+      { minX: BOOTH.x0, maxX: BOOTH.x1, minZ: BOOTH.z0, maxZ: BOOTH.z1, y: BOOTH.h },
+    ],
+  },
   fov: 38,
   offset: [1.3, 4.4, 4.8],
   lookHeight: 0.3,

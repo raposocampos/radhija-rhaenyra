@@ -40,6 +40,12 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     - `run-e2e.mjs` e `e2e.yml`: suíte `historia`.
   - Testes: `test/historia-{regras,layout,cenas,missao,cenario}.test.mjs`, a suíte `tools/scripts/test-historia.mjs`
     (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
+- **Mudança de escopo (2026-11-01, depois da prévia `1b02690`, que passou em CI, E2E historia e mapa):** o usuário
+  pediu o Modo História em **3ª pessoa**, com a câmera atrás da dog girando livre, só na história, e **segurou o #75**:
+  a 3ª pessoa entra no mesmo PR, com prévia nova antes do "pode integrar".
+  - Feito: `src/story/camera/thirdPerson.js`, a escolha da câmera pelo layout no `game.js` (`cameraRigs`) e a casa
+    inteira, com paredes, vergas, telhado e forro.
+  - Também: o muro sul na altura de antes, a laje do depósito e os testes `test/historia-camera.test.mjs`.
 - **PR #75** (branch `claude/historia-fatia`). Rodadas do CI:
   - `41277097555`: 17 erros de tipo, corrigidos;
   - `41277384381`: 10 testes falhando, corrigidos;

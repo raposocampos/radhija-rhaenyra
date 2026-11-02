@@ -40,6 +40,9 @@ export function buildWorld({ engine, root, layout }) {
     T('atores', () => buildAtores(root, L)),
   ];
   const merged = T('merge', () => kit.finish());
+  // 3ª pessoa: a casa é inteira (paredes até o forro). As paredes dela não projetam sombra própria, para o sol das
+  // cenas continuar entrando nos cômodos (o quarto da abertura foi composto assim, como a maquete aberta de antes).
+  for (const m of merged.meshes) if (/:casa$/.test(m.name)) m.castShadow = false;
   const treats = T('petiscos', () => buildTreats(root, L.COLLECTIBLES, { glow: 0.3 }));
   whenFontsReady(() => { for (const p of parts) for (const s of p.signs || []) s.redraw?.(); });
 

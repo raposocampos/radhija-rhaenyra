@@ -409,7 +409,16 @@ export function buildGaragem(kit, root, L) {
   wallPiece(X0, X0i, JAMB, LP.z, LINTEL, WALL_H, 1, 0); // a verga
   wallPiece(X0, X0i, LP.z, WALL.maxZ, 0, WALL_H, 1, 0); // oeste, ao sul da porta
   wallPiece(X1i, X1, Z0i, WALL.maxZ, 0, WALL_H, -1, 0); // leste, inteira (colisor 'deposito-leste')
-  // arremates no topo das três paredes (chegam a ST.h): o corte de maquete, sem telhado
+  // a laje do depósito (3ª pessoa: a câmera fica atrás da dog, de dentro ele precisa de teto)
+  {
+    const slabGeo = new THREE.BoxGeometry(ST.x1 - ST.x0 + 0.16, 0.08, WALL.maxZ - ST.z0 + 0.16);
+    const lid = new THREE.Mesh(slabGeo, new THREE.MeshStandardMaterial({ color: '#d9d2c4', roughness: 0.9 }));
+    lid.name = 'recanto:laje-deposito';
+    lid.position.set((ST.x0 + ST.x1) / 2, ST.h + 0.04, (ST.z0 + WALL.maxZ) / 2);
+    lid.receiveShadow = true;
+    root.add(lid);
+  }
+  // arremates no topo das três paredes (chegam a ST.h)
   put(rb(X1 - X0 + 0.04, 0.04, 0.2, 0.012, 1).translate(ST.x0 / 2 + ST.x1 / 2, WALL_H, ST.z0), CAPC);
   for (const x of [ST.x0, ST.x1]) put(rb(0.2, 0.04, WALL.maxZ - Z0i - 0.02, 0.012, 1).translate(x, WALL_H, (Z0i + 0.02 + WALL.maxZ) / 2), CAPC);
   // o cobogó no alto da parede leste (ventila o depósito), visto dos dois lados

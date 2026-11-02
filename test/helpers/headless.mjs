@@ -134,7 +134,9 @@ export async function createHeadlessGame({ level = 1, mode = 'play', query = '',
   const dogs = { radhija: (makeDog || stubDog)('radhija'), rhaenyra: (makeDog || stubDog)('rhaenyra') };
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
   const params = new URLSearchParams(query);
-  const game = createGame({ engine, dogs, levels: defs, params, hub, story: story ? await realStory(story) : null });
+  // com a área da história, a câmera em 3ª pessoa dela (layout.CAMERA.rig = 'third')
+  const cameraRigs = story ? { third: (await import('../../src/story/camera/thirdPerson.js')).createThirdPersonRig } : {};
+  const game = createGame({ engine, dogs, levels: defs, params, hub, story: story ? await realStory(story) : null, cameraRigs });
   // o progresso que o mapa lê (no jogo, o da UI)
   const save = { levels: {}, ...(progress || {}) };
   game.setProgressSource(() => save);

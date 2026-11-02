@@ -389,6 +389,14 @@ estrutura e etapas em [MODO-HISTORIA.md](MODO-HISTORIA.md).
 - **HUD** (`src/story/ui/`, carregado só com a história): faixas de cinema, preto, anel do pular, cartela do capítulo,
   aviso do primeiro Faro (tocável), lupa e meias, mural provisório e fim do capítulo. Ouve os eventos `story:*` do
   puzzle; a música troca por `story:music` (`main.js`).
+- **Câmera em 3ª pessoa** (`src/story/camera/thirdPerson.js`, só no Modo História): o núcleo escolhe a câmera pelo
+  layout (`CAMERA.rig`) entre as de `createGame({ cameraRigs })`. As fases e o mapa usam o `cameraRig` de sempre.
+  - Ela fica atrás da dog ativa e gira com o analógico direito, o arraste do mouse ou do dedo no canvas, a rodinha e a
+    pinça.
+  - O braço encurta antes de um colisor alto (pelo começo do id, `CAMERA.third.occluders`), e a câmera não passa dos
+    tetos de `CAMERA.third.ceilings`.
+  - Sem mexer na câmera, ela volta para trás da dog quando ela anda (`autoRecenter`; o E2E desliga).
+  - A entrada (`basis()`) gira junto. Os planos das cenas (`focusShot`) e o resto da API são os do `cameraRig`.
 - **A área** (`src/story/areas/recanto/`): `layout.js` (coordenadas, colisores, grafo e câmera, com a grade de
   colisão), `lighting.js` (manhã e noite), `world/` (cenário em zonas no kit do mapa: `base`, `casa`, `comum`, `leste`,
   `garagem`, `atores`), `scenes.js` (as seis cenas) e `puzzle.js` (a missão, os paralelos e as pistas). Nos testes,

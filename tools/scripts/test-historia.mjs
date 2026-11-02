@@ -55,6 +55,8 @@ try {
   await page.goto(BASE, { waitUntil: 'load', timeout: 120000 });
   await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
   await load('?historia');
+  // a câmera em 3ª pessoa fica no rumo inicial (o da câmera de cima): as teclas do harness contam com ele
+  await ev(() => { window.__game.game.debug.cam.autoRecenter = false; });
   let i = await info();
   check(await ev(() => window.__game.game.isStory), '?historia abre a área da história (prévia/desenvolvimento)');
   check(i.story?.scene === 'abertura', 'a abertura começa sozinha', i.story);

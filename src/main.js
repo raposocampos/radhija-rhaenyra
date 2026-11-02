@@ -62,12 +62,16 @@ async function boot() {
   // (?historia só numa prévia de PR ou no desenvolvimento: src/story/gate.js)
   const storyOn = storyEnabled(params, !!dev, BUILD_INFO, location.pathname);
   const storyMods = storyOn
-    ? await Promise.all([import('./story/areas/recanto/index.js'), import('./story/ui/storyHud.js')])
+    ? await Promise.all([import('./story/areas/recanto/index.js'), import('./story/ui/storyHud.js'), import('./story/camera/thirdPerson.js')])
     : null;
   mark('story');
 
   // o mapa das fases (Pandorópolis): Jogar → Fases, a pausa e a vitória levam a ele
-  const game = createGame({ engine, dogs, levels: LEVELS, params, hub: MAPA, story: storyMods?.[0].default ?? null });
+  // a área da história usa a câmera em 3ª pessoa (layout.CAMERA.rig = 'third'); as fases e o mapa, a de cima
+  const game = createGame({
+    engine, dogs, levels: LEVELS, params, hub: MAPA, story: storyMods?.[0].default ?? null,
+    cameraRigs: storyMods ? { third: storyMods[2].createThirdPersonRig } : {},
+  });
   const audio = createAudio();
   const particles = createParticles(engine);
   // opções salvas (modo sem dicas): a UI esconde objetivo e dicas, o feedback esconde o marcador do objetivo
