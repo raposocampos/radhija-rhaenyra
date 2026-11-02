@@ -7,11 +7,15 @@ on:
         description: Partida a verificar
         type: choice
         default: todas
-        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, mapa, recursos, carregamento, primeira-passagem]
+        options: [todas, fase1, fase2, fase3, fase4, fase5, controle, regressoes, pulo, bafo, porcos, expresso, lambe, toque, lavanderia, menu, extras, biblioteca, quintal, canil, empurra, mapa, historia, recursos, carregamento, primeira-passagem]
       qualidades:
         description: 'Primeira passagem: aparelhos (lista JSON entre alta, celular-media e celular-baixa)'
         type: string
         default: '["alta","celular-media","celular-baixa"]'
+      fases:
+        description: 'Primeira passagem: fases (lista JSON de 1 a 10; "historia" é a área do Modo História)'
+        type: string
+        default: '[1,2,3,4,5,6,7,8,9,10,"historia"]'
 
 permissions:
   contents: read
@@ -99,6 +103,40 @@ jobs:
           path: shots/resources*/
           if-no-files-found: error
           retention-days: 7
+  # Recursos da área do Modo História (tools/scripts/measure-resources.mjs com MEASURE_STORY=1): a área do Recanto
+  # alternando com a fase 1 (o platô dos recursos a cada visita) e o teto da fase 10 em chamadas de desenho e
+  # triângulos. Job próprio, em paralelo: o de "recursos" das fases fica como estava.
+  recursos-historia:
+    name: Recursos gráficos do Modo História
+    if: inputs.suite == 'todas' || inputs.suite == 'historia'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      MEASURE_STORY: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Gerar build de produção desta medição
+        run: npm run build
+      - name: Instalar Chromium e dependências Linux
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Medir a área da história contra o teto da fase 10
+        run: node tools/scripts/measure-resources.mjs
+      - name: Guardar medições e capturas mesmo em falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recursos-historia
+          path: shots/resources/
+          if-no-files-found: error
+          retention-days: 7
   # Estresse do primeiro boot (fora de "todas"): cada rodada sobe Vite e navegador novos e abre uma fase frio e
   # quente. Lotes 0–3: 25 rodadas, uma por vez, com o cache de dependências do Vite apagado a cada rodada (otimizador
   # frio, como na primeira suíte de cada job); lotes 4–7: 36 rodadas, três ao mesmo tempo (disputa de CPU). Reproduz
@@ -149,7 +187,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fase: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        fase: ${{ fromJSON(inputs.fases || '[1,2,3,4,5,6,7,8,9,10,"historia"]') }}
         qualidade: ${{ fromJSON(inputs.qualidades || '["alta","celular-media","celular-baixa"]') }}
     env:
       CI: 'true'
@@ -191,7 +229,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil","empurra","mapa"]' || format('["{0}"]', inputs.suite)) }}
+        suite: ${{ fromJSON(inputs.suite == 'todas' && '["fase1","fase2","fase3","fase4","fase5","controle","regressoes","pulo","bafo","porcos","expresso","lambe","toque","lavanderia","menu","extras","biblioteca","quintal","canil","empurra","mapa","historia"]' || format('["{0}"]', inputs.suite)) }}
     env:
       CI: 'true'
     steps:
@@ -243,6 +281,9 @@ jobs:
       - name: Capturas dos modelos das dogs (atual × novo) para revisão (qualidade visual completa)
         if: always() && matrix.suite == 'canil'
         run: node tools/scripts/capture-modelos.mjs
+      - name: Capturas do Modo História (capítulo 1) para revisão (qualidade de cada aparelho)
+        if: always() && matrix.suite == 'historia'
+        run: node tools/scripts/capture-historia.mjs
       - name: Guardar capturas para diagnóstico
         if: always()
         uses: actions/upload-artifact@v4

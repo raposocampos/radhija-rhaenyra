@@ -349,6 +349,12 @@ export function dashIcon() {
 export function pushIcon() {
   return stroke('<rect x="12.5" y="6" width="8.5" height="12" rx="1.6" fill="currentColor" fill-opacity=".22"/><path d="M2.8 12h7"/><path d="M7 8.6l3.3 3.4L7 15.4"/>');
 }
+/** Faro (Modo História): o focinho com as ondas do cheiro. */
+export function noseIcon() {
+  return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <ellipse cx="14.5" cy="13" rx="6" ry="4.6" fill="currentColor" fill-opacity=".22"/><ellipse cx="16.4" cy="12.2" rx="2.3" ry="1.7" fill="currentColor"/>
+  <path d="M6.4 8.6c-1.6 2.9-1.6 5.9 0 8.8"/><path d="M3.2 6.6c-2.4 4.3-2.4 8.5 0 12.8" opacity=".6"/></svg>`;
+}
 /** Trocar de cachorrinha: duas setas em círculo. */
 export function swapIcon() {
   return stroke('<path d="M16.5 3.8l3.2 3.2-3.2 3.2"/><path d="M19.5 7H9.2a5 5 0 0 0-5 5"/><path d="M7.5 20.2l-3.2-3.2 3.2-3.2"/><path d="M4.5 17h10.3a5 5 0 0 0 5-5"/>', 2.2);

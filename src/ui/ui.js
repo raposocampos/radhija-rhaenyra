@@ -221,13 +221,15 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
     $('.rr-logo__item').innerHTML = ico;
     $('.rr-logo__name').textContent = cur.name || '';
     $('.rr-level__item').innerHTML = ico;
-    $('.rr-level__num').textContent = `Fase ${cur.number}`;
+    // a área do Modo História (prévias: ?historia) é um capítulo, não uma fase
+    const tag = cur.story ? `Capítulo ${cur.number}` : `Fase ${cur.number}`;
+    $('.rr-level__num').textContent = tag;
     $('.rr-level__name').textContent = cur.name || '';
     hud.setTotalLabel(cur.total);
     $('.rr-celebrate__item').innerHTML = ico;
     $('.rr-celebrate__text').textContent = cur.texts.celebrate || 'Eba! Missão cumprida!';
     $('.rr-victory__badge').innerHTML = ico;
-    $('.rr-pause__level').innerHTML = `${ico}<span>Fase ${cur.number} · ${esc(cur.name)}</span>`;
+    $('.rr-pause__level').innerHTML = `${ico}<span>${tag} · ${esc(cur.name)}</span>`;
     root.dataset.level = cur.id || '';
     renderIntro();
     renderCards();
@@ -235,7 +237,7 @@ export function createUI({ audio, layout, levels, params, unlockAll = false, inp
 
   function renderIntro() {
     $('.rr-introcard__badge').innerHTML = itemIcon(cur.item);
-    $('.rr-introcard__eyebrow').textContent = `Fase ${cur.number}`;
+    $('.rr-introcard__eyebrow').textContent = cur.story ? `Capítulo ${cur.number}` : `Fase ${cur.number}`;
     $('.rr-introcard__name').textContent = cur.name || '';
     $('.rr-introcard__sub').textContent = cur.subtitle || '';
     $('.rr-introcard__text').textContent = cur.intro || '';

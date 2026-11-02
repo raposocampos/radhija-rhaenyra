@@ -1,0 +1,95 @@
+// RECANTO DAS PATINHAS — o cenário do capítulo 1 (Modo História). Coordenadas em ../layout.js.
+// API: buildWorld({ engine, root, layout }) → { props: RecantoProps, seeThrough, env, update(dt, t), dispose() }.
+// Peças fixas entram no kit do mapa das fases (src/levels/mapa/world/kit.js): uma malha por material e por ZONA (um
+// grupo com nome por lugar), então a área inteira sai em poucas dezenas de desenhos e o recorte da câmera tira as
+// zonas fora de vista. O que se mexe (portas, galho, lixeira, barquinho, balde, bola, pombos, cenoura, mãos) fica em
+// malhas próprias, com o lado de animar em `props`.
+//   base.js     gramado, caminhos, muro, portãozinho, a rua e a cidade ao fundo, árvores, postes, bancos, cartazes, entulho
+//   casa.js     a casa em corte (quarto, cozinha, sala) e o quintal (porta da área de serviço, galho, telhas, casinha)
+//   comum.js    a piscina, a área de serviço (tanques, varal) e a torre (porta de mola, terraço, caixa d'água)
+//   leste.js    a guarita (toldo, antena, radinho), a lixeira, o lago (ilha, píer, barquinho)
+//   garagem.js  a garagem (caminhonete, depósito, prateleira com o balde, bola, corda)
+//   atores.js   o Esquadrão Migalha (Capitão, Farelo, Soneca), a cenoura de borracha, as mãos e pés humanos, a chuva
+// A sombra do sol cobre só a vizinhança do que a câmera olha (engine.focusShadow), como no mapa.
+import { shared } from '../../../../world/util.js';
+import { buildTreats } from '../../../../world/treats.js';
+import { createKit, whenFontsReady } from '../../../../levels/mapa/world/kit.js';
+import { buildBase } from './base.js';
+import { buildCasa } from './casa.js';
+import { buildComum } from './comum.js';
+import { buildLeste } from './leste.js';
+import { buildGaragem } from './garagem.js';
+import { buildAtores } from './atores.js';
+
+/**
+ * @param {import('../../../../types').LevelBuildArgs} args
+ */
+export function buildWorld({ engine, root, layout }) {
+  const L = layout;
+  /** @type {Record<string, number>} */
+  const timings = {};
+  /** @template T @param {string} name @param {() => T} fn @returns {T} */
+  const T = (name, fn) => { const t0 = performance.now(); const v = fn(); timings[name] = Math.round(performance.now() - t0); return v; };
+  const kit = createKit(root);
+  const parts = [
+    T('base', () => buildBase(kit, root, L)),
+    T('casa', () => buildCasa(kit, root, L)),
+    T('comum', () => buildComum(kit, root, L)),
+    T('leste', () => buildLeste(kit, root, L)),
+    T('garagem', () => buildGaragem(kit, root, L)),
+    T('atores', () => buildAtores(root, L)),
+  ];
+  const merged = T('merge', () => kit.finish());
+  // 3ª pessoa: a casa é inteira (paredes até o forro). As paredes dela não projetam sombra própria, para o sol das
+  // cenas continuar entrando nos cômodos (o quarto da abertura foi composto assim, como a maquete aberta de antes).
+  for (const m of merged.meshes) if (/:casa$/.test(m.name)) m.castShadow = false;
+  const treats = T('petiscos', () => buildTreats(root, L.COLLECTIBLES, { glow: 0.3 }));
+  whenFontsReady(() => { for (const p of parts) for (const s of p.signs || []) s.redraw?.(); });
+
+  /** Os props de todas as peças juntos (cada peça devolve os seus). */
+  const props = Object.assign({}, ...parts.map((p) => p.props || {}));
+  props.collectibles = treats.list;
+  props.update = () => {};
+  props.reset = () => { for (const p of parts) p.reset?.(); };
+
+  const off = L.CAMERA.offset;
+  return {
+    props,
+    env: { timings, meshes: merged.meshes.length, groups: Object.keys(merged.groups) },
+    // o que fica em pé pode ficar entre a câmera e as dogs (o chão e a água não)
+    seeThrough: [
+      ...merged.meshes.filter((m) => !/:(ground|plant):/.test(m.name)),
+      ...parts.flatMap((p) => p.seeThrough || []),
+    ],
+    update(dt, t) {
+      shared.time.value = t;
+      treats.update(dt, t);
+      for (const p of parts) p.update?.(dt, t);
+      // a sombra acompanha o ponto que a câmera olha (a câmera fica a `offset` dele)
+      const c = engine?.camera?.position;
+      if (c) engine.focusShadow?.(c.x - off[0], c.z - off[2], { half: 12, top: 10 });
+    },
+    dispose() { for (const p of parts) p.dispose?.(); },
+  };
+}
+
+/**
+ * Props do Recanto (o que o puzzle anima). Cada peça do cenário devolve uma parte.
+ * @typedef {{
+ *   kitchenDoor: import('../../../../types').GateProp, kitchenHandle: import('../../../../types').WallButtonProp,
+ *   serviceDoor: import('../../../../types').GateProp, branch: { object: import('three').Object3D, setPos(x: number, z: number): void },
+ *   windowLeaf: { object: import('three').Object3D, setOpen(t: number): void }, bowl: { object: import('three').Object3D, setTipped(k: number): void },
+ *   bedCarrot: { object: import('three').Object3D, setVisible(on: boolean): void },
+ *   towerDoor: import('../../../../types').GateProp, gateLeaf: import('../../../../types').GateProp,
+ *   line: { object: import('three').Object3D, shake(k: number): void, setPin(open: number): void },
+ *   bin: { object: import('three').Object3D, setPos(x: number, z: number): void },
+ *   boat: { object: import('three').Object3D, setPos(x: number, z: number, y?: number, tilt?: number): void },
+ *   booth: { radio: { setOn(on: boolean): void }, windowAnchor: { x: number, y: number, z: number } },
+ *   bucket: { object: import('three').Object3D, setTip(t: number): void }, ball: { object: import('three').Object3D, setPos(x: number, z: number, y?: number, spin?: number): void },
+ *   rope: { object: import('three').Object3D, setPull(k: number): void, setGrip(src: (() => any) | null): void, bitePoint(): { x: number, y: number, z: number } },
+ *   storageDoor: import('../../../../types').GateProp,
+ *   socks: { id: string, object: import('three').Object3D, collect(): void, reset(): void }[],
+ *   squad: any, carrot: any, humans: any, ghosts: any, rain: any, city: any,
+ *   collectibles: import('../../../../types').CollectibleProp[]
+ * }} RecantoProps
+ */

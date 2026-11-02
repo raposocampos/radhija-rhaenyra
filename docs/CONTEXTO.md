@@ -1,8 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-30, Claude**.
-- **Modo História, etapa 1:** o roteiro de "As Aventuras de Radhija & Rhaenyra" (branch `claude/historia-do-jogo`,
-  aguardando aprovação).
+Última atualização: **2026-11-02, Claude**.
+- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), agora em 3ª pessoa, branch `claude/historia-fatia`
+  (PR #75), à espera da prévia nova e do "pode integrar".
+- **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
 - **#71, menu novo e trilha:** etapa 4 de 4 da interface, em v0.10.21 · build 113.
@@ -14,7 +15,82 @@
 
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: Modo História, etapa 1, o roteiro (Claude, branch `claude/historia-do-jogo`)
+## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+- **Pedido (2026-10-31, pelo orquestrador, com o roteiro do #74):** a abertura "A noite da garoa" e o cap. 1 "Cadê a
+  Cenoura?" jogáveis, só pela entrada das prévias. A etapa é um portão: se não divertir ou não se entender, a história
+  volta para revisão.
+- **Decisões do usuário nesta sessão (2026-11-01):**
+  - o Faro fica no V, no L3 e num botão de focinho no toque;
+  - as seis decisões padrão do roteiro valem.
+  - O conceito (abertura, planta da área, puzzles, Faro, Reconstrução, HUD, mural e trilha) foi mostrado numa página
+    privada, fora do repositório.
+- **Feito (sem commit até este registro):**
+  - `src/story/`: kit de cenas, Faro e Reconstrução, lupa, regras do mural, HUD, entrada (`gate.js`) e a área
+    `areas/recanto/`.
+    - O cenário foi feito em seis zonas; três delas (`comum`, `leste` e `garagem`) por subagentes.
+    - São seis cenas, a missão de 7 passos, 3 puzzles paralelos, 3 meias, 4 petiscos e 2 pistas escondidas.
+  - Sons da história em `src/fx/audio/soundsHistoria.js` e dois temas novos em `themes.js`: `recanto` (clarinete) e
+    `misterio`.
+  - Núcleo, só acréscimos, avisados ao orquestrador:
+    - `game.js`: índice `STORY`, `cinematic()`, `onFaro` e `lie`/`look` na trava;
+    - `main.js`: `?historia` só em prévia ou desenvolvimento;
+    - `input.js`: L3 e o toque viram `Faro`;
+    - `touchControls`, `ui.js`, `ui.css`, `feedback.js` e `types.d.ts`;
+    - `test/helpers/headless.mjs`: opção `story`;
+    - `run-e2e.mjs` e `e2e.yml`: suíte `historia`.
+  - Testes: `test/historia-{regras,layout,cenas,missao,cenario}.test.mjs`, a suíte `tools/scripts/test-historia.mjs`
+    (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
+- **Mudança de escopo (2026-11-01, depois da prévia `1b02690`, que passou em CI, E2E historia e mapa):** o usuário
+  pediu o Modo História em **3ª pessoa**, com a câmera atrás da dog girando livre, só na história, e **segurou o #75**:
+  a 3ª pessoa entra no mesmo PR, com prévia nova antes do "pode integrar". Levar o jogo para C++ ou uma engine
+  ficou para depois, sem decisão.
+  - Feito no `bb819a4`: `src/story/camera/thirdPerson.js` e a escolha da câmera pelo layout no `game.js`
+    (`cameraRigs`; o `cameraRig.js` das fases não mudou).
+    - No cenário: a casa inteira (paredes, vergas, telhado e forro), o muro sul na altura e a laje do depósito.
+    - Testes em `test/historia-camera.test.mjs`.
+  - Feito em 2026-11-02 (condições do orquestrador):
+    - o clique do analógico direito logo depois de girar não vale como botão;
+    - arraste do mouse e do dedo só na parte livre da tela, com captura do ponteiro (só passar o mouse não gira);
+    - teto também na garagem;
+    - corte de desenho em 72 m, depois da névoa;
+    - a câmera volta suave para trás da dog no fim das cenas;
+    - o Faro em contas de luz acima do chão;
+    - a medição confere o pior quadro em 3ª pessoa (quatro rumos e o horizonte) contra o teto da fase 10;
+    - o E2E arrasta com o dedo e com o mouse;
+    - a decisão foi registrada em HISTORIA e MODO-HISTORIA.
+- **PR #75** (branch `claude/historia-fatia`). Rodadas do CI:
+  - `41277097555`: 17 erros de tipo, corrigidos;
+  - `41277384381`: 10 testes falhando, corrigidos;
+  - `41321935257`: 3 testes falhando (o z-fighting das janelas da torre, a conta da porta da casinha e o
+    portãozinho, que só abria a colisão 1,4 s depois do porteiro), corrigidos no commit seguinte.
+  - O resultado do CI desse último commit deve ser conferido no GitHub.
+- **Revisão do orquestrador (sobre o `a16c1a8`, conferida no `b47c4e3`):** as condições dos arquivos compartilhados
+  estão cumpridas. Ajustes feitos:
+  - a medição da história só com `MEASURE_STORY=1`, no job próprio `recursos-historia`;
+  - a decisão inteira da entrada em `storyEnabled` (`src/story/gate.js`), com teste da produção;
+  - o Faro na tabela de entrada da ARQUITETURA;
+  - o cabeçalho das regras do mural.
+- **Validação local:** só `node --check` e uma verificação curta da área no Node (carrega, pula a abertura e passa
+  pelas etapas sem ninguém atravessar nada).
+- **Próximo passo:**
+  1. CI verde no commit novo da 3ª pessoa.
+  2. E2E no mesmo commit: `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`, e
+     também `mapa` e `controle`, porque a ligação da câmera e da entrada no `game.js` mudou.
+  3. Revisar as capturas da 3ª pessoa.
+  4. Entregar a prévia nova ao usuário, com o que testar: PC, iPhone 13 e Android pequeno, de pé e deitado, e
+     Pandorópolis igual. Avisar o orquestrador.
+  - Integrar só com o "pode integrar" do próprio usuário nesta sessão.
+
+## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`, deploy `41268345237`, v0.10.24 · build 116)
+
+- Integrado com o "pode integrar" do usuário (no chat do orquestrador): squash `00d393d`, CI do `main` `41268192608`,
+  deploy `41268345237`. O `version.json` no ar mostra v0.10.24 · build 116, commit `00d393d` (conferido pelo
+  orquestrador).
+- O usuário confirmou as seis decisões padrão ("pode manter as decisões padrão"). O registro está em
+  [HISTORIA.md](HISTORIA.md) e [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- O histórico abaixo é o da entrega.
+
 
 - **Pedido do usuário (2026-10-29):** "Vamos escrever a história do Game".
 - **Como o roteiro foi decidido:**
@@ -52,12 +128,8 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   - nenhum nome com duplo sentido. O usuário reprovou um nome por isso; a mãe dos pombos é a Dona Pluma e o filhote,
     o Fiapo.
 - **Validação:** só documentação, sem teste local nem E2E. Os checks `testes-e-build` e `publicar-site` rodam no PR.
-- **Para o usuário confirmar no storyboard:**
-  - as 6 decisões padrão do roteiro;
-  - a voz "uá-uá";
-  - a duração dos capítulos;
-  - o botão do Faro.
-- **Próximo passo:** PR, checks e o "pode integrar" do usuário. Depois, a etapa 2 (fatia jogável) numa sessão própria.
+- **Confirmado em 2026-11-01:** as 6 decisões padrão do roteiro e o botão do Faro (V, L3 e o focinho no toque).
+- **Ainda em aberto:** a voz "uá-uá", a duração dos capítulos e o ângulo de câmera do mapa-múndi.
 
 ## Entregue: privacidade, os docs sem dizer de quem são as cachorras (Claude, PR #73, squash `c379e0f`, deploy `40994221500`, v0.10.23 · build 115)
 

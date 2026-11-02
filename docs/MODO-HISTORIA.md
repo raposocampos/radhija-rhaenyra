@@ -1,12 +1,13 @@
 # Modo História: visão de design
 
-Situação: **enredo aprovado no plano em 2026-10-29. O storyboard e as seis decisões padrão aguardam confirmação, e
-nada foi implementado.**
+Situação: **etapa 1 (roteiro) integrada no PR #74. Etapa 2 (fatia jogável) em construção: em 2026-11-01 o usuário
+confirmou as seis decisões padrão e escolheu o botão do Faro (V, L3 e o botão do focinho no toque). No mesmo dia,
+pediu o Modo História em 3ª pessoa (veja "Câmera em 3ª pessoa").**
 - O roteiro completo ("As Aventuras de Radhija & Rhaenyra": enredo, elenco, casos, capítulos e mapa-múndi) está em
   [HISTORIA.md](HISTORIA.md).
 - Este documento trata da estrutura, do desempenho, do progresso e das etapas de entrega.
 - No menu (Jogar), o cartão "Modo História" ainda mostra o selo "Em breve" e não abre nada (`MODES.story` em
-  `src/ui/markup.js`).
+  `src/ui/markup.js`). A fatia da etapa 2 abre só pela entrada das prévias: `?historia` (veja "Etapa 2" abaixo).
 
 ## O que o usuário pediu
 
@@ -137,18 +138,86 @@ ou não se entender, a história volta para revisão antes de seguir.
 - **Fluidez:** nenhum quadro longo com a câmera andando, e Faro legível no perfil `minima`.
 - **Teste do usuário** nos três aparelhos.
 
-## Em aberto com o usuário
+## Câmera em 3ª pessoa (decisão de 2026-11-01)
 
-**As seis decisões padrão do roteiro,** listadas em [HISTORIA.md](HISTORIA.md):
-- mistério de verdade;
-- prazo visível;
-- fatia jogável primeiro;
-- núcleo de 4 capítulos;
-- Faro em pulso;
-- custo do erro no mural.
+Depois de ver a prévia da fatia, o usuário mudou o escopo: **o Modo História é um jogo em 3ª pessoa.** Na câmera de
+cima, havia pontos do mapa ruins de enxergar.
+- **Como funciona:** a câmera fica atrás da cachorrinha ativa e gira livre: analógico direito, arrastar com o mouse ou
+  com o dedo na parte livre da tela, rodinha e pinça para aproximar. Ela desvia das paredes (o braço encurta) e não
+  passa do forro dentro dos cômodos. Quando a dog anda sem que a jogadora mexa na câmera, ela volta devagar para trás.
+- **Só no Modo História:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **Nas cenas:** os planos do diretor assumem a câmera. No fim (assistida ou pulada), ela volta suave para trás da
+  dog ativa, em 0,6 s, sem trava sobrando.
+- **Toque e mouse:** o dedo só gira a câmera na parte livre da tela (o joystick e os botões ficam com o dedo deles).
+  O arraste segue o dedo ou o mouse mesmo passando por cima do HUD. Só passar o mouse por cima não gira, e nada pede
+  permissão ao navegador (sem trava do ponteiro).
+- **Controle:** o analógico direito gira a câmera (nas fases, ele continua olhando em volta). Um clique sem querer
+  nele, logo depois de girar, não vale como botão.
+- **Distância de desenho:** a câmera corta o que está além de 72 m, depois da névoa (que acaba em 64 m de dia). O
+  Faro virou contas de luz um pouco acima do chão, legíveis de lado, sem pós-processamento.
+- **Orçamento:** a medição de recursos confere o pior quadro da 3ª pessoa em vários pontos do mapa (atrás da dog
+  olhando para os quatro lados, e quase rente ao chão olhando o horizonte) contra o teto da fase 10.
+- **No cenário:** a casa ficou inteira (paredes até o forro, vergas nas passagens, telhado), o muro do sul voltou à
+  altura e o depósito ganhou laje. As paredes da casa não projetam sombra, para o sol continuar entrando nos cômodos.
+  O recorte que deixa ver as dogs através do que as tapa continua valendo.
+- **Para depois, sem decisão:** levar o jogo para C++/engine, com build jogável.
+
+
+**Como abrir.** `?historia` numa prévia de PR ou na versão de desenvolvimento (`src/story/gate.js`). No link principal
+não abre nada. `?historia&stage=varal` começa numa etapa da missão (testes e revisão).
+
+**Controles novos.** Faro: V, L3 ou o botão do focinho no toque (só com a Radhija). Pular cena: segurar E (ou Espaço,
+Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o próprio aviso do Faro também é tocável.
+
+**Onde está cada coisa:**
+- `src/story/scene/`: o kit de cenas. O sequenciador de beats (`sequencer.js`) põe o que fica de permanente no commit, e
+  por isso pular e assistir dão no mesmo. Também o diretor (câmera, dogs, balões, sons), os balões de ícone num atlas
+  só, o pular segurando, o clima (noite e manhã sem recompilar sombreadores) e as mãos e pés humanos.
+- `src/story/faro/`: o pulso do Faro, sem pós-processamento (véu na tela e trilhas aditivas), e a Reconstrução com
+  silhuetas translúcidas e animação gravada.
+- `src/story/clues.js` e `src/story/mural/rules.js`: o catálogo das pistas, a lupa e as regras do mural.
+- `src/story/ui/`: o HUD da história (faixas, cartela, aviso do Faro, lupa, meias, mural provisório e fim do capítulo).
+- `src/story/areas/recanto/`: o Recanto das Patinhas, com layout, iluminação, cenário em zonas (`world/`), as seis cenas
+  (`scenes.js`) e a missão (`puzzle.js`).
+- No núcleo: a área carrega como fase especial fora da lista (`STORY = −2`, em `src/game/game.js`). Durante uma cena,
+  `puzzle.cinematic()` segura a entrada e as dogs, e `puzzle.onFaro` recebe o botão do Faro.
+- `src/story/camera/thirdPerson.js`: a câmera em 3ª pessoa. O núcleo escolhe a câmera pelo layout
+  (`CAMERA.rig = 'third'`, com `createGame({ cameraRigs })`).
+
+**O capítulo 1.**
+- **A abertura**, com 6 beats e o primeiro Faro.
+- **A missão**, em 7 passos:
+  1. a maçaneta da cozinha;
+  2. o galho e a porta da área de serviço;
+  3. o Faro na piscina, que mostra a Reconstrução;
+  4. a arrancada no poste do varal;
+  5. a porta de mola da torre, com a irmã segurando, até o terraço;
+  6. o porteiro, que só acorda com o latido grave da Rhaenyra;
+  7. o portãozinho.
+- **Os três puzzles paralelos:**
+  - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
+  - a lixeira e o toldo até a meia da antena;
+  - a corda, o balde e a bola até a meia do depósito.
+- **Pistas:** as obrigatórias, as de cena e duas escondidas (a baba e o ralo).
+- **Colecionáveis:** três meias e quatro petiscos.
+- **O fim:** o mural provisório, só com o caso 3, e a tela de fim do capítulo.
+
+**Verificação.**
+- **Testes unitários no CI** (`test/historia-*.test.mjs`):
+  - regras do mural e da lupa;
+  - mapa da área;
+  - cada cena assistida × pulada;
+  - travas e "ninguém atravessa nada" quadro a quadro;
+  - a missão e os paralelos com os controles de verdade;
+  - o cenário (z-fighting e colisores).
+- **E2E** na suíte `historia` do workflow manual, com capturas nos 11 tamanhos de tela. Nos de toque, um dedo de
+  verdade arrastado na parte livre gira a câmera e, no joystick, não gira. No PC, o arraste do mouse gira e só passar o
+  mouse por cima, não.
+- **Capturas de revisão** em qualidade cheia (`capture-historia.mjs`).
+
+## Em aberto com o usuário
 
 **Ainda por decidir:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o botão do Faro;
-- o ângulo de câmera do mapa-múndi.
+- o ângulo de câmera do mapa-múndi (a 3ª pessoa vale dentro das áreas).
