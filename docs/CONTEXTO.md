@@ -1,7 +1,8 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-11-01, Claude**.
-- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), branch `claude/historia-fatia`, em construção.
+Última atualização: **2026-11-02, Claude**.
+- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), agora em 3ª pessoa, branch `claude/historia-fatia`
+  (PR #75), à espera da prévia nova e do "pode integrar".
 - **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
@@ -42,10 +43,22 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
 - **Mudança de escopo (2026-11-01, depois da prévia `1b02690`, que passou em CI, E2E historia e mapa):** o usuário
   pediu o Modo História em **3ª pessoa**, com a câmera atrás da dog girando livre, só na história, e **segurou o #75**:
-  a 3ª pessoa entra no mesmo PR, com prévia nova antes do "pode integrar".
-  - Feito: `src/story/camera/thirdPerson.js`, a escolha da câmera pelo layout no `game.js` (`cameraRigs`) e a casa
-    inteira, com paredes, vergas, telhado e forro.
-  - Também: o muro sul na altura de antes, a laje do depósito e os testes `test/historia-camera.test.mjs`.
+  a 3ª pessoa entra no mesmo PR, com prévia nova antes do "pode integrar". Levar o jogo para C++ ou uma engine
+  ficou para depois, sem decisão.
+  - Feito no `bb819a4`: `src/story/camera/thirdPerson.js` e a escolha da câmera pelo layout no `game.js`
+    (`cameraRigs`; o `cameraRig.js` das fases não mudou).
+    - No cenário: a casa inteira (paredes, vergas, telhado e forro), o muro sul na altura e a laje do depósito.
+    - Testes em `test/historia-camera.test.mjs`.
+  - Feito em 2026-11-02 (condições do orquestrador):
+    - o clique do analógico direito logo depois de girar não vale como botão;
+    - arraste do mouse e do dedo só na parte livre da tela, com captura do ponteiro (só passar o mouse não gira);
+    - teto também na garagem;
+    - corte de desenho em 72 m, depois da névoa;
+    - a câmera volta suave para trás da dog no fim das cenas;
+    - o Faro em contas de luz acima do chão;
+    - a medição confere o pior quadro em 3ª pessoa (quatro rumos e o horizonte) contra o teto da fase 10;
+    - o E2E arrasta com o dedo e com o mouse;
+    - a decisão foi registrada em HISTORIA e MODO-HISTORIA.
 - **PR #75** (branch `claude/historia-fatia`). Rodadas do CI:
   - `41277097555`: 17 erros de tipo, corrigidos;
   - `41277384381`: 10 testes falhando, corrigidos;
@@ -61,10 +74,12 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
 - **Validação local:** só `node --check` e uma verificação curta da área no Node (carrega, pula a abertura e passa
   pelas etapas sem ninguém atravessar nada).
 - **Próximo passo:**
-  1. CI verde;
-  2. E2E `historia` (com `recursos-historia`) e, se der, a primeira passagem `historia`;
-  3. revisar as capturas;
-  4. entregar a prévia ao usuário, com o que testar nos três aparelhos.
+  1. CI verde no commit novo da 3ª pessoa.
+  2. E2E no mesmo commit: `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`, e
+     também `mapa` e `controle`, porque a ligação da câmera e da entrada no `game.js` mudou.
+  3. Revisar as capturas da 3ª pessoa.
+  4. Entregar a prévia nova ao usuário, com o que testar: PC, iPhone 13 e Android pequeno, de pé e deitado, e
+     Pandorópolis igual. Avisar o orquestrador.
   - Integrar só com o "pode integrar" do próprio usuário nesta sessão.
 
 ## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`, deploy `41268345237`, v0.10.24 · build 116)

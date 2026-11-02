@@ -449,6 +449,7 @@ export const CAMERA = {
       { minX: STORAGE.x0, maxX: STORAGE.x1, minZ: STORAGE.z0, maxZ: STORAGE.z1, y: STORAGE.h },
       { minX: TOWER.x0, maxX: TOWER.x1, minZ: TOWER.z0, maxZ: TOWER.z1, y: TOWER.h },
       { minX: BOOTH.x0, maxX: BOOTH.x1, minZ: BOOTH.z0, maxZ: BOOTH.z1, y: BOOTH.h },
+      { minX: CARPORT.x0, maxX: CARPORT.x1, minZ: CARPORT.z0, maxZ: CARPORT.z1, y: CARPORT.h },
     ],
   },
   fov: 38,

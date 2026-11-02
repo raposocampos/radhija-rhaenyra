@@ -28,6 +28,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   const cfg = {
     distance: 3.1, pitch: 0.34, minPitch: 0.04, maxPitch: 1.05, fov: 54, pivotY: 0.5, lookY: 0.42, heading: Math.PI,
     occluders: DEFAULT_OCCLUDERS, ceilings: [], probe: 0.16, minDist: 0.15, lift: 0.8,
+    far: 72, // a 3ª pessoa olha o horizonte: além da névoa nada se desenha
   };
   const title = { center: { x: 0, z: 0 }, radius: 5, angle: 0.4, height: 2.4, look: { x: 0, y: 0.6, z: 0 } };
   const celebrate = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
@@ -41,6 +42,9 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     if (C.celebrate) { celebrate.pos.set(...C.celebrate.pos); celebrate.look.set(...C.celebrate.look); }
   }
   configure(layout);
+  const farBefore = camera.far;
+  camera.far = cfg.far;
+  camera.updateProjectionMatrix();
 
   // ---------------------------------------------------------------- estado
   let heading = cfg.heading; // para onde a câmera olha, no plano (0 = +z)
@@ -52,7 +56,9 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   const pivotTarget = new THREE.Vector3();
   let switchT = 0;
   let sinceInput = 99;
-  // voltar sozinha para trás da dog (as partidas automáticas do E2E desligam: as teclas delas contam com um rumo fixo)
+  let sinceStick = 99; // desde o último giro pelo analógico direito (o clique dele logo depois não vale como botão)
+  // a câmera gira sozinha para trás da dog (andando e no fim das cenas). As partidas automáticas do E2E desligam: as
+  // teclas delas contam com um rumo fixo.
   let autoRecenter = true;
   let lastUpdate = -1;
   let mode = 'title';
@@ -72,6 +78,8 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   let pinch0 = 0;
   const onDown = (e) => {
     if (e.button > 0 && e.pointerType === 'mouse') return;
+    // o arraste segue com o canvas mesmo passando por cima do HUD (e o soltar chega aqui, onde quer que seja)
+    try { element.setPointerCapture?.(e.pointerId); } catch { /* sem captura: o soltar fora ainda é conferido no mover */ }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse' });
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
@@ -81,6 +89,8 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   const onMove = (e) => {
     const p = pointers.get(e.pointerId);
     if (!p) return;
+    // mouse sem o botão apertado: o soltar se perdeu (fora da janela); passar o mouse por cima não gira a câmera
+    if (!p.touch && !(e.buttons & 1)) { onUp(e); return; }
     if (pointers.size === 2) {
       p.x = e.clientX;
       p.y = e.clientY;
@@ -103,6 +113,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     element.addEventListener('pointermove', onMove);
     element.addEventListener('pointerup', onUp);
     element.addEventListener('pointercancel', onUp);
+    element.addEventListener('lostpointercapture', onUp);
     element.addEventListener('wheel', onWheel, { passive: true });
   }
 
@@ -187,6 +198,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
       try { g = readGamepad(); } catch { g = null; }
       const sx = g?.connected ? g.stick2?.x ?? 0 : 0;
       const sy = g?.connected ? g.stick2?.y ?? 0 : 0;
+      if (Math.hypot(sx, sy) > 0.15) sinceStick = 0;
       const dy = drag.yaw - sx * 2.4 * dt;
       const dp = drag.pitch - sy * 1.5 * dt;
       if (Math.abs(dy) > 1e-5 || Math.abs(dp) > 1e-5) { heading = wrap(heading + dy); pitch = clamp(pitch + dp, cfg.minPitch, cfg.maxPitch); moved = true; }
@@ -194,6 +206,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     }
     drag.yaw = drag.pitch = drag.zoom = 0;
     sinceInput = moved ? 0 : sinceInput + dt;
+    sinceStick += dt;
     zoom += (zoomTarget - zoom) * ease(8, dt);
 
     if (ctx.target) {
@@ -246,17 +259,23 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     if (instant) { trans = null; return; }
     trans = { fromPos: pos.clone(), fromLook: look.clone(), fromFov: fov, t: 0, dur };
   }
-  /** Põe o seguimento direto no alvo (reinício, troca de etapa, fim de cena). yaw (opcional): atrás de quem olha para lá. */
+  /**
+   * Põe o seguimento no alvo (reinício, troca de etapa, fim de cena). yaw (opcional): atrás de quem olha para lá. Saindo
+   * de um plano de cena, a volta para trás da dog é suave (0,6 s), não um corte.
+   */
   function snapFollow(x, z, yaw = null) {
+    const fromShot = !!shot;
     pivot.set(x, pivot.y || cfg.pivotY, z);
     pivotTarget.copy(pivot);
-    if (Number.isFinite(yaw)) heading = yaw;
+    if (autoRecenter && Number.isFinite(yaw)) heading = wrap(yaw);
     dist = Math.min(dist, cfg.distance * zoom);
     shot = null;
     mode = 'follow';
-    trans = null;
-    fov = followPose(pos, look);
-    apply();
+    trans = fromShot ? { fromPos: pos.clone(), fromLook: look.clone(), fromFov: fov, t: 0, dur: 0.6 } : null;
+    if (!fromShot) {
+      fov = followPose(pos, look);
+      apply();
+    }
   }
   function focusShot(x, z, { hold = 1.2, inT = 0.55, outT = 0.7, scale = 0.8, y = cfg.lookY + 0.1, target = null, from = null } = {}) {
     shot = { point: new THREE.Vector3(x, y, z), target, from, t: 0, inT, hold, outT, scale, fromPos: pos.clone(), fromLook: look.clone() };
@@ -270,6 +289,10 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     update, setMode, snapFollow, focusShot, configure,
     onSwitch() { switchT = 0.9; },
     setZone() {},
+    /** Gira para trás de quem olha para `yaw` (o fim das cenas: atrás da dog ativa). */
+    behind(yaw) { if (autoRecenter && Number.isFinite(yaw)) heading = wrap(yaw); },
+    /** O analógico direito girou a câmera agorinha? (o clique dele, nesse meio-tempo, não conta como botão) */
+    stickBusy() { return sinceStick < 0.45; },
     /** O mundo de colisão da área (o braço desvia das paredes). */
     setWorld(w) { world = w || null; },
     limits: { minX: -Infinity, maxX: Infinity, minZ: -Infinity, maxZ: Infinity },
@@ -293,11 +316,14 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     /** Entrada sintética (testes): gira e aproxima como um arraste. */
     nudge({ yaw = 0, pitch: p = 0, zoom: z = 0 } = {}) { drag.yaw += yaw; drag.pitch += p; drag.zoom += z; },
     dispose() {
+      camera.far = farBefore;
+      camera.updateProjectionMatrix();
       if (!element?.removeEventListener) return;
       element.removeEventListener('pointerdown', onDown);
       element.removeEventListener('pointermove', onMove);
       element.removeEventListener('pointerup', onUp);
       element.removeEventListener('pointercancel', onUp);
+      element.removeEventListener('lostpointercapture', onUp);
       element.removeEventListener('wheel', onWheel);
     },
   };

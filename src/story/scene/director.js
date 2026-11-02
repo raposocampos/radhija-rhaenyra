@@ -165,13 +165,14 @@ export function createDirector({ ctx, balloons = null, emit }) {
     follow(outT = 1.0) {
       if (!shotOn) return;
       shotOn = false;
+      cam.behind?.(ctrls[ctx.activeDog].yaw);
       cam.focusShot(shotLook.x, shotLook.z, { target: { ...shotLook }, from: { ...shotFrom }, hold: 0, inT: 0.0001, outT });
     },
     /** Corta direto para o seguimento (no preto, ou ao pular a cena). */
     snapFollow() {
       shotOn = false;
       const c = ctrls[ctx.activeDog];
-      cam.snapFollow(c.x, c.z);
+      cam.snapFollow(c.x, c.z, c.yaw);
     },
     get shotOn() { return shotOn; },
 

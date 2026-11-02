@@ -625,7 +625,8 @@ export function createGame({ engine, dogs, levels, params, hub = null, story = n
     const compName = other(activeDog);
     const C = ctrls[compName];
     if (input.consume('KeyF') && !cine) setStay(compName, !stay[compName]);
-    if (input.consume('KeyC') && !cine) {
+    // na 3ª pessoa o analógico direito gira a câmera: o clique dele nesse meio-tempo é sem querer
+    if (input.consume('KeyC') && !cine && !cam.stickBusy?.()) {
       extras.tryPoop(A, {
         allTreats: puzzle.total > 0 && puzzle.collected >= puzzle.total,
         free: !puzzle.lockFor(activeDog) && !lick.on && !bafo.aiming && !(bafo.blowT > 0) && !A.shove,

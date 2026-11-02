@@ -72,7 +72,8 @@ export function createFaro({ root, engine = null, world = null }) {
   wave.visible = false;
   group.add(wave);
 
-  const dotGeo = new THREE.CircleGeometry(0.055, 12).rotateX(-Math.PI / 2);
+  // contas de luz (esferinhas) um pouco acima do chão: legíveis de lado, com a câmera em 3ª pessoa
+  const dotGeo = new THREE.IcosahedronGeometry(0.05, 0);
   const ringGeo = new THREE.RingGeometry(0.2, 0.26, 40).rotateX(-Math.PI / 2);
   /** @type {Map<string, { mesh: THREE.InstancedMesh, mat: THREE.MeshBasicMaterial, base: THREE.Matrix4[], n: number, enabled: boolean }>} */
   const trails = new Map();
@@ -91,7 +92,7 @@ export function createFaro({ root, engine = null, world = null }) {
    * @param {string} id @param {{ x: number, z: number, y?: number }[]} points
    * @param {{ color?: string, y?: number, spacing?: number, size?: number, fadeEnd?: boolean, enabled?: boolean }} [o]
    */
-  function addTrail(id, points, { color = SCENT.cenoura, y = 0.025, spacing = 0.13, size = 1, fadeEnd = false, enabled = true } = {}) {
+  function addTrail(id, points, { color = SCENT.cenoura, y = 0.09, spacing = 0.13, size = 1, fadeEnd = false, enabled = true } = {}) {
     removeTrail(id);
     const pts = [];
     for (let i = 0; i + 1 < points.length; i++) {
@@ -115,7 +116,7 @@ export function createFaro({ root, engine = null, world = null }) {
     pts.forEach((p, i) => {
       const fade = fadeEnd ? 1 - 0.75 * (i / Math.max(1, pts.length - 1)) : 1;
       const s = size * (0.75 + 0.5 * ((i * 37) % 7) / 6) * fade;
-      m4.compose(v.set(p.x + Math.sin(i * 2.3) * 0.03, p.y, p.z + Math.cos(i * 1.7) * 0.03), q.identity(), sc.set(s, 1, s));
+      m4.compose(v.set(p.x + Math.sin(i * 2.3) * 0.03, p.y + 0.02 * Math.sin(i * 1.3), p.z + Math.cos(i * 1.7) * 0.03), q.identity(), sc.set(s, s, s));
       base.push(m4.clone());
       mesh.setMatrixAt(i, m4);
     });

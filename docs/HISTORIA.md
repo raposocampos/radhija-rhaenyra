@@ -1,8 +1,8 @@
 # As Aventuras de Radhija & Rhaenyra: o roteiro do Modo História
 
 Situação: **enredo aprovado no plano em 2026-10-29 e roteiro integrado (PR #74). Em 2026-11-01 o usuário confirmou as
-seis decisões padrão e escolheu o botão do Faro; a fatia jogável (abertura e cap. 1) está sendo construída na etapa 2
-([MODO-HISTORIA.md](MODO-HISTORIA.md)).**
+seis decisões padrão e escolheu o botão do Faro e, no mesmo dia, a câmera em 3ª pessoa. A fatia jogável (abertura e
+cap. 1) está sendo construída na etapa 2 ([MODO-HISTORIA.md](MODO-HISTORIA.md)).**
 - Esta é a versão 2. Ela foi reescrita depois de cinco críticas (mistério, personagens, jogabilidade, narrativa sem
   palavras e escopo) e de uma avaliação final.
 - A estrutura técnica e as etapas de entrega estão em [MODO-HISTORIA.md](MODO-HISTORIA.md).
@@ -46,10 +46,19 @@ As seis valem para a fatia jogável e para o resto da história. Cada uma ainda 
 de focinho nos controles de toque, que só aparece no Modo História. O Faro é só da Radhija: com a Rhaenyra, uma dica
 lembra disso.
 
+**A câmera em 3ª pessoa (decidida em 2026-11-01, depois da primeira prévia da fatia):** o Modo História é um jogo em
+3ª pessoa. A câmera fica atrás da cachorrinha ativa e gira livre em volta dela (analógico direito, arrastar com o
+mouse ou com o dedo na parte livre da tela). Ela desvia das paredes, não passa do teto e volta devagar para trás da dog
+quando ela anda.
+- **Por quê:** na câmera de cima, havia pontos do mapa ruins de enxergar, e a 3ª pessoa deixa o jogo mais atual.
+- **Só na história:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **As cenas** continuam com os planos do diretor. No fim de cada uma, a câmera volta suave para trás da dog.
+- **Para depois, sem decisão:** levar o jogo para C++ ou uma engine de games, com build jogável.
+
 **Ainda em aberto:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o ângulo de câmera do mapa-múndi.
+- o ângulo de câmera do mapa-múndi (a 3ª pessoa vale dentro das áreas).
 
 ---
 

@@ -1,7 +1,8 @@
 # Modo História: visão de design
 
 Situação: **etapa 1 (roteiro) integrada no PR #74. Etapa 2 (fatia jogável) em construção: em 2026-11-01 o usuário
-confirmou as seis decisões padrão e escolheu o botão do Faro (V, L3 e o botão do focinho no toque).**
+confirmou as seis decisões padrão e escolheu o botão do Faro (V, L3 e o botão do focinho no toque). No mesmo dia,
+pediu o Modo História em 3ª pessoa (veja "Câmera em 3ª pessoa").**
 - O roteiro completo ("As Aventuras de Radhija & Rhaenyra": enredo, elenco, casos, capítulos e mapa-múndi) está em
   [HISTORIA.md](HISTORIA.md).
 - Este documento trata da estrutura, do desempenho, do progresso e das etapas de entrega.
@@ -145,6 +146,17 @@ cima, havia pontos do mapa ruins de enxergar.
   com o dedo na parte livre da tela, rodinha e pinça para aproximar. Ela desvia das paredes (o braço encurta) e não
   passa do forro dentro dos cômodos. Quando a dog anda sem que a jogadora mexa na câmera, ela volta devagar para trás.
 - **Só no Modo História:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **Nas cenas:** os planos do diretor assumem a câmera. No fim (assistida ou pulada), ela volta suave para trás da
+  dog ativa, em 0,6 s, sem trava sobrando.
+- **Toque e mouse:** o dedo só gira a câmera na parte livre da tela (o joystick e os botões ficam com o dedo deles).
+  O arraste segue o dedo ou o mouse mesmo passando por cima do HUD. Só passar o mouse por cima não gira, e nada pede
+  permissão ao navegador (sem trava do ponteiro).
+- **Controle:** o analógico direito gira a câmera (nas fases, ele continua olhando em volta). Um clique sem querer
+  nele, logo depois de girar, não vale como botão.
+- **Distância de desenho:** a câmera corta o que está além de 72 m, depois da névoa (que acaba em 64 m de dia). O
+  Faro virou contas de luz um pouco acima do chão, legíveis de lado, sem pós-processamento.
+- **Orçamento:** a medição de recursos confere o pior quadro da 3ª pessoa em vários pontos do mapa (atrás da dog
+  olhando para os quatro lados, e quase rente ao chão olhando o horizonte) contra o teto da fase 10.
 - **No cenário:** a casa ficou inteira (paredes até o forro, vergas nas passagens, telhado), o muro do sul voltou à
   altura e o depósito ganhou laje. As paredes da casa não projetam sombra, para o sol continuar entrando nos cômodos.
   O recorte que deixa ver as dogs através do que as tapa continua valendo.
@@ -198,7 +210,9 @@ Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o pr
   - travas e "ninguém atravessa nada" quadro a quadro;
   - a missão e os paralelos com os controles de verdade;
   - o cenário (z-fighting e colisores).
-- **E2E** na suíte `historia` do workflow manual, com capturas nos 11 tamanhos de tela.
+- **E2E** na suíte `historia` do workflow manual, com capturas nos 11 tamanhos de tela. Nos de toque, um dedo de
+  verdade arrastado na parte livre gira a câmera e, no joystick, não gira. No PC, o arraste do mouse gira e só passar o
+  mouse por cima, não.
 - **Capturas de revisão** em qualidade cheia (`capture-historia.mjs`).
 
 ## Em aberto com o usuário
@@ -206,4 +220,4 @@ Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o pr
 **Ainda por decidir:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o ângulo de câmera do mapa-múndi.
+- o ângulo de câmera do mapa-múndi (a 3ª pessoa vale dentro das áreas).

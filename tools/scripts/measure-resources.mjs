@@ -272,6 +272,10 @@ async function measureStory(page, base) {
       const b = game.levelDef.layout.WORLD.bounds;
       const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
       const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+      // a visão geral com o alcance de desenho das fases (o corte de distância da 3ª pessoa não entra nesta comparação)
+      const farRig = engine.camera.far;
+      engine.camera.far = 220;
+      engine.camera.updateProjectionMatrix();
       engine.camera.position.set(cx + span * 0.65, span * 0.8, cz + span * 1.1);
       engine.camera.lookAt(cx, 0, cz);
       engine.camera.updateMatrixWorld();
@@ -284,19 +288,28 @@ async function measureStory(page, base) {
         renderer.getContext().finish();
         draws.push({ ...renderer.info.render });
       }
-      // o pior quadro da câmera do jogo andando pelos nós de navegação (a área toda passa pela tela)
+      // o pior quadro da câmera em 3ª pessoa pelos nós de navegação: atrás da dog olhando para os quatro lados e uma
+      // pose quase rente ao chão, olhando o horizonte (a 3ª pessoa enxerga mais longe que a câmera de cima)
       let worst = { calls: 0, triangles: 0, at: null };
       const L = game.levelDef.layout;
-      const off = L.CAMERA.offset;
-      for (const [id, p] of last ? Object.entries(L.NAV_NODES) : []) {
-        engine.camera.position.set(p.x + off[0], off[1], p.z + off[2]);
-        engine.camera.lookAt(p.x, 0.3, p.z);
-        engine.camera.updateMatrixWorld();
-        renderer.info.reset();
-        measurement.originals.render(1 / 60, 1);
-        renderer.getContext().finish();
-        const r = renderer.info.render;
-        if (r.calls > worst.calls) worst = { calls: r.calls, triangles: r.triangles, at: id };
+      const T = { distance: 3.1, pitch: 0.34, pivotY: 0.5, lookY: 0.42, fov: 54, ...L.CAMERA.third };
+      engine.camera.far = farRig;
+      engine.camera.fov = T.fov;
+      engine.camera.updateProjectionMatrix();
+      const poses = [[0, T.pitch], [Math.PI / 2, T.pitch], [Math.PI, T.pitch], [-Math.PI / 2, T.pitch], [Math.PI, 0.06]];
+      const nodes = Object.entries(L.NAV_NODES).filter((_, i) => i % 2 === 0);
+      for (const [id, p] of last ? nodes : []) {
+        for (const [h, pitch] of poses) {
+          const fx = Math.sin(h), fz = Math.cos(h), d = T.distance;
+          engine.camera.position.set(p.x - fx * Math.cos(pitch) * d, T.pivotY + Math.sin(pitch) * d, p.z - fz * Math.cos(pitch) * d);
+          engine.camera.lookAt(p.x, T.lookY, p.z);
+          engine.camera.updateMatrixWorld();
+          renderer.info.reset();
+          measurement.originals.render(1 / 60, 1);
+          renderer.getContext().finish();
+          const r = renderer.info.render;
+          if (r.calls > worst.calls) worst = { calls: r.calls, triangles: r.triangles, at: `${id}@${h.toFixed(2)}/${pitch}` };
+        }
       }
       let objects = 0;
       scene.traverse(() => objects++);
@@ -343,6 +356,10 @@ async function measureStory(page, base) {
     console.log(`[resources] historia vs fase10: calls ${area.draws[1].calls}/${ceiling.calls} triangles ${area.draws[1].triangles}/${ceiling.triangles}`);
     check(area.draws[1].calls <= ceiling.calls, `historia: ${area.draws[1].calls} draw calls above the fase10 ceiling (${ceiling.calls})`);
     check(area.draws[1].triangles <= ceiling.triangles, `historia: ${area.draws[1].triangles} triangles above the fase10 ceiling (${ceiling.triangles})`);
+    // e o pior quadro da 3ª pessoa (de vários pontos, inclusive olhando o horizonte)
+    console.log(`[resources] historia, pior quadro em 3ª pessoa: calls ${area.worst.calls}/${ceiling.calls} triangles ${area.worst.triangles}/${ceiling.triangles} (${area.worst.at})`);
+    check(area.worst.calls <= ceiling.calls, `historia: worst third-person frame ${area.worst.calls} draw calls above the fase10 ceiling (${ceiling.calls})`);
+    check(area.worst.triangles <= ceiling.triangles, `historia: worst third-person frame ${area.worst.triangles} triangles above the fase10 ceiling (${ceiling.triangles})`);
   } else {
     report.warnings.push('historia: no fase10 sample to compare with');
   }

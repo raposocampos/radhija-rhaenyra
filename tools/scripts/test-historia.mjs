@@ -7,7 +7,9 @@
 //  - o mural provisório: a patinha do tutorial, a ligação errada volta, arrastar e tocar, Continuar, o fim do capítulo
 //    e Jogar de novo; ninguém atravessa nada no caminho;
 //  - no celular (iPhone 13): o toque no aviso do Faro, o botão ⏩ segurado pula, o botão do focinho;
-//  - o HUD da história (lupa e meias, faixas, cartela, aviso, mural, fim) nos 11 tamanhos de tela, com capturas.
+//  - o HUD da história (lupa e meias, faixas, cartela, aviso, mural, fim) nos 11 tamanhos de tela, com capturas;
+//  - a câmera em 3ª pessoa: o dedo arrastado na parte livre da tela gira a câmera e no joystick anda com a dog (sem
+//    girar); no PC, arrastar com o mouse gira e só passar o mouse por cima, não.
 //   node tools/scripts/test-historia.mjs [--url http://127.0.0.1:5176/]
 import { createHarness, parseArgs } from './lib/harness.mjs';
 import { SCREENS, boxesIn, outside, overlapPairs, settle, touchDevice, IPHONE_UA } from './lib/screens.mjs';
@@ -49,6 +51,96 @@ async function skipScene(label) {
 }
 /** Espera a etapa. */
 const stageIs = (st, timeout = 20000) => waitFor((i) => i.story?.stage === st && !i.story.scene, { timeout });
+
+// ---------- a câmera em 3ª pessoa pelo dedo e pelo mouse ----------
+const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const camHeading = (pg) => pg.evaluate(() => window.__game.game.debug.cam.heading);
+/** O joystick com o dedo agora (o eixo da entrada e o aro aceso). */
+const stickNow = () => ({ m: window.__game.game.input.axis().m, on: !!document.querySelector('.rr-touch__stick')?.classList.contains('is-on') });
+/**
+ * Arrasta um dedo de verdade (protocolo do navegador: touch + pointer events, como num celular), como na suíte toque.
+ * Antes de soltar, mede o joystick na página.
+ */
+async function fingerDrag(pg, from, to, { steps = 8, hold = 60 } = {}) {
+  const cdp = await pg.context().newCDPSession(pg);
+  try {
+    const at = (x, y) => [{ x: Math.round(x), y: Math.round(y), id: 1, radiusX: 8, radiusY: 8, force: 1 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from.x, from.y) });
+    for (let k = 1; k <= steps; k++) {
+      await pg.waitForTimeout(35);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(from.x + ((to.x - from.x) * k) / steps, from.y + ((to.y - from.y) * k) / steps) });
+    }
+    await pg.waitForTimeout(hold);
+    const stick = await pg.evaluate(stickNow);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    return stick;
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+}
+/** Um ponto da tela com só o jogo por baixo (sem HUD nem botão) e o meio da área do joystick. */
+const dragSpots = (pg) => pg.evaluate(() => {
+  const canvas = window.__game.engine.renderer.domElement;
+  const vw = innerWidth, vh = innerHeight;
+  const free = [[0.6, 0.3], [0.55, 0.22], [0.66, 0.42], [0.5, 0.4], [0.72, 0.25], [0.6, 0.55]]
+    .map(([fx, fy]) => ({ x: Math.round(vw * fx), y: Math.round(vh * fy) }))
+    .find((p) => document.elementFromPoint(p.x, p.y) === canvas) ?? null;
+  const zr = document.querySelector('.rr-touch__zone')?.getBoundingClientRect();
+  const zone = zr && zr.width > 0 ? { x: Math.round(zr.left + zr.width * 0.5), y: Math.round(zr.top + zr.height * 0.6) } : null;
+  const zoneTop = zone ? String(document.elementFromPoint(zone.x, zone.y)?.className ?? '') : null;
+  return { free, zone, zoneTop, vw };
+});
+/** O seguimento sem plano de cena (a entrada da câmera só vale jogando) e sem a volta automática para trás da dog. */
+async function cameraReady(pg) {
+  await pg.waitForFunction(() => { const c = window.__game.game.debug.cam; return c.mode === 'follow' && !c.shotActive; }, null, { timeout: 15000 }).catch(() => {});
+  await pg.evaluate(() => { window.__game.game.debug.cam.autoRecenter = false; });
+}
+/**
+ * Toque: o dedo arrastado na parte livre da tela gira a câmera (sem acender o joystick); no joystick, anda com a dog e a
+ * câmera fica (a câmera não rouba o dedo do joystick).
+ */
+async function touchDragChecks(pg, label) {
+  await cameraReady(pg);
+  const s = await dragSpots(pg);
+  check(!!s.free, `${label}: uma parte livre da tela para girar a câmera`, s);
+  if (s.free) {
+    const h0 = await camHeading(pg);
+    const stick = await fingerDrag(pg, s.free, { x: s.free.x - s.vw * 0.2, y: s.free.y });
+    await pg.waitForTimeout(250);
+    const turn = Math.abs(wrapAngle((await camHeading(pg)) - h0));
+    check(turn > 0.25, `${label}: arrastar o dedo na parte livre gira a câmera`, { turn: +turn.toFixed(2) });
+    check(!stick.on && stick.m < 0.05, `${label}: esse arraste não mexe no joystick`, stick);
+  }
+  check(!!s.zone && s.zoneTop.includes('rr-touch__zone'), `${label}: o joystick por cima na área dele`, s);
+  if (s.zone) {
+    const h0 = await camHeading(pg);
+    const stick = await fingerDrag(pg, s.zone, { x: s.zone.x + s.vw * 0.08, y: s.zone.y - 30 }, { steps: 10, hold: 300 });
+    await pg.waitForTimeout(250);
+    const turn = Math.abs(wrapAngle((await camHeading(pg)) - h0));
+    check(stick.on || stick.m > 0.2, `${label}: o dedo no joystick fica com o joystick`, stick);
+    check(turn < 0.02, `${label}: arrastar no joystick não gira a câmera`, { turn: +turn.toFixed(3) });
+  }
+}
+/** PC: arrastar com o mouse (botão apertado) gira a câmera; só passar o mouse por cima, não. */
+async function mouseDragChecks(pg, label) {
+  await cameraReady(pg);
+  const s = await dragSpots(pg);
+  check(!!s.free, `${label}: uma parte livre da tela para girar a câmera`, s);
+  if (!s.free) return;
+  const h0 = await camHeading(pg);
+  await pg.mouse.move(s.free.x, s.free.y);
+  await pg.mouse.down();
+  await pg.mouse.move(s.free.x - s.vw * 0.2, s.free.y, { steps: 8 });
+  await pg.mouse.up();
+  await pg.waitForTimeout(250);
+  const h1 = await camHeading(pg);
+  const turn = Math.abs(wrapAngle(h1 - h0));
+  check(turn > 0.25, `${label}: arrastar com o mouse gira a câmera`, { turn: +turn.toFixed(2) });
+  await pg.mouse.move(s.free.x, s.free.y, { steps: 8 });
+  await pg.waitForTimeout(250);
+  const hover = Math.abs(wrapAngle((await camHeading(pg)) - h1));
+  check(hover < 0.01, `${label}: só passar o mouse não gira a câmera`, { turn: +hover.toFixed(3) });
+}
 
 try {
   console.log('\n== Abertura: "A noite da garoa" ==');
@@ -307,6 +399,10 @@ try {
         check(outside(bx, vw, vh).length === 0, `${scr.id}: HUD inteiro na tela`, outside(bx, vw, vh));
         check(overlapPairs(bx).length === 0, `${scr.id}: HUD sem sobreposição`, overlapPairs(bx));
         await snap('jogando');
+        // a câmera em 3ª pessoa: o dedo (na parte livre da tela, não no joystick) ou o mouse giram
+        if (scr.touch) await touchDragChecks(q, scr.id);
+        else await mouseDragChecks(q, scr.id);
+        await snap('girada');
         // em cena: as faixas, o pular e o aviso do Faro (o HUD do jogo some)
         await q.evaluate(() => { const e = window.__game.events; e.emit('story:cinema', { on: true, id: 'teste' }); e.emit('story:prompt', { kind: 'faro', on: true }); });
         await q.waitForTimeout(700);
