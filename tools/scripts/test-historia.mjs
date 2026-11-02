@@ -120,6 +120,28 @@ async function touchDragChecks(pg, label) {
     check(stick.on || stick.m > 0.2, `${label}: o dedo no joystick fica com o joystick`, stick);
     check(turn < 0.02, `${label}: arrastar no joystick não gira a câmera`, { turn: +turn.toFixed(3) });
   }
+  // os botões de toque têm prioridade: o dedo que aperta o focinho e escorrega um pouco (sem sair dele) fica com o
+  // botão; a câmera não gira (no canvas, 12 px girariam 0,09 rad)
+  const fb = await pg.evaluate(() => {
+    const el = document.querySelector('.rr-tbtn--faro');
+    const r = el?.getBoundingClientRect();
+    if (!r || r.width < 1) return null;
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, ativa: window.__game.game.activeDog };
+  });
+  check(!!fb, `${label}: o botão do focinho nos controles`, fb);
+  if (fb) {
+    await pg.waitForFunction(() => !window.__game.game.debug.info().story.faro.active, null, { timeout: 30000 }).catch(() => {});
+    await pg.evaluate(() => window.__game.game.debug.clearLog());
+    const h0 = await camHeading(pg);
+    await fingerDrag(pg, fb, { x: fb.x - 12, y: fb.y }, { steps: 4, hold: 60 });
+    if (fb.ativa === 'radhija') {
+      await pg.waitForFunction(() => window.__game.game.debug.events('story:faro').length > 0, null, { timeout: 10000 }).catch(() => {});
+      const faros = await pg.evaluate(() => window.__game.game.debug.events('story:faro').length);
+      check(faros >= 1, `${label}: o focinho solta o Faro`, faros);
+    }
+    const turn = Math.abs(wrapAngle((await camHeading(pg)) - h0));
+    check(turn < 0.02, `${label}: o dedo no botão não gira a câmera`, { turn: +turn.toFixed(3) });
+  }
 }
 /** PC: arrastar com o mouse (botão apertado) gira a câmera; só passar o mouse por cima, não. */
 async function mouseDragChecks(pg, label) {
@@ -379,9 +401,17 @@ try {
       await p.waitForFunction(() => !window.__game.game.debug.info().story.faro.active, null, { timeout: 30000 }).catch(() => {});
       await p.evaluate(() => window.__game.game.debug.clearLog());
       await p.touchscreen.tap(faroBtn.x, faroBtn.y);
-      await p.waitForTimeout(600);
-      const faros = await p.evaluate(() => window.__game.game.debug.events('story:faro').length);
-      check(faros >= 1, 'iPhone: o botão do focinho solta o pulso do Faro', faros);
+      // o pulso sai no quadro seguinte ao toque; no SwiftShader com DPR 3, um quadro em 3ª pessoa passa de 0,5 s
+      await p.waitForFunction(() => window.__game.game.debug.events('story:faro').length > 0, null, { timeout: 10000 }).catch(() => {});
+      const diag = await p.evaluate(({ x, y }) => {
+        const g = window.__game.game;
+        const top = document.elementFromPoint(x, y);
+        return {
+          faros: g.debug.events('story:faro').length, ativa: g.activeDog, faro: g.debug.info().story.faro.active,
+          toque: !!document.querySelector('.rr-touch.is-on'), alvo: top?.closest?.('[data-touch]')?.dataset.touch ?? top?.tagName ?? null,
+        };
+      }, faroBtn);
+      check(diag.faros >= 1, 'iPhone: o botão do focinho solta o pulso do Faro', diag);
     }
     await p.evaluate(() => window.__e2eRender?.());
     await p.screenshot({ path: 'shots/historia/13-iphone-faro.png' });
