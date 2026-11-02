@@ -39,7 +39,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     const C = L.CAMERA || {};
     Object.assign(cfg, C.third || {});
     if (C.title) Object.assign(title, C.title);
-    if (C.celebrate) { celebrate.pos.set(...C.celebrate.pos); celebrate.look.set(...C.celebrate.look); }
+    if (C.celebrate) { celebrate.pos.fromArray(C.celebrate.pos); celebrate.look.fromArray(C.celebrate.look); }
   }
   configure(layout);
   const farBefore = camera.far;

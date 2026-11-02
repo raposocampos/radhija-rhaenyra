@@ -443,7 +443,7 @@ export const CAMERA = {
   third: {
     distance: 3.1, pitch: 0.34, fov: 54, pivotY: 0.5, lookY: 0.42,
     heading: Math.atan2(-1.3, -4.8), // começa olhando para onde a câmera de cima olhava (o norte, um pouco a oeste)
-    // tetos: dentro deles a câmera não sobe além (casa, depósito, saguão da torre, guarita, casinha)
+    // tetos: dentro deles a câmera não sobe além (casa, depósito, saguão da torre, guarita, garagem)
     ceilings: [
       { minX: HOUSE.x0, maxX: HOUSE.x1, minZ: HOUSE.z0, maxZ: HOUSE.z1, y: WALLS.h },
       { minX: STORAGE.x0, maxX: STORAGE.x1, minZ: STORAGE.z0, maxZ: STORAGE.z1, y: STORAGE.h },

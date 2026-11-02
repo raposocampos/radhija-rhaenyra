@@ -184,6 +184,18 @@ export interface CameraConfig {
    * desliga a zona com cam.setZone(id, on).
    */
   zones?: { id?: string; minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
+  /**
+   * Qual câmera a área usa, pelo nome registrado em createGame({ cameraRigs }) (o Modo História usa 'third'). Sem ele,
+   * ou com um nome não registrado, a câmera de cima das fases.
+   */
+  rig?: string;
+  /** A câmera em 3ª pessoa do Modo História (src/story/camera/thirdPerson.js). */
+  third?: {
+    distance?: number; pitch?: number; minPitch?: number; maxPitch?: number; fov?: number; pivotY?: number; lookY?: number;
+    heading?: number; occluders?: string[]; probe?: number; minDist?: number; lift?: number; far?: number;
+    /** Tetos (retângulos e altura): com a dog embaixo, a câmera não sobe além deles. */
+    ceilings?: { minX: number; maxX: number; minZ: number; maxZ: number; y: number }[];
+  };
 }
 
 /**
