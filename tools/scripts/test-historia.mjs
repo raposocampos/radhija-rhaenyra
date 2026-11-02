@@ -78,15 +78,15 @@ async function fingerDrag(pg, from, to, { steps = 8, hold = 60 } = {}) {
     await cdp.detach().catch(() => {});
   }
 }
-/** Um ponto da tela com só o jogo por baixo (sem HUD nem botão) e o meio da área do joystick. */
+/** Um ponto da tela com só o jogo por baixo (sem HUD nem botão) e o centro do joystick parado (na área dele). */
 const dragSpots = (pg) => pg.evaluate(() => {
   const canvas = window.__game.engine.renderer.domElement;
   const vw = innerWidth, vh = innerHeight;
   const free = [[0.6, 0.3], [0.55, 0.22], [0.66, 0.42], [0.5, 0.4], [0.72, 0.25], [0.6, 0.55]]
     .map(([fx, fy]) => ({ x: Math.round(vw * fx), y: Math.round(vh * fy) }))
     .find((p) => document.elementFromPoint(p.x, p.y) === canvas) ?? null;
-  const zr = document.querySelector('.rr-touch__zone')?.getBoundingClientRect();
-  const zone = zr && zr.width > 0 ? { x: Math.round(zr.left + zr.width * 0.5), y: Math.round(zr.top + zr.height * 0.6) } : null;
+  const sr = document.querySelector('.rr-touch__stick')?.getBoundingClientRect();
+  const zone = sr && sr.width > 0 ? { x: Math.round(sr.left + sr.width / 2), y: Math.round(sr.top + sr.height / 2) } : null;
   const zoneTop = zone ? String(document.elementFromPoint(zone.x, zone.y)?.className ?? '') : null;
   return { free, zone, zoneTop, vw };
 });
