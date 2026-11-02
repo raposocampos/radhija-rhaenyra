@@ -151,6 +151,8 @@ async function captureDevice(dev, url) {
   for (const [stage, name, frames] of [['cozinha', '12-cozinha', 30], ['galho', '13-quintal-galho', 30], ['piscina', '14-piscina', 30],
     ['varal', '16-varal', 30], ['torre', '18-torre', 30], ['portaria', '20-guarita', 30], ['fechamento', '22-portaozinho', 30]]) {
     await open(stage);
+    // a câmera do jogo em 3ª pessoa, atrás da dog ativa (sem a vinda da tela de título, que passa pelas paredes)
+    await page.evaluate(() => { const g = window.__game.game; const c = g.debug.ctrls[g.activeDog]; g.debug.cam.snapFollow(c.x, c.z, c.yaw); });
     await step(frames);
     await shot(name);
   }

@@ -147,8 +147,21 @@ try {
   await page.goto(BASE, { waitUntil: 'load', timeout: 120000 });
   await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
   await load('?historia');
-  // a câmera em 3ª pessoa fica no rumo inicial (o da câmera de cima): as teclas do harness contam com ele
-  await ev(() => { window.__game.game.debug.cam.autoRecenter = false; });
+  // a câmera em 3ª pessoa fica parada no rumo da câmera de cima (o do offset do layout): as teclas do harness contam
+  // com ele. O rumo é posto de novo porque, até aqui, o começo da abertura já girou a câmera para trás de uma dog.
+  await ev(() => {
+    const cam = window.__game.game.debug.cam;
+    const off = window.__game.layout.CAMERA.offset;
+    cam.autoRecenter = false;
+    cam.heading = Math.atan2(-off[0], -off[2]);
+  });
+  const camFixed = await ev(() => {
+    const b = window.__game.game.debug.cam.basis();
+    const off = window.__game.layout.CAMERA.offset;
+    const L = Math.hypot(off[0], off[2]);
+    return Math.abs(b.fx + off[0] / L) < 1e-6 && Math.abs(b.fz + off[2] / L) < 1e-6;
+  });
+  check(camFixed, 'a câmera parada no rumo das teclas do harness');
   let i = await info();
   check(await ev(() => window.__game.game.isStory), '?historia abre a área da história (prévia/desenvolvimento)');
   check(i.story?.scene === 'abertura', 'a abertura começa sozinha', i.story);
