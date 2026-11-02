@@ -115,7 +115,8 @@ export function buildCasa(kit, root, L) {
   const hw = H.x1 - H.x0, hd = H.z1 - H.z0;
   const ceiling = new THREE.Mesh(new THREE.BoxGeometry(hw - t, 0.04, hd - t), new THREE.MeshStandardMaterial({ color: '#f6efe4', roughness: 0.9 }));
   ceiling.name = 'recanto:forro';
-  ceiling.position.set((H.x0 + H.x1) / 2, WL.h - 0.02, (H.z0 + H.z1) / 2);
+  // o topo 6 mm abaixo do alto das paredes (no mesmo plano, brigaria com elas: z-fighting)
+  ceiling.position.set((H.x0 + H.x1) / 2, WL.h - 0.026, (H.z0 + H.z1) / 2);
   ceiling.receiveShadow = true;
   keep(ceiling);
   const roofGeo = gableRoof(hw + 0.6, hd + 0.6, 1.35);
