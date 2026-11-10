@@ -1,6 +1,8 @@
-// Faro em pulso (Radhija), sistema novo do Modo História (docs/HISTORIA.md, "Faro (Radhija), em pulso").
-// Um toque solta uma onda a partir da Radhija; por FARO.dur segundos as trilhas de cheiro acendem com a cor de cada
-// cheiro (cenoura laranja, pombos cinza, gansa branca) e as pistas e coisas fora do lugar brilham.
+// Faro em pulso (as duas farejam), sistema novo do Modo História (docs/HISTORIA.md, "Faro, em pulso").
+// Um toque solta uma onda a partir de quem fareja; por FARO.dur segundos as trilhas de cheiro acendem com a cor de cada
+// cheiro (cenoura laranja, pombos cinza, gansa branca) e as pistas e coisas fora do lugar brilham. Uma pista revelada
+// fica "presa" (pin): continua brilhando fraco depois do pulso, até a jogadora examinar. A nuvem de cheiro que leva à
+// próxima pista é outro módulo (scentCloud.js).
 // Sem pós-processamento (perfil mínima): trilhas e brilhos são materiais que não dependem de luz (MeshBasic, mistura
 // aditiva, sem neblina), e um véu escuro e leve cobre a tela por baixo deles (um quadrado em espaço de tela, desenhado
 // depois do cenário e antes dos brilhos). Com o compositor (perfis com pós), o mundo também perde um pouco da cor.
@@ -8,7 +10,7 @@
 // API: createFaro({ root, engine, world }) → addTrail, addSpot, pulse(from), update(dt), reach(from, spot), active…
 import * as THREE from 'three';
 
-export const FARO = { dur: 6, waveR: 9, waveT: 0.85, fadeIn: 0.4, fadeOut: 0.6, veil: 0.42 };
+export const FARO = { dur: 8, waveR: 10, waveT: 0.85, fadeIn: 0.4, fadeOut: 0.6, veil: 0.36, pinned: 0.55 };
 /** Cores dos cheiros (o roteiro): cenoura laranja, pombos cinza, gansa branca, gato laranja-escuro. */
 export const SCENT = { cenoura: '#FF8A2A', pombos: '#A9B7D0', gansa: '#F3F6FF', gato: '#D2691E', pista: '#FFD27A', escondida: '#FFC53D', reconstrucao: '#BFE3FF' };
 
@@ -155,7 +157,7 @@ export function createFaro({ root, engine = null, world = null }) {
     g.add(ring, glow);
     g.visible = false;
     group.add(g);
-    const s = { id, x, y, z, r, kind, group: g, ring, glow, enabled, los, pulse: Math.random() * 6 };
+    const s = { id, x, y, z, r, kind, group: g, ring, glow, enabled, los, pulse: Math.random() * 6, pinned: false };
     spots.set(id, s);
     return s;
   }
@@ -189,11 +191,22 @@ export function createFaro({ root, engine = null, world = null }) {
   function setVisible(on) {
     veil.visible = on;
     for (const t of trails.values()) t.mesh.visible = on && t.enabled;
-    for (const s of spots.values()) s.group.visible = on && s.enabled;
+    for (const s of spots.values()) s.group.visible = (on || s.pinned) && s.enabled;
+  }
+  /** As pistas presas brilham fraco fora do pulso (no pulso, o update normal cuida delas). */
+  function showPinned(dt) {
+    for (const s of spots.values()) {
+      if (!s.pinned || !s.enabled) continue;
+      s.pulse += dt;
+      const p = 0.7 + 0.3 * Math.sin(s.pulse * 3.2);
+      s.group.visible = true;
+      /** @type {THREE.MeshBasicMaterial} */ (s.ring.material).opacity = 0.9 * FARO.pinned * p;
+      s.glow.material.opacity = 0.75 * FARO.pinned * p;
+    }
   }
 
   function update(dt, time = 0) {
-    if (S.t < 0) return;
+    if (S.t < 0) { showPinned(dt); return; }
     S.t += dt;
     const t = S.t;
     const total = FARO.dur + FARO.fadeOut;
@@ -203,6 +216,7 @@ export function createFaro({ root, engine = null, world = null }) {
       setVisible(false);
       wave.visible = false;
       setSat(0);
+      showPinned(0);
       return;
     }
     const k = t < FARO.fadeIn ? t / FARO.fadeIn : t > FARO.dur ? 1 - (t - FARO.dur) / FARO.fadeOut : 1;
@@ -236,8 +250,9 @@ export function createFaro({ root, engine = null, world = null }) {
       if (!s.enabled) continue;
       s.pulse += dt;
       const p = 0.75 + 0.25 * Math.sin(s.pulse * 4.2);
-      /** @type {THREE.MeshBasicMaterial} */ (s.ring.material).opacity = 0.9 * k * p;
-      s.glow.material.opacity = 0.75 * k * p;
+      const kk = s.pinned ? Math.max(k, FARO.pinned) : k;
+      /** @type {THREE.MeshBasicMaterial} */ (s.ring.material).opacity = 0.9 * kk * p;
+      s.glow.material.opacity = 0.75 * kk * p;
     }
   }
 
@@ -261,13 +276,20 @@ export function createFaro({ root, engine = null, world = null }) {
     /** Liga ou desliga uma trilha (uma trilha nova que aparece depois de um acontecimento). */
     setTrail(id, on) { const t = trails.get(id); if (t) t.enabled = on; },
     setSpot(id, on) { const s = spots.get(id); if (s) s.enabled = on; },
+    /** Prende a pista: ela continua brilhando fraco depois do pulso (até examinar). */
+    pin(id, on) {
+      const s = spots.get(id);
+      if (!s) return;
+      s.pinned = !!on;
+      if (!on && S.t < 0) s.group.visible = false;
+    },
     spot: (id) => spots.get(id) || null,
     get active() { return S.t >= 0; },
     /** 0..1: o quanto o pulso está aceso agora. */
     get k() { return S.k; },
     /** Segundos desde o pulso (−1 apagado). */
     get t() { return S.t; },
-    info() { return { active: S.t >= 0, t: +S.t.toFixed(2), trails: [...trails.keys()], spots: [...spots.values()].filter((s) => s.enabled).map((s) => s.id) }; },
+    info() { return { active: S.t >= 0, t: +S.t.toFixed(2), trails: [...trails.keys()], spots: [...spots.values()].filter((s) => s.enabled).map((s) => s.id), pinned: [...spots.values()].filter((s) => s.pinned).map((s) => s.id) }; },
     group,
     dispose() {
       stop();

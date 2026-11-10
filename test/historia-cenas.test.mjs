@@ -1,51 +1,105 @@
-// Modo História (etapa 2): as seis cenas do capítulo 1 no jogo de verdade (headless, com o cenário do Recanto).
+// Modo História (etapa 2): as nove cenas do capítulo 1 no jogo de verdade (headless, com o cenário do Recanto).
 // Para cada cena, assistida até o fim e pulada (segurar E logo depois de começar):
 //  - o jogo fica no MESMO estado (etapa, pistas, meias, posição das dogs, música, travas);
 //  - nenhuma trava sobra: a dog ativa anda de novo e a entrada volta (fora do mural);
 //  - ninguém atravessa nada a cada quadro, nem nas transições (dog no chão dentro de colisor, ou uma dentro da outra).
-// E a abertura: o primeiro Faro pelo botão (V), pelo toque no aviso (ui:storyFaro) e sozinho depois de 5 s.
+// Cada cena começa pelo gatilho de verdade (as três pistas do quarto examinadas, o Faro na piscina e na porta da
+// torre, o cesto e a arrancada no varal, o Superbafo na grelha, o latido grosso).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStoryGame, storyInfo, playScene, intrusions, moved } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine } from './helpers/historia.mjs';
+
+/** O Superbafo da Radhija na grelha da guarita (o gatilho da cena do cheiro). */
+function blowVent(h) {
+  const V = h.layout.BOOTH_VENT;
+  become(h, 'radhija');
+  h.teleport('radhija', V.x - 0.75, V.z, Math.PI / 2);
+  h.run(0.3);
+  h.tap('KeyR');
+}
 
 /** Monta o jogo com a cena a ponto de começar: a etapa, a dog certa e o gatilho de verdade. */
 const SCENES = {
   abertura: {
     async prepare() { return createStoryGame(); },
-    free: [1, 0], // do quarto para a porta da cozinha
-    after: 'cozinha',
+    free: [1, 0], // do quarto para a grade
+    after: 'quarto',
+  },
+  janela: {
+    async prepare() {
+      const h = await createStoryGame();
+      h.game.debug.setStage('quarto', 'radhija');
+      h.run(0.3);
+      // o Faro revela as três pistas do quarto; examinadas as três, os pombos passam pela janela
+      const seen = sniff(h);
+      for (const id of ['trilha', 'pote', 'pena']) assert.ok(seen.includes(id), `o Faro revela ${id}`);
+      for (const id of ['trilha', 'pote', 'pena']) assert.ok(examine(h, id), `${id} examinada`);
+      return h;
+    },
+    free: [1, 0],
+    after: 'casa',
   },
   reconstrucao: {
     async prepare() {
       const h = await createStoryGame();
       h.game.debug.setStage('piscina', 'radhija');
-      h.run(0.2);
-      h.tap('KeyV'); // o pulso do Faro perto da piscina acha a boia
+      h.run(0.3);
+      h.tap('KeyV'); // o pulso do Faro perto da piscina acha a marca da boia
       return h;
     },
     free: [1, 0],
     after: 'varal',
   },
-  varal: {
+  senha: {
     async prepare() {
       const h = await createStoryGame();
-      h.game.debug.setStage('varal', 'radhija');
-      h.run(0.2);
-      const P = h.layout.DASH_POST;
-      h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
-      h.tap('ShiftLeft'); // a arrancada no poste do varal
+      h.game.debug.setStage('torre', 'rhaenyra');
+      h.run(0.3);
+      h.tap('KeyV'); // as duas farejam: aqui, a Rhaenyra, perto da porta da torre
       return h;
     },
     free: [-1, 0],
+    after: 'torre',
+  },
+  varal: {
+    async prepare() {
+      const h = await createStoryGame();
+      h.game.debug.setStage('varal', 'rhaenyra');
+      h.run(0.3);
+      // a Rhaenyra empurra o cesto de roupa até embaixo da cenoura
+      const C = h.layout.LAUNDRY;
+      h.teleport('rhaenyra', C.start.x - C.half - 0.26, C.start.z, Math.PI / 2);
+      h.run(0.2);
+      assert.ok(push(h, [1, 0], 14, () => storyInfo(h).flags.basketUnder), 'o cesto chega embaixo da cenoura');
+      // e a arrancada da Radhija no poste do leste solta o pregador
+      become(h, 'radhija');
+      const P = h.layout.DASH_POST;
+      h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
+      h.run(0.2);
+      h.tap('ShiftLeft');
+      return h;
+    },
+    free: [0, 1],
     after: 'torre',
   },
   terraco: {
     async prepare() {
       const h = await createStoryGame();
       h.game.debug.setStage('torre', 'radhija');
-      h.run(0.2);
+      h.run(0.3);
       const T = h.layout.TOWER_LOBBY;
       h.teleport('radhija', (T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2, Math.PI / 2); // entrou no saguão da torre
+      return h;
+    },
+    free: [-1, 0],
+    after: 'portaria',
+  },
+  cheiro: {
+    async prepare() {
+      const h = await createStoryGame();
+      h.game.debug.setStage('portaria', 'radhija');
+      h.run(0.3);
+      blowVent(h);
       return h;
     },
     free: [-1, 0],
@@ -54,11 +108,16 @@ const SCENES = {
   porteiro: {
     async prepare() {
       const h = await createStoryGame();
-      h.game.debug.setStage('portaria', 'rhaenyra');
-      h.run(0.2);
+      h.game.debug.setStage('portaria', 'radhija');
+      h.run(0.3);
+      blowVent(h);
+      skipScene(h, 'cheiro');
+      assert.ok(storyInfo(h).flags.windowOpen, 'a janela da guarita abriu');
+      become(h, 'rhaenyra');
       const B = h.layout.BOOTH;
-      h.teleport('rhaenyra', (B.x0 + B.x1) / 2, B.z1 + 0.6, Math.PI);
-      h.tap('KeyE'); // o latido grave da Rhaenyra acorda o porteiro
+      h.teleport('rhaenyra', (B.x0 + B.x1) / 2, B.awning.z1 + 0.9, Math.PI);
+      h.run(0.2);
+      h.tap('KeyE'); // o latido grosso da Rhaenyra acorda o porteiro
       return h;
     },
     free: [0, 1],
@@ -68,7 +127,7 @@ const SCENES = {
     async prepare() {
       const h = await createStoryGame();
       h.game.debug.setStage('fechamento', 'radhija');
-      h.run(0.2);
+      h.run(0.3);
       const G = h.layout.GATE;
       h.teleport('radhija', (G.x0 + G.x1) / 2, G.z + 0.6, Math.PI); // na frente do portãozinho aberto
       return h;
@@ -83,7 +142,7 @@ for (const [id, S] of Object.entries(SCENES)) {
     const A = await S.prepare();
     assert.deepEqual(intrusions(A), [], 'antes da cena');
     const pa = playScene(A, { skip: false });
-    assert.equal(pa.id, id, 'a cena certa começou (assistida)');
+    assert.equal(pa.id, id, `a cena certa começou (assistida): ${JSON.stringify(storyInfo(A).flags)}`);
     const B = await S.prepare();
     const pb = playScene(B, { skip: true });
     assert.equal(pb.id, id, 'a cena certa começou (pulada)');
@@ -102,6 +161,12 @@ for (const [id, S] of Object.entries(SCENES)) {
       assert.equal(h.puzzle.lockFor('radhija'), null, `${how}: sem trava na Radhija`);
       assert.equal(h.puzzle.lockFor('rhaenyra'), null, `${how}: sem trava na Rhaenyra`);
       assert.equal(storyInfo(h).scene, null, `${how}: a cena acabou`);
+      // a volta para trás da dog é suave (menos de 1 s); depois dela, nenhum plano de cena sobra
+      if (S.free) {
+        h.run(1.1);
+        assert.equal(h.game.debug.cam.shotActive, false, `${how}: a câmera voltou para trás da dog`);
+        assert.equal(h.game.debug.cam.mode, 'follow', `${how}: seguindo a dog`);
+      }
       if (S.free) {
         assert.equal(h.puzzle.cinematic(), false, `${how}: a entrada volta`);
         const d = moved(h, 0.7, S.free);
@@ -112,55 +177,63 @@ for (const [id, S] of Object.entries(SCENES)) {
   });
 }
 
-test('abertura: o primeiro Faro pelo toque no aviso (ui:storyFaro) e sozinho, depois de 5 s', async () => {
-  // pelo toque no aviso: a cena segue na hora
+test('abertura: termina com a jogadora no quarto, a cenoura sumida e o aviso do Faro na tela', async () => {
   const h = await createStoryGame();
-  let guard = 0;
-  while (!h.puzzle.waitingFaro && guard++ < 60 * 60) h.step();
-  assert.ok(h.puzzle.waitingFaro, 'a abertura espera o primeiro Faro');
-  const prompts = h.log('story:prompt');
-  assert.ok(prompts.some((p) => p.on), 'o aviso do Faro aparece');
+  const r = playScene(h, { skip: false });
+  assert.equal(r.id, 'abertura');
+  assert.ok(r.seconds > 20 && r.seconds < 45, `a abertura dura ${r.seconds.toFixed(1)} s`);
+  const s = storyInfo(h);
+  assert.equal(s.stage, 'quarto');
+  // as pistas de cena chegam com a abertura; as do quarto, só farejando e examinando
+  assert.deepEqual(s.clues.slice().sort(), ['abraco', 'pombos']);
+  assert.equal(h.props.carrot.object.visible, false, 'a cenoura sumiu');
+  h.run(0.3);
+  assert.ok(h.log('story:prompt').some((p) => p.on), 'o aviso do Faro aparece no quarto');
+  assert.equal(h.log('objective').at(-1)?.text, 'A cenoura sumiu! Farejem o quarto');
+  // o toque no aviso (ui:storyFaro) fareja; o aviso some
   h.events.emit('ui:storyFaro', {});
-  h.step();
-  assert.equal(h.puzzle.waitingFaro, false, 'o toque no aviso dispara o Faro');
-  assert.ok(h.log('story:faro').length >= 1, 'o pulso saiu');
-  for (const id of ['trilha', 'pote', 'pena']) assert.ok(storyInfo(h).clues.includes(id), `pista ${id} na lupa`);
-
-  // sem apertar nada: sai sozinho
-  const g = await createStoryGame();
-  guard = 0;
-  while (!g.puzzle.waitingFaro && guard++ < 60 * 60) g.step();
-  const t0 = g.time;
-  while (g.puzzle.waitingFaro && g.time - t0 < 8) g.step();
-  assert.equal(g.puzzle.waitingFaro, false);
-  assert.ok(g.time - t0 > 4.5 && g.time - t0 < 6, `sozinho em ~5 s (${(g.time - t0).toFixed(2)} s)`);
+  h.run(0.3);
+  assert.ok(h.log('story:faro').length >= 1, 'o pulso saiu pelo toque no aviso');
+  assert.equal(h.log('story:prompt').at(-1).on, false, 'depois do primeiro Faro, o aviso some');
 });
 
-test('abertura: com a Rhaenyra ativa (?dog=rhaenyra), o primeiro Faro ainda é da Radhija e o L3 do controle vale', async () => {
-  const h = await createStoryGame({ query: 'dog=rhaenyra' });
-  let guard = 0;
-  while (!h.puzzle.waitingFaro && guard++ < 60 * 60) h.step();
-  assert.ok(h.puzzle.waitingFaro);
-  // L3 (apertar o analógico esquerdo) → 'Faro'
-  h.setPad(h.pad({ down: [] }));
-  h.step();
-  h.setPad(h.pad({ down: [10] }));
-  h.step();
-  h.setPad(h.pad({ down: [] }));
-  h.step();
-  h.setPad(null);
-  assert.equal(h.puzzle.waitingFaro, false, 'o L3 dispara o Faro na abertura');
-});
-
-test('abertura: durante a cena, nada de trocar de dog, Fica, pulo ou latido', async () => {
+test('abertura: durante a cena, nada de trocar de dog, Fica, pulo, latido ou Faro', async () => {
   const h = await createStoryGame();
   h.run(2);
   assert.ok(storyInfo(h).scene === 'abertura');
   const before = h.game.activeDog;
   const barks = h.dogs.radhija.barks + h.dogs.rhaenyra.barks;
-  for (const k of ['KeyQ', 'KeyF', 'Space', 'KeyC']) h.tap(k);
+  for (const k of ['KeyQ', 'KeyF', 'Space', 'KeyC', 'KeyV']) h.tap(k);
   assert.equal(h.game.activeDog, before, 'Q não troca');
   assert.deepEqual(h.game.stay, { radhija: false, rhaenyra: false }, 'F não põe no Fica');
   assert.equal(h.dogs.radhija.barks + h.dogs.rhaenyra.barks, barks, 'ninguém late');
+  assert.equal(h.log('story:faro').length, 0, 'o Faro não sai no meio da cena');
   assert.ok(storyInfo(h).scene === 'abertura', 'a cena segue');
+});
+
+test('cenas: a cenoura vai nas patas do Farelo quando os pombos a levam (nada de flutuar)', async () => {
+  const h = await createStoryGame();
+  h.game.debug.setStage('quarto', 'radhija');
+  h.run(0.3);
+  sniff(h);
+  for (const id of ['trilha', 'pote', 'pena']) examine(h, id);
+  const far = h.props.squad.far;
+  const carrot = h.props.carrot;
+  assert.equal(typeof carrot.holdBy, 'function', 'a cenoura sabe ser agarrada');
+  assert.equal(typeof far.feetPoint, 'function', 'o pombo diz onde as patas seguram');
+  let seen = 0;
+  let worst = 0;
+  playScene(h, {
+    each() {
+      if (storyInfo(h).scene !== 'janela' || storyInfo(h).beat !== 'voo' || !carrot.object.visible || !far.object.visible) return;
+      const f = far.feetPoint();
+      const c = carrot.object.position;
+      const d = Math.hypot(c.x - f.x, c.y - f.y, c.z - f.z);
+      // os primeiros quadros são a cenoura chegando às patas
+      if (seen++ > 6) worst = Math.max(worst, d);
+      assert.ok(c.y < far.object.position.y + 0.25, 'a cenoura fica embaixo do pombo');
+    },
+  });
+  assert.ok(seen > 40, `a cenoura aparece no voo (${seen} quadros)`);
+  assert.ok(worst < 0.14, `a cenoura não sai das patas (no máximo ${worst.toFixed(3)} m)`);
 });

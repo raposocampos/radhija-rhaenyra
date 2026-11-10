@@ -132,7 +132,7 @@ export function createStoryHud({ root, audio = null }) {
       titleT = 3.4;
     }),
     events.on('story:prompt', (/** @type {any} */ p) => { prompt.classList.toggle('is-on', !!p.on); }),
-    events.on('story:faro', () => { faroCool = 6.6; coolFaro(true); }),
+    events.on('story:faro', () => { faroCool = 1.2; coolFaro(true); }),
     events.on('story:clue', (/** @type {any} */ p) => {
       if (!found.includes(p.id)) found.push(p.id);
       queue.push(p.id);

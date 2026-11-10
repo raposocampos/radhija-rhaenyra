@@ -1,12 +1,16 @@
 // Modo História (suíte 'historia'): a fatia jogável no navegador de verdade, pela entrada das prévias (?historia).
-//  - a abertura "A noite da garoa" com o HUD da história: faixas de cinema, o HUD do jogo escondido, o aviso do primeiro
-//    Faro com a tecla do aparelho, o V dispara o pulso, os cartões voam para a lupa, segurar E pula o resto;
-//  - a missão com as teclas reais: a maçaneta (impulso da Rhaenyra), o galho, a porta da área de serviço, o Faro na
-//    piscina (a Reconstrução, assistida), a arrancada no varal, a porta de mola da torre com a irmã segurando, o
-//    porteiro (o latido fino não basta, o grave sim), o portãozinho (o fechamento, assistido);
+//  - a abertura "A noite da garoa" com o HUD da história (faixas de cinema, o HUD do jogo escondido), filmada de dentro
+//    do quarto, e segurar E pula o resto;
+//  - o quarto: o aviso do Faro com a tecla do aparelho, o V solta o pulso e a nuvem de cheiro, o E examina a trilha, o
+//    pote e a pena; a cena dos pombos na janela e a cartela do capítulo;
+//  - a missão com as teclas reais, puzzle a puzzle: a portinha de gato e o pedal da grade, o saco de ração e a
+//    maçaneta, o galho, a passagem do muro e a argola do ferrolho, o Faro na piscina (a Reconstrução), o cesto e a
+//    arrancada no varal, a senha do interfone (o Faro mostra) e a porta de mola com a irmã segurando, o Superbafo na
+//    grelha da guarita e o latido grosso, o portãozinho (o fechamento, assistido). Os trechos longos entre um puzzle e
+//    outro são postos no lugar (o mapa cresceu; a caminhada com a IA fica nos testes de unidade);
 //  - o mural provisório: a patinha do tutorial, a ligação errada volta, arrastar e tocar, Continuar, o fim do capítulo
 //    e Jogar de novo; ninguém atravessa nada no caminho;
-//  - no celular (iPhone 13): o toque no aviso do Faro, o botão ⏩ segurado pula, o botão do focinho;
+//  - no celular (iPhone 13): o botão ⏩ segurado pula, o toque no aviso do Faro, o botão do focinho;
 //  - o HUD da história (lupa e meias, faixas, cartela, aviso, mural, fim) nos 11 tamanhos de tela, com capturas;
 //  - a câmera em 3ª pessoa: o dedo arrastado na parte livre da tela gira a câmera e no joystick anda com a dog (sem
 //    girar); no PC, arrastar com o mouse gira e só passar o mouse por cima, não.
@@ -130,15 +134,13 @@ async function touchDragChecks(pg, label) {
   });
   check(!!fb, `${label}: o botão do focinho nos controles`, fb);
   if (fb) {
-    await pg.waitForFunction(() => !window.__game.game.debug.info().story.faro.active, null, { timeout: 30000 }).catch(() => {});
+    await pg.waitForFunction(() => window.__game.game.debug.info().story.faroReady, null, { timeout: 30000 }).catch(() => {});
     await pg.evaluate(() => window.__game.game.debug.clearLog());
     const h0 = await camHeading(pg);
     await fingerDrag(pg, fb, { x: fb.x - 12, y: fb.y }, { steps: 4, hold: 60 });
-    if (fb.ativa === 'radhija') {
-      await pg.waitForFunction(() => window.__game.game.debug.events('story:faro').length > 0, null, { timeout: 10000 }).catch(() => {});
-      const faros = await pg.evaluate(() => window.__game.game.debug.events('story:faro').length);
-      check(faros >= 1, `${label}: o focinho solta o Faro`, faros);
-    }
+    await pg.waitForFunction(() => window.__game.game.debug.events('story:faro').length > 0, null, { timeout: 10000 }).catch(() => {});
+    const faros = await pg.evaluate(() => window.__game.game.debug.events('story:faro').length);
+    check(faros >= 1, `${label}: o focinho solta o Faro`, faros);
     const turn = Math.abs(wrapAngle((await camHeading(pg)) - h0));
     check(turn < 0.02, `${label}: o dedo no botão não gira a câmera`, { turn: +turn.toFixed(3) });
   }
@@ -169,8 +171,40 @@ try {
   await page.goto(BASE, { waitUntil: 'load', timeout: 120000 });
   await ev(() => { localStorage.removeItem('rr-progress-v1'); localStorage.removeItem('rr-settings-v1'); });
   await load('?historia');
+  let i = await info();
+  check(await ev(() => window.__game.game.isStory), '?historia abre a área da história (prévia/desenvolvimento)');
+  check(i.story?.scene === 'abertura', 'a abertura começa sozinha', i.story);
+  let hs = await hudState();
+  check(hs?.story && hs.cinema, 'HUD da história com as faixas de cinema', hs);
+  const hudHidden = await ev(() => getComputedStyle(document.querySelector('.rr-hud')).visibility === 'hidden');
+  check(hudHidden, 'na cena, o HUD do jogo some (nada de texto em cena)');
+  // a câmera de cinema fica dentro do quarto (a casa é inteira: nada de filmar através de parede)
+  const camInRoom = () => ev(() => {
+    const p = window.__game.engine.camera.position;
+    const Q = window.__game.layout.ROOMS.quarto;
+    return { ok: p.x > Q.x0 && p.x < Q.x1 && p.z > Q.z0 && p.z < Q.z1 && p.y < window.__game.layout.WALLS.h, at: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)] };
+  });
+  await H.sleep(3000);
+  check((await camInRoom()).ok, 'a noite da garoa é filmada de dentro do quarto', await camInRoom());
+  await shot('01-abertura-noite.png');
+  i = await waitFor((x) => x.story?.beat === 'pombos', { timeout: 40000 });
+  await H.sleep(4200);
+  check((await camInRoom()).ok, 'os pombos no parapeito, vistos de dentro do quarto', await camInRoom());
+  await shot('02-abertura-pombos.png');
+  i = await waitFor((x) => x.story?.beat === 'manha', { timeout: 40000 });
+  await H.sleep(6000);
+  await shot('03-abertura-manha.png');
+  // o resto, pulando (segurar E)
+  await skipScene('abertura');
+  i = await stageIs('quarto', 20000);
+  check(i.story.stage === 'quarto', 'a abertura termina com a jogadora no quarto', i.story.stage);
+  hs = await hudState();
+  check(!hs.cinema, 'as faixas saem e o HUD volta', hs);
+  check(hs.clues.length === 2, 'a lupa guarda as 2 pistas de cena', hs.clues);
+  check((await ev(() => document.querySelector('.rr-objective')?.innerText || '')).includes('A cenoura sumiu'), 'o objetivo diz o mistério: a cenoura sumiu', await ev(() => document.querySelector('.rr-objective')?.innerText));
+  check((await noOverlap()).length === 0, 'ninguém dentro de nada', await noOverlap());
   // a câmera em 3ª pessoa fica parada no rumo da câmera de cima (o do offset do layout): as teclas do harness contam
-  // com ele. O rumo é posto de novo porque, até aqui, o começo da abertura já girou a câmera para trás de uma dog.
+  // com ele. Posto aqui, depois da abertura (o fim das cenas gira a câmera para trás da dog).
   await ev(() => {
     const cam = window.__game.game.debug.cam;
     const off = window.__game.layout.CAMERA.offset;
@@ -184,95 +218,190 @@ try {
     return Math.abs(b.fx + off[0] / L) < 1e-6 && Math.abs(b.fz + off[2] / L) < 1e-6;
   });
   check(camFixed, 'a câmera parada no rumo das teclas do harness');
-  let i = await info();
-  check(await ev(() => window.__game.game.isStory), '?historia abre a área da história (prévia/desenvolvimento)');
-  check(i.story?.scene === 'abertura', 'a abertura começa sozinha', i.story);
-  let hs = await hudState();
-  check(hs?.story && hs.cinema, 'HUD da história com as faixas de cinema', hs);
-  const hudHidden = await ev(() => getComputedStyle(document.querySelector('.rr-hud')).visibility === 'hidden');
-  check(hudHidden, 'na cena, o HUD do jogo some (nada de texto em cena)');
-  await shot('01-abertura-noite.png');
-  // o primeiro Faro: a cena espera o botão (com a tecla do aparelho no aviso)
-  i = await waitFor((x) => x.story?.waitingFaro, { timeout: 60000 });
-  check(i.story.waitingFaro, 'a abertura espera o primeiro Faro', i.story);
+  const LY = await ev(() => {
+    const L = window.__game.layout;
+    const pick = (o, ks) => Object.fromEntries(ks.map((k) => [k, o[k]]));
+    return {
+      spots: L.CLUE_SPOTS, flap: L.PET_FLAP, gate: L.PET_GATE, pedal: L.PET_PEDAL, sack: L.FOOD_SACK, handle: L.KITCHEN_HANDLE,
+      branch: L.BRANCH, sdoor: L.SERVICE_DOOR, gap: L.YARD_GAP, bolt: L.SERVICE_BOLT, yard: pick(L.YARD, ['x0', 'x1', 'z0']),
+      recon: L.RECON, laundry: L.LAUNDRY, pin: L.CARROT_PIN, post: L.DASH_POST, tdoor: L.TOWER_DOOR, intercom: L.INTERCOM,
+      booth: L.BOOTH, vent: L.BOOTH_VENT, lgate: L.GATE, house: pick(L.HOUSE, ['x1']),
+    };
+  });
+  /** Põe uma dog num lugar (os trechos longos: a partida confere cada puzzle com as teclas, não a caminhada). */
+  const tp = (name, x, z, yaw = null) => ev(({ name: n, x: px, z: pz, yaw: y }) => {
+    const g = window.__game.game;
+    g.debug.teleport(n, px, pz);
+    if (y !== null) g.debug.ctrls[n].yaw = y;
+  }, { name, x, z, yaw });
+
+  console.log('\n== O quarto: farejar (V) e examinar (E) a trilha, o pote e a pena ==');
+  // o aviso do Faro com a tecla do aparelho
+  await H.sleep(600);
   const prompt = await ev(() => {
     const el = document.querySelector('.rr-story__prompt');
     const key = [...el.querySelectorAll('[data-dev]')].find((k) => getComputedStyle(k).display !== 'none');
     return { on: el.classList.contains('is-on'), key: key?.textContent?.trim() ?? null };
   });
   check(prompt.on && prompt.key === 'V', 'o aviso do focinho com a tecla V (teclado)', prompt);
-  await shot('02-abertura-aviso-faro.png');
   await clearLog();
-  await press('KeyV', 600);
-  i = await waitFor((x) => !x.story.waitingFaro, { timeout: 5000 });
-  check(!i.story.waitingFaro && (await logOf('story:faro')).length >= 1, 'V dispara o pulso do Faro', i.story);
-  await H.sleep(2500);
-  await shot('03-abertura-faro.png');
-  hs = await hudState();
-  check(['trilha', 'pote', 'pena'].every((id) => hs.clues.includes(id)), 'a trilha, o pote e a pena chegam à lupa', hs.clues);
-  // a cartela do capítulo (assistindo até o fim)
-  i = await waitFor((x) => x.story.beat === 'titulo', { timeout: 30000 });
+  await press('KeyV', 900);
+  i = await info();
+  check((await logOf('story:faro')).length >= 1, 'V solta o pulso do Faro', i.story.faro);
+  check(['trilha', 'pote', 'pena'].every((id) => i.story.revealed.includes(id)), 'o Faro revela a trilha, o pote e a pena', i.story.revealed);
+  check(i.story.cloud.on && i.story.cloud.puffs >= 2, 'a nuvem de cheiro sai do focinho até a pista mais perto', i.story.cloud);
+  check(!(await ev(() => document.querySelector('.rr-story__prompt').classList.contains('is-on'))), 'depois do primeiro Faro, o aviso some');
+  await shot('04-quarto-faro.png');
+  for (const id of ['trilha', 'pote', 'pena']) {
+    const s = LY.spots[id];
+    const at = s.at ?? s;
+    if (id === 'pena') await tp('radhija', at.x, at.z, Math.PI);
+    else await walkTo(at.x, at.z, { timeout: 12000, tol: 0.3 });
+    await press('KeyE', 1600);
+    i = await waitFor((x) => x.story.clues.includes(id), { timeout: 4000 });
+    check((await story()).clues.includes(id), `${id}: examinada com o E, vira pista na lupa`, (await story()).clues);
+  }
+  // examinadas as três: os pombos passam pela janela com a cenoura nas patas
+  i = await waitFor((x) => x.story.scene === 'janela', { timeout: 6000 });
+  check(i.story.scene === 'janela', 'com as três pistas, a cena dos pombos na janela', i.story);
+  i = await waitFor((x) => x.story.beat === 'voo', { timeout: 6000 });
+  await H.sleep(2300);
+  await shot('05-janela-pombos.png');
+  i = await waitFor((x) => x.story.beat === 'titulo' || !x.story.scene, { timeout: 30000 });
   await H.sleep(900);
   hs = await hudState();
   check(hs.title, 'a cartela "As Aventuras de Radhija & Rhaenyra" · "Capítulo 1 · Cadê a Cenoura?"', hs);
   const titleText = await ev(() => document.querySelector('.rr-story__title').innerText.replace(/\s+/g, ' ').trim());
   check(/Radhija/.test(titleText) && /Rhaenyra/.test(titleText) && /Cadê a Cenoura/.test(titleText), 'o texto da cartela', titleText);
-  await shot('04-abertura-cartela.png');
-  i = await stageIs('cozinha', 20000);
-  check(i.story.stage === 'cozinha', 'a abertura termina na missão da cozinha', i.story.stage);
-  hs = await hudState();
-  check(!hs.cinema, 'as faixas saem e o HUD volta', hs);
-  check(hs.clues.length === 5, 'a lupa guarda 5 pistas', hs.clues);
-  await H.sleep(3000); // os cartões voam até a lupa, um por vez
+  await shot('06-cartela.png');
+  i = await stageIs('casa', 20000);
+  check(i.story.stage === 'casa', 'a missão: atrás dos pombos', i.story.stage);
+  await H.sleep(2500); // os cartões voam até a lupa, um por vez
   check((await ev(() => document.querySelector('[data-n="pistas"]').textContent)) === '5', 'o contador da lupa mostra 5', await ev(() => document.querySelector('[data-n="pistas"]').textContent));
-  check((await noOverlap()).length === 0, 'ninguém dentro de nada', await noOverlap());
+  await ev(() => { const cam = window.__game.game.debug.cam; const off = window.__game.layout.CAMERA.offset; cam.heading = Math.atan2(-off[0], -off[2]); });
 
-  console.log('\n== Passo 1: a maçaneta da cozinha (impulso da Rhaenyra) ==');
+  console.log('\n== A casa: a portinha de gato, o pedal da grade, o saco de ração e a maçaneta ==');
+  const fz = (LY.flap.z0 + LY.flap.z1) / 2;
+  await become('radhija');
+  await walkPath([[LY.flap.x - 0.75, fz], [LY.flap.x + 0.85, fz]], { timeout: 20000, tol: 0.16 });
+  i = await info();
+  check(i.dogs.radhija.x > LY.flap.x + 0.3, 'a Radhija passa pela portinha de gato da grade', i.dogs.radhija);
+  await walkTo(LY.pedal.x, LY.pedal.z, { timeout: 10000, tol: 0.14, stopIf: (x) => x.story.flags.petGateOpen });
+  i = await waitFor((x) => x.story.flags.petGateOpen && x.story.doors.petGate > 0.9, { timeout: 5000 });
+  check(i.story.flags.petGateOpen, 'o pedal solta a grade do quarto', i.story.doors);
+  await shot('07-grade-aberta.png');
   await become('rhaenyra');
-  await walkPath([[-10.0, 3.0], [-7.32, 3.12]], { timeout: 20000 });
+  const gz = (LY.gate.hinge.z + LY.gate.latchPost.z) / 2;
+  await walkPath([[LY.gate.hinge.x - 0.9, gz], [LY.gate.hinge.x + 1.3, gz]], { timeout: 25000 });
+  i = await info();
+  check(i.dogs.rhaenyra.x > LY.gate.hinge.x + 0.6, 'a Rhaenyra passa pela grade aberta', i.dogs.rhaenyra);
+  // o saco de ração está na frente da maçaneta: a Rhaenyra empurra para o norte
+  await walkTo(LY.sack.start.x, LY.sack.start.z + LY.sack.half + 0.3, { timeout: 20000, tol: 0.12 });
+  i = await holdUntil([...keysFor(0, -1), 'ShiftLeft'], (x) => x.story.flags.sackFree, { timeout: 12000, label: 'empurrar o saco de ração' });
+  check(i.story.flags.sackFree, 'a Rhaenyra empurra o saco de ração para o lado', i.story.pushables);
+  await walkTo(LY.handle.x - 0.46, LY.handle.z, { timeout: 10000, tol: 0.12 });
   // de frente para a porta (leste) e o pulo
   await H.hold(keysFor(1, 0), 120);
   await press('Space', 1500);
   i = await waitFor((x) => x.story.flags.kitchenOpen, { timeout: 6000 });
-  check(i.story.flags.kitchenOpen && i.story.stage === 'galho', 'o impulso na maçaneta abre a porta da cozinha', i.story);
-  await shot('05-cozinha-porta.png');
+  check(i.story.flags.kitchenOpen && i.story.stage === 'quintal', 'o impulso na maçaneta abre a porta da cozinha', i.story);
+  await shot('08-cozinha-porta.png');
 
-  console.log('\n== Passo 2: o galho e a porta da área de serviço ==');
-  // pela porta aberta e em volta da ponta da folha (ela abre para o quintal) até a face oeste do galho
-  await walkPath([[-6.0, 2.95], [-5.35, 2.75], [-5.55, 1.95]], { timeout: 20000 });
-  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.branchFree, { timeout: 12000, label: 'empurrar o galho' });
+  console.log('\n== O quintal: o galho, a passagem do muro e a argola do ferrolho ==');
+  const sdx = (LY.sdoor.hinge.x + LY.sdoor.latchPost.x) / 2;
+  await tp('rhaenyra', LY.branch.start.x - LY.branch.half - 0.26, LY.branch.start.z, Math.PI / 2);
+  await H.sleep(300);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.branchFree, { timeout: 14000, label: 'empurrar o galho' });
   check(i.story.flags.branchFree, 'a Rhaenyra empurra o galho para longe da porta', i.story.flags);
   check(i.story.clues.includes('telhas'), 'as telhas da tempestade (caso 2) na lupa', i.story.clues);
-  await walkTo(-4.83, 1.95, { timeout: 8000 });
-  await press('KeyE', 800);
-  i = await stageIs('piscina', 6000);
-  check(i.story.flags.serviceOpen, 'E abre a porta da área de serviço', i.story);
-
-  console.log('\n== Passo 3: o Faro na piscina (a Reconstrução, assistida) ==');
+  await tp('rhaenyra', sdx - 0.2, LY.sdoor.hinge.z + 0.8, Math.PI);
+  await press('KeyE', 900);
+  i = await info();
+  check(!i.story.flags.serviceOpen, 'o E na porta não abre: o ferrolho fica do outro lado', i.story.flags);
+  check((await ev(() => document.querySelector('.rr-objective')?.innerText || '')).includes('ferrolho'), 'o objetivo aponta o ferrolho do outro lado do muro');
+  await H.sleep(2800); // o plano da câmera na passagem do muro
   await become('radhija');
-  await walkPath([[-4.83, 2.2], [-4.83, 0.5], [-4.8, -0.6]], { timeout: 25000 });
+  const gapX = (LY.gap.x0 + LY.gap.x1) / 2;
+  await tp('radhija', gapX, LY.gap.z + 0.8, Math.PI);
+  await H.sleep(300);
+  await walkTo(gapX, LY.gap.z - 0.9, { timeout: 10000, tol: 0.16 });
+  i = await info();
+  check(i.dogs.radhija.z < LY.gap.z - 0.3, 'a Radhija passa pela passagem baixa do muro', i.dogs.radhija);
+  await shot('09-passagem-do-muro.png');
+  await walkTo(LY.bolt.ring.x, LY.bolt.ring.z - 0.5, { timeout: 12000, tol: 0.16 });
+  await press('KeyE', 300);
+  await page.waitForFunction(() => !!window.__game.game.puzzle.lockFor('radhija')?.pull, null, { timeout: 15000 }).catch(() => {});
+  const pull = await ev(() => { const p = window.__game.game.puzzle.lockFor('radhija')?.pull; return p ? { ax: p.ax, az: p.az } : null; });
+  check(!!pull, 'a Radhija morde a argola do ferrolho', await story());
+  if (pull) {
+    i = await holdUntil(keysFor(pull.ax, pull.az), (x) => x.story.flags.boltOpen, { timeout: 10000, label: 'puxar a argola' });
+    check(i.story.flags.boltOpen, 'puxando a argola, o ferrolho corre', i.story.flags);
+  }
+  i = await stageIs('piscina', 8000);
+  check(i.story.flags.serviceOpen, 'e a porta da área de serviço abre', i.story);
+  await shot('10-porta-de-servico.png');
+
+  console.log('\n== A piscina: o Faro mostra a Reconstrução ==');
+  await tp('radhija', LY.recon.x - 0.9, LY.recon.z + 1.5, Math.PI);
+  await H.sleep(1500);
   await clearLog();
   await press('KeyV', 800);
   i = await waitFor((x) => x.story.scene === 'reconstrucao', { timeout: 6000 });
   check(i.story.scene === 'reconstrucao', 'o pulso perto da piscina mostra a Reconstrução', i.story);
-  await H.sleep(2000);
-  await shot('06-reconstrucao.png');
+  await H.sleep(2200);
+  await shot('11-reconstrucao.png');
   i = await stageIs('varal', 30000);
   check(i.story.clues.includes('boia'), 'a boia (caso 1) na lupa', i.story.clues);
 
-  console.log('\n== Passo 4: a arrancada no varal ==');
-  await walkPath([[-4.8, 0.4], [-6.85, -3.2], [-5.6, -6.3], [-2.0, -6.35], [2.25, -6.6]], { timeout: 40000 });
-  await holdUntil(keysFor(0, -1), (x) => !!x.story.scene, { timeout: 1500, during: () => press('ShiftLeft', 60), label: 'arrancada no poste' });
-  i = await waitFor((x) => x.story.scene === 'varal' || x.story.stage === 'torre', { timeout: 3000 });
-  check(i.story.scene === 'varal' || i.story.stage === 'torre', 'a arrancada no poste sacode o varal', i.story);
-  if (i.story.scene) await skipScene('varal');
+  console.log('\n== O varal: o cesto embaixo da cenoura e a arrancada no poste ==');
+  await become('rhaenyra');
+  await tp('rhaenyra', LY.laundry.start.x - LY.laundry.half - 0.28, LY.laundry.start.z, Math.PI / 2);
+  await H.sleep(300);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.basketUnder, { timeout: 20000, label: 'empurrar o cesto de roupa' });
+  check(i.story.flags.basketUnder, 'a Rhaenyra põe o cesto de roupa embaixo da cenoura', i.story.pushables);
+  await shot('12-varal-cesto.png');
+  await become('radhija');
+  await tp('radhija', LY.post.x, LY.post.z + 1.0, Math.PI);
+  await H.sleep(300);
+  await holdUntil(keysFor(0, -1), (x) => !!x.story.scene, { timeout: 2500, during: () => press('ShiftLeft', 60), label: 'arrancada no poste' });
+  i = await waitFor((x) => x.story.scene === 'varal' || x.story.stage === 'torre', { timeout: 4000 });
+  check(i.story.scene === 'varal' || i.story.stage === 'torre', 'com o cesto no lugar, a arrancada no poste solta o pregador', i.story);
+  if (i.story.scene) {
+    i = await waitFor((x) => x.story.beat === 'voa' || !x.story.scene, { timeout: 8000 });
+    await H.sleep(900);
+    await shot('13-varal-farelo-com-a-cenoura.png');
+    await skipScene('varal');
+  }
   i = await stageIs('torre', 10000);
   check(i.story.stage === 'torre', 'os pombos levam a cenoura para a torre', i.story.stage);
 
-  console.log('\n== Passo 5: a porta de mola da torre, a irmã segurando ==');
+  console.log('\n== A torre: a senha do interfone (o Faro mostra) e a porta de mola ==');
+  const tdz = (LY.tdoor.hinge.z + LY.tdoor.latchPost.z) / 2;
+  await tp('radhija', LY.tdoor.hinge.x - 1.7, tdz + 1.3, Math.PI / 2);
+  await H.sleep(1500);
+  await press('KeyV', 800);
+  i = await waitFor((x) => x.story.scene === 'senha', { timeout: 6000 });
+  check(i.story.scene === 'senha', 'o Faro perto da porta mostra o Farelo apertando a senha', i.story);
+  await H.sleep(3600);
+  await shot('14-senha-do-interfone.png');
+  i = await waitFor((x) => !x.story.scene, { timeout: 30000 });
+  check(i.story.clues.includes('senha') && i.story.flags.codeSeen, 'a senha vira pista na lupa', i.story.clues);
   await become('rhaenyra');
-  await walkTo(3.22, -6.17, { timeout: 15000 });
-  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.doors.tower > 0.65, { timeout: 5000, label: 'empurrar a porta de mola' });
+  for (const id of LY.intercom.code) {
+    const b = LY.intercom.buttons.find((x) => x.id === id);
+    await tp('rhaenyra', b.x - 0.46, b.z, Math.PI / 2);
+    await H.sleep(300);
+    await H.hold(keysFor(1, 0), 120);
+    await press('Space', 1700);
+    i = await waitFor((x) => x.story.code.includes(id) || x.story.flags.towerUnlocked, { timeout: 4000 });
+  }
+  i = await waitFor((x) => x.story.flags.towerUnlocked, { timeout: 5000 });
+  check(i.story.flags.towerUnlocked, 'os três botões na ordem da senha destravam a porta da torre', { code: i.story.code, flags: i.story.flags });
+  await shot('15-interfone-destravado.png');
+  await tp('rhaenyra', LY.tdoor.hinge.x - 0.4, tdz, Math.PI / 2);
+  await tp('radhija', LY.tdoor.hinge.x - 1.3, LY.tdoor.latchPost.z - 0.25, Math.PI / 2);
+  await H.sleep(300);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.doors.tower > 0.65, { timeout: 6000, label: 'empurrar a porta de mola' });
   check(i.story.doors.tower > 0.6, 'a Rhaenyra abre a porta de mola', i.story.doors);
   // segurando, troca para a Radhija: a irmã no vão fica segurando
   await holdUntil([...keysFor(1, 0), 'ShiftLeft'], () => false, { timeout: 500, during: () => press('KeyQ', 100), label: 'trocar segurando a porta' });
@@ -281,39 +410,59 @@ try {
   await H.sleep(800);
   check((await story()).doors.tower > 0.3, 'com a irmã no vão, a mola não fecha', (await story()).doors);
   // a irmã segura encostada na folha (do lado da dobradiça): a Radhija passa pelo lado do batente e entra no saguão
-  await walkPath([[3.1, -6.0], [3.76, -5.95], [4.4, -5.6]], { timeout: 12000 });
+  await walkPath([[LY.tdoor.hinge.x - 0.5, LY.tdoor.latchPost.z - 0.25], [LY.tdoor.hinge.x + 0.25, LY.tdoor.latchPost.z - 0.25], [LY.tdoor.hinge.x + 0.9, LY.tdoor.latchPost.z - 0.1]], { timeout: 14000, tol: 0.16 });
   i = await waitFor((x) => x.story.scene === 'terraco' || x.story.stage === 'portaria', { timeout: 6000 });
   check(i.story.scene === 'terraco' || i.story.stage === 'portaria', 'a Radhija passa pela irmã e entra no saguão: o terraço', i.story);
   if (i.story.scene) {
-    await H.sleep(2500);
-    await shot('07-terraco.png');
+    await H.sleep(2600);
+    await shot('16-terraco.png');
     await skipScene('terraço');
   }
   i = await stageIs('portaria', 10000);
   check((await noOverlap()).length === 0, 'ninguém dentro de nada na torre', await noOverlap());
 
-  console.log('\n== Passo 6: o porteiro ==');
-  await walkPath([[3.3, -3.9], [8.6, -3.9], [9.6, -3.95], [10.7, -6.0]], { timeout: 40000 });
+  console.log('\n== A portaria: o Superbafo na grelha, a janela e o latido grosso ==');
+  const bx = (LY.booth.x0 + LY.booth.x1) / 2;
+  await become('rhaenyra');
+  await tp('rhaenyra', bx + 0.4, LY.booth.awning.z1 + 0.9, Math.PI);
+  await H.sleep(400);
+  await press('KeyE', 900);
+  i = await info();
+  check(!i.story.scene && i.story.stage === 'portaria' && !i.story.flags.windowOpen, 'de janela fechada, o latido grosso não acorda o porteiro', i.story.flags);
+  await become('radhija');
+  await tp('radhija', LY.vent.x - 0.75, LY.vent.z, Math.PI / 2);
+  await H.sleep(500);
+  await press('KeyR', 400);
+  i = await waitFor((x) => x.story.scene === 'cheiro' || x.story.flags.windowOpen, { timeout: 10000 });
+  check(i.story.scene === 'cheiro' || i.story.flags.windowOpen, 'o Superbafo entra pela grelha da guarita', i.story);
+  if (i.story.scene) {
+    await H.sleep(3200);
+    await shot('17-janela-da-guarita.png');
+  }
+  i = await waitFor((x) => !x.story.scene && x.story.flags.windowOpen, { timeout: 30000 });
+  check(i.story.flags.windowOpen, 'e a janela abre', i.story.flags);
+  await tp('radhija', bx - 0.5, LY.booth.awning.z1 + 0.9, Math.PI);
+  await H.sleep(400);
   await press('KeyE', 900);
   i = await info();
   check(!i.story.scene && i.story.stage === 'portaria', 'o latido fino da Radhija não acorda o porteiro', i.story);
   await become('rhaenyra');
-  await walkTo(11.6, -6.05, { timeout: 15000 });
   await press('KeyE', 600);
   i = await waitFor((x) => x.story.scene === 'porteiro', { timeout: 4000 });
-  check(i.story.scene === 'porteiro', 'o latido grave da Rhaenyra acorda o porteiro', i.story);
+  check(i.story.scene === 'porteiro', 'o latido grosso da Rhaenyra acorda o porteiro', i.story);
   await H.sleep(3000);
-  await shot('08-porteiro.png');
+  await shot('18-porteiro.png');
   await skipScene('porteiro');
   i = await stageIs('fechamento', 10000);
   check(i.story.flags.gateOpen, 'o portãozinho aberto', i.story.flags);
 
-  console.log('\n== Passo 7: o portãozinho (o fechamento, assistido) e o mural ==');
-  await walkPath([[12.6, -6.4], [13.0, -8.25]], { timeout: 15000 });
+  console.log('\n== O portãozinho (o fechamento, assistido) e o mural ==');
+  const gtx = (LY.lgate.x0 + LY.lgate.x1) / 2;
+  await walkPath([[gtx - 0.2, LY.lgate.z + 2.4], [gtx, LY.lgate.z + 0.75]], { timeout: 20000 });
   i = await waitFor((x) => x.story.scene === 'fechamento', { timeout: 4000 });
   check(i.story.scene === 'fechamento', 'no portãozinho, o fechamento', i.story);
-  await H.sleep(4000);
-  await shot('09-fechamento.png');
+  await H.sleep(4200);
+  await shot('19-fechamento.png');
   i = await waitFor((x) => x.story.stage === 'mural', { timeout: 30000 });
   await H.sleep(800);
   hs = await hudState();
@@ -322,7 +471,7 @@ try {
   check(tray.length === 4 && ['pombos', 'pote', 'trilha', 'abraco'].every((id) => tray.includes(id)), 'os quatro cartões do caso 3 na bandeja', tray);
   check(await ev(() => !!document.querySelector('.rr-mural__slot.is-lock')), 'a casa do cartão que falta tem o "?"');
   await H.sleep(1200);
-  await shot('10-mural-tutorial.png');
+  await shot('20-mural-tutorial.png');
   // a ligação errada volta
   await page.click('.rr-mural__tray [data-id="trilha"]');
   await page.click('.rr-mural__slot[data-slot="0"]');
@@ -349,7 +498,7 @@ try {
   const done = await ev(() => { const b = window.__game.storyHud.mural.board; return { settled: b.settled, closed: b.closed }; });
   check(done.settled && !done.closed, 'tudo no lugar; o caso continua aberto (falta o cartão de um capítulo futuro)', done);
   check(await ev(() => !document.querySelector('.rr-mural__go').hidden), 'aparece o Continuar');
-  await shot('11-mural-completo.png');
+  await shot('21-mural-completo.png');
   await clearLog();
   await page.click('.rr-mural__go');
   i = await waitFor((x) => x.story.stage === 'fim', { timeout: 5000 });
@@ -357,37 +506,40 @@ try {
   hs = await hudState();
   const end = (await logOf('story:chapterEnd')).at(-1);
   check(hs.end && end?.chapter === 1, 'o fim do capítulo, com a lupa, as escondidas e as meias', end);
-  await shot('12-fim-do-capitulo.png');
+  await shot('22-fim-do-capitulo.png');
   check((await noOverlap()).length === 0, 'ninguém dentro de nada no fim', await noOverlap());
   // Jogar de novo: a abertura de novo, do começo
   await page.click('.rr-story__end [data-act="again"]');
   i = await waitFor((x) => x.story?.scene === 'abertura', { timeout: 8000 });
   check(i.story.scene === 'abertura' && (await hudState()).clues.length === 0, 'Jogar de novo começa a abertura do zero', i.story);
 
-  console.log('\n== Celular (iPhone 13): o toque no aviso do Faro, o ⏩ segurado e o botão do focinho ==');
+  console.log('\n== Celular (iPhone 13): o ⏩ segurado, o toque no aviso do Faro e o botão do focinho ==');
   const p = await H.newPage(touchDevice(844, 390, 3, IPHONE_UA), 'iphone13', { lowGfx: true });
   try {
     await p.goto(`${BASE}?historia`, { waitUntil: 'load', timeout: 120000 });
     await p.waitForFunction(() => window.__game?.game?.isStory && window.__game.game.debug.info().story?.scene === 'abertura', null, { timeout: 120000 });
     await p.touchscreen.tap(422, 195);
-    await p.waitForFunction(() => window.__game.game.debug.info().story?.waitingFaro, null, { timeout: 120000 });
+    await p.waitForTimeout(1500);
+    // segurar o ⏩ pula a abertura (o dedo fica no botão)
+    await p.evaluate(() => document.querySelector('.rr-story__skip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: true })));
+    await p.waitForFunction(() => !window.__game.game.debug.info().story.scene, null, { timeout: 20000 }).catch(() => {});
+    await p.evaluate(() => document.querySelector('.rr-story__skip').dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', isPrimary: true })));
+    const st = await p.evaluate(() => window.__game.game.debug.info().story);
+    check(!st.scene && st.stage === 'quarto', 'iPhone: segurar o ⏩ pula a cena', st);
+    await p.touchscreen.tap(422, 195);
+    // no quarto, o aviso do Faro com o botão do focinho (sem tecla); tocar nele fareja
+    await p.waitForFunction(() => document.querySelector('.rr-story__prompt')?.classList.contains('is-on'), null, { timeout: 20000 }).catch(() => {});
     const touchKey = await p.evaluate(() => {
       const el = document.querySelector('.rr-story__prompt');
       const key = [...el.querySelectorAll('[data-dev]')].find((k) => getComputedStyle(k).display !== 'none');
-      return key?.dataset.dev ?? null;
+      return { on: el.classList.contains('is-on'), dev: key?.dataset.dev ?? null };
     });
-    check(touchKey === 'touch', 'iPhone: o aviso mostra o botão do focinho (sem tecla)', touchKey);
+    check(touchKey.on && touchKey.dev === 'touch', 'iPhone: o aviso mostra o botão do focinho (sem tecla)', touchKey);
+    await p.evaluate(() => window.__game.game.debug.clearLog());
     const pb = await p.locator('.rr-story__prompt').boundingBox();
     await p.touchscreen.tap(pb.x + pb.width / 2, pb.y + pb.height / 2);
-    await p.waitForFunction(() => !window.__game.game.debug.info().story.waitingFaro, null, { timeout: 8000 }).catch(() => {});
-    check(!(await p.evaluate(() => window.__game.game.debug.info().story.waitingFaro)), 'iPhone: tocar no aviso dispara o Faro');
-    // segurar o ⏩ pula a abertura (o dedo fica no botão)
-    await p.evaluate(() => document.querySelector('.rr-story__skip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: true })));
-    await p.waitForFunction(() => !window.__game.game.debug.info().story.scene, null, { timeout: 15000 }).catch(() => {});
-    await p.evaluate(() => document.querySelector('.rr-story__skip').dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', isPrimary: true })));
-    const st = await p.evaluate(() => window.__game.game.debug.info().story);
-    check(!st.scene && st.stage === 'cozinha', 'iPhone: segurar o ⏩ pula a cena', st);
-    await p.touchscreen.tap(422, 195);
+    await p.waitForFunction(() => window.__game.game.debug.events('story:faro').length > 0, null, { timeout: 10000 }).catch(() => {});
+    check((await p.evaluate(() => window.__game.game.debug.events('story:faro').length)) >= 1, 'iPhone: tocar no aviso fareja');
     await p.waitForTimeout(800);
     const faroBtn = await p.evaluate(() => {
       const el = document.querySelector('.rr-tbtn--faro');
@@ -397,8 +549,8 @@ try {
     });
     check(faroBtn?.shown, 'iPhone: o botão do focinho nos controles de toque', faroBtn);
     if (faroBtn?.shown) {
-      // o primeiro pulso (o da abertura) dura uns 6 s: o botão só solta outro depois que ele acaba
-      await p.waitForFunction(() => !window.__game.game.debug.info().story.faro.active, null, { timeout: 30000 }).catch(() => {});
+      // o pulso pode ser repetido depois da recarga curta (1,2 s)
+      await p.waitForFunction(() => window.__game.game.debug.info().story.faroReady, null, { timeout: 30000 }).catch(() => {});
       await p.evaluate(() => window.__game.game.debug.clearLog());
       await p.touchscreen.tap(faroBtn.x, faroBtn.y);
       // o pulso sai no quadro seguinte ao toque; no SwiftShader com DPR 3, um quadro em 3ª pessoa passa de 0,5 s
@@ -414,7 +566,7 @@ try {
       check(diag.faros >= 1, 'iPhone: o botão do focinho solta o pulso do Faro', diag);
     }
     await p.evaluate(() => window.__e2eRender?.());
-    await p.screenshot({ path: 'shots/historia/13-iphone-faro.png' });
+    await p.screenshot({ path: 'shots/historia/23-iphone-faro.png' });
   } catch (err) {
     check(false, `iPhone: erro inesperado: ${err.stack || err.message}`);
   } finally {
@@ -425,9 +577,9 @@ try {
   for (const scr of SCREENS) {
     const q = await H.newPage(scr.opts, scr.id, { lowGfx: true });
     try {
-      await q.goto(`${BASE}?historia&stage=cozinha`, { waitUntil: 'load', timeout: 120000 });
+      await q.goto(`${BASE}?historia&stage=casa`, { waitUntil: 'load', timeout: 120000 });
       // de pé, o aviso de girar pausa o jogo: ali só a etapa conta
-      await q.waitForFunction((portrait) => window.__game?.game?.isStory && (portrait || window.__game.game.state === 'playing') && window.__game.game.debug.info().story?.stage === 'cozinha', !!scr.portrait, { timeout: 120000 });
+      await q.waitForFunction((portrait) => window.__game?.game?.isStory && (portrait || window.__game.game.state === 'playing') && window.__game.game.debug.info().story?.stage === 'casa', !!scr.portrait, { timeout: 120000 });
       if (scr.touch) await q.touchscreen.tap(scr.opts.viewport.width / 2, scr.opts.viewport.height / 2);
       await q.waitForTimeout(800);
       await settle(q);

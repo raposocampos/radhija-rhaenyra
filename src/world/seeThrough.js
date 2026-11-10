@@ -53,11 +53,14 @@ export function applySeeThroughTo(...roots) {
   }
 }
 
-/** A cada quadro: alvo A = dog ativa, B = companheira (no meio do corpo). */
-export function updateSeeThrough(dogs, activeName) {
+/**
+ * A cada quadro: alvo A = dog ativa, B = companheira (no meio do corpo). k (0..1): o tamanho do recorte; 0 desliga (as
+ * cenas do Modo História: a câmera de cinema não fura o cenário em volta das dogs).
+ */
+export function updateSeeThrough(dogs, activeName, k = 1) {
   const other = activeName === 'radhija' ? 'rhaenyra' : 'radhija';
   const a = dogs[activeName]?.object.position;
   const b = dogs[other]?.object.position;
-  if (a) uniforms.uSTA.value.set(a.x, 0.25, a.z, 0.42);
-  if (b) uniforms.uSTB.value.set(b.x, 0.25, b.z, 0.34);
+  if (a) uniforms.uSTA.value.set(a.x, 0.25, a.z, 0.42 * k);
+  if (b) uniforms.uSTB.value.set(b.x, 0.25, b.z, 0.34 * k);
 }

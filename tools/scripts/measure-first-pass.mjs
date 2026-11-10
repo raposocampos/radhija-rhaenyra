@@ -13,7 +13,7 @@
 // runner; o relatório diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
-//   FIRST_PASS_LEVELS=historia: a área do Modo História (?historia, na etapa da cozinha: sem cena tocando)
+//   FIRST_PASS_LEVELS=historia: a área do Modo História (?historia, na etapa da casa: sem cena tocando)
 //   E2E_VERTEX_INPUT_DYNAMIC=1 (o padrão do Chromium no SwiftShader; ver angleArgs em lib/browser.mjs)
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -406,7 +406,7 @@ try {
         page.on('response', (r) => { if (r.status() >= 400) errors.push(`HTTP ${r.status()}: ${r.url()}`); });
         await page.addInitScript(pageSetup, { quality: DEVICES[quality].level });
         const url = level === 'historia'
-          ? `${base}?historia&stage=cozinha${DOGS ? `&dogs=${DOGS}` : ''}`
+          ? `${base}?historia&stage=casa${DOGS ? `&dogs=${DOGS}` : ''}`
           : `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
         await page.goto(url, { waitUntil: 'load', timeout: 180000 });
         await page.waitForFunction(() => window.__firstPass && window.__game?.game.state === 'playing', null, { timeout: 180000 });

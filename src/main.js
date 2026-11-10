@@ -149,7 +149,7 @@ async function boot() {
       engine.camera.position.set(.../** @type {[number, number, number]} */ (camFix));
       engine.camera.lookAt(.../** @type {[number, number, number]} */ (lookFix));
     }
-    updateSeeThrough(dogs, game.activeDog || 'radhija');
+    updateSeeThrough(dogs, game.activeDog || 'radhija', game.isStory && game.puzzle?.cinematic?.() ? 0 : 1);
     feedback.update(dt, elapsed);
     particles.update(dt);
     ui.update(dt);

@@ -1,8 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-11-02, Claude**.
-- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), agora em 3ª pessoa, branch `claude/historia-fatia`
-  (PR #75), à espera da prévia nova e do "pode integrar".
+Última atualização: **2026-11-10, Claude**.
+- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), em 3ª pessoa, branch `claude/historia-fatia`
+  (PR #75). **A prévia `1baeb48` foi reprovada pelo usuário em 2026-11-09**; a fatia está sendo refeita no mesmo PR
+  (veja "Revisão da fatia" abaixo).
 - **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
@@ -16,6 +17,42 @@
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+### Revisão da fatia (2026-11-09): a prévia em 3ª pessoa foi reprovada
+
+- **O que o usuário disse, testando a prévia `1baeb48` (verde em tudo):**
+  - a câmera é empurrada para uma visão de cima em lugar apertado, porque a casa é pequena;
+  - os puzzles estão muito simples;
+  - a cena de início está péssima;
+  - os gráficos do cenário e os balões precisam melhorar; o tamanho do mapa também;
+  - os pombos não parecem pombos e não agarram a cenoura (ela flutua);
+  - não fica claro que a missão é descobrir o que aconteceu com a cenoura e onde ela está;
+  - as duas devem farejar, com uma nuvenzinha de cheiro até o objetivo ou até o mistério.
+- **Feito em 2026-11-09 e 2026-11-10 (no branch; o resultado do CI e do E2E deste commit precisa ser conferido no
+  GitHub):**
+  - **Mapa 1,7× maior** (`layout.js` reescrito: cômodos de ~6 m, condomínio de 48 × 30 m; objetos no tamanho real).
+  - **Câmera** (`thirdPerson.js`): só paredes encurtam o braço; dentro de casa ela chega mais perto; com o braço
+    curto, olha por cima do ombro, para a frente, nunca de cima; sem travelling do título para o jogo.
+  - **Faro das duas**, com a nuvem de cheiro pelo caminho até a próxima pista (`src/story/faro/scentCloud.js`),
+    pistas reveladas que continuam brilhando e se examinam com E.
+  - **Puzzles com mais passos** (`puzzle.js` reescrito): a grade do quarto (portinha de gato e pedal), o saco de
+    ração na frente da maçaneta, o ferrolho da porta de serviço pelo outro lado do muro, o cesto embaixo da cenoura
+    no varal, a senha do interfone da torre (o Faro mostra o Farelo apertando) e o Superbafo pela grelha da guarita
+    antes do latido grosso.
+  - **Nove cenas** (`scenes.js` reescrito), filmadas de dentro dos lugares; o recorte "ver através" fica desligado
+    nelas (`seeThrough.js` e `main.js`, um parâmetro a mais, com o padrão de sempre para as fases).
+  - **Cenário:** as seis peças de `world/` refeitas para o mapa maior, com mais acabamento e as peças dos puzzles;
+    pombos com cara de pombo, que agarram a cenoura (`holdBy`); balões novos, com "frases" de até três ícones.
+    Feitas por subagentes, uma peça cada.
+  - **Testes:** `test/historia-{layout,cenas,missao,camera,cenario,regras}.test.mjs` refeitos; a suíte
+    `tools/scripts/test-historia.mjs` e as capturas `capture-historia.mjs` refeitas para a missão nova.
+  - **Validação local:** só `node --check` e os arquivos de teste da história rodados um a um no Node (sem
+    navegador, sem build): layout, regras, missão, cenas e câmera passaram.
+- **Próximo passo:** CI verde; E2E `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`,
+  `mapa` e `controle`; revisar as capturas (abertura, pombos, balões, câmera dentro de casa, cenário) e corrigir o que
+  aparecer; entregar a prévia nova. Integrar só com o "pode integrar" do usuário.
+
+### Histórico da etapa (até a prévia reprovada)
 
 - **Pedido (2026-10-31, pelo orquestrador, com o roteiro do #74):** a abertura "A noite da garoa" e o cap. 1 "Cadê a
   Cenoura?" jogáveis, só pela entrada das prévias. A etapa é um portão: se não divertir ou não se entender, a história

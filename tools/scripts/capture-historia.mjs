@@ -1,9 +1,10 @@
 // Capturas de revisão do Modo História (capítulo 1, Cadê a Cenoura?), cada aparelho com a SUA qualidade gráfica (sem a
 // redução do harness): PC (1280×720, perfil alta), iPhone 13 (844×390, DPR 3, perfil médio) e Infinix Note 30 5G
 // (893×393, DPR 2,75, perfil baixo, sem pós-processamento: o Faro sem pós). Em cada um, os momentos da fatia: a abertura
-// (o quarto à noite com a garoa, os pombos no parapeito, a mão da tutora, o primeiro pulso do Faro, a cartela) e a
-// missão em cada etapa (cozinha, galho, piscina com a Reconstrução, varal, torre e terraço, guarita, portãozinho), o
-// mural e o fim do capítulo. No PC, também vistas altas do condomínio inteiro (câmera livre).
+// beat a beat (a câmera de cinema dentro do quarto), o quarto (o Faro com a nuvem de cheiro, as pistas, os pombos na
+// janela com a cenoura nas patas, a cartela), vistas de JOGO em 3ª pessoa pela casa e pelo condomínio (no PC, todas),
+// os puzzles e as cenas da missão (a grade, a Reconstrução, o varal, a senha, o terraço, a guarita, o porteiro, o
+// fechamento), o mural e o fim do capítulo. No PC, também vistas altas do condomínio inteiro (câmera livre).
 // Roda no GitHub Actions (E2E manual, suíte historia), depois da partida. O laço do jogo fica congelado e o script avança
 // quadro a quadro e desenha só na hora da captura (SwiftShader é lento). Saída: shots/historia-revisao/*.png.
 import './lib/browser-log.mjs'; // antes do playwright-core: registro do Chromium em shots/diagnostico/
@@ -81,7 +82,10 @@ async function captureDevice(dev, url) {
         }
       };
       window.__render = (cam) => {
+        const far0 = G.engine.camera.far;
         if (cam) {
+          G.engine.camera.far = 400;
+          G.engine.camera.updateProjectionMatrix();
           G.engine.camera.position.set(...cam.pos);
           G.engine.camera.lookAt(...cam.look);
           G.engine.camera.updateMatrixWorld();
@@ -89,6 +93,7 @@ async function captureDevice(dev, url) {
         }
         G.engine.render(1 / 60, rev.t);
         G.engine.renderer.getContext().finish();
+        if (cam) { G.engine.camera.far = far0; G.engine.camera.updateProjectionMatrix(); }
       };
       /** Avança até `pred(info)` (no máximo n quadros). */
       window.__until = (src, n = 3000) => {
@@ -115,106 +120,278 @@ async function captureDevice(dev, url) {
   const key = (code, down) => page.evaluate(({ c, d }) => window.dispatchEvent(new KeyboardEvent(d ? 'keydown' : 'keyup', { code: c, key: c })), { c: code, d: down });
   const tap = async (code) => { await key(code, true); await step(2); await key(code, false); await step(2); };
 
-  // ---- a abertura, beat a beat
-  await open();
-  await step(150);
-  await shot('01-noite-garoa');
-  await until((i) => i.story.beat === 'pombos');
-  await step(200);
-  await shot('02-pombos-no-parapeito');
-  await step(160);
-  await shot('03-capitao-mede-a-cenoura');
-  await until((i) => i.story.beat === 'manha');
-  await step(120);
-  await shot('04-manha-mao-da-tutora');
-  await step(200);
-  await shot('05-manha-radhija-acorda');
-  await until((i) => i.story.waitingFaro);
-  await step(20);
-  await shot('06-aviso-do-faro');
-  await tap('KeyV');
-  await step(40);
-  await shot('07-pulso-do-faro');
-  await step(110);
-  await shot('08-pombos-pela-janela');
-  await until((i) => i.story.beat === 'acorda');
-  await step(170);
-  await shot('09-rhaenyra-acorda');
-  await until((i) => i.story.beat === 'titulo');
-  await step(80);
-  await shot('10-cartela');
-  await until((i) => !i.story.scene);
-  await step(60);
-  await shot('11-quarto-de-dia');
-
-  // ---- a missão, etapa a etapa (as cenas tocando nos momentos fortes)
-  for (const [stage, name, frames] of [['cozinha', '12-cozinha', 30], ['galho', '13-quintal-galho', 30], ['piscina', '14-piscina', 30],
-    ['varal', '16-varal', 30], ['torre', '18-torre', 30], ['portaria', '20-guarita', 30], ['fechamento', '22-portaozinho', 30]]) {
-    await open(stage);
-    // a câmera do jogo em 3ª pessoa, atrás da dog ativa (sem a vinda da tela de título, que passa pelas paredes)
-    await page.evaluate(() => { const g = window.__game.game; const c = g.debug.ctrls[g.activeDog]; g.debug.cam.snapFollow(c.x, c.z, c.yaw); });
+  /** Põe uma dog num lugar, olhando para `yaw` (radianos; π = norte). */
+  const place = (name, x, z, yaw = Math.PI) => page.evaluate(({ n, px, pz, y }) => {
+    const g = window.__game.game;
+    g.debug.teleport(n, px, pz);
+    g.debug.ctrls[n].yaw = y;
+  }, { n: name, px: x, pz: z, y: yaw });
+  /** A câmera do jogo (3ª pessoa) atrás da dog ativa, olhando para `heading` (padrão: para onde ela olha). */
+  const behind = (heading = null) => page.evaluate((h) => {
+    const g = window.__game.game;
+    const c = g.debug.ctrls[g.activeDog];
+    g.debug.cam.autoRecenter = false;
+    g.debug.cam.heading = h ?? c.yaw;
+    g.debug.cam.snapFollow(c.x, c.z);
+  }, heading);
+  /** Uma vista de jogo: a dog ativa em (x, z) olhando para `yaw`, a câmera atrás dela, assentada. */
+  const view = async (name, x, z, yaw = Math.PI, { who = 'radhija', frames = 100 } = {}) => {
+    await place(who, x, z, yaw);
+    await behind(yaw);
     await step(frames);
     await shot(name);
+  };
+  const LY = () => page.evaluate(() => {
+    const L = window.__game.game.levelDef.layout;
+    return JSON.parse(JSON.stringify({
+      BED: L.BED, ROOMS: L.ROOMS, HOUSE: L.HOUSE, spots: L.CLUE_SPOTS, flap: L.PET_FLAP, gate: L.PET_GATE, pedal: L.PET_PEDAL, sack: L.FOOD_SACK,
+      handle: L.KITCHEN_HANDLE, kdoor: L.KITCHEN_DOOR, yard: L.YARD, branch: L.BRANCH, sdoor: L.SERVICE_DOOR, gap: L.YARD_GAP, bolt: L.SERVICE_BOLT,
+      pool: L.POOL, recon: L.RECON, line: L.LINE, pin: L.CARROT_PIN, post: L.DASH_POST, laundry: L.LAUNDRY, tower: L.TOWER, tdoor: L.TOWER_DOOR,
+      intercom: L.INTERCOM, lobby: L.TOWER_LOBBY, booth: L.BOOTH, vent: L.BOOTH_VENT, lgate: L.GATE, lake: L.LAKE, pier: L.PIER, car: L.CAR,
+      carport: L.CARPORT, storage: L.STORAGE, wall: L.WALL, tanks: L.TANKS,
+    }));
+  });
+
+  // ---- a abertura, beat a beat (a câmera de cinema, dentro do quarto)
+  await open();
+  const Y = await LY();
+  await step(110);
+  await shot('01-noite-quarto');
+  await step(260);
+  await shot('02-noite-cenoura-abracada');
+  await until((i) => i.story.beat === 'pombos');
+  await step(150);
+  await shot('03-pombos-pousam-no-parapeito');
+  await step(120);
+  await shot('04-capitao-olha-a-cenoura');
+  await step(110);
+  await shot('05-capitao-mede-e-pensa');
+  await step(90);
+  await shot('06-continencia');
+  await until((i) => i.story.beat === 'manha');
+  await step(110);
+  await shot('07-manha-mao-da-tutora');
+  await step(230);
+  await shot('08-radhija-acorda-sem-a-cenoura');
+  await step(170);
+  await shot('09-radhija-olha-o-pote');
+  await until((i) => i.story.beat === 'acorda');
+  await step(60);
+  await shot('10-radhija-late-cenoura-sumiu');
+  await step(120);
+  await shot('11-rhaenyra-acorda');
+  await until((i) => !i.story.scene);
+  await step(80);
+  await shot('12-quarto-comeca-o-jogo');
+
+  // ---- o quarto: o Faro, a nuvem de cheiro e as pistas
+  await tap('KeyV');
+  await step(50);
+  await shot('13-quarto-faro-e-nuvem');
+  for (const id of ['trilha', 'pote', 'pena']) {
+    const at = Y.spots[id].at ?? Y.spots[id];
+    await place('radhija', at.x, at.z, Math.PI);
+    await behind(Math.PI);
+    await step(30);
+    if (id === 'pote') await shot('14-quarto-pista-brilhando');
+    await tap('KeyE');
+    await step(45);
+    if (id === 'trilha') await shot('15-quarto-examinando');
+    await step(40);
   }
+  await until((i) => i.story.scene === 'janela', 240);
+  await until((i) => i.story.beat === 'voo', 240);
+  await step(130);
+  await shot('16-janela-pombos-com-a-cenoura');
+  await step(50);
+  await shot('17-janela-farelo-agarra');
+  await until((i) => i.story.beat === 'reacao', 600);
+  await step(60);
+  await shot('18-janela-radhija-manda');
+  await step(90);
+  await shot('19-janela-rhaenyra-anima');
+  await until((i) => i.story.beat === 'titulo', 600);
+  await step(80);
+  await shot('20-cartela');
+  await until((i) => !i.story.scene);
+  await step(60);
+  await shot('21-casa-depois-da-cartela');
+
+  // ---- vistas de jogo (3ª pessoa) pela casa e pelo condomínio: [etapa, nome, x, z, rumo, também no celular?]
+  const Q = Y.ROOMS.quarto, K = Y.ROOMS.cozinha, SL = Y.ROOMS.sala;
+  const VIEWS = [
+    ['casa', '30-jogo-quarto-para-a-janela', (Q.x0 + Q.x1) / 2 + 0.5, Q.z1 - 1.4, Math.PI, true],
+    ['casa', '31-jogo-quarto-para-a-grade', (Q.x0 + Q.x1) / 2 - 0.6, (Q.z0 + Q.z1) / 2 + 0.3, Math.PI / 2],
+    ['casa', '32-jogo-quarto-encostada-na-parede', (Q.x0 + Q.x1) / 2 + 0.8, Q.z1 - 0.5, Math.PI, true],
+    ['casa', '33-jogo-quarto-no-canto', Q.x0 + 1.4, Q.z1 - 0.55, Math.PI * 0.75],
+    ['casa', '34-jogo-grade-e-portinha-de-gato', Y.flap.x - 1.5, (Y.flap.z0 + Y.gate.hinge.z) / 2, Math.PI / 2],
+    ['quintal', '35-jogo-cozinha-para-a-porta', (K.x0 + K.x1) / 2 - 0.6, (K.z0 + K.z1) / 2 + 0.3, Math.PI / 2, true],
+    ['quintal', '36-jogo-cozinha-bancada', (K.x0 + K.x1) / 2, K.z1 - 1.3, Math.PI],
+    ['quintal', '37-jogo-sala', (SL.x0 + SL.x1) / 2 + 1.5, SL.z0 + 1.2, 0],
+    ['quintal', '38-jogo-sala-para-a-cozinha', (SL.x0 + SL.x1) / 2 - 2.0, SL.z1 - 1.6, Math.PI * 0.75],
+    ['quintal', '39-jogo-quintal-galho-e-porta', Y.branch.start.x - 0.6, Y.yard.z0 + 3.4, Math.PI, true],
+    ['quintal', '40-jogo-quintal-para-o-sul', (Y.yard.x0 + Y.yard.x1) / 2, Y.yard.z0 + 2.2, 0],
+    ['piscina', '41-jogo-saindo-pela-porta-de-servico', (Y.sdoor.hinge.x + Y.sdoor.latchPost.x) / 2, Y.sdoor.hinge.z + 1.6, Math.PI],
+    ['piscina', '42-jogo-ferrolho-do-lado-de-fora', Y.bolt.ring.x + 0.4, Y.bolt.ring.z - 1.5, 0],
+    ['piscina', '43-jogo-gramado-para-a-piscina', Y.recon.x - 2.2, Y.recon.z + 3.6, Math.PI * 0.82, true],
+    ['piscina', '44-jogo-piscina-deque', Y.pool.x1 + 0.9, Y.pool.z1 + 1.2, -Math.PI * 0.78],
+    ['varal', '45-jogo-varal-com-os-pombos', Y.pin.x - 0.4, Y.pin.z + 3.4, Math.PI, true],
+    ['varal', '46-jogo-area-de-servico-tanques', Y.tanks.x1 + 1.6, Y.tanks.z1 + 1.8, -Math.PI * 0.72],
+    ['torre', '47-jogo-torre-porta-e-interfone', Y.tdoor.hinge.x - 2.8, Y.intercom.buttons[1].z + 0.3, Math.PI / 2, true],
+    ['torre', '48-jogo-torre-de-longe', Y.tower.x0 - 5.5, Y.tower.z1 + 3.5, Math.PI * 0.68],
+    ['portaria', '49-jogo-guarita-e-portaozinho', (Y.booth.x0 + Y.booth.x1) / 2 + 0.6, Y.booth.z1 + 4.2, Math.PI, true],
+    ['portaria', '50-jogo-guarita-grelha', Y.vent.x - 2.2, Y.vent.z + 0.6, Math.PI / 2],
+    ['portaria', '51-jogo-lago-do-pier', Y.pier.x0 - 1.2, (Y.pier.z0 + Y.pier.z1) / 2, Math.PI / 2, true],
+    ['portaria', '52-jogo-lago-margem-sul-barquinho', Y.lake.island.x - 3.4, Y.wall.maxZ - 3.4, Math.PI * 0.78],
+    ['portaria', '53-jogo-garagem', (Y.carport.x0 + Y.car.x0) / 2 - 0.2, Y.carport.z0 - 2.2, 0.3, true],
+    ['portaria', '54-jogo-garagem-caminhonete-de-perto', Y.car.x0 - 1.3, (Y.car.z0 + Y.car.z1) / 2, Math.PI / 2],
+    ['portaria', '55-jogo-embaixo-da-caminhonete', (Y.car.x0 + Y.car.x1) / 2, Y.car.z0 + 2.0, 0],
+    ['portaria', '56-jogo-gramado-oeste', Y.wall.minX + 6.5, -6.0, Math.PI / 2 + 0.4],
+    ['portaria', '57-jogo-muro-norte-e-cidade', 0.5, Y.wall.minZ + 4.2, Math.PI, true],
+    ['portaria', '58-jogo-centro-do-condominio', 3.2, 0.6, Math.PI * 0.6],
+  ];
+  let opened = null;
+  for (const [stage, name, x, z, yaw, mobile] of VIEWS) {
+    if (!dev.full && !mobile) continue;
+    if (opened !== stage) { await open(stage); opened = stage; }
+    await view(name, x, z, yaw);
+  }
+
+  // ---- os puzzles e as cenas da missão
+  // a grade aberta pelo pedal
+  await open('casa');
+  await place('radhija', Y.pedal.x, Y.pedal.z, -Math.PI / 2);
+  await step(90);
+  await behind(-Math.PI / 2);
+  await step(40);
+  await shot('60-pedal-e-grade-aberta');
   // a Reconstrução: o pulso perto da piscina
   await open('piscina');
+  await place('radhija', Y.recon.x - 0.9, Y.recon.z + 1.5, Math.PI);
   await step(20);
   await tap('KeyV');
   await until((i) => i.story.scene === 'reconstrucao', 200);
-  await step(160);
-  await shot('15-reconstrucao');
-  // o varal sacudindo (a arrancada no poste)
+  await step(170);
+  await shot('61-reconstrucao-da-boia');
+  // o varal: o cesto embaixo, a arrancada, o Farelo pega no ar
   await open('varal');
+  await page.evaluate(() => { const g = window.__game.game; g.debug.setStage('torre', 'radhija'); g.debug.setStage('varal', 'radhija'); });
+  await page.evaluate(() => { const g = window.__game.game; const L = g.levelDef.layout; g.debug.teleport('rhaenyra', L.LAUNDRY.start.x - L.LAUNDRY.half - 0.28, L.LAUNDRY.start.z); g.debug.ctrls.rhaenyra.yaw = Math.PI / 2; });
+  await tap('KeyQ');
+  await step(10);
+  await page.evaluate(() => {
+    const down = (c) => window.dispatchEvent(new KeyboardEvent('keydown', { code: c, key: c }));
+    const g = window.__game.game;
+    const b = g.debug.cam.basis();
+    // empurrar para o leste com as teclas de agora (a base da câmera)
+    const fwd = b.fx, rgt = b.rx;
+    const s = ((Math.round(Math.atan2(rgt, fwd) / (Math.PI / 4)) % 8) + 8) % 8;
+    for (const k of [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyS', 'KeyD'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyW', 'KeyA']][s]) down(k);
+    down('ShiftLeft');
+  });
+  await until((i) => i.story.flags.basketUnder, 900);
+  await page.evaluate(() => { for (const c of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft']) window.dispatchEvent(new KeyboardEvent('keyup', { code: c, key: c })); });
+  await step(20);
+  await behind(Math.PI);
+  await step(30);
+  await shot('62-varal-cesto-embaixo-da-cenoura');
+  await tap('KeyQ');
   await page.evaluate(() => { const g = window.__game.game; const P = g.levelDef.layout.DASH_POST; g.debug.teleport('radhija', P.x, P.z + 0.45); g.debug.ctrls.radhija.yaw = Math.PI; });
-  await step(5);
+  await step(8);
   await tap('ShiftLeft');
-  await until((i) => i.story.scene === 'varal', 60);
-  await step(70);
-  await shot('17-varal-sacode');
-  // o terraço da torre
+  await until((i) => i.story.scene === 'varal', 90);
+  await until((i) => i.story.beat === 'cai', 200);
+  await step(16);
+  await shot('63-varal-a-cenoura-cai');
+  await step(34);
+  await shot('64-varal-farelo-agarra-no-ar');
+  await until((i) => i.story.beat === 'voa', 300);
+  await step(80);
+  await shot('65-varal-voam-para-a-torre');
+  await until((i) => i.story.beat === 'pousam', 600);
+  await step(40);
+  await shot('66-varal-pousam-na-caixa-dagua');
+  // a senha do interfone
   await open('torre');
+  await step(80);
+  await tap('KeyV');
+  await until((i) => i.story.scene === 'senha', 200);
+  await step(120);
+  await shot('67-senha-farelo-primeiro-botao');
+  await step(180);
+  await shot('68-senha-os-tres-botoes');
+  await until((i) => !i.story.scene, 900);
+  // o terraço da torre
   await page.evaluate(() => { const g = window.__game.game; const T = g.levelDef.layout.TOWER_LOBBY; g.debug.teleport('radhija', (T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2); });
   await until((i) => i.story.scene === 'terraco', 60);
-  await until((i) => i.story.beat === 'vento', 2000);
+  await until((i) => i.story.beat === 'corrida', 600);
+  await step(90);
+  await shot('69-terraco-corrida');
+  await until((i) => i.story.beat === 'quase', 600);
+  await step(70);
+  await shot('70-terraco-quase');
+  await until((i) => i.story.beat === 'vento', 600);
+  await step(120);
+  await shot('71-terraco-vento-e-cidade');
+  await until((i) => i.story.beat === 'olham', 600);
   await step(60);
-  await shot('19-terraco-vento');
-  // o porteiro e a botina
+  await shot('72-terraco-as-duas');
+  // a guarita: o Superbafo na grelha, a janela abre, o latido grosso
   await open('portaria');
-  await page.evaluate(() => { const g = window.__game.game; g.debug.setStage('portaria', 'rhaenyra'); const B = g.levelDef.layout.BOOTH; g.debug.teleport('rhaenyra', (B.x0 + B.x1) / 2, B.z1 + 0.6); });
+  await place('radhija', Y.vent.x - 0.75, Y.vent.z, Math.PI / 2);
+  await behind(Math.PI / 2);
+  await step(30);
+  await shot('73-guarita-grelha-antes-do-sopro');
+  await tap('KeyR');
+  await until((i) => i.story.scene === 'cheiro', 400);
+  await step(60);
+  await shot('74-guarita-cheiro');
+  await until((i) => i.story.beat === 'abre', 600);
+  await step(80);
+  await shot('75-guarita-janela-abrindo');
+  await until((i) => !i.story.scene, 900);
+  await tap('KeyQ');
   await step(10);
+  await page.evaluate(() => { const g = window.__game.game; const B = g.levelDef.layout.BOOTH; g.debug.teleport('rhaenyra', (B.x0 + B.x1) / 2 + 0.4, B.awning.z1 + 0.9); g.debug.ctrls.rhaenyra.yaw = Math.PI; });
+  await step(20);
   await tap('KeyE');
   await until((i) => i.story.beat === 'botina', 1200);
+  await step(70);
+  await shot('76-botina-do-porteiro');
+  await until((i) => i.story.beat === 'abre', 900);
   await step(60);
-  await shot('21-botina-do-porteiro');
+  await shot('77-portaozinho-abrindo');
   // o fechamento: os pombos sobre a cidade e a borboleta
   await open('fechamento');
   await page.evaluate(() => { const g = window.__game.game; const G = g.levelDef.layout.GATE; g.debug.teleport('radhija', (G.x0 + G.x1) / 2, G.z + 0.6); });
   await until((i) => i.story.scene === 'fechamento', 60);
-  await until((i) => i.story.beat === 'pombos', 600);
-  await step(80);
-  await shot('23-pombos-sobre-a-cidade');
-  await until((i) => i.story.beat === 'borboleta', 600);
   await step(70);
-  await shot('24-borboleta');
+  await shot('78-fechamento-saem');
+  await until((i) => i.story.beat === 'pombos', 600);
+  await step(110);
+  await shot('79-pombos-sobre-a-cidade');
+  await until((i) => i.story.beat === 'borboleta', 600);
+  await step(80);
+  await shot('80-borboleta');
   await until((i) => i.story.stage === 'mural', 1200);
   await step(60);
-  await shot('25-mural');
+  await shot('81-mural');
   await page.evaluate(() => window.__game.events.emit('ui:muralDone', { errors: 0, settled: true }));
   await step(30);
-  await shot('26-fim-do-capitulo');
+  await shot('82-fim-do-capitulo');
 
   if (dev.full) {
-    await open('cozinha');
+    await open('casa');
     await step(10);
     // vistas altas (câmera livre, sem a interface): o condomínio inteiro e cada canto
     for (const [name, cam] of [
-      ['30-vista-condominio', { pos: [6, 26, 24], look: [0, 0, -1] }],
-      ['31-vista-casa-quintal', { pos: [-6, 9, 9.5], look: [-9, 0, 3.6] }],
-      ['32-vista-piscina-varal', { pos: [0, 9, 3.5], look: [-1.6, 0, -4.6] }],
-      ['33-vista-torre-guarita', { pos: [12, 9, 1.5], look: [8.5, 0.8, -6.6] }],
-      ['34-vista-lago', { pos: [13, 8, 8.5], look: [9.6, 0, 1.6] }],
-      ['35-vista-garagem', { pos: [4, 7, 12], look: [1.6, 0.4, 6.4] }],
-      ['36-vista-rua-cidade', { pos: [13, 3.2, -6.4], look: [13, 2.4, -24] }],
+      ['90-vista-condominio', { pos: [10, 44, 41], look: [0, 0, -1.7] }],
+      ['91-vista-casa-quintal', { pos: [-10, 15, 16], look: [-15, 0, 6] }],
+      ['92-vista-piscina-varal', { pos: [0, 15, 6], look: [-2.7, 0, -7.8] }],
+      ['93-vista-torre-guarita', { pos: [20, 15, 2.5], look: [14.5, 1.4, -11.2] }],
+      ['94-vista-lago', { pos: [22, 13.5, 14.5], look: [16.3, 0, 2.7] }],
+      ['95-vista-garagem', { pos: [6.8, 12, 20.4], look: [2.7, 0.7, 10.9] }],
+      ['96-vista-rua-cidade', { pos: [22, 5.4, -10.9], look: [22, 4, -40] }],
     ]) await shot(name, { cam, hideUi: true });
   }
   await page.close();

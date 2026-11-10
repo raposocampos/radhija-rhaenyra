@@ -251,7 +251,7 @@ try {
  * fase 10 (chamadas de desenho e triângulos). Também o pior quadro da câmera do jogo pelos nós de navegação.
  */
 async function measureStory(page, base) {
-  await page.goto(`${base}?debug&historia&stage=cozinha`, { waitUntil: 'load', timeout: 120000 });
+  await page.goto(`${base}?debug&historia&stage=casa`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.isStory && window.__game.game.state === 'playing', null, { timeout: 120000 });
   const samples = [];
   for (let cycle = 1; cycle <= WARMUP + MEASURED; cycle++) {
@@ -263,7 +263,7 @@ async function measureStory(page, base) {
         if (await game.loadLevel(0, { mode: 'title' }) !== true) throw new Error('load failed: fase 1');
         if (await game.loadLevel(-2, { mode: 'play' }) !== true) throw new Error('load failed: historia');
       }
-      game.debug.setStage('cozinha');
+      game.debug.setStage('casa');
       for (let step = 1; step <= 60; step++) {
         measurement.originals.game(1 / 60, step / 60);
         measurement.originals.feedback(1 / 60, step / 60);

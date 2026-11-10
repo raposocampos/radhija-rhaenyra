@@ -11,6 +11,7 @@
 //   garagem.js  a garagem (caminhonete, depósito, prateleira com o balde, bola, corda)
 //   atores.js   o Esquadrão Migalha (Capitão, Farelo, Soneca), a cenoura de borracha, as mãos e pés humanos, a chuva
 // A sombra do sol cobre só a vizinhança do que a câmera olha (engine.focusShadow), como no mapa.
+import * as THREE from 'three';
 import { shared } from '../../../../world/util.js';
 import { buildTreats } from '../../../../world/treats.js';
 import { createKit, whenFontsReady } from '../../../../levels/mapa/world/kit.js';
@@ -52,7 +53,7 @@ export function buildWorld({ engine, root, layout }) {
   props.update = () => {};
   props.reset = () => { for (const p of parts) p.reset?.(); };
 
-  const off = L.CAMERA.offset;
+  const fwd = new THREE.Vector3();
   return {
     props,
     env: { timings, meshes: merged.meshes.length, groups: Object.keys(merged.groups) },
@@ -65,9 +66,14 @@ export function buildWorld({ engine, root, layout }) {
       shared.time.value = t;
       treats.update(dt, t);
       for (const p of parts) p.update?.(dt, t);
-      // a sombra acompanha o ponto que a câmera olha (a câmera fica a `offset` dele)
-      const c = engine?.camera?.position;
-      if (c) engine.focusShadow?.(c.x - off[0], c.z - off[2], { half: 12, top: 10 });
+      // a sombra acompanha o que a câmera olha: uns metros à frente dela, no chão
+      const cam = engine?.camera;
+      if (cam?.getWorldDirection) {
+        cam.getWorldDirection(fwd);
+        const flat = Math.hypot(fwd.x, fwd.z) || 1;
+        const reach = 5;
+        engine.focusShadow?.(cam.position.x + (fwd.x / flat) * reach, cam.position.z + (fwd.z / flat) * reach, { half: 14, top: 10 });
+      }
     },
     dispose() { for (const p of parts) p.dispose?.(); },
   };

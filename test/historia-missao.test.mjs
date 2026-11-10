@@ -1,114 +1,188 @@
 // Modo História (etapa 2): a missão do capítulo 1 no jogo de verdade (headless, cenário do Recanto), com os controles
-// de verdade: o impulso da Rhaenyra na maçaneta, o empurrão no galho, o E na porta da área de serviço, o pulso do Faro
-// na piscina, a arrancada no poste do varal, a porta de mola da torre, o latido grave na guarita e o portãozinho; o
-// mural no fim (só fecha o que dá) e o fim do capítulo. E os três enigmas paralelos: o barquinho até a ilha (com a
-// Dona Gansa distraída por um latido), a lixeira e o toldo até a meia da antena, a corda, o balde e a bola até a
-// meia do depósito. As cenas são puladas aqui (o teste das cenas confere que pular dá no mesmo).
+// de verdade. A investigação e os puzzles de causa e efeito, na ordem:
+//   quarto (farejar com V, examinar com E a trilha, o pote e a pena) → casa (a Radhija pela portinha de gato, o pedal
+//   solta a grade; a Rhaenyra empurra o saco de ração e pula na maçaneta) → quintal (o galho; a Radhija pela passagem
+//   do muro puxa a argola do ferrolho) → piscina (o Faro e a Reconstrução) → varal (o cesto embaixo da cenoura e a
+//   arrancada no poste) → torre (o Faro mostra a senha; os três botões na ordem; a porta de mola com a irmã segurando)
+//   → portaria (o Superbafo na grelha abre a janela; o latido grosso acorda o porteiro) → portãozinho → mural → fim.
+// E os três enigmas paralelos: o barquinho até a ilha (com a Dona Gansa distraída por um latido), a lixeira e o toldo
+// até a meia da antena, a corda, o balde e a bola até a meia do depósito. As cenas são puladas aqui (o teste das cenas
+// confere que pular dá no mesmo).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStoryGame, storyInfo, playScene, intrusions } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, skipScene, intrusions, become, holdWorld, push, sniff, examine } from './helpers/historia.mjs';
 
 const near = (c, p, r) => Math.hypot(c.x - p.x, c.z - p.z) <= r;
-/**
- * Segura uma direção do MUNDO (com as teclas extras) até `until` ou `sec` s, recalculando as teclas a cada quadro: em
- * 3ª pessoa a câmera gira e a mesma tecla aponta para outro lado.
- */
-function holdWorld(h, dir, sec, until, extra = []) {
-  const n = Math.max(1, Math.round(sec * 60));
-  let ok = false;
-  for (let i = 0; i < n; i++) {
-    h.hold(dir, extra);
-    h.step();
-    if (until(h)) { ok = true; break; }
-  }
-  h.hold(null);
-  return ok;
-}
-/** Segura a direção (do mundo) com Shift (empurrar) até `until` ou `sec` s. */
-function push(h, dir, sec, until) {
-  const ok = holdWorld(h, dir, sec, until, ['ShiftLeft']);
-  h.run(0.2);
-  return ok;
-}
-/** Pula a cena que começou (ou vai começar) e confere que ninguém atravessou nada nela. */
-function skipScene(h, id) {
-  const r = playScene(h, { skip: true });
-  assert.equal(r.id, id, `a cena ${id} começou`);
-  assert.deepEqual(r.bad, [], `${id}: ninguém atravessa nada`);
-}
-/** Troca para a dog `name` (Q) se ainda não for ela. */
-function become(h, name) {
-  for (let i = 0; i < 8 && h.game.activeDog !== name; i++) {
-    h.tap('KeyQ');
-    if (h.game.activeDog !== name) h.run(0.2);
-  }
-  const why = { cine: h.puzzle.cinematic(), lock: !!h.puzzle.lockFor(h.game.activeDog), extras: h.info().extras?.act ?? null, scene: storyInfo(h).scene };
-  assert.equal(h.game.activeDog, name, `${name} ativa ${JSON.stringify(why)}`);
+const mid = (D) => ({ x: (D.hinge.x + D.latchPost.x) / 2, z: (D.hinge.z + D.latchPost.z) / 2 });
+/** A Rhaenyra pula na parede, na frente do botão (ou da alavanca) `spot`, e espera voltar ao chão. */
+function boost(h, spot) {
+  h.teleport('rhaenyra', spot.x + spot.nx * 0.44, spot.z + spot.nz * 0.44, Math.atan2(-spot.nx, -spot.nz));
+  h.run(0.25);
+  h.tap('Space');
+  h.run(1.5);
 }
 
-test('missão do capítulo 1: os sete passos, do quarto ao portãozinho, o mural e o fim', async () => {
+test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas, o mural e o fim', async () => {
   const h = await createStoryGame();
   const L = h.layout;
   const S = () => storyInfo(h);
   const bad = new Set();
   const watch = () => { for (const m of intrusions(h)) bad.add(`[${S().stage}] ${m}`); };
 
-  // 0. a abertura (pulada): o Faro já leu a trilha, o pote e a pena
+  // 0. a abertura (pulada): só as pistas de cena; a cenoura sumiu
   skipScene(h, 'abertura');
-  assert.equal(S().stage, 'cozinha');
-  for (const id of ['pombos', 'abraco', 'pote', 'trilha', 'pena']) assert.ok(S().clues.includes(id), `pista ${id}`);
+  assert.equal(S().stage, 'quarto');
+  assert.deepEqual(S().clues.slice().sort(), ['abraco', 'pombos']);
 
-  // 1. cozinha: a Radhija não alcança; a Rhaenyra pula na maçaneta de alavanca e a porta abre para o quintal
+  // 1. quarto: o Faro revela a trilha, o pote e a pena; cada uma se examina de perto, com o E
+  assert.deepEqual(S().revealed, [], 'sem farejar, nada brilha');
+  h.tap('KeyE');
+  h.run(0.3);
+  assert.equal(S().exam, null, 'sem farejar, não há o que examinar');
+  const seen = sniff(h);
+  for (const id of ['trilha', 'pote', 'pena']) assert.ok(seen.includes(id), `o Faro revela ${id}`);
+  assert.ok(S().cloud.on && S().cloud.puffs >= 2, `a nuvem de cheiro sai do focinho (${JSON.stringify(S().cloud)})`);
+  for (const id of ['trilha', 'pote', 'pena']) {
+    assert.ok(examine(h, id), `${id} examinada vira pista na lupa`);
+    watch();
+  }
+  // examinadas as três: os pombos passam pela janela com a cenoura, e a missão vira ir atrás deles
+  skipScene(h, 'janela');
+  assert.equal(S().stage, 'casa');
+  assert.equal(h.log('objective').at(-1)?.text, 'Atrás dos pombos! Saiam de casa');
+
+  // 2. casa: a grade do quarto barra a Rhaenyra; a Radhija passa pela portinha de gato e pisa no pedal
   become(h, 'rhaenyra');
-  const Hd = L.KITCHEN_HANDLE;
-  h.teleport('rhaenyra', Hd.x - 0.44, Hd.z, Math.PI / 2);
+  const G = L.PET_GATE, F = L.PET_FLAP;
+  h.walkTo(G.hinge.x + 1.2, mid(G).z, { timeout: 4 });
+  assert.ok(h.ctrls.rhaenyra.x < G.hinge.x - 0.1, `a grade segura a Rhaenyra no quarto (x ${h.ctrls.rhaenyra.x.toFixed(2)})`);
+  h.walkTo(F.x + 1.0, (F.z0 + F.z1) / 2, { timeout: 4 });
+  assert.ok(h.ctrls.rhaenyra.x < F.x - 0.1, 'e ela não cabe na portinha de gato');
+  watch();
+  become(h, 'radhija');
+  h.teleport('radhija', F.x - 0.7, (F.z0 + F.z1) / 2, Math.PI / 2);
   h.run(0.2);
-  h.tap('Space');
-  assert.ok(h.run(3, { until: () => S().flags.kitchenOpen }), 'o impulso na maçaneta abre a porta da cozinha');
-  assert.equal(S().stage, 'galho');
-  h.run(1.2, { until: () => false });
+  h.walkTo(F.x + 0.8, (F.z0 + F.z1) / 2, { timeout: 5, tol: 0.15 });
+  assert.ok(h.ctrls.radhija.x > F.x + 0.3, `a Radhija passa pela portinha de gato (x ${h.ctrls.radhija.x.toFixed(2)})`);
+  watch();
+  assert.equal(S().flags.petGateOpen, false);
+  h.walkTo(L.PET_PEDAL.x, L.PET_PEDAL.z, { timeout: 5, tol: 0.12, until: () => S().flags.petGateOpen });
+  assert.ok(h.run(1.5, { until: () => S().flags.petGateOpen }) || S().flags.petGateOpen, 'o pedal solta a grade');
+  h.run(1.2);
+  assert.ok(S().doors.petGate > 0.9, `a grade abre e fica aberta (${S().doors.petGate})`);
+  watch();
+  // a Rhaenyra passa pela grade aberta
+  become(h, 'rhaenyra');
+  h.walkTo(G.hinge.x - 0.9, mid(G).z, { timeout: 6 });
+  h.walkTo(G.hinge.x + 1.3, mid(G).z, { timeout: 6 });
+  assert.ok(h.ctrls.rhaenyra.x > G.hinge.x + 0.6, 'a Rhaenyra passa para a cozinha');
+  watch();
+  // o saco de ração na frente da maçaneta: sem tirar, o pulo não alcança
+  assert.equal(S().flags.sackFree, false);
+  assert.deepEqual(h.puzzle.wallSpots(), [], 'com o saco na frente, não há onde apoiar as patas');
+  const Sk = L.FOOD_SACK;
+  h.teleport('rhaenyra', Sk.start.x, Sk.start.z + Sk.half + 0.26, Math.PI);
+  h.run(0.2);
+  assert.ok(push(h, [0, -1], 8, () => S().flags.sackFree), `a Rhaenyra empurra o saco para o lado (${JSON.stringify(S().pushables.sack)})`);
+  watch();
+  assert.equal(h.puzzle.wallSpots().length, 1, 'agora dá para alcançar a maçaneta');
+  boost(h, L.KITCHEN_HANDLE);
+  assert.ok(S().flags.kitchenOpen, 'o impulso na maçaneta abre a porta da cozinha');
+  assert.equal(S().stage, 'quintal');
+  h.run(1.0);
   watch();
 
-  // 2. galho: a Rhaenyra empurra o galho para o leste (as telhas aparecem) e o E abre a porta da área de serviço
-  const Br = L.BRANCH;
+  // 3. quintal: o galho trava a porta; tirado o galho, o ferrolho ainda fica do outro lado do muro
+  const Br = L.BRANCH, SD = L.SERVICE_DOOR, sd = mid(SD);
   h.teleport('rhaenyra', Br.start.x - Br.half - 0.24, Br.start.z, Math.PI / 2);
   h.run(0.2);
-  assert.ok(push(h, [1, 0], 8, () => S().flags.branchFree), 'o galho sai da frente da porta');
+  assert.ok(push(h, [1, 0], 10, () => S().flags.branchFree), 'o galho sai da frente da porta');
   assert.ok(S().clues.includes('telhas'), 'as telhas da tempestade viram pista (caso 2)');
   watch();
-  const sd = { x: (L.SERVICE_DOOR.hinge.x + L.SERVICE_DOOR.latchPost.x) / 2, z: L.SERVICE_DOOR.hinge.z };
-  h.teleport('rhaenyra', sd.x, sd.z + 0.7, Math.PI);
+  h.teleport('rhaenyra', sd.x - 0.2, sd.z + 0.75, Math.PI);
   h.run(0.2);
   h.tap('KeyE');
   h.run(0.5);
-  assert.equal(S().flags.serviceOpen, true, 'E na porta abre a área de serviço');
+  assert.equal(S().flags.serviceOpen, false, 'o E na porta não abre: o ferrolho é por fora');
+  assert.equal(h.log('objective').at(-1)?.text, 'O ferrolho fica do outro lado do muro');
+  h.run(2.6); // o plano da câmera na passagem do muro
+  // a Radhija passa pela passagem baixa do muro e puxa a argola do ferrolho com a boca
+  become(h, 'radhija');
+  const YG = L.YARD_GAP, gx = (YG.x0 + YG.x1) / 2;
+  h.teleport('radhija', gx, YG.z + 0.75, Math.PI);
+  h.run(0.2);
+  h.walkTo(gx, YG.z - 0.85, { timeout: 5, tol: 0.15 });
+  assert.ok(h.ctrls.radhija.z < YG.z - 0.3, `a Radhija sai do outro lado do muro (z ${h.ctrls.radhija.z.toFixed(2)})`);
+  watch();
+  const SB = L.SERVICE_BOLT;
+  h.walkTo(SB.ring.x, SB.ring.z - 0.45, { timeout: 6, tol: 0.15 });
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a argola na boca (fase ${S().tug}, ${S().tugWhat})`);
+  const lock = h.puzzle.lockFor('radhija');
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.boltOpen), 'puxando a argola, o ferrolho corre');
+  assert.ok(h.run(2, { until: () => S().flags.serviceOpen }), 'e a porta da área de serviço abre');
   assert.equal(S().stage, 'piscina');
   h.run(1.2);
+  assert.equal(h.puzzle.lockFor('radhija'), null, 'a argola solta sozinha');
   watch();
 
-  // 3. piscina: o pulso do Faro da Radhija perto da piscina acha a boia → a Reconstrução (caso 1)
-  become(h, 'radhija');
-  h.teleport('radhija', L.RECON.x + 0.8, L.POOL.z1 + 1.2, Math.PI);
-  h.run(0.2);
+  // 4. piscina: o pulso do Faro perto da piscina acha a marca da boia → a Reconstrução (caso 1)
+  h.teleport('radhija', L.RECON.x - 0.9, L.RECON.z + 1.4, Math.PI);
+  h.run(1.3);
   h.tap('KeyV');
   skipScene(h, 'reconstrucao');
   assert.ok(S().clues.includes('boia'), 'a boia (caso 1)');
   assert.equal(S().stage, 'varal');
 
-  // 4. varal: a arrancada da Radhija no poste sacode o varal, o pregador solta e os pombos levam a cenoura
+  // 5. varal: sem o cesto embaixo, sacudir o varal não adianta; com o cesto, a arrancada solta o pregador
   const P = L.DASH_POST;
   h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
   h.run(0.2);
   h.tap('ShiftLeft');
+  h.run(0.8);
+  assert.equal(S().scene, null, 'sem o cesto embaixo da cenoura, o pregador não solta');
+  assert.equal(S().stage, 'varal');
+  become(h, 'rhaenyra');
+  const C = L.LAUNDRY;
+  h.teleport('rhaenyra', C.start.x - C.half - 0.26, C.start.z, Math.PI / 2);
+  h.run(0.2);
+  assert.ok(push(h, [1, 0], 14, () => S().flags.basketUnder), `a Rhaenyra põe o cesto embaixo da cenoura (${JSON.stringify(S().pushables.laundry)})`);
+  watch();
+  become(h, 'radhija');
+  h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
+  h.run(1.8); // a recarga da arrancada
+  h.tap('ShiftLeft');
   skipScene(h, 'varal');
   assert.equal(S().stage, 'torre');
 
-  // 5. torre: a Rhaenyra empurra a porta de mola; trocando para a Radhija com a irmã no vão, ela fica segurando
+  // 6. torre: a porta só destrava com a senha do interfone; o Faro mostra o Farelo apertando
   become(h, 'rhaenyra');
-  const TD = L.TOWER_DOOR;
-  h.teleport('rhaenyra', TD.hinge.x - 0.36, (TD.hinge.z + TD.latchPost.z) / 2, Math.PI / 2);
+  const TD = L.TOWER_DOOR, td = mid(TD);
+  h.teleport('rhaenyra', TD.hinge.x - 0.36, td.z, Math.PI / 2);
   h.run(0.2);
-  assert.ok(push(h, [1, 0], 4, () => h.puzzle.navFlags().towerOpen), 'a porta de mola abre com o empurrão');
+  push(h, [1, 0], 1.2, () => false);
+  assert.ok(S().doors.tower < 0.05, 'trancada, a porta de mola não abre');
+  assert.equal(S().flags.towerUnlocked, false);
+  h.teleport('rhaenyra', TD.hinge.x - 1.6, td.z + 1.2, Math.PI / 2);
+  h.run(1.3);
+  h.tap('KeyV'); // a Rhaenyra também fareja
+  skipScene(h, 'senha');
+  assert.ok(S().clues.includes('senha') && S().flags.codeSeen, 'a senha vira pista');
+  const IC = L.INTERCOM;
+  const spotOf = (id) => IC.buttons.find((b) => b.id === id);
+  // na ordem da parede (errada): o interfone recusa
+  for (const b of IC.buttons) boost(h, b);
+  h.run(1.6);
+  assert.equal(S().flags.towerUnlocked, false, 'a ordem errada não destrava');
+  assert.deepEqual(S().code, [], 'e o interfone volta a esperar');
+  // na ordem da senha
+  for (const id of IC.code) { boost(h, spotOf(id)); watch(); }
+  h.run(0.8);
+  assert.equal(S().flags.towerUnlocked, true, 'a senha certa destrava a porta');
+  // a Rhaenyra empurra a porta de mola; trocando para a Radhija com a irmã no vão, ela fica segurando
+  h.teleport('rhaenyra', TD.hinge.x - 0.36, td.z, Math.PI / 2);
+  h.run(0.2);
+  assert.ok(push(h, [1, 0], 4, () => h.puzzle.navFlags().towerOpen), 'destrancada, a porta de mola abre com o empurrão');
   holdWorld(h, [1, 0], 0.3, () => false, ['ShiftLeft']);
   h.hold([1, 0], ['ShiftLeft']);
   h.tap('KeyQ'); // segurando: troca para a Radhija
@@ -123,25 +197,39 @@ test('missão do capítulo 1: os sete passos, do quarto ao portãozinho, o mural
   skipScene(h, 'terraco');
   assert.equal(S().stage, 'portaria');
 
-  // 6. portaria: o latido fino da Radhija não acorda o porteiro; o grave da Rhaenyra sim, e ele abre o portãozinho
-  const B = L.BOOTH;
-  h.teleport('radhija', (B.x0 + B.x1) / 2 - 0.5, B.z1 + 0.7, Math.PI);
-  h.run(0.2);
-  h.tap('KeyE');
-  h.run(0.3);
-  assert.equal(S().scene, null, 'o latido da Radhija não basta');
-  assert.equal(S().stage, 'portaria');
+  // 7. portaria: de janela fechada nenhum latido entra; o Superbafo da Radhija pela grelha faz a janela abrir
+  const B = L.BOOTH, bx = (B.x0 + B.x1) / 2;
   become(h, 'rhaenyra');
-  h.teleport('rhaenyra', (B.x0 + B.x1) / 2 + 0.4, B.z1 + 0.7, Math.PI);
+  h.teleport('rhaenyra', bx + 0.4, B.awning.z1 + 0.9, Math.PI);
+  h.run(0.3);
+  h.tap('KeyE');
+  h.run(0.5);
+  assert.equal(S().scene, null, 'com a janela fechada, o latido grosso não entra');
+  assert.equal(S().stage, 'portaria');
+  become(h, 'radhija');
+  const V = L.BOOTH_VENT;
+  h.teleport('radhija', V.x - 0.75, V.z, Math.PI / 2);
+  h.run(0.3);
+  h.tap('KeyR');
+  skipScene(h, 'cheiro');
+  assert.equal(S().flags.windowOpen, true, 'o cheiro lá dentro faz a janela abrir');
+  // de janela aberta: o latido fino da Radhija não acorda o porteiro; o grosso da Rhaenyra sim
+  h.teleport('radhija', bx - 0.5, B.awning.z1 + 0.9, Math.PI);
+  h.run(0.3);
+  h.tap('KeyE');
+  h.run(0.4);
+  assert.equal(S().scene, null, 'o latido da Radhija não basta');
+  become(h, 'rhaenyra');
+  h.teleport('rhaenyra', bx + 0.4, B.awning.z1 + 0.9, Math.PI);
   h.run(0.4);
   h.tap('KeyE');
   skipScene(h, 'porteiro');
   assert.equal(S().stage, 'fechamento');
   assert.equal(S().flags.gateOpen, true, 'o portãozinho aberto');
 
-  // 7. fechamento: no portãozinho, os pombos voam para a cidade e a Rhaenyra segue a borboleta → o mural
-  const G = L.GATE;
-  h.teleport('rhaenyra', (G.x0 + G.x1) / 2, G.z + 0.6, Math.PI);
+  // 8. fechamento: no portãozinho, os pombos voam para a cidade e a Rhaenyra segue a borboleta → o mural
+  const Gt = L.GATE;
+  h.teleport('rhaenyra', (Gt.x0 + Gt.x1) / 2, Gt.z + 0.6, Math.PI);
   skipScene(h, 'fechamento');
   assert.equal(S().stage, 'mural');
   const mural = h.log('story:mural').at(-1);
@@ -156,46 +244,89 @@ test('missão do capítulo 1: os sete passos, do quarto ao portãozinho, o mural
   const end = h.log('story:chapterEnd').at(-1);
   assert.ok(end, 'o fim do capítulo');
   assert.deepEqual({ chapter: end.chapter, title: end.title, hiddenTotal: end.hiddenTotal, socksTotal: end.socksTotal }, { chapter: 1, title: 'Cadê a Cenoura?', hiddenTotal: 2, socksTotal: 3 });
-  assert.ok(end.clues >= 7, `pistas na lupa: ${end.clues}`);
+  assert.ok(end.clues >= 8, `pistas na lupa: ${end.clues}`);
   assert.deepEqual([...bad], [], 'ninguém atravessa nada no caminho');
   assert.equal(h.puzzle.lockFor('radhija'), null);
   assert.equal(h.puzzle.lockFor('rhaenyra'), null);
 });
 
-test('pistas escondidas: a baba no parapeito de dentro e o ralo sem rolha só com o Faro de perto', async () => {
-  const h = await createStoryGame({ query: 'stage=cozinha' });
+test('Faro: as duas farejam, e a nuvem de cheiro leva até a próxima pista de cada etapa', async () => {
+  const h = await createStoryGame({ query: 'stage=casa' });
   const L = h.layout;
   const S = () => storyInfo(h);
-  assert.equal(S().stage, 'cozinha');
+  // com a Rhaenyra: o pulso sai, sem dica de "só a Radhija"
+  become(h, 'rhaenyra');
+  h.clearLog();
+  h.run(1.3);
+  h.tap('KeyV');
+  h.run(0.4);
+  const faro = h.log('story:faro');
+  assert.equal(faro.length, 1, 'o pulso da Rhaenyra sai');
+  assert.equal(faro[0].who, 'rhaenyra');
+  // a nuvem sai dela e vai para o rastro dos pombos, lá fora (a pista seguinte), pelo caminho de dentro da casa
+  const c = S().cloud;
+  assert.ok(c.on && c.puffs >= 10, `a nuvem de cheiro aparece (${JSON.stringify(c)})`);
+  assert.ok(near(c.lead, L.RECON, 0.1), 'e leva até a marca da piscina');
+  assert.ok(c.total > 15, `o caminho é o de andar, não em linha reta por cima das paredes (${c.total} m)`);
+  const mesh = h.engine.scene.getObjectByName('faro:nuvem-de-cheiro');
+  assert.ok(mesh && mesh.visible && mesh.count === c.puffs, 'a malha da nuvem está na cena');
+  // a nuvem acompanha quem fareja: trocando para a Radhija com o Faro aceso, sai dela
+  become(h, 'radhija');
+  h.run(0.5);
+  assert.ok(S().cloud.on, 'a nuvem segue com a outra dog');
+  // o pulso acaba e a nuvem some; apertar de novo logo depois recomeça (recarga curta)
+  h.run(9.5);
+  assert.equal(S().faro.active, false, 'o pulso acaba em uns 8 s');
+  assert.equal(S().cloud.on, false, 'a nuvem some com ele');
+  h.tap('KeyV');
+  h.run(0.3);
+  assert.ok(S().faro.active);
+  h.tap('KeyV');
+  h.run(0.2);
+  assert.equal(h.log('story:faro').length, 2, 'dentro da recarga (1,2 s), o segundo toque não conta');
+  h.run(1.2);
+  h.tap('KeyV');
+  h.run(0.2);
+  assert.equal(h.log('story:faro').length, 3, 'depois dela, o pulso recomeça');
+  // em cada etapa, a nuvem aponta a pista certa
+  const leadAt = (stage, at = null) => {
+    h.game.debug.setStage(stage, 'radhija');
+    if (at) h.teleport('radhija', at.x, at.z, 0);
+    h.run(1.4);
+    h.tap('KeyV');
+    h.run(0.4);
+    return S().cloud.lead;
+  };
+  assert.ok(near(leadAt('varal'), L.CARROT_PIN, 0.6), 'no varal: a cenoura');
+  // na torre, de longe (de perto, o próprio pulso já mostra a Reconstrução da senha)
+  assert.ok(near(leadAt('torre', L.NAV_NODES.P_south), L.INTERCOM.recon, 0.1), 'na torre, sem a senha: o lugar da Reconstrução');
+  const gate = { x: (L.GATE.x0 + L.GATE.x1) / 2, z: L.GATE.z };
+  assert.ok(near(leadAt('fechamento'), gate, 1.0), 'no fim: o portãozinho');
+});
+
+test('pistas escondidas: a baba no parapeito de dentro e o ralo sem rolha, só com o Faro de perto e examinando', async () => {
+  const h = await createStoryGame({ query: 'stage=casa' });
+  const L = h.layout;
+  const S = () => storyInfo(h);
   assert.ok(!S().clues.includes('baba'));
-  // longe do basculante: nada
-  h.teleport('radhija', -9.2, 2.9, 0);
-  h.run(0.2);
-  h.tap('KeyV');
-  h.run(1);
-  assert.ok(!S().clues.includes('baba'), 'de longe, a baba não aparece');
-  h.run(6.5); // o pulso acaba
+  // do meio do quarto: a baba não aparece
+  h.teleport('radhija', L.BED.x + 2.6, L.BED.z + 3.6, 0);
+  assert.ok(!sniff(h).includes('baba'), 'de longe, a baba não aparece');
+  h.run(9.5); // o pulso acaba
   // pertinho do parapeito de dentro, no chão do quarto ao lado da caminha
-  h.teleport('radhija', L.BED.x + L.BED.r + 0.15, L.WINDOW.z + 0.55, -Math.PI / 2);
-  h.run(0.2);
-  h.tap('KeyV');
-  h.run(1);
-  assert.ok(S().clues.includes('baba'), 'de perto, a baba (escondida) entra na lupa');
+  h.teleport('radhija', L.BED.x + L.BED.r + 0.2, L.WINDOW.z + 0.5, -Math.PI / 2);
+  assert.ok(sniff(h).includes('baba'), 'de perto, o Faro revela a baba');
+  assert.ok(!S().clues.includes('baba'), 'revelada ainda não é pista: falta examinar');
+  assert.ok(S().faro.pinned.includes('baba'), 'e continua brilhando depois do pulso');
+  assert.ok(examine(h, 'baba'), 'examinada, a baba (escondida) entra na lupa');
+  assert.ok(!S().faro.pinned.includes('baba'), 'e para de brilhar');
   // o ralo do tanque, na área de serviço (com as portas abertas)
   h.game.debug.setStage('varal', 'radhija');
   h.run(0.2);
-  h.teleport('radhija', L.DRAIN.x + 0.8, L.TANKS.z0 + 1.2, Math.PI);
-  h.run(0.2);
-  h.tap('KeyV');
-  h.run(1);
-  assert.ok(S().clues.includes('ralo'), 'o ralo sem rolha (escondida, caso 1)');
-  // com a Rhaenyra, o Faro não sai (é da Radhija): dica
-  become(h, 'rhaenyra');
-  h.clearLog();
-  h.tap('KeyV');
-  h.run(0.2);
-  assert.equal(h.log('story:faro').length, 0, 'a Rhaenyra não tem Faro');
-  assert.ok(h.log('hint').length >= 1, 'a dica diz que o Faro é da Radhija');
+  h.teleport('radhija', L.DRAIN.x + 0.8, L.TANKS.z1 + 0.9, Math.PI);
+  assert.ok(sniff(h).includes('ralo'), 'o Faro revela o ralo');
+  assert.ok(examine(h, 'ralo'), 'o ralo sem rolha (escondida, caso 1)');
+  assert.deepEqual(intrusions(h), []);
 });
 
 test('paralelo A: o latido distrai a Dona Gansa, a Rhaenyra empurra o barquinho até o canal e só a Radhija atravessa para a ilha', async () => {
@@ -206,7 +337,7 @@ test('paralelo A: o latido distrai a Dona Gansa, a Rhaenyra empurra o barquinho 
   const watch = () => { for (const m of intrusions(h)) bad.add(m); };
   // a Radhija late de longe, a oeste do píer: a gansa vai ver o que é
   become(h, 'radhija');
-  h.teleport('radhija', 4.3, 1.55, Math.PI / 2);
+  h.teleport('radhija', L.PIER.x0 - 2.0, (L.PIER.z0 + L.PIER.z1) / 2, Math.PI / 2);
   h.run(0.3);
   h.tap('KeyE');
   h.run(0.5);
@@ -218,7 +349,7 @@ test('paralelo A: o latido distrai a Dona Gansa, a Rhaenyra empurra o barquinho 
   const boatAt = () => h.props.boat.object.position;
   h.teleport('rhaenyra', Bt.start.x - Bt.half - 0.24, Bt.start.z, Math.PI / 2);
   h.run(0.2);
-  assert.ok(push(h, [1, 0], 10, () => boatAt().x >= Bt.dock.x - 0.1), `pela margem até a frente do canal (x ${boatAt().x.toFixed(2)}, gansa: ${S().goose})`);
+  assert.ok(push(h, [1, 0], 16, () => boatAt().x >= Bt.dock.x - 0.1), `pela margem até a frente do canal (x ${boatAt().x.toFixed(2)}, gansa: ${S().goose})`);
   watch();
   // de frente para o canal, um empurrão para o norte: ele entra no canal e vira ponte
   h.teleport('rhaenyra', boatAt().x, Bt.start.z + Bt.half + 0.24, Math.PI);
@@ -257,12 +388,12 @@ test('paralelo B: a Rhaenyra leva a lixeira até o toldo e segura (Fica); a Radh
   // para o leste, pela frente da torre
   h.teleport('rhaenyra', Bn.start.x - Bn.half - 0.26, Bn.start.z, Math.PI / 2);
   h.run(0.2);
-  assert.ok(push(h, [1, 0], 10, () => binPos().x >= tx), `a lixeira vai para o leste (x ${binPos().x.toFixed(2)})`);
+  assert.ok(push(h, [1, 0], 12, () => binPos().x >= tx), `a lixeira vai para o leste (x ${binPos().x.toFixed(2)})`);
   // para o norte, até encostar no toldo da guarita
   const bx = binPos().x;
   h.teleport('rhaenyra', bx, binPos().z + Bn.half + 0.26, Math.PI);
   h.run(0.2);
-  assert.ok(push(h, [0, -1], 8, () => binPos().z <= tz), `a lixeira encosta no toldo (z ${binPos().z.toFixed(2)})`);
+  assert.ok(push(h, [0, -1], 12, () => binPos().z <= tz), `a lixeira encosta no toldo (z ${binPos().z.toFixed(2)})`);
   const p = binPos();
   assert.ok(p.x >= Sp.x0 && p.x <= Sp.x1 && p.z >= Sp.z0 - 0.05 && p.z <= Sp.z1, `no lugar (${p.x.toFixed(2)}, ${p.z.toFixed(2)})`);
   // sem a irmã segurando, a lixeira escapa
@@ -310,6 +441,7 @@ test('paralelo C: a corda debaixo da caminhonete derruba o balde na bola; a port
   h.tap('KeyE');
   // ela vai até a corda (o passinho), morde e segura
   assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a corda na boca (fase ${storyInfo(h).tug})`);
+  assert.equal(S().tugWhat, 'corda');
   const lock = h.puzzle.lockFor('radhija');
   assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.ballClear), 'puxando, o balde cai e a bola rola para longe da porta');
   h.run(0.3);
@@ -324,12 +456,12 @@ test('paralelo C: a corda debaixo da caminhonete derruba o balde na bola; a port
   const sock = L.SOCKS.find((s) => s.id === 'deposito');
   h.teleport('radhija', SD.hinge.x + 0.5, midZ, Math.PI / 2);
   h.run(0.2);
-  h.walkTo(sock.x, sock.z, { timeout: 6, until: () => S().socks.includes('deposito') });
+  h.walkTo(sock.x, sock.z, { timeout: 8, until: () => S().socks.includes('deposito') });
   assert.ok(S().socks.includes('deposito'), 'a meia do depósito');
   assert.deepEqual(intrusions(h), []);
 });
 
-test('meia da casinha e petiscos: só a Radhija entra na casinha do quintal; os quatro petiscos existem', async () => {
+test('meia da casinha e petiscos: só a Radhija entra na casinha do quintal; os cinco petiscos existem', async () => {
   const h = await createStoryGame({ query: 'stage=piscina' });
   const L = h.layout;
   const S = () => storyInfo(h);
@@ -349,16 +481,26 @@ test('meia da casinha e petiscos: só a Radhija entra na casinha do quintal; os 
   const sock = L.SOCKS.find((s) => s.id === 'casinha');
   h.walkTo(sock.x, sock.z, { timeout: 5, until: () => S().socks.includes('casinha') });
   assert.ok(S().socks.includes('casinha'), 'a meia da casinha');
-  assert.equal(h.puzzle.total, 4, 'quatro petiscos no capítulo');
+  assert.equal(h.puzzle.total, 5, 'cinco petiscos no capítulo');
+  // o da mesa da cozinha: só a Radhija passa por baixo dela
+  const treat = L.COLLECTIBLES.find((c) => c.id === 'mesa');
+  const before = h.puzzle.collected;
+  h.teleport('radhija', treat.x, treat.z + 0.9, Math.PI);
+  h.run(0.2);
+  h.walkTo(treat.x, treat.z, { timeout: 4 });
+  assert.equal(h.puzzle.collected, before + 1, 'o petisco embaixo da mesa da cozinha');
   assert.deepEqual(intrusions(h), []);
 });
 
-test('o botão do focinho (toque, só no Modo História) solta o Faro da Radhija', async () => {
-  const h = await createStoryGame({ query: 'stage=cozinha' });
+test('o botão do focinho (toque, só no Modo História) solta o Faro de quem está com a jogadora', async () => {
+  const h = await createStoryGame({ query: 'stage=casa&dog=rhaenyra' });
+  h.run(1.3);
   h.clearLog();
   assert.equal(h.game.input.touch.press('faro'), true, 'o botão existe no Modo História');
   h.step();
   h.game.input.touch.release('faro');
   h.step();
-  assert.ok(h.log('story:faro').length >= 1, 'o pulso saiu pelo botão do focinho');
+  const f = h.log('story:faro');
+  assert.ok(f.length >= 1, 'o pulso saiu pelo botão do focinho');
+  assert.equal(f[0].who, h.game.activeDog, 'da dog que está com a jogadora');
 });

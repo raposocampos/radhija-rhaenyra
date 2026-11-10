@@ -37,6 +37,12 @@ export const PICTOS = {
   telhas: card(`<path d="M8,47 l18,-14 l6,3 l-16,14z" fill="#7a5a3a" ${S}/><path d="M30,49 q6,-8 14,-4 q-4,7 -14,4z M38,39 q6,-6 12,-2 q-4,6 -12,2z" fill="#c4643f" ${S}/><path d="M34,10 l-6,10 h6 l-5,10" stroke="#5b6b9a" stroke-width="2" fill="none"/>`),
   boia: card(`<path d="M6,49 h48" stroke="#6FC3E0" stroke-width="6"/>${pigeon(30, 30, 0.8, { fly: true })}<path d="M21,40 q9,-4 18,0 q-2,6 -9,6 q-7,0 -9,-6z" fill="#F2C230" ${S} opacity=".95"/>`),
   ralo: card(`<rect x="8" y="14" width="44" height="30" rx="4" fill="#cfd8dc" ${S}/><circle cx="30" cy="34" r="5" fill="${INK}"/><path d="M30,29 q4,-8 10,-10" stroke="#9aa4aa" stroke-width="1.4" fill="none"/>`),
+  senha: card(`<rect x="6" y="18" width="48" height="20" rx="5" fill="#cfd8dc" ${S}/>`
+    + `<circle cx="16" cy="28" r="6.4" fill="#FFFDF6" ${S}/><path d="M12.4,30.4 q.6,-6 3.6,-6 q3,0 3.6,6z" fill="#E8B93A" ${S}/><circle cx="16" cy="31.6" r="1.1" fill="${INK}"/>`
+    + `<circle cx="30" cy="28" r="6.4" fill="#FFFDF6" ${S}/><path d="M26.4,26.9 h7.2 a1.5,1.5 0 1 1 1.4,1.6 a1.5,1.5 0 1 1 -1.4,1.6 h-7.2 a1.5,1.5 0 1 1 -1.4,-1.6 a1.5,1.5 0 1 1 1.4,-1.6z" fill="#FFF6E3" stroke="${INK}" stroke-width="1"/>`
+    + `<circle cx="44" cy="28" r="6.4" fill="#FFFDF6" ${S}/><path d="M43,31 v-7 l3.6,-.9 v6" fill="none" stroke="${INK}" stroke-width="1.3"/><ellipse cx="42" cy="31.2" rx="1.5" ry="1.1" fill="${INK}"/><ellipse cx="45.6" cy="30.2" rx="1.5" ry="1.1" fill="${INK}"/>`
+    + `<circle cx="16" cy="45" r="1.5" fill="${INK}"/><circle cx="28.4" cy="45" r="1.5" fill="${INK}"/><circle cx="31.9" cy="45" r="1.5" fill="${INK}"/><circle cx="41" cy="45" r="1.5" fill="${INK}"/><circle cx="44.4" cy="45" r="1.5" fill="${INK}"/><circle cx="47.8" cy="45" r="1.5" fill="${INK}"/>`
+    + `${pigeon(30, 16, 0.5, { flip: false })}`),
   q: card(`<path d="M24,22 q0,-8 7,-8 q7,0 7,6 q0,5 -7,7 v4" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="31" cy="40" r="2.6" fill="${INK}"/>`),
 };
 

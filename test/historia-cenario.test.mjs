@@ -46,8 +46,9 @@ test('recanto: cenário sem faces coplanares sobrepostas (z-fighting)', async ()
 });
 
 test('recanto: objetos do cenário na altura das dogs têm colisor', async () => {
-  // na etapa da cozinha (a abertura feita): portas fechadas, galho, lixeira e barquinho no lugar de começo
-  const h = await createStoryGame({ query: 'stage=cozinha' });
+  // na etapa da casa (a abertura e o quarto feitos): portas e grade fechadas, o saco de ração, o galho, o cesto, a
+  // lixeira e o barquinho no lugar de começo
+  const h = await createStoryGame({ query: 'stage=casa' });
   const root = h.engine.scene.getObjectByName('fase:recanto');
   assert.ok(root, 'o cenário da área está na cena');
   const dogs = ['radhija', 'rhaenyra'].map((name) => ({
@@ -68,9 +69,23 @@ test('recanto: os props que o puzzle usa existem e o cenário fica dentro do or�
   try {
     const P = built.props;
     for (const k of ['kitchenDoor', 'kitchenHandle', 'serviceDoor', 'branch', 'windowLeaf', 'bowl', 'towerDoor', 'gateLeaf', 'line',
-      'bin', 'boat', 'booth', 'bucket', 'ball', 'rope', 'storageDoor', 'socks', 'squad', 'carrot', 'humans', 'ghosts', 'rain', 'city']) {
+      'bin', 'boat', 'booth', 'bucket', 'ball', 'rope', 'storageDoor', 'socks', 'squad', 'carrot', 'humans', 'ghosts', 'rain', 'city',
+      // as peças dos puzzles novos
+      'petGate', 'petPedal', 'foodSack', 'serviceBolt', 'laundry', 'intercom']) {
       assert.ok(P[k], `prop ${k}`);
     }
+    // o que o puzzle chama em cada uma
+    assert.equal(typeof P.petGate.setOpen, 'function', 'a grade do quarto abre');
+    assert.equal(typeof P.petPedal.setPress, 'function', 'o pedal afunda');
+    assert.equal(typeof P.foodSack.setPos, 'function', 'o saco de ração anda');
+    assert.equal(typeof P.laundry.setPos, 'function', 'o cesto de roupa anda');
+    for (const m of ['setPull', 'setGrip', 'bitePoint', 'setSlid']) assert.equal(typeof P.serviceBolt[m], 'function', `ferrolho.${m}`);
+    for (const id of ['osso', 'nota', 'sino']) assert.equal(typeof P.intercom.buttons?.[id]?.setPress, 'function', `botão ${id} do interfone`);
+    for (const m of ['setLit', 'setState']) assert.equal(typeof P.intercom[m], 'function', `interfone.${m}`);
+    assert.equal(typeof P.booth.setWindow, 'function', 'a janela da guarita abre');
+    // os pombos agarram a cenoura
+    assert.equal(typeof P.carrot.holdBy, 'function', 'a cenoura é agarrada');
+    for (const b of ['cap', 'son', 'far']) for (const m of ['carry', 'feetPoint', 'shiver', 'lookAt']) assert.equal(typeof P.squad[b][m], 'function', `pombo ${b}.${m}`);
     assert.equal(P.socks.length, 3, 'três meias');
     assert.ok(P.booth.windowAnchor && Number.isFinite(P.booth.windowAnchor.x), 'o ponto da janela da guarita (balões do ronco)');
     assert.equal(typeof P.boat.setPos, 'function');

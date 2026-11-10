@@ -1,6 +1,8 @@
 // Ajudas dos testes do Modo História (test/historia-*.test.mjs): o jogo headless com a área do Recanto das Patinhas
-// (cenário de verdade, test/helpers/headless.mjs), tocar uma cena até o fim ou pulando (segurar E), e o detector de
-// "nada atravessa nada" que roda a cada quadro das cenas e das transições.
+// (cenário de verdade, test/helpers/headless.mjs), tocar uma cena até o fim ou pulando (segurar E), o detector de
+// "nada atravessa nada" que roda a cada quadro das cenas e das transições, e os gestos da missão com os controles de
+// verdade (farejar, examinar, empurrar, trocar de dog).
+import assert from 'node:assert/strict';
 import STORY from '../../src/story/areas/recanto/index.js';
 import { createHeadlessGame } from './headless.mjs';
 
@@ -41,24 +43,18 @@ export function intrusions(h, { tol = 0.02, shrink = 0.8 } = {}) {
 
 /**
  * Toca a cena que está para começar (ou já começou) até o fim, ou pulando (segurando E logo depois de ela começar).
- * Cada quadro passa pelo detector de intrusões e pelo `each(h)` opcional. Na abertura, quando ela espera o Faro, aperta V.
+ * Cada quadro passa pelo detector de intrusões e pelo `each(h)` opcional.
  * @returns {{ id: string | null, frames: number, seconds: number, bad: string[], skipped: boolean }}
  */
-export function playScene(h, { skip = false, max = 120, each = null, faroKey = 'KeyV' } = {}) {
+export function playScene(h, { skip = false, max = 120, each = null } = {}) {
   const bad = new Set();
   let frames = 0;
-  // começa (a cena pendente entra no próximo quadro)
-  for (let i = 0; i < 5 && !storyInfo(h).scene; i++) { h.step(); frames++; }
+  // começa (a cena pendente entra no próximo quadro; quem examina uma pista termina antes)
+  for (let i = 0; i < 90 && !storyInfo(h).scene; i++) { h.step(); frames++; }
   const id = storyInfo(h).scene;
   if (!id) return { id: null, frames, seconds: frames / 60, bad: [], skipped: false };
   if (skip) h.keyDown('KeyE');
-  let pressedFaro = false;
   while (storyInfo(h).scene && frames < max * 60) {
-    if (!skip && !pressedFaro && storyInfo(h).beat === 'pulso' && h.puzzle.waitingFaro) {
-      h.tap(faroKey);
-      frames += 2;
-      pressedFaro = true;
-    }
     h.step();
     frames++;
     for (const m of intrusions(h)) bad.add(`[${id}/${storyInfo(h).beat ?? 'fim'}] ${m}`);
@@ -72,6 +68,14 @@ export function playScene(h, { skip = false, max = 120, each = null, faroKey = '
   return { id, frames, seconds: frames / 60, bad: [...bad], skipped: skip };
 }
 
+/** Pula a cena que começou (ou vai começar) e confere que ninguém atravessou nada nela. */
+export function skipScene(h, id) {
+  const r = playScene(h, { skip: true });
+  assert.equal(r.id, id, `a cena ${id} começou (${JSON.stringify({ stage: storyInfo(h).stage, scene: storyInfo(h).scene })})`);
+  assert.deepEqual(r.bad, [], `${id}: ninguém atravessa nada`);
+  return r;
+}
+
 /** Anda com a dog ativa por (dx, dz) do mundo durante `sec` s e devolve quanto ela andou (controle livre?). */
 export function moved(h, sec = 0.6, dir = [0, -1]) {
   const c = h.ctrls[h.game.activeDog];
@@ -81,4 +85,55 @@ export function moved(h, sec = 0.6, dir = [0, -1]) {
   h.hold(null);
   h.run(0.1);
   return Math.hypot(c.x - x0, c.z - z0);
+}
+
+/** Troca para a dog `name` (Q) se ainda não for ela. */
+export function become(h, name) {
+  for (let i = 0; i < 8 && h.game.activeDog !== name; i++) {
+    h.tap('KeyQ');
+    if (h.game.activeDog !== name) h.run(0.2);
+  }
+  const why = { cine: h.puzzle.cinematic(), lock: !!h.puzzle.lockFor(h.game.activeDog), extras: h.info().extras?.act ?? null, scene: storyInfo(h).scene };
+  assert.equal(h.game.activeDog, name, `${name} ativa ${JSON.stringify(why)}`);
+}
+
+/**
+ * Segura uma direção do MUNDO (com as teclas extras) até `until` ou `sec` s, recalculando as teclas a cada quadro: em
+ * 3ª pessoa a câmera gira e a mesma tecla aponta para outro lado.
+ */
+export function holdWorld(h, dir, sec, until, extra = []) {
+  const n = Math.max(1, Math.round(sec * 60));
+  let ok = false;
+  for (let i = 0; i < n; i++) {
+    h.hold(dir, extra);
+    h.step();
+    if (until(h)) { ok = true; break; }
+  }
+  h.hold(null);
+  return ok;
+}
+/** Segura a direção (do mundo) com Shift (empurrar) até `until` ou `sec` s. */
+export function push(h, dir, sec, until) {
+  const ok = holdWorld(h, dir, sec, until, ['ShiftLeft']);
+  h.run(0.2);
+  return ok;
+}
+
+/** O Faro (V) com a dog ativa: espera a recarga, aperta e deixa a onda sair. → as pistas reveladas depois dele. */
+export function sniff(h) {
+  h.run(1.3); // a recarga do pulso anterior
+  h.tap('KeyV');
+  h.run(0.2);
+  return storyInfo(h).revealed;
+}
+
+/** Leva a dog ativa até onde se examina a pista (o ponto do layout) e aperta E; espera ela terminar de examinar. */
+export function examine(h, id) {
+  const s = h.layout.CLUE_SPOTS[id];
+  const p = s.at ?? s;
+  const c = h.ctrls[h.game.activeDog];
+  if (Math.hypot(c.x - p.x, c.z - p.z) > 0.5) h.walkTo(p.x, p.z, { tol: 0.35, timeout: 12 });
+  h.tap('KeyE');
+  h.run(1.3);
+  return storyInfo(h).clues.includes(id);
 }

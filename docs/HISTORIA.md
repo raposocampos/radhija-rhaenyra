@@ -38,13 +38,27 @@ As seis valem para a fatia jogável e para o resto da história. Cada uma ainda 
    a um minuto da uma. Alternativa: o prazo ser só o ovo e a chuva, sem regra de eleição.
 3. **Fatia jogável primeiro.** A abertura e o cap. 1 ficam jogáveis antes de construir os caps. 2 a 8.
 4. **Núcleo de 4 capítulos** (1, 2, 6 e 8), com os 8 como meta.
-5. **Faro em pulso.** Um toque solta uma onda que mostra trilhas e pistas por cerca de 6 s. Alternativa: segurar o
+5. **Faro em pulso.** Um toque solta uma onda que mostra trilhas e pistas por cerca de 8 s. Alternativa: segurar o
    botão.
 6. **Erro no mural tem reação e custo.** O cartão volta, e só o caso fechado sem erro ganha o carimbo dourado.
 
 **O botão do Faro (escolhido em 2026-11-01):** V no teclado, L3 no controle (apertar o analógico esquerdo) e um botão
-de focinho nos controles de toque, que só aparece no Modo História. O Faro é só da Radhija: com a Rhaenyra, uma dica
-lembra disso.
+de focinho nos controles de toque, que só aparece no Modo História.
+
+**Revisão da fatia (pedida pelo usuário em 2026-11-09, depois de testar a primeira prévia em 3ª pessoa):**
+- **As duas farejam.** O Faro deixou de ser só da Radhija.
+- **A nuvem de cheiro.** Enquanto o pulso dura, uma trilha de nuvenzinhas sai do focinho de quem fareja e segue o
+  caminho até a próxima pista. Ela passa por baixo de porta fechada e pela portinha de gato: mostra para onde é, e
+  abrir o caminho é com as duas.
+- **Pistas se examinam.** O pulso revela a pista (ela fica brilhando), e o E, de perto, a guarda na lupa.
+- **O mistério fica claro desde o começo.** A abertura termina com a cenoura sumida e a jogadora no quarto, para
+  farejar. Os objetivos falam do mistério ("A cenoura sumiu! Farejem o quarto", "Atrás dos pombos!").
+- **Puzzles com mais passos,** em cadeias de causa e efeito para as duas (veja o cap. 1).
+- **Mapa maior:** o Recanto ficou 1,7× maior, com cômodos de ~6 m, para a câmera em 3ª pessoa caber.
+- **Câmera:** em lugar apertado ela olha por cima do ombro da dog, para a frente, nunca de cima.
+- **Pombos:** com cara de pombo (cinza-claro, pescoço furta-cor, barras nas asas), e quem leva a cenoura agarra com as
+  patas.
+- **Balões e cenário** refeitos; as cenas são filmadas de dentro dos lugares.
 
 **A câmera em 3ª pessoa (decidida em 2026-11-01, depois da primeira prévia da fatia):** o Modo História é um jogo em
 3ª pessoa. A câmera fica atrás da cachorrinha ativa e gira livre em volta dela (analógico direito, arrastar com o
@@ -218,10 +232,13 @@ cena antes do flashback.**
 
 ## Mecânicas de investigação, que valem a história toda
 
-### Faro (Radhija), em pulso
+### Faro (as duas), em pulso
 
-- **O pulso.** Um toque solta uma onda a partir da Radhija. Por cerca de 6 s, as trilhas de cheiro acendem com cor
-  própria, e as pistas e as coisas fora do lugar brilham.
+- **O pulso.** Um toque solta uma onda a partir de quem fareja. Por cerca de 8 s, as trilhas de cheiro acendem com
+  cor própria, e as pistas e as coisas fora do lugar brilham. Dá para repetir logo depois (recarga de 1,2 s).
+- **A nuvem de cheiro.** Durante o pulso, nuvenzinhas saem do focinho e seguem o caminho de andar até a próxima
+  pista, com um brilho correndo para o lado de lá. A cor é a do cheiro que se segue.
+- **Examinar.** A pista revelada continua brilhando fraco depois do pulso. De perto, o E a examina e a guarda na lupa.
   - **Cores das trilhas:** cenoura laranja, pombos cinza, gansa branca, gato laranja-escuro.
 - **No perfil `minima`,** que não tem pós-processamento:
   - trilhas e pistas usam material emissivo;
@@ -449,32 +466,51 @@ A luneta e a roda-gigante são cenário com enigma, não mecânicas novas.
 tempestade da véspera estão pelo chão.
 
 **Missão:**
-1. **O quarto (abertura).** O primeiro pulso de Faro mostra a trilha laranja da cama até a janela, o pote virado e a
-   pena molhada no parapeito.
-2. **Sair de casa.** A Radhija aponta, e a Rhaenyra abre a porta da cozinha com impulso na maçaneta de alavanca.
-3. **O galho.** Um galho da tempestade bloqueia a porta da área de serviço, e a Rhaenyra o empurra para o lado.
-4. **A piscina.** No caminho, o Faro mostra a primeira Reconstrução: um pombo levando a boia de patinho murcha da
-   piscina.
+1. **O quarto.** A abertura termina com a cenoura sumida. A jogadora fareja: o pulso revela a trilha laranja da
+   cama até a janela, o pote virado e a pena molhada no parapeito, e cada uma se examina de perto.
+   - Com as três na lupa, os pombos passam pela janela, baixo e torto, com a cenoura nas patas. Entra a cartela.
+2. **Sair de casa.**
+   - Uma grade de proteção fecha a passagem do quarto. Só a Radhija passa pela portinha de gato. Do lado da cozinha,
+     ela pisa no pedal que solta a grade, e a Rhaenyra passa.
+   - Na porta do quintal, o saco de ração está bem na frente da maçaneta. A Rhaenyra o empurra para o lado e abre a
+     porta com o impulso na maçaneta de alavanca.
+3. **O quintal.**
+   - Um galho da tempestade bloqueia a porta da área de serviço, e a Rhaenyra o empurra para o lado. Embaixo dele,
+     as telhas.
+   - A porta continua fechada: o ferrolho fica do lado de fora. A copa do galho tapava uma passagem baixa no muro.
+     A Radhija passa por ela e puxa a argola do ferrolho com a boca.
+4. **A piscina.** O Faro mostra a primeira Reconstrução: um pombo levando a boia de patinho murcha da piscina.
 5. **Área de serviço.** Os pombos pousaram no varal para descansar, e a cenoura enroscou num pregador.
-   - A arrancada da Radhija solta o pregador.
-   - A cenoura cai, mas o Farelo a pega no ar.
+   - Sacudir o varal não basta: se a cenoura cair no chão, os pombos pegam. A Rhaenyra empurra o cesto de roupa até
+     embaixo dela.
+   - A arrancada da Radhija no poste solta o pregador. A cenoura cai, mas o Farelo a pega no ar, um palmo acima do
+     cesto.
    - Os pombos sobem para a torre do condomínio.
-6. **A torre do condomínio.** A Rhaenyra empurra a porta de mola e segura com o Fica, e a Radhija passa.
+6. **A torre do condomínio.**
+   - A porta só destrava com a senha do interfone: três botões com desenho, no alto. O Faro mostra a Reconstrução do
+     Farelo, que é gordinho e sobe de escada, apertando os três na ordem. A Rhaenyra repete com o impulso.
+   - Ela empurra a porta de mola e segura com o Fica, e a Radhija passa.
    - No terraço, as irmãs quase pegam a cenoura, mas o vento sul leva os pombos por cima do muro, rumo à Praça.
    - Do terraço se vê, ao longe, o relógio da Prefeitura parado.
-7. **A portaria.** O porteiro cochila dentro da guarita, fora de vista: só se ouvem o ronco e o radinho.
-   - O latido fino da Radhija não adianta. Ela manda a Rhaenyra latir, e o latido grosso acorda o porteiro.
+7. **A portaria.** O porteiro cochila dentro da guarita, fora de vista, de janela fechada: só se ouvem o ronco e o
+   radinho, abafados.
+   - De janela fechada, nenhum latido entra. O Superbafo da Radhija entra pela grelha de ventilação, lá dentro
+     alguém espirra e a janela abre.
+   - O latido fino da Radhija ainda não adianta. O latido grosso da Rhaenyra acorda o porteiro.
    - Num plano baixo de cena, a botina e a mão dele abrem o portãozinho.
 
 **Quem faz o quê:**
-- **Radhija:** Faro e arrancada no pregador.
-- **Rhaenyra:** impulso na maçaneta, empurra o galho e a porta de mola, segura com o Fica e dá o latido grosso.
+- **Radhija:** a portinha de gato e o pedal, a passagem do muro e a argola do ferrolho, a arrancada no pregador e o
+  Superbafo na grelha.
+- **Rhaenyra:** empurra o saco de ração, o galho e o cesto, dá o impulso na maçaneta e nos botões do interfone,
+  empurra a porta de mola, segura com o Fica e dá o latido grosso.
+- **As duas:** o Faro.
 
 **Pistas:**
 - **Obrigatórias:**
-  - **C3:** a trilha laranja, o pote virado e a pena molhada, no primeiro pulso.
+  - **C3:** a trilha laranja, o pote virado e a pena molhada, farejadas e examinadas no quarto.
   - **C2:** os galhos e as telhas da tempestade.
-  - **C1:** a Reconstrução do pombo levando a boia de patinho murcha.
+  - **C1:** a Reconstrução do pombo levando a boia de patinho murcha, e a do Farelo apertando a senha do interfone.
 - **Por cena (C3):** os pombos encharcados no parapeito e o abraço da manhã, ambos na abertura.
 - **Escondidas:**
   - **C3:** a baba no parapeito, do lado de dentro (Faro, perto da janela).

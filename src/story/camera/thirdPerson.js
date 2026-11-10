@@ -1,12 +1,15 @@
 // Câmera em 3ª pessoa do Modo História (decisão do usuário em 2026-11-01): atrás da cachorrinha ativa, girando livre
 // em volta dela (analógico direito; arrastar com o mouse ou com o dedo na parte livre da tela; rodinha e pinça
-// aproximam), desviando das paredes (o braço da câmera encurta antes de entrar num colisor alto) e voltando devagar
-// para trás da dog quando ela anda. Dentro de um cômodo, ela não passa do teto.
+// aproximam), desviando das paredes (o braço da câmera encurta antes de entrar numa parede) e voltando devagar
+// para trás da dog quando ela anda. Dentro de um cômodo, ela chega mais perto, fica mais baixa e não passa do teto.
+// Em lugar apertado (retorno do usuário em 2026-11-09: "a câmera fica sendo empurrada para uma visão de cima"), o
+// braço curto NÃO vira vista de cima: a câmera sobe só até passar da cabeça da dog e olha para a frente, por cima do
+// ombro dela. Só paredes encurtam o braço; móveis, árvores e o carro ficam por conta do recorte que deixa ver as dogs.
 // Mesma API do cameraRig das fases (src/game/cameraRig.js): update, basis (a entrada é relativa à câmera), focusShot
 // (os planos das cenas, com alvo e origem lidos por referência), snapFollow, setMode, onSwitch, setZone, setZoom.
 // As fases e o mapa das fases continuam com a câmera de cima; esta só entra com layout.CAMERA.rig === 'third'.
 // Configuração em layout.CAMERA.third: { distance, pitch, minPitch, maxPitch, fov, pivotY, lookY, heading, occluders,
-// ceilings: [{ minX, maxX, minZ, maxZ, y }] }.
+// indoor: { distance, pitch }, ceilings: [{ minX, maxX, minZ, maxZ, y }] }.
 import * as THREE from 'three';
 import { readGamepad } from '../../game/input.js';
 
@@ -15,9 +18,9 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = (rate, dt) => 1 - Math.exp(-rate * dt);
 
-/** Colisores que tapam a câmera (paredes, muros, prédios, árvores): pelo começo do id. */
-const DEFAULT_OCCLUDERS = ['muro', 'casa', 'quarto', 'cozinha', 'quintal', 'casinha', 'torre', 'guarita', 'deposito', 'arvore',
-  'geladeira', 'guarda-roupa', 'tanques', 'porta', 'portaozinho', 'caminhonete', 'filtro'];
+/** Colisores que encurtam o braço da câmera (só o que é parede: muros, casa, prédios e portas): pelo começo do id. */
+const DEFAULT_OCCLUDERS = ['muro', 'casa', 'quarto', 'cozinha', 'quintal', 'torre', 'guarita', 'deposito', 'porta', 'portaozinho'];
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /**
  * @param {THREE.PerspectiveCamera} camera
@@ -26,8 +29,13 @@ const DEFAULT_OCCLUDERS = ['muro', 'casa', 'quarto', 'cozinha', 'quintal', 'casi
  */
 export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   const cfg = {
-    distance: 3.1, pitch: 0.34, minPitch: 0.04, maxPitch: 1.05, fov: 54, pivotY: 0.5, lookY: 0.42, heading: Math.PI,
-    occluders: DEFAULT_OCCLUDERS, ceilings: [], probe: 0.16, minDist: 0.15, lift: 0.8,
+    distance: 2.8, pitch: 0.3, minPitch: 0.04, maxPitch: 0.95, fov: 56, pivotY: 0.5, lookY: 0.44, heading: Math.PI,
+    occluders: DEFAULT_OCCLUDERS, ceilings: [], probe: 0.16, minDist: 0.2,
+    // dentro de um cômodo (embaixo de um teto): mais perto e mais baixa
+    indoor: { distance: 2.1, pitch: 0.22 },
+    // braço curto (parede atrás da dog): de closeFrom m para baixo a câmera vai virando "por cima do ombro": sobe até
+    // closeLift m (passa da cabeça dela) e olha closeAhead m à frente, closeLook m mais alto
+    closeFrom: 1.6, closeTo: 0.45, closeLift: 0.42, closeAhead: 1.9, closeLook: 0.26,
     far: 72, // a 3ª pessoa olha o horizonte: além da névoa nada se desenha
   };
   const title = { center: { x: 0, z: 0 }, radius: 5, angle: 0.4, height: 2.4, look: { x: 0, y: 0.6, z: 0 } };
@@ -52,6 +60,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
   let zoom = 1;
   let zoomTarget = 1;
   let dist = cfg.distance; // o braço de agora (encurta nas paredes)
+  let inK = 0; // 0 ao ar livre … 1 embaixo de um teto (entra e sai suave)
   const pivot = new THREE.Vector3();
   const pivotTarget = new THREE.Vector3();
   let switchT = 0;
@@ -136,21 +145,22 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
     for (const c of cfg.ceilings) if (x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ) return c.y;
     return Infinity;
   };
+  /** A inclinação de agora: a que a jogadora escolheu, um pouco mais baixa dentro de um cômodo. */
+  const pitchNow = () => clamp(pitch - (cfg.pitch - cfg.indoor.pitch) * inK, cfg.minPitch, cfg.maxPitch);
 
   // ---------------------------------------------------------------- poses
   function followPose(outPos, outLook) {
     const fx = Math.sin(heading), fz = Math.cos(heading);
-    const cp = Math.cos(pitch), sp = Math.sin(pitch);
-    outLook.set(pivot.x, pivot.y - cfg.pivotY + cfg.lookY, pivot.z);
-    outPos.set(pivot.x - fx * cp * dist, pivot.y + sp * dist, pivot.z - fz * cp * dist);
-    // com o braço curto (encostada numa parede), a câmera sobe e olha por cima da dog
-    if (dist < 1.2) outPos.y += (1.2 - dist) * cfg.lift;
-    // dentro de um cômodo: abaixo do teto (encurta o braço mantendo o ângulo)
+    const p = pitchNow();
+    const cp = Math.cos(p), sp = Math.sin(p);
+    // braço curto: por cima do ombro, olhando para a frente (nunca de cima para baixo)
+    const near = sstep(cfg.closeFrom, cfg.closeTo, dist);
+    const baseY = pivot.y - cfg.pivotY;
+    outLook.set(pivot.x + fx * cfg.closeAhead * near, baseY + cfg.lookY + cfg.closeLook * near, pivot.z + fz * cfg.closeAhead * near);
+    outPos.set(pivot.x - fx * cp * dist, pivot.y + sp * dist + cfg.closeLift * near, pivot.z - fz * cp * dist);
+    // dentro de um cômodo: sempre abaixo do teto
     const ceil = Math.min(ceilingAt(pivot.x, pivot.z), ceilingAt(outPos.x, outPos.z));
-    if (pivot.y < ceil - 0.25 && outPos.y > ceil - 0.15 && sp > 1e-3) {
-      const d = Math.max(cfg.minDist, (ceil - 0.15 - pivot.y) / sp);
-      outPos.set(pivot.x - fx * cp * d, pivot.y + sp * d, pivot.z - fz * cp * d);
-    }
+    if (pivot.y < ceil - 0.25 && outPos.y > ceil - 0.2) outPos.y = ceil - 0.2;
     let f = cfg.fov;
     if (shot) {
       const s = shot;
@@ -225,10 +235,14 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
         if (Math.abs(diff) < 2.3) heading = wrap(heading + diff * ease(0.9 * Math.min(1, speed / 2), dt));
       }
     }
+    // embaixo de um teto, a câmera chega mais perto e fica mais baixa (entra e sai em ~0,5 s)
+    const roof = ceilingAt(pivot.x, pivot.z);
+    inK += ((Number.isFinite(roof) && pivot.y < roof - 0.25 ? 1 : 0) - inK) * ease(4, dt);
     // o braço: até onde dá sem entrar numa parede (encolhe na hora, estica devagar)
-    const want = cfg.distance * zoom;
-    const reach = boomReach(pivot.x, pivot.z, -Math.sin(heading), -Math.cos(heading), want * Math.cos(pitch)) / Math.max(0.2, Math.cos(pitch));
-    dist = reach < dist ? reach : dist + (Math.min(reach, want) - dist) * ease(3, dt);
+    const want = (cfg.distance + (cfg.indoor.distance - cfg.distance) * inK) * zoom;
+    const pn = pitchNow();
+    const reach = boomReach(pivot.x, pivot.z, -Math.sin(heading), -Math.cos(heading), want * Math.cos(pn)) / Math.max(0.2, Math.cos(pn));
+    dist = reach < dist ? reach : dist + (Math.min(reach, want) - dist) * ease(2.6, dt);
 
     if (shot) {
       shot.t += dt;
@@ -255,6 +269,8 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
 
   function setMode(m, { instant = false, dur = 1.2 } = {}) {
     if (m === mode && !instant) return;
+    // do título para o jogo, sem travelling: a área é grande e fechada, e ele atravessaria paredes até chegar à dog
+    if (m === 'follow' && mode === 'title') instant = true;
     mode = m;
     if (instant) { trans = null; return; }
     trans = { fromPos: pos.clone(), fromLook: look.clone(), fromFov: fov, t: 0, dur };

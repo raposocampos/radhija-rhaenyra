@@ -160,6 +160,30 @@ export const SOUNDS_HISTORIA = {
     for (let i = 0; i < 3; i++) tone(G, o, { type: 'sine', f: 140 * p, to: 90 * p, t: t + i * (0.22 - i * 0.05), a: 0.002, d: 0.08, peak: 0.1 / (i + 1) });
     return 0.6;
   },
+  // o interfone da torre: o bip de cada botão
+  bip(G, o, t, p) {
+    tone(G, o, { type: 'square', f: 1320 * p, t, a: 0.002, hold: 0.05, d: 0.05, peak: 0.035, filt: { type: 'lowpass', f: 3200, q: 0.7 } });
+    return 0.14;
+  },
+  // a senha certa: a porta destrava (dois tons que sobem e o estalo do trinco elétrico)
+  'interfone-ok'(G, o, t, p) {
+    tone(G, o, { type: 'square', f: 880 * p, t, a: 0.002, hold: 0.09, d: 0.05, peak: 0.03, filt: { type: 'lowpass', f: 3000, q: 0.7 } });
+    tone(G, o, { type: 'square', f: 1320 * p, t: t + 0.13, a: 0.002, hold: 0.16, d: 0.08, peak: 0.03, filt: { type: 'lowpass', f: 3000, q: 0.7 } });
+    nz(G, o, { t: t + 0.36, a: 0.001, d: 0.05, peak: 0.14, type: 'bandpass', f: 1500 * p, q: 3 });
+    return 0.5;
+  },
+  // a senha errada: um zumbido grave e curto
+  'interfone-erro'(G, o, t, p) {
+    tone(G, o, { type: 'sawtooth', f: 150 * p, t, a: 0.004, hold: 0.26, d: 0.08, peak: 0.05, filt: { type: 'lowpass', f: 900, q: 0.8 } });
+    return 0.4;
+  },
+  // o porteiro espirra lá dentro (o cheiro chegou): o ar puxado e o "tchim" abafado
+  espirro(G, o, t, p) {
+    nz(G, o, { t, a: 0.22, d: 0.08, peak: 0.07, type: 'bandpass', f: 700 * p, to: 1500 * p, toT: 0.25, q: 1.6, buf: G.pink });
+    nz(G, o, { t: t + 0.34, a: 0.004, d: 0.22, peak: 0.2, type: 'bandpass', f: 2100 * p, to: 900 * p, toT: 0.2, q: 1.1 });
+    tone(G, o, { type: 'sine', f: 240 * p, to: 130 * p, t: t + 0.34, a: 0.004, d: 0.16, peak: 0.08 });
+    return 0.7;
+  },
   // rajada do vento sul (o terraço)
   vento(G, o, t, p) {
     nz(G, o, { t, a: 0.35, hold: 0.6, d: 0.8, peak: 0.07, type: 'bandpass', f: 380 * p, to: 760 * p, toT: 1.2, q: 0.6, buf: G.pink });
@@ -167,6 +191,6 @@ export const SOUNDS_HISTORIA = {
   },
 };
 
-export const MIN_GAP_HISTORIA = { ronco: 1.2, radinho: 1.2, arrulho: 0.4, asas: 0.15, faro: 0.6, pista: 0.12, botina: 0.12, passarinhos: 1 };
+export const MIN_GAP_HISTORIA = { ronco: 1.2, radinho: 1.2, arrulho: 0.4, asas: 0.15, faro: 0.6, pista: 0.12, botina: 0.12, passarinhos: 1, bip: 0.08, espirro: 1 };
 export const PITCH_VAR_HISTORIA = { fiu: 0.04, arrulho: 0.06, asas: 0.05, pista: 0, pino: 0.02, botina: 0.05, pulinho: 0.06, bola: 0.05 };
 export const VERB_HISTORIA = { fiu: 0.12, ronco: 0.08, radinho: 0.06, arrulho: 0.12, faro: 0.3, pista: 0.25, meia: 0.2, portao: 0.15, balde: 0.25, vento: 0.2 };

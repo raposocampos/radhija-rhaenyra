@@ -29,11 +29,12 @@ export const CLUES = {
   telhas: { id: 'telhas', case: 'C2', type: 'obrigatoria', name: 'Galhos e telhas da tempestade', picto: 'telhas', chapter: 1 },
   // caso 1, a borracha sumida
   boia: { id: 'boia', case: 'C1', type: 'obrigatoria', name: 'Um pombo levando a boia de patinho murcha', picto: 'boia', chapter: 1 },
+  senha: { id: 'senha', case: 'C1', type: 'obrigatoria', name: 'O Farelo sobe pela escada: a senha do interfone', picto: 'senha', chapter: 1 },
   ralo: { id: 'ralo', case: 'C1', type: 'escondida', name: 'O ralo do tanque sem a rolha', picto: 'ralo', chapter: 1 },
 };
 
 /** As pistas do capítulo 1, na ordem em que costumam aparecer. */
-export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'telhas', 'boia', 'ralo'];
+export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'telhas', 'boia', 'senha', 'ralo'];
 
 /**
  * A lupa: guarda as pistas achadas (por id, na ordem em que chegaram). add(id) devolve true só na primeira vez e

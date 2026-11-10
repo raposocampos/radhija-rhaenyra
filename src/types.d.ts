@@ -192,7 +192,11 @@ export interface CameraConfig {
   /** A câmera em 3ª pessoa do Modo História (src/story/camera/thirdPerson.js). */
   third?: {
     distance?: number; pitch?: number; minPitch?: number; maxPitch?: number; fov?: number; pivotY?: number; lookY?: number;
-    heading?: number; occluders?: string[]; probe?: number; minDist?: number; lift?: number; far?: number;
+    heading?: number; occluders?: string[]; probe?: number; minDist?: number; far?: number;
+    /** Dentro de um cômodo (embaixo de um teto): a distância e a inclinação. */
+    indoor?: { distance: number; pitch: number };
+    /** Braço curto: de closeFrom a closeTo m, a câmera sobe closeLift m e olha closeAhead m à frente, closeLook m acima. */
+    closeFrom?: number; closeTo?: number; closeLift?: number; closeAhead?: number; closeLook?: number;
     /** Tetos (retângulos e altura): com a dog embaixo, a câmera não sobe além deles. */
     ceilings?: { minX: number; maxX: number; minZ: number; maxZ: number; y: number }[];
   };

@@ -14,7 +14,7 @@ import { createCaseBoard, CASE3_TIMELINE } from '../src/story/mural/rules.js';
 import { CLUES, CASES, CHAPTER1_CLUES, createClueBook } from '../src/story/clues.js';
 import { createScene } from '../src/story/scene/sequencer.js';
 import { createSkipInput, SKIP_HOLD } from '../src/story/scene/skip.js';
-import { BALLOON_ICONS } from '../src/story/scene/balloons.js';
+import { BALLOON_ICONS, BALLOON_ATLAS } from '../src/story/scene/balloons.js';
 import { PICTOS } from '../src/story/ui/pictos.js';
 import { SOUND_NAMES } from '../src/fx/audio/sounds.js';
 import { THEMES, compileTheme } from '../src/fx/audio/themes.js';
@@ -245,11 +245,30 @@ test('trilha da história: o tema do clarinete (recanto) e o do mistério compil
   assert.match(JSON.stringify(THEMES.recanto), /clarinet/, 'o recanto é no clarinete');
 });
 
-test('balões: o atlas tem os ícones do roteiro, com o cone', () => {
+test('balões: o atlas tem os ícones do roteiro (com o cone) e os da missão nova, e as "frases" cabem nele', () => {
   for (const id of ['cenoura', 'cone', 'osso', 'coracao', 'q', 'ex', 'raiva', 'zzz', 'seta', 'nota', 'relogio', 'lupa']) {
     assert.ok(BALLOON_ICONS.includes(id), id);
   }
-  assert.ok(BALLOON_ICONS.length + 2 <= 25, 'os ícones e os dois fundos cabem na grade 5 × 5 do atlas');
+  // os que a missão e as cenas usam: cada balão do jogo tem o desenho dele
+  for (const id of ['pombo', 'cheiro', 'latido', 'x', 'ok', 'janela', 'porta', 'cesto', 'pote', 'chuva', 'saco', 'empurrar', 'torre', 'gota', 'pena', 'sino']) {
+    assert.ok(BALLOON_ICONS.includes(id), id);
+  }
+  assert.equal(new Set(BALLOON_ICONS).size, BALLOON_ICONS.length, 'sem ícone repetido');
+  // os ícones ocupam as primeiras fileiras do atlas; as últimas ficam com os fundos (fala e pensamento, de 1 a 3 ícones)
+  const A = BALLOON_ATLAS;
+  assert.ok(BALLOON_ICONS.length <= A.iconCells, `os ${BALLOON_ICONS.length} ícones cabem nas ${A.iconCells} casas de ícone`);
+  assert.ok(A.iconCells < A.grid * A.grid && A.maxIcons === 3, 'sobram fileiras para os fundos, de 1 a 3 ícones');
+  // todo balão que o puzzle e as cenas mostram usa um ícone que existe
+  const files = ['src/story/areas/recanto/puzzle.js', 'src/story/areas/recanto/scenes.js'];
+  const used = new Set();
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8');
+    for (const m of src.matchAll(/(?:balloons\.show|dir\.balloon)\(\s*(\[[^\]]*\]|'[\w-]+')/g)) {
+      for (const n of m[1].matchAll(/'([\w-]+)'/g)) used.add(n[1]);
+    }
+  }
+  assert.ok(used.size >= 12, `ícones usados: ${used.size}`);
+  assert.deepEqual([...used].filter((n) => !BALLOON_ICONS.includes(n)), [], 'ícone usado que não existe no atlas');
 });
 
 // ---------------------------------------------------------------------------------------------- entrada

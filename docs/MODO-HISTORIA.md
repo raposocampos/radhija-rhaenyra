@@ -145,9 +145,16 @@ cima, havia pontos do mapa ruins de enxergar.
 - **Como funciona:** a câmera fica atrás da cachorrinha ativa e gira livre: analógico direito, arrastar com o mouse ou
   com o dedo na parte livre da tela, rodinha e pinça para aproximar. Ela desvia das paredes (o braço encurta) e não
   passa do forro dentro dos cômodos. Quando a dog anda sem que a jogadora mexa na câmera, ela volta devagar para trás.
+- **Lugar apertado (revisão de 2026-11-09):** o usuário reprovou a câmera "empurrada para uma visão de cima" na casa
+  pequena. Agora:
+  - o mapa ficou 1,7× maior (cômodos de ~6 m), e dentro de casa a câmera chega mais perto (2,1 m) e fica mais baixa;
+  - só paredes encurtam o braço. Móveis, árvores e o carro ficam por conta do recorte que deixa ver as dogs;
+  - com o braço curto, a câmera sobe só até passar da cabeça da dog e olha para a frente, por cima do ombro dela;
+  - do título para o jogo não há mais travelling (ele atravessava paredes).
 - **Só no Modo História:** as 10 fases e Pandorópolis continuam com a câmera de cima.
-- **Nas cenas:** os planos do diretor assumem a câmera. No fim (assistida ou pulada), ela volta suave para trás da
-  dog ativa, em 0,6 s, sem trava sobrando.
+- **Nas cenas:** os planos do diretor assumem a câmera, sempre de DENTRO dos lugares (a casa é inteira). O recorte
+  "ver através" fica desligado durante a cena. No fim (assistida ou pulada), a câmera volta suave para trás da dog
+  ativa, em 0,6 s, sem trava sobrando.
 - **Toque e mouse:** o dedo só gira a câmera na parte livre da tela (o joystick e os botões ficam com o dedo deles).
   O arraste segue o dedo ou o mouse mesmo passando por cima do HUD. Só passar o mouse por cima não gira, e nada pede
   permissão ao navegador (sem trava do ponteiro).
@@ -166,13 +173,17 @@ cima, havia pontos do mapa ruins de enxergar.
 **Como abrir.** `?historia` numa prévia de PR ou na versão de desenvolvimento (`src/story/gate.js`). No link principal
 não abre nada. `?historia&stage=varal` começa numa etapa da missão (testes e revisão).
 
-**Controles novos.** Faro: V, L3 ou o botão do focinho no toque (só com a Radhija). Pular cena: segurar E (ou Espaço,
-Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o próprio aviso do Faro também é tocável.
+**Controles novos.** Faro: V, L3 ou o botão do focinho no toque, com qualquer uma das duas. Examinar uma pista
+revelada: E, de perto. Pular cena: segurar E (ou Espaço, Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. No
+quarto, o aviso do Faro também é tocável.
 
 **Onde está cada coisa:**
 - `src/story/scene/`: o kit de cenas. O sequenciador de beats (`sequencer.js`) põe o que fica de permanente no commit, e
   por isso pular e assistir dão no mesmo. Também o diretor (câmera, dogs, balões, sons), os balões de ícone num atlas
   só, o pular segurando, o clima (noite e manhã sem recompilar sombreadores) e as mãos e pés humanos.
+- `src/story/faro/scentCloud.js`: a nuvem de cheiro. Um rastro de nuvenzinhas (uma malha só, instâncias viradas para
+  a câmera) do focinho de quem fareja até a próxima pista, pelo grafo de navegação da área, sem olhar o que está
+  fechado.
 - `src/story/faro/`: o pulso do Faro, sem pós-processamento (véu na tela e trilhas aditivas), e a Reconstrução com
   silhuetas translúcidas e animação gravada.
 - `src/story/clues.js` e `src/story/mural/rules.js`: o catálogo das pistas, a lupa e as regras do mural.
@@ -184,16 +195,18 @@ Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o pr
 - `src/story/camera/thirdPerson.js`: a câmera em 3ª pessoa. O núcleo escolhe a câmera pelo layout
   (`CAMERA.rig = 'third'`, com `createGame({ cameraRigs })`).
 
-**O capítulo 1.**
-- **A abertura**, com 6 beats e o primeiro Faro.
-- **A missão**, em 7 passos:
-  1. a maçaneta da cozinha;
-  2. o galho e a porta da área de serviço;
-  3. o Faro na piscina, que mostra a Reconstrução;
-  4. a arrancada no poste do varal;
-  5. a porta de mola da torre, com a irmã segurando, até o terraço;
-  6. o porteiro, que só acorda com o latido grave da Rhaenyra;
-  7. o portãozinho.
+**O capítulo 1 (refeito em 2026-11-09: mais passos, das duas, com investigação).**
+- **A abertura**, em 5 beats, filmada dentro do quarto: a noite, os pombos no parapeito, o preto, a manhã sem a
+  cenoura, as duas acordando. Termina com a jogadora no quarto.
+- **A missão:**
+  1. o quarto: farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela e a cartela;
+  2. a casa: a portinha de gato e o pedal da grade (Radhija); o saco de ração e a maçaneta (Rhaenyra);
+  3. o quintal: o galho (Rhaenyra); a passagem do muro e a argola do ferrolho (Radhija);
+  4. a piscina: o Faro mostra a Reconstrução;
+  5. o varal: o cesto embaixo da cenoura (Rhaenyra) e a arrancada no poste (Radhija);
+  6. a torre: a senha do interfone, que o Faro mostra; a porta de mola com a irmã segurando, até o terraço;
+  7. a portaria: o Superbafo pela grelha abre a janela; o latido grosso da Rhaenyra acorda o porteiro;
+  8. o portãozinho.
 - **Os três puzzles paralelos:**
   - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
   - a lixeira e o toldo até a meia da antena;
@@ -212,7 +225,8 @@ Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. Na abertura, o pr
   - o cenário (z-fighting e colisores).
 - **E2E** na suíte `historia` do workflow manual, com capturas nos 11 tamanhos de tela. Nos de toque, um dedo de
   verdade arrastado na parte livre gira a câmera e, no joystick, não gira. No PC, o arraste do mouse gira e só passar o
-  mouse por cima, não.
+  mouse por cima, não. A partida confere cada puzzle com as teclas; os trechos longos entre eles são postos no lugar
+  (a caminhada com a IA fica nos testes de unidade).
 - **Capturas de revisão** em qualidade cheia (`capture-historia.mjs`).
 
 ## Em aberto com o usuário

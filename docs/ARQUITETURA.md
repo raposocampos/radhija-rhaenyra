@@ -378,16 +378,19 @@ estrutura e etapas em [MODO-HISTORIA.md](MODO-HISTORIA.md).
   - `director.js` segura as dogs (`lockFor` com `drive`), anda com elas por pontos e faz os planos de câmera pelo
     `focusShot` do `cameraRig`, com alvo por referência e `hold: Infinity`.
   - `mood.js` troca noite e manhã escrevendo nos uniformes, sem o `applyLighting` (que recompila sombreadores).
-  - `balloons.js` faz os balões de ícone, todos num atlas 5 × 5; `skip.js` é o pular segurando (E, Espaço, Enter,
-    ✕/○ ou o ⏩ do toque) e `humans.js` desenha as mãos e a botina.
+  - `balloons.js` faz os balões de ícone, todos num atlas só (fala, pensamento e "frases" de até três ícones, com o
+    tamanho na tela ajustado pela distância à câmera); `skip.js` é o pular segurando (E, Espaço, Enter, ✕/○ ou o ⏩
+    do toque) e `humans.js` desenha as mãos e a botina.
 - **Investigação** (`src/story/faro/`, `clues.js`, `mural/rules.js`):
-  - o Faro não usa pós-processamento: um véu em tela e trilhas e pontos aditivos, então funciona no perfil
-    `minima`;
+  - o Faro (das duas) não usa pós-processamento: um véu em tela e trilhas e pontos aditivos, então funciona no
+    perfil `minima`. A pista revelada fica brilhando (`faro.pin`) até ser examinada com o E;
+  - `scentCloud.js` desenha a nuvem de cheiro: do focinho de quem fareja até a próxima pista (`puzzle` diz qual),
+    pelo grafo de navegação da área, sem olhar portas fechadas, numa malha só de instâncias viradas para a câmera;
   - a Reconstrução mostra silhuetas translúcidas com animação gravada;
   - a lupa guarda as pistas por id; as regras do mural são puras (a ligação errada volta, e o caso só fecha com as
     pistas necessárias).
 - **HUD** (`src/story/ui/`, carregado só com a história): faixas de cinema, preto, anel do pular, cartela do capítulo,
-  aviso do primeiro Faro (tocável), lupa e meias, mural provisório e fim do capítulo. Ouve os eventos `story:*` do
+  aviso do Faro (tocável; no quarto, até o primeiro pulso), lupa e meias, mural provisório e fim do capítulo. Ouve os eventos `story:*` do
   puzzle; a música troca por `story:music` (`main.js`).
 - **Câmera em 3ª pessoa** (`src/story/camera/thirdPerson.js`, só no Modo História): o núcleo escolhe a câmera pelo
   layout (`CAMERA.rig`) entre as de `createGame({ cameraRigs })`. As fases e o mapa usam o `cameraRig` de sempre.
@@ -516,7 +519,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar | `shift()` |
 | Empurrão em pé (Rhaenyra, de frente para algo empurrável no alto), segurar | Shift | R1 · RB | Empurrar (segurar) | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
-| Faro (Radhija, só no Modo História): o pulso | V | L3 (apertar o analógico esquerdo) | botão do focinho | `Faro` |
+| Faro (as duas, só no Modo História): o pulso | V | L3 (apertar o analógico esquerdo) | botão do focinho | `Faro` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
 | Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
 
