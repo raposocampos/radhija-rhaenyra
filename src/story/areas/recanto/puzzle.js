@@ -53,8 +53,9 @@ const OBJECTIVES = {
 };
 /** Dicas de controle (somem no modo sem dicas). */
 const HINTS = {
-  faro: 'Fareje com V: a nuvem de cheiro leva até a próxima pista.',
-  examinar: 'Chegue perto do que brilha e examine com E.',
+  // sem nome de tecla solto: o aviso do focinho ao lado mostra a do aparelho, e "(E)" vira o botão certo na tela
+  faro: 'Fareje: a nuvem de cheiro leva até a próxima pista.',
+  examinar: 'Chegue perto do que brilha e examine (E).',
   grade: 'A grade é alta. Só a Radhija passa pela portinha de gato.',
   pedal: 'O pedal solta a grade: pise nele.',
   saco: 'O saco de ração está na frente da maçaneta: a Rhaenyra empurra (segure Shift).',
