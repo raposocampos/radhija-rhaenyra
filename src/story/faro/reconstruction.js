@@ -13,10 +13,15 @@ export function ghostMaterial(color = '#CFE6FF', opacity = 0.5) {
   });
 }
 
-/** Troca todos os materiais de um objeto pelo das silhuetas (guarda os originais para dispose). */
+/**
+ * Troca os materiais das malhas de um objeto pelo das silhuetas. Os enfeites em sprite (o "zzz" do pombo) ficam de
+ * fora, escondidos e com o material deles: o modelo mexe na opacidade desses a cada quadro, e no material
+ * compartilhado isso apagava a silhueta inteira.
+ */
 export function ghostify(object, material) {
   object.traverse((o) => {
-    if (o.isMesh || o.isSprite) {
+    if (o.isSprite) { o.visible = false; return; }
+    if (o.isMesh) {
       o.material = material;
       o.castShadow = false;
       o.receiveShadow = false;

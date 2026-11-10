@@ -90,6 +90,15 @@ test('recanto: os props que o puzzle usa existem e o cenário fica dentro do or�
     assert.ok(P.booth.windowAnchor && Number.isFinite(P.booth.windowAnchor.x), 'o ponto da janela da guarita (balões do ronco)');
     assert.equal(typeof P.boat.setPos, 'function');
     assert.equal(typeof P.rope.setPull, 'function');
+    // nenhuma malha com textura projeta sombra: a variante com textura do programa de sombra só seria compilada com a
+    // câmera andando (um engasgo no celular; a primeira passagem do CI mede)
+    const textured = [];
+    root.traverse((o) => {
+      const m = /** @type {any} */ (o);
+      if (!m.isMesh || !m.castShadow) return;
+      for (const x of Array.isArray(m.material) ? m.material : [m.material]) if (x?.map && !(x.alphaTest > 0)) textured.push(m.name || m.parent?.name || '?');
+    });
+    assert.deepEqual(textured, [], 'malhas com textura que projetam sombra');
     // nada de luz nova: a área usa o sol e o céu do jogo (luzes de verdade custam caro no celular)
     let lights = 0;
     root.traverse((o) => { if (/** @type {any} */ (o).isLight) lights++; });

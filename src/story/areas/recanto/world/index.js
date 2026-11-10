@@ -45,6 +45,15 @@ export function buildWorld({ engine, root, layout }) {
   // cenas continuar entrando nos cômodos (o quarto da abertura foi composto assim, como a maquete aberta de antes).
   for (const m of merged.meshes) if (/:casa$/.test(m.name)) m.castShadow = false;
   const treats = T('petiscos', () => buildTreats(root, L.COLLECTIBLES, { glow: 0.3 }));
+  // Malha com textura não projeta sombra (as meias perdidas, de 15 cm): o material de sombra do three leva a textura
+  // da malha junto, e essa variante do programa só era compilada quando a primeira delas entrava na caixa de sombra,
+  // com a câmera andando (medido na primeira passagem: 1 programa depois da carga, na casinha do quintal).
+  root.traverse((o) => {
+    const m = /** @type {THREE.Mesh} */ (o);
+    if (!m.isMesh || !m.castShadow) return;
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    if (mats.some((x) => x && /** @type {any} */ (x).map && !(x.alphaTest > 0))) m.castShadow = false;
+  });
   whenFontsReady(() => { for (const p of parts) for (const s of p.signs || []) s.redraw?.(); });
 
   /** Os props de todas as peças juntos (cada peça devolve os seus). */

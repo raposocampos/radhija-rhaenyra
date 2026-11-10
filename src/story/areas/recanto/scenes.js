@@ -377,10 +377,10 @@ export function createWindowScene(K) {
           const x = t < 1.3 ? lerp(cx - 3.9, cx - 1.25, span(t, 0.6, 1.3))
             : t < 3.1 ? lerp(cx - 1.25, cx + 0.35, span(t, 1.3, 3.1))
               : lerp(cx + 0.35, cx + 4.8, span(t, 3.1, 3.9));
-          if (t > 0.6) flyPack(K, { x, y: 1.1 + Math.sin(t * 2.6) * 0.09, z: W.z - 0.8 }, Math.PI / 2, t);
+          if (t > 0.6) flyPack(K, { x, y: 1.0 + Math.sin(t * 2.6) * 0.08, z: W.z - 0.8 }, Math.PI / 2, t);
           for (const n of ['radhija', 'rhaenyra']) if (!dir.walking(n)) dir.actor(n).look = P3(lerp(cx - 2, cx + 2, k), 1.2, W.z);
           // a câmera acompanha o Farelo um pouco
-          dir.lookAt(P3(lerp(cx - 0.45, cx + 0.2, span(t, 1.0, 3.2)), 1.04, W.z - 0.8));
+          dir.lookAt(P3(lerp(cx - 0.45, cx + 0.2, span(t, 1.0, 3.2)), 1.0, W.z - 0.8));
           if (t > 3.2 && !S.bark) { S.bark = true; dir.bark('radhija'); }
         },
         leave() { hideSquad(K); K.props.carrot.object.visible = false; },
@@ -589,11 +589,25 @@ export function createVaralScene(K) {
           const u = smooth(span(t, 0, 3.4));
           const p = { x: lerp(P.x - 0.9, tank.x, u), y: lerp(lineY + 0.9, tank.y + 0.4, u) + Math.sin(u * Math.PI) * 0.8, z: lerp(P.z + 0.5, tank.z, u) };
           flyPack(K, p, Math.atan2(tank.x - P.x, tank.z - P.z), t, { k: u > 0.85 ? (u - 0.85) / 0.15 : 0 });
-          dir.dolly(P3(P.x + 1.9, 0.95, P.z + 3.7), P3(P.x + 1.2, 1.5, P.z + 4.6), P3(P.x - 0.3, 1.1, P.z), P3(tank.x - 0.8, tank.y - 0.4, tank.z + 0.6), span(t, 0.1, 3.0));
+          // a câmera recua para a torre caber inteira e fica presa no bando (antes, olhava para um ponto fixo e o
+          // bando saía do quadro)
+          dir.dolly(P3(P.x + 1.9, 0.95, P.z + 3.7), P3(P.x - 2.2, 1.3, P.z + 5.4), P3(P.x - 0.3, 1.1, P.z), P3(P.x - 0.3, 1.1, P.z), span(t, 0.1, 3.0));
+          const e = smooth(span(t, 0, 0.6));
+          dir.lookAt(P3(lerp(P.x - 0.3, p.x, e), lerp(1.1, p.y - 0.1, e), lerp(P.z, p.z, e)));
           for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(p.x, p.y, p.z);
         },
       },
-      { id: 'pousam', dur: 1.1, enter() { squadOnTank(K); dir.sfx('arrulho', { x: tank.x, z: tank.z }); dir.balloon(['torre', 'seta'], { who: 'rhaenyra', life: 1.0, size: 0.4 }); } },
+      {
+        // as duas olhando para o alto da torre, com a caixa d'água ao fundo
+        id: 'pousam', dur: 1.6,
+        enter() {
+          squadOnTank(K);
+          dir.sfx('arrulho', { x: tank.x, z: tank.z });
+          dir.shot(P3(P.x - 1.7, 0.62, P.z + 1.3), P3(L.TOWER.x0 + 2.2, 3.0, tank.z + 1.4), { inT: 0.5 });
+          for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(tank.x, tank.y, tank.z);
+          dir.balloon(['torre', 'seta'], { who: 'rhaenyra', life: 1.4, size: 0.4 });
+        },
+      },
     ],
     cleanup() {
       props.line.shake(0);

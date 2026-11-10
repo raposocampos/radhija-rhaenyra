@@ -177,6 +177,33 @@ for (const [id, S] of Object.entries(SCENES)) {
   });
 }
 
+test('reconstruções: as silhuetas aparecem de verdade (o material não fica apagado) e o pombo fica à vista', async () => {
+  for (const [stage, dog, id] of [['piscina', 'radhija', 'reconstrucao'], ['torre', 'rhaenyra', 'senha']]) {
+    const h = await createStoryGame();
+    h.game.debug.setStage(stage, dog);
+    h.run(0.3);
+    h.tap('KeyV');
+    const mat = h.props.ghosts.material;
+    const gp = h.props.ghosts.pigeon.object;
+    let best = 0;
+    let shown = 0;
+    let frames = 0;
+    playScene(h, {
+      each() {
+        if (storyInfo(h).scene !== id || storyInfo(h).beat !== 'silhuetas') return;
+        frames++;
+        best = Math.max(best, mat.opacity);
+        let up = true;
+        for (let p = gp; p; p = p.parent) if (!p.visible) up = false;
+        if (up && mat.opacity > 0.25) shown++;
+      },
+    });
+    assert.ok(frames > 60, `${id}: a Reconstrução roda (${frames} quadros)`);
+    assert.ok(best > 0.4, `${id}: o material das silhuetas acende (no máximo ${best.toFixed(2)})`);
+    assert.ok(shown > frames * 0.6, `${id}: o pombo fantasma fica à vista na maior parte (${shown}/${frames})`);
+  }
+});
+
 test('abertura: termina com a jogadora no quarto, a cenoura sumida e o aviso do Faro na tela', async () => {
   const h = await createStoryGame();
   const r = playScene(h, { skip: false });

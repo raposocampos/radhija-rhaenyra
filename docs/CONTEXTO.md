@@ -51,8 +51,21 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     empurra para o oeste, a Radhija passa e puxa a argola. A ordem na tela: porta (trancada), galho, passagem.
   - **Móveis novos com colisor** no layout (`HOUSE_EXTRAS`, `GARAGE_STUFF`, `POOL_TABLE`, `POOL_TOYBOX`,
     `SERVICE_WASHER`, `SERVICE_RACK`, `TOWER_GAS`); no barquinho encaixado, o pescoço do patinho e a roda de pá colidem.
+  - **Depois das primeiras capturas da revisão (2026-11-10):**
+    - a cenoura fica na frente das duas na caminha; os pombos passam rente ao vidro na cena da janela; os balões não
+      passam do alto da parte visível da tela; a nuvem de cheiro usa mistura normal (lê no piso claro);
+    - as silhuetas das duas Reconstruções estavam invisíveis no jogo: o "zzz" do modelo do pombo dividia o material
+      delas e zerava a opacidade a cada quadro (`ghostify` agora deixa os sprites de fora; teste em `historia-cenas`);
+    - a porta de mola da torre: a irmã segura de onde estiver no vão;
+    - malha com textura não projeta sombra na área (as meias): a variante com textura do programa de sombra era
+      compilada com a câmera andando (a primeira passagem acusava 1 programa depois da carga);
+    - o E2E segurava mal duas teclas (o R do Superbafo era um toque instantâneo; na troca da torre, as teclas levavam a
+      Radhija para dentro do saguão): eram do roteiro, não do jogo.
   - **Validação local:** só `node --check` e os arquivos de teste da história rodados um a um no Node (sem
     navegador, sem build): layout, regras, missão, cenas, câmera e cenário passaram com as seis peças novas.
+  - **No CI, commit `225942f`:** `testes-e-build` verde; E2E `historia` 223/223 e `recursos-historia` verde (528
+    desenhos e 873 mil triângulos, contra 2529 e 1,14 milhão da fase 10); `mapa` e `controle` verdes no `8e2e96d`. A
+    primeira passagem ainda falhava pelo programa de sombra (corrigido no commit seguinte: conferir no GitHub).
 - **Próximo passo:** CI verde; E2E `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`,
   `mapa` e `controle`; revisar as capturas (abertura, pombos, balões, câmera dentro de casa, cenário) e corrigir o que
   aparecer; atualizar a descrição do #75; entregar a prévia nova. Integrar só com o "pode integrar" do usuário.
