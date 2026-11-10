@@ -21,6 +21,7 @@ import { buildComum } from './comum.js';
 import { buildLeste } from './leste.js';
 import { buildGaragem } from './garagem.js';
 import { buildAtores } from './atores.js';
+import { buildCinemaLight } from './cinemaLight.js';
 
 /**
  * @param {import('../../../../types').LevelBuildArgs} args
@@ -39,6 +40,10 @@ export function buildWorld({ engine, root, layout }) {
     T('leste', () => buildLeste(kit, root, L)),
     T('garagem', () => buildGaragem(kit, root, L)),
     T('atores', () => buildAtores(root, L)),
+    T('luz', () => {
+      const light = buildCinemaLight(root, L);
+      return { props: { cinemaLight: light }, update: (dt, t) => light.update(dt, t), reset: () => light.reset() };
+    }),
   ];
   const merged = T('merge', () => kit.finish());
   // 3ª pessoa: a casa é inteira (paredes até o forro). As paredes dela não projetam sombra própria, para o sol das
@@ -104,7 +109,7 @@ export function buildWorld({ engine, root, layout }) {
  *   rope: { object: import('three').Object3D, setPull(k: number): void, setGrip(src: (() => any) | null): void, bitePoint(): { x: number, y: number, z: number } },
  *   storageDoor: import('../../../../types').GateProp,
  *   socks: { id: string, object: import('three').Object3D, collect(): void, reset(): void }[],
- *   squad: any, carrot: any, humans: any, ghosts: any, rain: any, city: any,
+ *   squad: any, carrot: any, humans: any, ghosts: any, rain: any, city: any, cinemaLight?: any,
  *   collectibles: import('../../../../types').CollectibleProp[]
  * }} RecantoProps
  */

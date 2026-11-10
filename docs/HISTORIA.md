@@ -14,8 +14,10 @@ cap. 1) está sendo construída na etapa 2 ([MODO-HISTORIA.md](MODO-HISTORIA.md)
 - **Título:** "As Aventuras de Radhija & Rhaenyra", com o nome do capítulo como subtítulo.
 - **Tom:** aventura divertida, com cara de desenho animado, e com **investigação**. O porquê do sumiço não aparece
   de primeira, e a história guarda uma virada: "a culpada estava em casa".
-- **Sem palavras.** As cenas são contadas só com desenhos e gestos: balões de ícone, latidos, linguagem corporal,
-  câmera e música. Ficam em texto apenas os títulos de capítulo, os nomes dos casos e os objetivos curtos no HUD.
+- **Falas em HQ (mudança do usuário em 2026-11-10, no lugar do "sem palavras").** As cenas viram páginas de HQ dentro
+  do jogo, no estilo mangá / Scott Pilgrim: quadros, balões com falas curtas em pt-BR, caixas de narração,
+  onomatopeias e efeitos, com a "voz" em sílabas sintetizadas por personagem. No jogo, as falas curtas aparecem como
+  legenda. Os balões só de ícone saíram: confundiam.
 - **Humanos:** só de relance (pés, mãos, pantufas, galochas), nunca o rosto.
 - **Independência:** o enredo não tem ligação com as 10 fases. Personagens e peças podem ser reaproveitados, e a
   história traz mecânicas novas.
@@ -1023,8 +1025,13 @@ de eleitores (cachorros, gatos, patos) e o relógio parado a um minuto da uma.
 
 ## Regras para quem for construir
 
-- **Sem palavras nas cenas.** O texto fica só nos títulos de capítulo, nos nomes dos casos e nos objetivos curtos do
-  HUD. Os recados em Pombês e os cartões do mural são desenhos, sem letras.
+- **Falas curtas, em HQ.** Nas cenas, balões de quadrinho com frases curtas (até ~60 letras), caixas de narração e
+  onomatopeias; no jogo, legendas curtas. Nada escrito no CENÁRIO 3D (placas, cartazes): lá, só pictogramas. Os
+  cartões do mural continuam desenhos.
+- **A árvore de pistas (2026-11-10).** Um botão abre o quadro de dedução, no estilo dos jogos do Sherlock Holmes: a
+  pergunta-raiz do capítulo, as perguntas que a história faz e as pistas ligadas a cada uma (desenho + frase). Com as
+  pistas necessárias, o jogador escolhe a conclusão; a certa segue a história (no cap. 1, "Quem entrou no quarto?"
+  traz os pombos à janela). Estado em `src/story/deduction.js`.
 - **Modo sem dicas:**
   - esconde o objetivo do HUD, o marcador e os balões de dica;
   - mantém os títulos de capítulo, as cenas e o mural, onde a pergunta aberta continua como pictograma.

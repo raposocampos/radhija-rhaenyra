@@ -18,6 +18,30 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
 
+### 2ª reprovação (2026-11-10, prévia `1ae2d97`, verde no CI): cinema, HQ e árvore de pistas
+
+- **O que o usuário disse:** o sistema de pistas e o tipo de diálogo (balões só de ícone) deixam tudo confuso; refazer
+  a animação e a abertura, que "precisa se parecer com cinema", com enquadramento, luz, gráficos, roteiro e animação
+  das dogs "nível jogos AAA". Ele decidiu: **falas escritas** (curtas, pt-BR) e, logo depois, **diálogo em HQ dentro do
+  jogo** (mangá / Scott Pilgrim: quadros, balões com texto, onomatopeias, efeitos) e uma **árvore de pistas** que abre
+  com um botão, no estilo dos jogos do Sherlock Holmes. A regra "sem palavras" do roteiro caiu (docs/HISTORIA.md).
+- **Feito (no branch; conferir o CI do commit):**
+  - `src/story/deduction.js`: o quadro de dedução (pergunta-raiz, perguntas, pistas ligadas, conclusões). No cap. 1,
+    "Quem entrou no quarto de noite?" fica pronta com a trilha, o pote e a pena; a conclusão certa traz a cena dos
+    pombos na janela. `CLUES[id].text` é a anotação de cada pista.
+  - `src/story/scene/storyteller.js`: `dir.say` (balão de HQ nas cenas, legenda no jogo, a boca de quem fala mexe),
+    `dir.comic/panel/onomato/caption/fx` (a página de HQ) e `dir.lens` (a lente de cada plano).
+  - `scenes.js`: abertura nova (~55 s): grua lá fora na garoa, a noite no quarto, página de HQ dos pombos (o Capitão
+    mede a cenoura: "é exatamente o que precisamos"), o trovão, a manhã e a página do susto, a Rhaenyra acordando
+    molhada, as apresentações estilo Scott Pilgrim e a cartela. Todas as cenas falam com texto; varal, terraço e
+    janela viram páginas de HQ.
+  - Gestos das dogs (`gesture`: alongar, bocejar, inclinar a cabeça, farejar o chão, triste, alerta, abanar, tremer)
+    e a fala (`talk`) em `src/dogs/dogAnimation.js`, por acréscimo (sem os campos, a pose é a mesma).
+  - Interface: o quadro de dedução (`src/story/ui/board.js`, Tab / Select / o botão do HUD), as legendas do jogo e as
+    vozes sintetizadas (`subtitles.js`, `soundsHistoria.js`), a camada de HQ (`src/story/ui/comic.js`).
+  - Luz de cinema no quarto (`world/cinemaLight.js`): feixe da lua e do sol pelo basculante, mancha da janela no
+    chão, poeira, abajur e o relâmpago.
+
 ### Revisão da fatia (2026-11-09): a prévia em 3ª pessoa foi reprovada
 
 - **O que o usuário disse, testando a prévia `1baeb48` (verde em tudo):**

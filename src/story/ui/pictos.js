@@ -1,6 +1,6 @@
 // Desenhos dos cartões de pista (pictogramas, sem letras) e dos ícones do HUD da história: SVG em texto, 60 × 60,
-// contorno de chocolate e cores chapadas, no estilo dos ícones do jogo (src/ui/icons.js). A lupa, o mural e o cartão
-// que voa até a lupa usam os mesmos desenhos.
+// contorno de chocolate e cores chapadas, no estilo dos ícones do jogo (src/ui/icons.js). O quadro de dedução, o mural
+// e o cartão da pista anotada (que voa até o botão do quadro) usam os mesmos desenhos.
 const INK = '#2a2318';
 const S = `stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
 const card = (inner) => `<svg viewBox="0 0 60 60" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="7" fill="#FFFDF6" ${S}/>${inner}</svg>`;
@@ -49,6 +49,8 @@ export const PICTOS = {
 /** Ícones do HUD (24 × 24, contorno de chocolate). */
 export const HUD_ICONS = {
   lupa: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.2" fill="#DFF2FF" stroke="#4A3426" stroke-width="2"/><path d="M14.6,14.6 l5.4,5.4" stroke="#4A3426" stroke-width="3" stroke-linecap="round"/><path d="M7.2,8.4 a3.2,3.2 0 0 1 3,-2.4" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>`,
+  /** O quadro de dedução: a pergunta no alto ligada a dois cartões por fios de luz. */
+  quadro: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,8.4 C12,12 6.5,11 6.5,14.6 M12,8.4 C12,12 17.5,11 17.5,14.6" fill="none" stroke="#F2B544" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="6" r="4" fill="#2B3A63" stroke="#4A3426" stroke-width="1.6"/><path d="M10.6,5 q0,-1.6 1.5,-1.6 q1.5,0 1.5,1.3 q0,1 -1.4,1.5 v.7" fill="none" stroke="#FFE7A8" stroke-width="1.2" stroke-linecap="round"/><circle cx="12.2" cy="8.2" r=".55" fill="#FFE7A8"/><rect x="2.6" y="14.4" width="7.8" height="7" rx="1.4" fill="#FFF6E6" stroke="#4A3426" stroke-width="1.6" transform="rotate(-5 6.5 18)"/><rect x="13.6" y="14.4" width="7.8" height="7" rx="1.4" fill="#FFF6E6" stroke="#4A3426" stroke-width="1.6" transform="rotate(5 17.5 18)"/><path d="M4.6,17.6 h3.6 M4.8,19.4 h2.6 M15.6,17.6 h3.6 M15.8,19.4 h2.6" stroke="#B08A6A" stroke-width="1" stroke-linecap="round"/></svg>`,
   meia: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8,3 h7 v8 l4,5 v4 h-6 l-7,-7z" fill="#FFF4E2" stroke="#4A3426" stroke-width="1.8" stroke-linejoin="round"/><path d="M8,3 h7 v3 h-7z" fill="#E8554A"/><path d="M8.4,9 h6.2 M8.4,11.6 h6.2" stroke="#E8554A" stroke-width="1.6"/></svg>`,
   focinho: `<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="13" cy="12" rx="7.5" ry="5.6" fill="#E8C07A" stroke="#4A3426" stroke-width="1.8"/><ellipse cx="15.2" cy="11.2" rx="3" ry="2.2" fill="#4A3426"/><path d="M4.6,7.4 q-2,4.6 0,9.2 M2.2,5.4 q-3,6.6 0,13.2" fill="none" stroke="#F08A3C" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   pular: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4,6 l7,6 l-7,6z M12,6 l7,6 l-7,6z" fill="#FFF6E6" stroke="#4A3426" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
@@ -62,3 +64,5 @@ export const HUD_ICONS = {
 
 /** O desenho de um cartão pelo id da pista (o "?" para o que falta). */
 export const pictoOf = (id) => PICTOS[id] || PICTOS.q;
+/** O desenho de uma pista vindo de um evento: `picto` pode ser o id do desenho ou o próprio SVG (pictoOf já aplicado). */
+export const pictoSvg = (picto, id) => (typeof picto === 'string' && picto.trimStart().startsWith('<svg') ? picto : pictoOf(picto || id));

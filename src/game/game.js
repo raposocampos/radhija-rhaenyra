@@ -1181,6 +1181,9 @@ export function createGame({ engine, dogs, levels, params, hub = null, story = n
       if (c.jumpT > 0 && !(c.clearT > 0)) G.airK = Math.min(0.98, 1 - c.jumpT / c.jumpDur);
       an.airK = c.jumpT > 0 && !(c.clearT > 0) ? 1 - c.jumpT / c.jumpDur : c.jumpT > 0 || G.jf > 0 ? G.airK : locks[n]?.airK ?? -1;
       an.crouch = locks[n]?.crouch ?? 0;
+      // gesto e fala de cena (lock.gesture, lock.talk, Modo História)
+      an.gesture = locks[n]?.gesture ?? null;
+      an.talk = locks[n]?.talk ?? 0;
       // apertando um botão com a pata (lock.press, no mundo): o alto dele no referencial do objeto da dog
       const PR = locks[n]?.press;
       if (PR) {

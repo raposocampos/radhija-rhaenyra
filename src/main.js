@@ -87,6 +87,7 @@ async function boot() {
   const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality, settings, map: !dev });
   // o HUD da história (faixas de cinema, lupa, meias, mural, fim do capítulo): só com ?historia numa prévia
   const storyHud = storyMods ? storyMods[1].createStoryHud({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), audio }) : null;
+  const comic = storyMods ? (await import('./story/ui/comic.js')).createComicLayer({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), engine, events }) : null; // a HQ das cenas (balões, quadros)
   // o mapa lê o progresso salvo pela UI (e, no catálogo de desenvolvimento, libera todas as bandeirinhas)
   game.setProgressSource(() => ui.progress);
   game.setUnlockAll(!!dev);

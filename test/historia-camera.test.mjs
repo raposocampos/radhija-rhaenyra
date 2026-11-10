@@ -161,13 +161,17 @@ test('3ª pessoa: nas cenas, a câmera de cinema fica DENTRO do quarto e o segui
   h.run(0.3);
   assert.equal(storyInfo(h).scene, 'abertura');
   assert.ok(h.game.debug.cam.shotActive, 'a abertura segura um plano');
-  // a abertura inteira: nenhum plano de fora da casa nem de dentro de parede (a casa é inteira, com forro e telhado)
+  // a abertura inteira: nenhum plano de dentro de parede (a casa é inteira, com forro e telhado)
   const bad = new Set();
   playScene(h, {
     each() {
       if (storyInfo(h).scene !== 'abertura') return;
       const p = h.engine.camera.position;
-      if (!inRoom(p)) bad.add(`${storyInfo(h).beat}: câmera em (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
+      // o primeiro plano (desde 2026-11-10) é a grua lá fora, na garoa, descendo até o vidro do basculante: fora da
+      // casa, do lado da janela, e nunca dentro de parede; o resto, dentro do quarto
+      const outside = storyInfo(h).beat === 'fora';
+      const W = h.layout.WINDOW;
+      if (outside ? !(p.z < W.z - 0.3 && p.y > 0.6) : !inRoom(p)) bad.add(`${storyInfo(h).beat}: câmera em (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
       for (const id of cameraInsideWall(h)) bad.add(`${storyInfo(h).beat}: câmera dentro de ${id}`);
     },
   });

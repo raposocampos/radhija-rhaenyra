@@ -184,6 +184,10 @@ try {
     const Q = window.__game.layout.ROOMS.quarto;
     return { ok: p.x > Q.x0 && p.x < Q.x1 && p.z > Q.z0 && p.z < Q.z1 && p.y < window.__game.layout.WALLS.h, at: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)] };
   });
+  // o primeiro plano é a grua lá fora, na garoa, descendo até o basculante; depois, tudo dentro do quarto
+  await H.sleep(2600);
+  await shot('00-abertura-fora.png');
+  i = await waitFor((x) => x.story?.beat === 'noite', { timeout: 20000 });
   await H.sleep(3000);
   check((await camInRoom()).ok, 'a noite da garoa é filmada de dentro do quarto', await camInRoom());
   await shot('01-abertura-noite.png');
@@ -191,9 +195,13 @@ try {
   await H.sleep(4200);
   check((await camInRoom()).ok, 'os pombos no parapeito, vistos de dentro do quarto', await camInRoom());
   await shot('02-abertura-pombos.png');
+  await H.sleep(4300);
+  await shot('02b-abertura-capitao.png');
   i = await waitFor((x) => x.story?.beat === 'manha', { timeout: 40000 });
   await H.sleep(6000);
   await shot('03-abertura-manha.png');
+  await H.sleep(4100);
+  await shot('03b-abertura-cade-a-cenoura.png');
   // o resto, pulando (segurar E)
   await skipScene('abertura');
   i = await stageIs('quarto', 20000);
@@ -261,18 +269,29 @@ try {
     i = await waitFor((x) => x.story.clues.includes(id), { timeout: 4000 });
     check((await story()).clues.includes(id), `${id}: examinada com o E, vira pista na lupa`, (await story()).clues);
   }
-  // examinadas as três: os pombos passam pela janela com a cenoura nas patas
+  // examinadas as três: a pergunta "Quem entrou no quarto?" fica pronta na árvore de pistas (Tab abre o quadro)
+  await H.sleep(1800);
+  check((await story()).scene === null, 'só examinar não traz a cena: falta deduzir', await story());
+  await press('Tab', 900);
+  check(await ev(() => !!document.querySelector('.rr-board') && getComputedStyle(document.querySelector('.rr-board')).display !== 'none'), 'Tab abre a árvore de pistas');
+  check(await ev(() => !!document.querySelector('.rr-board__node.is-pronta[data-node="quem"]')), 'a pergunta "Quem entrou no quarto?" está pronta para deduzir');
+  await shot('05a-arvore-de-pistas.png');
+  await page.click('.rr-board__node[data-node="quem"]');
+  await H.sleep(700);
+  await page.click('.rr-board__opt[data-opt="2"]');
+  await H.sleep(900);
+  check(!(await story()).board.solved.includes('quem'), 'a conclusão errada não passa', (await story()).board);
+  await page.click('.rr-board__opt[data-opt="0"]');
+  await H.sleep(700);
+  await shot('05b-conclusao.png');
+  check((await story()).board.solved.includes('quem'), 'a conclusão certa: "Foram os pombos!"', (await story()).board);
+  // a conclusão certa traz os pombos à janela com a cenoura nas patas
   i = await waitFor((x) => x.story.scene === 'janela', { timeout: 6000 });
-  check(i.story.scene === 'janela', 'com as três pistas, a cena dos pombos na janela', i.story);
+  check(i.story.scene === 'janela', 'deduzido, a cena dos pombos na janela', i.story);
   i = await waitFor((x) => x.story.beat === 'voo', { timeout: 6000 });
   await H.sleep(2300);
   await shot('05-janela-pombos.png');
-  i = await waitFor((x) => x.story.beat === 'titulo' || !x.story.scene, { timeout: 30000 });
-  await H.sleep(900);
-  hs = await hudState();
-  check(hs.title, 'a cartela "As Aventuras de Radhija & Rhaenyra" · "Capítulo 1 · Cadê a Cenoura?"', hs);
-  const titleText = await ev(() => document.querySelector('.rr-story__title').innerText.replace(/\s+/g, ' ').trim());
-  check(/Radhija/.test(titleText) && /Rhaenyra/.test(titleText) && /Cadê a Cenoura/.test(titleText), 'o texto da cartela', titleText);
+  i = await waitFor((x) => !x.story.scene, { timeout: 30000 });
   await shot('06-cartela.png');
   i = await stageIs('casa', 20000);
   check(i.story.stage === 'casa', 'a missão: atrás dos pombos', i.story.stage);

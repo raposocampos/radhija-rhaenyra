@@ -1,7 +1,8 @@
 // Diretor de cena (kit de cenas do Modo História): o que os beats usam para mexer no mundo.
 //  - Dogs: hold(nome) segura a dog numa pose roteirizada (o núcleo não a move: lockFor devolve uma trava com drive);
 //    pose() põe no lugar, walk() leva por uma lista de pontos com o rumo suave, e a trava leva a ação, a inclinação, o
-//    pulinho (airK), o deitar (lie), a pata erguida (press) e para onde olhar (look). release() devolve ao jogador.
+//    pulinho (airK), o deitar (lie), a pata erguida (press), para onde olhar (look), o gesto (gesture: alongar, bocejar,
+//    inclinar a cabeça…; gesture(nome, tipo) liga) e a fala (talk 0..1: a boca mexe). release() devolve ao jogador.
 //  - Câmera: shot({ from, look }) segura um plano (o focusShot do cameraRig com hold infinito; cut = sem transição),
 //    dolly() faz o travelling mexendo nos mesmos pontos (o rig lê por referência a cada quadro), follow() volta ao
 //    seguimento com uma transição e snapFollow() corta direto.
@@ -29,7 +30,7 @@ export function createDirector({ ctx, balloons = null, emit }) {
       const c = ctrls[name];
       A[name] = {
         x: c.x, y: c.y || 0, z: c.z, yaw: c.yaw, speed: 0, action: 'none', slope: 0, airK: -1, crouch: 0,
-        lie: null, press: null, look: null, walk: null, px: c.x, pz: c.z,
+        lie: null, press: null, look: null, walk: null, px: c.x, pz: c.z, gesture: null, talk: 0,
       };
     }
     return A[name];
@@ -106,13 +107,23 @@ export function createDirector({ ctx, balloons = null, emit }) {
       return {
         action: a.action, faceX: a.x + Math.sin(a.yaw), faceZ: a.z + Math.cos(a.yaw), drive: true,
         slope: a.slope, airK: a.airK, crouch: a.crouch, lie: a.lie, press: a.press, look: a.look, reach: !!a.press,
+        gesture: a.gesture, talk: a.talk,
       };
+    },
+    /**
+     * Gesto de cena (dogAnimation.js): 'stretch' | 'yawn' | 'tilt' | 'sniffGround' | 'sad' | 'alert' | 'wag' | 'shiver';
+     * null (ou nada) desliga, com a saída suave. Começa do zero a cada chamada; o update avança o t.
+     * @param {string} name @param {import('../../types').DogGestureKind | null} [kind]
+     */
+    gesture(name, kind = null) {
+      actor(name).gesture = kind ? { kind, t: 0 } : null;
     },
     update(dt) {
       lastDt = dt > 0 ? dt : lastDt;
       for (const n of NAMES) {
         const a = A[n];
         if (!a) continue;
+        if (a.gesture) a.gesture.t += dt;
         if (a.walk) {
           const w = a.walk;
           const p = w.pts[w.i];

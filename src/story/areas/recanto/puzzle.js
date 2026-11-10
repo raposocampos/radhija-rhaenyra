@@ -28,6 +28,8 @@ import { createFaro, SCENT } from '../../faro/faro.js';
 import { createScentCloud } from '../../faro/scentCloud.js';
 import { createReconstruction } from '../../faro/reconstruction.js';
 import { createClueBook, CLUES } from '../../clues.js';
+import { createDeduction } from '../../deduction.js';
+import { createStoryteller } from '../../scene/storyteller.js';
 import { MORNING } from './lighting.js';
 import {
   createOpening, createWindowScene, createReconScene, createCodeScene, createVaralScene, createTerraceScene,
@@ -40,6 +42,7 @@ const stageIndex = (s) => STAGES.indexOf(s);
 /** Os objetivos curtos do HUD: a pergunta do mistério e o que fazer agora. */
 const OBJECTIVES = {
   quarto: 'A cenoura sumiu! Farejem o quarto',
+  deduzir: 'Quem entrou no quarto? Abram a árvore de pistas',
   casa: 'Atrás dos pombos! Saiam de casa',
   quintal: 'Atrás dos pombos! Saiam pela porta do quintal',
   galho: 'Tem uma passagem no muro, atrás do galho',
@@ -56,6 +59,7 @@ const HINTS = {
   // sem nome de tecla solto: o aviso do focinho ao lado mostra a do aparelho, e "(E)" vira o botão certo na tela
   faro: 'Fareje: a nuvem de cheiro leva até a próxima pista.',
   examinar: 'Chegue perto do que brilha e examine (E).',
+  arvore: 'Três pistas! Abra a árvore de pistas (Tab, Select ou o botão do caderno) e responda: quem entrou no quarto?',
   grade: 'A grade é alta. Só a Radhija passa pela portinha de gato.',
   pedal: 'O pedal solta a grade: pise nele.',
   saco: 'O saco de ração está na frente da maçaneta: a Rhaenyra empurra (segure Shift).',
@@ -101,7 +105,43 @@ export function createPuzzle(ctx) {
   const mood = createMood(engine, { base: MORNING });
   const faro = createFaro({ root, engine, world });
   const cloud = createScentCloud({ root, layout: L, world });
-  const book = createClueBook({ emit });
+  // a árvore de pistas (src/story/deduction.js): cada pista nova refaz o quadro; a conclusão certa segue a história
+  /** @type {ReturnType<typeof createDeduction> | null} */
+  let deduction = null;
+  const book = createClueBook({
+    emit,
+    onAdd: (id, silent) => {
+      // as telhas da tempestade abrem a pergunta do capítulo 2
+      if (id === 'telhas') deduction?.ask('tempestade', { silent });
+      deduction?.sync(silent ? null : id);
+    },
+  });
+  deduction = createDeduction({
+    emit, book,
+    onResolve: (id) => {
+      // "Quem entrou no quarto?" respondida: os pombos passam pela janela com a cenoura, depois de o quadro mostrar a
+      // conclusão dourada (a cena fecharia o quadro na hora)
+      if (id === 'quem' && S?.stage === 'quarto' && !S.windowSeen) S.janelaT = 1.3;
+      emit('objective', puzzle.objective(ctx.activeDog));
+    },
+  });
+  // as falas (balões de HQ nas cenas, legendas no jogo) e a página de HQ, pelo diretor
+  const teller = createStoryteller({
+    dir, emit, cam: () => ctx.cam,
+    anchorOf: (who) => {
+      const sq = props.squad || {};
+      const bird = { capitao: sq.cap, farelo: sq.far, soneca: sq.son }[who];
+      if (bird?.object?.visible) { const q = bird.object.position; return { x: q.x, y: q.y + 0.32, z: q.z }; }
+      if (who === 'porteiro') { const w = props.booth?.windowAnchor; return w ? { x: w.x, y: w.y + 0.2, z: w.z } : null; }
+      return null;
+    },
+  });
+  for (const k of ['say', 'clearSay', 'comic', 'panel', 'onomato', 'caption', 'fx', 'lens']) dir[k] = teller[k];
+  {
+    // o fim de cada cena (assistida ou pulada) também fecha a página de HQ e as falas
+    const baseCleanup = dir.cleanup.bind(dir);
+    dir.cleanup = (o) => { teller.clearSay(); if (teller.comicOn) teller.comic(false); baseCleanup(o); teller.lens(38); };
+  }
   const hints = createHints(emit, { hint: HINTS, prompt: PROMPTS });
 
   // trilhas de cheiro e pistas do Faro
@@ -277,7 +317,7 @@ export function createPuzzle(ctx) {
   let S = null;
   function fresh() {
     return {
-      stage: 'abertura', time: 0, scene: null, pending: 'abertura',
+      stage: 'abertura', time: 0, scene: null, pending: 'abertura', janelaT: 0,
       petGateOpen: false, windowSeen: false, kitchenOpen: false, branchFree: false, boltOpen: false, boltT: -1, serviceOpen: false,
       reconDone: false, varalDone: false, codeSeen: false, towerUnlocked: false, terraceDone: false, windowOpen: false,
       porterDone: false, gateOpen: false, closingDone: false, muralDone: false,
@@ -291,7 +331,7 @@ export function createPuzzle(ctx) {
 
   // ---------------------------------------------------------------- o contexto das cenas
   const K = {
-    ctx, dir, props, L, faro, cloud, recon, reconCode, playRecon, book, mood, emit, feather, butterfly, balloons, CODE_TIMES,
+    ctx, dir, props, L, faro, cloud, recon, reconCode, playRecon, book, deduction, mood, emit, feather, butterfly, balloons, CODE_TIMES,
     get S() { return S; },
     clueAt(id) {
       const s = spots[id];
@@ -371,6 +411,11 @@ export function createPuzzle(ctx) {
   });
   // o botão do Faro na tela de toque e o aviso tocável do HUD (ui:storyFaro)
   const offFaro = events.on('ui:storyFaro', () => { if (S && !S.scene?.active) puzzle.onFaro(R(ctx.activeDog)); });
+  // a conclusão escolhida no quadro de dedução (src/story/ui): certa, a história segue; errada, o quadro treme
+  const offDeduce = events.on('ui:storyDeduce', (/** @type {{ node?: string, option?: number }} */ p = {}) => {
+    if (!S || S.scene?.active || !p.node) return;
+    deduction.deduce(p.node, p.option ?? -1);
+  });
 
   // ---------------------------------------------------------------- ajudas
   const near = (c, p, r) => Math.hypot(c.x - p.x, c.z - p.z) <= r;
@@ -427,12 +472,15 @@ export function createPuzzle(ctx) {
       S.revealed.delete(E.id);
       faro.pin?.(E.id, false);
       book.add(E.id, K.clueAt(E.id));
-      balloons.show(CLUE_ICON[E.id] ?? 'lupa', { follow: () => dir.head(E.who, 0.32), kind: 'pensamento', life: 1.6, size: 0.42 });
+      // um close rápido na pista, e quem achou diz o que concluiu
+      const sp = spots[E.id];
+      cam()?.focusShot?.(sp.x, sp.z, { hold: 1.3, inT: 0.35, outT: 0.55, scale: 0.42, y: (sp.y ?? 0.1) + 0.05 });
+      dir.say(E.who, CLUES[E.id]?.text ?? CLUES[E.id]?.name ?? '', { mode: 'jogo' });
     }
     if (E.t >= EXAM.time) {
       S.exam = null;
-      // as três do quarto examinadas: os pombos passam pela janela com a cenoura
-      if (S.stage === 'quarto' && ROOM_CLUES.every((id) => book.has(id))) S.pending = 'janela';
+      // as três do quarto examinadas: a pergunta fica pronta na árvore de pistas (a resposta certa traz os pombos)
+      if (S.stage === 'quarto' && ROOM_CLUES.every((id) => book.has(id))) hints.now('arvore', 6, 10);
       emit('objective', puzzle.objective(ctx.activeDog));
     }
   }
@@ -551,11 +599,13 @@ export function createPuzzle(ctx) {
       cam()?.focusShot?.((YG.x0 + YG.x1) / 2, YG.z + 0.3, { hold: 1.6, inT: 0.6, outT: 0.7, scale: 0.7 });
       emit('objective', puzzle.objective(ctx.activeDog));
     }
-    balloons.show(['porta', 'x'], { follow: () => dir.head(c.name, 0.32), kind: 'pensamento', life: 1.6, size: 0.42 });
     if (!S.branchFree) {
-      balloons.show('ex', { at: { x: branch.x, y: 0.95, z: branch.z }, kind: 'solto', life: 1.6, size: 0.36 });
+      dir.say(c.name, c.name === 'radhija' ? 'Trancada por fora! Mas aquele buraco no muro… atrás do galho!' : 'Não abre! E se a gente tirar aquele galho dali?', { mode: 'jogo' });
       hints.now('galho', 4.6, 6);
-    } else hints.now('ferrolho', 4.2, 6);
+    } else {
+      dir.say(c.name, 'O ferrolho é do lado de fora… a Radhija cabe naquele buraco!', { mode: 'jogo' });
+      hints.now('ferrolho', 4.2, 6);
+    }
   }
   // ---------------------------------------------------------------- o barquinho encaixando no canal (paralelo A)
   const boatFloat = () => props.boat?.floatY ?? -0.15;
@@ -626,14 +676,14 @@ export function createPuzzle(ctx) {
           S.towerUnlocked = true;
           props.intercom?.setState?.('ok');
           emit('story:sfx', { name: 'interfone-ok', x: at.x, z: at.z });
-          balloons.show('ok', { at, kind: 'solto', life: 1.4, size: 0.44 });
+          dir.onomato('PLIM!', { at, size: 0.9, color: '#8ee08e', rot: -6 });
           emit('door:unlock', { id: 'torre', x: at.x, z: at.z });
           emit('objective', puzzle.objective(ctx.activeDog));
         } else {
           S.codeErrT = 0.9;
           props.intercom?.setState?.('erro');
           emit('story:sfx', { name: 'interfone-erro', x: at.x, z: at.z });
-          balloons.show('x', { at, kind: 'solto', life: 1.0, size: 0.44 });
+          dir.onomato('BÉÉÉ!', { at, size: 0.9, color: '#ff6b6b', rot: 6, style: 'shake' });
           hints.now(S.codeSeen ? 'senhaErrada' : 'senha', 3.6, 5);
         }
       }
@@ -655,11 +705,14 @@ export function createPuzzle(ctx) {
     quarto() {
       morningRoom(K);
       for (const id of ['pombos', 'abraco']) book.add(id, { silent: true });
+      deduction.ask('quem', { silent: true });
       S.music = 'recanto';
     },
     casa() {
       S.windowSeen = true;
       for (const id of ROOM_CLUES) book.add(id, { silent: true });
+      deduction.resolve('quem', { silent: true });
+      deduction.ask('onde', { silent: true });
       squadOnLine(K);
     },
     quintal() {
@@ -680,11 +733,13 @@ export function createPuzzle(ctx) {
       S.serviceOpen = true;
       serviceDoor.setTarget(1); serviceDoor.set?.(1); serviceDoor.lock();
     },
-    varal() { S.reconDone = true; book.add('boia', { silent: true }); },
-    torre() { S.varalDone = true; laundry.setPos(L.LAUNDRY.maxX, L.LAUNDRY.start.z); props.line?.setPin?.(1); squadOnTank(K); },
+    varal() { S.reconDone = true; book.add('boia', { silent: true }); deduction.ask('borracha', { silent: true }); },
+    torre() { S.varalDone = true; deduction.resolve('onde', { silent: true }); laundry.setPos(L.LAUNDRY.maxX, L.LAUNDRY.start.z); props.line?.setPin?.(1); squadOnTank(K); },
     portaria() {
       S.codeSeen = true;
       book.add('senha', { silent: true });
+      deduction.ask('senha', { silent: true });
+      deduction.ask('rua', { silent: true });
       S.towerUnlocked = true;
       props.intercom?.setState?.('ok');
       S.terraceDone = true;
@@ -734,6 +789,7 @@ export function createPuzzle(ctx) {
       const T = (text, p, y = 0.6) => ({ text, target: p ? { x: p.x, y, z: p.z } : null, stage: st });
       switch (st) {
         case 'quarto': {
+          if (deduction.isReady('quem')) return T(OBJECTIVES.deduzir, null);
           const l = lead();
           return T(OBJECTIVES.quarto, l && S.revealed.size ? l : null, 0.7);
         }
@@ -758,6 +814,7 @@ export function createPuzzle(ctx) {
       S.time += dt;
       S.mandaCd = Math.max(0, S.mandaCd - dt);
       S.rattleCd = Math.max(0, S.rattleCd - dt);
+      if (S.janelaT > 0) { S.janelaT -= dt; if (S.janelaT <= 0) S.pending = S.pending || 'janela'; }
       S.faroCd = Math.max(0, S.faroCd - dt);
       S.sniffT = Math.max(0, S.sniffT - dt);
       hints.frame?.(dt);
@@ -785,6 +842,7 @@ export function createPuzzle(ctx) {
       dir.update(dt);
       // nas cenas, as faixas de cinema cobrem 11% do alto da tela: os balões ficam abaixo delas
       balloons.update(dt, engine?.camera, S.scene?.active ? 0.36 : 0.45);
+      teller.update(dt);
       faro.update(dt, S.time);
       // a nuvem de cheiro: enquanto o Faro está aceso, do focinho de quem está com a jogadora até a próxima pista
       cloud.setLead(playing ? lead() : null);
@@ -873,7 +931,7 @@ export function createPuzzle(ctx) {
           S.snoreT = 2.8;
           const v = distVol(boothCenter, 12);
           if (v > 0.05) {
-            balloons.show('zzz', { at: { ...boothWindow() }, kind: 'solto', life: 2.2, size: 0.4 });
+            dir.onomato('ZZZ…', { at: { ...boothWindow() }, size: 0.6, color: '#c9d6ff', rot: -4 });
             emit('story:sfx', { name: 'ronco', x: boothCenter.x, z: boothCenter.z, volume: v * (S.windowOpen ? 1 : 0.55) });
           }
         }
@@ -908,7 +966,7 @@ export function createPuzzle(ctx) {
             for (const p of Object.values(props.squad || {})) p.peck?.();
             emit('story:sfx', { name: 'varal', x: L.DASH_POST.x, z: L.DASH_POST.z });
             if (S.stage === 'varal') {
-              balloons.show(['cesto', 'seta'], { at: { x: L.CARROT_PIN.x, y: L.CARROT_PIN.y + 0.5, z: L.CARROT_PIN.z }, kind: 'solto', life: 1.8, size: 0.4 });
+              dir.say('radhija', 'Se a cenoura cair no chão, eles pegam! Precisa de alguma coisa embaixo…', { mode: 'jogo' });
               hints.now('cesto', 4.2, 6);
             }
           }
@@ -968,11 +1026,11 @@ export function createPuzzle(ctx) {
         if (S.mandaCd <= 0) {
           S.mandaCd = 2.2;
           if (!sackFree()) {
-            balloons.show(['saco', 'empurrar'], { follow: () => dir.head(c.name, 0.32), kind: 'pensamento', life: 1.8, size: 0.42 });
+            dir.say(c.name, 'Esse saco de ração tá bem na frente da maçaneta…', { mode: 'jogo' });
             hints.now('saco', 4, 6);
           } else if (c.name === 'radhija') {
             dir.bark('radhija');
-            balloons.show(['seta', 'porta'], { follow: () => dir.head('radhija', 0.32), kind: 'fala', life: 1.6, size: 0.42 });
+            dir.say('radhija', 'A maçaneta é alta demais pra mim. Rhaenyra, pula nela!', { mode: 'jogo' });
             hints.now('maçaneta', 3.6, 6);
           } else hints.now('maçaneta', 3.6, 6);
         }
@@ -1100,7 +1158,7 @@ export function createPuzzle(ctx) {
       if (S.stage === 'portaria' && !S.porterDone && near(c, boothCenter, 4.2)) {
         if (!S.windowOpen) {
           // de janela fechada, nenhum latido entra
-          balloons.show(['janela', 'x'], { at: { ...boothWindow(), y: boothWindow().y + 0.45 }, kind: 'solto', life: 1.8, size: 0.44 });
+          dir.say(c.name, S.barkedShut ? 'A janela fechada abafa tudo… e aquela grelha embaixo?' : 'Ele nem ouviu! A janela tá fechada.', { mode: 'jogo' });
           // a primeira vez explica a janela; depois, a grelha
           hints.now(S.barkedShut ? 'grelha' : 'janela', 4.2, 4);
           S.barkedShut = true;
@@ -1110,8 +1168,8 @@ export function createPuzzle(ctx) {
           startScene('porteiro');
         } else {
           // o latido fino não adianta: o ronco continua, e ela manda a irmã latir
-          balloons.show('zzz', { at: { ...boothWindow() }, kind: 'solto', life: 1.6, size: 0.44 });
-          balloons.show(['latido', 'seta'], { follow: () => dir.head('radhija', 0.32), kind: 'fala', life: 1.5, size: 0.4 });
+          dir.onomato('ZZZ…', { at: { ...boothWindow() }, size: 0.6, color: '#c9d6ff', rot: -4 });
+          dir.say('radhija', 'Meu latido é fininho demais… Rhaenyra, late você!', { mode: 'jogo' });
           hints.now('latidoFino', 3.8, 7);
         }
       }
@@ -1164,6 +1222,10 @@ export function createPuzzle(ctx) {
       effects.reset?.();
       collect.reset();
       book.reset();
+      deduction.reset();
+      teller.reset();
+      emit('story:sayClear', {});
+      emit('story:comic', { on: false });
       faro.stop();
       for (const id of EXAMINABLE) faro.pin?.(id, false);
       cloud.setLead(null);
@@ -1219,6 +1281,7 @@ export function createPuzzle(ctx) {
     dispose() {
       offMural();
       offFaro();
+      offDeduce();
       skip.dispose();
       faro.dispose();
       cloud.dispose();
@@ -1230,7 +1293,7 @@ export function createPuzzle(ctx) {
       return {
         story: {
           stage: S.stage, scene: S.scene?.active ? S.scene.id : null, beat: S.scene?.beat ?? null,
-          clues: book.found, socks: [...S.socks], faro: faro.info(), cloud: cloud.info(),
+          clues: book.found, socks: [...S.socks], faro: faro.info(), cloud: cloud.info(), board: deduction.snapshot(), lines: teller.lines,
           recon: { active: recon.active || reconCode.active, plays: recon.plays, codePlays: reconCode.plays },
           revealed: [...S.revealed], exam: S.exam?.id ?? null, code: S.code.slice(),
           flags: {
@@ -1256,7 +1319,7 @@ export function createPuzzle(ctx) {
     snapshot() {
       const d = (n) => ({ x: +R(n).x.toFixed(3), z: +R(n).z.toFixed(3), yaw: +R(n).yaw.toFixed(3), y: +(R(n).y || 0).toFixed(3) });
       return {
-        stage: S.stage, clues: book.snapshot().slice().sort(), socks: [...S.socks].sort(),
+        stage: S.stage, clues: book.snapshot().slice().sort(), socks: [...S.socks].sort(), board: deduction.snapshot(),
         dogs: { radhija: d('radhija'), rhaenyra: d('rhaenyra') },
         window: props.windowLeaf ? 'ok' : null, music: S.music,
         flags: { windowOpen: S.windowOpen, codeSeen: S.codeSeen, towerUnlocked: S.towerUnlocked, gateOpen: S.gateOpen },

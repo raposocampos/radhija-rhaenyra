@@ -23,7 +23,13 @@ pediu o Modo História em 3ª pessoa (veja "Câmera em 3ª pessoa").**
   maior, com carregamentos escondidos.
 - **O Condomínio é o Recanto das Patinhas** (cap. 1).
 - **8 capítulos, com um núcleo de 4** (1, 2, 6 e 8), que conta a história completa sozinho.
-- **Sem palavras nas cenas:** só desenhos e gestos. Os humanos aparecem só de relance.
+- **Falas em HQ (decisão do usuário em 2026-11-10, no lugar de "sem palavras"):** as cenas viram páginas de HQ dentro
+  do jogo, no estilo mangá / Scott Pilgrim (quadros, balões com falas curtas em pt-BR, caixas de narração,
+  onomatopeias, efeitos), com a voz em sílabas sintetizadas por personagem; no jogo, falas curtas viram legenda. Os
+  humanos aparecem só de relance.
+- **Árvore de pistas (decisão do usuário em 2026-11-10):** um botão (Tab, Select/View ou o do HUD) abre o quadro de
+  dedução no estilo dos jogos do Sherlock Holmes: a pergunta-raiz do capítulo, as perguntas, as pistas ligadas a cada
+  uma (desenho + anotação) e as conclusões, escolhidas pelo jogador.
 - **Investigação:** Faro, Reconstrução, pistas, mural de pistas e enigmas.
 - **Sem ligação de enredo com as 10 fases.** Personagens e peças podem ser reaproveitados.
 
@@ -186,7 +192,12 @@ quarto, o aviso do Faro também é tocável.
   fechado.
 - `src/story/faro/`: o pulso do Faro, sem pós-processamento (véu na tela e trilhas aditivas), e a Reconstrução com
   silhuetas translúcidas e animação gravada.
-- `src/story/clues.js` e `src/story/mural/rules.js`: o catálogo das pistas, a lupa e as regras do mural.
+- `src/story/clues.js` e `src/story/mural/rules.js`: o catálogo das pistas (com a anotação de cada uma), a lupa e as
+  regras do mural.
+- `src/story/deduction.js`: o estado da árvore de pistas (perguntas, pistas ligadas, conclusões; `story:board`).
+- `src/story/scene/storyteller.js`: as falas (`dir.say`), a página de HQ (`dir.comic`, `panel`, `onomato`, `caption`,
+  `fx`) e a lente dos planos (`dir.lens`).
+- `src/story/ui/board.js`, `subtitles.js` e `comic.js`: o quadro de dedução, as legendas com voz e a camada de HQ.
 - `src/story/ui/`: o HUD da história (faixas, cartela, aviso do Faro, lupa, meias, mural provisório e fim do capítulo).
 - `src/story/areas/recanto/`: o Recanto das Patinhas, com layout, iluminação, cenário em zonas (`world/`), as seis cenas
   (`scenes.js`) e a missão (`puzzle.js`).

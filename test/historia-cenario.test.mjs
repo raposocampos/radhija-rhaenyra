@@ -24,6 +24,7 @@ const SEM_COLISOR = [
   [/(meia-)/, 'meia perdida: o colecionável do capítulo'],
   [/(taboa|junco|vitoria-regia|ninfeia|lago-|:plant:lago$)/, 'plantas do lago: ficam na água, fechada pela margem, pelo píer e pelo canal (as dogs não entram)'],
   [/(pena|borboleta|pombo|esquadrao|cenoura|fantasma|maos|tutora|porteiro|chuva)/, 'atores e efeitos das cenas (escondidos ou no alto)'],
+  [/luz-de-cinema/, 'a luz falsa das cenas (feixe pela janela, poeira, brilho do abajur): não é coisa, é luz'],
 ];
 const skipped = (o) => {
   for (let p = o; p; p = p.parent) if (p.name && SEM_COLISOR.some(([re]) => re.test(p.name))) return true;

@@ -10,7 +10,7 @@
 // confere que pular dá no mesmo).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStoryGame, storyInfo, skipScene, intrusions, become, holdWorld, push, sniff, examine } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, skipScene, intrusions, become, holdWorld, push, sniff, examine, deduce } from './helpers/historia.mjs';
 
 const near = (c, p, r) => Math.hypot(c.x - p.x, c.z - p.z) <= r;
 const mid = (D) => ({ x: (D.hinge.x + D.latchPost.x) / 2, z: (D.hinge.z + D.latchPost.z) / 2 });
@@ -46,7 +46,9 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
     assert.ok(examine(h, id), `${id} examinada vira pista na lupa`);
     watch();
   }
-  // examinadas as três: os pombos passam pela janela com a cenoura, e a missão vira ir atrás deles
+  // examinadas as três, a pergunta fica pronta na árvore de pistas; a conclusão certa traz os pombos à janela com a
+  // cenoura, e a missão vira ir atrás deles
+  deduce(h, 'quem', 0);
   skipScene(h, 'janela');
   assert.equal(S().stage, 'casa');
   assert.equal(h.log('objective').at(-1)?.text, 'Atrás dos pombos! Saiam de casa');

@@ -137,3 +137,9 @@ export function examine(h, id) {
   h.run(1.3);
   return storyInfo(h).clues.includes(id);
 }
+
+/** Escolhe a conclusão `option` da pergunta `node` no quadro de dedução (como o clique na árvore de pistas). */
+export function deduce(h, node, option) {
+  h.events.emit('ui:storyDeduce', { node, option });
+  h.run(0.1);
+}

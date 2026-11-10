@@ -7,7 +7,7 @@
 // torre, o cesto e a arrancada no varal, o Superbafo na grelha, o latido grosso).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine, deduce } from './helpers/historia.mjs';
 
 /** O Superbafo da Radhija na grelha da guarita (o gatilho da cena do cheiro). */
 function blowVent(h) {
@@ -34,6 +34,8 @@ const SCENES = {
       const seen = sniff(h);
       for (const id of ['trilha', 'pote', 'pena']) assert.ok(seen.includes(id), `o Faro revela ${id}`);
       for (const id of ['trilha', 'pote', 'pena']) assert.ok(examine(h, id), `${id} examinada`);
+      // a pergunta fica pronta na árvore de pistas; a conclusão certa traz os pombos à janela
+      deduce(h, 'quem', 0);
       return h;
     },
     free: [1, 0],
@@ -208,7 +210,7 @@ test('abertura: termina com a jogadora no quarto, a cenoura sumida e o aviso do 
   const h = await createStoryGame();
   const r = playScene(h, { skip: false });
   assert.equal(r.id, 'abertura');
-  assert.ok(r.seconds > 20 && r.seconds < 45, `a abertura dura ${r.seconds.toFixed(1)} s`);
+  assert.ok(r.seconds > 40 && r.seconds < 70, `a abertura dura ${r.seconds.toFixed(1)} s`);
   const s = storyInfo(h);
   assert.equal(s.stage, 'quarto');
   // as pistas de cena chegam com a abertura; as do quarto, só farejando e examinando
@@ -244,6 +246,7 @@ test('cenas: a cenoura vai nas patas do Farelo quando os pombos a levam (nada de
   h.run(0.3);
   sniff(h);
   for (const id of ['trilha', 'pote', 'pena']) examine(h, id);
+  deduce(h, 'quem', 0);
   const far = h.props.squad.far;
   const carrot = h.props.carrot;
   assert.equal(typeof carrot.holdBy, 'function', 'a cenoura sabe ser agarrada');
@@ -263,4 +266,40 @@ test('cenas: a cenoura vai nas patas do Farelo quando os pombos a levam (nada de
   });
   assert.ok(seen > 40, `a cenoura aparece no voo (${seen} quadros)`);
   assert.ok(worst < 0.14, `a cenoura não sai das patas (no máximo ${worst.toFixed(3)} m)`);
+});
+
+test('árvore de pistas: três pistas deixam a pergunta pronta; a conclusão errada não passa, a certa traz os pombos', async () => {
+  const h = await createStoryGame();
+  h.game.debug.setStage('quarto', 'radhija');
+  h.run(0.3);
+  const board = () => storyInfo(h).board;
+  assert.deepEqual(board().asked, ['quem'], 'a abertura deixa a primeira pergunta');
+  sniff(h);
+  for (const id of ['trilha', 'pote', 'pena']) examine(h, id);
+  h.run(0.5);
+  assert.equal(storyInfo(h).scene, null, 'só examinar não basta: falta deduzir');
+  assert.match(h.log('objective').at(-1)?.text ?? '', /árvore de pistas/, 'o objetivo manda abrir a árvore');
+  h.clearLog();
+  deduce(h, 'quem', 2);
+  assert.equal(h.log('story:deduceWrong').length, 1, 'a conclusão errada treme e volta');
+  assert.ok(!board().solved.includes('quem'));
+  deduce(h, 'quem', 0);
+  assert.ok(board().solved.includes('quem'), 'a certa vira conclusão');
+  h.run(0.6);
+  assert.equal(storyInfo(h).scene, null, 'o quadro mostra a conclusão antes da cena');
+  h.run(1.0);
+  assert.equal(storyInfo(h).scene, 'janela', 'e os pombos passam pela janela');
+});
+
+test('falas: as cenas falam com texto (balões de HQ), sem balão de ícone, e a página de HQ fecha no fim', async () => {
+  const h = await createStoryGame();
+  const r = playScene(h, { skip: false });
+  assert.equal(r.id, 'abertura');
+  const says = h.log('story:say');
+  assert.ok(says.length >= 12, `a abertura tem falas (${says.length})`);
+  assert.ok(says.every((p) => typeof p.text === 'string' && p.text.length > 0), 'toda fala tem texto');
+  assert.ok(says.some((p) => p.who === 'capitao') && says.some((p) => p.who === 'radhija') && says.some((p) => p.who === 'rhaenyra'), 'falam os pombos e as duas');
+  assert.ok(h.log('story:panel').length >= 5, 'quadros de HQ');
+  assert.ok(h.log('story:onomato').length >= 4, 'onomatopeias');
+  assert.equal(h.log('story:comic').at(-1)?.on, false, 'a página de HQ fecha no fim');
 });

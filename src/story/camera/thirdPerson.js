@@ -175,7 +175,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
       if (s.t < s.inT) { outPos.copy(s.fromPos); outLook.copy(s.fromLook); }
       outPos.lerp(shotPos, w);
       outLook.lerp(shotLook, w);
-      f = cfg.fov + (38 - cfg.fov) * w; // os planos das cenas foram compostos com a lente das fases
+      f = cfg.fov + (shotFov - cfg.fov) * w; // a lente do plano (38 graus, a das fases, se a cena não escolher outra)
     }
     return f;
   }
@@ -293,6 +293,9 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
       apply();
     }
   }
+  /** A lente dos planos de cena (graus): as cenas escolhem (close: teleobjetiva; vista: grande-angular). */
+  let shotFov = 38;
+  function setShotFov(f = 38) { shotFov = Math.max(14, Math.min(70, f)); }
   function focusShot(x, z, { hold = 1.2, inT = 0.55, outT = 0.7, scale = 0.8, y = cfg.lookY + 0.1, target = null, from = null } = {}) {
     shot = { point: new THREE.Vector3(x, y, z), target, from, t: 0, inT, hold, outT, scale, fromPos: pos.clone(), fromLook: look.clone() };
   }
@@ -302,7 +305,7 @@ export function createThirdPersonRig(camera, layout, { element = null } = {}) {
 
   return {
     kind: 'third',
-    update, setMode, snapFollow, focusShot, configure,
+    update, setMode, snapFollow, focusShot, configure, setShotFov,
     onSwitch() { switchT = 0.9; },
     setZone() {},
     /** Gira para trás de quem olha para `yaw` (o fim das cenas: atrás da dog ativa). */

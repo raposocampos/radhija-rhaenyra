@@ -44,6 +44,15 @@ const PAD_EDGE_CODES = [
   [PAD.LS, 'Faro'], // o pulso do Faro (Modo História, src/story/faro/faro.js)
 ];
 
+/**
+ * Uma tela da UI por cima do jogo segura o controle (o quadro de dedução do Modo História, src/story/ui/board.js, que
+ * lê o controle sozinho com readGamepad): enquanto true, o poll() não gera toques nem move as dogs, e o que estava
+ * apertado fica travado até soltar (não vaza para o jogo quando a tela fecha).
+ */
+let padCaptured = false;
+/** @param {boolean} on */
+export function capturePad(on) { padCaptured = !!on; }
+
 function connectedPads() {
   try {
     if (typeof navigator === 'undefined' || !navigator.getGamepads) return [];
@@ -261,6 +270,18 @@ export function createInput({ onDevice } = {}) {
       return;
     }
     pad.last = g.pad;
+    if (padCaptured) {
+      // a UI está com o controle: nada passa para o jogo e o que está apertado só vale de novo depois de soltar
+      pad.prev = pad.cur = g.down.slice();
+      for (let i = 0; i < 17; i++) if (g.down[i]) pad.latched.add(i);
+      if (g.rt > 0.35) pad.latched.add(PAD.RT);
+      if (g.lt > 0.35) pad.latched.add(PAD.LT);
+      pad.stick = { x: 0, y: 0, m: 0 };
+      pad.stick2 = { x: 0, y: 0, m: 0 };
+      pad.dpad = { x: 0, y: 0 };
+      pad.shiftHeld = pad.bafo = pad.lick = pad.rtHeld = pad.ltHeld = false;
+      return;
+    }
     pad.prev = pad.cur;
     pad.cur = g.down.slice();
     // RT com histerese (gatilho analógico)

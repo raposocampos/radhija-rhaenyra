@@ -1,4 +1,4 @@
-// As cenas do capítulo 1 (sem palavras): a abertura "A noite da garoa", os pombos na janela, a Reconstrução da piscina,
+// As cenas do capítulo 1: a abertura "A noite da garoa", os pombos na janela, a Reconstrução da piscina,
 // a senha do interfone, o varal, o terraço da torre, o cheiro na guarita, o porteiro e o fechamento. Roteiro em
 // docs/HISTORIA.md. Cada cena é uma lista de beats (src/story/scene/sequencer.js) tocada pelo diretor
 // (src/story/scene/director.js). O que fica de PERMANENTE (pistas, etapa, portas, onde as dogs ficam) está no commit de
@@ -6,6 +6,9 @@
 // DIREÇÃO (2026-11-09): a câmera das cenas é de cinema, DENTRO dos lugares (a casa é inteira: nada de olhar através de
 // parede), na altura das cachorrinhas, com quem age de perfil ou de frente e a cenoura sempre em quadro quando ela é o
 // assunto. Quem leva a cenoura agarra com as patas (props.carrot.holdBy).
+// DIREÇÃO (2026-11-10, depois da 2ª reprovação): as falas são escritas (balões de HQ nas cenas: dir.say), e os
+// momentos fortes viram páginas de HQ estilo mangá/Scott Pilgrim (dir.comic, dir.panel, dir.onomato, dir.caption,
+// dir.fx: src/story/scene/storyteller.js). As dogs têm gestos (dir.gesture) e mexem a boca quando falam.
 // K: { ctx, dir, props, L, faro, cloud, recon, reconCode, playRecon, book, mood, emit, S, ... } (montado pelo puzzle).
 import { createScene, span, smooth, lerp } from '../../scene/sequencer.js';
 import { MORNING, NIGHT } from './lighting.js';
@@ -87,6 +90,9 @@ export function morningRoom(K) {
   const { L, props } = K;
   const SO = L.SILL.out;
   K.mood.set(MORNING);
+  props.cinemaLight?.setNight?.(0);
+  props.cinemaLight?.setMorning?.(1);
+  props.cinemaLight?.flash?.(0);
   props.rain?.setOn?.(0);
   props.windowLeaf?.setOpen?.(0);
   props.bowl?.setTipped?.(1);
@@ -100,8 +106,15 @@ export function morningRoom(K) {
 
 // ------------------------------------------------------------------------------------------------ a abertura
 /**
- * A abertura "A noite da garoa" (~32 s): as irmãs dormindo abraçadas à cenoura; os pombos encharcados no parapeito e o
- * plano do Capitão; o preto; de manhã, a cenoura sumiu. Termina com a jogadora no quarto, para farejar.
+ * A abertura "A noite da garoa" (~55 s), revisada em 2026-11-10 para parecer cinema e HQ:
+ *  - FORA: a casa de noite, na garoa; a câmera desce até a janela do quarto (caixa de narração);
+ *  - NOITE: lá dentro, as duas dormindo abraçadas à cenoura (falando dormindo);
+ *  - POMBOS: página de HQ — o esquadrão encharcado pousa no parapeito; o Capitão mede a cenoura e diz que ela é
+ *    "exatamente o que precisamos" (o mistério); o trovão, o preto;
+ *  - MANHÃ: a mão da tutora fecha o basculante; a Radhija acorda, e a cenoura sumiu (página de HQ, o grito);
+ *  - ACORDA: a Rhaenyra acorda molhada (a pista da virada, sem explicar), as apresentações estilo Scott Pilgrim, a
+ *    Radhija promete descobrir quem foi; a cartela do capítulo.
+ * Termina com a jogadora no quarto e a primeira pergunta na árvore de pistas ("Quem entrou no quarto de noite?").
  */
 export function createOpening(K) {
   const { L, dir, props, emit } = K;
@@ -118,7 +131,12 @@ export function createOpening(K) {
   const rhaOut = { x: B.x + 0.35, z: B.z + 1.15 };
   const perchY = SO.y + 0.04;
   const perch = [[-0.42, 0.5], [0.02, 1.25], [0.46, 1.95]]; // deslocamento no parapeito e quando cada um pousa
+  const capAt = () => P3(cx + perch[0][0], perchY + 0.18, SO.z - 0.02);
+  // lá fora: entre as duas árvores do gramado norte, descendo até o vidro
+  const outA = P3(cx + 0.35, 3.1, W.z - 7.0), outB = P3(cx + 0.12, 1.15, W.z - 1.45);
   const S = {};
+  /** Uma vez só por cena (as falas e os efeitos em `t`). */
+  const once = (key, cond, fn) => { if (cond && !S[key]) { S[key] = true; fn(); } };
 
   const scene = createScene({
     id: 'abertura',
@@ -126,13 +144,16 @@ export function createOpening(K) {
     setup() {
       for (const k of Object.keys(S)) delete S[k];
       K.mood.set(NIGHT);
+      props.cinemaLight?.setMorning?.(0);
+      props.cinemaLight?.setNight?.(1);
       props.rain.setOn(1);
       props.windowLeaf.setOpen(1);
       props.bowl.setTipped(0);
       K.feather.visible = false;
       dir.ambience('rain');
       dir.music(null);
-      dir.fade(0, 1.6);
+      dir.fade(0, 2.2);
+      dir.comic(false);
       dir.hold('radhija', 'rhaenyra');
       dir.pose('radhija', { ...sleepRad, y: 0.12, speed: 0, action: 'none', lie: lie(14, 1, -1) });
       dir.pose('rhaenyra', { ...sleepRha, y: 0.12, speed: 0, action: 'none', lie: lie(14, 1, 1) });
@@ -142,34 +163,48 @@ export function createOpening(K) {
       c.position.set(carrotBed.x, carrotBed.y, carrotBed.z);
       c.rotation.set(0, 0.4, Math.PI / 2);
       dir.snapFollow();
-      dir.shot(P3(B.x + 2.3, 1.3, B.z + 3.5), P3(B.x, 0.8, B.z - 0.7), { cut: true });
+      dir.lens(44);
+      dir.shot(outA, P3(cx, 1.6, W.z), { cut: true });
     },
     beats: [
       {
-        // dentro do quarto, de noite: a câmera chega devagar na caminha, até a cenoura abraçada pelas duas
-        id: 'noite', dur: 7.2,
+        // FORA: plano de grua, da chuva até a janela do quarto, com a caixa de narração
+        id: 'fora', dur: 6.4,
         tick(_, t) {
-          dir.dolly(P3(B.x + 2.3, 1.3, B.z + 3.5), P3(B.x + 1.0, 0.58, B.z + 1.5), P3(B.x, 0.8, B.z - 0.7), P3(carrotBed.x, 0.27, carrotBed.z), span(t, 0.5, 6.2));
-          if (t > 3.6 && !S.fiu) {
-            S.fiu = true;
+          dir.dolly(outA, outB, P3(cx, 1.6, W.z), P3(cx, 0.85, W.z + 1.4), span(t, 0.3, 6.2));
+          once('cap', t > 0.8, () => dir.caption('Recanto das Patinhas', { sub: 'a noite da garoa', pos: 'bl', dur: 4.6 }));
+          once('n1', t > 3.4, () => dir.say(null, 'Toda noite, as duas dormiam abraçadas ao seu tesouro…', { mode: 'cena', dur: 3.4 }));
+        },
+      },
+      {
+        // NOITE: dentro do quarto, a câmera chega devagar na caminha, até a cenoura abraçada pelas duas
+        id: 'noite', dur: 8.4,
+        enter() { dir.lens(34); dir.shot(P3(B.x + 2.3, 1.3, B.z + 3.5), P3(B.x, 0.8, B.z - 0.7), { cut: true }); },
+        tick(_, t) {
+          dir.dolly(P3(B.x + 2.3, 1.3, B.z + 3.5), P3(B.x + 0.9, 0.55, B.z + 1.45), P3(B.x, 0.8, B.z - 0.7), P3(carrotBed.x, 0.24, carrotBed.z), span(t, 0.3, 6.6));
+          once('n2', t > 0.5, () => dir.say(null, '…uma cenoura de borracha.', { mode: 'cena', dur: 2.4 }));
+          props.carrot.squeeze(t > 3.3 && t < 3.9 ? Math.sin(span(t, 3.3, 3.9) * Math.PI) : 0);
+          once('sq', t > 3.4, () => {
             dir.sfx('fiu', { x: carrotBed.x, z: carrotBed.z });
-            dir.balloon('nota', { at: P3(carrotBed.x + 0.14, 0.62, carrotBed.z), kind: 'solto', life: 1.6, size: 0.3 });
-          }
-          props.carrot.squeeze(t > 3.5 && t < 4.1 ? Math.sin(span(t, 3.5, 4.1) * Math.PI) : 0);
-          if (t > 5.3 && !S.heart) { S.heart = true; dir.balloon('coracao', { at: P3(carrotBed.x - 0.05, 0.66, carrotBed.z), kind: 'solto', life: 1.6, size: 0.3 }); }
+            dir.onomato('SQUEAK!', { at: P3(carrotBed.x, carrotBed.y + 0.25, carrotBed.z), size: 0.8, color: '#ff9f43', rot: 10 });
+          });
+          once('s1', t > 4.3, () => dir.say('rhaenyra', 'Hmmm… cenourinha… minha…', { mood: 'sono', mode: 'cena', dur: 2.2 }));
+          once('s2', t > 6.4, () => dir.say('radhija', '…é minha… zzz', { mood: 'sono', mode: 'cena', dur: 1.8 }));
         },
         leave() { props.carrot.squeeze(0); },
       },
       {
-        // a janela vista de dentro, por cima das duas dormindo: os três pombos pousam encharcados no parapeito
-        id: 'pombos', dur: 9.4,
+        // POMBOS: a página de HQ. Os três pousam encharcados no parapeito; o Capitão mede a cenoura; o trovão
+        id: 'pombos', dur: 14.2,
         enter() {
+          dir.comic(true);
+          dir.panel('2h', 0, { enter: 'wipe', tilt: -1 });
           dir.shot(P3(cx + 1.5, 1.05, W.z + 2.3), P3(cx - 0.05, 0.98, SO.z), { cut: true });
           dir.sfx('arrulho', { x: cx, z: SO.z });
         },
         tick(_, t) {
           const sq = props.squad;
-          dir.dolly(P3(cx + 1.5, 1.05, W.z + 2.3), P3(cx + 0.85, 1.0, W.z + 1.72), P3(cx - 0.05, 0.98, SO.z), P3(cx - 0.1, 0.95, SO.z), span(t, 0.3, 8.6));
+          if (!S.close) dir.dolly(P3(cx + 1.5, 1.05, W.z + 2.3), P3(cx + 0.85, 1.0, W.z + 1.72), P3(cx - 0.05, 0.98, SO.z), P3(cx - 0.1, 0.95, SO.z), span(t, 0.3, 5.6));
           [sq.cap, sq.son, sq.far].forEach((p, i) => {
             const [off, at] = perch[i];
             if (t < at - 0.75) return;
@@ -182,22 +217,35 @@ export function createOpening(K) {
             } else {
               // pousado, tremendo de frio (um tremidinho no lugar)
               p.setPose({ x: px + Math.sin(t * 46 + i) * 0.004, y: perchY, z: pz, yaw: 0, flying: false, asleep: false });
-              p.shiver?.(1 - 0.5 * span(t, 6.2, 7.0));
+              p.shiver?.(1 - 0.5 * span(t, 9.0, 10.0));
               if (!S[`land${i}`]) { S[`land${i}`] = true; dir.sfx('asas', { x: px, z: pz, volume: 0.45 }); }
             }
           });
-          // o Capitão olha a cenoura lá dentro, mede com a asa (o cone no balão de pensamento) e bate continência
-          sq.cap.lookAt?.(t > 2.9 && t < 6.6 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
-          sq.cap.measure(span(t, 3.7, 4.3) * (1 - span(t, 5.5, 5.9)));
-          sq.cap.salute(span(t, 6.0, 6.4) * (1 - span(t, 7.4, 7.8)));
-          if (t > 3.2 && !S.see) { S.see = true; dir.balloon('cenoura', { at: P3(cx + perch[0][0], perchY + 0.78, SO.z), kind: 'pensamento', life: 1.5, size: 0.4 }); }
-          if (t > 4.4 && !S.cone) {
-            S.cone = true;
-            // o cone aparece primeiro colado na cenoura, depois no balão de pensamento do Capitão
-            dir.balloon('cone', { at: P3(carrotBed.x, carrotBed.y + 0.3, carrotBed.z), kind: 'solto', life: 1.6, size: 0.3 });
-          }
-          if (t > 4.9 && !S.think) { S.think = true; dir.balloon('cone', { at: P3(cx + perch[0][0], perchY + 0.78, SO.z), kind: 'pensamento', life: 1.7, size: 0.4 }); }
-          if (t > 7.0 && !S.feather) {
+          once('flap', t > 0.7, () => dir.onomato('FLAP FLAP', { at: P3(cx + 0.6, perchY + 0.7, SO.z), size: 1, color: '#9bd1ff', rot: -10 }));
+          once('l1', t > 2.5, () => dir.say('capitao', 'Esquadrão… abrigo à vista!', { mood: 'sussurro', mode: 'cena' }));
+          once('l2', t > 4.3, () => {
+            dir.say('soneca', 'Atchim!', { mood: 'grito', mode: 'cena', dur: 1.2 });
+            dir.sfx('espirro', { x: cx + perch[1][0], z: SO.z });
+            dir.onomato('ATCHIM!', { at: P3(cx + perch[1][0], perchY + 0.45, SO.z), size: 0.9, color: '#ffffff', rot: 6, style: 'shake' });
+          });
+          once('l3', t > 5.0, () => dir.say('capitao', 'Shhh!', { mood: 'sussurro', mode: 'cena', dur: 1.0 }));
+          // segundo quadro: de perto, o Capitão olha a cenoura lá dentro e mede com a asa
+          once('close', t > 5.8, () => {
+            dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
+            const c = capAt();
+            dir.lens(24);
+            dir.shot(P3(c.x + 0.62, c.y + 0.08, W.z + 0.95), P3(c.x - 0.05, c.y + 0.05, c.z), { cut: true });
+          });
+          if (S.close) dir.lookAt(P3(capAt().x - 0.05 + Math.sin(t * 0.7) * 0.02, capAt().y + 0.05, capAt().z));
+          once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
+          sq.cap.lookAt?.(t > 6.6 && t < 11.2 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
+          sq.cap.measure(span(t, 7.4, 8.0) * (1 - span(t, 10.0, 10.4)));
+          once('l5', t > 7.7, () => dir.say('capitao', 'Uma cenoura desse tamanho…', { mode: 'cena', dur: 2.0 }));
+          once('l6', t > 9.6, () => { dir.say('capitao', '…é exatamente o que precisamos.', { mode: 'cena', dur: 2.4 }); dir.fx('focus', { at: capAt(), dur: 1.6 }); });
+          sq.cap.salute(span(t, 11.2, 11.5) * (1 - span(t, 12.4, 12.7)));
+          once('l7', t > 11.2, () => dir.say('farelo', 'E as cachorras?', { mode: 'cena', dur: 1.3 }));
+          once('l8', t > 12.0, () => dir.say('capitao', 'Dormem feito pedra.', { mode: 'cena', dur: 1.4 }));
+          if (t > 11.0 && !S.feather) {
             S.feather = true;
             K.feather.visible = true;
             K.featherFall = 0;
@@ -208,16 +256,32 @@ export function createOpening(K) {
             K.feather.position.set(SO.x + 0.25 + Math.sin(f * 9) * 0.06, SO.y + 0.03 + (1 - f) * 0.3, SO.z);
             K.feather.rotation.set(0, 0, Math.sin(f * 7) * 0.6 + 1.3);
           }
-          if (t > 8.3 && !S.dark) {
-            S.dark = true;
-            dir.fade(1, 0.9); // a tela escurece antes de qualquer coisa acontecer
+          // o trovão: quadro cheio, o clarão, e a tela escurece antes de qualquer coisa acontecer
+          once('thunder', t > 13.1, () => {
+            dir.panel('full', 0, { enter: 'pop' });
+            dir.lens(40);
+            dir.shot(P3(cx + 1.1, 1.0, W.z + 1.9), P3(cx, 0.95, SO.z), { cut: true });
+            dir.fx('flash', { dur: 0.5 });
+            dir.fx('shake', { dur: 0.6 });
+            dir.onomato('BRRRUUUM!', { sx: 0.5, sy: 0.42, size: 1.6, color: '#ffe066', rot: -6, style: 'shake' });
+            dir.sfx('trovao');
+            S.flashT = 0;
+          });
+          // o relâmpago: a luz da janela estoura e cai em dois pulsos, e o quarto acende junto
+          if (S.flashT !== undefined) {
+            S.flashT += 1 / 60;
+            const f = Math.max(0, 1 - S.flashT / 0.18) + 0.6 * Math.max(0, 1 - Math.abs(S.flashT - 0.32) / 0.1);
+            props.cinemaLight?.flash?.(Math.min(1, f));
+            K.mood.blend(NIGHT, MORNING, Math.min(0.7, f * 0.7));
           }
+          once('dark', t > 13.6, () => dir.fade(1, 0.6));
         },
         leave() { props.squad.cap.measure(0); props.squad.cap.salute(0); },
       },
       {
         // no preto: a manhã chega (a luz, a garoa para, os pombos e a cenoura já foram, o pote virou)
-        id: 'preto', dur: 1.0, noSkip: true,
+        id: 'preto', dur: 1.2, noSkip: true,
+        enter() { dir.clearSay(); dir.comic(false); },
         tick(_, t) {
           if (t > 0.05 && !S.morning) {
             S.morning = true;
@@ -232,11 +296,12 @@ export function createOpening(K) {
         },
       },
       {
-        // de manhã: a mão da tutora fecha o basculante; a Radhija acorda e a cenoura não está mais lá
-        id: 'manha', dur: 9.6,
+        // MANHÃ: a mão da tutora fecha o basculante; a Radhija acorda e a cenoura não está mais lá
+        id: 'manha', dur: 11.2,
         enter() {
-          dir.fade(0, 0.9);
+          dir.fade(0, 1.1);
           dir.sfx('passarinhos', { volume: 0.6 });
+          dir.caption('Na manhã seguinte…', { pos: 'tl', dur: 2.6 });
           const arm = props.humans.tutora;
           arm.object.visible = true;
           arm.object.position.set(cx + 0.62, 2.55, W.z + 0.42);
@@ -252,49 +317,86 @@ export function createOpening(K) {
           arm.elbow.rotation.x = lerp(0.0, 0.5, smooth(span(t, 1.1, 1.8)) * (1 - span(t, 2.8, 3.3)));
           arm.hand.userData.grip(span(t, 1.7, 2.0) * (1 - span(t, 2.7, 2.9)));
           if (t > 1.95 && t < 2.8) props.windowLeaf.setOpen(1 - span(t, 1.95, 2.7));
-          if (t > 2.0 && !S.click) { S.click = true; dir.sfx('janela', { x: cx, z: W.z }); }
+          once('click', t > 2.0, () => { dir.sfx('janela', { x: cx, z: W.z }); dir.onomato('CLEC', { at: P3(cx, W.top, W.z + 0.1), size: 0.6, color: '#ffffff', rot: 8 }); });
           arm.object.visible = t < 3.7;
-          // corta para a caminha: a Radhija acorda, procura a cenoura e não acha
-          if (t > 3.7 && !S.cut) {
-            S.cut = true;
+          // corta para a caminha: a Radhija acorda, boceja, procura a cenoura e não acha
+          once('cut', t > 3.7, () => {
             props.windowLeaf.setOpen(0);
             dir.shot(P3(B.x + 1.35, 0.52, B.z + 1.25), P3(B.x + 0.1, 0.33, B.z), { cut: true });
-          }
+          });
           const a = dir.actor('radhija');
           const wake = span(t, 4.2, 5.0);
           if (wake > 0) a.lie = wake < 1 ? lie(16, 1 - wake, -1) : null;
-          // olha o lugar vazio da cenoura, a irmã abraçada nela, o pote virado
-          a.look = t > 7.4 ? P3(L.BOWL.x, 0.1, L.BOWL.z) : t > 6.3 ? P3(B.x - 0.3, 0.3, B.z + 0.1) : t > 5.0 ? P3(carrotBed.x, 0.15, carrotBed.z) : null;
-          if (t > 5.4 && !S.q1) { S.q1 = true; dir.balloon(['cenoura', 'q'], { who: 'radhija', kind: 'pensamento', life: 1.9, size: 0.44 }); }
-          if (t > 7.6 && !S.q2) { S.q2 = true; dir.balloon(['pote', 'q'], { who: 'radhija', kind: 'pensamento', life: 1.5, size: 0.4 }); }
-          if (t > 8.9 && !S.ex) { S.ex = true; dir.balloon('ex', { who: 'radhija', life: 0.9, size: 0.42 }); }
+          once('yawn', t > 5.0, () => dir.gesture?.('radhija', 'yawn'));
+          once('w1', t > 5.9, () => dir.say('radhija', 'Hmm… bom dia, cenourinh…', { mood: 'sono', mode: 'cena', dur: 1.9 }));
+          // olha o lugar vazio da cenoura
+          a.look = t > 6.6 ? P3(carrotBed.x, 0.15, carrotBed.z) : null;
+          // a página de HQ do susto: o rosto, o lugar vazio, o grito
+          once('p1', t > 7.4, () => {
+            dir.gesture?.('radhija', 'alert');
+            dir.comic(true);
+            dir.panel('3b', 0, { enter: 'pop', tilt: -2 });
+            dir.lens(26);
+            dir.shot(P3(a.x + Math.sin(a.yaw) * 0.75 + 0.15, 0.42, a.z + Math.cos(a.yaw) * 0.75), dir.head('radhija', -0.08), { cut: true });
+            dir.say('radhija', '…cadê a cenoura?', { mode: 'cena', dur: 1.5 });
+          });
+          once('p2', t > 8.6, () => {
+            dir.panel('3b', 1, { enter: 'slide', tilt: 2 });
+            dir.shot(P3(carrotBed.x + 0.5, 0.62, carrotBed.z + 0.55), P3(carrotBed.x, 0.12, carrotBed.z), { cut: true });
+            dir.onomato('?!', { at: P3(carrotBed.x, 0.4, carrotBed.z), size: 1.2, color: '#ff6b6b', rot: -8, style: 'stretch' });
+          });
+          once('p3', t > 9.6, () => {
+            dir.panel('3b', 2, { enter: 'zoom', tilt: -1 });
+            dir.lens(36);
+            dir.shot(P3(B.x + 1.6, 0.7, B.z + 1.5), P3(B.x + 0.15, 0.35, B.z), { cut: true });
+            dir.say('radhija', 'CADÊ A CENOURA?!', { mood: 'grito', mode: 'cena', dur: 1.6 });
+            dir.fx('speed', { at: dir.head('radhija'), dur: 1.2 });
+            dir.bark('radhija');
+          });
         },
         leave() { props.humans.tutora.object.visible = false; props.windowLeaf.setOpen(0); },
       },
       {
-        // a Radhija late; a Rhaenyra acorda de patas molhadas, olha o pote, dá de ombros, e as duas pulam da caminha
-        id: 'acorda', dur: 6.4,
+        // ACORDA: a Rhaenyra acorda molhada; as apresentações; a promessa da detetive; as duas pulam da caminha
+        id: 'acorda', dur: 10.4,
         enter() {
-          dir.shot(P3(B.x + 2.2, 0.85, B.z + 2.5), P3(B.x + 0.45, 0.36, B.z + 0.6), { inT: 0.9 });
-          const a = dir.actor('radhija');
-          a.lie = null;
+          dir.panel('2h', 0, { enter: 'slide', tilt: 1 });
+          dir.shot(P3(B.x + 2.2, 0.85, B.z + 2.5), P3(B.x + 0.45, 0.36, B.z + 0.6), { cut: true });
+          dir.actor('radhija').lie = null;
         },
         tick(_, t) {
           const a = dir.actor('radhija');
           const h = dir.actor('rhaenyra');
           if (!S.radOut) a.look = P3(h.x, 0.3, h.z);
-          if (t > 0.25 && !S.b1) { S.b1 = true; dir.bark('radhija'); }
-          if (t > 0.65 && !S.b2) { S.b2 = true; dir.bark('radhija'); dir.balloon(['cenoura', 'x'], { who: 'radhija', life: 1.7, size: 0.44 }); }
-          const wake = span(t, 1.1, 1.9);
+          const wake = span(t, 0.3, 1.1);
           h.lie = wake < 1 ? lie(16, 1 - wake, 1) : null;
-          if (t > 1.9 && t < 2.6) h.look = P3(L.BOWL.x, 0.05, L.BOWL.z);
-          if (t > 2.1 && !S.hq) { S.hq = true; dir.balloon(['gota', 'q'], { who: 'rhaenyra', kind: 'pensamento', life: 1.1, size: 0.4 }); }
-          h.action = t > 2.6 && t < 3.4 ? 'shake' : 'none';
-          if (t > 2.6 && !S.drip) { S.drip = true; dir.sfx('sacudir', { x: h.x, z: h.z }); }
+          once('ry', t > 1.0, () => dir.gesture?.('rhaenyra', 'yawn'));
+          once('r1', t > 1.2, () => dir.say('rhaenyra', 'Hã…? Que cenoura?', { mood: 'sono', mode: 'cena', dur: 1.7 }));
+          h.action = t > 3.0 && t < 3.8 ? 'shake' : 'none';
+          once('drip', t > 3.0, () => {
+            dir.sfx('sacudir', { x: h.x, z: h.z });
+            dir.onomato('CHUÁ!', { at: dir.head('rhaenyra', 0.1), size: 0.8, color: '#7fd1ff', rot: 12 });
+          });
+          once('r2', t > 3.9, () => dir.say('radhija', 'Ué… por que você tá molhada?', { mode: 'cena', dur: 1.8 }));
+          once('r3', t > 5.0, () => { dir.say('rhaenyra', 'Tô? Nem vi!', { mode: 'cena', dur: 1.2 }); dir.gesture?.('rhaenyra', 'tilt'); });
+          // segundo quadro: a promessa, com as apresentações
+          once('p2', t > 6.0, () => {
+            dir.panel('2h', 1, { enter: 'slide', tilt: -1.5 });
+            dir.shot(P3(B.x + 0.6, 0.5, B.z + 1.9), P3(B.x + 0.05, 0.42, B.z), { cut: true });
+            dir.gesture?.('radhija', 'alert');
+            dir.say('radhija', 'Alguém entrou no nosso quarto. E eu vou descobrir quem foi!', { mode: 'cena', dur: 2.6 });
+            dir.caption('RADHIJA', { sub: 'detetive · mandona · morre de medo de trovão', pos: 'bl', dur: 2.6, at: dir.head('radhija') });
+          });
+          once('p3', t > 8.4, () => {
+            dir.gesture?.('rhaenyra', 'wag');
+            dir.say('rhaenyra', 'Eba! Uma investigação!', { mood: 'grito', mode: 'cena', dur: 1.6 });
+            dir.caption('RHAENYRA', { sub: 'assistente · corajosa · meio bobinha', pos: 'br', dur: 2.0, at: dir.head('rhaenyra') });
+            dir.fx('sparkle', { at: dir.head('rhaenyra'), dur: 1.2 });
+          });
           // a Radhija pula da caminha para o chão
-          if (t > 3.3 && !S.radOut) { S.radOut = true; S.rad0 = { x: a.x, z: a.z, yaw: a.yaw }; }
+          if (t > 8.9 && !S.radOut) { S.radOut = true; S.rad0 = { x: a.x, z: a.z, yaw: a.yaw }; }
           if (S.radOut && !S.radDown) {
-            const u = span(t, 3.3, 4.0), e = smooth(u);
+            const u = span(t, 8.9, 9.5), e = smooth(u);
             a.x = lerp(S.rad0.x, st.rad.x, e);
             a.z = lerp(S.rad0.z, st.rad.z, e);
             a.y = lerp(0.12, 0, e) + Math.sin(u * Math.PI) * 0.22;
@@ -305,9 +407,9 @@ export function createOpening(K) {
             if (u >= 1) { S.radDown = true; Object.assign(a, { x: st.rad.x, z: st.rad.z, y: 0, airK: -1, speed: 0, yaw: st.rad.yaw }); }
           }
           // a Rhaenyra pula pelo lado de baixo (longe da irmã) e corre até ela
-          if (t > 4.0 && !S.run) { S.run = true; S.hop0 = { x: h.x, z: h.z }; }
+          if (t > 9.2 && !S.run) { S.run = true; S.hop0 = { x: h.x, z: h.z }; }
           if (S.run && !S.out) {
-            const u = span(t, 4.0, 4.65), e = smooth(u);
+            const u = span(t, 9.2, 9.8), e = smooth(u);
             h.x = lerp(S.hop0.x, rhaOut.x, e);
             h.z = lerp(S.hop0.z, rhaOut.z, e);
             h.y = lerp(0.12, 0, e) + Math.sin(u * Math.PI) * 0.24;
@@ -324,9 +426,30 @@ export function createOpening(K) {
           if (S.out && !dir.walking('rhaenyra')) h.look = P3(a.x, 0.35, a.z);
         },
       },
+      {
+        // a cartela do capítulo, por cima do quarto
+        id: 'titulo', dur: 3.6,
+        enter() {
+          dir.clearSay();
+          dir.comic(false);
+          dir.gesture?.('radhija', null);
+          dir.gesture?.('rhaenyra', null);
+          emit('story:title', { eyebrow: 'Capítulo 1', title: 'As Aventuras de Radhija & Rhaenyra', chapter: 'Cadê a Cenoura?' });
+          dir.music('recanto');
+          dir.shot(P3(B.x + 2.6, 1.5, B.z + 3.6), P3(B.x + 0.6, 0.5, B.z + 1.0), { inT: 1.2 });
+        },
+        tick(_, t) {
+          // a Rhaenyra termina de chegar ao lugar dela
+          const h = dir.actor('rhaenyra');
+          if (S.out && !dir.walking('rhaenyra')) h.look = P3(dir.actor('radhija').x, 0.35, dir.actor('radhija').z);
+          void t;
+        },
+      },
     ],
     cleanup() {
       props.humans.tutora.object.visible = false;
+      dir.gesture?.('radhija', null);
+      dir.gesture?.('rhaenyra', null);
       dir.cleanup({ snap: true });
       dir.fade(0, 0.35);
     },
@@ -337,6 +460,7 @@ export function createOpening(K) {
       dir.ambience('day');
       dir.music('recanto');
       K.setStage('quarto');
+      K.deduction?.ask('quem');
       dir.snapFollow();
     },
   });
@@ -345,8 +469,8 @@ export function createOpening(K) {
 
 // ------------------------------------------------------------------------------------------------ os pombos na janela
 /**
- * Com a trilha, o pote e a pena examinados: lá fora, os pombos passam baixo e torto com a cenoura nas patas. A cartela
- * do capítulo entra no fim.
+ * Com a pergunta "Quem entrou no quarto de noite?" deduzida na árvore de pistas: lá fora, os pombos passam baixo e
+ * torto com a cenoura nas patas. Página de HQ: o voo, o grito, a reação das duas.
  */
 export function createWindowScene(K) {
   const { L, dir, emit } = K;
@@ -354,6 +478,7 @@ export function createWindowScene(K) {
   const cx = (W.x0 + W.x1) / 2;
   const marks = { rad: { x: B.x + 0.9, z: B.z + 1.55, yaw: Math.PI }, rha: { x: B.x + 1.8, z: B.z + 1.95, yaw: Math.PI } };
   const S = {};
+  const once = (key, cond, fn) => { if (cond && !S[key]) { S[key] = true; fn(); } };
   return createScene({
     id: 'janela',
     emit,
@@ -362,13 +487,15 @@ export function createWindowScene(K) {
       dir.hold('radhija', 'rhaenyra');
       dir.walk('radhija', [{ x: marks.rad.x, z: marks.rad.z }], { speed: 2.6, face: Math.PI });
       dir.walk('rhaenyra', [{ x: marks.rha.x, z: marks.rha.z }], { speed: 2.8, face: Math.PI });
+      dir.comic(true);
+      dir.panel('full', 0, { enter: 'zoom' });
       // de perto, por cima da caminha: a janela enche a tela e os pombos passam logo ali fora
       dir.shot(P3(cx + 0.45, 1.05, W.z + 1.0), P3(cx - 0.45, 1.04, W.z - 0.8), { inT: 0.7 });
       dir.music('misterio');
     },
     beats: [
       {
-        id: 'voo', dur: 4.4,
+        id: 'voo', dur: 5.0,
         enter() { dir.sfx('asas', { x: cx, z: W.z - 1.5 }); },
         tick(_, t) {
           const k = span(t, 0.6, 3.9);
@@ -377,18 +504,26 @@ export function createWindowScene(K) {
           const x = t < 1.3 ? lerp(cx - 3.9, cx - 1.25, span(t, 0.6, 1.3))
             : t < 3.1 ? lerp(cx - 1.25, cx + 0.35, span(t, 1.3, 3.1))
               : lerp(cx + 0.35, cx + 4.8, span(t, 3.1, 3.9));
-          if (t > 0.6) flyPack(K, { x, y: 1.0 + Math.sin(t * 2.6) * 0.08, z: W.z - 0.8 }, Math.PI / 2, t);
+          if (t > 0.6 && t < 4.2) flyPack(K, { x, y: 1.0 + Math.sin(t * 2.6) * 0.08, z: W.z - 0.8 }, Math.PI / 2, t);
+          if (t >= 4.2 && !S.gone) { S.gone = true; hideSquad(K); K.props.carrot.object.visible = false; }
           for (const n of ['radhija', 'rhaenyra']) if (!dir.walking(n)) dir.actor(n).look = P3(lerp(cx - 2, cx + 2, k), 1.2, W.z);
           // a câmera acompanha o Farelo um pouco
           dir.lookAt(P3(lerp(cx - 0.45, cx + 0.2, span(t, 1.0, 3.2)), 1.0, W.z - 0.8));
-          if (t > 3.2 && !S.bark) { S.bark = true; dir.bark('radhija'); }
+          once('flap', t > 1.1, () => dir.onomato('FLAP FLAP FLAP', { at: P3(cx - 0.8, 1.35, W.z - 0.8), size: 1.1, color: '#9bd1ff', rot: -8 }));
+          once('l1', t > 1.4, () => dir.say('rhaenyra', 'Olha! Lá fora!', { mood: 'grito', mode: 'cena', dur: 1.3 }));
+          once('l2', t > 2.4, () => dir.say('farelo', 'Foi mal! É por uma boa causa!', { mode: 'cena', dur: 1.7 }));
+          once('l3', t > 3.4, () => {
+            dir.say('radhija', 'A NOSSA CENOURA!', { mood: 'grito', mode: 'cena', dur: 1.5 });
+            dir.fx('speed', { dur: 1.0 });
+            dir.bark('radhija');
+          });
         },
-        leave() { hideSquad(K); K.props.carrot.object.visible = false; },
       },
       {
-        // de frente para as duas: a Radhija aponta a janela e manda; a Rhaenyra faz o rabo-hélice
-        id: 'reacao', dur: 3.4,
+        // de frente para as duas: a Radhija manda; a Rhaenyra faz o rabo-hélice
+        id: 'reacao', dur: 5.0,
         enter() {
+          dir.panel('2v', 0, { enter: 'slide', tilt: -1.5 });
           dir.shot(P3(cx + 0.4, 0.62, W.z + 0.8), P3(B.x + 1.35, 0.38, B.z + 1.75), { cut: true });
           for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = null;
         },
@@ -396,20 +531,17 @@ export function createWindowScene(K) {
           const a = dir.actor('radhija');
           const h = dir.actor('rhaenyra');
           a.press = t > 0.3 && t < 1.9 ? { x: a.x, y: 0.4, z: a.z - 0.34, k: Math.sin(span(t, 0.3, 1.9) * Math.PI) } : null;
-          if (t > 0.4 && !S.say) { S.say = true; dir.balloon(['pombo', 'cenoura', 'ex'], { who: 'radhija', life: 1.9, size: 0.46 }); dir.bark('radhija'); }
-          if (t > 1.3 && !S.mad) { S.mad = true; dir.balloon('raiva', { who: 'radhija', life: 1.2, size: 0.36, up: 0.62 }); }
+          once('s1', t > 0.4, () => { dir.say('radhija', 'Foram os pombos! Eu sabia!', { mode: 'cena', dur: 1.8 }); dir.fx('anger', { at: dir.head('radhija'), dur: 1.2 }); });
           h.look = t < 1.6 ? P3(a.x, 0.35, a.z) : null;
-          h.action = t > 1.8 && t < 2.9 ? 'proud' : 'none';
-          if (t > 1.9 && !S.go) { S.go = true; dir.balloon(['seta', 'porta'], { who: 'rhaenyra', life: 1.3, size: 0.42 }); dir.bark('rhaenyra'); }
+          once('p2', t > 2.2, () => {
+            dir.panel('2v', 1, { enter: 'slide', tilt: 1.5 });
+            dir.gesture?.('rhaenyra', 'wag');
+            dir.say('rhaenyra', 'Bora atrás deles!', { mood: 'grito', mode: 'cena', dur: 1.4 });
+            dir.bark('rhaenyra');
+          });
+          once('s3', t > 3.6, () => dir.say('radhija', 'Pela porta do quintal. Rápido!', { mode: 'cena', dur: 1.5 }));
         },
-        leave() { dir.actor('radhija').press = null; dir.actor('rhaenyra').action = 'none'; },
-      },
-      {
-        id: 'titulo', dur: 3.8,
-        enter() {
-          emit('story:title', { eyebrow: 'Capítulo 1', title: 'As Aventuras de Radhija & Rhaenyra', chapter: 'Cadê a Cenoura?' });
-          dir.music('recanto');
-        },
+        leave() { dir.actor('radhija').press = null; dir.actor('rhaenyra').action = 'none'; dir.gesture?.('rhaenyra', null); },
       },
     ],
     cleanup() { dir.cleanup(); },
@@ -419,6 +551,8 @@ export function createWindowScene(K) {
       K.windowSeen();
       K.placeAt(marks.rad, marks.rha);
       dir.music('recanto');
+      K.deduction?.resolve('quem', { silent: true });
+      K.deduction?.ask('onde');
       K.setStage('casa');
     },
   });
@@ -449,10 +583,10 @@ export function createReconScene(K) {
         },
       },
       {
-        id: 'pista', dur: 1.2,
+        id: 'pista', dur: 2.6,
         enter() {
           K.book.add('boia', K.clueAt('boia'));
-          dir.balloon(['pombo', 'q'], { who: 'radhija', kind: 'pensamento', life: 1.1, size: 0.42 });
+          dir.say('radhija', 'Um pombo levou a boia de patinho… também é de borracha!', { mode: 'cena', dur: 2.4 });
         },
       },
     ],
@@ -463,6 +597,7 @@ export function createReconScene(K) {
     commit() {
       K.book.add('boia', K.clueAt('boia'));
       dir.music('recanto');
+      K.deduction?.ask('borracha');
       K.setStage('varal');
     },
   });
@@ -498,12 +633,19 @@ export function createCodeScene(K) {
               S[id] = true;
               K.lightCode(id, true);
               dir.sfx('bip', { x: wallX, z: IC.buttons.find((b) => b.id === id).z });
-              dir.balloon(id, { at: P3(wallX - 0.25, 1.75 + i * 0.02, IC.buttons.find((b) => b.id === id).z), kind: 'solto', life: 6.2 - K.CODE_TIMES[i], size: 0.34 });
+              const bz = IC.buttons.find((b) => b.id === id).z;
+              dir.onomato(['BIP!', 'BIP!', 'BIP!'][i], { at: P3(wallX - 0.25, 1.35, bz), size: 0.7, color: ['#7fd1ff', '#ff8fc7', '#8ee08e'][i], rot: (i - 1) * 8 });
             }
           });
         },
       },
-      { id: 'pista', dur: 1.0, enter() { K.book.add('senha', K.clueAt('senha')); } },
+      {
+        id: 'pista', dur: 2.6,
+        enter() {
+          K.book.add('senha', K.clueAt('senha'));
+          dir.say('rhaenyra', 'Sino, osso, nota! Decorei!', { mode: 'cena', dur: 2.2 });
+        },
+      },
     ],
     cleanup() {
       reconCode.stop();
@@ -513,6 +655,7 @@ export function createCodeScene(K) {
     commit() {
       K.book.add('senha', K.clueAt('senha'));
       K.codeSeen();
+      K.deduction?.ask('senha', { silent: true });
       dir.music('recanto');
     },
   });
@@ -532,13 +675,20 @@ export function createVaralScene(K) {
       for (const k of Object.keys(S)) delete S[k];
       dir.hold('radhija', 'rhaenyra');
       for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(P.x, P.y, P.z);
-      // do sul, baixo: o varal de perfil, a cenoura no pregador e o cesto embaixo
+      // do sul, baixo: o varal de perfil, a cenoura no pregador e o cesto embaixo (página de HQ)
+      dir.comic(true);
+      dir.panel('2v', 0, { enter: 'wipe', tilt: -1 });
+      dir.lens(34);
       dir.shot(P3(P.x + 1.9, 0.95, P.z + 3.7), P3(P.x - 0.3, 1.1, P.z), { inT: 0.6 });
     },
     beats: [
       {
-        id: 'sacode', dur: 1.0,
-        enter() { dir.sfx('varal', { x: L.LINE.b.x, z: L.LINE.b.z }); },
+        id: 'sacode', dur: 1.2,
+        enter() {
+          dir.sfx('varal', { x: L.LINE.b.x, z: L.LINE.b.z });
+          dir.onomato('TOIM-OIM-OIM!', { at: P3(L.LINE.b.x - 0.4, L.LINE.h + 0.3, L.LINE.b.z), size: 1, color: '#ffb35c', rot: 8, style: 'shake' });
+          dir.fx('shake', { dur: 0.5 });
+        },
         tick(_, t) {
           props.line.shake(Math.exp(-t * 2.2));
           // os pombos se assustam: um pulinho no ar e voltam para o fio
@@ -550,8 +700,14 @@ export function createVaralScene(K) {
         },
       },
       {
-        id: 'cai', dur: 1.5,
-        enter() { props.line.setPin(1); dir.sfx('pregador', { x: P.x, z: P.z }); },
+        id: 'cai', dur: 1.9,
+        enter() {
+          props.line.setPin(1);
+          dir.sfx('pregador', { x: P.x, z: P.z });
+          dir.panel('2v', 1, { enter: 'slide', tilt: 1.5 });
+          dir.lens(26);
+          dir.onomato('PLOC!', { at: P3(P.x, P.y + 0.1, P.z), size: 0.8, color: '#ffffff', rot: -6 });
+        },
         tick(_, t) {
           props.line.shake(Math.exp(-(t + 1.0) * 2.2));
           const c = props.carrot;
@@ -570,7 +726,8 @@ export function createVaralScene(K) {
               S.caught = true;
               grab(K, far);
               dir.sfx('asas', { x: P.x, z: P.z });
-              dir.balloon('ex', { who: 'radhija', life: 1.0, size: 0.42 });
+              dir.onomato('PEGOU!', { at: P3(P.x, P.y - 0.2, P.z), size: 1, color: '#ffd23f', rot: -10 });
+              dir.say('radhija', 'NÃÃÃO!', { mood: 'grito', mode: 'cena', dur: 1.0 });
             }
             const u = smooth(span(t, catchT, 1.5));
             const y0 = P.y - 0.15 - 4.9 * catchT * catchT + 0.2;
@@ -584,7 +741,13 @@ export function createVaralScene(K) {
       {
         // o bando sobe até a caixa d'água da torre: a câmera acompanha
         id: 'voa', dur: 3.6,
-        enter() { dir.sfx('asas', { x: P.x, z: P.z }); dir.balloon(['pombo', 'raiva'], { who: 'radhija', life: 1.4, size: 0.44 }); },
+        enter() {
+          dir.panel('full', 0, { enter: 'pop' });
+          dir.lens(38);
+          dir.sfx('asas', { x: P.x, z: P.z });
+          dir.say('capitao', 'Esquadrão, para a torre!', { mode: 'cena', dur: 1.6 });
+          dir.onomato('FLAP FLAP', { at: P3(P.x - 0.6, P.y + 0.6, P.z), size: 1, color: '#9bd1ff', rot: -6 });
+        },
         tick(_, t) {
           const u = smooth(span(t, 0, 3.4));
           const p = { x: lerp(P.x - 0.9, tank.x, u), y: lerp(lineY + 0.9, tank.y + 0.4, u) + Math.sin(u * Math.PI) * 0.8, z: lerp(P.z + 0.5, tank.z, u) };
@@ -605,7 +768,7 @@ export function createVaralScene(K) {
           dir.sfx('arrulho', { x: tank.x, z: tank.z });
           dir.shot(P3(P.x - 1.7, 0.62, P.z + 1.3), P3(L.TOWER.x0 + 2.2, 3.0, tank.z + 1.4), { inT: 0.5 });
           for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(tank.x, tank.y, tank.z);
-          dir.balloon(['torre', 'seta'], { who: 'rhaenyra', life: 1.4, size: 0.4 });
+          dir.say('rhaenyra', 'Eles foram para a torre!', { mode: 'cena', dur: 1.5 });
         },
       },
     ],
@@ -614,6 +777,7 @@ export function createVaralScene(K) {
       dir.cleanup();
     },
     commit() {
+      K.deduction?.resolve('onde', { silent: true });
       props.line.setPin(1);
       squadOnTank(K);
       K.setStage('torre');
@@ -656,12 +820,15 @@ export function createTerraceScene(K) {
       },
       {
         // as duas correm até a caixa d'água: os pombos lá em cima, a cenoura debaixo da pata do Farelo
-        id: 'corrida', dur: 2.6,
+        id: 'corrida', dur: 3.0,
         enter() {
           dir.fade(0, 0.4);
+          dir.comic(true);
+          dir.panel('full', 0, { enter: 'wipe' });
+          dir.lens(40);
           dir.walk('rhaenyra', [{ x: T.rha.x, z: T.rha.z }], { speed: 2.6 });
           dir.walk('radhija', [{ x: T.rad.x, z: T.rad.z }], { speed: 2.0 });
-          dir.balloon(['cenoura', 'ex'], { who: 'rhaenyra', life: 1.3, size: 0.44 });
+          dir.say('rhaenyra', 'Lá está a cenoura!', { mood: 'grito', mode: 'cena', dur: 1.4 });
         },
         tick() {
           for (const n of ['radhija', 'rhaenyra']) { dir.actor(n).y = T.y; dir.actor(n).look = P3(tank.x, tank.y, tank.z); }
@@ -670,10 +837,14 @@ export function createTerraceScene(K) {
       },
       {
         // a Rhaenyra pula na parede da caixa d'água: quase; os pombos levantam voo com a cenoura
-        id: 'quase', dur: 2.0,
+        id: 'quase', dur: 2.6,
         enter() {
           dir.bark('rhaenyra');
+          dir.panel('2h', 0, { enter: 'slide', tilt: -2 });
           dir.shot(P3(T.rad.x + 0.3, T.y + 0.8, T.rad.z + 2.3), P3(tx0 + 1.2, T.y + 1.9, tank.z + 0.3), { inT: 0.5 });
+          dir.say('capitao', 'Esquadrão, decolar!', { mood: 'grito', mode: 'cena', dur: 1.4 });
+          dir.fx('speed', { dur: 1.2 });
+          dir.onomato('QUAAASE!', { at: P3(tx0 + 0.6, T.y + 1.2, tank.z + 0.6), size: 1.2, color: '#ffd23f', rot: -10, style: 'stretch' });
         },
         tick(_, t) {
           const h = dir.actor('rhaenyra');
@@ -690,8 +861,8 @@ export function createTerraceScene(K) {
       },
       {
         // por cima da mureta: o vento sul leva os pombos por cima do muro, rumo à cidade; ao longe, o relógio parado
-        id: 'vento', dur: 3.8,
-        enter() { dir.shot(P3(T.rad.x - 0.4, T.y + 1.0, T.rad.z - 1.2), P3(T.view.x - 2.5, 7.2, T.view.z), { inT: 1.2 }); },
+        id: 'vento', dur: 4.2,
+        enter() { dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 }); dir.lens(32); dir.shot(P3(T.rad.x - 0.4, T.y + 1.0, T.rad.z - 1.2), P3(T.view.x - 2.5, 7.2, T.view.z), { inT: 1.2 }); },
         tick(_, t) {
           const k = span(t, 0, 3.8);
           flyPack(K, { x: tank.x - 1.2 - k * 5.5, y: tank.y + 1.65 + k * 2.6, z: tank.z - 2.4 - k * 15 }, Math.PI + 0.3, t + 2);
@@ -699,36 +870,40 @@ export function createTerraceScene(K) {
             S.clock = true;
             // ao longe, o relógio da Prefeitura parado (o ícone colado na torre)
             const ca = props.city.clockAt;
-            dir.balloon(['relogio', 'q'], { at: P3(ca.x + 1.6, ca.y + 0.6, ca.z), kind: 'solto', life: 1.6, size: 1.2 });
+            dir.say(null, 'Lá longe, o relógio da Prefeitura parou a uma hora em ponto.', { mode: 'cena', dur: 2.8 });
           }
           for (const n of ['radhija', 'rhaenyra']) { dir.actor(n).y = T.y; dir.actor(n).look = P3(tank.x - 3, 5, tank.z - 9); }
         },
       },
       {
         // de frente para as duas: a Radhija brava, a Rhaenyra sem entender
-        id: 'olham', dur: 1.9,
+        id: 'olham', dur: 3.6,
         enter() {
+          dir.panel('full', 0, { enter: 'pop' });
+          dir.lens(30);
           hideSquad(K);
           props.carrot.object.visible = false;
           dir.shot(P3(T.rad.x + 0.5, T.y + 0.55, T.rad.z - 2.3), P3((T.rad.x + T.rha.x) / 2, T.y + 0.36, (T.rad.z + T.rha.z) / 2), { cut: true });
-          dir.balloon('raiva', { who: 'radhija', life: 1.3, size: 0.42 });
+          dir.say('radhija', 'Voltem aqui, seus ladrões de cenoura!', { mood: 'grito', mode: 'cena', dur: 1.8 });
+          dir.fx('anger', { at: dir.head('radhija'), dur: 1.2 });
         },
         tick(_, t) {
           const a = dir.actor('radhija'), h = dir.actor('rhaenyra');
           a.y = h.y = T.y;
           a.look = P3(h.x, T.y + 0.4, h.z);
           h.look = P3(a.x, T.y + 0.35, a.z);
-          if (t > 0.7 && !S.shrug) { S.shrug = true; dir.balloon(['seta', 'pombo'], { who: 'rhaenyra', kind: 'pensamento', life: 1.1, size: 0.42 }); }
+          if (t > 1.6 && !S.shrug) { S.shrug = true; dir.say('rhaenyra', 'Foram para a rua… pelo portão!', { mode: 'cena', dur: 1.8 }); dir.gesture?.('rhaenyra', 'tilt'); }
         },
       },
       {
         id: 'desce', dur: 0.9, noSkip: true,
-        enter() { dir.fade(1, 0.35); },
+        enter() { dir.fade(1, 0.35); dir.comic(false); dir.gesture?.('rhaenyra', null); },
         tick(_, t) { if (t > 0.4 && !S.back) { S.back = true; downstairs(); } },
       },
     ],
     cleanup() { dir.cleanup({ snap: true }); dir.fade(0, 0.4); },
     commit() {
+      K.deduction?.ask('rua');
       // só o lugar (K.placeAt): uma pose do diretor aqui seguraria as dogs de novo, depois do cleanup
       hideSquad(K);
       props.carrot.object.visible = false;
@@ -765,14 +940,14 @@ export function createSmellScene(K) {
     beats: [
       {
         id: 'cheiro', dur: 1.3,
-        enter() { dir.balloon('cheiro', { at: P3(win().x - 0.2, win().y + 0.2, win().z + 0.1), kind: 'solto', life: 1.3, size: 0.4 }); },
+        enter() { dir.onomato('FUUU…', { at: P3(win().x - 0.2, win().y + 0.2, win().z + 0.1), size: 0.8, color: '#c8f7a1', rot: 6 }); },
         tick(_, t) { props.booth.setVentPuff?.(Math.max(0, 1 - t)); },
       },
       {
         id: 'espirro', dur: 1.0,
         enter() {
           dir.sfx('espirro', { x: bx, z: L.BOOTH.z1 });
-          dir.balloon('ex', { at: P3(win().x, win().y + 0.35, win().z + 0.1), kind: 'solto', life: 0.9, size: 0.44 });
+          dir.onomato('ATCHIM!', { at: P3(win().x, win().y + 0.35, win().z + 0.1), size: 1.1, color: '#ffffff', rot: -8, style: 'shake' });
           props.booth.radio.setOn(false);
         },
       },
@@ -787,9 +962,9 @@ export function createSmellScene(K) {
         enter() {
           props.booth.radio.setOn(true);
           dir.sfx('ronco', { x: bx, z: L.BOOTH.z1 });
-          dir.balloon('zzz', { at: P3(win().x, win().y, win().z), kind: 'solto', life: 1.5, size: 0.44 });
+          dir.say('porteiro', 'Uá… uá… zzz…', { mood: 'sono', mode: 'cena', dur: 1.5 });
         },
-        tick(_, t) { if (t > 0.6 && !S.idea) { S.idea = true; dir.balloon(['latido', 'janela'], { who: 'radhija', kind: 'pensamento', life: 1.0, size: 0.42 }); } },
+        tick(_, t) { if (t > 0.6 && !S.idea) { S.idea = true; dir.say('radhija', 'Janela aberta! Agora, o latido mais forte da casa…', { mood: 'pensa', mode: 'cena', dur: 1.8 }); } },
       },
     ],
     cleanup() {
@@ -824,7 +999,8 @@ export function createPorteiroScene(K) {
       K.snoring = false;
       props.booth.radio.setOn(false);
       dir.shot(P3(bx + 1.9, 1.15, L.BOOTH.z1 + 2.7), P3(win().x, win().y - 0.05, win().z), { inT: 0.5 });
-      dir.balloon('ex', { at: P3(win().x, win().y + 0.3, win().z + 0.1), kind: 'solto', life: 1.0, size: 0.46 });
+      dir.onomato('AU! AU!', { at: P3(win().x - 0.4, win().y, win().z + 0.4), size: 1.3, color: '#ffd23f', rot: -10, style: 'shake' });
+      dir.say('porteiro', 'UÁ?! Uá-uá!', { mood: 'grito', mode: 'cena', dur: 1.2 });
       dir.sfx('ronco-fim', { x: win().x, z: win().z });
     },
     beats: [
@@ -881,7 +1057,7 @@ export function createPorteiroScene(K) {
           p.object.rotation.y = 0.4;
           if (u >= 1) p.object.visible = false;
         },
-        leave() { dir.balloon(['seta', 'pombo'], { who: 'radhija', life: 1.2, size: 0.42 }); },
+        leave() { dir.say('radhija', 'O portão abriu! Atrás dos pombos!', { mode: 'cena', dur: 1.4 }); },
       },
     ],
     cleanup() {
@@ -940,7 +1116,7 @@ export function createClosingScene(K) {
           const k = span(t, 0, 3.0);
           const yaw = Math.atan2(p.x - gx, p.z - St.sidewalk);
           flyPack(K, { x: lerp(gx - 1.5, p.x, 0.35 + k * 0.5), y: 5.4 + Math.sin(t * 2) * 0.2, z: lerp(St.sidewalk - 1, p.z, 0.35 + k * 0.5) }, yaw, t);
-          if (t > 0.8 && !S.point) { S.point = true; dir.balloon(['seta', 'cenoura'], { who: 'radhija', life: 1.8, size: 0.46 }); }
+          if (t > 0.8 && !S.point) { S.point = true; dir.say('radhija', 'Lá vão eles, com a nossa cenoura!', { mode: 'cena', dur: 1.9 }); }
           const a = dir.actor('radhija');
           a.press = t > 0.8 && t < 2.4 ? { x: a.x, y: 0.42, z: a.z - 0.35, k: Math.sin(span(t, 0.8, 2.4) * Math.PI) } : null;
           for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(p.x, 6, p.z);
@@ -967,7 +1143,7 @@ export function createClosingScene(K) {
       },
       {
         id: 'raiva', dur: 1.4,
-        enter() { dir.balloon('raiva', { who: 'radhija', life: 1.2, size: 0.44 }); dir.bark('radhija'); },
+        enter() { dir.say('radhija', 'RHAENYRA! Foco!', { mood: 'grito', mode: 'cena', dur: 1.2 }); dir.fx('anger', { at: dir.head('radhija'), dur: 1.0 }); dir.bark('radhija'); },
         tick(_, t) { if (t > 0.45 && !S.b2) { S.b2 = true; dir.bark('radhija'); } },
       },
       {

@@ -245,7 +245,7 @@ test('trilha da história: o tema do clarinete (recanto) e o do mistério compil
   assert.match(JSON.stringify(THEMES.recanto), /clarinet/, 'o recanto é no clarinete');
 });
 
-test('balões: o atlas tem os ícones do roteiro (com o cone) e os da missão nova, e as "frases" cabem nele', () => {
+test('balões: o atlas de ícones continua inteiro, e as cenas e o jogo falam com texto (sem balão de ícone)', () => {
   for (const id of ['cenoura', 'cone', 'osso', 'coracao', 'q', 'ex', 'raiva', 'zzz', 'seta', 'nota', 'relogio', 'lupa']) {
     assert.ok(BALLOON_ICONS.includes(id), id);
   }
@@ -258,17 +258,14 @@ test('balões: o atlas tem os ícones do roteiro (com o cone) e os da missão no
   const A = BALLOON_ATLAS;
   assert.ok(BALLOON_ICONS.length <= A.iconCells, `os ${BALLOON_ICONS.length} ícones cabem nas ${A.iconCells} casas de ícone`);
   assert.ok(A.iconCells < A.grid * A.grid && A.maxIcons === 3, 'sobram fileiras para os fundos, de 1 a 3 ícones');
-  // todo balão que o puzzle e as cenas mostram usa um ícone que existe
+  // desde 2026-11-10 (pedido do usuário) as cenas e o jogo falam com texto (dir.say: balões de HQ e legendas), sem
+  // balão de ícone: nada no puzzle nem nas cenas usa mais o atlas de ícones
   const files = ['src/story/areas/recanto/puzzle.js', 'src/story/areas/recanto/scenes.js'];
-  const used = new Set();
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
-    for (const m of src.matchAll(/(?:balloons\.show|dir\.balloon)\(\s*(\[[^\]]*\]|'[\w-]+')/g)) {
-      for (const n of m[1].matchAll(/'([\w-]+)'/g)) used.add(n[1]);
-    }
+    assert.equal([...src.matchAll(/(?:balloons\.show|dir\.balloon)\(/g)].length, 0, `balão de ícone em ${f}`);
+    assert.ok(/dir\.say\(/.test(src), `falas com texto em ${f}`);
   }
-  assert.ok(used.size >= 12, `ícones usados: ${used.size}`);
-  assert.deepEqual([...used].filter((n) => !BALLOON_ICONS.includes(n)), [], 'ícone usado que não existe no atlas');
 });
 
 // ---------------------------------------------------------------------------------------------- entrada
