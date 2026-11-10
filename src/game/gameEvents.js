@@ -19,15 +19,15 @@ const RUMBLE = {
   'extra:secret': () => [0.22, 0.5, 380],
 };
 
+/** Eventos de todo quadro, fora do registro de depuração. */
+const UNLOGGED = new Set(['story:sayMove']);
+
 /**
  * O núcleo recebe uma função para calcular o padrão. A decisão de vibrar fica
  * depois do dispatch, inclusive durante a inicialização da entrada.
  * @param {{ dispatch: import('../types').GameEmit, now: () => number,
  *           rumble: (pattern: () => RumblePattern) => void }} deps
  */
-/** Eventos de todo quadro, fora do registro de depuração. */
-const UNLOGGED = new Set(['story:sayMove']);
-
 export function createGameEvents({ dispatch, now, rumble }) {
   /** @type {{ t: number, name: string, payload: object }[]} */
   const log = [];

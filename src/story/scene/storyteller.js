@@ -20,7 +20,7 @@ export const sayDuration = (text) => Math.min(5.5, Math.max(1.6, 0.9 + String(te
 
 /**
  * @param {{ dir: any, emit: (name: string, payload?: object) => void,
- *   anchorOf?: (who: string) => ({ x: number, y: number, z: number } | null) }} opts
+ *   anchorOf?: (who: string) => ({ x: number, y: number, z: number } | null), cam?: () => any }} opts
  *   anchorOf: onde fica a cabeça de quem não é dog (pombos, porteiro); as dogs vêm do diretor.
  *   cam: a câmera da história (para a lente dos planos).
  */

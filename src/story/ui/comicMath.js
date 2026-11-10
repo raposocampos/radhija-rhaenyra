@@ -567,6 +567,7 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
   ];
   const corners = (x, y) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
   // as bordas inclinadas: puxa para o meio do quadro até os quatro cantos caberem
+  /** @param {number[]} p */
   const fit = ([x, y]) => {
     for (let i = 0; i < 14; i++) {
       if (corners(x, y).every((p) => inside(poly, p[0], p[1], -pad * 0.5))) break;

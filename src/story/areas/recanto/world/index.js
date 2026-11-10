@@ -33,6 +33,7 @@ export function buildWorld({ engine, root, layout }) {
   /** @template T @param {string} name @param {() => T} fn @returns {T} */
   const T = (name, fn) => { const t0 = performance.now(); const v = fn(); timings[name] = Math.round(performance.now() - t0); return v; };
   const kit = createKit(root);
+  /** @type {any[]} as peças (cada uma devolve props e, se tiver, update, reset, seeThrough, signs, dispose) */
   const parts = [
     T('base', () => buildBase(kit, root, L)),
     T('casa', () => buildCasa(kit, root, L)),
