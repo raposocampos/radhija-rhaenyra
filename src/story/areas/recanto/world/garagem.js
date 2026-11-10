@@ -1022,12 +1022,11 @@ export function buildGaragem(kit, root, L) {
   {
     const z0 = LP.z + 0.2, z1 = Math.min(z0 + 1.6, GS.bench.z1 - 0.3), y0 = 0.82, y1 = 1.77, zc = (z0 + z1) / 2, yc = (y0 + y1) / 2;
     const BOARD = C('#c9a777'), HOLE = C('#7c6243');
-    const pw = z1 - z0, ph = y1 - y0, cw = pw / Math.round(pw / 0.05), ch = ph / Math.round(ph / 0.05);
-    const board = tilesV(pw, ph, cw, ch, (p) => {
-      const i = Math.round((p.x + pw / 2) / cw - 0.5), j = Math.round((p.y + ph / 2) / ch - 0.5);
-      return i % 2 && j % 2 ? HOLE : BOARD;
-    });
-    deco(board.rotateY(-Math.PI / 2).translate(X0 - 0.012, yc, zc), null);
+    const pw = z1 - z0, ph = y1 - y0, nz = Math.round(pw / 0.1), ny = Math.round(ph / 0.1);
+    // a chapa perfurada: os furinhos a cada 10 cm (de perto, a 3ª pessoa vê um por um)
+    deco(tilesV(pw, ph, pw / 4, ph / 3, (p) => _c.copy(BOARD).multiplyScalar(0.96 + vnoise2(p.x * 3.1, p.y * 3.7) * 0.08)).rotateY(-Math.PI / 2).translate(X0 - 0.012, yc, zc), null);
+    const hole = new THREE.PlaneGeometry(0.018, 0.018).rotateY(-Math.PI / 2);
+    for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) deco(hole, HOLE, { x: X0 - 0.0145, y: y0 + ((j + 0.5) * ph) / ny, z: z0 + ((i + 0.5) * pw) / nz });
     const WOODF = C('#9c7448');
     for (const [dz, dy, w, h] of [[0, ph / 2, pw + 0.04, 0.03], [0, -ph / 2, pw + 0.04, 0.03], [pw / 2, 0, 0.03, ph], [-pw / 2, 0, 0.03, ph]]) {
       deco(rb(0.016, h, w, 0.005, 1).translate(X0 - 0.01, yc + dy - h / 2, zc + dz), WOODF);
@@ -1210,6 +1209,20 @@ export function buildGaragem(kit, root, L) {
     hang(z1 - 0.22);
     deco(new THREE.TorusGeometry(0.11, 0.014, 5, 16).rotateY(Math.PI / 2).translate(x - 0.005, yR - 0.12, z1 - 0.22), C('#7d8589'));
   }
+  // ---------- embaixo da janela, a prateleirinha com os vasos de tempero (pegam o sol da manhã) e o chapéu de palha
+  {
+    const zc = (WIN.z0 + WIN.z1) / 2, y = WIN.y0 - 0.1, x = X1i - 0.085;
+    deco(rb(0.17, 0.025, WIN.z1 - WIN.z0 + 0.24, 0.006, 1).translate(x, y - 0.025, zc), WOODS);
+    for (const z of [WIN.z0 - 0.02, WIN.z1 + 0.02]) deco(rodAB([X1i - 0.01, y - 0.15, z], [X1i - 0.14, y - 0.03, z], 0.007, 4), IRON);
+    for (const h of [{ dz: -0.3, c: '#5d8a3a', r: 0.07 }, { dz: 0, c: '#7d9c3f', r: 0.085 }, { dz: 0.3, c: '#4f8a35', r: 0.065 }]) {
+      deco(cyl(0.055, 0.04, 0.08, 10).translate(x, y, zc + h.dz), C('#c9764f'));
+      deco(sphere(h.r, 8, 6).scale(1, 1.15, 1).translate(x, y + 0.08 + h.r * 0.8, zc + h.dz), C(h.c));
+    }
+    const hz = (WIN.z1 + ZS) / 2 + 0.1, hy = 1.6, STRAW = C('#e6c879');
+    deco(cyl(0.18, 0.18, 0.012, 16).rotateZ(Math.PI / 2).translate(X1i - 0.016, hy, hz), STRAW);
+    deco(sphere(0.095, 12, 8).scale(0.7, 1, 1).translate(X1i - 0.03, hy, hz), STRAW);
+    deco(new THREE.TorusGeometry(0.094, 0.012, 4, 14).rotateY(Math.PI / 2).translate(X1i - 0.034, hy, hz), C('#d0453b'));
+  }
   // ---------- na parede do sul: a escada de madeira deitada nos ganchos, a mangueira velha enrolada e a guia vermelha
   {
     const z = ZS - 0.035, x0 = STUFF.cans.x1 + 0.18, x1 = STUFF.crate.x0 - 0.02, yl = 1.42, yh = 1.76;
@@ -1261,18 +1274,20 @@ export function buildGaragem(kit, root, L) {
   const CR = STUFF.crate;
   const SOCK = L.SOCKS?.find((s) => s.id === 'deposito') ?? { x: (CR.x0 + CR.x1) / 2, z: CR.z0 + 0.2, y: 0.45 };
   {
-    const top = Math.max(0.3, SOCK.y - 0.032), hw = Math.min(0.3, SOCK.x - CR.x0 - 0.04, CR.x1 - SOCK.x - 0.04), hd = Math.min(0.18, SOCK.z - CR.z0 - 0.02);
+    const top = Math.max(0.3, SOCK.y - 0.032), hw = Math.min(0.3, SOCK.x - CR.x0 - 0.04, CR.x1 - SOCK.x - 0.04);
+    // a meia fica em cima dela, perto da frente; a caixa se estende para o sul
+    const cz = SOCK.z + 0.06, hd = Math.min(0.24, cz - CR.z0 - 0.02);
     const h = top - FLOOR;
-    put(rb(hw * 2, h - 0.06, hd * 2, 0.012, 1).translate(SOCK.x, FLOOR, SOCK.z), (p) => _c.set('#c79b63').multiplyScalar(0.94 + (Math.floor((p.x - SOCK.x + 2) / 0.1) % 2) * 0.08));
-    put(rb(hw * 2 + 0.014, 0.06, hd * 2 + 0.014, 0.012, 1).translate(SOCK.x, top - 0.06, SOCK.z), C('#d1a76f'));
-    for (const sx of [-1, 1]) deco(slab(0.04, h - 0.03, hd * 2 + 0.02).translate(SOCK.x + sx * (hw - 0.07), FLOOR + 0.01, SOCK.z), C('#8a6c43'));
+    put(rb(hw * 2, h - 0.06, hd * 2, 0.012, 1).translate(SOCK.x, FLOOR, cz), (p) => _c.set('#c79b63').multiplyScalar(0.94 + (Math.floor((p.x - SOCK.x + 2) / 0.1) % 2) * 0.08));
+    put(rb(hw * 2 + 0.014, 0.06, hd * 2 + 0.014, 0.012, 1).translate(SOCK.x, top - 0.06, cz), C('#d1a76f'));
+    for (const sx of [-1, 1]) deco(slab(0.04, h - 0.03, hd * 2 + 0.02).translate(SOCK.x + sx * (hw - 0.07), FLOOR + 0.01, cz), C('#8a6c43'));
     // o ossinho pintado na frente (para quem entra) e a patinha do lado
-    const zf = SOCK.z - hd - 0.004, yb = FLOOR + h * 0.42;
+    const zf = cz - hd - 0.004, yb = FLOOR + h * 0.42;
     deco(shapeXY([[-0.07, -0.012], [0.07, -0.012], [0.07, 0.012], [-0.07, 0.012]]).rotateY(Math.PI).translate(SOCK.x, yb, zf), C('#fff6e6'));
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) deco(new THREE.CircleGeometry(0.02, 10).rotateY(Math.PI).translate(SOCK.x + sx * 0.075, yb + sy * 0.014, zf), C('#fff6e6'));
     const xw = SOCK.x - hw - 0.004;
-    deco(new THREE.CircleGeometry(0.035, 12).rotateY(-Math.PI / 2).translate(xw, yb, SOCK.z), C('#fff6e6'));
-    for (let i = 0; i < 4; i++) deco(new THREE.CircleGeometry(0.014, 8).rotateY(-Math.PI / 2).translate(xw, yb + Math.sin(0.7 + i * 0.58) * 0.05, SOCK.z + Math.cos(0.7 + i * 0.58) * 0.05), C('#fff6e6'));
+    deco(new THREE.CircleGeometry(0.035, 12).rotateY(-Math.PI / 2).translate(xw, yb, cz), C('#fff6e6'));
+    for (let i = 0; i < 4; i++) deco(new THREE.CircleGeometry(0.014, 8).rotateY(-Math.PI / 2).translate(xw, yb + Math.sin(0.7 + i * 0.58) * 0.05, cz + Math.cos(0.7 + i * 0.58) * 0.05), C('#fff6e6'));
     // atrás da caixa: o saco de ração encostado na parede e as duas tigelas empilhadas
     const zb = Math.min(CR.z1 - 0.12, ZS - 0.12);
     put(rb(0.34, 0.52, 0.17, 0.06, 2).translate(CR.x0 + 0.24, FLOOR, zb), C('#d9772f'));
@@ -1332,7 +1347,7 @@ export function buildGaragem(kit, root, L) {
   for (let i = 0; i < NRAF; i++) deco(rb(0.07, RAF_H, rafLen, 0.012, 1), _c.copy(WOOD_L).multiplyScalar(0.93 + (i % 3) * 0.06).clone(), { x: rafX(i), y: yRaf(RZC), z: RZC, rx: -THETA });
   {
     const NB = Math.round((RZ1 - RZ0) / 0.42);
-    const BAT = C('#b08258');
+    const BAT = C('#a87a52');
     for (let j = 0; j < NB; j++) {
       const z = RZ0 + 0.05 + (j / (NB - 1)) * (RZ1 - RZ0 - 0.1);
       deco(slab(bx1 - bx0 + 0.06, BAT_H, 0.05), BAT, { x: bxc, y: yRaf(z) + RAF_H / COS, z, rx: -THETA });
@@ -1351,7 +1366,7 @@ export function buildGaragem(kit, root, L) {
     const zl = [...span(-LEN / 2, LEN / 2, 8), ...SKYL.flatMap((s) => [lz(s.z0), lz(s.z1)])].sort((a, b) => a - b).filter((v, i, a) => i === 0 || v - a[i - 1] > 0.06);
     const inSky = (x, z) => SKYL.some((s) => x > s.x0 - bxc && x < s.x1 - bxc && z > lz(s.z0) && z < lz(s.z1));
     const sheet = corrugated(span(-W / 2, W / 2, Math.round(W / (PITCH / 4))), zl, PITCH, AMP, SHEET_T, inSky);
-    const TILE = C('#bb6645'), MOSS = C('#7d6a4a'), UNDER = C('#c98f6c');
+    const TILE = C('#bb6645'), MOSS = C('#7d6a4a'), UNDER = C('#dcae8c');
     const tone = (p) => vnoise2(Math.floor(p.x / PITCH + 0.5) * 1.7, Math.floor((p.z + LEN / 2) / 1.2) * 3.1);
     paint(sheet.top, (p) => {
       const moss = smoothstep(0.52, 0.8, fbm2(p.x * 0.9 + 4, p.z * 0.35, 3)) * 0.45;

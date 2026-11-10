@@ -79,7 +79,7 @@ export function createFaro({ root, engine = null, world = null }) {
   const ringGeo = new THREE.RingGeometry(0.2, 0.26, 40).rotateX(-Math.PI / 2);
   /** @type {Map<string, { mesh: THREE.InstancedMesh, mat: THREE.MeshBasicMaterial, base: THREE.Matrix4[], n: number, enabled: boolean }>} */
   const trails = new Map();
-  /** @type {Map<string, { id: string, x: number, y: number, z: number, r: number, kind: string, group: THREE.Group, ring: THREE.Mesh, glow: THREE.Sprite, enabled: boolean, los?: { x: number, z: number } | null, pulse: number }>} */
+  /** @type {Map<string, { id: string, x: number, y: number, z: number, r: number, kind: string, group: THREE.Group, ring: THREE.Mesh, glow: THREE.Sprite, enabled: boolean, los?: { x: number, z: number } | null, pulse: number, pinned: boolean }>} */
   const spots = new Map();
 
   const S = { t: -1, from: { x: 0, z: 0 }, k: 0, sat0: null };

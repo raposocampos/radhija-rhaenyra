@@ -245,6 +245,9 @@ export function createPuzzle(ctx) {
   const CH = L.CHANNEL;
   const channelMouth = world.addDynamic({ id: 'canal-boca', kind: 'water', shape: 'segment', ax: CH.x0 - 0.05, az: CH.z1, bx: CH.x1 + 0.05, bz: CH.z1, t: 0.1 });
   const boatBridge = world.addDynamic({ id: 'barquinho-ponte', kind: 'static', shape: 'box', x: (CH.x0 + CH.x1) / 2, z: (CH.z0 + CH.z1) / 2, hx: (CH.x1 - CH.x0) / 2, hz: (CH.z1 - CH.z0) / 2, blocks: 'large' });
+  // de pé no convés, o pescoço do patinho e a caixa da roda de pá: a Radhija passa ENTRE os dois, nunca por dentro
+  const boatNeck = world.addDynamic({ id: 'barquinho-pescoco', kind: 'static', shape: 'circle', x: L.BOAT.dock.x + 0.35, z: L.BOAT.dock.z, r: 0.09 });
+  const boatWheel = world.addDynamic({ id: 'barquinho-roda', kind: 'static', shape: 'circle', x: L.BOAT.dock.x - 0.36, z: L.BOAT.dock.z, r: 0.1 });
   // a bola e o balde no chão do depósito (depois da queda) também colidem
   const ballCol = world.addDynamic({ id: 'bola', kind: 'static', shape: 'circle', x: L.BALL.x, z: L.BALL.z, r: L.BALL.r });
   const bucketCol = world.addDynamic({ id: 'balde', kind: 'static', shape: 'circle', x: L.SHELF.landing.x, z: L.SHELF.landing.z, r: 0.17 });
@@ -552,6 +555,8 @@ export function createPuzzle(ctx) {
     props.boat?.setPos?.(L.BOAT.dock.x, L.BOAT.dock.z, boatFloat(), 0);
     channelMouth.enabled = false;
     boatBridge.enabled = true;
+    boatNeck.enabled = true;
+    boatWheel.enabled = true;
     emit('story:boat', { docked: true });
   }
 
@@ -1160,6 +1165,8 @@ export function createPuzzle(ctx) {
       butterfly.visible = false;
       channelMouth.enabled = true;
       boatBridge.enabled = false;
+      boatNeck.enabled = false;
+      boatWheel.enabled = false;
       gapPlug.enabled = true;
       ballCol.x = L.BALL.x; ballCol.z = L.BALL.z;
       bucketCol.enabled = false;

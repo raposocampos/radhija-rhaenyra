@@ -68,7 +68,7 @@ export const ROOMS = {
  * sala (na parede z = ROOMS.cozinha.z1).
  */
 export const DOORWAYS = {
-  quartoCozinha: { x: ROOMS.quarto.x1, z0: 4.2, z1: 6.0 },
+  quartoCozinha: { x: ROOMS.quarto.x1, z0: 4.0, z1: 6.0 },
   cozinhaSala: { z: ROOMS.cozinha.z1, x0: -15.7, x1: -14.2 },
 };
 /**
@@ -138,7 +138,7 @@ export const TILES = { x: BRANCH.start.x + 0.05, z: YARD.z0 + 0.75 };
  * A passagem baixa no muro norte do quintal (um arco de escoar água, rente ao chão): só a Radhija cabe. Enquanto o
  * galho não sai, a copa dele tapa a passagem.
  */
-export const YARD_GAP = { x0: -10.5, x1: -9.9, z: YARD.z0, h: 0.42 };
+export const YARD_GAP = { x0: -10.65, x1: -9.75, z: YARD.z0, h: 0.42 };
 /**
  * O ferrolho da porta da área de serviço fica do lado de fora (o norte), com uma argola numa cordinha: a Radhija morde
  * e puxa para o norte; depois de `pull` m, o ferrolho corre e a porta abre.
@@ -198,6 +198,12 @@ export const INTERCOM = {
 };
 /** O saguão logo depois da porta: a Radhija entrando aqui começa a cena da escada e do terraço. */
 export const TOWER_LOBBY = { x0: TOWER.x0 + 0.1, x1: TOWER.x0 + 2.5, z0: u(-7.4), z1: u(-5.0) };
+/** Móveis a mais do deque, da área de serviço e da torre (cenário com colisão; world/comum.js). */
+export const POOL_TABLE = { x: LOUNGERS[0].x + 0.62, z: LOUNGERS[0].z - 0.35, r: 0.2 };
+export const POOL_TOYBOX = { x: POOL.deck.x0 + 0.9, z: RECON.z + 1.5, hx: 0.32, hz: 0.45 };
+export const SERVICE_WASHER = { x: TANKS.x1 + 0.34, z: TANKS.z0 + 0.31, hx: 0.34, hz: 0.31 };
+export const SERVICE_RACK = { x: 2.3, z: WALL.minZ + WALL.t / 2 + 0.34, hx: 0.5, hz: 0.26 };
+export const TOWER_GAS = { x: TOWER.x0 - WALLS.t / 2 - 0.24, z: -14.2, hx: 0.24, hz: 0.5 };
 /** O terraço (só em cena): a casinha da escada e os lugares das irmãs e dos pombos. */
 export const TERRACE = {
   y: TOWER.h, hut: { x: 7.4, z: -9.6 }, rad: { x: 8.6, z: -11.2 }, rha: { x: 9.6, z: -12.2 },
@@ -249,7 +255,7 @@ export const BOAT = { start: { x: 13.0, z: 8.55 }, half: 0.5, height: 0.6, minX:
 export const GOOSE = {
   home: { x: PIER.x1 - 0.55, z: (PIER.z0 + PIER.z1) / 2 },
   patrol: [{ x: PIER.x1 - 0.55, z: (PIER.z0 + PIER.z1) / 2 }, { x: 11.3, z: 9.3 }],
-  radius: 0.22, alertR: 1.6, lureR: 11.0, lureStop: 1.9, curiousTime: 9, walkSpeed: 0.95,
+  radius: 0.27, alertR: 1.6, lureR: 11.0, lureStop: 1.9, curiousTime: 9, walkSpeed: 0.95,
   chargeSpeed: 2.6, chargeTime: 0.7, knockback: 0.9, cooldown: 1.6,
 };
 
@@ -278,6 +284,19 @@ export const STORAGE_STUFF = {
   cans: { x0: STORAGE.x0 + 0.08, x1: STORAGE.x0 + 0.65, z0: WALL.maxZ - 1.2, z1: WALL.maxZ - 0.28 },
   crate: { x0: STORAGE.x1 - 0.82, x1: STORAGE.x1 - 0.1, z0: WALL.maxZ - 1.16, z1: WALL.maxZ - 0.28 },
   brooms: { x0: STORAGE.x1 - 0.42, x1: STORAGE.x1 - 0.1, z0: STORAGE.z0 + 0.08, z1: STORAGE.z0 + 0.36 },
+};
+/** O que fica no chão da garagem e colide (src/story/areas/recanto/world/garagem.js desenha dentro destes lugares). */
+export const GARAGE_STUFF = {
+  // pilares a mais da cobertura: meio da frente, meio do fundo e meio do lado oeste
+  posts: [{ x: CAR.x1 + 0.66, z: CARPORT.z0 }, { x: CAR.x1 + 0.66, z: WALL.maxZ - 0.4 }, { x: CARPORT.x0, z: STORAGE.z0 }],
+  // a bicicleta encostada na parede norte do depósito, por fora
+  bike: { x0: STORAGE.x0 + 0.85, x1: STORAGE.x0 + 2.65, z0: STORAGE.z0 - 0.66, z1: STORAGE.z0 - 0.08 },
+  // o carrinho de mão, no lado oeste
+  barrow: { x0: CARPORT.x0 + 0.3, x1: CARPORT.x0 + 1.0, z0: WALL.maxZ - 3.1, z1: WALL.maxZ - 1.5 },
+  // a bancada de ferramentas no muro do fundo, entre o pilar do meio e o depósito
+  bench: { x0: STORAGE.x0 - 2.07, x1: STORAGE.x0 - 0.37, z0: WALL.maxZ - 0.82, z1: WALL.maxZ - 0.2 },
+  // a pilha de pneus velhos no canto sudoeste
+  tires: { x: CARPORT.x0 + 0.66, z: WALL.maxZ - 0.62, r: 0.36 },
 };
 
 // ---------------------------------------------------------------- colecionáveis e pistas
@@ -333,7 +352,7 @@ export const TREES = [
 ];
 export const TREE_TRUNK_R = 0.25;
 export const BENCHES = [
-  P(-8.6, -6.0, { yaw: Math.PI / 2 }), { x: 15.3, z: -5.2, yaw: 0 }, // o segundo de frente para o lago
+  { x: u(-8.6), z: u(-6.0), yaw: Math.PI / 2 }, { x: 15.3, z: -5.2, yaw: 0 }, // o segundo de frente para o lago
   { x: -17.2, z: -5.6, yaw: Math.PI / 2 }, { x: 11.6, z: 11.2, yaw: Math.PI },
 ];
 export const LAMPS = [
@@ -451,6 +470,11 @@ export const STATIC_COLLIDERS = [
   boxAt('filtro-piscina', POOL_FILTER),
   circle('ducha', POOL_SHOWER.x, POOL_SHOWER.z, POOL_SHOWER.r),
   ...POOL_POTS.map((p, i) => circle(`vaso-piscina-${i + 1}`, p.x, p.z, p.r)),
+  circle('mesinha-piscina', POOL_TABLE.x, POOL_TABLE.z, POOL_TABLE.r),
+  boxAt('bau-das-boias', POOL_TOYBOX),
+  boxAt('maquina-de-lavar', SERVICE_WASHER),
+  boxAt('varal-de-chao', SERVICE_RACK),
+  boxAt('abrigo-do-gas', TOWER_GAS),
   // área de serviço (o cesto de roupa é dinâmico)
   box('tanques', TANKS.x0, TANKS.z0, TANKS.x1, TANKS.z1),
   circle('poste-varal-oeste', LINE.a.x, LINE.a.z, LINE.postR + 0.03),
@@ -478,6 +502,11 @@ export const STATIC_COLLIDERS = [
   seg('deposito-leste', STORAGE.x1, STORAGE.z0, STORAGE.x1, STORAGE.z1, wt),
   circle('garagem-pilar-1', CARPORT.x0, CARPORT.z0, 0.1), circle('garagem-pilar-2', CARPORT.x1, CARPORT.z0, 0.1),
   circle('garagem-pilar-3', CARPORT.x0, WALL.maxZ - 0.4, 0.1),
+  ...GARAGE_STUFF.posts.map((p, i) => circle(`garagem-pilar-${i + 4}`, p.x, p.z, 0.1)),
+  box('garagem-bicicleta', GARAGE_STUFF.bike.x0, GARAGE_STUFF.bike.z0, GARAGE_STUFF.bike.x1, GARAGE_STUFF.bike.z1),
+  box('garagem-carrinho-de-mao', GARAGE_STUFF.barrow.x0, GARAGE_STUFF.barrow.z0, GARAGE_STUFF.barrow.x1, GARAGE_STUFF.barrow.z1),
+  box('garagem-bancada', GARAGE_STUFF.bench.x0, GARAGE_STUFF.bench.z0, GARAGE_STUFF.bench.x1, GARAGE_STUFF.bench.z1),
+  circle('garagem-pneus', GARAGE_STUFF.tires.x, GARAGE_STUFF.tires.z, GARAGE_STUFF.tires.r),
   // dentro do depósito: as latas de tinta, a caixa de brinquedos com o saco de ração (a meia fica em cima dela) e a
   // vassoura com o rastelo
   box('deposito-latas', STORAGE_STUFF.cans.x0, STORAGE_STUFF.cans.z0, STORAGE_STUFF.cans.x1, STORAGE_STUFF.cans.z1),
@@ -495,8 +524,8 @@ export const STATIC_COLLIDERS = [
 // ---------------------------------------------------------------- navegação da companheira
 /** @type {Record<string, import('../../../types').XZ>} */
 export const NAV_NODES = {
-  Q_bed: P(-12.0, 3.5), Q_mid: { x: -20.4, z: 5.9 }, Q_door: { x: -18.5, z: 5.4 }, Q_flap: { x: -18.3, z: 4.5 },
-  K_flap: { x: -17.0, z: 4.5 }, K_gate: { x: -16.6, z: 5.4 }, K_pedal: { x: PET_PEDAL.x + 0.1, z: PET_PEDAL.z + 0.2 },
+  Q_bed: P(-12.0, 3.5), Q_mid: { x: -20.4, z: 5.9 }, Q_door: { x: -18.5, z: 5.4 }, Q_flap: { x: -18.3, z: 4.4 },
+  K_flap: { x: -17.0, z: 4.4 }, K_gate: { x: -16.6, z: 5.4 }, K_pedal: { x: PET_PEDAL.x + 0.1, z: PET_PEDAL.z + 0.2 },
   K_mid: P(-8.9, 2.75), K_door: { x: -12.9, z: 4.84 }, K_sala: { x: -14.95, z: ROOMS.cozinha.z1 }, S_mid: P(-10.6, 6.4),
   Y_door: { x: -10.5, z: 4.84 }, Y_mid: P(-5.2, 4.6), Y_south: P(-4.6, 7.8), Y_gate: { x: -8.2, z: 4.0 },
   Y_gap: { x: -10.2, z: 2.9 }, C_gap: { x: -10.2, z: 1.2 }, C_bolt: { x: -7.95, z: 1.2 },
@@ -587,8 +616,8 @@ const LAYOUT = {
   BED, BOWL, WARDROBE, TOY_BASKET, RUG, DRESSER, COUNTER, FRIDGE, KITCHEN_TABLE, SOFA, TV_RACK, COFFEE_TABLE, ARMCHAIR,
   KITCHEN_DOOR, KITCHEN_HANDLE, FOOD_SACK, YARD, SERVICE_DOOR, BRANCH, TILES, YARD_GAP, SERVICE_BOLT, DOGHOUSE, YARD_BEDS,
   POOL, RECON, LOUNGERS, UMBRELLA, POOL_FILTER, POOL_SHOWER, POOL_POTS, SERVICE, TANKS, DRAIN, LINE, CARROT_PIN, DASH_POST,
-  LAUNDRY, TOWER, TOWER_DOOR, INTERCOM, TOWER_LOBBY, TERRACE, BOOTH, ANTENNA, BOOTH_VENT, BIN, BIN_SPOT, CLIMB, LAKE, PIER,
-  BOAT, CHANNEL, GOOSE, CARPORT, CAR, WHEELS, STORAGE, STORAGE_DOOR, BALL, SHELF, ROPE, STORAGE_STUFF, COLLECTIBLES,
+  LAUNDRY, TOWER, TOWER_DOOR, INTERCOM, TOWER_LOBBY, POOL_TABLE, POOL_TOYBOX, SERVICE_WASHER, SERVICE_RACK, TOWER_GAS, TERRACE, BOOTH, ANTENNA, BOOTH_VENT, BIN, BIN_SPOT, CLIMB, LAKE, PIER,
+  BOAT, CHANNEL, GOOSE, CARPORT, CAR, WHEELS, STORAGE, STORAGE_DOOR, BALL, SHELF, ROPE, STORAGE_STUFF, GARAGE_STUFF, COLLECTIBLES,
   COLLECTIBLE_PICKUP_R, SOCKS, SOCK_PICKUP_R, CLUE_SPOTS, CARROT_TRAIL, TREES, TREE_TRUNK_R, BENCHES, LAMPS,
   ELECTION_POSTER, BEDS,
   DOGS: {

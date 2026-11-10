@@ -1603,9 +1603,11 @@ function buildGreens(kit, L, shore) {
     if (Math.hypot(x - L.BIN.start.x, z - L.BIN.start.z) < 0.6) return false;
     return true;
   };
-  const addTuft = (x, z, s) => kit.add(tufts[Math.floor(R() * 3)], { color: null, slot: 'plant', x, z, sx: s, sy: s * (0.85 + R() * 0.3), sz: s, ry: R() * 6.28, ...o });
-  const addFlower = (x, z) => kit.add(FLOWERS[Math.floor(R() * FLOWERS.length)], { color: null, slot: 'plant', x, z, sx: 1.15, sy: 1 + R() * 0.3, sz: 1.15, ry: R() * 6.28, ...o });
-  const addClover = (x, z) => kit.add(clovers[Math.floor(R() * 2)], { color: null, slot: 'plant', x, z, sx: 1.2, sz: 1.2, ry: R() * 6.28, ...o });
+  // o pé de cada tufo fica 6 mm enterrado: a base das hastes não briga com o gramado (z-fighting)
+  const SINK = -0.006;
+  const addTuft = (x, z, s) => kit.add(tufts[Math.floor(R() * 3)], { color: null, slot: 'plant', x, y: SINK, z, sx: s, sy: s * (0.85 + R() * 0.3), sz: s, ry: R() * 6.28, ...o });
+  const addFlower = (x, z) => kit.add(FLOWERS[Math.floor(R() * FLOWERS.length)], { color: null, slot: 'plant', x, y: SINK, z, sx: 1.15, sy: 1 + R() * 0.3, sz: 1.15, ry: R() * 6.28, ...o });
+  const addClover = (x, z) => kit.add(clovers[Math.floor(R() * 2)], { color: null, slot: 'plant', x, y: SINK, z, sx: 1.2, sz: 1.2, ry: R() * 6.28, ...o });
   // as folhas ficam um pouco reviradas (nenhuma face deitada no mesmo plano de uma poça ou de um caminho)
   const addLeaf = (x, z) => { const s = 0.03 + R() * 0.022; kit.add(LEAF, { color: LEAVES[Math.floor(R() * LEAVES.length)], slot: 'plant', x, y: 0.031 + R() * 0.004, z, sx: s, sz: s * 0.5, rx: (R() < 0.5 ? -1 : 1) * (0.1 + R() * 0.12), ry: R() * 6.28, rz: (R() < 0.5 ? -1 : 1) * (0.1 + R() * 0.14), ...o }); };
   // a cinta do lago: capim na beirada da areia, florzinhas e trevos um pouco mais para fora
@@ -1785,7 +1787,7 @@ function buildBoat(root, L, live) {
   // as asas nos flancos (o norte e o sul: as pranchas passam por cima delas)
   for (const s of [-1, 1]) parts.push(part(new THREE.SphereGeometry(1, 14, 10), '#f4b324', { x: -0.05, y: 0.17, z: s * 0.478, sx: 0.2, sy: 0.075, sz: 0.035, rz: 0.15 }));
   // o pescoço com o lenço vermelho, a cabeça (bochechas, olhos com brilho, bico) e o topete
-  const NX = 0.31, HX = 0.335, HY = 0.62, HR = 0.15;
+  const NX = 0.35, HX = 0.375, HY = 0.62, HR = 0.15;
   parts.push(part(cyl(0.068, 0.088, 0.26, 14), '#ffcf33', { x: NX, y: DECK - 0.02 }));
   parts.push(part(new THREE.TorusGeometry(0.078, 0.02, 6, 16).rotateX(Math.PI / 2), '#e8463c', { x: NX, y: 0.43 }));
   parts.push(part(new THREE.ConeGeometry(0.03, 0.09, 6), '#d63a31', { x: NX - 0.09, y: 0.4, rz: 2.6 }));
@@ -1799,9 +1801,9 @@ function buildBoat(root, L, live) {
   }
   for (const [dx, dz, rx] of [[-0.03, -0.016, -0.35], [-0.01, 0, 0], [-0.03, 0.016, 0.35]]) parts.push(part(new THREE.ConeGeometry(0.02, 0.07, 6), '#ffcf33', { x: HX + dx, y: HY + HR - 0.012, z: dz, rx, rz: 0.5 }));
   // a caixa da roda de pá na popa (branca com a faixa vermelha) e a cauda arrebitada em cima dela
-  parts.push(part(new THREE.CylinderGeometry(0.1, 0.1, 0.19, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), '#f7f2e8', { x: -0.34, y: DECK }));
-  parts.push(part(new THREE.CylinderGeometry(0.103, 0.103, 0.03, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), '#e8463c', { x: -0.34, y: DECK }));
-  parts.push(part(new THREE.ConeGeometry(0.075, 0.17, 12), '#ffcf33', { x: -0.415, y: DECK + 0.12, sz: 0.6, rz: 0.9 }));
+  parts.push(part(new THREE.CylinderGeometry(0.1, 0.1, 0.19, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), '#f7f2e8', { x: -0.36, y: DECK }));
+  parts.push(part(new THREE.CylinderGeometry(0.103, 0.103, 0.03, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), '#e8463c', { x: -0.36, y: DECK }));
+  parts.push(part(new THREE.ConeGeometry(0.075, 0.17, 12), '#ffcf33', { x: -0.435, y: DECK + 0.12, sz: 0.6, rz: 0.9 }));
   // a bandeirinha num canto da popa (fora das pranchas e do corredor por onde a Radhija passa)
   const fl = link([-0.4, DECK, -0.25], [-0.4, 0.62, -0.25], 0.006, 5);
   parts.push(part(fl.g, '#f4efe6', { x: fl.x, y: fl.y, z: fl.z }));

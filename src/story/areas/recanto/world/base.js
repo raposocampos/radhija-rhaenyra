@@ -464,6 +464,7 @@ export function buildBase(kit, root, L) {
   const W2 = { x0: Dk.x0 - 1.35, x1: Dk.x0 - 0.15, z0: Sv.z1, z1: zw0, dir: 'z' };
   const W3 = { x0: Dk.x1 + 0.45, x1: Tw.x0 - 0.36, z0: Sv.z1, z1: zw0, dir: 'z' };
   const W4 = { x0: W3.x1, x1: plaza.x0 + 1.3, z0: Tw.z1 + 0.95, z1: Tw.z1 + 2.25, dir: 'x' };
+  /** @type {{ x0: number, x1: number, z0: number, z1: number, dir: string, border?: boolean, endA?: boolean, basket?: boolean }[]} */
   const PATHS = [
     W1, W2, W3, W4,
     { x0: W2.x1, x1: W3.x0, z0: Sv.z1 + 0.06, z1: Dk.z0 - 0.06, dir: 'x', border: false }, // entre o deque e a área de serviço
