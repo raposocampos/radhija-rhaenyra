@@ -41,7 +41,8 @@ const stageIndex = (s) => STAGES.indexOf(s);
 const OBJECTIVES = {
   quarto: 'A cenoura sumiu! Farejem o quarto',
   casa: 'Atrás dos pombos! Saiam de casa',
-  galho: 'Tirem o galho da frente da porta',
+  quintal: 'Atrás dos pombos! Saiam pela porta do quintal',
+  galho: 'Tem uma passagem no muro, atrás do galho',
   ferrolho: 'O ferrolho fica do outro lado do muro',
   piscina: 'Farejem o rastro dos pombos',
   varal: 'A cenoura está no varal!',
@@ -58,8 +59,8 @@ const HINTS = {
   pedal: 'O pedal solta a grade: pise nele.',
   saco: 'O saco de ração está na frente da maçaneta: a Rhaenyra empurra (segure Shift).',
   maçaneta: 'A maçaneta é alta: troque (Q) e pule na porta com a Rhaenyra.',
-  galho: 'O galho trava a porta: a Rhaenyra empurra (segure Shift).',
-  ferrolho: 'A porta tem ferrolho por fora. Procure uma passagem para a Radhija.',
+  galho: 'A porta tem ferrolho por fora. O galho tapa a passagem do muro: a Rhaenyra empurra (segure Shift).',
+  ferrolho: 'A porta tem ferrolho por fora: a Radhija cabe na passagem do muro.',
   argola: 'A Radhija puxa a argola do ferrolho com a boca (E).',
   cesto: 'Se a cenoura cair no chão, os pombos pegam: ponha o cesto de roupa embaixo dela.',
   poste: 'Com o cesto no lugar, a arrancada da Radhija no poste solta o pregador.',
@@ -251,7 +252,7 @@ export function createPuzzle(ctx) {
   // a bola e o balde no chão do depósito (depois da queda) também colidem
   const ballCol = world.addDynamic({ id: 'bola', kind: 'static', shape: 'circle', x: L.BALL.x, z: L.BALL.z, r: L.BALL.r });
   const bucketCol = world.addDynamic({ id: 'balde', kind: 'static', shape: 'circle', x: L.SHELF.landing.x, z: L.SHELF.landing.z, r: 0.17 });
-  // a copa do galho tapa a passagem baixa do muro do quintal (só a Radhija passaria) até o galho sair
+  // o galho fica na frente da passagem baixa do muro do quintal (só a Radhija passaria) até ser empurrado
   const YG = L.YARD_GAP;
   const gapPlug = world.addDynamic({ id: 'galho-copa', kind: 'static', shape: 'box', x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.2, hx: (YG.x1 - YG.x0) / 2 + 0.1, hz: 0.3, blocks: 'small' });
   // o Superbafo entra pela grelha da guarita e sai lá dentro, no nariz do porteiro
@@ -536,6 +537,25 @@ export function createPuzzle(ctx) {
     emit('story:sock', { id, count: S.socks.size, total: L.SOCKS.length, x: def?.x, y: def?.y, z: def?.z });
   }
 
+  // ---------------------------------------------------------------- a porta do quintal, trancada por fora
+  /** A dog tenta a porta do quintal: ela chacoalha e não abre; a câmera mostra o galho na frente da passagem do muro. */
+  function tryServiceDoor(c) {
+    if (S.rattleCd > 0) return;
+    S.rattleCd = 2;
+    const sd = L.SERVICE_DOOR, YG = L.YARD_GAP;
+    emit('story:sfx', { name: 'trancado', x: sd.hinge.x, z: sd.hinge.z });
+    // a câmera mostra a passagem baixa do muro (uma vez) e o objetivo passa a apontar para o galho ou para ela
+    if (!S.gapShown) {
+      S.gapShown = true;
+      cam()?.focusShot?.((YG.x0 + YG.x1) / 2, YG.z + 0.3, { hold: 1.6, inT: 0.6, outT: 0.7, scale: 0.7 });
+      emit('objective', puzzle.objective(ctx.activeDog));
+    }
+    balloons.show(['porta', 'x'], { follow: () => dir.head(c.name, 0.32), kind: 'pensamento', life: 1.6, size: 0.42 });
+    if (!S.branchFree) {
+      balloons.show('ex', { at: { x: branch.x, y: 0.95, z: branch.z }, kind: 'solto', life: 1.6, size: 0.36 });
+      hints.now('galho', 4.6, 6);
+    } else hints.now('ferrolho', 4.2, 6);
+  }
   // ---------------------------------------------------------------- o barquinho encaixando no canal (paralelo A)
   const boatFloat = () => props.boat?.floatY ?? -0.15;
   function stepDock(dt) {
@@ -650,7 +670,7 @@ export function createPuzzle(ctx) {
       kitchenDoor.setTarget(1); kitchenDoor.set?.(1); kitchenDoor.lock();
     },
     piscina() {
-      branch.setPos(L.BRANCH.maxX, L.BRANCH.start.z);
+      branch.setPos(L.BRANCH.minX, L.BRANCH.start.z);
       S.branchFree = true;
       book.add('telhas', { silent: true });
       S.boltOpen = true;
@@ -718,8 +738,10 @@ export function createPuzzle(ctx) {
         }
         case 'casa': return T(OBJECTIVES.casa, { x: L.KITCHEN_HANDLE.x - 0.25, z: L.KITCHEN_HANDLE.z }, 1.3);
         case 'quintal':
+          // primeiro a porta (trancada por fora); depois o galho na frente da passagem; por fim, a passagem
+          if (!S.gapShown) return T(OBJECTIVES.quintal, doorMid(sd), 1.2);
           if (!S.branchFree) return T(OBJECTIVES.galho, branch, 0.9);
-          return T(OBJECTIVES.ferrolho, S.gapShown ? { x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.5 } : doorMid(sd), S.gapShown ? 0.6 : 1.2);
+          return T(OBJECTIVES.ferrolho, { x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.5 }, 0.6);
         case 'piscina': return T(OBJECTIVES.piscina, L.RECON, 0.6);
         case 'varal': return T(OBJECTIVES.varal, L.CARROT_PIN, L.CARROT_PIN.y + 0.4);
         case 'torre':
@@ -865,8 +887,10 @@ export function createPuzzle(ctx) {
       // gatilhos da missão
       const rad = R('radhija');
       if (playing) {
-        if (after('quintal') && !book.has('telhas') && branch.x >= L.BRANCH.start.x + 0.6) book.add('telhas', K.clueAt('telhas'));
-        if (!S.branchFree && branch.x >= L.BRANCH.freeX) {
+        if (after('quintal') && !book.has('telhas') && Math.abs(branch.x - L.BRANCH.start.x) >= 0.5) book.add('telhas', K.clueAt('telhas'));
+        // chegando à porta do quintal, as dogs já percebem que ela não abre por dentro
+        if (S.stage === 'quintal' && !S.gapShown && !S.serviceOpen && active.z > L.YARD.z0 && near(active, doorMid(sd), 0.95)) tryServiceDoor(active);
+        if (!S.branchFree && branch.x <= L.BRANCH.freeX) {
           S.branchFree = true;
           emit('objective', puzzle.objective(ctx.activeDog));
         }
@@ -951,23 +975,7 @@ export function createPuzzle(ctx) {
       }
       // a porta da área de serviço: o ferrolho fica do outro lado
       if (st === 'quintal' && !S.serviceOpen && c.z > L.YARD.z0 && near(c, doorMid(sd), 1.45)) {
-        if (S.rattleCd <= 0) {
-          S.rattleCd = 2;
-          emit('story:sfx', { name: 'trancado', x: sd.hinge.x, z: sd.hinge.z });
-          if (!S.branchFree) {
-            balloons.show('ex', { at: { x: branch.x, y: 0.95, z: branch.z }, kind: 'solto', life: 1.2, size: 0.36 });
-            hints.now('galho', 3.4, 6);
-          } else {
-            // a câmera mostra a passagem baixa do muro (uma vez) e o objetivo passa a apontar para ela
-            if (!S.gapShown) {
-              S.gapShown = true;
-              cam()?.focusShot?.((YG.x0 + YG.x1) / 2, YG.z + 0.3, { hold: 1.6, inT: 0.6, outT: 0.7, scale: 0.7 });
-              emit('objective', puzzle.objective(ctx.activeDog));
-            }
-            balloons.show(['porta', 'x'], { follow: () => dir.head(c.name, 0.32), kind: 'pensamento', life: 1.6, size: 0.42 });
-            hints.now('ferrolho', 4.2, 6);
-          }
-        }
+        tryServiceDoor(c);
         return true;
       }
       // a argola do ferrolho, do lado de fora: a Radhija morde e puxa

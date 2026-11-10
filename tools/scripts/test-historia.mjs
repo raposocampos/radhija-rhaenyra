@@ -309,19 +309,20 @@ try {
 
   console.log('\n== O quintal: o galho, a passagem do muro e a argola do ferrolho ==');
   const sdx = (LY.sdoor.hinge.x + LY.sdoor.latchPost.x) / 2;
-  await tp('rhaenyra', LY.branch.start.x - LY.branch.half - 0.26, LY.branch.start.z, Math.PI / 2);
-  await H.sleep(300);
-  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.branchFree, { timeout: 14000, label: 'empurrar o galho' });
-  check(i.story.flags.branchFree, 'a Rhaenyra empurra o galho para longe da porta', i.story.flags);
-  check(i.story.clues.includes('telhas'), 'as telhas da tempestade (caso 2) na lupa', i.story.clues);
   await tp('rhaenyra', sdx - 0.2, LY.sdoor.hinge.z + 0.8, Math.PI);
   await press('KeyE', 900);
   i = await info();
   check(!i.story.flags.serviceOpen, 'o E na porta não abre: o ferrolho fica do outro lado', i.story.flags);
-  check((await ev(() => document.querySelector('.rr-objective')?.innerText || '')).includes('ferrolho'), 'o objetivo aponta o ferrolho do outro lado do muro');
+  check((await ev(() => document.querySelector('.rr-objective')?.innerText || '')).includes('galho'), 'o objetivo aponta a passagem atrás do galho');
   await H.sleep(2800); // o plano da câmera na passagem do muro
+  await tp('rhaenyra', LY.branch.start.x + LY.branch.half + 0.26, LY.branch.start.z, -Math.PI / 2);
+  await H.sleep(300);
+  i = await holdUntil([...keysFor(-1, 0), 'ShiftLeft'], (x) => x.story.flags.branchFree, { timeout: 14000, label: 'empurrar o galho' });
+  check(i.story.flags.branchFree, 'a Rhaenyra empurra o galho para longe da passagem', i.story.flags);
+  check(i.story.clues.includes('telhas'), 'as telhas da tempestade (caso 2) na lupa', i.story.clues);
+  check((await ev(() => document.querySelector('.rr-objective')?.innerText || '')).includes('ferrolho'), 'o objetivo aponta o ferrolho do outro lado do muro');
   await become('radhija');
-  const gapX = (LY.gap.x0 + LY.gap.x1) / 2;
+  const gapX = LY.gap.x1 - 0.3;
   await tp('radhija', gapX, LY.gap.z + 0.8, Math.PI);
   await H.sleep(300);
   await walkTo(gapX, LY.gap.z - 0.9, { timeout: 10000, tol: 0.16 });

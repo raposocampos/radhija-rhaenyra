@@ -475,10 +475,9 @@ tempestade da véspera estão pelo chão.
    - Na porta do quintal, o saco de ração está bem na frente da maçaneta. A Rhaenyra o empurra para o lado e abre a
      porta com o impulso na maçaneta de alavanca.
 3. **O quintal.**
-   - Um galho da tempestade bloqueia a porta da área de serviço, e a Rhaenyra o empurra para o lado. Embaixo dele,
-     as telhas.
-   - A porta continua fechada: o ferrolho fica do lado de fora. A copa do galho tapava uma passagem baixa no muro.
-     A Radhija passa por ela e puxa a argola do ferrolho com a boca.
+   - A porta da área de serviço não abre: o ferrolho fica do lado de fora. Um galho da tempestade caiu na frente de
+     uma passagem baixa no muro, e a Rhaenyra o empurra para o lado. Embaixo dele, as telhas.
+   - A Radhija passa pela passagem e puxa a argola do ferrolho com a boca.
 4. **A piscina.** O Faro mostra a primeira Reconstrução: um pombo levando a boia de patinho murcha da piscina.
 5. **Área de serviço.** Os pombos pousaram no varal para descansar, e a cenoura enroscou num pregador.
    - Sacudir o varal não basta: se a cenoura cair no chão, os pombos pegam. A Rhaenyra empurra o cesto de roupa até

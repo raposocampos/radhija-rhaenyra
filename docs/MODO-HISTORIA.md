@@ -201,7 +201,8 @@ quarto, o aviso do Faro também é tocável.
 - **A missão:**
   1. o quarto: farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela e a cartela;
   2. a casa: a portinha de gato e o pedal da grade (Radhija); o saco de ração e a maçaneta (Rhaenyra);
-  3. o quintal: o galho (Rhaenyra); a passagem do muro e a argola do ferrolho (Radhija);
+  3. o quintal: a porta trancada por fora; o galho na frente da passagem do muro (Rhaenyra); a passagem e a argola do
+     ferrolho (Radhija);
   4. a piscina: o Faro mostra a Reconstrução;
   5. o varal: o cesto embaixo da cenoura (Rhaenyra) e a arrancada no poste (Radhija);
   6. a torre: a senha do interfone, que o Faro mostra; a porta de mola com a irmã segurando, até o terraço;

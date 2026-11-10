@@ -14,8 +14,8 @@
 //     PEDAL solta a grade. Na porta do quintal, o SACO DE RAÇÃO está na frente da maçaneta (a Rhaenyra empurra e
 //     depois alcança a alavanca com o impulso).
 //   QUINTAL, a leste da casa: a PORTA DA ÁREA DE SERVIÇO, no muro norte, tem o ferrolho do outro lado e está travada
-//     por um GALHO da tempestade (a Rhaenyra empurra para o leste; embaixo, as telhas). A copa do galho tapava a
-//     PASSAGEM baixa do muro: a Radhija passa por ela e puxa a argola do ferrolho pelo outro lado.
+//     (a argola fica do lado de fora). Um GALHO da tempestade caiu na frente da PASSAGEM baixa do muro (a Rhaenyra
+//     empurra para o oeste; embaixo, as telhas): a Radhija passa por ela e puxa a argola do ferrolho pelo outro lado.
 //   PISCINA, no meio: a marca molhada da boia de patinho, a oeste, é onde o Faro mostra a Reconstrução.
 //   ÁREA DE SERVIÇO, encostada no muro norte: tanques (o ralo sem a rolha) e o VARAL, onde a cenoura ficou presa num
 //     pregador. A Rhaenyra empurra o CESTO de roupa para baixo dela e a arrancada da Radhija no poste do leste solta.
@@ -128,22 +128,31 @@ export const SERVICE_DOOR = {
   closedYaw: -Math.PI / 2, openYaw: -Math.PI / 2 - Math.PI * 0.55, openTime: 1.0, closeTime: 1.0, h: 1.9,
 };
 /**
- * O galho da tempestade encostado na porta, do lado do quintal (caixa empurrável de meia medida `half`): a Rhaenyra
- * empurra para o leste; depois de `freeX`, a porta e a passagem do muro ficam livres. Embaixo dele, as telhas
- * quebradas (pista do caso 2). A copa do galho se estende `crown` m para o oeste do tronco e tapa a passagem.
+ * A passagem baixa no muro norte do quintal (um arco de escoar água, rente ao chão): só a Radhija cabe. Fica a oeste
+ * da porta, fora do arco da folha.
  */
-export const BRANCH = { start: { x: -8.2, z: YARD.z0 + 0.66 }, half: 0.46, height: 0.55, minX: -8.2, maxX: YARD.x1 - WALLS.t / 2 - 0.48, minZ: YARD.z0 + 0.66, maxZ: YARD.z0 + 0.66, pushSpeed: 0.75, freeX: -6.9, crown: 2.3 };
+export const YARD_GAP = { x0: -10.4, x1: -9.5, z: YARD.z0, h: 0.42 };
+/**
+ * O galho da tempestade caído na frente da passagem do muro, do lado do quintal (caixa empurrável de meia medida
+ * `half`; a tora e as folhas cabem todas nela, então ninguém atravessa nada): a Rhaenyra empurra para o oeste, até
+ * perto da parede da casa; de `freeX` em diante, a passagem fica livre. Embaixo dele, as telhas quebradas (pista do
+ * caso 2). O galho nunca entra no arco da porta.
+ */
+export const BRANCH = {
+  start: { x: (YARD_GAP.x0 + YARD_GAP.x1) / 2, z: YARD.z0 + 0.66 }, half: 0.46, height: 0.55,
+  minX: HOUSE.x1 + WALLS.t / 2 + 0.16 + 0.46, maxX: (YARD_GAP.x0 + YARD_GAP.x1) / 2, minZ: YARD.z0 + 0.66, maxZ: YARD.z0 + 0.66,
+  pushSpeed: 0.75, freeX: -10.7,
+};
 export const TILES = { x: BRANCH.start.x + 0.05, z: YARD.z0 + 0.75 };
 /**
- * A passagem baixa no muro norte do quintal (um arco de escoar água, rente ao chão): só a Radhija cabe. Enquanto o
- * galho não sai, a copa dele tapa a passagem.
- */
-export const YARD_GAP = { x0: -10.65, x1: -9.75, z: YARD.z0, h: 0.42 };
-/**
  * O ferrolho da porta da área de serviço fica do lado de fora (o norte), com uma argola numa cordinha: a Radhija morde
- * e puxa para o norte; depois de `pull` m, o ferrolho corre e a porta abre.
+ * e puxa para o norte; depois de `pull` m, o ferrolho corre e a porta abre. A argola pende ao lado do batente leste,
+ * fora do vão (ninguém passa por dentro dela ao atravessar a porta).
  */
-export const SERVICE_BOLT = { ring: { x: -7.95, z: YARD.z0 - 0.3, y: 0.34 }, anchor: { x: -7.95, z: YARD.z0 - 0.06, y: 0.5 }, pull: 0.45, grabR: 0.6 };
+export const SERVICE_BOLT = {
+  ring: { x: SERVICE_DOOR.latchPost.x + 0.3, z: YARD.z0 - 0.3, y: 0.34 }, anchor: { x: SERVICE_DOOR.latchPost.x + 0.3, z: YARD.z0 - 0.06, y: 0.5 },
+  pull: 0.45, grabR: 0.6,
+};
 /** A casinha de cachorro do quintal (a porta para o oeste é estreita: só a Radhija entra). */
 export const DOGHOUSE = { x: u(-3.85), z: u(6.7), hx: 0.55, hz: 0.6, h: 1.0, door: 0.5 };
 export const YARD_BEDS = [{ x: u(-6.1), z: u(7.6), hx: 0.45, hz: 1.5 }, { x: u(-3.5) + 0.35, z: u(4.4), hx: 0.38, hz: 1.3 }];
@@ -198,6 +207,19 @@ export const INTERCOM = {
 };
 /** O saguão logo depois da porta: a Radhija entrando aqui começa a cena da escada e do terraço. */
 export const TOWER_LOBBY = { x0: TOWER.x0 + 0.1, x1: TOWER.x0 + 2.5, z0: u(-7.4), z1: u(-5.0) };
+/** Móveis a mais da casa (cenário com colisão; world/casa.js). */
+export const HOUSE_EXTRAS = {
+  chairs: [{ x: -13.9, z: 6.3, half: 0.2, face: 1 }, { x: -13.3, z: 7.5, half: 0.2, face: -1 }],
+  bin: { x: -17.36, z: 3.0, r: 0.17 },
+  bedroomShelf: { x: -17.93, z: 3.1, hx: 0.17, hz: 0.6, h: 1.05 },
+  bedroomPlant: { x: -23.74, z: 7.76, r: 0.24 },
+  bookcase: { x: -20.06, z: 8.43, hx: 0.9, hz: 0.19, h: 2.1 },
+  sideboard: { x: -13.1, z: 8.44, hx: 0.75, hz: 0.2, h: 0.8 },
+  loveseat: { x: -15.3, z: 11.58, hx: 0.75, hz: 0.4, h: 0.78 },
+  pouf: { x: -13.95, z: 12.38, r: 0.26 },
+  floorLamp: { x: -23.45, z: 10.25, r: 0.14 },
+  plants: [{ x: -11.98, z: 13.86, r: 0.26 }, { x: -11.98, z: 8.58, r: 0.24 }, { x: -18.66, z: 8.68, r: 0.22 }],
+};
 /** Móveis a mais do deque, da área de serviço e da torre (cenário com colisão; world/comum.js). */
 export const POOL_TABLE = { x: LOUNGERS[0].x + 0.62, z: LOUNGERS[0].z - 0.35, r: 0.2 };
 export const POOL_TOYBOX = { x: POOL.deck.x0 + 0.9, z: RECON.z + 1.5, hx: 0.32, hz: 0.45 };
@@ -445,6 +467,17 @@ export const STATIC_COLLIDERS = [
   ...[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz], i) => circle(`mesa-perna-${i + 1}`, KITCHEN_TABLE.x + sx * (KITCHEN_TABLE.hx - 0.05), KITCHEN_TABLE.z + sz * (KITCHEN_TABLE.hz - 0.05), 0.04)),
   // a quina de fora da casa (o pilar da esquina do quintal)
   box('casa-quina', HOUSE.x1 - 0.25, HOUSE.z0 - 0.17, HOUSE.x1 + 0.12, HOUSE.z0 + 0.15),
+  // casa: móveis a mais (world/casa.js)
+  ...HOUSE_EXTRAS.chairs.map((c, i) => box(`cadeira-cozinha-${i + 1}`, c.x - c.half, c.z - c.half, c.x + c.half, c.z + c.half)),
+  circle('lixeira-cozinha', HOUSE_EXTRAS.bin.x, HOUSE_EXTRAS.bin.z, HOUSE_EXTRAS.bin.r),
+  boxAt('estante-quarto', HOUSE_EXTRAS.bedroomShelf),
+  circle('vaso-quarto', HOUSE_EXTRAS.bedroomPlant.x, HOUSE_EXTRAS.bedroomPlant.z, HOUSE_EXTRAS.bedroomPlant.r),
+  boxAt('estante-sala', HOUSE_EXTRAS.bookcase),
+  boxAt('aparador-sala', HOUSE_EXTRAS.sideboard),
+  boxAt('namoradeira', HOUSE_EXTRAS.loveseat),
+  circle('pufe-sala', HOUSE_EXTRAS.pouf.x, HOUSE_EXTRAS.pouf.z, HOUSE_EXTRAS.pouf.r),
+  circle('luminaria-sala', HOUSE_EXTRAS.floorLamp.x, HOUSE_EXTRAS.floorLamp.z, HOUSE_EXTRAS.floorLamp.r),
+  ...HOUSE_EXTRAS.plants.map((p, i) => circle(`vaso-sala-${i + 1}`, p.x, p.z, p.r)),
   boxAt('sofa', SOFA),
   boxAt('rack', TV_RACK),
   boxAt('mesinha-sala', COFFEE_TABLE),
@@ -452,6 +485,8 @@ export const STATIC_COLLIDERS = [
   // quintal (a porta da área de serviço é dinâmica; a passagem baixa só barra a Rhaenyra)
   seg('quintal-norte-oeste', YARD.x0, YARD.z0, YARD_GAP.x0, YARD.z0, wt),
   box('quintal-passagem', YARD_GAP.x0, YARD.z0 - wt, YARD_GAP.x1, YARD.z0 + wt, { blocks: 'large' }),
+  // a mão-francesa, a cordinha e a argola do ferrolho, do lado de fora do muro
+  box('ferrolho-argola', SERVICE_BOLT.ring.x - 0.06, SERVICE_BOLT.ring.z - 0.06, SERVICE_BOLT.ring.x + 0.06, YARD.z0 - wt),
   seg('quintal-norte-meio', YARD_GAP.x1, YARD.z0, SERVICE_DOOR.hinge.x, YARD.z0, wt),
   seg('quintal-norte-leste', SERVICE_DOOR.latchPost.x, YARD.z0, YARD.x1, YARD.z0, wt),
   seg('quintal-leste', YARD.x1, YARD.z0, YARD.x1, YARD.z1, wt),
@@ -528,7 +563,7 @@ export const NAV_NODES = {
   K_flap: { x: -17.0, z: 4.4 }, K_gate: { x: -16.6, z: 5.4 }, K_pedal: { x: PET_PEDAL.x + 0.1, z: PET_PEDAL.z + 0.2 },
   K_mid: P(-8.9, 2.75), K_door: { x: -12.9, z: 4.84 }, K_sala: { x: -14.95, z: ROOMS.cozinha.z1 }, S_mid: P(-10.6, 6.4),
   Y_door: { x: -10.5, z: 4.84 }, Y_mid: P(-5.2, 4.6), Y_south: P(-4.6, 7.8), Y_gate: { x: -8.2, z: 4.0 },
-  Y_gap: { x: -10.2, z: 2.9 }, C_gap: { x: -10.2, z: 1.2 }, C_bolt: { x: -7.95, z: 1.2 },
+  Y_gap: { x: -9.9, z: 3.45 }, C_gap: { x: -9.95, z: 1.2 }, C_bolt: { x: SERVICE_BOLT.ring.x, z: 1.2 },
   C_gate: { x: -8.2, z: 0.7 }, C_west: P(-8.6, 0.3), C_far: P(-12.6, 0.15),
   P_west: P(-6.85, -3.2), P_nw: P(-5.6, -6.3), P_north: P(-2.0, -6.35), P_ne: P(2.9, -6.35),
   P_east: P(2.95, -3.2), P_south: P(-2.0, 0.1), P_se: P(2.8, 0.1),
@@ -614,6 +649,7 @@ export const CAMERA = {
 const LAYOUT = {
   SCALE, WORLD, WALL, GATE, GATE_LEAF, STREET, WALLS, HOUSE, ROOMS, DOORWAYS, PET_GATE, PET_FLAP, PET_PEDAL, WINDOW, SILL,
   BED, BOWL, WARDROBE, TOY_BASKET, RUG, DRESSER, COUNTER, FRIDGE, KITCHEN_TABLE, SOFA, TV_RACK, COFFEE_TABLE, ARMCHAIR,
+  HOUSE_EXTRAS,
   KITCHEN_DOOR, KITCHEN_HANDLE, FOOD_SACK, YARD, SERVICE_DOOR, BRANCH, TILES, YARD_GAP, SERVICE_BOLT, DOGHOUSE, YARD_BEDS,
   POOL, RECON, LOUNGERS, UMBRELLA, POOL_FILTER, POOL_SHOWER, POOL_POTS, SERVICE, TANKS, DRAIN, LINE, CARROT_PIN, DASH_POST,
   LAUNDRY, TOWER, TOWER_DOOR, INTERCOM, TOWER_LOBBY, POOL_TABLE, POOL_TOYBOX, SERVICE_WASHER, SERVICE_RACK, TOWER_GAS, TERRACE, BOOTH, ANTENNA, BOOTH_VENT, BIN, BIN_SPOT, CLIMB, LAKE, PIER,

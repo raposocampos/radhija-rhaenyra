@@ -6,8 +6,8 @@
 // quarto (a folha na dobradiça e a parte fixa com a portinha de gato), o PEDAL que a solta (o cabinho vermelho liga um
 // ao outro), o SACO DE RAÇÃO na frente da maçaneta e a porta da cozinha com a alavanca do lado de dentro.
 // O QUINTAL: o muro com a passagem baixa (o arco de escoar água, com a calhinha), a porta da área de serviço com o
-// FERROLHO do lado de fora (a argola na cordinha, pendurada na mão-francesa do pilar), o GALHO da tempestade (o tronco
-// no colisor, a copa para o oeste) em cima das telhas, a casinha, canteiros, capim e flores, poças e folhas.
+// FERROLHO do lado de fora (a argola na cordinha, pendurada na mão-francesa do pilar), o GALHO da tempestade (a tora e
+// as folhas dentro do colisor, na frente da passagem) em cima das telhas, a casinha, canteiros, capim e flores, poças.
 // O que colide tem colisor em ../layout.js (STATIC_COLLIDERS); o resto fica rente ao chão (até 8 cm) ou no alto.
 import * as THREE from 'three';
 import { rng, foliageCluster, paint, mergeGeometries, mergeVertices, leafSkin } from '../../../../world/util.js';
@@ -96,7 +96,10 @@ function blobPts(r, seed, n = 18) {
 }
 /** Decalque irregular deitado no chão (voltado para cima). */
 const flatBlob = (r, seed, n = 18) => shapeXY(blobPts(r, seed, n)).rotateX(-Math.PI / 2);
-/** Disco plano no plano XY (voltado para +Z), esticado e deslocado. */
+/**
+ * Disco plano no plano XY (voltado para +Z), esticado e deslocado.
+ * @returns {THREE.BufferGeometry}
+ */
 const disc = (r, x = 0, y = 0, sx = 1, sy = 1, n = 14) => new THREE.CircleGeometry(r, n).scale(sx, sy, 1).translate(x, y, 0);
 /** Folha caída: a nervura dobrada em V e a ponta levantada (nunca rente a outra coisa). */
 function leafGeo(len, w) {
@@ -113,6 +116,8 @@ function leafGeo(len, w) {
 /**
  * Pictogramas planos (no plano XY, voltados para +Z, centrados, de lado ~s): osso, patinha, coração, cenoura, sol.
  * → [[geometria, cor | null], …] (null: a cor de quem pede).
+ * @param {string} kind @param {number} s
+ * @returns {[THREE.BufferGeometry, string | null][]}
  */
 function picto(kind, s) {
   if (kind === 'osso') {
@@ -166,7 +171,11 @@ function createBaker() {
   const list = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
   return {
-    /** color: cor, função (posição local, normal) → Color, ou null para manter a da geometria. */
+    /**
+     * color: cor (string ou THREE.Color), função (posição local, normal) → Color, ou null para manter a da geometria.
+     * @param {THREE.BufferGeometry} geo
+     * @param {{ color?: any, x?: number, y?: number, z?: number, rx?: number, ry?: number, rz?: number, sx?: number, sy?: number, sz?: number }} [o]
+     */
     add(geo, { color = '#ffffff', x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1 } = {}) {
       for (const k of Object.keys(geo.attributes)) if (!KEEP.includes(k)) geo.deleteAttribute(k);
       const g = geo.clone();
@@ -193,8 +202,8 @@ function createBaker() {
   };
 }
 /** Uma malha de cor por vértice com as peças de um baker. */
-function bakedMesh(baker, name, { rough = 0.75, metal = 0, cast = true, side = THREE.FrontSide } = {}) {
-  const m = new THREE.Mesh(baker.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: metal, side }));
+function bakedMesh(baker, name, { rough = 0.75, metal = 0, cast = true } = {}) {
+  const m = new THREE.Mesh(baker.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: metal }));
   m.name = name;
   m.castShadow = cast;
   m.receiveShadow = true;
@@ -344,7 +353,7 @@ export function buildCasa(kit, root, L) {
   };
   /** O mesmo, deitado no chão (voltado para cima), girado de `ry`. */
   const artFlat = (put, kind, s, col, x, y, z, ry = 0, extra = {}) => {
-    for (const [g, c] of picto(kind, s)) put(/** @type {THREE.BufferGeometry} */ (g).rotateX(-Math.PI / 2), { color: c ?? col, x, y, z, ry, ao: false, ...extra });
+    for (const [g, c] of picto(kind, s)) put(g.rotateX(-Math.PI / 2), { color: c ?? col, x, y, z, ry, ao: false, ...extra });
   };
 
   const FL = 0.006; // o piso (logo acima do gramado: as patas ficam no chão)
@@ -1021,7 +1030,7 @@ export function buildCasa(kit, root, L) {
     const b = createBaker();
     const rr = PP.r - 0.04;
     b.add(new THREE.LatheGeometry([new THREE.Vector2(rr, 0.0), new THREE.Vector2(rr, 0.042), new THREE.Vector2(rr - 0.014, 0.05), new THREE.Vector2(0, 0.05)], 28), { color: RED });
-    for (const [g, c] of picto('pata', 0.26)) b.add(/** @type {THREE.BufferGeometry} */ (g).rotateX(-Math.PI / 2), { color: c ?? '#fff6e6', y: 0.0515, ry: Math.PI / 2 });
+    for (const [g, c] of picto('pata', 0.26)) b.add(g.rotateX(-Math.PI / 2), { color: c ?? '#fff6e6', y: 0.0515, ry: Math.PI / 2 });
     pedalCap = bakedMesh(b, 'pedal:tampa', { rough: 0.45, cast: false });
     pedal.add(pedalCap);
   }
@@ -1590,9 +1599,9 @@ export function buildCasa(kit, root, L) {
   };
   layoutBolt();
 
-  // ---------------------------------------------------------------- o galho da tempestade (o tronco e a copa)
-  // O tronco fica no colisor (BRANCH.half, BRANCH.height); a copa (ramos com folhas, até ~0,6 m) vai BRANCH.crown m para
-  // o oeste e tapa a passagem do muro com o galho no começo. Tudo anda junto quando ela empurra.
+  // ---------------------------------------------------------------- o galho da tempestade (a tora e as folhas)
+  // Tudo cabe no colisor (BRANCH.half; as folhas até ~0,6 m): o galho começa na frente da passagem do muro e tapa a
+  // passagem; a Rhaenyra empurra para o oeste. Tudo anda junto.
   const branch = new THREE.Group();
   branch.name = 'recanto:galho';
   {
@@ -1614,36 +1623,26 @@ export function buildCasa(kit, root, L) {
     const m = bakedMesh(b, 'galho:tronco', { rough: 0.92 });
     branch.add(m);
   }
-  // a copa: os ramos e as folhas ficam num grupo à parte (as dogs passam roçando nas folhinhas)
+  // as folhas: touceiras em volta da tora, todas DENTRO do colisor (a dog empurra o galho, nunca entra na folhagem)
   const crown = new THREE.Group();
   crown.name = 'galho:copa-de-folhinhas';
   {
     const b = createBaker();
-    const bark = vary('#6b4a2e', 0.12, 23), barkL = vary('#7d5a3a', 0.1, 31);
-    const hb = BR.half, W0 = -hb, W1 = -hb - BR.crown, Rc = rng(41);
-    // o ramo principal continua a tora para o oeste; os raminhos abrem para os lados
-    const main = [[W0 + 0.02, 0.15, 0.12], [W0 - 0.5, 0.13, 0.2], [W0 - 1.1, 0.14, 0.1], [W0 - 1.7, 0.15, 0.04], [W1 + 0.3, 0.12, 0.1]];
-    const rads = [0.12, 0.085, 0.06, 0.04, 0.02];
-    for (let i = 0; i + 1 < main.length; i++) b.add(limbAB(main[i], main[i + 1], rads[i], rads[i + 1], 8), { color: bark });
-    for (let i = 1; i + 1 < main.length; i++) b.add(sphere(rads[i], 8, 6), { color: bark, x: main[i][0], y: main[i][1], z: main[i][2] });
+    const barkL = vary('#7d5a3a', 0.1, 31);
+    const hb = BR.half, Rc = rng(41);
     /** @type {{ x: number, y: number, z: number, r: number }[]} */
     const blobs = [];
-    // as touceiras de folhas (x, z no referencial do galho; o norte, onde fica o muro, é −z): uma fileira do lado do
-    // muro (na frente da passagem), uma do lado do quintal e as do meio, mais altas; tudo dentro de BRANCH.crown
-    for (let i = 0; i < 9; i++) {
-      const u = i / 8, x = lerp(W0 - 0.3, W1 + 0.26, u);
-      for (const side of [-1, 0, 1]) {
-        if (side === 0 && i % 2) continue;
-        const r = (side === 0 ? 0.2 : 0.17) + Rc() * 0.05 - u * 0.03;
-        const z = side * (hb - r * 1.14 - Rc() * 0.05) + (side === 0 ? (Rc() - 0.5) * 0.12 : 0);
-        const bx = Math.max(W1 + r * 1.14, x + (Rc() - 0.5) * 0.14 + (side === 0 ? 0.12 : 0));
-        const y = Math.min(0.6 - r * 1.14, r * 0.95 + 0.06 + Rc() * 0.06 + (side === 0 ? 0.06 : 0));
-        blobs.push({ x: bx, y, z, r });
-        // o raminho que leva até a touceira (sai do nó do ramo principal logo a leste dela)
-        let from = main[0];
-        for (const m of main) if (m[0] >= bx + 0.1) from = m;
-        b.add(limbAB(from, [bx, y - r * 0.2, z], 0.03 - u * 0.012, 0.012, 6), { color: barkL });
-      }
+    // [x, z] em frações da meia medida, o raio e quanto sobem: as dos cantos mais baixas, as do meio em cima da tora
+    const SPOTS = [[-0.72, -0.62, 0.17, 0], [-0.05, -0.7, 0.16, 0.02], [0.62, -0.6, 0.15, 0], [-0.7, 0.6, 0.16, 0],
+      [0.05, 0.7, 0.15, 0.03], [0.66, 0.62, 0.14, 0], [-0.34, 0.02, 0.16, 0.16], [0.3, -0.08, 0.14, 0.2]];
+    for (const [fx, fz, r0, up] of SPOTS) {
+      const r = r0 + Rc() * 0.025;
+      const lim = hb - r * 1.14 - 0.012;
+      const x = Math.max(-lim, Math.min(lim, fx * hb)), z = Math.max(-lim, Math.min(lim, fz * hb));
+      const y = Math.min(0.6 - r * 1.14, r * 0.95 + 0.06 + up + Rc() * 0.04);
+      blobs.push({ x, y, z, r });
+      // o raminho que leva da tora até a touceira
+      b.add(limbAB([x * 0.45, 0.2, 0.08], [x, y - r * 0.2, z], 0.028, 0.012, 6), { color: barkL });
     }
     crown.add(bakedMesh(b, 'galho:ramos', { rough: 0.92 }));
     const leavesGeo = foliageCluster(blobs.map((q) => ({ ...q, sy: 0.82 })), { detail: 1, amp: 0.26, seed: 9, dark: '#3d5a24', mid: '#6b8f35', light: '#a2c056' });
@@ -1652,7 +1651,7 @@ export function buildCasa(kit, root, L) {
     leaves.castShadow = true;
     leaves.receiveShadow = true;
     crown.add(leaves);
-    crown.add(leafSkin(leavesGeo, { count: 640, size: 0.11, seed: 5, material: SLOTS.plant(), minNormalY: -0.5 }));
+    crown.add(leafSkin(leavesGeo, { count: 320, size: 0.09, seed: 5, material: SLOTS.plant(), minNormalY: -0.5 }));
   }
   branch.add(crown);
   keep(branch);

@@ -229,7 +229,7 @@ async function captureDevice(dev, url) {
     ['quintal', '36-jogo-cozinha-bancada', (K.x0 + K.x1) / 2, K.z1 - 1.3, Math.PI],
     ['quintal', '37-jogo-sala', (SL.x0 + SL.x1) / 2 + 1.5, SL.z0 + 1.2, 0],
     ['quintal', '38-jogo-sala-para-a-cozinha', (SL.x0 + SL.x1) / 2 - 2.0, SL.z1 - 1.6, Math.PI * 0.75],
-    ['quintal', '39-jogo-quintal-galho-e-porta', Y.branch.start.x - 0.6, Y.yard.z0 + 3.4, Math.PI, true],
+    ['quintal', '39-jogo-quintal-galho-e-porta', Y.branch.start.x + 0.9, Y.yard.z0 + 3.6, Math.PI, true],
     ['quintal', '40-jogo-quintal-para-o-sul', (Y.yard.x0 + Y.yard.x1) / 2, Y.yard.z0 + 2.2, 0],
     ['piscina', '41-jogo-saindo-pela-porta-de-servico', (Y.sdoor.hinge.x + Y.sdoor.latchPost.x) / 2, Y.sdoor.hinge.z + 1.6, Math.PI],
     ['piscina', '42-jogo-ferrolho-do-lado-de-fora', Y.bolt.ring.x + 0.4, Y.bolt.ring.z - 1.5, 0],

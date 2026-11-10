@@ -92,23 +92,26 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   h.run(1.0);
   watch();
 
-  // 3. quintal: o galho trava a porta; tirado o galho, o ferrolho ainda fica do outro lado do muro
+  // 3. quintal: a porta do muro tem o ferrolho por fora; a passagem baixa do muro fica atrás do galho
   const Br = L.BRANCH, SD = L.SERVICE_DOOR, sd = mid(SD);
-  h.teleport('rhaenyra', Br.start.x - Br.half - 0.24, Br.start.z, Math.PI / 2);
-  h.run(0.2);
-  assert.ok(push(h, [1, 0], 10, () => S().flags.branchFree), 'o galho sai da frente da porta');
-  assert.ok(S().clues.includes('telhas'), 'as telhas da tempestade viram pista (caso 2)');
-  watch();
+  assert.equal(h.log('objective').at(-1)?.text, 'Atrás dos pombos! Saiam pela porta do quintal');
   h.teleport('rhaenyra', sd.x - 0.2, sd.z + 0.75, Math.PI);
   h.run(0.2);
   h.tap('KeyE');
   h.run(0.5);
   assert.equal(S().flags.serviceOpen, false, 'o E na porta não abre: o ferrolho é por fora');
-  assert.equal(h.log('objective').at(-1)?.text, 'O ferrolho fica do outro lado do muro');
+  assert.equal(h.log('objective').at(-1)?.text, 'Tem uma passagem no muro, atrás do galho');
   h.run(2.6); // o plano da câmera na passagem do muro
+  // a Rhaenyra empurra o galho para o oeste, até perto da parede da casa
+  h.teleport('rhaenyra', Br.start.x + Br.half + 0.24, Br.start.z, -Math.PI / 2);
+  h.run(0.2);
+  assert.ok(push(h, [-1, 0], 10, () => S().flags.branchFree), `o galho sai da frente da passagem (${JSON.stringify(S().pushables.branch)})`);
+  assert.ok(S().clues.includes('telhas'), 'as telhas da tempestade viram pista (caso 2)');
+  assert.equal(h.log('objective').at(-1)?.text, 'O ferrolho fica do outro lado do muro');
+  watch();
   // a Radhija passa pela passagem baixa do muro e puxa a argola do ferrolho com a boca
   become(h, 'radhija');
-  const YG = L.YARD_GAP, gx = (YG.x0 + YG.x1) / 2;
+  const YG = L.YARD_GAP, gx = YG.x1 - 0.3;
   h.teleport('radhija', gx, YG.z + 0.75, Math.PI);
   h.run(0.2);
   h.walkTo(gx, YG.z - 0.85, { timeout: 5, tol: 0.15 });

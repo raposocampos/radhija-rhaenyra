@@ -521,7 +521,7 @@ export function buildBase(kit, root, L) {
     { x: L.TILES.x, z: L.TILES.z, r: 0.6 }, { x: L.BOOTH_VENT.x - 0.5, z: L.BOOTH_VENT.z, r: 0.5 },
     ...L.COLLECTIBLES.map((c) => ({ x: c.x, z: c.z, r: 0.4 })),
   ];
-  const BRANCH_LANE = { x0: L.BRANCH.minX - L.BRANCH.half - L.BRANCH.crown, x1: L.BRANCH.maxX + L.BRANCH.half, z0: L.BRANCH.minZ - L.BRANCH.half - 0.1, z1: L.BRANCH.maxZ + L.BRANCH.half + 0.1 };
+  const BRANCH_LANE = { x0: L.BRANCH.minX - L.BRANCH.half - 0.1, x1: L.BRANCH.maxX + L.BRANCH.half, z0: L.BRANCH.minZ - L.BRANCH.half - 0.1, z1: L.BRANCH.maxZ + L.BRANCH.half + 0.1 };
   const hitsCollider = (x, z, pad) => COLS.some((c) => {
     if (c.shape === 'circle') return Math.hypot(x - c.x, z - c.z) < c.r + pad;
     if (c.shape === 'box') return Math.abs(x - c.x) < c.hx + pad && Math.abs(z - c.z) < c.hz + pad;

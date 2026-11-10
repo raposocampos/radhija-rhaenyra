@@ -46,11 +46,16 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     Feitas por subagentes, uma peça cada.
   - **Testes:** `test/historia-{layout,cenas,missao,camera,cenario,regras}.test.mjs` refeitos; a suíte
     `tools/scripts/test-historia.mjs` e as capturas `capture-historia.mjs` refeitas para a missão nova.
+  - **Quintal (2026-11-10):** a porta do muro tem o ferrolho por fora, com a argola pendurada ao lado do batente (fora
+    do vão). O galho caiu na frente da passagem baixa do muro e cabe inteiro no colisor (tora e folhas): a Rhaenyra
+    empurra para o oeste, a Radhija passa e puxa a argola. A ordem na tela: porta (trancada), galho, passagem.
+  - **Móveis novos com colisor** no layout (`HOUSE_EXTRAS`, `GARAGE_STUFF`, `POOL_TABLE`, `POOL_TOYBOX`,
+    `SERVICE_WASHER`, `SERVICE_RACK`, `TOWER_GAS`); no barquinho encaixado, o pescoço do patinho e a roda de pá colidem.
   - **Validação local:** só `node --check` e os arquivos de teste da história rodados um a um no Node (sem
-    navegador, sem build): layout, regras, missão, cenas e câmera passaram.
+    navegador, sem build): layout, regras, missão, cenas, câmera e cenário passaram com as seis peças novas.
 - **Próximo passo:** CI verde; E2E `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`,
   `mapa` e `controle`; revisar as capturas (abertura, pombos, balões, câmera dentro de casa, cenário) e corrigir o que
-  aparecer; entregar a prévia nova. Integrar só com o "pode integrar" do usuário.
+  aparecer; atualizar a descrição do #75; entregar a prévia nova. Integrar só com o "pode integrar" do usuário.
 
 ### Histórico da etapa (até a prévia reprovada)
 

@@ -26,7 +26,7 @@ function makeWorld(open = {}) {
   const CH = L.CHANNEL;
   w.addDynamic({ id: 'canal-boca', kind: 'water', shape: 'segment', ax: CH.x0 - 0.05, az: CH.z1, bx: CH.x1 + 0.05, bz: CH.z1, t: 0.1, enabled: !open.boatDocked });
   w.addDynamic({ id: 'barquinho-ponte', kind: 'static', shape: 'box', x: (CH.x0 + CH.x1) / 2, z: (CH.z0 + CH.z1) / 2, hx: (CH.x1 - CH.x0) / 2, hz: (CH.z1 - CH.z0) / 2, blocks: 'large', enabled: !!open.boatDocked });
-  // a copa do galho tapa a passagem baixa do muro do quintal até o galho sair
+  // o galho fica na frente da passagem baixa do muro do quintal até ser empurrado
   const YG = L.YARD_GAP;
   w.addDynamic({ id: 'galho-copa', kind: 'static', shape: 'box', x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.2, hx: (YG.x1 - YG.x0) / 2 + 0.1, hz: 0.3, blocks: 'small', enabled: !open.gapOpen });
   return { w, n: createNavigator(L, w) };
@@ -136,7 +136,7 @@ test('recanto: o grafo liga o quarto a cada etapa da missão quando as portas ab
   assert.ok(makeWorld(yard).n.findPath(from, N.Y_mid, big(yard)).reachable, 'aberta a cozinha, o quintal sim');
   assert.equal(makeWorld(yard).n.findPath(from, N.P_west, big(yard)).reachable, false, 'com a área de serviço fechada, a piscina não');
   // o ferrolho fica do outro lado: com o galho no lugar, nem a Radhija passa; tirado o galho, só ela, pela passagem
-  assert.equal(makeWorld(yard).n.findPath(from, N.C_bolt, small(yard)).reachable, false, 'a copa do galho tapa a passagem do muro');
+  assert.equal(makeWorld(yard).n.findPath(from, N.C_bolt, small(yard)).reachable, false, 'o galho tapa a passagem do muro');
   const gap = { ...yard, gapOpen: true };
   assert.ok(makeWorld(gap).n.findPath(from, N.C_bolt, small(gap)).reachable, 'tirado o galho, a Radhija chega à argola do ferrolho');
   assert.equal(makeWorld(gap).n.findPath(from, N.C_bolt, big(gap)).reachable, false, 'a Rhaenyra não cabe na passagem');
@@ -155,13 +155,18 @@ test('recanto: a portinha de gato e a passagem do muro são só da Radhija', () 
   const midG = (YG.x0 + YG.x1) / 2;
   assert.ok(w.segmentClear(midG, YG.z + 0.8, midG, YG.z - 0.8, R.radhija, 'small'), 'a Radhija atravessa a passagem do muro');
   assert.equal(w.segmentClear(midG, YG.z + 0.8, midG, YG.z - 0.8, R.rhaenyra, 'large'), false, 'a Rhaenyra não');
-  // com o galho no lugar, a copa tapa a passagem (o galho começa de modo que a copa cubra o vão)
-  assert.equal(makeWorld({}).w.segmentClear(midG, YG.z + 0.8, midG, YG.z - 0.8, R.radhija, 'small'), false, 'tapada pela copa do galho');
+  // com o galho no lugar, ele tapa a passagem (a caixa do galho cobre o vão inteiro)
+  assert.equal(makeWorld({}).w.segmentClear(midG, YG.z + 0.8, midG, YG.z - 0.8, R.radhija, 'small'), false, 'tapada pelo galho');
   const B = L.BRANCH;
-  const crownW = B.start.x - B.half - B.crown;
-  assert.ok(crownW < YG.x0 && B.start.x - B.half > YG.x1, 'no começo, a copa cobre a passagem');
-  assert.ok(B.freeX - B.half - B.crown > YG.x1 - 0.05 || B.freeX - B.half - B.crown > YG.x0, 'empurrado até freeX, a copa já saiu de cima dela');
-  assert.ok(B.maxX >= B.freeX + 0.2, 'o galho tem para onde ir');
+  assert.ok(B.start.x - B.half <= YG.x0 + 0.02 && B.start.x + B.half >= YG.x1 - 0.02, 'no começo, o galho cobre a passagem');
+  // empurrado para o oeste até freeX, sobra passagem com folga para a Radhija; até o fim, a passagem inteira
+  assert.ok(YG.x1 - (B.freeX + B.half) >= 2 * R.radhija + 0.3, `em freeX, a Radhija passa com folga (${(YG.x1 - (B.freeX + B.half)).toFixed(2)} m)`);
+  assert.ok(B.minX + B.half <= YG.x0 + 0.02, 'no fim do curso, a passagem inteira fica livre');
+  assert.ok(B.minX <= B.freeX - 0.1, 'o galho tem para onde ir');
+  // o galho fica sempre fora do arco da porta do quintal (a folha abre para o sul), e a argola, fora do vão
+  const SD = L.SERVICE_DOOR;
+  assert.ok(B.maxX + B.half < SD.hinge.x - SD.length * 0.2 - 0.3, 'o galho não entra no arco da porta');
+  assert.ok(L.SERVICE_BOLT.ring.x > SD.latchPost.x + 0.2, 'a argola do ferrolho pende fora do vão da porta');
 });
 
 test('recanto: as peças de empurrar têm o caminho livre e param onde o puzzle precisa', () => {
