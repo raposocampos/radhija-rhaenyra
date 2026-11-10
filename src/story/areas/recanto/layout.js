@@ -222,7 +222,7 @@ export const HOUSE_EXTRAS = {
 };
 /** Móveis a mais do deque, da área de serviço e da torre (cenário com colisão; world/comum.js). */
 export const POOL_TABLE = { x: LOUNGERS[0].x + 0.62, z: LOUNGERS[0].z - 0.35, r: 0.2 };
-export const POOL_TOYBOX = { x: POOL.deck.x0 + 0.9, z: RECON.z + 1.5, hx: 0.32, hz: 0.45 };
+export const POOL_TOYBOX = { x: -2.0, z: POOL.deck.z0 + 0.62, hx: 0.32, hz: 0.45 }; // no lado norte do deque, longe da marca da boia
 export const SERVICE_WASHER = { x: TANKS.x1 + 0.34, z: TANKS.z0 + 0.31, hx: 0.34, hz: 0.31 };
 export const SERVICE_RACK = { x: 2.3, z: WALL.minZ + WALL.t / 2 + 0.34, hx: 0.5, hz: 0.26 };
 export const TOWER_GAS = { x: TOWER.x0 - WALLS.t / 2 - 0.24, z: -14.2, hx: 0.24, hz: 0.5 };

@@ -281,7 +281,7 @@ export function createPuzzle(ctx) {
       reconDone: false, varalDone: false, codeSeen: false, towerUnlocked: false, terraceDone: false, windowOpen: false,
       porterDone: false, gateOpen: false, closingDone: false, muralDone: false,
       boatDocked: false, dockT: -1, bucketT: -1, ballClear: false, storageOpen: false,
-      towerPush: false, towerHeld: false, towerHoldAt: null, storagePush: false, lastActive: null, socks: new Set(), climb: null,
+      towerPush: false, towerHeld: false, towerHoldAt: null, towerHoldT: 0, storagePush: false, lastActive: null, socks: new Set(), climb: null,
       snoreT: 1.5, radioT: 0.6, radioOn: true, prompt: null, music: null, mandaCd: 0, rattleCd: 0, mural: null,
       revealed: new Set(), exam: null, faroCd: 0, sniffT: 0, tugWhat: null, code: [], codeT: -1, codeErrT: -1, gapShown: false,
       firstFaro: false, promptOn: false,
@@ -782,7 +782,8 @@ export function createPuzzle(ctx) {
       stepClimb(dt);
       stepExam(dt);
       dir.update(dt);
-      balloons.update(dt, engine?.camera);
+      // nas cenas, as faixas de cinema cobrem 11% do alto da tela: os balões ficam abaixo delas
+      balloons.update(dt, engine?.camera, S.scene?.active ? 0.36 : 0.45);
       faro.update(dt, S.time);
       // a nuvem de cheiro: enquanto o Faro está aceso, do focinho de quem está com a jogadora até a próxima pista
       cloud.setLead(playing ? lead() : null);
@@ -810,7 +811,9 @@ export function createPuzzle(ctx) {
       kitchenDoor.update(dt, { ctrls: C });
       serviceDoor.update(dt, { ctrls: C });
       // a mola fecha sozinha: aberta enquanto a Rhaenyra empurra ou segura (no Fica, encostada na folha aberta)
-      if (S.towerHeld && (!ctx.isStaying('rhaenyra') || !near(R('rhaenyra'), S.towerHoldAt, 0.6))) S.towerHeld = false;
+      // segurando a porta: vale enquanto ela está no Fica e no lugar (o passinho até o lugar leva um instante)
+      S.towerHoldT = Math.max(0, S.towerHoldT - dt);
+      if (S.towerHeld && (!ctx.isStaying('rhaenyra') || (S.towerHoldT <= 0 && !near(R('rhaenyra'), S.towerHoldAt, 0.6)))) S.towerHeld = false;
       towerDoor.setTarget(S.towerPush || S.towerHeld ? 1 : 0);
       S.towerPush = false;
       towerDoor.update(dt, { ctrls: C });
@@ -941,6 +944,7 @@ export function createPuzzle(ctx) {
           if (inside) towerDoor.set?.(1);
           ctx.setStay('rhaenyra', true);
           S.towerHeld = true;
+          S.towerHoldT = 0.7;
           effects.pushTo(rha, S.towerHoldAt.x, S.towerHoldAt.z, { dur: 0.4, action: 'push', face: { x: td.hinge.x + 0.3, z: td.hinge.z } });
         }
         S.lastActive = ctx.activeDog;
@@ -1282,7 +1286,8 @@ export function createPuzzle(ctx) {
     }
   }
   function inDoorway(c, D) {
-    const x0 = D.hinge.x - 0.35, x1 = D.hinge.x + 0.95;
+    // de fora, empurrando a folha, ela fica a um corpo da parede: o vão conta desde ali
+    const x0 = D.hinge.x - 0.8, x1 = D.hinge.x + 0.95;
     const z0 = Math.min(D.hinge.z, D.latchPost.z), z1 = Math.max(D.hinge.z, D.latchPost.z);
     return c.x > x0 && c.x < x1 && c.z > z0 - 0.1 && c.z < z1 + 0.1;
   }

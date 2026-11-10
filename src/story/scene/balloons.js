@@ -1043,18 +1043,29 @@ export function createBalloons({ root, camera = null, poolSize = 8 }) {
     return slot.id;
   }
 
+  /** O alto da parte visível da tela (fração da altura a partir do meio), dado a cada update. */
+  let safeTop = 0.45;
+
   function hide(id) {
     const s = pool.find((p) => p.id === id);
     if (s) s.life = Math.min(s.life, s.t + OUT);
   }
 
-  /** Os balões (não os soltos) que cairiam um em cima do outro na tela: o mais novo sobe até livrar o mais velho. */
+  /**
+   * Os balões (não os soltos) que cairiam um em cima do outro na tela: o mais novo sobe até livrar o mais velho. E
+   * nenhum balão passa do alto da parte visível da tela (`safeTop`, em fração da altura a partir do meio: as faixas de
+   * cinema das cenas cobrem o alto): ele desce até caber.
+   */
   function settle(dt) {
     live.sort((a, b) => a.id - b.id);
     for (let i = 0; i < live.length; i++) {
       const s = live[i];
       let want = 0;
       s.hw = 0;
+      if (s.kind === 'solto' && s.perM > 0) {
+        const over = s.sy + (s.now * s.perM) / 2 - safeTop;
+        if (over > 0) want = -over / s.perM;
+      }
       if (s.kind !== 'solto' && s.perM > 0) {
         const g = s.spec;
         const u = (s.now * s.perM) / CELL; // px do fundo → fração da altura da tela
@@ -1074,6 +1085,9 @@ export function createBalloons({ root, camera = null, poolSize = 8 }) {
           }
           if (!moved) break;
         }
+        // o alto do balão dentro da parte visível
+        const over = cy0 + want + s.hh - safeTop;
+        if (over > 0) want -= over;
         s.cy = cy0 + want;
         want /= s.perM; // de volta a metros
       }
@@ -1086,9 +1100,11 @@ export function createBalloons({ root, camera = null, poolSize = 8 }) {
    * balão fica na faixa certa da tela e os balões vizinhos não se cobrem; sem ela, o size vale em metros.
    * @param {number} dt
    * @param {THREE.Camera | null} [cam]
+   * @param {number} [top] o alto da parte visível da tela (fração da altura a partir do meio; 0,5 = a borda)
    */
-  function update(dt, cam = camera) {
+  function update(dt, cam = camera, top = 0.45) {
     const step = dt > 0 ? dt : 0;
+    safeTop = top;
     const useCam = !!cam && cam.isCamera === true && typeof cam.updateWorldMatrix === 'function';
     live.length = 0;
     for (const s of pool) {

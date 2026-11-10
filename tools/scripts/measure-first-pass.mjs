@@ -298,7 +298,9 @@ async function pageTour({ dt, startFrames, startFramesMax, nodeFrames, returnFra
         const s = scan(true);
         news.push({ pass, node: node.id, frame: frames.length - 1, programs: f.programs, textures: f.textures, geometries: f.geometries,
           ms: f.ms, materials: s.mats.slice(0, 12), moreMaterials: Math.max(0, s.mats.length - 12), textureList: s.texs.slice(0, 8),
-          newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [] });
+          newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [],
+          // o tipo do material e o começo da chave do programa (o shader e as variantes: instâncias, lados, alfa…)
+          newProgramKeys: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => `${/** @type {any} */ (p).type ?? '?'} · ${String(p.cacheKey ?? '').slice(0, 900)}`) : [] });
       }
     }
     cur = null;
@@ -483,7 +485,10 @@ try {
         }
         if (run.state !== 'playing' && run.state !== 'celebrate' && run.state !== 'victory') fail(`${label}: estado inesperado ${run.state}`);
         if (STRICT) {
-          if (summary.afterLoad.programs > 0) fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
+          if (summary.afterLoad.programs > 0) {
+            fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
+            for (const n of run.news.filter((x) => x.programs > 0)) console.log(`[primeira-passagem]   ${n.node}, quadro ${n.frame} da ${n.pass}ª passagem: ${(n.newProgramKeys || []).join(' | ')}`);
+          }
           if (summary.afterLoad.textures > 0) fail(`${label}: ${summary.afterLoad.textures} texturas enviadas depois da carga`);
           if (summary.afterLoad.geometries > 0) fail(`${label}: ${summary.afterLoad.geometries} geometrias enviadas depois da carga`);
           if (summary.events.programs > 0 || summary.events.textures > 0) fail(`${label}: o primeiro superbafo compilou ${summary.events.programs} programas e enviou ${summary.events.textures} texturas`);

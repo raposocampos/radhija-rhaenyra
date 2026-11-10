@@ -109,9 +109,10 @@ export function createOpening(K) {
   const cx = (W.x0 + W.x1) / 2;
   const SO = L.SILL.out;
   const lie = (t, k = 1, side = 1) => ({ kind: 'lie', t, k, side });
-  const sleepRad = { x: B.x + 0.2, z: B.z - 0.04, yaw: -Math.PI / 2 - 0.25 };
-  const sleepRha = { x: B.x - 0.24, z: B.z + 0.08, yaw: Math.PI / 2 - 0.2 };
-  const carrotBed = { x: B.x - 0.02, y: 0.17, z: B.z - 0.02 };
+  // as duas um pouco para o fundo da caminha e a cenoura na frente delas, do lado da câmera (à vista o tempo todo)
+  const sleepRad = { x: B.x + 0.27, z: B.z - 0.17, yaw: -Math.PI / 2 - 0.25 };
+  const sleepRha = { x: B.x - 0.27, z: B.z - 0.07, yaw: Math.PI / 2 - 0.2 };
+  const carrotBed = { x: B.x + 0.03, y: 0.18, z: B.z + 0.3 };
   const st = { rad: L.DOGS.radhija.start, rha: L.DOGS.rhaenyra.start };
   /** Onde a Rhaenyra cai ao pular da caminha (fora da borda, do lado de baixo, longe da irmã no chão). */
   const rhaOut = { x: B.x + 0.35, z: B.z + 1.15 };
@@ -361,8 +362,8 @@ export function createWindowScene(K) {
       dir.hold('radhija', 'rhaenyra');
       dir.walk('radhija', [{ x: marks.rad.x, z: marks.rad.z }], { speed: 2.6, face: Math.PI });
       dir.walk('rhaenyra', [{ x: marks.rha.x, z: marks.rha.z }], { speed: 2.8, face: Math.PI });
-      // por cima do ombro das duas: a janela ao fundo
-      dir.shot(P3(B.x + 1.6, 0.95, B.z + 3.4), P3(cx + 0.3, 1.15, W.z), { inT: 0.7 });
+      // de perto, por cima da caminha: a janela enche a tela e os pombos passam logo ali fora
+      dir.shot(P3(cx + 0.45, 1.05, W.z + 1.0), P3(cx - 0.45, 1.04, W.z - 0.8), { inT: 0.7 });
       dir.music('misterio');
     },
     beats: [
@@ -370,12 +371,17 @@ export function createWindowScene(K) {
         id: 'voo', dur: 4.4,
         enter() { dir.sfx('asas', { x: cx, z: W.z - 1.5 }); },
         tick(_, t) {
-          const k = span(t, 0.6, 3.5);
-          if (t > 0.6) flyPack(K, { x: lerp(cx - 4.4, cx + 4.8, k), y: 1.22 + Math.sin(t * 2.6) * 0.12, z: W.z - 1.5 }, Math.PI / 2, t);
+          const k = span(t, 0.6, 3.9);
+          // chegam depressa, passam DEVAGAR na frente do vidro (o Farelo torto, com a cenoura pendurada nas patas) e
+          // somem depressa: x em três trechos
+          const x = t < 1.3 ? lerp(cx - 3.9, cx - 1.25, span(t, 0.6, 1.3))
+            : t < 3.1 ? lerp(cx - 1.25, cx + 0.35, span(t, 1.3, 3.1))
+              : lerp(cx + 0.35, cx + 4.8, span(t, 3.1, 3.9));
+          if (t > 0.6) flyPack(K, { x, y: 1.1 + Math.sin(t * 2.6) * 0.09, z: W.z - 0.8 }, Math.PI / 2, t);
           for (const n of ['radhija', 'rhaenyra']) if (!dir.walking(n)) dir.actor(n).look = P3(lerp(cx - 2, cx + 2, k), 1.2, W.z);
-          dir.lookAt(P3(cx + 0.3 + (k - 0.5) * 0.7, 1.15, W.z));
-          if (t > 1.5 && !S.ex) { S.ex = true; dir.balloon(['pombo', 'ex'], { who: 'radhija', life: 1.6, size: 0.46 }); }
-          if (t > 3.0 && !S.bark) { S.bark = true; dir.bark('radhija'); }
+          // a câmera acompanha o Farelo um pouco
+          dir.lookAt(P3(lerp(cx - 0.45, cx + 0.2, span(t, 1.0, 3.2)), 1.04, W.z - 0.8));
+          if (t > 3.2 && !S.bark) { S.bark = true; dir.bark('radhija'); }
         },
         leave() { hideSquad(K); K.props.carrot.object.visible = false; },
       },
@@ -390,7 +396,7 @@ export function createWindowScene(K) {
           const a = dir.actor('radhija');
           const h = dir.actor('rhaenyra');
           a.press = t > 0.3 && t < 1.9 ? { x: a.x, y: 0.4, z: a.z - 0.34, k: Math.sin(span(t, 0.3, 1.9) * Math.PI) } : null;
-          if (t > 0.4 && !S.say) { S.say = true; dir.balloon(['pombo', 'cenoura'], { who: 'radhija', life: 1.9, size: 0.46 }); dir.bark('radhija'); }
+          if (t > 0.4 && !S.say) { S.say = true; dir.balloon(['pombo', 'cenoura', 'ex'], { who: 'radhija', life: 1.9, size: 0.46 }); dir.bark('radhija'); }
           if (t > 1.3 && !S.mad) { S.mad = true; dir.balloon('raiva', { who: 'radhija', life: 1.2, size: 0.36, up: 0.62 }); }
           h.look = t < 1.6 ? P3(a.x, 0.35, a.z) : null;
           h.action = t > 1.8 && t < 2.9 ? 'proud' : 'none';
@@ -912,7 +918,8 @@ export function createClosingScene(K) {
         id: 'pombos', dur: 3.0,
         enter() {
           const p = portal();
-          dir.shot(P3(gx + 1.6, 0.8, St.sidewalk + 2.2), P3(lerp(gx, p.x, 0.5), 4.2, lerp(St.sidewalk, p.z, 0.6)), { inT: 1.0 });
+          // de dentro, pelo vão do portãozinho: as duas na calçada, de costas, e os pombos lá no alto, sobre a avenida
+          dir.shot(P3(gx - 0.4, 0.75, G.z + 2.6), P3(lerp(gx, p.x, 0.35), 3.4, St.z1 - 6), { inT: 1.0 });
         },
         tick(_, t) {
           const p = portal();
@@ -956,7 +963,8 @@ export function createClosingScene(K) {
           K.butterfly.visible = false;
           dir.walk('rhaenyra', [{ x: gx + 0.7, z: St.sidewalk - 0.3 }, { x: gx + 0.2, z: St.z1 + 0.8 }], { speed: 3.2 });
           dir.walk('radhija', [{ x: gx - 0.2, z: St.z1 + 1.4 }], { speed: 2.3 });
-          dir.shot(P3(gx - 0.8, 1.5, St.sidewalk + 2.6), P3(gx + 0.1, 0.5, St.z1 + 0.5), { inT: 0.8 });
+          // de novo pelo vão do portãozinho: as duas somem rua afora
+          dir.shot(P3(gx - 0.35, 1.05, G.z + 1.6), P3(gx + 0.1, 0.5, St.z1 + 0.5), { inT: 0.8 });
         },
         tick(_, t) { if (t > 1.5 && !S.dark) { S.dark = true; dir.fade(1, 0.6); } },
       },

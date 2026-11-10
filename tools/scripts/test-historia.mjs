@@ -400,12 +400,13 @@ try {
   check(i.story.flags.towerUnlocked, 'os três botões na ordem da senha destravam a porta da torre', { code: i.story.code, flags: i.story.flags });
   await shot('15-interfone-destravado.png');
   await tp('rhaenyra', LY.tdoor.hinge.x - 0.4, tdz, Math.PI / 2);
-  await tp('radhija', LY.tdoor.hinge.x - 1.3, LY.tdoor.latchPost.z - 0.25, Math.PI / 2);
+  // a Radhija espera fora da linha do vão: as teclas seguradas na troca não a levam para dentro antes da hora
+  await tp('radhija', LY.tdoor.hinge.x - 1.3, LY.tdoor.latchPost.z + 1.1, Math.PI / 2);
   await H.sleep(300);
   i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.doors.tower > 0.65, { timeout: 6000, label: 'empurrar a porta de mola' });
   check(i.story.doors.tower > 0.6, 'a Rhaenyra abre a porta de mola', i.story.doors);
   // segurando, troca para a Radhija: a irmã no vão fica segurando
-  await holdUntil([...keysFor(1, 0), 'ShiftLeft'], () => false, { timeout: 500, during: () => press('KeyQ', 100), label: 'trocar segurando a porta' });
+  await holdUntil([...keysFor(1, 0), 'ShiftLeft'], () => false, { timeout: 250, during: () => press('KeyQ', 100), label: 'trocar segurando a porta' });
   i = await info();
   check(i.activeDog === 'radhija' && i.stay.rhaenyra, 'trocando com a irmã no vão, ela fica segurando (Fica automático)', { active: i.activeDog, stay: i.stay });
   await H.sleep(800);
@@ -433,7 +434,8 @@ try {
   await become('radhija');
   await tp('radhija', LY.vent.x - 0.75, LY.vent.z, Math.PI / 2);
   await H.sleep(500);
-  await press('KeyR', 400);
+  // o Superbafo é de segurar (mira) e soltar (sopra): um toque instantâneo cabe entre dois quadros e não conta
+  await H.hold(['KeyR'], 350);
   i = await waitFor((x) => x.story.scene === 'cheiro' || x.story.flags.windowOpen, { timeout: 10000 });
   check(i.story.scene === 'cheiro' || i.story.flags.windowOpen, 'o Superbafo entra pela grelha da guarita', i.story);
   if (i.story.scene) {

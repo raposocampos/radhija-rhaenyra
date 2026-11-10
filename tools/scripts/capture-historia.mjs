@@ -279,17 +279,12 @@ async function captureDevice(dev, url) {
   await page.evaluate(() => { const g = window.__game.game; const L = g.levelDef.layout; g.debug.teleport('rhaenyra', L.LAUNDRY.start.x - L.LAUNDRY.half - 0.28, L.LAUNDRY.start.z); g.debug.ctrls.rhaenyra.yaw = Math.PI / 2; });
   await tap('KeyQ');
   await step(10);
-  await page.evaluate(() => {
-    const down = (c) => window.dispatchEvent(new KeyboardEvent('keydown', { code: c, key: c }));
-    const g = window.__game.game;
-    const b = g.debug.cam.basis();
-    // empurrar para o leste com as teclas de agora (a base da câmera)
-    const fwd = b.fx, rgt = b.rx;
-    const s = ((Math.round(Math.atan2(rgt, fwd) / (Math.PI / 4)) % 8) + 8) % 8;
-    for (const k of [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyS', 'KeyD'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyW', 'KeyA']][s]) down(k);
-    down('ShiftLeft');
-  });
+  // a câmera atrás dela, olhando para o leste: o W empurra o cesto ao longo do varal
+  await behind(Math.PI / 2);
+  await step(4);
+  await page.evaluate(() => { for (const c of ['KeyW', 'ShiftLeft']) window.dispatchEvent(new KeyboardEvent('keydown', { code: c, key: c })); });
   await until((i) => i.story.flags.basketUnder, 900);
+  await step(10);
   await page.evaluate(() => { for (const c of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft']) window.dispatchEvent(new KeyboardEvent('keyup', { code: c, key: c })); });
   await step(20);
   await behind(Math.PI);

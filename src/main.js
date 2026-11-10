@@ -128,6 +128,8 @@ async function boot() {
   // Celular/tablet: no máximo 60 quadros por segundo (telas de 90/120 Hz desenhariam o dobro e esquentariam o
   // aparelho). O quadro pulado não roda nada; o seguinte recebe o tempo inteiro em dt. No PC, todos os quadros.
   const capFrame = engine.quality.capFps ? createFrameCap() : null;
+  /** O "ver através" do quadro: nas cenas do Modo História fica desligado (a câmera de cinema não fura o cenário). */
+  const seeThroughNow = () => updateSeeThrough(dogs, game.activeDog || 'radhija', game.isStory && game.puzzle?.cinematic?.() ? 0 : 1);
 
   function frame(now) {
     if (capFrame && !capFrame(now)) {
@@ -149,7 +151,7 @@ async function boot() {
       engine.camera.position.set(.../** @type {[number, number, number]} */ (camFix));
       engine.camera.lookAt(.../** @type {[number, number, number]} */ (lookFix));
     }
-    updateSeeThrough(dogs, game.activeDog || 'radhija', game.isStory && game.puzzle?.cinematic?.() ? 0 : 1);
+    seeThroughNow();
     feedback.update(dt, elapsed);
     particles.update(dt);
     ui.update(dt);
@@ -163,7 +165,7 @@ async function boot() {
   window.__game = {
     engine, dogs, game, audio, particles, feedback, ui, events, settings, levels: LEVELS, THREE, installHint, storyHud,
     // capturas quadro a quadro (tools/scripts/capture-lambe.mjs): o mesmo "ver através" do quadro normal
-    seeThrough: () => updateSeeThrough(dogs, game.activeDog || 'radhija'),
+    seeThrough: () => seeThroughNow(),
     get env() { return game.built?.env; },
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout; },

@@ -4,8 +4,8 @@
 // atrás. O rastro passa por onde o cheiro passaria (por baixo de porta fechada, pela portinha de gato): quando a porta
 // está trancada, ele mostra para onde é, e abrir é com as duas.
 //  - O caminho vem do grafo de navegação da área (NAV_NODES/NAV_EDGES), sem olhar o que está fechado.
-//  - O desenho é uma malha só (instâncias de um quadrado virado para a câmera, mistura aditiva, sem textura e sem
-//    pós-processamento): vale também no perfil mínimo.
+//  - O desenho é uma malha só (instâncias de um quadrado virado para a câmera, sem textura e sem pós-processamento):
+//    vale também no perfil mínimo.
 // API: createScentCloud({ root, layout, world }) → { setLead(lead | null), update(dt, time, k, from), path(from, to),
 //   info(), dispose() }.
 import * as THREE from 'three';
@@ -35,14 +35,21 @@ void main() {
   mv.xy += position.xy * s;
   gl_Position = projectionMatrix * mv;
 }`;
+// A cor da instância leva o tom do cheiro e, no tamanho dela, o quanto a nuvenzinha aparece (a onda, o começo e o fim
+// do rastro). Miolo claro e beirada macia em gomos: lê bem no piso claro e no gramado (mistura normal, não aditiva).
 const FS = /* glsl */ `
 uniform float uK;
 varying vec2 vUv;
 varying vec3 vCol;
 void main() {
-  float d = length(vUv - 0.5) * 2.0;
-  float a = smoothstep(1.0, 0.0, d);
-  gl_FragColor = vec4(vCol * (a * a * uK), 1.0);
+  vec2 p = (vUv - 0.5) * 2.0;
+  float m = max(vCol.r, max(vCol.g, vCol.b));
+  vec3 hue = m > 1e-4 ? vCol / m : vec3(1.0);
+  float d = length(p) + 0.07 * sin(atan(p.y, p.x) * 4.0 + hue.g * 9.0);
+  float a = smoothstep(1.0, 0.45, d);
+  float core = smoothstep(0.85, 0.0, d);
+  vec3 col = mix(hue, vec3(1.0), 0.6 * core);
+  gl_FragColor = vec4(col, a * min(1.0, m) * 0.86 * uK);
   #include <colorspace_fragment>
 }`;
 
@@ -107,7 +114,7 @@ export function createScentCloud({ root, layout, world = null }) {
   const geo = new THREE.PlaneGeometry(1, 1);
   const mat = new THREE.ShaderMaterial({
     vertexShader: VS, fragmentShader: FS, uniforms: { uK: { value: 0 } },
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false,
+    transparent: true, depthWrite: false, fog: false, toneMapped: false,
   });
   const mesh = new THREE.InstancedMesh(geo, mat, MAX);
   mesh.name = 'faro:nuvem-de-cheiro';
@@ -175,13 +182,13 @@ export function createScentCloud({ root, layout, world = null }) {
       const wave = 0.5 + 0.5 * Math.sin(time * 3.4 - p.d * 1.9);
       const bob = Math.sin(time * 1.3 + i * 1.7) * 0.05;
       const side = Math.sin(i * 2.4) * 0.09;
-      const size = (0.34 + 0.16 * ((i * 37) % 7) / 6) * (0.85 + 0.35 * wave);
+      const size = (0.4 + 0.18 * ((i * 37) % 7) / 6) * (0.85 + 0.35 * wave);
       // some no fim do trecho desenhado quando o caminho continua além dele
       const tail = total > REACH + 0.5 ? Math.min(1, (REACH - p.d) / 2.5) : 1;
       const head = Math.min(1, p.d / 0.6);
       m4.compose(v.set(p.x + side, (lead.y ?? 0) * (total > 0 ? Math.min(1, p.d / total) : 0) + HEIGHT + bob, p.z + Math.cos(i * 1.9) * 0.09), q, sc.setScalar(size));
       mesh.setMatrixAt(i, m4);
-      mesh.setColorAt(i, tmpC.copy(color).multiplyScalar((0.45 + 0.55 * wave) * tail * head));
+      mesh.setColorAt(i, tmpC.copy(color).multiplyScalar((0.55 + 0.45 * wave) * tail * head));
     }
     mesh.count = n;
     mesh.visible = n > 0;
