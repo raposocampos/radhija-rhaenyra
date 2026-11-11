@@ -56,11 +56,49 @@ export function createDirector({ ctx, balloons = null, emit }) {
     c.vz = (c.z - pz) * idt;
   }
 
-  /** Cabeça da dog no mundo (para balões e olhares). */
+  /**
+   * O alto da cabeça da dog no mundo, `up` m acima dele (balões, olhares, efeitos). Segue o osso da cabeça do modelo
+   * (deitada, olhando para o lado, bocejando): o ponto é o alto do crânio, por cima do centro da cabeça, preso ao osso.
+   * Sem o modelo (dublês dos testes), a conta da pose em pé: o centro da cabeça fica a HEAD_FWD do comprimento à frente
+   * (no modelo, o centro da cabeça está a ~41% do comprimento focinho→garupa à frente do meio do corpo; os 32% de antes
+   * caíam na nuca, e o balão apontava para trás da cabeça).
+   */
+  const HEAD_FWD = 0.415;
+  /** Por dog: o osso da cabeça e onde fica, nele, o alto do crânio (calculado uma vez, da pose de descanso). */
+  /** @type {Record<string, any>} */
+  const headRig = { radhija: null, rhaenyra: null };
+  function boneTop(name, vis) {
+    /** @type {any} */
+    const m = dogs?.[name];
+    /** @type {any} */
+    const bone = m?.mouthSocket?.parent;
+    if (!bone?.isBone || !bone.matrixWorld || typeof bone.updateWorldMatrix !== 'function') return null;
+    let r = headRig[name];
+    if (!r || r.bone !== bone) {
+      // a posição de descanso do osso no espaço do modelo (o inverso da matriz de ligação do esqueleto)
+      const sk = m.skeleton;
+      const i = sk?.bones?.indexOf?.(bone) ?? -1;
+      const inv = i >= 0 ? sk.boneInverses?.[i] : null;
+      if (!inv?.clone) return null;
+      const e = inv.clone().invert().elements;
+      // o centro da cabeça (o marcador fica sobre ele) e o alto do crânio (headTop), medidos a partir do osso
+      const hz = Number.isFinite(m.markerAnchor?.position?.z) ? m.markerAnchor.position.z : vis.length * HEAD_FWD;
+      r = headRig[name] = { bone, top: vis.headTop - e[13], fwd: hz - e[14], ok: e[13] > 0.1 && e[13] < vis.headTop };
+    }
+    if (!r.ok) return null;
+    bone.updateWorldMatrix(true, false);
+    const w = bone.matrixWorld.elements;
+    return { x: w[4] * r.top + w[8] * r.fwd + w[12], y: w[5] * r.top + w[9] * r.fwd + w[13], z: w[6] * r.top + w[10] * r.fwd + w[14] };
+  }
   function head(name, up = 0) {
     const c = ctrls[name];
     const vis = c.cfg.visual || { length: 0.6, headTop: 0.5 };
-    const f = vis.length * 0.32;
+    const p = boneTop(name, vis);
+    // o osso só vale se estiver com a dog (um modelo fora da cena ou de outra fase fica na conta da pose em pé)
+    if (p && Math.hypot(p.x - c.x, p.z - c.z) < vis.length && p.y > (c.y || 0) - 0.05 && p.y < (c.y || 0) + vis.headTop + 0.3) {
+      return { x: p.x, y: p.y + up, z: p.z };
+    }
+    const f = vis.length * HEAD_FWD;
     return { x: c.x + Math.sin(c.yaw) * f, y: (c.y || 0) + vis.headTop + up, z: c.z + Math.cos(c.yaw) * f };
   }
 

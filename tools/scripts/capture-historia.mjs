@@ -227,6 +227,15 @@ async function captureDevice(dev, url) {
   await tap('Tab');
   await step(20);
   await shot('25-arvore-de-pistas', { wait: 1400 });
+  // ligar as três pistas da bandeja à pergunta
+  for (const id of ['trilha', 'pote', 'pena']) {
+    await page.click(`.rr-board__tcard[data-tray="${id}"]`).catch(() => {});
+    await page.waitForTimeout(250);
+    if (id === 'trilha') await shot('25b-arvore-pista-escolhida', { wait: 200 });
+    await page.click('.rr-board__node[data-node="quem"]').catch(() => {});
+    await page.waitForTimeout(450);
+  }
+  await shot('25c-arvore-pistas-ligadas', { wait: 600 });
   await page.click('.rr-board__node[data-node="quem"]').catch(() => {});
   await step(10);
   await shot('26-arvore-qual-a-conclusao', { wait: 900 });
@@ -323,11 +332,15 @@ async function captureDevice(dev, url) {
   await behind(Math.PI);
   await step(30);
   await shot('62-varal-cesto-embaixo-da-cenoura');
-  await tap('KeyQ');
-  await page.evaluate(() => { const g = window.__game.game; const P = g.levelDef.layout.DASH_POST; g.debug.teleport('radhija', P.x, P.z + 0.45); g.debug.ctrls.radhija.yaw = Math.PI; });
+  // o empurra-empurra da Rhaenyra no poste do leste (Shift de frente para ele, com a câmera atrás dela)
+  await page.evaluate(() => { const g = window.__game.game; const P = g.levelDef.layout.DASH_POST; g.debug.teleport('rhaenyra', P.x, P.z + 0.62); g.debug.ctrls.rhaenyra.yaw = Math.PI; });
+  await behind(Math.PI);
   await step(8);
-  await tap('ShiftLeft');
-  await until((i) => i.story.scene === 'varal', 90);
+  await page.evaluate(() => { for (const c of ['KeyW', 'ShiftLeft']) window.dispatchEvent(new KeyboardEvent('keydown', { code: c, key: c })); });
+  await step(50);
+  await shot('62b-varal-empurra-empurra');
+  await until((i) => i.story.scene === 'varal', 420);
+  await page.evaluate(() => { for (const c of ['KeyW', 'ShiftLeft']) window.dispatchEvent(new KeyboardEvent('keyup', { code: c, key: c })); });
   await until((i) => i.story.beat === 'cai', 200);
   await step(16);
   await shot('63-varal-a-cenoura-cai');
@@ -351,19 +364,32 @@ async function captureDevice(dev, url) {
   await until((i) => !i.story.scene, 900);
   // o terraço da torre
   await page.evaluate(() => { const g = window.__game.game; const T = g.levelDef.layout.TOWER_LOBBY; g.debug.teleport('radhija', (T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2); });
-  await until((i) => i.story.scene === 'terraco', 60);
-  await until((i) => i.story.beat === 'corrida', 600);
+  await until((i) => i.story.scene === 'telhadoChega', 90);
+  await until((i) => i.story.beat === 'saem', 600);
   await step(90);
-  await shot('69-terraco-corrida');
-  await until((i) => i.story.beat === 'quase', 600);
-  await step(70);
-  await shot('70-terraco-quase');
-  await until((i) => i.story.beat === 'vento', 600);
-  await step(120);
-  await shot('71-terraco-vento-e-cidade');
-  await until((i) => i.story.beat === 'olham', 600);
-  await step(60);
-  await shot('72-terraco-as-duas');
+  await shot('69-telhado-chegada');
+  await until((i) => i.story.beat === 'desafio', 600);
+  await step(80);
+  await shot('70-telhado-desafio-do-capitao');
+  await until((i) => i.story.beat === 'plano', 600);
+  await step(90);
+  await shot('71-telhado-o-plano');
+  await until((i) => !i.story.scene, 900);
+  // jogando lá em cima: vistas de jogo (a câmera atrás da dog) dos poleiros, do caixote e da caixa d'água
+  await page.evaluate(() => { const L = window.__game.game.levelDef.layout; const g = window.__game.game; g.debug.teleport('radhija', L.ROOF_ARRIVE.rad.x + 0.6, L.ROOF_ARRIVE.rad.z - 0.4); g.debug.ctrls.radhija.yaw = Math.PI * 0.7; });
+  await behind(Math.PI * 0.7);
+  await step(40);
+  await shot('72-telhado-jogando-poleiros');
+  await page.evaluate(() => { const L = window.__game.game.levelDef.layout; const g = window.__game.game; g.debug.teleport('radhija', L.ROOF_CRATE.start.x - 0.9, L.ROOF_CRATE.start.z + 0.9); g.debug.ctrls.radhija.yaw = Math.PI * 0.85; });
+  await behind(Math.PI * 0.85);
+  await step(40);
+  await shot('72b-telhado-caixote-e-caixa-dagua');
+  await page.evaluate(() => { const L = window.__game.game.levelDef.layout; const g = window.__game.game; g.debug.teleport('radhija', (L.ROOFTOP.x0 + L.ROOFTOP.x1) / 2, L.ROOFTOP.z1 - 0.8); g.debug.ctrls.radhija.yaw = Math.PI; });
+  await behind(Math.PI);
+  await step(40);
+  await shot('72c-telhado-mureta-e-cidade');
+  await page.evaluate(() => window.__game.game.puzzle.rooftop.skipToEnd());
+  await step(20);
   // a guarita: o Superbafo na grelha, a janela abre, o latido grosso
   await open('portaria');
   await place('radhija', Y.vent.x - 0.75, Y.vent.z, Math.PI / 2);

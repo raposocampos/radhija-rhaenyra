@@ -245,6 +245,28 @@ export function viewOffsetFor(rect, W, H, aspect = W / H) {
   return { fullWidth: fw, fullHeight: fh, x: fw / 2 - cx, y: fh / 2 - cy, width: W, height: H };
 }
 
+/**
+ * Projeta um ponto do mundo na tela W × H com as matrizes da câmera (as do último desenho: com o viewOffset do quadro
+ * ao vivo, o ponto cai onde o 3D o desenhou dentro do quadro). front: false atrás da câmera. ppm: px por metro naquela
+ * distância (a escala vertical da projeção), para medir a cabeça na tela.
+ * @param {{ x: number, y: number, z: number }} a
+ * @param {{ matrixWorldInverse: { elements: ArrayLike<number> }, projectionMatrix: { elements: ArrayLike<number> }, near?: number }} camera
+ * @param {number} W @param {number} H
+ */
+export function projectPoint(a, camera, W, H) {
+  const m = camera.matrixWorldInverse.elements, p = camera.projectionMatrix.elements;
+  const x = +a.x || 0, y = +a.y || 0, z = +a.z || 0;
+  const vx = m[0] * x + m[4] * y + m[8] * z + m[12];
+  const vy = m[1] * x + m[5] * y + m[9] * z + m[13];
+  const vz = m[2] * x + m[6] * y + m[10] * z + m[14];
+  const depth = -vz;
+  if (depth < (camera.near ?? 0.1)) return { x: (vx >= 0 ? 1 : -1) * 1e4, y: H * 2, front: false, ppm: 0 };
+  const cw = p[3] * vx + p[7] * vy + p[11] * vz + p[15];
+  const nx = (p[0] * vx + p[4] * vy + p[8] * vz + p[12]) / cw;
+  const ny = (p[1] * vx + p[5] * vy + p[9] * vz + p[13]) / cw;
+  return { x: ((nx + 1) / 2) * W, y: ((1 - ny) / 2) * H, front: true, ppm: (p[5] * H) / 2 / depth };
+}
+
 // ------------------------------------------------------------------ entradas do quadro ao vivo
 /** Duração (s) de cada entrada. */
 export const ENTER = { pop: 0.42, slide: 0.44, wipe: 0.4, zoom: 0.5, shrink: 0.6, none: 0 };
@@ -536,15 +558,26 @@ const CANDIDATES = [
   ['dl', (ax, ay, w, h, g) => [ax - w * 0.3, ay + g + h / 2], 60],
   ['dr', (ax, ay, w, h, g) => [ax + w * 0.3, ay + g + h / 2], 64],
 ];
+/** Meia largura da cabeça das dogs (m), para o espaço livre embaixo da âncora (comic.js converte em px pela distância). */
+export const HEAD_HALF = 0.09;
+/** Folga (px) entre a ponta do rabicho e a cabeça de quem fala: o rabicho aponta e encosta, sem furar o desenho. */
+export const tipGap = (gap) => clamp(gap * 0.22, 3, 9);
+/**
+ * A caixa da cabeça embaixo da âncora (o alto da cabeça): o balão não a cobre. clear = meia largura em px.
+ * @returns {Rect}
+ */
+export const headBox = (ax, ay, clear) => ({ x: ax - clear, y: ay - clear * 0.25, w: clear * 2, h: clear * 1.7 });
 /**
  * Onde o balão fica: dentro do quadro (com folga das bordas, inclusive as inclinadas), sem cobrir outros balões nem
- * quem fala, de preferência acima e à esquerda da cabeça. Fora do quadro ou atrás da câmera: na borda mais perto, com o
- * rabicho apontando para fora (out: true, a etiqueta com o nome aparece).
+ * a cabeça de quem fala (a âncora é o alto da cabeça; `clear` px em volta e embaixo dela ficam livres), de preferência
+ * acima e à esquerda da cabeça. O rabicho vai até a cabeça (para tipGap px antes dela), mesmo quando o balão teve de
+ * ir longe (outro balão, a borda do quadro). Fora do quadro ou atrás da câmera: na borda mais perto, com o rabicho
+ * apontando para fora (out: true, a etiqueta com o nome aparece).
  * @param {{ anchor: { x: number, y: number, front: boolean } | null, w: number, h: number, poly: Pt[],
- *   others?: Rect[], prev?: string | null, pad?: number, gap?: number }} o
+ *   others?: Rect[], prev?: string | null, pad?: number, gap?: number, clear?: number }} o
  * @returns {{ x: number, y: number, side: string, tip: { x: number, y: number } | null, out: boolean }}
  */
-export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad = 8, gap = 22 }) {
+export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad = 8, gap = 22, clear = null }) {
   const b = bboxOf(poly);
   const c = centroid(poly);
   // a cabeça logo além da borda (cortada pelo quadro) conta como dentro: o balão fica perto, sem etiqueta de nome
@@ -570,7 +603,10 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
     }
     return [x, y];
   };
-  const crowd = (x, y) => others.reduce((s, o) => s + overlap({ x, y, w, h }, o), 0);
+  // a cabeça de quem fala (embaixo da âncora) conta como um balão a não cobrir
+  const hb = anchor && anchor.front !== false && inside(poly, anchor.x, anchor.y, 0)
+    ? headBox(anchor.x, anchor.y, clear ?? gap * 1.1) : null;
+  const crowd = (x, y) => others.reduce((s, o) => s + overlap({ x, y, w, h }, o), 0) + (hb ? overlap({ x, y, w, h }, hb) * 1.5 : 0);
   // sem lugar livre perto do alvo: procura no quadro inteiro o canto com menos sobreposição
   const unclutter = (x, y) => {
     if (crowd(x, y) <= w * h * 0.04) return [x, y];
@@ -622,12 +658,12 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
     if (s < bestS) { bestS = s; best = { x, y, side }; }
   }
   [best.x, best.y] = unclutter(best.x, best.y);
-  // o rabicho para na cabeça; longe demais, fica num tamanho de HQ
+  // o rabicho vai do balão até a cabeça e para logo antes dela (nunca mais curto: um rabicho que para no meio do
+  // caminho aponta para o vazio e o balão parece de outra personagem)
   const bx = best.x + w / 2, by = best.y + h / 2;
   const dx = anchor.x - bx, dy = anchor.y - by;
   const len = Math.hypot(dx, dy) || 1;
-  const max = Math.max(w, h) / 2 + gap * 1.6 + 26;
-  const t = Math.min(len - 3, max);
+  const t = Math.max(0, len - tipGap(gap));
   return { ...best, tip: { x: bx + (dx / len) * t, y: by + (dy / len) * t }, out: false };
 }
 

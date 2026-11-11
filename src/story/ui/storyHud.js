@@ -5,11 +5,12 @@
 //  - as falas (story:say): a voz de sílabas de quem fala SEMPRE (cena e jogo) e, no jogo (mode 'jogo'), a legenda
 //    curta embaixo (subtitles.js); as das cenas são desenhadas pela camada de HQ (comic.js). story:sayClear apaga e
 //    cala; story:voice { who, text | chars, mood?, cps? } só a voz; story:voiceStop cala;
-//  - as pistas: o cartão da pista anotada (desenho + frase) aparece no meio-alto e voa para o botão do quadro
-//    (story:clue); a pergunta nova num letreiro no alto (story:question); o quadro de dedução (story:board, board.js),
-//    aberto pelo botão do quadro, Tab (teclado) ou Back/Select/View (controle); a conclusão escolhida sai em
-//    ui:storyDeduce { node, option } e a errada volta em story:deduceWrong { node }; abrir/fechar avisa
-//    ui:storyBoard { open };
+//  - as pistas: o cartão da pista anotada (desenho + frase; no depoimento, o retratinho e a fala) aparece no meio-alto
+//    e voa para o botão do quadro (story:clue); a pergunta nova num letreiro no alto (story:question); o quadro de
+//    dedução (story:board, board.js), aberto pelo botão do quadro, Tab (teclado) ou Back/Select/View (controle); a
+//    ligação sai em ui:storyLink { clue, node } (errada: story:linkWrong), o confronto em ui:storyConfront
+//    { testimony, clue } (errado: story:confrontWrong; certo: story:insight), a conclusão em ui:storyDeduce
+//    { node, option } (errada: story:deduceWrong { node }); abrir/fechar avisa ui:storyBoard { open };
 //  - conta as meias (story:sock); abre o mural provisório (story:mural) e o fim do capítulo (story:chapterEnd);
 //  - toca os sons e o ambiente da história (story:sfx, story:ambience). A música fica no main.js (story:music).
 import './story.css';
@@ -18,6 +19,7 @@ import { CLUES } from '../clues.js';
 import { readGamepad, capturePad, PAD } from '../../game/input.js';
 import { pictoSvg, HUD_ICONS } from './pictos.js';
 import { createMuralUI } from './mural.js';
+import { createFaroMeter } from './faroMeter.js';
 import { createSubtitles, createVoice } from './subtitles.js';
 import { createBoardUI, boardSummary } from './board.js';
 
@@ -80,6 +82,8 @@ export function createStoryHud({ root, audio = null }) {
   // a legenda do jogo fica entre o joystick e os botões, acima da dica e do aviso de agir (o .rr-hud__bottom)
   const voice = createVoice({ play });
   const subs = createSubtitles({ host: /** @type {HTMLElement} */ (root.querySelector('.rr-hud__bottom')) || host, onSkip: () => voice.stop() });
+  // o fôlego do Faro (o medidor em volta do botão do focinho / do retrato da dog ativa)
+  const faroMeter = createFaroMeter({ root, events });
   const board = createBoardUI({
     host,
     emit: (n, p) => events.emit(n, p),
@@ -129,7 +133,12 @@ export function createStoryHud({ root, audio = null }) {
   function startAnn(item) {
     if (item.kind === 'clue') {
       const p = item.p;
-      const text = p.text || CLUES[p.id]?.name || '';
+      // depoimento: o retratinho de quem falou, o nome e a fala entre aspas (letra à mão)
+      const dep = p.type === 'depoimento' || CLUES[p.id]?.type === 'depoimento';
+      const quote = dep ? (p.quote || CLUES[p.id]?.quote || '') : '';
+      const text = dep && quote ? `“${quote}”` : (p.text || CLUES[p.id]?.name || '');
+      clueCard.classList.toggle('is-dep', dep);
+      clueCard.querySelector('.rr-clue__eyebrow').textContent = dep ? `Depoimento · ${p.name || CLUES[p.id]?.name || ''}` : 'Pista anotada';
       clueCard.querySelector('.rr-clue__pic').innerHTML = pictoSvg(p.picto, p.id);
       // a frase inteira, palavra a palavra (a tinta entra em sequência; nada fica recortado)
       const line = clueCard.querySelector('.rr-clue__text');
@@ -193,8 +202,9 @@ export function createStoryHud({ root, audio = null }) {
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
     Enter: 'ok', NumpadEnter: 'ok', Space: 'ok', KeyE: 'ok', Backspace: 'back',
-    Equal: 'zoomIn', NumpadAdd: 'zoomIn', Minus: 'zoomOut', NumpadSubtract: 'zoomOut',
-    Digit1: 'opt1', Digit2: 'opt2', Digit3: 'opt3', Numpad1: 'opt1', Numpad2: 'opt2', Numpad3: 'opt3',
+    Equal: 'zoomIn', NumpadAdd: 'zoomIn', Minus: 'zoomOut', NumpadSubtract: 'zoomOut', KeyC: 'confront',
+    // os números: a opção da conclusão (painel aberto) ou o cartão da bandeja de Achados
+    ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((n) => [[`Digit${n}`, `opt${n}`], [`Numpad${n}`, `opt${n}`]])),
   };
   /** Na captura (antes do jogo): Tab abre/fecha o quadro; com ele aberto, as teclas são dele (o jogo não as vê). */
   const onKey = (/** @type {KeyboardEvent} */ e) => {
@@ -228,6 +238,7 @@ export function createStoryHud({ root, audio = null }) {
     if (board.isOpen) {
       if (edge(PAD.A)) board.command('ok');
       if (edge(PAD.B)) board.command('back');
+      if (edge(PAD.Y)) board.command('confront');
       if (edge(PAD.RB)) board.command('zoomIn');
       if (edge(PAD.LB)) board.command('zoomOut');
       // D-pad com repetição (segurar passa de pergunta em pergunta)
@@ -309,6 +320,10 @@ export function createStoryHud({ root, audio = null }) {
       else chip.classList.toggle('has-ready', boardSummary(board.state).ready > 0);
     }),
     events.on('story:deduceWrong', (/** @type {any} */ p) => board.wrong(p?.node)),
+    // ligar e confrontar no quadro (src/story/deduction.js responde ao ui:storyLink e ao ui:storyConfront)
+    events.on('story:linkWrong', (/** @type {any} */ p) => board.linkWrong(p || {})),
+    events.on('story:confrontWrong', (/** @type {any} */ p) => board.confrontWrong(p || {})),
+    events.on('story:insight', (/** @type {any} */ p) => board.insight(p || {})),
     events.on('story:sock', (/** @type {any} */ p) => {
       socks = p.count ?? socks + 1;
       nMeias.textContent = String(socks);
@@ -397,6 +412,7 @@ export function createStoryHud({ root, audio = null }) {
     mural,
     board,
     dispose() {
+      faroMeter.dispose();
       for (const off of offs) off();
       removeEventListener('keydown', onKey, true);
       capturePad(false);

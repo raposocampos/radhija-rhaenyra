@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { rng, foliageCluster, paint, mergeGeometries, mergeVertices, leafSkin } from '../../../../world/util.js';
 import { lavender } from '../../../../world/plants.js';
 import { buildWallButton } from '../../../../world/wallButton.js';
-import { rb, cyl, slab, sphere, rod, tiles, tilesV, gableRoof, SLOTS } from '../../../../levels/mapa/world/kit.js';
+import { rb, cyl, slab, sphere, rod, tiles, tilesV, gableRoof, SLOTS, wallBox, weathered } from '../../../../levels/mapa/world/kit.js';
 
 const TAU = Math.PI * 2;
 const C = (hex) => new THREE.Color(hex);
@@ -428,12 +428,13 @@ export function buildCasa(kit, root, L) {
    * Parede ao longo de x (em z = c) ou de z (em x = c), de a0 a a1, com vãos { a, b, y0, y1 }. `od` (±1): o lado de
    * fora no eixo atravessado; a face oposta leva a cor de dentro.
    */
-  const wallRun = (axis, c, a0, a1, out, inside, od, holes = []) => {
+  const wallRun = (axis, c, a0, a1, out, inside, od, holes = [], ext = false) => {
     const box = (p0, p1, y0, y1) => {
       if (p1 - p0 < 0.005 || y1 - y0 < 0.005) return;
-      const len = p1 - p0, mid = (p0 + p1) / 2;
-      add(axis === 'x' ? slab(len, y1 - y0, t) : slab(t, y1 - y0, len), {
-        color: wallTint(out, inside, axis === 'x' ? 0 : od, axis === 'x' ? od : 0, y0),
+      const len = p1 - p0, mid = (p0 + p1) / 2, ox = axis === 'x' ? 0 : od, oz = axis === 'x' ? od : 0;
+      // as de fora: o reboco gasto (respingos no barrado, umidade, escorridos embaixo do beiral); as de dentro, lisas
+      add(ext ? (axis === 'x' ? wallBox(len, y1 - y0, t) : wallBox(t, y1 - y0, len)) : (axis === 'x' ? slab(len, y1 - y0, t) : slab(t, y1 - y0, len)), {
+        color: ext ? weathered(out, { h: WL.h, y0, seed: c * 0.61 + mid * 0.07, along: axis === 'x' ? 'x' : 'z', inside, out: [ox, oz], eave: 0.3 }) : wallTint(out, inside, ox, oz, y0),
         x: axis === 'x' ? mid : c, y: y0, z: axis === 'x' ? c : mid, ao: false,
       });
     };
@@ -449,13 +450,13 @@ export function buildCasa(kit, root, L) {
     piece(p, a1, 0, WL.h);
   };
   // norte (o basculante do quarto e a janela da pia), oeste (o muro do condomínio por fora), sul e leste
-  wallRun('x', H.z0, H.x0 - ht, XM, plaster, lilac, -1, [hBasc]);
-  wallRun('x', H.z0, XM, H.x1 + ht, plaster, mint, -1, [WIN.pia]);
-  wallRun('z', H.x0, ZN, ZM, '#efe2c8', lilac, -1);
-  wallRun('z', H.x0, ZM, ZS, '#efe2c8', yellow, -1);
-  wallRun('x', H.z1, H.x0 - ht, H.x1 + ht, plaster, yellow, 1, [WIN.salaSul]);
-  wallRun('z', H.x1, ZN, ZM, plaster, mint, 1, [hKD, WIN.cozinha]);
-  wallRun('z', H.x1, ZM, ZS, plaster, yellow, 1, [WIN.sala1, WIN.sala2]);
+  wallRun('x', H.z0, H.x0 - ht, XM, plaster, lilac, -1, [hBasc], true);
+  wallRun('x', H.z0, XM, H.x1 + ht, plaster, mint, -1, [WIN.pia], true);
+  wallRun('z', H.x0, ZN, ZM, '#efe2c8', lilac, -1, [], true);
+  wallRun('z', H.x0, ZM, ZS, '#efe2c8', yellow, -1, [], true);
+  wallRun('x', H.z1, H.x0 - ht, H.x1 + ht, plaster, yellow, 1, [WIN.salaSul], true);
+  wallRun('z', H.x1, ZN, ZM, plaster, mint, 1, [hKD, WIN.cozinha], true);
+  wallRun('z', H.x1, ZM, ZS, plaster, yellow, 1, [WIN.sala1, WIN.sala2], true);
   // de dentro: quarto | cozinha (a passagem da grade) e a parede da sala (a passagem da cozinha)
   wallRun('z', XM, ZN, ZM - ht, mint, lilac, 1, [hDQ]);
   // (as pontas entram 2 cm nas paredes de fora: nenhuma face delas fica no plano das beiradas do forro)
@@ -1416,7 +1417,8 @@ export function buildCasa(kit, root, L) {
     const len = Math.hypot(bx - ax, bz - az);
     if (len < 0.02) return;
     const ry = -Math.atan2(bz - az, bx - ax);
-    addY(slab(len, Y.wallH, t), { color: yardTint, x: (ax + bx) / 2, z: (az + bz) / 2, ry, ao: false });
+    // o reboco gasto, com o musgo nas pontas (o pé do pilar, o canto do muro do condomínio)
+    addY(wallBox(len, Y.wallH, t), { color: weathered(wallY, { h: Y.wallH, half: len / 2, seed: ax * 0.37 + az * 0.11, eave: 0.16 }), x: (ax + bx) / 2, z: (az + bz) / 2, ry, ao: false });
     addY(rb(len + 0.02, 0.05, t + 0.06, 0.015, 1), { color: '#c9b693', x: (ax + bx) / 2, y: Y.wallH, z: (az + bz) / 2, ry, ao: false });
   };
   const GM = 0.24; // o trecho do arco passa disto para cada lado da passagem

@@ -26,7 +26,10 @@ export const SPEAKERS = {
   capitao: { name: 'Capitão Migalha', sound: 'voz-pombo', every: 3, pitch: 0.82 },
   farelo: { name: 'Farelo', sound: 'voz-pombo', every: 3, pitch: 1.05 },
   soneca: { name: 'Soneca', sound: 'voz-pombo', every: 4, pitch: 1.18 },
-  porteiro: { name: 'Seu Porteiro', sound: 'voz-porteiro', every: 4, pitch: 1 },
+  porteiro: { name: 'Sr. Luiz', sound: 'voz-porteiro', every: 4, pitch: 1 },
+  // as testemunhas: a gansa no trombone abafado lá no agudo (um "quém"), o gato num arrulho fino
+  gansa: { name: 'Dona Gansa', sound: 'voz-porteiro', every: 3, pitch: 1.55 },
+  bichano: { name: 'Bichano', sound: 'voz-pombo', every: 4, pitch: 1.4 },
 };
 /** @typedef {'normal' | 'grito' | 'sussurro' | 'sono' | 'pensa'} Mood */
 

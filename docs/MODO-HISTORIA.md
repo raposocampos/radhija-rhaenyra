@@ -179,7 +179,10 @@ cima, havia pontos do mapa ruins de enxergar.
 **Como abrir.** `?historia` numa prévia de PR ou na versão de desenvolvimento (`src/story/gate.js`). No link principal
 não abre nada. `?historia&stage=varal` começa numa etapa da missão (testes e revisão).
 
-**Controles novos.** Faro: V, L3 ou o botão do focinho no toque, com qualquer uma das duas. Examinar uma pista
+**Controles novos.** Faro: V, L3 ou o botão do focinho no toque, com qualquer uma das duas; liga e desliga, e gasta
+o fôlego de cada dog (8 s cheio, recarrega desligado; `src/story/faro/faroMode.js`, o medidor em `faroMeter.js`).
+Árvore de pistas: Tab, Select ou o botão do HUD; ligar uma pista a uma pergunta é tocar/clicar na pista e depois na
+pergunta. Falar com uma testemunha: E, de perto. Examinar uma pista
 revelada: E, de perto. Pular cena: segurar E (ou Espaço, Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. No
 quarto, o aviso do Faro também é tocável.
 
@@ -215,10 +218,16 @@ quarto, o aviso do Faro também é tocável.
   3. o quintal: a porta trancada por fora; o galho na frente da passagem do muro (Rhaenyra); a passagem e a argola do
      ferrolho (Radhija);
   4. a piscina: o Faro mostra a Reconstrução;
-  5. o varal: o cesto embaixo da cenoura (Rhaenyra) e a arrancada no poste (Radhija);
-  6. a torre: a senha do interfone, que o Faro mostra; a porta de mola com a irmã segurando, até o terraço;
-  7. a portaria: o Superbafo pela grelha abre a janela; o latido grosso da Rhaenyra acorda o porteiro;
+  5. o varal: o cesto embaixo da cenoura e o empurra-empurra da Rhaenyra no poste (Shift / R1, três empurrões);
+  6. a torre: a senha do interfone (4 botões; a Reconstrução mostra dois e o espirro do Soneca esconde o terceiro, que
+     vem do depoimento da Dona Gansa); a porta de mola com a irmã segurando; o terraço jogável (`rooftop.js`, fora do
+     mapa): encurralar os pombos com uma dog no Fica, o caixote embaixo da escada, o pulo na parede no trinco, a fuga
+     e a pista da tampa;
+  7. a portaria: o Superbafo pela grelha abre a janela; o latido grosso da Rhaenyra acorda o Sr. Luiz, que dá o
+     depoimento (contradito pela grelha: pergunta nova no quadro);
   8. o portãozinho.
+- **As testemunhas:** a Dona Gansa (quer o broche que caiu na ilha) e o Bichano, no capô da caminhonete (quer a
+  bolinha presa no depósito); cada uma dá um depoimento para a árvore de pistas.
 - **Os três puzzles paralelos:**
   - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
   - a lixeira e o toldo até a meia da antena;

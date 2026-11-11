@@ -40,8 +40,22 @@ const P = (x, z, extra = {}) => ({ x: u(x), z: u(z), ...extra });
 // ---------------------------------------------------------------- terreno
 /** O muro do condomínio: as linhas de centro e a espessura; a altura (o do norte é mais baixo: a cidade aparece). */
 export const WALL = { minX: u(-14.2), maxX: u(14.2), minZ: u(-9.0), maxZ: u(8.8), t: 0.24, h: 1.85, hNorth: 1.5 };
-/** Limites onde as dogs andam: 20 cm para dentro do muro (a rua do lado de fora é só cenário: as cenas levam as dogs até lá). */
-export const WORLD = { bounds: { minX: WALL.minX + 0.2, maxX: WALL.maxX - 0.2, minZ: WALL.minZ + 0.2, maxZ: WALL.maxZ - 0.2 } };
+/**
+ * O TERRAÇO DA TORRE jogável (pedido do usuário em 2026-11-11: "quando se abre a porta não tem nada pra fazer"). O núcleo
+ * só anda no chão (y = 0) e a colisão é 2D: o terraço é um cenário à parte, NO CHÃO, longe do condomínio (a leste, depois
+ * dos vizinhos). Em volta dele, a "queda": a fachada do prédio desce até `fall` e, lá embaixo, a rua, as copas e os
+ * telhados baixos; ao norte, a cidade com o relógio. De `cut` em diante (x) o chão de fora do condomínio (world/base.js)
+ * dá lugar ao do cenário do telhado (world/telhado.js). Entrar no saguão da torre leva as duas para lá num corte no preto;
+ * no fim, outro corte as devolve para a porta da torre (rooftop.js, scenesTelhado.js). `t`: a espessura da mureta.
+ */
+export const ROOFTOP = { x0: 63.5, x1: 76.5, z0: -12.0, z1: -1.0, t: 0.2, parapet: 0.55, fall: -9.0, cut: 50 };
+/** Os limites do condomínio: 20 cm para dentro do muro (o cenário de dentro usa estes). */
+export const CONDO_BOUNDS = { minX: WALL.minX + 0.2, maxX: WALL.maxX - 0.2, minZ: WALL.minZ + 0.2, maxZ: WALL.maxZ - 0.2 };
+/**
+ * Limites onde as dogs andam: o condomínio e, a leste, o terraço da torre (o muro e os colisores 'telhado-vazio-*' fecham
+ * o que fica entre os dois; a rua do lado de fora é só cenário: as cenas levam as dogs até lá).
+ */
+export const WORLD = { bounds: { ...CONDO_BOUNDS, maxX: ROOFTOP.x1 + 0.2 } };
 /** O portãozinho de pedestres no muro norte (fechado até o porteiro abrir), ao lado da guarita. */
 export const GATE = { x0: 21.25, x1: 22.45, z: WALL.minZ, h: 1.45 };
 /** A folha do portãozinho: abre para dentro (para o sul), como as outras dobradiças (folha ao longo de −Z local). */
@@ -177,8 +191,14 @@ export const DRAIN = { x: TANKS.x0 + 0.5, z: TANKS.z0 + 0.26, y: TANKS.h - 0.2 }
 /** O varal entre dois postes; a cenoura presa num pregador, a 2 m do poste do leste. */
 export const LINE = { a: { x: -4.4, z: u(-7.55) }, b: { x: u(2.25), z: u(-7.55) }, h: 1.32, postR: 0.07 };
 export const CARROT_PIN = { x: LINE.b.x - 2.0, z: LINE.a.z, y: LINE.h - 0.02 };
-/** A arrancada da Radhija até este raio do poste do leste sacode o varal e solta o pregador. */
+/** O poste do leste do varal (DASH_POST: o nome antigo, de quando a arrancada da Radhija sacudia o varal). */
 export const DASH_POST = { x: LINE.b.x, z: LINE.b.z, r: 0.62 };
+/**
+ * O empurra-empurra da Rhaenyra no poste do leste (empurrão em pé, segurando Shift / R1: src/game/mechanics/
+ * shoveTarget.js): ela apoia as patas da frente do lado sul. A cada empurrão o varal balança; com o cesto embaixo da
+ * cenoura, no terceiro o pregador solta (pedido do usuário em 2026-11-11, no lugar da arrancada da Radhija).
+ */
+export const POLE_SHOVE = { x: LINE.b.x, z: LINE.b.z + LINE.postR + 0.03, nx: 0, nz: 1, y: 0.55, w: 0, over: 0, kind: 'tree', pushes: 3 };
 /**
  * O cesto de roupa (caixa empurrável, só ao longo do varal): a Rhaenyra empurra para o leste até parar embaixo da
  * cenoura (`under`: até quanto do pregador conta). Sem o cesto embaixo, sacudir o varal não adianta.
@@ -193,14 +213,16 @@ export const TOWER_DOOR = {
   closedYaw: Math.PI, openYaw: Math.PI + Math.PI * 0.5, openTime: 0.8, closeTime: 0.65, h: 2.0,
 };
 /**
- * O interfone da torre, na parede oeste, ao sul da porta: três botões no alto (o impulso da Rhaenyra), cada um com um
- * desenho. A senha são os três, na ordem de `code` (o Faro mostra a Reconstrução do Farelo apertando: `recon`).
+ * O interfone da torre, na parede oeste, ao sul da porta: quatro botões no alto (o impulso da Rhaenyra), cada um com
+ * um desenho. A senha são três deles, na ordem de `code`: o Faro mostra a Reconstrução do Farelo apertando os dois
+ * primeiros (`recon`), e o espirro do Soneca esconde o terceiro (a árvore de pistas: o depoimento da Dona Gansa).
  */
 export const INTERCOM = {
   buttons: [
-    { id: 'osso', x: TOWER.x0 - WALLS.t / 2, z: -9.45, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
-    { id: 'nota', x: TOWER.x0 - WALLS.t / 2, z: -8.95, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
-    { id: 'sino', x: TOWER.x0 - WALLS.t / 2, z: -8.45, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
+    { id: 'osso', x: TOWER.x0 - WALLS.t / 2, z: -9.68, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
+    { id: 'nota', x: TOWER.x0 - WALLS.t / 2, z: -9.228, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
+    { id: 'peixe', x: TOWER.x0 - WALLS.t / 2, z: -8.776, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
+    { id: 'sino', x: TOWER.x0 - WALLS.t / 2, z: -8.324, nx: -1, nz: 0, top: 1.02, kind: 'button', mode: 'once' },
   ],
   code: ['sino', 'osso', 'nota'],
   recon: { x: TOWER.x0 - 1.1, z: -9.0, r: 5.5 },
@@ -231,6 +253,60 @@ export const TERRACE = {
   y: TOWER.h, hut: { x: 7.4, z: -9.6 }, rad: { x: 8.6, z: -11.2 }, rha: { x: 9.6, z: -12.2 },
   pigeons: { x: u(7.0), z: u(-8.0), y: TOWER.tank.h }, view: { x: u(6.0), z: -52 },
 };
+
+// ---------------------------------------------------------------- o terraço jogável (cenário à parte: ROOFTOP)
+/** A casinha da escada, no canto sudoeste: as duas saem pela porta da face leste (o vão em z0..z1 da porta). */
+export const ROOF_HUT = { x0: ROOFTOP.x0, x1: ROOFTOP.x0 + 2.4, z0: ROOFTOP.z1 - 2.8, z1: ROOFTOP.z1, h: 2.3, door: { z0: -2.95, z1: -1.95, h: 1.95 } };
+/** Onde as duas aparecem, na frente da porta da casinha (o corte da chegada). */
+export const ROOF_ARRIVE = { rad: { x: 66.85, z: -2.0, yaw: Math.PI / 2 }, rha: { x: 67.05, z: -3.15, yaw: Math.PI / 2 } };
+/**
+ * A caixa d'água grande, no canto nordeste (encostada nas muretas do norte e do leste), com o alçapão no alto (a TAMPA de
+ * borracha dele some com os pombos: a pista 'tampa') e a escada de marinheiro na face sul.
+ */
+export const ROOF_TANK = { x0: 72.6, x1: ROOFTOP.x1, z0: ROOFTOP.z0, z1: -8.4, h: 2.7, hatch: { x: 74.55, z: -10.25, r: 0.3 } };
+/**
+ * A escada de marinheiro: os trilhos encostados na face sul (z), de `low` até o alto; o lance de baixo fica recolhido e
+ * travado lá em cima. Destravado, ele desce `drop` m e apoia no caixote.
+ */
+export const ROOF_LADDER = { x: 74.4, z: ROOF_TANK.z1 + 0.08, w: 0.42, low: 1.3, drop: 0.8 };
+/**
+ * O caixote de feira (caixa empurrável): a Rhaenyra leva até embaixo da escada (o fim do curso: x = maxX e z = minZ, a 10
+ * cm da caixa d'água). Dá para empurrar para o leste e para o norte, em qualquer ordem.
+ */
+export const ROOF_CRATE = { start: { x: 70.6, z: -3.4 }, half: 0.3, height: 0.5, minX: 70.6, maxX: ROOF_LADDER.x, minZ: ROOF_TANK.z1 + 0.4, maxZ: -3.4, pushSpeed: 0.8 };
+/**
+ * A trava da escada: um puxador vermelho que pende na frente dos trilhos, alto demais para o pulo do chão. Com o caixote
+ * embaixo da escada, a face sul dele vira a "parede" do impulso da Rhaenyra (createWallButton: o impulso sobe o
+ * quanto um caixote sobe) e a pata alcança o puxador.
+ */
+export const ROOF_LATCH = { x: ROOF_LADDER.x, z: ROOF_CRATE.minZ + ROOF_CRATE.half, nx: 0, nz: 1, top: 1.45, kind: 'lever', mode: 'once', lat: 0 };
+/**
+ * Os poleiros dos pombos: três baixos (a antena, o varal e o ar-condicionado) e o alto da caixa d'água (o único alto
+ * demais: é para lá que eles vão quando não sobra poleiro). (x, z): o ponto do chão que conta para espantar e guardar;
+ * y: onde os pés pousam; `axis`/`step`: os três lugares lado a lado (o Farelo, com a cenoura, no meio).
+ */
+export const ROOF_PERCHES = {
+  antena: { x: 65.6, z: -10.4, y: 2.27, axis: 'x', step: 0.33 },
+  varal: { x: 69.4, z: -6.0, y: 1.46, axis: 'x', step: 0.55 },
+  ar: { x: 75.8, z: -4.2, y: 0.84, axis: 'z', step: 0.27 },
+  caixa: { x: 74.55, z: -9.75, y: ROOF_TANK.h + 0.02, axis: 'x', step: 0.5, high: true },
+};
+/** A antena de TV (o mastro com a base de concreto), o varal de terraço e o ar-condicionado velho com o ventilador. */
+export const ROOF_ANTENNA = { x: ROOF_PERCHES.antena.x, z: ROOF_PERCHES.antena.z, base: 0.22, top: 2.9, bar: 2.25 };
+export const ROOF_LINE = { a: { x: 67.6, z: -6.0 }, b: { x: 71.2, z: -6.0 }, h: 1.45, postR: 0.05 };
+export const ROOF_AC = { x0: 75.3, x1: ROOFTOP.x1 - ROOFTOP.t / 2 - 0.02, z0: -4.7, z1: -3.7, h: 0.82 };
+/** O carrinho de mão esquecido (as alças para o sul), a pilha de caixas e os vasos (cenário com colisão). */
+export const ROOF_BARROW = { x: 68.6, z: -2.1, hx: 0.36, hz: 0.7 };
+export const ROOF_BOXES = { x: 64.3, z: -7.6, hx: 0.55, hz: 0.45 };
+export const ROOF_POTS = [{ x: 67.7, z: -11.55, r: 0.22 }, { x: 72.15, z: -11.5, r: 0.2 }, { x: 63.95, z: -5.0, r: 0.2 }, { x: 76.05, z: -6.6, r: 0.2 }];
+/**
+ * O mirante: a mureta norte de frente para a cidade, aonde as penas levam (o fim do terraço). Junto dela, o DEGRAU de
+ * concreto (com colisor): na cena, as duas sobem nele para olhar por cima da mureta (a Radhija é mais baixa que ela).
+ */
+export const ROOF_STEP = { x0: 68.9, x1: 71.1, z0: ROOFTOP.z0 + ROOFTOP.t / 2, z1: -11.3, h: 0.2 };
+export const ROOF_LOOKOUT = { x: 70.0, z: ROOF_STEP.z1 + 0.35, r: 1.0 };
+/** As penas que caem na fuga, do pé da caixa d'água até o mirante (o Faro mostra a direção da cidade). */
+export const ROOF_FEATHERS = [{ x: 72.2, z: -9.0, yaw: -0.8 }, { x: 71.4, z: -9.85, yaw: -0.6 }, { x: 70.6, z: -10.6, yaw: -0.4 }];
 
 // ---------------------------------------------------------------- guarita e portãozinho (nordeste)
 export const BOOTH = { x0: 17.84, x1: 20.24, z0: WALL.minZ + 0.2, z1: -12.7, h: 2.25, roof: 2.42, awning: { z1: -12.1, y0: 1.56, y1: 1.74 } };
@@ -332,6 +408,17 @@ export const COLLECTIBLES = [
   { id: 'mesa', x: KITCHEN_TABLE.x, z: KITCHEN_TABLE.z }, // embaixo da mesa da cozinha (só a Radhija)
 ];
 export const COLLECTIBLE_PICKUP_R = 0.42;
+/**
+ * As testemunhas (pedido do usuário em 2026-11-11: dar propósito aos personagens e aos puzzles paralelos):
+ *  - a Dona Gansa perdeu o broche de campanha (os pombos deixaram cair na ilha): devolvido, ela conta o que viu;
+ *  - o Bichano, na garagem, quer a bolinha presa atrás da porta do depósito: com ela solta, ele conta o que ouviu.
+ * `talk`: a que distância o E conversa.
+ */
+export const WITNESSES = {
+  broche: { x: LAKE.island.x + 0.35, z: LAKE.island.z + 0.15, y: 0.1, pickR: 0.5 },
+  gansa: { talk: 1.9 },
+  bichano: { talk: 1.7 },
+};
 /** Meias perdidas (o colecionável do capítulo). */
 export const SOCKS = [
   { id: 'antena', x: ANTENNA.x, z: ANTENNA.z, y: ANTENNA.sock }, // puzzle B (subida pela lixeira e pelo toldo)
@@ -506,6 +593,9 @@ export const STATIC_COLLIDERS = [
   circle('ducha', POOL_SHOWER.x, POOL_SHOWER.z, POOL_SHOWER.r),
   ...POOL_POTS.map((p, i) => circle(`vaso-piscina-${i + 1}`, p.x, p.z, p.r)),
   circle('mesinha-piscina', POOL_TABLE.x, POOL_TABLE.z, POOL_TABLE.r),
+  // vida nos cantos (world/base.js): a bicicletinha no muro sul e os caixotes no canto nordeste
+  box('vida-bicicleta', 8.95, 14.42, 10.25, 14.84),
+  box('vida-caixotes', 23.15, -15.15, 24.0, -14.35),
   boxAt('bau-das-boias', POOL_TOYBOX),
   boxAt('maquina-de-lavar', SERVICE_WASHER),
   boxAt('varal-de-chao', SERVICE_RACK),
@@ -554,7 +644,42 @@ export const STATIC_COLLIDERS = [
     ? box(`banco-${i + 1}`, b.x - 0.25, b.z - 0.7, b.x + 0.25, b.z + 0.7)
     : box(`banco-${i + 1}`, b.x - 0.7, b.z - 0.25, b.x + 0.7, b.z + 0.25))),
   ...LAMPS.map((l, i) => circle(`poste-${i + 1}`, l.x, l.z, 0.08)),
+  // o terraço da torre (cenário à parte, a leste): roofColliders
+  ...roofColliders(),
 ];
+
+/**
+ * Os colisores do terraço jogável ('telhado-*'): as muretas, a casinha da escada (com a porta fechada atrás das duas), a
+ * caixa d'água, a antena, os postes do varal, o ar-condicionado, o carrinho de mão, as caixas e os vasos. Em volta, o
+ * "vazio" ('telhado-vazio-*'): tudo o que fica dentro dos limites e fora do condomínio e do terraço (ninguém anda lá).
+ */
+function roofColliders() {
+  const R = ROOFTOP, rt = R.t / 2, B = WORLD.bounds;
+  const out = R.x0 - rt - 0.02, outE = R.x1 + rt + 0.02, outN = R.z0 - rt - 0.02, outS = R.z1 + rt + 0.02;
+  const H = ROOF_HUT, T = ROOF_TANK, AC = ROOF_AC;
+  return [
+    // as muretas (a casinha e a caixa d'água ficam por cima delas nos cantos)
+    seg('telhado-mureta-norte', R.x0, R.z0, R.x1, R.z0, rt),
+    seg('telhado-mureta-sul', R.x0, R.z1, R.x1, R.z1, rt),
+    seg('telhado-mureta-oeste', R.x0, R.z0, R.x0, R.z1, rt),
+    seg('telhado-mureta-leste', R.x1, R.z0, R.x1, R.z1, rt),
+    box('telhado-casinha', H.x0, H.z0, H.x1, H.z1),
+    box('telhado-caixa', T.x0, T.z0, T.x1, T.z1),
+    box('telhado-antena', ROOF_ANTENNA.x - ROOF_ANTENNA.base, ROOF_ANTENNA.z - ROOF_ANTENNA.base, ROOF_ANTENNA.x + ROOF_ANTENNA.base, ROOF_ANTENNA.z + ROOF_ANTENNA.base),
+    circle('telhado-varal-oeste', ROOF_LINE.a.x, ROOF_LINE.a.z, ROOF_LINE.postR + 0.03),
+    circle('telhado-varal-leste', ROOF_LINE.b.x, ROOF_LINE.b.z, ROOF_LINE.postR + 0.03),
+    box('telhado-ar', AC.x0, AC.z0, AC.x1, AC.z1),
+    boxAt('telhado-carrinho', ROOF_BARROW),
+    boxAt('telhado-pilha', ROOF_BOXES),
+    box('telhado-degrau', ROOF_STEP.x0, ROOF_STEP.z0, ROOF_STEP.x1, ROOF_STEP.z1),
+    ...ROOF_POTS.map((p, i) => circle(`telhado-vaso-${i + 1}`, p.x, p.z, p.r)),
+    // o vazio em volta: entre o muro leste do condomínio e o terraço, ao norte, ao sul e a leste dele
+    box('telhado-vazio-oeste', WALL.maxX + mt + 0.04, B.minZ - 1, out, B.maxZ + 1),
+    box('telhado-vazio-norte', out, B.minZ - 1, B.maxX + 1, outN),
+    box('telhado-vazio-sul', out, outS, B.maxX + 1, B.maxZ + 1),
+    box('telhado-vazio-leste', outE, outN, B.maxX + 1, outS),
+  ];
+}
 
 // ---------------------------------------------------------------- navegação da companheira
 /** @type {Record<string, import('../../../types').XZ>} */
@@ -577,6 +702,10 @@ export const NAV_NODES = {
   L_east: { x: 22.4, z: 10.2 }, I_mid: { x: LAKE.island.x, z: LAKE.island.z + 0.3 },
   G_front: P(1.6, 2.7), G_west: P(-2.6, 4.6), G_side: { x: 2.9, z: 9.4 }, G_door: { x: 3.2, z: 12.15 },
   G_in: { x: 6.1, z: 12.4 },
+  // o terraço da torre (cenário à parte: ligado só entre si)
+  R_porta: { x: 67.2, z: -2.45 }, R_meio: { x: 69.4, z: -4.5 }, R_sul: { x: 72.4, z: -2.2 }, R_se: { x: 74.6, z: -2.2 },
+  R_leste: { x: 74.3, z: -5.8 }, R_tanque: { x: 73.4, z: -7.2 }, R_centro: { x: 70.3, z: -8.6 }, R_no: { x: 67.4, z: -9.2 },
+  R_oeste: { x: 65.0, z: -5.6 }, R_mirante: { x: ROOF_LOOKOUT.x, z: ROOF_LOOKOUT.z },
 };
 /** @type {import('../../../types').NavEdge[]} */
 export const NAV_EDGES = [
@@ -601,6 +730,10 @@ export const NAV_EDGES = [
   ['P_se', 'G_front'], ['G_front', 'L_sw'], ['L_sw', 'L_south'], ['G_front', 'L_south'],
   ['L_south', 'L_slot'], ['L_slot', 'L_east'], ['L_slot', 'I_mid', { requires: ['small', 'boatDocked'] }],
   ['G_front', 'G_west'], ['G_front', 'G_side'], ['G_side', 'G_door'], ['G_door', 'G_in', { requires: 'storageOpen' }],
+  // o terraço da torre
+  ['R_porta', 'R_meio'], ['R_porta', 'R_oeste'], ['R_meio', 'R_oeste'], ['R_meio', 'R_sul'], ['R_meio', 'R_centro'],
+  ['R_sul', 'R_se'], ['R_se', 'R_leste'], ['R_leste', 'R_tanque'], ['R_tanque', 'R_centro'], ['R_centro', 'R_no'],
+  ['R_centro', 'R_mirante'], ['R_no', 'R_mirante'], ['R_no', 'R_oeste'],
 ];
 
 // ---------------------------------------------------------------- objetivo, câmera
@@ -625,6 +758,9 @@ export const CAMERA = {
     // dentro de casa (embaixo de um teto), a câmera chega mais perto e fica mais baixa
     indoor: { distance: 2.1, pitch: 0.22 },
     heading: Math.atan2(-1.3, -4.8), // começa olhando para o norte, um pouco a oeste
+    // as paredes que encurtam o braço (a lista de src/story/camera/thirdPerson.js e, no terraço da torre, a casinha da
+    // escada e a caixa d'água; as muretas não: a câmera pode sair por cima delas e mostrar a queda)
+    occluders: ['muro', 'casa', 'quarto', 'cozinha', 'quintal', 'torre', 'guarita', 'deposito', 'porta', 'portaozinho', 'telhado-casinha', 'telhado-caixa'],
     // tetos: dentro deles a câmera não sobe além (casa, depósito, saguão da torre, guarita, garagem)
     ceilings: [
       { minX: HOUSE.x0, maxX: HOUSE.x1, minZ: HOUSE.z0, maxZ: HOUSE.z1, y: WALLS.h },
@@ -651,11 +787,13 @@ const LAYOUT = {
   BED, BOWL, WARDROBE, TOY_BASKET, RUG, DRESSER, COUNTER, FRIDGE, KITCHEN_TABLE, SOFA, TV_RACK, COFFEE_TABLE, ARMCHAIR,
   HOUSE_EXTRAS,
   KITCHEN_DOOR, KITCHEN_HANDLE, FOOD_SACK, YARD, SERVICE_DOOR, BRANCH, TILES, YARD_GAP, SERVICE_BOLT, DOGHOUSE, YARD_BEDS,
-  POOL, RECON, LOUNGERS, UMBRELLA, POOL_FILTER, POOL_SHOWER, POOL_POTS, SERVICE, TANKS, DRAIN, LINE, CARROT_PIN, DASH_POST,
+  POOL, RECON, LOUNGERS, UMBRELLA, POOL_FILTER, POOL_SHOWER, POOL_POTS, SERVICE, TANKS, DRAIN, LINE, CARROT_PIN, POLE_SHOVE, DASH_POST,
   LAUNDRY, TOWER, TOWER_DOOR, INTERCOM, TOWER_LOBBY, POOL_TABLE, POOL_TOYBOX, SERVICE_WASHER, SERVICE_RACK, TOWER_GAS, TERRACE, BOOTH, ANTENNA, BOOTH_VENT, BIN, BIN_SPOT, CLIMB, LAKE, PIER,
   BOAT, CHANNEL, GOOSE, CARPORT, CAR, WHEELS, STORAGE, STORAGE_DOOR, BALL, SHELF, ROPE, STORAGE_STUFF, GARAGE_STUFF, COLLECTIBLES,
-  COLLECTIBLE_PICKUP_R, SOCKS, SOCK_PICKUP_R, CLUE_SPOTS, CARROT_TRAIL, TREES, TREE_TRUNK_R, BENCHES, LAMPS,
+  COLLECTIBLE_PICKUP_R, WITNESSES, SOCKS, SOCK_PICKUP_R, CLUE_SPOTS, CARROT_TRAIL, TREES, TREE_TRUNK_R, BENCHES, LAMPS,
   ELECTION_POSTER, BEDS,
+  ROOFTOP, CONDO_BOUNDS, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
+  ROOF_AC, ROOF_BARROW, ROOF_BOXES, ROOF_POTS, ROOF_STEP, ROOF_LOOKOUT, ROOF_FEATHERS,
   DOGS: {
     radhija: withStart('radhija', { x: BED.x + 1.0, z: BED.z + 1.4, yaw: 1.9 }),
     rhaenyra: withStart('rhaenyra', { x: BED.x + 1.9, z: BED.z + 1.75, yaw: -1.4 }),

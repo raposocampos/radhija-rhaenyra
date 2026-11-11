@@ -14,7 +14,8 @@ import {
   TYPE_CPS, PAUSE_LONG, SPEAKERS, charTimes, typeDuration, typedCount, voiceBeats, holdTime, createVoice, subtitleHtml, moodVoice,
 } from '../src/story/ui/subtitles.js';
 import {
-  BOARD, ZOOM, VIEW_PAD, readableFor, layoutBoard, boardHtml, clampView, initialView, zoomAt, pickFocus, boardSummary, missingLabel, fitScale, focusOf,
+  BOARD, ZOOM, VIEW_PAD, TRAY_H, padFor, readableFor, layoutBoard, boardHtml, clampView, initialView, zoomAt, pickFocus, boardSummary, missingLabel, fitScale, focusOf,
+  trayItems, trayHtml, trayHint,
 } from '../src/story/ui/board.js';
 import { HUD_ICONS } from '../src/story/ui/pictos.js';
 import { SOUND_NAMES } from '../src/fx/audio/sounds.js';
@@ -229,9 +230,81 @@ test('quadro: o foco ao abrir e o resumo do botão (pistas e o "!" de pronta)', 
   assert.equal(pickFocus(noReady), 'onde', 'a da pista nova');
   assert.equal(pickFocus({ ...noReady, fresh: undefined }), 'onde', 'a primeira aberta');
   assert.equal(pickFocus({ root: { text: '' }, nodes: [] }), null);
-  assert.deepEqual(boardSummary(STATE), { clues: 5, ready: 1 });
-  assert.deepEqual(boardSummary(null), { clues: 0, ready: 0 });
+  assert.deepEqual(boardSummary(STATE), { clues: 5, ready: 1, loose: 0 });
+  assert.deepEqual(boardSummary(null), { clues: 0, ready: 0, loose: 0 });
+  // as soltas da bandeja também contam como achadas
+  assert.deepEqual(boardSummary({ ...STATE, tray: [{ id: 'baba', text: 'b' }, { id: 'trilha', text: 't' }] }), { clues: 6, ready: 1, loose: 2 });
+  // a pergunta nova de uma contradição ganha o foco
+  assert.equal(pickFocus({ ...noReady, fresh: 'quando' }), 'quando');
   assert.match(HUD_ICONS.quadro, /^<svg /);
+});
+
+// ---------------------------------------------------------------------------------------------- ligar e confrontar
+const DEP = { id: 'dep-luiz', type: 'depoimento', picto: 'porteiro', name: 'Sr. Luiz', who: 'luiz', quote: 'Ninguém <entra> na guarita!', text: 'O Sr. Luiz jura.' };
+const LINKING = {
+  root: { text: 'O caso' },
+  nodes: [
+    { id: 'quem', text: 'Quem entrou?', conclusion: null, state: 'aberta', need: 3, slots: 2, clues: [{ id: 'trilha', picto: 'trilha', text: 'Farelinhos.', type: 'obrigatoria' }, { id: 'pombos', picto: 'pombos', text: 'Pombos.', type: 'cena' }] },
+    { id: 'luiz', text: 'O Sr. Luiz viu?', conclusion: null, state: 'aberta', need: 0, slots: 0, clues: [DEP] },
+  ],
+  tray: [{ id: 'pote', picto: 'pote', text: 'O pote virado.', type: 'obrigatoria' }, { id: 'grelha', picto: 'grelha', text: 'A grelha.', type: 'obrigatoria' }],
+  found: [
+    { id: 'pombos', picto: 'pombos', text: 'Pombos.', type: 'cena', links: ['quem'] },
+    { id: 'trilha', picto: 'trilha', text: 'Farelinhos.', type: 'obrigatoria', links: ['quem'] },
+    { id: 'pote', picto: 'pote', text: 'O pote virado.', type: 'obrigatoria', links: [] },
+    { ...DEP, links: ['luiz'] },
+    { id: 'grelha', picto: 'grelha', text: 'A grelha.', type: 'obrigatoria', links: [] },
+  ],
+  contradicted: ['dep-luiz'],
+};
+
+test('ligar: os encaixes vêm do modelo (a extra não tapa encaixe), as perguntas viram alvo e a ligação nova acende', () => {
+  const L = layoutBoard(LINKING);
+  const quem = L.nodes.find((n) => n.id === 'quem');
+  assert.equal(quem.clues.length, 2, 'as ligadas (uma é extra)');
+  assert.equal(quem.slots.length, 2, 'slots do modelo: ainda faltam 2 necessárias');
+  const h = boardHtml(LINKING, L, { pick: 'pote', link: { clue: 'trilha', node: 'quem' } });
+  assert.match(h, /rr-board__node is-aberta is-target" data-node="quem"/, 'com uma pista escolhida, a pergunta vira alvo');
+  assert.match(h, /rr-board__slot is-target/);
+  assert.match(h, /rr-board__wire is-pista is-luz is-fresh/, 'o fio da ligação nova desenha');
+  assert.match(h, /rr-board__clue is-fresh" data-clue="trilha" data-under="quem"/);
+  assert.match(h, /faltam 2 pistas/);
+  // o depoimento: retratinho, nome, a fala entre aspas (escapada) e o carimbo da contradição
+  assert.match(h, /rr-board__clue is-dep is-contra" data-clue="dep-luiz"/);
+  assert.match(h, /rr-board__who"><span class="rr-board__face"><svg/);
+  assert.match(h, /<b>Sr\. Luiz<\/b>/);
+  assert.match(h, /rr-board__quote">“Ninguém &lt;entra&gt; na guarita!”/);
+  assert.match(h, /rr-board__stamp">Contradição!/);
+  assert.doesNotMatch(h, /<entra>/);
+  // sem pista escolhida, ninguém é alvo
+  assert.doesNotMatch(boardHtml(LINKING, L), /is-target/);
+});
+
+test('bandeja: as soltas e os depoimentos; no confronto, todas as pistas (menos depoimentos); números e textos escapados', () => {
+  assert.deepEqual(trayItems(LINKING).map((c) => c.id), ['pote', 'dep-luiz', 'grelha'], 'soltas e o depoimento (mesmo ligado), na ordem de chegada');
+  assert.equal(trayItems(LINKING).find((c) => c.id === 'dep-luiz').linked, true);
+  assert.deepEqual(trayItems(LINKING, 'confront', 'dep-luiz').map((c) => c.id), ['pombos', 'trilha', 'pote', 'grelha'], 'a que desmente pode estar ligada');
+  assert.deepEqual(trayItems(null), []);
+  const h = trayHtml(trayItems(LINKING), { pick: 'pote', focus: 2, fresh: 'grelha', contradicted: ['dep-luiz'] });
+  assert.match(h, /rr-board__tcard is-pick" data-tray="pote" aria-pressed="true"/);
+  assert.match(h, /rr-board__tcard is-dep is-linked is-contra" data-tray="dep-luiz"/);
+  assert.match(h, /rr-board__tcard is-focus is-fresh" data-tray="grelha"/);
+  assert.match(h, /<q>Ninguém &lt;entra&gt; na guarita!<\/q>/);
+  assert.match(h, /rr-board__tnum" aria-hidden="true">1</);
+  assert.match(trayHtml([]), /Nenhuma pista solta/);
+  // o que a bandeja diz
+  assert.match(trayHint('idle', null, 2), /Escolha uma pista/);
+  assert.match(trayHint('link', { type: 'obrigatoria' }, 2), /escolha a pergunta/);
+  assert.match(trayHint('link', DEP, 2), /confronte/);
+  assert.match(trayHint('confront', DEP, 2), /desmente Sr\. Luiz/);
+  // a bandeja come a parte de baixo da tela: no celular deitado ela é mais baixa
+  assert.equal(VIEW_PAD.bottom, TRAY_H.full + 8);
+  assert.equal(padFor(334).bottom, TRAY_H.compact + 8);
+  assert.equal(padFor(720), VIEW_PAD);
+  const css = readFileSync('src/story/ui/story.css', 'utf8');
+  for (const c of ['.rr-board__tray', '.rr-board__tcard', '.rr-board__tcard.is-pick', '.rr-board__clue.is-dep', '.rr-board__quote', '.rr-board__stamp', '.rr-board__node.is-target', '.rr-board__toast', '.rr-board__eureka', '.rr-clue.is-dep', `height: ${TRAY_H.full}px`, `height: ${TRAY_H.compact}px`]) {
+    assert.ok(css.includes(c), c);
+  }
 });
 
 test('sons novos do quadro, das vozes e do trovão estão na biblioteca', () => {

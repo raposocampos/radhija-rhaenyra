@@ -44,7 +44,37 @@ export const PICTOS = {
     + `<circle cx="16" cy="45" r="1.5" fill="${INK}"/><circle cx="28.4" cy="45" r="1.5" fill="${INK}"/><circle cx="31.9" cy="45" r="1.5" fill="${INK}"/><circle cx="41" cy="45" r="1.5" fill="${INK}"/><circle cx="44.4" cy="45" r="1.5" fill="${INK}"/><circle cx="47.8" cy="45" r="1.5" fill="${INK}"/>`
     + `${pigeon(30, 16, 0.5, { flip: false })}`),
   q: card(`<path d="M24,22 q0,-8 7,-8 q7,0 7,6 q0,5 -7,7 v4" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="31" cy="40" r="2.6" fill="${INK}"/>`),
+  // a grelha de ventilação da guarita, rente ao chão, com o fiapo de cheiro entrando
+  grelha: card(`<rect x="8" y="10" width="44" height="40" fill="#e8dcc4" ${S}/><rect x="14" y="30" width="32" height="16" rx="2" fill="#8a8f96" ${S}/>`
+    + `${[34, 38, 42].map((y) => `<path d="M16,${y} h28" stroke="${INK}" stroke-width="1.6"/>`).join('')}`
+    + '<path d="M6,24 q8,-6 14,0 q6,6 12,0" fill="none" stroke="#9ccf6a" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="2 4"/>'),
+  // a caixa d'água com o alçapão aberto (o tracejado onde ficava a tampa) e o pombo levando a tampa redonda embora
+  tampa: card(`<path d="M8,52 v-22 l6,-5 h30 l-6,5 v22z" fill="#e8dcc4" ${S}/><path d="M38,52 v-22 l6,-5 v22z" fill="#cbbd9f" ${S}/>`
+    + `<path d="M8,30 l6,-5 h30 l-6,5z" fill="#d6c7a6" ${S}/><ellipse cx="25" cy="27.6" rx="6" ry="1.9" fill="${INK}"/>`
+    + `<ellipse cx="25" cy="27.6" rx="8.6" ry="3" fill="none" stroke="${INK}" stroke-width="1.1" stroke-dasharray="2 2"/>`
+    + `<path d="M16,40 q3,-4 6,0 q-3,4 -6,0z" fill="#3f9fd8"/>`
+    + `${pigeon(44, 18, 0.62, { fly: true })}<ellipse cx="44" cy="20.4" rx="5.4" ry="1.8" fill="#3a3d44" ${S}/>`),
+  // retratinhos de quem dá depoimento (cabeça de frente, no fundo de cor)
+  gansa: portrait('#D9ECF7', `<path d="M22,58 q-2,-18 6,-26 q-6,-6 -2,-14 q4,-8 12,-6 q8,2 7,12 q-1,6 -6,9 q10,8 7,25z" fill="#FFFFFF" ${S}/>`
+    + `<path d="M43,17 l11,3 l-11,4z" fill="#F29A2E" ${S}/><circle cx="38" cy="16" r="2" fill="${INK}"/><path d="M34,11 l7,2" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>`
+    + '<path d="M28,38 q6,3 12,0" fill="none" stroke="#c9d3dd" stroke-width="1.6" stroke-linecap="round"/>'),
+  gato: portrait('#F7E2C8', `<path d="M14,20 l3,-12 l9,8z M46,20 l-3,-12 l-9,8z" fill="#9A9AA6" ${S}/><path d="M17,14 l1.4,-4 l3.4,3z M43,14 l-1.4,-4 l-3.4,3z" fill="#F2A7B5"/>`
+    + `<ellipse cx="30" cy="30" rx="18" ry="15" fill="#9A9AA6" ${S}/><path d="M22,18 l2,5 M30,16 v5 M38,18 l-2,5" stroke="#6E6E7A" stroke-width="2" stroke-linecap="round"/>`
+    + `<ellipse cx="23" cy="29" rx="3" ry="3.6" fill="#C8E07A" ${S}/><ellipse cx="37" cy="29" rx="3" ry="3.6" fill="#C8E07A" ${S}/><path d="M23,27 v4.4 M37,27 v4.4" stroke="${INK}" stroke-width="1.6"/>`
+    + `<path d="M28,35 h4 l-2,2.4z" fill="#E58A8A" ${S}/><path d="M30,37.4 q-2,3 -5,2 M30,37.4 q2,3 5,2" fill="none" stroke="${INK}" stroke-width="1.2"/>`
+    + `<path d="M8,33 l12,1 M8,38 l12,-1 M52,33 l-12,1 M52,38 l-12,-1" stroke="${INK}" stroke-width=".9"/>`),
+  porteiro: portrait('#E7EFE2', `<path d="M8,58 q2,-12 22,-12 q20,0 22,12z" fill="#4E7A5E" ${S}/><path d="M24,46 l6,7 l6,-7" fill="#FFFDF6" ${S}/>`
+    + `<ellipse cx="30" cy="31" rx="13" ry="14" fill="#E8B48C" ${S}/><circle cx="17.5" cy="32" r="3" fill="#E0A47C" ${S}/><circle cx="42.5" cy="32" r="3" fill="#E0A47C" ${S}/>`
+    + `<circle cx="25" cy="29" r="1.6" fill="${INK}"/><circle cx="35" cy="29" r="1.6" fill="${INK}"/><path d="M28.6,31 q1.4,3 2.8,0" fill="none" stroke="${INK}" stroke-width="1.2"/>`
+    + `<path d="M21,37 q4,-3 9,-1 q5,-2 9,1 q-4,3 -9,1 q-5,2 -9,-1z" fill="#5B3A26" ${S}/>`
+    + `<path d="M15,21 q15,-12 30,0 l1,3 h-32z" fill="#2E4A6B" ${S}/><path d="M13,24 h34 q-2,4 -17,4 q-15,0 -17,-4z" fill="#22364F" ${S}/><circle cx="30" cy="17" r="2.4" fill="#F2C230" ${S}/>`),
 };
+/** O retratinho de um depoimento: o cartão com fundo de cor e a carinha (sem letras, sem clipPath: o mesmo desenho
+ * aparece várias vezes na página e um id repetido quebraria o recorte). */
+function portrait(bg, inner) {
+  return `<svg viewBox="0 0 60 60" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="7" fill="${bg}"/>${inner}`
+    + `<rect x="2" y="2" width="56" height="56" rx="7" fill="none" ${S}/></svg>`;
+}
 
 /** Ícones do HUD (24 × 24, contorno de chocolate). */
 export const HUD_ICONS = {

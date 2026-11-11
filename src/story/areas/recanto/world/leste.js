@@ -562,9 +562,11 @@ function buildBooth(kit, root, L, live) {
   const put = (g, color, x, y, z, extra = {}) => kit.add(g, { color, x, y, z, ...o, ...extra });
 
   // ---------- paredes: reboco manchado por fora (o escorrido da chuva embaixo do beiral), escuro por dentro ----------
-  const INSIDE = '#38343b';
-  const PL = col('#f3e4c8'), DAMP = col('#c9bb9c'), CIN = col(INSIDE);
-  const _pc = new THREE.Color();
+  // por dentro: o barrado verde-musgo até 1 m e a parede creme em cima (pelo guichê se vê o Sr. Luiz e o fundo)
+  const INSIDE = '#6e8a80';
+  const PL = col('#f3e4c8'), DAMP = col('#c9bb9c'), CIN = col(INSIDE), CUP = col('#d8cdb2');
+  const _pc = new THREE.Color(), _pi = new THREE.Color();
+  const inner = (y) => _pi.copy(CIN).lerp(CUP, smoothstep(0.95, 1.08, y)).multiplyScalar(0.8 + 0.2 * smoothstep(0, 0.4, y));
   /** O reboco no ponto (u ao longo da parede, y do chão), no mundo: as peças vizinhas continuam o mesmo desenho. */
   const plasterAt = (u, y, seed) => {
     _pc.copy(PL).offsetHSL(0, 0, (vnoise2(u * 1.6 + seed * 13.1, y * 1.6 + seed * 5.3) - 0.5) * 0.075);
@@ -575,13 +577,13 @@ function buildBooth(kit, root, L, live) {
   const wall = (dir, a, b, y0, y1, fixed, nx, nz, seed) => {
     const mid = (a + b) / 2, alongX = dir === 'x';
     const g = alongX ? wallBox(b - a, y1 - y0, T) : wallBox(T, y1 - y0, b - a);
-    const fn = (p, n) => (n.x * nx + n.z * nz < -0.5 ? CIN : plasterAt((alongX ? p.x : p.z) + mid, p.y + y0, seed));
+    const fn = (p, n) => (n.x * nx + n.z * nz < -0.5 ? inner(p.y + y0) : plasterAt((alongX ? p.x : p.z) + mid, p.y + y0, seed));
     kit.add(g, { color: fn, x: alongX ? mid : fixed, y: y0, z: alongX ? fixed : mid, ...o, ao: false });
   };
   const ax0 = x0 + 0.05, ax1 = x1 - 0.05, az0 = z0 + 0.05, az1 = z1 - 0.05; // as pontas somem nos pilares
   const zs = wz1 - T / 2, zn = wz0 + T / 2, xe = wx1 - T / 2, xw = wx0 + T / 2;
   // norte (encostada no muro: de fora ninguém vê)
-  put(slab(ax1 - ax0, H, T), inOut('#e9dcc2', INSIDE, 0, -1), cx, 0, zn, { ao: false });
+  put(wallBox(ax1 - ax0, H, T), (p, n) => (n.z > 0.5 ? inner(p.y) : _pc.set('#e9dcc2')), cx, 0, zn, { ao: false });
   // sul, com o vão do guichê
   wall('x', ax0, ax1, 0, WIN.y0, zs, 0, 1, 1);
   wall('x', ax0, ax1, WIN.y1, H, zs, 0, 1, 1);
@@ -689,11 +691,69 @@ function buildBooth(kit, root, L, live) {
   put(curtain(0.36, 0.68, 4, 0.03, CUR), null, WIN.x0 + 0.2, 1.16, wz1 - T - 0.05, { ao: false });
   addLink(kit, [WIN.x0 - 0.04, 1.535, wz1 - T - 0.05], [WIN.x1 + 0.04, 1.535, wz1 - T - 0.05], 0.008, ROD);
 
-  // ---------- lá dentro (escuro): o piso, o balcão com o radinho, a garrafa térmica, a xícara e o livro ----------
-  put(slab(x1 - x0 - 0.2, 0.05, z1 - z0 - 0.2), tone('#3f3a36', 0.05, 3, 9), cx, 0, cz, { ao: false });
+  // ---------- lá dentro: o piso de lajotinha vermelha, o balcão com o radinho, a garrafa térmica, a xícara e o livro;
+  // no fundo (o que se vê pelo guichê, atrás do Sr. Luiz): o mural de avisos, o quadro de chaves, o relógio, o armário
+  // de aço no canto noroeste (atrás da cadeira, longe do caminho até a porta do leste), o boné no cabide e a lâmpada
+  put(slab(x1 - x0 - 0.2, 0.046, z1 - z0 - 0.2), tone('#4a3a32', 0.05, 3, 9), cx, 0, cz, { ao: false }); // as lajotas por cima: 0,05
+  {
+    const ix0 = wx0 + T, ix1 = wx1 - T, iz0 = wz0 + T, iz1 = wz1 - T;
+    const RED = ['#a9533b', '#9c4a34', '#b25d42', '#a04e37'].map(col);
+    put(tiles(ix1 - ix0, iz1 - iz0, 0.3, 0.3, (p) => _c.copy(RED[Math.floor(hash(Math.round(p.x * 7), Math.round(p.z * 7)) * 4) % 4]).multiplyScalar(0.9 + 0.14 * hash(Math.round(p.z * 7), Math.round(p.x * 7)))),
+      null, (ix0 + ix1) / 2, 0.0502, (iz0 + iz1) / 2, { slot: 'ground', ao: false });
+    const bz = iz0 + 0.004; // a face de dentro da parede do norte
+    // o mural de cortiça com os avisos (papéis coloridos, sem letra: só as listrinhas cinza) e as tachinhas
+    const MX = 19.62, MY = 1.42;
+    put(rb(0.74, 0.52, 0.03, 0.01, 1), '#7a5534', MX, MY - 0.26, bz + 0.015, { ao: false });
+    put(slab(0.68, 0.46, 0.012), tone('#c09060', 0.05, 9, 3), MX, MY - 0.23, bz + 0.03, { ao: false });
+    /** @type {[number, number, string, number][]} */
+    const NOTES = [[-0.22, 0.08, '#fff6dc', 0.05], [-0.04, 0.1, '#ffd5e0', -0.06], [0.16, 0.06, '#cfe8ff', 0.04], [-0.17, -0.12, '#fff0a0', -0.03], [0.05, -0.1, '#ffffff', 0.07], [0.24, -0.11, '#d7f0c8', -0.05]];
+    NOTES.forEach(([dx, dy, c, rz], k) => {
+      put(slab(0.13, 0.17, 0.004), c, MX + dx, MY + dy - 0.085, bz + 0.0425 + k * 0.0006, { rz, ao: false });
+      for (let l = 0; l < 3; l++) put(slab(0.08 - l * 0.015, 0.008, 0.002), '#9a958c', MX + dx - 0.005, MY + dy + 0.03 - l * 0.03, bz + 0.0455 + k * 0.0006, { rz, ao: false });
+      put(sphere(0.008, 6, 4), ['#e8473a', '#3f8fd1', '#f2c230'][k % 3], MX + dx, MY + dy + 0.065, bz + 0.05, { ao: false });
+    });
+    // o quadro de chaves: a tábua, os ganchos e as chaves com a etiqueta colorida
+    const KX = 18.98, KY = 1.36;
+    put(rb(0.34, 0.22, 0.02, 0.008, 1), '#8f5f38', KX, KY - 0.11, bz + 0.01, { ao: false });
+    for (let k = 0; k < 6; k++) {
+      const hx = KX - 0.135 + (k % 3) * 0.135, hy = KY + (k < 3 ? 0.045 : -0.05);
+      put(cyl(0.004, 0.004, 0.03, 5), '#c9ced3', hx, hy, bz + 0.02, { rx: Math.PI / 2, ao: false });
+      if (k === 4) continue; // uma vaga: a chave do portãozinho está com ele
+      put(new THREE.TorusGeometry(0.009, 0.0022, 4, 8), '#c9a24a', hx, hy - 0.012, bz + 0.045, { ao: false });
+      put(slab(0.012, 0.03, 0.004), k % 2 ? '#c9a24a' : '#b9bec4', hx, hy - 0.05, bz + 0.045, { ao: false });
+      put(slab(0.024, 0.034, 0.004), ['#e8473a', '#3f8fd1', '#f2c230', '#4f9a52', '#e2559a', '#f08a3c'][k], hx + 0.02, hy - 0.06, bz + 0.042, { rz: 0.2, ao: false });
+    }
+    // o relógio de parede (sem números: as marcas e os ponteiros)
+    put(cyl(0.11, 0.11, 0.03, 20), '#3a3f44', 18.98, 1.86, bz, { rx: Math.PI / 2, ao: false });
+    put(cyl(0.095, 0.095, 0.004, 20), '#fbf6ea', 18.98, 1.86, bz + 0.03, { rx: Math.PI / 2, ao: false });
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      put(slab(0.006, k % 3 ? 0.012 : 0.02, 0.002), '#3a2719', 18.98 + Math.sin(a) * 0.08, 1.86 + Math.cos(a) * 0.08 - 0.006, bz + 0.035, { rz: -a, ao: false });
+    }
+    put(slab(0.008, 0.06, 0.002), '#3a2719', 18.98, 1.86, bz + 0.0365, { rz: -2.3, ao: false });
+    put(slab(0.006, 0.075, 0.002), '#3a2719', 18.98, 1.86, bz + 0.0385, { rz: -0.5, ao: false });
+    // o armário de aço no canto noroeste: as duas portas, as venezianas e os puxadores; a caixa de papelão em cima
+    const AX = ix0 + 0.27, AZ = iz0 + 0.2;
+    put(rb(0.52, 1.72, 0.38, 0.015, 1), tone('#6d7f8c', 0.03, 4, 12), AX, 0.052, AZ);
+    put(slab(0.006, 1.6, 0.004), '#4a5862', AX, 0.11, AZ + 0.191, { ao: false });
+    for (const sg of [-1, 1]) {
+      for (let k = 0; k < 4; k++) put(slab(0.16, 0.012, 0.004), '#55646e', AX + sg * 0.125, 1.45 + k * 0.035, AZ + 0.191, { ao: false });
+      put(rb(0.016, 0.1, 0.016, 0.005, 1), '#c9ced3', AX + sg * 0.025, 0.95, AZ + 0.198, { ao: false });
+    }
+    put(rb(0.3, 0.12, 0.22, 0.02, 1), '#e9a23b', AX + 0.05, 1.772, AZ, { ry: 0.2 });
+    // o cabide na parede do oeste com o boné azul-marinho do uniforme pendurado
+    const CXw = ix0 + 0.004, CZ = -14.05;
+    put(rb(0.02, 0.06, 0.3, 0.006, 1), '#8f5f38', CXw + 0.01, 1.55, CZ, { ao: false });
+    for (const dz of [-0.09, 0.09]) put(cyl(0.006, 0.006, 0.05, 6), '#c9ced3', CXw + 0.035, 1.58, CZ + dz, { rz: -Math.PI / 2, ao: false });
+    put(new THREE.SphereGeometry(0.085, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#24324f', CXw + 0.1, 1.46, CZ - 0.09, { rz: Math.PI / 2 - 0.25, ao: false });
+    put(cyl(0.07, 0.07, 0.008, 12), '#1d283f', CXw + 0.075, 1.4, CZ - 0.09, { sx: 1.3, rz: Math.PI / 2 - 0.25, ao: false });
+    // a lâmpada pendurada no meio (acesa: ainda é cedo), o fio e a cúpula de alumínio
+    const LX = cx + 0.1, LZ = -13.95;
+    addLink(kit, [LX, H - 0.01, LZ], [LX, 1.95, LZ], 0.004, { color: '#2b2b30', ...o }, 4);
+    put(new THREE.ConeGeometry(0.12, 0.09, 14, 1, true), '#d9dde0', LX, 1.9, LZ, { ao: false });
+    put(sphere(0.04, 10, 8), '#fff2c8', LX, 1.865, LZ, { slot: 'lit', ao: false });
+  }
   const CY = 0.8; // o tampo do balcão de dentro, logo abaixo do vão do guichê (0,82)
-  // o biombo escuro atrás do balcão: do guichê só se vê o balcão e a penumbra (o porteiro ronca do outro lado)
-  put(slab(wx1 - wx0 - 2 * T - 0.095, H - 0.06, 0.02), '#252228', cx - 0.0425, 0.05, wz1 - T - 0.62, { ao: false });
   put(rb(wx1 - wx0 - 2 * T - 0.004, 0.035, 0.46, 0.008, 1), tone('#5a3f2b', 0.04, 5, 2), cx, CY - 0.035, wz1 - T - 0.23, { ao: false });
   // o radinho de pilha, atrás da folha que corre (com a janela aberta, fica no vão)
   const R0 = { x: WIN.x1 - 0.3, y: CY, z: wz1 - T - 0.09 };
@@ -1576,7 +1636,8 @@ function buildGreens(kit, L, shore) {
   const { pts, lake, nearPier, nearGoose } = shore;
   const o = { group: GC, ao: false };
   const R = rng(203);
-  const W = L.WORLD.bounds, B = L.BOOTH, V = L.BOOTH_VENT, Bt = L.BOAT, Ch = L.CHANNEL, Pr = L.PIER, T = L.TOWER;
+  // os limites do condomínio (WORLD.bounds vai até o terraço da torre, a leste: layout.ROOFTOP)
+  const W = L.CONDO_BOUNDS || L.WORLD.bounds, B = L.BOOTH, V = L.BOOTH_VENT, Bt = L.BOAT, Ch = L.CHANNEL, Pr = L.PIER, T = L.TOWER;
   const tufts = [0, 1, 2].map((k) => reedClump(140 + k * 7, { n: 8 + k, h: 0.13 + k * 0.035, r: 0.05 + k * 0.012, heads: 0, wide: 1.3, tip: '#a8c85e', base: '#4f7a32' }));
   const FLOWERS = ['#fff6ee', '#ffd23f', '#f3a6c8', '#c9a6ee', '#ff8a5c'].map((c, k) => flowerPatch(60 + k * 3, c, k === 1 ? '#f08a24' : '#f2c230'));
   const clovers = [cloverPatch(5), cloverPatch(9)];

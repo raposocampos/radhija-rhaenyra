@@ -139,24 +139,23 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   assert.ok(S().clues.includes('boia'), 'a boia (caso 1)');
   assert.equal(S().stage, 'varal');
 
-  // 5. varal: sem o cesto embaixo, sacudir o varal não adianta; com o cesto, a arrancada solta o pregador
-  const P = L.DASH_POST;
-  h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
+  // 5. varal: o empurra-empurra da Rhaenyra no poste (Shift de frente para ele). Sem o cesto embaixo, sacudir o
+  // varal não adianta (a Radhija avisa); com o cesto, no terceiro empurrão o pregador solta
+  const P = L.POLE_SHOVE;
+  become(h, 'rhaenyra');
+  h.teleport('rhaenyra', P.x, P.z + 0.5, Math.PI);
   h.run(0.2);
-  h.tap('ShiftLeft');
-  h.run(0.8);
+  holdWorld(h, [0, -1], 3.0, () => false, ['ShiftLeft']);
   assert.equal(S().scene, null, 'sem o cesto embaixo da cenoura, o pregador não solta');
   assert.equal(S().stage, 'varal');
-  become(h, 'rhaenyra');
   const C = L.LAUNDRY;
   h.teleport('rhaenyra', C.start.x - C.half - 0.26, C.start.z, Math.PI / 2);
   h.run(0.2);
   assert.ok(push(h, [1, 0], 14, () => S().flags.basketUnder), `a Rhaenyra põe o cesto embaixo da cenoura (${JSON.stringify(S().pushables.laundry)})`);
   watch();
-  become(h, 'radhija');
-  h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
-  h.run(1.8); // a recarga da arrancada
-  h.tap('ShiftLeft');
+  h.teleport('rhaenyra', P.x, P.z + 0.5, Math.PI);
+  h.run(0.3);
+  assert.ok(holdWorld(h, [0, -1], 6, () => !!S().scene, ['ShiftLeft']), `o empurra-empurra no poste solta o pregador (${JSON.stringify(S().flags)})`);
   skipScene(h, 'varal');
   assert.equal(S().stage, 'torre');
 
@@ -199,7 +198,13 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   watch();
   const T = L.TOWER_LOBBY;
   h.teleport('radhija', (T.x0 + T.x1) / 2 + 0.2, (T.z0 + T.z1) / 2 + 0.6, Math.PI / 2);
-  skipScene(h, 'terraco');
+  // o terraço da torre: a chegada (cena) e o pega-pega jogável lá em cima (test/historia-telhado.test.mjs joga com as
+  // teclas); aqui, de uma vez
+  skipScene(h, 'telhadoChega');
+  assert.ok(h.puzzle.rooftop.active, 'as duas estão no terraço');
+  h.puzzle.rooftop.skipToEnd();
+  h.run(0.3);
+  assert.ok(S().clues.includes('tampa'), 'a tampa de borracha da caixa d’água sumiu (pista)');
   assert.equal(S().stage, 'portaria');
 
   // 7. portaria: de janela fechada nenhum latido entra; o Superbafo da Radhija pela grelha faz a janela abrir
@@ -259,7 +264,7 @@ test('Faro: as duas farejam, e a nuvem de cheiro leva até a próxima pista de c
   const h = await createStoryGame({ query: 'stage=casa' });
   const L = h.layout;
   const S = () => storyInfo(h);
-  // com a Rhaenyra: o pulso sai, sem dica de "só a Radhija"
+  // com a Rhaenyra: o Faro liga, sem dica de "só a Radhija"
   become(h, 'rhaenyra');
   h.clearLog();
   h.run(1.3);
@@ -279,20 +284,24 @@ test('Faro: as duas farejam, e a nuvem de cheiro leva até a próxima pista de c
   become(h, 'radhija');
   h.run(0.5);
   assert.ok(S().cloud.on, 'a nuvem segue com a outra dog');
-  // o pulso acaba e a nuvem some; apertar de novo logo depois recomeça (recarga curta)
+  // o modo Faro gasta o fôlego de quem fareja: em uns 8 s a Radhija cansa, o modo desliga e a nuvem some
   h.run(9.5);
-  assert.equal(S().faro.active, false, 'o pulso acaba em uns 8 s');
+  assert.equal(S().faroMode.on, false, 'sem fôlego, o Faro desliga sozinho');
   assert.equal(S().cloud.on, false, 'a nuvem some com ele');
+  assert.ok(h.log('story:faroState').some((p) => p.tired), 'a Radhija funga cansada');
   h.tap('KeyV');
   h.run(0.3);
-  assert.ok(S().faro.active);
+  assert.equal(S().faroMode.on, false, 'cansada, apertar não liga');
+  assert.equal(h.log('story:faro').length, 1);
+  // a irmã tem o fôlego dela: liga; e apertar de novo desliga
+  become(h, 'rhaenyra');
   h.tap('KeyV');
-  h.run(0.2);
-  assert.equal(h.log('story:faro').length, 2, 'dentro da recarga (1,2 s), o segundo toque não conta');
-  h.run(1.2);
+  h.run(0.3);
+  assert.equal(S().faroMode.on, true, 'com a Rhaenyra descansada, liga');
+  assert.equal(h.log('story:faro').length, 2);
   h.tap('KeyV');
-  h.run(0.2);
-  assert.equal(h.log('story:faro').length, 3, 'depois dela, o pulso recomeça');
+  h.run(0.5);
+  assert.equal(S().faroMode.on, false, 'apertar de novo desliga');
   // em cada etapa, a nuvem aponta a pista certa
   const leadAt = (stage, at = null) => {
     h.game.debug.setStage(stage, 'radhija');
@@ -317,7 +326,8 @@ test('pistas escondidas: a baba no parapeito de dentro e o ralo sem rolha, só c
   // do meio do quarto: a baba não aparece
   h.teleport('radhija', L.BED.x + 2.6, L.BED.z + 3.6, 0);
   assert.ok(!sniff(h).includes('baba'), 'de longe, a baba não aparece');
-  h.run(9.5); // o pulso acaba
+  if (S().faroMode?.on) h.tap('KeyV'); // desliga o Faro (o fôlego volta)
+  h.run(1.0);
   // pertinho do parapeito de dentro, no chão do quarto ao lado da caminha
   h.teleport('radhija', L.BED.x + L.BED.r + 0.2, L.WINDOW.z + 0.5, -Math.PI / 2);
   assert.ok(sniff(h).includes('baba'), 'de perto, o Faro revela a baba');

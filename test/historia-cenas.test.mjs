@@ -7,7 +7,7 @@
 // torre, o cesto e a arrancada no varal, o Superbafo na grelha, o latido grosso).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine, deduce } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine, deduce, holdWorld } from './helpers/historia.mjs';
 
 /** O Superbafo da Radhija na grelha da guarita (o gatilho da cena do cheiro). */
 function blowVent(h) {
@@ -73,28 +73,27 @@ const SCENES = {
       h.teleport('rhaenyra', C.start.x - C.half - 0.26, C.start.z, Math.PI / 2);
       h.run(0.2);
       assert.ok(push(h, [1, 0], 14, () => storyInfo(h).flags.basketUnder), 'o cesto chega embaixo da cenoura');
-      // e a arrancada da Radhija no poste do leste solta o pregador
-      become(h, 'radhija');
-      const P = h.layout.DASH_POST;
-      h.teleport('radhija', P.x, P.z + 0.45, Math.PI);
+      // e o empurra-empurra da Rhaenyra no poste do leste solta o pregador (o terceiro empurrão começa a cena)
+      const P = h.layout.POLE_SHOVE;
+      h.teleport('rhaenyra', P.x, P.z + 0.5, Math.PI);
       h.run(0.2);
-      h.tap('ShiftLeft');
+      holdWorld(h, [0, -1], 6, () => !!storyInfo(h).scene, ['ShiftLeft']);
       return h;
     },
     free: [0, 1],
     after: 'torre',
   },
-  terraco: {
+  telhadoChega: {
     async prepare() {
       const h = await createStoryGame();
       h.game.debug.setStage('torre', 'radhija');
       h.run(0.3);
       const T = h.layout.TOWER_LOBBY;
-      h.teleport('radhija', (T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2, Math.PI / 2); // entrou no saguão da torre
+      h.teleport('radhija', (T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2, Math.PI / 2); // entrou no saguão da torre: o terraço
       return h;
     },
-    free: [-1, 0],
-    after: 'portaria',
+    free: [1, 0],
+    after: 'torre', // a etapa segue: o pega-pega no terraço é jogável
   },
   cheiro: {
     async prepare() {

@@ -11,7 +11,8 @@ import { typeDuration } from '../ui/subtitles.js';
 
 /** Os nomes de quem fala (o que aparece na etiqueta e nas legendas). */
 export const SPEAKERS = {
-  radhija: 'Radhija', rhaenyra: 'Rhaenyra', capitao: 'Capitão Migalha', farelo: 'Farelo', soneca: 'Soneca', porteiro: 'Seu Porteiro',
+  radhija: 'Radhija', rhaenyra: 'Rhaenyra', capitao: 'Capitão Migalha', farelo: 'Farelo', soneca: 'Soneca', porteiro: 'Sr. Luiz',
+  gansa: 'Dona Gansa', bichano: 'Bichano',
 };
 /** Letras por segundo da "máquina de escrever" dos balões (igual à da camada de HQ). */
 export const TYPE_RATE = 45;
@@ -33,7 +34,7 @@ export function createStoryteller({ dir, emit, anchorOf = () => null, cam = () =
   const DOGS = ['radhija', 'rhaenyra'];
   function anchor(who) {
     if (!who) return null;
-    if (DOGS.includes(who)) return dir.head(who, 0.12);
+    if (DOGS.includes(who)) return dir.head(who, 0.03);
     return anchorOf(who);
   }
 

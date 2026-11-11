@@ -255,7 +255,7 @@ try {
   await clearLog();
   await press('KeyV', 900);
   i = await info();
-  check((await logOf('story:faro')).length >= 1, 'V solta o pulso do Faro', i.story.faro);
+  check((await logOf('story:faro')).length >= 1 && i.story.faroMode?.on, 'V liga o Faro (o modo fica aceso, gastando o fôlego)', i.story.faroMode);
   check(['trilha', 'pote', 'pena'].every((id) => i.story.revealed.includes(id)), 'o Faro revela a trilha, o pote e a pena', i.story.revealed);
   check(i.story.cloud.on && i.story.cloud.puffs >= 2, 'a nuvem de cheiro sai do focinho até a pista mais perto', i.story.cloud);
   check(!(await ev(() => document.querySelector('.rr-story__prompt').classList.contains('is-on'))), 'depois do primeiro Faro, o aviso some');
@@ -274,8 +274,17 @@ try {
   check((await story()).scene === null, 'só examinar não traz a cena: falta deduzir', await story());
   await press('Tab', 900);
   check(await ev(() => !!document.querySelector('.rr-board') && getComputedStyle(document.querySelector('.rr-board')).display !== 'none'), 'Tab abre a árvore de pistas');
-  check(await ev(() => !!document.querySelector('.rr-board__node.is-pronta[data-node="quem"]')), 'a pergunta "Quem entrou no quarto?" está pronta para deduzir');
   await shot('05a-arvore-de-pistas.png');
+  // as três pistas chegam soltas na bandeja de Achados: o jogador liga cada uma à pergunta
+  check(await ev(() => !document.querySelector('.rr-board__node.is-pronta[data-node="quem"]')), 'antes de ligar as pistas, a pergunta ainda não está pronta');
+  for (const id of ['trilha', 'pote', 'pena']) {
+    await page.click(`.rr-board__tcard[data-tray="${id}"]`);
+    await H.sleep(250);
+    await page.click('.rr-board__node[data-node="quem"]');
+    await H.sleep(500);
+  }
+  check(await ev(() => !!document.querySelector('.rr-board__node.is-pronta[data-node="quem"]')), 'ligadas as três, a pergunta "Quem entrou no quarto?" fica pronta para deduzir', (await story()).board);
+  await shot('05aa-pistas-ligadas.png');
   await page.click('.rr-board__node[data-node="quem"]');
   await H.sleep(700);
   await page.click('.rr-board__opt[data-opt="2"]');
@@ -367,25 +376,24 @@ try {
   await clearLog();
   await press('KeyV', 800);
   i = await waitFor((x) => x.story.scene === 'reconstrucao', { timeout: 6000 });
-  check(i.story.scene === 'reconstrucao', 'o pulso perto da piscina mostra a Reconstrução', i.story);
+  check(i.story.scene === 'reconstrucao', 'o Faro perto da piscina mostra a Reconstrução', i.story);
   await H.sleep(2200);
   await shot('11-reconstrucao.png');
   i = await stageIs('varal', 30000);
   check(i.story.clues.includes('boia'), 'a boia (caso 1) na lupa', i.story.clues);
 
-  console.log('\n== O varal: o cesto embaixo da cenoura e a arrancada no poste ==');
+  console.log('\n== O varal: o cesto embaixo da cenoura e o empurra-empurra da Rhaenyra no poste ==');
   await become('rhaenyra');
   await tp('rhaenyra', LY.laundry.start.x - LY.laundry.half - 0.28, LY.laundry.start.z, Math.PI / 2);
   await H.sleep(300);
   i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.basketUnder, { timeout: 20000, label: 'empurrar o cesto de roupa' });
   check(i.story.flags.basketUnder, 'a Rhaenyra põe o cesto de roupa embaixo da cenoura', i.story.pushables);
   await shot('12-varal-cesto.png');
-  await become('radhija');
-  await tp('radhija', LY.post.x, LY.post.z + 1.0, Math.PI);
+  await tp('rhaenyra', LY.post.x, LY.post.z + 0.62, Math.PI);
   await H.sleep(300);
-  await holdUntil(keysFor(0, -1), (x) => !!x.story.scene, { timeout: 2500, during: () => press('ShiftLeft', 60), label: 'arrancada no poste' });
+  await holdUntil([...keysFor(0, -1), 'ShiftLeft'], (x) => !!x.story.scene, { timeout: 9000, label: 'empurra-empurra no poste' });
   i = await waitFor((x) => x.story.scene === 'varal' || x.story.stage === 'torre', { timeout: 4000 });
-  check(i.story.scene === 'varal' || i.story.stage === 'torre', 'com o cesto no lugar, a arrancada no poste solta o pregador', i.story);
+  check(i.story.scene === 'varal' || i.story.stage === 'torre', 'com o cesto no lugar, o empurra-empurra da Rhaenyra no poste solta o pregador', i.story);
   if (i.story.scene) {
     i = await waitFor((x) => x.story.beat === 'voa' || !x.story.scene, { timeout: 8000 });
     await H.sleep(900);
@@ -432,15 +440,23 @@ try {
   check((await story()).doors.tower > 0.3, 'com a irmã no vão, a mola não fecha', (await story()).doors);
   // a irmã segura encostada na folha (do lado da dobradiça): a Radhija passa pelo lado do batente e entra no saguão
   await walkPath([[LY.tdoor.hinge.x - 0.5, LY.tdoor.latchPost.z - 0.25], [LY.tdoor.hinge.x + 0.25, LY.tdoor.latchPost.z - 0.25], [LY.tdoor.hinge.x + 0.9, LY.tdoor.latchPost.z - 0.1]], { timeout: 14000, tol: 0.16 });
-  i = await waitFor((x) => x.story.scene === 'terraco' || x.story.stage === 'portaria', { timeout: 6000 });
-  check(i.story.scene === 'terraco' || i.story.stage === 'portaria', 'a Radhija passa pela irmã e entra no saguão: o terraço', i.story);
+  i = await waitFor((x) => x.story.scene === 'telhadoChega' || !!x.story.roof?.phase && x.story.roof.phase !== 'off', { timeout: 8000 });
+  check(i.story.scene === 'telhadoChega' || i.story.roof?.phase !== 'off', 'a Radhija passa pela irmã e entra no saguão: as duas sobem ao terraço', i.story);
   if (i.story.scene) {
     await H.sleep(2600);
-    await shot('16-terraco.png');
+    await shot('16-terraco-chegada.png');
     // num runner lento, a cena pode acabar sozinha durante a captura: só pula se ainda estiver rodando
-    if ((await story()).scene) await skipScene('terraço');
+    if ((await story()).scene) await skipScene('chegada ao terraço');
   }
+  // lá em cima é jogável (o pega-pega com os pombos: test/historia-telhado.test.mjs joga com as teclas); aqui, a
+  // dog anda no terraço e o resto vai de uma vez
+  i = await waitFor((x) => !x.story.scene && x.story.roof?.phase && x.story.roof.phase !== 'off', { timeout: 8000 });
+  check(!!i.story.roof && i.story.roof.phase !== 'off', 'no terraço, jogando', i.story.roof);
+  await shot('16b-terraco-jogando.png');
+  check((await noOverlap()).length === 0, 'ninguém dentro de nada no terraço', await noOverlap());
+  await ev(() => window.__game.game.puzzle.rooftop.skipToEnd());
   i = await stageIs('portaria', 10000);
+  check(i.story.clues.includes('tampa'), 'a tampa de borracha da caixa d’água (pista)', i.story.clues);
   check((await noOverlap()).length === 0, 'ninguém dentro de nada na torre', await noOverlap());
 
   console.log('\n== A portaria: o Superbafo na grelha, a janela e o latido grosso ==');

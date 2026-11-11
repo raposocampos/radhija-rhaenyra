@@ -86,21 +86,24 @@ export function createTutoraArm({ sleeve = '#8E7CC3', cuff = '#F1ECF7', reach = 
   return { object, elbow, hand: h, dispose: () => disposeTree(object) };
 }
 
-/** Botina de trabalho: sola escura, bico arredondado, cano com o cadarço; a ponta para +Z, o calcanhar na origem. */
-function boot(leather, sole) {
+/**
+ * Botina de trabalho: sola escura, bico arredondado, cano com o cadarço; a ponta para +Z, o calcanhar na origem.
+ * O Sr. Luiz (srLuiz.js) calça a mesma (com `seg` menor: menos triângulos no corpo inteiro).
+ */
+export function boot(leather, sole, seg = 14) {
   const g = new THREE.Group();
   g.name = 'botina';
   const s = mesh(new THREE.BoxGeometry(0.11, 0.035, 0.29), sole, 'sola');
   s.position.set(0, 0.018, 0.1);
   g.add(s);
-  const toe = mesh(new THREE.SphereGeometry(0.058, 14, 10), leather, 'bico');
+  const toe = mesh(new THREE.SphereGeometry(0.058, seg, Math.round(seg * 0.72)), leather, 'bico');
   toe.scale.set(1, 0.72, 1.25);
   toe.position.set(0, 0.06, 0.19);
   g.add(toe);
   const foot = mesh(new THREE.BoxGeometry(0.1, 0.08, 0.2), leather, 'peito-do-pe');
   foot.position.set(0, 0.075, 0.07);
   g.add(foot);
-  const shaft = mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.15, 14), leather, 'cano');
+  const shaft = mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.15, seg), leather, 'cano');
   shaft.position.set(0, 0.15, 0);
   g.add(shaft);
   const laces = mesh(new THREE.BoxGeometry(0.03, 0.12, 0.012), std('#E9D8B8', 0.9), 'cadarco');

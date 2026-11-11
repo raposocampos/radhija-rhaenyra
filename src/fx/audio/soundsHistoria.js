@@ -1,5 +1,6 @@
 // Sons do Modo História (capítulo 1, Cadê a Cenoura?): a cenoura de borracha que faz "fiu", o ronco e o radinho do
-// porteiro, os pombos (arrulho e asas), o varal e o pregador, o pulso do Faro, o plim da pista e do mural, a meia, a
+// porteiro, os pombos (arrulho e asas), o varal e o pregador, o pulso e o modo do Faro (liga, desliga, a fungada e a
+// dog cansada sem fôlego), o plim da pista e do mural, a meia, a
 // botina, o trinco, a janela, os passarinhos da manhã, o balde e a bola. Cada som: (G, dest, t, p, opts) → duração (s).
 // Entram na biblioteca em ./sounds.js; o HUD da história toca nos eventos story:sfx (src/story/ui/storyHud.js).
 // Nada de voz humana de verdade: as falas têm "vozes" de sílabas sintetizadas (voz-*, tocadas pela máquina de escrever
@@ -202,6 +203,41 @@ export const SOUNDS_HISTORIA = {
     [84, 88, 91, 96].forEach((m, i) => marimba(G, o, mtof(m) * p, t + 0.32 + i * 0.07, 0.045, 0.7));
     return 1.2;
   },
+  // o modo Faro liga (src/story/faro/faroMode.js): três fungadas fundas puxando o ar e um brilho que sobe (a visão de
+  // cheiro abrindo)
+  'faro-liga'(G, o, t, p) {
+    for (let i = 0; i < 3; i++) nz(G, o, { t: t + i * 0.1, a: 0.02, d: 0.07, peak: 0.075, type: 'bandpass', f: (1500 + i * 250) * p, q: 1.3 });
+    nz(G, o, { t: t + 0.22, a: 0.3, d: 0.45, peak: 0.05, type: 'bandpass', f: 500 * p, to: 2200 * p, toT: 0.65, q: 0.8, buf: G.pink });
+    tone(G, o, { type: 'sine', f: mtof(72) * p, to: mtof(84) * p, glideT: 0.45, t: t + 0.25, a: 0.12, d: 0.5, peak: 0.028 });
+    [79, 84, 88].forEach((m, i) => marimba(G, o, mtof(m) * p, t + 0.34 + i * 0.07, 0.035, 0.6));
+    return 1.0;
+  },
+  // o modo Faro desliga: o ar saindo pelo focinho e o brilho descendo
+  'faro-desliga'(G, o, t, p) {
+    nz(G, o, { t, a: 0.03, d: 0.28, peak: 0.05, type: 'bandpass', f: 1400 * p, to: 500 * p, toT: 0.3, q: 0.9, buf: G.pink });
+    marimba(G, o, mtof(84) * p, t + 0.04, 0.03, 0.4);
+    marimba(G, o, mtof(77) * p, t + 0.12, 0.028, 0.5);
+    return 0.6;
+  },
+  // sem fôlego: a fungada falha (duas puxadinhas fracas), o bufo com os beiços tremendo e um "hum" cansado caindo
+  'faro-cansado'(G, o, t, p) {
+    nz(G, o, { t, a: 0.02, d: 0.05, peak: 0.045, type: 'bandpass', f: 1300 * p, q: 1.2 });
+    nz(G, o, { t: t + 0.12, a: 0.02, d: 0.05, peak: 0.035, type: 'bandpass', f: 1150 * p, q: 1.2 });
+    const flutter = gn(G, 0.6);
+    const lfo = osc(G, 'sine', 24, t + 0.2, t + 0.85);
+    const depth = gn(G, 0.4);
+    lfo.connect(depth); depth.connect(flutter.gain);
+    flutter.connect(o);
+    nz(G, flutter, { t: t + 0.22, a: 0.03, hold: 0.12, d: 0.35, peak: 0.09, type: 'lowpass', f: 900 * p, to: 420 * p, toT: 0.5, q: 0.8, buf: G.pink });
+    tone(G, o, { type: 'triangle', f: 230 * p, to: 160 * p, t: t + 0.26, a: 0.03, hold: 0.08, d: 0.3, peak: 0.035, filt: { type: 'lowpass', f: 900, q: 0.7 } });
+    return 0.9;
+  },
+  // uma fungada (a cada ~1,25 s com o modo Faro ligado): duas puxadinhas curtas, baixinho
+  fungada(G, o, t, p) {
+    nz(G, o, { t, a: 0.012, d: 0.045, peak: 0.05, type: 'bandpass', f: 1700 * p, q: 1.5 });
+    nz(G, o, { t: t + 0.085, a: 0.012, d: 0.05, peak: 0.045, type: 'bandpass', f: 1900 * p, q: 1.5 });
+    return 0.2;
+  },
   // uma pista nova na lupa: plim-plim de caixinha de música
   pista(G, o, t, p) {
     marimba(G, o, mtof(88) * p, t, 0.08, 0.6);
@@ -343,13 +379,14 @@ export const SOUNDS_HISTORIA = {
 
 export const MIN_GAP_HISTORIA = {
   ronco: 1.2, radinho: 1.2, arrulho: 0.4, asas: 0.15, faro: 0.6, pista: 0.12, botina: 0.12, passarinhos: 1, bip: 0.08, espirro: 1, trovao: 1.5,
+  'faro-liga': 0.3, 'faro-desliga': 0.2, 'faro-cansado': 0.6, fungada: 0.5,
   'voz-radhija': 0.045, 'voz-rhaenyra': 0.07, 'voz-pombo': 0.07, 'voz-porteiro': 0.1, neuronio: 0.06, rabisco: 0.3, 'quadro-abre': 0.3, 'quadro-fecha': 0.3,
 };
 export const PITCH_VAR_HISTORIA = {
-  fiu: 0.04, arrulho: 0.06, asas: 0.05, pista: 0, pino: 0.02, botina: 0.05, pulinho: 0.06, bola: 0.05,
+  fiu: 0.04, arrulho: 0.06, asas: 0.05, pista: 0, pino: 0.02, botina: 0.05, pulinho: 0.06, bola: 0.05, fungada: 0.08, 'faro-cansado': 0.04,
   'voz-radhija': 0.05, 'voz-rhaenyra': 0.05, 'voz-pombo': 0.05, 'voz-porteiro': 0.04, 'deduz-certo': 0, pergunta: 0,
 };
 export const VERB_HISTORIA = {
-  fiu: 0.12, ronco: 0.08, radinho: 0.06, arrulho: 0.12, faro: 0.3, pista: 0.25, meia: 0.2, portao: 0.15, balde: 0.25, vento: 0.2, trovao: 0.3,
+  fiu: 0.12, ronco: 0.08, radinho: 0.06, arrulho: 0.12, faro: 0.3, 'faro-liga': 0.3, 'faro-desliga': 0.2, pista: 0.25, meia: 0.2, portao: 0.15, balde: 0.25, vento: 0.2, trovao: 0.3,
   'voz-radhija': 0.03, 'voz-rhaenyra': 0.03, 'voz-pombo': 0.04, 'voz-porteiro': 0.04, 'quadro-abre': 0.3, 'deduz-certo': 0.35, pergunta: 0.3, neuronio: 0.2,
 };

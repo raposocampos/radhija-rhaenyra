@@ -209,18 +209,20 @@ test('recanto: o pedal, os botões do interfone, a argola e a grelha ficam ao al
   assert.ok(Pd.x > G.hinge.x + 0.2, 'o pedal fica do lado da cozinha');
   assert.ok(Math.hypot(Pd.x - G.hinge.x, Pd.z - G.hinge.z) > 0.5 && Pd.z > G.hinge.z + Pd.r, 'fora do arco da folha');
   assert.equal(w.overlaps(Pd.x, Pd.z, R.radhija, 'small'), false, 'livre para a Radhija pisar');
-  // o interfone: três botões na parede oeste da torre, cada um com apoio livre para a Rhaenyra, e a senha usa os três
+  // o interfone: quatro botões na parede oeste da torre, cada um com apoio livre para a Rhaenyra; a senha usa três
   const IC = L.INTERCOM;
-  assert.equal(IC.buttons.length, 3);
-  assert.deepEqual(IC.code.slice().sort(), IC.buttons.map((b) => b.id).sort(), 'a senha usa cada botão uma vez');
+  assert.equal(IC.buttons.length, 4, 'quatro botões: a senha usa três (o espirro esconde o terceiro na Reconstrução)');
+  assert.equal(IC.code.length, 3, 'a senha tem três botões');
+  assert.equal(new Set(IC.code).size, 3, 'sem botão repetido na senha');
+  for (const id of IC.code) assert.ok(IC.buttons.some((b) => b.id === id), `${id}: botão da senha existe`);
   assert.notDeepEqual(IC.code, IC.buttons.map((b) => b.id), 'a ordem da senha não é a ordem dos botões na parede');
   for (const b of IC.buttons) {
     assert.ok(Math.abs(b.x - (L.TOWER.x0 - L.WALLS.t / 2)) < 0.01 && b.nx === -1, `${b.id}: na face oeste da torre`);
     assert.equal(w.overlaps(b.x - 0.45, b.z, R.rhaenyra, 'large'), false, `${b.id}: a Rhaenyra tem onde apoiar`);
-    assert.ok(b.z > L.TOWER_DOOR.latchPost.z + 0.3 && b.z < L.TOWER.z1 - 0.2, `${b.id}: entre a porta e a quina da torre`);
+    assert.ok(b.z > L.TOWER_DOOR.latchPost.z + 0.3 && b.z < L.TOWER.z1 - 0.15, `${b.id}: entre a porta e a quina da torre`);
   }
   const zs = IC.buttons.map((b) => b.z).sort((a, b) => a - b);
-  assert.ok(zs[1] - zs[0] >= 0.45 && zs[2] - zs[1] >= 0.45, 'os botões ficam afastados (o impulso escolhe o da frente)');
+  for (let i = 1; i < zs.length; i++) assert.ok(zs[i] - zs[i - 1] >= 0.45, 'os botões ficam afastados (o impulso escolhe o da frente)');
   assert.ok(n.findPath(L.NAV_NODES.T_pad, { x: IC.recon.x, z: IC.recon.z }, big(ALL_OPEN)).reachable, 'o lugar da Reconstrução da senha');
   // a argola do ferrolho: do lado de fora do quintal, ao alcance da Radhija
   const SB = L.SERVICE_BOLT;

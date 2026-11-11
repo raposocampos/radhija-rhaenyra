@@ -100,8 +100,9 @@ export function morningRoom(K) {
   hideSquad(K);
   props.carrot.object.visible = false;
   K.feather.visible = true;
-  K.feather.position.set(SO.x + 0.25, SO.y + 0.03, SO.z);
-  K.feather.rotation.set(0, 0.4, 1.45);
+  // a pena nova (src/story/scene/feather.js) deitada no parapeito, molhada da garoa
+  if (props.feather?.placeOnSill) { props.feather.placeOnSill(); props.feather.setWet?.(0.65); }
+  else { K.feather.position.set(SO.x + 0.25, SO.y + 0.03, SO.z); K.feather.rotation.set(0, 0.4, 1.45); }
 }
 
 // ------------------------------------------------------------------------------------------------ a abertura
@@ -233,12 +234,14 @@ export function createOpening(K) {
           // segundo quadro: de perto, o Capitão olha a cenoura lá dentro e mede com a asa
           once('close', t > 5.8, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
-            // de dentro, rente ao vidro (limpo): o Capitão de frente, olhando a cenoura lá dentro
+            // de fora, do lado oeste da janela, na chuva: o Capitão de perfil em primeiro plano, o esquadrão em fila
+            // atrás dele no parapeito e, pelo vidro, o quarto com a cenoura (as lâminas abertas do basculante ficam
+            // acima do quadro)
             const c = capAt();
-            dir.lens(30);
-            dir.shot(P3(c.x + 0.3, c.y + 0.02, W.z + 0.62), P3(c.x - 0.02, c.y + 0.08, c.z), { cut: true });
+            dir.lens(32);
+            dir.shot(P3(c.x - 1.05, c.y + 0.06, c.z - 0.42), P3(c.x + 0.25, c.y + 0.02, c.z + 0.1), { cut: true });
           });
-          if (S.close) dir.lookAt(P3(capAt().x - 0.02 + Math.sin(t * 0.7) * 0.015, capAt().y + 0.08, capAt().z));
+          if (S.close) dir.lookAt(P3(capAt().x + 0.25 + Math.sin(t * 0.7) * 0.015, capAt().y + 0.02, capAt().z + 0.1));
           once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
           sq.cap.lookAt?.(t > 6.6 && t < 11.2 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
           sq.cap.measure(span(t, 7.4, 8.0) * (1 - span(t, 10.0, 10.4)));
@@ -255,8 +258,12 @@ export function createOpening(K) {
           if (S.feather) {
             K.featherFall = Math.min(1, (K.featherFall ?? 0) + 1 / 55);
             const f = K.featherFall;
-            K.feather.position.set(SO.x + 0.25 + Math.sin(f * 9) * 0.06, SO.y + 0.03 + (1 - f) * 0.3, SO.z);
-            K.feather.rotation.set(0, 0, Math.sin(f * 7) * 0.6 + 1.3);
+            // a pena cai rodopiando do Capitão até o parapeito e assenta, molhada
+            if (f >= 1 && props.feather?.placeOnSill) { if (!S.featherDown) { S.featherDown = true; props.feather.placeOnSill(); props.feather.setWet?.(0.65); } }
+            else {
+              K.feather.position.set(SO.x + 0.25 + Math.sin(f * 9) * 0.06, SO.y + 0.004 + (1 - f) * 0.3, SO.z);
+              K.feather.rotation.set(Math.sin(f * 7) * 0.5, 1.35 + Math.sin(f * 5) * 0.6, Math.sin(f * 11) * 0.35);
+            }
           }
           // o trovão: quadro cheio, o clarão, e a tela escurece antes de qualquer coisa acontecer
           once('thunder', t > 13.1, () => {
@@ -540,7 +547,7 @@ export function createWindowScene(K) {
             dir.panel('2v', 1, { enter: 'slide', tilt: 1.5 });
             // o segundo quadro: a Rhaenyra de perto, abanando
             dir.lens(30);
-            dir.shot(P3(h.x + 0.2, 0.5, h.z + 1.15), dir.head('rhaenyra', -0.12), { cut: true });
+            dir.shot(P3(h.x + 0.35, 0.62, h.z + 1.75), dir.head('rhaenyra', -0.18), { cut: true });
             dir.gesture?.('rhaenyra', 'wag');
             dir.say('rhaenyra', 'Bora atrás deles!', { mood: 'grito', mode: 'cena', dur: 1.4 });
             dir.bark('rhaenyra');
@@ -560,6 +567,62 @@ export function createWindowScene(K) {
       K.deduction?.resolve('quem', { silent: true });
       K.deduction?.ask('onde');
       K.setStage('casa');
+    },
+  });
+}
+
+// ------------------------------------------------------------------------------------------------ as testemunhas
+/**
+ * Uma conversa com testemunha (a Dona Gansa, o Bichano): página de HQ com as falas, um plano das duas dogs com quem
+ * fala, e o depoimento vai para a árvore de pistas (K.book.add). `who`: o falante; `at()`: onde ele está.
+ * @param {any} K @param {{ id: string, who: string, at: () => ({ x: number, y: number, z: number }), clue: string,
+ *   lines: [string | null, string, object?][], onCommit?: () => void }} o
+ */
+export function createWitnessScene(K, { id, who, at, clue, lines, onCommit = () => {} }) {
+  const { dir, emit } = K;
+  const S = {};
+  let T = 0;
+  return createScene({
+    id,
+    emit,
+    setup() {
+      for (const k of Object.keys(S)) delete S[k];
+      dir.hold('radhija', 'rhaenyra');
+      const p = at();
+      const a = dir.actor('radhija');
+      // o plano: de lado, as dogs de um lado e quem fala do outro
+      const mx = (a.x + p.x) / 2, mz = (a.z + p.z) / 2;
+      const dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1;
+      const px = -dz / d, pz = dx / d;
+      for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(p.x, p.y + 0.2, p.z);
+      dir.comic(true);
+      dir.panel('full', 0, { enter: 'zoom' });
+      dir.lens(34);
+      dir.shot(P3(mx + px * 2.4, 0.95, mz + pz * 2.4), P3(mx, 0.35, mz), { inT: 0.6 });
+      T = 0.5;
+      S.at = 0;
+    },
+    beats: [
+      {
+        id: 'conversa', until: () => S.done, max: 30,
+        tick(_, t) {
+          // uma fala de cada vez, no ritmo de ler; a cada duas, um quadro novo
+          if (S.at < lines.length && t >= T) {
+            const [speaker, text, o = {}] = lines[S.at];
+            if (S.at > 0 && S.at % 2 === 0) dir.panel('2h', (S.at / 2) % 2, { enter: 'slide', tilt: S.at % 4 ? 1.5 : -1.5 });
+            dir.say(speaker, text, { mode: 'cena', ...o });
+            T = t + Math.min(3.4, 1.0 + String(text).length / 16);
+            S.at++;
+          }
+          if (S.at >= lines.length && t >= T) S.done = true;
+        },
+      },
+      { id: 'pista', dur: 1.0, enter() { K.book.add(clue, K.clueAt?.(clue)); } },
+    ],
+    cleanup() { dir.cleanup(); },
+    commit() {
+      K.book.add(clue, K.clueAt?.(clue));
+      onCommit();
     },
   });
 }
@@ -633,8 +696,15 @@ export function createCodeScene(K) {
       {
         id: 'silhuetas', until: () => !reconCode.active, max: reconCode.duration + 1.5,
         tick(_, t) {
-          // cada botão acende quando o Farelo aperta (e fica aceso até o fim: a ordem vira a pista)
-          IC.code.forEach((id, i) => {
+          // dois botões acendem quando o Farelo aperta (e ficam acesos até o fim); no terceiro, o espirro do Soneca
+          // atrapalha: o terceiro botão fica para a árvore de pistas (o depoimento da Dona Gansa)
+          if (t >= K.CODE_TIMES[2] && !S.sneeze) {
+            S.sneeze = true;
+            dir.sfx('espirro', { x: wallX, z: midZ });
+            dir.onomato('ATCHIM!', { at: P3(wallX - 0.6, 1.5, midZ), size: 1.2, color: '#ffffff', rot: -8, style: 'shake' });
+            dir.fx('shake', { dur: 0.5 });
+          }
+          IC.code.slice(0, 2).forEach((id, i) => {
             if (t >= K.CODE_TIMES[i] && !S[id]) {
               S[id] = true;
               K.lightCode(id, true);
@@ -649,7 +719,7 @@ export function createCodeScene(K) {
         id: 'pista', dur: 2.6,
         enter() {
           K.book.add('senha', K.clueAt('senha'));
-          dir.say('rhaenyra', 'Sino, osso, nota! Decorei!', { mode: 'cena', dur: 2.2 });
+          dir.say('rhaenyra', 'Sino, osso… e o terceiro? O espirro atrapalhou tudo!', { mode: 'cena', dur: 2.4 });
         },
       },
     ],
@@ -978,6 +1048,7 @@ export function createSmellScene(K) {
       dir.cleanup();
     },
     commit() {
+      K.book.add('grelha', K.clueAt?.('grelha'));
       props.booth.radio.setOn(true);
       K.windowOpened();
       K.snoring = true;
@@ -990,11 +1061,13 @@ export function createPorteiroScene(K) {
   const { L, dir, props, emit } = K;
   const G = L.GATE;
   const gx = (G.x0 + G.x1) / 2;
-  const bx = (L.BOOTH.x0 + L.BOOTH.x1) / 2;
   const S = {};
+  const once = (key, cond, fn) => { if (cond && !S[key]) { S[key] = true; fn(); } };
   const win = () => props.booth.windowAnchor;
-  const from = { x: L.BOOTH.x1 + 0.3, z: L.BOOTH.z0 + 0.6 };
-  const to = { x: G.x1 + 0.35, z: G.z + 0.45 };
+  const luiz = () => props.srLuiz;
+  /** Onde o Sr. Luiz fica no portãozinho: do lado do trinco, fora do arco da folha (ela abre para dentro). */
+  const atGate = { x: G.x1 + 0.45, z: G.z + 0.55 };
+  const head = () => { const o = luiz()?.object; return o ? P3(o.position.x, o.position.y + 1.45, o.position.z) : P3(win().x, win().y, win().z); };
   return createScene({
     id: 'porteiro',
     emit,
@@ -1004,80 +1077,94 @@ export function createPorteiroScene(K) {
       for (const n of ['radhija', 'rhaenyra']) dir.actor(n).look = P3(win().x, 1.2, win().z);
       K.snoring = false;
       props.booth.radio.setOn(false);
-      dir.shot(P3(bx + 1.9, 1.15, L.BOOTH.z1 + 2.7), P3(win().x, win().y - 0.05, win().z), { inT: 0.5 });
+      props.humans.porteiro.object.visible = false;
+      // página de HQ: em cima, o Sr. Luiz pulando na cadeira, visto pela janela do guichê
+      dir.comic(true);
+      dir.panel('2h', 0, { enter: 'pop', tilt: -1.5 });
+      dir.lens(30);
+      const h = head();
+      dir.shot(P3(win().x + 0.25, h.y + 0.05, win().z + 1.25), P3(h.x, h.y - 0.1, h.z), { cut: true });
       dir.onomato('AU! AU!', { at: P3(win().x - 0.4, win().y, win().z + 0.4), size: 1.3, color: '#ffd23f', rot: -10, style: 'shake' });
-      dir.say('porteiro', 'UÁ?! Uá-uá!', { mood: 'grito', mode: 'cena', dur: 1.2 });
+      luiz()?.setPose('acorda');
       dir.sfx('ronco-fim', { x: win().x, z: win().z });
+      dir.fx('impact', { at: h, dur: 0.6 });
     },
     beats: [
-      { id: 'acorda', dur: 1.2 },
       {
-        // plano baixo no portãozinho: só a botina e a mão do porteiro
-        id: 'botina', dur: 1.7,
+        id: 'acorda', dur: 6.2,
+        tick(_, t) {
+          once('l1', t > 0.4, () => dir.say('porteiro', 'HEIN?! Quem latiu?', { mood: 'grito', mode: 'cena', dur: 1.4 }));
+          // embaixo, as duas latindo para a janela (ele só ouve latido)
+          once('p2', t > 1.6, () => {
+            dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
+            dir.lens(34);
+            const a = dir.actor('radhija');
+            dir.shot(P3(a.x + 1.3, 0.75, a.z + 1.4), P3(win().x, 0.9, win().z), { cut: true });
+            dir.say('radhija', 'Seu Luiz! Os pombos levaram a nossa cenoura!', { mode: 'cena', dur: 2.0 });
+            dir.bark('radhija');
+          });
+          once('l3', t > 3.6, () => {
+            luiz()?.setPose('fala');
+            luiz()?.say(true);
+            dir.say('porteiro', 'Pombo aqui? Impossível. Ninguém entra na guarita: está tudo trancado!', { mode: 'cena', dur: 2.6 });
+          });
+        },
+        leave() { luiz()?.say(false); },
+      },
+      {
+        // corte: ele no portãozinho, de pé, abrindo a tranca
+        id: 'abre', dur: 3.4,
         enter() {
-          dir.shot(P3(gx - 1.7, 0.36, G.z + 2.5), P3(gx + 0.15, 0.55, G.z + 0.2), { cut: true });
-          const p = props.humans.porteiro;
-          p.object.visible = true;
-          p.object.position.set(from.x, 0, from.z);
-          p.object.rotation.y = Math.PI * 0.6;
-          p.hand.userData.grip(0);
-          p.arm.rotation.x = 0;
+          dir.panel('full', 0, { enter: 'wipe' });
+          dir.lens(32);
+          const L1 = luiz();
+          if (L1) {
+            L1.chair && (L1.chair.object.visible = true);
+            L1.object.position.set(atGate.x, 0, atGate.z);
+            L1.object.rotation.set(0, -Math.PI * 0.75, 0);
+            L1.setPose('em-pe', undefined, { instant: true });
+          }
+          dir.shot(P3(gx - 1.6, 0.9, G.z + 2.6), P3(gx + 0.3, 0.95, G.z + 0.3), { cut: true });
+          dir.say('porteiro', 'Calma, calma! Querem passear, é?', { mode: 'cena', dur: 1.8 });
         },
         tick(_, t) {
-          const p = props.humans.porteiro;
-          const u = span(t, 0, 1.6);
-          // do lado da guarita até o lado do trinco, fora do arco da folha (ela abre para dentro)
-          p.object.position.x = lerp(from.x, to.x, u);
-          p.object.position.z = lerp(from.z, to.z, u);
-          p.object.rotation.y = lerp(Math.PI * 0.6, -2.38, smooth(span(t, 1.0, 1.6)));
-          const step = Math.sin(u * Math.PI * 5);
-          p.legs.left.position.z = step * 0.12;
-          p.legs.right.position.z = -step * 0.12;
-          if (Math.abs(step) > 0.95 && !S.st) { S.st = true; dir.sfx('botina', { x: p.object.position.x, z: p.object.position.z }); }
-          if (Math.abs(step) < 0.5) S.st = false;
-        },
-      },
-      {
-        id: 'trinco', dur: 1.2,
-        tick(_, t) {
-          const p = props.humans.porteiro;
-          p.arm.rotation.x = -0.9 * smooth(span(t, 0, 0.7));
-          p.hand.userData.grip(span(t, 0.6, 0.9));
-          if (t > 0.8 && !S.click) { S.click = true; dir.sfx('trinco', { x: gx, z: G.z }); }
+          const L1 = luiz();
+          if (L1) {
+            L1.setPose('abre-portao', Math.min(1, t / 1.4));
+            L1.reach?.('R', t < 1.6 ? P3(G.x1 - 0.05, 1.0, G.z + 0.03) : null);
+          }
+          once('click', t > 1.1, () => { dir.sfx('trinco', { x: gx, z: G.z }); dir.onomato('CLAC!', { at: P3(G.x1, 1.1, G.z), size: 0.8, color: '#ffffff', rot: 6 }); });
+          once('open', t > 1.3, () => dir.sfx('portao', { x: gx, z: G.z }));
+          if (t > 1.3) props.gateLeaf.setOpen(smooth(span(t, 1.3, 2.7)));
         },
       },
       {
-        id: 'abre', dur: 1.5,
-        enter() { dir.sfx('portao', { x: gx, z: G.z }); },
-        tick(_, t) { props.gateLeaf.setOpen(smooth(span(t, 0, 1.4))); },
-      },
-      {
-        id: 'sai', dur: 1.3,
-        tick(_, t) {
-          const p = props.humans.porteiro;
-          p.arm.rotation.x = -0.9 * (1 - smooth(span(t, 0, 0.5)));
-          p.hand.userData.grip(1 - span(t, 0, 0.3));
-          const u = span(t, 0.3, 1.3);
-          p.object.position.x = lerp(to.x, to.x + 0.55, u);
-          p.object.position.z = lerp(to.z, to.z + 1.15, u);
-          p.object.rotation.y = 0.4;
-          if (u >= 1) p.object.visible = false;
+        id: 'acena', dur: 2.2,
+        enter() {
+          luiz()?.setPose('acena');
+          dir.say('porteiro', 'Vão lá… mas voltem pro almoço!', { mode: 'cena', dur: 1.8 });
         },
         leave() { dir.say('radhija', 'O portão abriu! Atrás dos pombos!', { mode: 'cena', dur: 1.4 }); },
       },
     ],
     cleanup() {
       props.humans.porteiro.object.visible = false;
+      luiz()?.reach?.('R', null);
       dir.cleanup();
     },
     commit() {
+      K.book.add('dep-luiz', K.clueAt?.('dep-luiz'));
       props.gateLeaf.setOpen(1);
       K.gateOpened();
       props.booth.radio.setOn(true);
+      // acordado, de volta à cadeira da guarita, de olho no portão
+      const L1 = luiz();
+      if (L1) { L1.reset?.(); L1.setPose('sentado', undefined, { instant: true }); }
       K.setStage('fechamento');
     },
   });
 }
+
 
 // ------------------------------------------------------------------------------------------------ o fechamento
 export function createClosingScene(K) {

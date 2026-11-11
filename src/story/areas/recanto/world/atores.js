@@ -10,7 +10,17 @@
 //    furinho do apito; squeeze(k) amassa no "fiu"; holdBy(pombo | null) prende nas patas dele: em voo, as duas patas
 //    descem e os dedos fecham em volta dela (ela pende com a ponta para baixo e para trás e balança com atraso);
 //    pousado, ela fica deitada no apoio com uma pata em cima. Presa, a posição dela é sempre função das patas.
-//  - as MÃOS E PÉS humanos (kit de cenas): o braço da tutora e o porteiro, escondidos até as cenas.
+//  - as MÃOS E PÉS humanos (kit de cenas): o braço da tutora e o porteiro antigo (só a botina e a mão), escondidos até
+//    as cenas.
+//  - o SR. LUIZ, o porteiro de corpo inteiro (src/story/scene/srLuiz.js), dormindo na cadeira giratória dentro da
+//    guarita, de frente para o guichê (visível pela janela): props.srLuiz = { ...a API dele, chair, spot, reset() }.
+//    Sentado, ele fica atrás do balcão de dentro (o tampo, de leste.js, termina em z = BOOTH.z1 − 0,6) e a ponta das
+//    botinas fica embaixo do tampo. ATENÇÃO: o biombo escuro de leste.js (z = BOOTH.z1 − 0,76, do chão ao teto)
+//    atravessa ele e a cadeira e o esconde da janela: precisa sair de lá (ou ir para trás da cadeira, z < BOOTH.z1 − 1,4).
+//  - a PENA de pombo molhada (src/story/scene/feather.js), escondida até as cenas: props.feather = { object, setWet(k),
+//    sill: { x, y, z, yaw }, placeOnSill() } (deitada no parapeito de fora, onde ela fica de manhã).
+//  - o BICHANO, o gato da fase 9 (src/story/scene/bichano.js), dormindo no capô da caminhonete, na garagem:
+//    props.bichano = { ...a API dele, spot, reset() } (dentro do colisor da caminhonete, acima das dogs).
 //  - as SILHUETAS da Reconstrução da piscina: um pombo (o Farelo) e a boia de patinho murcha, translúcidos.
 //  - a GAROA da abertura: riscos de chuva numa malha só (instâncias), em volta da casa.
 //  - as MEIAS PERDIDAS (o colecionável do capítulo): { id, object, collect(), reset() }.
@@ -19,6 +29,9 @@ import { createPigeon } from '../../../../world/pigeon.js';
 import { createSock } from '../../../../world/toys.js';
 import { mergeGeometries } from '../../../../world/util.js';
 import { createTutoraArm, createPorteiro } from '../../../scene/humans.js';
+import { createSrLuiz, createGuardChair, CHAIR_OFFSET } from '../../../scene/srLuiz.js';
+import { createFeather } from '../../../scene/feather.js';
+import { createBichano } from '../../../scene/bichano.js';
 import { ghostMaterial, ghostify } from '../../../faro/reconstruction.js';
 
 const { smoothstep: ss, lerp, clamp } = THREE.MathUtils;
@@ -688,6 +701,40 @@ function rubberCarrot() {
   };
 }
 
+// ------------------------------------------------------------------------------------------------ os lugares dos três
+/** O piso de dentro da guarita (leste.js: a laje de 5 cm). */
+const BOOTH_FLOOR = 0.05;
+/**
+ * O Sr. Luiz na guarita (a origem dele: o chão entre os pés). Sentado de frente para o guichê (+Z), no meio da metade
+ * que abre (a do leste, a do windowAnchor); a ponta das botinas embaixo do balcão de dentro (leste.js: o tampo vai da
+ * parede do sul, por dentro, até 0,46 m para o norte, de 0,765 a 0,8 m do chão). Daqui ele também fica de pé sem as
+ * coxas atravessarem o tampo (a barriga passa por cima dele). A cadeira fica em CHAIR_OFFSET, atrás dele.
+ * @param {any} L
+ */
+export function srLuizSpot(L) {
+  const B = L.BOOTH;
+  return { x: (B.x0 + B.x1) / 2 + 0.36, y: BOOTH_FLOOR, z: B.z1 - 0.72, yaw: 0 };
+}
+/**
+ * O Bichano no capô da caminhonete, perto da frente (de onde as dogs chegam) e do lado do depósito. O capô (garagem.js,
+ * o miolo entre os para-lamas) sobe da frente para a cabine: y = 1,029 + 0,054 · (z − 0,42), com z a partir do
+ * para-choque da frente. Ele olha para a entrada da garagem (o norte), um pouco para o oeste.
+ * @param {any} L
+ */
+export function bichanoSpot(L) {
+  const C = L.CAR;
+  const zl = 0.66;
+  return { x: (C.x0 + C.x1) / 2 + 0.25, y: 1.08 - 0.051 + (zl - 0.42) * 0.054 + 0.003, z: C.z0 + zl, yaw: Math.PI + 0.3, tilt: -Math.atan(0.054) };
+}
+/**
+ * A pena deitada no parapeito de fora (de manhã): perto da ponta do leste, atravessada (o parapeito tem 20 cm).
+ * @param {any} L
+ */
+export function featherSill(L) {
+  const SO = L.SILL.out;
+  return { x: SO.x + 0.25, y: SO.y + 0.0015, z: SO.z + 0.01, yaw: 1.35 };
+}
+
 /** A boia de patinho murcha (para a silhueta da Reconstrução): um anel amassado com a cabeça de patinho caída. */
 function limpDuckFloat(material) {
   const g = new THREE.Group();
@@ -740,6 +787,65 @@ export function buildAtores(root, L) {
   tutora.object.visible = false;
   porteiro.object.visible = false;
   group.add(tutora.object, porteiro.object);
+
+  // ---------------------------------------------------------------- o Sr. Luiz, dormindo na cadeira da guarita
+  const LZ = srLuizSpot(L);
+  const chair = createGuardChair();
+  const srLuiz = Object.assign(createSrLuiz(), {
+    chair,
+    spot: LZ,
+    /** De volta à guarita: sentado, dormindo, a cadeira no lugar. */
+    reset() {
+      const o = srLuiz.object;
+      o.visible = true;
+      o.position.set(LZ.x, LZ.y, LZ.z);
+      o.rotation.set(0, LZ.yaw, 0);
+      const s = Math.sin(LZ.yaw), c = Math.cos(LZ.yaw);
+      chair.object.position.set(LZ.x + CHAIR_OFFSET.x * c + CHAIR_OFFSET.z * s, LZ.y, LZ.z - CHAIR_OFFSET.x * s + CHAIR_OFFSET.z * c);
+      chair.object.rotation.set(0, LZ.yaw, 0);
+      chair.object.visible = true;
+      chair.setSwivel(0);
+      srLuiz.lookAt(null);
+      srLuiz.say(false);
+      srLuiz.reach('L', null);
+      srLuiz.reach('R', null);
+      srLuiz.setPose('dorme', undefined, { instant: true });
+    },
+  });
+  srLuiz.reset();
+  group.add(srLuiz.object, chair.object);
+
+  // ---------------------------------------------------------------- a pena de pombo (só nas cenas)
+  const feather = Object.assign(createFeather(), {
+    sill: featherSill(L),
+    /** Deitada no parapeito de fora, como ela fica de manhã. */
+    placeOnSill() {
+      const s = feather.sill;
+      feather.object.visible = true;
+      feather.object.position.set(s.x, s.y, s.z);
+      feather.object.rotation.set(0, s.yaw, 0);
+    },
+  });
+  feather.object.visible = false;
+  group.add(feather.object);
+
+  // ---------------------------------------------------------------- o Bichano, no capô da caminhonete
+  const BS = bichanoSpot(L);
+  const bichano = Object.assign(createBichano(), {
+    spot: BS,
+    /** De volta ao capô, dormindo. */
+    reset() {
+      const o = bichano.object;
+      o.visible = true;
+      o.position.set(BS.x, BS.y, BS.z);
+      o.rotation.set(BS.tilt, BS.yaw, 0); // XYZ: o rumo e depois a inclinação do capô (em torno do x do mundo)
+      bichano.lookAt(null);
+      bichano.say(false);
+      bichano.setPose('dorme', undefined, { instant: true });
+    },
+  });
+  bichano.reset();
+  group.add(bichano.object);
 
   // ---------------------------------------------------------------- as silhuetas da Reconstrução da piscina
   // o pombo fantasma é o Farelo (mesma escala, mesma barriga, mesma postura), só no material das silhuetas
@@ -839,12 +945,15 @@ export function buildAtores(root, L) {
     props: {
       squad, carrot, rain: rainApi, socks,
       humans: { tutora, porteiro },
+      srLuiz, feather, bichano,
       ghosts,
     },
     seeThrough: [],
     signs: [],
     update(dt, t) {
       for (const p of Object.values(squad)) if (p.object.visible) p.update(dt, t);
+      if (srLuiz.object.visible) srLuiz.update(dt, t);
+      if (bichano.object.visible) bichano.update(dt, t);
       carrot._update(dt); // depois dos pombos: presa, ela sai das patas de quem segura
       rainApi.update(dt);
       for (const s of socks) s._update(dt, t);
@@ -859,13 +968,22 @@ export function buildAtores(root, L) {
       carrot.squeeze(0);
       tutora.object.visible = false;
       porteiro.object.visible = false;
+      srLuiz.reset();
+      bichano.reset();
+      feather.object.visible = false;
+      feather.setWet(0.45);
       rainApi.setOn(0);
       for (const s of socks) s.reset();
     },
-    // as mãos e a botina liberam o que é delas; o resto fica na árvore para o escopo de recursos da área liberar
+    // as mãos, a botina, o Sr. Luiz, a cadeira, a pena e o Bichano liberam o que é deles; o resto fica na árvore para o
+    // escopo de recursos da área liberar
     dispose() {
       tutora.dispose();
       porteiro.dispose();
+      srLuiz.dispose();
+      chair.dispose();
+      feather.dispose();
+      bichano.dispose();
     },
   };
 }

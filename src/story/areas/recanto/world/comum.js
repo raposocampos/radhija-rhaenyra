@@ -21,9 +21,9 @@
 // API: buildComum(kit, root, L) → { props: { line, laundry, towerDoor, intercom, terrace }, seeThrough, update(dt, t),
 //   reset(), dispose(), signs }
 import * as THREE from 'three';
-import { rng, mat, paint, mergeGeometries, canvasTexture } from '../../../../world/util.js';
+import { rng, mat, paint, mergeGeometries, canvasTexture, fbm2, vnoise2 } from '../../../../world/util.js';
 import { buildWallButton, wallButtonYaw } from '../../../../world/wallButton.js';
-import { rb, cyl, slab, tiles, tilesV, windowAt, SLOTS } from '../../../../levels/mapa/world/kit.js';
+import { rb, cyl, slab, tiles, tilesV, windowAt, SLOTS, wallBox, weathered } from '../../../../levels/mapa/world/kit.js';
 import { waterMat, flowerBush } from '../../../../levels/mapa/world/pecas.js';
 
 const TAU = Math.PI * 2;
@@ -115,6 +115,47 @@ function grate(s = 0.2, n = 4, light = '#c9ced2', dark = '#2f3134') {
   const step = (s - 2 * b) / (2 * n - 1);
   for (let i = 0; i < 2 * n - 1; i++) list.push([-h + b, -h + b + i * step, h - b, -h + b + (i + 1) * step, i % 2 ? light : dark]);
   return flatQuads(list);
+}
+const CEMENT = new THREE.Color('#cdc6b9'), DAMP = new THREE.Color('#8e9096'), GRIME = new THREE.Color('#867b69'), MOSS = new THREE.Color('#77864f');
+/**
+ * Piso de placas de cimento (x0..x1 × z0..z1, deitado em y): placas de ~0,95 m separadas por juntas de 7 mm (o que
+ * aparece nelas é o piso de baixo, mais escuro), cada uma cortada em 3 × 3 para a cor variar por dentro.
+ * tone(x, z, sorteio da placa 0..1, out) → a cor do vértice.
+ * @param {number} x0 @param {number} x1 @param {number} z0 @param {number} z1 @param {number} y
+ * @param {(x: number, z: number, plate: number, out: THREE.Color) => THREE.Color} tone
+ */
+function cementPlates(x0, x1, z0, z1, y, tone, size = 0.96, sub = 3) {
+  const nx = Math.max(1, Math.round((x1 - x0) / size)), nz = Math.max(1, Math.round((z1 - z0) / size));
+  const pw = (x1 - x0) / nx, pd = (z1 - z0) / nz, gap = 0.0035;
+  const pos = [], col = [], idx = [];
+  const c = new THREE.Color();
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < nz; j++) {
+      const ax = x0 + i * pw + (i ? gap : 0), bx = x0 + (i + 1) * pw - (i < nx - 1 ? gap : 0);
+      const az = z0 + j * pd + (j ? gap : 0), bz = z0 + (j + 1) * pd - (j < nz - 1 ? gap : 0);
+      const plate = hash(i, j, 11), first = pos.length / 3;
+      for (let v = 0; v <= sub; v++) {
+        for (let u = 0; u <= sub; u++) {
+          const x = ax + ((bx - ax) * u) / sub, z = az + ((bz - az) * v) / sub;
+          tone(x, z, plate, c);
+          pos.push(x, y, z);
+          col.push(c.r, c.g, c.b);
+        }
+      }
+      for (let v = 0; v < sub; v++) {
+        for (let u = 0; u < sub; u++) {
+          const a = first + v * (sub + 1) + u, b = a + 1, d = a + sub + 1, e = d + 1;
+          idx.push(a, d, b, b, d, e);
+        }
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(pos.length).map((_, k) => (k % 3 === 1 ? 1 : 0)), 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  return g;
 }
 /** Mancha deitada de contorno irregular (raio r), voltada para cima. */
 function blob(r, seed = 1, n = 18, wob = 0.16) {
@@ -389,6 +430,13 @@ function pictoTexture(kind, bg) {
       for (const sx of [-1, 1]) for (const sy of [-1, 1]) parts.push(() => g.arc(sx * 62, sy * 23, 29, 0, TAU));
       draw(parts, '#fffaf0');
       g.restore();
+    } else if (kind === 'peixe') {
+      draw([
+        () => g.ellipse(118, 128, 64, 40, 0, 0, TAU),
+        () => { g.moveTo(176, 128); g.lineTo(220, 92); g.lineTo(220, 164); g.closePath(); },
+      ], '#fffaf0');
+      g.fillStyle = '#2b1d14';
+      g.beginPath(); g.arc(88, 118, 9, 0, TAU); g.fill();
     } else if (kind === 'nota') {
       draw([
         () => g.rect(138, 54, 20, 128),
@@ -1033,12 +1081,22 @@ function buildService({ kit, L, drips }) {
   const fx0 = S.x0, fx1 = S.x1, fz0 = wz, fz1 = S.z1;
   const pillars = northPillars(L);
 
-  // ---------- o piso: placas de cimento (variação por placa), as juntas, as guias e o ralo de piso
-  add(tiles(fx1 - fx0, fz1 - fz0, 0.62, 0.62, cells(['#cbc5ba', '#c4beb2', '#d0cabf', '#c7c0b3'], 0.62, 5)), { color: null, slot: 'ground', x: (fx0 + fx1) / 2, y: FL, z: (fz0 + fz1) / 2, ao: false });
-  const joints = [];
-  for (let x = fx0 + 1.86; x < fx1 - 0.3; x += 1.86) joints.push([x - 0.006, fz0, x + 0.006, fz1, '#a39d92']);
-  for (const k of [1 / 3, 2 / 3]) joints.push([fx0, fz0 + (fz1 - fz0) * k - 0.006, fx1, fz0 + (fz1 - fz0) * k + 0.006, '#a39d92']);
-  add(flatQuads(joints), { color: null, slot: 'ground', y: FL + 0.003, ao: false });
+  // ---------- o piso: placas de cimento queimado, cada uma com o seu tom e manchada por dentro (a umidade da garoa em
+  // nuvens, o encardido e o musgo no pé do muro, a sujeira junto das guias, a linha molhada embaixo da beira do
+  // telhadinho e o molhado embaixo do varal), as juntas escuras entre elas, as guias e o ralo de piso
+  add(slab(fx1 - fx0 - 0.01, 0.001, fz1 - fz0 - 0.01), { color: '#8a8378', slot: 'ground', x: (fx0 + fx1) / 2, y: FL - 0.001, z: (fz0 + fz1) / 2, ao: false });
+  add(cementPlates(fx0, fx1, fz0, fz1, FL + 0.0025, (x, z, plate, out) => {
+    out.copy(CEMENT).multiplyScalar(0.9 + 0.14 * plate);
+    out.multiplyScalar(0.93 + 0.13 * fbm2(x * 0.9 + 3, z * 0.9 - 1, 3));
+    out.lerp(DAMP, smooth((fbm2(x * 0.32 - 7, z * 0.32 + 2, 3) - 0.52) * 7) * 0.5);
+    const dw = z - fz0, de = Math.min(x - fx0, fx1 - x, fz1 - z);
+    out.lerp(GRIME, (1 - smooth(dw / 0.8)) * 0.55 + (1 - smooth(de / 0.4)) * 0.35);
+    out.lerp(MOSS, (1 - smooth(dw / 0.3)) * smooth((fbm2(x * 0.7, 3.3, 2) - 0.45) * 6) * 0.55);
+    // a pingadeira do telhadinho (a garoa escorreu da beira das telhas) e o molhado embaixo das roupas do varal
+    if (x > T.x0 - 0.2 && x < (WM ? WM.x + WM.hx : T.x1) + 0.2) out.lerp(DAMP, (1 - smooth(Math.abs(z - (T.z1 + 0.46)) / 0.22)) * 0.55);
+    if (x > Ln.a.x + 0.2 && x < Ln.b.x - 0.2) out.lerp(DAMP, (1 - smooth(Math.abs(z - Ln.a.z) / 0.5)) * smooth((vnoise2(x * 2.2, z * 2.2) - 0.35) * 4) * 0.35);
+    return out.multiplyScalar(0.97 + 0.06 * hash(Math.round(x * 31), Math.round(z * 29), 2));
+  }), { color: null, slot: 'ground', ao: false });
   for (const x of [fx0 + 0.03, fx1 - 0.03]) add(slab(0.06, 0.016, fz1 - fz0), { color: '#b7b0a4', x, y: 0.002, z: (fz0 + fz1) / 2, ao: false });
   add(slab(fx1 - fx0 - 0.12, 0.016, 0.06), { color: '#b7b0a4', x: (fx0 + fx1) / 2, y: 0.002, z: fz1 - 0.03, ao: false });
   add(grate(0.22, 4), { color: null, slot: 'ground', x: T.x1 + 1.3, y: FL + 0.003, z: T.z1 + 0.55, ao: false });
@@ -1048,6 +1106,23 @@ function buildService({ kit, L, drips }) {
   for (let i = 0; i < 9; i++) {
     const x = Ln.a.x + 0.5 + Rw() * (Ln.b.x - Ln.a.x - 1.0), z = Ln.a.z + (Rw() - 0.5) * 0.8;
     add(blob(0.07 + Rw() * 0.08, i * 3 + 1), { color: '#9a958b', slot: 'glass', x, y: FL + 0.006, z, sz: 0.7, ao: false });
+  }
+  // as folhas e a sujeirinha que a garoa juntou no pé do muro e nos dois cantos (rentes ao piso)
+  {
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -0.04);
+    sh.quadraticCurveTo(0.026, -0.01, 0, 0.04);
+    sh.quadraticCurveTo(-0.026, -0.01, 0, -0.04);
+    const leafG = new THREE.ShapeGeometry(sh, 3).rotateX(-Math.PI / 2);
+    const cols = ['#7a9a3a', '#b8a24a', '#9a6a3a', '#6f8f34', '#c98d3c', '#8a5a34'];
+    const Rl = rng(61), wx1 = (WM ? WM.x + WM.hx : T.x1) + 0.08, rk = RK ? [RK.x - RK.hx - 0.05, RK.x + RK.hx + 0.05] : [0, 0];
+    for (let i = 0; i < 54; i++) {
+      const corner = i % 3 === 0;
+      const x = corner ? (i % 2 ? fx0 + 0.08 + Rl() * Rl() * 1.2 : fx1 - 0.08 - Rl() * Rl() * 1.2) : fx0 + 0.2 + Rl() * (fx1 - fx0 - 0.4);
+      const z = fz0 + 0.05 + Rl() * Rl() * (corner ? 2.2 : 0.7);
+      if (z < T.z1 + 0.05 && ((x > T.x0 - 0.06 && x < wx1) || (x > rk[0] && x < rk[1]))) continue;
+      add(leafG, { color: cols[i % cols.length], slot: 'ground', x, y: FL + 0.0055 + (i % 5) * 0.0006, z, ry: Rl() * TAU, sx: 0.75 + Rl() * 0.6, sz: 0.75 + Rl() * 0.6, ao: false });
+    }
   }
   // um caco de telha do telhadinho, caído na tempestade, e duas folhas
   add(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 6, 1, true, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2), { color: '#b85a38', x: T.x1 + 0.9, y: FL + 0.002, z: T.z1 + 0.75, ry: 0.7, ao: false });
@@ -1595,12 +1670,16 @@ function buildTower({ kit, L, anim, drips, keep }) {
   const dz0 = D.hinge.z, dz1 = D.latchPost.z, dzc = (dz0 + dz1) / 2;
 
   // ---------- as paredes (em cima dos colisores): o barrado embaixo, o reboco em cima; por dentro, a mesma divisão
+  // (por fora, o reboco gasto do kit: respingos e umidade no barrado, os escorridos embaixo da laje; por dentro, liso)
   const wall = (ax, bx, az, bz, y0, y1, dx, dz) => {
-    const part = (ya, yb, out, ins, ao) => add(rb(bx - ax, yb - ya, bz - az, 0.012, 1), { color: twoTone(out, ins, dx, dz), x: (ax + bx) / 2, y: ya, z: (az + bz) / 2, ao });
+    const along = bx - ax >= bz - az ? 'x' : 'z', seed = ax * 0.31 + az * 0.17;
+    const part = (ya, yb, out, ins, ao) => add(wallBox(bx - ax, yb - ya, bz - az), { color: twoTone(out, ins, dx, dz), x: (ax + bx) / 2, y: ya, z: (az + bz) / 2, ao });
+    const dadoW = weathered('#d9a87c', { h: DADO, y0, seed, along, streak: 0, eave: 0.08 });
+    const faceW = (ya) => weathered('#f1dfc4', { h: WH, y0: ya, seed, along, splash: 0, damp: 0, eave: 0.3 });
     if (y0 < DADO - 0.01 && y1 > DADO + 0.01) {
-      part(y0, DADO, dado, innerLow, true);
-      part(DADO, y1, facade, inner, false);
-    } else part(y0, y1, facade, inner, false);
+      part(y0, DADO, dadoW, innerLow, true);
+      part(DADO, y1, faceW(DADO), inner, false);
+    } else part(y0, y1, y0 < DADO ? dadoW : faceW(y0), inner, false);
   };
   wall(x0, x1, z0, zn, 0, WH, 0, 1);
   wall(x0, x1, zi, z1, 0, WH, 0, -1);
@@ -1623,15 +1702,17 @@ function buildTower({ kit, L, anim, drips, keep }) {
   frieze(x0 - 0.012, x0 + 0.002, wzIn, dz0 - 0.07);
   frieze(x0 + 0.21, x1 - 0.21, z0 - 0.012, z0 + 0.002);
   // os cunhais (as quinas de fora, de reboco claro): cobrem as emendas das paredes
-  const quoin = (qx, qz, dirX, outZ, dirZ, outX) => {
+  // (zw: a largura do lado voltado para x; na quina sudoeste ela é estreita, para não pegar o botão do sino do interfone)
+  const quoin = (qx, qz, dirX, outZ, dirZ, outX, zw = 0.21) => {
     const ax = Math.min(qx + outX * 0.014, qx + dirX * 0.21), bx = Math.max(qx + outX * 0.014, qx + dirX * 0.21);
     const az = Math.min(qz - outZ * 0.004, qz + outZ * 0.014), bz = Math.max(qz - outZ * 0.004, qz + outZ * 0.014);
     add(rb(bx - ax, WH, bz - az, 0.006, 1), { color: trim, x: (ax + bx) / 2, z: (az + bz) / 2 });
     const cx0 = Math.min(qx - outX * 0.004, qx + outX * 0.014), cx1 = Math.max(qx - outX * 0.004, qx + outX * 0.014);
-    const cz0 = Math.min(qz + outZ * 0.014, qz + dirZ * 0.21), cz1 = Math.max(qz + outZ * 0.014, qz + dirZ * 0.21);
+    const cz0 = Math.min(qz + outZ * 0.014, qz + dirZ * zw), cz1 = Math.max(qz + outZ * 0.014, qz + dirZ * zw);
     add(rb(cx1 - cx0, WH, cz1 - cz0, 0.006, 1), { color: trim, x: (cx0 + cx1) / 2, z: (cz0 + cz1) / 2 });
   };
-  quoin(x0, z1, 1, 1, -1, -1);
+  const lastBtn = L.INTERCOM.buttons.reduce((m, b) => Math.max(m, b.z), -Infinity);
+  quoin(x0, z1, 1, 1, -1, -1, Math.max(0.06, Math.min(0.21, z1 - (lastBtn + 0.137) - 0.02)));
   quoin(x1, z1, -1, 1, -1, 1);
   quoin(x1, z0, -1, -1, 1, 1);
   quoin(x0, z0, 1, -1, 1, -1);
@@ -2141,7 +2222,7 @@ function buildIntercom({ kit, L, keep }) {
   group.name = 'recanto:interfone';
   keep(group);
   /** @type {Record<string, string>} */
-  const COLORS = { osso: '#3f8fd1', nota: '#e2559a', sino: '#2f9e6a' };
+  const COLORS = { osso: '#3f8fd1', nota: '#e2559a', sino: '#2f9e6a', peixe: '#e8913a' };
   const PY = 1.32, PW = 0.235;                     // o meio e o lado das plaquinhas
   /** @type {Record<string, import('../../../../types').WallButtonProp>} */
   const buttons = {};

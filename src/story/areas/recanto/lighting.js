@@ -1,24 +1,31 @@
 // Recanto das Patinhas — iluminação (formato de LIGHTING_DEFAULT em src/core/engine.js).
 // MANHÃ (a da carga e do jogo): sol baixo e dourado do leste, céu claro com neblina baixa e orvalho; a neblina rosada
-// do horizonte esconde o fim da cidade. NOITE (só a abertura, "A noite da garoa"): a mesma direção de luz, fria e fraca
-// como a lua por trás das nuvens, céu fechado, quase sem estrelas.
+// do horizonte esconde o fim da cidade. O sol é forte e quente e o preenchimento (hemisfério e mapa do ambiente) mais
+// fraco e azulado: a sombra fica marcada e fria, o sol, cor de mel (o contraste das maquetes de "It Takes Two").
+// NOITE (só a abertura, "A noite da garoa"): a mesma direção de luz, fria e fraca como a lua por trás das nuvens, céu
+// fechado, quase sem estrelas.
 // A troca entre as duas acontece no preto da cena (src/story/scene/mood.js), mexendo só em cores e intensidades: as
 // duas usam os mesmos programas da GPU (a sombra continua ligada nas duas, o mapa do ambiente é o da manhã).
 import { SUN } from './layout.js';
 
 /** @type {import('../../../types').LightingPreset} */
 export const MORNING = {
-  sun: { dir: SUN.direction, color: SUN.color, intensity: 2.7, shadowBias: -0.0004, shadowNormalBias: 0.028 },
-  hemi: { sky: '#cfe0f4', ground: '#8f8a5c', intensity: 1.1 },
-  fog: { color: '#e8d9cc', near: 18, far: 64 },
-  exposure: 1.1,
+  // o sol: mais quente que o do layout (mel, não creme) e mais forte; o viés da sombra é o de antes
+  sun: { dir: SUN.direction, color: '#ffcf96', intensity: 3.25, shadowBias: -0.0004, shadowNormalBias: 0.028 },
+  // o preenchimento: céu azul de verdade por cima (as sombras puxam para o azul) e o chão de grama e terra, quente
+  hemi: { sky: '#a9c6ee', ground: '#9a8656', intensity: 0.92 },
+  // a neblina rosada do horizonte: pêssego com um quê de rosa, começando um pouco mais longe (o meio do condomínio
+  // fica nítido) e fechando antes da cidade acabar
+  fog: { color: '#efd5cb', near: 20, far: 66 },
+  exposure: 1.06,
   sky: {
-    zenith: '#79a6d6', mid: '#b9d2ea', horizon: '#ffe0c2', ground: '#cdb89a', sun: '#fff1d6',
-    stars: 0, clouds: 0.8, glow: 0.9, disk: 0.9, cloudTint: [1.0, 0.92, 0.84],
+    zenith: '#6b9fd8', mid: '#b4d0ee', horizon: '#ffd7c4', ground: '#d6b9a0', sun: '#fff0d2',
+    stars: 0, clouds: 0.8, glow: 1.0, disk: 0.9, cloudTint: [1.0, 0.9, 0.86],
   },
-  env: { intensity: 0.62, ground: '#7f8a52' },
-  grade: { warm: [1.03, 1.0, 0.95], sat: 1.06, lift: [0.006, 0.005, 0.004], vignette: 0.22 },
-  bloom: { strength: 0.25, radius: 0.55, threshold: 0.9 },
+  env: { intensity: 0.5, ground: '#7f8a52' },
+  // mais saturação e um contraste leve: as sombras descem um pouco (lift menor) e o quente sobe nos realces
+  grade: { warm: [1.04, 1.0, 0.94], sat: 1.13, lift: [0.002, 0.003, 0.006], vignette: 0.24 },
+  bloom: { strength: 0.26, radius: 0.55, threshold: 0.9 },
 };
 
 /** A noite da garoa (só cores e intensidades mudam em relação à manhã). */

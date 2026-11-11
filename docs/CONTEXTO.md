@@ -1,9 +1,9 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-11-10, Claude**.
+Última atualização: **2026-11-11, Claude**.
 - **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), em 3ª pessoa, branch `claude/historia-fatia`
-  (PR #75). **A prévia `1baeb48` foi reprovada pelo usuário em 2026-11-09**; a fatia está sendo refeita no mesmo PR
-  (veja "Revisão da fatia" abaixo).
+  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada como estilo, pedidos de
+  2026-11-11) está integrada no branch, aguardando CI, E2E e a aprovação do usuário (veja "3ª rodada" abaixo).
 - **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
@@ -17,6 +17,41 @@
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
+
+- **Gostou do estilo HQ.** Pediu: os dois planos fracos; balões alinhados; pena melhor; no varal, o empurra-empurra
+  da Rhaenyra (Shift/R1) no lugar da arrancada da Radhija; mais puzzles com propósito para objetos e personagens;
+  mistérios melhores; detetive "mais de detetive"; Faro com VFX melhor, fôlego e liga/desliga; o Sr. Luiz (porteiro,
+  corpo inteiro com rosto, decisão dele); a torre com puzzle mais difícil e coisa para fazer depois da porta; gráficos
+  do mapa melhores. O usuário foi dormir e pediu (pelo orquestrador) para fechar a rodada até a prévia, sem integrar.
+- **Feito (commit desta rodada; conferir o CI e o E2E pelo commit no GitHub):**
+  - Varal: o poste do leste com o empurrão em pé da Rhaenyra (`L.POLE_SHOVE`, `createShoveTarget`); com o cesto
+    embaixo, no 3º empurrão o pregador solta; sem o cesto, a Radhija avisa. A arrancada saiu.
+  - Interfone com 4 botões (osso, nota, peixe, sino); a Reconstrução mostra só 2 (o espirro do Soneca esconde o 3º),
+    que vem do depoimento da Dona Gansa.
+  - Testemunhas com pedidos: a Dona Gansa quer o broche (na ilha do lago) e o Bichano (no capô da caminhonete) quer a
+    bolinha presa no depósito; cada uma dá um depoimento (`dep-gansa`, `dep-bichano`). O Sr. Luiz dá `dep-luiz`, que
+    contradiz a `grelha` (pergunta nova "O Sr. Luiz viu os pombos saindo?", gancho aberto).
+  - Árvore de pistas v2 (`deduction.js`, `board.js`): as pistas caem em "Achados" e o jogador liga cada uma à
+    pergunta; depoimentos e confronto (contradição → pergunta nova). `tampa` (do telhado) é extra de "borracha".
+  - Balões presos à cabeça (`director.head`); os dois planos (close do Capitão de fora, Rhaenyra na janela).
+  - Faro liga/desliga com fôlego por dog (`faroMode.js`, `faroMeter.js`, sons `faro-liga/desliga/cansado`), VFX
+    novo na nuvem de cheiro.
+  - Sr. Luiz (`scene/srLuiz.js`, corpo inteiro com rosto), Bichano (`scene/bichano.js`), pena nova (`scene/feather.js`);
+    vozes e cores das testemunhas em `subtitles.js` e `comic.js`.
+  - Telhado da torre jogável, fora do mapa (`rooftop.js`, `scenesTelhado.js`, `world/telhado.js`, x 63,5–76,5):
+    poleiros → encurralar os pombos (uma dog no Fica) → caixote embaixo da escada → pulo na parede no trinco → a
+    Radhija sobe → cena da fuga → pista `tampa` → de volta à porta da torre (etapa `portaria`).
+  - Gráficos: decalques de contato (`kit.js`: balde `contact` e `decalLot`, só acréscimo; o mapa não usa), vida nos
+    cantos (bicicleta, caixotes, com colisores), polimento em base/casa/comum/leste, luz da manhã retocada.
+  - E: falar com a testemunha ficou por último em `interact` (o Bichano no capô roubava o E da corda debaixo da
+    caminhonete).
+  - Testes: `historia-deducao`, `historia-faro`, `historia-personagens`, `historia-telhado`, `historia-ui`,
+    `historia-comic`, `dogGestures`; missão e cenas com o empurrão, o Faro novo e o telhado; os roteiros de E2E
+    (`test-historia.mjs`, `capture-historia.mjs`) ligam as pistas no quadro e passam pelo telhado.
+- **Próximo passo:** CI do commit, E2E `historia` e primeira passagem `historia`; revisar as capturas; prévia ao
+  usuário. **Não integrar sem o "pode integrar" dele.**
 
 ### 2ª reprovação (2026-11-10, prévia `1ae2d97`, verde no CI): cinema, HQ e árvore de pistas
 

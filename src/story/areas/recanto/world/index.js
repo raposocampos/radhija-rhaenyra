@@ -22,6 +22,7 @@ import { buildLeste } from './leste.js';
 import { buildGaragem } from './garagem.js';
 import { buildAtores } from './atores.js';
 import { buildCinemaLight } from './cinemaLight.js';
+import { buildTelhado } from './telhado.js';
 
 /**
  * @param {import('../../../../types').LevelBuildArgs} args
@@ -40,6 +41,7 @@ export function buildWorld({ engine, root, layout }) {
     T('comum', () => buildComum(kit, root, L)),
     T('leste', () => buildLeste(kit, root, L)),
     T('garagem', () => buildGaragem(kit, root, L)),
+    T('telhado', () => buildTelhado(kit, root, L)),
     T('atores', () => buildAtores(root, L)),
     T('luz', () => {
       const light = buildCinemaLight(root, L);
@@ -72,9 +74,9 @@ export function buildWorld({ engine, root, layout }) {
   return {
     props,
     env: { timings, meshes: merged.meshes.length, groups: Object.keys(merged.groups) },
-    // o que fica em pé pode ficar entre a câmera e as dogs (o chão e a água não)
+    // o que fica em pé pode ficar entre a câmera e as dogs (o chão, a água e os decalques do chão não)
     seeThrough: [
-      ...merged.meshes.filter((m) => !/:(ground|plant):/.test(m.name)),
+      ...merged.meshes.filter((m) => !/:(ground|plant|contact):/.test(m.name)),
       ...parts.flatMap((p) => p.seeThrough || []),
     ],
     update(dt, t) {

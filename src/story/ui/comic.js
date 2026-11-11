@@ -29,18 +29,19 @@
 // copia o recorte. Os quadros ainda não usados da página aparecem como molduras com retícula escura.
 // Sem nenhum evento, nada muda: o canvas fica sem clip-path e a câmera sem viewOffset.
 import './comic.css';
-import * as THREE from 'three';
 import {
   MOODS, OUT_DUR, SLOTS, balloonShape, bboxOf, bubblesPath, burstPath, centroid, clamp, clipCss, cloudPath, createLiveDriver,
   createOnomatoQueue, createStage, ease, frameMetrics, inkPath, needsNewPage, normLayout, normSlot, offsetPoly, ovalPath,
-  placeBalloon, placeCorner, rectPoly, sayTiming, seeded, slotPoly, tailPath, typedCount, viewOffsetFor,
+  placeBalloon, placeCorner, rectPoly, sayTiming, seeded, slotPoly, tailPath, typedCount, viewOffsetFor, HEAD_HALF, projectPoint,
 } from './comicMath.js';
 
 /** Cor de destaque de quem fala (etiqueta do nome, legenda). */
 const CAST = {
   radhija: { name: 'Radhija', color: '#E39B2E' },
   rhaenyra: { name: 'Rhaenyra', color: '#EE6FA4' },
-  porteiro: { name: 'Seu Porteiro', color: '#4E8F6A' },
+  porteiro: { name: 'Sr. Luiz', color: '#4E8F6A' },
+  gansa: { name: 'Dona Gansa', color: '#C9822F' },
+  bichano: { name: 'Bichano', color: '#8A6F5A' },
   migalha: { name: 'Capitão Migalha', color: '#5E79B5' },
   capitao: { name: 'Capitão Migalha', color: '#5E79B5' },
   farelo: { name: 'Farelo', color: '#7C8FBF' },
@@ -202,13 +203,13 @@ export function createComicLayer({ root, engine, events }) {
   const panelPolyNow = () => stage.live?.poly ?? screenPoly();
 
   // ------------------------------------------------ projeção (com o viewOffset do quadro ao vivo)
-  const V = new THREE.Vector3();
-  /** @param {{ x: number, y: number, z: number }} a */
+  /**
+   * O ponto do mundo na tela, com a câmera e o viewOffset do desenho de agora (o mesmo plano do quadro ao vivo).
+   * ppm: quantos px um metro ocupa naquela distância (o tamanho da cabeça na tela, para o balão não cobri-la).
+   * @param {{ x: number, y: number, z: number }} a
+   */
   function project(a) {
-    V.set(+a.x || 0, +a.y || 0, +a.z || 0).applyMatrix4(camera.matrixWorldInverse);
-    if (V.z > -camera.near) return { x: (V.x >= 0 ? 1 : -1) * 1e4, y: geom.H * 2, front: false };
-    V.applyMatrix4(camera.projectionMatrix);
-    return { x: ((V.x + 1) / 2) * geom.W, y: ((1 - V.y) / 2) * geom.H, front: true };
+    return projectPoint(a, camera, geom.W, geom.H);
   }
 
   // ------------------------------------------------ páginas
@@ -562,7 +563,11 @@ export function createComicLayer({ root, engine, events }) {
       ({ x, y } = placeCorner(poly, b.w, b.h, corner, pad));
     } else {
       const anc = b.anchor ? project(b.anchor) : null;
-      const pl = placeBalloon({ anchor: anc, w: b.w, h: b.h, poly, others: placed, prev: b.side, pad, gap: clamp(b.h * 0.42, 14, 40) });
+      const gap = clamp(b.h * 0.42, 14, 40);
+      // a cabeça (uns 9 cm de cada lado do alto dela) fica livre; num close, ela é grande na tela
+      const pb = bboxOf(poly);
+      const clear = anc?.front ? clamp(HEAD_HALF * anc.ppm, gap * 0.8, Math.min(pb.w, pb.h) * 0.22) : null;
+      const pl = placeBalloon({ anchor: anc, w: b.w, h: b.h, poly, others: placed, prev: b.side, pad, gap, clear });
       ({ x, y, tip, out, side } = pl);
     }
     // anda macio atrás de quem fala (a primeira vez já nasce no lugar)

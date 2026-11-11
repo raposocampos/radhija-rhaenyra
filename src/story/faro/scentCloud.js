@@ -1,9 +1,12 @@
 // A nuvem de cheiro do Faro (pedido do usuário em 2026-11-09: "uma nuvenzinha de cheiro até o objetivo, ou até o
-// mistério"). Enquanto o pulso do Faro está aceso, um rastro de nuvenzinhas sai do focinho de quem fareja e segue o
-// caminho até a próxima pista (`lead`), na cor do cheiro, com uma onda de brilho correndo para o lado de lá: é só ir
-// atrás. O rastro passa por onde o cheiro passaria (por baixo de porta fechada, pela portinha de gato): quando a porta
-// está trancada, ele mostra para onde é, e abrir é com as duas.
-//  - O caminho vem do grafo de navegação da área (NAV_NODES/NAV_EDGES), sem olhar o que está fechado.
+// mistério"; mais bonita em 2026-11-11). Enquanto o Faro está aceso, um rastro de nuvenzinhas sai do focinho de quem
+// fareja e anda pelo caminho até a próxima pista (`lead`), na cor do cheiro, com uma onda de brilho correndo para o
+// lado de lá: é só ir atrás. Cada nuvenzinha tem gomos (três bolinhas encavaladas), um brilho por dentro puxado para
+// cima, gira devagar e deriva com o vento; as da ponta (perto da pista) são maiores e mais fortes, e um tufo gira em
+// volta da pista quando ela está no trecho desenhado. O rastro passa por onde o cheiro passaria (por baixo de porta
+// fechada, pela portinha de gato): quando a porta está trancada, ele mostra para onde é, e abrir é com as duas.
+//  - O caminho vem do grafo de navegação da área (NAV_NODES/NAV_EDGES), sem olhar o que está fechado; o começo dele
+//    acompanha quem fareja a cada quadro (o resto é refeito a cada 0,3 s).
 //  - O desenho é uma malha só (instâncias de um quadrado virado para a câmera, sem textura e sem pós-processamento):
 //    vale também no perfil mínimo.
 // API: createScentCloud({ root, layout, world }) → { setLead(lead | null), update(dt, time, k, from), path(from, to),
@@ -12,13 +15,20 @@ import * as THREE from 'three';
 
 const MAX = 96; // nuvenzinhas no máximo
 const STEP = 0.36; // m entre uma e outra
+const START = 0.35; // m: a primeira nuvenzinha um pouco à frente do focinho
 const REACH = 16; // m de rastro à frente de quem fareja (o resto aparece andando)
 const HEIGHT = 0.3; // m acima do chão
+const FLOW = 0.55; // m/s: as nuvenzinhas andam do focinho para a pista
+const END_PUFFS = 5; // o tufo em volta da pista
 const ORDER = 906; // depois do véu do Faro
 
+// O tamanho e a rotação (em volta do eixo da tela) vêm da matriz da instância: cada nuvenzinha gira devagar e o
+// ângulo também muda um pouco o tamanho dos gomos.
 const VS = /* glsl */ `
 varying vec2 vUv;
+varying vec2 vScr;
 varying vec3 vCol;
+varying float vSeed;
 void main() {
   vUv = uv;
   vCol = vec3(1.0);
@@ -27,29 +37,44 @@ void main() {
   #endif
   vec4 c = vec4(0.0, 0.0, 0.0, 1.0);
   float s = 1.0;
+  float ang = 0.0;
   #ifdef USE_INSTANCING
     c = instanceMatrix * c;
     s = length(instanceMatrix[0].xyz);
+    ang = atan(instanceMatrix[0].y, instanceMatrix[0].x);
   #endif
+  vSeed = ang;
+  float cs = cos(ang);
+  float sn = sin(ang);
+  vec2 q = vec2(cs * position.x - sn * position.y, sn * position.x + cs * position.y);
+  vScr = q * 2.0;
   vec4 mv = modelViewMatrix * c;
-  mv.xy += position.xy * s;
+  mv.xy += q * s;
   gl_Position = projectionMatrix * mv;
 }`;
 // A cor da instância leva o tom do cheiro e, no tamanho dela, o quanto a nuvenzinha aparece (a onda, o começo e o fim
-// do rastro). Miolo claro e beirada macia em gomos: lê bem no piso claro e no gramado (mistura normal, não aditiva).
+// do rastro). Gomos com miolo claro (a luz vem de cima, na tela) e a beirada um tico mais escura (volume): lê bem no
+// piso claro e no gramado (mistura normal, não aditiva).
 const FS = /* glsl */ `
 uniform float uK;
 varying vec2 vUv;
+varying vec2 vScr;
 varying vec3 vCol;
+varying float vSeed;
 void main() {
   vec2 p = (vUv - 0.5) * 2.0;
   float m = max(vCol.r, max(vCol.g, vCol.b));
   vec3 hue = m > 1e-4 ? vCol / m : vec3(1.0);
-  float d = length(p) + 0.07 * sin(atan(p.y, p.x) * 4.0 + hue.g * 9.0);
-  float a = smoothstep(1.0, 0.45, d);
-  float core = smoothstep(0.85, 0.0, d);
-  vec3 col = mix(hue, vec3(1.0), 0.6 * core);
-  gl_FragColor = vec4(col, a * min(1.0, m) * 0.86 * uK);
+  float h = fract(sin(vSeed * 12.9898) * 43758.5453);
+  float d = min(
+    min(length(p - vec2(0.3, 0.02)) / (0.58 + 0.08 * h), length(p - vec2(-0.16, 0.27)) / (0.54 - 0.06 * h)),
+    min(length(p - vec2(-0.14, -0.26)) / (0.5 + 0.06 * h), length(p) / 0.66)
+  );
+  float a = smoothstep(1.0, 0.55, d);
+  float core = smoothstep(0.8, 0.0, length(vScr - vec2(-0.08, 0.2)));
+  float rim = smoothstep(0.5, 1.0, d) * a;
+  vec3 col = mix(hue, vec3(1.0), 0.58 * core) * (1.0 - 0.2 * rim);
+  gl_FragColor = vec4(col, a * min(1.0, m) * 0.88 * uK);
   #include <colorspace_fragment>
 }`;
 
@@ -107,6 +132,17 @@ export function scentRoute(layout, world, from, to) {
   return [{ x: from.x, z: from.z }, ...chain, { x: to.x, z: to.z }];
 }
 
+/** 0 → 1 suave entre a e b. */
+function smooth(a, b, x) {
+  const t = b > a ? Math.min(1, Math.max(0, (x - a) / (b - a))) : x >= b ? 1 : 0;
+  return t * t * (3 - 2 * t);
+}
+/** Um número de 0 a 1 que é sempre o mesmo para a mesma nuvenzinha. */
+function hash(n) {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
 /**
  * @param {{ root: THREE.Object3D, layout: import('../../types').LevelLayout, world?: import('../../types').CollisionWorld | null }} opts
  */
@@ -122,13 +158,15 @@ export function createScentCloud({ root, layout, world = null }) {
   mesh.renderOrder = ORDER;
   mesh.count = 0;
   mesh.visible = false;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 3).fill(1), 3);
+  mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
   root.add(mesh);
 
   /** @type {{ x: number, z: number, y?: number, color?: string } | null} */
   let lead = null;
-  /** Os pontos do rastro de agora (um a cada STEP m), com a distância desde o começo. */
-  let pts = [];
+  /** @type {{ x: number, z: number, d: number }[]} o caminho de agora até a pista, com a distância desde quem fareja */
+  let route = [];
   let total = 0; // m de caminho até a pista (inteiro, não só o trecho desenhado)
   let refreshT = 0;
   const color = new THREE.Color('#FF8A2A');
@@ -137,25 +175,43 @@ export function createScentCloud({ root, layout, world = null }) {
   const v = new THREE.Vector3();
   const q = new THREE.Quaternion();
   const sc = new THREE.Vector3();
+  const AXIS = new THREE.Vector3(0, 0, 1);
+  const P = { x: 0, z: 0 };
 
   function rebuild(from) {
-    pts = [];
+    route = [];
     total = 0;
     if (!lead) return;
-    const route = scentRoute(layout, world, from, lead);
+    const r = scentRoute(layout, world, from, lead);
     let acc = 0;
-    let next = 0.35; // a primeira nuvenzinha um pouco à frente do focinho
-    for (let i = 0; i + 1 < route.length; i++) {
-      const a = route[i], b = route[i + 1];
-      const len = Math.hypot(b.x - a.x, b.z - a.z);
-      while (next <= acc + len && pts.length < MAX && next <= REACH) {
-        const u = len > 1e-6 ? (next - acc) / len : 0;
-        pts.push({ x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, d: next });
-        next += STEP;
-      }
-      acc += len;
+    for (let i = 0; i < r.length; i++) {
+      if (i) acc += Math.hypot(r[i].x - r[i - 1].x, r[i].z - r[i - 1].z);
+      route.push({ x: r[i].x, z: r[i].z, d: acc });
     }
     total = acc;
+  }
+  /** O começo do caminho acompanha quem fareja a cada quadro (sem esperar o próximo refazer). */
+  function follow(from) {
+    if (route.length < 2) return;
+    route[0].x = from.x;
+    route[0].z = from.z;
+    let acc = 0;
+    for (let i = 1; i < route.length; i++) {
+      acc += Math.hypot(route[i].x - route[i - 1].x, route[i].z - route[i - 1].z);
+      route[i].d = acc;
+    }
+    total = acc;
+  }
+  /** O ponto a `d` m de quem fareja, pelo caminho. */
+  function sample(d) {
+    let i = 1;
+    while (i < route.length - 1 && route[i].d < d) i++;
+    const a = route[i - 1], b = route[i];
+    const seg = b.d - a.d;
+    const u = seg > 1e-6 ? Math.min(1, Math.max(0, (d - a.d) / seg)) : 0;
+    P.x = a.x + (b.x - a.x) * u;
+    P.z = a.z + (b.z - a.z) * u;
+    return P;
   }
 
   /**
@@ -163,32 +219,75 @@ export function createScentCloud({ root, layout, world = null }) {
    * @param {{ x: number, z: number } | null} from quem fareja (o rastro sai dela e acompanha quando ela anda)
    */
   function update(dt, time, k, from) {
-    if (!(k > 0) || !lead || !from) {
-      if (mesh.visible) { mesh.visible = false; mesh.count = 0; pts = []; }
+    if (!(k > 0) || !lead || !from || !Number.isFinite(from.x) || !Number.isFinite(from.z)) {
+      if (mesh.visible) { mesh.visible = false; mesh.count = 0; route = []; total = 0; }
       refreshT = 0;
       return;
     }
-    refreshT -= dt;
-    if (refreshT <= 0) {
+    time = Number.isFinite(time) ? time : 0;
+    refreshT -= Number.isFinite(dt) ? dt : 0;
+    if (refreshT <= 0 || route.length < 2) {
       refreshT = 0.3;
       rebuild(from);
+    } else follow(from);
+    if (route.length < 2) {
+      mesh.visible = false;
+      mesh.count = 0;
+      return;
     }
     color.set(lead.color || '#FF8A2A');
-    mat.uniforms.uK.value = k;
-    const n = pts.length;
-    for (let i = 0; i < n; i++) {
-      const p = pts[i];
-      // a onda de brilho corre de quem fareja para a pista; as nuvenzinhas sobem e descem devagar, fora de compasso
-      const wave = 0.5 + 0.5 * Math.sin(time * 3.4 - p.d * 1.9);
-      const bob = Math.sin(time * 1.3 + i * 1.7) * 0.05;
-      const side = Math.sin(i * 2.4) * 0.09;
-      const size = (0.4 + 0.18 * ((i * 37) % 7) / 6) * (0.85 + 0.35 * wave);
-      // some no fim do trecho desenhado quando o caminho continua além dele
-      const tail = total > REACH + 0.5 ? Math.min(1, (REACH - p.d) / 2.5) : 1;
-      const head = Math.min(1, p.d / 0.6);
-      m4.compose(v.set(p.x + side, (lead.y ?? 0) * (total > 0 ? Math.min(1, p.d / total) : 0) + HEIGHT + bob, p.z + Math.cos(i * 1.9) * 0.09), q, sc.setScalar(size));
-      mesh.setMatrixAt(i, m4);
-      mesh.setColorAt(i, tmpC.copy(color).multiplyScalar((0.55 + 0.45 * wave) * tail * head));
+    mat.uniforms.uK.value = Math.min(1, k);
+    const leadY = lead.y ?? 0;
+    const drawn = Math.min(total, REACH);
+    const ends = total <= REACH + 0.01; // a pista está no trecho desenhado
+    // o vento: uma deriva lenta que muda de lado devagar
+    const wx = 0.1 * Math.sin(time * 0.27) + 0.04 * Math.sin(time * 0.71 + 1.3);
+    const wz = 0.07 * Math.cos(time * 0.21) + 0.03 * Math.sin(time * 0.53);
+    // as nuvenzinhas andam: a de número i está a START + (i + f) * STEP m (f corre de 0 a 1 e recomeça); `id` não muda
+    // enquanto ela anda (o tamanho, o giro e o balanço são dela)
+    const base = (time * FLOW) / STEP;
+    const K = Math.floor(base);
+    const f = base - K;
+    let n = 0;
+    for (let i = 0; n < MAX - END_PUFFS; i++) {
+      const d = START + (i + f) * STEP;
+      if (d > drawn) break;
+      const id = i - K;
+      const h1 = hash(id);
+      const h2 = hash(id + 57.3);
+      const p = sample(d);
+      // a onda de brilho corre de quem fareja para a pista
+      const wave = 0.5 + 0.5 * Math.sin(time * 3.4 - d * 1.9);
+      const bob = Math.sin(time * 1.3 + id * 1.7) * 0.05;
+      const drift = Math.min(1, (d - START) / 1.5);
+      const side = Math.sin(id * 2.4 + time * 0.8) * 0.08;
+      // entra macio no focinho; some no fim do trecho desenhado quando o caminho continua além dele; chega na pista
+      const head = Math.min(1, (d - START) / (STEP * 1.5));
+      const tail = ends ? Math.min(1, (total - d) / 0.5) : Math.min(1, (REACH - d) / 2.5);
+      const tip = ends ? smooth(Math.max(0, total - 3), total, d) : 0; // as da ponta: maiores e mais fortes
+      const size = (0.38 + 0.18 * h1) * (0.85 + 0.35 * wave) * (0.7 + 0.3 * head) * (1 + 0.45 * tip);
+      const y = leadY * (total > 0 ? Math.min(1, d / total) : 0) + HEIGHT + bob + 0.04 * tip;
+      const ang = h2 * 6.283 + time * (0.15 + 0.25 * h1) * (h2 > 0.5 ? 1 : -1);
+      q.setFromAxisAngle(AXIS, ang);
+      m4.compose(v.set(p.x + side + wx * drift, y, p.z + Math.cos(id * 1.9) * 0.09 + wz * drift), q, sc.setScalar(size));
+      mesh.setMatrixAt(n, m4);
+      mesh.setColorAt(n, tmpC.copy(color).multiplyScalar(Math.max(0, (0.55 + 0.45 * wave) * head * tail * (1 + 0.35 * tip))));
+      n++;
+    }
+    // o tufo na pista: gira devagar em volta dela, pulsando com a onda
+    if (ends && n > 0) {
+      const at = route[route.length - 1];
+      const pulse = 0.5 + 0.5 * Math.sin(time * 3.4 - total * 1.9);
+      for (let j = 0; j < END_PUFFS; j++) {
+        const a = time * 0.9 + (j * Math.PI * 2) / END_PUFFS;
+        const r = 0.28 + 0.06 * Math.sin(time * 1.7 + j);
+        const size = 0.42 * (0.9 + 0.2 * Math.sin(time * 2 + j * 1.3));
+        q.setFromAxisAngle(AXIS, j * 1.37 + time * 0.3);
+        m4.compose(v.set(at.x + Math.cos(a) * r + wx * 0.5, leadY + HEIGHT * 0.85 + 0.08 * Math.sin(time * 1.3 + j * 1.1), at.z + Math.sin(a) * r + wz * 0.5), q, sc.setScalar(size));
+        mesh.setMatrixAt(n, m4);
+        mesh.setColorAt(n, tmpC.copy(color).multiplyScalar(0.8 + 0.4 * pulse));
+        n++;
+      }
     }
     mesh.count = n;
     mesh.visible = n > 0;

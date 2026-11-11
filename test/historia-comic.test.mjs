@@ -13,8 +13,9 @@ import {
   LAYOUTS, SLOTS, ENTER, EXIT_DUR, OUT_DUR, READ_MIN, animatePanel, balloonShape, bboxOf, burstPath, centroid, clipCss,
   cloudPath, contentBox, createLiveDriver, createOnomatoQueue, createStage, frameMetrics, inkPath, inside, needsNewPage,
   ovalPath, placeBalloon, placeCorner, rectPoly, sayTiming, slotPoly, tailPath, typeTimes, typedCount, viewOffsetFor,
-  voiceMarks, overlap,
+  voiceMarks, overlap, projectPoint, headBox, tipGap, HEAD_HALF,
 } from '../src/story/ui/comicMath.js';
+import { createDirector } from '../src/story/scene/director.js';
 
 /** As telas que importam: celular deitado (Infinix compacto), iPhone 13 deitado com entalhe, PC. */
 const SCREENS = [
@@ -370,4 +371,130 @@ test('onomatopeias: até três na tela, cada uma com sua vida; no mesmo lugar, e
   assert.match(e.color, /^#[0-9A-F]{6}$/i);
   q.clear();
   assert.deepEqual(q.active(3), []);
+});
+
+// ---------------------------------------------------------------------------------------------- balão alinhado
+// Pedido de 2026-11-11: "os balões estão meio desalinhados com as personagens". Com a câmera de verdade (lente dos
+// closes, o viewOffset do quadro), a ponta do rabicho termina na cabeça de quem fala, o balão não cobre a cabeça e,
+// empurrado por outro balão, o rabicho continua chegando até ela.
+const RAD = { headTop: 0.48, Hc: { y: 0.388, z: 0.248 } };
+/** A câmera do jogo (38° de padrão, 30° nos closes) num plano do diretor, com o viewOffset do quadro (como comic.js). */
+function shotCam(g, layout, slot, from, look, fov = 30) {
+  const cam = new THREE.PerspectiveCamera(fov, g.W / g.H, 0.1, 220);
+  cam.position.set(from.x, from.y, from.z);
+  cam.lookAt(look.x, look.y, look.z);
+  cam.updateMatrixWorld();
+  const { poly, bbox } = slotPoly(layout, slot, g, 1.5);
+  const v = viewOffsetFor(bbox, g.W, g.H, cam.aspect);
+  cam.setViewOffset(v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height);
+  return { cam, poly };
+}
+
+test('balão com câmera de verdade: a projeção bate com o 3D do quadro, o rabicho termina na cabeça e o balão não a cobre', () => {
+  const g = { W: 1280, H: 720 };
+  // a Radhija em pé na origem, olhando para +z: o alto da cabeça e o centro dela
+  const top = { x: 0, y: RAD.headTop + 0.02, z: RAD.Hc.z };
+  const center = { x: 0, y: RAD.Hc.y, z: RAD.Hc.z };
+  const cases = [
+    // o close da cena da janela (a câmera a 1,2 m da cara, olhando para a cabeça), no quadro de cima do 3b
+    ['close 3b/0', '3b', 0, { x: 0.25, y: 0.5, z: 1.2 + RAD.Hc.z }, { x: 0, y: RAD.headTop - 0.1, z: RAD.Hc.z }, 30],
+    ['close 2v/1', '2v', 1, { x: 0.35, y: 0.62, z: 1.75 }, { x: 0, y: RAD.headTop - 0.18, z: RAD.Hc.z }, 30],
+    ['aberto full', 'full', 0, { x: 1.4, y: 0.85, z: 2.6 }, { x: 0, y: 0.36, z: 0.2 }, 38],
+  ];
+  for (const [name, layout, slot, from, look, fov] of cases) {
+    const { cam, poly } = shotCam(g, layout, slot, from, look, fov);
+    // a projeção da camada de HQ é a mesma do three (com o viewOffset do quadro)
+    const a = projectPoint(top, cam, g.W, g.H);
+    const t3 = new THREE.Vector3(top.x, top.y, top.z).project(cam);
+    assert.ok(near(a.x, ((t3.x + 1) / 2) * g.W, 1e-6) && near(a.y, ((1 - t3.y) / 2) * g.H, 1e-6), `${name}: projeção igual à do three`);
+    assert.ok(a.front && a.ppm > 0);
+    // o plano olha para a cabeça: ela cai dentro do quadro
+    assert.ok(inside(poly, a.x, a.y, 0), `${name}: a cabeça (${a.x.toFixed(0)}, ${a.y.toFixed(0)}) dentro do quadro`);
+    const c = projectPoint(center, cam, g.W, g.H);
+    assert.ok(c.y > a.y, `${name}: o centro da cabeça fica embaixo do alto dela`);
+    // o encaixe, com as mesmas contas da camada (gap pela altura do balão, folga pela cabeça na tela)
+    const w = 230, h = 70;
+    const gap = Math.min(40, Math.max(14, h * 0.42));
+    const pb = bboxOf(poly);
+    const clear = Math.min(Math.max(HEAD_HALF * a.ppm, gap * 0.8), Math.min(pb.w, pb.h) * 0.22);
+    const p = placeBalloon({ anchor: a, w, h, poly, gap, clear });
+    assert.equal(p.out, false, name);
+    const miss = Math.hypot(p.tip.x - a.x, p.tip.y - a.y);
+    assert.ok(miss <= tipGap(gap) + 0.5, `${name}: o rabicho termina a ${miss.toFixed(1)} px da cabeça`);
+    // o balão não cobre a cabeça (nem o alto, nem o centro)
+    for (const q of [a, c]) assert.ok(!(q.x > p.x && q.x < p.x + w && q.y > p.y && q.y < p.y + h), `${name}: o balão cobre a cabeça`);
+    assert.ok(overlap({ x: p.x, y: p.y, w, h }, headBox(a.x, a.y, clear)) < w * h * 0.05, `${name}: o balão invade a cabeça`);
+    // outro balão no lugar preferido: este vai para outro canto, e o rabicho ainda chega à cabeça
+    const other = { x: p.x, y: p.y, w, h };
+    const q2 = placeBalloon({ anchor: a, w, h, poly, gap, clear, others: [other] });
+    assert.ok(overlap(other, { x: q2.x, y: q2.y, w, h }) < w * h * 0.2, `${name}: desviou do outro balão`);
+    const miss2 = Math.hypot(q2.tip.x - a.x, q2.tip.y - a.y);
+    assert.ok(miss2 <= tipGap(gap) + 0.5, `${name}: longe, o rabicho ainda termina na cabeça (${miss2.toFixed(1)} px)`);
+    cam.clearViewOffset();
+  }
+});
+
+// ---------------------------------------------------------------------------------------------- a cabeça no diretor
+/** Um dublê do modelo v2: o objeto da dog, o osso do corpo e o da cabeça (pose de descanso como no desenho), a boca no osso
+ * da cabeça e o marcador sobre o centro dela. O esqueleto é ligado com a dog na origem (como no modelo de verdade). */
+function fakeDog({ headTop = RAD.headTop, rest = { y: RAD.Hc.y - 0.028, z: RAD.Hc.z - 0.018 }, hz = RAD.Hc.z } = {}) {
+  const object = new THREE.Group();
+  const inner = new THREE.Group();
+  object.add(inner);
+  const body = new THREE.Bone();
+  body.position.set(0, 0.245, 0);
+  const headBone = new THREE.Bone();
+  headBone.position.set(0, rest.y - 0.245, rest.z);
+  body.add(headBone);
+  inner.add(body);
+  inner.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton([body, headBone]);
+  const mouthSocket = new THREE.Object3D();
+  mouthSocket.position.set(0, -0.02, 0.12);
+  headBone.add(mouthSocket);
+  const markerAnchor = new THREE.Object3D();
+  markerAnchor.position.set(0, headTop + 0.14, hz);
+  object.add(markerAnchor);
+  return { object, body, headBone, skeleton, mouthSocket, markerAnchor };
+}
+
+test('diretor: head() segue o osso da cabeça (em pé, deitada, virada) e, sem modelo, mira o centro da cabeça', () => {
+  const vis = { length: 0.6, headTop: RAD.headTop };
+  const ctrl = { x: 1.2, z: -0.7, y: 0, yaw: 0.6, cfg: { visual: vis } };
+  const dog = fakeDog();
+  // a dog no lugar do controlador
+  dog.object.position.set(ctrl.x, 0, ctrl.z);
+  dog.object.rotation.y = ctrl.yaw;
+  const scene = new THREE.Scene();
+  scene.add(dog.object);
+  const dir = createDirector({ ctx: /** @type {any} */ ({ ctrls: { radhija: ctrl }, cam: {}, dogs: { radhija: dog } }), emit: () => {} });
+  // em pé: o alto da cabeça, por cima do centro dela
+  dog.object.updateMatrixWorld(true);
+  const want = dog.object.localToWorld(new THREE.Vector3(0, RAD.headTop, RAD.Hc.z));
+  let h = dir.head('radhija', 0);
+  assert.ok(Math.hypot(h.x - want.x, h.y - want.y, h.z - want.z) < 1e-6, `em pé: ${JSON.stringify(h)} × ${want.toArray()}`);
+  assert.ok(near(dir.head('radhija', 0.12).y, want.y + 0.12, 1e-9), 'up: acima do alto da cabeça');
+  // a cabeça desce (deitada na caminha): o ponto desce junto, sem precisar de nova matriz (head() atualiza)
+  dog.headBone.position.y -= 0.2;
+  h = dir.head('radhija', 0);
+  assert.ok(near(h.y, want.y - 0.2, 1e-6), `deitada: ${h.y.toFixed(3)}`);
+  // a cabeça vira para o lado: o ponto gira com ela
+  dog.headBone.position.y += 0.2;
+  dog.headBone.rotation.set(0.5, 0.9, 0);
+  h = dir.head('radhija', 0);
+  dog.headBone.updateWorldMatrix(true, false);
+  const turned = dog.headBone.localToWorld(new THREE.Vector3(0, RAD.headTop - (RAD.Hc.y - 0.028), 0.018));
+  assert.ok(Math.hypot(h.x - turned.x, h.y - turned.y, h.z - turned.z) < 1e-6, 'virada: o alto do crânio gira com o osso');
+  // sem modelo (dublês): a conta da pose em pé, no centro da cabeça (não mais na nuca, a 32%)
+  const bare = createDirector({ ctx: /** @type {any} */ ({ ctrls: { radhija: ctrl }, cam: {}, dogs: {} }), emit: () => {} });
+  const b = bare.head('radhija', 0.1);
+  const fwd = Math.hypot(b.x - ctrl.x, b.z - ctrl.z);
+  assert.ok(Math.abs(fwd - RAD.Hc.z) < 0.01, `sem modelo, o centro da cabeça fica a ${fwd.toFixed(3)} m à frente`);
+  assert.ok(near(Math.atan2(b.x - ctrl.x, b.z - ctrl.z), ctrl.yaw, 1e-9), 'na direção do rumo');
+  assert.ok(near(b.y, RAD.headTop + 0.1, 1e-9));
+  // o modelo longe da dog (fora da cena, outra fase): vale a conta
+  dog.headBone.rotation.set(0, 0, 0);
+  dog.object.position.set(40, 0, 40);
+  const far = dir.head('radhija', 0);
+  assert.ok(Math.hypot(far.x - ctrl.x, far.z - ctrl.z) < vis.length, 'modelo longe: a conta da pose em pé');
 });

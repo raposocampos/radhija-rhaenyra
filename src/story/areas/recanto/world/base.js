@@ -9,14 +9,14 @@
 // escritos direto no lugar, uma geometria por material e por zona (batch), em vez de milhares de peças no kit.
 import * as THREE from 'three';
 import { rng, foliageCluster, canvasTexture, fbm2, vnoise2, smoothstep, mat, paint, mergeGeometries, mergeVertices } from '../../../../world/util.js';
-import { createKit, rb, cyl, slab, sphere, hipRoof } from '../../../../levels/mapa/world/kit.js';
+import { createKit, rb, cyl, slab, sphere, hipRoof, decalLot } from '../../../../levels/mapa/world/kit.js';
 import { flowerBush } from '../../../../levels/mapa/world/pecas.js';
 
 const TAU = Math.PI * 2;
 const col = (hex) => new THREE.Color(hex);
 const UP = [0, 1, 0], DOWN = [0, -1, 0], SOUTH = [0, 0, 1], NORTH = [0, 0, -1], EAST = [1, 0, 0], WEST = [-1, 0, 0];
 /** A cor da neblina da manhã: o que fica longe já nasce desbotado para ela (camadas mais claras ao fundo). */
-const HAZE = col('#e8d9cc');
+const HAZE = col('#efd5cb');
 const far = (hex, k) => col(hex).lerp(HAZE, k);
 /** Sorteio fixo por posição (0..1). */
 const h01 = (a, b = 0) => { const n = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return n - Math.floor(n); };
@@ -116,24 +116,57 @@ const CROWNS = {
   'ipe-roxo': { dark: '#62428c', mid: '#9677c6', light: '#cdb9ef' },
 };
 const crowns = new Map();
-/** Copa larga, de ver por baixo: quatro bolhas grandes no alto e uma saia de bolhas menores em volta. */
+/**
+ * Copa larga, de ver por baixo, em três andares: quatro bolhas grandes no meio, uma saia de bolhas menores em volta
+ * (em alturas diferentes: a copa não fica com a barra reta) e um coroamento de três no alto. Depois, a luz de maquete
+ * (shadeCrown): as dobras entre as bolhas e o miolo escuros e azulados, o alto voltado para o céu claro e quente.
+ */
 function crown(kind, variant) {
   const key = `${kind}:${variant}`;
   if (crowns.has(key)) return crowns.get(key);
   const R = rng(23 + variant * 11 + kind.length);
-  const big = [{ x: 0, y: 3.3, z: 0, r: 1.3 }], small = [];
+  const big = [{ x: 0, y: 3.3, z: 0, r: 1.3 }], small = [], top = [];
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * TAU + R() * 0.8;
-    big.push({ x: Math.cos(a) * 0.95, y: 2.95 + R() * 0.3, z: Math.sin(a) * 0.95, r: 0.92 + R() * 0.16 });
+    big.push({ x: Math.cos(a) * 0.95, y: 2.9 + R() * 0.42, z: Math.sin(a) * 0.95, r: 0.9 + R() * 0.2 });
   }
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * TAU + 0.6 + R() * 0.7;
-    small.push({ x: Math.cos(a) * 1.45, y: 2.66 + R() * 0.3, z: Math.sin(a) * 1.45, r: 0.6 + R() * 0.16 });
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + 0.6 + R() * 0.6, d = 1.32 + R() * 0.3;
+    small.push({ x: Math.cos(a) * d, y: 2.55 + R() * 0.5, z: Math.sin(a) * d, r: 0.5 + R() * 0.22 });
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU + 1.1 + R() * 0.8;
+    top.push({ x: Math.cos(a) * 0.55, y: 3.95 + R() * 0.3, z: Math.sin(a) * 0.55, r: 0.5 + R() * 0.16 });
   }
   const o = { amp: 0.2, freq: 2.0, seed: variant + 3, ...CROWNS[kind] };
-  const g = mergeGeometries([foliageCluster(big, { detail: 2, ...o }), foliageCluster(small, { detail: 1, ...o, amp: 0.24 })]);
+  const g = mergeGeometries([foliageCluster(big, { detail: 2, ...o }), foliageCluster(small, { detail: 1, ...o, amp: 0.24 }), foliageCluster(top, { detail: 1, ...o, amp: 0.22 })]);
+  shadeCrown(g, CROWNS[kind]);
   crowns.set(key, g);
   return g;
+}
+/**
+ * A luz de maquete na copa (por cima das cores do foliageCluster): o que olha para dentro (as dobras entre as bolhas)
+ * e o miolo de baixo escurecem e puxam para o azul do céu; o alto voltado para cima clareia e esquenta.
+ * @param {THREE.BufferGeometry} g
+ * @param {{ dark: string, mid: string, light: string }} pal
+ */
+function shadeCrown(g, pal) {
+  const pos = g.attributes.position, nor = g.attributes.normal, colA = g.attributes.color;
+  const deep = col(pal.dark).multiply(col('#b8c4e6')), sunny = col(pal.light).lerp(col('#fff2c4'), 0.35);
+  const c = new THREE.Color(), d = new THREE.Vector3(), n = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    d.set(pos.getX(i), pos.getY(i) - 3.15, pos.getZ(i));
+    const rad = d.length();
+    d.divideScalar(rad || 1);
+    n.fromBufferAttribute(nor, i);
+    c.fromBufferAttribute(colA, i);
+    const inward = 1 - smoothstep(-0.35, 0.45, n.dot(d)); // dobra: a face olha para o miolo
+    const core = 1 - smoothstep(0.9, 1.9, rad); // o miolo (perto do eixo e do meio da copa)
+    const under = 1 - smoothstep(2.3, 3.1, pos.getY(i)); // a barra de baixo
+    c.lerp(deep, Math.min(0.75, inward * 0.55 + core * 0.3 + under * 0.25));
+    c.lerp(sunny, smoothstep(0.35, 0.95, n.y) * smoothstep(3.2, 4.3, pos.getY(i)) * 0.45);
+    colA.setXYZ(i, c.r, c.g, c.b);
+  }
 }
 /** Copa leve (três bolhas), para o que só aparece de longe: as árvores da rua e as dos vizinhos. */
 function lightCrown(variant, colors) {
@@ -151,7 +184,7 @@ let _trunk = null, _bough = null;
 function trunkGeo() {
   if (_trunk) return _trunk;
   const pts = [[0.34, 0], [0.275, 0.08], [0.215, 0.32], [0.18, 0.9], [0.16, 1.6], [0.145, 2.4]].map(([r, y]) => new THREE.Vector2(r, y));
-  _trunk = new THREE.LatheGeometry(pts, 9);
+  _trunk = new THREE.LatheGeometry(pts, 14);
   return _trunk;
 }
 /** Galho grosso que sobe do tronco para dentro da copa (inclinado para +x). */
@@ -161,7 +194,26 @@ function boughGeo() {
   _bough.rotateZ(-0.78);
   return _bough;
 }
-const barkTone = (p) => _c.copy(BARK).multiplyScalar((0.8 + 0.3 * h01(Math.round(Math.atan2(p.z, p.x) * 5), 2)) * (0.76 + 0.24 * smoothstep(0, 0.5, p.y)));
+const MOSSY = col('#5f7438');
+/**
+ * A casca: sulcos verticais (cada coluna do torno com o seu tom), escura no pé e, no lado norte, o musgo subindo da
+ * raiz (a umidade da garoa fica na sombra).
+ * @param {THREE.Vector3} p @param {THREE.Vector3} [n]
+ */
+let _lowBough = null;
+/** Galho baixo, mais deitado (sai a 1,55 m e entra na saia da copa a ~1 m do tronco). */
+function lowBoughGeo() {
+  if (_lowBough) return _lowBough;
+  _lowBough = cyl(0.028, 0.06, 1.3, 5);
+  _lowBough.rotateZ(-0.98);
+  return _lowBough;
+}
+const barkTone = (p, n) => {
+  const a = Math.atan2(p.z, p.x);
+  _c.copy(BARK).multiplyScalar((0.72 + 0.42 * h01(Math.round(a * 14 / TAU * 2), 2) * (0.7 + 0.3 * h01(Math.round(p.y * 3), Math.round(a * 3)))) * (0.7 + 0.3 * smoothstep(0, 0.6, p.y)));
+  if (n) _c.lerp(MOSSY, (1 - smoothstep(0.15, 0.85, p.y)) * smoothstep(0.1, 0.7, -n.z) * 0.6);
+  return _c;
+};
 
 /** Lâmina de capim (três triângulos): base → meio → ponta, caindo para `ang`. */
 function bladeInto(B, x, y, z, ang, h, w, lean, cb, ct) {
@@ -259,6 +311,100 @@ function vineGeo(kind, variant, h) {
   const g = mergeGeometries(parts);
   vines.set(key, g);
   return g;
+}
+
+// ---------------------------------------------------------------- miudezas (a vida nos cantos), feitas uma vez
+/** Junta peças já pintadas numa geometria (sem uv). @param {[THREE.BufferGeometry, string | ((p: THREE.Vector3, n: THREE.Vector3) => THREE.Color)][]} list */
+function painted(list) {
+  const parts = list.map(([g, c]) => {
+    g.deleteAttribute('uv');
+    return paint(g, c);
+  });
+  const out = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
+  for (const g of parts) g.dispose();
+  return out;
+}
+const birds = new Map();
+/**
+ * Passarinho pousado, de bico para +x e os pés em y = 0 (11 cm de altura): pardal (marrom, peito claro), bem-te-vi
+ * (peito amarelo, cabeça preta com a listra branca) ou sabiá (peito cor de laranja).
+ * @param {'pardal' | 'bentevi' | 'sabia'} kind
+ */
+function birdGeo(kind) {
+  if (birds.has(kind)) return birds.get(kind);
+  const P = {
+    pardal: { back: '#8a6a4a', belly: '#d9c8a8', head: '#7c6650', cap: '#8f8a84' },
+    bentevi: { back: '#7a6040', belly: '#f2c230', head: '#2a2420', cap: '#fbf7ee' },
+    sabia: { back: '#7d6a55', belly: '#d9893f', head: '#7d6a55', cap: '#6f5d4a' },
+  }[kind];
+  const back = col(P.back), belly = col(P.belly);
+  const body = new THREE.SphereGeometry(1, 9, 6).scale(0.055, 0.04, 0.038).rotateZ(0.28).translate(0, 0.052, 0);
+  const head = new THREE.SphereGeometry(0.027, 8, 6).translate(0.044, 0.088, 0);
+  const cap = new THREE.SphereGeometry(0.0275, 8, 4, 0, TAU, 0, 0.9).translate(0.044, 0.0885, 0);
+  const beak = new THREE.ConeGeometry(0.008, 0.024, 5).rotateZ(-Math.PI / 2).translate(0.079, 0.086, 0);
+  const tail = new THREE.BoxGeometry(0.055, 0.007, 0.03).rotateZ(0.42).translate(-0.066, 0.034, 0);
+  const wing = new THREE.SphereGeometry(1, 7, 4).scale(0.042, 0.022, 0.012);
+  const legs = [-0.012, 0.012].map((z) => new THREE.CylinderGeometry(0.003, 0.003, 0.022, 4).translate(0.004, 0.011, z));
+  const eyes = [-1, 1].map((s) => new THREE.SphereGeometry(0.0045, 5, 4).translate(0.058, 0.094, s * 0.022));
+  const g = painted([
+    [body, (p) => _c.copy(back).lerp(belly, 1 - smoothstep(0.035, 0.06, p.y + p.x * 0.3))],
+    [head, P.head], [cap, P.cap], [beak, '#3a2a1a'], [tail, P.back],
+    [wing.clone().rotateZ(0.25).translate(-0.006, 0.058, 0.034), P.back], [wing.rotateZ(0.25).translate(-0.006, 0.058, -0.034), P.back],
+    ...legs.map((l) => /** @type {[THREE.BufferGeometry, string]} */ ([l, '#c08a5a'])), ...eyes.map((e) => /** @type {[THREE.BufferGeometry, string]} */ ([e, '#141210'])),
+  ]);
+  birds.set(kind, g);
+  return g;
+}
+let _can = null;
+/** Regador de lata verde (base em y = 0, bico para +x): o corpo, a borda, o bico com o crivo e a alça. */
+function wateringCan() {
+  if (_can) return _can;
+  const spout = cyl(0.01, 0.014, 0.19, 6).rotateZ(-0.85).translate(0.055, 0.04, 0);
+  _can = painted([
+    [cyl(0.072, 0.078, 0.15, 14), '#3f8f5a'], [cyl(0.074, 0.074, 0.012, 14).translate(0, 0.145, 0), '#357a4c'],
+    [spout, '#3f8f5a'], [new THREE.ConeGeometry(0.03, 0.035, 8, 1, true).rotateZ(Math.PI / 2 + 0.85).translate(0.2, 0.165, 0), '#357a4c'],
+    [new THREE.TorusGeometry(0.06, 0.009, 5, 10, Math.PI).translate(-0.01, 0.15, 0), '#2f6a42'],
+  ]);
+  return _can;
+}
+let _sack = null;
+/** Saco de adubo de pé (base em y = 0): o corpo estufado, a boca dobrada e a etiqueta lisa (sem letra). */
+function sackGeo() {
+  if (_sack) return _sack;
+  _sack = painted([
+    [rb(0.3, 0.36, 0.13, 0.05, 2), (p) => _c.set('#5d6b3a').multiplyScalar(0.85 + 0.2 * smoothstep(0, 0.3, p.y))],
+    [rb(0.28, 0.05, 0.06, 0.02, 1).translate(0, 0.355, 0), '#4f5c30'],
+    [new THREE.BoxGeometry(0.16, 0.12, 0.004).translate(0, 0.19, 0.066), '#e8dcb8'],
+    [new THREE.CircleGeometry(0.03, 10).translate(0, 0.2, 0.069), '#d0582f'],
+  ]);
+  return _sack;
+}
+let _marker = null;
+/** Plaquinha de canteiro (sem letra): a estaca e a plaquinha com uma florzinha pintada. */
+function markerGeo(color) {
+  const key = `m:${color}`;
+  if (birds.has(key)) return birds.get(key);
+  const g = painted([
+    [slab(0.016, 0.26, 0.01), '#8f5f38'],
+    [rb(0.11, 0.075, 0.008, 0.008, 1).translate(0, 0.2, 0.008), color],
+    [new THREE.CircleGeometry(0.014, 8).translate(0, 0.238, 0.0125), '#e8473a'],
+    [new THREE.CircleGeometry(0.006, 6).translate(0, 0.238, 0.0128), '#f2c230'],
+  ]);
+  birds.set(key, g);
+  return g;
+}
+/** Casinha de passarinho de madeira, presa no tronco (as costas em z = 0, a frente para +z, a base em y = 0). */
+function birdhouseGeo() {
+  if (_marker) return _marker;
+  _marker = painted([
+    [rb(0.15, 0.17, 0.14, 0.01, 1).translate(0, 0, 0.075), '#c98d5a'],
+    [rb(0.12, 0.012, 0.19, 0.004, 1).rotateZ(0.6).translate(-0.045, 0.2, 0.075), '#b85a36'],
+    [rb(0.12, 0.012, 0.19, 0.004, 1).rotateZ(-0.6).translate(0.045, 0.2, 0.075), '#c4643f'],
+    [new THREE.CircleGeometry(0.03, 12).translate(0, 0.1, 0.1455), '#2a2018'],
+    [cyl(0.005, 0.005, 0.05, 5).rotateX(Math.PI / 2).translate(0, 0.045, 0.165), '#6b4a2e'],
+    [slab(0.03, 0.22, 0.02).translate(0, -0.03, 0.002), '#6b4a2e'],
+  ]);
+  return _marker;
 }
 
 // ---------------------------------------------------------------- texturas em canvas
@@ -403,7 +549,8 @@ function condoSign() {
 }
 
 // ---------------------------------------------------------------- paletas
-const PLASTER = col('#efe2c8'), DAMP = col('#b7b08a'), STREAK = col('#b3a58a'), PLINTH = col('#b9a98e'), JOINT = col('#77695a');
+const PLASTER = col('#efe2c8'), DAMP = col('#b2ab84'), STREAK = col('#ab9c80'), PLINTH = col('#b9a98e'), JOINT = col('#77695a');
+const PAINT2 = col('#f6ead3'), SPLASH = col('#a99579'), MOSS = col('#7d8c4c'), GRIME = col('#8a7a62'), LIMO = col('#8c9a6a');
 const CAPC = col('#e3d8c4'), CAPD = col('#bfb39d');
 const TILES = ['#c9683f', '#b95a36', '#d27747', '#c06040'].map(col);
 const PAVERS = ['#d9ccb3', '#cfc0a4', '#e0d5bf', '#c9b99b', '#d3c2a6'].map(col);
@@ -425,6 +572,8 @@ const Y0 = 0.010, Y1 = 0.0165;
  * @param {import('../../../../types').LevelLayout} L
  */
 export function buildBase(kit, root, L) {
+  /** Até onde vai o chão de fora a leste: o terraço da torre (layout.ROOFTOP) tem o chão dele de ROOFTOP.cut em diante. */
+  const XE = L.ROOFTOP?.cut ?? 95;
   const R = rng(5);
   const W = L.WALL, S = L.STREET, G = L.GATE, Pl = L.POOL, Dk = Pl.deck, Sv = L.SERVICE, Tw = L.TOWER, Bo = L.BOOTH, Cp = L.CARPORT, Yd = L.YARD, Hs = L.HOUSE, Pi = L.PIER;
   const mt = W.t / 2;
@@ -544,7 +693,7 @@ export function buildBase(kit, root, L) {
     const n = fbm2(x * 0.15 + 3.1, z * 0.15 - 7.4, 3);
     out.copy(LG.a).lerp(LG.b, smoothstep(0.5, 0.72, n)).lerp(LG.c, 1 - smoothstep(0.3, 0.5, n));
     out.lerp(LG.dry, smoothstep(0.6, 0.8, fbm2(x * 0.22 + 40, z * 0.22 - 13, 2)) * 0.4);
-    out.multiplyScalar(0.9 + fbm2(x * 0.5 - 11, z * 0.5 + 5, 2) * 0.2);
+    out.multiplyScalar(0.86 + fbm2(x * 0.5 - 11, z * 0.5 + 5, 2) * 0.28);
     const edge = Math.min(x - W.minX - mt, W.maxX - mt - x, z - W.minZ - mt, W.maxZ - mt - z);
     out.lerp(LG.lush, (1 - smoothstep(0.1, 2.2, edge)) * 0.55);
     for (const t of L.TREES) {
@@ -658,7 +807,8 @@ export function buildBase(kit, root, L) {
     const B = batch();
     const green = col('#a4b784'), city = col('#d2c5ae');
     B.rect(-95, -95, W.minX - mt, 70, -0.02, green);
-    B.rect(W.maxX + mt, -95, 95, 70, -0.02, green);
+    // a leste, até onde começa o cenário do terraço da torre (layout.ROOFTOP.cut: lá o chão é o de world/telhado.js)
+    B.rect(W.maxX + mt, -95, XE, 70, -0.02, green);
     B.rect(W.minX - mt, W.maxZ + mt, W.maxX + mt, 70, -0.02, green);
     B.rect(W.minX - mt, -95, W.maxX + mt, S.z1 - 2.2, -0.02, city);
     const m = keep(new THREE.Mesh(B.geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })));
@@ -683,7 +833,11 @@ export function buildBase(kit, root, L) {
         if (s1 - s0 < 0.04 || t1 - t0 < 0.04) return;
         const x0 = alongX ? r.x0 + s0 : r.x0 + t0, x1 = alongX ? r.x0 + s1 : r.x0 + t1;
         const z0 = alongX ? r.z0 + t0 : r.z0 + s0, z1 = alongX ? r.z0 + t1 : r.z0 + s1;
-        B.rect(x0, z0, x1, z1, Y1, tone(pal, (x0 + x1) / 2, (z0 + z1) / 2, _q[0]));
+        // as beiradas encardidas (a terra que a chuva joga da grama) e um bloquete ou outro manchado de limo
+        const c = tone(pal, (x0 + x1) / 2, (z0 + z1) / 2, _q[0]);
+        c.lerp(GRIME, (1 - smoothstep(0, 0.32, Math.min(t0, Wt - t1))) * 0.3);
+        if (h01(Math.round((x0 + x1) * 13), Math.round((z0 + z1) * 11)) > 0.94) c.lerp(LIMO, 0.35);
+        B.rect(x0, z0, x1, z1, Y1, c);
       };
       B.rect(r.x0, r.z0, r.x1, r.z1, Y0, SAND);
       const g = 0.007;
@@ -778,10 +932,19 @@ export function buildBase(kit, root, L) {
   // ---------------------------------------------------------------- muro
   // Rodapé de pedra em blocos, reboco manchado (umidade subindo do chão, escorridos embaixo do chapim), o chapim de
   // pedra com as telhas de capa por cima e os pilares chanfrados. O do norte é mais baixo: por cima dele, a cidade.
-  const plaster = (u, y, h, seed, out) => {
-    out.copy(PLASTER).multiplyScalar(0.9 + fbm2(u * 0.8 + seed * 17.3, y * 1.3 + seed, 3) * 0.2);
-    out.lerp(DAMP, (1 - smoothstep(0.2, 0.8, y)) * smoothstep(0.35, 0.7, fbm2(u * 0.45 + seed * 3.1, 2.7, 2)) * 0.6);
-    return out.lerp(STREAK, smoothstep(h - 0.55, h, y) * smoothstep(0.5, 0.8, vnoise2(u * 2.3 + seed * 9.1, 0.5)) * 0.45);
+  // A cor do reboco num ponto (u: ao longo do trecho, y: altura, dp: distância até o pilar mais perto).
+  const plaster = (u, y, h, seed, out, dp = 9) => {
+    // a tinta creme: o grão do reboco e manchas largas de repintura (um creme mais novo, mais claro)
+    out.copy(PLASTER).multiplyScalar(0.87 + fbm2(u * 0.8 + seed * 17.3, y * 1.3 + seed, 3) * 0.24);
+    out.lerp(PAINT2, smoothstep(0.56, 0.64, fbm2(u * 0.22 + seed * 5.1, y * 0.45 - seed, 2)) * 0.55);
+    // o barrado da chuva: os respingos de terra até uns 35 cm, mais escuros embaixo
+    out.lerp(SPLASH, (1 - smoothstep(0.2, 0.44, y)) * (0.42 + 0.3 * vnoise2(u * 3.1 + seed, 1.7)));
+    // a umidade subindo do chão em manchas (até quase 1 m) e o musgo no pé dos pilares
+    out.lerp(DAMP, (1 - smoothstep(0.25, 0.95, y - 0.25 * fbm2(u * 0.9, seed, 2))) * smoothstep(0.35, 0.68, fbm2(u * 0.45 + seed * 3.1, 2.7, 2)) * 0.7);
+    out.lerp(MOSS, (1 - smoothstep(0.05, 0.7, dp)) * (1 - smoothstep(0.2, 0.62, y)) * smoothstep(0.38, 0.62, fbm2(u * 1.3 + seed, 4.1, 2)) * 0.6);
+    // os escorridos embaixo do chapim e a sombra da pingadeira logo abaixo dela
+    out.lerp(STREAK, smoothstep(h - 0.8, h - 0.12, y) * smoothstep(0.42, 0.78, vnoise2(u * 3.4 + seed * 9.1, 0.5)) * 0.6);
+    return out.multiplyScalar(1 - smoothstep(h - 0.17, h - 0.02, y) * 0.24);
   };
   const pillars = new Set();
   /** Pilar do muro (dentro do colisor do muro: 36 cm), com a capa de pedra em bico e, em alguns, a lanterninha acesa. */
@@ -792,12 +955,17 @@ export function buildBase(kit, root, L) {
     const B = lot('solid', `muro-${side}`);
     const a = 0.18, ch = 0.045, top = h + 0.14;
     const ring = [[-a + ch, -a], [a - ch, -a], [a, -a + ch], [a, a - ch], [a - ch, a], [-a + ch, a], [-a, a - ch], [-a, -a + ch]];
-    const c0 = _q[0].copy(PLASTER).multiplyScalar(0.9), c1 = _q[1].copy(PLASTER).multiplyScalar(1.04), cp = _q[2].copy(PLINTH).multiplyScalar(0.9);
+    const cp = _q[2].copy(PLINTH).multiplyScalar(0.9);
+    // o fuste em quatro faixas: os respingos embaixo, o reboco, e a sombra do capitel logo abaixo dele
+    const ys = [0.2, 0.42, top - 0.2, top - 0.075];
+    const tones = [_c.copy(PLASTER).lerp(SPLASH, 0.55).clone(), _c.copy(PLASTER).multiplyScalar(0.97).clone(), _c.copy(PLASTER).multiplyScalar(1.03).clone(), _c.copy(PLASTER).multiplyScalar(0.8).clone()];
     for (let i = 0; i < 8; i++) {
       const p = ring[i], q = ring[(i + 1) % 8], f = [p[0] + q[0], 0, p[1] + q[1]];
       B.quad([x + p[0], 0, z + p[1]], [x + q[0], 0, z + q[1]], [x + q[0], 0.2, z + q[1]], [x + p[0], 0.2, z + p[1]], cp, f);
-      B.quad([x + p[0], 0.2, z + p[1]], [x + q[0], 0.2, z + q[1]], [x + q[0], top, z + q[1]], [x + p[0], top, z + p[1]], [c0, c0, c1, c1], f);
+      for (let k = 0; k + 1 < ys.length; k++) B.quad([x + p[0], ys[k], z + p[1]], [x + q[0], ys[k], z + q[1]], [x + q[0], ys[k + 1], z + q[1]], [x + p[0], ys[k + 1], z + p[1]], [tones[k], tones[k], tones[k + 1], tones[k + 1]], f);
     }
+    // o capitel: uma moldura de pedra 2 cm para fora, logo abaixo da capa
+    B.box(x - 0.2, top - 0.075, z - 0.2, x + 0.2, top, z + 0.2, CAPD, true);
     B.box(x - 0.225, top, z - 0.225, x + 0.225, top + 0.05, z + 0.225, CAPC, true);
     const b = 0.19, yb = top + 0.05;
     B.fan([x, yb + 0.14, z], [[x - b, yb, z - b], [x - b, yb, z + b], [x + b, yb, z + b], [x + b, yb, z - b]], CAPC, UP);
@@ -817,10 +985,12 @@ export function buildBase(kit, root, L) {
     const IN = [nx, 0, nz], OUT = [-nx, 0, -nz];
     const n = Math.max(1, Math.round(len / 4));
     const seed = side.charCodeAt(0) * 0.37 + ax * 0.011;
-    const ys = [0, 0.2, 0.45, 0.72, 1].map((k) => 0.2 + (h - 0.2) * k);
+    // as fiadas da cor: mais juntas embaixo (o barrado, a umidade) e logo abaixo do chapim (a sombra da pingadeira)
+    const ys = [0.2, 0.3, 0.42, 0.6, 0.85, ...[0.35, 0.6].map((k) => 0.85 + (h - 1.05) * k), h - 0.2, h - 0.12, h];
     for (let k = 0; k < n; k++) {
       const s0 = (len * k) / n, s1 = (len * (k + 1)) / n, pl = s1 - s0;
-      const cols = Math.max(1, Math.ceil(pl / 0.55));
+      const cols = Math.max(1, Math.ceil(pl / 0.3));
+      const dp = (u) => Math.min(u - s0, s1 - u);
       for (const dir of [1, -1]) {
         const fine = dir > 0 || o.outer;
         const off = dir * mt, F = dir > 0 ? IN : OUT, cn = fine ? cols : 1, rn = fine ? ys.length - 1 : 1;
@@ -829,7 +999,7 @@ export function buildBase(kit, root, L) {
           for (let r = 0; r < rn; r++) {
             const y0 = fine ? ys[r] : 0.2, y1 = fine ? ys[r + 1] : h;
             B.quad(at(u0, off, y0), at(u1, off, y0), at(u1, off, y1), at(u0, off, y1),
-              [plaster(u0, y0, h, seed + dir, _q[0]), plaster(u1, y0, h, seed + dir, _q[1]), plaster(u1, y1, h, seed + dir, _q[2]), plaster(u0, y1, h, seed + dir, _q[3])], F);
+              [plaster(u0, y0, h, seed + dir, _q[0], dp(u0)), plaster(u1, y0, h, seed + dir, _q[1], dp(u1)), plaster(u1, y1, h, seed + dir, _q[2], dp(u1)), plaster(u0, y1, h, seed + dir, _q[3], dp(u0))], F);
           }
         }
         // o rodapé: a junta escura por trás e os blocos de pedra na frente (do lado de dentro, um a um)
@@ -962,7 +1132,7 @@ export function buildBase(kit, root, L) {
           B.rect(x + 0.005, z0 + j * rw + 0.005, x + 0.735, z0 + (j + 1) * rw - 0.005, 0.03, _q[0].set('#cfc6b6').multiplyScalar(0.9 + 0.16 * h01(x * 3.3, j + z0)));
         }
       }
-      B.rect(-95, z0, 95, z1, 0.026, _q[0].set('#a8a092'));
+      B.rect(-95, z0, XE, z1, 0.026, _q[0].set('#a8a092'));
     };
     side(S.sidewalk + 0.08, S.z0, 2, 1e9, 1e9);
     side(S.z1 - 2.2, S.z1 - 0.08, 3, av0, av1);
@@ -971,7 +1141,7 @@ export function buildBase(kit, root, L) {
     const asph = (x, z, out) => out.set('#5d5f66').multiplyScalar(0.88 + 0.2 * h01(x * 1.7, z * 2.3)).lerp(_q[3].set('#3c4048'), smoothstep(0.5, 0.68, fbm2(x * 0.3 + 5, z * 0.5, 3)) * 0.6);
     for (let x = -30; x < 34; x += 1) for (let j = 0; j < 4; j++) B.rect(x, za + ((zb - za) * j) / 4, x + 1, za + ((zb - za) * (j + 1)) / 4, 0.02, asph(x, j * 1.1, _q[0]));
     B.rect(-95, za, -30, zb, 0.02, _q[0].set('#585a61'));
-    B.rect(34, za, 95, zb, 0.02, _q[0].set('#585a61'));
+    B.rect(34, za, XE, zb, 0.02, _q[0].set('#585a61'));
     B.rect(av0, -70, av1, za, 0.02, _q[0].set('#5a5c63'));
     // as guias rebaixadas (a travessia e a boca da avenida), a faixa de pedestres, os traços e o bueiro
     B.rect(cross0, S.sidewalk - 0.08, cross1, S.sidewalk + 0.08, 0.034, _q[0].set('#b9b2a6'));
@@ -992,8 +1162,8 @@ export function buildBase(kit, root, L) {
     }
     // as guias: inteiras fora da travessia e da boca da avenida
     const curb = (xa, xb, z) => kit.add(slab(xb - xa, S.curb, 0.16), { color: '#b9b2a6', x: (xa + xb) / 2, z, group: 'rua' });
-    curb(-95, cross0, S.sidewalk); curb(cross1, 95, S.sidewalk);
-    curb(-95, av0, S.z1); curb(av1, 95, S.z1);
+    curb(-95, cross0, S.sidewalk); curb(cross1, XE, S.sidewalk);
+    curb(-95, av0, S.z1); curb(av1, XE, S.z1);
     // o hidrante da calçada de cá (fora do caminho das cenas)
     const hx = gx - 2.65, hz = S.sidewalk + 0.5;
     kit.add(cyl(0.085, 0.105, 0.44, 10), { color: '#d8403a', x: hx, y: 0.03, z: hz, group: 'rua' });
@@ -1307,6 +1477,8 @@ export function buildBase(kit, root, L) {
     kit.add(trunkGeo(), { color: barkTone, x: t.x, z: t.z, ry: R() * TAU, group: grp, ao: false });
     const a0 = R() * TAU;
     for (let k = 0; k < 3; k++) kit.add(boughGeo(), { color: '#6f4a2e', x: t.x, y: 1.85, z: t.z, ry: a0 + (k / 3) * TAU + (R() - 0.5) * 0.5, group: grp, ao: false });
+    // dois galhos mais baixos e abertos, entre os de cima: aparecem por baixo da copa, entrando na saia de folhas
+    for (let k = 0; k < 2; k++) kit.add(lowBoughGeo(), { color: '#664329', x: t.x, y: 1.55 + k * 0.12, z: t.z, ry: a0 + ((k + 0.5) / 3) * TAU * 1.5 + (R() - 0.5) * 0.4, group: grp, ao: false });
     kit.add(crown(t.kind, i % 3), { color: null, slot: 'foliage', x: t.x, z: t.z, ry: R() * TAU, sx: s, sy: s * (0.94 + R() * 0.12), sz: s, group: grp });
     if (inR(Dk, t.x, t.z, 0.3)) return; // no deque não tem terra nem raiz
     const B = lot('ground', grp);
@@ -1448,10 +1620,11 @@ export function buildBase(kit, root, L) {
   // junto ao muro (menos onde há prédio encostado nele)
   for (const [ax, az, bx, bz, nx, nz] of [[W.minX, W.minZ, W.maxX, W.minZ, 0, 1], [W.maxX, W.minZ, W.maxX, W.maxZ, -1, 0], [W.minX, W.maxZ, W.maxX, W.maxZ, 0, -1], [W.minX, W.minZ, W.minX, Hs.z0, 1, 0]]) {
     const len = Math.hypot(bx - ax, bz - az);
-    for (let s = 0.3; s < len - 0.3; s += 0.21) {
-      if (R() < 0.2) continue;
-      const d = mt + 0.05 + R() * R() * 0.5, x = ax + ((bx - ax) * s) / len + nx * d, z = az + ((bz - az) * s) / len + nz * d;
-      if (free(x, z, 0.02)) tuft(x, z, R() < 0.32);
+    // (o pé do muro é onde o cortador não chega: o capim cresce mais cheio e mais alto)
+    for (let s = 0.3; s < len - 0.3; s += 0.16) {
+      if (R() < 0.15) continue;
+      const d = mt + 0.05 + R() * R() * 0.6, x = ax + ((bx - ax) * s) / len + nx * d, z = az + ((bz - az) * s) / len + nz * d;
+      if (free(x, z, 0.02)) tuft(x, z, R() < 0.5);
     }
   }
   // nas beiradas das calçadinhas, da entrada da garagem e da pracinha
@@ -1633,6 +1806,168 @@ export function buildBase(kit, root, L) {
     drops.castShadow = false;
     drops.frustumCulled = false;
     keep(drops);
+  }
+
+  // ---------------------------------------------------------------- a vida nos cantos
+  // Só onde não atrapalha: no alto (passarinhos no chapim do muro, no encosto de um banco, no braço dos postes; as
+  // casinhas de passarinho nos troncos), dentro dos canteiros (o colisor deles: regador, plaquinhas, o saco de adubo,
+  // a pazinha) ou rente ao chão (a mangueira enrolada no gramado). As peças maiores no chão (a bicicletinha, os
+  // caixotes) só aparecem quando o layout trouxer o colisor delas (ids 'vida-…').
+  {
+    const hasCol = (id) => COLS.some((c) => c.id === id);
+    /** @type {('pardal' | 'bentevi' | 'sabia')[]} */
+    const KINDS = ['pardal', 'bentevi', 'pardal', 'sabia'];
+    /** Passarinho no chapim de um trecho de muro (nx, nz: para dentro; olha para dentro ou de lado). */
+    const onWall = (x, z, h, side, k, look = 0) => kit.add(birdGeo(KINDS[k % KINDS.length]), { color: null, x, y: h + 0.05 + 0.085, z, ry: look, group: `muro-${side}`, ao: false });
+    // norte (ry −π/2: de bico para o sul, para dentro), longe da torre, da guarita e do telhadinho dos tanques
+    onWall(-20.1, W.minZ - 0.02, W.hNorth, 'n', 0, -Math.PI / 2);
+    onWall(-19.86, W.minZ + 0.02, W.hNorth, 'n', 2, -Math.PI / 2 + 0.6);
+    onWall(-4.2, W.minZ, W.hNorth, 'n', 1, -Math.PI / 2 - 0.3);
+    onWall(0.8, W.minZ, W.hNorth, 'n', 3, 0);
+    onWall(1.06, W.minZ + 0.01, W.hNorth, 'n', 0, Math.PI);
+    onWall(16.0, W.minZ, W.hNorth, 'n', 1, -Math.PI / 2);
+    // leste (ry π: de bico para o oeste) e sul (ry π/2: para o norte)
+    onWall(W.maxX, -3.0, W.h, 'l', 2, Math.PI);
+    onWall(W.maxX, 6.9, W.h, 'l', 1, Math.PI + 0.4);
+    onWall(9.4, W.maxZ, W.h, 's', 3, Math.PI / 2);
+    onWall(9.66, W.maxZ, W.h, 's', 0, Math.PI / 2 - 0.5);
+    // um sabiá no encosto do banco do lago e um pardal no braço de dois postes
+    {
+      const b = L.BENCHES[1], c = Math.cos(b.yaw), sn = Math.sin(b.yaw), lx = 0.36, lz = -0.2;
+      kit.add(birdGeo('sabia'), { color: null, x: b.x + lx * c + lz * sn, y: 0.865, z: b.z - lx * sn + lz * c, ry: b.yaw + 0.5, group: `jardim-${zona(b.x, b.z)}`, ao: false });
+    }
+    for (const [i, dx, ry] of [[1, 0.17, 0.4], [4, -0.16, 2.6]]) {
+      const l = L.LAMPS[i];
+      if (l) kit.add(birdGeo(i === 1 ? 'pardal' : 'bentevi'), { color: null, x: l.x + dx, y: 2.352, z: l.z, ry, group: `jardim-${zona(l.x, l.z)}`, ao: false });
+    }
+    // as casinhas de passarinho nos troncos (a 1,6 m, viradas para o sul), com um pardal na porta de uma delas
+    L.TREES.forEach((t, i) => {
+      if (t.kind !== 'verde' || i % 2) return;
+      const grp = `jardim-${zona(t.x, t.z)}`;
+      kit.add(birdhouseGeo(), { color: null, x: t.x, y: 1.6, z: t.z + 0.15, group: grp, ao: false });
+      if (i % 4 === 0) kit.add(birdGeo('pardal'), { color: null, x: t.x + 0.02, y: 1.6 + 0.045 - 0.003, z: t.z + 0.15 + 0.175, ry: -Math.PI / 2 + 0.3, sx: 0.85, sy: 0.85, sz: 0.85, group: grp, ao: false });
+    });
+    // nos canteiros do muro (em cima da terra, dentro do colisor): regadores, plaquinhas, o saco de adubo e a pazinha
+    const soil = 0.22 - 0.03;
+    const inBed = (x, z) => (L.BEDS || []).find((bd) => Math.abs(x - bd.x) < bd.hx - 0.06 && Math.abs(z - bd.z) < bd.hz - 0.04);
+    const bedPut = (geo, x, z, o = {}) => { if (inBed(x, z)) kit.add(geo, { color: null, x, y: soil, z, group: `jardim-${zona(x, z)}`, ao: false, ...o }); };
+    bedPut(wateringCan(), -12.25, W.minZ + mt + 0.24, { ry: 2.6 });
+    bedPut(wateringCan(), W.minX + mt + 0.22, -3.0, { ry: -0.6, sx: 0.9, sy: 0.9, sz: 0.9 });
+    bedPut(sackGeo(), -22.95, W.minZ + mt + 0.09, { rx: -0.12, ry: 0.05 });
+    for (const [x, z, c, ry] of [[-20.6, W.minZ + mt + 0.3, '#fff6dc', 0.15], [-15.4, W.minZ + mt + 0.3, '#fff0a0', -0.1], [W.minX + mt + 0.3, -10.6, '#ffffff', Math.PI / 2 + 0.1], [13.4, W.maxZ - mt - 0.2, '#d7f0c8', Math.PI - 0.12], [21.2, W.maxZ - mt - 0.2, '#ffd5e0', Math.PI + 0.1]]) {
+      bedPut(markerGeo(String(c)), Number(x), Number(z), { ry: Number(ry), rx: 0.08 });
+    }
+    {
+      const x = -14.1, z = W.minZ + mt + 0.26;
+      if (inBed(x, z)) {
+        const B = lot('solid', `jardim-${zona(x, z)}`), wood = col('#c08a52'), steel = col('#9aa1a6');
+        B.box(x - 0.012, soil + 0.05, z - 0.012, x + 0.012, soil + 0.2, z + 0.012, wood, true);
+        B.quad([x - 0.04, soil - 0.02, z], [x + 0.04, soil - 0.02, z], [x + 0.03, soil + 0.05, z + 0.004], [x - 0.03, soil + 0.05, z + 0.004], steel, SOUTH);
+      }
+    }
+    // a mangueira enrolada no gramado, perto do canteiro do oeste, e a torneira dela no muro (rente ao chão: 6 cm)
+    {
+      const hx = W.minX + mt + 1.0, hz = -1.62, wallX = W.minX + mt;
+      if (free(hx, hz, 0.3)) {
+        const grp = `grama-${zona(hx, hz)}`, green = '#4f9a52';
+        for (let k = 0; k < 3; k++) kit.add(new THREE.TorusGeometry(0.21 + k * 0.03, 0.015, 6, 22).rotateX(Math.PI / 2), { color: k % 2 ? '#5aa85e' : green, slot: 'solid', x: hx + k * 0.012, y: 0.016 + (k === 2 ? 0.026 : 0), z: hz - k * 0.01, group: grp, ao: false });
+        const run = new THREE.CatmullRomCurve3([[hx - 0.26, 0.016, hz], [hx - 0.6, 0.016, hz - 0.05], [wallX + 0.06, 0.016, hz - 0.1], [wallX + 0.018, 0.08, hz - 0.1], [wallX + 0.018, 0.5, hz - 0.1], [wallX + 0.03, 0.6, hz - 0.1]].map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+        kit.add(new THREE.TubeGeometry(run, 24, 0.014, 5), { color: green, slot: 'solid', group: grp, ao: false });
+        kit.add(cyl(0.022, 0.016, 0.07, 8).rotateZ(Math.PI / 2), { color: '#f2c230', x: hx + 0.28, y: 0.022, z: hz + 0.05, ry: 0.4, group: grp, ao: false });
+        kit.add(cyl(0.014, 0.014, 0.1, 8).rotateZ(Math.PI / 2), { color: '#c9ced3', slot: 'glass', x: wallX + 0.05, y: 0.62, z: hz - 0.1, group: 'muro-o', ao: false });
+        kit.add(rb(0.016, 0.012, 0.06, 0.005, 1), { color: '#d63a32', x: wallX + 0.06, y: 0.67, z: hz - 0.1, group: 'muro-o', ao: false });
+      }
+    }
+    // a bicicletinha encostada no muro do sul (colisor 'vida-bicicleta': x 8,95…10,25, z 14,42…14,84)
+    if (hasCol('vida-bicicleta')) {
+      const grp = `jardim-${zona(9.6, 14.6)}`, bx = 9.6, bz = W.maxZ - mt - 0.2, frame = '#e8475f';
+      const wheel = (x) => {
+        kit.add(new THREE.TorusGeometry(0.2, 0.022, 6, 22), { color: '#2b2b30', x, y: 0.22, z: bz, ry: 0.03, group: grp, ao: false });
+        kit.add(new THREE.TorusGeometry(0.17, 0.006, 4, 18), { color: '#c9ced3', x, y: 0.22, z: bz, ry: 0.03, group: grp, ao: false });
+        kit.add(cyl(0.03, 0.03, 0.05, 8).rotateX(Math.PI / 2), { color: '#9aa1a6', x, y: 0.22, z: bz, group: grp, ao: false });
+      };
+      wheel(bx - 0.42);
+      wheel(bx + 0.42);
+      const tube = (a, b, r = 0.016) => {
+        const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], 0), len = d.length();
+        kit.add(cyl(r, r, len, 6).rotateZ(-Math.atan2(d.x, d.y)), { color: frame, x: a[0], y: a[1], z: bz, group: grp, ao: false });
+      };
+      tube([bx - 0.42, 0.22], [bx - 0.05, 0.24]); tube([bx - 0.05, 0.24], [bx + 0.3, 0.5]); tube([bx - 0.42, 0.22], [bx - 0.12, 0.52]);
+      tube([bx - 0.12, 0.52], [bx + 0.3, 0.5]); tube([bx + 0.42, 0.22], [bx + 0.3, 0.5]); tube([bx + 0.3, 0.5], [bx + 0.27, 0.64], 0.013);
+      tube([bx - 0.05, 0.24], [bx - 0.14, 0.58], 0.013);
+      kit.add(rb(0.2, 0.04, 0.09, 0.02, 1), { color: '#2b2b30', x: bx - 0.15, y: 0.58, z: bz, group: grp, ao: false });
+      kit.add(cyl(0.012, 0.012, 0.4, 6).rotateX(Math.PI / 2), { color: '#3a3f44', x: bx + 0.27, y: 0.64, z: bz, group: grp, ao: false });
+      kit.add(new THREE.ConeGeometry(0.07, 0.06, 10, 1, true).rotateZ(Math.PI / 2), { color: '#f2c230', x: bx + 0.36, y: 0.6, z: bz, group: grp, ao: false });
+    }
+    // os caixotes de feira e um saco no canto nordeste, perto do portãozinho (colisor 'vida-caixotes': x 23,15…24,0, z −15,15…−14,35)
+    if (hasCol('vida-caixotes')) {
+      const grp = `jardim-${zona(23.6, -14.8)}`, B = lot('solid', grp);
+      const crate = (cx, cz, y, ry, tint) => {
+        const c = Math.cos(ry), sn = Math.sin(ry), w = 0.25, d = 0.18, h = 0.3;
+        const P = (lx, ly, lz) => [cx + lx * c + lz * sn, y + ly, cz - lx * sn + lz * c];
+        const wood = _q[0].copy(col('#c9995e')).multiplyScalar(tint), dark = _q[1].copy(col('#8f6a40')).multiplyScalar(tint);
+        /** @type {[number, number[]][]} */
+        const SIDES_X = [[1, [c, 0, -sn]], [-1, [-c, 0, sn]]], SIDES_Z = [[1, [sn, 0, c]], [-1, [-sn, 0, -c]]];
+        for (const [sx, F] of SIDES_X) {
+          for (let k = 0; k < 3; k++) B.quad(P(sx * w, 0.02 + k * 0.1, -d), P(sx * w, 0.02 + k * 0.1, d), P(sx * w, 0.09 + k * 0.1, d), P(sx * w, 0.09 + k * 0.1, -d), wood, F);
+          B.quad(P(sx * (w - 0.02), 0, -d), P(sx * (w - 0.02), 0, d), P(sx * (w - 0.02), h, d), P(sx * (w - 0.02), h, -d), dark, F);
+        }
+        for (const [sz, F] of /** @type {[number, number[]][]} */ (SIDES_Z)) {
+          for (let k = 0; k < 3; k++) B.quad(P(-w, 0.02 + k * 0.1, sz * d), P(w, 0.02 + k * 0.1, sz * d), P(w, 0.09 + k * 0.1, sz * d), P(-w, 0.09 + k * 0.1, sz * d), wood, F);
+          B.quad(P(-w, 0, sz * (d - 0.02)), P(w, 0, sz * (d - 0.02)), P(w, h, sz * (d - 0.02)), P(-w, h, sz * (d - 0.02)), dark, F);
+        }
+        B.quad(P(-w + 0.02, 0.02, -d + 0.02), P(w - 0.02, 0.02, -d + 0.02), P(w - 0.02, 0.02, d - 0.02), P(-w + 0.02, 0.02, d - 0.02), dark, UP);
+      };
+      crate(23.5, -14.95, 0, 0.05, 1);
+      crate(23.52, -14.6, 0, -0.08, 0.92);
+      crate(23.5, -14.93, 0.3, 0.2, 1.06);
+      kit.add(sackGeo(), { color: null, x: 23.82, z: -14.48, ry: -1.2, rx: -0.1, sx: 0.8, sy: 0.8, sz: 0.8, group: grp, ao: false });
+    }
+  }
+
+  // ---------------------------------------------------------------- sombras de contato (oclusão no pé das coisas)
+  // Um decalque macio, azulado, em volta de tudo o que fica em pé no chão: o pé dos muros e das paredes (as quinas
+  // ficam mais escuras, onde duas faixas se cruzam), dos móveis, dos postes, dos troncos, dos vasos, da caminhonete e da
+  // guarita, e por baixo do que tem pés (mesas, bancos, espreguiçadeiras). Sai dos colisores do layout: tudo o que tem
+  // colisor fica no chão. Um lote por zona (balde 'contact': sem luz, sem sombra, por cima dos pisos).
+  {
+    /** @type {Record<string, ReturnType<typeof decalLot>>} */
+    const lots = {};
+    const inWater = (x, z) => (x > Pl.x0 - 0.02 && x < Pl.x1 + 0.02 && z > Pl.z0 - 0.02 && z < Pl.z1 + 0.02) || lakeD(x, z) < 0.12;
+    const lotAt = (x, z) => lots[zona(x, z)] || (lots[zona(x, z)] = decalLot(0.027, inWater));
+    const cx = (W.minX + W.maxX) / 2, cz = (W.minZ + W.maxZ) / 2;
+    // o terraço da torre (cenário à parte, 'telhado-*', com o vazio em volta) fica de fora: world/telhado.js cuida dele
+    const SKIP = /^(lago-|ilha-|canal-|pier-|piscina$|espreguicadeira-\d+-ponta|telhado-)/;
+    /** Os móveis de pés (por baixo deles a sombra é mais fechada). */
+    const LEGS = /^(espreguicadeira|mesa|banco|cadeira|caminhonete|garagem-bicicleta|garagem-carrinho|garagem-bancada|varal-de-chao|mesinha|namoradeira|poltrona|sofa|aparador|rack|comoda|bau)/;
+    for (const c of COLS) {
+      if (!c.id || SKIP.test(c.id) || c.kind === 'water') continue;
+      if (c.shape === 'segment') {
+        const len = Math.hypot(c.bx - c.ax, c.bz - c.az);
+        if (len < 0.05) continue;
+        const ux = (c.bx - c.ax) / len, uz = (c.bz - c.az) / len, t = c.t ?? 0.05;
+        const mx = (c.ax + c.bx) / 2, mz = (c.az + c.bz) / 2;
+        const D = lotAt(mx, mz);
+        const muro = /^muro-/.test(c.id);
+        // o muro do condomínio: só do lado de dentro (largo); as paredes de casa, de torre e de depósito: dos dois lados
+        const sides = muro ? [(cx - mx) * -uz + (cz - mz) * ux > 0 ? 1 : -1] : [1, -1];
+        for (const s of sides) {
+          const nx = -uz * s, nz = ux * s;
+          D.strip(c.ax + nx * t, c.az + nz * t, c.bx + nx * t, c.bz + nz * t, nx, nz, muro ? 0.62 : 0.42, { a: muro ? 0.34 : 0.3 });
+        }
+      } else if (c.shape === 'box') {
+        const legs = LEGS.test(c.id) || c.blocks === 'large';
+        const w = Math.min(0.5, 0.22 + 0.16 * Math.min(c.hx, c.hz));
+        lotAt(c.x, c.z).rrect(c.x, c.z, c.hx, c.hz, w, { a: legs ? 0.4 : 0.32 });
+      } else if (c.shape === 'circle') {
+        const w = Math.min(0.5, 0.16 + c.r * 0.9);
+        lotAt(c.x, c.z).disc(c.x, c.z, c.r, /^arvore-/.test(c.id) ? 0.62 : w, { a: /^arvore-/.test(c.id) ? 0.36 : 0.3 });
+      }
+    }
+    for (const [key, D] of Object.entries(lots)) {
+      const g = D.geometry();
+      if (g) kit.add(g, { color: null, slot: 'contact', group: `sombra-${key}`, ao: false });
+    }
   }
 
   flush();

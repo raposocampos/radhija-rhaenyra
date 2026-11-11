@@ -24,6 +24,7 @@ const SEM_COLISOR = [
   [/(meia-)/, 'meia perdida: o colecionável do capítulo'],
   [/(taboa|junco|vitoria-regia|ninfeia|lago-|:plant:lago$)/, 'plantas do lago: ficam na água, fechada pela margem, pelo píer e pelo canal (as dogs não entram)'],
   [/(pena|borboleta|pombo|esquadrao|cenoura|fantasma|maos|tutora|porteiro|chuva)/, 'atores e efeitos das cenas (escondidos ou no alto)'],
+  [/broche/, 'o broche da Dona Gansa: rente ao chão da ilha, a Radhija passa por cima para pegar'],
   [/luz-de-cinema/, 'a luz falsa das cenas (feixe pela janela, poeira, brilho do abajur): não é coisa, é luz'],
 ];
 const skipped = (o) => {

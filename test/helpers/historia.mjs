@@ -2,6 +2,7 @@
 // (cenário de verdade, test/helpers/headless.mjs), tocar uma cena até o fim ou pulando (segurar E), o detector de
 // "nada atravessa nada" que roda a cada quadro das cenas e das transições, e os gestos da missão com os controles de
 // verdade (farejar, examinar, empurrar, trocar de dog).
+import { CHAPTER1_BOARD } from '../../src/story/deduction.js';
 import assert from 'node:assert/strict';
 import STORY from '../../src/story/areas/recanto/index.js';
 import { createHeadlessGame } from './headless.mjs';
@@ -121,9 +122,9 @@ export function push(h, dir, sec, until) {
 
 /** O Faro (V) com a dog ativa: espera a recarga, aperta e deixa a onda sair. → as pistas reveladas depois dele. */
 export function sniff(h) {
-  h.run(1.3); // a recarga do pulso anterior
-  h.tap('KeyV');
-  h.run(0.2);
+  // o modo Faro: liga (se estiver desligado) e dá tempo de a procura achar o que está no alcance
+  if (!storyInfo(h).faroMode?.on) h.tap('KeyV');
+  h.run(0.4);
   return storyInfo(h).revealed;
 }
 
@@ -138,8 +139,12 @@ export function examine(h, id) {
   return storyInfo(h).clues.includes(id);
 }
 
-/** Escolhe a conclusão `option` da pergunta `node` no quadro de dedução (como o clique na árvore de pistas). */
+/**
+ * No quadro de dedução: liga as pistas necessárias à pergunta `node` (como o jogador, uma a uma) e escolhe a conclusão
+ * `option`.
+ */
 export function deduce(h, node, option) {
+  for (const clue of CHAPTER1_BOARD.questions.find((q) => q.id === node)?.clues ?? []) h.events.emit('ui:storyLink', { clue, node });
   h.events.emit('ui:storyDeduce', { node, option });
   h.run(0.1);
 }
