@@ -437,7 +437,8 @@ try {
   if (i.story.scene) {
     await H.sleep(2600);
     await shot('16-terraco.png');
-    await skipScene('terraço');
+    // num runner lento, a cena pode acabar sozinha durante a captura: só pula se ainda estiver rodando
+    if ((await story()).scene) await skipScene('terraço');
   }
   i = await stageIs('portaria', 10000);
   check((await noOverlap()).length === 0, 'ninguém dentro de nada na torre', await noOverlap());
