@@ -588,7 +588,13 @@ try {
     });
     check(faroBtn?.shown, 'iPhone: o botão do focinho nos controles de toque', faroBtn);
     if (faroBtn?.shown) {
-      // o pulso pode ser repetido depois da recarga curta (1,2 s)
+      // o Faro liga e desliga (com fôlego): ligado pelo toque no aviso, o botão do focinho desliga; o próximo toque liga
+      const modeOn = () => p.evaluate(() => !!window.__game.game.debug.info().story.faroMode?.on);
+      if (await modeOn()) {
+        await p.touchscreen.tap(faroBtn.x, faroBtn.y);
+        await p.waitForFunction(() => !window.__game.game.debug.info().story.faroMode?.on, null, { timeout: 10000 }).catch(() => {});
+        check(!(await modeOn()), 'iPhone: o botão do focinho desliga o Faro');
+      }
       await p.waitForFunction(() => window.__game.game.debug.info().story.faroReady, null, { timeout: 30000 }).catch(() => {});
       await p.evaluate(() => window.__game.game.debug.clearLog());
       await p.touchscreen.tap(faroBtn.x, faroBtn.y);
@@ -598,7 +604,7 @@ try {
         const g = window.__game.game;
         const top = document.elementFromPoint(x, y);
         return {
-          faros: g.debug.events('story:faro').length, ativa: g.activeDog, faro: g.debug.info().story.faro.active,
+          faros: g.debug.events('story:faro').length, ativa: g.activeDog, faro: g.debug.info().story.faro.active, modo: g.debug.info().story.faroMode,
           toque: !!document.querySelector('.rr-touch.is-on'), alvo: top?.closest?.('[data-touch]')?.dataset.touch ?? top?.tagName ?? null,
         };
       }, faroBtn);
