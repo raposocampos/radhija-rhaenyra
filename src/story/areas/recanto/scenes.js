@@ -133,9 +133,12 @@ export function createOpening(K) {
   const perchY = SO.y + 0.04;
   const perch = [[-0.42, 0.5], [0.02, 1.25], [0.46, 1.95]]; // deslocamento no parapeito e quando cada um pousa
   const capAt = () => P3(cx + perch[0][0], perchY + 0.18, SO.z - 0.02);
-  /** O close do Capitão: a câmera atrás do ombro esquerdo dele, de fora; o alvo, a cenoura (com um balanço leve). */
-  const capOts = () => P3(cx - 0.8, 0.97, W.z - 0.69);
-  const capLook = (t) => P3(carrotBed.x + 0.2 + Math.sin(t * 0.7) * 0.015, carrotBed.y + 0.05, carrotBed.z);
+  /**
+   * O close do Capitão: de perfil, na altura da cabeça, da ponta oeste do parapeito (ele é o primeiro da fila: nada
+   * entre ele e a câmera; o esquadrão fica atrás dele e o vidro à direita). O alvo é a cabeça (~0,11 m acima de capAt).
+   */
+  const capCam = () => { const c = capAt(); return P3(c.x - 1.0, c.y + 0.2, c.z - 0.2); };
+  const capLook = (t) => { const c = capAt(); return P3(c.x + 0.08 + Math.sin(t * 0.7) * 0.01, c.y + 0.11, c.z + 0.03); };
   // lá fora: do alto e de longe (o telhado na garoa) descendo até a janela acesa, emoldurada pelas duas árvores do
   // gramado norte (a câmera para antes delas, no vão do meio)
   const outA = P3(cx + 2.5, 5.4, W.z - 14), outB = P3(cx + 0.38, 1.6, W.z - 7.3);
@@ -237,11 +240,9 @@ export function createOpening(K) {
           // segundo quadro: de perto, o Capitão olha a cenoura lá dentro e mede com a asa
           once('close', t > 5.8, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
-            // por cima do ombro do Capitão, de fora, na chuva: a nuca dele em primeiro plano, à direita, e, pelo meio
-            // da lâmina de baixo do basculante (vidro limpo), a cenoura na caminha entre as duas dormindo. A linha de
-            // visão passa a 6 cm do lado oeste dele, entre o batente e o corpo, cruzando a janela a 0,71 m de altura
-            dir.lens(32);
-            dir.shot(capOts(), capLook(0), { cut: true });
+            // de fora, na chuva: o Capitão de perfil, a cabeça no terço do quadro, olhando a cenoura pelo vidro
+            dir.lens(30);
+            dir.shot(capCam(), capLook(0), { cut: true });
           });
           if (S.close) dir.lookAt(capLook(t));
           once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
@@ -1069,7 +1070,16 @@ export function createPorteiroScene(K) {
   const luiz = () => props.srLuiz;
   /** Onde o Sr. Luiz fica no portãozinho: do lado do trinco, fora do arco da folha (ela abre para dentro). */
   const atGate = { x: G.x1 + 0.45, z: G.z + 0.55 };
-  const head = () => { const o = luiz()?.object; return o ? P3(o.position.x, o.position.y + 1.45, o.position.z) : P3(win().x, win().y, win().z); };
+  /** A cabeça do Sr. Luiz no mundo (o osso da cabeça; sentado ela fica a ~1,15 m, embaixo da barra do toldo). */
+  const head = () => {
+    const L1 = luiz(), hb = L1?.parts?.head, o = L1?.object;
+    if (hb && o) {
+      hb.updateWorldMatrix(true, false);
+      const v = hb.localToWorld(o.position.clone().set(0, 0.06, 0));
+      return P3(v.x, v.y, v.z);
+    }
+    return o ? P3(o.position.x, o.position.y + 1.15, o.position.z) : P3(win().x, win().y, win().z);
+  };
   return createScene({
     id: 'porteiro',
     emit,
@@ -1085,7 +1095,8 @@ export function createPorteiroScene(K) {
       dir.panel('2h', 0, { enter: 'pop', tilt: -1.5 });
       dir.lens(30);
       const h = head();
-      dir.shot(P3(win().x + 0.25, h.y + 0.05, win().z + 1.25), P3(h.x, h.y - 0.1, h.z), { cut: true });
+      // de fora, por baixo do babado do toldo (a barra fica a 1,56 m), pelo vão aberto do guichê
+      dir.shot(P3(win().x + 0.2, Math.min(1.32, h.y + 0.04), win().z + 0.85), P3(h.x, h.y - 0.05, h.z), { cut: true });
       dir.onomato('AU! AU!', { at: P3(win().x - 0.4, win().y, win().z + 0.4), size: 1.3, color: '#ffd23f', rot: -10, style: 'shake' });
       luiz()?.setPose('acorda');
       dir.sfx('ronco-fim', { x: win().x, z: win().z });
@@ -1100,10 +1111,11 @@ export function createPorteiroScene(K) {
           once('p2', t > 1.6, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
             dir.lens(34);
-            const a = dir.actor('radhija');
-            dir.shot(P3(a.x + 1.3, 0.75, a.z + 1.4), P3(win().x, 0.9, win().z), { cut: true });
-            dir.say('radhija', 'Seu Luiz! Os pombos levaram a nossa cenoura!', { mode: 'cena', dur: 2.0 });
-            dir.bark('radhija');
+            // do pátio, a ~2,9 m do guichê e a 0,95 m do chão: a linha até a cabeça dele passa por cima da lixeira
+            // (1 m) quando ela está estacionada embaixo do toldo. A Rhaenyra (quem latiu) está ali na frente
+            dir.shot(P3(win().x + 0.45, 0.95, win().z + 2.85), P3(win().x, 1.0, win().z), { cut: true });
+            dir.say('rhaenyra', 'Seu Luiz! Os pombos levaram a nossa cenoura!', { mode: 'cena', dur: 2.0 });
+            dir.bark('rhaenyra');
           });
           once('l3', t > 3.6, () => {
             luiz()?.setPose('fala');
@@ -1126,7 +1138,7 @@ export function createPorteiroScene(K) {
             L1.object.rotation.set(0, -Math.PI * 0.75, 0);
             L1.setPose('em-pe', undefined, { instant: true });
           }
-          dir.shot(P3(gx - 1.6, 0.9, G.z + 2.6), P3(gx + 0.3, 0.95, G.z + 0.3), { cut: true });
+          dir.shot(P3(gx - 1.0, 1.0, G.z + 2.5), P3(gx + 0.3, 0.98, G.z + 0.3), { cut: true });
           dir.say('porteiro', 'Calma, calma! Querem passear, é?', { mode: 'cena', dur: 1.8 });
         },
         tick(_, t) {
@@ -1143,8 +1155,18 @@ export function createPorteiroScene(K) {
       {
         id: 'acena', dur: 2.2,
         enter() {
+          const o = luiz()?.object;
+          if (o) { S.yaw0 = o.rotation.y; S.yaw1 = Math.atan2(gx - 1.0 - o.position.x, G.z + 2.5 - o.position.z); }
           luiz()?.setPose('acena');
           dir.say('porteiro', 'Vão lá… mas voltem pro almoço!', { mode: 'cena', dur: 1.8 });
+        },
+        tick(_, t) {
+          // vira devagar para a câmera (o lado curto do giro)
+          const o = luiz()?.object;
+          if (o && S.yaw1 !== undefined) {
+            const d = Math.atan2(Math.sin(S.yaw1 - S.yaw0), Math.cos(S.yaw1 - S.yaw0));
+            o.rotation.y = S.yaw0 + d * smooth(span(t, 0, 0.45));
+          }
         },
         leave() { dir.say('radhija', 'O portão abriu! Atrás dos pombos!', { mode: 'cena', dur: 1.4 }); },
       },

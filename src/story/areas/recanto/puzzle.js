@@ -139,7 +139,17 @@ export function createPuzzle(ctx) {
       const sq = props.squad || {};
       const bird = { capitao: sq.cap, farelo: sq.far, soneca: sq.son }[who];
       if (bird?.object?.visible) { const q = bird.object.position; return { x: q.x, y: q.y + 0.32, z: q.z }; }
-      if (who === 'porteiro') { const w = props.booth?.windowAnchor; return w ? { x: w.x, y: w.y + 0.2, z: w.z } : null; }
+      if (who === 'porteiro') {
+        // o Sr. Luiz: o balão sai da cabeça dele (na guarita ou no portãozinho); sem o modelo, do guichê
+        const lu = props.srLuiz, hb = lu?.parts?.head, o = lu?.object;
+        if (hb && o?.visible) {
+          hb.updateWorldMatrix(true, false);
+          const v = hb.localToWorld(o.position.clone().set(0, 0.08, 0));
+          return { x: v.x, y: v.y, z: v.z };
+        }
+        const w = props.booth?.windowAnchor;
+        return w ? { x: w.x, y: w.y + 0.2, z: w.z } : null;
+      }
       if (who === 'gansa') return { x: goose.x, y: 0.62, z: goose.z };
       if (who === 'bichano') { const o = props.bichano?.object; return o ? { x: o.position.x, y: o.position.y + 0.32, z: o.position.z } : null; }
       return null;

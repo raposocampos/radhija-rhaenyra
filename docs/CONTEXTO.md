@@ -50,8 +50,18 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   - Testes: `historia-deducao`, `historia-faro`, `historia-personagens`, `historia-telhado`, `historia-ui`,
     `historia-comic`, `dogGestures`; missão e cenas com o empurrão, o Faro novo e o telhado; os roteiros de E2E
     (`test-historia.mjs`, `capture-historia.mjs`) ligam as pistas no quadro e passam pelo telhado.
-- **Próximo passo:** CI do commit, E2E `historia` e primeira passagem `historia`; revisar as capturas; prévia ao
-  usuário. **Não integrar sem o "pode integrar" dele.**
+  - Depois das capturas: o close do Capitão virou perfil na altura da cabeça, da ponta oeste do parapeito; a cena do
+    Sr. Luiz com o 1º quadro por baixo do toldo (a cabeça vem do osso do modelo), o 2º do pátio (a fala é da
+    Rhaenyra, quem latiu), o balão saindo da cabeça dele e o aceno virado para a câmera.
+  - Validado antes disso: `67613b2` com CI, E2E `historia` (230/230) e primeira passagem `historia` verdes. O último
+    commit desta rodada leva estes ajustes e este registro: conferir o CI e o E2E dele no GitHub.
+- **Pendências para olhar com o usuário:**
+  - Nas capturas 1280×720 do E2E (`test-historia.mjs`), o quadro congelado das páginas de HQ sai escuro; nas
+    capturas de revisão (`capture-historia.mjs`) ele aparece. Investigar `snapshot()` em `src/story/ui/comic.js` no
+    laço real do jogo (o usuário viu a HQ no aparelho e aprovou o estilo, então pode ser só do E2E).
+  - Se a Rhaenyra latir logo depois da cena do cheiro, o cartão "Pista anotada" (grelha) aparece por cima da página de
+    HQ do Sr. Luiz.
+- **Próximo passo:** o usuário testa a prévia. **Não integrar sem o "pode integrar" dele.**
 
 ### 2ª reprovação (2026-11-10, prévia `1ae2d97`, verde no CI): cinema, HQ e árvore de pistas
 
