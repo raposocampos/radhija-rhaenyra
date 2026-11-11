@@ -664,7 +664,7 @@ export function createBoardUI({ host, emit, sfx = () => {}, onClose = () => {} }
   let drag = null;
   let dragged = false;
   cardsBox.addEventListener('pointerdown', (e) => {
-    const c = /** @type {HTMLElement} */ (e.target).closest?.('.rr-board__tcard');
+    const c = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('.rr-board__tcard'));
     if (!c || !isOpen || mode === 'confront') return;
     drag = { id: c.getAttribute('data-tray'), src: c, x: e.clientX, y: e.clientY, pid: e.pointerId, ghost: null };
     dragged = false;
@@ -709,7 +709,7 @@ export function createBoardUI({ host, emit, sfx = () => {}, onClose = () => {} }
   }
   cardsBox.addEventListener('click', (e) => {
     if (dragged) { dragged = false; return; }
-    const c = /** @type {HTMLElement} */ (e.target).closest?.('.rr-board__tcard');
+    const c = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('.rr-board__tcard'));
     if (!c) return;
     const id = c.getAttribute('data-tray');
     tf = Math.max(0, items().findIndex((x) => x.id === id));

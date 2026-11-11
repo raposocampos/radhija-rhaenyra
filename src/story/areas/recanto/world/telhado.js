@@ -389,6 +389,7 @@ export function buildTelhado(kit, root, L) {
     const towel = cloth(0.62, 0.46, (u) => col(Math.floor(u * 8) % 2 ? '#f2c230' : '#3f9fd8'));
     const shirt = cloth(0.42, 0.4, () => col('#e45b5b'));
     const sockA = cloth(0.09, 0.22, (u, v) => col(v < 0.2 ? '#fffaf0' : '#7fbf6a'));
+    /** @type {[THREE.BufferGeometry, number][]} */
     const parts = [[towel, 68.25], [shirt, 70.75], [sockA, 71.0]];
     const clothMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide });
     for (const [geo, x] of parts) {

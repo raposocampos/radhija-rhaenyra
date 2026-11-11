@@ -316,7 +316,8 @@ export function createPuzzle(ctx) {
   // o empurra-empurra da Rhaenyra no poste do varal (o balanço do poste sacode o varal)
   const poleShove = createShoveTarget({
     id: 'poste-varal', cfg: L.POLE_SHOVE, emit, world, root,
-    prop: { setSway: (a) => props.line?.shake?.(Math.min(1, Math.abs(a) * 3.2)) },
+    // só o balanço: o poste não tem objeto próprio para inclinar (o varal sacode)
+    prop: /** @type {any} */ ({ setSway: (a) => props.line?.shake?.(Math.min(1, Math.abs(a) * 3.2)) }),
   });
   props.rope?.setGrip?.(() => (S.tugWhat === 'corda' ? tug.grip() : null));
   props.serviceBolt?.setGrip?.(() => (S.tugWhat === 'ferrolho' ? tug.grip() : null));

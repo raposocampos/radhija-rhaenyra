@@ -418,6 +418,7 @@ export function createRooftop(K, { world, emit, effects, ctx, props, dir, hints,
       emit('objective', obj());
       return false; // o Faro segue o caminho normal (o modo liga do mesmo jeito)
     },
+    /** @param {number} dt @param {any} c @param {any} intent @param {{ shift?: boolean }} [o] */
     modifyIntent(dt, c, intent, { shift } = {}) {
       if (!roof.active || S.climb || S.ladderDown) return null;
       const r = crate.modifyIntent(dt, c, intent, { shift });

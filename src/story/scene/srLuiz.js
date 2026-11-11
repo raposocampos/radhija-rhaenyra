@@ -403,11 +403,13 @@ function buildLeg(M, s) {
   b.updateMatrixWorld(true);
   const parts = [];
   b.traverse((o) => {
-    if (!o.isMesh) return;
-    const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    parts.push(tint(g, o.material.color));
-    o.geometry.dispose();
-    o.material.dispose();
+    const m = /** @type {THREE.Mesh} */ (o);
+    if (!m.isMesh) return;
+    const mat = /** @type {THREE.MeshStandardMaterial} */ (m.material);
+    const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
+    parts.push(tint(g, mat.color));
+    m.geometry.dispose();
+    mat.dispose();
   });
   const bootMesh = fuse(parts.map((g) => g.translate(0, -ANKLE_Y, 0)), M.boot, 'botina');
   ankle.add(bootMesh);
@@ -630,7 +632,7 @@ function mixPose(a, b, t, out = {}) {
   }
   return out;
 }
-const clonePose = (p) => mixPose(p, p, 0);
+const clonePose = (p) => /** @type {any} */ (mixPose(p, p, 0));
 /** Quanto tempo a troca de pose leva (s). */
 const BLEND = { 'dorme': 0.6, 'acorda': 0.08, 'sentado': 0.5, 'em-pe': 0.75, 'anda': 0.35, 'abre-portao': 0.3, 'acena': 0.35, 'fala': 0.35 };
 /** Quanto dura o que anda sozinho (s), quando a cena não dá o k. */
@@ -660,7 +662,7 @@ export function createSrLuiz() {
   spine.add(torso, torsoGloss);
   const neck = new THREE.Group();
   neck.name = 'sr-luiz:pescoco';
-  neck.position.set(...NECK);
+  neck.position.set(NECK[0], NECK[1], NECK[2]);
   neck.rotation.order = 'YXZ';
   neck.add(fuse([tint(hangCyl(0.058, 0.062, 0.115, 10, true).translate(0, 0.085, 0), PAL.skin)], M.matte, 'pescoco'));
   spine.add(neck);
@@ -718,7 +720,7 @@ export function createSrLuiz() {
   spine.add(arms.L.shoulder, arms.R.shoulder);
   const legs = { L: buildLeg(M, 1), R: buildLeg(M, -1) };
   pelvis.add(legs.L.hip, legs.R.hip);
-  object.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
+  object.traverse((o) => { if (/** @type {THREE.Mesh} */ (o).isMesh) o.receiveShadow = true; });
 
   // ---------------------------------------------------------------- estado
   const S = {
@@ -927,7 +929,7 @@ export function createSrLuiz() {
     /** As peças (para quem precisar de mais: o quepe, a cabeça, as mãos). */
     parts: { pelvis, spine, neck, head, cap, stache, mouth, arms, legs },
     dispose() {
-      object.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+      object.traverse((o) => { const m = /** @type {THREE.Mesh} */ (o); if (m.isMesh) m.geometry.dispose(); });
       for (const m of Object.values(M)) m.dispose();
       object.removeFromParent();
     },
@@ -980,7 +982,7 @@ export function createGuardChair() {
     /** Gira o assento e o encosto (rad). */
     setSwivel(a) { top.rotation.y = a; },
     dispose() {
-      object.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+      object.traverse((o) => { const m = /** @type {THREE.Mesh} */ (o); if (m.isMesh) m.geometry.dispose(); });
       matte.dispose();
       gloss.dispose();
       object.removeFromParent();
