@@ -9,7 +9,7 @@
 //    encolhe até o quadro); enter vale do 2º em diante (sem enter: slide em página nova, pop na mesma). O quadro mostra o
 //    recorte central ("cover") do plano: componha como em tela cheia (frações dos quadros em comicMath.slotPoly).
 //  story:say { id, who, name, text, dur, mode, mood?, anchor? } (mode 'cena') balão; who null = caixa de narração.
-//    Emita o story:panel ANTES das falas do quadro (as que vierem no mesmo instante passam para o quadro novo).
+//    Cada fala fica no quadro em que foi dita: emita o story:panel ANTES das falas do quadro novo.
 //  story:sayMove { id, x, y, z } · story:sayClear
 //  story:caption { text, sub?, pos?, dur?, anchor?, who? }   legenda estilo Scott Pilgrim (nome + descrição + selo)
 //  story:onomato { text, anchor?, sx?, sy?, size?, color?, rot?, style?, dur? }  onomatopeia gigante
@@ -18,16 +18,20 @@
 // subtitles.js); a camada só emite story:voiceStop quando uma página vira com um balão ainda digitando.
 //
 // Como o quadro ao vivo funciona: o canvas WebGL continua do tamanho da tela, recortado no quadro por clip-path, e a
-// câmera ganha um viewOffset que centra o plano no quadro (comicMath.viewOffsetFor). Os quadros congelados são
-// <canvas> 2D com a foto do 3D, atrás do canvas WebGL (só o quadro ao vivo custa um desenho 3D).
-// A foto: o canvas WebGL só guarda a imagem até o navegador mostrá-la, então, no story:panel (que chega no update, antes
-// do desenho, com a câmera ainda no plano do quadro anterior), a camada desenha a cena uma vez a mais, na hora, e copia
-// o recorte. O recorte acompanha cada desenho pelo gancho engine.onAfterRender.
+// câmera ganha um viewOffset que centra o plano no quadro (comicMath.viewOffsetFor). Os dois são postos logo ANTES de
+// cada desenho (engine.onBeforeRender), no instante daquele desenho: o 3D e o recorte saem sempre juntos. Balões,
+// legendas e efeitos vêm logo depois do desenho (engine.onAfterRender), com as matrizes da câmera daquele desenho.
+// O relógio é o tempo do jogo que chega no render (o mesmo das cenas): parado com o jogo parado, e com o laço avançado
+// aos saltos o desenho seguinte já mostra o estado certo (a entrada termina, o quadro aparece inteiro).
+// Os quadros congelados são <canvas> 2D com a foto do 3D, atrás do canvas WebGL (só o quadro ao vivo custa um desenho
+// 3D). A foto: o canvas WebGL só guarda a imagem até o navegador mostrá-la, então, no story:panel (que chega no update,
+// antes do desenho, com a câmera ainda no plano do quadro anterior), a camada desenha a cena uma vez a mais, na hora, e
+// copia o recorte. Os quadros ainda não usados da página aparecem como molduras com retícula escura.
 // Sem nenhum evento, nada muda: o canvas fica sem clip-path e a câmera sem viewOffset.
 import './comic.css';
 import * as THREE from 'three';
 import {
-  MOODS, OUT_DUR, balloonShape, bboxOf, bubblesPath, burstPath, centroid, clamp, clipCss, cloudPath, createLiveDriver,
+  MOODS, OUT_DUR, SLOTS, balloonShape, bboxOf, bubblesPath, burstPath, centroid, clamp, clipCss, cloudPath, createLiveDriver,
   createOnomatoQueue, createStage, ease, frameMetrics, inkPath, needsNewPage, normLayout, normSlot, offsetPoly, ovalPath,
   placeBalloon, placeCorner, rectPoly, sayTiming, seeded, slotPoly, tailPath, typedCount, viewOffsetFor,
 } from './comicMath.js';
@@ -72,7 +76,25 @@ export function createComicLayer({ root, engine, events }) {
   let reduced = !!mq?.matches;
   const onMotion = () => { reduced = !!mq?.matches; };
   mq?.addEventListener?.('change', onMotion);
-  const clock = () => performance.now() / 1000;
+
+  // ------------------------------------------------ o relógio: o tempo do jogo que chega em cada desenho
+  // Tudo (entradas dos quadros, digitação, vida dos balões, efeitos) anda pelo tempo do jogo, o mesmo das cenas: com o
+  // jogo parado nada anda, e com o laço avançado aos saltos (capturas) o desenho seguinte já mostra o estado certo.
+  let clk = 0;
+  let lastT = null;
+  let lastReal = null;
+  function advance(dt, t) {
+    const real = performance.now() / 1000;
+    let d = Number(dt) || 0;
+    if (typeof t === 'number' && Number.isFinite(t)) {
+      // o relógio do jogo voltou (só as ferramentas recomeçam a contagem): vale o tempo real desde o último desenho
+      if (lastT !== null) d = t >= lastT ? t - lastT : real - (lastReal ?? real);
+      lastT = t;
+    }
+    lastReal = real;
+    clk += clamp(d, 0, 30);
+  }
+  const clock = () => clk;
 
   // ------------------------------------------------ a frente (balões, legendas, onomatopeias, efeitos), dentro de .rr
   const host = document.createElement('div');
@@ -120,9 +142,13 @@ export function createComicLayer({ root, engine, events }) {
   let wantDefault = false;
   let snapping = false;
   let filterSet = false;
-  let lastNow = clock();
+  let lastTick = clk;
   let seq = 0;
   let inkKey = '';
+  /** Semente do nanquim do quadro ao vivo (a mesma da moldura dele na página: os dois traços coincidem). */
+  let liveSeed = 1;
+  /** O quadro ao vivo no desenho de agora (step antes do desenho), para os balões e os efeitos depois dele. */
+  let cur = null;
   /** @type {any} */
   let page = null;
   /** @type {Map<number, any>} */
@@ -134,7 +160,7 @@ export function createComicLayer({ root, engine, events }) {
   const sfxEls = new Map();
   /** @type {any[]} */
   let fxs = [];
-  /** @type {null | { t0: number, dur: number, amp: number }} */
+  /** @type {null | { t0: number, dur: number, amp: number, shown?: boolean }} */
   let shake = null;
   let fxDrawn = false;
 
@@ -154,9 +180,10 @@ export function createComicLayer({ root, engine, events }) {
     stage.setGeom(geom);
     sizeSvgs();
     if (page) {
-      for (const f of page.frozen) {
-        f.poly = slotPoly(f.layout, f.slot, geom, f.tilt).poly;
-        placeBox(f.box, f.poly);
+      for (const S of page.slots) {
+        S.poly = slotPoly(page.layout, S.slot, geom, S.tilt).poly;
+        placeBox(S.el, S.poly);
+        if (S.frozen) placeBox(S.frozen, S.poly);
       }
       drawPageInk(page);
     }
@@ -185,30 +212,55 @@ export function createComicLayer({ root, engine, events }) {
   }
 
   // ------------------------------------------------ páginas
+  const slotSeed = (p, slot) => p.id * 13 + slot * 7 + 3;
+  /**
+   * Página nova: todos os quadros do layout já desenhados, com moldura de nanquim e um fundo de retícula escura; o ao
+   * vivo e os congelados cobrem a moldura deles (a página nunca fica meio vazia).
+   */
   function makePage(layout) {
     const el = document.createElement('div');
     el.className = 'rr-comic-page';
     el.dataset.style = style;
-    el.innerHTML = `<svg class="rr-comic-page__shade" preserveAspectRatio="none"><path class="still"/><path class="live"/></svg>
+    el.innerHTML = `<svg class="rr-comic-page__shade" preserveAspectRatio="none"><path/></svg><div class="rr-comic-page__slots"></div>
       <div class="rr-comic-page__panels"></div><svg class="rr-comic-page__ink" preserveAspectRatio="none"><path/></svg><div class="rr-comic-page__talk"></div>`;
     back.appendChild(el);
+    const slotsBox = el.querySelector('.rr-comic-page__slots');
     const p = {
-      id: ++seq, el, layout, used: new Set(), frozen: [],
+      id: ++seq, el, layout, used: new Set(), slots: [],
       panels: /** @type {HTMLElement} */ (el.querySelector('.rr-comic-page__panels')),
       talk: /** @type {HTMLElement} */ (el.querySelector('.rr-comic-page__talk')),
-      shadeStill: el.querySelector('.rr-comic-page__shade .still'),
-      shadeLive: el.querySelector('.rr-comic-page__shade .live'),
+      shade: el.querySelector('.rr-comic-page__shade path'),
       ink: el.querySelector('.rr-comic-page__ink path'),
     };
+    for (let s = 0; s < SLOTS[layout]; s++) {
+      const box = document.createElement('div');
+      box.className = 'rr-comic-page__slot';
+      const S = { slot: s, tilt: 0, poly: slotPoly(layout, s, geom, 0).poly, el: box, frozen: null };
+      placeBox(box, S.poly);
+      slotsBox.appendChild(box);
+      p.slots.push(S);
+    }
     const vb = `0 0 ${geom.W} ${geom.H}`;
     for (const s of el.querySelectorAll('svg')) s.setAttribute('viewBox', vb);
+    drawPageInk(p);
     return p;
   }
   function drawPageInk(p) {
     const { ink } = frameMetrics(geom.W, geom.H);
-    p.ink.setAttribute('d', p.frozen.map((f) => inkPath(f.poly, f.seed, ink * 0.3)).join(''));
+    p.ink.setAttribute('d', p.slots.map((S) => inkPath(S.poly, slotSeed(p, S.slot), ink * 0.3)).join(''));
     p.ink.setAttribute('stroke-width', ink.toFixed(1));
-    p.shadeStill.setAttribute('d', p.frozen.map((f) => inkPath(offsetPoly(f.poly, ink * 1.4, ink * 1.8), 1, 0)).join(''));
+    p.shade.setAttribute('d', p.slots.map((S) => inkPath(offsetPoly(S.poly, ink * 1.4, ink * 1.8), 1, 0)).join(''));
+  }
+  /** O quadro ganha a inclinação pedida (a moldura e o fundo dele acompanham). */
+  function useSlot(p, slot, tilt) {
+    const S = p.slots[slot];
+    p.used.add(slot);
+    if (!S || S.tilt === tilt) return;
+    S.tilt = tilt;
+    S.poly = slotPoly(p.layout, slot, geom, tilt).poly;
+    placeBox(S.el, S.poly);
+    if (S.frozen) placeBox(S.frozen, S.poly);
+    drawPageInk(p);
   }
   function placeBox(box, poly) {
     const b = bboxOf(poly);
@@ -233,7 +285,6 @@ export function createComicLayer({ root, engine, events }) {
       balloons.delete(b.key);
     }
     if (cut) events.emit('story:voiceStop', {});
-    old.shadeLive.setAttribute('d', '');
     turnBox.appendChild(old.el);
     void old.el.offsetWidth;
     old.el.classList.add('is-turning');
@@ -245,11 +296,9 @@ export function createComicLayer({ root, engine, events }) {
   }
   /** hold: o quadro reabre ao vivo na mesma página (sai a foto dele e os balões congelados nele). */
   function dropFrozen(p, slot) {
-    const keep = [];
-    for (const f of p.frozen) { if (f.slot === slot) f.box.remove(); else keep.push(f); }
-    p.frozen = keep;
+    const S = p.slots[slot];
+    if (S?.frozen) { S.frozen.remove(); S.frozen = null; }
     for (const b of [...balloons.values()]) if (b.frozen && b.page === p.id && b.slot === slot) removeBalloon(b);
-    drawPageInk(p);
   }
 
   // ------------------------------------------------ a foto do quadro que congela
@@ -286,20 +335,27 @@ export function createComicLayer({ root, engine, events }) {
   }
   function freezeLive(prev) {
     const shot = page ? snapshot(prev.poly) : null;
-    if (page && shot) {
+    const S = page?.slots[prev.slot];
+    if (page && shot && S) {
       const box = document.createElement('div');
       box.className = 'rr-comic-page__panel';
-      placeBox(box, prev.poly);
+      placeBox(box, S.poly);
       box.appendChild(shot);
       page.panels.appendChild(box);
-      page.frozen.push({ layout: prev.layout, slot: prev.slot, tilt: prev.tilt, poly: prev.poly, seed: prev.id * 7 + 3, box });
-      drawPageInk(page);
+      S.frozen?.remove();
+      S.frozen = box;
     }
-    // os balões do quadro ficam nele, parados (e terminam de digitar junto com a voz); sem página, somem. Os que nem
-    // apareceram ainda (a fala veio no mesmo instante do quadro novo) passam para o quadro novo.
+    if (!page) { for (const b of balloons.values()) if (!b.frozen) leave(b, true); return; }
+    // as falas ditas neste quadro ficam nele, paradas (e terminam de digitar junto com a voz). As que ainda nem
+    // apareceram (o laço andou sem desenhar) são encaixadas agora no quadro que congela, com a câmera do plano dele
+    // (a foto acabou de atualizar as matrizes).
+    const pad = talkPad();
+    const placed = [];
+    for (const b of balloons.values()) if (!b.frozen && !b.leaving && b.x != null) placed.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+    const now = clock();
     for (const b of balloons.values()) {
-      if (b.frozen || (b.x == null && !b.leaving)) continue;
-      if (!page || b.leaving) { leave(b, true); continue; }
+      if (b.frozen || b.leaving) continue;
+      if (b.x == null) { firstShow(b, now); placeOne(b, prev.poly, placed, 0, pad, new Set()); }
       b.frozen = true;
       b.page = page.id;
       b.slot = prev.slot;
@@ -382,17 +438,17 @@ export function createComicLayer({ root, engine, events }) {
     fxs = [];
     if (newPage) { turnPage(); page = makePage(layout); }
     if (ev.hold) dropFrozen(page, slot);
-    page.used.add(slot);
+    useSlot(page, slot, ev.tilt);
     // o 1º quadro de cada HQ sempre sai da tela cheia (o plano de cinema vira o quadro, sem corte); depois, o pedido
     const asked = ENTERS.includes(p.enter) ? p.enter : null;
     const enter = !prev ? (asked === 'none' ? 'none' : 'shrink') : asked || (newPage ? 'slide' : 'pop');
     stage.open(now, { ...ev, enter, auto: !!p.auto, t0: enter === 'shrink' ? t0 : now });
+    liveSeed = slotSeed(page, slot);
     inkKey = '';
-    // o desenho deste quadro já sai com o plano do quadro novo
-    driver.prime(now, target, geom);
   }
 
   // ------------------------------------------------ balões
+  const talkPad = () => Math.max(8, frameMetrics(geom.W, geom.H).ink * 2.2);
   /** @param {any} [p] */
   function say(p = {}) {
     if (p.mode && p.mode !== 'cena') return;
@@ -442,7 +498,7 @@ export function createComicLayer({ root, engine, events }) {
     txt.style.top = `${(sh.h - th) / 2}px`;
     txt.classList.add('is-set');
     const cx = sh.w / 2, cy = sh.h / 2;
-    const bw = clamp(fs * 0.17, 2.2, 4.4);
+    const bw = clamp(fs * 0.15, 2.2, 4.6);
     const b = {
       key: ++seq, id, who: p.who ?? null, narr, mood, el, bin, a, z, text,
       ...sayTiming(text, Number(p.dur)), n: 0, t0: now,
@@ -465,6 +521,13 @@ export function createComicLayer({ root, engine, events }) {
     balloons.set(b.key, b);
     el.classList.add('is-in');
     sr.textContent = `${p.name ? `${p.name}: ` : ''}${text}`;
+  }
+  /**
+   * A primeira vez que o balão aparece: se o jogo andou sem desenhar (laço aos saltos), ele chega já escrito e com um
+   * tempinho de tela, em vez de sumir antes de ser visto. No jogo normal (desenho a cada quadro) não muda nada.
+   */
+  function firstShow(b, now) {
+    b.t0 = Math.max(b.t0, now - Math.max(0, b.hideAt - 0.6));
   }
   function leave(b, fast = false) {
     if (b.leaving) return;
@@ -491,15 +554,53 @@ export function createComicLayer({ root, engine, events }) {
   function clearTalk() {
     for (const b of balloons.values()) leave(b, true);
   }
-  /** A cada desenho: digita, toca as sílabas, encaixa os balões no quadro e aponta os rabichos. */
+  /** Encaixa um balão no quadro (desviando dos já encaixados) e aponta o rabicho. */
+  function placeOne(b, poly, placed, dt, pad, corners) {
+    let x, y, tip = null, out = false, side = null;
+    if (b.narr) {
+      const corner = ['tl', 'tr', 'bl', 'br'].find((c) => !corners.has(c)) || 'tl';
+      ({ x, y } = placeCorner(poly, b.w, b.h, corner, pad));
+    } else {
+      const anc = b.anchor ? project(b.anchor) : null;
+      const pl = placeBalloon({ anchor: anc, w: b.w, h: b.h, poly, others: placed, prev: b.side, pad, gap: clamp(b.h * 0.42, 14, 40) });
+      ({ x, y, tip, out, side } = pl);
+    }
+    // anda macio atrás de quem fala (a primeira vez já nasce no lugar)
+    const first = b.x == null;
+    const k = first ? 1 : 1 - Math.exp(-dt * 14);
+    const nx = first ? x : b.x + (x - b.x) * k;
+    const ny = first ? y : b.y + (y - b.y) * k;
+    if (first || Math.abs(nx - b.x) > 0.05 || Math.abs(ny - b.y) > 0.05) {
+      b.el.style.transform = `translate3d(${nx.toFixed(1)}px, ${ny.toFixed(1)}px, 0)`;
+    }
+    if (first) b.el.style.visibility = '';
+    b.x = nx;
+    b.y = ny;
+    b.side = side;
+    if (out !== b.out) { b.out = out; b.el.classList.toggle('is-off', out); }
+    if (!b.narr) {
+      const tx = tip ? tip.x - nx : b.cx, ty = tip ? tip.y - ny : b.cy;
+      const key = `${Math.round(tx)},${Math.round(ty)}`;
+      if (key !== b.tipKey) {
+        b.tipKey = key;
+        const d = !tip ? '' : b.mood === 'pensa'
+          ? bubblesPath(b.cx, b.cy, tx, ty, Math.min(b.rx, b.ry) * 1.05, clamp(b.fs * 0.42, 4, 10))
+          : tailPath(b.cx, b.cy, tx, ty, clamp(Math.min(b.rx, b.ry) * 0.62, 9, 28), Math.min(b.rx, b.ry) * 0.5);
+        for (const pth of b.tails) pth.setAttribute('d', d);
+      }
+    }
+    placed.push({ x: nx, y: ny, w: b.w, h: b.h });
+  }
+  /** Depois de cada desenho: digita e encaixa os balões no quadro ao vivo (os congelados só terminam de digitar). */
   function updateTalk(now, dt, poly) {
     const placed = [];
     for (const c of caps) if (c.x != null && !c.leaving) placed.push({ x: c.x, y: c.y, w: c.w, h: c.h });
     const corners = new Set([...caps].map((c) => c.pos));
     const order = [...balloons.values()].sort((x, y) => Number(y.narr) - Number(x.narr));
-    const pad = Math.max(8, frameMetrics(geom.W, geom.H).ink * 2.2);
+    const pad = talkPad();
     for (const b of order) {
       if (b.leaving) { if (now >= b.goneAt2) removeBalloon(b); continue; }
+      if (b.x == null) firstShow(b, now);
       const t = now - b.t0;
       const n = typedCount(b.times, t);
       if (n !== b.n) {
@@ -510,39 +611,7 @@ export function createComicLayer({ root, engine, events }) {
       // no quadro congelado, o balão fica até a página virar
       if (b.frozen) continue;
       if (t >= b.hideAt) { leave(b); continue; }
-      let x, y, tip = null, out = false, side = null;
-      if (b.narr) {
-        const corner = ['tl', 'tr', 'bl', 'br'].find((c) => !corners.has(c)) || 'tl';
-        ({ x, y } = placeCorner(poly, b.w, b.h, corner, pad));
-      } else {
-        const anc = b.anchor ? project(b.anchor) : null;
-        const pl = placeBalloon({ anchor: anc, w: b.w, h: b.h, poly, others: placed, prev: b.side, pad, gap: clamp(b.h * 0.42, 14, 36) });
-        ({ x, y, tip, out, side } = pl);
-      }
-      // anda macio atrás de quem fala (o primeiro quadro já nasce no lugar)
-      const k = b.x == null ? 1 : 1 - Math.exp(-dt * 14);
-      const nx = b.x == null ? x : b.x + (x - b.x) * k;
-      const ny = b.y == null ? y : b.y + (y - b.y) * k;
-      if (b.x == null || Math.abs(nx - b.x) > 0.05 || Math.abs(ny - b.y) > 0.05) {
-        b.el.style.transform = `translate3d(${nx.toFixed(1)}px, ${ny.toFixed(1)}px, 0)`;
-      }
-      if (b.x == null) b.el.style.visibility = '';
-      b.x = nx;
-      b.y = ny;
-      b.side = side;
-      if (out !== b.out) { b.out = out; b.el.classList.toggle('is-off', out); }
-      if (!b.narr) {
-        const tx = tip ? tip.x - nx : b.cx, ty = tip ? tip.y - ny : b.cy;
-        const key = `${Math.round(tx)},${Math.round(ty)}`;
-        if (key !== b.tipKey) {
-          b.tipKey = key;
-          const d = !tip ? '' : b.mood === 'pensa'
-            ? bubblesPath(b.cx, b.cy, tx, ty, Math.min(b.rx, b.ry) * 1.05, clamp(b.fs * 0.42, 4, 9))
-            : tailPath(b.cx, b.cy, tx, ty, clamp(Math.min(b.rx, b.ry) * 0.62, 9, 26), Math.min(b.rx, b.ry) * 0.5);
-          for (const pth of b.tails) pth.setAttribute('d', d);
-        }
-      }
-      placed.push({ x: nx, y: ny, w: b.w, h: b.h });
+      placeOne(b, poly, placed, dt, pad, corners);
     }
   }
 
@@ -563,6 +632,7 @@ export function createComicLayer({ root, engine, events }) {
     const cast = CAST[p.who] || null;
     el.style.setProperty('--cc', cast?.color || CAP_COLORS[seq % CAP_COLORS.length]);
     el.innerHTML = `<div class="rr-comic__capin"><b class="rr-comic__capname">${letters(text)}</b>${p.sub ? `<span class="rr-comic__capsub">${esc(p.sub)}</span>` : ''}<svg class="rr-comic__star" viewBox="-13 -13 26 26"><path d="${STAR}"/></svg></div>`;
+    el.style.visibility = 'hidden';
     capsBox.appendChild(el);
     let arrow = null;
     if (p.anchor) {
@@ -590,10 +660,13 @@ export function createComicLayer({ root, engine, events }) {
     const pad = Math.max(10, frameMetrics(geom.W, geom.H).ink * 3);
     for (const c of caps) {
       if (c.leaving && now >= c.gone) { c.el.remove(); c.arrow?.remove(); caps.delete(c); continue; }
+      // a primeira vez na tela: fica pelo menos um tempinho (laço aos saltos), igual aos balões
+      if (c.x == null) { c.t0 = Math.max(c.t0, now - 0.4); c.t1 = Math.max(c.t1, now + 0.8); }
       if (!c.leaving && now >= c.t1) leaveCap(c, now);
       const { x, y } = placeCorner(poly, c.w, c.h, c.pos, pad);
       if (c.x == null || Math.abs(x - c.x) > 0.3 || Math.abs(y - c.y) > 0.3) {
         c.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+        if (c.x == null) c.el.style.visibility = '';
         c.x = x;
         c.y = y;
       }
@@ -632,6 +705,7 @@ export function createComicLayer({ root, engine, events }) {
     for (const ev of evicted) { const s = sfxEls.get(ev.id); if (s) fadeSfx(s, now); }
     const el = document.createElement('div');
     el.className = `rr-comic__sfxw is-${item.style}`;
+    el.style.visibility = 'hidden';
     const o = document.createElement('div');
     o.className = 'rr-comic__sfxo';
     const t = document.createElement('div');
@@ -647,7 +721,7 @@ export function createComicLayer({ root, engine, events }) {
     o.appendChild(t);
     el.appendChild(o);
     sfxBox.appendChild(el);
-    sfxEls.set(item.id, { el, item, end: item.t1, out: false, frozen: false, x: null, y: null });
+    sfxEls.set(item.id, { el, item, end: item.t1, out: false, frozen: false, x: null, y: null, fx: null, fy: null });
   }
   function fadeSfx(s, now) {
     if (s.out) { s.end = Math.min(s.end, now + 0.2); return; }
@@ -658,6 +732,8 @@ export function createComicLayer({ root, engine, events }) {
   function updateSfx(now) {
     const m = Math.min(geom.W, geom.H);
     for (const [id, s] of sfxEls) {
+      // a primeira vez na tela: fica pelo menos um tempinho (laço aos saltos)
+      if (s.fx == null && !s.out) s.end = Math.max(s.end, now + 0.7);
       if (now >= s.end) { s.el.remove(); sfxEls.delete(id); continue; }
       if (!s.out && now >= s.end - 0.24) { s.out = true; s.el.classList.add('is-out'); }
       let x = s.x, y = s.y;
@@ -670,6 +746,7 @@ export function createComicLayer({ root, engine, events }) {
       const fy = clamp(y + s.item.dy * m, m * 0.12, geom.H - m * 0.12);
       if (s.fx == null || Math.abs(fx - s.fx) > 0.2 || Math.abs(fy - s.fy) > 0.2) {
         s.el.style.transform = `translate3d(${fx.toFixed(1)}px, ${fy.toFixed(1)}px, 0)`;
+        if (s.fx == null) s.el.style.visibility = '';
         s.fx = fx;
         s.fy = fy;
       }
@@ -690,7 +767,7 @@ export function createComicLayer({ root, engine, events }) {
       if (kind === 'shake') return;
     }
     fxs.push({
-      kind, t0: now, dur, seed: (++seq * 977) >>> 0, dir: Number(p.dir) > 0 ? 1 : -1,
+      kind, t0: now, dur, seed: (++seq * 977) >>> 0, dir: Number(p.dir) > 0 ? 1 : -1, shown: false,
       anchor: p.anchor ? { x: +p.anchor.x || 0, y: +p.anchor.y || 0, z: +p.anchor.z || 0 } : null,
     });
   }
@@ -702,9 +779,11 @@ export function createComicLayer({ root, engine, events }) {
     fxDrawn = false;
   }
   function drawFx(now, poly) {
+    // a primeira vez na tela: o efeito aparece (laço aos saltos), já andado um pouco
+    for (const f of fxs) if (!f.shown) { f.shown = true; f.t0 = Math.max(f.t0, now - f.dur * 0.35); }
     fxs = fxs.filter((f) => now < f.t0 + f.dur);
     if (!fxs.length || !fxCtx) { clearFxCanvas(); return; }
-    // meia resolução de sobra no celular: linhas e brilhos não pedem mais que 1,5× (o 3D é que precisa de nitidez)
+    // linhas e brilhos não pedem mais que 1,5× (o 3D é que precisa de nitidez)
     const r = Math.min(window.devicePixelRatio || 1, 1.5);
     const cw = Math.round(geom.W * r), ch = Math.round(geom.H * r);
     if (fxCanvas.width !== cw || fxCanvas.height !== ch) { fxCanvas.width = cw; fxCanvas.height = ch; }
@@ -735,6 +814,7 @@ export function createComicLayer({ root, engine, events }) {
   }
   function updateShake(now) {
     if (!shake) return;
+    if (!shake.shown) { shake.shown = true; shake.t0 = Math.max(shake.t0, now - shake.dur * 0.3); }
     const k = (now - shake.t0) / shake.dur;
     if (k >= 1 || reduced) {
       shake = null;
@@ -752,58 +832,63 @@ export function createComicLayer({ root, engine, events }) {
     liveG.style.transform = stage.live ? tr : '';
   }
 
-  // ------------------------------------------------ a cada desenho (engine.onAfterRender)
+  // ------------------------------------------------ a cada desenho (engine.onBeforeRender / onAfterRender)
   function busy() {
-    return on || closing || driver.applied || !!driver.pending || balloons.size > 0 || caps.size > 0 || sfxEls.size > 0 || fxs.length > 0 || !!shake || fxDrawn;
+    return on || closing || driver.applied || balloons.size > 0 || caps.size > 0 || sfxEls.size > 0 || fxs.length > 0 || !!shake || fxDrawn;
   }
-  function tick() {
+  /** Antes do desenho: o relógio anda; o plano e o recorte do quadro ao vivo saem juntos neste desenho. */
+  function before(dt, t) {
+    advance(dt, t);
     if (snapping) return;
-    const now = clock();
-    const dt = Math.min(0.1, Math.max(0, now - lastNow));
-    lastNow = now;
+    cur = null;
     if (!busy()) return;
     if (geomDirty) relayout();
     if (on && wantDefault && !stage.live) { wantDefault = false; panel({ layout: 'full', slot: 0, enter: 'shrink', auto: true }); }
-    // o recorte que acompanha o desenho que acabou de sair (e o plano do próximo)
-    const shown = driver.step(now, target, geom);
-    if (shown) {
-      const id = stage.live?.id ?? 0;
-      const key = shown.live && shown.k >= 1 ? `${id}:${geom.W}x${geom.H}` : '';
+    const f = driver.step(clk, target, geom);
+    cur = f;
+    if (f) {
+      const key = f.live && f.k >= 1 ? `${liveSeed}:${geom.W}x${geom.H}` : '';
       if (!key || key !== inkKey) {
         inkKey = key;
         const { ink } = frameMetrics(geom.W, geom.H);
-        frameInk.setAttribute('d', inkPath(shown.clip, id * 7 + 3, ink * 0.3));
+        frameInk.setAttribute('d', f.clip.length > 2 ? inkPath(f.clip, liveSeed, ink * 0.3) : '');
         frameInk.setAttribute('stroke-width', ink.toFixed(1));
-        page?.shadeLive.setAttribute('d', shown.clip.length > 2 ? inkPath(offsetPoly(shown.clip, ink * 1.4, ink * 1.8), 1, 0) : '');
       }
     } else if (inkKey !== 'none') {
       inkKey = 'none';
       frameInk.setAttribute('d', '');
     }
-    const poly = shown?.final || shown?.clip || screenPoly();
+    updateShake(clk);
+    if (closing && !stage.busy && !driver.applied) finish();
+  }
+  /** Depois do desenho (câmera com as matrizes deste desenho): balões, legendas, onomatopeias e efeitos. */
+  function after() {
+    if (snapping) return;
+    const now = clk;
+    const dt = Math.min(0.1, Math.max(0, now - lastTick));
+    lastTick = now;
+    if (!busy()) return;
+    const poly = cur?.final || cur?.clip || screenPoly();
     const area = poly.length > 2 ? poly : screenPoly();
     updateCaps(now, area);
     updateTalk(now, dt, area);
     updateSfx(now);
-    updateShake(now);
     drawFx(now, area);
-    if (closing && !stage.busy && !driver.applied && !driver.pending) finish();
   }
-  const offRender = typeof engine.onAfterRender === 'function'
-    ? engine.onAfterRender(tick)
-    : (() => {
-      // sem o gancho: um laço próprio (a foto continua certa: ela desenha na hora)
-      let raf = 0;
-      const loop = () => { tick(); raf = requestAnimationFrame(loop); };
-      raf = requestAnimationFrame(loop);
-      return () => cancelAnimationFrame(raf);
-    })();
+  /** @type {(() => void)[]} */
+  const offRender = [];
+  if (typeof engine.onBeforeRender === 'function') offRender.push(engine.onBeforeRender(before));
+  if (typeof engine.onAfterRender === 'function') {
+    // sem o gancho de antes (engine antigo), o plano vai junto do resto, depois do desenho
+    offRender.push(engine.onAfterRender(typeof engine.onBeforeRender === 'function' ? after : (dt, t) => { before(dt, t); after(); }));
+  }
 
   /** Corta tudo na hora, sem animação (troca de fase, recomeço). */
   function hardReset() {
     on = false;
     closing = false;
     wantDefault = false;
+    cur = null;
     delete root.dataset.comic;
     stage.clear();
     driver.reset(target);
@@ -857,14 +942,14 @@ export function createComicLayer({ root, engine, events }) {
       return {
         on, closing, style, layout: page?.layout ?? null,
         live: stage.live ? { layout: stage.live.layout, slot: stage.live.slot, id: stage.live.id } : null,
-        frozen: page?.frozen.length ?? 0,
+        frozen: page ? page.slots.filter((S) => S.frozen).length : 0,
         balloons: [...balloons.values()].filter((b) => !b.leaving).map((b) => ({ id: b.id, who: b.who, frozen: b.frozen, typed: b.n, out: !!b.out })),
         captions: caps.size, sfx: sfxEls.size, fx: fxs.length, clip: gl.style.clipPath || '',
       };
     },
     dispose() {
       for (const off of offs) off();
-      offRender?.();
+      for (const off of offRender) off();
       hardReset();
       window.removeEventListener('resize', onResize);
       mq?.removeEventListener?.('change', onMotion);

@@ -14,14 +14,20 @@ import { pictoSvg } from './pictos.js';
 /** @typedef {{ id: string, text: string, conclusion: string | null, state: 'aberta' | 'pronta' | 'resolvida', options?: string[], need: number, clues: BoardClue[] }} BoardNode */
 /** @typedef {{ root: { text: string }, nodes: BoardNode[], fresh?: string }} BoardState */
 
-/** Medidas do quadro (px do "mundo"; a câmera escala). */
+/** Medidas do quadro (px do "mundo"; a câmera escala). As pistas de cada pergunta ficam lado a lado embaixo dela e as
+ * perguntas lado a lado na largura: o quadro é largo e baixo, como a tela deitada. */
 export const BOARD = {
-  pad: 56, colW: 290, rootW: 380, rootH: 86, top: 34,
-  nodeW: 240, nodeH: 116, nodeY: 270,
-  clueW: 200, clueH: 158, clueY0: 400, clueGap: 26, spine: 18,
+  pad: 40, top: 24, rootW: 520, rootH: 96,
+  nodeW: 270, nodeH: 132, nodeTop: 186, colGap: 44,
+  clueW: 210, clueH: 178, clueTop: 376, clueGap: 18,
 };
-/** Zoom: o menor legível no celular, o maior, e quanto a rodinha/os botões mudam. */
-export const ZOOM = { readable: 0.74, max: 1.6, step: 1.18 };
+/**
+ * Zoom: o menor legível (PC: pergunta ≥ 15 px e pista ≥ 13 px na tela; no celular, os px CSS valem mais), o maior, o
+ * maior ao abrir e o passo da rodinha/botões.
+ */
+export const ZOOM = { readable: 0.75, readableCompact: 0.62, max: 1.6, open: 1.1, step: 1.18 };
+/** O zoom mínimo legível para a altura da janela (tela baixa = celular deitado). */
+export const readableFor = (vh) => (vh < 500 ? ZOOM.readableCompact : ZOOM.readable);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -41,43 +47,52 @@ export function missingLabel(n) {
 export function layoutBoard(state) {
   const B = BOARD;
   const list = state?.nodes || [];
-  const n = Math.max(1, list.length);
-  const width = Math.max(n * B.colW + 2 * B.pad, B.rootW + 2 * B.pad);
-  const root = { x: width / 2, y: B.top + B.rootH / 2, w: B.rootW, h: B.rootH };
-  const x0 = (width - n * B.colW) / 2;
-  let bottom = B.nodeY + B.nodeH / 2;
-  const links = [];
-  const nodes = list.map((nd, i) => {
-    const cx = x0 + B.colW * (i + 0.5);
-    const node = { id: nd.id, x: cx, y: B.nodeY, w: B.nodeW, h: B.nodeH, clues: [], slots: [] };
-    const solved = nd.state === 'resolvida';
+  // a largura de cada coluna: a pergunta ou a fileira das pistas e encaixes embaixo dela, o que for maior
+  const cols = list.map((nd) => {
     const have = (nd.clues || []).length;
-    const slots = solved ? 0 : Math.max(0, (nd.need || 0) - have);
+    const slots = nd.state === 'resolvida' ? 0 : Math.max(0, (nd.need || 0) - have);
     const total = have + slots;
-    const spineX = cx - B.clueW / 2 - B.spine + 10;
-    const cardX = cx + 10;
-    const nb = B.nodeY + B.nodeH / 2;
-    for (let j = 0; j < total; j++) {
-      const cy = B.clueY0 + j * (B.clueH + B.clueGap) + B.clueH / 2;
-      const left = cardX - B.clueW / 2;
-      // o fio desce pela "espinha" à esquerda dos cartões e dobra para dentro de cada um
-      const d = `M${spineX},${nb} L${spineX},${cy - 16} Q${spineX},${cy} ${spineX + 16},${cy} L${left},${cy}`;
-      if (j < have) {
-        const c = nd.clues[j];
-        node.clues.push({ id: c.id, x: cardX, y: cy, w: B.clueW, h: B.clueH });
-        links.push({ kind: 'pista', glow: solved ? 'ouro' : 'luz', d, node: nd.id, clue: c.id });
+    const row = total ? total * B.clueW + (total - 1) * B.clueGap : 0;
+    return { have, slots, total, row, w: Math.max(B.nodeW, row) };
+  });
+  const inner = cols.reduce((a, c) => a + c.w, 0) + Math.max(0, cols.length - 1) * B.colGap;
+  const width = Math.max(inner, B.rootW, B.nodeW) + 2 * B.pad;
+  const root = { x: width / 2, y: B.top + B.rootH / 2, w: B.rootW, h: B.rootH };
+  const nodeY = B.nodeTop + B.nodeH / 2;
+  const nb = B.nodeTop + B.nodeH;
+  const cy = B.clueTop + B.clueH / 2;
+  let bottom = nb;
+  const links = [];
+  let x = (width - inner) / 2;
+  // os troncos saem espalhados pela base da raiz, na ordem das perguntas
+  const spread = list.length > 1 ? Math.min(46, (B.rootW - 120) / (list.length - 1)) : 0;
+  const nodes = list.map((nd, i) => {
+    const c = cols[i];
+    const cx = x + c.w / 2;
+    x += c.w + B.colGap;
+    const node = { id: nd.id, x: cx, y: nodeY, w: B.nodeW, h: B.nodeH, clues: [], slots: [] };
+    const solved = nd.state === 'resolvida';
+    let px = cx - c.row / 2 + B.clueW / 2;
+    for (let j = 0; j < c.total; j++, px += B.clueW + B.clueGap) {
+      const top = B.clueTop;
+      const my = (nb + top) / 2;
+      const d = `M${cx.toFixed(1)},${nb} C${cx.toFixed(1)},${my} ${px.toFixed(1)},${my} ${px.toFixed(1)},${top}`;
+      if (j < c.have) {
+        const cl = nd.clues[j];
+        node.clues.push({ id: cl.id, x: px, y: cy, w: B.clueW, h: B.clueH });
+        links.push({ kind: 'pista', glow: solved ? 'ouro' : 'luz', d, node: nd.id, clue: cl.id });
       } else {
-        node.slots.push({ x: cardX, y: cy, w: B.clueW, h: B.clueH });
+        node.slots.push({ x: px, y: cy, w: B.clueW, h: B.clueH });
         links.push({ kind: 'vazio', glow: 'apagado', d, node: nd.id });
       }
-      bottom = Math.max(bottom, cy + B.clueH / 2);
+      bottom = Math.max(bottom, B.clueTop + B.clueH);
     }
+    const sx = root.x + (i - (list.length - 1) / 2) * spread;
     const y1 = root.y + root.h / 2;
-    const y2 = B.nodeY - B.nodeH / 2;
-    const my = (y1 + y2) / 2;
+    const my = (y1 + B.nodeTop) / 2;
     links.push({
-      kind: 'tronco', glow: solved ? 'ouro' : have > 0 || nd.state === 'pronta' ? 'luz' : 'apagado',
-      d: `M${root.x},${y1} C${root.x},${my} ${cx},${my} ${cx},${y2}`, node: nd.id,
+      kind: 'tronco', glow: solved ? 'ouro' : c.have > 0 || nd.state === 'pronta' ? 'luz' : 'apagado',
+      d: `M${sx.toFixed(1)},${y1} C${sx.toFixed(1)},${my} ${cx.toFixed(1)},${my} ${cx.toFixed(1)},${B.nodeTop}`, node: nd.id,
     });
     return node;
   });
@@ -149,12 +164,12 @@ export function boardHtml(state, L, { sel = null, fresh = null, solved = null, m
 }
 
 // ---------------------------------------------------------------------------------------------- câmera
-/** Folgas da tela (px): em cima fica a barra do título e do ✕; nos outros lados, um respiro. */
-export const VIEW_PAD = { top: 64, side: 40 };
-/** O zoom que mostra o quadro inteiro na janela (vw × vh), sem ficar embaixo da barra de cima. */
-export const fitScale = (L, vw, vh) => Math.max(0.05, Math.min((vw - 2 * VIEW_PAD.side) / L.width, (vh - VIEW_PAD.top - VIEW_PAD.side) / L.height));
+/** Folgas da tela (px): em cima a barra do título e do ✕, embaixo a ajuda das teclas; nos lados, um respiro. */
+export const VIEW_PAD = { top: 64, side: 36, bottom: 44 };
+/** O zoom que mostra o quadro inteiro na janela (vw × vh), sem ficar embaixo das barras. */
+export const fitScale = (L, vw, vh) => Math.max(0.05, Math.min((vw - 2 * VIEW_PAD.side) / L.width, (vh - VIEW_PAD.top - VIEW_PAD.bottom) / L.height));
 /** Limites do zoom: de um pouco menos que o quadro inteiro até o máximo. */
-export const zoomRange = (L, vw, vh) => ({ min: Math.min(fitScale(L, vw, vh) * 0.92, ZOOM.readable), max: ZOOM.max });
+export const zoomRange = (L, vw, vh) => ({ min: Math.min(fitScale(L, vw, vh) * 0.92, readableFor(vh)), max: ZOOM.max });
 
 /**
  * Prende a câmera ({ x, y } = ponto do mundo no meio da tela, s = zoom) para o quadro não sumir da tela (com as
@@ -169,28 +184,33 @@ export function clampView(v, L, vw, vh) {
     if (size * s + lo + hi <= view) return size / 2 - (lo - hi) / 2 / s;
     return clamp(c, half - lo / s, size - half + hi / s);
   };
-  return { x: axis(v.x, L.width, vw, VIEW_PAD.side, VIEW_PAD.side), y: axis(v.y, L.height, vh, VIEW_PAD.top, VIEW_PAD.side), s };
+  return { x: axis(v.x, L.width, vw, VIEW_PAD.side, VIEW_PAD.side), y: axis(v.y, L.height, vh, VIEW_PAD.top, VIEW_PAD.bottom), s };
 }
 
-/** Onde olhar para uma pergunta: ela e as pistas embaixo (o que couber), abaixo da barra de cima. */
+/**
+ * Onde olhar para uma pergunta: da raiz até as pistas dela, se couber; senão a pergunta e as pistas; senão a pergunta
+ * logo abaixo da barra de cima.
+ */
 export function focusOf(L, id, vh, s) {
   const ln = L.nodes.find((n) => n.id === id);
   if (!ln) return { x: L.width / 2, y: L.height / 2 };
   const last = [...ln.clues, ...ln.slots].pop();
-  const top = ln.y - ln.h / 2 - 14;
-  const bot = last ? last.y + last.h / 2 + 14 : ln.y + ln.h / 2 + 30;
-  const avail = (vh - VIEW_PAD.top) / s;
-  const lift = VIEW_PAD.top / 2 / s;
-  // se não couber tudo, a pergunta fica logo abaixo da barra
-  return { x: ln.x, y: bot - top <= avail ? (top + bot) / 2 - lift : top + vh / 2 / s - VIEW_PAD.top / s };
+  const bot = last ? last.y + last.h / 2 + 12 : ln.y + ln.h / 2 + 24;
+  const avail = (vh - VIEW_PAD.top - VIEW_PAD.bottom) / s;
+  const shift = (VIEW_PAD.top - VIEW_PAD.bottom) / 2 / s;
+  for (const top of [L.root.y - L.root.h / 2 - 8, ln.y - ln.h / 2 - 12]) {
+    if (bot - top <= avail) return { x: ln.x, y: (top + bot) / 2 - shift };
+  }
+  const top = ln.y - ln.h / 2 - 12;
+  return { x: ln.x, y: top + vh / 2 / s - VIEW_PAD.top / s };
 }
 
 /** O zoom e o ponto iniciais: o quadro inteiro se der para ler; senão o zoom legível na pergunta em foco. */
 export function initialView(L, vw, vh, focusId) {
   const fit = fitScale(L, vw, vh);
-  if (fit >= ZOOM.readable) return clampView({ x: L.width / 2, y: L.height / 2, s: Math.min(1, fit) }, L, vw, vh);
-  const s = ZOOM.readable;
-  return clampView({ ...focusOf(L, focusId, vh, s), s }, L, vw, vh);
+  const readable = readableFor(vh);
+  if (fit >= readable) return clampView({ x: L.width / 2, y: L.height / 2, s: Math.min(ZOOM.open, fit) }, L, vw, vh);
+  return clampView({ ...focusOf(L, focusId, vh, readable), s: readable }, L, vw, vh);
 }
 
 /** Zoom mantendo parado o ponto da tela (px, py) (rodinha e pinça). */
@@ -236,12 +256,12 @@ export function createBoardUI({ host, emit, sfx = () => {}, onClose = () => {} }
     <div class="rr-board__view"><div class="rr-board__world"></div></div>
     <div class="rr-board__top">
       <span class="rr-board__title">Quadro de dedução</span>
-      <span class="rr-board__help" aria-hidden="true">
-        <span data-dev="keyboard"><b>←</b><b>→</b> perguntas · <b>Enter</b> deduzir · <b>Tab</b> fechar</span>
-        <span data-dev="gamepad"><b>✥</b> perguntas · <b><i class="k-ps">✕</i><i class="k-xb">A</i></b> deduzir · <b><i class="k-ps">○</i><i class="k-xb">B</i></b> fechar</span>
-        <span data-dev="touch">arraste e use dois dedos para aproximar</span>
-      </span>
       <button type="button" class="rr-board__close" aria-label="Fechar o quadro">✕</button>
+    </div>
+    <div class="rr-board__help" aria-hidden="true">
+      <span data-dev="keyboard"><b>←</b><b>→</b> perguntas · <b>Enter</b> deduzir · <b>+</b><b>−</b> zoom · <b>Tab</b> fechar</span>
+      <span data-dev="gamepad"><b>✥</b> perguntas · <b><i class="k-ps">✕</i><i class="k-xb">A</i></b> deduzir · <b><i class="k-ps">○</i><i class="k-xb">B</i></b> fechar</span>
+      <span data-dev="touch">arraste e use dois dedos para aproximar</span>
     </div>
     <div class="rr-board__deduce" hidden><div class="rr-board__dcard" role="dialog" aria-label="Qual é a conclusão?">
       <span class="rr-board__eyebrow">Qual é a conclusão?</span><h3></h3><div class="rr-board__opts"></div>

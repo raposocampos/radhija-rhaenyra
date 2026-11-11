@@ -169,9 +169,10 @@ test('3ª pessoa: nas cenas, a câmera de cinema fica DENTRO do quarto e o segui
       const p = h.engine.camera.position;
       // o primeiro plano (desde 2026-11-10) é a grua lá fora, na garoa, descendo até o vidro do basculante: fora da
       // casa, do lado da janela, e nunca dentro de parede; o resto, dentro do quarto
-      const outside = storyInfo(h).beat === 'fora';
+      // e o close do Capitão no parapeito é de fora, com o quarto pelo vidro atrás dele
+      const outside = storyInfo(h).beat === 'fora' || (storyInfo(h).beat === 'pombos' && p.z < h.layout.WINDOW.z - 0.3);
       const W = h.layout.WINDOW;
-      if (outside ? !(p.z < W.z - 0.3 && p.y > 0.6) : !inRoom(p)) bad.add(`${storyInfo(h).beat}: câmera em (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
+      if (outside ? !(p.z < W.z - 0.3 && p.y > 0.4) : !inRoom(p)) bad.add(`${storyInfo(h).beat}: câmera em (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
       for (const id of cameraInsideWall(h)) bad.add(`${storyInfo(h).beat}: câmera dentro de ${id}`);
     },
   });

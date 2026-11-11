@@ -680,7 +680,8 @@ export function buildCasa(kit, root, L) {
   const leaf = new THREE.Group();
   leaf.name = 'recanto:basculante';
   leaf.position.set(cx, W.sill, H.z0);
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#a9d2ea', roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.55, depthWrite: false });
+  // vidro limpo: as cenas filmam através dele (os pombos no parapeito, o voo com a cenoura)
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#d9eef8', roughness: 0.08, metalness: 0, transparent: true, opacity: 0.16, depthWrite: false });
   const frameMat = new THREE.MeshStandardMaterial({ color: TRIM, roughness: 0.55 });
   /** @type {THREE.Group[]} */
   const slats = [];

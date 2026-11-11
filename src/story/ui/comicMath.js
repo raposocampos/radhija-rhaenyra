@@ -368,21 +368,15 @@ export function clipCss(poly) {
 }
 
 /**
- * O motorista do canvas WebGL: prime() na hora do evento (o desenho deste quadro já sai com o plano novo) e step()
- * logo depois de cada desenho (aplica o recorte que acompanha o desenho feito e prepara o plano do próximo).
- * Só escreve no canvas e na câmera quando há quadro; ao acabar, desfaz clip-path, transform, filter e viewOffset.
+ * O motorista do canvas WebGL: step() logo ANTES de cada desenho põe o plano (viewOffset) e o recorte (clip-path) do
+ * quadro ao vivo naquele instante, os dois juntos (o desenho e o recorte saem no mesmo quadro, mesmo com o laço do jogo
+ * andando aos saltos). Só escreve no canvas e na câmera quando há quadro; ao acabar, desfaz clip-path, transform, filter
+ * e viewOffset.
  * @param {ReturnType<typeof createStage>} stage
  */
 export function createLiveDriver(stage) {
-  let pending = null;
   let applied = false;
   let clip = '';
-  /** @param {{ style: any, camera: any }} target @param {Geom} geom */
-  function view(target, f, geom) {
-    const v = viewOffsetFor(f.content, geom.W, geom.H, target.camera.aspect || geom.W / geom.H);
-    target.camera.setViewOffset(v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height);
-    applied = true;
-  }
   /** Desfaz tudo o que a camada pôs no canvas e na câmera (só se pôs). */
   function restore(target) {
     if (!applied) return;
@@ -395,30 +389,23 @@ export function createLiveDriver(stage) {
   }
   return {
     get applied() { return applied; },
-    get pending() { return pending; },
-    /** Na hora do evento: o desenho deste quadro já sai com o plano do quadro novo. */
-    prime(now, target, geom) {
-      const f = stage.frame(now);
-      if (f) view(target, f, geom);
-      pending = f;
-      return f;
-    },
-    /** Depois do desenho: aplica o recorte do quadro que acabou de aparecer (devolvido, ou null) e prepara o próximo. */
+    /**
+     * Antes do desenho: o quadro agora (devolvido) ou null (sem quadro: desfaz o que tinha posto).
+     * @param {number} now @param {{ style: any, camera: any }} target @param {Geom} geom
+     */
     step(now, target, geom) {
-      const shown = pending;
-      if (shown) {
-        const c = clipCss(shown.clip);
-        if (c !== clip) { target.style.clipPath = c; clip = c; }
-      }
       const f = stage.frame(now);
-      if (f) view(target, f, geom);
-      else if (!shown) restore(target);
-      pending = f;
-      return shown;
+      if (!f) { restore(target); return null; }
+      const v = viewOffsetFor(f.content, geom.W, geom.H, target.camera.aspect || geom.W / geom.H);
+      target.camera.setViewOffset(v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height);
+      const c = clipCss(f.clip);
+      if (c !== clip) { target.style.clipPath = c; clip = c; }
+      applied = true;
+      return f;
     },
     restore,
     /** Corta na hora (pular a cena, trocar de fase). */
-    reset(target) { pending = null; restore(target); },
+    reset(target) { restore(target); },
   };
 }
 
@@ -560,6 +547,13 @@ const CANDIDATES = [
 export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad = 8, gap = 22 }) {
   const b = bboxOf(poly);
   const c = centroid(poly);
+  // a cabeça logo além da borda (cortada pelo quadro) conta como dentro: o balão fica perto, sem etiqueta de nome
+  if (anchor && anchor.front !== false && !inside(poly, anchor.x, anchor.y, 0)
+    && anchor.x > b.x - b.w * 0.15 && anchor.x < b.x + b.w * 1.15 && anchor.y > b.y - b.h * 0.22 && anchor.y < b.y + b.h * 1.22) {
+    let ax = clamp(anchor.x, b.x + pad, b.x + b.w - pad), ay = clamp(anchor.y, b.y + pad, b.y + b.h - pad);
+    for (let i = 0; i < 12 && !inside(poly, ax, ay, -pad * 0.5); i++) { ax += (c[0] - ax) * 0.15; ay += (c[1] - ay) * 0.15; }
+    anchor = { x: ax, y: ay, front: true };
+  }
   const R = { x: b.x + pad, y: b.y + pad, w: Math.max(0, b.w - 2 * pad), h: Math.max(0, b.h - 2 * pad) };
   const clampBox = (x, y) => [
     w >= R.w ? R.x + (R.w - w) / 2 : clamp(x, R.x, R.x + R.w - w),
@@ -577,8 +571,23 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
     return [x, y];
   };
   const crowd = (x, y) => others.reduce((s, o) => s + overlap({ x, y, w, h }, o), 0);
+  // sem lugar livre perto do alvo: procura no quadro inteiro o canto com menos sobreposição
+  const unclutter = (x, y) => {
+    if (crowd(x, y) <= w * h * 0.04) return [x, y];
+    let best = [x, y], bestS = crowd(x, y) * 0.08;
+    const sx = Math.max(8, w / 3), sy = Math.max(8, h / 2);
+    for (let yy = R.y; yy <= R.y + Math.max(0, R.h - h) + 0.5; yy += sy) {
+      for (let xx = R.x; xx <= R.x + Math.max(0, R.w - w) + 0.5; xx += sx) {
+        const [fx, fy] = fit([xx, yy]);
+        const s2 = crowd(fx, fy) * 0.08 + Math.hypot(fx - x, fy - y) * 0.25;
+        if (s2 < bestS) { bestS = s2; best = [fx, fy]; }
+      }
+    }
+    return best;
+  };
   if (!anchor) {
-    const [x, y] = fit(clampBox(b.x + b.w / 2 - w / 2, R.y));
+    const [x0, y0] = fit(clampBox(b.x + b.w / 2 - w / 2, R.y));
+    const [x, y] = unclutter(x0, y0);
     return { x, y, side: 'top', tip: null, out: true };
   }
   const front = anchor.front !== false;
@@ -588,12 +597,14 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
     if (!front) { ax = c[0] + (anchor.x >= c[0] ? 1 : -1) * b.w; ay = b.y + b.h * 2; }
     let best = null, bestS = Infinity;
     for (const dy of [0, -1, 1, -2, 2]) {
-      const [x0, y0] = clampBox(ax - w / 2, ay - h / 2 + dy * (h + 6));
-      const [x, y] = fit([x0, y0]);
-      const s = crowd(x, y) * 0.08 + Math.abs(dy) * 30;
-      if (s < bestS) { bestS = s; best = [x, y]; }
+      for (const dx of [0, -1, 1]) {
+        const [x0, y0] = clampBox(ax - w / 2 + dx * (w + 6), ay - h / 2 + dy * (h + 6));
+        const [x, y] = fit([x0, y0]);
+        const s = crowd(x, y) * 0.08 + Math.abs(dy) * 30 + Math.abs(dx) * 45;
+        if (s < bestS) { bestS = s; best = [x, y]; }
+      }
     }
-    const [x, y] = best;
+    const [x, y] = unclutter(best[0], best[1]);
     const bx = x + w / 2, by = y + h / 2;
     const dx = ax - bx, dy = ay - by;
     const len = Math.hypot(dx, dy) || 1;
@@ -610,6 +621,7 @@ export function placeBalloon({ anchor, w, h, poly, others = [], prev = null, pad
     if (prev && prev !== side) s += 18;
     if (s < bestS) { bestS = s; best = { x, y, side }; }
   }
+  [best.x, best.y] = unclutter(best.x, best.y);
   // o rabicho para na cabeça; longe demais, fica num tamanho de HQ
   const bx = best.x + w / 2, by = best.y + h / 2;
   const dx = anchor.x - bx, dy = anchor.y - by;

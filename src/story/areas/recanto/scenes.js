@@ -132,8 +132,9 @@ export function createOpening(K) {
   const perchY = SO.y + 0.04;
   const perch = [[-0.42, 0.5], [0.02, 1.25], [0.46, 1.95]]; // deslocamento no parapeito e quando cada um pousa
   const capAt = () => P3(cx + perch[0][0], perchY + 0.18, SO.z - 0.02);
-  // lá fora: entre as duas árvores do gramado norte, descendo até o vidro
-  const outA = P3(cx + 0.35, 3.1, W.z - 7.0), outB = P3(cx + 0.12, 1.15, W.z - 1.45);
+  // lá fora: do alto e de longe (o telhado na garoa) descendo até a janela acesa, emoldurada pelas duas árvores do
+  // gramado norte (a câmera para antes delas, no vão do meio)
+  const outA = P3(cx + 2.5, 5.4, W.z - 14), outB = P3(cx + 0.38, 1.6, W.z - 7.3);
   const S = {};
   /** Uma vez só por cena (as falas e os efeitos em `t`). */
   const once = (key, cond, fn) => { if (cond && !S[key]) { S[key] = true; fn(); } };
@@ -163,15 +164,15 @@ export function createOpening(K) {
       c.position.set(carrotBed.x, carrotBed.y, carrotBed.z);
       c.rotation.set(0, 0.4, Math.PI / 2);
       dir.snapFollow();
-      dir.lens(44);
-      dir.shot(outA, P3(cx, 1.6, W.z), { cut: true });
+      dir.lens(32);
+      dir.shot(outA, P3(cx, 3.0, W.z), { cut: true });
     },
     beats: [
       {
         // FORA: plano de grua, da chuva até a janela do quarto, com a caixa de narração
         id: 'fora', dur: 6.4,
         tick(_, t) {
-          dir.dolly(outA, outB, P3(cx, 1.6, W.z), P3(cx, 0.85, W.z + 1.4), span(t, 0.3, 6.2));
+          dir.dolly(outA, outB, P3(cx, 3.0, W.z), P3(cx, 0.98, W.z), span(t, 0.3, 6.2));
           once('cap', t > 0.8, () => dir.caption('Recanto das Patinhas', { sub: 'a noite da garoa', pos: 'bl', dur: 4.6 }));
           once('n1', t > 3.4, () => dir.say(null, 'Toda noite, as duas dormiam abraçadas ao seu tesouro…', { mode: 'cena', dur: 3.4 }));
         },
@@ -233,10 +234,10 @@ export function createOpening(K) {
           once('close', t > 5.8, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
             const c = capAt();
-            dir.lens(24);
-            dir.shot(P3(c.x + 0.62, c.y + 0.08, W.z + 0.95), P3(c.x - 0.05, c.y + 0.05, c.z), { cut: true });
+            dir.lens(28);
+            dir.shot(P3(c.x - 0.62, c.y + 0.1, c.z - 0.78), P3(c.x + 0.12, c.y + 0.02, c.z + 0.35), { cut: true });
           });
-          if (S.close) dir.lookAt(P3(capAt().x - 0.05 + Math.sin(t * 0.7) * 0.02, capAt().y + 0.05, capAt().z));
+          if (S.close) dir.lookAt(P3(capAt().x + 0.12 + Math.sin(t * 0.7) * 0.02, capAt().y + 0.02, capAt().z + 0.35));
           once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
           sq.cap.lookAt?.(t > 6.6 && t < 11.2 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
           sq.cap.measure(span(t, 7.4, 8.0) * (1 - span(t, 10.0, 10.4)));
@@ -336,8 +337,8 @@ export function createOpening(K) {
             dir.gesture?.('radhija', 'alert');
             dir.comic(true);
             dir.panel('3b', 0, { enter: 'pop', tilt: -2 });
-            dir.lens(26);
-            dir.shot(P3(a.x + Math.sin(a.yaw) * 0.75 + 0.15, 0.42, a.z + Math.cos(a.yaw) * 0.75), dir.head('radhija', -0.08), { cut: true });
+            dir.lens(30);
+            dir.shot(P3(a.x + Math.sin(a.yaw) * 1.2 + 0.25, 0.5, a.z + Math.cos(a.yaw) * 1.2), dir.head('radhija', -0.1), { cut: true });
             dir.say('radhija', '…cadê a cenoura?', { mode: 'cena', dur: 1.5 });
           });
           once('p2', t > 8.6, () => {
@@ -490,7 +491,8 @@ export function createWindowScene(K) {
       dir.comic(true);
       dir.panel('full', 0, { enter: 'zoom' });
       // de perto, por cima da caminha: a janela enche a tela e os pombos passam logo ali fora
-      dir.shot(P3(cx + 0.45, 1.05, W.z + 1.0), P3(cx - 0.45, 1.04, W.z - 0.8), { inT: 0.7 });
+      dir.lens(34);
+      dir.shot(P3(cx + 0.35, 0.98, W.z + 2.1), P3(cx - 0.2, 0.98, W.z - 1.2), { inT: 0.7 });
       dir.music('misterio');
     },
     beats: [
@@ -504,11 +506,11 @@ export function createWindowScene(K) {
           const x = t < 1.3 ? lerp(cx - 3.9, cx - 1.25, span(t, 0.6, 1.3))
             : t < 3.1 ? lerp(cx - 1.25, cx + 0.35, span(t, 1.3, 3.1))
               : lerp(cx + 0.35, cx + 4.8, span(t, 3.1, 3.9));
-          if (t > 0.6 && t < 4.2) flyPack(K, { x, y: 1.0 + Math.sin(t * 2.6) * 0.08, z: W.z - 0.8 }, Math.PI / 2, t);
+          if (t > 0.6 && t < 4.2) flyPack(K, { x, y: 0.95 + Math.sin(t * 2.6) * 0.07, z: W.z - 1.35 }, Math.PI / 2, t);
           if (t >= 4.2 && !S.gone) { S.gone = true; hideSquad(K); K.props.carrot.object.visible = false; }
           for (const n of ['radhija', 'rhaenyra']) if (!dir.walking(n)) dir.actor(n).look = P3(lerp(cx - 2, cx + 2, k), 1.2, W.z);
           // a câmera acompanha o Farelo um pouco
-          dir.lookAt(P3(lerp(cx - 0.45, cx + 0.2, span(t, 1.0, 3.2)), 1.0, W.z - 0.8));
+          dir.lookAt(P3(lerp(cx - 0.4, cx + 0.15, span(t, 1.0, 3.2)), 0.98, W.z - 1.2));
           once('flap', t > 1.1, () => dir.onomato('FLAP FLAP FLAP', { at: P3(cx - 0.8, 1.35, W.z - 0.8), size: 1.1, color: '#9bd1ff', rot: -8 }));
           once('l1', t > 1.4, () => dir.say('rhaenyra', 'Olha! Lá fora!', { mood: 'grito', mode: 'cena', dur: 1.3 }));
           once('l2', t > 2.4, () => dir.say('farelo', 'Foi mal! É por uma boa causa!', { mode: 'cena', dur: 1.7 }));

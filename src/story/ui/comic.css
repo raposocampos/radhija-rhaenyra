@@ -33,7 +33,25 @@
 .rr-comic-page__shade path { fill: rgba(44, 24, 10, .32); }
 .rr-comic-page[data-style="manga"] .rr-comic-page__shade path { fill: rgba(0, 0, 0, .3); }
 .rr-comic-page__ink path, .rr-comic__frame path { fill: none; stroke: #17111a; stroke-linejoin: round; stroke-linecap: round; }
-.rr-comic-page__panels, .rr-comic-page__talk { position: absolute; inset: 0; }
+.rr-comic-page__slots, .rr-comic-page__panels, .rr-comic-page__talk { position: absolute; inset: 0; }
+/* os quadros da página ainda não usados: moldura de nanquim com retícula escura (a página nunca fica meio vazia; o
+   quadro ao vivo e as fotos cobrem a moldura deles) */
+.rr-comic-page__slot {
+  position: absolute; background-color: #2B2442;
+  background-image:
+    radial-gradient(circle, rgba(255, 228, 196, .14) 0 1.25px, transparent 1.7px),
+    repeating-linear-gradient(-58deg, rgba(255, 255, 255, .045) 0 2px, transparent 2px 10px),
+    radial-gradient(120% 120% at 28% 18%, #4C4170 0%, #2B2442 58%, #1C172C 100%);
+  background-size: 8px 8px, auto, 100% 100%;
+}
+.rr-comic-page[data-style="manga"] .rr-comic-page__slot {
+  background-color: #333333;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .15) 0 1.2px, transparent 1.6px),
+    repeating-linear-gradient(-58deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 10px),
+    radial-gradient(120% 120% at 28% 18%, #5A5A5A 0%, #2C2C2C 70%);
+  background-size: 7px 7px, auto, 100% 100%;
+}
 .rr-comic-page__panel { position: absolute; overflow: hidden; background: #2a2118; }
 .rr-comic-page__panel canvas { display: block; width: 100%; height: 100%; }
 .rr-comic-page[data-style="manga"] .rr-comic-page__panel canvas { filter: grayscale(1) contrast(1.12); }
@@ -56,16 +74,17 @@
 @keyframes rr-comic-shade { from { opacity: 0; } to { opacity: 1; } }
 /* fechando: os quadros congelados e o nanquim somem; o papel fica até o canvas voltar a cobrir a tela */
 .rr-comic-back.is-closing .rr-comic-page__panels, .rr-comic-back.is-closing .rr-comic-page__ink,
-.rr-comic-back.is-closing .rr-comic-page__shade { opacity: 0; transition: opacity .3s ease; }
+.rr-comic-back.is-closing .rr-comic-page__shade, .rr-comic-back.is-closing .rr-comic-page__slots { opacity: 0; transition: opacity .3s ease; }
 
 /* ------------------------------------------------------------ frente */
 .rr-comic {
   position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden;
   --ink: #17111a;
-  --cf: clamp(15px, 2.15vmin, 24px);
+  /* letra de HQ grande: 2,65% da altura da tela (19 px em 720p, 29 px em 1080p), nunca menos de 14 px (celular) */
+  --cf: max(14px, 2.65vh);
   --sfx: clamp(30px, 10vmin, 118px);
 }
-.rr[data-compact] .rr-comic { --cf: max(12.5px, calc(14.5 * var(--u, 1px))); --sfx: max(28px, calc(40 * var(--u, 1px))); }
+.rr[data-compact] .rr-comic { --sfx: max(28px, calc(40 * var(--u, 1px))); }
 .rr-comic__live, .rr-comic__turn, .rr-comic__talk, .rr-comic__caps, .rr-comic__sfx { position: absolute; inset: 0; }
 .rr-comic__fx { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; }
 .rr-comic.is-closing .rr-comic__frame { opacity: 0; transition: opacity .4s ease; }
@@ -114,7 +133,7 @@
 .rr-comic__txt .z { visibility: hidden; }
 .is-grito .rr-comic__txt { font-weight: 700; font-size: calc(var(--cf) * 1.2); letter-spacing: .03em; }
 .is-grito.is-in .rr-comic__txt.is-set { animation: rr-comic-shout .12s steps(2, end) infinite; }
-.is-sussurro .rr-comic__txt { font-weight: 500; font-size: calc(var(--cf) * .92); color: #4F4560; }
+.is-sussurro .rr-comic__txt { font-weight: 500; font-size: calc(var(--cf) * .96); color: #4F4560; }
 .is-sono .rr-comic__txt { color: #3C4A7E; }
 .is-pensa .rr-comic__txt { font-weight: 500; color: #3A2F45; }
 .rr-comic__bal.is-still .rr-comic__txt, .rr-comic__bal.is-frozen .rr-comic__txt { animation: none !important; }
@@ -126,7 +145,7 @@
   rotate: -1.2deg; transform-origin: 0 0;
 }
 .is-nar .rr-comic__txt {
-  font: italic 700 calc(var(--cf) * .92)/1.22 'Nunito', system-ui, sans-serif;
+  font: italic 700 var(--cf)/1.22 'Nunito', system-ui, sans-serif;
   text-transform: none; letter-spacing: 0; text-align: left; color: #3B2A1C;
 }
 
@@ -153,7 +172,7 @@
 .rr-comic__cap { position: absolute; left: 0; top: 0; font-size: var(--cf); will-change: transform; }
 .rr-comic__capin { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: .3em; padding: .55em 1em .25em .25em; rotate: -3deg; }
 .rr-comic__capname {
-  display: block; white-space: nowrap; font: 700 calc(var(--cf) * 1.85)/1 'Fredoka', system-ui, sans-serif;
+  display: block; white-space: nowrap; font: 700 calc(var(--cf) * 1.6)/1 'Fredoka', system-ui, sans-serif;
   text-transform: uppercase; letter-spacing: .04em; color: #FFFFFF; background: var(--ink);
   padding: .16em .5em .1em; transform: skewX(-10deg); box-shadow: .14em .16em 0 var(--cc, #F08A3C);
   animation: rr-comic-cap-bar .3s cubic-bezier(.2, .8, .2, 1) both;
@@ -162,7 +181,7 @@
 @keyframes rr-comic-cap-bar { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes rr-comic-letter { from { transform: translateY(.6em) rotate(-14deg) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 .rr-comic__capsub {
-  display: block; white-space: nowrap; font: 600 calc(var(--cf) * .86)/1.1 'Fredoka', system-ui, sans-serif;
+  display: block; white-space: nowrap; font: 600 calc(var(--cf) * .82)/1.1 'Fredoka', system-ui, sans-serif;
   color: var(--ink); background: #FFD84A; padding: .26em .65em .2em; border: 2px solid var(--ink);
   transform: skewX(-10deg) translateX(.9em); box-shadow: .12em .14em 0 rgba(23, 17, 26, .3);
   animation: rr-comic-sub .4s .3s cubic-bezier(.2, .8, .2, 1) both;

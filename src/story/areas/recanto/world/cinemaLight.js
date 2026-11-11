@@ -156,6 +156,15 @@ export function buildCinemaLight(root, L) {
   lamp.renderOrder = 906;
   group.add(lamp);
 
+  // a janela acesa vista de fora, de noite (o abajur lá dentro): um retângulo quente logo atrás do vidro
+  const winMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: '#ffb066', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
+  const winGlow = new THREE.Mesh(new THREE.PlaneGeometry(ww * 1.5, wh * 1.6), winMat);
+  winGlow.name = 'luz:janela-acesa';
+  winGlow.position.set(cx, W.sill + wh / 2, W.z + 0.05);
+  winGlow.rotation.y = Math.PI;
+  winGlow.renderOrder = 906;
+  group.add(winGlow);
+
   const S = { night: 0, morning: 0, flash: 0 };
   const NIGHT_C = new THREE.Color('#7f9cff'), DAY_C = new THREE.Color('#ffd49a'), WHITE = new THREE.Color('#e8f0ff');
   const tmp = new THREE.Color();
@@ -168,6 +177,7 @@ export function buildCinemaLight(root, L) {
     patchMat.opacity = Math.min(1, 0.55 * k + 0.9 * S.flash);
     dustMat.opacity = 0.75 * S.morning;
     glowMat.opacity = 0.85 * S.night;
+    winMat.opacity = 0.55 * S.night;
     group.visible = k > 0.001 || S.flash > 0.001 || S.night > 0.001;
   }
   apply();

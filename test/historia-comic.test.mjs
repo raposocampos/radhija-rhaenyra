@@ -187,17 +187,14 @@ test('sem nenhum evento, o canvas fica sem clip-path e a câmera sem viewOffset'
   const style = {};
   const camera = { aspect: g.W / g.H, setViewOffset: (...a) => calls.push(['set', ...a]), clearViewOffset: () => calls.push(['clear']) };
   const target = { style, camera };
-  for (let t = 0; t < 3; t += 1 / 60) driver.step(t, target, g);
+  for (let t = 0; t < 3; t += 1 / 60) assert.equal(driver.step(t, target, g), null);
   assert.deepEqual(style, {}, 'nada escrito no estilo do canvas');
   assert.deepEqual(calls, [], 'nada na câmera');
   assert.equal(driver.applied, false);
 
-  // com um quadro: o plano vai na hora (prime) e o recorte acompanha o desenho seguinte (step)
+  // com um quadro: o plano e o recorte saem juntos, no mesmo desenho
   st.open(3, { layout: '2h', slot: 0, enter: 'none' });
-  driver.prime(3, target, g);
-  assert.equal(calls.at(-1)[0], 'set');
-  assert.equal(style.clipPath, undefined, 'o recorte só entra depois do desenho');
-  driver.step(3.016, target, g);
+  driver.step(3, target, g);
   assert.equal(style.clipPath, clipCss(slotPoly('2h', 0, g).poly));
   const v = viewOffsetFor(slotPoly('2h', 0, g).bbox, g.W, g.H, g.W / g.H);
   assert.deepEqual(calls.at(-1).slice(1), [v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height]);
@@ -216,11 +213,34 @@ test('sem nenhum evento, o canvas fica sem clip-path e a câmera sem viewOffset'
 
   // pular a cena: reset corta na hora
   st.open(7, { layout: 'full' });
-  driver.prime(7, target, g);
+  driver.step(7, target, g);
   st.clear();
   driver.reset(target);
   assert.equal(style.clipPath, '');
   assert.equal(calls.at(-1)[0], 'clear');
+});
+
+test('laço aos saltos (capturas): o primeiro desenho depois do quadro novo já mostra o quadro inteiro, com o plano dele', () => {
+  // o jogo anda 2 s sem desenhar (o quadro novo chegou no meio): o desenho seguinte mostra o fim da entrada, e o recorte
+  // e o plano são os do mesmo instante (nunca o estado do começo da animação)
+  for (const enter of ['slide', 'pop', 'zoom', 'wipe', 'shrink']) {
+    for (const [layout, slot] of [['3b', 1], ['3b', 2], ['2h', 0], ['2v', 0], ['2v', 1], ['full', 0]]) {
+      const g = SCREENS[2];
+      const st = createStage();
+      st.setGeom(g);
+      const driver = createLiveDriver(st);
+      const style = {};
+      let view = null;
+      const camera = { aspect: g.W / g.H, setViewOffset: (...a) => { view = a; }, clearViewOffset: () => { view = null; } };
+      st.open(10, { layout, slot, enter, tilt: 1.5 });
+      const f = driver.step(12, { style, camera }, g);
+      const { poly, bbox } = slotPoly(layout, slot, g, 1.5);
+      assert.equal(style.clipPath, clipCss(poly), `${enter} ${layout}/${slot}: o quadro inteiro no lugar`);
+      const v = viewOffsetFor(bbox, g.W, g.H);
+      assert.deepEqual(view, [v.fullWidth, v.fullHeight, v.x, v.y, v.width, v.height], `${enter} ${layout}/${slot}: o plano do quadro`);
+      assert.equal(f.k, 1);
+    }
+  }
 });
 
 test('página nova: outro layout ou quadro já usado; hold reabre o quadro na mesma página', () => {
@@ -266,6 +286,14 @@ test('balão: cabe no quadro, fica acima de quem fala, desvia de outro balão e 
   const behind = placeBalloon({ anchor: { x: -1e4, y: g.H * 2, front: false }, w, h, poly });
   assert.equal(behind.out, true);
   assert.ok(behind.tip.y > behind.y + h / 2, 'atrás da câmera: o rabicho aponta para baixo');
+  // a cabeça logo acima da borda (cortada pelo quadro) conta como dentro: sem etiqueta, balão perto
+  const top = placeBalloon({ anchor: { x: bbox.x + bbox.w * 0.5, y: bbox.y - 6, front: true }, w, h, poly });
+  assert.equal(top.out, false, 'cabeça cortada pela borda de cima: dentro');
+  // duas falas com quem fala fora do quadro (o caso das capturas): uma não cobre a outra
+  const big = slotPoly('2h', 0, { W: 1280, H: 720 }, 1);
+  const r1 = placeBalloon({ anchor: { x: 680, y: -40, front: true }, w: 220, h: 66, poly: big.poly });
+  const r2 = placeBalloon({ anchor: { x: 650, y: -40, front: true }, w: 150, h: 54, poly: big.poly, others: [{ x: r1.x, y: r1.y, w: 220, h: 66 }] });
+  assert.ok(overlap({ x: r1.x, y: r1.y, w: 220, h: 66 }, { x: r2.x, y: r2.y, w: 150, h: 54 }) < 150 * 54 * 0.05, 'fora do quadro, uma fala não cobre a outra');
   const none = placeBalloon({ anchor: null, w, h, poly });
   assert.equal(none.out, true);
   assert.equal(none.tip, null);

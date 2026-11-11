@@ -14,7 +14,7 @@ import {
   TYPE_CPS, PAUSE_LONG, SPEAKERS, charTimes, typeDuration, typedCount, voiceBeats, holdTime, createVoice, subtitleHtml, moodVoice,
 } from '../src/story/ui/subtitles.js';
 import {
-  BOARD, ZOOM, VIEW_PAD, layoutBoard, boardHtml, clampView, initialView, zoomAt, pickFocus, boardSummary, missingLabel, fitScale, focusOf,
+  BOARD, ZOOM, VIEW_PAD, readableFor, layoutBoard, boardHtml, clampView, initialView, zoomAt, pickFocus, boardSummary, missingLabel, fitScale, focusOf,
 } from '../src/story/ui/board.js';
 import { HUD_ICONS } from '../src/story/ui/pictos.js';
 import { SOUND_NAMES } from '../src/fx/audio/sounds.js';
@@ -128,6 +128,13 @@ test('quadro: layout sem nada encavalado, encaixes vazios para as pistas que fal
   assert.equal(byId.como.slots.length, 2, 'falta 2');
   assert.equal(byId.quando.slots.length, 1, 'falta 1');
   assert.ok(L.nodes.every((n) => n.y > L.root.y), 'as perguntas descem da raiz');
+  // as pistas (e encaixes) de cada pergunta lado a lado embaixo dela, e as perguntas lado a lado na largura
+  for (const n of L.nodes) {
+    const row = [...n.clues, ...n.slots];
+    assert.ok(row.every((c) => c.y === row[0].y && c.y - c.h / 2 > n.y + n.h / 2), `${n.id}: fileira embaixo da pergunta`);
+    for (let i = 1; i < row.length; i++) assert.ok(row[i].x - row[i - 1].x >= BOARD.clueW, `${n.id}: lado a lado`);
+  }
+  assert.ok(L.nodes.every((n, i) => i === 0 || (n.y === L.nodes[0].y && n.x > L.nodes[i - 1].x)), 'perguntas na mesma linha');
   const tronco = (id) => L.links.find((k) => k.kind === 'tronco' && k.node === id);
   assert.equal(tronco('quem').glow, 'ouro');
   assert.equal(tronco('onde').glow, 'luz');
@@ -162,32 +169,48 @@ test('quadro: o HTML tem a conclusão dourada, o "Deduzir", o "falta N pista(s)"
   assert.equal(missingLabel(3), 'faltam 3 pistas');
 });
 
-test('quadro: câmera — o quadro inteiro no PC, zoom legível no celular deitado, o ponto sob o dedo parado', () => {
-  const L = layoutBoard(STATE);
-  // PC 1280×720: o quadro inteiro (cabe com zoom ≥ legível)
-  const pc = initialView(L, 1280, 720, 'onde');
-  const fit = fitScale(L, 1280, 720);
-  if (fit >= ZOOM.readable) {
-    assert.ok(Math.abs(pc.s - Math.min(1, fit)) < 1e-9);
-    const top = 720 / 2 + (L.root.y - L.root.h / 2 - pc.y) * pc.s;
-    assert.ok(top >= VIEW_PAD.top - 1, `a raiz abaixo da barra (${top})`);
+test('quadro: câmera — tudo enquadrado e legível no PC, zoom legível no celular deitado, o ponto sob o dedo parado', () => {
+  // as letras do quadro (px do mundo, story.css): pergunta 20, pista 18; na tela de 720p, pergunta ≥ 15 e pista ≥ 13
+  const NODE_PX = 20;
+  const CLUE_PX = 18;
+  // o começo do capítulo (uma pergunta, três pistas): o quadro inteiro na tela do PC, letra grande, raiz fora da barra
+  const one = { root: { text: 'O que aconteceu com a cenoura?' }, nodes: [{ id: 'quem', text: 'Quem entrou no quarto de noite?', conclusion: null, state: 'pronta', options: ['a', 'b'], need: 3, clues: STATE.nodes.slice(0, 2).flatMap((n) => n.clues).slice(0, 3) }] };
+  for (const st of [one, { ...STATE, nodes: STATE.nodes.slice(0, 2) }]) {
+    const L1 = layoutBoard(st);
+    const pc = initialView(L1, 1280, 720, pickFocus(st));
+    assert.ok(fitScale(L1, 1280, 720) >= ZOOM.readable, `cabe inteiro (${fitScale(L1, 1280, 720)})`);
+    assert.ok(NODE_PX * pc.s >= 15 && CLUE_PX * pc.s >= 13, `letra legível no PC (zoom ${pc.s})`);
+    const sx = (x) => 640 + (x - pc.x) * pc.s;
+    const sy = (y) => 360 + (y - pc.y) * pc.s;
+    assert.ok(sy(L1.root.y - L1.root.h / 2) >= VIEW_PAD.top - 1, 'a raiz abaixo da barra de cima');
+    const boxes = [L1.root, ...L1.nodes, ...L1.nodes.flatMap((n) => [...n.clues, ...n.slots])];
+    for (const bx of boxes) {
+      assert.ok(sx(bx.x - bx.w / 2) >= 0 && sx(bx.x + bx.w / 2) <= 1280, 'tudo na largura');
+      assert.ok(sy(bx.y + bx.h / 2) <= 720 - VIEW_PAD.bottom + 1, 'tudo acima da ajuda de baixo');
+    }
+    // o quadro espalhado: ocupa boa parte da largura (nada de coluna estreita no meio)
+    assert.ok(L1.width * pc.s >= 0.5 * 1280, `largura na tela ${L1.width * pc.s}`);
   }
+  // o capítulo inteiro (4 perguntas) no PC: se não couber legível, zoom legível na pergunta em foco
+  const L = layoutBoard(STATE);
+  const pcAll = initialView(L, 1280, 720, 'onde');
+  assert.ok(pcAll.s >= Math.min(ZOOM.readable, fitScale(L, 1280, 720)) - 1e-9);
   // Infinix deitado (759×334) e iPhone 13 deitado (844×390): zoom legível, olhando para a pergunta em foco
   for (const [vw, vh] of [[759, 334], [844, 390]]) {
     const v = initialView(L, vw, vh, 'onde');
-    assert.ok(v.s >= ZOOM.readable - 1e-9, `${vw}×${vh}: zoom ${v.s}`);
+    assert.ok(v.s >= readableFor(vh) - 1e-9, `${vw}×${vh}: zoom ${v.s}`);
     const onde = L.nodes.find((n) => n.id === 'onde');
     // a pergunta inteira na tela, abaixo da barra do título
     const sx = (x) => vw / 2 + (x - v.x) * v.s;
     const sy = (y) => vh / 2 + (y - v.y) * v.s;
     assert.ok(sx(onde.x - onde.w / 2) >= 0 && sx(onde.x + onde.w / 2) <= vw, `${vw}: pergunta na largura`);
     assert.ok(sy(onde.y - onde.h / 2) >= VIEW_PAD.top - 1 && sy(onde.y + onde.h / 2) <= vh, `${vw}: pergunta na altura (${sy(onde.y - onde.h / 2)})`);
-    // a menor letra do quadro (12,5 px) continua legível
-    assert.ok(12.5 * v.s >= 9, 'letra legível');
+    // no celular (px CSS maiores na mão), a letra da pista fica em ≥ 11 px
+    assert.ok(CLUE_PX * v.s >= 11, 'letra legível no celular');
   }
   // preso: arrastar para longe não perde o quadro
   const far = clampView({ x: -5000, y: 9000, s: 0.8 }, L, 759, 334);
-  assert.ok(far.x * 0.8 >= 759 / 2 - 40 - 1e-6 && far.y <= L.height);
+  assert.ok(far.x * 0.8 >= 759 / 2 - VIEW_PAD.side - 1e-6 && far.y <= L.height);
   assert.ok(clampView({ x: 0, y: 0, s: 99 }, L, 759, 334).s <= ZOOM.max);
   // zoom na pinça/rodinha: o ponto do mundo sob o dedo não sai do lugar
   const v0 = { x: 400, y: 300, s: 0.8 };
@@ -198,7 +221,6 @@ test('quadro: câmera — o quadro inteiro no PC, zoom legível no celular deita
   assert.ok(Math.abs(v1.s - 1.04) < 1e-9);
   // o foco de uma pergunta sem pistas também existe
   assert.ok(Number.isFinite(focusOf(L, 'quando', 334, 0.8).y));
-  assert.ok(BOARD.colW >= BOARD.clueW + 2 * BOARD.spine, 'a espinha dos fios cabe na coluna');
 });
 
 test('quadro: o foco ao abrir e o resumo do botão (pistas e o "!" de pronta)', () => {

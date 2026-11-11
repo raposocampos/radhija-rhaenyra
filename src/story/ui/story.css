@@ -137,7 +137,7 @@
 /* ------------------------------------------------------------------------------------------------ a pista anotada
    (story:clue): o cartão de papel pautado com fita entra no meio-alto, a frase "escreve" e ele voa para o botão do quadro */
 .rr-clue {
-  position: absolute; left: 50%; top: 13vh; width: min(300px, 72vw); padding: 16px 18px 14px; box-sizing: border-box;
+  position: absolute; left: 50%; top: 13vh; width: min(340px, 78vw); padding: 16px 20px 14px; box-sizing: border-box;
   display: grid; justify-items: center; gap: 4px; pointer-events: none; z-index: 2; border-radius: 6px;
   background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 25px, rgba(84, 128, 190, .2) 25px 26px) 0 14px / 100% 26px, #FFFBF0;
   box-shadow: 0 16px 34px rgba(20, 12, 6, .38), 0 2px 0 rgba(0, 0, 0, .08);
@@ -156,12 +156,18 @@
 .rr-clue__eyebrow { font: 600 11.5px/1 'Fredoka', sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #B0522A; }
 .rr-clue__pic { display: block; width: 96px; height: 96px; filter: drop-shadow(0 3px 4px rgba(40, 24, 14, .2)); }
 .rr-clue__pic svg { width: 100%; height: 100%; display: block; }
-.rr-clue__text { margin: 2px 0 0; font: 500 19px/1.3 'Fredoka', sans-serif; color: #2B3A63; text-align: center; transform: rotate(-1deg); }
-.rr-clue.is-on .rr-clue__text { animation: rr-write 1s .3s cubic-bezier(.4, .1, .4, 1) both; }
-@keyframes rr-write { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-.rr[data-compact] .rr-clue { top: 9vh; width: min(250px, 62vw); padding: calc(10 * var(--u)) calc(12 * var(--u)) calc(9 * var(--u)); }
+.rr-clue__text {
+  margin: 2px 0 0; max-width: 100%; font: 500 19px/1.3 'Fredoka', sans-serif; color: #2B3A63; text-align: center;
+  overflow-wrap: break-word; text-wrap: balance; transform: rotate(-1deg);
+}
+.rr-clue__text.is-long { font-size: 17px; }
+/* a tinta entra palavra a palavra, mas a frase está sempre inteira (no máximo mais clara no começo) */
+.rr-clue.is-on .rr-clue__text span { animation: rr-ink .35s calc(.25s + var(--i, 0) * .04s) ease-out both; }
+@keyframes rr-ink { from { opacity: .22; filter: blur(1.2px); } to { opacity: 1; filter: none; } }
+.rr[data-compact] .rr-clue { top: 9vh; width: min(280px, 66vw); padding: calc(10 * var(--u)) calc(12 * var(--u)) calc(9 * var(--u)); }
 .rr[data-compact] .rr-clue__pic { width: calc(62 * var(--u)); height: calc(62 * var(--u)); }
 .rr[data-compact] .rr-clue__text { font-size: max(13px, calc(15 * var(--u))); }
+.rr[data-compact] .rr-clue__text.is-long { font-size: max(12px, calc(13.5 * var(--u))); }
 .rr[data-compact] .rr-clue__eyebrow { font-size: max(9px, calc(10 * var(--u))); }
 
 /* ------------------------------------------------------------------------------------------------ a pergunta nova
@@ -232,14 +238,14 @@
   background: linear-gradient(180deg, #2c3660, #1a2038);
   box-shadow: 0 0 0 1.5px rgba(242, 181, 68, .65), 0 0 30px rgba(242, 181, 68, .2), 0 12px 26px rgba(0, 0, 0, .45);
 }
-.rr-board__root strong { font: 700 22px/1.15 'Fredoka', sans-serif; color: #FFF6E6; }
-.rr-board__eyebrow { font: 600 11px/1 'Fredoka', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: #F2B544; }
+.rr-board__root strong { font: 700 28px/1.15 'Fredoka', sans-serif; color: #FFF6E6; }
+.rr-board__eyebrow { font: 600 13px/1 'Fredoka', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: #F2B544; }
 
 /* as perguntas */
 .rr-board__node {
   position: absolute; box-sizing: border-box; appearance: none; border: 0; margin: 0; cursor: pointer; text-align: left;
-  display: grid; grid-template-columns: 44px 1fr; grid-auto-rows: min-content; align-content: center; column-gap: 12px; row-gap: 5px;
-  padding: 10px 14px; border-radius: 16px; color: #F4ECDD; font: 600 17px/1.2 'Fredoka', sans-serif;
+  display: grid; grid-template-columns: 48px 1fr; grid-auto-rows: min-content; align-content: center; column-gap: 12px; row-gap: 6px;
+  padding: 10px 14px; border-radius: 16px; color: #F4ECDD; font: 600 20px/1.2 'Fredoka', sans-serif;
   background: linear-gradient(180deg, rgba(36, 44, 76, .96), rgba(24, 29, 52, .96));
   box-shadow: inset 0 0 0 1.5px rgba(167, 220, 255, .38), 0 10px 22px rgba(0, 0, 0, .42);
   transition: box-shadow .2s, translate .2s var(--ease-out);
@@ -248,13 +254,13 @@
 .rr-board__node:focus { outline: none; }
 .rr-board__node.is-sel { box-shadow: inset 0 0 0 1.5px rgba(167, 220, 255, .38), 0 0 0 3px #FFF6E6, 0 0 22px rgba(255, 246, 230, .35), 0 10px 22px rgba(0, 0, 0, .42); }
 .rr-board__q {
-  grid-row: 1 / span 2; align-self: center; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
-  font: 700 26px/1 'Fredoka', sans-serif; color: #A7DCFF; background: radial-gradient(circle, rgba(167, 220, 255, .26), rgba(167, 220, 255, .04));
+  grid-row: 1 / span 2; align-self: center; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 28px/1 'Fredoka', sans-serif; color: #A7DCFF; background: radial-gradient(circle, rgba(167, 220, 255, .26), rgba(167, 220, 255, .04));
   box-shadow: 0 0 0 1.5px rgba(167, 220, 255, .6); animation: rr-q-pulse 1.8s ease-in-out infinite;
 }
 @keyframes rr-q-pulse { 50% { box-shadow: 0 0 0 1.5px rgba(167, 220, 255, .6), 0 0 0 7px rgba(167, 220, 255, 0), 0 0 16px rgba(167, 220, 255, .45); } }
 .rr-board__ask { align-self: end; }
-.rr-board__need { font: 600 12.5px/1 'Fredoka', sans-serif; color: #9FB4D8; letter-spacing: .03em; }
+.rr-board__need { font: 600 15px/1 'Fredoka', sans-serif; color: #9FB4D8; letter-spacing: .03em; }
 .rr-board__node.is-pronta {
   background: linear-gradient(180deg, rgba(64, 48, 26, .97), rgba(40, 30, 18, .97));
   box-shadow: inset 0 0 0 1.5px #F8B55E, 0 0 26px rgba(248, 181, 94, .35), 0 10px 22px rgba(0, 0, 0, .42);
@@ -263,7 +269,7 @@
 .rr-board__q.is-ready { color: #FFD27A; background: radial-gradient(circle, rgba(248, 181, 94, .35), rgba(248, 181, 94, .06)); box-shadow: 0 0 0 1.5px #F8B55E; animation-name: rr-q-ready; }
 @keyframes rr-q-ready { 50% { box-shadow: 0 0 0 1.5px #F8B55E, 0 0 0 8px rgba(248, 181, 94, 0), 0 0 18px rgba(248, 181, 94, .6); scale: 1.06; } }
 .rr-board__cta {
-  justify-self: start; padding: 4px 12px 5px; border-radius: 999px; font: 700 13px/1 'Fredoka', sans-serif; letter-spacing: .04em;
+  justify-self: start; padding: 5px 14px 6px; border-radius: 999px; font: 700 15px/1 'Fredoka', sans-serif; letter-spacing: .04em;
   color: #3A2410; background: linear-gradient(180deg, #FFC86E, #E9892F); box-shadow: 0 2px 0 #8B4E1C;
 }
 .rr-board__node.is-resolvida {
@@ -272,8 +278,8 @@
   box-shadow: inset 0 0 0 1.5px #F2C46A, 0 0 28px rgba(242, 196, 106, .35), 0 10px 22px rgba(0, 0, 0, .42);
 }
 .rr-board__node.is-resolvida.is-sel { box-shadow: inset 0 0 0 1.5px #F2C46A, 0 0 0 3px #FFF6E6, 0 0 30px rgba(242, 196, 106, .45), 0 10px 22px rgba(0, 0, 0, .42); }
-.rr-board__node.is-resolvida .rr-board__ask { font: 500 12.5px/1.2 'Fredoka', sans-serif; color: rgba(255, 236, 200, .72); align-self: auto; }
-.rr-board__conc { font: 700 20px/1.15 'Fredoka', sans-serif; color: #FFE3A0; text-shadow: 0 0 14px rgba(255, 200, 90, .55); }
+.rr-board__node.is-resolvida .rr-board__ask { font: 500 15px/1.2 'Fredoka', sans-serif; color: rgba(255, 236, 200, .72); align-self: auto; }
+.rr-board__conc { font: 700 21px/1.15 'Fredoka', sans-serif; color: #FFE3A0; text-shadow: 0 0 14px rgba(255, 200, 90, .55); }
 .rr-board__seal {
   position: absolute; top: -11px; right: -11px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   font: 700 16px/1 'Fredoka', sans-serif; color: #3A2410; background: radial-gradient(circle at 35% 30%, #FFF0B8, #F2B544 70%); box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
@@ -292,22 +298,22 @@
 .rr-board__clue {
   position: absolute; box-sizing: border-box; display: grid; grid-template-rows: auto 1fr; justify-items: center; gap: 4px;
   padding: 10px 12px 8px; border-radius: 6px; color: #2B3A63; transform: rotate(var(--tilt, 0deg));
-  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 21px, rgba(84, 128, 190, .2) 21px 22px) 0 92px / 100% 22px no-repeat, #FFFBF0;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 21px, rgba(84, 128, 190, .2) 21px 22px) 0 80px / 100% 22px, #FFFBF0;
   box-shadow: 0 10px 20px rgba(0, 0, 0, .45);
 }
 .rr-board__clue::before { content: ''; position: absolute; top: -8px; left: 50%; width: 56px; height: 16px; margin-left: -28px; background: rgba(255, 226, 150, .72); transform: rotate(-4deg); }
-.rr-board__pic { display: block; width: 78px; height: 78px; }
+.rr-board__pic { display: block; width: 64px; height: 64px; }
 .rr-board__pic svg { width: 100%; height: 100%; display: block; }
 .rr-board__clue p {
-  margin: 0; font: 500 15px/1.22 'Fredoka', sans-serif; text-align: center; transform: rotate(-.6deg);
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin: 0; font: 500 18px/1.2 'Fredoka', sans-serif; text-align: center; transform: rotate(-.6deg);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 .rr-board__clue.is-fresh { animation: rr-board-in .5s .15s var(--ease-out) both, rr-fresh 1.1s .7s ease-in-out 3; }
 @keyframes rr-fresh { 50% { box-shadow: 0 10px 20px rgba(0, 0, 0, .45), 0 0 0 4px rgba(255, 210, 122, .85), 0 0 26px rgba(255, 210, 122, .6); } }
 .rr-board__slot {
   position: absolute; box-sizing: border-box; display: grid; place-items: center; border-radius: 10px;
   border: 2px dashed rgba(167, 220, 255, .32); background: rgba(167, 220, 255, .04);
-  font: 700 40px/1 'Fredoka', sans-serif; color: rgba(167, 220, 255, .3);
+  font: 700 52px/1 'Fredoka', sans-serif; color: rgba(167, 220, 255, .3);
 }
 .rr-board__slot span { animation: rr-slot 2.2s ease-in-out infinite; }
 @keyframes rr-slot { 50% { opacity: .45; } }
@@ -322,8 +328,12 @@
   padding: calc(10px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 18px calc(18px + env(safe-area-inset-left, 0px));
   background: linear-gradient(180deg, rgba(7, 8, 13, .88), rgba(7, 8, 13, 0));
 }
-.rr-board__title { font: 600 14px/1 'Fredoka', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: #F2B544; white-space: nowrap; }
-.rr-board__help { flex: 1; min-width: 0; font: 600 12.5px/1.3 'Nunito', system-ui, sans-serif; color: rgba(244, 236, 221, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rr-board__title { flex: 1; font: 600 14px/1 'Fredoka', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: #F2B544; white-space: nowrap; }
+.rr-board__help {
+  position: absolute; left: 50%; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: calc(100% - 24px);
+  padding: 6px 14px; border-radius: 999px; background: rgba(7, 8, 13, .72); box-shadow: inset 0 0 0 1px rgba(244, 236, 221, .14); pointer-events: none;
+  font: 600 13px/1.3 'Nunito', system-ui, sans-serif; color: rgba(244, 236, 221, .78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rr-board__help [data-dev] { display: none; }
 .rr:not([data-device]) .rr-board__help [data-dev="keyboard"], .rr[data-device="keyboard"] .rr-board__help [data-dev="keyboard"],
 .rr[data-device="gamepad"] .rr-board__help [data-dev="gamepad"], .rr[data-device="touch"] .rr-board__help [data-dev="touch"] { display: inline; }
@@ -364,7 +374,7 @@
 /* no celular deitado: a barra menor (sem a ajuda) e a escolha cabendo na altura */
 .rr[data-compact] .rr-board__top { padding-top: calc(6 * var(--u) + env(safe-area-inset-top, 0px)); padding-bottom: 10px; }
 .rr[data-compact] .rr-board__help { display: none; }
-.rr[data-compact] .rr-board__title { font-size: max(10px, calc(11.5 * var(--u))); flex: 1; }
+.rr[data-compact] .rr-board__title { font-size: max(10px, calc(11.5 * var(--u))); }
 .rr[data-compact] .rr-board__close { width: 36px; height: 36px; font-size: 16px; }
 .rr[data-compact] .rr-board__dcard { padding: calc(10 * var(--u)) calc(14 * var(--u)); gap: calc(6 * var(--u)); }
 .rr[data-compact] .rr-board__dcard h3 { font-size: max(14px, calc(16 * var(--u))); }

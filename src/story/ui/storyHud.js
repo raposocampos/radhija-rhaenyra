@@ -131,7 +131,10 @@ export function createStoryHud({ root, audio = null }) {
       const p = item.p;
       const text = p.text || CLUES[p.id]?.name || '';
       clueCard.querySelector('.rr-clue__pic').innerHTML = pictoSvg(p.picto, p.id);
-      clueCard.querySelector('.rr-clue__text').textContent = text;
+      // a frase inteira, palavra a palavra (a tinta entra em sequência; nada fica recortado)
+      const line = clueCard.querySelector('.rr-clue__text');
+      line.innerHTML = text.split(/\s+/).filter(Boolean).map((w, i) => `<span style="--i:${i}">${esc(w)}</span>`).join(' ');
+      line.classList.toggle('is-long', text.length > 56);
       reset(clueCard);
       clueCard.classList.add('is-on');
       play('pista');

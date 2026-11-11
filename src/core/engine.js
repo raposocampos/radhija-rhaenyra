@@ -5,7 +5,8 @@
 //   prepare()                      // aquece a GPU com a fase inteira (sem engasgo na 1ª vez em cada área)
 //   quality                        // qualidade por aparelho (src/core/quality.js): PC 'alta' (a de sempre), celular mais leve
 //   render(dt, t)
-//   onAfterRender(fn) → desliga    // fn(dt, t) logo depois de cada render (a HQ do Modo História: foto do quadro, balões)
+//   onBeforeRender(fn) → desliga   // fn(dt, t) logo antes de cada render (a HQ do Modo História: plano e recorte do quadro)
+//   onAfterRender(fn) → desliga    // fn(dt, t) logo depois de cada render (a HQ do Modo História: balões, efeitos)
 // }
 // Formato do preset: ver LIGHTING_DEFAULT (= fim de tarde da fase 1) e docs/ARQUITETURA.md §4.3 (tipo LightingPreset).
 import * as THREE from 'three';
@@ -430,11 +431,19 @@ export function createEngine(container, { params } = {}) {
   }
 
   /**
-   * Ganchos logo depois de cada render, na mesma tarefa: o canvas WebGL ainda guarda a imagem (preserveDrawingBuffer
-   * desligado: depois que o navegador mostra o quadro, ela some). Usado pela HQ do Modo História (src/story/ui/comic.js).
+   * Ganchos logo antes e logo depois de cada render, na mesma tarefa (o canvas WebGL ainda guarda a imagem logo depois:
+   * preserveDrawingBuffer desligado). Usados pela HQ do Modo História (src/story/ui/comic.js): antes, o plano e o recorte
+   * do quadro ao vivo (os dois saem no mesmo desenho); depois, os balões e os efeitos.
    * @type {Set<(dt: number, t?: number) => void>}
    */
+  const beforeRender = new Set();
+  /** @type {Set<(dt: number, t?: number) => void>} */
   const afterRender = new Set();
+  /** @param {(dt: number, t?: number) => void} fn @returns {() => void} desliga */
+  function onBeforeRender(fn) {
+    beforeRender.add(fn);
+    return () => { beforeRender.delete(fn); };
+  }
   /** @param {(dt: number, t?: number) => void} fn @returns {() => void} desliga */
   function onAfterRender(fn) {
     afterRender.add(fn);
@@ -443,6 +452,9 @@ export function createEngine(container, { params } = {}) {
 
   /** @param {number} dt @param {number} [t] */
   function render(dt, t) {
+    for (const fn of beforeRender) {
+      try { fn(dt, t); } catch (error) { console.error('[engine] onBeforeRender', error); }
+    }
     shared.time.value = t ?? shared.time.value;
     sky.material.uniforms.uTime.value = shared.time.value;
     // o céu acompanha a câmera (sem paralaxe)
@@ -483,6 +495,7 @@ export function createEngine(container, { params } = {}) {
     /** Perfil aplicado agora: { level, pixelRatio, reason }. */
     get qualityState() { return { ...qualityState }; },
     render,
+    onBeforeRender,
     onAfterRender,
   };
 }
