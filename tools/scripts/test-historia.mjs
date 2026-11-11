@@ -594,6 +594,10 @@ try {
         await p.touchscreen.tap(faroBtn.x, faroBtn.y);
         await p.waitForFunction(() => !window.__game.game.debug.info().story.faroMode?.on, null, { timeout: 10000 }).catch(() => {});
         check(!(await modeOn()), 'iPhone: o botão do focinho desliga o Faro');
+        // o botão tem uma trava de 0,15 s de jogo depois de desligar (faroMode: bounce, contra o toque duplo): o
+        // próximo toque espera 0,3 s do relógio do jogo (no SwiftShader, o quadro pode ser rápido ou lento)
+        const t0 = await p.evaluate(() => window.__game.game.debug.info().simSec);
+        await p.waitForFunction((t) => window.__game.game.debug.info().simSec > t + 0.3, t0, { timeout: 15000 }).catch(() => {});
       }
       await p.waitForFunction(() => window.__game.game.debug.info().story.faroReady, null, { timeout: 30000 }).catch(() => {});
       await p.evaluate(() => window.__game.game.debug.clearLog());
