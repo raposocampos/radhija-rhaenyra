@@ -133,6 +133,9 @@ export function createOpening(K) {
   const perchY = SO.y + 0.04;
   const perch = [[-0.42, 0.5], [0.02, 1.25], [0.46, 1.95]]; // deslocamento no parapeito e quando cada um pousa
   const capAt = () => P3(cx + perch[0][0], perchY + 0.18, SO.z - 0.02);
+  /** O close do Capitão: a câmera atrás do ombro esquerdo dele, de fora; o alvo, a cenoura (com um balanço leve). */
+  const capOts = () => P3(cx - 0.8, 0.97, W.z - 0.69);
+  const capLook = (t) => P3(carrotBed.x + 0.2 + Math.sin(t * 0.7) * 0.015, carrotBed.y + 0.05, carrotBed.z);
   // lá fora: do alto e de longe (o telhado na garoa) descendo até a janela acesa, emoldurada pelas duas árvores do
   // gramado norte (a câmera para antes delas, no vão do meio)
   const outA = P3(cx + 2.5, 5.4, W.z - 14), outB = P3(cx + 0.38, 1.6, W.z - 7.3);
@@ -234,14 +237,13 @@ export function createOpening(K) {
           // segundo quadro: de perto, o Capitão olha a cenoura lá dentro e mede com a asa
           once('close', t > 5.8, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
-            // de fora, do lado oeste da janela, na chuva: o Capitão de perfil em primeiro plano, o esquadrão em fila
-            // atrás dele no parapeito e, pelo vidro, o quarto com a cenoura (as lâminas abertas do basculante ficam
-            // acima do quadro)
-            const c = capAt();
+            // por cima do ombro do Capitão, de fora, na chuva: a nuca dele em primeiro plano, à direita, e, pelo meio
+            // da lâmina de baixo do basculante (vidro limpo), a cenoura na caminha entre as duas dormindo. A linha de
+            // visão passa a 6 cm do lado oeste dele, entre o batente e o corpo, cruzando a janela a 0,71 m de altura
             dir.lens(32);
-            dir.shot(P3(c.x - 1.05, c.y + 0.06, c.z - 0.42), P3(c.x + 0.25, c.y + 0.02, c.z + 0.1), { cut: true });
+            dir.shot(capOts(), capLook(0), { cut: true });
           });
-          if (S.close) dir.lookAt(P3(capAt().x + 0.25 + Math.sin(t * 0.7) * 0.015, capAt().y + 0.02, capAt().z + 0.1));
+          if (S.close) dir.lookAt(capLook(t));
           once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
           sq.cap.lookAt?.(t > 6.6 && t < 11.2 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
           sq.cap.measure(span(t, 7.4, 8.0) * (1 - span(t, 10.0, 10.4)));

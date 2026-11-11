@@ -409,12 +409,20 @@ async function captureDevice(dev, url) {
   await page.evaluate(() => { const g = window.__game.game; const B = g.levelDef.layout.BOOTH; g.debug.teleport('rhaenyra', (B.x0 + B.x1) / 2 + 0.4, B.awning.z1 + 0.9); g.debug.ctrls.rhaenyra.yaw = Math.PI; });
   await step(20);
   await tap('KeyE');
-  await until((i) => i.story.beat === 'botina', 1200);
-  await step(70);
-  await shot('76-botina-do-porteiro');
-  await until((i) => i.story.beat === 'abre', 900);
+  // o Sr. Luiz: a página de HQ na guarita (acorda, as duas latem, o depoimento), o portãozinho e o aceno
+  await until((i) => i.story.scene === 'porteiro', 600);
   await step(60);
-  await shot('77-portaozinho-abrindo');
+  await shot('76-sr-luiz-acorda');
+  await step(100);
+  await shot('76b-sr-luiz-as-duas-latem');
+  await step(140);
+  await shot('76c-sr-luiz-o-depoimento');
+  await until((i) => i.story.beat === 'abre', 600);
+  await step(80);
+  await shot('77-sr-luiz-abre-o-portaozinho');
+  await until((i) => i.story.beat === 'acena', 600);
+  await step(50);
+  await shot('77b-sr-luiz-acena');
   // o fechamento: os pombos sobre a cidade e a borboleta
   await open('fechamento');
   await page.evaluate(() => { const g = window.__game.game; const G = g.levelDef.layout.GATE; g.debug.teleport('radhija', (G.x0 + G.x1) / 2, G.z + 0.6); });
