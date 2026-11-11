@@ -474,7 +474,7 @@ export function createPuzzle(ctx) {
       book.add(E.id, K.clueAt(E.id));
       // um close rápido na pista, e quem achou diz o que concluiu
       const sp = spots[E.id];
-      cam()?.focusShot?.(sp.x, sp.z, { hold: 1.3, inT: 0.35, outT: 0.55, scale: 0.42, y: (sp.y ?? 0.1) + 0.05 });
+      cam()?.focusShot?.(sp.x, sp.z, { hold: 1.1, inT: 0.4, outT: 0.6, scale: 0.72, y: (sp.y ?? 0.1) + 0.2 });
       dir.say(E.who, CLUES[E.id]?.text ?? CLUES[E.id]?.name ?? '', { mode: 'jogo' });
     }
     if (E.t >= EXAM.time) {

@@ -233,11 +233,12 @@ export function createOpening(K) {
           // segundo quadro: de perto, o Capitão olha a cenoura lá dentro e mede com a asa
           once('close', t > 5.8, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: 1.5 });
+            // de dentro, rente ao vidro (limpo): o Capitão de frente, olhando a cenoura lá dentro
             const c = capAt();
-            dir.lens(28);
-            dir.shot(P3(c.x - 0.62, c.y + 0.1, c.z - 0.78), P3(c.x + 0.12, c.y + 0.02, c.z + 0.35), { cut: true });
+            dir.lens(30);
+            dir.shot(P3(c.x + 0.3, c.y + 0.02, W.z + 0.62), P3(c.x - 0.02, c.y + 0.08, c.z), { cut: true });
           });
-          if (S.close) dir.lookAt(P3(capAt().x + 0.12 + Math.sin(t * 0.7) * 0.02, capAt().y + 0.02, capAt().z + 0.35));
+          if (S.close) dir.lookAt(P3(capAt().x - 0.02 + Math.sin(t * 0.7) * 0.015, capAt().y + 0.08, capAt().z));
           once('l4', t > 6.0, () => dir.say('farelo', 'Capitão… olha aquilo lá dentro.', { mood: 'sussurro', mode: 'cena' }));
           sq.cap.lookAt?.(t > 6.6 && t < 11.2 ? P3(carrotBed.x, carrotBed.y, carrotBed.z) : null);
           sq.cap.measure(span(t, 7.4, 8.0) * (1 - span(t, 10.0, 10.4)));
@@ -381,14 +382,14 @@ export function createOpening(K) {
           once('r2', t > 3.9, () => dir.say('radhija', 'Ué… por que você tá molhada?', { mode: 'cena', dur: 1.8 }));
           once('r3', t > 5.0, () => { dir.say('rhaenyra', 'Tô? Nem vi!', { mode: 'cena', dur: 1.2 }); dir.gesture?.('rhaenyra', 'tilt'); });
           // segundo quadro: a promessa, com as apresentações
-          once('p2', t > 6.0, () => {
+          once('a2', t > 6.0, () => {
             dir.panel('2h', 1, { enter: 'slide', tilt: -1.5 });
             dir.shot(P3(B.x + 0.6, 0.5, B.z + 1.9), P3(B.x + 0.05, 0.42, B.z), { cut: true });
             dir.gesture?.('radhija', 'alert');
             dir.say('radhija', 'Alguém entrou no nosso quarto. E eu vou descobrir quem foi!', { mode: 'cena', dur: 2.6 });
             dir.caption('RADHIJA', { sub: 'detetive · mandona · morre de medo de trovão', pos: 'bl', dur: 2.6, at: dir.head('radhija') });
           });
-          once('p3', t > 8.4, () => {
+          once('a3', t > 8.4, () => {
             dir.gesture?.('rhaenyra', 'wag');
             dir.say('rhaenyra', 'Eba! Uma investigação!', { mood: 'grito', mode: 'cena', dur: 1.6 });
             dir.caption('RHAENYRA', { sub: 'assistente · corajosa · meio bobinha', pos: 'br', dur: 2.0, at: dir.head('rhaenyra') });
@@ -537,6 +538,9 @@ export function createWindowScene(K) {
           h.look = t < 1.6 ? P3(a.x, 0.35, a.z) : null;
           once('p2', t > 2.2, () => {
             dir.panel('2v', 1, { enter: 'slide', tilt: 1.5 });
+            // o segundo quadro: a Rhaenyra de perto, abanando
+            dir.lens(30);
+            dir.shot(P3(h.x + 0.2, 0.5, h.z + 1.15), dir.head('rhaenyra', -0.12), { cut: true });
             dir.gesture?.('rhaenyra', 'wag');
             dir.say('rhaenyra', 'Bora atrás deles!', { mood: 'grito', mode: 'cena', dur: 1.4 });
             dir.bark('rhaenyra');

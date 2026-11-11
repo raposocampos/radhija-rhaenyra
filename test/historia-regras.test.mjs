@@ -292,3 +292,15 @@ test('toque: o botão do focinho fica num mapa só do Modo História (os botões
   assert.equal(TOUCH_BUTTONS.faro, undefined, 'o mapa dos botões de sempre continua o mesmo');
   for (const id of Object.keys(STORY_TOUCH_BUTTONS)) assert.equal(TOUCH_BUTTONS[id], undefined, `${id} não repete um botão de sempre`);
 });
+
+// ---------------------------------------------------------------------------------------------- cenas
+test('cenas: cada "uma vez só" (once) tem chave própria dentro da cena (a mesma chave em dois beats pularia o segundo)', () => {
+  const src = readFileSync('src/story/areas/recanto/scenes.js', 'utf8');
+  const bad = [];
+  for (const part of src.split(/\nexport function /).slice(1)) {
+    const name = part.split('(')[0];
+    const keys = [...part.matchAll(/once\('(\w+)'/g)].map((m) => m[1]);
+    for (const k of new Set(keys)) if (keys.filter((x) => x === k).length > 1) bad.push(`${name}: ${k}`);
+  }
+  assert.deepEqual(bad, []);
+});
