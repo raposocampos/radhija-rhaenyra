@@ -8,12 +8,20 @@
 // para +Z. Sentado, a cadeira fica atrás dele: createGuardChair() posta em CHAIR_OFFSET (o assento a 0,47 m).
 //
 // createSrLuiz() → { object, setPose(name, k?, { instant }?), update(dt, t), lookAt(p | null), say(on),
-//                    reach(side, p | null), handPoint(side), pose, dispose() }
+//                    reach(side, p | null), handPoint(side), gesture(kind | null, dur?), pose, dispose() }
 //   Poses: 'dorme' (sentado, cabeça caída, ronco: o peito sobe e desce e o bigode treme), 'acorda' (o susto: pula na
-//   cadeira, o quepe voa, olhos arregalados; k 0..1 é o progresso, sem k anda sozinho em 1,4 s), 'sentado' (acordado),
-//   'em-pe', 'anda' (k = metros andados; sem k, o passo sai do quanto o object andou desde o quadro anterior, ou anda no
-//   lugar), 'abre-portao' (a mão direita vai à tranca, fecha e puxa; k 0..1, sem k em 1,6 s), 'acena', 'fala' (a mão
-//   gesticula e a boca mexe embaixo do bigode). say(on) mexe a boca em qualquer pose.
+//   cadeira, as pernas e os braços voam, o quepe voa, olhos arregalados; k 0..1 é o progresso, sem k anda sozinho em
+//   1,4 s), 'sentado' (acordado), 'em-pe' (parado: respira e passa o peso de uma perna para a outra), 'anda' (k =
+//   metros andados; sem k, o passo sai do quanto o object andou desde o quadro anterior, ou anda no lugar; os braços
+//   balançam ao contrário das pernas, com o cotovelo dobrando), 'abre-portao' (a mão direita vai à tranca, fecha e
+//   puxa; k 0..1, sem k em 1,6 s), 'acena' (o braço inteiro, do ombro, num arco por cima da cabeça, e o corpo
+//   acompanha), 'fala' (as duas mãos gesticulam em batidas, a cabeça e as sobrancelhas acompanham, a boca mexe embaixo
+//   do bigode). say(on) mexe a boca em qualquer pose.
+//   As trocas de pose são suaves: o corpo vai na frente, a cabeça e as mãos chegam um tiquinho depois; levantando da
+//   cadeira, ele inclina para a frente, apoia as mãos nas coxas e empurra (e, sentando, o contrário).
+//   gesture(kind, dur?): um gesto da mão direita por cima de qualquer pose, que entra e sai sozinho: 'oculos' (empurra
+//   os óculos no nariz), 'quepe' (ajeita a pala do quepe) e 'coca' (coça a cabeça, de lado, embaixo do quepe, com a
+//   cabeça inclinada e uma sobrancelha erguida); null tira.
 //   reach('R' | 'L', {x, y, z} | null): a mão vai até um ponto do mundo (a tranca do portãozinho, a janela).
 //   handPoint('R' | 'L') → {x, y, z}: onde está a palma agora (no mundo).
 // Leve para o celular: ~30 malhas, ~5 mil triângulos, MeshStandardMaterial com cor por vértice, nenhuma luz.
@@ -511,26 +519,34 @@ function asleep(t) {
   P.snore = 1;
   return P;
 }
-/** O susto (k 0..1): pula na cadeira, os braços voam, o quepe sobe e cai de volta, e ele fica acordado, olhando. */
+/**
+ * O susto (k 0..1): pula na cadeira (o corpo sobe de uma vez e cai sentado com um quiquezinho), os braços voam e se
+ * abrem, as pernas chutam para a frente, o quepe sobe e cai de volta, e ele fica acordado, olhando em volta.
+ */
 function waking(k, t) {
   const P = mixPose(asleep(t), seatedAwake(), ss(k, 0.08, 0.32));
-  const jolt = ss(k, 0.06, 0.13) * (1 - ss(k, 0.18, 0.42));
-  P.pel[1] += 0.09 * jolt;
-  P.pel[2] += 0.03 * jolt;
-  P.spine[0] -= 0.12 * jolt;
-  P.neck[0] -= 0.25 * jolt;
-  P.head[0] -= 0.12 * jolt;
+  const jolt = ss(k, 0.05, 0.11) * (1 - ss(k, 0.17, 0.4));
+  // caindo de volta na cadeira: o quiquezinho (afunda um tiquinho no estofado e volta)
+  const land = Math.sin(clamp((k - 0.36) / 0.14, 0, 1) * Math.PI);
+  P.pel[1] += 0.14 * jolt - 0.018 * land;
+  P.pel[2] += 0.04 * jolt;
+  P.spine[0] -= 0.18 * jolt - 0.05 * land;
+  P.neck[0] -= 0.3 * jolt;
+  P.head[0] -= 0.14 * jolt;
+  // os braços: sobem e abrem no pulo, num instante (o susto) e descem devagar
   const up = jolt;
-  P.hL = mixArr(P.hL, [0.37, 0.4, 0.14], up);
-  P.hR = mixArr(P.hR, [-0.37, 0.44, 0.12], up);
+  P.hL = mixArr(P.hL, [0.42, 0.44, 0.12], up);
+  P.hR = mixArr(P.hR, [-0.42, 0.48, 0.1], up);
   P.pL = mixArr(P.pL, [1, -1, 0], up);
   P.pR = mixArr(P.pR, [-1, -1, 0], up);
-  P.dL = mixArr(P.dL, [0.3, 1, 0.1, 0, 0, 1, 1], up);
-  P.dR = mixArr(P.dR, [-0.3, 1, 0.1, 0, 0, 1, 1], up);
+  P.dL = mixArr(P.dL, [0.45, 1, 0.1, 0, 0, 1, 1], up);
+  P.dR = mixArr(P.dR, [-0.45, 1, 0.1, 0, 0, 1, 1], up);
   P.gL = lerp(P.gL, 0, up);
   P.gR = lerp(P.gR, 0, up);
-  P.fL[1] += 0.05 * jolt; P.fR[1] += 0.04 * jolt;
-  P.fL[2] += 0.08 * jolt; P.fR[2] += 0.1 * jolt;
+  // as pernas chutam para a frente e para cima
+  P.fL[1] += 0.07 * jolt; P.fR[1] += 0.06 * jolt;
+  P.fL[2] += 0.11 * jolt; P.fR[2] += 0.13 * jolt;
+  P.tL -= 0.3 * jolt; P.tR -= 0.3 * jolt;
   P.eyes = k < 0.07 ? 0 : 1 + 0.35 * ss(k, 0.07, 0.12) * (1 - ss(k, 0.5, 0.85));
   P.brow = [lerp(P.brow[0], 1.0, ss(k, 0.07, 0.12) * (1 - 0.6 * ss(k, 0.5, 0.9))), 0.25 * jolt];
   P.mouth = Math.max(0, 0.95 * ss(k, 0.07, 0.11) * (1 - ss(k, 0.3, 0.48)));
@@ -566,10 +582,38 @@ function walking(phase) {
   P.pelR = [0.02, 0.08 * s1, -0.035 * s1];
   P.spine = [0.03, -0.11 * s1, 0.03 * s1];
   P.neck = [0.05 + 0.02 * c2, 0.03 * s1, 0];
-  // os braços balançam ao contrário das pernas
-  P.hL = [0.31, -0.11 + 0.02 * Math.abs(R.z / H), 0.04 + 0.15 * (R.z / H)];
-  P.hR = [-0.31, -0.11 + 0.02 * Math.abs(L.z / H), 0.04 + 0.15 * (L.z / H)];
+  // os braços balançam ao contrário das pernas, do ombro: indo para a frente, o cotovelo dobra e a mão sobe um pouco
+  // (e vem para perto da barriga); indo para trás, o braço estica
+  const aL = R.z / H, aR = L.z / H;
+  P.hL = [0.31 - 0.03 * Math.max(0, aL), -0.11 + 0.06 * Math.max(0, aL) + 0.02 * Math.abs(aL), 0.04 + 0.2 * aL];
+  P.hR = [-0.31 + 0.03 * Math.max(0, aR), -0.11 + 0.06 * Math.max(0, aR) + 0.02 * Math.abs(aR), 0.04 + 0.2 * aR];
+  P.dL = [0, -1, 0.15 + 0.5 * Math.max(0, aL), -1, 0, 0, 0.6];
+  P.dR = [0, -1, 0.15 + 0.5 * Math.max(0, aR), 1, 0, 0, 0.6];
+  P.gL = 0.35;
+  P.gR = 0.35;
   P.belly = Math.sin(phase * TAU * 2 - 1.0);
+  return P;
+}
+/**
+ * De pé, parado: respira (os ombros sobem um tiquinho) e passa o peso de uma perna para a outra devagar — o quadril
+ * vai para cima da perna de apoio e cai do lado da outra, que relaxa (o joelho dobra e o calcanhar sobe um pouco); o
+ * tronco compensa e a cabeça passeia.
+ */
+function idle(t) {
+  const P = standing();
+  const w = Math.sin((t * TAU) / 5.6 + 0.7);
+  const s = Math.sign(w) * Math.pow(Math.abs(w), 0.55); // fica mais tempo apoiado numa perna do que trocando
+  P.pel = [0.024 * s, STAND_Y - 0.007 * Math.abs(s), 0];
+  P.pelR = [0, 0.02 * s, 0.03 * s];
+  P.spine = [-0.03 + 0.012 * Math.sin(t * 1.9), -0.015 * s, -0.024 * s];
+  P.neck = [0.04, 0.02 * Math.sin(t * 0.43), -0.008 * s];
+  P.head = [-0.02, 0.05 * Math.sin(t * 0.37), -0.012 * s];
+  // as botinas ficam plantadas (nada de patinar no chão): o joelho da perna solta dobra sozinho, com o quadril descendo
+  // daquele lado
+  // os braços pendurados acompanham o balanço
+  P.hL = [0.315 + 0.012 * s, -0.12, 0.025];
+  P.hR = [-0.315 + 0.012 * s, -0.12, 0.025];
+  P.breath = 0.008;
   return P;
 }
 function gateOpening(k) {
@@ -588,30 +632,57 @@ function gateOpening(k) {
   P.mouth = 0.15 * pull;
   return P;
 }
+/**
+ * O aceno (t s): o braço direito inteiro lá em cima, balançando do ombro num arco por cima da cabeça (o cotovelo vai
+ * junto), e o corpo acompanha: o peso na perna esquerda, o tronco inclina e torce para o lado do braço a cada vaivém, a
+ * cabeça inclinada, o sorriso embaixo do bigode; a mão esquerda descansa na barriga.
+ */
 function waving(t) {
   const P = standing();
-  const w = Math.sin(t * TAU * 1.6);
-  P.hR = [-0.36 + 0.06 * w, 0.6, 0.1];
-  P.pR = [-1, -1, 0.2];
-  P.dR = [-0.25 * w, 1, 0.1, 0, 0, 1, 1];
+  const ph = t * TAU * 1.3;
+  const w = Math.sin(ph), c = Math.cos(ph);
+  P.hR = [-0.3 + 0.15 * w, 0.64 - 0.05 * Math.abs(w), 0.1 + 0.04 * c];
+  P.pR = [-1, -0.5, 0.35];
+  P.dR = [-0.4 * w - 0.08, 1, 0.12, 0, 0, 1, 1];
   P.gR = 0;
-  P.head = [-0.06, 0.05, -0.1];
-  P.spine = [-0.05, 0, 0.04];
-  P.brow = [0.45, 0.1];
+  P.hL = [0.2, 0.1, 0.27];
+  P.pL = [1, -0.3, -0.6];
+  P.dL = [-0.75, -0.15, 0.5, -0.2, 0, 1, 1];
+  P.gL = 0.45;
+  P.pel = [0.022, STAND_Y - 0.006 + 0.005 * Math.abs(w), 0];
+  P.pelR = [0, 0.03, 0.03];
+  P.fR = [-0.13, ANKLE_Y + 0.006, 0.05];
+  P.tR = 0.12;
+  P.spine = [-0.05, -0.06 + 0.04 * w, 0.06 + 0.04 * w];
+  P.neck = [0.0, 0.03 * w, -0.03];
+  P.head = [-0.08, 0.08, -0.13 - 0.04 * w];
+  P.brow = [0.5, 0.1];
   P.eyes = 1.05;
-  P.mouth = 0.22;
+  P.mouth = 0.26 + 0.06 * Math.abs(w);
   return P;
 }
+/**
+ * Falando (t s): as duas mãos gesticulam em batidas fora de compasso (a palma para cima, explicando; uma sobe na
+ * ênfase enquanto a outra desce), o tronco inclina um pouco na ênfase, a cabeça acena e vira, as sobrancelhas sobem na
+ * batida. Por cima, o peso passeia como parado.
+ */
 function talking(t) {
-  const P = standing();
-  const g = Math.sin(t * 2.3), g2 = Math.sin(t * 1.3 + 1);
-  P.hL = [0.24 + 0.03 * g2, 0.1 + 0.04 * g, 0.3];
+  const P = idle(t);
+  const b1 = Math.max(0, Math.sin(t * 2.7)) ** 2;
+  const b2 = Math.max(0, Math.sin(t * 2.7 * 0.83 + 2.3)) ** 2;
+  const sway = Math.sin(t * 1.1);
+  P.hL = [0.22 + 0.04 * sway, 0.08 + 0.1 * b1, 0.29 + 0.05 * b1];
   P.pL = [1, -0.6, -0.3];
-  P.dL = [0.35, 0.15, 1, 0, 1, 0, 1];
-  P.gL = 0.05;
-  P.neck = [0.04 + 0.04 * Math.sin(t * 3.1), 0.06 * g2, 0];
-  P.head = [-0.02, 0.05 * g, 0.04 * g2];
-  P.brow = [0.25 + 0.2 * Math.max(0, g), 0.05];
+  P.dL = [0.35, 0.15 + 0.35 * b1, 1, 0, 1, 0, 1];
+  P.gL = 0.05 + 0.1 * (1 - b1);
+  P.hR = [-0.21 - 0.04 * sway, 0.07 + 0.1 * b2, 0.28 + 0.05 * b2];
+  P.pR = [-1, -0.6, -0.3];
+  P.dR = [-0.35, 0.15 + 0.35 * b2, 1, 0, 1, 0, 1];
+  P.gR = 0.05 + 0.1 * (1 - b2);
+  P.spine = [-0.03 + 0.05 * Math.max(b1, b2), 0.05 * sway, P.spine[2]];
+  P.neck = [0.04 + 0.04 * Math.sin(t * 3.1) + 0.04 * b1, 0.06 * Math.sin(t * 1.3 + 1), 0];
+  P.head = [-0.02 + 0.05 * b2, 0.06 * Math.sin(t * 2.3), 0.04 * Math.sin(t * 1.3 + 1)];
+  P.brow = [0.2 + 0.4 * Math.max(b1, b2), 0.05];
   P.talk = 1;
   return P;
 }
@@ -638,6 +709,23 @@ const BLEND = { 'dorme': 0.6, 'acorda': 0.08, 'sentado': 0.5, 'em-pe': 0.75, 'an
 /** Quanto dura o que anda sozinho (s), quando a cena não dá o k. */
 const AUTO = { 'acorda': 1.4, 'abre-portao': 1.6 };
 export const SR_LUIZ_POSES = Object.keys(BLEND);
+/** Levantar da cadeira (ou sentar) leva pelo menos isto (s), inclinando o tronco para a frente no meio. */
+const STAND_UP = 0.95;
+
+/**
+ * Os gestos da mão direita por cima da pose (gesture): quanto duram (s), onde a palma vai (na cabeça, no referencial
+ * dela: HEAD_C é o meio do rosto), para onde apontam os dedos e a palma (no tronco), o lado do cotovelo e o quanto a mão
+ * fecha. 'oculos': o indicador empurra a ponte dos óculos; 'quepe': a mão pega a pala e ajeita; 'coca': os dedos
+ * coçam a cabeça de lado, embaixo do quepe.
+ */
+const GEST = {
+  oculos: { dur: 1.1, p: [0.0, HEAD_C[1] - 0.004, HEAD_C[2] + 0.215], d: [0.05, 1, -0.3, 0, 0, -1], pole: [-1, -0.6, 0.1], grip: 0.45 },
+  quepe: { dur: 1.4, p: [-0.05, HEAD_C[1] + 0.078, HEAD_C[2] + 0.235], d: [0.3, 0.15, 1, 0, -1, 0], pole: [-1, -0.4, 0.2], grip: 0.65 },
+  coca: { dur: 1.9, p: [-0.165, HEAD_C[1] + 0.055, HEAD_C[2] - 0.03], d: [-0.1, 1, -0.4, 1, 0, 0], pole: [-1, -0.2, -0.1], grip: 0.4 },
+};
+export const SR_LUIZ_GESTURES = Object.freeze(Object.keys(GEST));
+/** O quanto o gesto está valendo em t (entra e sai suave). */
+const gestEnv = (t, dur) => ss(t, 0, 0.3 * dur) * (1 - ss(t, 0.74 * dur, dur));
 
 // ------------------------------------------------------------------------------------------------ o Sr. Luiz
 export function createSrLuiz() {
@@ -729,7 +817,12 @@ export function createSrLuiz() {
     look: /** @type {{x:number,y:number,z:number}|null} */ (null), lookK: 0, lookYaw: 0, lookPitch: 0,
     say: false, talkK: 0, blinkT: 2.5, blink: 0,
     reach: { L: /** @type {{x:number,y:number,z:number}|null} */ (null), R: null }, reachK: { L: 0, R: 0 },
+    /** O gesto da mão direita por cima da pose ({ kind, t, dur }) e o quanto ele vale neste quadro. */
+    g: /** @type {{ kind: string, t: number, dur: number } | null} */ (null), gw: 0,
+    /** Levantando da cadeira (+1) ou sentando (−1) nesta troca de pose; 0 nas outras. */
+    rise: 0,
   };
+  const _gd = [0, 0, 0, 0, 0, 0, 0];
 
   function target(t) {
     const k = S.k ?? (AUTO[S.name] ? clamp(S.poseT / AUTO[S.name], 0, 1) : 0);
@@ -741,13 +834,7 @@ export function createSrLuiz() {
       case 'abre-portao': return gateOpening(k);
       case 'acena': return waving(t);
       case 'fala': return talking(t);
-      default: {
-        const P = standing();
-        P.pel[0] = 0.008 * Math.sin(t * 0.7);
-        P.spine[2] = 0.012 * Math.sin(t * 0.7 + 0.5);
-        P.head[1] = 0.05 * Math.sin(t * 0.37);
-        return P;
-      }
+      default: return idle(t);
     }
   }
 
@@ -825,8 +912,11 @@ export function createSrLuiz() {
     // os braços: os punhos vão aos alvos (no tronco), ou a um ponto do mundo (reach)
     for (const side of /** @type {const} */ (['L', 'R'])) {
       const arm = arms[side];
-      const h = side === 'L' ? P.hL : P.hR, p = side === 'L' ? P.pL : P.pR, d = side === 'L' ? P.dL : P.dR;
+      const h = side === 'L' ? P.hL : P.hR, p = side === 'L' ? P.pL : P.pR;
+      const d = side === 'L' ? P.dL : P.dR;
+      let grip = side === 'L' ? P.gL : P.gR;
       _T.set(h[0], h[1], h[2]);
+      _P.set(p[0], p[1], p[2]);
       S.reachK[side] += ((S.reach[side] ? 1 : 0) - S.reachK[side]) * (1 - Math.exp(-dt * 8));
       if (S.reachK[side] > 0.002 && S.reach[side]) {
         object.updateMatrixWorld(true);
@@ -838,24 +928,55 @@ export function createSrLuiz() {
         if (len > 0.09) _v.addScaledVector(_S.sub(_v).normalize(), 0.075);
         _T.lerp(_v, S.reachK[side]);
       }
-      _P.set(p[0], p[1], p[2]);
+      if (side === 'R' && S.g && S.gw > 0.001) {
+        // o gesto: a palma num ponto da cabeça (que acompanha o olhar e o aceno); o punho fica um palmo antes, para
+        // trás da direção dos dedos; coçando, os dedos vão e voltam
+        const G = GEST[S.g.kind];
+        const scr = S.g.kind === 'coca' ? 0.013 * Math.sin(S.g.t * TAU * 6.5) : 0;
+        const push = S.g.kind === 'oculos' ? 0.012 * ss(S.g.t, 0.35 * S.g.dur, 0.55 * S.g.dur) : 0;
+        head.updateWorldMatrix(true, false);
+        _v.set(G.p[0], G.p[1] + scr + push, G.p[2]);
+        head.localToWorld(_v);
+        spine.worldToLocal(_v);
+        _S.set(G.d[0], G.d[1], G.d[2]).normalize();
+        _v.addScaledVector(_S, -0.075);
+        _T.lerp(_v, S.gw);
+        // subindo (e descendo), a mão passa por fora e um pouco para trás: pendurada, ela não varre o que está à frente
+        const arc = Math.sin(Math.PI * S.gw);
+        _T.x -= 0.06 * arc;
+        _T.z -= 0.08 * arc;
+        _P.lerp(_S.set(G.pole[0], G.pole[1], G.pole[2]), S.gw);
+        grip = lerp(grip, G.grip + (S.g.kind === 'coca' ? 0.25 * Math.sin(S.g.t * TAU * 6.5) : 0), S.gw);
+      }
       solve2(arm.shoulder, arm.elbow, arm.shoulder.position, _T, _P, UPPER, FORE);
       // a mão: segue o antebraço, ou vira para a direção pedida (os dedos e a palma, no tronco)
       const wgt = d[6];
       if (wgt > 0.001) {
-        _hy.set(-d[0], -d[1], -d[2]).normalize();
-        _hx.set(d[3], d[4], d[5]).multiplyScalar(-arm.s).addScaledVector(_hy, 0);
-        _hx.addScaledVector(_hy, -_hx.dot(_hy));
-        if (_hx.lengthSq() < 1e-8) _hx.set(1, 0, 0).addScaledVector(_hy, -_hy.x);
-        _hx.normalize();
-        _hz.crossVectors(_hx, _hy);
-        _m4.makeBasis(_hx, _hy, _hz);
-        _qT.setFromRotationMatrix(_m4);
-        _qA.copy(arm.shoulder.quaternion).multiply(arm.elbow.quaternion).invert().multiply(_qT);
+        handTurn(arm, d, _qA);
         arm.hand.quaternion.slerpQuaternions(_qI, _qA, wgt);
       } else arm.hand.quaternion.identity();
-      arm.grip(side === 'L' ? P.gL : P.gR);
+      // no gesto, a mão gira para a direção dele depois de sair do lugar (girando o quatérnio: nada de passar por um
+      // rumo sem sentido no meio do caminho; e, pendurada, os dedos não varrem o balcão da guarita)
+      if (side === 'R' && S.g && S.gw > 0.001) {
+        const G = GEST[S.g.kind];
+        for (let i = 0; i < 6; i++) _gd[i] = G.d[i];
+        handTurn(arm, _gd, _qB);
+        arm.hand.quaternion.slerp(_qB, ss(S.gw, 0.3, 0.9));
+      }
+      arm.grip(grip);
     }
+  }
+  /** O giro da mão (no antebraço) para os dedos e a palma apontarem para d (no tronco). */
+  function handTurn(arm, d, out) {
+    _hy.set(-d[0], -d[1], -d[2]).normalize();
+    _hx.set(d[3], d[4], d[5]).multiplyScalar(-arm.s);
+    _hx.addScaledVector(_hy, -_hx.dot(_hy));
+    if (_hx.lengthSq() < 1e-8) _hx.set(1, 0, 0).addScaledVector(_hy, -_hy.x);
+    _hx.normalize();
+    _hz.crossVectors(_hx, _hy);
+    _m4.makeBasis(_hx, _hy, _hz);
+    _qT.setFromRotationMatrix(_m4);
+    return out.copy(arm.shoulder.quaternion).multiply(arm.elbow.quaternion).invert().multiply(_qT);
   }
 
   function update(dt, t) {
@@ -880,6 +1001,44 @@ export function createSrLuiz() {
       // (nas duas, longe do tampo do balcão da guarita enquanto o corpo passa pela altura dele)
       const uh = SEATED.has(S.name) ? ss(u, 0.4, 1) : ss(u, 0, 0.6);
       for (const k of HAND_KEYS) mixArrInto(S.cur[k], S.from[k], T[k], uh);
+      // a cabeça chega um tiquinho depois do corpo (nada de mudar tudo junto, como um boneco)
+      const uhd = ss(u, 0.12, 1);
+      mixArrInto(S.cur.neck, S.from.neck, T.neck, uhd);
+      mixArrInto(S.cur.head, S.from.head, T.head, uhd);
+      // levantando da cadeira (ou sentando): o tronco inclina para a frente no meio, o peso vai para cima dos pés
+      if (S.rise) {
+        const arc = Math.sin(Math.PI * u);
+        S.cur.spine[0] += 0.26 * arc;
+        S.cur.neck[0] -= 0.1 * arc;
+        S.cur.pel[2] += 0.03 * arc;
+      }
+    }
+    // o gesto da mão direita (a mão vai à cabeça em apply): o rosto e o quepe acompanham
+    if (S.g) {
+      S.g.t += dt;
+      S.gw = gestEnv(S.g.t, S.g.dur);
+      const g = S.gw, P = S.cur, kind = S.g.kind;
+      if (kind === 'oculos') {
+        // empurrando os óculos: o queixo sobe um tiquinho e as sobrancelhas acompanham
+        const push = ss(S.g.t, 0.35 * S.g.dur, 0.55 * S.g.dur) * (1 - ss(S.g.t, 0.7 * S.g.dur, S.g.dur));
+        P.head[0] -= 0.06 * push;
+        P.brow[0] += 0.25 * g;
+      } else if (kind === 'quepe') {
+        // a pala sobe e o quepe assenta de novo, um tiquinho torto e de volta
+        const lift = Math.sin(Math.PI * clamp((S.g.t - 0.3 * S.g.dur) / (0.45 * S.g.dur), 0, 1));
+        P.cap[1] -= 0.14 * lift;
+        P.cap[0] += 0.008 * lift;
+        P.cap[2] += 0.05 * lift * Math.sin(S.g.t * 7);
+        P.head[0] -= 0.04 * g;
+      } else if (kind === 'coca') {
+        // coçando: a cabeça inclina para a mão, uma sobrancelha sobe, a boca torce
+        P.head[2] += 0.16 * g;
+        P.head[1] -= 0.08 * g;
+        P.brow[0] += 0.15 * g;
+        P.brow[1] += 0.55 * g;
+        P.mouth = Math.max(P.mouth, 0.07 * g);
+      }
+      if (S.g.t >= S.g.dur) { S.g = null; S.gw = 0; }
     }
     apply(S.cur, t, dt);
   }
@@ -897,21 +1056,47 @@ export function createSrLuiz() {
     setPose(name, k, opts = {}) {
       if (!BLEND[name]) name = 'em-pe';
       if (name !== S.name) {
+        // levantar da cadeira e sentar nela levam mais tempo, com o tronco inclinando (o susto não: é de uma vez)
+        const was = SEATED.has(S.name), now = SEATED.has(name);
+        S.rise = was !== now && name !== 'acorda' ? (now ? -1 : 1) : 0;
         S.from = clonePose(S.cur);
         S.name = name;
         S.poseT = 0;
         S.blendT = 0;
-        S.blendDur = BLEND[name];
+        S.blendDur = S.rise ? Math.max(BLEND[name], STAND_UP) : BLEND[name];
         if (name === 'anda') S.walk = 0;
       }
       S.k = typeof k === 'number' && Number.isFinite(k) ? k : null;
       if (opts.instant) {
+        // corte de câmera: a pose entra pronta, sem gesto pela metade
         S.blendT = S.blendDur;
+        S.rise = 0;
+        S.g = null;
+        S.gw = 0;
         S.from = clonePose(target(S.t));
         update(0, S.t);
       }
     },
     update,
+    /**
+     * Um gesto da mão direita por cima da pose: 'oculos', 'quepe' ou 'coca' (dur s; sem, o tempo natural dele); null
+     * tira (a mão volta suave).
+     * @param {string | null} kind @param {number} [dur]
+     */
+    gesture(kind, dur) {
+      if (!kind || !GEST[kind]) { if (S.g) S.g.t = Math.max(S.g.t, S.g.dur * 0.74); return; }
+      S.g = { kind, t: 0, dur: dur ?? GEST[kind].dur };
+    },
+    /** O gesto agora (ou null) e o quanto ele vale (0..1). */
+    get gestureNow() { return S.g ? { kind: S.g.kind, k: S.gw } : null; },
+    /** Onde a palma vai no gesto de agora (no mundo; testes), ou null. */
+    gestureTarget() {
+      if (!S.g) return null;
+      const G = GEST[S.g.kind];
+      head.updateWorldMatrix(true, false);
+      const v = head.localToWorld(new V3(G.p[0], G.p[1], G.p[2]));
+      return { x: v.x, y: v.y, z: v.z };
+    },
     /** A cabeça vira para um ponto do mundo; null volta ao normal. */
     lookAt(p) { S.look = p ? { x: p.x, y: p.y, z: p.z } : null; },
     /** A boca mexe embaixo do bigode (em qualquer pose). */
