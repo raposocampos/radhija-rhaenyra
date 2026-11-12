@@ -1375,7 +1375,8 @@ export function buildGaragem(kit, root, L) {
     paint(sheet.bottom, (p) => _c.copy(UNDER).multiplyScalar(0.9 + tone(p) * 0.16));
     const place = { x: bxc, y: sheetC(SZC), z: SZC, rx: -THETA };
     deco(sheet.top, null, place);
-    deco(sheet.bottom, null, place);
+    // (a face de baixo não faz sombra: a de cima, logo acima dela, já faz a mesma)
+    deco(sheet.bottom, null, { ...place, slot: 'nocast' });
     if (sheet.holes) clear.push(sheet.holes.rotateX(-THETA).translate(bxc, sheetC(SZC), SZC));
   }
   // a testeira, a calha (com o canal) e o bico da calha no canto oeste; as tabeiras dos lados

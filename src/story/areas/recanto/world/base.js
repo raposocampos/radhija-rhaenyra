@@ -125,10 +125,14 @@ function crown(kind, variant) {
   const key = `${kind}:${variant}`;
   if (crowns.has(key)) return crowns.get(key);
   const R = rng(23 + variant * 11 + kind.length);
-  const big = [{ x: 0, y: 3.3, z: 0, r: 1.3 }], small = [], top = [];
+  /** @type {{ x: number, y: number, z: number, r: number, detail?: number }[]} */
+  const big = [{ x: 0, y: 3.3, z: 0, r: 1.3 }];
+  const small = [], top = [];
+  // (as três de volta do meio ficam em parte dentro dele e das outras: com menos subdivisão, como a saia e o
+  // coroamento; a do meio, a maior, fica com a subdivisão cheia)
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * TAU + R() * 0.8;
-    big.push({ x: Math.cos(a) * 0.95, y: 2.9 + R() * 0.42, z: Math.sin(a) * 0.95, r: 0.9 + R() * 0.2 });
+    big.push({ x: Math.cos(a) * 0.95, y: 2.9 + R() * 0.42, z: Math.sin(a) * 0.95, r: 0.9 + R() * 0.2, detail: 1 });
   }
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * TAU + 0.6 + R() * 0.6, d = 1.32 + R() * 0.3;
@@ -956,13 +960,24 @@ export function buildBase(kit, root, L) {
     return out.multiplyScalar(1 - smoothstep(h - 0.17, h - 0.02, y) * 0.24);
   };
   const pillars = new Set();
+  /**
+   * A sombra do muro e dos pilares: eles são feitos de milhares de quadrinhos (a cor do reboco) e ficam no balde sem
+   * sombra ('nocast'); a sombra vem de caixas simples no lugar deles (o balde 'shadow', que não desenha nada).
+   * Uma caixa de w × h × d com a base em y0, no meio de (x, z), girada de ry.
+   */
+  const shadowBox = (x, y0, z, w, h, d, side, ry = 0) => kit.add(slab(w, h, d), { slot: 'shadow', x, y: y0, z, ry, group: `muro-${side}`, ao: false });
   /** Pilar do muro (dentro do colisor do muro: 36 cm), com a capa de pedra em bico e, em alguns, a lanterninha acesa. */
   const pillarAt = (x, z, h, side, lamp, a = 0.18) => {
     const key = `${Math.round(x * 100)},${Math.round(z * 100)}`;
     if (pillars.has(key)) return;
     pillars.add(key);
-    const B = lot('solid', `muro-${side}`);
+    const B = lot('nocast', `muro-${side}`);
     const ch = 0.045, top = h + 0.14;
+    // a sombra: o fuste, o capitel e a capa em bico (uma caixa mais estreita na metade da altura dela) e a lanterninha
+    shadowBox(x, 0, z, a * 2, top, a * 2, side);
+    shadowBox(x, top - 0.075, z, 0.45, 0.125, 0.45, side);
+    shadowBox(x, top + 0.05, z, 0.26, 0.08, 0.26, side);
+    if (lamp) shadowBox(x, top + 0.15, z, 0.2, 0.34, 0.2, side);
     const ring = [[-a + ch, -a], [a - ch, -a], [a, -a + ch], [a, a - ch], [a - ch, a], [-a + ch, a], [-a, a - ch], [-a, -a + ch]];
     const cp = _q[2].copy(PLINTH).multiplyScalar(0.9);
     // o fuste em quatro faixas: os respingos embaixo, o reboco, e a sombra do capitel logo abaixo dele
@@ -993,7 +1008,14 @@ export function buildBase(kit, root, L) {
     if (len < 0.05) return;
     const mt = o.half ?? W.t / 2;
     const dx = (bx - ax) / len, dz = (bz - az) / len;
-    const B = lot('solid', `muro-${side}`);
+    const B = lot('nocast', `muro-${side}`);
+    // a sombra do trecho: o muro, o chapim (5,5 cm para fora de cada lado) e a fileira de telhas de capa em cima dele
+    {
+      const mx = (ax + bx) / 2, mz = (az + bz) / 2, ry = -Math.atan2(dz, dx);
+      shadowBox(mx, 0, mz, len, h, mt * 2, side, ry);
+      shadowBox(mx, h, mz, len, 0.05, (mt + 0.055) * 2, side, ry);
+      shadowBox(mx, h + 0.05, mz, len, 0.09, 0.22, side, ry);
+    }
     const at = (s, off, y) => [ax + dx * s + nx * off, y, az + dz * s + nz * off];
     const IN = [nx, 0, nz], OUT = [-nx, 0, -nz];
     const n = Math.max(1, Math.round(len / 4));

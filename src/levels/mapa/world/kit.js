@@ -26,9 +26,20 @@ export const SLOTS = {
    * componentes, ver decalLot), sem luz, por cima do piso (sem profundidade, puxado para a câmera) e sem sombra.
    */
   contact: () => mat('mapa-contact', () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })),
+  /**
+   * O mesmo material de 'solid', mas sem fazer sombra: miudezas (frutinhas, louças, pedrinhas, o que fica rente ao
+   * chão), cuja sombra mal aparece e conta os triângulos de novo, ou peças que fazem sombra por uma forma mais simples
+   * à parte. Sem o sombreado de maquete, a não ser com `ao: true`.
+   */
+  nocast: () => mat('mapa-solid', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 })),
+  /**
+   * Formas só de sombra: não desenham nada na tela (nem cor, nem profundidade), só entram na sombra do sol. A forma
+   * simples (uma caixa) de uma peça de muitos triângulos que fica no 'nocast': a mesma sombra, com poucos triângulos.
+   */
+  shadow: () => mat('mapa-shadow', () => new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })),
 };
 /** Baldes que não fazem sombra (o chão e as plantinhas baixas: a sombra delas mal aparece e custa uma passada). */
-const NO_CAST = new Set(['ground', 'plant', 'contact']);
+const NO_CAST = new Set(['ground', 'plant', 'contact', 'nocast']);
 /** Baldes com o sombreado de maquete (base mais escura). */
 const AO_SLOTS = new Set(['solid']);
 

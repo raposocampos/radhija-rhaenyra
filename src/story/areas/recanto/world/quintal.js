@@ -34,6 +34,11 @@ const _zAxis = new THREE.Vector3(0, 0, 1);
 const _qa = new THREE.Quaternion();
 const _va = new THREE.Vector3();
 const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+// As plantas das fases na versão leve (o quintal tem dezenas delas e a área precisa caber no celular): a espiga da lavanda
+// com menos segmentos (de ~2 700 para ~1 000 triângulos), a moita do gerânio e o pé de alface também.
+const LAVENDER_LITE = { spikeCap: 1, spikeRadial: 5 };
+const GERANIUM_LITE = { detail: 1, florets: 6, clusters: 4 };
+const LETTUCE_LITE = { segs: [7, 4] };
 
 // ---------------------------------------------------------------- cores e formas (as mesmas da casa)
 /** Variação suave de uma cor (reboco, madeira, tecido). */
@@ -70,6 +75,16 @@ function limbAB(a, b, r0, r1, seg = 7) {
 /** Tubo por pontos [x, y, z] (mangueira, cabo, caule, alça). */
 function tubeAlong(pts, r, radial = 5, segs = 24) {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))), segs, r, radial, false);
+}
+/** Caixa centrada só com as laterais (sem a face de cima e a de baixo), subdividida como a BoxGeometry. */
+function sidesBox(w, h, d, sw, sh, sd) {
+  const g = new THREE.BoxGeometry(w, h, d, sw, sh, sd);
+  const idx = g.index.array, keep = [];
+  // os grupos da BoxGeometry: +x, −x, +y, −y, +z, −z
+  for (const gr of g.groups) if (gr.materialIndex !== 2 && gr.materialIndex !== 3) for (let i = gr.start; i < gr.start + gr.count; i++) keep.push(idx[i]);
+  g.setIndex(keep);
+  g.clearGroups();
+  return g;
 }
 /** Forma plana no plano XY (voltada para +Z). */
 function shapeXY(pts) {
@@ -140,14 +155,14 @@ function bushGeo(r, h, seed, flower, n = 7) {
     return q;
   }));
 }
-/** Hortênsia: uma moita grande com as bolas de flor (azul-lilás ou rosa) por cima. */
+/** Hortênsia: uma moita grande com as bolas de flor (azul-lilás ou rosa) por cima (três, das grandes). */
 function hydrangeaGeo(r, seed, tone) {
   const R = rng(seed);
   const parts = [foliageCluster([{ x: 0, y: r * 0.55, z: 0, r, sy: 0.72 }, { x: r * 0.4, y: r * 0.6, z: -r * 0.25, r: r * 0.75, sy: 0.7 }], { detail: 1, amp: 0.26, freq: 8, seed, dark: '#27461c', mid: '#46702b', light: '#7aa144' })];
   const base = C(tone);
-  for (let i = 0; i < 6; i++) {
-    const a = R() * TAU, rr = Math.sqrt(R()) * r * 0.7;
-    const ball = foliageCluster([{ x: Math.cos(a) * rr, y: r * 0.95 + R() * 0.05, z: Math.sin(a) * rr, r: 0.075 + R() * 0.03, sy: 0.85 }], { detail: 1, amp: 0.35, freq: 22, seed: seed + i, dark: '#' + base.clone().multiplyScalar(0.72).getHexString(), mid: '#' + base.getHexString(), light: '#' + base.clone().lerp(C('#ffffff'), 0.35).getHexString(), sunBias: 0.4, bottomDark: 0.3 });
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU + R() * 1.2, rr = (0.45 + 0.4 * R()) * r * 0.7;
+    const ball = foliageCluster([{ x: Math.cos(a) * rr, y: r * 0.95 + R() * 0.05, z: Math.sin(a) * rr, r: 0.095 + R() * 0.035, sy: 0.85 }], { detail: 1, amp: 0.35, freq: 22, seed: seed + i, dark: '#' + base.clone().multiplyScalar(0.72).getHexString(), mid: '#' + base.getHexString(), light: '#' + base.clone().lerp(C('#ffffff'), 0.35).getHexString(), sunBias: 0.4, bottomDark: 0.3 });
     parts.push(ball);
   }
   return mergeGeometries(parts.map((g) => {
@@ -610,12 +625,12 @@ export function buildQuintal(kit, root, L) {
     put(new THREE.BoxGeometry(w, h, th, Math.max(1, Math.round(w / 0.4)), Math.max(1, Math.round(h / 0.105)), 1).translate(0, h / 2, 0), { color: wood, x: cx, z: z1 - th / 2 });
     put(new THREE.BoxGeometry(th, h, d - th * 2, 1, Math.max(1, Math.round(h / 0.105)), 1).translate(0, h / 2, 0), { color: wood, x: x0 + th / 2, z: cz });
     put(new THREE.BoxGeometry(th, h, d - th * 2, 1, Math.max(1, Math.round(h / 0.105)), 1).translate(0, h / 2, 0), { color: wood, x: x1 - th / 2, z: cz });
-    // o arremate de cima e os mourõezinhos nos cantos
-    put(rb(w + 0.03, 0.025, 0.07, 0.008, 1), { color: '#c4935f', x: cx, y: h, z: z0 + 0.03, ao: false });
-    put(rb(w + 0.03, 0.025, 0.07, 0.008, 1), { color: '#c4935f', x: cx, y: h, z: z1 - 0.03, ao: false });
-    put(rb(0.07, 0.025, d - 0.12, 0.008, 1), { color: '#c4935f', x: x0 + 0.03, y: h, z: cz, ao: false });
-    put(rb(0.07, 0.025, d - 0.12, 0.008, 1), { color: '#c4935f', x: x1 - 0.03, y: h, z: cz, ao: false });
-    for (const [sx, sz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) put(rb(0.08, h + 0.06, 0.08, 0.01, 1), { color: '#7d5634', x: sx + (sx === x0 ? 0.035 : -0.035), z: sz + (sz === z0 ? 0.035 : -0.035) });
+    // o arremate de cima e os mourõezinhos nos cantos (retos: o arredondado de 1 cm não aparece e eram 9× os triângulos)
+    put(slab(w + 0.03, 0.025, 0.07), { color: '#c4935f', x: cx, y: h, z: z0 + 0.03, ao: false });
+    put(slab(w + 0.03, 0.025, 0.07), { color: '#c4935f', x: cx, y: h, z: z1 - 0.03, ao: false });
+    put(slab(0.07, 0.025, d - 0.12), { color: '#c4935f', x: x0 + 0.03, y: h, z: cz, ao: false });
+    put(slab(0.07, 0.025, d - 0.12), { color: '#c4935f', x: x1 - 0.03, y: h, z: cz, ao: false });
+    for (const [sx, sz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) put(slab(0.08, h + 0.06, 0.08), { color: '#7d5634', x: sx + (sx === x0 ? 0.035 : -0.035), z: sz + (sz === z0 ? 0.035 : -0.035) });
     put(slab(w - 0.1, 0.012, d - 0.1), { color: vary('#5a4030', 0.12, 13), slot: 'ground', x: cx, y: h - 0.03, z: cz, ao: false });
     shade(cz).rrect(cx, cz, w / 2, d / 2, 0.22, { a: 0.24, fill: false, color: '#2a1e12' });
   };
@@ -629,7 +644,7 @@ export function buildQuintal(kit, root, L) {
     inBed(XW, PS.x0, 5, (x, i) => {
       const z = (HR.z0 + HR.z1) / 2 + (i % 2 ? 0.16 : -0.14);
       if (i % 2) addJ(bushGeo(0.15, 0.24, 300 + i, '#d6452f', 8), { color: null, slot: 'plant', x, y: top, z, ry: Rh() * 6 }); // pimenteira
-      else addJ(lavender({ stems: 14, height: 0.34, seed: 70 + i }), { color: null, slot: 'plant', x, y: top, z, ry: Rh() * 6 }); // alecrim
+      else addJ(lavender({ stems: 14, height: 0.34, seed: 70 + i, ...LAVENDER_LITE }), { color: null, slot: 'plant', x, y: top, z, ry: Rh() * 6 }); // alecrim
     });
     inBed(PS.x1, XE, 4, (x, i) => {
       const z = (HR.z0 + HR.z1) / 2 + (i % 2 ? -0.15 : 0.15);
@@ -686,19 +701,23 @@ export function buildQuintal(kit, root, L) {
   // ================================================================ o jardim de flores e a irrigação automática
   const SP = L.SPRINKLERS;
   // os dois canteiros compridos: mureta de tijolo, terra e as flores (tudo dentro do colisor)
-  /** As plantas da frente dos canteiros: lavanda, margaridas (brancas e amarelas) e gerânios, duas de cada. */
+  /**
+   * As plantas da frente dos canteiros: lavanda, margaridas (brancas e amarelas) e gerânios, duas de cada (a lavanda e o
+   * gerânio na versão leve das plantas das fases: a espiga e a moita com menos segmentos, o mesmo desenho).
+   */
   const FRONT = variants(6, (v) => {
     const kind = Math.floor(v / 2), alt = v % 2;
-    return kind === 0 ? lavender({ stems: 16, height: 0.36, seed: 700 + v })
-      : kind === 1 ? smallFlowers({ count: 22, radius: 0.15, height: 0.18, color: alt ? '#fff6ee' : '#f2c230', seed: 720 + v })
-        : geranium({ radius: 0.15, height: 0.2, seed: 740 + v, flower: alt ? '#e8708a' : '#ff6a55' });
+    return kind === 0 ? lavender({ stems: 12, height: 0.36, seed: 700 + v, ...LAVENDER_LITE })
+      : kind === 1 ? smallFlowers({ count: 16, radius: 0.15, height: 0.18, color: alt ? '#fff6ee' : '#f2c230', seed: 720 + v })
+        : geranium({ radius: 0.15, height: 0.2, seed: 740 + v, flower: alt ? '#e8708a' : '#ff6a55', ...GERANIUM_LITE });
   });
   const HYDRANGEA = variants(4, (i) => hydrangeaGeo(0.31 + (i % 2) * 0.03, 600 + i * 7, i < 2 ? '#8ea6e8' : '#e7a3c6'));
   L.YARD_BEDS.forEach((bd, i) => {
     const o = new THREE.Color(), ba = C('#c98a6a'), bb = C('#b9785a');
     const x0 = bd.x - bd.hx + (i === 0 ? ht : 0), x1 = bd.x + bd.hx - (i === 1 ? ht : 0), z0 = bd.z - bd.hz, z1 = bd.z + bd.hz;
     const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2;
-    const g = new THREE.BoxGeometry(w, 0.26, d, Math.max(1, Math.round(w / 0.22)), 3, Math.max(1, Math.round(d / 0.22)));
+    // (só as laterais: a de cima fica dentro do arremate e a de baixo no chão; eram dois terços dos triângulos)
+    const g = sidesBox(w, 0.26, d, Math.max(1, Math.round(w / 0.22)), 3, Math.max(1, Math.round(d / 0.22)));
     g.translate(0, 0.13, 0);
     addJ(g, { color: (p) => o.copy((Math.floor(p.y / 0.08) + Math.floor((p.x + p.z) / 0.22)) % 2 ? ba : bb), x: cx, z: bd.z });
     addJ(rb(w + 0.03, 0.03, d + 0.03, 0.01, 1), { color: '#d8c6a5', x: cx, y: 0.245, z: bd.z, ao: false });
@@ -741,7 +760,8 @@ export function buildQuintal(kit, root, L) {
   // o jato: gotas instanciadas (arcos do bocal até o chão), molhado no chão embaixo
   const DROPS = 44;
   const dropMat = new THREE.MeshBasicMaterial({ color: '#dff3ff', transparent: true, opacity: 0.78, depthWrite: false });
-  const drops = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), dropMat, DROPS * heads.length);
+  // (cada gota, de 1 a 2 cm e esticada na vertical, é um octaedro: 8 triângulos em vez de 36)
+  const drops = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), dropMat, DROPS * heads.length);
   drops.name = 'aspersores:gotas';
   drops.frustumCulled = false;
   drops.castShadow = false;
@@ -831,8 +851,8 @@ export function buildQuintal(kit, root, L) {
   {
     const top = 0.27;
     const Rh = rng(91);
-    const LETTUCES = variants(3, (i) => lettuce({ r: 0.115 + i * 0.012, seed: 200 + i * 3 }));
-    const CARROTS = variants(3, (i) => carrotTops({ seed: 230 + i, height: 0.22 }));
+    const LETTUCES = variants(3, (i) => lettuce({ r: 0.115 + i * 0.012, seed: 200 + i * 3, ...LETTUCE_LITE }));
+    const CARROTS = variants(3, (i) => carrotTops({ seed: 230 + i, height: 0.22, fronds: 5 }));
     const TOMATOES = variants(3, (i) => foliageCluster([{ x: 0, y: 0.32, z: 0, r: 0.17, sy: 1.4 }, { x: 0.04, y: 0.62, z: 0.02, r: 0.14, sy: 1.2 }], { detail: 1, amp: 0.35, freq: 10, seed: 260 + i, dark: '#25421a', mid: '#3f6a28', light: '#76a143' }));
     // o canteiro da alface: duas fileiras de pés (o grande, na beirada norte, é o prop)
     const A = HT.beds[0], LT = L.LETTUCE;
@@ -849,7 +869,7 @@ export function buildQuintal(kit, root, L) {
       const x = lerp(B2.x0 + 0.25, B2.x1 - 0.25, i / 8);
       addF(CARROTS(i), { color: null, slot: 'plant', x, y: top, z: B2.z0 + 0.28, ry: Rh() * 6 });
       if (i % 2 === 0) addF(foliageCluster([{ x: 0, y: 0.14, z: 0, r: 0.15, sy: 0.7 }], { detail: 1, amp: 0.4, freq: 9, seed: 240 + i, dark: '#2b4a35', mid: '#3f6b4a', light: '#6d9a74' }), { color: null, slot: 'foliage', x, y: top, z: B2.z1 - 0.3 });
-      else addF(lavender({ stems: 10, height: 0.26, seed: 250 + i }), { color: null, slot: 'plant', x, y: top, z: B2.z1 - 0.3, ry: Rh() * 6 });
+      else addF(lavender({ stems: 10, height: 0.26, seed: 250 + i, ...LAVENDER_LITE }), { color: null, slot: 'plant', x, y: top, z: B2.z1 - 0.3, ry: Rh() * 6 });
     }
     // os tomates no muro: estacas de bambu, as ramas e os tomates (vermelhos e verdes)
     const T3 = HT.beds[2];
@@ -858,9 +878,10 @@ export function buildQuintal(kit, root, L) {
       const x = lerp(T3.x0 + 0.3, T3.x1 - 0.3, i / Math.max(1, nt - 1)), z = (T3.z0 + T3.z1) / 2;
       addF(rod(0.012, 1.05, 5), { color: '#c9b27a', x, y: top + 0.5, z, ao: false });
       addF(TOMATOES(i), { color: null, slot: 'foliage', x, y: top, z, ry: i * 1.9 });
+      // (os tomates, de 3 a 4 cm, sem sombra: a das ramas já cobre)
       for (let k = 0; k < 4; k++) {
         const a = Rh() * TAU;
-        addF(sphere(0.032 + Rh() * 0.01, 8, 6), { color: k % 3 ? '#d93a2a' : '#7fae3a', x: x + Math.cos(a) * 0.12, y: top + 0.25 + Rh() * 0.5, z: z + Math.sin(a) * 0.12 - 0.04, ao: false });
+        addF(sphere(0.032 + Rh() * 0.01, 7, 5), { color: k % 3 ? '#d93a2a' : '#7fae3a', slot: 'nocast', x: x + Math.cos(a) * 0.12, y: top + 0.25 + Rh() * 0.5, z: z + Math.sin(a) * 0.12 - 0.04, ao: false });
       }
     }
     // o regador azul em cima da beirada do canteiro dos legumes
@@ -868,15 +889,15 @@ export function buildQuintal(kit, root, L) {
     addF(cyl(0.075, 0.09, 0.16, 12), { color: '#3d8fd1', x: wx, y: 0.3, z: wz, ao: false });
     addF(rodAB([wx + 0.06, 0.38, wz], [wx + 0.22, 0.46, wz], 0.012, 6), { color: '#3d8fd1', ao: false });
     addF(new THREE.TorusGeometry(0.055, 0.009, 5, 12, Math.PI).rotateY(Math.PI / 2), { color: '#3d8fd1', x: wx - 0.02, y: 0.44, z: wz, ao: false });
-    // a composteira: caixote de ripas com a terra escura e folhas
+    // a composteira: caixote de ripas com a terra escura e folhas (ripas e mourões retos: 24 ripas)
     const CM = HT.compost;
     for (let k = 0; k < 6; k++) {
       const y = 0.06 + k * 0.15;
       for (const [dx, dz, w, d] of [[0, -CM.hz + 0.02, CM.hx * 2, 0.04], [0, CM.hz - 0.02, CM.hx * 2, 0.04], [-CM.hx + 0.02, 0, 0.04, CM.hz * 2 - 0.08], [CM.hx - 0.02, 0, 0.04, CM.hz * 2 - 0.08]]) {
-        addF(rb(w, 0.11, d, 0.01, 1), { color: k % 2 ? '#8a6240' : '#9a7048', x: CM.x + dx, y, z: CM.z + dz, ao: false });
+        addF(slab(w, 0.11, d), { color: k % 2 ? '#8a6240' : '#9a7048', x: CM.x + dx, y, z: CM.z + dz, ao: false });
       }
     }
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) addF(rb(0.06, CM.h, 0.06, 0.01, 1), { color: '#6e4c30', x: CM.x + sx * (CM.hx - 0.03), z: CM.z + sz * (CM.hz - 0.03) });
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) addF(slab(0.06, CM.h, 0.06), { color: '#6e4c30', x: CM.x + sx * (CM.hx - 0.03), z: CM.z + sz * (CM.hz - 0.03) });
     addF(foliageCluster([{ x: 0, y: CM.h - 0.18, z: 0, r: 0.3, sy: 0.35 }], { detail: 1, amp: 0.3, freq: 8, seed: 270, dark: '#3a2a1a', mid: '#5a4228', light: '#7d6a3a' }), { color: null, slot: 'foliage', x: CM.x, z: CM.z });
   }
   // o pé de alface grande (o prop): estica quando a Radhija puxa a folha sozinha; a folha de fora sai com a Rhaenyra
@@ -1170,7 +1191,7 @@ export function buildQuintal(kit, root, L) {
     const pot = (put, x, z, s, flower) => {
       put(cyl(0.13 * s, 0.1 * s, 0.24 * s, 14), { color: '#c9764f', x, z });
       put(new THREE.TorusGeometry(0.13 * s, 0.018 * s, 5, 16).rotateX(Math.PI / 2), { color: '#b8663f', x, y: 0.24 * s, z, ao: false });
-      put(geranium({ radius: 0.13 * s, height: 0.16 * s, seed: Math.round(x * 13 + z * 7), flower }), { color: null, slot: 'plant', x, y: 0.22 * s, z });
+      put(geranium({ radius: 0.13 * s, height: 0.16 * s, seed: Math.round(x * 13 + z * 7), flower, ...GERANIUM_LITE }), { color: null, slot: 'plant', x, y: 0.22 * s, z });
     };
     // em cima das muretas da horta do meio (em cima do colisor delas)
     pot(addJ, XW + 0.32, HR.z1 - 0.25, 0.8, '#ff6a55');
@@ -1212,7 +1233,7 @@ export function buildQuintal(kit, root, L) {
     const Rg = rng(311);
     for (let k = 0; k < 14; k++) {
       const a = Rg() * TAU, rr = 0.6 + Rg() * 0.7;
-      b.add(sphere(0.045, 8, 6), { color: Rg() < 0.4 ? '#d6c45a' : '#8fb547', x: Math.cos(a) * rr, y: GV.crown.y - 0.25 + Rg() * 0.3, z: Math.sin(a) * rr, sy: 1.2 });
+      b.add(sphere(0.045, 7, 5), { color: Rg() < 0.4 ? '#d6c45a' : '#8fb547', x: Math.cos(a) * rr, y: GV.crown.y - 0.25 + Rg() * 0.3, z: Math.sin(a) * rr, sy: 1.2 });
     }
     guavaTop.add(bakedMesh(b, 'goiabeira:galhos', { rough: 0.85 }));
     const blobs = [{ x: 0, y: GV.crown.y + 0.25, z: 0, r: 0.95, sy: 0.6 }];
@@ -1390,9 +1411,10 @@ export function buildQuintal(kit, root, L) {
     const Rg = rng(123);
     const blade = new THREE.BufferGeometry();
     {
+      // (quatro folhas por touceira: são 2 000 touceiras)
       const pos = [], col = [];
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * TAU + 0.4, h = 0.1 + (i % 3) * 0.035, w = 0.014, lx = Math.cos(a) * 0.05, lz = Math.sin(a) * 0.05;
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * TAU + 0.4, h = 0.1 + (i % 3) * 0.035, w = 0.014, lx = Math.cos(a) * 0.05, lz = Math.sin(a) * 0.05;
         const px = -Math.sin(a) * w, pz = Math.cos(a) * w;
         pos.push(px, 0, pz, -px, 0, -pz, lx, h, lz);
         col.push(0.55, 0.62, 0.5, 0.55, 0.62, 0.5, 1, 1, 1);
@@ -1402,7 +1424,7 @@ export function buildQuintal(kit, root, L) {
       blade.computeVertexNormals();
     }
     const AREA = { x0: XO, x1: XE, z0: Y.z0, z1: ZS };
-    const NG = 2400;
+    const NG = 2000;
     const grass = new THREE.InstancedMesh(blade, SLOTS.plant(), NG);
     grass.name = 'recanto:capim-do-quintal';
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), cg = new THREE.Color();

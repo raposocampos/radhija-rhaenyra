@@ -27,6 +27,20 @@ const DARK = new THREE.Color(0.075, 0.08, 0.11);
 const LIT = new THREE.Color(1, 1, 1);
 
 /**
+ * Cilindro (ou tronco de cone) com a base em y = 0, sem a tampa de baixo (fica apoiado) e, com `top` falso, também sem a
+ * de cima (coberta pela tampa ou pela peça de cima): os potes, as latas e as garrafas da despensa.
+ */
+function cylOpen(rTop, rBot, h, seg, top = true) {
+  const g = new THREE.CylinderGeometry(rTop, rBot, h, seg);
+  const idx = g.index.array, keep = [];
+  // os grupos da CylinderGeometry: o corpo, a tampa de cima e a de baixo
+  for (const gr of g.groups) if (gr.materialIndex === 0 || (top && gr.materialIndex === 1)) for (let i = gr.start; i < gr.start + gr.count; i++) keep.push(idx[i]);
+  g.setIndex(keep);
+  g.clearGroups();
+  return g.translate(0, h / 2, 0);
+}
+
+/**
  * @param {ReturnType<typeof import('../../../../levels/mapa/world/kit.js').createKit>} kit
  * @param {THREE.Group} root
  * @param {import('../../../../types').LevelLayout} L
@@ -590,12 +604,16 @@ export function buildCasaSul(kit, root, L) {
   {
     const Pp = WG.pantry;
     const woodS = vary('#d9b98f', 0.04, 8);
-    /** Uma estante de prateleiras (de frente para `dir` em z) com as coisas em cima. */
+    /**
+     * Uma estante de prateleiras (de frente para `dir` em z) com as coisas em cima. Leve (é uma copa pequena, quase sempre
+     * no escuro): os montantes e as caixas retos, e os potes, as latas e as garrafas com menos lados e sem as tampas que
+     * não aparecem (a de baixo, apoiada; a de cima, coberta pela tampa ou pelo gargalo).
+     */
     const shelfUnit = (S, dir, levels, seed) => {
       const Rs = rng(seed);
       const x0 = S.x - S.hx, x1 = S.x + S.hx, back = S.z - dir * S.hz, front = S.z + dir * S.hz;
       dark(slab(S.hx * 2 - 0.02, S.h - 0.02, 0.015), { color: '#b08452', x: S.x, y: FL, z: back + dir * 0.008 });
-      for (const x of [x0 + 0.02, S.x, x1 - 0.02]) dark(rb(0.035, S.h, S.hz * 2 - 0.01, 0.008, 1), { color: woodS, x, y: FL, z: S.z });
+      for (const x of [x0 + 0.02, S.x, x1 - 0.02]) dark(slab(0.035, S.h, S.hz * 2 - 0.01), { color: woodS, x, y: FL, z: S.z });
       levels.forEach((y, li) => {
         dark(slab(S.hx * 2 - 0.03, 0.025, S.hz * 2 - 0.03), { color: '#c9a77d', x: S.x, y, z: S.z });
         // em cada prateleira: potes de vidro (o conteúdo colorido), latas, caixas e garrafas
@@ -605,22 +623,22 @@ export function buildCasaSul(kit, root, L) {
           if (Math.abs(x - S.x) < 0.04) { x += 0.06; continue; }
           if (k < 0.3) {
             const r = 0.045 + Rs() * 0.02, hh = 0.14 + Rs() * 0.08;
-            dark(cyl(r, r, hh, 12), { color: ['#f2c230', '#e8a04a', '#c9764f', '#8a5a3c', '#f4e3c8', '#e8475f'][Math.floor(Rs() * 6)], x: x + r, y: yy, z: zz });
-            dark(cyl(r + 0.004, r + 0.004, 0.025, 12), { color: ['#e8475f', '#3d8fd1', '#5cb85c', '#c9a24a'][li % 4], x: x + r, y: yy + hh, z: zz });
+            dark(cylOpen(r, r, hh, 9, false), { color: ['#f2c230', '#e8a04a', '#c9764f', '#8a5a3c', '#f4e3c8', '#e8475f'][Math.floor(Rs() * 6)], x: x + r, y: yy, z: zz });
+            dark(cylOpen(r + 0.004, r + 0.004, 0.025, 9), { color: ['#e8475f', '#3d8fd1', '#5cb85c', '#c9a24a'][li % 4], x: x + r, y: yy + hh, z: zz });
             x += r * 2 + 0.03;
           } else if (k < 0.55) {
             const r = 0.035, hh = 0.1;
-            for (let s = 0; s < 2; s++) dark(cyl(r, r, hh, 12), { color: ['#d0d4d8', '#e8475f', '#f2c230'][(li + s) % 3], x: x + r, y: yy + s * hh, z: zz });
+            for (let s = 0; s < 2; s++) dark(cylOpen(r, r, hh, 8, s === 1), { color: ['#d0d4d8', '#e8475f', '#f2c230'][(li + s) % 3], x: x + r, y: yy + s * hh, z: zz });
             x += r * 2 + 0.03;
           } else if (k < 0.8) {
             const w = 0.12 + Rs() * 0.06, hh = 0.18 + Rs() * 0.1;
-            dark(rb(w, hh, 0.07, 0.008, 1), { color: ['#f08a3c', '#4aa6a0', '#f4e3c8', '#8a72c2', '#5f8fb8'][Math.floor(Rs() * 5)], x: x + w / 2, y: yy, z: zz });
+            dark(slab(w, hh, 0.07), { color: ['#f08a3c', '#4aa6a0', '#f4e3c8', '#8a72c2', '#5f8fb8'][Math.floor(Rs() * 5)], x: x + w / 2, y: yy, z: zz });
             art(dark, ['osso', 'coracao', 'sol', 'pata'][Math.floor(Rs() * 4)], Math.min(w, hh) * 0.5, '#fff6e6', x + w / 2, yy + hh * 0.55, zz + dir * 0.036, 0, dir);
             x += w + 0.03;
           } else {
             const r = 0.032, hh = 0.24;
-            dark(cyl(r, r, hh, 10), { color: ['#5c9a3a', '#c9a24a', '#bfe3f5'][Math.floor(Rs() * 3)], x: x + r, y: yy, z: zz });
-            dark(cyl(0.012, r, 0.06, 10), { color: '#e4e6e8', x: x + r, y: yy + hh, z: zz });
+            dark(cylOpen(r, r, hh, 7, false), { color: ['#5c9a3a', '#c9a24a', '#bfe3f5'][Math.floor(Rs() * 3)], x: x + r, y: yy, z: zz });
+            dark(cylOpen(0.012, r, 0.06, 7), { color: '#e4e6e8', x: x + r, y: yy + hh, z: zz });
             x += r * 2 + 0.03;
           }
         }
@@ -633,10 +651,10 @@ export function buildCasaSul(kit, root, L) {
     const Bk = Pp.basket;
     {
       const wa2 = C('#c99b5a'), wb2 = C('#b5864a');
-      dark(cyl(Bk.r, Bk.r - 0.03, 0.22, 16), { color: (p) => (Math.floor(p.y * 36) % 2 ? wa2 : wb2), x: Bk.x, y: FL, z: Bk.z });
+      dark(cylOpen(Bk.r, Bk.r - 0.03, 0.22, 12), { color: (p) => (Math.floor(p.y * 36) % 2 ? wa2 : wb2), x: Bk.x, y: FL, z: Bk.z });
       for (let i = 0; i < 7; i++) {
         const a = (i / 7) * TAU, rr = i ? 0.08 : 0;
-        dark(sphere(0.045, 8, 6), { color: i % 3 ? '#c9a06a' : '#b8895a', x: Bk.x + Math.cos(a) * rr, y: FL + 0.21, z: Bk.z + Math.sin(a) * rr, sx: 1.2, sz: 0.9, ry: a });
+        dark(sphere(0.045, 7, 5), { color: i % 3 ? '#c9a06a' : '#b8895a', x: Bk.x + Math.cos(a) * rr, y: FL + 0.21, z: Bk.z + Math.sin(a) * rr, sx: 1.2, sz: 0.9, ry: a });
       }
     }
     // a vassoura e o rodo encostados no canto (os cabos subindo pela parede)
@@ -787,7 +805,7 @@ export function buildCasaSul(kit, root, L) {
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
         const x = sx * (W / 2 - 0.07), z = sz * (D / 2 - 0.07);
         b.add(cyl(0.028, 0.022, DT.h - 0.045, 10), { color: '#7a4e32', x, z });
-        b.add(sphere(0.036, 10, 8), { color: '#8a5a3c', x, y: 0.42, z, sy: 0.7 });
+        b.add(sphere(0.036, 8, 6), { color: '#8a5a3c', x, y: 0.42, z, sy: 0.7 });
       }
     });
     // as cadeiras (assento estofado, pés, encosto de ripas)
@@ -797,7 +815,7 @@ export function buildCasaSul(kit, root, L) {
         for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add(slab(0.035, sz < 0 ? 0.95 : 0.45, 0.035), { color: '#7a4e32', x: sx * (s - 0.02), z: sz * (s - 0.02) });
         b.add(rb(s * 2, 0.035, s * 2, 0.012, 1), { color: '#8a5a3c', y: 0.43 });
         b.add(rb(s * 2 - 0.04, 0.04, s * 2 - 0.04, 0.016, 1), { color: vary('#c96a4a', 0.04, 20), y: 0.462 });
-        for (const y of [0.62, 0.74, 0.86]) b.add(rb(s * 2 - 0.04, 0.05, 0.022, 0.008, 1), { color: '#8a5a3c', y, z: -(s - 0.02) });
+        for (const y of [0.62, 0.74, 0.86]) b.add(slab(s * 2 - 0.04, 0.05, 0.022), { color: '#8a5a3c', y, z: -(s - 0.02) });
       });
     }
     // a cristaleira encostada no norte: o armário de baixo, as portas de vidro e a louça lá dentro
@@ -823,7 +841,7 @@ export function buildCasaSul(kit, root, L) {
           if ((i + Math.round(y * 10)) % 3 === 0) {
             b.add(cyl(0.035, 0.028, 0.06, 12), { color: '#fff6e6', x, y, z: 0.02 });
             b.add(new THREE.TorusGeometry(0.018, 0.005, 5, 10), { color: '#fff6e6', x: x + 0.04, y: y + 0.03, z: 0.02, ry: Math.PI / 2 });
-          } else b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.012, 18).rotateX(Math.PI / 2 - 0.25), { color: i % 2 ? '#fff6e6' : '#bfe3f5', x, y: y + 0.105, z: -D / 2 + 0.07 });
+          } else b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.012, 14).rotateX(Math.PI / 2 - 0.25), { color: i % 2 ? '#fff6e6' : '#bfe3f5', x, y: y + 0.105, z: -D / 2 + 0.07 });
         }
       }
       for (const s of [-1, 1]) b.add(slab(W / 2 - 0.04, 0.9, 0.012), { color: '#cfe6ee', x: s * (W / 4), y: 0.92, z: D / 2 - 0.01 });
@@ -906,7 +924,7 @@ export function buildCasaSul(kit, root, L) {
       const W = CT.hz * 2, D = CT.hx * 2;
       b.add(rb(W, 0.04, D, 0.015, 1), { color: vary('#c9935a', 0.05, 8), y: CT.h - 0.04 });
       b.add(slab(W - 0.12, 0.02, D - 0.12), { color: '#b5864a', y: 0.12 });
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add(rb(0.045, CT.h - 0.04, 0.045, 0.01, 1), { color: '#a87445', x: sx * (W / 2 - 0.05), z: sz * (D / 2 - 0.05) });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add(slab(0.045, CT.h - 0.04, 0.045), { color: '#a87445', x: sx * (W / 2 - 0.05), z: sz * (D / 2 - 0.05) });
       b.add(rb(0.5, 0.12, 0.2, 0.03, 1), { color: (p) => C(Math.floor(p.y * 50) % 2 ? '#c99b5a' : '#b5864a'), y: 0.14 });
     });
     add(rb(0.19, 0.03, 0.26, 0.006, 1), { color: '#3d8fd1', x: CT.x + 0.04, y: CT.h, z: CT.z - 0.25, ry: 0.2, ao: false });

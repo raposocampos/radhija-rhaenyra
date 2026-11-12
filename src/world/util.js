@@ -300,7 +300,8 @@ export function paint(geo, colorOrFn) {
   return geo;
 }
 
-// Aglomerado orgânico de "bolhas" de folhagem: esferas deslocadas por ruído, fundidas, com vertex color.
+// Aglomerado orgânico de "bolhas" de folhagem: esferas deslocadas por ruído, fundidas, com vertex color. Uma bolha
+// pode ter o próprio `detail` (a subdivisão da esfera; sem ele, a do aglomerado).
 export function foliageCluster(blobs, {
   detail = 2, amp = 0.22, freq = 2.2, seed = 1,
   dark = '#3d5a24', light = '#9dbb4f', mid = '#6b8f35', sunBias = 0.55, bottomDark = 0.5,
@@ -311,7 +312,7 @@ export function foliageCluster(blobs, {
   const v = new THREE.Vector3(), d = new THREE.Vector3();
   for (const best of blobs) {
     /** @type {THREE.BufferGeometry} */
-    let g = new THREE.IcosahedronGeometry(1, detail);
+    let g = new THREE.IcosahedronGeometry(1, best.detail ?? detail);
     g.deleteAttribute('normal'); g.deleteAttribute('uv');
     g = mergeVertices(g, 1e-5);
     g.scale(best.r * (best.sx || 1), best.r * (best.sy || 0.9), best.r * (best.sz || 1));
