@@ -377,10 +377,11 @@ const markAt = (marks, name) => marks.find((m) => m.name === name)?.t ?? null;
 
 let browser;
 const watchdog = setTimeout(() => {
-  report.errors.push('medição passou de 40 minutos');
+  report.errors.push('medição passou de 60 minutos');
   void browser?.close();
   server.closeAllConnections();
-}, 40 * 60 * 1000);
+  // 60 min: a área do Modo História com a casa e o quintal maiores (2026-11-12) levou de 28 a 41 min no SwiftShader
+}, 60 * 60 * 1000);
 watchdog.unref();
 try {
   await mkdir(OUT, { recursive: true });

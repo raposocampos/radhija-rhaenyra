@@ -51,10 +51,11 @@ const server = createServer(async (request, response) => {
 
 let browser;
 const watchdog = setTimeout(() => {
-  report.errors.push('measurement exceeded 20 minutes');
+  report.errors.push('measurement exceeded 35 minutes');
   void browser?.close();
   server.closeAllConnections();
-}, 20 * 60 * 1000);
+  // 35 min: a área do Modo História maior (2026-11-12) passou dos 20 de antes (o pior quadro percorre os nós dela)
+}, 35 * 60 * 1000);
 watchdog.unref();
 try {
   await mkdir(OUT, { recursive: true });

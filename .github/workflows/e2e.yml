@@ -110,7 +110,8 @@ jobs:
     name: Recursos gráficos do Modo História
     if: inputs.suite == 'todas' || inputs.suite == 'historia'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # a medição da área maior (2026-11-12) passou dos 20 min da vigia antiga; a vigia agora é de 35 min
+    timeout-minutes: 55
     env:
       CI: 'true'
       MEASURE_STORY: '1'
@@ -183,7 +184,9 @@ jobs:
     if: inputs.suite == 'todas' || inputs.suite == 'primeira-passagem'
     name: Primeira passagem — fase ${{ matrix.fase }} (${{ matrix.qualidade }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # a área do Modo História (com a casa e o quintal maiores, 2026-11-12) levou de 28 a 41 min; as fases, bem menos.
+    # A vigia da medição (tools/scripts/measure-first-pass.mjs) corta antes do job.
+    timeout-minutes: ${{ matrix.fase == 'historia' && 70 || 45 }}
     strategy:
       fail-fast: false
       matrix:
@@ -224,8 +227,9 @@ jobs:
     runs-on: ubuntu-24.04
     # medido (E2E 40429824990): as suítes mais longas (menu, toque) jogam em 10–16 min; a instalação do Chromium
     # levou de 20 s a 10 min nos runners. 40 min dá folga sem esconder uma suíte travada (o runner corta após 5 min
-    # sem saída).
-    timeout-minutes: 40
+    # sem saída). A partida da história, com as capturas de revisão nos três aparelhos, passou de 40 min depois da casa
+    # e do quintal maiores (2026-11-12): ela ganha 75.
+    timeout-minutes: ${{ matrix.suite == 'historia' && 75 || 40 }}
     strategy:
       fail-fast: false
       matrix:
