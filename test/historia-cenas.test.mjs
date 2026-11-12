@@ -1,10 +1,11 @@
-// Modo História (etapa 2): as nove cenas do capítulo 1 no jogo de verdade (headless, com o cenário do Recanto).
+// Modo História (etapa 2): as onze cenas do capítulo 1 no jogo de verdade (headless, com o cenário do Recanto).
 // Para cada cena, assistida até o fim e pulada (segurar E logo depois de começar):
 //  - o jogo fica no MESMO estado (etapa, pistas, meias, posição das dogs, música, travas);
 //  - nenhuma trava sobra: a dog ativa anda de novo e a entrada volta (fora do mural);
 //  - ninguém atravessa nada a cada quadro, nem nas transições (dog no chão dentro de colisor, ou uma dentro da outra).
-// Cada cena começa pelo gatilho de verdade (as três pistas do quarto examinadas, o Faro na piscina e na porta da
-// torre, o cesto e a arrancada no varal, o Superbafo na grelha, o latido grosso).
+// Cada cena começa pelo gatilho de verdade (as três pistas do quarto examinadas, a maçaneta da cozinha, a porta dos
+// fundos empurrada, o Faro na piscina e na porta da torre, o cesto e a arrancada no varal, o Superbafo na grelha, o
+// latido grosso).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStoryGame, storyInfo, playScene, skipScene, intrusions, moved, become, push, sniff, examine, deduce, holdWorld } from './helpers/historia.mjs';
@@ -40,6 +41,48 @@ const SCENES = {
     },
     free: [1, 0],
     after: 'casa',
+  },
+  aspirador: {
+    async prepare() {
+      const h = await createStoryGame();
+      h.game.debug.setStage('casa', 'radhija');
+      h.run(0.3);
+      // a Radhija pisa no pedal (a grade solta); a Rhaenyra tira o saco de ração e pula na maçaneta: a porta da cozinha
+      // abre para o corredor, e o barulho acorda o aspirador
+      const L = h.layout;
+      h.teleport('radhija', L.PET_PEDAL.x - 0.5, L.PET_PEDAL.z + 0.3, 0);
+      h.run(0.2);
+      h.walkTo(L.PET_PEDAL.x, L.PET_PEDAL.z, { timeout: 5, tol: 0.12, until: () => storyInfo(h).flags.petGateOpen });
+      h.run(1.2);
+      become(h, 'rhaenyra');
+      const Sk = L.FOOD_SACK, KH = L.KITCHEN_HANDLE;
+      h.teleport('rhaenyra', Sk.start.x - Sk.half - 0.26, Sk.start.z, Math.PI / 2);
+      h.run(0.2);
+      assert.ok(push(h, [1, 0], 8, () => storyInfo(h).flags.sackFree), 'o saco sai da frente da maçaneta');
+      h.teleport('rhaenyra', KH.x + KH.nx * 0.44, KH.z + KH.nz * 0.44, Math.atan2(-KH.nx, -KH.nz));
+      h.run(0.25);
+      h.tap('Space');
+      return h;
+    },
+    free: [0, -1], // de volta para a cozinha
+    after: 'casa',
+  },
+  portaFundos: {
+    async prepare() {
+      const h = await createStoryGame();
+      h.game.debug.setStage('casa', 'rhaenyra');
+      h.run(0.3);
+      // a casa resolvida até o trinco aberto; a Rhaenyra empurra a porta dos fundos
+      h.puzzle.casa.jump('porta');
+      become(h, 'rhaenyra');
+      const EX = h.layout.HOUSE_EXIT;
+      h.teleport('rhaenyra', EX.x - 0.5, (EX.z0 + EX.z1) / 2, Math.PI / 2);
+      h.run(0.2);
+      holdWorld(h, [1, 0], 4, () => !!storyInfo(h).scene, ['ShiftLeft']);
+      return h;
+    },
+    free: [1, 0], // pela porta aberta, para o quintal
+    after: 'quintal',
   },
   reconstrucao: {
     async prepare() {

@@ -127,6 +127,34 @@ test('3ª pessoa: lugar apertado não vira vista de cima (a câmera olha para a 
   }
 });
 
+test('3ª pessoa: no corredor e na despensa da casa maior (cômodos estreitos), por cima do ombro, fora das paredes', async () => {
+  const h = await createStoryGame({ query: 'stage=casa' });
+  const cam = h.game.debug.cam;
+  const L = h.layout;
+  h.puzzle.casa.jump('jantar'); // a porta da cozinha aberta, o aspirador na base e a luz da despensa acesa
+  h.run(0.3);
+  const Co = L.SMALL_ROOMS.corredor, De = L.SMALL_ROOMS.despensa;
+  h.teleport('rhaenyra', -19.2, 9.2, 0); // a irmã longe, na sala de jantar
+  const cx = (Co.x0 + Co.x1) / 2;
+  const spots = [
+    { x: cx, z: Co.z0 + 1.4, yaw: 0, what: 'no corredor, olhando para o sul' },
+    { x: cx - 0.2, z: Co.z1 - 1.3, yaw: Math.PI, what: 'no corredor, olhando para o norte' },
+    { x: cx, z: 10.0, yaw: Math.PI / 2, what: 'no corredor, de frente para a parede do leste' },
+    { x: (De.x0 + De.x1) / 2 + 0.3, z: (De.z0 + De.z1) / 2 + 0.25, yaw: -Math.PI / 2, what: 'na despensa' },
+  ];
+  for (const s of spots) {
+    settle(h, s.x, s.z, s.yaw);
+    const p = h.engine.camera.position;
+    const c = h.ctrls.radhija;
+    assert.deepEqual(cameraInsideWall(h), [], `${s.what}: a câmera fora da parede`);
+    assert.ok(p.y < L.WALLS.h - 0.1, `${s.what}: abaixo do forro (${p.y.toFixed(2)} m)`);
+    assert.ok(lookDown(h) < 0.6, `${s.what}: sem virar vista de cima (${lookDown(h).toFixed(2)} rad para baixo)`);
+    const d = h.engine.camera.getWorldDirection(new THREE.Vector3());
+    assert.ok(d.x * Math.sin(s.yaw) + d.z * Math.cos(s.yaw) > 0.75, `${s.what}: a câmera olha para onde ela olha`);
+    assert.ok(Math.hypot(p.x - c.x, p.z - c.z) < 2.6, `${s.what}: perto dela`);
+  }
+});
+
 test('3ª pessoa: dentro da casa, a câmera não passa do forro', async () => {
   const h = await createStoryGame({ query: 'stage=casa' });
   const cam = h.game.debug.cam;

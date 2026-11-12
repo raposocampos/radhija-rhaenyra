@@ -905,8 +905,8 @@ export function createPuzzle(ctx) {
   const STAGE_SPOTS = {
     quarto: null,
     casa: null,
-    // do lado de fora da porta dos fundos (HOUSE_EXIT), olhando para o norte (a porta da área de serviço)
-    quintal: [{ x: L.HOUSE_EXIT.x + 1.26, z: L.HOUSE_EXIT.z0 - 0.1, yaw: Math.PI }, { x: L.HOUSE_EXIT.x + 2.06, z: L.HOUSE_EXIT.z0 + 0.4, yaw: Math.PI }],
+    // do lado de fora da porta dos fundos (HOUSE_EXIT), fora do arco da folha dela
+    quintal: [{ x: L.HOUSE_EXIT.x + 1.36, z: L.HOUSE_EXIT.z0 + 0.15, yaw: Math.PI / 2 }, { x: L.HOUSE_EXIT.x + 1.31, z: L.HOUSE_EXIT.z1 + 0.05, yaw: Math.PI / 2 }],
     piscina: [{ x: doorMid(sd).x, z: sd.hinge.z - 1.7, yaw: Math.PI }, { x: doorMid(sd).x + 0.9, z: sd.hinge.z - 1.3, yaw: Math.PI }],
     varal: [{ x: L.LINE.b.x - 0.4, z: L.LINE.b.z + 2.0, yaw: Math.PI }, { x: L.LINE.b.x - 1.5, z: L.LINE.b.z + 2.2, yaw: Math.PI }],
     torre: [{ x: td.hinge.x - 1.5, z: doorMid(td).z + 0.9, yaw: Math.PI / 2 }, { x: td.hinge.x - 1.6, z: doorMid(td).z - 0.3, yaw: Math.PI / 2 }],

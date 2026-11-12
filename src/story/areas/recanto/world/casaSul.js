@@ -315,8 +315,9 @@ export function buildCasaSul(kit, root, L) {
       }
     }
   };
-  windowAt('z', H.x1, winC, -1, { shutter: '#5aa7a0', flowers: true });
-  windowAt('z', H.x1, winL, -1, { shutter: '#5aa7a0', flowers: true, sill: false });
+  // na parede do leste, sem floreira por fora: lá embaixo encostam o canteiro de flores e a horta do quintal
+  windowAt('z', H.x1, winC, -1, { shutter: '#5aa7a0' });
+  windowAt('z', H.x1, winL, -1, { shutter: '#5aa7a0', sill: false });
   windowAt('x', H.z1, winS1, -1, { curtain: '#f6efe0' });
   windowAt('x', H.z1, winS2, -1, { curtain: '#f6efe0' });
   sunPatch('z', XE, winC, { x0: XC + ht, x1: XE, z0: ZK + ht, z1: ZE - ht });
@@ -1313,7 +1314,8 @@ export function buildCasaSul(kit, root, L) {
   const LT = L.EXIT_LATCH;
   {
     const b = createBaker();
-    const Ld = ED.length - 0.024, zc = -0.012 - Ld / 2, T = 0.05, y0 = 0.025, top = ED.h - 0.005, gy0 = 1.05, gy1 = top - 0.12, sw = 0.12;
+    // a folha abre para fora: 4,5 cm acima do chão, ela passa por cima das lajotas e do capacho do quintal
+    const Ld = ED.length - 0.024, zc = -0.012 - Ld / 2, T = 0.05, y0 = 0.045, top = ED.h - 0.005, gy0 = 1.05, gy1 = top - 0.12, sw = 0.12;
     const green = vary('#5f9a7a', 0.05, 11), dk = '#4f8468';
     b.add(slab(T, gy0 - y0, Ld), { color: green, y: y0, z: zc });
     b.add(slab(T, top - gy1, Ld), { color: green, y: gy1, z: zc });
@@ -1322,7 +1324,7 @@ export function buildCasaSul(kit, root, L) {
     for (const yy of [(gy0 * 2 + gy1) / 3, (gy0 + gy1 * 2) / 3]) b.add(slab(T - 0.012, 0.03, Ld - sw * 2), { color: dk, y: yy - 0.015, z: zc });
     // as almofadas de baixo dos dois lados, a chapa de chute de dentro, a maçaneta de alavanca dos dois lados
     for (const sx of [-1, 1]) for (const [py, ph] of [[0.12, 0.38], [0.58, 0.36]]) b.add(rb(0.012, ph, Ld - 0.24, 0.004, 1), { color: dk, x: sx * (T / 2 + 0.004), y: py, z: zc });
-    b.add(slab(0.006, 0.14, Ld - 0.06), { color: '#c9a24a', x: -T / 2 - 0.002, y: 0.035, z: zc });
+    b.add(slab(0.006, 0.14, Ld - 0.06), { color: '#c9a24a', x: -T / 2 - 0.002, y: 0.055, z: zc });
     for (const sx of [-1, 1]) {
       b.add(rb(0.012, 0.16, 0.05, 0.006, 1), { color: '#d9b25a', x: sx * (T / 2 + 0.006), y: 0.92, z: -Ld + 0.09 });
       b.add(rodAB([sx * (T / 2 + 0.012), 1.0, -Ld + 0.09], [sx * (T / 2 + 0.05), 1.0, -Ld + 0.21], 0.01, 6), { color: '#d9b25a' });

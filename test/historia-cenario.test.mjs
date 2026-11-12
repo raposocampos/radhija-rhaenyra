@@ -85,6 +85,16 @@ test('recanto: os props que o puzzle usa existem e o cenário fica dentro do or�
     for (const id of ['osso', 'nota', 'sino']) assert.equal(typeof P.intercom.buttons?.[id]?.setPress, 'function', `botão ${id} do interfone`);
     for (const m of ['setLit', 'setState']) assert.equal(typeof P.intercom[m], 'function', `interfone.${m}`);
     assert.equal(typeof P.booth.setWindow, 'function', 'a janela da guarita abre');
+    // a casa maior (world/casaSul.js): o aspirador, a despensa e o interruptor, a toalha e a lata, o pufe e a porta dos
+    // fundos
+    for (const m of ['setPose', 'setMode']) assert.equal(typeof P.vacuum?.[m], 'function', `aspirador.${m}`);
+    assert.equal(typeof P.pantry?.setLit, 'function', 'a despensa acende');
+    for (const m of ['setPress', 'setOn']) assert.equal(typeof P.pantrySwitch?.[m], 'function', `interruptor.${m}`);
+    for (const m of ['setSlide', 'setGrip', 'bitePoint']) assert.equal(typeof P.tablecloth?.[m], 'function', `toalha.${m}`);
+    for (const m of ['setPose', 'closeLid', 'setLidPose']) assert.equal(typeof P.cookieTin?.[m], 'function', `lata.${m}`);
+    assert.ok(P.cookieTin.body && P.cookieTin.lid, 'a lata tem corpo e tampa');
+    assert.equal(typeof P.pouf?.setPos, 'function', 'o pufe anda');
+    for (const m of ['setOpen', 'setLatch']) assert.equal(typeof P.exitDoor?.[m], 'function', `porta dos fundos.${m}`);
     // os pombos agarram a cenoura
     assert.equal(typeof P.carrot.holdBy, 'function', 'a cenoura é agarrada');
     for (const b of ['cap', 'son', 'far']) for (const m of ['carry', 'feetPoint', 'shiver', 'lookAt']) assert.equal(typeof P.squad[b][m], 'function', `pombo ${b}.${m}`);

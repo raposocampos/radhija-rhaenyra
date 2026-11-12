@@ -1,7 +1,9 @@
 // Modo História (etapa 2): a missão do capítulo 1 no jogo de verdade (headless, cenário do Recanto), com os controles
 // de verdade. A investigação e os puzzles de causa e efeito, na ordem:
 //   quarto (farejar com V, examinar com E a trilha, o pote e a pena) → casa (a Radhija pela portinha de gato, o pedal
-//   solta a grade; a Rhaenyra empurra o saco de ração e pula na maçaneta) → quintal (o galho; a Radhija pela passagem
+//   solta a grade; a Rhaenyra empurra o saco de ração e pula na maçaneta; o latido manda o aspirador robô para a base;
+//   o impulso no interruptor acende a despensa; a Radhija puxa a toalha e a lata cai; o pufe até o sofá, a Radhija sobe
+//   até o trinco e a Rhaenyra empurra a porta dos fundos) → quintal (o galho; a Radhija pela passagem
 //   do muro puxa a argola do ferrolho) → piscina (o Faro e a Reconstrução) → varal (o cesto embaixo da cenoura e a
 //   arrancada no poste) → torre (o Faro mostra a senha; os três botões na ordem; a porta de mola com a irmã segurando)
 //   → portaria (o Superbafo na grelha abre a janela; o latido grosso acorda o porteiro) → portãozinho → mural → fim.
@@ -83,13 +85,68 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   assert.equal(S().flags.sackFree, false);
   assert.deepEqual(h.puzzle.wallSpots(), [], 'com o saco na frente, não há onde apoiar as patas');
   const Sk = L.FOOD_SACK;
-  h.teleport('rhaenyra', Sk.start.x, Sk.start.z + Sk.half + 0.26, Math.PI);
+  h.teleport('rhaenyra', Sk.start.x - Sk.half - 0.26, Sk.start.z, Math.PI / 2);
   h.run(0.2);
-  assert.ok(push(h, [0, -1], 8, () => S().flags.sackFree), `a Rhaenyra empurra o saco para o lado (${JSON.stringify(S().pushables.sack)})`);
+  assert.ok(push(h, [1, 0], 8, () => S().flags.sackFree), `a Rhaenyra empurra o saco para o lado (${JSON.stringify(S().pushables.sack)})`);
   watch();
   assert.equal(h.puzzle.wallSpots().length, 1, 'agora dá para alcançar a maçaneta');
   boost(h, L.KITCHEN_HANDLE);
   assert.ok(S().flags.kitchenOpen, 'o impulso na maçaneta abre a porta da cozinha');
+  assert.equal(S().stage, 'casa', 'a porta da cozinha dá no corredor: a casa continua');
+  // a porta acorda o aspirador robô (cena); a Radhija morre de medo dele, e o latido grosso da Rhaenyra o manda
+  // para a base
+  skipScene(h, 'aspirador');
+  h.run(0.3);
+  assert.equal(h.log('objective').at(-1)?.text, 'Um aspirador robô! A Radhija morre de medo dele');
+  const KD = L.KITCHEN_DOOR, kd = mid(KD);
+  h.teleport('rhaenyra', kd.x - 0.1, kd.z + 0.85, 0);
+  h.run(8, { until: () => { watch(); const v = S().casa.vac; return Math.hypot(v.x - h.ctrls.rhaenyra.x, v.z - h.ctrls.rhaenyra.z) < L.VACUUM.barkR - 0.4; } });
+  h.tap('KeyE');
+  h.run(0.2);
+  assert.equal(S().casa.vacuum, 'scared', 'o latido grosso assusta o aspirador');
+  assert.ok(h.run(15, { until: () => { watch(); return S().casa.vacuum === 'docked'; } }), 'e ele volta para a base');
+  // a despensa no escuro: o impulso da Rhaenyra no interruptor alto acende a luz, e a goteira aparece
+  assert.equal(h.log('objective').at(-1)?.text, 'A despensa está no escuro: acendam a luz');
+  boost(h, L.PANTRY.switch);
+  assert.ok(S().casa.pantryLit, 'a luz da despensa acende');
+  assert.ok(S().revealed.includes('goteira'), 'a goteira brilha');
+  watch();
+  // a sala de jantar: a Radhija puxa a toalha, a lata cai e dela saem o petisco e a etiqueta
+  become(h, 'radhija');
+  const TC = L.TABLECLOTH;
+  h.teleport('radhija', TC.bite.x + 0.45, TC.bite.z + 0.05, -Math.PI / 2);
+  h.run(0.3);
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a toalha na boca (fase ${S().tug})`);
+  const cloth = h.puzzle.lockFor('radhija');
+  assert.ok(holdWorld(h, [cloth.pull.ax, cloth.pull.az], 6, () => { watch(); return S().casa.tin !== 'mesa'; }), 'puxando a toalha, a lata cai');
+  assert.ok(h.run(3, { until: () => { watch(); return S().casa.tin === 'chao'; } }), 'a lata para no chão');
+  h.run(0.3);
+  assert.ok(examine(h, 'etiqueta'), 'a etiqueta da cenoura vira pista');
+  watch();
+  // a sala de estar: a Rhaenyra leva o pufe até o sofá; a Radhija sobe até o trinco; a Rhaenyra empurra a porta
+  const PF = L.POUF, EX = L.HOUSE_EXIT, ez = (EX.z0 + EX.z1) / 2;
+  h.teleport('radhija', -15.6, 16.2, Math.PI / 2);
+  become(h, 'rhaenyra');
+  h.teleport('rhaenyra', PF.start.x, PF.start.z + PF.half + 0.26, Math.PI);
+  h.run(0.2);
+  assert.ok(push(h, [0, -1], 8, () => S().casa.pouf.z <= PF.minZ + 0.02), `o pufe vai para o norte (${JSON.stringify(S().casa.pouf)})`);
+  h.teleport('rhaenyra', S().casa.pouf.x - PF.half - 0.26, S().casa.pouf.z, Math.PI / 2);
+  h.run(0.2);
+  assert.ok(push(h, [1, 0], 10, () => S().casa.poufAtSofa), `o pufe encosta no sofá (${JSON.stringify(S().casa.pouf)})`);
+  watch();
+  h.teleport('rhaenyra', -14.0, 18.9, Math.PI / 2);
+  become(h, 'radhija');
+  h.teleport('radhija', S().casa.pouf.x - 0.7, S().casa.pouf.z, Math.PI / 2);
+  h.run(0.3);
+  h.tap('KeyE');
+  assert.ok(h.run(10, { until: () => { watch(); return S().casa.latchOpen && S().casa.climb === null; } }), 'a Radhija sobe pelo pufe e abre o trinco');
+  h.teleport('radhija', EX.x - 1.4, ez - 0.6, Math.PI / 2);
+  become(h, 'rhaenyra');
+  h.teleport('rhaenyra', EX.x - 0.5, ez, Math.PI / 2);
+  h.run(0.2);
+  assert.ok(holdWorld(h, [1, 0], 4, () => !!S().scene, ['ShiftLeft']), 'destrancada, a Rhaenyra empurra a porta dos fundos');
+  skipScene(h, 'portaFundos');
   assert.equal(S().stage, 'quintal');
   h.run(1.0);
   watch();
@@ -253,7 +310,7 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   assert.equal(S().stage, 'fim');
   const end = h.log('story:chapterEnd').at(-1);
   assert.ok(end, 'o fim do capítulo');
-  assert.deepEqual({ chapter: end.chapter, title: end.title, hiddenTotal: end.hiddenTotal, socksTotal: end.socksTotal }, { chapter: 1, title: 'Cadê a Cenoura?', hiddenTotal: 2, socksTotal: 3 });
+  assert.deepEqual({ chapter: end.chapter, title: end.title, hiddenTotal: end.hiddenTotal, socksTotal: end.socksTotal }, { chapter: 1, title: 'Cadê a Cenoura?', hiddenTotal: 4, socksTotal: 3 });
   assert.ok(end.clues >= 8, `pistas na lupa: ${end.clues}`);
   assert.deepEqual([...bad], [], 'ninguém atravessa nada no caminho');
   assert.equal(h.puzzle.lockFor('radhija'), null);
@@ -273,11 +330,11 @@ test('Faro: as duas farejam, e a nuvem de cheiro leva até a próxima pista de c
   const faro = h.log('story:faro');
   assert.equal(faro.length, 1, 'o pulso da Rhaenyra sai');
   assert.equal(faro[0].who, 'rhaenyra');
-  // a nuvem sai dela e vai para o rastro dos pombos, lá fora (a pista seguinte), pelo caminho de dentro da casa
+  // a nuvem sai dela e vai para o próximo passo da casa: com a Rhaenyra presa no quarto, a grade (o resto da casa está
+  // em test/historia-casa.test.mjs)
   const c = S().cloud;
-  assert.ok(c.on && c.puffs >= 10, `a nuvem de cheiro aparece (${JSON.stringify(c)})`);
-  assert.ok(near(c.lead, L.RECON, 0.1), 'e leva até a marca da piscina');
-  assert.ok(c.total > 15, `o caminho é o de andar, não em linha reta por cima das paredes (${c.total} m)`);
+  assert.ok(c.on && c.puffs >= 2, `a nuvem de cheiro aparece (${JSON.stringify(c)})`);
+  assert.ok(near(c.lead, mid(L.PET_GATE), 0.1), 'e leva até a grade');
   const mesh = h.engine.scene.getObjectByName('faro:nuvem-de-cheiro');
   assert.ok(mesh && mesh.visible && mesh.count === c.puffs, 'a malha da nuvem está na cena');
   // a nuvem acompanha quem fareja: trocando para a Radhija com o Faro aceso, sai dela
@@ -311,6 +368,10 @@ test('Faro: as duas farejam, e a nuvem de cheiro leva até a próxima pista de c
     h.run(0.4);
     return S().cloud.lead;
   };
+  // no quintal (a casa resolvida), de dentro do quarto: a marca da piscina, pelo caminho de andar (pela casa e pela
+  // porta dos fundos), não em linha reta por cima das paredes
+  assert.ok(near(leadAt('quintal', { x: L.BED.x + 1.6, z: L.BED.z + 2.0 }), L.RECON, 0.1), 'no quintal: a marca da piscina');
+  assert.ok(S().cloud.puffs >= 10 && S().cloud.total > 15, `o caminho é o de andar (${JSON.stringify(S().cloud)})`);
   assert.ok(near(leadAt('varal'), L.CARROT_PIN, 0.6), 'no varal: a cenoura');
   // na torre, de longe (de perto, o próprio pulso já mostra a Reconstrução da senha)
   assert.ok(near(leadAt('torre', L.NAV_NODES.P_south), L.INTERCOM.recon, 0.1), 'na torre, sem a senha: o lugar da Reconstrução');

@@ -78,6 +78,7 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
 
   // ---------------------------------------------------------------- mecânicas e colisores
   // o aspirador (um círculo que anda: ninguém o atravessa) e o medo da Radhija (as faixas que barram só a pequena)
+  const IGNORE_VAC = { ignore: new Set(['aspirador']) };
   const vacCol = world.addDynamic({ id: 'aspirador', kind: 'static', shape: 'circle', x: V.dock.x, z: V.dock.z, r: V.r });
   const F = V.fear;
   const fearHall = world.addDynamic({ id: 'medo-do-aspirador', kind: 'static', shape: 'box', x: (F.x0 + F.x1) / 2, z: (F.z0 + F.z1) / 2, hx: (F.x1 - F.x0) / 2, hz: (F.z1 - F.z0) / 2, blocks: 'small', enabled: false });
@@ -100,7 +101,7 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
   let S = null;
   const fresh = () => ({
     time: 0, vac: 'sleep', vx: V.dock.x, vz: V.dock.z, vyaw: V.dock.yaw, vdir: -1, vt: 0, vYaw0: 0, vYaw1: 0, bumps: 0,
-    home: null, homeI: 0, vacuumSeen: false, sayCd: 0, fearCd: 0, fearI: 0, darkI: 0, rattleCd: 0, dripT: 0,
+    home: null, homeI: 0, detours: 0, vacuumSeen: false, sayCd: 0, fearCd: 0, fearI: 0, darkI: 0, rattleCd: 0, dripT: 0,
     pantryLit: false, litT: -1, clothP: 0, clothBase: 0, tin: 'mesa', tinT: 0, latchOpen: false, latchT: -1,
     exitPush: false, exitOpen: false, climb: null, shownLatch: false, seenRha: false,
   });
@@ -161,6 +162,7 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
     const zc = Math.min(Math.max(S.vz, LN.z0), LN.z1);
     S.home = [{ x: LN.x, z: zc }, { x: LN.x, z: LN.z1 }, { x: V.dock.x, z: V.dock.z }];
     S.homeI = 0;
+    S.detours = 0;
     setVacMode('home');
   }
   function docked() {
@@ -213,11 +215,32 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
         const dx = p.x - S.vx, dz = p.z - S.vz, d = Math.hypot(dx, dz);
         const step = 0.5 * dt;
         const yaw = lerpAngle(S.vyaw, Math.atan2(dx, dz), Math.min(1, dt * 8));
-        if (d <= step) { if (!dogAt(p.x, p.z)) { placeVac(p.x, p.z, yaw); S.homeI++; } }
-        else stepTo(S.vx + (dx / d) * step, S.vz + (dz / d) * step, yaw); // com alguém no caminho, espera
+        if (d <= step) { if (!dogAt(p.x, p.z)) { placeVac(p.x, p.z, yaw); S.homeI++; } } else {
+          // com alguém no caminho: dá a volta por um dos lados do corredor (se couber); se não, espera
+          const c = stepTo(S.vx + (dx / d) * step, S.vz + (dz / d) * step, yaw);
+          if (c) detour(c, Math.sign(dz) || 1);
+        }
         break;
       }
       default: break;
+    }
+  }
+  /**
+   * Voltando para a base com uma dog no caminho: dois pontos de desvio (de lado, na altura dele, e passando a dog), do
+   * lado do corredor com espaço, se o caminho até eles estiver livre de paredes e móveis. `dz`: o sentido em z.
+   */
+  function detour(c, dz) {
+    if (S.detours >= 4) return;
+    const wt = L.WALLS.t / 2, lo = COR.x0 + wt + V.r + 0.06, hi = COR.x1 - wt - V.r - 0.06;
+    const off = c.r + V.r + V.gap + 0.1;
+    const xs = [c.x - off, c.x + off].filter((x) => x >= lo && x <= hi).sort((a, b) => Math.abs(a - S.vx) - Math.abs(b - S.vx));
+    for (const x of xs) {
+      const a = { x, z: S.vz }, b = { x, z: c.z + dz * off };
+      if (dogAt(a.x, a.z) || dogAt(b.x, b.z)) continue;
+      if (!world.segmentClear(S.vx, S.vz, a.x, a.z, V.r, 'large', IGNORE_VAC) || !world.segmentClear(a.x, a.z, b.x, b.z, V.r, 'large', IGNORE_VAC)) continue;
+      S.home.splice(S.homeI, 0, a, b);
+      S.detours++;
+      return;
     }
   }
   /** Encostou numa dog: com a Rhaenyra no Fica, desiste e volta para a base; sem, desvia (e na terceira, desiste). */
@@ -543,6 +566,11 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
         if (d < 5 && K.S?.stage === 'casa') emit('story:sfx', { name: 'pingo', x: PN.drip.x, z: PN.drip.z, volume: (1 - d / 5) * (S.pantryLit ? 0.4 : 0.8) });
       }
       if (!playing) return;
+      // o passo da casa mudou (o saco saiu da frente, o pufe encostou no sofá…): o objetivo novo no HUD
+      if (K.S?.stage === 'casa') {
+        const st = step();
+        if (st !== S.lastStep) { S.lastStep = st; objectiveNow(); }
+      }
       // o aspirador
       if (vacActive()) {
         stepVacuum(dt);
@@ -664,7 +692,7 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
       return null;
     },
     /** O interruptor da despensa (com a luz apagada e o aspirador já acordado: antes disso a porta da cozinha está fechada). */
-    wallSpots() { return S && !S.pantryLit && K.S?.stage === 'casa' ? [sw.spot] : []; },
+    wallSpots() { return S && !S.pantryLit && K.S?.stage === 'casa' && K.S.kitchenOpen ? [sw.spot] : []; },
     onWallTouch(c, spot) {
       if (spot?.id !== sw.id) return false;
       sw.touch();

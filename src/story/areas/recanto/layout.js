@@ -905,7 +905,8 @@ export const NAV_NODES = {
   J_s: { x: -19.5, z: 13.3 }, J_sw: { x: -22.3, z: 13.1 }, J_arco: { x: -21.0, z: 14.0 },
   E_arco: { x: -21.0, z: 15.3 }, E_w: { x: -21.4, z: 17.7 }, E_sw: { x: -18.6, z: 19.25 }, E_tvn: { x: -18.3, z: 15.25 },
   E_n: { x: -15.0, z: 15.25 }, E_mid: { x: -14.6, z: 17.95 }, E_s: { x: -16.2, z: 19.3 }, E_porta: { x: -12.4, z: 18.85 },
-  Y_fundos: { x: -10.35, z: 18.6 },
+  // do lado de fora da porta dos fundos (o mesmo nó do quintal maior, branch claude/historia-quintal-maior)
+  Y_exit: { x: HOUSE_EXIT.x + 0.81, z: (HOUSE_EXIT.z0 + HOUSE_EXIT.z1) / 2 },
   Y_door: { x: -10.5, z: 4.84 }, Y_mid: P(-5.2, 4.6), Y_south: P(-4.6, 7.8), Y_gate: { x: -8.2, z: 4.0 },
   Y_gap: { x: -9.9, z: 3.45 }, C_gap: { x: -9.95, z: 1.2 }, C_bolt: { x: SERVICE_BOLT.ring.x, z: 1.2 },
   C_gate: { x: -8.2, z: 0.7 }, C_west: P(-8.6, 0.3), C_far: P(-12.6, 0.15),
@@ -940,7 +941,10 @@ export const NAV_EDGES = [
   ['J_copa', 'J_e'], ['J_copa', 'J_s'], ['J_e', 'J_n'], ['J_e', 'J_s'], ['J_n', 'J_nw'], ['J_nw', 'J_sw'], ['J_s', 'J_sw'],
   ['J_s', 'J_arco'], ['J_sw', 'J_arco'], ['J_arco', 'E_arco'],
   ['E_arco', 'E_w'], ['E_arco', 'E_tvn'], ['E_w', 'E_sw'], ['E_tvn', 'E_n'], ['E_sw', 'E_s'], ['E_n', 'E_mid'], ['E_s', 'E_mid'],
-  ['E_mid', 'E_porta'], ['E_porta', 'Y_fundos', { requires: 'exitOpen' }], ['Y_fundos', 'Y_south'],
+  ['E_mid', 'E_porta'], ['E_porta', 'Y_exit', { requires: 'exitOpen' }],
+  // provisório, só até juntar com o quintal maior (lá Y_exit liga ao pátio e à passagem do jabuti): sem ele, este
+  // branch não teria caminho da porta dos fundos até o quintal antigo
+  ['Y_exit', 'Y_south'],
   ['Y_door', 'Y_mid'], ['Y_door', 'Y_gate'], ['Y_mid', 'Y_south'], ['Y_mid', 'Y_gate'], ['Y_door', 'Y_gap'], ['Y_gate', 'Y_gap'],
   ['Y_gap', 'C_gap', { requires: ['small', 'gapOpen'] }], ['C_gap', 'C_bolt'], ['C_gap', 'C_west'], ['C_bolt', 'C_gate'],
   ['Y_gate', 'C_gate', { requires: 'serviceOpen' }],
