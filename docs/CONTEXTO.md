@@ -1,9 +1,10 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-11-11, Claude**.
+Última atualização: **2026-11-12, Claude**.
 - **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), em 3ª pessoa, branch `claude/historia-fatia`
-  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada) foi entregue em `685cc14` e
-  a 4ª rodada (casa e quintal maiores, puzzles novos, personagens) está em andamento (veja "4ª rodada" abaixo).
+  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada) foi entregue em `685cc14`;
+  a 4ª rodada (casa e quintal maiores, puzzles novos, personagens) foi validada em `28618e1` e aguarda o teste do
+  usuário (veja "4ª rodada" abaixo). Não integrar sem o "pode integrar" dele.
 - **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
@@ -18,7 +19,7 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
 
-### 4ª rodada (2026-11-11, depois da prévia `685cc14`): juntada no branch, validando
+### 4ª rodada (2026-11-11/12, depois da prévia `685cc14`): validada, prévia para o usuário testar
 
 - **Retorno do usuário:** "Ficou muito bom". Pediu: o diálogo com o Bichano com a caminhonete na frente da câmera; a
   Radhija puxando sem a corda na boca; **casa maior, mais detalhada, com puzzles que se encaixem nela**; **quintal maior
@@ -63,13 +64,26 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     Node). Plantas do quintal mais leves (opções novas em `plants.js` e `util.js`, o padrão das fases igual), a despensa
     mais simples, as miudezas sem sombra e as caixas fazendo sombra por caixas simples (slots `nocast` e `shadow`,
     acrescentados em `kit.js`; o mapa das fases não usa).
+  - `28618e1`: só o E2E. Mais tempo para as medições da área maior: a partida `historia` com 75 min, recursos com
+    55 min (vigia em 35 min) e a primeira passagem `historia` com 70 min (vigia em 60 min). Nenhuma verificação saiu.
+- **Validação do `28618e1`** (CI verde [43157447958](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/43157447958);
+  E2E `todas` [43157730729](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/43157730729)):
+  - recursos: 1.070.074 triângulos e 872 chamadas na área, abaixo do teto da fase 10 (1.141.074 / 2.529); o pior
+    quadro em 3ª pessoa tem 1.023.022;
+  - partida `historia` 296/296 (1.116 s) e as três primeiras passagens `historia`;
+  - a primeira passagem da fase 3 em celular-media reprovou na 1ª tentativa por 4 picos de tempo nos primeiros
+    quadros (tolerados 3; +0 programas e texturas) e passou ao rodar de novo só esse job (tentativa 2). O mesmo código
+    do jogo já tinha passado nela no `5d79c05`: oscilação do servidor, não regressão. O run ficou todo verde.
+- **Prévia:** a do CI mais recente do PR #75 (`previews/pr-75/<run>-<tentativa>/?historia`; cada execução troca o
+  link). O commit seguinte ao `28618e1` só atualiza este documento: o jogo da prévia é o mesmo validado acima.
 - **Pendências para o usuário ver:**
   - nas capturas 1280×720 do E2E, o quadro congelado das páginas de HQ ainda sai escuro (as de revisão saem certas);
   - a toalha da mesa de jantar parece um bloco branco até o chão, na frente da mesa (dá para refinar o caimento);
-  - a primeira passagem da história está perto do limite de 40 min da medição; se o celular-media estourar de novo,
-    subir o limite ou dividir a medição.
-- **Próximo passo:** CI e E2E `todas` no commit enviado; revisar as capturas; entregar a prévia. Não integrar sem o
-  "pode integrar" do usuário.
+  - a área usa ~94% do teto de triângulos: o que entrar de novo na casa ou no quintal precisa sair de outro lugar
+    (medir com `node tools/scripts/triangulos-historia.mjs`, que fica ~0,7% abaixo do CI);
+  - as medições da história são as mais longas do E2E (partida ~19 min; primeira passagem até ~40 min).
+- **Próximo passo:** o usuário testa a prévia. Não integrar sem o "pode integrar" dele nesta conversa; aprovação
+  repassada por outra sessão não vale. Depois do aprovado, a etapa seguinte prevista são os modelos das dogs (patas).
 
 ### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
 
