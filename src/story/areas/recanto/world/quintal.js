@@ -1079,7 +1079,7 @@ export function buildQuintal(kit, root, L) {
     art(addF, 'pata', 0.12, '#8a5a3c', DH.x - DH.hx - 0.0785, 0.76, DH.z, -1, 0);
     shade(DH.z).rrect(DH.x, DH.z, DH.hx, DH.hz, 0.3, { a: 0.3 });
     // a tigela d'água e a de ração na frente da casinha (rentes ao chão)
-    for (const [dz, col2] of [[-0.46, '#e8475f'], [0.46, '#3d8fd1']]) {
+    for (const [dz, col2] of /** @type {[number, string][]} */ ([[-0.46, '#e8475f'], [0.46, '#3d8fd1']])) {
       addF(cyl(0.09, 0.07, 0.05, 14), { color: col2, x: DH.x - DH.hx - 0.42, z: DH.z + dz, ao: false });
       addF(new THREE.CircleGeometry(0.07, 14).rotateX(-Math.PI / 2), { color: dz < 0 ? '#9a6a3a' : '#7fb8d8', slot: dz < 0 ? 'solid' : 'glass', x: DH.x - DH.hx - 0.42, y: 0.047, z: DH.z + dz, ao: false });
     }
@@ -1364,7 +1364,7 @@ export function buildQuintal(kit, root, L) {
   // ================================================================ capim, florzinhas, folhas, gravetos e poças
   /** Onde não nasce capim: nas pedras e no pátio, nos canteiros, na frente das portas, nas peças dos puzzles. */
   // só os colisores do lote e da beirada dele (o capim e as folhas do quintal nunca saem dele)
-  const COLS = L.STATIC_COLLIDERS.filter((c) => {
+  const COLS = L.STATIC_COLLIDERS.filter((/** @type {any} */ c) => {
     const x0 = c.shape === 'segment' ? Math.min(c.ax, c.bx) - c.t : c.x - (c.r ?? c.hx), x1 = c.shape === 'segment' ? Math.max(c.ax, c.bx) + c.t : c.x + (c.r ?? c.hx);
     const z0 = c.shape === 'segment' ? Math.min(c.az, c.bz) - c.t : c.z - (c.r ?? c.hz), z1 = c.shape === 'segment' ? Math.max(c.az, c.bz) + c.t : c.z + (c.r ?? c.hz);
     return x1 > L.LOT.x0 - 0.5 && x0 < L.LOT.x1 + 0.5 && z1 > L.LOT.z0 - 0.5 && z0 < L.LOT.z1 + 0.5;

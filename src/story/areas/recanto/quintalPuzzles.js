@@ -77,7 +77,8 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
     prop: /** @type {any} */ ({ setSway: (a) => P()?.guava?.setSway?.(Math.max(-0.22, Math.min(0.22, a)), guavaSway.dx, guavaSway.dz) }),
   });
   /** As quatro faces do tronco: a Rhaenyra empurra de onde estiver (cada uma é um spot do empurrão em pé). */
-  const treeSpots = [[-1, 0, 'o'], [1, 0, 'l'], [0, -1, 'n'], [0, 1, 's']].map(([nx, nz, k]) => ({
+  /** @type {import('../../../types').ShoveSpot[]} */
+  const treeSpots = /** @type {[number, number, string][]} */ ([[-1, 0, 'o'], [1, 0, 'l'], [0, -1, 'n'], [0, 1, 's']]).map(([nx, nz, k]) => /** @type {any} */ ({
     id: `goiabeira-${k}`, x: GV.x + nx * (GV.r + 0.03), z: GV.z + nz * (GV.r + 0.03), nx, nz, y: 0.55, w: 0, over: 0, kind: 'tree',
     look: { x: GV.kite.x, y: GV.kite.y, z: GV.kite.z },
   }));
@@ -658,6 +659,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       }
     },
     /** Empurrar o jabuti (a Rhaenyra com Shift) não adianta: ela fica no lugar e ganha a dica. */
+    /** @param {number} dt @param {any} c @param {any} intent @param {{ shift?: boolean }} [o] */
     modifyIntent(dt, c, intent, { shift } = {}) {
       if (!Y || Y.jabuti === 'anda' || c.size !== 'large' || !shift || intent.speed < 0.05) return null;
       const dx = jabCol.x - c.x, dz = jabCol.z - c.z, d = Math.hypot(dx, dz);

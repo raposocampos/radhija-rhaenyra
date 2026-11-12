@@ -184,7 +184,7 @@ export function createJabuti() {
   // ---------------------------------------------------------------- as patas (diagonais no passo) e o rabinho
   /** @type {{ g: THREE.Group, base: THREE.Vector3, front: boolean, side: number, phase: number }[]} */
   const legs = [];
-  for (const [sx, sz, front] of [[-1, 1, true], [1, 1, true], [-1, -1, false], [1, -1, false]]) {
+  for (const [sx, sz, front] of /** @type {[number, number, boolean][]} */ ([[-1, 1, true], [1, 1, true], [-1, -1, false], [1, -1, false]])) {
     const g = new THREE.Group();
     const base = new THREE.Vector3(sx * SHELL.rx * 0.66, SHELL.y0 + 0.013, sz * SHELL.rz * 0.6);
     g.position.copy(base);

@@ -534,7 +534,7 @@ export function buildCasaSul(kit, root, L) {
       b.add(cyl(0.016, 0.016, 0.14, 8), { color: '#d0d4d8', y: Sk.h, z: -D / 2 + 0.06 });
       b.add(rodAB([0, Sk.h + 0.13, -D / 2 + 0.06], [0, Sk.h + 0.12, -D / 2 + 0.2], 0.012, 6), { color: '#d0d4d8' });
       b.add(cyl(0.03, 0.025, 0.09, 10), { color: '#f2c230', x: W / 2 - 0.1, y: Sk.h, z: -0.04 });
-      for (const [dx, col] of [[-0.008, '#e8475f'], [0.01, '#3d8fd1']]) b.add(rodAB([W / 2 - 0.1 + dx, Sk.h + 0.08, -0.04], [W / 2 - 0.1 + dx * 3, Sk.h + 0.2, -0.04 + dx], 0.005, 4), { color: col });
+      for (const [dx, col] of /** @type {[number, string][]} */ ([[-0.008, '#e8475f'], [0.01, '#3d8fd1']])) b.add(rodAB([W / 2 - 0.1 + dx, Sk.h + 0.08, -0.04], [W / 2 - 0.1 + dx * 3, Sk.h + 0.2, -0.04 + dx], 0.005, 4), { color: col });
       b.add(rb(0.08, 0.025, 0.05, 0.012, 1), { color: '#f4b8c8', x: -W / 2 + 0.11, y: Sk.h, z: 0 });
     });
     add(rb(0.62, 0.72, 0.03, 0.02, 1), { color: '#c9a24a', x: Sk.x, y: 1.12, z: ZK + ht + 0.015, ao: false });
@@ -853,7 +853,7 @@ export function buildCasaSul(kit, root, L) {
       add(rb(0.04, h, w, 0.012, 1), { color: '#c9a24a', x: x + 0.02, y: fy - h / 2, z: fz, ao: false });
       add(slab(0.006, h - 0.08, w - 0.08), { color: '#3f5f52', x: x + 0.043, y: fy - h / 2 + 0.04, z: fz, ao: false });
       add(disc(0.2, 0, 0, 1.6, 0.45).rotateY(Math.PI / 2), { color: '#c9935a', x: x + 0.05, y: fy - 0.2, z: fz, ao: false });
-      for (const [dz, dy, r, col] of [[-0.12, -0.08, 0.09, '#e8475f'], [0.08, -0.06, 0.1, '#f2c230'], [-0.02, 0.06, 0.08, '#7fb04f'], [0.2, 0.0, 0.07, '#8a72c2']]) {
+      for (const [dz, dy, r, col] of /** @type {[number, number, number, string][]} */ ([[-0.12, -0.08, 0.09, '#e8475f'], [0.08, -0.06, 0.1, '#f2c230'], [-0.02, 0.06, 0.08, '#7fb04f'], [0.2, 0.0, 0.07, '#8a72c2']])) {
         add(disc(r, 0, 0).rotateY(Math.PI / 2), { color: col, x: x + 0.052, y: fy + dy, z: fz + dz, ao: false });
       }
     }
