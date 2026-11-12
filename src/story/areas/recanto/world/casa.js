@@ -1,10 +1,12 @@
 // RECANTO DAS PATINHAS — a casa das irmãs e o quintal, para a câmera em 3ª pessoa (de perto e de baixo).
 // A casa é inteira (paredes até o forro, telhado de duas águas, janelas de verdade com a luz da manhã): o QUARTO lilás
 // (a caminha redonda embaixo do basculante, o pote d'água que vira, guarda-roupa, cômoda com abajur, estante, tapete e
-// brinquedos), a COZINHA de azulejo (bancada com pia e fogão, armários, geladeira com ímãs, mesa e cadeiras, os potes
-// de ração) e a SALA (sofá, poltrona, mesinha, rack com TV, estante alta, plantas). Peças dos puzzles: a GRADE do
+// brinquedos) e a COZINHA de azulejo (bancada com pia e fogão, armários, geladeira com ímãs, mesa e cadeiras embaixo da
+// janela que era a porta do quintal, os potes de ração). A ala sul (corredor, banheiro, despensa, sala de jantar, sala
+// de estar e a porta dos fundos) fica em ./casaSul.js, que usa as formas exportadas daqui. Peças dos puzzles: a GRADE do
 // quarto (a folha na dobradiça e a parte fixa com a portinha de gato), o PEDAL que a solta (o cabinho vermelho liga um
-// ao outro), o SACO DE RAÇÃO na frente da maçaneta e a porta da cozinha com a alavanca do lado de dentro.
+// ao outro), o SACO DE RAÇÃO na frente da maçaneta e a porta da cozinha para o corredor, com a alavanca do lado da
+// cozinha.
 // O QUINTAL: o muro com a passagem baixa (o arco de escoar água, com a calhinha), a porta da área de serviço com o
 // FERROLHO do lado de fora (a argola na cordinha, pendurada na mão-francesa do pilar), o GALHO da tempestade (a tora e
 // as folhas dentro do colisor, na frente da passagem) em cima das telhas, a casinha, canteiros, capim e flores, poças.
@@ -27,7 +29,7 @@ const _va = new THREE.Vector3();
 
 // ---------------------------------------------------------------- cores
 /** Variação suave de uma cor (reboco, madeira, tecido). */
-function vary(hex, amp = 0.05, f = 7) {
+export function vary(hex, amp = 0.05, f = 7) {
   const c = C(hex), out = new THREE.Color();
   return (p) => {
     const n = Math.sin(p.x * f * 1.7 + p.z * f * 2.3 + p.y * f) * 0.5 + Math.sin(p.x * f * 5.1 - p.z * f * 3.7) * 0.5;
@@ -35,7 +37,7 @@ function vary(hex, amp = 0.05, f = 7) {
   };
 }
 /** Tábuas: cor por tábua (fiadas de 16 cm, emendas a cada 90 cm), ao longo de x ou de z. */
-function planks(base, alt, alongZ = false) {
+export function planks(base, alt, alongZ = false) {
   const a = C(base), b = C(alt), out = new THREE.Color();
   return (p) => {
     const u = alongZ ? p.x : p.z, v = alongZ ? p.z : p.x;
@@ -46,16 +48,16 @@ function planks(base, alt, alongZ = false) {
   };
 }
 /** Ladrilho xadrez de lado s. */
-function checker(a, b, s = 0.3) {
+export function checker(a, b, s = 0.3) {
   const ca = C(a), cb = C(b);
   return (p) => ((Math.floor(p.x / s) + Math.floor(p.z / s)) % 2 === 0 ? ca : cb);
 }
 /** Número pseudoaleatório fixo de dois inteiros (0..1). */
-const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+export const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
 
 // ---------------------------------------------------------------- formas
 /** Haste entre dois pontos [x, y, z]. */
-function rodAB(a, b, r, seg = 6) {
+export function rodAB(a, b, r, seg = 6) {
   _va.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
   const len = Math.max(1e-4, _va.length());
   const g = new THREE.CylinderGeometry(r, r, len, seg, 1);
@@ -64,7 +66,7 @@ function rodAB(a, b, r, seg = 6) {
   return g;
 }
 /** Tronco de cone entre dois pontos [x, y, z] (r0 em a, r1 em b): galhos. */
-function limbAB(a, b, r0, r1, seg = 7) {
+export function limbAB(a, b, r0, r1, seg = 7) {
   _va.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
   const len = Math.max(1e-4, _va.length());
   const g = new THREE.CylinderGeometry(r1, r0, len, seg, 1);
@@ -73,17 +75,17 @@ function limbAB(a, b, r0, r1, seg = 7) {
   return g;
 }
 /** Tubo por pontos [x, y, z] (mangueira, cabo, caule, alça). */
-function tubeAlong(pts, r, radial = 5, segs = 24) {
+export function tubeAlong(pts, r, radial = 5, segs = 24) {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))), segs, r, radial, false);
 }
 /** Forma plana no plano XY (voltada para +Z). */
-function shapeXY(pts) {
+export function shapeXY(pts) {
   const s = new THREE.Shape();
   pts.forEach((p, i) => (i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])));
   return new THREE.ShapeGeometry(s, 1);
 }
 /** Contorno irregular de raio r (poças, manchas). */
-function blobPts(r, seed, n = 18) {
+export function blobPts(r, seed, n = 18) {
   const R = rng(seed);
   const ph = [R() * TAU, R() * TAU, R() * TAU];
   const out = [];
@@ -95,14 +97,14 @@ function blobPts(r, seed, n = 18) {
   return out;
 }
 /** Decalque irregular deitado no chão (voltado para cima). */
-const flatBlob = (r, seed, n = 18) => shapeXY(blobPts(r, seed, n)).rotateX(-Math.PI / 2);
+export const flatBlob = (r, seed, n = 18) => shapeXY(blobPts(r, seed, n)).rotateX(-Math.PI / 2);
 /**
  * Disco plano no plano XY (voltado para +Z), esticado e deslocado.
  * @returns {THREE.BufferGeometry}
  */
-const disc = (r, x = 0, y = 0, sx = 1, sy = 1, n = 14) => new THREE.CircleGeometry(r, n).scale(sx, sy, 1).translate(x, y, 0);
+export const disc = (r, x = 0, y = 0, sx = 1, sy = 1, n = 14) => new THREE.CircleGeometry(r, n).scale(sx, sy, 1).translate(x, y, 0);
 /** Folha caída: a nervura dobrada em V e a ponta levantada (nunca rente a outra coisa). */
-function leafGeo(len, w) {
+export function leafGeo(len, w) {
   const s = new THREE.Shape();
   s.moveTo(0, -len / 2);
   s.quadraticCurveTo(w, -len * 0.1, 0, len / 2);
@@ -119,7 +121,7 @@ function leafGeo(len, w) {
  * @param {string} kind @param {number} s
  * @returns {[THREE.BufferGeometry, string | null][]}
  */
-function picto(kind, s) {
+export function picto(kind, s) {
   if (kind === 'osso') {
     /** @type {THREE.BufferGeometry[]} */
     const parts = [new THREE.PlaneGeometry(s * 0.6, s * 0.2)];
@@ -148,7 +150,7 @@ function picto(kind, s) {
 }
 
 /** Moita florida leve (duas bolhas de folhagem e florzinhas por cima): para floreiras, vasos e canteiros. */
-function bushGeo(r, h, seed, flower, n = 7) {
+export function bushGeo(r, h, seed, flower, n = 7) {
   const R = rng(seed);
   /** @type {THREE.BufferGeometry[]} */
   const parts = [foliageCluster([{ x: 0, y: h * 0.5, z: 0, r, sy: 0.7 }, { x: r * 0.45, y: h * 0.62, z: r * 0.2, r: r * 0.7, sy: 0.75 }], { detail: 1, amp: 0.3, freq: 9, seed, dark: '#2f4d1f', mid: '#4f7a2e', light: '#86a94a' })];
@@ -167,7 +169,7 @@ function bushGeo(r, h, seed, flower, n = 7) {
 }
 
 /** Junta peças pintadas numa geometria só, como o kit, para os objetos que se mexem (uma malha cada). */
-function createBaker() {
+export function createBaker() {
   const list = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
   return {
@@ -202,7 +204,7 @@ function createBaker() {
   };
 }
 /** Uma malha de cor por vértice com as peças de um baker. */
-function bakedMesh(baker, name, { rough = 0.75, metal = 0, cast = true } = {}) {
+export function bakedMesh(baker, name, { rough = 0.75, metal = 0, cast = true } = {}) {
   const m = new THREE.Mesh(baker.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: metal }));
   m.name = name;
   m.castShadow = cast;
@@ -211,7 +213,7 @@ function bakedMesh(baker, name, { rough = 0.75, metal = 0, cast = true } = {}) {
 }
 
 /** Tubo de cordinha atualizável (número fixo de pontos), com as pernas torcidas na cor. */
-function createCordTube(n, radial, base) {
+export function createCordTube(n, radial, base) {
   const g = new THREE.BufferGeometry();
   const vc = n * (radial + 1);
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vc * 3), 3));
@@ -270,7 +272,7 @@ function createCordTube(n, radial, base) {
  * Telhado de duas águas (cumeeira ao longo de x): as águas em fiadas de telha (cor por telha), as empenas na cor do
  * reboco e o forro do beiral por baixo. Base w × d (já com o beiral) em y = 0, centrada.
  */
-function tiledRoof(w, d, h, { tile = 0.34, gable = '#f3d9bf', under = '#e9dcc6' } = {}) {
+export function tiledRoof(w, d, h, { tile = 0.34, gable = '#f3d9bf', under = '#e9dcc6' } = {}) {
   const pos = [], col = [];
   const hx = w / 2, hz = d / 2;
   const cols = Math.max(1, Math.round(w / tile)), rows = Math.max(1, Math.round(Math.hypot(hz, h) / tile));
@@ -303,8 +305,11 @@ function tiledRoof(w, d, h, { tile = 0.34, gable = '#f3d9bf', under = '#e9dcc6' 
   return g;
 }
 
+/** As tintas de dentro da ala sul (./casaSul.js): o norte dela é a parede do sul do quarto e da cozinha, feita aqui. */
+export const WING_PAINT = { jantar: '#f1dcc4', banheiro: '#eef6f4', corredor: '#f6ecd8', despensa: '#efe6d6', estar: '#f6e8c4' };
+
 /** Recorta um polígono [[x, z], …] por um retângulo (Sutherland–Hodgman). */
-function clipRect(poly, x0, x1, z0, z1) {
+export function clipRect(poly, x0, x1, z0, z1) {
   const cut = (pts, inside, cross) => {
     const out = [];
     for (let i = 0; i < pts.length; i++) {
@@ -326,7 +331,7 @@ function clipRect(poly, x0, x1, z0, z1) {
 }
 
 /** Cortina: um pano em pregas (ondas ao longo da largura), com a base em y = 0. */
-function curtainGeo(w, h, d = 0.035) {
+export function curtainGeo(w, h, d = 0.035) {
   const g = new THREE.BoxGeometry(w, h, d, 8, 1, 1);
   g.translate(0, h / 2, 0);
   const p = g.attributes.position;
@@ -357,10 +362,10 @@ export function buildCasa(kit, root, L) {
   };
 
   const FL = 0.006; // o piso (logo acima do gramado: as patas ficam no chão)
-  const XW = H.x0 + ht, XE = H.x1 - ht, ZN = H.z0 + ht, ZS = H.z1 - ht; // faces de dentro das paredes de fora
+  const XW = H.x0 + ht, XE = H.x1 - ht, ZN = H.z0 + ht; // faces de dentro das paredes de fora
   const XM = RM.quarto.x1, ZM = RM.quarto.z1; // os centros das paredes de dentro
-  const W = L.WINDOW, KD = L.KITCHEN_DOOR, DQ = L.DOORWAYS.quartoCozinha, DS = L.DOORWAYS.cozinhaSala;
-  const K = L.COUNTER, F = L.FRIDGE, KT = L.KITCHEN_TABLE, SF = L.SOFA, TV = L.TV_RACK, CT = L.COFFEE_TABLE, AC = L.ARMCHAIR;
+  const W = L.WINDOW, KD = L.KITCHEN_DOOR, DQ = L.DOORWAYS.quartoCozinha, KW = L.KITCHEN_WINDOW;
+  const K = L.COUNTER, F = L.FRIDGE, KT = L.KITCHEN_TABLE;
   const PASS_H = 2.05;
   const CEIL = WL.h - 0.046; // a face de baixo do forro
   const lilac = '#e7dcf2', mint = '#e5f1e1', yellow = '#f6e8c4', plaster = '#f3d9bf';
@@ -373,25 +378,18 @@ export function buildCasa(kit, root, L) {
     bin: { x: XM + ht + 0.24, z: K.z1 + 0.3, r: 0.17 },
     bedroomShelf: { x: XM - ht - 0.17, z: H.z0 + 1.06, hx: 0.17, hz: 0.6, h: 1.05 },
     bedroomPlant: { x: XW + 0.32, z: ZM - ht - 0.32, r: 0.24 },
-    bookcase: { x: SF.x, z: ZM + ht + 0.19, hx: 0.9, hz: 0.19, h: 2.1 },
-    sideboard: { x: DS.x1 + 1.1, z: ZM + ht + 0.2, hx: 0.75, hz: 0.2, h: 0.8 },
-    loveseat: { x: TV.x, z: TV.z - 2.4, hx: 0.75, hz: 0.4, h: 0.78 },
-    pouf: { x: TV.x + 1.35, z: TV.z - 1.6, r: 0.26 },
-    floorLamp: { x: AC.x - 0.55, z: AC.z - 0.75, r: 0.14 },
-    plants: [{ x: XE - 0.34, z: ZS - 0.34, r: 0.26 }, { x: XE - 0.34, z: ZM + ht + 0.34, r: 0.24 }, { x: SF.x + 1.4, z: ZM + ht + 0.44, r: 0.22 }],
   };
 
   // janelas de verdade (vão na parede): a…b ao longo da parede, y0…y1 do peitoril ao alto
   const WIN = {
     pia: { a: SINK_X - 0.5, b: SINK_X + 0.5, y0: 1.08, y1: 1.78 }, // cozinha, norte, em cima da pia
     cozinha: { a: ZM - 1.86, b: ZM - 0.66, y0: 1.0, y1: 1.9 }, // cozinha, leste (o quintal)
-    sala1: { a: ZM + 0.9, b: ZM + 2.3, y0: 0.85, y1: 1.95 }, // sala, leste
-    sala2: { a: ZS - 2.2, b: ZS - 0.8, y0: 0.85, y1: 1.95 },
-    salaSul: { a: SF.x + SF.hx + 0.5, b: TV.x - TV.hx - 0.6, y0: 0.95, y1: 1.95 }, // sala, sul, entre o sofá e o rack
+    portaVelha: { a: KW.z0, b: KW.z1, y0: KW.sill, y1: KW.top }, // cozinha, leste: a antiga porta do quintal, agora janela
   };
   const hBasc = { a: W.x0, b: W.x1, y0: W.sill, y1: W.top };
-  const hDQ = { a: DQ.z0, b: DQ.z1, y0: 0, y1: PASS_H }, hDS = { a: DS.x0, b: DS.x1, y0: 0, y1: PASS_H };
-  const hKD = { a: KD.hinge.z, b: KD.latchPost.z, y0: 0, y1: KD.h + 0.04 };
+  const hDQ = { a: DQ.z0, b: DQ.z1, y0: 0, y1: PASS_H };
+  // a porta da cozinha para o corredor, na parede do sul da cozinha (ao longo de x)
+  const hKD = { a: Math.min(KD.hinge.x, KD.latchPost.x), b: Math.max(KD.hinge.x, KD.latchPost.x), y0: 0, y1: KD.h + 0.04 };
 
   // ---------------------------------------------------------------- pisos
   /** Piso de um cômodo: quadrados cw × cd, cada um com a cor de fn(i, j) (colunas em x, fiadas em z). */
@@ -410,11 +408,10 @@ export function buildCasa(kit, root, L) {
     const ca = C('#f3e8d4'), cb = C('#dfa07c'), o = new THREE.Color();
     floorOf(XM + ht, XE, ZN, ZM - ht, 0.3, 0.3, (i, j) => o.copy((i + j) % 2 ? cb : ca).multiplyScalar(0.96 + 0.06 * hash(i, j)));
   }
-  floorOf(XW, XE, ZM + ht, ZS, 0.16, 0.45, plankTint('#b98252', '#9a6a40', false));
-  // soleiras: das passagens de dentro (madeira) e da porta da cozinha (pedra)
+  // (os pisos da ala sul ficam em ./casaSul.js)
+  // soleiras: das passagens de dentro (madeira): a grade do quarto e a porta da cozinha para o corredor
   add(slab(t + 0.02, 0.012, DQ.z1 - DQ.z0), { color: '#b08452', x: XM, y: FL, z: (DQ.z0 + DQ.z1) / 2, ao: false });
-  add(slab(DS.x1 - DS.x0, 0.012, t + 0.02), { color: '#b08452', x: (DS.x0 + DS.x1) / 2, y: FL, z: ZM, ao: false });
-  add(rb(t + 0.14, 0.03, KD.latchPost.z - KD.hinge.z, 0.008, 1), { color: '#cfc6b6', x: H.x1 + 0.04, y: -0.006, z: (KD.hinge.z + KD.latchPost.z) / 2, ao: false });
+  add(slab(hKD.b - hKD.a, 0.012, t + 0.02), { color: '#b08452', x: (hKD.a + hKD.b) / 2, y: FL, z: ZM, ao: false });
   /** Tapete: quadradinhos de 10 cm com a cor de fn(u, v) (u, v de −1 a 1), 4 mm acima do piso. */
   const rug = (x, z, hx, hz, fn) => add(tiles(hx * 2, hz * 2, 0.1, 0.1, (p) => fn(p.x / hx, p.z / hz)), { color: null, slot: 'ground', x, y: FL + 0.004, z, ao: false });
 
@@ -453,15 +450,17 @@ export function buildCasa(kit, root, L) {
   wallRun('x', H.z0, H.x0 - ht, XM, plaster, lilac, -1, [hBasc], true);
   wallRun('x', H.z0, XM, H.x1 + ht, plaster, mint, -1, [WIN.pia], true);
   wallRun('z', H.x0, ZN, ZM, '#efe2c8', lilac, -1, [], true);
-  wallRun('z', H.x0, ZM, ZS, '#efe2c8', yellow, -1, [], true);
-  wallRun('x', H.z1, H.x0 - ht, H.x1 + ht, plaster, yellow, 1, [WIN.salaSul], true);
-  wallRun('z', H.x1, ZN, ZM, plaster, mint, 1, [hKD, WIN.cozinha], true);
-  wallRun('z', H.x1, ZM, ZS, plaster, yellow, 1, [WIN.sala1, WIN.sala2], true);
-  // de dentro: quarto | cozinha (a passagem da grade) e a parede da sala (a passagem da cozinha)
+  wallRun('z', H.x1, ZN, ZM, plaster, mint, 1, [WIN.portaVelha, WIN.cozinha], true);
+  // (as paredes de fora da ala sul, do sul e do leste ao sul de ZM, ficam em ./casaSul.js)
+  // de dentro: quarto | cozinha (a passagem da grade) e o sul do quarto e da cozinha, que é o norte da ala sul: a sala
+  // de jantar, o banheiro e o corredor (com a porta da cozinha), cada um com a tinta dele (WING_PAINT)
   wallRun('z', XM, ZN, ZM - ht, mint, lilac, 1, [hDQ]);
   // (as pontas entram 2 cm nas paredes de fora: nenhuma face delas fica no plano das beiradas do forro)
-  wallRun('x', ZM, XW - 0.02, XM, yellow, lilac, 1);
-  wallRun('x', ZM, XM, XE + 0.02, yellow, mint, 1, [hDS]);
+  const XB = L.SMALL_ROOMS.banheiro.x0, XC = L.SMALL_ROOMS.corredor.x0;
+  wallRun('x', ZM, XW - 0.02, XM, WING_PAINT.jantar, lilac, 1);
+  wallRun('x', ZM, XM, XB, WING_PAINT.jantar, mint, 1);
+  wallRun('x', ZM, XB, XC, WING_PAINT.banheiro, mint, 1);
+  wallRun('x', ZM, XC, XE + 0.02, WING_PAINT.corredor, mint, 1, [hKD]);
 
   /** Caixa no referencial de uma parede: `along` no comprimento dela, `off` atravessado a partir de c. */
   const wbox = (axis, c, along, y, off, sa, sy, sc, color, extra = {}) => add(axis === 'x' ? slab(sa, sy, sc) : slab(sc, sy, sa), { color, x: axis === 'x' ? along : c + off, y, z: axis === 'x' ? c + off : along, ao: false, ...extra });
@@ -505,11 +504,7 @@ export function buildCasa(kit, root, L) {
     ],
     cozinha: [
       { axis: 'x', c: ZN, a0: XM + ht, a1: XE, dir: 1, holes: [WIN.pia] }, { axis: 'z', c: XM + ht, a0: ZN, a1: ZM - ht, dir: 1, holes: [hDQ] },
-      { axis: 'x', c: ZM - ht, a0: XM + ht, a1: XE, dir: -1, holes: [hDS] }, { axis: 'z', c: XE, a0: ZN, a1: ZM - ht, dir: -1, holes: [hKD, WIN.cozinha] },
-    ],
-    sala: [
-      { axis: 'x', c: ZM + ht, a0: XW, a1: XE, dir: 1, holes: [hDS] }, { axis: 'z', c: XW, a0: ZM + ht, a1: ZS, dir: 1, holes: [] },
-      { axis: 'x', c: ZS, a0: XW, a1: XE, dir: -1, holes: [WIN.salaSul] }, { axis: 'z', c: XE, a0: ZM + ht, a1: ZS, dir: -1, holes: [WIN.sala1, WIN.sala2] },
+      { axis: 'x', c: ZM - ht, a0: XM + ht, a1: XE, dir: -1, holes: [hKD] }, { axis: 'z', c: XE, a0: ZN, a1: ZM - ht, dir: -1, holes: [WIN.portaVelha, WIN.cozinha] },
     ],
   };
   {
@@ -522,15 +517,13 @@ export function buildCasa(kit, root, L) {
     const azulejo = (u, y, i, j) => o.copy(y > 0.82 ? (i % 3 ? tileC : tileD) : (hash(Math.round(u * 5), j) > 0.5 ? tileA : tileB)).multiplyScalar(base(y));
     for (const [room, faces] of Object.entries(FACES)) {
       for (const f of faces) {
-        strip(f.axis, f.c, f.a0, f.a1, f.dir, FL, room === 'sala' ? 0.13 : 0.09, 0.018, TRIM, f.holes); // rodapé
+        strip(f.axis, f.c, f.a0, f.a1, f.dir, FL, 0.09, 0.018, TRIM, f.holes); // rodapé
         strip(f.axis, f.c, f.a0, f.a1, f.dir, CEIL - 0.07, 0.07, 0.045, TRIM); // roda-teto
         if (room === 'quarto') {
           skin(f.axis, f.c, f.a0, f.a1, f.dir, 0.09, 0.9, 0.15, 0.4, lambri, f.holes);
           strip(f.axis, f.c, f.a0, f.a1, f.dir, 0.9, 0.035, 0.022, TRIM, f.holes);
         } else if (room === 'cozinha' && f.c !== ZN) {
           skin(f.axis, f.c, f.a0, f.a1, f.dir, 0.09, 1.0, 0.2, 0.182, azulejo, f.holes);
-        } else if (room === 'sala') {
-          strip(f.axis, f.c, f.a0, f.a1, f.dir, 2.12, 0.03, 0.02, '#e7c98c'); // a régua dos quadros
         }
       }
     }
@@ -565,9 +558,9 @@ export function buildCasa(kit, root, L) {
   // por fora, a barra da base nas paredes do norte, do sul e do leste
   add(rb(hw + t + 0.04, 0.26, 0.03, 0.01, 1), { color: '#d8bfa0', x: hcx, z: H.z0 - ht - 0.012, ao: false });
   add(rb(hw + t + 0.04, 0.26, 0.03, 0.01, 1), { color: '#d8bfa0', x: hcx, z: H.z1 + ht + 0.012, ao: false });
-  strip('z', H.x1 + ht, H.z0 + 0.16, H.z1 + ht, 1, 0, 0.26, 0.024, '#d8bfa0', [hKD]);
-  // vigas de madeira no forro da sala e as luminárias pendentes (sem luz de verdade: o globo é emissivo)
-  for (let i = 0; i < 4; i++) add(slab(0.14, 0.13, ZS - ZM - ht + 0.04), { color: vary('#9a6a40', 0.06, 5), x: lerp(XW + 1.5, XE - 1.5, i / 3), y: CEIL - 0.125, z: (ZM + ht + ZS) / 2, ao: false });
+  // (a leste, com o vão da porta dos fundos)
+  strip('z', H.x1 + ht, H.z0 + 0.16, H.z1 + ht, 1, 0, 0.26, 0.024, '#d8bfa0', [{ a: L.HOUSE_EXIT.z0, b: L.HOUSE_EXIT.z1, y0: 0, y1: 2.1 }]);
+  // as luminárias pendentes (sem luz de verdade: o globo é emissivo)
   /** Pendente: o fio do forro, a cúpula e o globo aceso. */
   const pendant = (x, z, drop, shade) => {
     add(rod(0.006, drop, 5), { color: '#4a4f57', x, y: CEIL - drop / 2, z, ao: false });
@@ -578,8 +571,6 @@ export function buildCasa(kit, root, L) {
   pendant((XW + XM) / 2 + 0.4, (ZN + ZM) / 2 + 0.6, 0.5, '#cbb6e8');
   pendant(KT.x, KT.z, 0.75, '#f0a58a');
   pendant((XM + XE) / 2 - 0.8, ZN + 1.9, 0.5, '#8fcdb8');
-  pendant(CT.x, CT.z - 0.2, 0.6, '#f2c25e');
-  pendant(EX.loveseat.x, EX.loveseat.z + 0.9, 0.6, '#f2c25e');
 
   // ---------------------------------------------------------------- janelas e passagens
   const glassB = createBaker(); // os vidros de todas as janelas numa malha só (transparente)
@@ -646,13 +637,9 @@ export function buildCasa(kit, root, L) {
   };
   windowAt('x', H.z0, WIN.pia, 1, { curtain: '#f4d98a' });
   windowAt('z', H.x1, WIN.cozinha, -1, { curtain: '#f0a58a', shutter: '#5aa7a0' });
-  windowAt('z', H.x1, WIN.sala1, -1, { curtain: '#f6efe0', shutter: '#5aa7a0', flowers: true });
-  windowAt('z', H.x1, WIN.sala2, -1, { curtain: '#f6efe0', shutter: '#5aa7a0', flowers: true });
-  windowAt('x', H.z1, WIN.salaSul, -1, { curtain: '#f6efe0' });
+  windowAt('z', H.x1, WIN.portaVelha, -1, { curtain: '#f0a58a', shutter: '#5aa7a0', flowers: true });
   sunPatch('z', XE, WIN.cozinha, { x0: XM + ht, x1: XE, z0: ZN, z1: ZM - ht });
-  sunPatch('z', XE, WIN.sala1, { x0: XW, x1: XE, z0: ZM + ht, z1: ZS });
-  sunPatch('z', XE, WIN.sala2, { x0: XW, x1: XE, z0: ZM + ht, z1: ZS });
-  sunPatch('x', ZS, WIN.salaSul, { x0: XW, x1: XE, z0: ZM + ht, z1: ZS });
+  sunPatch('z', XE, WIN.portaVelha, { x0: XM + ht, x1: XE, z0: ZN, z1: ZM - ht });
 
   /** Guarnição de uma passagem { a, b, y1 } na parede `axis` em c: forras dos lados e de cima e o alisar nas duas faces. */
   const casing = (axis, c, h, lin = 0.02) => {
@@ -666,8 +653,7 @@ export function buildCasa(kit, root, L) {
     }
   };
   casing('z', XM, hDQ);
-  casing('x', ZM, hDS);
-  casing('z', H.x1, hKD, 0.01);
+  casing('x', ZM, hKD);
 
   // ---------------------------------------------------------------- o basculante do quarto
   const cx = (W.x0 + W.x1) / 2, ww = W.x1 - W.x0, wh = W.top - W.sill;
@@ -1172,7 +1158,8 @@ export function buildCasa(kit, root, L) {
       const sa = C('#f4d98a'), sb = C('#fff6e6'), sc = C('#e8a04a');
       rug(SINK_X, K.z1 + 0.5, 0.85, 0.32, (u, v) => (Math.abs(u) > 0.9 ? sc : Math.round(v * 3.2 + 4) % 2 ? sa : sb));
     }
-    const bz = (K.z1 + KD.hinge.z) / 2 + 0.05;
+    // o quadro-negro entre a bancada e a janela (que era a porta do quintal)
+    const bz = (K.z1 + KW.z0) / 2 + 0.03;
     frame(XE, 1.42, bz, -1, 0, 1.0, 0.66, '#8a5a3c', '#3f5f52', 'osso', '#fff6e6');
     art(add, 'pata', 0.2, '#f4d98a', XE - 0.0385, 1.56, bz - 0.32, -1, 0);
     art(add, 'coracao', 0.16, '#f4b8c8', XE - 0.0385, 1.26, bz + 0.33, -1, 0);
@@ -1187,10 +1174,11 @@ export function buildCasa(kit, root, L) {
         add(cyl(0.058, 0.058, 0.02, 12), { color: '#c9935a', x: XM + ht + 0.085, y: sy + 0.025 + hj, z, ao: false });
       }
     }
-    for (let i = 0; i < 3; i++) frame(DS.x1 + 0.7 + i * 0.5, 1.5 + (i % 2) * 0.12, ZM - ht, 0, -1, 0.34, 0.34, ['#8a5a3c', '#c9a24a', '#f4b8c8'][i], '#fff6e6', ['pata', 'cenoura', 'coracao'][i], ['#3d8fd1', '#f07a1a', '#e8475f'][i]);
+    // os três quadrinhos na parede do sul, em cima dos potes de ração (a oeste da porta do corredor)
+    for (let i = 0; i < 3; i++) frame(-16.2 + i * 0.5, 1.5 + (i % 2) * 0.12, ZM - ht, 0, -1, 0.34, 0.34, ['#8a5a3c', '#c9a24a', '#f4b8c8'][i], '#fff6e6', ['pata', 'cenoura', 'coracao'][i], ['#3d8fd1', '#f07a1a', '#e8475f'][i]);
   }
 
-  // a porta da cozinha: a folha na dobradiça (−Z local; com ela fechada, o +X local é o lado de dentro)
+  // a porta da cozinha para o corredor: a folha na dobradiça (−Z local; com ela fechada, o +X local é a cozinha)
   const door = new THREE.Group();
   door.name = 'recanto:porta-da-cozinha';
   door.position.set(KD.hinge.x, 0, KD.hinge.z);
@@ -1203,7 +1191,8 @@ export function buildCasa(kit, root, L) {
     for (const s of [-1, 1]) b.add(slab(T, gy1 - gy0, sw), { color: wood, y: gy0, z: zc + s * (Ld / 2 - sw / 2) });
     b.add(slab(T - 0.012, gy1 - gy0, 0.04), { color: dark, y: gy0, z: zc });
     b.add(slab(T - 0.012, 0.035, Ld - sw * 2), { color: dark, y: (gy0 + gy1) / 2 - 0.0175, z: zc });
-    // por fora (−X): as duas almofadas e a maçaneta de bola; por dentro, só a chapa de baixo (as patinhas ficam na folha lisa)
+    // do lado do corredor (−X): as duas almofadas e a maçaneta de bola; do lado da cozinha, só a chapa de baixo (as
+    // patinhas ficam na folha lisa)
     for (const [py, ph] of [[0.16, 0.48], [0.74, 0.44]]) b.add(rb(0.014, ph, Ld - 0.26, 0.006, 1), { color: dark, x: -T / 2 - 0.004, y: py, z: zc });
     b.add(sphere(0.036, 12, 8), { color: '#d9b25a', x: -T / 2 - 0.04, y: 1.0, z: -0.012 - Ld + 0.1 });
     b.add(cyl(0.012, 0.012, 0.04, 8), { color: '#d9b25a', x: -T / 2, y: 1.0, z: -0.012 - Ld + 0.1, rz: Math.PI / 2 });
@@ -1214,10 +1203,11 @@ export function buildCasa(kit, root, L) {
     pane.position.set(0, (gy0 + gy1) / 2, zc);
     door.add(pane);
   }
-  // a alavanca do lado de dentro: o +Z dela aponta para dentro da cozinha (o −x do mundo com a porta fechada)
+  // a alavanca do lado da cozinha: o +Z dela aponta para dentro da cozinha (o +X local da folha), a tantos metros da
+  // dobradiça quanto a maçaneta do layout
   const KH = L.KITCHEN_HANDLE;
   const handle = buildWallButton({ kind: 'lever', top: KH.top, color: '#e8554a', plate: '#f4ecdc', trim: '#7a4e2e', name: 'macaneta-de-alavanca' });
-  handle.object.position.set(0.026, 0, -(KH.z - KD.hinge.z));
+  handle.object.position.set(0.026, 0, -Math.hypot(KH.x - KD.hinge.x, KH.z - KD.hinge.z));
   handle.object.rotation.y = Math.PI / 2;
   door.add(handle.object);
   keep(door);
@@ -1263,150 +1253,7 @@ export function buildCasa(kit, root, L) {
   const setSack = (x, z) => sack.position.set(x, 0, z);
   setSack(FS.start.x, FS.start.z);
 
-  // ---------------------------------------------------------------- sala
-  {
-    // o sofá (de costas para a parede do sul, olhando para o norte): pés, base, encosto, braços, almofadas e a manta
-    const blue = vary('#5f8fb8', 0.04, 7), blueD = vary('#5583ab', 0.04, 7);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(cyl(0.03, 0.025, 0.07, 8), { color: '#8a6a48', x: SF.x + sx * (SF.hx - 0.1), y: FL, z: SF.z + sz * (SF.hz - 0.08), ao: false });
-    add(rb(SF.hx * 2, 0.3, SF.hz * 2, 0.06, 2), { color: blue, x: SF.x, y: 0.07, z: SF.z });
-    add(rb(SF.hx * 2, 0.44, 0.2, 0.07, 2), { color: blueD, x: SF.x, y: 0.36, z: SF.z + SF.hz - 0.1, ao: false });
-    for (const s of [-1, 1]) add(rb(0.2, 0.28, SF.hz * 2, 0.07, 2), { color: blueD, x: SF.x + s * (SF.hx - 0.1), y: 0.34, z: SF.z, ao: false });
-    for (const s of [-0.5, 0.5]) {
-      add(rb(SF.hx - 0.24, 0.12, SF.hz * 2 - 0.28, 0.05, 2), { color: '#7aa6cc', x: SF.x + s * (SF.hx - 0.2), y: 0.35, z: SF.z - 0.07, ao: false });
-      add(rb(SF.hx - 0.3, 0.3, 0.12, 0.05, 2), { color: '#6f9cc4', x: SF.x + s * (SF.hx - 0.2), y: 0.46, z: SF.z + SF.hz - 0.24, rx: -0.12, ao: false });
-    }
-    add(rb(0.34, 0.3, 0.12, 0.08, 2), { color: '#f2c25e', x: SF.x - 0.55, y: 0.47, z: SF.z + 0.1, rz: 0.2, rx: -0.2, ao: false });
-    add(rb(0.3, 0.28, 0.12, 0.08, 2), { color: '#e8708a', x: SF.x + 0.6, y: 0.47, z: SF.z + 0.08, rz: -0.15, rx: -0.2, ao: false });
-    add(rb(0.24, 0.04, SF.hz * 2 + 0.02, 0.018, 1), { color: vary('#f4e3c8', 0.06, 30), x: SF.x + SF.hx - 0.1, y: 0.62, z: SF.z, ao: false });
-    // a mesinha de centro (tampo, prateleira, quatro pés), com os livros, a caneca e o vasinho
-    add(rb(CT.hx * 2, 0.04, CT.hz * 2, 0.015, 1), { color: vary('#c9935a', 0.05, 8), x: CT.x, y: CT.h - 0.04, z: CT.z, ao: false });
-    add(slab(CT.hx * 2 - 0.12, 0.02, CT.hz * 2 - 0.12), { color: '#b5864a', x: CT.x, y: 0.12, z: CT.z, ao: false });
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(rb(0.045, CT.h - 0.04, 0.045, 0.01, 1), { color: '#a87445', x: CT.x + sx * (CT.hx - 0.05), y: FL, z: CT.z + sz * (CT.hz - 0.05) });
-    add(rb(0.26, 0.03, 0.19, 0.006, 1), { color: '#3d8fd1', x: CT.x - 0.25, y: CT.h, z: CT.z + 0.04, ry: 0.2, ao: false });
-    add(rb(0.22, 0.025, 0.16, 0.006, 1), { color: '#f2c230', x: CT.x - 0.24, y: CT.h + 0.03, z: CT.z + 0.04, ry: -0.1, ao: false });
-    add(cyl(0.04, 0.035, 0.085, 10), { color: '#e8475f', x: CT.x + 0.08, y: CT.h, z: CT.z - 0.1, ao: false });
-    add(cyl(0.06, 0.045, 0.11, 12), { color: '#f4e3c8', x: CT.x + 0.32, y: CT.h, z: CT.z + 0.08, ao: false });
-    add(bushGeo(0.08, 0.1, 71, '#f4b8c8', 5), { color: null, slot: 'plant', x: CT.x + 0.32, y: CT.h + 0.08, z: CT.z + 0.08 });
-    add(rb(0.5, 0.12, 0.2, 0.03, 1), { color: (p) => C(Math.floor(p.y * 50) % 2 ? '#c99b5a' : '#b5864a'), x: CT.x, y: 0.14, z: CT.z, ao: false });
-    // a poltrona (olha para o leste) com a manta de tricô
-    const rose = vary('#e59a8a', 0.04, 7);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(cyl(0.03, 0.025, 0.08, 8), { color: '#8a6a48', x: AC.x + sx * (AC.hx - 0.09), y: FL, z: AC.z + sz * (AC.hz - 0.09), ao: false });
-    add(rb(AC.hx * 2, 0.28, AC.hz * 2, 0.07, 2), { color: rose, x: AC.x, y: 0.08, z: AC.z });
-    add(rb(0.2, AC.h - 0.36, AC.hz * 2, 0.08, 2), { color: rose, x: AC.x - AC.hx + 0.1, y: 0.36, z: AC.z, ao: false });
-    for (const s of [-1, 1]) add(rb(AC.hx * 2 - 0.1, 0.24, 0.18, 0.07, 2), { color: '#dc8d7c', x: AC.x + 0.05, y: 0.34, z: AC.z + s * (AC.hz - 0.09), ao: false });
-    add(rb(AC.hx * 2 - 0.34, 0.11, AC.hz * 2 - 0.4, 0.05, 2), { color: '#f0b3a4', x: AC.x + 0.1, y: 0.35, z: AC.z, ao: false });
-    add(rb(0.05, 0.36, 0.44, 0.02, 1), { color: vary('#8fcdb8', 0.08, 40), x: AC.x - AC.hx + 0.215, y: 0.42, z: AC.z + 0.05, rz: -0.08, ao: false });
-    // o tapete grande (losangos) embaixo da mesinha
-    {
-      const ta = C('#d98a5a'), tb = C('#f2d7b0'), tc = C('#8f5a3c'), td = C('#e9b98a');
-      const hx = 1.8, hz = 1.3;
-      rug(CT.x - 0.5, CT.z - 0.05, hx, hz, (u, v) => {
-        const d = Math.min((1 - Math.abs(u)) * hx, (1 - Math.abs(v)) * hz);
-        if (d < 0.1) return tc;
-        if (d < 0.2) return tb;
-        const q = Math.abs(((u * hx * 1.6) % 1 + 1) % 1 - 0.5) + Math.abs(((v * hz * 1.6) % 1 + 1) % 1 - 0.5);
-        return q < 0.22 ? ta : q < 0.36 ? td : tb;
-      });
-    }
-    // o tapete da TV (listras) e a caminha de sol embaixo da janela (rente ao chão: as dogs passam por cima)
-    {
-      const S = EX.loveseat, sa = C('#7fa36b'), sb = C('#f2e6c8'), sc = C('#5f8a56');
-      add(tiles(2.6, 1.9, 0.2, 0.19, (p) => (Math.abs(p.x) > 1.1 ? sc : Math.round(p.z / 0.19 + 20) % 2 ? sa : sb)), { color: null, slot: 'ground', x: S.x, y: FL + 0.004, z: S.z + 0.95, ao: false });
-      const mx = XE - 1.6, mz = (WIN.sala1.a + WIN.sala1.b) / 2;
-      add(rb(0.9, 0.05, 0.7, 0.022, 2), { color: vary('#e8a04a', 0.05, 12), x: mx, y: FL, z: mz, ao: false });
-      add(rb(0.62, 0.016, 0.44, 0.007, 1), { color: '#f2c98a', x: mx, y: FL + 0.044, z: mz, ao: false });
-      artFlat(add, 'pata', 0.26, '#c9702a', mx, FL + 0.0625, mz, Math.PI / 2);
-    }
-    // o rack com a TV (olha para o norte), a caixa de som e o vasinho
-    const tz = TV.z - TV.hz;
-    add(slab(TV.hx * 2 - 0.1, 0.06, TV.hz * 2 - 0.1), { color: '#8a6a48', x: TV.x, y: FL, z: TV.z, ao: false });
-    add(rb(TV.hx * 2, TV.h - 0.06, TV.hz * 2 - 0.02, 0.02, 1), { color: vary('#c99b6a', 0.04, 6), x: TV.x, y: 0.06, z: TV.z + 0.01 });
-    for (const s of [-1, 1]) {
-      add(rb(TV.hx * 0.62, TV.h - 0.14, 0.016, 0.006, 1), { color: '#dcc095', x: TV.x + s * TV.hx * 0.64, y: 0.1, z: tz + 0.016, ao: false });
-      add(sphere(0.017, 8, 6), { color: '#c9a24a', x: TV.x + s * TV.hx * 0.4, y: 0.3, z: tz - 0.002, ao: false });
-    }
-    add(slab(TV.hx * 0.52, TV.h - 0.2, 0.01), { color: '#5a4030', x: TV.x, y: 0.13, z: tz + 0.016, ao: false });
-    add(rb(0.34, 0.05, 0.2, 0.012, 1), { color: '#3a3d42', x: TV.x - 0.1, y: TV.h, z: TV.z + 0.02, ao: false });
-    add(rb(1.16, 0.68, 0.04, 0.012, 1), { color: '#2a2c2f', x: TV.x - 0.1, y: TV.h + 0.07, z: TV.z + 0.04, ao: false });
-    add(slab(1.08, 0.6, 0.006), { color: '#1d2733', slot: 'glass', x: TV.x - 0.1, y: TV.h + 0.11, z: TV.z + 0.018 });
-    add(rb(0.14, 0.24, 0.14, 0.02, 1), { color: '#4a4f57', x: TV.x + 0.64, y: TV.h, z: TV.z + 0.02, ao: false });
-    add(rod(0.045, 0.012, 12), { color: '#2a2c2f', x: TV.x + 0.64, y: TV.h + 0.15, z: TV.z - 0.052, rx: Math.PI / 2, ao: false });
-    // a estante alta de frente para o sofá (livros, vasos, o troféu e os cestos embaixo)
-    {
-      const S = EX.bookcase, x0 = S.x - S.hx, x1 = S.x + S.hx, zf = S.z + S.hz, wood = vary('#c99b6a', 0.04, 6);
-      add(slab(S.hx * 2 - 0.02, S.h - 0.02, 0.015), { color: '#b08452', x: S.x, y: FL, z: S.z - S.hz + 0.012, ao: false });
-      for (const x of [x0 + 0.02, S.x, x1 - 0.02]) add(rb(0.04, S.h, S.hz * 2 - 0.01, 0.008, 1), { color: wood, x, y: FL, z: S.z });
-      add(rb(S.hx * 2 + 0.04, 0.05, S.hz * 2 + 0.03, 0.012, 1), { color: '#b5864a', x: S.x, y: S.h, z: S.z, ao: false });
-      const ys = [0.06, 0.5, 0.9, 1.3, 1.7];
-      for (const y of ys) add(slab(S.hx * 2 - 0.04, 0.03, S.hz * 2 - 0.04), { color: '#d9b98f', x: S.x, y, z: S.z + 0.005, ao: false });
-      for (let r = 1; r < ys.length; r++) for (const s of [-1, 1]) {
-        const a0 = s < 0 ? x0 + 0.05 : S.x + 0.03, a1 = s < 0 ? S.x - 0.03 : x1 - 0.05, yy = ys[r] + 0.03;
-        if ((r + (s > 0 ? 1 : 0)) % 3 === 0) {
-          // um vaso e um porta-retrato no lugar dos livros
-          add(cyl(0.07, 0.05, 0.2, 12), { color: ['#8fcdb8', '#f0a58a', '#8a72c2'][r % 3], x: a0 + 0.2, y: yy, z: S.z + 0.04, ao: false });
-          add(rb(0.2, 0.24, 0.02, 0.008, 1), { color: '#8a5a3c', x: a1 - 0.22, y: yy, z: S.z + 0.08, ao: false });
-          add(slab(0.15, 0.19, 0.004), { color: '#fff6e6', x: a1 - 0.22, y: yy + 0.025, z: S.z + 0.092, ao: false });
-          art(add, r % 2 ? 'pata' : 'osso', 0.1, '#e8708a', a1 - 0.22, yy + 0.12, S.z + 0.0965, 0, 1);
-        } else books('x', a0, a1 - (r % 2) * 0.2, yy, zf - 0.03, 1, 30 + r * 2 + (s > 0 ? 1 : 0), 0.2);
-      }
-      for (const s of [-1, 1]) add(rb(S.hx - 0.12, 0.34, S.hz * 2 - 0.08, 0.03, 1), { color: (p) => C(Math.floor(p.y * 36) % 2 ? '#c99b5a' : '#b5864a'), x: S.x + s * S.hx / 2, y: 0.095, z: S.z + 0.01, ao: false });
-    }
-    // o aparador (com o vaso de flores e os porta-retratos) e a paisagem na parede em cima dele
-    {
-      const S = EX.sideboard, fzz = S.z + S.hz;
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(cyl(0.028, 0.02, 0.14, 8), { color: '#8a6a48', x: S.x + sx * (S.hx - 0.08), y: FL, z: S.z + sz * (S.hz - 0.07), ao: false });
-      add(rb(S.hx * 2, S.h - 0.16, S.hz * 2 - 0.02, 0.02, 1), { color: vary('#5aa7a0', 0.04, 6), x: S.x, y: 0.14, z: S.z - 0.01 });
-      add(rb(S.hx * 2 + 0.04, 0.03, S.hz * 2 + 0.02, 0.01, 1), { color: vary('#c9935a', 0.05, 8), x: S.x, y: S.h - 0.03, z: S.z, ao: false });
-      for (let i = -1; i <= 1; i++) {
-        add(rb(S.hx * 0.62, S.h - 0.26, 0.016, 0.006, 1), { color: '#6fb7b0', x: S.x + i * S.hx * 0.64, y: 0.18, z: fzz - 0.014, ao: false });
-        add(sphere(0.017, 8, 6), { color: '#c9a24a', x: S.x + i * S.hx * 0.64, y: 0.62, z: fzz + 0.004, ao: false });
-      }
-      add(cyl(0.07, 0.05, 0.22, 12), { color: '#f4e3c8', x: S.x - 0.4, y: S.h, z: S.z, ao: false });
-      add(bushGeo(0.13, 0.16, 77, '#e8708a', 8), { color: null, slot: 'plant', x: S.x - 0.4, y: S.h + 0.2, z: S.z });
-      add(rb(0.22, 0.26, 0.02, 0.008, 1), { color: '#c9a24a', x: S.x + 0.3, y: S.h, z: S.z - 0.06, ao: false });
-      add(slab(0.17, 0.21, 0.004), { color: '#fff6e6', x: S.x + 0.3, y: S.h + 0.025, z: S.z - 0.048, ao: false });
-      art(add, 'coracao', 0.11, '#e8475f', S.x + 0.3, S.h + 0.13, S.z - 0.0435, 0, 1);
-      // a paisagem: o céu, o sol, dois morros
-      const px = S.x, py = 1.55, zf = ZM + ht;
-      add(rb(1.1, 0.7, 0.03, 0.012, 1), { color: '#8a5a3c', x: px, y: py - 0.35, z: zf + 0.015, ao: false });
-      add(slab(1.02, 0.62, 0.006), { color: '#bfe3f5', x: px, y: py - 0.31, z: zf + 0.031, ao: false });
-      add(disc(0.09, 0.26, 0.14), { color: '#f2c230', x: px, y: py, z: zf + 0.0385, ao: false });
-      const hill = (y0, amp, ph, k) => { const pts = [[-0.51, -0.31]]; for (let i = 0; i <= 14; i++) pts.push([-0.51 + (1.02 * i) / 14, y0 + amp * Math.sin((i / 14) * Math.PI * k + ph)]); pts.push([0.51, -0.31]); return shapeXY(pts); };
-      add(hill(-0.16, 0.11, 0.3, 1.3), { color: '#7fb04f', x: px, y: py, z: zf + 0.04, ao: false });
-      add(hill(-0.24, 0.07, 2.4, 1.1), { color: '#5c9a3a', x: px, y: py, z: zf + 0.042, ao: false });
-    }
-    // a namoradeira de frente para a TV e o pufe
-    {
-      const S = EX.loveseat, green = vary('#7fa36b', 0.04, 7);
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(cyl(0.03, 0.025, 0.07, 8), { color: '#8a6a48', x: S.x + sx * (S.hx - 0.1), y: FL, z: S.z + sz * (S.hz - 0.08), ao: false });
-      add(rb(S.hx * 2, 0.3, S.hz * 2, 0.06, 2), { color: green, x: S.x, y: 0.07, z: S.z });
-      add(rb(S.hx * 2, 0.42, 0.2, 0.07, 2), { color: '#759a62', x: S.x, y: 0.36, z: S.z - S.hz + 0.1, ao: false });
-      for (const s of [-1, 1]) add(rb(0.18, 0.26, S.hz * 2, 0.07, 2), { color: '#759a62', x: S.x + s * (S.hx - 0.09), y: 0.34, z: S.z, ao: false });
-      add(rb(S.hx * 2 - 0.4, 0.11, S.hz * 2 - 0.28, 0.05, 2), { color: '#93b57f', x: S.x, y: 0.35, z: S.z + 0.07, ao: false });
-      add(rb(0.3, 0.28, 0.12, 0.08, 2), { color: '#f2c25e', x: S.x + 0.3, y: 0.46, z: S.z - 0.08, rx: 0.2, ao: false });
-      const P = EX.pouf;
-      add(cyl(P.r - 0.03, P.r - 0.05, 0.3, 18), { color: vary('#e8a04a', 0.05, 12), x: P.x, y: FL, z: P.z });
-      add(cyl(P.r - 0.08, P.r - 0.03, 0.05, 18), { color: '#f2b866', x: P.x, y: FL + 0.3, z: P.z, ao: false });
-      add(sphere(0.022, 8, 6), { color: '#8a5a3c', x: P.x, y: FL + 0.355, z: P.z, ao: false });
-    }
-    // a luminária de piso ao lado da poltrona e os vasos de planta
-    {
-      const P = EX.floorLamp;
-      add(cyl(P.r - 0.02, P.r, 0.03, 16), { color: '#4a4f57', x: P.x, y: FL, z: P.z, ao: false });
-      add(cyl(0.014, 0.014, 1.42, 6), { color: '#c9a24a', x: P.x, y: FL + 0.03, z: P.z, ao: false });
-      add(cyl(0.12, 0.2, 0.26, 18), { color: '#fff1c2', slot: 'lit', x: P.x, y: 1.4, z: P.z });
-    }
-    potPlant(EX.plants[0].x, EX.plants[0].z, EX.plants[0].r, 'palma', 41, Math.PI * 0.95, Math.PI * 1.55);
-    potPlant(EX.plants[1].x, EX.plants[1].z, EX.plants[1].r, 'costela', 42, Math.PI * 0.45, Math.PI * 1.05);
-    potPlant(EX.plants[2].x, EX.plants[2].z, EX.plants[2].r, 'ficus', 43);
-    // os quadros em cima do sofá e na parede do oeste
-    const fy = 1.62, zf = ZS;
-    frame(SF.x - 0.62, fy, zf, 0, -1, 0.5, 0.62, '#8a5a3c', '#fff6e6', 'pata', '#5f8fb8');
-    frame(SF.x, fy + 0.06, zf, 0, -1, 0.56, 0.5, '#c9a24a', '#fde9c9', 'osso', '#c79a6a');
-    frame(SF.x + 0.62, fy, zf, 0, -1, 0.5, 0.62, '#8a5a3c', '#fff6e6', 'pata', '#e8708a');
-    frame(XW, 1.6, AC.z, 1, 0, 0.8, 0.6, '#c9a24a', '#e8f3fb', 'sol', '#f2c230');
-    frame(XW, 1.55, AC.z + 1.9, 1, 0, 0.44, 0.56, '#8a5a3c', '#fff6e6', 'cenoura', '#f07a1a');
-  }
+  // (a sala de jantar e a de estar, com o resto da ala sul, ficam em ./casaSul.js)
 
   // ---------------------------------------------------------------- quintal: o muro, a passagem baixa e a porta
   const Y = L.YARD, SD = L.SERVICE_DOOR, YG = L.YARD_GAP, BR = L.BRANCH, SB = L.SERVICE_BOLT;

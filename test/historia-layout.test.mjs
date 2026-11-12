@@ -5,7 +5,10 @@
 //  - as dogs começam em lugar livre; petiscos e meias ficam onde a dog certa alcança, por um caminho do grafo;
 //  - as peças dos puzzles: a portinha de gato e a passagem do muro (só a Radhija), o pedal, o saco de ração, o cesto
 //    de roupa, os botões do interfone e a grelha da guarita ficam onde a dog certa alcança;
-//  - as portas de dobradiça (a grade, cozinha, área de serviço, torre, depósito e o portãozinho) não varrem móvel nenhum;
+//  - a casa maior (4ª rodada): o corredor com o aspirador, o interruptor da despensa, a toalha e a lata, o pufe, o sofá,
+//    o parapeito e o trinco da porta dos fundos ficam onde o puzzle precisa;
+//  - as portas de dobradiça (a grade, cozinha, área de serviço, torre, depósito, portãozinho e a porta dos fundos) não
+//    varrem móvel nenhum;
 //  - a câmera e as pistas ficam dentro do condomínio.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +19,7 @@ import { scentRoute } from '../src/story/faro/scentCloud.js';
 
 const world = createCollisionWorld(L);
 /** As portas de dobradiça fechadas (ou abertas, pelo nome) e o que mais o puzzle põe no mundo. */
-const DOORS = { petGateOpen: L.PET_GATE, kitchenOpen: L.KITCHEN_DOOR, serviceOpen: L.SERVICE_DOOR, towerOpen: L.TOWER_DOOR, storageOpen: L.STORAGE_DOOR, gateOpen: L.GATE_LEAF };
+const DOORS = { petGateOpen: L.PET_GATE, kitchenOpen: L.KITCHEN_DOOR, exitOpen: L.EXIT_DOOR, serviceOpen: L.SERVICE_DOOR, towerOpen: L.TOWER_DOOR, storageOpen: L.STORAGE_DOOR, gateOpen: L.GATE_LEAF };
 function makeWorld(open = {}) {
   const w = createCollisionWorld(L);
   for (const [flag, D] of Object.entries(DOORS)) {
@@ -29,6 +32,10 @@ function makeWorld(open = {}) {
   // o galho fica na frente da passagem baixa do muro do quintal até ser empurrado
   const YG = L.YARD_GAP;
   w.addDynamic({ id: 'galho-copa', kind: 'static', shape: 'box', x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.2, hx: (YG.x1 - YG.x0) / 2 + 0.1, hz: 0.3, blocks: 'small', enabled: !open.gapOpen });
+  // o medo da Radhija: o corredor com o aspirador andando e a despensa no escuro (casaPuzzles.js)
+  const F = L.VACUUM.fear, PF = L.PANTRY.fear;
+  w.addDynamic({ id: 'medo-do-aspirador', kind: 'static', shape: 'box', x: (F.x0 + F.x1) / 2, z: (F.z0 + F.z1) / 2, hx: (F.x1 - F.x0) / 2, hz: (F.z1 - F.z0) / 2, blocks: 'small', enabled: !open.vacuumAway });
+  w.addDynamic({ id: 'medo-do-escuro', kind: 'static', shape: 'box', x: (PF.x0 + PF.x1) / 2, z: (PF.z0 + PF.z1) / 2, hx: (PF.x1 - PF.x0) / 2, hz: (PF.z1 - PF.z0) / 2, blocks: 'small', enabled: !open.pantryLit });
   return { w, n: createNavigator(L, w) };
 }
 /** Um lugar livre para a dog a até `r` m do ponto (meia ou petisco em cima de um móvel), ou null. */
@@ -45,8 +52,10 @@ function freeNear(w, p, r, who) {
 }
 const R = { radhija: L.DOGS.radhija.radius, rhaenyra: L.DOGS.rhaenyra.radius };
 const SIZE = { radhija: L.DOGS.radhija.size, rhaenyra: L.DOGS.rhaenyra.size };
+/** A casa resolvida: a grade, a porta do corredor, o aspirador na base, a luz da despensa e a porta dos fundos. */
+const HOUSE_OPEN = { petGateOpen: true, kitchenOpen: true, vacuumAway: true, pantryLit: true, exitOpen: true };
 /** Todas as etapas feitas: portas abertas, o galho fora da passagem, barquinho encaixado. */
-const ALL_OPEN = { petGateOpen: true, kitchenOpen: true, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true };
+const ALL_OPEN = { ...HOUSE_OPEN, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true };
 const small = (flags) => ({ r: R.radhija, size: SIZE.radhija, flags: { ...flags, small: true } });
 const big = (flags) => ({ r: R.rhaenyra, size: SIZE.rhaenyra, flags });
 
@@ -54,10 +63,20 @@ test('recanto: o terreno tem tamanho de 3ª pessoa (cômodos de ~6 m, condomíni
   for (const [id, Q] of Object.entries(L.ROOMS)) {
     assert.ok(Q.x1 - Q.x0 >= 5.8 && Q.z1 - Q.z0 >= 5.8, `${id}: ${(Q.x1 - Q.x0).toFixed(1)} × ${(Q.z1 - Q.z0).toFixed(1)} m`);
   }
+  // a casa maior: o quarto e a cozinha no mesmo lugar, e a ala sul dentro da casa (até HOUSE.z1)
+  assert.deepEqual(Object.keys(L.ROOMS), ['quarto', 'cozinha', 'jantar', 'estar']);
+  assert.equal(L.ROOMS.estar.z1, L.HOUSE.z1, 'a sala de estar vai até o sul da casa');
+  // os cômodos pequenos: o corredor largo para a câmera (por cima do ombro) e comprido; o banheiro e a despensa de ~2,5 m
+  const Co = L.SMALL_ROOMS.corredor;
+  assert.ok(Co.x1 - Co.x0 >= 2.3 && Co.z1 - Co.z0 >= 6, `corredor: ${(Co.x1 - Co.x0).toFixed(2)} × ${(Co.z1 - Co.z0).toFixed(2)} m`);
+  for (const id of ['banheiro', 'despensa']) {
+    const Q = L.SMALL_ROOMS[id];
+    assert.ok(Q.x1 - Q.x0 >= 2.5 && Q.z1 - Q.z0 >= 2.5, `${id}: ${(Q.x1 - Q.x0).toFixed(2)} × ${(Q.z1 - Q.z0).toFixed(2)} m`);
+  }
   assert.ok(L.WALL.maxX - L.WALL.minX >= 46 && L.WALL.maxZ - L.WALL.minZ >= 29, 'o condomínio');
   // os objetos continuam do tamanho real
   assert.ok(Math.abs(L.CAR.x1 - L.CAR.x0 - 2.0) < 0.05 && Math.abs(L.CAR.z1 - L.CAR.z0 - 4.1) < 0.05, 'a caminhonete');
-  assert.ok(L.KITCHEN_DOOR.length <= 1.05 && L.BED.r <= 0.85, 'porta e caminha');
+  assert.ok(L.KITCHEN_DOOR.length <= 1.05 && L.EXIT_DOOR.length <= 1.05 && L.BED.r <= 0.85, 'portas e caminha');
   // a câmera em 3ª pessoa cabe nos cômodos: dentro de casa o braço dela é menor que meio cômodo
   const T = L.CAMERA.third;
   assert.equal(L.CAMERA.rig, 'third');
@@ -131,9 +150,20 @@ test('recanto: o grafo liga o quarto a cada etapa da missão quando as portas ab
   assert.ok(shut.n.findPath(from, N.K_pedal, small({})).reachable, 'a Radhija passa pela portinha de gato e chega ao pedal');
   const gate = makeWorld({ petGateOpen: true });
   assert.ok(gate.n.findPath(from, N.K_mid, big({ petGateOpen: true })).reachable, 'aberta a grade, a cozinha sim');
-  assert.equal(gate.n.findPath(from, N.Y_mid, big({ petGateOpen: true })).reachable, false, 'com a porta da cozinha fechada, o quintal não');
-  const yard = { petGateOpen: true, kitchenOpen: true };
-  assert.ok(makeWorld(yard).n.findPath(from, N.Y_mid, big(yard)).reachable, 'aberta a cozinha, o quintal sim');
+  assert.equal(gate.n.findPath(from, N.C_mid, big({ petGateOpen: true })).reachable, false, 'com a porta da cozinha fechada, o corredor não');
+  assert.equal(gate.n.findPath(from, N.Y_mid, big({ petGateOpen: true })).reachable, false, 'nem o quintal');
+  // a casa, passo a passo: o corredor com o aspirador andando (a Radhija não entra), a despensa no escuro (idem), a
+  // sala de jantar, a de estar e, com a porta dos fundos aberta, o quintal
+  const hall = { petGateOpen: true, kitchenOpen: true };
+  assert.equal(makeWorld(hall).n.findPath(from, N.C_mid, small(hall)).reachable, false, 'com o aspirador andando, a Radhija não entra no corredor');
+  const docked = { ...hall, vacuumAway: true };
+  assert.ok(makeWorld(docked).n.findPath(from, N.C_copa, small(docked)).reachable, 'com ele na base, ela chega à porta da despensa');
+  assert.equal(makeWorld(docked).n.findPath(from, N.J_e, small(docked)).reachable, false, 'no escuro, ela não passa pela despensa');
+  const lit = { ...docked, pantryLit: true };
+  for (const id of ['J_e', 'J_n', 'B_in', 'E_w', 'E_porta']) assert.ok(makeWorld(lit).n.findPath(from, N[id], big(lit)).reachable, `com a luz acesa, ${id}`);
+  assert.equal(makeWorld(lit).n.findPath(from, N.Y_mid, big(lit)).reachable, false, 'com a porta dos fundos fechada, o quintal não');
+  const yard = HOUSE_OPEN;
+  assert.ok(makeWorld(yard).n.findPath(from, N.Y_mid, big(yard)).reachable, 'aberta a porta dos fundos, o quintal sim');
   assert.equal(makeWorld(yard).n.findPath(from, N.P_west, big(yard)).reachable, false, 'com a área de serviço fechada, a piscina não');
   // o ferrolho fica do outro lado: com o galho no lugar, nem a Radhija passa; tirado o galho, só ela, pela passagem
   assert.equal(makeWorld(yard).n.findPath(from, N.C_bolt, small(yard)).reachable, false, 'o galho tapa a passagem do muro');
@@ -180,13 +210,15 @@ test('recanto: as peças de empurrar têm o caminho livre e param onde o puzzle 
     }
     return bad;
   };
-  // o saco de ração corre para o norte ao longo da parede; livre, não fica mais na frente da porta nem da maçaneta
+  // o saco de ração corre para o leste ao longo da parede do sul da cozinha; livre, sai da frente da maçaneta e deixa a
+  // passagem da porta do corredor larga
   const S = L.FOOD_SACK, KD = L.KITCHEN_DOOR, KH = L.KITCHEN_HANDLE;
   assert.deepEqual(lane(S, 'saco de ração'), []);
-  assert.ok(S.start.z + S.half > KH.z - 0.2 && S.start.z - S.half < KH.z + 0.2, 'no começo, o saco está na frente da maçaneta');
-  assert.ok(S.freeZ + S.half < Math.min(KD.hinge.z, KD.latchPost.z), 'livre, o saco sai da frente da porta');
-  assert.ok(S.minZ <= S.freeZ - 0.3, 'e tem para onde ir');
-  assert.equal(world.overlaps(KH.x - 0.45, KH.z, R.rhaenyra, 'large'), false, 'a Rhaenyra tem onde apoiar para alcançar a maçaneta');
+  assert.ok(S.start.x + S.half > KH.x - 0.2 && S.start.x - S.half < KH.x + 0.2, 'no começo, o saco está na frente da maçaneta');
+  assert.ok(S.start.z < KD.hinge.z, 'do lado da cozinha');
+  assert.ok(S.freeX - S.half > Math.min(KD.hinge.x, KD.latchPost.x) + 0.75, 'livre, o saco deixa a passagem da porta larga');
+  assert.ok(S.maxX >= S.freeX && S.freeX >= S.start.x + 0.5, 'e tem para onde ir');
+  assert.equal(world.overlaps(KH.x, KH.z - 0.45, R.rhaenyra, 'large'), false, 'a Rhaenyra tem onde apoiar para alcançar a maçaneta');
   // o cesto de roupa corre embaixo do varal e para embaixo da cenoura
   const C = L.LAUNDRY, P = L.CARROT_PIN;
   assert.deepEqual(lane(C, 'cesto de roupa'), []);
@@ -243,21 +275,22 @@ test('recanto: a nuvem de cheiro acha o caminho do quarto até a piscina por den
   assert.ok(route.length >= 5, `o caminho passa por vários pontos (${route.length})`);
   assert.deepEqual(route[0], { x: from.x, z: from.z });
   assert.deepEqual(route[route.length - 1], { x: L.RECON.x, z: L.RECON.z });
-  // passa pela porta da cozinha e pela da área de serviço (ou pela passagem do muro), nunca por cima de parede
-  const H = L.HOUSE;
+  // passa pela casa (o corredor, a despensa, as salas) e sai pela porta dos fundos, nunca por cima de parede
+  const H = L.HOUSE, EX = L.HOUSE_EXIT;
   let crossedEast = false;
   for (let i = 0; i + 1 < route.length; i++) {
     const a = route[i], b = route[i + 1];
     if (a.x < H.x1 && b.x >= H.x1) {
       crossedEast = true;
       const z = a.z + ((H.x1 - a.x) / (b.x - a.x)) * (b.z - a.z);
-      assert.ok(z > L.KITCHEN_DOOR.hinge.z - 0.1 && z < L.KITCHEN_DOOR.latchPost.z + 0.1, `sai da casa pela porta da cozinha (z ${z.toFixed(2)})`);
+      assert.ok(z > EX.z0 - 0.1 && z < EX.z1 + 0.1, `sai da casa pela porta dos fundos (z ${z.toFixed(2)})`);
     }
   }
   assert.ok(crossedEast, 'o caminho sai da casa');
   let len = 0;
   for (let i = 0; i + 1 < route.length; i++) len += Math.hypot(route[i + 1].x - route[i].x, route[i + 1].z - route[i].z);
-  assert.ok(len < 45, `sem voltas à toa (${len.toFixed(1)} m)`);
+  // a porta dos fundos fica no sudeste da casa e a piscina ao norte: o caminho é mais longo que antes, mas sem voltas
+  assert.ok(len < 80, `sem voltas à toa (${len.toFixed(1)} m)`);
   // de perto e com caminho livre, vai direto
   assert.equal(scentRoute(L, w, from, { x: from.x + 0.8, z: from.z + 0.4 }).length, 2);
 });
@@ -281,7 +314,7 @@ test('recanto: a ilha só com o barquinho encaixado, e só para a Radhija', () =
 const tipAt = (D, yaw, f = 1) => ({ x: D.hinge.x - Math.sin(yaw) * D.length * f, z: D.hinge.z - Math.cos(yaw) * D.length * f });
 
 test('recanto: as portas de dobradiça abrem sem varrer móvel nenhum', () => {
-  const HINGED = { grade: L.PET_GATE, cozinha: L.KITCHEN_DOOR, servico: L.SERVICE_DOOR, torre: L.TOWER_DOOR, deposito: L.STORAGE_DOOR, portaozinho: L.GATE_LEAF };
+  const HINGED = { grade: L.PET_GATE, cozinha: L.KITCHEN_DOOR, fundos: L.EXIT_DOOR, servico: L.SERVICE_DOOR, torre: L.TOWER_DOOR, deposito: L.STORAGE_DOOR, portaozinho: L.GATE_LEAF };
   const bad = [];
   for (const [id, D] of Object.entries(HINGED)) {
     // fechada, a ponta da folha está no batente
@@ -300,10 +333,13 @@ test('recanto: as portas de dobradiça abrem sem varrer móvel nenhum', () => {
 
 test('recanto: as portas abrem para dentro do lugar onde as dogs chegam depois', () => {
   const open = (D) => tipAt(D, D.openYaw);
-  // a grade do quarto abre para a cozinha (leste); a da cozinha, para o quintal (leste); a da área de serviço, para o
-  // quintal (sul)
+  // a grade do quarto abre para a cozinha (leste); a da cozinha, para o corredor (sul); a dos fundos, para o quintal
+  // (leste); a da área de serviço, para o quintal (sul)
   assert.ok(open(L.PET_GATE).x > L.PET_GATE.hinge.x + 0.5, 'grade: para a cozinha');
-  assert.ok(open(L.KITCHEN_DOOR).x > L.KITCHEN_DOOR.hinge.x + 0.5, 'cozinha: para o leste');
+  assert.ok(open(L.KITCHEN_DOOR).z > L.KITCHEN_DOOR.hinge.z + 0.5, 'cozinha: para o corredor');
+  assert.ok(open(L.EXIT_DOOR).x > L.EXIT_DOOR.hinge.x + 0.5, 'porta dos fundos: para o quintal');
+  const ED = L.EXIT_DOOR, EX = L.HOUSE_EXIT;
+  assert.ok(ED.hinge.x === EX.x && Math.min(ED.hinge.z, ED.latchPost.z) === EX.z0 && Math.max(ED.hinge.z, ED.latchPost.z) === EX.z1, 'a porta dos fundos fecha o vão HOUSE_EXIT');
   assert.ok(open(L.SERVICE_DOOR).z > L.SERVICE_DOOR.hinge.z + 0.5, 'área de serviço: para o sul');
   // a de mola da torre e a do depósito: para dentro (leste); o portãozinho: para dentro do condomínio (sul)
   assert.ok(open(L.TOWER_DOOR).x > L.TOWER_DOOR.hinge.x + 0.5, 'torre: para dentro');
@@ -331,4 +367,79 @@ test('recanto: câmera, pistas e meias dentro do condomínio', () => {
   for (const c of L.COLLECTIBLES) assert.ok(inside(c), `petisco ${c.id}`);
   assert.equal(L.COLLECTIBLES.length, 5, 'cinco petiscos');
   assert.equal(L.SOCKS.length, 3, 'três meias');
+});
+
+test('casa maior: o aspirador anda pelo corredor sem encostar em nada, e o medo da Radhija fecha o corredor e a despensa', () => {
+  const V = L.VACUUM, LN = V.lane, Co = L.SMALL_ROOMS.corredor;
+  const laneX = (z) => LN.x + LN.zig * Math.sin(((z - LN.z0) / LN.wave) * Math.PI * 2);
+  const bad = [];
+  // a trilha em zigue-zague (com 2 cm de folga) e o caminho de volta para a base
+  for (let z = LN.z0; z <= LN.z1 + 1e-6; z += 0.05) {
+    if (world.overlaps(laneX(z), z, V.r + 0.02, 'large')) bad.push(`trilha em z ${z.toFixed(2)}`);
+  }
+  for (let k = 0; k <= 1.0001; k += 0.05) {
+    const x = LN.x + (V.dock.x - LN.x) * k, z = LN.z1 + (V.dock.z - LN.z1) * k;
+    for (const c of world.contacts(x, z, V.r, 'large')) if (c.id !== 'base-do-aspirador' && c.depth > 0.01) bad.push(`volta para a base em (${x.toFixed(2)}, ${z.toFixed(2)}): ${c.id}`);
+  }
+  assert.deepEqual(bad, []);
+  // a trilha fica no corredor, longe da folha da porta da cozinha aberta, e a base no canto
+  assert.ok(LN.x - LN.zig - V.r > Co.x0 + 0.08 && LN.x + LN.zig + V.r < Co.x1 - 0.08, 'a trilha cabe no corredor');
+  const KD = L.KITCHEN_DOOR;
+  assert.ok(LN.z0 - V.r > KD.hinge.z + KD.length + 0.05, 'a ponta norte da trilha passa longe da folha aberta');
+  assert.ok(V.dock.x > Co.x1 - 0.5 && V.dock.z > Co.z1 - 0.6, 'a base no canto sudeste');
+  // o medo: a faixa do corredor cobre a entrada inteira; a da despensa, o vão da porta
+  const F = V.fear;
+  assert.ok(F.x0 <= Co.x0 + L.WALLS.t / 2 + 0.01 && F.x1 >= Co.x1 - L.WALLS.t / 2 - 0.01, 'o medo cobre a largura do corredor');
+  const PF = L.PANTRY.fear, DD = L.DOORWAYS.despensa;
+  assert.ok(PF.z0 <= DD.z0 && PF.z1 >= DD.z1, 'o medo do escuro cobre a porta da despensa');
+  // com o medo, nem a Radhija entra; a Rhaenyra passa
+  const shut = makeWorld({ petGateOpen: true, kitchenOpen: true });
+  const kx = (KD.hinge.x + KD.latchPost.x) / 2;
+  assert.equal(shut.w.segmentClear(kx, KD.hinge.z - 0.6, kx, KD.hinge.z + 1.2, R.radhija, 'small'), false, 'a Radhija não entra no corredor');
+  assert.ok(shut.w.segmentClear(kx - 0.15, KD.hinge.z - 0.6, kx - 0.15, KD.hinge.z + 1.2, R.rhaenyra, 'large'), 'a Rhaenyra entra');
+  const dz = (DD.z0 + DD.z1) / 2;
+  assert.equal(shut.w.segmentClear(DD.x + 0.6, dz, DD.x - 0.6, dz, R.radhija, 'small'), false, 'no escuro, a Radhija não entra na despensa');
+  assert.ok(shut.w.segmentClear(DD.x + 0.6, dz, DD.x - 0.6, dz, R.rhaenyra, 'large'), 'a Rhaenyra entra');
+});
+
+test('casa maior: o interruptor, a toalha e a lata, o pufe, o sofá, o parapeito e o trinco ficam onde o puzzle precisa', () => {
+  const { w } = makeWorld(HOUSE_OPEN);
+  // o interruptor: na parede do corredor, ao norte da porta da despensa, com lugar para a Rhaenyra pular
+  const SW = L.PANTRY.switch, DD = L.DOORWAYS.despensa;
+  assert.ok(Math.abs(SW.x - (DD.x + L.WALLS.t / 2)) < 0.01 && SW.nx === 1, 'na face do corredor');
+  assert.ok(SW.z < DD.z0 - 0.3 && SW.z > L.SMALL_ROOMS.despensa.z0 + 0.2, 'ao norte da porta, longe da quina');
+  assert.equal(w.overlaps(SW.x + 0.45, SW.z, R.rhaenyra, 'large'), false, 'a Rhaenyra tem onde apoiar');
+  // a toalha: a ponta comprida no leste, ao alcance da boca da Radhija, e o caminho para trás livre
+  const T = L.DINING_TABLE, TC = L.TABLECLOTH, CK = L.COOKIE_TIN;
+  assert.ok(Math.abs(TC.bite.x - (T.x + T.hx)) < 0.06 && TC.bite.y < 0.35 && T.h - TC.end <= TC.bite.y + 0.01, 'a ponta pendurada quase no chão');
+  for (let d = 0.3; d <= 0.3 + TC.pull + 0.25; d += 0.05) assert.equal(w.overlaps(TC.bite.x + d, TC.bite.z, R.radhija, 'small'), false, `puxando a ${d.toFixed(2)} m da mesa`);
+  // a lata cai depois de a toalha escorregar um pouco (antes do fim do puxão) e tudo o que sai dela fica fora do caminho
+  const fallAt = T.x + T.hx - 0.05 - CK.x;
+  assert.ok(fallAt > 0.25 && fallAt < TC.pull, `a lata cai com ${fallAt.toFixed(2)} m de puxão`);
+  const puller = { x: TC.bite.x + 0.3 + TC.pull, z: TC.bite.z };
+  for (const [id, p, r] of [['lata', CK.rest, 0.12], ['tampa', CK.lid, 0.08], ['biscoito', CK.treat, 0.1], ['etiqueta', CK.tag, 0.06], ['queda', CK.land, CK.r]]) {
+    assert.equal(w.overlaps(p.x, p.z, r, 'large'), false, `${id}: fora dos colisores`);
+    assert.ok(Math.hypot(p.x - puller.x, p.z - puller.z) > r + R.radhija + 0.05, `${id}: longe de quem puxa`);
+    assert.ok(p.x > T.x + T.hx + 0.05 || Math.abs(p.z - T.z) > T.hz + 0.05, `${id}: fora da mesa`);
+  }
+  assert.equal(L.COLLECTIBLES.find((c) => c.id === 'lata')?.x, CK.treat.x, 'o petisco é o biscoito da lata');
+  // o pufe: o retângulo inteiro dele livre (nunca fica preso) e, no fim do curso, encostado na frente do sofá, embaixo da janela
+  const PF = L.POUF, PS = L.POUF_SPOT, SF = L.SOFA, LW = L.LIVING_WINDOW;
+  for (let x = PF.minX; x <= PF.maxX + 1e-6; x += 0.1) {
+    for (let z = PF.minZ; z <= PF.maxZ + 1e-6; z += 0.1) {
+      for (const c of world.contacts(x, z, PF.half * 0.98, 'large')) assert.ok(c.depth <= 0.03, `o pufe em (${x.toFixed(2)}, ${z.toFixed(2)}) entra em ${c.id}`);
+    }
+  }
+  assert.ok(Math.abs(PS.x + PF.half - (SF.x - SF.hx)) < 0.02, 'no fim do curso, o pufe encosta no sofá');
+  assert.ok(PS.z0 >= PF.minZ - 0.01 && PS.z1 <= SF.z + SF.hz + 0.05 && PS.z1 > LW.z0, 'na frente do sofá, embaixo da janela');
+  // a subida: pufe → assento → encosto → parapeito, cada degrau acima do outro, e o trinco ao alcance da ponta do parapeito
+  const SL = L.LIVING_SILL, LT = L.EXIT_LATCH;
+  assert.ok(PF.height < SF.seat + 0.05 && SF.seat < SF.h && SF.h < SL.y, 'os degraus sobem');
+  assert.ok(SL.y - SF.h < 0.2 && SF.h - SF.seat < 0.45, 'cada degrau, um pulinho');
+  assert.ok(SL.x1 >= SF.x + SF.hx - 0.02, 'o parapeito em cima do encosto');
+  assert.ok(LT.z - SL.z1 < 0.4 && LT.y - SL.y < 0.45 && LT.y - SL.y > 0.25, `o trinco ao alcance da pata, do parapeito (${(LT.z - SL.z1).toFixed(2)} m, ${(LT.y - SL.y).toFixed(2)} m)`);
+  assert.ok(LT.y > 1.1, 'alto demais para o pulo do chão');
+  // a porta dos fundos: com lugar para a Rhaenyra empurrar por dentro
+  const EX = L.HOUSE_EXIT;
+  assert.equal(w.overlaps(EX.x - 0.5, (EX.z0 + EX.z1) / 2, R.rhaenyra, 'large'), false, 'a Rhaenyra empurra a porta por dentro');
 });

@@ -3,7 +3,8 @@
 // com o E, e cada passagem do caminho é um puzzle de causa e efeito para as duas resolverem juntas:
 //   abertura → QUARTO (farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela) → CASA (só a Radhija
 //   passa pela portinha de gato da grade; o pedal solta a grade para a irmã; a Rhaenyra empurra o saco de ração e
-//   alcança a maçaneta) → QUINTAL (a Rhaenyra empurra o galho; a Radhija passa pela passagem do muro e puxa a argola
+//   alcança a maçaneta da porta do corredor; na ala sul, o aspirador robô, a despensa no escuro, o pufe e o trinco da
+//   porta dos fundos: casaPuzzles.js) → QUINTAL (a Rhaenyra empurra o galho; a Radhija passa pela passagem do muro e puxa a argola
 //   do ferrolho pelo outro lado) → PISCINA (o Faro mostra a Reconstrução) → VARAL (a Rhaenyra põe o cesto embaixo da
 //   cenoura e a arrancada da Radhija no poste solta o pregador; o Farelo pega no ar) → TORRE (o Faro mostra o Farelo
 //   apertando a senha do interfone; a Rhaenyra aperta os três botões na ordem, segura a porta de mola com o Fica e a
@@ -39,6 +40,8 @@ import {
 } from './scenes.js';
 import { createRooftop } from './rooftop.js';
 import { createRooftopScenes } from './scenesTelhado.js';
+import { createCasaPuzzles } from './casaPuzzles.js';
+import { createCasaScenes } from './scenesCasa.js';
 
 export const STAGES = ['abertura', 'quarto', 'casa', 'quintal', 'piscina', 'varal', 'torre', 'portaria', 'fechamento', 'mural', 'fim'];
 const stageIndex = (s) => STAGES.indexOf(s);
@@ -88,11 +91,11 @@ const HINTS = {
 };
 const PROMPTS = { examinar: 'Examinar', argola: 'Puxar a argola', corda: 'Puxar a corda', subir: 'Subir' };
 /** O ícone do balão de cada pista examinada (a dog "pensa" o que achou). */
-const CLUE_ICON = { trilha: 'cenoura', pote: 'pote', pena: 'pena', baba: 'gota', telhas: 'chuva', ralo: 'gota' };
+const CLUE_ICON = { trilha: 'cenoura', pote: 'pote', pena: 'pena', baba: 'gota', telhas: 'chuva', ralo: 'gota', goteira: 'gota', etiqueta: 'cone' };
 /** Quanto tempo a dog fica examinando (s) e a que distância do ponto ela precisa estar (m). */
 const EXAM = { time: 1.0, at: 0.55, r: 1.2 };
 /** As pistas que o Faro revela e o E examina (as de cena e as Reconstruções chegam de outro jeito). */
-const EXAMINABLE = ['trilha', 'pote', 'pena', 'baba', 'ralo'];
+const EXAMINABLE = ['trilha', 'pote', 'pena', 'baba', 'ralo', 'goteira', 'etiqueta'];
 const ROOM_CLUES = ['trilha', 'pote', 'pena'];
 
 /** @type {import('../../../types').DogName[]} */
@@ -331,7 +334,9 @@ export function createPuzzle(ctx) {
   });
   props.rope?.setGrip?.(() => (S.tugWhat === 'corda' ? tug.grip() : null));
   props.serviceBolt?.setGrip?.(() => (S.tugWhat === 'ferrolho' ? tug.grip() : null));
-  const collect = createCollectibles({ list: L.COLLECTIBLES, props, emit, pickupR: L.COLLECTIBLE_PICKUP_R });
+  // (uma cópia por partida: o petisco da lata de biscoito só aparece quando ela cai; casaPuzzles.js mexe na cópia)
+  const treatList = L.COLLECTIBLES.map((c) => ({ ...c }));
+  const collect = createCollectibles({ list: treatList, props, emit, pickupR: L.COLLECTIBLE_PICKUP_R });
   // o canal fechado até o barquinho encaixar; depois, a ponte que só a Radhija atravessa
   const CH = L.CHANNEL;
   const channelMouth = world.addDynamic({ id: 'canal-boca', kind: 'water', shape: 'segment', ax: CH.x0 - 0.05, az: CH.z1, bx: CH.x1 + 0.05, bz: CH.z1, t: 0.1 });
@@ -403,10 +408,24 @@ export function createPuzzle(ctx) {
     gateOpened() { S.gateOpen = true; clearSweep(gate, { x: (L.GATE.x0 + L.GATE.x1) / 2, z: L.GATE.z }); gate.lock(); gate.set?.(1); },
     /** A plaquinha de um botão do interfone acesa (a Reconstrução da senha). */
     lightCode(id, on) { props.intercom?.setLit?.(id, on); },
+    /** A casa (casaPuzzles.js): revelar uma pista (o brilho; o E examina), o objetivo de agora e o lado da cozinha
+     * resolvido (a grade aberta, o saco fora da frente e a porta do corredor aberta). */
+    reveal: (id) => reveal(id),
+    objective: () => puzzle.objective(ctx.activeDog),
+    openKitchenSide() {
+      S.petGateOpen = true;
+      petGate.setTarget(1); petGate.set?.(1); petGate.lock();
+      sack.setPos(L.FOOD_SACK.maxX, L.FOOD_SACK.start.z);
+      S.kitchenOpen = true;
+      handle.setOn?.(true);
+      kitchenDoor.setTarget(1); kitchenDoor.set?.(1); kitchenDoor.lock();
+    },
     set snoring(on) { S.snoreT = on ? 1.5 : Infinity; },
   };
   // o terraço da torre, jogável (um cenário à parte, fora do mapa: world/telhado.js; pedido de 2026-11-11)
   const roof = createRooftop(K, { world, root, emit, effects, ctx, props, dir, hints });
+  // a ala sul da casa: o aspirador, a despensa no escuro, a toalha e a lata, o pufe e a porta dos fundos (casaPuzzles.js)
+  const casa = createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hints, tug, sack, collectList: treatList });
   let scenes = null;
   function makeScenes() {
     return {
@@ -417,6 +436,7 @@ export function createPuzzle(ctx) {
       varal: createVaralScene(K),
       terraco: createTerraceScene(K),
       ...createRooftopScenes(K, roof),
+      ...createCasaScenes(K, casa),
       cheiro: createSmellScene(K),
       porteiro: createPorteiroScene(K),
       fechamento: createClosingScene(K),
@@ -514,7 +534,7 @@ export function createPuzzle(ctx) {
   };
   const doorMid = (D) => ({ x: (D.hinge.x + D.latchPost.x) / 2, z: (D.hinge.z + D.latchPost.z) / 2 });
   const gateMid = { x: (L.GATE.x0 + L.GATE.x1) / 2, z: L.GATE.z };
-  const sackFree = () => sack.z <= L.FOOD_SACK.freeZ + 0.02;
+  const sackFree = () => sack.x >= L.FOOD_SACK.freeX - 0.02;
   const basketUnder = () => Math.abs(laundry.x - L.CARROT_PIN.x) <= L.LAUNDRY.under;
   const after = (st) => stageIndex(S.stage) >= stageIndex(st);
 
@@ -598,7 +618,8 @@ export function createPuzzle(ctx) {
         }
         return best ? { x: best.x, z: best.z, color: SCENT.cenoura } : null;
       }
-      case 'casa': case 'quintal': case 'piscina': return { x: L.RECON.x, z: L.RECON.z, color: SCENT.pombos };
+      case 'casa': return casa.lead() ?? { x: L.RECON.x, z: L.RECON.z, color: SCENT.pombos };
+      case 'quintal': case 'piscina': return { x: L.RECON.x, z: L.RECON.z, color: SCENT.pombos };
       case 'varal': return { x: L.CARROT_PIN.x, z: L.CARROT_PIN.z + 0.4, y: 0.7, color: SCENT.cenoura };
       case 'torre': if (roof.active) return roof.lead(); return S.towerUnlocked || S.codeSeen
         ? { x: L.TOWER.x0 - 0.5, z: doorMid(L.TOWER_DOOR).z, color: SCENT.cenoura }
@@ -836,12 +857,8 @@ export function createPuzzle(ctx) {
       squadOnLine(K);
     },
     quintal() {
-      S.petGateOpen = true;
-      petGate.setTarget(1); petGate.set?.(1); petGate.lock();
-      sack.setPos(L.FOOD_SACK.start.x, L.FOOD_SACK.minZ);
-      S.kitchenOpen = true;
-      handle.setOn?.(true);
-      kitchenDoor.setTarget(1); kitchenDoor.set?.(1); kitchenDoor.lock();
+      K.openKitchenSide();
+      casa.skipAll();
     },
     piscina() {
       branch.setPos(L.BRANCH.minX, L.BRANCH.start.z);
@@ -888,7 +905,8 @@ export function createPuzzle(ctx) {
   const STAGE_SPOTS = {
     quarto: null,
     casa: null,
-    quintal: [{ x: L.HOUSE.x1 + 1.6, z: 5.6, yaw: 0 }, { x: L.HOUSE.x1 + 1.1, z: 6.5, yaw: 0 }],
+    // do lado de fora da porta dos fundos (HOUSE_EXIT), olhando para o norte (a porta da área de serviço)
+    quintal: [{ x: L.HOUSE_EXIT.x + 1.26, z: L.HOUSE_EXIT.z0 - 0.1, yaw: Math.PI }, { x: L.HOUSE_EXIT.x + 2.06, z: L.HOUSE_EXIT.z0 + 0.4, yaw: Math.PI }],
     piscina: [{ x: doorMid(sd).x, z: sd.hinge.z - 1.7, yaw: Math.PI }, { x: doorMid(sd).x + 0.9, z: sd.hinge.z - 1.3, yaw: Math.PI }],
     varal: [{ x: L.LINE.b.x - 0.4, z: L.LINE.b.z + 2.0, yaw: Math.PI }, { x: L.LINE.b.x - 1.5, z: L.LINE.b.z + 2.2, yaw: Math.PI }],
     torre: [{ x: td.hinge.x - 1.5, z: doorMid(td).z + 0.9, yaw: Math.PI / 2 }, { x: td.hinge.x - 1.6, z: doorMid(td).z - 0.3, yaw: Math.PI / 2 }],
@@ -919,7 +937,7 @@ export function createPuzzle(ctx) {
           const l = lead();
           return T(OBJECTIVES.quarto, l && S.revealed.size ? l : null, 0.7);
         }
-        case 'casa': return T(OBJECTIVES.casa, { x: L.KITCHEN_HANDLE.x - 0.25, z: L.KITCHEN_HANDLE.z }, 1.3);
+        case 'casa': return casa.objective();
         case 'quintal':
           // primeiro a porta (trancada por fora); depois o galho na frente da passagem; por fim, a passagem
           if (!S.gapShown) return T(OBJECTIVES.quintal, doorMid(sd), 1.2);
@@ -1044,6 +1062,8 @@ export function createPuzzle(ctx) {
         props.serviceBolt?.setSlid?.(Math.min(1, S.boltT / 0.35));
         if (S.boltT >= 0.35) { S.boltT = -1; openServiceDoor(); }
       }
+      // a ala sul da casa (o aspirador, a despensa, a toalha e a lata, o pufe, o trinco e a porta dos fundos)
+      casa.update(dt, { active, comp, playing });
       gapPlug.enabled = !S.branchFree;
       // petiscos e meias
       if (playing && !climbing()) {
@@ -1107,6 +1127,7 @@ export function createPuzzle(ctx) {
         if (ex) hints.setPrompt('examinar');
         else if (active.name === 'radhija' && !S.boltOpen && S.branchFree && active.z < L.YARD.z0 && near(active, SB.ring, SB.grabR + 0.3) && !tug.busy?.()) hints.setPrompt('argola');
         else if (active.name === 'radhija' && S.bucketT === -1 && near(active, L.ROPE.end, L.ROPE.grabR + 0.25) && !tug.busy?.()) hints.setPrompt('corda');
+        else if (casa.prompt) hints.setPrompt(casa.prompt);
         else if (roof.prompt) hints.setPrompt(roof.prompt);
         else hints.setPrompt(null);
       }
@@ -1141,7 +1162,7 @@ export function createPuzzle(ctx) {
       // soltar a corda ou a argola (com ela na boca, o E chega aqui)
       if (tug.busy?.() && tug.who === c.name) { tug.release?.(); return true; }
       // a Radhija manda: aponta a maçaneta (a irmã é quem alcança), ou o saco na frente dela
-      if (st === 'casa' && near(c, doorMid(L.KITCHEN_DOOR), 1.9) && c.x < L.HOUSE.x1) {
+      if (st === 'casa' && !S.kitchenOpen && near(c, doorMid(L.KITCHEN_DOOR), 1.9) && c.z < L.KITCHEN_DOOR.hinge.z) {
         if (S.mandaCd <= 0) {
           S.mandaCd = 2.2;
           if (!sackFree()) {
@@ -1155,6 +1176,8 @@ export function createPuzzle(ctx) {
         }
         return true;
       }
+      // a ala sul da casa: a toalha, o pufe e a porta dos fundos
+      if (casa.interact(c)) return true;
       // a porta da área de serviço: o ferrolho fica do outro lado
       if (st === 'quintal' && !S.serviceOpen && c.z > L.YARD.z0 && near(c, doorMid(sd), 1.45)) {
         tryServiceDoor(c);
@@ -1226,6 +1249,7 @@ export function createPuzzle(ctx) {
       if (held) return held.look || null;
       if (S.exam?.who === c.name) return K.clueAt(S.exam.id);
       if (roof.active) return roof.lookTarget(c);
+      { const lt = casa.lookTarget(c); if (lt) return lt; }
       // farejando: o focinho vai ao chão por um instante
       if (S.sniffT > 0 && S.sniffWho === c.name) return { x: c.x + Math.sin(c.yaw) * 0.42, y: 0.02, z: c.z + Math.cos(c.yaw) * 0.42 };
       if (S.stage === 'varal' && near(c, L.CARROT_PIN, 3.6)) return { x: L.CARROT_PIN.x, y: L.CARROT_PIN.y, z: L.CARROT_PIN.z };
@@ -1235,6 +1259,7 @@ export function createPuzzle(ctx) {
     modifyIntent(dt, c, intent, { shift }) {
       if (S.scene?.active || climbing()) return null;
       if (roof.active) return roof.modifyIntent(dt, c, intent, { shift });
+      { const r = casa.modifyIntent(dt, c, intent, { shift }); if (r) return r; }
       for (const cr of [...(S.kitchenOpen ? [] : [sack]), branch, ...(S.varalDone ? [] : [laundry]), bin, ...(S.boatDocked || S.dockT >= 0 ? [] : [boat])]) {
         const r = cr.modifyIntent(dt, c, intent, { shift });
         if (r?.contact) {
@@ -1274,7 +1299,7 @@ export function createPuzzle(ctx) {
     navFlags() {
       return {
         petGateOpen: S.petGateOpen, kitchenOpen: S.kitchenOpen, gapOpen: S.branchFree, serviceOpen: S.serviceOpen,
-        towerOpen: towerDoor.t > 0.6, boatDocked: S.boatDocked, storageOpen: S.storageOpen,
+        towerOpen: towerDoor.t > 0.6, boatDocked: S.boatDocked, storageOpen: S.storageOpen, ...casa.navFlags(),
       };
     },
     wallSpots() {
@@ -1282,10 +1307,12 @@ export function createPuzzle(ctx) {
       const out = [];
       if (after('casa') && !S.kitchenOpen && sackFree()) out.push(handle.spot);
       if (after('quintal') && !S.towerUnlocked && S.codeT < 0 && S.codeErrT < 0) for (const b of buttons) if (!S.code.includes(b.id)) out.push(b.btn.spot);
+      out.push(...casa.wallSpots());
       return out;
     },
     onWallTouch(c, spot) {
       if (roof.onWallTouch(c, spot)) return;
+      if (casa.onWallTouch(c, spot)) return;
       if (spot.id === handle.id) {
         if (S.kitchenOpen) return;
         handle.touch();
@@ -1294,7 +1321,8 @@ export function createPuzzle(ctx) {
         kitchenDoor.setTarget(1);
         kitchenDoor.lock();
         emit('door:open', { id: 'cozinha', x: L.KITCHEN_DOOR.hinge.x, z: L.KITCHEN_DOOR.hinge.z });
-        setStage('quintal');
+        // a porta da cozinha agora dá no corredor: o barulho acorda o aspirador (casaPuzzles.js)
+        casa.onKitchenOpen();
         return;
       }
       const b = buttons.find((x) => x.btn.id === spot.id);
@@ -1303,6 +1331,7 @@ export function createPuzzle(ctx) {
     onBark(c) {
       if (S.scene?.active) return;
       if (roof.active) { roof.onBark(c); return; }
+      if (casa.onBark(c)) return;
       goose.onBark?.(c);
       if (S.stage === 'portaria' && !S.porterDone && near(c, boothCenter, 4.2)) {
         if (!S.windowOpen) {
@@ -1351,6 +1380,7 @@ export function createPuzzle(ctx) {
       if (!scenes) scenes = makeScenes();
       props.reset?.();
       roof.reset();
+      casa.reset();
       handle.reset?.();
       for (const b of buttons) b.btn.reset?.();
       pedal.reset?.();
@@ -1436,7 +1466,7 @@ export function createPuzzle(ctx) {
       return {
         story: {
           stage: S.stage, scene: S.scene?.active ? S.scene.id : null, beat: S.scene?.beat ?? null,
-          clues: book.found, socks: [...S.socks], faro: faro.info(), faroMode: faroMode.info(), cloud: cloud.info(), roof: roof.info(), board: deduction.snapshot(), lines: teller.lines,
+          clues: book.found, socks: [...S.socks], faro: faro.info(), faroMode: faroMode.info(), cloud: cloud.info(), roof: roof.info(), casa: casa.info(), board: deduction.snapshot(), lines: teller.lines,
           recon: { active: recon.active || reconCode.active, plays: recon.plays, codePlays: reconCode.plays },
           revealed: [...S.revealed], exam: S.exam?.id ?? null, code: S.code.slice(),
           flags: {
@@ -1467,6 +1497,7 @@ export function createPuzzle(ctx) {
         window: props.windowLeaf ? 'ok' : null, music: S.music,
         flags: { windowOpen: S.windowOpen, codeSeen: S.codeSeen, towerUnlocked: S.towerUnlocked, gateOpen: S.gateOpen },
         locks: { radhija: !!puzzle.lockFor('radhija'), rhaenyra: !!puzzle.lockFor('rhaenyra') },
+        casa: casa.snapshot(),
       };
     },
   };
@@ -1512,6 +1543,7 @@ export function createPuzzle(ctx) {
   S = fresh();
   scenes = makeScenes();
   puzzle.rooftop = roof;
+  puzzle.casa = casa;
   return puzzle;
 }
 

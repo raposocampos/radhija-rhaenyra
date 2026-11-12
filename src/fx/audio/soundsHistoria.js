@@ -375,12 +375,50 @@ export const SOUNDS_HISTORIA = {
     nz(G, o, { t, a: 0.35, hold: 0.6, d: 0.8, peak: 0.07, type: 'bandpass', f: 380 * p, to: 760 * p, toT: 1.2, q: 0.6, buf: G.pink });
     return 1.8;
   },
+  // ---------------------------------------------------------------------------------------- a casa (casaPuzzles.js)
+  // o aspirador robô andando: o motorzinho zumbindo e as escovas raspando
+  aspirador(G, o, t, p) {
+    tone(G, o, { type: 'sawtooth', f: 118 * p, to: 124 * p, t, a: 0.12, hold: 0.7, d: 0.3, peak: 0.03, filt: { type: 'lowpass', f: 700, q: 1.2 } });
+    nz(G, o, { t, a: 0.1, hold: 0.7, d: 0.3, peak: 0.05, type: 'bandpass', f: 2400 * p, q: 1.4 });
+    return 1.2;
+  },
+  // o aspirador apitando (acordou, trombou, levou susto ou chegou na base)
+  'aspirador-bip'(G, o, t, p) {
+    tone(G, o, { type: 'square', f: 1760 * p, t, a: 0.002, hold: 0.05, d: 0.04, peak: 0.03, filt: { type: 'lowpass', f: 3600, q: 0.7 } });
+    tone(G, o, { type: 'square', f: 2350 * p, t: t + 0.12, a: 0.002, hold: 0.05, d: 0.05, peak: 0.03, filt: { type: 'lowpass', f: 3600, q: 0.7 } });
+    return 0.25;
+  },
+  // a goteira na panela da despensa: o "ploc" (no escuro dá medo)
+  pingo(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 1400 * p, to: 2300 * p, t, a: 0.002, d: 0.09, peak: 0.07});
+    tone(G, o, { type: 'sine', f: 620 * p, to: 480 * p, t: t + 0.01, a: 0.002, d: 0.12, peak: 0.03});
+    return 0.2;
+  },
+  // o interruptor da despensa: o clique da tecla e o zumbidinho da lâmpada acendendo
+  interruptor(G, o, t, p) {
+    nz(G, o, { t, a: 0.001, d: 0.025, peak: 0.16, type: 'bandpass', f: 2600 * p, q: 3 });
+    tone(G, o, { type: 'sine', f: 120 * p, t: t + 0.05, a: 0.02, hold: 0.15, d: 0.2, peak: 0.02 });
+    return 0.4;
+  },
+  // a lata de biscoito batendo no chão e correndo (metal fino)
+  lata(G, o, t, p) {
+    [880, 1320, 2050].forEach((f, i) => tone(G, o, { type: 'sine', f: f * p, t, a: 0.002, d: 0.5 - i * 0.12, peak: 0.06 - i * 0.012 }));
+    nz(G, o, { t, a: 0.001, d: 0.06, peak: 0.12, type: 'bandpass', f: 3200 * p, q: 1.5 });
+    for (let i = 1; i < 5; i++) nz(G, o, { t: t + 0.2 + i * 0.15, a: 0.002, d: 0.05, peak: 0.04 / i, type: 'bandpass', f: 2600 * p, q: 2 });
+    return 1.1;
+  },
+  // a toalha escorregando pela mesa
+  toalha(G, o, t, p) {
+    nz(G, o, { t, a: 0.05, hold: 0.15, d: 0.2, peak: 0.06, type: 'bandpass', f: 1800 * p, to: 900 * p, toT: 0.35, q: 0.8, buf: G.pink });
+    return 0.45;
+  },
 };
 
 export const MIN_GAP_HISTORIA = {
   ronco: 1.2, radinho: 1.2, arrulho: 0.4, asas: 0.15, faro: 0.6, pista: 0.12, botina: 0.12, passarinhos: 1, bip: 0.08, espirro: 1, trovao: 1.5,
   'faro-liga': 0.3, 'faro-desliga': 0.2, 'faro-cansado': 0.6, fungada: 0.5,
   'voz-radhija': 0.045, 'voz-rhaenyra': 0.07, 'voz-pombo': 0.07, 'voz-porteiro': 0.1, neuronio: 0.06, rabisco: 0.3, 'quadro-abre': 0.3, 'quadro-fecha': 0.3,
+  aspirador: 0.8, 'aspirador-bip': 0.2, pingo: 0.4, lata: 0.5, toalha: 0.3,
 };
 export const PITCH_VAR_HISTORIA = {
   fiu: 0.04, arrulho: 0.06, asas: 0.05, pista: 0, pino: 0.02, botina: 0.05, pulinho: 0.06, bola: 0.05, fungada: 0.08, 'faro-cansado': 0.04,

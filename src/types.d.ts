@@ -766,7 +766,7 @@ export interface PropBase { object: THREE.Object3D }
 export interface HighlightProp { setHighlight(on: boolean): void }
 /** Item carregável: Object3D centrado e posição de origem (reset volta para lá). */
 export interface ItemProp extends PropBase, HighlightProp { home: THREE.Vector3 }
-export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void }
+export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void; setHidden?(on: boolean): void }
 export interface GateProp extends PropBase { setOpen(t: number): void }
 export interface PressProp extends PropBase { setPress(t: number): void }
 /** Botão ou alavanca no alto da parede (src/world/wallButton.js), acionado pelo impulso na parede. */

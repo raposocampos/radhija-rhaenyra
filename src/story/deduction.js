@@ -42,7 +42,7 @@ export const CHAPTER1_BOARD = {
       conclusion: 'Para o varal… e de lá, para a torre!',
     },
     {
-      id: 'borracha', text: 'Por que os pombos pegam coisas de borracha?', clues: ['boia', 'dep-bichano'], extra: ['ralo', 'tampa'],
+      id: 'borracha', text: 'Por que os pombos pegam coisas de borracha?', clues: ['boia', 'dep-bichano'], extra: ['ralo', 'tampa', 'etiqueta', 'goteira'],
       options: ['Para tapar uma goteira!', 'Pombos comem borracha.', 'Querem brincar na piscina.'], answer: 0,
       conclusion: 'Para tapar uma goteira… mas onde?',
     },
@@ -52,7 +52,7 @@ export const CHAPTER1_BOARD = {
       conclusion: 'A senha é sino, osso, nota!',
     },
     { id: 'rua', text: 'Para onde os pombos voaram pela rua?', clues: [], conclusion: '' },
-    { id: 'tempestade', text: 'O que a tempestade estragou?', clues: ['telhas'], conclusion: '' },
+    { id: 'tempestade', text: 'O que a tempestade estragou?', clues: ['telhas'], extra: ['goteira'], conclusion: '' },
     // a pergunta que sai da contradição do porteiro (aberta: gancho para depois)
     { id: 'luiz', text: 'O Sr. Luiz viu os pombos saindo?', clues: [], extra: ['dep-luiz', 'grelha'], conclusion: '' },
   ],

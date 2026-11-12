@@ -54,6 +54,16 @@ export const PICTOS = {
     + `<ellipse cx="25" cy="27.6" rx="8.6" ry="3" fill="none" stroke="${INK}" stroke-width="1.1" stroke-dasharray="2 2"/>`
     + `<path d="M16,40 q3,-4 6,0 q-3,4 -6,0z" fill="#3f9fd8"/>`
     + `${pigeon(44, 18, 0.62, { fly: true })}<ellipse cx="44" cy="20.4" rx="5.4" ry="1.8" fill="#3a3d44" ${S}/>`),
+  // a goteira da despensa: o forro com a mancha, os pingos caindo e a panela no chão
+  goteira: card(`<rect x="5" y="8" width="50" height="7" fill="#f2ece0" ${S}/><ellipse cx="30" cy="15" rx="9" ry="3" fill="#b9a98a"/>`
+    + `${[[30, 22, 1], [30, 32, 0.85]].map(([x, y, k]) => `<path d="M${x},${y - 5 * k} q-${3 * k},${4 * k} 0,${7 * k} q${3 * k},-${3 * k} 0,-${7 * k}z" fill="#7CC3EA" stroke="#3d7fb0" stroke-width=".9"/>`).join('')}`
+    + `<path d="M16,40 h28 l-3,11 h-22z" fill="#c9ced3" ${S}/><path d="M13,40 h34" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`
+    + '<ellipse cx="30" cy="42.5" rx="10" ry="1.6" fill="#5f8fb0"/>'),
+  // a etiqueta da cenoura: o papel pardo com o furo e o barbante, a cenoura em cone desenhada e a gota de borracha
+  etiqueta: card(`<path d="M17,14 h22 l7,8 v26 h-29z" fill="#d9b98f" ${S}/><circle cx="40" cy="20" r="2.2" fill="#FFFDF6" ${S}/>`
+    + '<path d="M42,19 q8,-6 12,-1" fill="none" stroke="#8a6a48" stroke-width="1.6"/>'
+    + `<path d="M24,26 h12 l-6,17z" fill="#ff8a2a" ${S}/><path d="M27,26 q1,-5 3,-6 M30,26 q0,-6 2,-7 M33,26 q-1,-5 -3,-6" fill="none" stroke="#5c9a3a" stroke-width="2"/>`
+    + `<path d="M25,46 h11" stroke="${INK}" stroke-width="1.2" stroke-dasharray="2 2"/>`),
   // retratinhos de quem dá depoimento (cabeça de frente, no fundo de cor)
   gansa: portrait('#D9ECF7', `<path d="M22,58 q-2,-18 6,-26 q-6,-6 -2,-14 q4,-8 12,-6 q8,2 7,12 q-1,6 -6,9 q10,8 7,25z" fill="#FFFFFF" ${S}/>`
     + `<path d="M43,17 l11,3 l-11,4z" fill="#F29A2E" ${S}/><circle cx="38" cy="16" r="2" fill="${INK}"/><path d="M34,11 l7,2" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>`

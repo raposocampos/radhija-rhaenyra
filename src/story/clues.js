@@ -32,12 +32,16 @@ export const CLUES = {
   baba: { id: 'baba', case: 'C3', type: 'escondida', name: 'Baba no parapeito, do lado de dentro', picto: 'baba', chapter: 1, support: true, text: 'Baba no parapeito, do lado de dentro… de quem será?' },
   // caso 2, o relógio parado
   telhas: { id: 'telhas', case: 'C2', type: 'obrigatoria', name: 'Galhos e telhas da tempestade', picto: 'telhas', chapter: 1, text: 'Telhas quebradas embaixo do galho: a tempestade estragou algum telhado.' },
+  // a casa (4ª rodada): a goteira na despensa, com a luz acesa (casaPuzzles.js)
+  goteira: { id: 'goteira', case: 'C2', type: 'escondida', name: 'A goteira na despensa', picto: 'goteira', chapter: 1, text: 'Uma goteira na despensa: a chuva de ontem pinga do forro.' },
   // caso 1, a borracha sumida
   boia: { id: 'boia', case: 'C1', type: 'obrigatoria', name: 'Um pombo levando a boia de patinho murcha', picto: 'boia', chapter: 1, text: 'Um pombo levou a boia de patinho da piscina. Também é de borracha!' },
   senha: { id: 'senha', case: 'C1', type: 'obrigatoria', name: 'O Farelo sobe pela escada: a senha do interfone', picto: 'senha', chapter: 1, text: 'O Farelo apertou o sino e o osso… e o Soneca espirrou antes do terceiro.' },
   // o alto da caixa d'água do terraço da torre (a fuga dos pombos): eles levaram a tampa de borracha do alçapão
   tampa: { id: 'tampa', case: 'C1', type: 'obrigatoria', name: 'A tampa de borracha da caixa d’água', picto: 'tampa', chapter: 1, text: 'A tampa de borracha da caixa d’água sumiu… mais borracha!' },
   ralo: { id: 'ralo', case: 'C1', type: 'escondida', name: 'O ralo do tanque sem a rolha', picto: 'ralo', chapter: 1, text: 'A rolha de borracha do tanque sumiu.' },
+  // a casa (4ª rodada): a etiqueta da cenoura, que estava na lata de biscoito da sala de jantar (casaPuzzles.js)
+  etiqueta: { id: 'etiqueta', case: 'C1', type: 'escondida', name: 'A etiqueta da cenoura', picto: 'etiqueta', chapter: 1, text: 'Etiqueta da cenoura: borracha e formato de cone. Tipo uma rolha!' },
   // a portaria
   grelha: { id: 'grelha', case: 'C3', type: 'obrigatoria', name: 'A grelha da guarita', picto: 'grelha', chapter: 1, text: 'A grelha da guarita deixa entrar ar… e cheiro.' },
   // depoimentos (o quadro de dedução: retratinho, a fala entre aspas e a anotação)
@@ -59,7 +63,7 @@ export const CLUES = {
 };
 
 /** As pistas do capítulo 1, na ordem em que costumam aparecer (os cartões do mural; os depoimentos ficam à parte). */
-export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'telhas', 'boia', 'senha', 'tampa', 'ralo', 'grelha'];
+export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'goteira', 'etiqueta', 'telhas', 'boia', 'senha', 'tampa', 'ralo', 'grelha'];
 /** Os depoimentos do capítulo 1 (quadro de dedução). */
 export const CHAPTER1_TESTIMONIES = ['dep-bichano', 'dep-gansa', 'dep-luiz'];
 
