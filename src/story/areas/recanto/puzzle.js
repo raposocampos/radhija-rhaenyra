@@ -32,6 +32,9 @@ import { createReconstruction } from '../../faro/reconstruction.js';
 import { createClueBook, CLUES } from '../../clues.js';
 import { createDeduction } from '../../deduction.js';
 import { createStoryteller } from '../../scene/storyteller.js';
+import { createButterflies } from '../../scene/butterfly.js';
+import { createBubbles } from '../../scene/bubbles.js';
+import { createLesada } from '../../scene/lesada.js';
 import { MORNING } from './lighting.js';
 import {
   createOpening, createWindowScene, createReconScene, createCodeScene, createVaralScene, createTerraceScene,
@@ -263,17 +266,11 @@ export function createPuzzle(ctx) {
     return m;
   })();
   feather.visible = false;
-  const butterfly = new THREE.Group();
-  butterfly.name = 'historia:borboleta';
-  const wingMat = new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: 0.6, side: THREE.DoubleSide });
-  const wings = [-1, 1].map((s) => {
-    const w = new THREE.Mesh(new THREE.CircleGeometry(0.05, 10), wingMat);
-    w.position.x = s * 0.045;
-    butterfly.add(w);
-    return w;
-  });
-  butterfly.visible = false;
-  root.add(butterfly);
+  // a borboleta do fechamento (hero, a cena move) e as do cenário, que a Rhaenyra persegue (src/story/scene/butterfly.js),
+  // e as bolhas de sabão (src/story/scene/bubbles.js)
+  const flutter = createButterflies({ root, world, layout: L });
+  const butterfly = flutter.hero.object;
+  const bubbles = createBubbles({ root, blocked: flutter.blocked });
   // o broche de campanha da Dona Gansa (os pombos deixaram cair na ilha): uma roseta azul e branca com fitas
   const broche = new THREE.Group();
   broche.name = 'historia:broche-da-gansa';
@@ -329,6 +326,8 @@ export function createPuzzle(ctx) {
     // só o balanço: o poste não tem objeto próprio para inclinar (o varal sacode)
     prop: /** @type {any} */ ({ setSway: (a) => props.line?.shake?.(Math.min(1, Math.abs(a) * 3.2)) }),
   });
+  // a Rhaenyra distraída (src/story/scene/lesada.js): só com nada mais da área segurando ela
+  const lesada = createLesada({ ctx, dir, emit, flutter, bubbles, layout: L, busy: (n) => !!(dir.lockFor(n) || effects.lockFor(n) || tug.lockFor(n)) });
   props.rope?.setGrip?.(() => (S.tugWhat === 'corda' ? tug.grip() : null));
   props.serviceBolt?.setGrip?.(() => (S.tugWhat === 'ferrolho' ? tug.grip() : null));
   const collect = createCollectibles({ list: L.COLLECTIBLES, props, emit, pickupR: L.COLLECTIBLE_PICKUP_R });
@@ -428,7 +427,8 @@ export function createPuzzle(ctx) {
           ['radhija', 'Na ilha. A senhora viu os pombos ontem à noite?'],
           ['gansa', 'Vi o gordinho! Voando torto, com uma coisa laranja…'],
           ['gansa', '…e cantarolando a noite toda: “plim-plim, a nota é o fim!”'],
-          ['rhaenyra', 'A nota… no fim? Hmm!'],
+          ['rhaenyra', 'Plim-plim? É o carrinho de sorvete!'],
+          ['radhija', 'Não, Rhaenyra… é uma pista. Anota aí: a nota é o fim.'],
           ['gansa', 'E não se esqueçam: votem na Dona Gansa!', { mood: 'grito' }],
         ],
         onCommit: () => { S.brocheGiven = true; S.broche = 'devolvido'; broche.visible = false; },
@@ -442,6 +442,8 @@ export function createPuzzle(ctx) {
           ['bichano', '…ouvi falar em goteira.', { mood: 'sussurro' }],
           ['radhija', 'Goteira? Onde?'],
           ['bichano', 'Isso eu não sei. Gato não sobe em telhado molhado.'],
+          ['rhaenyra', 'Goteira é uma torneira filhote?'],
+          ['radhija', 'Não, Rhaenyra. É um furinho no telhado.'],
         ],
         onCommit: () => { S.bichanoTalked = true; },
       }),
@@ -1126,8 +1128,10 @@ export function createPuzzle(ctx) {
         }
         S.lastActive = ctx.activeDog;
       }
-      // a borboleta bate as asas
-      if (butterfly.visible) { const f = Math.sin((K.butterflyFlap ?? 0) * 26) * 0.9; wings[0].rotation.y = f; wings[1].rotation.y = -f; }
+      // as borboletas (as do cenário somem na noite da abertura) e as bolhas; a Rhaenyra distraída, fora das cenas
+      flutter.update(dt, { ambient: S.stage !== 'abertura' });
+      bubbles.update(dt);
+      lesada.update(dt, { playing: playing && !S.pending && !climbing() && !roof.active && after('quarto') && stageIndex(S.stage) < stageIndex('mural') });
       return null;
     },
 
@@ -1219,7 +1223,7 @@ export function createPuzzle(ctx) {
       if (S.poleN >= (L.POLE_SHOVE.pushes ?? 3)) { S.varalDone = true; startScene('varal'); }
     },
     lockFor(name) {
-      return dir.lockFor(name) || effects.lockFor(name) || tug.lockFor(name) || null;
+      return dir.lockFor(name) || effects.lockFor(name) || tug.lockFor(name) || lesada.lockFor(name) || null;
     },
     lookTarget(c) {
       const held = dir.lockFor(c.name);
@@ -1378,7 +1382,9 @@ export function createPuzzle(ctx) {
       skip.disarm();
       mood.set(MORNING);
       feather.visible = false;
-      butterfly.visible = false;
+      flutter.reset();
+      bubbles.reset();
+      lesada.reset();
       channelMouth.enabled = true;
       boatBridge.enabled = false;
       boatNeck.enabled = false;
@@ -1431,6 +1437,9 @@ export function createPuzzle(ctx) {
       recon.dispose();
       reconCode.dispose();
       balloons.dispose();
+      lesada.dispose();
+      flutter.dispose();
+      bubbles.dispose();
     },
     info() {
       return {
@@ -1455,6 +1464,7 @@ export function createPuzzle(ctx) {
             laundry: { x: +laundry.x.toFixed(2), z: +laundry.z.toFixed(2) }, bin: { x: +bin.x.toFixed(2), z: +bin.z.toFixed(2) },
           },
           balloons: balloons.active, music: S.music, faroReady: puzzle.faroReady, cinematic: puzzle.cinematic(),
+          lesada: lesada.info(),
         },
       };
     },
@@ -1512,6 +1522,9 @@ export function createPuzzle(ctx) {
   S = fresh();
   scenes = makeScenes();
   puzzle.rooftop = roof;
+  // a Rhaenyra distraída e as borboletas (testes, E2E e medições: lesada.setOn(false) tira o sorteio)
+  puzzle.lesada = lesada;
+  puzzle.flutter = flutter;
   return puzzle;
 }
 

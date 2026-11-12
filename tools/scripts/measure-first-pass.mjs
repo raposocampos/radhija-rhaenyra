@@ -151,6 +151,8 @@ async function pageTour({ dt, startFrames, startFramesMax, nodeFrames, returnFra
   // o xixi (raro e sorteado) faria uma dog sair andando numa passagem e não na outra; as partidas automáticas que medem
   // onde as dogs ficam também o desligam
   if (replay) game.debug.idle?.setPee(false);
+  // no Modo História, pelo mesmo motivo, a Rhaenyra distraída (src/story/scene/lesada.js) também fica desligada
+  if (replay) game.puzzle?.lesada?.setOn?.(false);
   // caminho guloso: sempre o nó mais perto ainda não visitado
   const tour = [];
   let at = start;
