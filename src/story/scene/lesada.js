@@ -46,11 +46,11 @@ export const LESADA = Object.freeze({
   /** Farejando: a que distância fica o cantinho, a velocidade até lá e quanto tempo de focinho no chão. */
   sniff: Object.freeze({ d: [0.55, 0.95], v: 0.9, t: 2.1 }),
   /** Tropeço: s correndo (a mais de `speed` m/s) até o primeiro e entre eles; quanto livre à frente (m). */
-  trip: Object.freeze({ first: [26, 40], every: [60, 100], speed: 1.45, ahead: 0.9 }),
+  trip: Object.freeze({ first: [30, 50], every: [80, 140], speed: 1.45, ahead: 0.9 }),
   /** Focinho na porta: a velocidade contra ela (m/s) e o intervalo mínimo (s). */
   bonk: Object.freeze({ speed: 1.3, cd: 8 }),
   /** O "Hã?" atrasado quando a Radhija late perto: a chance, o intervalo mínimo (s), o atraso (s) e o alcance (m). */
-  ha: Object.freeze({ chance: 0.5, cd: 24, delay: [0.55, 0.85], r: 7 }),
+  ha: Object.freeze({ chance: 0.35, cd: 30, delay: [0.55, 0.85], r: 7 }),
   /** A Radhija chama: até que distância (m), de quanto em quanto tempo no máximo (s) e a chance. */
   call: Object.freeze({ r: 8, cd: 14, chance: 0.8 }),
 });
