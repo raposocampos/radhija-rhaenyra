@@ -30,6 +30,7 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const KEEP = ['position', 'normal', 'color'];
 const TRIM = '#fff8ec';
 const _up = new THREE.Vector3(0, 1, 0);
+const _zAxis = new THREE.Vector3(0, 0, 1);
 const _qa = new THREE.Quaternion();
 const _va = new THREE.Vector3();
 const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
@@ -648,6 +649,8 @@ export function buildQuintal(kit, root, L) {
   const leaf = new THREE.Group();
   leaf.name = 'alface:folha';
   leaf.userData.carryKind = 'carrot';
+  /** @type {THREE.Mesh} */
+  let leafMesh;
   {
     const s = new THREE.Shape();
     s.moveTo(0, -0.1);
@@ -659,6 +662,7 @@ export function buildQuintal(kit, root, L) {
     g.computeVertexNormals();
     paint(g, (q) => C('#a9d36a').lerp(C('#5f9a35'), clamp01(Math.abs(q.x) * 6)).multiplyScalar(Math.abs(q.x) < 0.006 ? 1.15 : 1));
     const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: THREE.DoubleSide }));
+    leafMesh = m;
     m.name = 'alface:folha-malha';
     m.castShadow = true;
     m.rotation.x = -Math.PI / 2; // deitada (no chão); na boca, o encaixe gira junto com a cabeça
@@ -678,7 +682,7 @@ export function buildQuintal(kit, root, L) {
     g.translate(0, 0.13, 0);
     addJ(g, { color: (p) => o.copy((Math.floor(p.y / 0.08) + Math.floor((p.x + p.z) / 0.22)) % 2 ? ba : bb), x: cx, z: bd.z });
     addJ(rb(w + 0.03, 0.03, d + 0.03, 0.01, 1), { color: '#d8c6a5', x: cx, y: 0.245, z: bd.z, ao: false });
-    addJ(slab(w - 0.12, 0.012, d - 0.12), { color: vary('#5a4030', 0.1, 11), slot: 'ground', x: cx, y: 0.262, z: bd.z, ao: false });
+    addJ(slab(w - 0.12, 0.012, d - 0.12), { color: vary('#5a4030', 0.1, 11), slot: 'ground', x: cx, y: 0.27, z: bd.z, ao: false });
     shade(bd.z).rrect(cx, bd.z, w / 2, d / 2, 0.22, { a: 0.22, fill: false, color: '#2a1e12' });
     // as plantas em duas fileiras (as hortênsias atrás, junto da parede; na frente, lavanda, margaridas e gerânios)
     const Rb = rng(500 + i);
@@ -686,7 +690,7 @@ export function buildQuintal(kit, root, L) {
     const nb = Math.round(d / 0.95), nf = Math.round(d / 0.62);
     for (let k = 0; k < nb; k++) {
       const z = z0 + 0.5 + k * ((d - 1.0) / Math.max(1, nb - 1));
-      addJ(hydrangeaGeo(0.3 + Rb() * 0.05, 600 + i * 20 + k, k % 2 ? '#8ea6e8' : '#e7a3c6'), { color: null, slot: 'foliage', x: back + (Rb() - 0.5) * 0.08, y: 0.25, z, ry: Rb() * 6 });
+      addJ(hydrangeaGeo(0.3 + Rb() * 0.05, 600 + i * 20 + k, k % 2 ? '#8ea6e8' : '#e7a3c6'), { color: null, slot: 'foliage', x: back + (Rb() - 0.5) * 0.08, y: 0.27, z, ry: Rb() * 6 });
     }
     for (let k = 0; k < nf; k++) {
       const z = z0 + 0.3 + k * ((d - 0.6) / Math.max(1, nf - 1));
@@ -694,7 +698,7 @@ export function buildQuintal(kit, root, L) {
       const plant = kind === 0 ? lavender({ stems: 16, height: 0.36, seed: 700 + k })
         : kind === 1 ? smallFlowers({ count: 22, radius: 0.15, height: 0.18, color: k % 2 ? '#fff6ee' : '#f2c230', seed: 720 + k })
           : geranium({ radius: 0.15, height: 0.2, seed: 740 + k, flower: ['#ff6a55', '#e8708a', '#b9a3e3'][k % 3] });
-      addJ(plant, { color: null, slot: 'plant', x: front + (Rb() - 0.5) * 0.12, y: 0.26, z, ry: Rb() * 6 });
+      addJ(plant, { color: null, slot: 'plant', x: front + (Rb() - 0.5) * 0.12, y: 0.28, z, ry: Rb() * 6 });
     }
   });
   // o gramadinho do meio: um pouco mais verde e viçoso (a irrigação), num decalque macio
@@ -708,7 +712,7 @@ export function buildQuintal(kit, root, L) {
     grp.userData.passThrough = true; // rente ao chão: as dogs pisam por cima (a Rhaenyra senta nele)
     grp.position.set(hd.x, 0, hd.z);
     const b = createBaker();
-    b.add(cyl(0.022, 0.022, 0.1, 10), { color: '#3a3f44', y: -0.08 });
+    b.add(cyl(0.022, 0.022, 0.1, 10), { color: '#3a3f44', y: -0.09 });
     b.add(cyl(0.032, 0.034, 0.024, 12), { color: '#2f5f34', y: 0.02 });
     b.add(cyl(0.012, 0.018, 0.012, 8), { color: '#c9a24a', y: 0.044 });
     const m = bakedMesh(b, `aspersor-${hd.id}:cabeca`, { rough: 0.5, metal: 0.2, cast: false });
@@ -849,7 +853,7 @@ export function buildQuintal(kit, root, L) {
   bigLettuce.position.set(LT.x, 0.27, LT.z);
   bigLettuce.add(new THREE.Mesh(lettuce({ r: 0.2, seed: 33 }), SLOTS.plant()));
   // a folha de fora, pendurada para fora da beirada (é ela que a Radhija morde)
-  const outerLeaf = new THREE.Mesh(leaf.children[0].geometry, leaf.children[0].material);
+  const outerLeaf = new THREE.Mesh(leafMesh.geometry, leafMesh.material);
   outerLeaf.name = 'alface:folha-de-fora';
   outerLeaf.rotation.set(-0.55, 0, 0);
   outerLeaf.position.set(0, -0.03, LT.bite.z - LT.z + 0.08);
@@ -1224,10 +1228,13 @@ export function buildQuintal(kit, root, L) {
     tailLine.update(TP0, 0.0025);
     for (let i = 0; i < TAILN; i++) {
       const p = TP0[i + 1];
-      _m4.compose(_p4.copy(p), _q4.setFromAxisAngle(_up, i * 0.7), _s4.set(1, 1, 1));
+      // o laço gira no plano do papel (deitado no chão, fica deitado)
+      _m4.compose(_p4.copy(p), _q4.setFromAxisAngle(_zAxis, (i % 2 ? 0.5 : -0.4) + Math.sin(i * 1.7) * 0.3), _s4.set(1, 1, 1));
       bows.setMatrixAt(i, _m4);
     }
     bows.instanceMatrix.needsUpdate = true;
+    bows.computeBoundingBox();
+    bows.computeBoundingSphere();
     clueBits.position.copy(TP0[Math.round(TAILN * 0.55)]);
   }
   layoutTail(1);

@@ -780,6 +780,12 @@ function yardColliders() {
     circle('varalzinho-oeste', SMALL_LINE.a.x, SMALL_LINE.a.z, SMALL_LINE.postR + 0.03),
     circle('varalzinho-leste', SMALL_LINE.b.x, SMALL_LINE.b.z, SMALL_LINE.postR + 0.03),
     circle('goiabeira', GUAVA.x, GUAVA.z, GUAVA.r),
+    // os pilares dos cantos do muro do lote a leste (mais largos que o muro fino do quintal)
+    box('muro-quina-lote-norte', LOT.x1 - 0.18, WALL.maxZ - 0.18, LOT.x1 + 0.18, WALL.maxZ + 0.18),
+    box('muro-quina-lote-sul', LOT.x1 - 0.18, LOT.z1 - 0.18, LOT.x1 + 0.18, LOT.z1 + 0.18),
+    // o vazio do lado de fora, a leste do lote e ao sul do condomínio (os quintais dos vizinhos: ninguém anda lá; os
+    // limites do mundo chegam até o fundo do lote)
+    box('vazio-sul-leste', LOT.x1 + WALLS.t / 2 + 0.04, WALL.maxZ + WALL.t / 2 + 0.04, ROOFTOP.x0 - ROOFTOP.t / 2 - 0.02, LOT.z1 + 1),
   ];
 }
 

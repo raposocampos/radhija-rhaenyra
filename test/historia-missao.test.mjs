@@ -334,7 +334,7 @@ test('quintal maior: da porta dos fundos à porta da área de serviço, com o ja
 
   // 4. a irrigação: sozinha, a Radhija não atravessa (o jato da frente a barra, e quem liga em cima dela a molha)
   become(h, 'radhija');
-  h.game.debug.setStay?.('rhaenyra', false);
+  h.game.setStay('rhaenyra', false);
   walk([[JB.x, 17.4], [JB.x, 15.35]]);
   const wet0 = Y().irrigation.wet;
   holdWorld(h, [0, -1], 7, () => h.ctrls.radhija.z < SP.lane.z0);

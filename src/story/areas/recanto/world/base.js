@@ -1048,7 +1048,7 @@ export function buildBase(kit, root, L) {
     for (let k = 0; k <= n; k++) {
       if ((k === 0 && o.noA) || (k === n && o.noB)) continue;
       const px = ax + dx * (len * k) / n, pz = az + dz * (len * k) / n;
-      pillarAt(px, pz, Math.max(h, o.corner && (k === 0 || k === n) ? W.h : h), side, k % 3 === 1 && !built(px + nx * 0.4, pz + nz * 0.4, 0.3), Math.min(0.18, mt + 0.06));
+      pillarAt(px, pz, Math.max(h, o.corner && (k === 0 || k === n) ? W.h : h), side, k % 3 === 1 && !built(px + nx * 0.4, pz + nz * 0.4, 0.3), mt < 0.1 ? mt + 0.05 : 0.18);
     }
   };
   // os trechos do norte acabam dentro dos pilares do portãozinho; o do oeste vai do canto até a casa (ela faz o resto)
