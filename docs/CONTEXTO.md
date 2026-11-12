@@ -18,7 +18,7 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
 
-### 4ª rodada (2026-11-11, depois da prévia `685cc14`): em andamento
+### 4ª rodada (2026-11-11, depois da prévia `685cc14`): juntada no branch, validando
 
 - **Retorno do usuário:** "Ficou muito bom". Pediu: o diálogo com o Bichano com a caminhonete na frente da câmera; a
   Radhija puxando sem a corda na boca; **casa maior, mais detalhada, com puzzles que se encaixem nela**; **quintal maior
@@ -34,10 +34,25 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   - o plano do Bichano por cima do ombro das dogs (`createWitnessScene`, quem fala no alto);
   - a corda na boca: o reset do cenário soltava a ligação da corda e da argola com a boca, e o puzzle não refazia
     (`wireGrips` depois de `props.reset`); `rope.tip()` e `serviceBolt.tip()` para o teste.
-- **Em andamento (agentes em worktrees próprias, a juntar no branch):** a casa (ala sul, 4 puzzles), o quintal (muros
-  do lote, quintal em L, 4 puzzles, jabuti) e os personagens (Rhaenyra lesada, borboleta, Sr. Luiz).
-- **Próximo passo:** juntar os três branches, rodar os testes da história, CI, E2E `historia` e primeira passagem,
-  revisar as capturas e entregar a prévia. Não integrar sem o "pode integrar" do usuário.
+- **Juntado no branch** (três branches de agentes, cada um testado com os 15 arquivos `test/historia-*`):
+  - `claude/historia-personagens`: a Rhaenyra distraída (`src/story/scene/lesada.js`: rabo em voltinha a trote,
+    borboleta, bolha, cheiro; tropeço, focinho na porta, "Hã?"; a Radhija chama), gestos `chaseTail`, `stumble` e
+    `bonk` em `dogAnimation.js` (só acréscimo), a borboleta nova (`scene/butterfly.js`, `scene/bubbles.js`), o Sr.
+    Luiz com respiração, susto, gestos e andando até o portãozinho (beat `sai`), e falas mais bobas da Rhaenyra.
+  - `claude/historia-quintal-maior`: o quintal saiu de `world/casa.js` para `world/quintal.js`; muros e vizinhos do
+    lote em `base.js`; jabuti Seu Bento (`scene/jabuti.js`) na horta (alface puxada pelas duas), irrigação com três
+    aspersores (a Rhaenyra tampa o do meio no Fica; o registro só a Radhija fecha), pipa na goiabeira (empurrão;
+    pista `rabiola`), mangueira e baldão (4ª meia). Módulo `quintalPuzzles.js`, cenas `scenesQuintal.js`, teste
+    `historia-quintal`.
+  - `claude/historia-casa-maior`: a ala sul (`world/casaSul.js`) com corredor, banheiro, despensa, sala de jantar e
+    sala de estar; a porta da cozinha dá no corredor e a antiga para o quintal virou janela; aspirador robô (cena
+    `aspirador`), despensa no escuro (interruptor no impulso; pista `goteira`), toalha e lata (petisco e pista
+    `etiqueta`), pufe → sofá → parapeito → trinco, e a porta dos fundos (cena `portaFundos`). Teste `historia-casa`;
+    o teste grande da missão atravessa a casa e o quintal novos.
+  - Na junção: a mangueira e a folha de alface também passaram a seguir a boca (religadas a cada reset), como a corda.
+  - Fora da história, só acréscimos: `dogAnimation.js` (gestos novos), `src/world/treats.js` (`setHidden`).
+- **Próximo passo:** CI e E2E `todas` (com as capturas da história e a primeira passagem) no commit enviado; revisar
+  as capturas da casa, do quintal, da Rhaenyra e do Sr. Luiz; entregar a prévia. Não integrar sem o "pode integrar".
 
 ### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
 
