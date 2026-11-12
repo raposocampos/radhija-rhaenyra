@@ -4,7 +4,9 @@
 //  - o quarto: o aviso do Faro com a tecla do aparelho, o V solta o pulso e a nuvem de cheiro, o E examina a trilha, o
 //    pote e a pena; a cena dos pombos na janela e a cartela do capítulo;
 //  - a missão com as teclas reais, puzzle a puzzle: a portinha de gato e o pedal da grade, o saco de ração e a
-//    maçaneta, o galho, a passagem do muro e a argola do ferrolho, o Faro na piscina (a Reconstrução), o cesto e a
+//    maçaneta, o quintal maior (a chegada pela porta dos fundos, o jabuti e a alface das duas, a irrigação com a Rhaenyra
+//    tampando o aspersor do meio, o registro, a pipa da goiabeira e o baldão com a bolinha de meia), o galho, a passagem
+//    do muro e a argola do ferrolho, o Faro na piscina (a Reconstrução), o cesto e a
 //    arrancada no varal, a senha do interfone (o Faro mostra) e a porta de mola com a irmã segurando, o Superbafo na
 //    grelha da guarita e o latido grosso, o portãozinho (o fechamento, assistido). Os trechos longos entre um puzzle e
 //    outro são postos no lugar (o mapa cresceu; a caminhada com a IA fica nos testes de unidade);
@@ -234,6 +236,9 @@ try {
       branch: L.BRANCH, sdoor: L.SERVICE_DOOR, gap: L.YARD_GAP, bolt: L.SERVICE_BOLT, yard: pick(L.YARD, ['x0', 'x1', 'z0']),
       recon: L.RECON, laundry: L.LAUNDRY, pin: L.CARROT_PIN, post: L.DASH_POST, tdoor: L.TOWER_DOOR, intercom: L.INTERCOM,
       booth: L.BOOTH, vent: L.BOOTH_VENT, lgate: L.GATE, house: pick(L.HOUSE, ['x1']),
+      // o quintal maior (4ª rodada)
+      exit: L.HOUSE_EXIT, jab: L.JABUTI, lettuce: L.LETTUCE, sp: L.SPRINKLERS, valve: L.VALVE, guava: L.GUAVA, hose: L.HOSE,
+      bucket: L.BUCKET, kite: L.KITE,
     };
   });
   /** Põe uma dog num lugar (os trechos longos: a partida confere cada puzzle com as teclas, não a caminhada). */
@@ -334,6 +339,124 @@ try {
   i = await waitFor((x) => x.story.flags.kitchenOpen, { timeout: 6000 });
   check(i.story.flags.kitchenOpen && i.story.stage === 'quintal', 'o impulso na maçaneta abre a porta da cozinha', i.story);
   await shot('08-cozinha-porta.png');
+
+  console.log('\n== O quintal maior: a chegada, o jabuti, a alface, a irrigação, o registro, a pipa e o baldão ==');
+  // a casa está sendo refeita em paralelo: daqui as duas saem pela porta dos fundos (HOUSE_EXIT) para o fundo do quintal
+  const exz = (LY.exit.z0 + LY.exit.z1) / 2;
+  await tp('rhaenyra', LY.exit.x + 1.31, LY.exit.z1 + 0.05, Math.PI / 2);
+  await tp('radhija', LY.exit.x + 1.36, LY.exit.z0 + 0.15, Math.PI / 2);
+  await become('radhija');
+  i = await waitFor((x) => x.story.scene === 'quintalChega', { timeout: 6000 });
+  check(i.story.scene === 'quintalChega', 'do lado de fora da porta dos fundos, a cena da chegada no quintal', i.story);
+  await H.sleep(1200);
+  await shot('08b-quintal-chegada.png');
+  await skipScene('chegada no quintal');
+  const yardOf = async () => (await story()).yard;
+  const headU = (k) => ev((n) => window.__game.game.puzzle.quintal.headState(n).u, k);
+  // o jabuti dorme na passagem estreita da horta: nem a Radhija passa
+  await walkPath([[-9.0, exz - 0.85], [LY.jab.x, 17.5]], { timeout: 15000, tol: 0.16 });
+  await H.hold(keysFor(0, -1), 1500);
+  i = await info();
+  check(i.dogs.radhija.z > LY.jab.z + 0.25, 'o jabuti tapa a passagem da horta', i.dogs.radhija);
+  await press('KeyE', 900);
+  check((await yardOf()).metJabuti, 'a conversa com o Seu Bento (ele quer alface)', await yardOf());
+  await shot('08c-quintal-jabuti.png');
+  // a alface: a Rhaenyra segura o pé (trocando com ela ali, ela fica) e a Radhija morde e puxa a folha de fora
+  await become('rhaenyra');
+  await tp('rhaenyra', LY.lettuce.x + 0.62, 22.32, Math.PI);
+  await H.sleep(300);
+  await become('radhija');
+  check((await info()).stay?.rhaenyra === true, 'a Rhaenyra fica segurando o pé de alface', (await info()).stay);
+  await tp('radhija', LY.lettuce.bite.x, LY.lettuce.bite.z - 0.6, 0);
+  await walkTo(LY.lettuce.bite.x, LY.lettuce.bite.z - 0.42, { timeout: 6000, tol: 0.12 });
+  await press('KeyE', 300);
+  await page.waitForFunction(() => !!window.__game.game.puzzle.lockFor('radhija')?.pull, null, { timeout: 15000 }).catch(() => {});
+  let pullL = await ev(() => { const p = window.__game.game.puzzle.lockFor('radhija')?.pull; return p ? { ax: p.ax, az: p.az } : null; });
+  check(!!pullL, 'a Radhija morde a folha de alface', await yardOf());
+  if (pullL) {
+    i = await holdUntil(keysFor(pullL.ax, pullL.az), (x) => x.story.yard.leaf === 'boca', { timeout: 8000, label: 'puxar a folha' });
+    check(i.story.yard.leaf === 'boca', 'com a irmã segurando, a folha solta e vai na boca', i.story.yard);
+  }
+  await shot('08d-quintal-alface-as-duas.png');
+  // a folha para o Seu Bento: a cena e ele sai da passagem, devagar
+  await become('rhaenyra');
+  await tp('rhaenyra', -10.1, 19.2, Math.PI);
+  await become('radhija');
+  await tp('radhija', LY.jab.x, 17.45, Math.PI);
+  await H.sleep(400);
+  await press('KeyE', 300);
+  i = await waitFor((x) => x.story.scene === 'quintalJabuti', { timeout: 5000 });
+  check(i.story.scene === 'quintalJabuti', 'a Radhija entrega a folha ao Seu Bento (cena)', i.story);
+  await H.sleep(2200);
+  await shot('08e-quintal-seu-bento-alface.png');
+  await skipScene('folha para o jabuti');
+  i = await waitFor((x) => x.story.yard.jabuti.moved, { timeout: 25000 });
+  check(i.story.yard.jabuti.moved, 'o jabuti sai da passagem da horta', i.story.yard.jabuti);
+  check((await noOverlap()).length === 0, 'ninguém dentro do jabuti nem de nada', await noOverlap());
+  // a irrigação: a Rhaenyra senta no aspersor do meio (trocando com ela em cima, ela fica) e a Radhija passa no tempo certo
+  const mid = LY.sp.heads[1];
+  await become('rhaenyra');
+  await tp('rhaenyra', mid.x, mid.z + 0.5, Math.PI);
+  await walkTo(mid.x, mid.z, { timeout: 5000, tol: 0.1 });
+  await become('radhija');
+  i = await waitFor((x) => x.story.yard.irrigation.plugged === 'meio', { timeout: 3000 });
+  check(i.story.yard.irrigation.plugged === 'meio', 'a Rhaenyra tampa o aspersor do meio', i.story.yard.irrigation);
+  await tp('radhija', LY.jab.x, 15.3, Math.PI);
+  await shot('08f-quintal-rhaenyra-tampando.png');
+  const wet0 = (await yardOf()).irrigation.wet;
+  await page.waitForFunction(() => { const u = window.__game.game.puzzle.quintal.headState(2).u; return u >= 2.45 && u < 2.9; }, null, { timeout: 12000 }).catch(() => {});
+  await walkTo(-8.72, 12.0, { timeout: 5000, tol: 0.14 });
+  await page.waitForFunction(() => { const u = window.__game.game.puzzle.quintal.headState(0).u; return u >= 2.45 && u < 2.9; }, null, { timeout: 12000 }).catch(() => {});
+  await walkPath([[-8.5, 9.6], [-8.4, 8.0]], { timeout: 6000, tol: 0.16 });
+  i = await info();
+  check(i.dogs.radhija.z < LY.sp.lane.z0, 'a Radhija atravessa o jardim dos aspersores', { rad: i.dogs.radhija, u: [await headU(2), await headU(0)] });
+  check(i.story.yard.irrigation.wet === wet0, 'sem se molhar', i.story.yard.irrigation);
+  // o registro: só o focinho da Radhija cabe
+  await walkTo(LY.valve.at.x, LY.valve.at.z, { timeout: 5000, tol: 0.14 });
+  await press('KeyE', 900);
+  i = await info();
+  check(i.story.yard.irrigation.off, 'a Radhija fecha o registro: a irrigação desliga', i.story.yard.irrigation);
+  await shot('08g-quintal-registro.png');
+  // a pipa (opcional): a Rhaenyra empurra a goiabeira em pé; a pipa cai e a rabiola vira pista
+  await become('rhaenyra');
+  await tp('rhaenyra', LY.guava.x - LY.guava.r - 0.5, LY.guava.z, Math.PI / 2);
+  await H.sleep(300);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.yard.kite.phase !== 'arvore', { timeout: 12000, label: 'empurrar a goiabeira' });
+  check(i.story.yard.kite.phase !== 'arvore', 'no terceiro empurrão a pipa cai', i.story.yard.kite);
+  i = await waitFor((x) => x.story.yard.kite.phase === 'chao', { timeout: 6000 });
+  const kat = i.story.yard.kite.at;
+  await tp('rhaenyra', kat.x - 0.6, kat.z + 0.3, Math.PI / 2);
+  await H.sleep(400);
+  await press('KeyE', 300);
+  i = await waitFor((x) => x.story.scene === 'quintalPipa', { timeout: 4000 });
+  check(i.story.scene === 'quintalPipa', 'examinar a rabiola (cena)', i.story);
+  await skipScene('rabiola da pipa');
+  check((await story()).clues.includes('rabiola'), 'a pista da rabiola na lupa', (await story()).clues);
+  // a mangueira e o baldão (opcional): a Radhija puxa o laço, a torneira temporizada abre e a bolinha de meia boia
+  await become('radhija');
+  await tp('radhija', LY.hose.bite.x + 0.25, LY.hose.bite.z - 0.25, -Math.PI * 0.75);
+  await H.sleep(300);
+  await press('KeyE', 300);
+  await page.waitForFunction(() => !!window.__game.game.puzzle.lockFor('radhija')?.pull, null, { timeout: 15000 }).catch(() => {});
+  pullL = await ev(() => { const p = window.__game.game.puzzle.lockFor('radhija')?.pull; return p ? { ax: p.ax, az: p.az } : null; });
+  check(!!pullL, 'a Radhija morde o laço da mangueira', await yardOf());
+  if (pullL) {
+    i = await holdUntil(keysFor(pullL.ax, pullL.az), (x) => x.story.yard.bucket.open, { timeout: 8000, label: 'puxar a mangueira' });
+    check(i.story.yard.bucket.open, 'a torneira abre', i.story.yard.bucket);
+  }
+  await H.sleep(1200);
+  await shot('08h-quintal-baldao-enchendo.png');
+  i = await waitFor((x) => x.story.yard.bucket.full, { timeout: 8000 });
+  check(i.story.yard.bucket.full, 'o baldão enche', i.story.yard.bucket);
+  await tp('radhija', LY.bucket.x - 0.7, LY.bucket.z - 0.45, Math.PI * 0.7);
+  await H.sleep(400);
+  await press('KeyE', 300);
+  i = await waitFor((x) => x.story.scene === 'quintalBolinha', { timeout: 4000 });
+  check(i.story.scene === 'quintalBolinha', 'pegar a bolinha de meia (cena)', i.story);
+  await skipScene('bolinha de meia');
+  i = await info();
+  check(i.story.socks.includes('balde'), 'a meia do baldão (a quarta)', i.story.socks);
+  check((await noOverlap()).length === 0, 'ninguém atravessa nada no quintal', await noOverlap());
 
   console.log('\n== O quintal: o galho, a passagem do muro e a argola do ferrolho ==');
   const sdx = (LY.sdoor.hinge.x + LY.sdoor.latchPost.x) / 2;
