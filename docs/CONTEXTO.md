@@ -51,8 +51,25 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
     o teste grande da missão atravessa a casa e o quintal novos.
   - Na junção: a mangueira e a folha de alface também passaram a seguir a boca (religadas a cada reset), como a corda.
   - Fora da história, só acréscimos: `dogAnimation.js` (gestos novos), `src/world/treats.js` (`setHidden`).
-- **Próximo passo:** CI e E2E `todas` (com as capturas da história e a primeira passagem) no commit enviado; revisar
-  as capturas da casa, do quintal, da Rhaenyra e do Sr. Luiz; entregar a prévia. Não integrar sem o "pode integrar".
+- **Validação do `9a45a1b`** (CI verde; E2E `todas` 43139742491):
+  - o E2E de recursos reprovou (1.279.648 triângulos na área, acima do teto da fase 10, 1.141.074; antes, no `685cc14`,
+    eram 1.029.223);
+  - a partida da história caiu em cascata no galho: o roteiro seguia com a Radhija depois do quintal novo;
+  - a primeira passagem da história em celular-media passou de 40 min (as outras duas passaram, com 23–34 min).
+- **Correções depois disso:**
+  - `aecf619`: o E2E troca para a Rhaenyra antes do galho; a câmera da chegada no quintal longe da folha da porta
+    dos fundos; "late" na dica do aspirador;
+  - `7ea1951`: a área cai para ~1.055.000 triângulos (`node tools/scripts/triangulos-historia.mjs`, ferramenta nova, só
+    Node). Plantas do quintal mais leves (opções novas em `plants.js` e `util.js`, o padrão das fases igual), a despensa
+    mais simples, as miudezas sem sombra e as caixas fazendo sombra por caixas simples (slots `nocast` e `shadow`,
+    acrescentados em `kit.js`; o mapa das fases não usa).
+- **Pendências para o usuário ver:**
+  - nas capturas 1280×720 do E2E, o quadro congelado das páginas de HQ ainda sai escuro (as de revisão saem certas);
+  - a toalha da mesa de jantar parece um bloco branco até o chão, na frente da mesa (dá para refinar o caimento);
+  - a primeira passagem da história está perto do limite de 40 min da medição; se o celular-media estourar de novo,
+    subir o limite ou dividir a medição.
+- **Próximo passo:** CI e E2E `todas` no commit enviado; revisar as capturas; entregar a prévia. Não integrar sem o
+  "pode integrar" do usuário.
 
 ### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
 
