@@ -55,7 +55,15 @@ export const CONDO_BOUNDS = { minX: WALL.minX + 0.2, maxX: WALL.maxX - 0.2, minZ
  * Limites onde as dogs andam: o condomínio e, a leste, o terraço da torre (o muro e os colisores 'telhado-vazio-*' fecham
  * o que fica entre os dois; a rua do lado de fora é só cenário: as cenas levam as dogs até lá).
  */
-export const WORLD = { bounds: { ...CONDO_BOUNDS, maxX: ROOFTOP.x1 + 0.2 } };
+/**
+ * O LOTE DA CASA (4ª rodada, pedido do usuário em 2026-11-11: "uma casa maior, com mais detalhes" e "aumente o quintal
+ * após sair de casa"): o lote cresce 11 m para o sul, além da linha do muro sul do condomínio, e o resto do condomínio
+ * não muda. A casa ganha uma ala sul (até HOUSE.z1) e o quintal cresce junto: a leste da casa (até LOT.z1) e numa faixa
+ * ao sul dela. O muro sul do condomínio continua só de LOT.x1 para o leste; o lote tem muro próprio a oeste, ao sul e a
+ * leste (em x = LOT.x1, de WALL.maxZ até LOT.z1).
+ */
+export const LOT = { x0: WALL.minX, x1: u(-2.9), z0: u(1.2), z1: WALL.maxZ + 11 };
+export const WORLD = { bounds: { ...CONDO_BOUNDS, maxX: ROOFTOP.x1 + 0.2, maxZ: LOT.z1 - 0.2 } };
 /** O portãozinho de pedestres no muro norte (fechado até o porteiro abrir), ao lado da guarita. */
 export const GATE = { x0: 21.25, x1: 22.45, z: WALL.minZ, h: 1.45 };
 /** A folha do portãozinho: abre para dentro (para o sul), como as outras dobradiças (folha ao longo de −Z local). */
@@ -70,7 +78,7 @@ export const STREET = { z0: WALL.minZ - 0.12, sidewalk: WALL.minZ - 1.6, z1: WAL
 /** Paredes: espessura e altura (a casa é inteira: paredes até o forro, telhado por cima). */
 export const WALLS = { t: 0.16, h: 2.7, low: 0.62 };
 /** A casa inteira (centro das paredes de fora). O oeste é o próprio muro do condomínio. */
-export const HOUSE = { x0: WALL.minX, x1: u(-6.8), z0: u(1.2), z1: u(8.4), floorY: 0.04 };
+export const HOUSE = { x0: WALL.minX, x1: u(-6.8), z0: u(1.2), z1: LOT.z1 - 5.5, floorY: 0.04 };
 /** Cômodos (faces de dentro aproximadas pelas linhas de centro). */
 export const ROOMS = {
   quarto: { x0: HOUSE.x0, x1: u(-10.4), z0: HOUSE.z0, z1: u(4.8) },
@@ -135,7 +143,7 @@ export const KITCHEN_HANDLE = { x: HOUSE.x1 - 0.06, z: 5.16, nx: -1, nz: 0, top:
 export const FOOD_SACK = { start: { x: HOUSE.x1 - 0.5, z: 5.1 }, half: 0.34, height: 0.62, minX: HOUSE.x1 - 0.5, maxX: HOUSE.x1 - 0.5, minZ: 3.2, maxZ: 5.1, pushSpeed: 0.75, freeZ: 3.95 };
 
 // ---------------------------------------------------------------- quintal (a leste da casa)
-export const YARD = { x0: HOUSE.x1, x1: u(-2.9), z0: HOUSE.z0, z1: WALL.maxZ, wallH: 1.2 };
+export const YARD = { x0: HOUSE.x1, x1: LOT.x1, z0: HOUSE.z0, z1: LOT.z1, wallH: 1.2 };
 /** A porta da área de serviço, no muro norte do quintal: abre para dentro do quintal (para o sul). */
 export const SERVICE_DOOR = {
   hinge: { x: -8.7, z: YARD.z0 }, latchPost: { x: -7.7, z: YARD.z0 }, length: 1.0,
@@ -526,8 +534,10 @@ export const STATIC_COLLIDERS = [
   seg('muro-norte-oeste', WALL.minX, WALL.minZ, GATE.x0, WALL.minZ, mt),
   seg('muro-norte-leste', GATE.x1, WALL.minZ, WALL.maxX, WALL.minZ, mt),
   seg('muro-leste', WALL.maxX, WALL.minZ, WALL.maxX, WALL.maxZ, mt),
-  seg('muro-sul', WALL.minX, WALL.maxZ, WALL.maxX, WALL.maxZ, mt),
-  seg('muro-oeste', WALL.minX, WALL.minZ, WALL.minX, WALL.maxZ, mt),
+  // o muro sul do condomínio só a leste do lote da casa; o lote tem muro próprio (oeste, sul e leste)
+  seg('muro-sul', LOT.x1, WALL.maxZ, WALL.maxX, WALL.maxZ, mt),
+  seg('muro-oeste', WALL.minX, WALL.minZ, WALL.minX, LOT.z1, mt),
+  seg('muro-lote-sul', LOT.x0, LOT.z1, LOT.x1, LOT.z1, mt),
   // casa: paredes de fora (a porta da cozinha é dinâmica) e as de dentro, com as passagens
   seg('casa-norte', HOUSE.x0, HOUSE.z0, HOUSE.x1, HOUSE.z0, wt),
   seg('casa-leste-norte', HOUSE.x1, HOUSE.z0, HOUSE.x1, KITCHEN_DOOR.hinge.z, wt),
@@ -773,7 +783,7 @@ export const CAMERA = {
   fov: 38,
   offset: [1.3, 4.4, 4.8],
   lookHeight: 0.3,
-  limits: { minX: WALL.minX + 1.6, maxX: WALL.maxX - 1.4, minZ: WALL.minZ + 1.4, maxZ: WALL.maxZ - 2.4 },
+  limits: { minX: WALL.minX + 1.6, maxX: WALL.maxX - 1.4, minZ: WALL.minZ + 1.4, maxZ: LOT.z1 - 2.4 },
   zones: [],
   // (a área não tem tela de título: fica dentro do quarto, para o caso de alguma transição passar por ele)
   title: { center: { x: BED.x + 1.0, z: BED.z + 1.6 }, radius: 1.9, radiusAmp: 0.1, angle: 0.4, height: 1.3, look: { x: BED.x, y: 0.5, z: BED.z - 0.2 } },
@@ -792,7 +802,7 @@ const LAYOUT = {
   BOAT, CHANNEL, GOOSE, CARPORT, CAR, WHEELS, STORAGE, STORAGE_DOOR, BALL, SHELF, ROPE, STORAGE_STUFF, GARAGE_STUFF, COLLECTIBLES,
   COLLECTIBLE_PICKUP_R, WITNESSES, SOCKS, SOCK_PICKUP_R, CLUE_SPOTS, CARROT_TRAIL, TREES, TREE_TRUNK_R, BENCHES, LAMPS,
   ELECTION_POSTER, BEDS,
-  ROOFTOP, CONDO_BOUNDS, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
+  ROOFTOP, CONDO_BOUNDS, LOT, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
   ROOF_AC, ROOF_BARROW, ROOF_BOXES, ROOF_POTS, ROOF_STEP, ROOF_LOOKOUT, ROOF_FEATHERS,
   DOGS: {
     radhija: withStart('radhija', { x: BED.x + 1.0, z: BED.z + 1.4, yaw: 1.9 }),

@@ -601,7 +601,17 @@ export function createWitnessScene(K, { id, who, at, clue, lines, onCommit = () 
       dir.comic(true);
       dir.panel('full', 0, { enter: 'zoom' });
       dir.lens(34);
-      dir.shot(P3(mx + px * 2.4, 0.95, mz + pz * 2.4), P3(mx, 0.35, mz), { inT: 0.6 });
+      if (p.y > 0.8) {
+        // quem fala está no alto (o Bichano no capô da caminhonete): por cima do ombro das dogs, de trás delas (o
+        // caminho que elas acabaram de fazer está livre) e acima do capô, olhando para o gato. De lado, a lataria
+        // da caminhonete ficava entre a câmera e as duas.
+        const ux = dx / d, uz = dz / d;
+        dir.shot(
+          P3(a.x - ux * 1.7 + px * 0.55, Math.max(1.2, p.y + 0.12), a.z - uz * 1.7 + pz * 0.55),
+          P3(a.x + dx * 0.7, 0.35 + (p.y - 0.35) * 0.7, a.z + dz * 0.7),
+          { inT: 0.6 },
+        );
+      } else dir.shot(P3(mx + px * 2.4, 0.95, mz + pz * 2.4), P3(mx, 0.35, mz), { inT: 0.6 });
       T = 0.5;
       S.at = 0;
     },
