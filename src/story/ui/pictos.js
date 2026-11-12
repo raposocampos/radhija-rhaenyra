@@ -54,6 +54,13 @@ export const PICTOS = {
     + `<ellipse cx="25" cy="27.6" rx="8.6" ry="3" fill="none" stroke="${INK}" stroke-width="1.1" stroke-dasharray="2 2"/>`
     + `<path d="M16,40 q3,-4 6,0 q-3,4 -6,0z" fill="#3f9fd8"/>`
     + `${pigeon(44, 18, 0.62, { fly: true })}<ellipse cx="44" cy="20.4" rx="5.4" ry="1.8" fill="#3a3d44" ${S}/>`),
+  // a pipa em losango (quatro cores) caída, a rabiola em laços e, enroscados nela, uma pena cinza e o anel laranja
+  pipa: card(`<path d="M18,8 l12,10 l-12,18 l-12,-18z" fill="#f2c230" ${S}/><path d="M18,8 l12,10 l-12,4z" fill="#e8475f"/><path d="M6,18 l12,4 l0,14z" fill="#3d8fd1"/>`
+    + `<path d="M18,8 l0,28 M6,18 h24" stroke="${INK}" stroke-width="1.1"/>`
+    + '<path d="M18,36 q4,6 10,6 q8,0 10,6 q2,5 10,6" fill="none" stroke="#f4f0e2" stroke-width="1.4"/>'
+    + `<path d="M24,41 l-3,-2 l0,4z M34,44 l3,-2 l0,4z M46,53 l-3,-2 l0,4z" fill="#e8475f" ${S}/>`
+    + `<g transform="translate(40 40) rotate(-35)"><path d="M0,0 q4,-6 1,-13 q-4,6 -1,13z" fill="#a9b2c2" ${S}/></g>`
+    + `<circle cx="29" cy="47" r="4.2" fill="none" stroke="#f07a1a" stroke-width="2.6"/>`),
   // retratinhos de quem dá depoimento (cabeça de frente, no fundo de cor)
   gansa: portrait('#D9ECF7', `<path d="M22,58 q-2,-18 6,-26 q-6,-6 -2,-14 q4,-8 12,-6 q8,2 7,12 q-1,6 -6,9 q10,8 7,25z" fill="#FFFFFF" ${S}/>`
     + `<path d="M43,17 l11,3 l-11,4z" fill="#F29A2E" ${S}/><circle cx="38" cy="16" r="2" fill="${INK}"/><path d="M34,11 l7,2" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>`

@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createStoryGame, storyInfo, playScene } from './helpers/historia.mjs';
+import { createStoryGame, storyInfo, playScene, skipScene } from './helpers/historia.mjs';
 import { createHeadlessGame } from './helpers/headless.mjs';
 
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -90,12 +90,35 @@ test('3ª pessoa: ao ar livre a câmera fica a ~2,8 m; dentro de casa chega mais
 test('3ª pessoa: o braço encurta antes de entrar numa parede', async () => {
   const h = await createStoryGame({ query: 'stage=quintal' });
   const cam = h.game.debug.cam;
-  // no quintal, encostada no muro leste dele, olhando para o oeste: a câmera ficaria do outro lado do muro
+  // no quintal (o norte, perto da goiabeira), encostada no muro leste dele, olhando para o oeste: a câmera ficaria do
+  // outro lado do muro
   const Y = h.layout.YARD;
-  h.teleport('rhaenyra', Y.x0 + 2.2, 11.5, 0);
-  settle(h, Y.x1 - 0.45, 9.0, -Math.PI / 2);
+  h.teleport('rhaenyra', Y.x0 + 2.2, 6.6, 0);
+  settle(h, Y.x1 - 0.45, 7.4, -Math.PI / 2);
   assert.deepEqual(cameraInsideWall(h), [], 'a câmera não fica dentro do muro');
   assert.ok(h.engine.camera.position.x < Y.x1 - 0.05, `a câmera fica do lado da dog (x ${h.engine.camera.position.x.toFixed(2)})`);
+  assert.ok(cam.distance < 1, `o braço encurtou (${cam.distance.toFixed(2)} m)`);
+});
+
+test('3ª pessoa: no quintal maior, o fundo é aberto, os canteiros baixos não encurtam o braço e o muro alto do lote sim', async () => {
+  const h = await createStoryGame({ query: 'stage=quintal' });
+  skipScene(h, 'quintalChega');
+  const cam = h.game.debug.cam;
+  const T = h.layout.CAMERA.third, SP = h.layout.SPRINKLERS, Y = h.layout.YARD;
+  h.teleport('rhaenyra', -10.2, 19.4, 0);
+  // no fundo do quintal, olhando para o norte (a horta do meio lá na frente): o braço inteiro
+  settle(h, -8.5, 21.6, Math.PI);
+  assert.ok(Math.abs(cam.distance - T.distance) < 0.15, `no fundo do quintal, o braço inteiro (${cam.distance.toFixed(2)} m)`);
+  assert.deepEqual(cameraInsideWall(h), []);
+  // no gramadinho dos aspersores, entre os canteiros de flores: eles são baixos, não encurtam o braço
+  h.puzzle.quintal.skipAll();
+  settle(h, SP.heads[1].x, SP.heads[1].z + 0.4, Math.PI);
+  assert.ok(Math.abs(cam.distance - T.distance) < 0.15, `entre os canteiros, o braço inteiro (${cam.distance.toFixed(2)} m)`);
+  assert.ok(lookDown(h) < 0.45, 'olhando para a frente, não de cima');
+  // encostada no muro alto do lote (a leste do fundo), olhando para o oeste: o braço encurta antes do muro
+  settle(h, Y.x1 - 0.42, 20.9, -Math.PI / 2);
+  assert.deepEqual(cameraInsideWall(h), [], 'a câmera fora do muro do lote');
+  assert.ok(h.engine.camera.position.x < Y.x1 - 0.05, `do lado do quintal (x ${h.engine.camera.position.x.toFixed(2)})`);
   assert.ok(cam.distance < 1, `o braço encurtou (${cam.distance.toFixed(2)} m)`);
 });
 

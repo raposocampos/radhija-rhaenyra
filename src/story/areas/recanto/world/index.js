@@ -5,7 +5,9 @@
 // zonas fora de vista. O que se mexe (portas, galho, lixeira, barquinho, balde, bola, pombos, cenoura, mãos) fica em
 // malhas próprias, com o lado de animar em `props`.
 //   base.js     gramado, caminhos, muro, portãozinho, a rua e a cidade ao fundo, árvores, postes, bancos, cartazes, entulho
-//   casa.js     a casa em corte (quarto, cozinha, sala) e o quintal (porta da área de serviço, galho, telhas, casinha)
+//   casa.js     a casa em corte (quarto, cozinha, sala)
+//   quintal.js  o quintal maior (a horta, o jabuti, a irrigação, a torneira e o balde, a goiabeira com a pipa, a porta da
+//               área de serviço, o galho e as telhas, a casinha)
 //   comum.js    a piscina, a área de serviço (tanques, varal) e a torre (porta de mola, terraço, caixa d'água)
 //   leste.js    a guarita (toldo, antena, radinho), a lixeira, o lago (ilha, píer, barquinho)
 //   garagem.js  a garagem (caminhonete, depósito, prateleira com o balde, bola, corda)
@@ -17,6 +19,7 @@ import { buildTreats } from '../../../../world/treats.js';
 import { createKit, whenFontsReady } from '../../../../levels/mapa/world/kit.js';
 import { buildBase } from './base.js';
 import { buildCasa } from './casa.js';
+import { buildQuintal } from './quintal.js';
 import { buildComum } from './comum.js';
 import { buildLeste } from './leste.js';
 import { buildGaragem } from './garagem.js';
@@ -38,6 +41,7 @@ export function buildWorld({ engine, root, layout }) {
   const parts = [
     T('base', () => buildBase(kit, root, L)),
     T('casa', () => buildCasa(kit, root, L)),
+    T('quintal', () => buildQuintal(kit, root, L)),
     T('comum', () => buildComum(kit, root, L)),
     T('leste', () => buildLeste(kit, root, L)),
     T('garagem', () => buildGaragem(kit, root, L)),
@@ -110,7 +114,7 @@ export function buildWorld({ engine, root, layout }) {
  *   booth: { radio: { setOn(on: boolean): void }, windowAnchor: { x: number, y: number, z: number } },
  *   bucket: { object: import('three').Object3D, setTip(t: number): void }, ball: { object: import('three').Object3D, setPos(x: number, z: number, y?: number, spin?: number): void },
  *   rope: { object: import('three').Object3D, setPull(k: number): void, setGrip(src: (() => any) | null): void, bitePoint(): { x: number, y: number, z: number }, tip(): { x: number, y: number, z: number } },
- *   storageDoor: import('../../../../types').GateProp,
+ *   storageDoor: import('../../../../types').GateProp, quintal?: any,
  *   socks: { id: string, object: import('three').Object3D, collect(): void, reset(): void }[],
  *   squad: any, carrot: any, humans: any, ghosts: any, rain: any, city: any, cinemaLight?: any,
  *   collectibles: import('../../../../types').CollectibleProp[]

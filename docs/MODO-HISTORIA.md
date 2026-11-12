@@ -203,7 +203,9 @@ quarto, o aviso do Faro também é tocável.
 - `src/story/ui/board.js`, `subtitles.js` e `comic.js`: o quadro de dedução, as legendas com voz e a camada de HQ.
 - `src/story/ui/`: o HUD da história (faixas, cartela, aviso do Faro, lupa, meias, mural provisório e fim do capítulo).
 - `src/story/areas/recanto/`: o Recanto das Patinhas, com layout, iluminação, cenário em zonas (`world/`), as seis cenas
-  (`scenes.js`) e a missão (`puzzle.js`).
+  (`scenes.js`) e a missão (`puzzle.js`). O quintal maior: `world/quintal.js` (o cenário), `quintalPuzzles.js` (a
+  lógica, ligada ao `puzzle.js` por ganchos, como o terraço em `rooftop.js`), `scenesQuintal.js` (as cenas) e o jabuti
+  em `src/story/scene/jabuti.js`.
 - No núcleo: a área carrega como fase especial fora da lista (`STORY = −2`, em `src/game/game.js`). Durante uma cena,
   `puzzle.cinematic()` segura a entrada e as dogs, e `puzzle.onFaro` recebe o botão do Faro.
 - `src/story/camera/thirdPerson.js`: a câmera em 3ª pessoa. O núcleo escolhe a câmera pelo layout
@@ -215,8 +217,28 @@ quarto, o aviso do Faro também é tocável.
 - **A missão:**
   1. o quarto: farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela e a cartela;
   2. a casa: a portinha de gato e o pedal da grade (Radhija); o saco de ração e a maçaneta (Rhaenyra);
-  3. o quintal: a porta trancada por fora; o galho na frente da passagem do muro (Rhaenyra); a passagem e a argola do
-     ferrolho (Radhija);
+  3. o quintal maior (4ª rodada, pedido de 2026-11-11: "mais puzzles espalhados pelo quintal; aumente o quintal após
+     sair de casa"). O lote da casa cresceu 11 m para o sul (`LOT`); as duas saem pela porta dos fundos (`HOUSE_EXIT`)
+     num quintal em L (`world/quintal.js`; a lógica em `quintalPuzzles.js` e as cenas em `scenesQuintal.js`):
+     - a chegada (cena `quintalChega`): o quintal dos fundos, o jabuti cochilando e os aspersores;
+     - **o jabuti** (obrigatório): o Seu Bento cochila na passagem estreita da horta do meio e só sai com uma folha de
+       alface. As duas pegam juntas no canteiro do fundo: a Rhaenyra segura o pé (Fica perto dele; trocando com ela ali,
+       ela fica sozinha) e a Radhija morde a folha de fora e puxa (a boca, como o ferrolho). Sozinha, a alface inteira
+       estica e escapa. A Radhija entrega a folha (cena `quintalJabuti`) e ele anda devagar até o cantinho, parando se
+       alguém está na frente; o latido o faz esconder no casco; empurrar não adianta;
+     - **a irrigação automática** (obrigatória): três aspersores no gramadinho entre os canteiros de flores ligam um
+       depois do outro, do norte para o sul. A Radhija não passa por aspersor ligado (o jato só barra a pequena; se
+       liga com ela dentro, ela leva o banho e pula para trás). A Rhaenyra senta (Fica) em cima de um e tampa: só
+       tampando o do meio dá para atravessar, no tempo certo de cada um (o programador mostra as três gotas). Do outro
+       lado, a Radhija fecha o registro (só o focinho dela cabe na caixinha);
+     - **a pipa** (opcional): a Rhaenyra empurra a goiabeira em pé (Shift / R1, de qualquer lado); no terceiro empurrão
+       a pipa cai bailando; na rabiola, penas e um anel de borracha (cena `quintalPipa`: a pista escondida `rabiola`,
+       extra da pergunta da borracha);
+     - **a mangueira e o balde** (opcional): a Radhija puxa o laço da mangueira enroscado na alavanca da torneira
+       temporizada; a água corre uns segundos e o baldão enche (se não encher, mais um puxão); a bolinha de meia da
+       Rhaenyra boia até a borda (cena `quintalBolinha`: a 4ª meia);
+     - e o final de antes: a porta trancada por fora; o galho na frente da passagem do muro (Rhaenyra); a passagem e a
+       argola do ferrolho (Radhija);
   4. a piscina: o Faro mostra a Reconstrução;
   5. o varal: o cesto embaixo da cenoura e o empurra-empurra da Rhaenyra no poste (Shift / R1, três empurrões);
   6. a torre: a senha do interfone (4 botões; a Reconstrução mostra dois e o espirro do Soneca esconde o terceiro, que
@@ -232,8 +254,8 @@ quarto, o aviso do Faro também é tocável.
   - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
   - a lixeira e o toldo até a meia da antena;
   - a corda, o balde e a bola até a meia do depósito.
-- **Pistas:** as obrigatórias, as de cena e duas escondidas (a baba e o ralo).
-- **Colecionáveis:** três meias e quatro petiscos.
+- **Pistas:** as obrigatórias, as de cena e três escondidas (a baba, o ralo e a rabiola da pipa do quintal).
+- **Colecionáveis:** quatro meias (a do baldão do quintal é a quarta) e cinco petiscos.
 - **O fim:** o mural provisório, só com o caso 3, e a tela de fim do capítulo.
 
 **Verificação.**
