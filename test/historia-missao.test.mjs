@@ -3,14 +3,15 @@
 //   quarto (farejar com V, examinar com E a trilha, o pote e a pena) → casa (a Radhija pela portinha de gato, o pedal
 //   solta a grade; a Rhaenyra empurra o saco de ração e pula na maçaneta; o latido manda o aspirador robô para a base;
 //   o impulso no interruptor acende a despensa; a Radhija puxa a toalha e a lata cai; o pufe até o sofá, a Radhija sobe
-//   até o trinco e a Rhaenyra empurra a porta dos fundos) → quintal (o galho; a Radhija pela passagem
-//   do muro puxa a argola do ferrolho) → piscina (o Faro e a Reconstrução) → varal (o cesto embaixo da cenoura e a
+//   até o trinco e a Rhaenyra empurra a porta dos fundos) → quintal (o jabuti e a alface, a irrigação e o registro, o
+//   galho; a Radhija pela passagem do muro puxa a argola do ferrolho) → piscina (o Faro e a Reconstrução) → varal (o cesto embaixo da cenoura e a
 //   arrancada no poste) → torre (o Faro mostra a senha; os três botões na ordem; a porta de mola com a irmã segurando)
 //   → portaria (o Superbafo na grelha abre a janela; o latido grosso acorda o porteiro) → portãozinho → mural → fim.
 // E os três enigmas paralelos: o barquinho até a ilha (com a Dona Gansa distraída por um latido), a lixeira e o toldo
 // até a meia da antena, a corda, o balde e a bola até a meia do depósito. As cenas são puladas aqui (o teste das cenas
 // confere que pular dá no mesmo).
 import { test } from 'node:test';
+import * as THREE from 'three';
 import assert from 'node:assert/strict';
 import { createStoryGame, storyInfo, skipScene, intrusions, become, holdWorld, push, sniff, examine, deduce } from './helpers/historia.mjs';
 
@@ -151,42 +152,29 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   h.run(1.0);
   watch();
 
-  // 3. quintal: a porta do muro tem o ferrolho por fora; a passagem baixa do muro fica atrás do galho
-  const Br = L.BRANCH, SD = L.SERVICE_DOOR, sd = mid(SD);
-  assert.equal(h.log('objective').at(-1)?.text, 'Atrás dos pombos! Saiam pela porta do quintal');
-  h.teleport('rhaenyra', sd.x - 0.2, sd.z + 0.75, Math.PI);
-  h.run(0.2);
-  h.tap('KeyE');
-  h.run(0.5);
-  assert.equal(S().flags.serviceOpen, false, 'o E na porta não abre: o ferrolho é por fora');
-  assert.equal(h.log('objective').at(-1)?.text, 'Tem uma passagem no muro, atrás do galho');
-  h.run(2.6); // o plano da câmera na passagem do muro
-  // a Rhaenyra empurra o galho para o oeste, até perto da parede da casa
-  h.teleport('rhaenyra', Br.start.x + Br.half + 0.24, Br.start.z, -Math.PI / 2);
-  h.run(0.2);
-  assert.ok(push(h, [-1, 0], 10, () => S().flags.branchFree), `o galho sai da frente da passagem (${JSON.stringify(S().pushables.branch)})`);
-  assert.ok(S().clues.includes('telhas'), 'as telhas da tempestade viram pista (caso 2)');
-  assert.equal(h.log('objective').at(-1)?.text, 'O ferrolho fica do outro lado do muro');
-  watch();
-  // a Radhija passa pela passagem baixa do muro e puxa a argola do ferrolho com a boca
+  // 3. quintal: as duas saem pela porta dos fundos, andando; do lado de fora, a cena da chegada. Depois, o quintal
+  // maior inteiro com os controles de verdade (yardChain): o jabuti, a alface, a irrigação, o registro, o galho e a
+  // argola do ferrolho, até a porta da área de serviço
   become(h, 'radhija');
-  const YG = L.YARD_GAP, gx = YG.x1 - 0.3;
-  h.teleport('radhija', gx, YG.z + 0.75, Math.PI);
-  h.run(0.2);
-  h.walkTo(gx, YG.z - 0.85, { timeout: 5, tol: 0.15 });
-  assert.ok(h.ctrls.radhija.z < YG.z - 0.3, `a Radhija sai do outro lado do muro (z ${h.ctrls.radhija.z.toFixed(2)})`);
+  h.walkTo(EX.x - 0.45, ez, { timeout: 5, tol: 0.2 });
+  h.walkTo(EX.x + 1.36, EX.z0 + 0.15, { timeout: 6, tol: 0.2 });
+  assert.ok(h.ctrls.radhija.x > EX.x + 0.6, `a Radhija sai pela porta dos fundos (x ${h.ctrls.radhija.x.toFixed(2)})`);
   watch();
-  const SB = L.SERVICE_BOLT;
-  h.walkTo(SB.ring.x, SB.ring.z - 0.45, { timeout: 6, tol: 0.15 });
-  h.tap('KeyE');
-  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a argola na boca (fase ${S().tug}, ${S().tugWhat})`);
-  const lock = h.puzzle.lockFor('radhija');
-  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.boltOpen), 'puxando a argola, o ferrolho corre');
-  assert.ok(h.run(2, { until: () => S().flags.serviceOpen }), 'e a porta da área de serviço abre');
+  assert.ok(h.run(3, { until: () => !!S().scene }), 'do lado de fora, a cena da chegada ao quintal');
+  skipScene(h, 'quintalChega');
+  become(h, 'rhaenyra');
+  h.walkTo(EX.x - 0.45, ez, { timeout: 5, tol: 0.2 });
+  h.walkTo(EX.x + 0.6, ez, { timeout: 5, tol: 0.2 });
+  h.walkTo(EX.x + 1.31, EX.z1 + 0.05, { timeout: 6, tol: 0.2 });
+  assert.ok(h.ctrls.rhaenyra.x > EX.x + 0.6, `a Rhaenyra também sai (x ${h.ctrls.rhaenyra.x.toFixed(2)})`);
+  watch();
+  // (os lugares exatos de onde o teste do quintal maior começa)
+  h.teleport('rhaenyra', EX.x + 1.31, EX.z1 + 0.05, Math.PI / 2);
+  become(h, 'radhija');
+  h.teleport('radhija', EX.x + 1.36, EX.z0 + 0.15, Math.PI / 2);
+  h.run(0.3);
+  yardChain(h, watch, { intro: false });
   assert.equal(S().stage, 'piscina');
-  h.run(1.2);
-  assert.equal(h.puzzle.lockFor('radhija'), null, 'a argola solta sozinha');
-  watch();
 
   // 4. piscina: o pulso do Faro perto da piscina acha a marca da boia → a Reconstrução (caso 1)
   h.teleport('radhija', L.RECON.x - 0.9, L.RECON.z + 1.4, Math.PI);
@@ -310,9 +298,160 @@ test('missão do capítulo 1: do quarto ao portãozinho, com os puzzles das duas
   assert.equal(S().stage, 'fim');
   const end = h.log('story:chapterEnd').at(-1);
   assert.ok(end, 'o fim do capítulo');
-  assert.deepEqual({ chapter: end.chapter, title: end.title, hiddenTotal: end.hiddenTotal, socksTotal: end.socksTotal }, { chapter: 1, title: 'Cadê a Cenoura?', hiddenTotal: 4, socksTotal: 3 });
+  // as escondidas: a baba, o ralo, a goteira da despensa, a etiqueta da lata e a rabiola da pipa do quintal; as meias:
+  // antena, depósito, casinha e a do baldão
+  assert.deepEqual({ chapter: end.chapter, title: end.title, hiddenTotal: end.hiddenTotal, socksTotal: end.socksTotal }, { chapter: 1, title: 'Cadê a Cenoura?', hiddenTotal: 5, socksTotal: 4 });
   assert.ok(end.clues >= 8, `pistas na lupa: ${end.clues}`);
   assert.deepEqual([...bad], [], 'ninguém atravessa nada no caminho');
+  assert.equal(h.puzzle.lockFor('radhija'), null);
+  assert.equal(h.puzzle.lockFor('rhaenyra'), null);
+});
+
+/**
+ * O quintal maior (4ª rodada), com os controles de verdade: da porta dos fundos até a porta da área de serviço (da etapa
+ * 'quintal' à 'piscina'). Começa com as duas do lado de fora da porta dos fundos (nos lugares de STAGE_SPOTS.quintal), a
+ * Radhija com a jogadora e, se `intro`, a cena da chegada a ponto de começar. Usado pela missão inteira (depois da casa)
+ * e pelo teste do quintal maior.
+ *   o jabuti na passagem da horta → a alface (a Rhaenyra segura com o Fica, a Radhija puxa) → a folha para o Seu Bento
+ *   → a irrigação (a Rhaenyra tampa o aspersor do meio, a Radhija passa no tempo certo) → o registro → o galho, a
+ *   passagem baixa e a argola do ferrolho.
+ */
+function yardChain(h, watch, { intro = true } = {}) {
+  const L = h.layout;
+  const S = () => storyInfo(h);
+  const Y = () => S().yard;
+  const yard = h.puzzle.quintal;
+  /** Anda pelos pontos, olhando o "nada atravessa nada" a cada trecho. */
+  const walk = (pts, o = {}) => { for (const [x, z] of pts) { h.walkTo(x, z, { timeout: 10, ...o }); watch(); } };
+  const JB = L.JABUTI, LT = L.LETTUCE, SP = L.SPRINKLERS, VV = L.VALVE;
+  // 0. a cena da chegada: o quintal dos fundos, o jabuti e os aspersores
+  if (intro) skipScene(h, 'quintalChega');
+  assert.equal(h.log('objective').at(-1)?.text, 'Um jabuti dorme na passagem da horta');
+
+  // 1. o jabuti tapa a passagem estreita da horta: nem a Radhija passa
+  walk([[-9.0, 17.95], [JB.x, 17.5]]);
+  holdWorld(h, [0, -1], 2.0, () => false);
+  assert.ok(h.ctrls.radhija.z > JB.z + 0.25, `o jabuti segura a Radhija do lado sul (z ${h.ctrls.radhija.z.toFixed(2)})`);
+  watch();
+  h.tap('KeyE'); // conversa com o Seu Bento
+  h.run(0.5);
+  assert.equal(Y().metJabuti, true);
+  assert.equal(h.log('objective').at(-1)?.text, 'O Seu Bento quer alface: peguem uma folha na horta');
+
+  // 2. a alface: sozinha, a Radhija puxa e o pé inteiro escapa
+  walk([[-9.6, 18.4], [-10.4, 21.1], [-12.6, 22.05], [LT.x + 0.45, 22.3]]);
+  h.walkTo(LT.bite.x, LT.bite.z - 0.42, { timeout: 5, tol: 0.15 });
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a folha na boca (fase ${S().tug})`);
+  let lock = h.puzzle.lockFor('radhija');
+  holdWorld(h, [lock.pull.ax, lock.pull.az], 4, () => !h.puzzle.lockFor('radhija')?.pull);
+  h.run(0.6);
+  assert.equal(Y().leaf, 'pe', 'sem a irmã segurando, a alface inteira estica e escapa');
+  watch();
+  // a Rhaenyra vem segurar o pé: trocando para a Radhija com ela ali, ela fica (Fica automático)
+  become(h, 'rhaenyra');
+  walk([[-13.0, 22.0], [LT.x + 0.62, 22.32]]);
+  become(h, 'radhija');
+  assert.equal(h.game.stay.rhaenyra, true, 'a Rhaenyra fica segurando o pé de alface');
+  h.walkTo(LT.bite.x - 0.05, LT.bite.z - 0.42, { timeout: 5, tol: 0.15 });
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), 'a folha na boca de novo');
+  lock = h.puzzle.lockFor('radhija');
+  holdWorld(h, [lock.pull.ax, lock.pull.az], 4, () => Y().leaf === 'boca');
+  assert.equal(Y().leaf, 'boca', 'com a irmã segurando, a folha solta: vai na boca da Radhija');
+  assert.ok(h.dogs.radhija.mouthSocket.children.some((o) => o.name === 'alface:folha'), 'a folha pendurada na boca dela');
+  h.run(0.4);
+  watch();
+
+  // 3. a folha para o Seu Bento: a cena, e ele sai da passagem devagar (para quando alguém está na frente)
+  walk([[-12.6, 22.05], [-10.4, 21.1], [-9.3, 18.3], [JB.x, 17.45]]);
+  h.tap('KeyE');
+  skipScene(h, 'quintalJabuti');
+  assert.equal(Y().leaf, 'jabuti');
+  assert.equal(Y().jabuti.phase, 'anda', 'ele começa a andar');
+  assert.equal(h.log('objective').at(-1)?.text, 'O Seu Bento está saindo… devagarinho');
+  assert.ok(h.run(20, { until: () => storyInfo(h).yard.jabuti.moved }), `o jabuti sai da passagem (${JSON.stringify(Y().jabuti)})`);
+  watch();
+  assert.ok(h.puzzle.navFlags().jabutiMoved);
+
+  // 4. a irrigação: sozinha, a Radhija não atravessa (o jato da frente a barra, e quem liga em cima dela a molha)
+  become(h, 'radhija');
+  h.game.setStay('rhaenyra', false);
+  walk([[JB.x, 17.4], [JB.x, 15.35]]);
+  const wet0 = Y().irrigation.wet;
+  holdWorld(h, [0, -1], 7, () => h.ctrls.radhija.z < SP.lane.z0);
+  assert.ok(h.ctrls.radhija.z > SP.heads[0].z, `sozinha, a Radhija não passa do jardim (z ${h.ctrls.radhija.z.toFixed(2)}, molhadas ${Y().irrigation.wet - wet0})`);
+  h.run(1.6);
+  watch();
+  // a Rhaenyra senta em cima do aspersor do meio (passa molhada mesmo) e, trocando, fica tampando
+  become(h, 'rhaenyra');
+  walk([[JB.x, 15.4], [SP.heads[1].x, SP.heads[1].z]], { tol: 0.12 });
+  become(h, 'radhija');
+  assert.ok(h.run(1.0, { until: () => storyInfo(h).yard.irrigation.plugged === 'meio' }), `a Rhaenyra tampa o do meio (${JSON.stringify(Y().irrigation)})`);
+  assert.equal(h.log('objective').at(-1)?.text, 'Os aspersores ligam um depois do outro: a Radhija não passa molhada');
+  // de volta para a frente do jardim; espera o do sul desligar, passa até a irmã, espera o do norte e passa
+  walk([[JB.x, 15.3]]);
+  const wet1 = Y().irrigation.wet;
+  assert.ok(h.run(8, { until: () => { const u = yard.headState(2).u; return u >= 2.45 && u < 2.6; } }), 'o do sul desliga');
+  walk([[-8.72, 12.0]], { tol: 0.12 });
+  assert.ok(h.ctrls.radhija.z < 12.4, `a Radhija espera ao lado da irmã, no seco (z ${h.ctrls.radhija.z.toFixed(2)})`);
+  assert.ok(h.run(8, { until: () => { const u = yard.headState(0).u; return u >= 2.45 && u < 2.6; } }), 'o do norte desliga');
+  walk([[-8.5, 9.6], [-8.4, 8.0]], { tol: 0.15 });
+  assert.ok(h.ctrls.radhija.z < SP.lane.z0, `a Radhija atravessou o jardim (z ${h.ctrls.radhija.z.toFixed(2)})`);
+  assert.equal(Y().irrigation.wet, wet1, 'sem se molhar');
+  assert.equal(h.log('objective').at(-1)?.text, 'Fechem o registro da irrigação');
+  watch();
+  // 5. o registro: só o focinho da Radhija cabe; a irrigação desliga e a irmã levanta
+  h.walkTo(VV.at.x, VV.at.z, { timeout: 5, tol: 0.15 });
+  h.tap('KeyE');
+  h.run(1.0);
+  assert.equal(Y().irrigation.off, true, 'a irrigação desligou');
+  assert.equal(h.game.stay.rhaenyra, false, 'a Rhaenyra levanta do aspersor');
+  assert.ok(h.puzzle.navFlags().irrigationOff);
+  // a Rhaenyra atravessa o jardim (seco agora)
+  become(h, 'rhaenyra');
+  walk([[SP.heads[1].x, 10.0], [-8.3, 7.4]]);
+  assert.ok(h.ctrls.rhaenyra.z < SP.lane.z0, 'a Rhaenyra também atravessa');
+  watch();
+
+  // 6. o final de antes: a porta trancada por fora, o galho na frente da passagem do muro, a argola do ferrolho
+  const Br = L.BRANCH, SD = L.SERVICE_DOOR, sd = mid(SD);
+  walk([[sd.x - 0.2, sd.z + 0.8]]);
+  h.tap('KeyE');
+  h.run(0.5);
+  assert.equal(h.log('objective').at(-1)?.text, 'Tem uma passagem no muro, atrás do galho');
+  h.run(2.6);
+  walk([[Br.start.x + Br.half + 0.6, Br.start.z + 0.5], [Br.start.x + Br.half + 0.24, Br.start.z]], { tol: 0.1 });
+  assert.ok(push(h, [-1, 0], 10, () => S().flags.branchFree), `o galho sai da frente da passagem (${JSON.stringify(S().pushables.branch)})`);
+  watch();
+  become(h, 'radhija');
+  const YG = L.YARD_GAP, gx = YG.x1 - 0.3;
+  walk([[gx, YG.z + 0.75], [gx, YG.z - 0.85]], { tol: 0.15 });
+  assert.ok(h.ctrls.radhija.z < YG.z - 0.3, 'a Radhija sai pela passagem baixa');
+  const SB = L.SERVICE_BOLT;
+  h.walkTo(SB.ring.x, SB.ring.z - 0.45, { timeout: 6, tol: 0.15 });
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), 'a argola na boca');
+  lock = h.puzzle.lockFor('radhija');
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.boltOpen), 'puxando a argola, o ferrolho corre');
+  assert.ok(h.run(2, { until: () => S().flags.serviceOpen }), 'e a porta da área de serviço abre');
+  assert.equal(S().stage, 'piscina');
+  h.run(1.0);
+  watch();
+}
+
+/** O quintal maior sozinho: começa na etapa 'quintal' (?stage=quintal), do lado de fora da porta dos fundos. */
+test('quintal maior: da porta dos fundos à porta da área de serviço, com o jabuti, a alface e a irrigação', async () => {
+  const h = await createStoryGame({ query: 'stage=quintal' });
+  const L = h.layout;
+  const S = () => storyInfo(h);
+  const bad = new Set();
+  const watch = () => { for (const m of intrusions(h)) bad.add(`[${S().stage}] ${m}`); };
+  const E = L.HOUSE_EXIT;
+  assert.equal(S().stage, 'quintal');
+  assert.ok(h.ctrls.radhija.x > E.x && Math.abs(h.ctrls.radhija.z - (E.z0 + E.z1) / 2) < 1, 'as duas começam do lado de fora da porta dos fundos');
+  yardChain(h, watch);
+  assert.deepEqual([...bad], [], 'ninguém atravessa nada no quintal');
   assert.equal(h.puzzle.lockFor('radhija'), null);
   assert.equal(h.puzzle.lockFor('rhaenyra'), null);
 });
@@ -519,7 +658,20 @@ test('paralelo C: a corda debaixo da caminhonete derruba o balde na bola; a port
   assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a corda na boca (fase ${storyInfo(h).tug})`);
   assert.equal(S().tugWhat, 'corda');
   const lock = h.puzzle.lockFor('radhija');
-  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.ballClear), 'puxando, o balde cai e a bola rola para longe da porta');
+  // a ponta da corda desenhada fica na boca dela enquanto puxa (o reset do jogo, no começo, soltava essa ligação:
+  // retorno do usuário em 2026-11-11, "Radhija não está com as cordas na boca quando ela está puxando")
+  const mouth = new THREE.Vector3();
+  const tipGap = () => {
+    h.dogs.radhija.mouthSocket.getWorldPosition(mouth);
+    const t = h.props.rope.tip();
+    return Math.hypot(t.x - mouth.x, t.y - mouth.y, t.z - mouth.z);
+  };
+  let worstTip = 0;
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => {
+    if (h.puzzle.lockFor('radhija')?.pull) worstTip = Math.max(worstTip, tipGap());
+    return S().flags.ballClear;
+  }), 'puxando, o balde cai e a bola rola para longe da porta');
+  assert.ok(worstTip < 0.05, `a corda na boca o puxão inteiro (pior distância ${(worstTip * 100).toFixed(1)} cm)`);
   h.run(0.3);
   assert.equal(h.puzzle.lockFor('radhija'), null, 'a corda solta sozinha');
   // agora a porta abre

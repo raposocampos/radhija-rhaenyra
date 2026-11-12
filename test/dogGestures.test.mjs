@@ -13,7 +13,7 @@ const { createDogV2 } = await import('../src/dogs/v2/dog.js');
 const { GESTURE_TIME } = await import('../src/dogs/dogAnimation.js');
 
 const KINDS = ['radhija', 'rhaenyra'];
-const GESTURES = ['stretch', 'yawn', 'tilt', 'sniffGround', 'sad', 'alert', 'wag', 'shiver'];
+const GESTURES = ['stretch', 'yawn', 'tilt', 'sniffGround', 'sad', 'alert', 'wag', 'shiver', 'chaseTail', 'stumble', 'bonk'];
 const DT = 1 / 60;
 const v = new THREE.Vector3();
 const q = new THREE.Quaternion();
@@ -221,6 +221,11 @@ test('gestos e fala no modelo novo: sem NaN e nada do corpo passa do chão', () 
       ['bocejando sentada', 2.5, gest('yawn', { action: 'sit' })],
       ['triste deitada', 3, gest('sad', { idle: { kind: 'lie', k: 1, t: 2, side: 1 } })],
       ['olhando de lado e alerta', 2, gest('alert', { lookAt: { x: 1, y: 0.4, z: 0.5 } })],
+      // a Rhaenyra distraída: a voltinha a trote atrás do rabo (as duas mãos) e o tropeço correndo
+      ['atrás do rabo, na voltinha', 2.5, (t) => ({ speed: 1.35, turn: 3.9, action: 'none', gesture: { kind: 'chaseTail', t, side: 1 } })],
+      ['atrás do rabo, para a direita', 2.5, (t) => ({ speed: 1.35, turn: -3.9, action: 'none', gesture: { kind: 'chaseTail', t, side: -1 } })],
+      ['tropeçando correndo', 1.2, (t) => ({ speed: Math.max(0, 1.6 - t * 3), action: 'none', gesture: { kind: 'stumble', t } })],
+      ['bateu o focinho recuando', 1.4, (t) => ({ speed: t < 0.25 ? 0.5 : 0, back: t < 0.25, action: t < 0.35 ? 'startled' : 'none', gesture: { kind: 'bonk', t } })],
     ];
     for (const [name, secs, anim] of cases) {
       for (let i = 0; i < 40; i++) d.update(DT, still());
@@ -236,4 +241,49 @@ test('gestos e fala no modelo novo: sem NaN e nada do corpo passa do chão', () 
     }
   }
   assert.deepEqual(bad, []);
+});
+
+test('gestos da Rhaenyra distraída: atrás do rabo (o "C"), o tropeço e o focinho na porta', () => {
+  const fwd = (d, n) => {
+    d.object.updateMatrixWorld(true);
+    return new THREE.Vector3(0, 0, 1).applyQuaternion(bone(d, n).getWorldQuaternion(new THREE.Quaternion()));
+  };
+  for (const kind of KINDS) {
+    const base = fresh(kind, 2, still);
+    const s = world(base, 'head').y; // escala: altura da cabeça em pé
+
+    // atrás do rabo, andando a voltinha: a cabeça vira para o lado da curva e o rabo curva para o mesmo lado (o "C");
+    // comparado com a mesma curva sem o gesto (+x é a esquerda da dog)
+    for (const side of [1, -1]) {
+      const turn = (g) => (t) => ({ speed: 1.3, turn: side * 3.8, action: 'none', ...(g ? { gesture: { kind: 'chaseTail', t, side } } : {}) });
+      const plain = fresh(kind, 1.2, turn(false));
+      const ct = fresh(kind, 1.2, turn(true));
+      const dHead = (fwd(ct, 'head').x - fwd(plain, 'head').x) * side;
+      assert.ok(dHead > 0.3, `${kind} atrás do rabo (${side}): a cabeça vira para dentro da curva (${dHead.toFixed(3)})`);
+      const dTail = (world(ct, 'tail3').x - world(plain, 'tail3').x) * side;
+      assert.ok(dTail > 0.02, `${kind} atrás do rabo (${side}): o rabo curva para o lado da cabeça (${dTail.toFixed(3)} m)`);
+      const dChest = (world(ct, 'neck').x - world(plain, 'neck').x) * side;
+      assert.ok(dChest > 0.005, `${kind} atrás do rabo (${side}): o peito curvado para dentro (${dChest.toFixed(3)} m)`);
+    }
+
+    // tropeço: o peito mergulha e a cabeça cai; no fim, volta à pose em pé
+    const tr = fresh(kind, 0.17, gest('stumble'));
+    assert.ok(world(tr, 'chest').y < world(base, 'chest').y - 0.03 * s, `${kind} tropeçando: o peito mergulha (${world(tr, 'chest').y.toFixed(3)} × ${world(base, 'chest').y.toFixed(3)})`);
+    assert.ok(world(tr, 'head').y < s - 0.05 * s, `${kind} tropeçando: a cabeça cai`);
+    const trEnd = fresh(kind, GESTURE_TIME.stumble + 0.6, gest('stumble'));
+    assert.ok(Math.abs(world(trEnd, 'chest').y - world(base, 'chest').y) < 0.01, `${kind} tropeçando: no fim, de pé de novo`);
+
+    // focinho na porta: o tranco joga a cabeça para trás (o focinho sobe) e depois ela fica zonza (a cabeça roda)
+    const bk = fresh(kind, 0.1, gest('bonk'));
+    assert.ok(fwd(bk, 'head').y > fwd(base, 'head').y + 0.08, `${kind} bateu o focinho: a cabeça vai para trás (${fwd(bk, 'head').y.toFixed(3)} × ${fwd(base, 'head').y.toFixed(3)})`);
+    const upX = (d) => {
+      d.object.updateMatrixWorld(true);
+      return new THREE.Vector3(0, 1, 0).applyQuaternion(bone(d, 'head').getWorldQuaternion(new THREE.Quaternion())).x;
+    };
+    const rolls = [0.35, 0.5, 0.65, 0.8].map((t) => upX(fresh(kind, t, gest('bonk'))));
+    assert.ok(Math.max(...rolls) - Math.min(...rolls) > 0.08, `${kind} zonza: a cabeça roda de um lado para o outro (${rolls.map((x) => x.toFixed(2)).join(' ')})`);
+    const bkEnd = fresh(kind, GESTURE_TIME.bonk + 0.8, gest('bonk'));
+    bone(base, 'head').getWorldQuaternion(q);
+    assert.ok(q.angleTo(bone(bkEnd, 'head').getWorldQuaternion(new THREE.Quaternion())) < 0.02, `${kind} zonza: no fim, a cabeça volta ao lugar`);
+  }
 });

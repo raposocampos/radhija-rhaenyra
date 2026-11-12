@@ -54,8 +54,9 @@ const R = { radhija: L.DOGS.radhija.radius, rhaenyra: L.DOGS.rhaenyra.radius };
 const SIZE = { radhija: L.DOGS.radhija.size, rhaenyra: L.DOGS.rhaenyra.size };
 /** A casa resolvida: a grade, a porta do corredor, o aspirador na base, a luz da despensa e a porta dos fundos. */
 const HOUSE_OPEN = { petGateOpen: true, kitchenOpen: true, vacuumAway: true, pantryLit: true, exitOpen: true };
-/** Todas as etapas feitas: portas abertas, o galho fora da passagem, barquinho encaixado. */
-const ALL_OPEN = { ...HOUSE_OPEN, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true };
+/** Todas as etapas feitas: portas abertas, o galho fora da passagem, barquinho encaixado, o jabuti fora da passagem da
+ * horta e a irrigação do quintal desligada. */
+const ALL_OPEN = { ...HOUSE_OPEN, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true, jabutiMoved: true, irrigationOff: true };
 const small = (flags) => ({ r: R.radhija, size: SIZE.radhija, flags: { ...flags, small: true } });
 const big = (flags) => ({ r: R.rhaenyra, size: SIZE.rhaenyra, flags });
 
@@ -126,8 +127,9 @@ test('recanto: petiscos e meias ficam onde a dog certa alcança, por um caminho 
     const p = n.findPath(from, c, ctx);
     assert.ok(p.reachable, `petisco ${c.id}: a Radhija chega lá`);
   }
-  // a do depósito fica em cima da caixa de brinquedos: um lugar livre ao alcance da pegada basta
-  for (const s of L.SOCKS.filter((x) => x.id !== 'antena')) {
+  // a do depósito fica em cima da caixa de brinquedos: um lugar livre ao alcance da pegada basta (a do baldão boia até
+  // a borda e se pega pelo quintalPuzzles.js: test/historia-quintal.test.mjs)
+  for (const s of L.SOCKS.filter((x) => x.id !== 'antena' && x.id !== 'balde')) {
     const spot = freeNear(w, s, L.SOCK_PICKUP_R - 0.05, 'radhija');
     assert.ok(spot, `meia ${s.id}: um lugar livre a menos de ${L.SOCK_PICKUP_R} m`);
     assert.ok(n.findPath(from, spot, ctx).reachable, `meia ${s.id}: a Radhija chega lá`);
@@ -162,8 +164,11 @@ test('recanto: o grafo liga o quarto a cada etapa da missão quando as portas ab
   const lit = { ...docked, pantryLit: true };
   for (const id of ['J_e', 'J_n', 'B_in', 'E_w', 'E_porta']) assert.ok(makeWorld(lit).n.findPath(from, N[id], big(lit)).reachable, `com a luz acesa, ${id}`);
   assert.equal(makeWorld(lit).n.findPath(from, N.Y_mid, big(lit)).reachable, false, 'com a porta dos fundos fechada, o quintal não');
-  const yard = HOUSE_OPEN;
-  assert.ok(makeWorld(yard).n.findPath(from, N.Y_mid, big(yard)).reachable, 'aberta a porta dos fundos, o quintal sim');
+  for (const id of ['Y_exit', 'Y_patio', 'Y_horta']) assert.ok(makeWorld(HOUSE_OPEN).n.findPath(from, N[id], small(HOUSE_OPEN)).reachable, `aberta a porta dos fundos, o quintal dos fundos (${id})`);
+  // do fundo do quintal para o norte, o jabuti na passagem da horta e a irrigação (os colisores deles são do puzzle:
+  // test/historia-quintal.test.mjs); daqui em diante, com os dois resolvidos
+  const yard = { ...HOUSE_OPEN, jabutiMoved: true, irrigationOff: true };
+  assert.ok(makeWorld(yard).n.findPath(from, N.Y_mid, big(yard)).reachable, 'com o quintal dos fundos resolvido, o resto do quintal');
   assert.equal(makeWorld(yard).n.findPath(from, N.P_west, big(yard)).reachable, false, 'com a área de serviço fechada, a piscina não');
   // o ferrolho fica do outro lado: com o galho no lugar, nem a Radhija passa; tirado o galho, só ela, pela passagem
   assert.equal(makeWorld(yard).n.findPath(from, N.C_bolt, small(yard)).reachable, false, 'o galho tapa a passagem do muro');
@@ -366,7 +371,7 @@ test('recanto: câmera, pistas e meias dentro do condomínio', () => {
   for (const s of L.SOCKS) assert.ok(inside(s), `meia ${s.id}`);
   for (const c of L.COLLECTIBLES) assert.ok(inside(c), `petisco ${c.id}`);
   assert.equal(L.COLLECTIBLES.length, 5, 'cinco petiscos');
-  assert.equal(L.SOCKS.length, 3, 'três meias');
+  assert.equal(L.SOCKS.length, 4, 'quatro meias (a do baldão do quintal é a quarta)');
 });
 
 test('casa maior: o aspirador anda pelo corredor sem encostar em nada, e o medo da Radhija fecha o corredor e a despensa', () => {

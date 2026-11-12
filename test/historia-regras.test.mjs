@@ -108,9 +108,9 @@ test('lupa: guarda cada pista uma vez, avisa o HUD e conta as escondidas', () =>
   assert.equal(seen[0][0], 'story:clue');
   assert.deepEqual({ id: seen[0][1].id, case: seen[0][1].case, type: seen[0][1].type, x: seen[0][1].x }, { id: 'pote', case: 'C3', type: 'obrigatoria', x: 1 });
   assert.deepEqual(book.found, ['pote', 'pombos']);
-  assert.deepEqual(book.hidden(1), { found: 0, total: 4 }, 'a baba, o ralo, a goteira da despensa e a etiqueta da lata são as escondidas do capítulo');
+  assert.deepEqual(book.hidden(1), { found: 0, total: 5 }, 'a baba, o ralo, a goteira da despensa, a etiqueta da lata e a rabiola da pipa do quintal são as escondidas do capítulo');
   book.add('ralo');
-  assert.deepEqual(book.hidden(1), { found: 1, total: 4 });
+  assert.deepEqual(book.hidden(1), { found: 1, total: 5 });
   assert.deepEqual(book.ofCase('C1'), ['ralo']);
   book.reset();
   assert.equal(book.count, 0);

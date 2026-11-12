@@ -19,8 +19,88 @@ function blowVent(h) {
   h.tap('KeyR');
 }
 
+/**
+ * O quintal: a Rhaenyra no Fica junto do pé de alface e a Radhija morde e puxa a folha de fora (com os controles).
+ * → com a folha na boca da Radhija.
+ */
+function pickLettuce(h) {
+  const LT = h.layout.LETTUCE;
+  become(h, 'radhija');
+  h.teleport('rhaenyra', LT.x + 0.62, 22.32, Math.PI);
+  h.game.setStay('rhaenyra', true);
+  h.teleport('radhija', LT.bite.x, LT.bite.z - 0.42, 0);
+  h.run(0.3);
+  h.tap('KeyE');
+  assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), 'a folha de alface na boca');
+  const lock = h.puzzle.lockFor('radhija');
+  holdWorld(h, [lock.pull.ax, lock.pull.az], 4, () => storyInfo(h).yard.leaf === 'boca');
+  assert.equal(storyInfo(h).yard.leaf, 'boca', 'a folha soltou');
+  h.run(0.4);
+}
+
 /** Monta o jogo com a cena a ponto de começar: a etapa, a dog certa e o gatilho de verdade. */
 const SCENES = {
+  // o quintal maior: a chegada (do lado de fora da porta dos fundos), a folha para o jabuti, a pipa e a bolinha
+  quintalChega: {
+    async prepare() { return createStoryGame({ query: 'stage=quintal' }); },
+    free: [1, 0],
+    after: 'quintal',
+  },
+  quintalJabuti: {
+    async prepare() {
+      const h = await createStoryGame({ query: 'stage=quintal' });
+      skipScene(h, 'quintalChega');
+      pickLettuce(h);
+      const JB = h.layout.JABUTI;
+      h.game.setStay('rhaenyra', false);
+      h.teleport('rhaenyra', -10.1, 19.0, Math.PI);
+      h.teleport('radhija', JB.x, 17.45, Math.PI);
+      h.run(0.3);
+      h.tap('KeyE'); // entrega a folha ao Seu Bento
+      return h;
+    },
+    free: [-1, 0],
+    after: 'quintal',
+  },
+  quintalPipa: {
+    async prepare() {
+      const h = await createStoryGame({ query: 'stage=piscina' });
+      const GV = h.layout.GUAVA;
+      become(h, 'rhaenyra');
+      h.teleport('rhaenyra', GV.x - GV.r - 0.5, GV.z, Math.PI / 2);
+      h.run(0.3);
+      // a Rhaenyra empurra a goiabeira em pé até a pipa cair
+      holdWorld(h, [1, 0], 8, () => storyInfo(h).yard.kite.phase !== 'arvore', ['ShiftLeft']);
+      assert.ok(h.run(4, { until: () => storyInfo(h).yard.kite.phase === 'chao' }), `a pipa cai (${JSON.stringify(storyInfo(h).yard.kite)})`);
+      const at = storyInfo(h).yard.kite.at;
+      h.teleport('rhaenyra', at.x - 0.55, at.z + 0.4, Math.PI / 2);
+      h.run(0.3);
+      h.tap('KeyE'); // examina a rabiola
+      return h;
+    },
+    free: [-1, 0],
+    after: 'piscina',
+  },
+  quintalBolinha: {
+    async prepare() {
+      const h = await createStoryGame({ query: 'stage=piscina' });
+      const HS = h.layout.HOSE, BK = h.layout.BUCKET;
+      become(h, 'radhija');
+      h.teleport('radhija', HS.bite.x + 0.25, HS.bite.z - 0.25, -Math.PI * 0.75);
+      h.run(0.3);
+      h.tap('KeyE');
+      assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), 'a mangueira na boca');
+      const lock = h.puzzle.lockFor('radhija');
+      holdWorld(h, [lock.pull.ax, lock.pull.az], 5, () => storyInfo(h).yard.bucket.open);
+      assert.ok(h.run(6, { until: () => storyInfo(h).yard.bucket.full }), 'o baldão enche');
+      h.teleport('radhija', BK.x - 0.7, BK.z - 0.45, Math.PI * 0.7);
+      h.run(0.3);
+      h.tap('KeyE'); // pega a bolinha de meia
+      return h;
+    },
+    free: [0, -1],
+    after: 'piscina',
+  },
   abertura: {
     async prepare() { return createStoryGame(); },
     free: [1, 0], // do quarto para a grade

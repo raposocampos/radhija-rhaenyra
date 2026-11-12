@@ -601,7 +601,9 @@ export function buildBase(kit, root, L) {
   };
   const inR = (r, x, z, pad = 0) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad;
   /** Os lugares construídos (cada um é de outra peça do cenário): nada da base é espalhado por cima deles. */
-  const BUILT = [Hs, Dk, Sv, Tw, { x0: Bo.x0, x1: Bo.x1, z0: Bo.z0, z1: Bo.awning.z1 }, Cp];
+  // o quintal (e a faixa do lote ao sul da casa) é de world/quintal.js: a base só faz o gramado de baixo dele
+  const LT = L.LOT;
+  const BUILT = [Hs, Dk, Sv, Tw, { x0: Bo.x0, x1: Bo.x1, z0: Bo.z0, z1: Bo.awning.z1 }, Cp, Yd, { x0: LT.x0, x1: LT.x1, z0: Hs.z1, z1: LT.z1 }];
   const built = (x, z, pad = 0.08) => BUILT.some((r) => inR(r, x, z, pad));
 
   // ---------- o traçado: calçadinhas de bloquete (retângulos que só se encostam) e trilhas de pedra
@@ -694,7 +696,9 @@ export function buildBase(kit, root, L) {
     out.copy(LG.a).lerp(LG.b, smoothstep(0.5, 0.72, n)).lerp(LG.c, 1 - smoothstep(0.3, 0.5, n));
     out.lerp(LG.dry, smoothstep(0.6, 0.8, fbm2(x * 0.22 + 40, z * 0.22 - 13, 2)) * 0.4);
     out.multiplyScalar(0.86 + fbm2(x * 0.5 - 11, z * 0.5 + 5, 2) * 0.28);
-    const edge = Math.min(x - W.minX - mt, W.maxX - mt - x, z - W.minZ - mt, W.maxZ - mt - z);
+    // até o muro mais perto: o do condomínio e, no lote da casa (a oeste de LOT.x1), os muros do lote
+    const inLot = x < LT.x1;
+    const edge = Math.min(x - W.minX - mt, (inLot && z > W.maxZ ? LT.x1 - 0.08 : W.maxX - mt) - x, z - W.minZ - mt, (inLot ? LT.z1 - mt : W.maxZ - mt) - z);
     out.lerp(LG.lush, (1 - smoothstep(0.1, 2.2, edge)) * 0.55);
     for (const t of L.TREES) {
       const d = Math.hypot(x - t.x, z - t.z);
@@ -717,8 +721,10 @@ export function buildBase(kit, root, L) {
       return out;
     };
     // passa por baixo do muro (no vão do portãozinho não sobra fresta até a calçada)
-    const xs = lines(W.minX - mt - 0.01, W.maxX + mt + 0.01, [Pl.x0, Pl.x1]);
-    const zs = lines(W.minZ - mt - 0.01, W.maxZ + mt + 0.01, [Pl.z0, Pl.z1]);
+    // e passa por baixo dos muros do lote da casa, que cresceu para o sul (LOT): as células ao sul do muro sul do
+    // condomínio e a leste do lote ficam de fora
+    const xs = lines(W.minX - mt - 0.01, W.maxX + mt + 0.01, [Pl.x0, Pl.x1, LT.x1 + 0.09]);
+    const zs = lines(W.minZ - mt - 0.01, LT.z1 + mt + 0.01, [Pl.z0, Pl.z1, W.maxZ + mt + 0.01]);
     const nx = xs.length - 1, nz = zs.length - 1;
     // as células em volta do lago saem da grade: ali o chão é recortado no contorno dele
     const cut = new Uint8Array(nx * nz);
@@ -775,6 +781,7 @@ export function buildBase(kit, root, L) {
         if (isCut(i, j)) continue;
         const cx = (xs[i] + xs[i + 1]) / 2, cz = (zs[j] + zs[j + 1]) / 2;
         if (cx > Pl.x0 && cx < Pl.x1 && cz > Pl.z0 && cz < Pl.z1) continue;
+        if (cz > W.maxZ + mt && cx > LT.x1 + 0.09) continue;
         vert(xs[i], zs[j]); vert(xs[i], zs[j + 1]); vert(xs[i + 1], zs[j + 1]);
         vert(xs[i], zs[j]); vert(xs[i + 1], zs[j + 1]); vert(xs[i + 1], zs[j]);
       }
@@ -809,7 +816,9 @@ export function buildBase(kit, root, L) {
     B.rect(-95, -95, W.minX - mt, 70, -0.02, green);
     // a leste, até onde começa o cenário do terraço da torre (layout.ROOFTOP.cut: lá o chão é o de world/telhado.js)
     B.rect(W.maxX + mt, -95, XE, 70, -0.02, green);
-    B.rect(W.minX - mt, W.maxZ + mt, W.maxX + mt, 70, -0.02, green);
+    // ao sul: em volta do lote da casa (a leste dele, até o muro sul do condomínio) e depois dele
+    B.rect(LT.x1 + 0.09, W.maxZ + mt, W.maxX + mt, LT.z1 + mt, -0.02, green);
+    B.rect(W.minX - mt, LT.z1 + mt, W.maxX + mt, 70, -0.02, green);
     B.rect(W.minX - mt, -95, W.maxX + mt, S.z1 - 2.2, -0.02, city);
     const m = keep(new THREE.Mesh(B.geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })));
     m.name = 'recanto:chao-de-fora';
@@ -948,12 +957,12 @@ export function buildBase(kit, root, L) {
   };
   const pillars = new Set();
   /** Pilar do muro (dentro do colisor do muro: 36 cm), com a capa de pedra em bico e, em alguns, a lanterninha acesa. */
-  const pillarAt = (x, z, h, side, lamp) => {
+  const pillarAt = (x, z, h, side, lamp, a = 0.18) => {
     const key = `${Math.round(x * 100)},${Math.round(z * 100)}`;
     if (pillars.has(key)) return;
     pillars.add(key);
     const B = lot('solid', `muro-${side}`);
-    const a = 0.18, ch = 0.045, top = h + 0.14;
+    const ch = 0.045, top = h + 0.14;
     const ring = [[-a + ch, -a], [a - ch, -a], [a, -a + ch], [a, a - ch], [a - ch, a], [-a + ch, a], [-a, a - ch], [-a, -a + ch]];
     const cp = _q[2].copy(PLINTH).multiplyScalar(0.9);
     // o fuste em quatro faixas: os respingos embaixo, o reboco, e a sombra do capitel logo abaixo dele
@@ -975,10 +984,14 @@ export function buildBase(kit, root, L) {
       B.fan([x, yb + 0.44, z], [[x - 0.11, yb + 0.33, z - 0.11], [x - 0.11, yb + 0.33, z + 0.11], [x + 0.11, yb + 0.33, z + 0.11], [x + 0.11, yb + 0.33, z - 0.11]], col(IRON), UP);
     }
   };
-  /** Um trecho de muro de a até b (nx, nz: para dentro do condomínio). `outer`: o lado de fora também com reboco fino. */
+  /**
+   * Um trecho de muro de a até b (nx, nz: para dentro do condomínio). `outer`: o lado de fora também com reboco fino;
+   * `half`: a meia espessura (o muro do lote a leste, que é o mesmo colisor do muro do quintal, é mais fino).
+   */
   const wallRun = (ax, az, bx, bz, h, nx, nz, side, o = {}) => {
     const len = Math.hypot(bx - ax, bz - az);
     if (len < 0.05) return;
+    const mt = o.half ?? W.t / 2;
     const dx = (bx - ax) / len, dz = (bz - az) / len;
     const B = lot('solid', `muro-${side}`);
     const at = (s, off, y) => [ax + dx * s + nx * off, y, az + dz * s + nz * off];
@@ -1035,14 +1048,19 @@ export function buildBase(kit, root, L) {
     for (let k = 0; k <= n; k++) {
       if ((k === 0 && o.noA) || (k === n && o.noB)) continue;
       const px = ax + dx * (len * k) / n, pz = az + dz * (len * k) / n;
-      pillarAt(px, pz, Math.max(h, o.corner && (k === 0 || k === n) ? W.h : h), side, k % 3 === 1 && !built(px + nx * 0.4, pz + nz * 0.4, 0.3));
+      pillarAt(px, pz, Math.max(h, o.corner && (k === 0 || k === n) ? W.h : h), side, k % 3 === 1 && !built(px + nx * 0.4, pz + nz * 0.4, 0.3), mt < 0.1 ? mt + 0.05 : 0.18);
     }
   };
   // os trechos do norte acabam dentro dos pilares do portãozinho; o do oeste vai do canto até a casa (ela faz o resto)
   wallRun(W.minX, W.minZ, G.x0 - 0.2, W.minZ, W.hNorth, 0, 1, 'n', { outer: true, corner: true, noB: true });
   wallRun(G.x1 + 0.2, W.minZ, W.maxX, W.minZ, W.hNorth, 0, 1, 'n', { outer: true, corner: true, noA: true });
   wallRun(W.maxX, W.minZ, W.maxX, W.maxZ, W.h, -1, 0, 'l');
-  wallRun(W.minX, W.maxZ, W.maxX, W.maxZ, W.h, 0, -1, 's');
+  // o muro sul do condomínio só a leste do lote da casa (4ª rodada: o lote cresceu 11 m para o sul) e os muros do
+  // lote: a oeste, depois da casa; ao sul; e a leste (o mesmo colisor do muro do quintal, quintal-leste)
+  wallRun(LT.x1, W.maxZ, W.maxX, W.maxZ, W.h, 0, -1, 's');
+  wallRun(W.minX, Hs.z1, W.minX, LT.z1, W.h, 1, 0, 'lote', { noA: true });
+  wallRun(LT.x0, LT.z1, LT.x1, LT.z1, W.h, 0, -1, 'lote');
+  wallRun(LT.x1, W.maxZ, LT.x1, LT.z1, W.h, -1, 0, 'lote', { half: L.WALLS.t / 2, noA: true, noB: true });
   wallRun(W.minX, W.minZ, W.minX, Hs.z0, W.h, 1, 0, 'o', { noB: true });
 
   // as trepadeiras: os ramos finos colados no muro e as folhas do meio para cima (a franja passa por cima do chapim)
@@ -1457,13 +1475,18 @@ export function buildBase(kit, root, L) {
     const back = (x, z, i) => nk.add(lightCrown(i % 3, hazy), { color: null, slot: 'foliage', x, y: 0.4, z, ry: i * 1.3, sx: 2.3, sy: 2.0 + (i % 3) * 0.25, sz: 2.3, group: 'vizinhos' });
     let n = 0;
     for (let z = W.minZ + 1.5; z < W.maxZ; z += 4.3) tree(W.maxX + 1.7 + Rn() * 1.2, z + (Rn() - 0.5) * 1.5, n++);
-    for (let x = W.minX + 2; x < W.maxX; x += 6.2) tree(x + (Rn() - 0.5) * 2, W.maxZ + 1.7 + Rn() * 1.2, n++);
-    for (let z = W.minZ + 1.8; z < W.maxZ; z += 4.6) tree(W.minX - 1.7 - Rn() * 1.2, z + (Rn() - 0.5) * 1.5, n++);
+    // ao sul: a leste do lote da casa, logo atrás do muro do condomínio; no lote, depois do muro dele (4ª rodada)
+    for (let x = W.minX + 2; x < W.maxX; x += 6.2) { const tx = x + (Rn() - 0.5) * 2, dz = 1.7 + Rn() * 1.2; tree(tx, (tx < LT.x1 + 1.8 ? LT.z1 : W.maxZ) + dz, n++); }
+    for (let z = W.minZ + 1.8; z < LT.z1; z += 4.6) tree(W.minX - 1.7 - Rn() * 1.2, z + (Rn() - 0.5) * 1.5, n++);
+    // a leste do lote, os quintais dos vizinhos (as copas aparecem por cima do muro do lote)
+    for (const [tx, tz] of [[LT.x1 + 1.1, 16.4], [LT.x1 + 1.3, 24.8], [LT.x1 + 8.6, 25.6]]) tree(tx, tz, n++);
     [[W.maxX + 6.2, -10.5, 6, 7], [W.maxX + 6.8, 1.2, 5.5, 8], [W.maxX + 6.0, 10.8, 6.5, 6.5]].forEach(([x, z, w, d], i) => neighbour(x, z, w, d, 3.3 + (i % 2) * 2.3, i + 1, WEST));
-    [[-18, W.maxZ + 6.0, 8, 6], [-5.5, W.maxZ + 6.6, 7, 5.5], [7, W.maxZ + 6.0, 8.5, 6], [19, W.maxZ + 6.4, 7, 6]].forEach(([x, z, w, d], i) => neighbour(x, z, w, d, 3.2 + ((i + 1) % 2) * 2.4, i + 4, NORTH));
-    [[W.minX - 6.2, -9.5, 6, 7.5], [W.minX - 6.6, 2.0, 5.5, 7], [W.minX - 6.0, 11.5, 6.5, 6.5]].forEach(([x, z, w, d], i) => neighbour(x, z, w, d, 3.4 + (i % 2) * 2.2, i + 8, EAST));
+    // ao sul: as casas que ficavam onde agora é o lote da casa foram para depois do muro dele; a leste do lote, a casa do
+    // vizinho de muro (o telhado aparece por cima dele)
+    [[-18, LT.z1 + 5.4, 8, 6], [-6.0, LT.z1 + 6.0, 7, 5.5], [7, W.maxZ + 6.0, 8.5, 6], [19, W.maxZ + 6.4, 7, 6], [LT.x1 + 5.2, 20.6, 4.6, 6.0]].forEach(([x, z, w, d], i) => neighbour(x, z, w, d, 3.2 + ((i + 1) % 2) * 2.4, i + 4, i === 4 ? WEST : NORTH));
+    [[W.minX - 6.2, -9.5, 6, 7.5], [W.minX - 6.6, 2.0, 5.5, 7], [W.minX - 6.0, 11.5, 6.5, 6.5], [W.minX - 6.4, 21.6, 6, 7]].forEach(([x, z, w, d], i) => neighbour(x, z, w, d, 3.4 + (i % 2) * 2.2, i + 8, EAST));
     for (let z = W.minZ - 2, i = 0; z < W.maxZ + 10; z += 6.5, i++) { back(W.maxX + 15 + (i % 2) * 3, z, i); back(W.minX - 15 - (i % 2) * 3, z + 3, i + 1); }
-    for (let x = W.minX - 8, i = 0; x < W.maxX + 10; x += 7.2, i++) back(x, W.maxZ + 15 + (i % 2) * 3, i + 2);
+    for (let x = W.minX - 8, i = 0; x < W.maxX + 10; x += 7.2, i++) back(x, (x < LT.x1 + 4 ? LT.z1 + 11 : W.maxZ + 15) + (i % 2) * 3, i + 2);
     NL.flush();
     nk.finish();
   }

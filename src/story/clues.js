@@ -42,6 +42,8 @@ export const CLUES = {
   ralo: { id: 'ralo', case: 'C1', type: 'escondida', name: 'O ralo do tanque sem a rolha', picto: 'ralo', chapter: 1, text: 'A rolha de borracha do tanque sumiu.' },
   // a casa (4ª rodada): a etiqueta da cenoura, que estava na lata de biscoito da sala de jantar (casaPuzzles.js)
   etiqueta: { id: 'etiqueta', case: 'C1', type: 'escondida', name: 'A etiqueta da cenoura', picto: 'etiqueta', chapter: 1, text: 'Etiqueta da cenoura: borracha e formato de cone. Tipo uma rolha!' },
+  // a pipa presa na goiabeira do quintal (a Rhaenyra empurra o tronco e ela cai): na rabiola, penas e um anel de borracha
+  rabiola: { id: 'rabiola', case: 'C1', type: 'escondida', name: 'Penas e um anel de borracha na rabiola da pipa', picto: 'pipa', chapter: 1, text: 'Penas e um anel de borracha enroscados na rabiola: os pombos passaram pelo quintal carregando borracha!' },
   // a portaria
   grelha: { id: 'grelha', case: 'C3', type: 'obrigatoria', name: 'A grelha da guarita', picto: 'grelha', chapter: 1, text: 'A grelha da guarita deixa entrar ar… e cheiro.' },
   // depoimentos (o quadro de dedução: retratinho, a fala entre aspas e a anotação)
@@ -63,7 +65,7 @@ export const CLUES = {
 };
 
 /** As pistas do capítulo 1, na ordem em que costumam aparecer (os cartões do mural; os depoimentos ficam à parte). */
-export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'goteira', 'etiqueta', 'telhas', 'boia', 'senha', 'tampa', 'ralo', 'grelha'];
+export const CHAPTER1_CLUES = ['pombos', 'abraco', 'pote', 'trilha', 'pena', 'baba', 'goteira', 'etiqueta', 'telhas', 'rabiola', 'boia', 'senha', 'tampa', 'ralo', 'grelha'];
 /** Os depoimentos do capítulo 1 (quadro de dedução). */
 export const CHAPTER1_TESTIMONIES = ['dep-bichano', 'dep-gansa', 'dep-luiz'];
 

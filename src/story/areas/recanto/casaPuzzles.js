@@ -93,7 +93,9 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
   const spots = L.CLUE_SPOTS;
   K.faro?.addSpot?.('goteira', { ...spots.goteira, kind: 'escondida', size: 0.6, los: spots.goteira.at, enabled: false });
   K.faro?.addSpot?.('etiqueta', { ...spots.etiqueta, kind: 'escondida', size: 0.5, los: spots.etiqueta.at, enabled: false });
-  props.tablecloth?.setGrip?.(() => (K.S?.tugWhat === 'toalha' ? tug.grip() : null));
+  // a ponta da toalha segue a boca da Radhija; o reset do cenário (props.reset) solta essa ligação, então reset() a refaz
+  const clothGrip = () => (K.S?.tugWhat === 'toalha' ? tug.grip() : null);
+  props.tablecloth?.setGrip?.(clothGrip);
   const treatEntry = () => collectList?.find((c) => c.id === 'lata') ?? null;
   const treatItem = () => props.collectibles?.find?.((c) => c.id === 'lata') ?? null;
 
@@ -832,6 +834,7 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
       props.pantry?.setLit?.(0);
       props.exitDoor?.setLatch?.(0);
       props.tablecloth?.setSlide?.(0);
+      props.tablecloth?.setGrip?.(clothGrip);
       props.cookieTin?.closeLid?.();
       props.cookieTin?.setPose?.(CK.x, TOP, CK.z);
       K.faro?.setSpot?.('goteira', false);

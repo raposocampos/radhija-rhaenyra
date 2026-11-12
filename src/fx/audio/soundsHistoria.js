@@ -412,6 +412,32 @@ export const SOUNDS_HISTORIA = {
     nz(G, o, { t, a: 0.05, hold: 0.15, d: 0.2, peak: 0.06, type: 'bandpass', f: 1800 * p, to: 900 * p, toT: 0.35, q: 0.8, buf: G.pink });
     return 0.45;
   },
+  // ---------------------------------------------------------------------------------------- a Rhaenyra distraída
+  // (src/story/scene/lesada.js) o focinho na porta fechada: o toc na madeira e o "tóim" de desenho, que vai caindo
+  bonk(G, o, t, p) {
+    nz(G, o, { t, a: 0.001, d: 0.05, peak: 0.16, type: 'bandpass', f: 900 * p, q: 2.2, buf: G.pink });
+    tone(G, o, { type: 'sine', f: 160 * p, to: 95 * p, t, a: 0.002, d: 0.14, peak: 0.12 });
+    boing(G, o, t + 0.03, p, 420, 0.05, 0.5);
+    return 0.6;
+  },
+  // a bolha de sabão estourando: um ploc agudo e curtinho
+  bolha(G, o, t, p) {
+    tone(G, o, { type: 'sine', f: 1500 * p, to: 2600 * p, t, a: 0.001, d: 0.045, peak: 0.07 });
+    nz(G, o, { t, a: 0.001, d: 0.025, peak: 0.05, type: 'highpass', f: 3000 * p, q: 0.7 });
+    return 0.12;
+  },
+  // a Radhija bufando (o "aff"): o ar saindo pelo focinho, com um tiquinho de voz no fim
+  bufa(G, o, t, p) {
+    nz(G, o, { t, a: 0.03, hold: 0.06, d: 0.2, peak: 0.07, type: 'bandpass', f: 1400 * p, to: 700 * p, toT: 0.25, q: 1.2, buf: G.pink });
+    tone(G, o, { type: 'triangle', f: 520 * p, to: 380 * p, t: t + 0.05, a: 0.02, d: 0.16, peak: 0.025, filt: { type: 'lowpass', f: 1800, q: 0.7 } });
+    return 0.35;
+  },
+  // o tropeço: as unhas arranhando o chão e o "pof" do peito
+  tropeco(G, o, t, p) {
+    for (let i = 0; i < 4; i++) nz(G, o, { t: t + i * 0.035, a: 0.002, d: 0.03, peak: 0.05, type: 'bandpass', f: rnd(2400, 3400) * p, q: 2 });
+    tone(G, o, { type: 'sine', f: 120 * p, to: 70 * p, t: t + 0.14, a: 0.003, d: 0.1, peak: 0.1 });
+    return 0.3;
+  },
 };
 
 export const MIN_GAP_HISTORIA = {
@@ -419,10 +445,12 @@ export const MIN_GAP_HISTORIA = {
   'faro-liga': 0.3, 'faro-desliga': 0.2, 'faro-cansado': 0.6, fungada: 0.5,
   'voz-radhija': 0.045, 'voz-rhaenyra': 0.07, 'voz-pombo': 0.07, 'voz-porteiro': 0.1, neuronio: 0.06, rabisco: 0.3, 'quadro-abre': 0.3, 'quadro-fecha': 0.3,
   aspirador: 0.8, 'aspirador-bip': 0.2, pingo: 0.4, lata: 0.5, toalha: 0.3,
+  bonk: 0.4, bolha: 0.06, bufa: 0.5, tropeco: 0.4,
 };
 export const PITCH_VAR_HISTORIA = {
   fiu: 0.04, arrulho: 0.06, asas: 0.05, pista: 0, pino: 0.02, botina: 0.05, pulinho: 0.06, bola: 0.05, fungada: 0.08, 'faro-cansado': 0.04,
   'voz-radhija': 0.05, 'voz-rhaenyra': 0.05, 'voz-pombo': 0.05, 'voz-porteiro': 0.04, 'deduz-certo': 0, pergunta: 0,
+  bonk: 0.06, bolha: 0.12, bufa: 0.05, tropeco: 0.05,
 };
 export const VERB_HISTORIA = {
   fiu: 0.12, ronco: 0.08, radinho: 0.06, arrulho: 0.12, faro: 0.3, 'faro-liga': 0.3, 'faro-desliga': 0.2, pista: 0.25, meia: 0.2, portao: 0.15, balde: 0.25, vento: 0.2, trovao: 0.3,

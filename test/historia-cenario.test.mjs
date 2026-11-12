@@ -98,7 +98,18 @@ test('recanto: os props que o puzzle usa existem e o cenário fica dentro do or�
     // os pombos agarram a cenoura
     assert.equal(typeof P.carrot.holdBy, 'function', 'a cenoura é agarrada');
     for (const b of ['cap', 'son', 'far']) for (const m of ['carry', 'feetPoint', 'shiver', 'lookAt']) assert.equal(typeof P.squad[b][m], 'function', `pombo ${b}.${m}`);
-    assert.equal(P.socks.length, 3, 'três meias');
+    assert.equal(P.socks.length, 4, 'quatro meias (a do baldão do quintal é a quarta)');
+    // o quintal maior (world/quintal.js): o que quintalPuzzles.js anima
+    const Q = P.quintal;
+    assert.ok(Q, 'prop quintal');
+    for (const m of ['set', 'setLit']) assert.equal(typeof Q.sprinklers[m], 'function', `aspersores.${m}`);
+    for (const m of ['setPull', 'setTorn', 'putLeaf', 'hideLeaf']) assert.equal(typeof Q.lettuce[m], 'function', `alface.${m}`);
+    for (const m of ['setGrip', 'setOpen', 'bitePoint', 'leverPoint']) assert.equal(typeof Q.hose[m], 'function', `mangueira.${m}`);
+    for (const m of ['setLevel', 'setFlow']) assert.equal(typeof Q.bucket[m], 'function', `balde.${m}`);
+    for (const m of ['drop', 'land', 'setGlow']) assert.equal(typeof Q.kite[m], 'function', `pipa.${m}`);
+    assert.equal(typeof Q.guava.setSway, 'function', 'a goiabeira balança');
+    assert.equal(typeof Q.valve.setClosed, 'function', 'o registro fecha');
+    for (const m of ['setState', 'lookAt', 'say', 'update']) assert.equal(typeof Q.jabuti[m], 'function', `jabuti.${m}`);
     assert.ok(P.booth.windowAnchor && Number.isFinite(P.booth.windowAnchor.x), 'o ponto da janela da guarita (balões do ronco)');
     assert.equal(typeof P.boat.setPos, 'function');
     assert.equal(typeof P.rope.setPull, 'function');

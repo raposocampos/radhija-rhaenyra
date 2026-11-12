@@ -1916,6 +1916,8 @@ export function buildGaragem(kit, root, L) {
     setGrip(src) { gripSrc = src || null; dirty = true; },
     /** Onde está o nó parado (sem ninguém mordendo): a ponta em repouso, com o puxão de agora. */
     bitePoint() { const e = restEnd(); return { x: e.x, y: e.y, z: e.z }; },
+    /** Onde o nó está desenhado agora (na boca de quem morde; os testes conferem). */
+    tip() { const e = P[NP - 1]; return { x: e.x, y: e.y, z: e.z }; },
   };
   /** @type {null | (() => ({ pos: THREE.Vector3, k: number } | null))} */
   let gripSrc = null;

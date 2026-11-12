@@ -668,12 +668,15 @@ export interface InputLock {
 }
 
 /** Gestos de cena das dogs (dogAnimation.js; durações naturais em GESTURE_TIME). */
-export type DogGestureKind = 'stretch' | 'yawn' | 'tilt' | 'sniffGround' | 'sad' | 'alert' | 'wag' | 'shiver';
+export type DogGestureKind = 'stretch' | 'yawn' | 'tilt' | 'sniffGround' | 'sad' | 'alert' | 'wag' | 'shiver' | 'chaseTail' | 'stumble' | 'bonk';
 export interface DogGesture {
   kind: DogGestureKind;
   /** Segundos desde que o gesto começou (a cena avança). */
   t: number;
-  /** 'tilt': para que lado a cabeça inclina (+1 / −1); sem, alterna a cada inclinada. */
+  /**
+   * 'tilt': para que lado a cabeça inclina (+1 / −1); sem, alterna a cada inclinada. 'chaseTail': para que lado a
+   * voltinha atrás do rabo vira (+1 esquerda / −1 direita).
+   */
   side?: number;
 }
 
@@ -1146,7 +1149,10 @@ export interface DogAnim {
   airK?: number;
   /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
   crouch?: number;
-  /** Gesto de cena (InputLock.gesture): alongar, bocejar, inclinar a cabeça, farejar o chão, triste, alerta, abanar, tremer. */
+  /**
+   * Gesto de cena (InputLock.gesture): alongar, bocejar, inclinar a cabeça, farejar o chão, triste, alerta, abanar,
+   * tremer, correr atrás do rabo, tropeçar e bater o focinho.
+   */
   gesture?: DogGesture | null;
   /** Falando (0..1; InputLock.talk): a boca abre e fecha em sílabas e a cabeça acompanha de leve. */
   talk?: number;

@@ -12,7 +12,7 @@ import { typeDuration } from '../ui/subtitles.js';
 /** Os nomes de quem fala (o que aparece na etiqueta e nas legendas). */
 export const SPEAKERS = {
   radhija: 'Radhija', rhaenyra: 'Rhaenyra', capitao: 'Capitão Migalha', farelo: 'Farelo', soneca: 'Soneca', porteiro: 'Sr. Luiz',
-  gansa: 'Dona Gansa', bichano: 'Bichano',
+  gansa: 'Dona Gansa', bichano: 'Bichano', bento: 'Seu Bento',
 };
 /** Letras por segundo da "máquina de escrever" dos balões (igual à da camada de HQ). */
 export const TYPE_RATE = 45;

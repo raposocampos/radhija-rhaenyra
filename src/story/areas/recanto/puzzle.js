@@ -33,6 +33,9 @@ import { createReconstruction } from '../../faro/reconstruction.js';
 import { createClueBook, CLUES } from '../../clues.js';
 import { createDeduction } from '../../deduction.js';
 import { createStoryteller } from '../../scene/storyteller.js';
+import { createButterflies } from '../../scene/butterfly.js';
+import { createBubbles } from '../../scene/bubbles.js';
+import { createLesada } from '../../scene/lesada.js';
 import { MORNING } from './lighting.js';
 import {
   createOpening, createWindowScene, createReconScene, createCodeScene, createVaralScene, createTerraceScene,
@@ -42,6 +45,8 @@ import { createRooftop } from './rooftop.js';
 import { createRooftopScenes } from './scenesTelhado.js';
 import { createCasaPuzzles } from './casaPuzzles.js';
 import { createCasaScenes } from './scenesCasa.js';
+import { createQuintal } from './quintalPuzzles.js';
+import { createQuintalScenes } from './scenesQuintal.js';
 
 export const STAGES = ['abertura', 'quarto', 'casa', 'quintal', 'piscina', 'varal', 'torre', 'portaria', 'fechamento', 'mural', 'fim'];
 const stageIndex = (s) => STAGES.indexOf(s);
@@ -154,6 +159,7 @@ export function createPuzzle(ctx) {
         return w ? { x: w.x, y: w.y + 0.2, z: w.z } : null;
       }
       if (who === 'gansa') return { x: goose.x, y: 0.62, z: goose.z };
+      if (who === 'bento') return yard.anchorOf(); // o jabuti do quintal (quintalPuzzles.js)
       if (who === 'bichano') { const o = props.bichano?.object; return o ? { x: o.position.x, y: o.position.y + 0.32, z: o.position.z } : null; }
       return null;
     },
@@ -266,17 +272,11 @@ export function createPuzzle(ctx) {
     return m;
   })();
   feather.visible = false;
-  const butterfly = new THREE.Group();
-  butterfly.name = 'historia:borboleta';
-  const wingMat = new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: 0.6, side: THREE.DoubleSide });
-  const wings = [-1, 1].map((s) => {
-    const w = new THREE.Mesh(new THREE.CircleGeometry(0.05, 10), wingMat);
-    w.position.x = s * 0.045;
-    butterfly.add(w);
-    return w;
-  });
-  butterfly.visible = false;
-  root.add(butterfly);
+  // a borboleta do fechamento (hero, a cena move) e as do cenário, que a Rhaenyra persegue (src/story/scene/butterfly.js),
+  // e as bolhas de sabão (src/story/scene/bubbles.js)
+  const flutter = createButterflies({ root, world, layout: L });
+  const butterfly = flutter.hero.object;
+  const bubbles = createBubbles({ root, blocked: flutter.blocked });
   // o broche de campanha da Dona Gansa (os pombos deixaram cair na ilha): uma roseta azul e branca com fitas
   const broche = new THREE.Group();
   broche.name = 'historia:broche-da-gansa';
@@ -332,8 +332,16 @@ export function createPuzzle(ctx) {
     // só o balanço: o poste não tem objeto próprio para inclinar (o varal sacode)
     prop: /** @type {any} */ ({ setSway: (a) => props.line?.shake?.(Math.min(1, Math.abs(a) * 3.2)) }),
   });
-  props.rope?.setGrip?.(() => (S.tugWhat === 'corda' ? tug.grip() : null));
-  props.serviceBolt?.setGrip?.(() => (S.tugWhat === 'ferrolho' ? tug.grip() : null));
+  // a Rhaenyra distraída (src/story/scene/lesada.js): só com nada mais da área segurando ela
+  const lesada = createLesada({ ctx, dir, emit, flutter, bubbles, layout: L, busy: (n) => !!(dir.lockFor(n) || effects.lockFor(n) || tug.lockFor(n)) });
+  // a ponta da corda da caminhonete e a argola do ferrolho seguem a boca de quem morde. O reset do cenário
+  // (props.reset) solta essa ligação, então ela é refeita depois de cada reset (puzzle.reset): sem isso, no jogo de
+  // verdade (que reseta ao começar), a Radhija puxava sem a corda na boca (retorno do usuário em 2026-11-11)
+  const wireGrips = () => {
+    props.rope?.setGrip?.(() => (S?.tugWhat === 'corda' ? tug.grip() : null));
+    props.serviceBolt?.setGrip?.(() => (S?.tugWhat === 'ferrolho' ? tug.grip() : null));
+  };
+  wireGrips();
   // (uma cópia por partida: o petisco da lata de biscoito só aparece quando ela cai; casaPuzzles.js mexe na cópia)
   const treatList = L.COLLECTIBLES.map((c) => ({ ...c }));
   const collect = createCollectibles({ list: treatList, props, emit, pickupR: L.COLLECTIBLE_PICKUP_R });
@@ -426,6 +434,8 @@ export function createPuzzle(ctx) {
   const roof = createRooftop(K, { world, root, emit, effects, ctx, props, dir, hints });
   // a ala sul da casa: o aspirador, a despensa no escuro, a toalha e a lata, o pufe e a porta dos fundos (casaPuzzles.js)
   const casa = createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hints, tug, sack, collectList: treatList });
+  // o quintal maior (4ª rodada): o jabuti, a irrigação, a pipa e a mangueira (quintalPuzzles.js, scenesQuintal.js)
+  const yard = createQuintal(K, { world, root, emit, effects, ctx, props, dir, hints, tug, dogs });
   let scenes = null;
   function makeScenes() {
     return {
@@ -437,6 +447,7 @@ export function createPuzzle(ctx) {
       terraco: createTerraceScene(K),
       ...createRooftopScenes(K, roof),
       ...createCasaScenes(K, casa),
+      ...createQuintalScenes(K, yard),
       cheiro: createSmellScene(K),
       porteiro: createPorteiroScene(K),
       fechamento: createClosingScene(K),
@@ -448,7 +459,8 @@ export function createPuzzle(ctx) {
           ['radhija', 'Na ilha. A senhora viu os pombos ontem à noite?'],
           ['gansa', 'Vi o gordinho! Voando torto, com uma coisa laranja…'],
           ['gansa', '…e cantarolando a noite toda: “plim-plim, a nota é o fim!”'],
-          ['rhaenyra', 'A nota… no fim? Hmm!'],
+          ['rhaenyra', 'Plim-plim? É o carrinho de sorvete!'],
+          ['radhija', 'Não, Rhaenyra… é uma pista. Anota aí: a nota é o fim.'],
           ['gansa', 'E não se esqueçam: votem na Dona Gansa!', { mood: 'grito' }],
         ],
         onCommit: () => { S.brocheGiven = true; S.broche = 'devolvido'; broche.visible = false; },
@@ -462,6 +474,8 @@ export function createPuzzle(ctx) {
           ['bichano', '…ouvi falar em goteira.', { mood: 'sussurro' }],
           ['radhija', 'Goteira? Onde?'],
           ['bichano', 'Isso eu não sei. Gato não sobe em telhado molhado.'],
+          ['rhaenyra', 'Goteira é uma torneira filhote?'],
+          ['radhija', 'Não, Rhaenyra. É um furinho no telhado.'],
         ],
         onCommit: () => { S.bichanoTalked = true; },
       }),
@@ -606,6 +620,7 @@ export function createPuzzle(ctx) {
   /** A próxima pista do mistério: { x, z, color } (o Faro solta a nuvem até lá). */
   function lead() {
     const c = R(ctx.activeDog);
+    if (S.stage === 'quintal') { const yl = yard.lead(); if (yl) return yl; }
     switch (S.stage) {
       case 'quarto': {
         let best = null;
@@ -861,6 +876,7 @@ export function createPuzzle(ctx) {
       casa.skipAll();
     },
     piscina() {
+      yard.skipAll(); // o quintal maior: o jabuti fora da passagem, a irrigação desligada
       branch.setPos(L.BRANCH.minX, L.BRANCH.start.z);
       S.branchFree = true;
       book.add('telhas', { silent: true });
@@ -938,11 +954,15 @@ export function createPuzzle(ctx) {
           return T(OBJECTIVES.quarto, l && S.revealed.size ? l : null, 0.7);
         }
         case 'casa': return casa.objective();
-        case 'quintal':
+        case 'quintal': {
+          // do fundo do quintal até o jardim: o jabuti e a irrigação (quintalPuzzles.js)
+          const yo = yard.objective();
+          if (yo) return { ...yo, stage: st };
           // primeiro a porta (trancada por fora); depois o galho na frente da passagem; por fim, a passagem
           if (!S.gapShown) return T(OBJECTIVES.quintal, doorMid(sd), 1.2);
           if (!S.branchFree) return T(OBJECTIVES.galho, branch, 0.9);
           return T(OBJECTIVES.ferrolho, { x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.5 }, 0.6);
+        }
         case 'piscina': return T(OBJECTIVES.piscina, L.RECON, 0.6);
         case 'varal': return T(OBJECTIVES.varal, L.CARROT_PIN, L.CARROT_PIN.y + 0.4);
         case 'torre':
@@ -984,6 +1004,7 @@ export function createPuzzle(ctx) {
       if (wantPrompt !== S.promptOn) { S.promptOn = wantPrompt; emit('story:prompt', { kind: 'faro', on: wantPrompt }); }
       stepClimb(dt);
       roof.update(dt, { active, comp, playing: !S.scene?.active });
+      yard.update(dt, { active, playing: !S.scene?.active && !S.pending });
       stepExam(dt);
       dir.update(dt);
       // nas cenas, as faixas de cinema cobrem 11% do alto da tela: os balões ficam abaixo delas
@@ -1128,6 +1149,7 @@ export function createPuzzle(ctx) {
         else if (active.name === 'radhija' && !S.boltOpen && S.branchFree && active.z < L.YARD.z0 && near(active, SB.ring, SB.grabR + 0.3) && !tug.busy?.()) hints.setPrompt('argola');
         else if (active.name === 'radhija' && S.bucketT === -1 && near(active, L.ROPE.end, L.ROPE.grabR + 0.25) && !tug.busy?.()) hints.setPrompt('corda');
         else if (casa.prompt) hints.setPrompt(casa.prompt);
+        else if (yard.prompt) hints.setPrompt(yard.prompt);
         else if (roof.prompt) hints.setPrompt(roof.prompt);
         else hints.setPrompt(null);
       }
@@ -1147,8 +1169,10 @@ export function createPuzzle(ctx) {
         }
         S.lastActive = ctx.activeDog;
       }
-      // a borboleta bate as asas
-      if (butterfly.visible) { const f = Math.sin((K.butterflyFlap ?? 0) * 26) * 0.9; wings[0].rotation.y = f; wings[1].rotation.y = -f; }
+      // as borboletas (as do cenário somem na noite da abertura) e as bolhas; a Rhaenyra distraída, fora das cenas
+      flutter.update(dt, { ambient: S.stage !== 'abertura' });
+      bubbles.update(dt);
+      lesada.update(dt, { playing: playing && !S.pending && !climbing() && !roof.active && after('quarto') && stageIndex(S.stage) < stageIndex('mural') });
       return null;
     },
 
@@ -1161,6 +1185,8 @@ export function createPuzzle(ctx) {
       if (ex) { startExam(c, ex); return true; }
       // soltar a corda ou a argola (com ela na boca, o E chega aqui)
       if (tug.busy?.() && tug.who === c.name) { tug.release?.(); return true; }
+      // o quintal maior: a alface, o jabuti, a mangueira, o registro, a pipa e a bolinha (quintalPuzzles.js)
+      if (yard.interact(c)) return true;
       // a Radhija manda: aponta a maçaneta (a irmã é quem alcança), ou o saco na frente dela
       if (st === 'casa' && !S.kitchenOpen && near(c, doorMid(L.KITCHEN_DOOR), 1.9) && c.z < L.KITCHEN_DOOR.hinge.z) {
         if (S.mandaCd <= 0) {
@@ -1220,9 +1246,13 @@ export function createPuzzle(ctx) {
     },
 
     /** O poste do varal, para o empurrão em pé da Rhaenyra (Shift / R1 de frente para ele). */
-    shoveSpots() { return S && after('piscina') && !S.varalDone && !S.scene?.active ? [poleShove.spot] : []; },
+    shoveSpots() {
+      const yardSpots = S && !S.scene?.active ? yard.shoveSpots() : []; // a goiabeira do quintal (a pipa)
+      return S && after('piscina') && !S.varalDone && !S.scene?.active ? [poleShove.spot, ...yardSpots] : yardSpots;
+    },
     /** Cada empurrão no poste: os pombos se assustam; com o cesto embaixo, no terceiro o pregador solta. */
     onShove(c, spot, C) {
+      if (yard.onShove(c, spot, C)) return;
       if (spot.id !== poleShove.spot.id || S.varalDone) return;
       poleShove.shove(c, C);
       for (const p of Object.values(props.squad || {})) p.peck?.();
@@ -1242,7 +1272,7 @@ export function createPuzzle(ctx) {
       if (S.poleN >= (L.POLE_SHOVE.pushes ?? 3)) { S.varalDone = true; startScene('varal'); }
     },
     lockFor(name) {
-      return dir.lockFor(name) || effects.lockFor(name) || tug.lockFor(name) || null;
+      return dir.lockFor(name) || effects.lockFor(name) || tug.lockFor(name) || lesada.lockFor(name) || null;
     },
     lookTarget(c) {
       const held = dir.lockFor(c.name);
@@ -1250,6 +1280,8 @@ export function createPuzzle(ctx) {
       if (S.exam?.who === c.name) return K.clueAt(S.exam.id);
       if (roof.active) return roof.lookTarget(c);
       { const lt = casa.lookTarget(c); if (lt) return lt; }
+      const yt = yard.lookTarget(c);
+      if (yt) return yt;
       // farejando: o focinho vai ao chão por um instante
       if (S.sniffT > 0 && S.sniffWho === c.name) return { x: c.x + Math.sin(c.yaw) * 0.42, y: 0.02, z: c.z + Math.cos(c.yaw) * 0.42 };
       if (S.stage === 'varal' && near(c, L.CARROT_PIN, 3.6)) return { x: L.CARROT_PIN.x, y: L.CARROT_PIN.y, z: L.CARROT_PIN.z };
@@ -1260,6 +1292,8 @@ export function createPuzzle(ctx) {
       if (S.scene?.active || climbing()) return null;
       if (roof.active) return roof.modifyIntent(dt, c, intent, { shift });
       { const r = casa.modifyIntent(dt, c, intent, { shift }); if (r) return r; }
+      const ym = yard.modifyIntent(dt, c, intent, { shift });
+      if (ym) return ym;
       for (const cr of [...(S.kitchenOpen ? [] : [sack]), branch, ...(S.varalDone ? [] : [laundry]), bin, ...(S.boatDocked || S.dockT >= 0 ? [] : [boat])]) {
         const r = cr.modifyIntent(dt, c, intent, { shift });
         if (r?.contact) {
@@ -1300,6 +1334,7 @@ export function createPuzzle(ctx) {
       return {
         petGateOpen: S.petGateOpen, kitchenOpen: S.kitchenOpen, gapOpen: S.branchFree, serviceOpen: S.serviceOpen,
         towerOpen: towerDoor.t > 0.6, boatDocked: S.boatDocked, storageOpen: S.storageOpen, ...casa.navFlags(),
+        ...yard.navFlags(),
       };
     },
     wallSpots() {
@@ -1333,6 +1368,7 @@ export function createPuzzle(ctx) {
       if (roof.active) { roof.onBark(c); return; }
       if (casa.onBark(c)) return;
       goose.onBark?.(c);
+      yard.onBark(c);
       if (S.stage === 'portaria' && !S.porterDone && near(c, boothCenter, 4.2)) {
         if (!S.windowOpen) {
           // de janela fechada, nenhum latido entra
@@ -1379,8 +1415,10 @@ export function createPuzzle(ctx) {
       S = fresh();
       if (!scenes) scenes = makeScenes();
       props.reset?.();
+      wireGrips();
       roof.reset();
       casa.reset();
+      yard.reset();
       handle.reset?.();
       for (const b of buttons) b.btn.reset?.();
       pedal.reset?.();
@@ -1408,7 +1446,9 @@ export function createPuzzle(ctx) {
       skip.disarm();
       mood.set(MORNING);
       feather.visible = false;
-      butterfly.visible = false;
+      flutter.reset();
+      bubbles.reset();
+      lesada.reset();
       channelMouth.enabled = true;
       boatBridge.enabled = false;
       boatNeck.enabled = false;
@@ -1461,12 +1501,16 @@ export function createPuzzle(ctx) {
       recon.dispose();
       reconCode.dispose();
       balloons.dispose();
+      lesada.dispose();
+      flutter.dispose();
+      bubbles.dispose();
     },
     info() {
       return {
         story: {
           stage: S.stage, scene: S.scene?.active ? S.scene.id : null, beat: S.scene?.beat ?? null,
           clues: book.found, socks: [...S.socks], faro: faro.info(), faroMode: faroMode.info(), cloud: cloud.info(), roof: roof.info(), casa: casa.info(), board: deduction.snapshot(), lines: teller.lines,
+          yard: yard.info(),
           recon: { active: recon.active || reconCode.active, plays: recon.plays, codePlays: reconCode.plays },
           revealed: [...S.revealed], exam: S.exam?.id ?? null, code: S.code.slice(),
           flags: {
@@ -1485,6 +1529,7 @@ export function createPuzzle(ctx) {
             laundry: { x: +laundry.x.toFixed(2), z: +laundry.z.toFixed(2) }, bin: { x: +bin.x.toFixed(2), z: +bin.z.toFixed(2) },
           },
           balloons: balloons.active, music: S.music, faroReady: puzzle.faroReady, cinematic: puzzle.cinematic(),
+          lesada: lesada.info(),
         },
       };
     },
@@ -1498,6 +1543,7 @@ export function createPuzzle(ctx) {
         flags: { windowOpen: S.windowOpen, codeSeen: S.codeSeen, towerUnlocked: S.towerUnlocked, gateOpen: S.gateOpen },
         locks: { radhija: !!puzzle.lockFor('radhija'), rhaenyra: !!puzzle.lockFor('rhaenyra') },
         casa: casa.snapshot(),
+        yard: yard.snapshot(),
       };
     },
   };
@@ -1539,11 +1585,16 @@ export function createPuzzle(ctx) {
   K.windowSeen = () => { S.windowSeen = true; };
   K.codeSeen = () => { S.codeSeen = true; };
   K.windowOpened = () => { S.windowOpen = true; props.booth?.setWindow?.(1); };
+  K.refreshObjective = () => emit('objective', puzzle.objective(ctx.activeDog));
 
   S = fresh();
   scenes = makeScenes();
   puzzle.rooftop = roof;
   puzzle.casa = casa;
+  // a Rhaenyra distraída e as borboletas (testes, E2E e medições: lesada.setOn(false) tira o sorteio)
+  puzzle.lesada = lesada;
+  puzzle.flutter = flutter;
+  puzzle.quintal = yard;
   return puzzle;
 }
 

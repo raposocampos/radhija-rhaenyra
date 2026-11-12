@@ -212,9 +212,101 @@ export const SERVICE_BOLT = {
   ring: { x: SERVICE_DOOR.latchPost.x + 0.3, z: YARD.z0 - 0.3, y: 0.34 }, anchor: { x: SERVICE_DOOR.latchPost.x + 0.3, z: YARD.z0 - 0.06, y: 0.5 },
   pull: 0.45, grabR: 0.6,
 };
-/** A casinha de cachorro do quintal (a porta para o oeste é estreita: só a Radhija entra). */
-export const DOGHOUSE = { x: u(-3.85), z: u(6.7), hx: 0.55, hz: 0.6, h: 1.0, door: 0.5 };
-export const YARD_BEDS = [{ x: u(-6.1), z: u(7.6), hx: 0.45, hz: 1.5 }, { x: u(-3.5) + 0.35, z: u(4.4), hx: 0.38, hz: 1.3 }];
+/**
+ * O QUINTAL MAIOR (4ª rodada, pedido do usuário em 2026-11-11: "coloque mais puzzles espalhados pelo quintal, lado de
+ * fora; aumente o quintal após sair de casa"). As duas saem pela porta dos fundos (HOUSE_EXIT) num quintal em L e
+ * atravessam até a porta da área de serviço, ao norte. De sul para norte (a lógica em quintalPuzzles.js; o cenário em
+ * world/quintal.js):
+ *   O FUNDO (a faixa ao sul da casa e o canto do quintal): a HORTA, com o canteiro de ALFACE (as duas juntas: a
+ *     Rhaenyra segura o pé com o Fica e a Radhija morde e puxa a folha), a TORNEIRA DE MOLA com a MANGUEIRA enroscada
+ *     na alavanca (a Radhija puxa e segura: o BALDÃO enche e a bolinha de meia boia até a borda, a 4ª meia, opcional),
+ *     a casinha, a mesa de jardim, o varalzinho, a composteira e os brinquedos;
+ *   A HORTA DO MEIO: dois canteiros elevados de lado a lado do quintal, com a PASSAGEM estreita no meio, onde o JABUTI
+ *     (o Seu Bento) cochila; só sai com uma folha de alface (obrigatório);
+ *   O JARDIM DE FLORES com a IRRIGAÇÃO AUTOMÁTICA: o gramadinho entre dois canteiros compridos, com três aspersores que
+ *     ligam em sequência, do norte para o sul. A Radhija não passa por aspersor ligado; a Rhaenyra senta (Fica) em cima
+ *     de um e tampa. Só tampando o do meio dá para atravessar, no tempo certo; do outro lado, a Radhija fecha o
+ *     REGISTRO (obrigatório);
+ *   O NORTE: a GOIABEIRA com a PIPA presa (a Rhaenyra empurra o tronco em pé até a pipa cair; na rabiola, a pista
+ *     'rabiola', opcional) e o final de antes: o galho, a passagem baixa e a argola do ferrolho.
+ */
+/** A casinha de cachorro, no fundo do quintal (a porta para o oeste é estreita: só a Radhija entra). */
+export const DOGHOUSE = { x: YARD.x1 - 0.92, z: 22.7, hx: 0.55, hz: 0.6, h: 1.0, door: 0.5 };
+/**
+ * Os dois canteiros compridos de flores da irrigação (com colisor: 'canteiro-quintal-1' e '-2'), um de cada lado do
+ * gramadinho dos aspersores. O de oeste encosta na parede da casa; o de leste, no muro do quintal.
+ */
+export const YARD_BEDS = [
+  { x: (YARD.x0 - 9.05) / 2, z: (8.6 + 14.85) / 2, hx: (-9.05 - YARD.x0) / 2, hz: (14.85 - 8.6) / 2 },
+  { x: (-7.45 + YARD.x1) / 2, z: (8.6 + 14.85) / 2, hx: (YARD.x1 + 7.45) / 2, hz: (14.85 - 8.6) / 2 },
+];
+/**
+ * A irrigação automática do jardim: três aspersores de jato redondo no gramadinho (`lane`) entre os canteiros. O
+ * programa liga um depois do outro, do norte para o sul (`order`): cada um fica `on` s ligado, o seguinte entra `step`
+ * s depois do anterior (os dois ficam juntos por on − step s) e `pre` s antes de jorrar a cabeça sobe e gorgoleja. A
+ * Radhija não entra no jato de um ligado (o colisor dele só barra a pequena; ligando com ela dentro, ela leva o banho e
+ * sai pulando para trás). A Rhaenyra sentada (Fica) a até `plugR` da cabeça tampa o aspersor. `r`: o raio do jato.
+ */
+export const SPRINKLERS = {
+  r: 1.05, plugR: 0.34,
+  lane: { x0: -9.05, x1: -7.45, z0: 8.6, z1: 14.85 },
+  heads: [{ id: 'norte', x: -8.25, z: 9.6 }, { id: 'meio', x: -8.25, z: 11.6 }, { id: 'sul', x: -8.25, z: 13.6 }],
+  order: ['norte', 'meio', 'sul'], on: 2.4, step: 2.1, pre: 0.45,
+};
+/**
+ * O registro da irrigação: a caixinha de concreto no chão, ao norte do jardim, com a tampa de ferro aberta em pé. Só o
+ * focinho da Radhija entra lá (a alavanca); `at`: onde ela fica para fechar (do lado do gramadinho).
+ */
+export const VALVE = { x: -9.5, z: 8.12, half: 0.2, at: { x: -8.95, z: 8.12 }, r: 0.62 };
+/**
+ * A horta do meio: dois canteiros elevados de lado a lado do quintal (com colisor: 'horta-oeste' e 'horta-leste') e a
+ * passagem estreita no meio (`pass`), onde o jabuti cochila.
+ */
+export const HORTA_ROW = { z0: 15.9, z1: 17.0, h: 0.42, pass: { x0: -8.75, x1: -7.75 } };
+/**
+ * O JABUTI (o Seu Bento): deitado na passagem da horta, de frente para o sul (colisor dinâmico 'jabuti', raio `r`).
+ * Com a folha de alface no cantinho do sul do canteiro do leste (`leaf`), ele anda devagar (`speed` m/s) pelo `path` até
+ * `eat` e come lá. Para quando uma dog está no caminho. `giveR`: de quão perto a Radhija entrega a folha.
+ */
+export const JABUTI = {
+  x: (HORTA_ROW.pass.x0 + HORTA_ROW.pass.x1) / 2, z: (HORTA_ROW.z0 + HORTA_ROW.z1) / 2, yaw: 0, r: 0.3, speed: 0.22,
+  path: [{ x: -8.25, z: 17.48 }, { x: -7.12, z: 17.6 }], eat: { x: -7.12, z: 17.6, yaw: Math.PI / 2 },
+  leaf: { x: -6.66, z: 17.62 }, giveR: 1.15, freeX: -7.35,
+};
+/** Os canteiros da horta do fundo (com colisor 'horta-*'), a composteira e o canteiro dos tomates junto do muro do lote. */
+export const HORTA = {
+  beds: [
+    { id: 'alface', x0: -15.9, x1: -12.7, z0: 22.7, z1: 23.6, h: 0.3 },
+    { id: 'legumes', x0: -21.8, x1: -17.6, z0: 22.7, z1: 23.6, h: 0.3 },
+    { id: 'tomates', x0: -22.6, x1: -12.4, z0: 25.1, z1: LOT.z1 - WALL.t / 2, h: 0.3 },
+  ],
+  compost: { x: LOT.x0 + WALL.t / 2 + 0.5, z: 23.15, hx: 0.42, hz: 0.42, h: 0.92 },
+};
+/**
+ * O pé de alface grande, na beirada norte do canteiro: a Radhija morde a folha de fora (`bite`, pendurada para fora da
+ * beirada) e puxa para trás; sem a Rhaenyra segurando (no Fica a até `holdR` do pé), a alface inteira estica e escapa;
+ * com ela, depois de `pull` m a folha solta.
+ */
+export const LETTUCE = { x: -14.3, z: 22.98, bite: { x: -14.3, z: 22.62, y: 0.22 }, holdR: 1.05, pull: 0.22, grabR: 0.55 };
+/**
+ * A torneira de mola do quintal (no cano, com a base de concreto; colisor 'torneira'), a mangueira enroscada na alavanca
+ * e o BALDÃO de obra. A Radhija morde o laço da mangueira (`bite`) e puxa: com `pull` m a alavanca abre; segurando, a água
+ * corre para o balde (`fill` s para encher). Soltou, a mola fecha. Cheio, a bolinha de meia boia até a borda.
+ */
+export const TAP = { x: -10.75, z: 25.3, r: 0.16, lever: { x: -10.75, y: 0.62, z: 25.3 } };
+export const BUCKET = { x: -8.5, z: 25.12, r: 0.26, colR: 0.31, h: 0.56 };
+export const HOSE = { bite: { x: -10.18, z: 24.58, y: 0.05 }, pull: 0.45, grabR: 0.55, fill: 3.5 };
+/** A mesa de jardim redonda com o guarda-sol (colisor 'mesa-jardim') e as duas cadeiras de plástico. */
+export const GARDEN_TABLE = { x: -6.45, z: 19.7, r: 0.48, h: 0.72, chairs: [{ x: -6.45, z: 18.82, yaw: 0, half: 0.23 }, { x: -7.36, z: 19.78, yaw: Math.PI / 2, half: 0.23 }] };
+/** O varalzinho do fundo (os dois postes com colisor) com o pano, a toalha e a bandana. */
+export const SMALL_LINE = { a: { x: -22.6, z: 21.2 }, b: { x: -18.8, z: 21.2 }, h: 1.25, postR: 0.05 };
+/**
+ * A GOIABEIRA do norte do quintal, com a PIPA presa no alto da copa. A Rhaenyra empurra o tronco em pé (Shift / R1: de
+ * qualquer lado, `pushes` empurrões) e a pipa cai, bailando, num dos `land`. O tronco é fino (`r`).
+ */
+// a pipa enroscada na beirada oeste da copa, por baixo das folhas (à vista do gramado, alta demais para as duas)
+export const GUAVA = { x: -6.15, z: 6.1, r: 0.16, pushes: 3, crown: { y: 2.25, r: 1.45 }, kite: { x: -7.42, y: 2.12, z: 6.62 } };
+export const KITE = { land: [{ x: -7.18, z: 6.78 }, { x: -7.32, z: 5.36 }, { x: -6.92, z: 7.45 }], examR: 0.95 };
 
 // ---------------------------------------------------------------- piscina (meio)
 export const POOL = { x0: u(-5.0), x1: u(1.0), z0: u(-4.8), z1: u(-1.8), deck: { x0: u(-6.3), x1: u(2.3), z0: u(-6.1), z1: u(-0.55) }, depth: 0.9 };
@@ -598,6 +690,9 @@ export const SOCKS = [
   { id: 'antena', x: ANTENNA.x, z: ANTENNA.z, y: ANTENNA.sock }, // puzzle B (subida pela lixeira e pelo toldo)
   { id: 'deposito', x: STORAGE_STUFF.crate.x0 + 0.18, z: STORAGE_STUFF.crate.z0 + 0.18, y: 0.45 }, // puzzle C (dentro do depósito, na quina de uma caixa)
   { id: 'casinha', x: DOGHOUSE.x, z: DOGHOUSE.z + 0.05, y: 0.06 }, // dentro da casinha do quintal (só a Radhija entra)
+  // a bolinha amarrada na meia, no fundo do baldão do quintal: boia até a borda com o balde cheio (quintalPuzzles.js
+  // pega; o colisor do balde não deixa a pegada de sempre alcançar o meio dele)
+  { id: 'balde', x: BUCKET.x, z: BUCKET.z, y: BUCKET.h - 0.2 },
 ];
 export const SOCK_PICKUP_R = 0.45;
 /**
@@ -794,6 +889,9 @@ export const STATIC_COLLIDERS = [
   seg('casinha-oeste-norte', DOGHOUSE.x - DOGHOUSE.hx, DOGHOUSE.z - DOGHOUSE.hz, DOGHOUSE.x - DOGHOUSE.hx, DOGHOUSE.z - DOGHOUSE.door / 2, 0.05),
   seg('casinha-oeste-sul', DOGHOUSE.x - DOGHOUSE.hx, DOGHOUSE.z + DOGHOUSE.door / 2, DOGHOUSE.x - DOGHOUSE.hx, DOGHOUSE.z + DOGHOUSE.hz, 0.05),
   ...YARD_BEDS.map((b, i) => boxAt(`canteiro-quintal-${i + 1}`, b)),
+  // o quintal maior (world/quintal.js): os nomes não começam com 'quintal' (o que começa encurta o braço da câmera,
+  // como parede; estes são baixos)
+  ...yardColliders(),
   // piscina: a água bloqueia (a borda é o deque de andar)
   box('piscina', POOL.x0, POOL.z0, POOL.x1, POOL.z1, { kind: 'water' }),
   ...LOUNGERS.map((l, i) => boxAt(`espreguicadeira-${i + 1}`, l, { blocks: 'large' })),
@@ -860,6 +958,35 @@ export const STATIC_COLLIDERS = [
 ];
 
 /**
+ * O que colide no quintal maior: a horta do meio (os dois canteiros e a passagem entre eles), a caixinha do registro, os
+ * canteiros da horta do fundo e a composteira, a torneira, o baldão, a mesa e as cadeiras de jardim, os postes do
+ * varalzinho e o tronco da goiabeira. O jabuti e os jatos dos aspersores são dinâmicos (quintalPuzzles.js).
+ */
+function yardColliders() {
+  const P = HORTA_ROW.pass;
+  return [
+    box('horta-oeste', YARD.x0, HORTA_ROW.z0, P.x0, HORTA_ROW.z1),
+    box('horta-leste', P.x1, HORTA_ROW.z0, YARD.x1, HORTA_ROW.z1),
+    box('registro', VALVE.x - VALVE.half, VALVE.z - VALVE.half, VALVE.x + VALVE.half, VALVE.z + VALVE.half),
+    ...HORTA.beds.map((b) => box(`horta-${b.id}`, b.x0, b.z0, b.x1, b.z1)),
+    boxAt('composteira', HORTA.compost),
+    circle('torneira', TAP.x, TAP.z, TAP.r),
+    circle('baldao', BUCKET.x, BUCKET.z, BUCKET.colR),
+    circle('mesa-jardim', GARDEN_TABLE.x, GARDEN_TABLE.z, GARDEN_TABLE.r + 0.02),
+    ...GARDEN_TABLE.chairs.map((c, i) => box(`cadeira-jardim-${i + 1}`, c.x - c.half, c.z - c.half, c.x + c.half, c.z + c.half)),
+    circle('varalzinho-oeste', SMALL_LINE.a.x, SMALL_LINE.a.z, SMALL_LINE.postR + 0.03),
+    circle('varalzinho-leste', SMALL_LINE.b.x, SMALL_LINE.b.z, SMALL_LINE.postR + 0.03),
+    circle('goiabeira', GUAVA.x, GUAVA.z, GUAVA.r),
+    // os pilares dos cantos do muro do lote a leste (mais largos que o muro fino do quintal)
+    box('muro-quina-lote-norte', LOT.x1 - 0.18, WALL.maxZ - 0.18, LOT.x1 + 0.18, WALL.maxZ + 0.18),
+    box('muro-quina-lote-sul', LOT.x1 - 0.18, LOT.z1 - 0.18, LOT.x1 + 0.18, LOT.z1 + 0.18),
+    // o vazio do lado de fora, a leste do lote e ao sul do condomínio (os quintais dos vizinhos: ninguém anda lá; os
+    // limites do mundo chegam até o fundo do lote)
+    box('vazio-sul-leste', LOT.x1 + WALLS.t / 2 + 0.04, WALL.maxZ + WALL.t / 2 + 0.04, ROOFTOP.x0 - ROOFTOP.t / 2 - 0.02, LOT.z1 + 1),
+  ];
+}
+
+/**
  * Os colisores do terraço jogável ('telhado-*'): as muretas, a casinha da escada (com a porta fechada atrás das duas), a
  * caixa d'água, a antena, os postes do varal, o ar-condicionado, o carrinho de mão, as caixas e os vasos. Em volta, o
  * "vazio" ('telhado-vazio-*'): tudo o que fica dentro dos limites e fora do condomínio e do terraço (ninguém anda lá).
@@ -905,9 +1032,13 @@ export const NAV_NODES = {
   J_s: { x: -19.5, z: 13.3 }, J_sw: { x: -22.3, z: 13.1 }, J_arco: { x: -21.0, z: 14.0 },
   E_arco: { x: -21.0, z: 15.3 }, E_w: { x: -21.4, z: 17.7 }, E_sw: { x: -18.6, z: 19.25 }, E_tvn: { x: -18.3, z: 15.25 },
   E_n: { x: -15.0, z: 15.25 }, E_mid: { x: -14.6, z: 17.95 }, E_s: { x: -16.2, z: 19.3 }, E_porta: { x: -12.4, z: 18.85 },
-  // do lado de fora da porta dos fundos (o mesmo nó do quintal maior, branch claude/historia-quintal-maior)
-  Y_exit: { x: HOUSE_EXIT.x + 0.81, z: (HOUSE_EXIT.z0 + HOUSE_EXIT.z1) / 2 },
-  Y_door: { x: -10.5, z: 4.84 }, Y_mid: P(-5.2, 4.6), Y_south: P(-4.6, 7.8), Y_gate: { x: -8.2, z: 4.0 },
+  Y_door: { x: -10.5, z: 4.84 }, Y_mid: P(-5.2, 4.6), Y_south: { x: -8.25, z: 15.35 }, Y_gate: { x: -8.2, z: 4.0 },
+  // o quintal maior: a saída dos fundos, o pátio, a horta do fundo, a passagem do jabuti, a irrigação e a goiabeira
+  Y_exit: { x: HOUSE_EXIT.x + 0.81, z: (HOUSE_EXIT.z0 + HOUSE_EXIT.z1) / 2 }, Y_patio: { x: -9.6, z: 20.4 }, Y_fundo: { x: -9.4, z: 22.6 },
+  Y_passS: { x: JABUTI.x, z: 17.5 }, Y_irrN: { x: -8.25, z: 8.15 }, Y_goiaba: { x: -7.0, z: 6.1 },
+  Y_torneira: { x: -10.0, z: 24.2 }, Y_casinha: { x: DOGHOUSE.x - DOGHOUSE.hx - 0.55, z: DOGHOUSE.z },
+  Y_horta: { x: -12.2, z: 22.0 }, Y_alface: { x: LETTUCE.x, z: 22.2 }, Y_horta_n: { x: -16.75, z: 22.1 }, Y_horta_meio: { x: -16.75, z: 23.15 },
+  Y_horta_s: { x: -16.75, z: 24.35 }, Y_horta_o: { x: -19.7, z: 21.9 },
   Y_gap: { x: -9.9, z: 3.45 }, C_gap: { x: -9.95, z: 1.2 }, C_bolt: { x: SERVICE_BOLT.ring.x, z: 1.2 },
   C_gate: { x: -8.2, z: 0.7 }, C_west: P(-8.6, 0.3), C_far: P(-12.6, 0.15),
   P_west: P(-6.85, -3.2), P_nw: P(-5.6, -6.3), P_north: P(-2.0, -6.35), P_ne: P(2.9, -6.35),
@@ -942,10 +1073,16 @@ export const NAV_EDGES = [
   ['J_s', 'J_arco'], ['J_sw', 'J_arco'], ['J_arco', 'E_arco'],
   ['E_arco', 'E_w'], ['E_arco', 'E_tvn'], ['E_w', 'E_sw'], ['E_tvn', 'E_n'], ['E_sw', 'E_s'], ['E_n', 'E_mid'], ['E_s', 'E_mid'],
   ['E_mid', 'E_porta'], ['E_porta', 'Y_exit', { requires: 'exitOpen' }],
-  // provisório, só até juntar com o quintal maior (lá Y_exit liga ao pátio e à passagem do jabuti): sem ele, este
-  // branch não teria caminho da porta dos fundos até o quintal antigo
-  ['Y_exit', 'Y_south'],
-  ['Y_door', 'Y_mid'], ['Y_door', 'Y_gate'], ['Y_mid', 'Y_south'], ['Y_mid', 'Y_gate'], ['Y_door', 'Y_gap'], ['Y_gate', 'Y_gap'],
+  ['Y_door', 'Y_mid'], ['Y_door', 'Y_gate'], ['Y_mid', 'Y_gate'], ['Y_door', 'Y_gap'], ['Y_gate', 'Y_gap'],
+  // o quintal maior: o jabuti fecha a passagem da horta; a irrigação ligada só barra a Radhija (a Rhaenyra passa
+  // molhada mesmo); a casa liga o lado de dentro da porta dos fundos a Y_exit
+  ['Y_exit', 'Y_patio'], ['Y_exit', 'Y_passS'], ['Y_patio', 'Y_passS'], ['Y_patio', 'Y_fundo'], ['Y_patio', 'Y_horta'],
+  ['Y_fundo', 'Y_horta'], ['Y_fundo', 'Y_torneira'], ['Y_fundo', 'Y_casinha'], ['Y_patio', 'Y_casinha'],
+  ['Y_horta', 'Y_alface'], ['Y_alface', 'Y_horta_n'], ['Y_horta_n', 'Y_horta_meio'], ['Y_horta_meio', 'Y_horta_s'],
+  ['Y_horta_n', 'Y_horta_o'], ['Y_torneira', 'Y_horta_s'],
+  ['Y_passS', 'Y_south', { requires: 'jabutiMoved' }],
+  ['Y_south', 'Y_irrN', { requires: 'large' }], ['Y_south', 'Y_irrN', { requires: 'irrigationOff' }],
+  ['Y_irrN', 'Y_mid'], ['Y_mid', 'Y_goiaba'], ['Y_goiaba', 'Y_gate'],
   ['Y_gap', 'C_gap', { requires: ['small', 'gapOpen'] }], ['C_gap', 'C_bolt'], ['C_gap', 'C_west'], ['C_bolt', 'C_gate'],
   ['Y_gate', 'C_gate', { requires: 'serviceOpen' }],
   ['C_gate', 'C_west'], ['C_west', 'C_far'], ['C_gate', 'P_south'], ['C_west', 'P_west'], ['C_gate', 'P_west'],
@@ -1026,6 +1163,7 @@ const LAYOUT = {
   ELECTION_POSTER, BEDS,
   ROOFTOP, CONDO_BOUNDS, LOT, HOUSE_EXIT, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
   ROOF_AC, ROOF_BARROW, ROOF_BOXES, ROOF_POTS, ROOF_STEP, ROOF_LOOKOUT, ROOF_FEATHERS,
+  SPRINKLERS, VALVE, HORTA_ROW, JABUTI, HORTA, LETTUCE, TAP, BUCKET, HOSE, GARDEN_TABLE, SMALL_LINE, GUAVA, KITE,
   DOGS: {
     radhija: withStart('radhija', { x: BED.x + 1.0, z: BED.z + 1.4, yaw: 1.9 }),
     rhaenyra: withStart('rhaenyra', { x: BED.x + 1.9, z: BED.z + 1.75, yaw: -1.4 }),
