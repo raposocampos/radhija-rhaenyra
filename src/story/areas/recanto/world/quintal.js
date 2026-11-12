@@ -754,13 +754,19 @@ export function buildQuintal(kit, root, L) {
   let sprayIdle = false;
   function layoutSpray(time) {
     // tudo parado e seco (a irrigação desligada): nada a desenhar nem a atualizar
-    const idle = heads.every((hd) => hd.spray <= 0.01 && hd.wet <= 0.001 && hd.up <= 0.001);
+    let idle = true, anyWet = false;
+    for (let i = 0; i < heads.length; i++) {
+      const hd = heads[i];
+      if (hd.spray > 0.01 || hd.wet > 0.001 || hd.up > 0.001) idle = false;
+      if (hd.wet > 0.001) anyWet = true;
+    }
     drops.visible = !idle;
-    wetDiscs.visible = heads.some((hd) => hd.wet > 0.001);
-    if (idle && sprayIdle) { for (const hd of heads) hd.grp.position.y = 0; return; }
+    wetDiscs.visible = anyWet;
+    if (idle && sprayIdle) { for (let i = 0; i < heads.length; i++) heads[i].grp.position.y = 0; return; }
     sprayIdle = idle;
     let k = 0;
-    heads.forEach((hd, hi) => {
+    for (let hi = 0; hi < heads.length; hi++) {
+      const hd = heads[hi];
       hd.grp.position.y = hd.up * 0.07;
       const leak = hd.plugged;
       const kk = hd.spray;
@@ -778,7 +784,7 @@ export function buildQuintal(kit, root, L) {
       }
       const wr = 0.25 + hd.wet * (SP.r - 0.1);
       wetDiscs.setMatrixAt(hi, _m4.compose(_p4.set(hd.x, 0.004, hd.z), _q4.identity(), _s4.set(wr, 1, wr)));
-    });
+    }
     drops.instanceMatrix.needsUpdate = true;
     wetDiscs.instanceMatrix.needsUpdate = true;
   }
@@ -1307,7 +1313,8 @@ export function buildQuintal(kit, root, L) {
   keep(wings);
   const _bq = new THREE.Quaternion(), _bw = new THREE.Quaternion(), _be = new THREE.Euler();
   function flyButterflies(time) {
-    BUTTERFLIES.forEach((b, i) => {
+    for (let i = 0; i < BUTTERFLIES.length; i++) {
+      const b = BUTTERFLIES[i];
       const a = time * b.sp + b.ph;
       const x = b.cx + Math.sin(a) * b.rx, z = b.cz + Math.sin(a * 2) * b.rz;
       const y = b.y + Math.sin(time * 1.7 + b.ph) * b.fy;
@@ -1315,14 +1322,15 @@ export function buildQuintal(kit, root, L) {
       const yaw = Math.atan2(Math.cos(a) * b.rx, Math.cos(a * 2) * 2 * b.rz);
       const flap = Math.sin(time * 22 + b.ph * 3) * 0.9;
       _bq.setFromAxisAngle(_up, yaw);
-      for (const side of [1, -1]) {
+      for (let w = 0; w < 2; w++) {
+        const side = w === 0 ? 1 : -1;
         _be.set(0, 0, side * (0.25 + flap));
         _bw.setFromEuler(_be);
         _q4.copy(_bq).multiply(_bw);
         _m4.compose(_p4.set(x, y, z), _q4, _s4.set(side, 1, 1));
-        wings.setMatrixAt(i * 2 + (side > 0 ? 0 : 1), _m4);
+        wings.setMatrixAt(i * 2 + w, _m4);
       }
-    });
+    }
     wings.instanceMatrix.needsUpdate = true;
   }
   flyButterflies(0);
@@ -1460,16 +1468,18 @@ export function buildQuintal(kit, root, L) {
   const quintal = {
     /** Os aspersores: a cabeça sobe (up 0..1), o jato (spray 0..1) e, tampado, o vazamento baixo em volta. */
     sprinklers: {
-      /** @param {string} id @param {{ up?: number, spray?: number, plugged?: boolean }} s */
-      set(id, s) {
-        const hd = heads.find((x) => x.id === id);
-        if (!hd) return;
-        if (s.up != null) hd.up = clamp01(s.up);
-        if (s.spray != null) hd.spray = clamp01(s.spray);
-        if (s.plugged != null) hd.plugged = !!s.plugged;
+      /** @param {string} id @param {number} up @param {number} spray @param {boolean} plugged */
+      set(id, up, spray, plugged) {
+        for (let i = 0; i < heads.length; i++) {
+          const hd = heads[i];
+          if (hd.id !== id) continue;
+          hd.up = clamp01(up);
+          hd.spray = clamp01(spray);
+          hd.plugged = !!plugged;
+        }
       },
       /** O programador: a gota de cada um acende enquanto ele está ligado. */
-      setLit(id, on) { const i = SP.heads.findIndex((x) => x.id === id); if (i >= 0) lamps[i].material = on ? lampOn : lampOff; },
+      setLit(id, on) { for (let i = 0; i < SP.heads.length; i++) if (SP.heads[i].id === id) lamps[i].material = on ? lampOn : lampOff; },
       get state() { return heads.map((h) => ({ id: h.id, up: +h.up.toFixed(2), spray: +h.spray.toFixed(2), plugged: h.plugged })); },
     },
     /** A alavanca do registro (0: aberto, a irrigação corre; 1: fechado). */

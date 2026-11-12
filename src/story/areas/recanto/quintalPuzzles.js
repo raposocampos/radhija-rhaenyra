@@ -88,7 +88,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
   const fresh = () => ({
     time: 0, introSeen: false, introWait: 0, metJabuti: false, leaf: 'pe', tugWhat: null, slip: -1,
     jabuti: 'cochila', jabT: 0, jabWait: 0, jabutiMoved: false, wakeT: 0, eatT: 0,
-    irrT: 0, irrigationOff: false, offT: -1, plugged: null, snapFor: null, wet: 0, wetCd: 0, lastDry: null, rhaWetCd: 4,
+    irrT: 0, irrigationOff: false, offT: -1, plugged: null, snapFor: null, wet: 0, wetCd: 0, lastDry: { x: 0, z: 0, ok: false }, rhaWetCd: 4,
     shoves: 0, kite: 'arvore', kiteSeen: false, tapT: -1, level: 0, full: false, toyTaken: false,
     sayCd: 0, zone: null, rattleCd: 0, eatSfx: 0, sfxCd: {}, lastActive: null, talkI: 0, bentoTalk: 0, leverK: 0, kiteAt: null,
   });
@@ -111,34 +111,48 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
   const jab = () => P()?.jabuti || null;
 
   // ---------------------------------------------------------------- a irrigação: o programa, o tampão e o banho
-  /** O tempo do programa de um aspersor: on (jorrando), pre (subindo, gorgolejando). */
-  function headState(i, t) {
-    const id = SP.heads[i].id;
-    const k = SP.order.indexOf(id);
-    const u = (((t - k * SP.step) % PERIOD) + PERIOD) % PERIOD;
-    const on = u < SP.on;
-    const pre = !on && u > PERIOD - SP.pre;
-    return { on, pre, u };
+  /** A ordem de cada aspersor no programa. */
+  const ORDER_K = SP.heads.map((hd) => SP.order.indexOf(hd.id));
+  /**
+   * O tempo do programa de um aspersor em t: on (jorrando), pre (subindo, gorgolejando), u (s desde que ligou). Escreve
+   * no objeto que recebe (o estado do quadro fica em ST, sem alocar a cada quadro).
+   */
+  function headState(i, t, out = { on: false, pre: false, u: 0 }) {
+    const u = (((t - ORDER_K[i] * SP.step) % PERIOD) + PERIOD) % PERIOD;
+    out.u = u;
+    out.on = u < SP.on;
+    out.pre = !out.on && u > PERIOD - SP.pre;
+    return out;
   }
+  /** O estado de cada aspersor neste quadro (refeito no começo do stepIrrigation). */
+  const ST = SP.heads.map(() => ({ on: false, pre: false, u: 0 }));
+  const _future = { on: false, pre: false, u: 0 };
   /** Quais estão jorrando agora (ligados, sem tampão), para quem fica perto. */
-  const spraying = (i) => !Y.irrigationOff && headState(i, Y.irrT).on && Y.plugged !== SP.heads[i].id;
+  const spraying = (i) => !Y.irrigationOff && ST[i].on && Y.plugged !== SP.heads[i].id;
   /** Dentro do jato do aspersor i (o círculo da dog encosta no do jato)? */
   const inJet = (c, i) => Math.hypot(c.x - SP.heads[i].x, c.z - SP.heads[i].z) < SP.r + c.r;
+  /** Algum jato jorrando encosta na dog? */
+  const wetAny = (c) => { for (let i = 0; i < SP.heads.length; i++) if (spraying(i) && inJet(c, i)) return true; return false; };
   /** Um ponto seco e livre para onde ela pula depois do banho: ao longo do gramadinho, de preferência para trás. */
   function dryExit(c, prefer) {
-    const dirs = prefer ? [prefer, -prefer] : [1, -1];
-    for (const s of dirs) {
+    for (let k = 0; k < 2; k++) {
+      const s = (k === 0 ? 1 : -1) * (prefer || 1);
       for (let d = 0.1; d <= 4.5; d += 0.05) {
         const x = c.x, z = c.z + s * d;
-        if (SP.heads.some((_, i) => (spraying(i) || headState(i, Y.irrT + 0.6).on && Y.plugged !== SP.heads[i].id) && Math.hypot(x - SP.heads[i].x, z - SP.heads[i].z) < SP.r + c.r + 0.06)) continue;
-        if (world.overlaps(x, z, c.r, c.size, { ignore: JET_IDS })) continue;
+        let wet = false;
+        for (let i = 0; i < SP.heads.length && !wet; i++) {
+          // seco agora e daqui a pouco (ela não pula para dentro de um que vai ligar)
+          const soon = headState(i, Y.irrT + 0.6, _future).on && Y.plugged !== SP.heads[i].id;
+          wet = (spraying(i) || soon) && Math.hypot(x - SP.heads[i].x, z - SP.heads[i].z) < SP.r + c.r + 0.06;
+        }
+        if (wet || world.overlaps(x, z, c.r, c.size, { ignore: JET_IDS })) continue;
         return { x, z };
       }
     }
-    return Y.lastDry || { x: c.x, z: c.z };
+    return Y.lastDry.ok ? { x: Y.lastDry.x, z: Y.lastDry.z } : { x: c.x, z: c.z };
   }
   function soak(c) {
-    const prefer = Y.lastDry ? Math.sign(Y.lastDry.z - c.z) || 1 : 1;
+    const prefer = Y.lastDry.ok ? Math.sign(Y.lastDry.z - c.z) || 1 : 1;
     const p = dryExit(c, prefer);
     const dist = Math.hypot(p.x - c.x, p.z - c.z);
     const dur = Math.max(0.3, Math.min(0.8, dist / 4));
@@ -161,12 +175,13 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       if (Y.offT >= 0) {
         Y.offT += dt;
         const k = clamp01(1 - Y.offT / 0.8);
-        SP.heads.forEach((hd) => q?.set?.(hd.id, { up: k, spray: 0, plugged: false }));
+        for (const hd of SP.heads) q?.set?.(hd.id, k, 0, false);
         if (Y.offT > 0.8) Y.offT = -1;
       }
       return;
     }
     Y.irrT += dt;
+    for (let i = 0; i < SP.heads.length; i++) headState(i, Y.irrT, ST[i]);
     // o tampão: a Rhaenyra no Fica em cima de uma cabeça (de perto, ela se ajeita em cima dela)
     const rha = R('rhaenyra');
     let plug = null;
@@ -192,17 +207,15 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       refresh();
     }
     // o desenho e os colisores de cada um
-    SP.heads.forEach((hd, i) => {
-      const st = headState(i, Y.irrT);
+    const rad = R('radhija');
+    for (let i = 0; i < SP.heads.length; i++) {
+      const hd = SP.heads[i], st = ST[i];
       const plugged = Y.plugged === hd.id;
       const up = st.on ? 1 : st.pre ? clamp01((st.u - (PERIOD - SP.pre)) / SP.pre) : clamp01(1 - (st.u - SP.on) / 0.35);
-      q?.set?.(hd.id, { up, spray: st.on ? Math.min(1, (st.u + 0.001) / 0.15) * (st.u > SP.on - 0.2 ? clamp01((SP.on - st.u) / 0.2) : 1) : 0, plugged });
+      q?.set?.(hd.id, up, st.on ? Math.min(1, (st.u + 0.001) / 0.15) * (st.u > SP.on - 0.2 ? clamp01((SP.on - st.u) / 0.2) : 1) : 0, plugged);
       q?.setLit?.(hd.id, st.on);
-      const col = jetCols[i];
-      const want = st.on && !plugged;
       // com a Radhija dentro, o colisor espera ela sair (o banho a tira de lá)
-      const rad = R('radhija');
-      col.enabled = want && !(rad && inJet(rad, i));
+      jetCols[i].enabled = st.on && !plugged && !(rad && inJet(rad, i));
       // o som de ligar, perto de quem joga
       if (st.on && st.u < 0.05 && playing) {
         const a = R(ctx.activeDog);
@@ -210,19 +223,18 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
         if (d < 9 && !(Y.sfxCd[hd.id] > 0)) { Y.sfxCd[hd.id] = 0.5; emit('story:sfx', { name: 'waterStart', x: hd.x, z: hd.z, volume: Math.max(0.15, 0.7 * (1 - d / 9)) }); }
       }
       if (Y.sfxCd[hd.id] > 0) Y.sfxCd[hd.id] -= dt;
-    });
+    }
     if (!playing) return;
     // o banho da Radhija (ativa ou não): dentro de um jato que jorra
-    const rad = R('radhija');
     if (rad && (rad.y || 0) < 0.3) {
-      const wetNow = SP.heads.some((_, i) => spraying(i) && inJet(rad, i));
-      if (!wetNow && !effects.busy?.('radhija')) Y.lastDry = { x: rad.x, z: rad.z };
+      const wetNow = wetAny(rad);
+      if (!wetNow && !effects.busy?.('radhija')) { Y.lastDry.x = rad.x; Y.lastDry.z = rad.z; Y.lastDry.ok = true; }
       Y.wetCd = Math.max(0, Y.wetCd - dt);
       if (wetNow && Y.wetCd <= 0 && !effects.busy?.('radhija')) soak(rad);
     }
     // a Rhaenyra adora: molha e comemora (de vez em quando)
     Y.rhaWetCd = Math.max(0, Y.rhaWetCd - dt);
-    if (rha && SP.heads.some((_, i) => spraying(i) && inJet(rha, i))) {
+    if (rha && wetAny(rha)) {
       effects.setWet('rhaenyra', 1, 2.2);
       if (Y.rhaWetCd <= 0) {
         Y.rhaWetCd = 9;
@@ -305,6 +317,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
   // ---------------------------------------------------------------- o jabuti
   const _bz = { x: 0, z: 0 };
   /** O caminho dele (uma curva só: sai da passagem para o sul e vira para o leste), t 0..1. */
+  const _j1 = { x: 0, z: 0 }, _j2 = { x: 0, z: 0 }, _j3 = { x: 0, z: 0 };
   function jabutiAt(t, out = _bz) {
     const a = { x: JB.x, z: JB.z }, b = { x: JB.path[0].x, z: JB.path[0].z + 0.14 }, c = JB.path[1];
     const u = 1 - t;
@@ -316,8 +329,8 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
   const PATH_LEN = (() => { let len = 0; const p = { x: JB.x, z: JB.z }, q = { x: 0, z: 0 }; for (let i = 1; i <= 40; i++) { jabutiAt(i / 40, q); len += Math.hypot(q.x - p.x, q.z - p.z); p.x = q.x; p.z = q.z; } return len; })();
   function placeJabuti(t) {
     const j = jab();
-    const p = jabutiAt(t, { x: 0, z: 0 });
-    const q = jabutiAt(Math.min(1, t + 0.02), { x: 0, z: 0 });
+    const p = jabutiAt(t, _j1);
+    const q = jabutiAt(Math.min(1, t + 0.02), _j2);
     jabCol.x = p.x;
     jabCol.z = p.z;
     if (j) {
@@ -332,8 +345,9 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       // devagar pela curva; para quando alguém está na frente (ele nunca passa por cima de ninguém)
       const step = (JB.speed * dt) / PATH_LEN;
       const t1 = Math.min(1, Y.jabT + step);
-      const p = jabutiAt(t1, { x: 0, z: 0 });
-      const blockedBy = NAMES.find((n) => { const c = R(n); return c && Math.hypot(c.x - p.x, c.z - p.z) < c.r + JB.r + 0.04; });
+      const p = jabutiAt(t1, _j3);
+      let blockedBy = null;
+      for (const n of NAMES) { const c = R(n); if (c && Math.hypot(c.x - p.x, c.z - p.z) < c.r + JB.r + 0.04) blockedBy = n; }
       if (blockedBy) {
         Y.jabWait += dt;
         if (Y.jabWait > 1.2 && Y.sayCd <= 0) say('bento', 'Com… li…cen…ça…', true, 4);
@@ -344,7 +358,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
         j?.setState?.('anda');
         placeJabuti(Y.jabT);
       }
-      if (!Y.jabutiMoved && jabutiAt(Y.jabT, { x: 0, z: 0 }).x >= JB.freeX) {
+      if (!Y.jabutiMoved && jabutiAt(Y.jabT, _j3).x >= JB.freeX) {
         Y.jabutiMoved = true;
         emit('story:jabuti', { moved: true });
         refresh();
@@ -712,7 +726,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       Y.irrigationOff = true;
       Y.offT = -1;
       for (const col of jetCols) col.enabled = false;
-      SP.heads.forEach((hd) => { P()?.sprinklers?.set?.(hd.id, { up: 0, spray: 0, plugged: false }); P()?.sprinklers?.setLit?.(hd.id, false); });
+      for (const hd of SP.heads) { P()?.sprinklers?.set?.(hd.id, 0, 0, false); P()?.sprinklers?.setLit?.(hd.id, false); }
       P()?.valve?.setClosed?.(1);
     },
     /** Testes: a pipa já no chão (sem a queda). */
