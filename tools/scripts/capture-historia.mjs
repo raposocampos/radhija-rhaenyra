@@ -3,7 +3,8 @@
 // (893×393, DPR 2,75, perfil baixo, sem pós-processamento: o Faro sem pós). Em cada um, os momentos da fatia: a abertura
 // beat a beat (a câmera de cinema dentro do quarto), o quarto (o Faro com a nuvem de cheiro, as pistas, os pombos na
 // janela com a cenoura nas patas, a cartela), vistas de JOGO em 3ª pessoa pela casa e pelo condomínio (no PC, todas),
-// os puzzles e as cenas da missão (a grade, a Reconstrução, o varal, a senha, o terraço, a guarita, o porteiro, o
+// os puzzles e as cenas da missão (a grade, a casa maior com o aspirador, a despensa, a toalha, o pufe e a porta dos
+// fundos, o quintal maior, a Reconstrução, o varal, a senha, o terraço, a guarita, o porteiro, o
 // fechamento), o mural e o fim do capítulo. No PC, também vistas altas do condomínio inteiro (câmera livre).
 // Roda no GitHub Actions (E2E manual, suíte historia), depois da partida. O laço do jogo fica congelado e o script avança
 // quadro a quadro e desenha só na hora da captura (SwiftShader é lento). Saída: shots/historia-revisao/*.png.
@@ -307,6 +308,169 @@ async function captureDevice(dev, url) {
     await until((i) => !i.story.scene);
   }
 
+  /**
+   * A casa maior (4ª rodada): a cena do aspirador (beat a beat), a Radhija com medo dele, o latido da Rhaenyra e ele na
+   * base; a despensa no escuro, o impulso no interruptor e a despensa acesa (a goteira); a toalha mordida, a lata caindo,
+   * o petisco e a etiqueta; o pufe empurrado até o sofá, a Radhija subindo até o trinco pelo parapeito e a cena da porta
+   * dos fundos.
+   */
+  async function captureHouse() {
+    const C = await page.evaluate(() => {
+      const L = window.__game.game.levelDef.layout;
+      return JSON.parse(JSON.stringify({ kdoor: L.KITCHEN_DOOR, doorways: L.DOORWAYS, sw: L.PANTRY.switch, cloth: L.TABLECLOTH, pouf: L.POUF, exit: L.HOUSE_EXIT }));
+    });
+    const become = async (n) => { for (let k = 0; k < 3 && (await page.evaluate(() => window.__game.game.activeDog)) !== n; k++) await tap('KeyQ'); };
+    const jump = (st) => page.evaluate((s) => window.__game.game.puzzle.casa.jump(s), st);
+    const casaInfo = () => page.evaluate(() => window.__game.game.debug.info().story.casa);
+    const kx = (C.kdoor.hinge.x + C.kdoor.latchPost.x) / 2, kz = C.kdoor.hinge.z;
+    // a porta da cozinha abre (como o impulso na maçaneta) e o barulho acorda o aspirador: a cena
+    await open('casa');
+    await place('radhija', kx - 0.9, kz - 1.5, 0);
+    await place('rhaenyra', kx - 0.5, kz - 0.7, 0);
+    await page.evaluate(() => window.__game.game.puzzle.casa.openKitchen());
+    await until((i) => i.story.scene === 'aspirador', 120);
+    await until((i) => i.story.beat === 'acorda', 60);
+    await step(70);
+    await shot('casa-01-cena-aspirador-acorda-na-base');
+    await until((i) => i.story.beat === 'vem', 200);
+    await step(110);
+    await shot('casa-02-cena-aspirador-sai-pelo-corredor');
+    await until((i) => i.story.beat === 'medo', 260);
+    await step(90);
+    if (dev.full) await shot('casa-03-cena-radhija-com-medo');
+    await until((i) => !i.story.scene);
+    // a Radhija trava na porta do corredor, de medo
+    await become('radhija');
+    await place('rhaenyra', -14.6, 6.9, 0);
+    await place('radhija', kx, kz - 0.8, 0);
+    await behind(0);
+    await key('KeyW', true);
+    await step(50);
+    await key('KeyW', false);
+    await step(10);
+    await shot('casa-04-radhija-com-medo-do-aspirador');
+    // o latido grosso da Rhaenyra perto dele: o susto e a volta para a base
+    await become('rhaenyra');
+    await place('rhaenyra', kx - 0.1, kz + 0.85, 0);
+    await behind(0);
+    await until((i) => Math.hypot(i.story.casa.vac.x - i.dogs.rhaenyra.x, i.story.casa.vac.z - i.dogs.rhaenyra.z) < 2.6, 900);
+    await tap('KeyE');
+    await step(20);
+    await shot('casa-05-latido-e-o-susto-do-aspirador');
+    await until((i) => i.story.casa.vacuum === 'docked', 1500);
+    if (dev.full) {
+      await place('rhaenyra', -12.95, 12.4, 0);
+      await behind(0);
+      await step(40);
+      await shot('casa-06-aspirador-de-volta-na-base');
+    }
+
+    // a despensa no escuro: a Radhija para na porta; a Rhaenyra pula no interruptor e a luz acende (a goteira)
+    await open('casa');
+    await jump('despensa');
+    await step(10);
+    const dd = C.doorways.despensa, ddz = (dd.z0 + dd.z1) / 2;
+    const swYaw = Math.atan2(-C.sw.nx, -C.sw.nz);
+    await become('radhija');
+    await place('rhaenyra', -12.6, 11.0, 0);
+    await place('radhija', dd.x + 0.75, ddz, -Math.PI / 2);
+    await behind(-Math.PI / 2);
+    await step(40);
+    await shot('casa-07-despensa-no-escuro');
+    await become('rhaenyra');
+    await place('rhaenyra', C.sw.x + C.sw.nx * 0.44, C.sw.z + C.sw.nz * 0.44, swYaw);
+    await place('radhija', -12.6, 11.0, 0);
+    await behind(swYaw + 0.6);
+    await step(20);
+    await tap('Space');
+    await step(26);
+    if (dev.full) await shot('casa-08-impulso-no-interruptor');
+    await until((i) => i.story.casa.pantryLit, 120);
+    await step(60);
+    await place('rhaenyra', dd.x + 0.7, ddz, -Math.PI / 2);
+    await behind(-Math.PI / 2);
+    await step(40);
+    await shot('casa-09-despensa-acesa-e-a-goteira');
+
+    // a sala de jantar: a Radhija morde a toalha e puxa; a lata escorrega e cai; o petisco e a etiqueta
+    await jump('jantar');
+    await step(10);
+    await become('radhija');
+    await place('radhija', C.cloth.bite.x + 0.45, C.cloth.bite.z + 0.05, -Math.PI / 2);
+    await behind(-Math.PI / 2 - 0.5);
+    await step(20);
+    await tap('KeyE');
+    await until((i) => i.story.tugWhat === 'toalha' && i.story.tug === 'hold', 200);
+    await step(10);
+    await shot('casa-10-radhija-morde-a-toalha');
+    // puxando para trás (a câmera atrás dela, de frente para a mesa: o S é para trás)
+    await behind(-Math.PI / 2);
+    await key('KeyS', true);
+    await until((i) => i.story.casa.tin !== 'mesa', 400);
+    await key('KeyS', false);
+    await step(22);
+    await shot('casa-11-a-lata-caindo-da-mesa');
+    await until((i) => i.story.casa.tin === 'chao', 200);
+    await step(40);
+    await shot('casa-12-lata-no-chao-petisco-e-etiqueta');
+
+    // a sala de estar: o pufe até o sofá (a Rhaenyra), a Radhija no parapeito abrindo o trinco, a porta dos fundos
+    await jump('sala');
+    await step(10);
+    const PF = C.pouf;
+    await become('rhaenyra');
+    await place('radhija', -15.6, 16.2, Math.PI / 2);
+    await place('rhaenyra', PF.start.x, PF.start.z + PF.half + 0.3, Math.PI);
+    await behind(Math.PI);
+    await step(10);
+    await key('ShiftLeft', true);
+    await key('KeyW', true);
+    await until((i) => i.story.casa.pouf.z <= 17.47, 600);
+    await key('KeyW', false);
+    if (dev.full) await shot('casa-13-rhaenyra-empurra-o-pufe');
+    let pf = (await casaInfo()).pouf;
+    await place('rhaenyra', pf.x - PF.half - 0.3, pf.z, Math.PI / 2);
+    await behind(Math.PI / 2);
+    await step(10);
+    await key('KeyW', true);
+    await until((i) => i.story.casa.poufAtSofa, 700);
+    await key('KeyW', false);
+    await key('ShiftLeft', false);
+    await step(20);
+    await shot('casa-14-pufe-encostado-no-sofa');
+    pf = (await casaInfo()).pouf;
+    await place('rhaenyra', -14.0, 18.9, Math.PI / 2);
+    await become('radhija');
+    await place('radhija', pf.x - 0.7, pf.z, Math.PI / 2);
+    await behind(Math.PI / 2 - 0.35);
+    await step(20);
+    await tap('KeyE');
+    await until((i) => i.story.casa.climb !== null, 30);
+    if (dev.full) { await step(70); await shot('casa-15-radhija-sobe-pelo-sofa'); }
+    await until((i) => i.story.casa.latchOpen, 900);
+    await step(6);
+    await shot('casa-16-radhija-no-parapeito-abre-o-trinco');
+    await until((i) => i.story.casa.climb === null, 900);
+    const ez = (C.exit.z0 + C.exit.z1) / 2;
+    await place('radhija', C.exit.x - 1.4, ez - 0.6, Math.PI / 2);
+    await become('rhaenyra');
+    await place('rhaenyra', C.exit.x - 0.5, ez, Math.PI / 2);
+    await behind(Math.PI / 2);
+    await step(10);
+    await key('ShiftLeft', true);
+    await key('KeyW', true);
+    await until((i) => i.story.scene === 'portaFundos', 400);
+    await key('KeyW', false);
+    await key('ShiftLeft', false);
+    await until((i) => i.story.beat === 'abre', 60);
+    await step(60);
+    await shot('casa-17-cena-a-porta-dos-fundos-abre');
+    await until((i) => i.story.beat === 'olham', 200);
+    await step(80);
+    await shot('casa-18-cena-o-quintal-la-fora');
+    await until((i) => !i.story.scene);
+  }
+
   // ---- a abertura, beat a beat: a grua lá fora, a noite no quarto, a página de HQ dos pombos, o trovão, a manhã e a
   // página do susto, as apresentações e a cartela (passos de 1/60 s a partir do começo de cada beat)
   await open();
@@ -415,17 +579,24 @@ async function captureDevice(dev, url) {
   await shot('33-casa-depois-da-janela');
 
   // ---- vistas de jogo (3ª pessoa) pela casa e pelo condomínio: [etapa, nome, x, z, rumo, também no celular?]
-  const Q = Y.ROOMS.quarto, K = Y.ROOMS.cozinha, SL = Y.ROOMS.sala;
+  const Q = Y.ROOMS.quarto, K = Y.ROOMS.cozinha, KDm = { x: (Y.kdoor.hinge.x + Y.kdoor.latchPost.x) / 2, z: Y.kdoor.hinge.z };
   const VIEWS = [
     ['casa', '30-jogo-quarto-para-a-janela', (Q.x0 + Q.x1) / 2 + 0.5, Q.z1 - 1.4, Math.PI, true],
     ['casa', '31-jogo-quarto-para-a-grade', (Q.x0 + Q.x1) / 2 - 0.6, (Q.z0 + Q.z1) / 2 + 0.3, Math.PI / 2],
     ['casa', '32-jogo-quarto-encostada-na-parede', (Q.x0 + Q.x1) / 2 + 0.8, Q.z1 - 0.5, Math.PI, true],
     ['casa', '33-jogo-quarto-no-canto', Q.x0 + 1.4, Q.z1 - 0.55, Math.PI * 0.75],
     ['casa', '34-jogo-grade-e-portinha-de-gato', Y.flap.x - 1.5, (Y.flap.z0 + Y.gate.hinge.z) / 2, Math.PI / 2],
-    ['quintal', '35-jogo-cozinha-para-a-porta', (K.x0 + K.x1) / 2 - 0.6, (K.z0 + K.z1) / 2 + 0.3, Math.PI / 2, true],
+    // a casa maior, toda resolvida na etapa do quintal (o aspirador na base, a luz da despensa acesa, a porta dos fundos
+    // aberta): a cozinha, o corredor, o banheiro, a despensa, a sala de jantar e a de estar
+    ['quintal', '35-jogo-cozinha-para-a-porta-do-corredor', KDm.x - 1.6, KDm.z - 1.55, Math.atan2(1.6, 1.55), true],
     ['quintal', '36-jogo-cozinha-bancada', (K.x0 + K.x1) / 2, K.z1 - 1.3, Math.PI],
-    ['quintal', '37-jogo-sala', (SL.x0 + SL.x1) / 2 + 1.5, SL.z0 + 1.2, 0],
-    ['quintal', '38-jogo-sala-para-a-cozinha', (SL.x0 + SL.x1) / 2 - 2.0, SL.z1 - 1.6, Math.PI * 0.75],
+    ['quintal', '37-jogo-corredor-para-o-sul', -12.95, 8.95, 0, true],
+    ['quintal', '37b-jogo-banheiro', -13.35, 9.88, -Math.PI / 2],
+    ['quintal', '37c-jogo-despensa-acesa', -13.35, 13.4, -Math.PI / 2],
+    ['quintal', '38-jogo-sala-de-jantar-mesa-e-toalha', -17.25, 13.4, Math.atan2(-3.25, -2.2), true],
+    ['quintal', '38b-jogo-sala-de-estar-sofa-e-janela', -15.0, 15.25, Math.atan2(2.9, 1.5), true],
+    ['quintal', '38c-jogo-sala-de-estar-para-a-tv', -14.6, 17.95, -Math.PI / 2],
+    ['quintal', '38d-jogo-porta-dos-fundos-aberta', -13.4, 18.8, Math.PI / 2],
     ['quintal', '39-jogo-quintal-galho-e-porta', Y.branch.start.x + 0.9, Y.yard.z0 + 3.6, Math.PI, true],
     ['quintal', '40-jogo-quintal-para-o-sul', (Y.yard.x0 + Y.yard.x1) / 2, Y.yard.z0 + 2.2, 0],
     ['piscina', '41-jogo-saindo-pela-porta-de-servico', (Y.sdoor.hinge.x + Y.sdoor.latchPost.x) / 2, Y.sdoor.hinge.z + 1.6, Math.PI],
@@ -458,6 +629,9 @@ async function captureDevice(dev, url) {
     }
     await view(name, x, z, yaw);
   }
+
+  // ---- a casa maior (4ª rodada): o aspirador, a despensa no escuro, a toalha e a lata, o pufe, o trinco e a porta dos fundos
+  await captureHouse();
 
   // ---- o quintal maior (4ª rodada): a chegada pela porta dos fundos, as vistas de jogo e os quatro puzzles
   await captureYard();

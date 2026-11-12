@@ -19,6 +19,7 @@
 // API: createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hints, tug, sack, collectList }) →
 //   { update(dt, o), interact(c), modifyIntent(dt, c, intent, o), wallSpots(), onWallTouch(c, spot), onBark(c),
 //     lockFor(name), lookTarget(c), navFlags(), objective(), lead(), prompt, onKitchenOpen(), skipAll(), jump(step),
+//     openKitchen() (capturas),
 //     reset(), info(), snapshot(), e o que as cenas usam: wakeVacuum(), vacuumPose(x, z, yaw), lanePose(z, dir),
 //     startPatrol(), openExit(), afterExit() }.
 import { createPushCrate, createWallButton, createHingedGate } from '../../../game/mechanics/index.js';
@@ -733,6 +734,12 @@ export function createCasaPuzzles(K, { world, emit, effects, ctx, props, dir, hi
       const p = target(st);
       if (!p) return null;
       return { x: p.x, z: p.z, color: st === 'grade' || st === 'aspirador' ? SCENT.pombos : SCENT.cenoura };
+    },
+
+    /** Capturas e E2E: a grade e a porta da cozinha abertas agora (como o impulso na maçaneta), com a cena do aspirador. */
+    openKitchen() {
+      K.openKitchenSide?.();
+      casa.onKitchenOpen();
     },
 
     // ---------------------------------------------------------------- o que as cenas chamam

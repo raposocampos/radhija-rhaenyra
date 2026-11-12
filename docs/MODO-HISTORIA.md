@@ -203,7 +203,8 @@ quarto, o aviso do Faro também é tocável.
 - `src/story/ui/board.js`, `subtitles.js` e `comic.js`: o quadro de dedução, as legendas com voz e a camada de HQ.
 - `src/story/ui/`: o HUD da história (faixas, cartela, aviso do Faro, lupa, meias, mural provisório e fim do capítulo).
 - `src/story/areas/recanto/`: o Recanto das Patinhas, com layout, iluminação, cenário em zonas (`world/`), as seis cenas
-  (`scenes.js`) e a missão (`puzzle.js`). O quintal maior: `world/quintal.js` (o cenário), `quintalPuzzles.js` (a
+  (`scenes.js`) e a missão (`puzzle.js`). A casa maior: `world/casaSul.js` (a ala sul), `casaPuzzles.js` (a lógica,
+  ligada ao `puzzle.js` por ganchos) e `scenesCasa.js` (as cenas). O quintal maior: `world/quintal.js` (o cenário), `quintalPuzzles.js` (a
   lógica, ligada ao `puzzle.js` por ganchos, como o terraço em `rooftop.js`), `scenesQuintal.js` (as cenas) e o jabuti
   em `src/story/scene/jabuti.js`.
 - No núcleo: a área carrega como fase especial fora da lista (`STORY = −2`, em `src/game/game.js`). Durante uma cena,
@@ -216,7 +217,26 @@ quarto, o aviso do Faro também é tocável.
   cenoura, as duas acordando. Termina com a jogadora no quarto.
 - **A missão:**
   1. o quarto: farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela e a cartela;
-  2. a casa: a portinha de gato e o pedal da grade (Radhija); o saco de ração e a maçaneta (Rhaenyra);
+  2. a casa maior (4ª rodada, pedido de 2026-11-11: "precisamos de uma casa maior, com mais detalhes, pensar em puzzles
+     que se enquadrem melhor na casa"). A casa ganhou a ala sul (`world/casaSul.js`; a lógica em `casaPuzzles.js` e as
+     cenas em `scenesCasa.js`): corredor, banheiro, despensa, sala de jantar, sala de estar e a porta dos fundos. A
+     antiga porta da cozinha para o quintal virou janela (`KITCHEN_WINDOW`); a porta da cozinha (`KITCHEN_DOOR`) agora dá
+     no corredor. Os passos:
+     - a portinha de gato e o pedal da grade (Radhija); o saco de ração empurrado para o leste e o pulo na maçaneta
+       (Rhaenyra);
+     - **o aspirador robô** (cena `aspirador`: o barulho da porta o acorda): ele anda em zigue-zague pelo corredor, sem
+       nunca encostar em ninguém. A Radhija morre de medo e não passa (trava, com a fala e o balão). O latido grosso da
+       Rhaenyra perto dele, ou ela no caminho dele com o Fica, o manda de volta para a base; sem o Fica, ele tromba,
+       desvia e, na terceira, desiste;
+     - **a despensa no escuro**: a Radhija não entra; a Rhaenyra entra, mas o interruptor é alto: o impulso na parede
+       (como a maçaneta) acende a luz. Acesa, aparece a goteira da chuva (pista escondida `goteira`). A despensa liga o
+       corredor à sala de jantar;
+     - **a toalha e a lata de biscoito**: a Radhija morde a ponta da toalha e puxa (a boca, como o ferrolho); a lata
+       escorrega até a beirada e cai (sem atravessar a mesa, as cadeiras nem o chão); dela saem um petisco e a
+       etiqueta da cenoura (pista escondida `etiqueta`). A Rhaenyra não puxa (traria a mesa junto);
+     - **o pufe, o sofá e o trinco**: o trinco da porta dos fundos é alto. A Rhaenyra empurra o pufe até encostar no
+       sofá; a Radhija sobe pelo pufe, pelo assento e pelo encosto até o parapeito da janela e abre o trinco com a pata;
+       a porta é pesada: só a Rhaenyra a empurra (cena `portaFundos`, e começa a etapa do quintal);
   3. o quintal maior (4ª rodada, pedido de 2026-11-11: "mais puzzles espalhados pelo quintal; aumente o quintal após
      sair de casa"). O lote da casa cresceu 11 m para o sul (`LOT`); as duas saem pela porta dos fundos (`HOUSE_EXIT`)
      num quintal em L (`world/quintal.js`; a lógica em `quintalPuzzles.js` e as cenas em `scenesQuintal.js`):
@@ -254,7 +274,8 @@ quarto, o aviso do Faro também é tocável.
   - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
   - a lixeira e o toldo até a meia da antena;
   - a corda, o balde e a bola até a meia do depósito.
-- **Pistas:** as obrigatórias, as de cena e três escondidas (a baba, o ralo e a rabiola da pipa do quintal).
+- **Pistas:** as obrigatórias, as de cena e cinco escondidas (a baba, o ralo, a goteira da despensa, a etiqueta da
+  lata e a rabiola da pipa do quintal).
 - **Colecionáveis:** quatro meias (a do baldão do quintal é a quarta) e cinco petiscos.
 - **O fim:** o mural provisório, só com o caso 3, e a tela de fim do capítulo.
 

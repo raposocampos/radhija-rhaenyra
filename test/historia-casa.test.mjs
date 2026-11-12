@@ -177,9 +177,21 @@ test('casa: a Radhija puxa a toalha; a lata cai sem atravessar nada e dela saem 
   const h = await createStoryGame({ query: 'stage=casa' });
   const L = h.layout;
   const S = () => storyInfo(h);
+  // o jogo de verdade reseta ao começar: o reset do cenário solta a ponta da toalha da boca, e o da casa a religa
+  h.puzzle.reset();
+  h.game.debug.setStage('casa', 'radhija');
   h.puzzle.casa.jump('jantar');
   h.run(0.3);
   const T = L.DINING_TABLE, TC = L.TABLECLOTH, CK = L.COOKIE_TIN;
+  /** A distância da boca da Radhija até o ponto da toalha mais perto dela. */
+  const mouth = new THREE.Vector3();
+  const clothGap = () => {
+    h.dogs.radhija.mouthSocket.getWorldPosition(mouth);
+    const p = h.props.tablecloth.object.geometry.attributes.position;
+    let best = Infinity;
+    for (let i = 0; i < p.count; i++) best = Math.min(best, Math.hypot(p.getX(i) - mouth.x, p.getY(i) - mouth.y, p.getZ(i) - mouth.z));
+    return best;
+  };
   const bad = new Set();
   /** A lata, a toalha e as dogs: nada atravessa a mesa, as cadeiras nem as paredes. */
   const tinBad = () => {
@@ -219,7 +231,13 @@ test('casa: a Radhija puxa a toalha; a lata cai sem atravessar nada e dela saem 
   assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a toalha na boca (fase ${S().tug})`);
   assert.equal(S().tugWhat, 'toalha');
   const lock = h.puzzle.lockFor('radhija');
-  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => { tinBad(); return S().casa.tin !== 'mesa'; }), `puxando, a lata cai (toalha ${S().casa.cloth} m)`);
+  let worstGap = 0;
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => {
+    tinBad();
+    if (h.puzzle.lockFor('radhija')?.pull && S().casa.tin === 'mesa') worstGap = Math.max(worstGap, clothGap());
+    return S().casa.tin !== 'mesa';
+  }), `puxando, a lata cai (toalha ${S().casa.cloth} m)`);
+  assert.ok(worstGap < 0.05, `a ponta da toalha na boca o puxão inteiro (pior distância ${(worstGap * 100).toFixed(1)} cm)`);
   assert.ok(h.run(3, { until: () => { tinBad(); return S().casa.tin === 'chao'; } }), 'a lata para no chão');
   h.run(0.3);
   assert.equal(h.puzzle.lockFor('radhija'), null, 'a toalha solta sozinha');

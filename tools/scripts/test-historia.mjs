@@ -4,7 +4,8 @@
 //  - o quarto: o aviso do Faro com a tecla do aparelho, o V solta o pulso e a nuvem de cheiro, o E examina a trilha, o
 //    pote e a pena; a cena dos pombos na janela e a cartela do capítulo;
 //  - a missão com as teclas reais, puzzle a puzzle: a portinha de gato e o pedal da grade, o saco de ração e a
-//    maçaneta, o quintal maior (a chegada pela porta dos fundos, o jabuti e a alface das duas, a irrigação com a Rhaenyra
+//    maçaneta, a casa maior (o aspirador robô e o latido, a despensa no escuro e o interruptor, a toalha e a lata, o
+//    pufe, o trinco e a porta dos fundos), o quintal maior (a chegada pela porta dos fundos, o jabuti e a alface das duas, a irrigação com a Rhaenyra
 //    tampando o aspersor do meio, o registro, a pipa da goiabeira e o baldão com a bolinha de meia), o galho, a passagem
 //    do muro e a argola do ferrolho, o Faro na piscina (a Reconstrução), o cesto e a
 //    arrancada no varal, a senha do interfone (o Faro mostra) e a porta de mola com a irmã segurando, o Superbafo na
@@ -237,6 +238,9 @@ try {
       recon: L.RECON, laundry: L.LAUNDRY, pin: L.CARROT_PIN, post: L.DASH_POST, tdoor: L.TOWER_DOOR, intercom: L.INTERCOM,
       booth: L.BOOTH, vent: L.BOOTH_VENT, lgate: L.GATE, house: pick(L.HOUSE, ['x1']),
       // o quintal maior (4ª rodada)
+      // a casa maior (4ª rodada)
+      kdoor: L.KITCHEN_DOOR, vac: L.VACUUM, doorways: L.DOORWAYS, pswitch: L.PANTRY.switch, cloth: L.TABLECLOTH, tin: L.COOKIE_TIN,
+      pouf: L.POUF,
       exit: L.HOUSE_EXIT, jab: L.JABUTI, lettuce: L.LETTUCE, sp: L.SPRINKLERS, valve: L.VALVE, guava: L.GUAVA, hose: L.HOSE,
       bucket: L.BUCKET, kite: L.KITE,
     };
@@ -328,24 +332,131 @@ try {
   await walkPath([[LY.gate.hinge.x - 0.9, gz], [LY.gate.hinge.x + 1.3, gz]], { timeout: 25000 });
   i = await info();
   check(i.dogs.rhaenyra.x > LY.gate.hinge.x + 0.6, 'a Rhaenyra passa pela grade aberta', i.dogs.rhaenyra);
-  // o saco de ração está na frente da maçaneta: a Rhaenyra empurra para o norte
-  await walkTo(LY.sack.start.x, LY.sack.start.z + LY.sack.half + 0.3, { timeout: 20000, tol: 0.12 });
-  i = await holdUntil([...keysFor(0, -1), 'ShiftLeft'], (x) => x.story.flags.sackFree, { timeout: 12000, label: 'empurrar o saco de ração' });
+  // o saco de ração está na frente da maçaneta: a Rhaenyra empurra para o leste
+  await walkTo(LY.sack.start.x - LY.sack.half - 0.3, LY.sack.start.z, { timeout: 20000, tol: 0.12 });
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.flags.sackFree, { timeout: 12000, label: 'empurrar o saco de ração' });
   check(i.story.flags.sackFree, 'a Rhaenyra empurra o saco de ração para o lado', i.story.pushables);
-  await walkTo(LY.handle.x - 0.46, LY.handle.z, { timeout: 10000, tol: 0.12 });
-  // de frente para a porta (leste) e o pulo
-  await H.hold(keysFor(1, 0), 120);
+  // a maçaneta de alavanca fica na porta da cozinha para o corredor (parede do sul): de frente para ela e o pulo
+  await walkTo(LY.handle.x, LY.handle.z - 0.46, { timeout: 10000, tol: 0.12 });
+  await H.hold(keysFor(0, 1), 120);
   await press('Space', 1500);
   i = await waitFor((x) => x.story.flags.kitchenOpen, { timeout: 6000 });
-  check(i.story.flags.kitchenOpen && i.story.stage === 'quintal', 'o impulso na maçaneta abre a porta da cozinha', i.story);
+  check(i.story.flags.kitchenOpen && i.story.stage === 'casa', 'o impulso na maçaneta abre a porta da cozinha (para o corredor; a casa continua)', i.story);
   await shot('08-cozinha-porta.png');
 
-  console.log('\n== O quintal maior: a chegada, o jabuti, a alface, a irrigação, o registro, a pipa e o baldão ==');
-  // a casa está sendo refeita em paralelo: daqui as duas saem pela porta dos fundos (HOUSE_EXIT) para o fundo do quintal
-  const exz = (LY.exit.z0 + LY.exit.z1) / 2;
-  await tp('rhaenyra', LY.exit.x + 1.31, LY.exit.z1 + 0.05, Math.PI / 2);
-  await tp('radhija', LY.exit.x + 1.36, LY.exit.z0 + 0.15, Math.PI / 2);
+  console.log('\n== O aspirador robô: a Radhija com medo; o latido grosso da Rhaenyra o manda para a base ==');
+  i = await waitFor((x) => x.story.scene === 'aspirador', { timeout: 6000 });
+  check(i.story.scene === 'aspirador', 'o barulho da porta acorda o aspirador robô (cena)', i.story);
+  await H.sleep(2600);
+  await shot('08a-casa-aspirador-acorda.png');
+  await skipScene('o aspirador');
+  i = await info();
+  check(i.story.casa.vacuum === 'patrol', 'o aspirador anda pelo corredor', i.story.casa);
+  // a Radhija trava na porta do corredor, de medo
+  const kdx = (LY.kdoor.hinge.x + LY.kdoor.latchPost.x) / 2;
+  await tp('rhaenyra', -14.6, 6.9, 0);
   await become('radhija');
+  await tp('radhija', kdx, LY.kdoor.hinge.z - 0.8, 0);
+  await H.hold(keysFor(0, 1), 1800);
+  i = await info();
+  check(i.dogs.radhija.z < LY.vac.fear.z0, 'com o aspirador andando, a Radhija não entra no corredor', { rad: i.dogs.radhija, casa: i.story.casa });
+  await shot('08b-casa-radhija-com-medo-do-aspirador.png');
+  // a Rhaenyra late perto dele: o susto, e ele volta para a base
+  await become('rhaenyra');
+  await tp('rhaenyra', kdx - 0.1, LY.kdoor.hinge.z + 0.85, 0);
+  i = await waitFor((x) => Math.hypot(x.story.casa.vac.x - x.dogs.rhaenyra.x, x.story.casa.vac.z - x.dogs.rhaenyra.z) < LY.vac.barkR - 0.4, { timeout: 15000 });
+  await press('KeyE', 300);
+  i = await info();
+  check(['scared', 'home', 'docked'].includes(i.story.casa.vacuum), 'o latido grosso da Rhaenyra assusta o aspirador', i.story.casa);
+  i = await waitFor((x) => x.story.casa.vacuum === 'docked', { timeout: 20000 });
+  check(i.story.casa.vacuum === 'docked', 'e ele volta para a base', i.story.casa);
+  await shot('08c-casa-aspirador-na-base.png');
+
+  console.log('\n== A despensa no escuro: o interruptor alto, com o impulso da Rhaenyra ==');
+  await become('radhija');
+  const dd = LY.doorways.despensa, ddz = (dd.z0 + dd.z1) / 2;
+  await tp('radhija', dd.x + 0.6, ddz, -Math.PI / 2);
+  await H.hold(keysFor(-1, 0), 1500);
+  i = await info();
+  check(i.dogs.radhija.x > dd.x + 0.1, 'no escuro, a Radhija não entra na despensa', i.dogs.radhija);
+  await shot('08d-casa-despensa-no-escuro.png');
+  await tp('radhija', -12.6, 11.0, 0);
+  await become('rhaenyra');
+  const psw = LY.pswitch;
+  await tp('rhaenyra', psw.x + psw.nx * 0.7, psw.z + psw.nz * 0.7, Math.atan2(-psw.nx, -psw.nz));
+  await walkTo(psw.x + psw.nx * 0.44, psw.z + psw.nz * 0.44, { timeout: 6000, tol: 0.1 });
+  await H.hold(keysFor(-psw.nx, -psw.nz), 120);
+  await press('Space', 1500);
+  i = await waitFor((x) => x.story.casa.pantryLit, { timeout: 5000 });
+  check(i.story.casa.pantryLit, 'o impulso no interruptor acende a luz da despensa', i.story.casa);
+  check(i.story.revealed.includes('goteira'), 'com a luz, a goteira brilha (pista escondida)', i.story.revealed);
+  await H.sleep(600);
+  await shot('08e-casa-despensa-acesa-goteira.png');
+
+  console.log('\n== A sala de jantar: a Radhija puxa a toalha, a lata cai; o petisco e a etiqueta ==');
+  await become('radhija');
+  await tp('radhija', LY.cloth.bite.x + 0.45, LY.cloth.bite.z + 0.05, -Math.PI / 2);
+  await H.sleep(300);
+  await press('KeyE', 900);
+  i = await waitFor((x) => x.story.tugWhat === 'toalha', { timeout: 4000 });
+  check(i.story.tugWhat === 'toalha', 'a Radhija morde a ponta da toalha', { tug: i.story.tug, what: i.story.tugWhat });
+  const clothPull = await ev(() => { const q = window.__game.game.puzzle.lockFor('radhija')?.pull; return q ? { ax: q.ax, az: q.az } : null; });
+  check(!!clothPull, 'a toalha na boca: puxar para trás', clothPull);
+  i = await holdUntil(keysFor(clothPull?.ax ?? 1, clothPull?.az ?? 0), (x) => x.story.casa.tin !== 'mesa', { timeout: 8000, label: 'puxar a toalha' });
+  await H.sleep(500);
+  await shot('08f-casa-toalha-e-lata-caindo.png');
+  i = await waitFor((x) => x.story.casa.tin === 'chao', { timeout: 5000 });
+  check(i.story.casa.tin === 'chao', 'puxando a toalha, a lata escorrega, cai e para no chão', i.story.casa);
+  await H.sleep(500);
+  i = await info();
+  check(i.story.revealed.includes('etiqueta'), 'da lata saem o petisco e a etiqueta (brilhando)', i.story.revealed);
+  await shot('08g-casa-lata-petisco-e-etiqueta.png');
+  await walkTo(LY.tin.treat.x, LY.tin.treat.z, { timeout: 6000, tol: 0.15 });
+  const et = LY.spots.etiqueta.at;
+  await walkTo(et.x, et.z, { timeout: 8000, tol: 0.3 });
+  await press('KeyE', 1600);
+  i = await waitFor((x) => x.story.clues.includes('etiqueta'), { timeout: 4000 });
+  check(i.story.clues.includes('etiqueta'), 'a etiqueta da cenoura vira pista', i.story.clues);
+  check((await noOverlap()).length === 0, 'ninguém atravessa nada na sala de jantar', await noOverlap());
+
+  console.log('\n== A sala de estar: o pufe até o sofá, a subida até o trinco e a porta dos fundos ==');
+  await tp('radhija', -15.6, 16.2, Math.PI / 2);
+  await become('rhaenyra');
+  const PF = LY.pouf;
+  await tp('rhaenyra', PF.start.x, PF.start.z + PF.half + 0.3, Math.PI);
+  i = await holdUntil([...keysFor(0, -1), 'ShiftLeft'], (x, zmin) => x.story.casa.pouf.z <= zmin, { timeout: 10000, arg: PF.minZ + 0.02, label: 'empurrar o pufe para o norte' });
+  await tp('rhaenyra', i.story.casa.pouf.x - PF.half - 0.3, i.story.casa.pouf.z, Math.PI / 2);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => x.story.casa.poufAtSofa, { timeout: 12000, label: 'empurrar o pufe até o sofá' });
+  check(i.story.casa.poufAtSofa, 'a Rhaenyra leva o pufe até encostar no sofá', i.story.casa.pouf);
+  await shot('08h-casa-pufe-no-sofa.png');
+  await tp('rhaenyra', -14.0, 18.9, Math.PI / 2);
+  await become('radhija');
+  await tp('radhija', i.story.casa.pouf.x - 0.7, i.story.casa.pouf.z, Math.PI / 2);
+  await H.sleep(300);
+  await press('KeyE', 300);
+  i = await waitFor((x) => x.story.casa.latchOpen, { timeout: 12000 });
+  check(i.story.casa.latchOpen, 'a Radhija sobe pelo pufe, pelo sofá e pelo parapeito e abre o trinco', i.story.casa);
+  await shot('08i-casa-trinco-pelo-parapeito.png');
+  i = await waitFor((x) => x.story.casa.climb === null, { timeout: 10000 });
+  check(i.story.casa.climb === null && (i.dogs.radhija.y || 0) < 0.05, 'e desce de volta ao chão', i.dogs.radhija);
+  const exz = (LY.exit.z0 + LY.exit.z1) / 2;
+  await tp('radhija', LY.exit.x - 1.4, exz - 0.6, Math.PI / 2);
+  await become('rhaenyra');
+  await tp('rhaenyra', LY.exit.x - 0.5, exz, Math.PI / 2);
+  i = await holdUntil([...keysFor(1, 0), 'ShiftLeft'], (x) => !!x.story.scene, { timeout: 8000, label: 'empurrar a porta dos fundos' });
+  check(i.story.scene === 'portaFundos', 'destrancada, a Rhaenyra empurra a porta dos fundos (cena)', i.story);
+  await H.sleep(1500);
+  await shot('08j-casa-porta-dos-fundos.png');
+  await skipScene('a porta dos fundos');
+  i = await stageIs('quintal', 8000);
+  check(i.story.stage === 'quintal', 'pela porta dos fundos, o quintal', i.story.stage);
+  check((await noOverlap()).length === 0, 'ninguém atravessa nada na casa', await noOverlap());
+
+  console.log('\n== O quintal maior: a chegada, o jabuti, a alface, a irrigação, o registro, a pipa e o baldão ==');
+  // as duas saem pela porta dos fundos: a Radhija andando, com as teclas; a irmã, posta do lado de fora
+  await tp('rhaenyra', LY.exit.x + 1.31, LY.exit.z1 + 0.05, Math.PI / 2);
+  await become('radhija');
+  await walkPath([[LY.exit.x - 0.45, exz], [LY.exit.x + 1.36, LY.exit.z0 + 0.15]], { timeout: 12000, tol: 0.16, stopIf: (x) => !!x.story.scene });
   i = await waitFor((x) => x.story.scene === 'quintalChega', { timeout: 6000 });
   check(i.story.scene === 'quintalChega', 'do lado de fora da porta dos fundos, a cena da chegada no quintal', i.story);
   await H.sleep(1200);
