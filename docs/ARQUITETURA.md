@@ -28,6 +28,7 @@ src/main.js                integração: monta motor, dogs, jogo, UI, áudio e e
 src/types.d.ts             tipos das APIs públicas (checados pelo TypeScript, ver §11)
 src/core/engine.js         renderer, céu, névoa, luz e pós-processamento; applyLighting(preset)
 src/core/events.js         barramento de eventos (on/off/once/emit)
+src/story/                 Modo História (§4.7): kit de cenas, Faro, pistas, mural, HUD e as áreas dos capítulos
 src/game/                  NÚCLEO genérico
   game.js                  estados, carregamento de fases, entrada → dogs, companheira, comemoração, depuração
   gameEvents.js            emissão, padrões de vibração e histórico de diagnóstico por instância
@@ -359,6 +360,51 @@ caixas arredondadas saem de um molde por número de segmentos; as plantinhas de 
 A sombra do sol cobre só a vizinhança do que a câmera olha (`engine.focusShadow`). Tudo o que fica em pé colide
 (`STATIC_COLLIDERS`), e o mapa liga a grade de colisão (`COLLISION_GRID`, §5).
 
+### 4.7 O Modo História (`src/story/`, etapa 2: a fatia jogável)
+
+A área de um capítulo é outra fase especial fora de `LEVELS` (`createGame({ story })`, índice `STORY = −2`): o mesmo
+núcleo, com o puzzle da área no contrato de `Puzzle`. Por enquanto só abre com `?historia` numa prévia de PR ou no
+desenvolvimento (`src/story/gate.js`); o card do menu segue "Em breve". Roteiro em [HISTORIA.md](HISTORIA.md),
+estrutura e etapas em [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- **O que o núcleo sabe da história** (`game.js`, tudo opcional no puzzle):
+  - `puzzle.cinematic()` verdadeiro, durante uma cena, no mural e no fim, segura a entrada: nada de trocar, Fica,
+    extras, pulo, latido, superbafo ou lambida. As dogs ficam paradas, ou a cena as move pela trava `drive`;
+  - `puzzle.onFaro(ativa)` recebe o Faro (`input.consume('Faro', 'KeyV')`: V, L3 = `PAD.LS` ou o botão `faro` do toque);
+  - a trava aceita `lie` (a pose de deitar da parada longa, `idle.js`) e `look` (para onde a dog olha), também na
+    companheira.
+- **Cenas** (`src/story/scene/`): `sequencer.js` toca beats (`dur` ou `until`/`max`, `noSkip`). O que a cena deixa
+  de permanente fica no `commit` e o caminho é desfeito no `cleanup`. No fim normal e no pulo rodam os dois, nessa
+  ordem: pular dá no mesmo estado (`test/historia-cenas.test.mjs`).
+  - `director.js` segura as dogs (`lockFor` com `drive`), anda com elas por pontos e faz os planos de câmera pelo
+    `focusShot` do `cameraRig`, com alvo por referência e `hold: Infinity`.
+  - `mood.js` troca noite e manhã escrevendo nos uniformes, sem o `applyLighting` (que recompila sombreadores).
+  - `balloons.js` faz os balões de ícone, todos num atlas só (fala, pensamento e "frases" de até três ícones, com o
+    tamanho na tela ajustado pela distância à câmera); `skip.js` é o pular segurando (E, Espaço, Enter, ✕/○ ou o ⏩
+    do toque) e `humans.js` desenha as mãos e a botina.
+- **Investigação** (`src/story/faro/`, `clues.js`, `mural/rules.js`):
+  - o Faro (das duas) não usa pós-processamento: um véu em tela e trilhas e pontos aditivos, então funciona no
+    perfil `minima`. A pista revelada fica brilhando (`faro.pin`) até ser examinada com o E;
+  - `scentCloud.js` desenha a nuvem de cheiro: do focinho de quem fareja até a próxima pista (`puzzle` diz qual),
+    pelo grafo de navegação da área, sem olhar portas fechadas, numa malha só de instâncias viradas para a câmera;
+  - a Reconstrução mostra silhuetas translúcidas com animação gravada;
+  - a lupa guarda as pistas por id; as regras do mural são puras (a ligação errada volta, e o caso só fecha com as
+    pistas necessárias).
+- **HUD** (`src/story/ui/`, carregado só com a história): faixas de cinema, preto, anel do pular, cartela do capítulo,
+  aviso do Faro (tocável; no quarto, até o primeiro pulso), lupa e meias, mural provisório e fim do capítulo. Ouve os eventos `story:*` do
+  puzzle; a música troca por `story:music` (`main.js`).
+- **Câmera em 3ª pessoa** (`src/story/camera/thirdPerson.js`, só no Modo História): o núcleo escolhe a câmera pelo
+  layout (`CAMERA.rig`) entre as de `createGame({ cameraRigs })`. As fases e o mapa usam o `cameraRig` de sempre.
+  - Ela fica atrás da dog ativa e gira com o analógico direito, o arraste do mouse ou do dedo no canvas, a rodinha e a
+    pinça.
+  - O braço encurta antes de um colisor alto (pelo começo do id, `CAMERA.third.occluders`), e a câmera não passa dos
+    tetos de `CAMERA.third.ceilings`.
+  - Sem mexer na câmera, ela volta para trás da dog quando ela anda (`autoRecenter`; o E2E desliga).
+  - A entrada (`basis()`) gira junto. Os planos das cenas (`focusShot`) e o resto da API são os do `cameraRig`.
+- **A área** (`src/story/areas/recanto/`): `layout.js` (coordenadas, colisores, grafo e câmera, com a grade de
+  colisão), `lighting.js` (manhã e noite), `world/` (cenário em zonas no kit do mapa: `base`, `casa`, `comum`, `leste`,
+  `garagem`, `atores`), `scenes.js` (as seis cenas) e `puzzle.js` (a missão, os paralelos e as pistas). Nos testes,
+  `createHeadlessGame({ story })` roda a área com o cenário de verdade (`test/helpers/historia.mjs`).
+
 ## 5. Colisão e navegação
 
 **Colisão** (`src/game/collision.js`): o corpo de cada dog é um círculo no plano XZ. Formatos de colisor:
@@ -473,6 +519,7 @@ duto nem nariz (as fases 1–3 e 5) têm nuvens que só se espalham e somem.
 | Arrancada (Radhija) / empurrar (Rhaenyra), segurar | Shift | R1 · RB | Arrancada · Empurrar | `shift()` |
 | Empurrão em pé (Rhaenyra, de frente para algo empurrável no alto), segurar | Shift | R1 · RB | Empurrar (segurar) | `shift()` |
 | Trocar de cachorrinha | Q | L1 · LB | Trocar | `KeyQ` |
+| Faro (as duas, só no Modo História): o pulso | V | L3 (apertar o analógico esquerdo) | botão do focinho | `Faro` |
 | Pausar | Esc | Options · Start | botão do canto | `Escape` |
 | Menus | setas, Tab, Enter confirma, Esc volta | D-pad/analógico, ✕ confirma, ○ volta | tocar nos botões (Voltar no canto) | |
 
@@ -486,7 +533,9 @@ o ✕ que confirma "Começar" não vira pulo, o ○ que volta da pausa não vira
 **Toque** (`src/ui/touchControls.js` → `input.touch`): joystick à esquerda (flutuante: tocando fora do aro, ele vem
 para baixo do dedo; `touchStick` usa a mesma zona morta e curva do analógico) e botões à direita (`TOUCH_BUTTONS`):
 Agir no canto e, em volta, Pular, Arrancada/Empurrar (toque = arrancada, segurar = empurrar), Lamber (segurar) e
-Superbafo (segurar e soltar); acima, Trocar e Fica/Vem; a pausa no canto de cima. Os rótulos acompanham a dog ativa
+Superbafo (segurar e soltar); acima, Trocar e Fica/Vem; a pausa no canto de cima. No Modo História entra também o
+botão do focinho (o Faro), de um mapa à parte (`STORY_TOUCH_BUTTONS`): ele só existe com a área da história carregada
+e o `TOUCH_BUTTONS` das fases não muda. Os rótulos acompanham a dog ativa
 (`.rr[data-dog]`): Arrancada vira Empurrar, o Superbafo fica apagado com a Rhaenyra (apertar dá a dica) e o Fica vira
 Vem. O teste `toque` confere que nenhuma caixa de botão encosta em outra nem no HUD. Multitoque por Pointer
 Events: um dedo no joystick e outro nos botões; arrastar o dedo de um botão para outro troca. O dispositivo atual

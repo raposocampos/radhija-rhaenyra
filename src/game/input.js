@@ -9,10 +9,11 @@
 //   R1/RB → Shift (segurar = empurrar; borda = arrancada)
 //   R2/RT → bafo() (segurar = mirar o superbafo, soltar = soprar; teclado R)
 //   L2/LT → lick() (segurar = Lambe-Lambe, as duas dogs; teclado L)
+//   L3 (apertar o analógico esquerdo) → 'Faro' (o pulso do Faro da Radhija no Modo História; teclado V)
 //   analógico esquerdo (zona morta radial + curva, magnitude 0..1) / D-pad → axis()
 // Toque (TOUCH_BUTTONS): Agir → 'KeyE' · Pular → 'Jump' · Superbafo → bafo() (segurar) · Lamber → lick() (segurar) ·
 //   Arrancada/Empurrar → Shift (borda = arrancada, segurar = empurrar) · Trocar → 'KeyQ' · Fica → 'KeyF' ·
-//   Pausa → 'Escape'; joystick virtual (touchStick) → axis().
+//   Pausa → 'Escape'; joystick virtual (touchStick) → axis(). No Modo História (STORY_TOUCH_BUTTONS): Faro → 'Faro'.
 // Dispositivo atual ('keyboard' | 'gamepad' | 'touch'): tecla, controle ou dedo na tela (pointerType touch/pen).
 // Ver docs/ARQUITETURA.md §6. Para os menus da UI: pollMenuPad() (abaixo), com estado próprio.
 
@@ -40,7 +41,17 @@ const PAD_EDGE_CODES = [
   [PAD.LB, 'KeyQ'],
   [PAD.START, 'Escape'],
   [PAD.RS, 'KeyC'], // extra (docs/ARQUITETURA.md, "Extras")
+  [PAD.LS, 'Faro'], // o pulso do Faro (Modo História, src/story/faro/faro.js)
 ];
+
+/**
+ * Uma tela da UI por cima do jogo segura o controle (o quadro de dedução do Modo História, src/story/ui/board.js, que
+ * lê o controle sozinho com readGamepad): enquanto true, o poll() não gera toques nem move as dogs, e o que estava
+ * apertado fica travado até soltar (não vaza para o jogo quando a tela fecha).
+ */
+let padCaptured = false;
+/** @param {boolean} on */
+export function capturePad(on) { padCaptured = !!on; }
 
 function connectedPads() {
   try {
@@ -88,6 +99,15 @@ export const TOUCH_BUTTONS = {
   stay: { code: 'KeyF' }, // Fica / Vem (companheira)
   pause: { code: 'Escape' }, // Pausar
 };
+/**
+ * Botões de toque que só existem no Modo História (src/ui/touchControls.js cria o do focinho com a área da história).
+ * @type {Record<string, { code?: string, hold?: 'bafo' | 'lick' | 'shift' }>}
+ */
+export const STORY_TOUCH_BUTTONS = {
+  faro: { code: 'Faro' }, // Faro: o botão do focinho, só com a Radhija
+};
+/** O botão de toque pelo id (os de sempre e os do Modo História). */
+const touchButton = (id) => TOUCH_BUTTONS[id] ?? STORY_TOUCH_BUTTONS[id];
 export const TOUCH_DEADZONE = 0.14;
 
 /**
@@ -180,7 +200,7 @@ export function createInput({ onDevice } = {}) {
   // ---------- toque (botões e joystick virtuais) ----------
   const virt = { held: new Set(), stick: { x: 0, y: 0, m: 0 } }; // estado dos controles virtuais
   const touchHeld = (kind) => {
-    for (const id of virt.held) if (TOUCH_BUTTONS[id].hold === kind) return true;
+    for (const id of virt.held) if (touchButton(id)?.hold === kind) return true;
     return false;
   };
   // ---------- controle ----------
@@ -250,6 +270,18 @@ export function createInput({ onDevice } = {}) {
       return;
     }
     pad.last = g.pad;
+    if (padCaptured) {
+      // a UI está com o controle: nada passa para o jogo e o que está apertado só vale de novo depois de soltar
+      pad.prev = pad.cur = g.down.slice();
+      for (let i = 0; i < 17; i++) if (g.down[i]) pad.latched.add(i);
+      if (g.rt > 0.35) pad.latched.add(PAD.RT);
+      if (g.lt > 0.35) pad.latched.add(PAD.LT);
+      pad.stick = { x: 0, y: 0, m: 0 };
+      pad.stick2 = { x: 0, y: 0, m: 0 };
+      pad.dpad = { x: 0, y: 0 };
+      pad.shiftHeld = pad.bafo = pad.lick = pad.rtHeld = pad.ltHeld = false;
+      return;
+    }
     pad.prev = pad.cur;
     pad.cur = g.down.slice();
     // RT com histerese (gatilho analógico)
@@ -353,7 +385,7 @@ export function createInput({ onDevice } = {}) {
     touch: {
       /** @param {string} id */
       press(id) {
-        const b = TOUCH_BUTTONS[id];
+        const b = touchButton(id);
         if (!b) return false;
         setDevice('touch');
         if (virt.held.has(id)) return true;

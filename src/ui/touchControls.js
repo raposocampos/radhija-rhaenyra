@@ -1,5 +1,5 @@
 // Controles de toque: joystick virtual à esquerda e botões à direita (Agir no meio; em volta Pular, Arrancada/Empurrar,
-// Lamber e Superbafo; acima Trocar e Fica/Vem), mais a pausa no canto. O Superbafo é só da Radhija: com a Rhaenyra ele
+// Lamber e Superbafo; acima Trocar e Fica/Vem; o Faro só existe na área do Modo História), mais a pausa no canto. O Superbafo é só da Radhija: com a Rhaenyra ele
 // fica apagado (apertar dá a dica). Só aparecem durante a partida e depois de um toque na tela (dispositivo
 // 'touch'); teclado ou controle os escondem (a UI chama setActive). Cada botão vira a mesma entrada lógica do teclado
 // e do controle por input.touch (TOUCH_BUTTONS em src/game/input.js).
@@ -9,7 +9,7 @@
 import { events } from '../core/events.js';
 import { touchStick } from '../game/input.js';
 import {
-  pawIcon, jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, stayIcon, followIcon, pauseIcon,
+  pawIcon, jumpIcon, windIcon, lickIcon, dashIcon, pushIcon, swapIcon, stayIcon, followIcon, pauseIcon, noseIcon,
 } from './icons.js';
 
 /** Rótulo e ícone por cachorrinha (tg-r = Radhija, tg-h = Rhaenyra; o CSS mostra o da ativa por .rr[data-dog]). */
@@ -193,6 +193,18 @@ export function createTouchControls({ root, input }) {
   // Agir pulsa quando há o que fazer (o mesmo prompt que mostra a tecla E no HUD)
   events.on('interact:prompt', (p) => btnEl('act').classList.toggle('is-ready', !!p?.text));
   renderStay();
+  // o Faro (Modo História): o botão do focinho entra com a área da história e sai com ela (as fases não o têm)
+  const pad = /** @type {HTMLElement} */ (el.querySelector('.rr-touch__pad'));
+  events.on('level:loaded', (info) => {
+    const want = !!info?.story;
+    const faro = btnEl('faro');
+    if (want && !faro) pad.insertAdjacentHTML('beforeend', button('faro', noseIcon(), 'Faro'));
+    else if (!want && faro) {
+      if (holds.has('faro')) { holds.set('faro', 1); release('faro'); }
+      for (const [k, p] of pointers) if (p.kind === 'btn' && p.id === 'faro') pointers.delete(k);
+      faro.remove();
+    }
+  });
 
   return {
     el,

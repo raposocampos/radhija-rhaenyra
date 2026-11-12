@@ -13,6 +13,7 @@
 // runner; o relatório diz o que acabou de entrar na câmera). O 1º quadro sem o aquecimento custava de 5 a 30× o normal.
 // Executar no CI (workflow E2E manual, suíte primeira-passagem), nunca como bateria no PC.
 //   FIRST_PASS_LEVELS=1,2  FIRST_PASS_QUALITY=alta,media  FIRST_PASS_DOGS=novo  FIRST_PASS_STRICT=0
+//   FIRST_PASS_LEVELS=historia: a área do Modo História (?historia, na etapa da casa: sem cena tocando)
 //   E2E_VERTEX_INPUT_DYNAMIC=1 (o padrão do Chromium no SwiftShader; ver angleArgs em lib/browser.mjs)
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -62,7 +63,7 @@ const EXCESS_MS = Number(process.env.FIRST_PASS_EXCESS_MS || 150);
 const EXCESS_REL = Number(process.env.FIRST_PASS_EXCESS_REL || 0.35);
 const MAX_PEAKS = Number(process.env.FIRST_PASS_MAX_PEAKS || 3);
 const MAX_RATIO = Number(process.env.FIRST_PASS_MAX_RATIO || 2.5);
-for (const l of LEVELS) if (!/^([1-9]|10)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
+for (const l of LEVELS) if (!/^([1-9]|10|historia)$/.test(l)) throw new Error(`FIRST_PASS_LEVELS inválido: ${l}`);
 for (const q of QUALITIES) if (!DEVICES[q]) throw new Error(`FIRST_PASS_QUALITY inválido: ${q}`);
 if (DOGS && !/^novo$/.test(DOGS)) throw new Error('FIRST_PASS_DOGS só aceita "novo"');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -150,6 +151,8 @@ async function pageTour({ dt, startFrames, startFramesMax, nodeFrames, returnFra
   // o xixi (raro e sorteado) faria uma dog sair andando numa passagem e não na outra; as partidas automáticas que medem
   // onde as dogs ficam também o desligam
   if (replay) game.debug.idle?.setPee(false);
+  // no Modo História, pelo mesmo motivo, a Rhaenyra distraída (src/story/scene/lesada.js) também fica desligada
+  if (replay) game.puzzle?.lesada?.setOn?.(false);
   // caminho guloso: sempre o nó mais perto ainda não visitado
   const tour = [];
   let at = start;
@@ -297,7 +300,9 @@ async function pageTour({ dt, startFrames, startFramesMax, nodeFrames, returnFra
         const s = scan(true);
         news.push({ pass, node: node.id, frame: frames.length - 1, programs: f.programs, textures: f.textures, geometries: f.geometries,
           ms: f.ms, materials: s.mats.slice(0, 12), moreMaterials: Math.max(0, s.mats.length - 12), textureList: s.texs.slice(0, 8),
-          newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [] });
+          newProgramNames: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => p.name) : [],
+          // o tipo do material e o começo da chave do programa (o shader e as variantes: instâncias, lados, alfa…)
+          newProgramKeys: f.programs > 0 ? renderer.info.programs.slice(-f.programs).map((p) => `${/** @type {any} */ (p).type ?? '?'} · ${String(p.cacheKey ?? '').slice(0, 900)}`) : [] });
       }
     }
     cur = null;
@@ -372,10 +377,11 @@ const markAt = (marks, name) => marks.find((m) => m.name === name)?.t ?? null;
 
 let browser;
 const watchdog = setTimeout(() => {
-  report.errors.push('medição passou de 40 minutos');
+  report.errors.push('medição passou de 60 minutos');
   void browser?.close();
   server.closeAllConnections();
-}, 40 * 60 * 1000);
+  // 60 min: a área do Modo História com a casa e o quintal maiores (2026-11-12) levou de 28 a 41 min no SwiftShader
+}, 60 * 60 * 1000);
 watchdog.unref();
 try {
   await mkdir(OUT, { recursive: true });
@@ -392,7 +398,7 @@ try {
   report.conditions.browserArguments = options.args;
   for (const level of LEVELS) {
     for (const quality of QUALITIES) {
-      const label = `fase${level}/${quality}`;
+      const label = level === 'historia' ? `historia/${quality}` : `fase${level}/${quality}`;
       console.log(`[primeira-passagem] ${label}: abrindo num navegador novo`);
       // navegador novo por medição: nada compilado antes (o cache de programas do processo da GPU é por navegador)
       browser = await chromium.launch(options);
@@ -404,7 +410,9 @@ try {
         page.on('crash', () => errors.push('page crashed'));
         page.on('response', (r) => { if (r.status() >= 400) errors.push(`HTTP ${r.status()}: ${r.url()}`); });
         await page.addInitScript(pageSetup, { quality: DEVICES[quality].level });
-        const url = `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
+        const url = level === 'historia'
+          ? `${base}?historia&stage=casa${DOGS ? `&dogs=${DOGS}` : ''}`
+          : `${base}?level=${level}&play${DOGS ? `&dogs=${DOGS}` : ''}`;
         await page.goto(url, { waitUntil: 'load', timeout: 180000 });
         await page.waitForFunction(() => window.__firstPass && window.__game?.game.state === 'playing', null, { timeout: 180000 });
         const run = await page.evaluate(pageTour, { dt: DT, startFrames: START_FRAMES, startFramesMax: START_FRAMES_MAX, nodeFrames: NODE_FRAMES,
@@ -480,7 +488,10 @@ try {
         }
         if (run.state !== 'playing' && run.state !== 'celebrate' && run.state !== 'victory') fail(`${label}: estado inesperado ${run.state}`);
         if (STRICT) {
-          if (summary.afterLoad.programs > 0) fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
+          if (summary.afterLoad.programs > 0) {
+            fail(`${label}: ${summary.afterLoad.programs} programas compilados depois da carga`);
+            for (const n of run.news.filter((x) => x.programs > 0)) console.log(`[primeira-passagem]   ${n.node}, quadro ${n.frame} da ${n.pass}ª passagem: ${(n.newProgramKeys || []).join(' | ')}`);
+          }
           if (summary.afterLoad.textures > 0) fail(`${label}: ${summary.afterLoad.textures} texturas enviadas depois da carga`);
           if (summary.afterLoad.geometries > 0) fail(`${label}: ${summary.afterLoad.geometries} geometrias enviadas depois da carga`);
           if (summary.events.programs > 0 || summary.events.textures > 0) fail(`${label}: o primeiro superbafo compilou ${summary.events.programs} programas e enviou ${summary.events.textures} texturas`);

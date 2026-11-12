@@ -1,12 +1,13 @@
 # Modo História: visão de design
 
-Situação: **enredo aprovado no plano em 2026-10-29. O storyboard e as seis decisões padrão aguardam confirmação, e
-nada foi implementado.**
+Situação: **etapa 1 (roteiro) integrada no PR #74. Etapa 2 (fatia jogável) em construção: em 2026-11-01 o usuário
+confirmou as seis decisões padrão e escolheu o botão do Faro (V, L3 e o botão do focinho no toque). No mesmo dia,
+pediu o Modo História em 3ª pessoa (veja "Câmera em 3ª pessoa").**
 - O roteiro completo ("As Aventuras de Radhija & Rhaenyra": enredo, elenco, casos, capítulos e mapa-múndi) está em
   [HISTORIA.md](HISTORIA.md).
 - Este documento trata da estrutura, do desempenho, do progresso e das etapas de entrega.
 - No menu (Jogar), o cartão "Modo História" ainda mostra o selo "Em breve" e não abre nada (`MODES.story` em
-  `src/ui/markup.js`).
+  `src/ui/markup.js`). A fatia da etapa 2 abre só pela entrada das prévias: `?historia` (veja "Etapa 2" abaixo).
 
 ## O que o usuário pediu
 
@@ -22,7 +23,13 @@ nada foi implementado.**
   maior, com carregamentos escondidos.
 - **O Condomínio é o Recanto das Patinhas** (cap. 1).
 - **8 capítulos, com um núcleo de 4** (1, 2, 6 e 8), que conta a história completa sozinho.
-- **Sem palavras nas cenas:** só desenhos e gestos. Os humanos aparecem só de relance.
+- **Falas em HQ (decisão do usuário em 2026-11-10, no lugar de "sem palavras"):** as cenas viram páginas de HQ dentro
+  do jogo, no estilo mangá / Scott Pilgrim (quadros, balões com falas curtas em pt-BR, caixas de narração,
+  onomatopeias, efeitos), com a voz em sílabas sintetizadas por personagem; no jogo, falas curtas viram legenda. Os
+  humanos aparecem só de relance.
+- **Árvore de pistas (decisão do usuário em 2026-11-10):** um botão (Tab, Select/View ou o do HUD) abre o quadro de
+  dedução no estilo dos jogos do Sherlock Holmes: a pergunta-raiz do capítulo, as perguntas, as pistas ligadas a cada
+  uma (desenho + anotação) e as conclusões, escolhidas pelo jogador.
 - **Investigação:** Faro, Reconstrução, pistas, mural de pistas e enigmas.
 - **Sem ligação de enredo com as 10 fases.** Personagens e peças podem ser reaproveitados.
 
@@ -137,18 +144,158 @@ ou não se entender, a história volta para revisão antes de seguir.
 - **Fluidez:** nenhum quadro longo com a câmera andando, e Faro legível no perfil `minima`.
 - **Teste do usuário** nos três aparelhos.
 
-## Em aberto com o usuário
+## Câmera em 3ª pessoa (decisão de 2026-11-01)
 
-**As seis decisões padrão do roteiro,** listadas em [HISTORIA.md](HISTORIA.md):
-- mistério de verdade;
-- prazo visível;
-- fatia jogável primeiro;
-- núcleo de 4 capítulos;
-- Faro em pulso;
-- custo do erro no mural.
+Depois de ver a prévia da fatia, o usuário mudou o escopo: **o Modo História é um jogo em 3ª pessoa.** Na câmera de
+cima, havia pontos do mapa ruins de enxergar.
+- **Como funciona:** a câmera fica atrás da cachorrinha ativa e gira livre: analógico direito, arrastar com o mouse ou
+  com o dedo na parte livre da tela, rodinha e pinça para aproximar. Ela desvia das paredes (o braço encurta) e não
+  passa do forro dentro dos cômodos. Quando a dog anda sem que a jogadora mexa na câmera, ela volta devagar para trás.
+- **Lugar apertado (revisão de 2026-11-09):** o usuário reprovou a câmera "empurrada para uma visão de cima" na casa
+  pequena. Agora:
+  - o mapa ficou 1,7× maior (cômodos de ~6 m), e dentro de casa a câmera chega mais perto (2,1 m) e fica mais baixa;
+  - só paredes encurtam o braço. Móveis, árvores e o carro ficam por conta do recorte que deixa ver as dogs;
+  - com o braço curto, a câmera sobe só até passar da cabeça da dog e olha para a frente, por cima do ombro dela;
+  - do título para o jogo não há mais travelling (ele atravessava paredes).
+- **Só no Modo História:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **Nas cenas:** os planos do diretor assumem a câmera, sempre de DENTRO dos lugares (a casa é inteira). O recorte
+  "ver através" fica desligado durante a cena. No fim (assistida ou pulada), a câmera volta suave para trás da dog
+  ativa, em 0,6 s, sem trava sobrando.
+- **Toque e mouse:** o dedo só gira a câmera na parte livre da tela (o joystick e os botões ficam com o dedo deles).
+  O arraste segue o dedo ou o mouse mesmo passando por cima do HUD. Só passar o mouse por cima não gira, e nada pede
+  permissão ao navegador (sem trava do ponteiro).
+- **Controle:** o analógico direito gira a câmera (nas fases, ele continua olhando em volta). Um clique sem querer
+  nele, logo depois de girar, não vale como botão.
+- **Distância de desenho:** a câmera corta o que está além de 72 m, depois da névoa (que acaba em 64 m de dia). O
+  Faro virou contas de luz um pouco acima do chão, legíveis de lado, sem pós-processamento.
+- **Orçamento:** a medição de recursos confere o pior quadro da 3ª pessoa em vários pontos do mapa (atrás da dog
+  olhando para os quatro lados, e quase rente ao chão olhando o horizonte) contra o teto da fase 10.
+- **No cenário:** a casa ficou inteira (paredes até o forro, vergas nas passagens, telhado), o muro do sul voltou à
+  altura e o depósito ganhou laje. As paredes da casa não projetam sombra, para o sol continuar entrando nos cômodos.
+  O recorte que deixa ver as dogs através do que as tapa continua valendo.
+- **Para depois, sem decisão:** levar o jogo para C++/engine, com build jogável.
+
+
+**Como abrir.** `?historia` numa prévia de PR ou na versão de desenvolvimento (`src/story/gate.js`). No link principal
+não abre nada. `?historia&stage=varal` começa numa etapa da missão (testes e revisão).
+
+**Controles novos.** Faro: V, L3 ou o botão do focinho no toque, com qualquer uma das duas; liga e desliga, e gasta
+o fôlego de cada dog (8 s cheio, recarrega desligado; `src/story/faro/faroMode.js`, o medidor em `faroMeter.js`).
+Árvore de pistas: Tab, Select ou o botão do HUD; ligar uma pista a uma pergunta é tocar/clicar na pista e depois na
+pergunta. Falar com uma testemunha: E, de perto. Examinar uma pista
+revelada: E, de perto. Pular cena: segurar E (ou Espaço, Enter), ✕/○ no controle, ou o botão ⏩ na tela de toque. No
+quarto, o aviso do Faro também é tocável.
+
+**Onde está cada coisa:**
+- `src/story/scene/`: o kit de cenas. O sequenciador de beats (`sequencer.js`) põe o que fica de permanente no commit, e
+  por isso pular e assistir dão no mesmo. Também o diretor (câmera, dogs, balões, sons), os balões de ícone num atlas
+  só, o pular segurando, o clima (noite e manhã sem recompilar sombreadores) e as mãos e pés humanos.
+- `src/story/faro/scentCloud.js`: a nuvem de cheiro. Um rastro de nuvenzinhas (uma malha só, instâncias viradas para
+  a câmera) do focinho de quem fareja até a próxima pista, pelo grafo de navegação da área, sem olhar o que está
+  fechado.
+- `src/story/faro/`: o pulso do Faro, sem pós-processamento (véu na tela e trilhas aditivas), e a Reconstrução com
+  silhuetas translúcidas e animação gravada.
+- `src/story/clues.js` e `src/story/mural/rules.js`: o catálogo das pistas (com a anotação de cada uma), a lupa e as
+  regras do mural.
+- `src/story/deduction.js`: o estado da árvore de pistas (perguntas, pistas ligadas, conclusões; `story:board`).
+- `src/story/scene/storyteller.js`: as falas (`dir.say`), a página de HQ (`dir.comic`, `panel`, `onomato`, `caption`,
+  `fx`) e a lente dos planos (`dir.lens`).
+- `src/story/ui/board.js`, `subtitles.js` e `comic.js`: o quadro de dedução, as legendas com voz e a camada de HQ.
+- `src/story/ui/`: o HUD da história (faixas, cartela, aviso do Faro, lupa, meias, mural provisório e fim do capítulo).
+- `src/story/areas/recanto/`: o Recanto das Patinhas, com layout, iluminação, cenário em zonas (`world/`), as seis cenas
+  (`scenes.js`) e a missão (`puzzle.js`). A casa maior: `world/casaSul.js` (a ala sul), `casaPuzzles.js` (a lógica,
+  ligada ao `puzzle.js` por ganchos) e `scenesCasa.js` (as cenas). O quintal maior: `world/quintal.js` (o cenário), `quintalPuzzles.js` (a
+  lógica, ligada ao `puzzle.js` por ganchos, como o terraço em `rooftop.js`), `scenesQuintal.js` (as cenas) e o jabuti
+  em `src/story/scene/jabuti.js`.
+- No núcleo: a área carrega como fase especial fora da lista (`STORY = −2`, em `src/game/game.js`). Durante uma cena,
+  `puzzle.cinematic()` segura a entrada e as dogs, e `puzzle.onFaro` recebe o botão do Faro.
+- `src/story/camera/thirdPerson.js`: a câmera em 3ª pessoa. O núcleo escolhe a câmera pelo layout
+  (`CAMERA.rig = 'third'`, com `createGame({ cameraRigs })`).
+
+**O capítulo 1 (refeito em 2026-11-09: mais passos, das duas, com investigação).**
+- **A abertura**, em 5 beats, filmada dentro do quarto: a noite, os pombos no parapeito, o preto, a manhã sem a
+  cenoura, as duas acordando. Termina com a jogadora no quarto.
+- **A missão:**
+  1. o quarto: farejar e examinar a trilha, o pote e a pena; a cena dos pombos na janela e a cartela;
+  2. a casa maior (4ª rodada, pedido de 2026-11-11: "precisamos de uma casa maior, com mais detalhes, pensar em puzzles
+     que se enquadrem melhor na casa"). A casa ganhou a ala sul (`world/casaSul.js`; a lógica em `casaPuzzles.js` e as
+     cenas em `scenesCasa.js`): corredor, banheiro, despensa, sala de jantar, sala de estar e a porta dos fundos. A
+     antiga porta da cozinha para o quintal virou janela (`KITCHEN_WINDOW`); a porta da cozinha (`KITCHEN_DOOR`) agora dá
+     no corredor. Os passos:
+     - a portinha de gato e o pedal da grade (Radhija); o saco de ração empurrado para o leste e o pulo na maçaneta
+       (Rhaenyra);
+     - **o aspirador robô** (cena `aspirador`: o barulho da porta o acorda): ele anda em zigue-zague pelo corredor, sem
+       nunca encostar em ninguém. A Radhija morre de medo e não passa (trava, com a fala e o balão). O latido grosso da
+       Rhaenyra perto dele, ou ela no caminho dele com o Fica, o manda de volta para a base; sem o Fica, ele tromba,
+       desvia e, na terceira, desiste;
+     - **a despensa no escuro**: a Radhija não entra; a Rhaenyra entra, mas o interruptor é alto: o impulso na parede
+       (como a maçaneta) acende a luz. Acesa, aparece a goteira da chuva (pista escondida `goteira`). A despensa liga o
+       corredor à sala de jantar;
+     - **a toalha e a lata de biscoito**: a Radhija morde a ponta da toalha e puxa (a boca, como o ferrolho); a lata
+       escorrega até a beirada e cai (sem atravessar a mesa, as cadeiras nem o chão); dela saem um petisco e a
+       etiqueta da cenoura (pista escondida `etiqueta`). A Rhaenyra não puxa (traria a mesa junto);
+     - **o pufe, o sofá e o trinco**: o trinco da porta dos fundos é alto. A Rhaenyra empurra o pufe até encostar no
+       sofá; a Radhija sobe pelo pufe, pelo assento e pelo encosto até o parapeito da janela e abre o trinco com a pata;
+       a porta é pesada: só a Rhaenyra a empurra (cena `portaFundos`, e começa a etapa do quintal);
+  3. o quintal maior (4ª rodada, pedido de 2026-11-11: "mais puzzles espalhados pelo quintal; aumente o quintal após
+     sair de casa"). O lote da casa cresceu 11 m para o sul (`LOT`); as duas saem pela porta dos fundos (`HOUSE_EXIT`)
+     num quintal em L (`world/quintal.js`; a lógica em `quintalPuzzles.js` e as cenas em `scenesQuintal.js`):
+     - a chegada (cena `quintalChega`): o quintal dos fundos, o jabuti cochilando e os aspersores;
+     - **o jabuti** (obrigatório): o Seu Bento cochila na passagem estreita da horta do meio e só sai com uma folha de
+       alface. As duas pegam juntas no canteiro do fundo: a Rhaenyra segura o pé (Fica perto dele; trocando com ela ali,
+       ela fica sozinha) e a Radhija morde a folha de fora e puxa (a boca, como o ferrolho). Sozinha, a alface inteira
+       estica e escapa. A Radhija entrega a folha (cena `quintalJabuti`) e ele anda devagar até o cantinho, parando se
+       alguém está na frente; o latido o faz esconder no casco; empurrar não adianta;
+     - **a irrigação automática** (obrigatória): três aspersores no gramadinho entre os canteiros de flores ligam um
+       depois do outro, do norte para o sul. A Radhija não passa por aspersor ligado (o jato só barra a pequena; se
+       liga com ela dentro, ela leva o banho e pula para trás). A Rhaenyra senta (Fica) em cima de um e tampa: só
+       tampando o do meio dá para atravessar, no tempo certo de cada um (o programador mostra as três gotas). Do outro
+       lado, a Radhija fecha o registro (só o focinho dela cabe na caixinha);
+     - **a pipa** (opcional): a Rhaenyra empurra a goiabeira em pé (Shift / R1, de qualquer lado); no terceiro empurrão
+       a pipa cai bailando; na rabiola, penas e um anel de borracha (cena `quintalPipa`: a pista escondida `rabiola`,
+       extra da pergunta da borracha);
+     - **a mangueira e o balde** (opcional): a Radhija puxa o laço da mangueira enroscado na alavanca da torneira
+       temporizada; a água corre uns segundos e o baldão enche (se não encher, mais um puxão); a bolinha de meia da
+       Rhaenyra boia até a borda (cena `quintalBolinha`: a 4ª meia);
+     - e o final de antes: a porta trancada por fora; o galho na frente da passagem do muro (Rhaenyra); a passagem e a
+       argola do ferrolho (Radhija);
+  4. a piscina: o Faro mostra a Reconstrução;
+  5. o varal: o cesto embaixo da cenoura e o empurra-empurra da Rhaenyra no poste (Shift / R1, três empurrões);
+  6. a torre: a senha do interfone (4 botões; a Reconstrução mostra dois e o espirro do Soneca esconde o terceiro, que
+     vem do depoimento da Dona Gansa); a porta de mola com a irmã segurando; o terraço jogável (`rooftop.js`, fora do
+     mapa): encurralar os pombos com uma dog no Fica, o caixote embaixo da escada, o pulo na parede no trinco, a fuga
+     e a pista da tampa;
+  7. a portaria: o Superbafo pela grelha abre a janela; o latido grosso da Rhaenyra acorda o Sr. Luiz, que dá o
+     depoimento (contradito pela grelha: pergunta nova no quadro);
+  8. o portãozinho.
+- **As testemunhas:** a Dona Gansa (quer o broche que caiu na ilha) e o Bichano, no capô da caminhonete (quer a
+  bolinha presa no depósito); cada uma dá um depoimento para a árvore de pistas.
+- **Os três puzzles paralelos:**
+  - o barquinho até a ilha, com a Dona Gansa distraída por um latido;
+  - a lixeira e o toldo até a meia da antena;
+  - a corda, o balde e a bola até a meia do depósito.
+- **Pistas:** as obrigatórias, as de cena e cinco escondidas (a baba, o ralo, a goteira da despensa, a etiqueta da
+  lata e a rabiola da pipa do quintal).
+- **Colecionáveis:** quatro meias (a do baldão do quintal é a quarta) e cinco petiscos.
+- **O fim:** o mural provisório, só com o caso 3, e a tela de fim do capítulo.
+
+**Verificação.**
+- **Testes unitários no CI** (`test/historia-*.test.mjs`):
+  - regras do mural e da lupa;
+  - mapa da área;
+  - cada cena assistida × pulada;
+  - travas e "ninguém atravessa nada" quadro a quadro;
+  - a missão e os paralelos com os controles de verdade;
+  - o cenário (z-fighting e colisores).
+- **E2E** na suíte `historia` do workflow manual, com capturas nos 11 tamanhos de tela. Nos de toque, um dedo de
+  verdade arrastado na parte livre gira a câmera e, no joystick, não gira. No PC, o arraste do mouse gira e só passar o
+  mouse por cima, não. A partida confere cada puzzle com as teclas; os trechos longos entre eles são postos no lugar
+  (a caminhada com a IA fica nos testes de unidade).
+- **Capturas de revisão** em qualidade cheia (`capture-historia.mjs`).
+
+## Em aberto com o usuário
 
 **Ainda por decidir:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o botão do Faro;
-- o ângulo de câmera do mapa-múndi.
+- o ângulo de câmera do mapa-múndi (a 3ª pessoa vale dentro das áreas).

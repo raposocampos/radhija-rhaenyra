@@ -6,7 +6,7 @@ import { createEngine } from './core/engine.js';
 import { createFrameCap, furShellsFor } from './core/quality.js';
 import { createSettings } from './core/settings.js';
 import { createDog } from './dogs/dog.js';
-import { createGame, HUB } from './game/game.js';
+import { createGame, HUB, STORY } from './game/game.js';
 import { createAudio } from './fx/audio.js';
 import { createParticles } from './fx/particles.js';
 import { createFeedback } from './fx/feedback.js';
@@ -15,6 +15,8 @@ import { createInstallHint } from './ui/installHint.js';
 import { updateSeeThrough } from './world/seeThrough.js';
 import { LEVELS as ALL_LEVELS, publishedLevelIndex } from './levels/index.js';
 import MAPA from './levels/mapa/index.js';
+import { BUILD_INFO } from './core/version.js';
+import { storyEnabled } from './story/gate.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -56,8 +58,20 @@ async function boot() {
   mark('dogs');
   engine.scene.add(dogs.radhija.object, dogs.rhaenyra.object);
 
+  // Modo História (só nas prévias): a área do capítulo e o HUD dela vêm sob demanda, fora do pacote inicial
+  // (?historia só numa prévia de PR ou no desenvolvimento: src/story/gate.js)
+  const storyOn = storyEnabled(params, !!dev, BUILD_INFO, location.pathname);
+  const storyMods = storyOn
+    ? await Promise.all([import('./story/areas/recanto/index.js'), import('./story/ui/storyHud.js'), import('./story/camera/thirdPerson.js')])
+    : null;
+  mark('story');
+
   // o mapa das fases (Pandorópolis): Jogar → Fases, a pausa e a vitória levam a ele
-  const game = createGame({ engine, dogs, levels: LEVELS, params, hub: MAPA });
+  // a área da história usa a câmera em 3ª pessoa (layout.CAMERA.rig = 'third'); as fases e o mapa, a de cima
+  const game = createGame({
+    engine, dogs, levels: LEVELS, params, hub: MAPA, story: storyMods?.[0].default ?? null,
+    cameraRigs: storyMods ? { third: storyMods[2].createThirdPersonRig } : {},
+  });
   const audio = createAudio();
   const particles = createParticles(engine);
   // opções salvas (modo sem dicas): a UI esconde objetivo e dicas, o feedback esconde o marcador do objetivo
@@ -71,6 +85,9 @@ async function boot() {
   // no catálogo de desenvolvimento (prévias dos protótipos) o menu libera todas as fases para teste
   // input: controles de toque; quality: menu de qualidade gráfica e layout do celular (engine.quality.device)
   const ui = createUI({ audio, layout: LEVELS[0].layout, levels: LEVELS, params, unlockAll: !!dev, input: game.input, quality: engine.quality, settings, map: !dev });
+  // o HUD da história (faixas de cinema, lupa, meias, mural, fim do capítulo): só com ?historia numa prévia
+  const storyHud = storyMods ? storyMods[1].createStoryHud({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), audio }) : null;
+  const comic = storyMods ? (await import('./story/ui/comic.js')).createComicLayer({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), engine, events }) : null; // a HQ das cenas (balões, quadros)
   // o mapa lê o progresso salvo pela UI (e, no catálogo de desenvolvimento, libera todas as bandeirinhas)
   game.setProgressSource(() => ui.progress);
   game.setUnlockAll(!!dev);
@@ -80,11 +97,17 @@ async function boot() {
     if (game.state === 'title') return 'menu';
     if (game.state === 'load-error') return null;
     if (game.isHub) return 'mapa';
+    // na história, a cena escolhe o tema (o clarinete do recanto, o mistério da Reconstrução; story:music)
+    if (game.isStory) return game.puzzle?.music ?? null;
     return game.levelDef?.id ?? null;
   };
   const syncMusic = () => { if (game.state !== 'loading') audio.setMusic(musicFor()); };
   events.on('game:state', syncMusic);
   events.on('level:loaded', syncMusic);
+  // a troca de tema da história vem no próprio evento (o puzzle guarda o tema atual para as próximas sincronias)
+  events.on('story:music', (/** @type {{ id?: string | null }} */ p = {}) => {
+    if (game.isStory && game.state !== 'loading' && game.state !== 'title') audio.setMusic(p.id ?? null);
+  });
 
   // iPhone no Safari: como jogar em tela cheia (pelo app da tela inicial); nada no PC nem no Android
   const installHint = createInstallHint({ root: /** @type {HTMLElement} */ (document.querySelector('#ui .rr')), device: engine.quality.device, audio });
@@ -92,7 +115,8 @@ async function boot() {
   // Fase inicial (id desconhecido: a primeira); ?play pula a tela inicial; ?mapa abre direto no mapa das fases.
   const lv = dev ? dev.index : published ?? 0;
   mark('ui');
-  if (params.has('mapa') && !dev) await game.loadLevel(HUB, { mode: 'play', initial: true });
+  if (storyOn) await game.loadLevel(STORY, { mode: 'play', initial: true });
+  else if (params.has('mapa') && !dev) await game.loadLevel(HUB, { mode: 'play', initial: true });
   else await game.loadLevel(lv, { mode: params.has('play') ? 'play' : 'title', initial: true });
   syncMusic();
 
@@ -105,6 +129,8 @@ async function boot() {
   // Celular/tablet: no máximo 60 quadros por segundo (telas de 90/120 Hz desenhariam o dobro e esquentariam o
   // aparelho). O quadro pulado não roda nada; o seguinte recebe o tempo inteiro em dt. No PC, todos os quadros.
   const capFrame = engine.quality.capFps ? createFrameCap() : null;
+  /** O "ver através" do quadro: nas cenas do Modo História fica desligado (a câmera de cinema não fura o cenário). */
+  const seeThroughNow = () => updateSeeThrough(dogs, game.activeDog || 'radhija', game.isStory && game.puzzle?.cinematic?.() ? 0 : 1);
 
   function frame(now) {
     if (capFrame && !capFrame(now)) {
@@ -126,10 +152,11 @@ async function boot() {
       engine.camera.position.set(.../** @type {[number, number, number]} */ (camFix));
       engine.camera.lookAt(.../** @type {[number, number, number]} */ (lookFix));
     }
-    updateSeeThrough(dogs, game.activeDog || 'radhija');
+    seeThroughNow();
     feedback.update(dt, elapsed);
     particles.update(dt);
     ui.update(dt);
+    storyHud?.update(dt);
     engine.render(dt, elapsed);
     requestAnimationFrame(frame);
   }
@@ -137,9 +164,9 @@ async function boot() {
 
   // Ganchos de teste/depuração (usados por tools/shot.mjs e pelo QA).
   window.__game = {
-    engine, dogs, game, audio, particles, feedback, ui, events, settings, levels: LEVELS, THREE, installHint,
+    engine, dogs, game, audio, particles, feedback, ui, events, settings, levels: LEVELS, THREE, installHint, storyHud,
     // capturas quadro a quadro (tools/scripts/capture-lambe.mjs): o mesmo "ver através" do quadro normal
-    seeThrough: () => updateSeeThrough(dogs, game.activeDog || 'radhija'),
+    seeThrough: () => seeThroughNow(),
     get env() { return game.built?.env; },
     get props() { return game.built?.props; },
     get layout() { return game.levelDef?.layout; },

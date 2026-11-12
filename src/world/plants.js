@@ -41,7 +41,11 @@ function blade(h, w, lean, dirA, color, segs = 4, tipColor) {
   return g;
 }
 
-export function lavender({ stems = 34, height = 0.42, spread = 0.13, seed = 1 } = {}) {
+/**
+ * Lavanda: as folhinhas da base, as hastes e as espigas. `spikeCap` e `spikeRadial`: os segmentos da espiga (as fases
+ * usam 3 e 6; com 1 e 5, um terço dos triângulos, para canteiros cheios, como os do Modo História).
+ */
+export function lavender({ stems = 34, height = 0.42, spread = 0.13, seed = 1, spikeCap = 3, spikeRadial = 6 } = {}) {
   const r = rng(seed);
   const parts = [];
   // base de folhas cinza-esverdeadas
@@ -60,7 +64,7 @@ export function lavender({ stems = 34, height = 0.42, spread = 0.13, seed = 1 } 
     parts.push(st);
     // espiga de flores
     const tx = Math.cos(a) * (rr + lean * 0.95), tz = Math.sin(a) * (rr + lean * 0.95), ty = 0.03 + h * (1 - lean * 0.25);
-    const spike = new THREE.CapsuleGeometry(0.012, 0.075, 3, 6);
+    const spike = new THREE.CapsuleGeometry(0.012, 0.075, spikeCap, spikeRadial);
     spike.translate(0, 0.03, 0);
     spike.rotateZ(-Math.cos(a) * lean * 1.6); spike.rotateX(Math.sin(a) * lean * 1.6);
     spike.translate(tx, ty, tz);
@@ -71,7 +75,11 @@ export function lavender({ stems = 34, height = 0.42, spread = 0.13, seed = 1 } 
   return merge(parts);
 }
 
-export function geranium({ radius = 0.2, height = 0.2, seed = 2, flower = '#ff6a55', clusters = 5 } = {}) {
+/**
+ * Gerânio: a moita de folhas e os cachos de flor. `detail` (a moita) e `florets` (as flores de cada cacho): as fases usam
+ * 2 e 9; com 1 e 6, metade dos triângulos, para canteiros cheios.
+ */
+export function geranium({ radius = 0.2, height = 0.2, seed = 2, flower = '#ff6a55', clusters = 5, detail = 2, florets = 9 } = {}) {
   const r = rng(seed);
   const blobs = [];
   for (let i = 0; i < 5; i++) {
@@ -79,12 +87,12 @@ export function geranium({ radius = 0.2, height = 0.2, seed = 2, flower = '#ff6a
     blobs.push({ x: Math.cos(a) * radius * 0.45, y: height * 0.45, z: Math.sin(a) * radius * 0.45, r: radius * 0.55, sy: 0.7 });
   }
   blobs.push({ x: 0, y: height * 0.6, z: 0, r: radius * 0.6, sy: 0.75 });
-  const parts = [foliageCluster(blobs, { detail: 2, amp: 0.3, freq: 10, seed, dark: '#2f4d1f', mid: '#4f7a2e', light: '#86a94a' })];
+  const parts = [foliageCluster(blobs, { detail, amp: 0.3, freq: 10, seed, dark: '#2f4d1f', mid: '#4f7a2e', light: '#86a94a' })];
   const fc = new THREE.Color(flower);
   for (let k = 0; k < clusters; k++) {
     const a = r() * Math.PI * 2, rr = r() * radius * 0.6;
     const cx = Math.cos(a) * rr, cz = Math.sin(a) * rr, cy = height * 0.95 + r() * 0.06;
-    for (let j = 0; j < 9; j++) {
+    for (let j = 0; j < florets; j++) {
       const b = new THREE.IcosahedronGeometry(0.018 + r() * 0.008, 0);
       const u = r() * Math.PI * 2, v = r() * 0.8;
       b.translate(cx + Math.cos(u) * v * 0.035, cy + r() * 0.02, cz + Math.sin(u) * v * 0.035);
@@ -102,14 +110,18 @@ export function boxwood(r = 0.26, seed = 3) {
   });
 }
 
-export function lettuce({ r = 0.12, seed = 4 } = {}) {
+/**
+ * Pé de alface: folhas em concha, de dentro para fora. `segs`: os segmentos de cada folha ([em volta, de cima para
+ * baixo]; as fases usam 10 × 6; 7 × 4 tem menos da metade dos triângulos, para canteiros cheios).
+ */
+export function lettuce({ r = 0.12, seed = 4, segs = [10, 6] } = {}) {
   const rr = rng(seed);
   const parts = [];
   const leaves = 11;
   for (let i = 0; i < leaves; i++) {
     const layer = i / leaves;
     const a = i * 2.4;
-    const g = new THREE.SphereGeometry(r * (0.75 - layer * 0.35), 10, 6, 0, Math.PI * 0.9, 0, Math.PI * 0.42);
+    const g = new THREE.SphereGeometry(r * (0.75 - layer * 0.35), segs[0], segs[1], 0, Math.PI * 0.9, 0, Math.PI * 0.42);
     g.rotateY(a);
     g.rotateX((rr() - 0.5) * 0.3);
     g.scale(1, 0.9 + layer * 0.5, 1);

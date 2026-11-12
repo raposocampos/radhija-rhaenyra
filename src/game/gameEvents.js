@@ -19,6 +19,9 @@ const RUMBLE = {
   'extra:secret': () => [0.22, 0.5, 380],
 };
 
+/** Eventos de todo quadro, fora do registro de depuração. */
+const UNLOGGED = new Set(['story:sayMove']);
+
 /**
  * O núcleo recebe uma função para calcular o padrão. A decisão de vibrar fica
  * depois do dispatch, inclusive durante a inicialização da entrada.
@@ -31,6 +34,8 @@ export function createGameEvents({ dispatch, now, rumble }) {
 
   /** @param {string} name @param {object} payload */
   function record(name, payload) {
+    // eventos de todo quadro (o ponto dos balões de fala do Modo História) não entram no registro: encheriam os 500
+    if (UNLOGGED.has(name)) return;
     log.push({ t: Math.round(now()), name, payload });
     if (log.length > 500) log.shift();
   }

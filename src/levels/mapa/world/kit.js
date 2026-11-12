@@ -21,9 +21,25 @@ export const SLOTS = {
   foliage: () => mat('mapa-foliage', () => addFoliageWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86 }), { amp: 0.045, freq: 0.9 })),
   /** Plantinhas de folha fina (lavanda, gerânio, ramas): as duas faces. */
   plant: () => mat('mapa-plant', () => addFoliageWind(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, side: THREE.DoubleSide }), { amp: 0.018, freq: 1.6 })),
+  /**
+   * Decalques no chão (sombra de contato, umidade, sujeira, musgo): cor E opacidade por vértice (a cor com quatro
+   * componentes, ver decalLot), sem luz, por cima do piso (sem profundidade, puxado para a câmera) e sem sombra.
+   */
+  contact: () => mat('mapa-contact', () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })),
+  /**
+   * O mesmo material de 'solid', mas sem fazer sombra: miudezas (frutinhas, louças, pedrinhas, o que fica rente ao
+   * chão), cuja sombra mal aparece e conta os triângulos de novo, ou peças que fazem sombra por uma forma mais simples
+   * à parte. Sem o sombreado de maquete, a não ser com `ao: true`.
+   */
+  nocast: () => mat('mapa-solid', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 })),
+  /**
+   * Formas só de sombra: não desenham nada na tela (nem cor, nem profundidade), só entram na sombra do sol. A forma
+   * simples (uma caixa) de uma peça de muitos triângulos que fica no 'nocast': a mesma sombra, com poucos triângulos.
+   */
+  shadow: () => mat('mapa-shadow', () => new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })),
 };
 /** Baldes que não fazem sombra (o chão e as plantinhas baixas: a sombra delas mal aparece e custa uma passada). */
-const NO_CAST = new Set(['ground', 'plant']);
+const NO_CAST = new Set(['ground', 'plant', 'contact', 'nocast']);
 /** Baldes com o sombreado de maquete (base mais escura). */
 const AO_SLOTS = new Set(['solid']);
 
@@ -97,6 +113,169 @@ export function createKit(root) {
     return { meshes, groups };
   }
   return { add, finish };
+}
+
+/**
+ * Lote de decalques deitados para o balde 'contact': manchas macias de cor e opacidade por vértice, que caem a zero
+ * na borda (sombra de contato no pé das coisas, umidade, sujeira, musgo, terra). Tudo numa geometria só:
+ *   const D = decalLot(); D.blob(...); D.rrect(...); D.strip(...);
+ *   kit.add(D.geometry(), { color: null, slot: 'contact', group, ao: false });
+ * `y`: a altura do lote (acima dos pisos de andar e dos decalques opacos deles; o material ainda puxa para a câmera).
+ * `clip(x, z)`: onde não pode haver decalque (água): o triângulo com um ponto ali fica de fora.
+ * @param {number} [y]
+ * @param {((x: number, z: number) => boolean) | null} [clip]
+ */
+export function decalLot(y = 0.027, clip = null) {
+  /** @type {number[]} */
+  const pos = [];
+  /** @type {number[]} */
+  const rgba = [];
+  const c = new THREE.Color();
+  /** Um triângulo [x, z, opacidade] × 3, sempre virado para cima. */
+  const tri = (p, q, r) => {
+    const cy = (q[1] - p[1]) * (r[0] - p[0]) - (q[0] - p[0]) * (r[1] - p[1]);
+    if (Math.abs(cy) < 1e-9 || (p[2] <= 0 && q[2] <= 0 && r[2] <= 0)) return;
+    if (clip && (clip(p[0], p[1]) || clip(q[0], q[1]) || clip(r[0], r[1]))) return;
+    if (cy < 0) { const t = q; q = r; r = t; }
+    for (const v of [p, q, r]) { pos.push(v[0], y, v[1]); rgba.push(c.r, c.g, c.b, v[2]); }
+  };
+  /** Anéis de pontos (mesma contagem) ligados em faixas; `center`: o miolo em leque. */
+  const rings = (list, center = null) => {
+    for (let k = 0; k + 1 < list.length; k++) {
+      const A = list[k], B = list[k + 1], n = A.length;
+      for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(A[i], A[j], B[j]); tri(A[i], B[j], B[i]); }
+    }
+    if (center) { const A = list[0]; for (let i = 0; i < A.length; i++) tri(center, A[i], A[(i + 1) % A.length]); }
+  };
+  /** Ruído leve e fixo por ângulo (contorno irregular). */
+  const wobble = (t, seed) => 0.6 * Math.sin(2 * t + seed) + 0.4 * Math.sin(3 * t + seed * 2.3);
+  return {
+    /**
+     * Mancha redonda (ou oval: sx, sz; girada: rot), opaca no meio e sumindo até o raio r.
+     * @param {number} x @param {number} z @param {number} r
+     * @param {{ a?: number, color?: THREE.ColorRepresentation, sx?: number, sz?: number, rot?: number, seed?: number, wob?: number, n?: number, core?: number }} [o]
+     */
+    blob(x, z, r, { a = 0.4, color = '#10162a', sx = 1, sz = 1, rot = 0, seed = 0, wob = 0.12, n = 14, core = 0.45 } = {}) {
+      c.set(color);
+      const cs = Math.cos(rot), sn = Math.sin(rot);
+      const ring = (k, al) => Array.from({ length: n }, (_, i) => {
+        const t = (i / n) * Math.PI * 2, rr = r * k * (1 + wob * wobble(t, seed));
+        const lx = Math.cos(t) * rr * sx, lz = Math.sin(t) * rr * sz;
+        return [x + lx * cs - lz * sn, z + lx * sn + lz * cs, al];
+      });
+      rings([ring(core, a * 0.88), ring(0.74, a * 0.38), ring(1, 0)], [x, z, a]);
+    },
+    /**
+     * Sombra de um poste ou vaso redondo (raio r0): `a` junto dele, sumindo em w para fora, e por baixo dele.
+     * @param {number} x @param {number} z @param {number} r0 @param {number} w
+     * @param {{ a?: number, color?: THREE.ColorRepresentation, n?: number }} [o]
+     */
+    disc(x, z, r0, w, { a = 0.35, color = '#10162a', n = 14 } = {}) {
+      c.set(color);
+      const ring = (r, al) => Array.from({ length: n }, (_, i) => {
+        const t = (i / n) * Math.PI * 2;
+        return [x + Math.cos(t) * r, z + Math.sin(t) * r, al];
+      });
+      rings([ring(r0, a), ring(r0 + w * 0.32, a * 0.52), ring(r0 + w, 0)], [x, z, a]);
+    },
+    /**
+     * Sombra de uma caixa no chão (centro x, z, meias medidas hx, hz, girada ry): `a` junto da caixa, sumindo em w
+     * para fora, com os cantos arredondados; `fill`: também por baixo dela (móveis de pés: mesa, banco, carro).
+     * @param {number} x @param {number} z @param {number} hx @param {number} hz @param {number} w
+     * @param {{ a?: number, ry?: number, fill?: boolean, color?: THREE.ColorRepresentation, k?: number }} [o]
+     */
+    rrect(x, z, hx, hz, w, { a = 0.35, ry = 0, fill = true, color = '#10162a', k = 3 } = {}) {
+      c.set(color);
+      const cs = Math.cos(ry), sn = Math.sin(ry);
+      const ring = (d, al) => {
+        const out = [];
+        for (const [sx, sz, t0] of [[1, 1, 0], [-1, 1, 0.5], [-1, -1, 1], [1, -1, 1.5]]) {
+          for (let i = 0; i <= k; i++) {
+            const t = (t0 + (i / k) * 0.5) * Math.PI;
+            const lx = sx * hx + Math.cos(t) * d, lz = sz * hz + Math.sin(t) * d;
+            out.push([x + lx * cs - lz * sn, z + lx * sn + lz * cs, al]);
+          }
+        }
+        return out;
+      };
+      rings([ring(0.001, a), ring(w * 0.32, a * 0.52), ring(w, 0)], fill ? [x, z, a] : null);
+    },
+    /**
+     * Faixa ao longo de um segmento (pé de parede, de mureta, de degrau): `a` na linha, sumindo em w para o lado
+     * (nx, nz); as pontas afinam em `taper` m.
+     * @param {number} ax @param {number} az @param {number} bx @param {number} bz @param {number} nx @param {number} nz @param {number} w
+     * @param {{ a?: number, color?: THREE.ColorRepresentation, taper?: number }} [o]
+     */
+    strip(ax, az, bx, bz, nx, nz, w, { a = 0.32, color = '#10162a', taper = 0 } = {}) {
+      c.set(color);
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 1e-3) return;
+      const n = Math.max(1, Math.ceil(len / 1.5));
+      const at = (s, d, al) => [ax + ((bx - ax) * s) / len + nx * d, az + ((bz - az) * s) / len + nz * d, al];
+      for (let i = 0; i < n; i++) {
+        const s0 = (len * i) / n, s1 = (len * (i + 1)) / n;
+        const f = (s) => (taper > 0 ? Math.min(1, s / taper, (len - s) / taper) : 1);
+        const k0 = f(s0), k1 = f(s1);
+        const A = [at(s0, 0, a * k0), at(s0, w * 0.3, a * 0.5 * k0), at(s0, w, 0)];
+        const B = [at(s1, 0, a * k1), at(s1, w * 0.3, a * 0.5 * k1), at(s1, w, 0)];
+        for (let j = 0; j < 2; j++) { tri(A[j], B[j], B[j + 1]); tri(A[j], B[j + 1], A[j + 1]); }
+      }
+    },
+    /** Quantos triângulos já tem. */
+    get count() { return pos.length / 9; },
+    /** @returns {THREE.BufferGeometry | null} */
+    geometry() {
+      if (!pos.length) return null;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(rgba, 4));
+      return g;
+    },
+  };
+}
+
+/**
+ * Caixa reta com a base em y = 0 e as faces cortadas a cada `step` m (largura e altura): a cor por vértice de uma
+ * parede (weathered) precisa dos vértices no meio dela para as manchas aparecerem.
+ */
+export function wallBox(w, h, d, step = 0.3) {
+  const g = new THREE.BoxGeometry(w, h, d, Math.max(1, Math.ceil(w / step)), Math.max(1, Math.ceil(h / step)), Math.max(1, Math.ceil(d / step)));
+  g.translate(0, h / 2, 0);
+  return g;
+}
+
+const _wc = new THREE.Color();
+/**
+ * Reboco pintado e gasto pelo tempo (cor por vértice, no referencial da peça): o grão do reboco, manchas de repintura,
+ * o barrado de respingos de terra embaixo, a umidade subindo do chão em manchas, o musgo perto das pontas e os
+ * escorridos embaixo do beiral ou do chapim, com a sombra da pingadeira logo abaixo dele. Use numa peça subdividida
+ * (wallBox) ao longo de x (along 'x') ou de z.
+ * @param {THREE.ColorRepresentation} base a cor da tinta
+ * @param {{ h?: number, y0?: number, seed?: number, along?: 'x' | 'z', half?: number, moss?: number, splash?: number,
+ *           damp?: number, streak?: number, eave?: number, inside?: THREE.ColorRepresentation | null, out?: [number, number] }} [o]
+ *   h: o alto da parede (a pingadeira); y0: onde a peça começa (no mundo); half: meio comprimento (o musgo nas pontas);
+ *   inside/out: a face voltada para o lado oposto de (out[0], out[1]) fica com a cor `inside`, lisa (o lado de dentro
+ *   das paredes de casa); as outras levam o desgaste.
+ * @returns {(p: THREE.Vector3, n: THREE.Vector3) => THREE.Color}
+ */
+export function weathered(base, { h = 2.5, y0 = 0, seed = 0, along = 'x', half = 0, moss = 0.55, splash = 1, damp = 1, streak = 1, eave = 0.22, inside = null, out = null } = {}) {
+  const c0 = new THREE.Color(base), c1 = c0.clone().offsetHSL(0, -0.03, 0.04);
+  const splashC = c0.clone().multiply(new THREE.Color(0.66, 0.6, 0.5)), dampC = c0.clone().multiply(new THREE.Color(0.74, 0.76, 0.66));
+  const streakC = c0.clone().multiply(new THREE.Color(0.74, 0.7, 0.62)), mossC = new THREE.Color('#6f8446');
+  const inC = inside == null ? null : new THREE.Color(inside);
+  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  return (p, n) => {
+    if (inC && out && n.x * out[0] + n.z * out[1] < -0.5) return _wc.copy(inC).multiplyScalar(0.86 + 0.14 * Math.min(1, Math.max(0, (p.y + y0) / 0.45)));
+    const a = along === 'x' ? p.x : p.z, u = a + seed * 7.31, y = p.y + y0;
+    _wc.copy(c0).multiplyScalar(0.88 + fbm2(u * 0.8 + seed, y * 1.3 - seed, 3) * 0.22);
+    _wc.lerp(c1, sm(0.56, 0.64, fbm2(u * 0.22 + seed * 5.1, y * 0.45 - seed, 2)) * 0.5);
+    _wc.lerp(splashC, (1 - sm(0.06, 0.36, y)) * (0.4 + 0.3 * vnoise2(u * 3.1 + seed, 1.7)) * splash);
+    _wc.lerp(dampC, (1 - sm(0.2, 0.95, y - 0.25 * fbm2(u * 0.9, seed, 2))) * sm(0.35, 0.68, fbm2(u * 0.45 + seed * 3.1, 2.7, 2)) * 0.65 * damp);
+    if (half > 0) _wc.lerp(mossC, (1 - sm(0.05, 0.6, half - Math.abs(a))) * (1 - sm(0.12, 0.55, y)) * sm(0.38, 0.62, fbm2(u * 1.3 + seed, 4.1, 2)) * moss);
+    _wc.lerp(streakC, sm(h - 0.85, h - 0.1, y) * sm(0.42, 0.78, vnoise2(u * 3.4 + seed * 9.1, 0.5)) * 0.55 * streak);
+    return _wc.multiplyScalar(1 - sm(h - eave, h - 0.02, y) * 0.22);
+  };
 }
 
 /** Índice 0, 1, 2… (peças sem índice entram no balde junto com as indexadas). */
@@ -292,7 +471,8 @@ export function windowAt(kit, { x, y, z, w = 0.9, h = 1.0, nx = 0, nz = 1, frame
   const ry = Math.atan2(nx, nz);
   const o = 0.03;
   kit.add(rb(w + 0.16, h + 0.16, 0.06, 0.025, 1), { color: frame, x: x + nx * o, y: y - h / 2 - 0.08, z: z + nz * o, ry, group });
-  kit.add(slab(w, h, 0.02), { color: lit ? '#ffe2a0' : '#8ec1df', slot: lit ? 'lit' : 'glass', x: x + nx * (o + 0.03), y: y - h / 2, z: z + nz * (o + 0.03), ry, group });
+  // o vidro fica 3 mm para dentro da moldura: nenhuma face dele no mesmo plano das pontas das travessas
+  kit.add(slab(w - 0.006, h - 0.006, 0.02), { color: lit ? '#ffe2a0' : '#8ec1df', slot: lit ? 'lit' : 'glass', x: x + nx * (o + 0.03), y: y - h / 2 + 0.003, z: z + nz * (o + 0.03), ry, group });
   kit.add(slab(0.05, h, 0.03), { color: frame, x: x + nx * (o + 0.045), y: y - h / 2, z: z + nz * (o + 0.045), ry, group });
   kit.add(slab(w, 0.05, 0.03), { color: frame, x: x + nx * (o + 0.045), y: y - 0.025, z: z + nz * (o + 0.045), ry, group });
   kit.add(rb(w + 0.3, 0.07, 0.16, 0.02, 1), { color: frame, x: x + nx * (o + 0.06), y: y - h / 2 - 0.13, z: z + nz * (o + 0.06), ry, group });

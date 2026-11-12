@@ -1,8 +1,11 @@
 # Contexto para retomar o projeto
 
-Última atualização: **2026-10-30, Claude**.
-- **Modo História, etapa 1:** o roteiro de "As Aventuras de Radhija & Rhaenyra" (branch `claude/historia-do-jogo`,
-  aguardando aprovação).
+Última atualização: **2026-11-12, Claude**.
+- **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), em 3ª pessoa, branch `claude/historia-fatia`
+  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada) foi entregue em `685cc14`;
+  a 4ª rodada (casa e quintal maiores, puzzles novos, personagens) foi validada em `28618e1` e aguarda o teste do
+  usuário (veja "4ª rodada" abaixo). Não integrar sem o "pode integrar" dele.
+- **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
 - **#71, menu novo e trilha:** etapa 4 de 4 da interface, em v0.10.21 · build 113.
@@ -14,7 +17,271 @@
 
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
-## Em andamento: Modo História, etapa 1, o roteiro (Claude, branch `claude/historia-do-jogo`)
+## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+### 4ª rodada (2026-11-11/12, depois da prévia `685cc14`): validada, prévia para o usuário testar
+
+- **Retorno do usuário:** "Ficou muito bom". Pediu: o diálogo com o Bichano com a caminhonete na frente da câmera; a
+  Radhija puxando sem a corda na boca; **casa maior, mais detalhada, com puzzles que se encaixem nela**; **quintal maior
+  depois de sair de casa, com mais puzzles lá fora**; sinais de que a Rhaenyra é "mais lesada"; borboleta melhor;
+  animações do Sr. Luiz melhores. Avisou que, em breve, os modelos das dogs (as patas) serão melhorados (outra etapa).
+- **Escolhas dele:** casa com aspirador robô, despensa no escuro (interruptor), toalha e lata de biscoito, pufe → sofá →
+  janela; quintal com irrigação automática, jabuti na horta, pipa presa na árvore, mangueira e balde; Rhaenyra
+  distraída no jogo, trapalhadas e falas mais bobas (sem "cara de boba" nas páginas de HQ).
+- **Feito no branch (commits locais `2028af7`, `378c298` e seguintes):**
+  - o contrato do terreno em `layout.js`: `LOT` (o lote da casa cresce 11 m para o sul, além da linha do muro sul;
+    o resto do condomínio não muda), `HOUSE.z1` = 20,46, `YARD.z1` = `LOT.z1`, `HOUSE_EXIT` (porta dos fundos na
+    parede leste, z 18,3–19,3), os muros do lote nos colisores;
+  - o plano do Bichano por cima do ombro das dogs (`createWitnessScene`, quem fala no alto);
+  - a corda na boca: o reset do cenário soltava a ligação da corda e da argola com a boca, e o puzzle não refazia
+    (`wireGrips` depois de `props.reset`); `rope.tip()` e `serviceBolt.tip()` para o teste.
+- **Juntado no branch** (três branches de agentes, cada um testado com os 15 arquivos `test/historia-*`):
+  - `claude/historia-personagens`: a Rhaenyra distraída (`src/story/scene/lesada.js`: rabo em voltinha a trote,
+    borboleta, bolha, cheiro; tropeço, focinho na porta, "Hã?"; a Radhija chama), gestos `chaseTail`, `stumble` e
+    `bonk` em `dogAnimation.js` (só acréscimo), a borboleta nova (`scene/butterfly.js`, `scene/bubbles.js`), o Sr.
+    Luiz com respiração, susto, gestos e andando até o portãozinho (beat `sai`), e falas mais bobas da Rhaenyra.
+  - `claude/historia-quintal-maior`: o quintal saiu de `world/casa.js` para `world/quintal.js`; muros e vizinhos do
+    lote em `base.js`; jabuti Seu Bento (`scene/jabuti.js`) na horta (alface puxada pelas duas), irrigação com três
+    aspersores (a Rhaenyra tampa o do meio no Fica; o registro só a Radhija fecha), pipa na goiabeira (empurrão;
+    pista `rabiola`), mangueira e baldão (4ª meia). Módulo `quintalPuzzles.js`, cenas `scenesQuintal.js`, teste
+    `historia-quintal`.
+  - `claude/historia-casa-maior`: a ala sul (`world/casaSul.js`) com corredor, banheiro, despensa, sala de jantar e
+    sala de estar; a porta da cozinha dá no corredor e a antiga para o quintal virou janela; aspirador robô (cena
+    `aspirador`), despensa no escuro (interruptor no impulso; pista `goteira`), toalha e lata (petisco e pista
+    `etiqueta`), pufe → sofá → parapeito → trinco, e a porta dos fundos (cena `portaFundos`). Teste `historia-casa`;
+    o teste grande da missão atravessa a casa e o quintal novos.
+  - Na junção: a mangueira e a folha de alface também passaram a seguir a boca (religadas a cada reset), como a corda.
+  - Fora da história, só acréscimos: `dogAnimation.js` (gestos novos), `src/world/treats.js` (`setHidden`).
+- **Validação do `9a45a1b`** (CI verde; E2E `todas` 43139742491):
+  - o E2E de recursos reprovou (1.279.648 triângulos na área, acima do teto da fase 10, 1.141.074; antes, no `685cc14`,
+    eram 1.029.223);
+  - a partida da história caiu em cascata no galho: o roteiro seguia com a Radhija depois do quintal novo;
+  - a primeira passagem da história em celular-media passou de 40 min (as outras duas passaram, com 23–34 min).
+- **Correções depois disso:**
+  - `aecf619`: o E2E troca para a Rhaenyra antes do galho; a câmera da chegada no quintal longe da folha da porta
+    dos fundos; "late" na dica do aspirador;
+  - `7ea1951`: a área cai para ~1.055.000 triângulos (`node tools/scripts/triangulos-historia.mjs`, ferramenta nova, só
+    Node). Plantas do quintal mais leves (opções novas em `plants.js` e `util.js`, o padrão das fases igual), a despensa
+    mais simples, as miudezas sem sombra e as caixas fazendo sombra por caixas simples (slots `nocast` e `shadow`,
+    acrescentados em `kit.js`; o mapa das fases não usa).
+  - `28618e1`: só o E2E. Mais tempo para as medições da área maior: a partida `historia` com 75 min, recursos com
+    55 min (vigia em 35 min) e a primeira passagem `historia` com 70 min (vigia em 60 min). Nenhuma verificação saiu.
+- **Validação do `28618e1`** (CI verde [43157447958](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/43157447958);
+  E2E `todas` [43157730729](https://github.com/raposocampos/radhija-rhaenyra/actions/runs/43157730729)):
+  - recursos: 1.070.074 triângulos e 872 chamadas na área, abaixo do teto da fase 10 (1.141.074 / 2.529); o pior
+    quadro em 3ª pessoa tem 1.023.022;
+  - partida `historia` 296/296 (1.116 s) e as três primeiras passagens `historia`;
+  - a primeira passagem da fase 3 em celular-media reprovou na 1ª tentativa por 4 picos de tempo nos primeiros
+    quadros (tolerados 3; +0 programas e texturas) e passou ao rodar de novo só esse job (tentativa 2). O mesmo código
+    do jogo já tinha passado nela no `5d79c05`: oscilação do servidor, não regressão. O run ficou todo verde.
+- **Prévia:** a do CI mais recente do PR #75 (`previews/pr-75/<run>-<tentativa>/?historia`; cada execução troca o
+  link). O commit seguinte ao `28618e1` só atualiza este documento: o jogo da prévia é o mesmo validado acima.
+- **Pendências para o usuário ver:**
+  - nas capturas 1280×720 do E2E, o quadro congelado das páginas de HQ ainda sai escuro (as de revisão saem certas);
+  - a toalha da mesa de jantar parece um bloco branco até o chão, na frente da mesa (dá para refinar o caimento);
+  - a área usa ~94% do teto de triângulos: o que entrar de novo na casa ou no quintal precisa sair de outro lugar
+    (medir com `node tools/scripts/triangulos-historia.mjs`, que fica ~0,7% abaixo do CI);
+  - as medições da história são as mais longas do E2E (partida ~19 min; primeira passagem até ~40 min).
+- **Próximo passo:** o usuário testa a prévia. Não integrar sem o "pode integrar" dele nesta conversa; aprovação
+  repassada por outra sessão não vale. Depois do aprovado, a etapa seguinte prevista são os modelos das dogs (patas).
+
+### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
+
+- **Gostou do estilo HQ.** Pediu: os dois planos fracos; balões alinhados; pena melhor; no varal, o empurra-empurra
+  da Rhaenyra (Shift/R1) no lugar da arrancada da Radhija; mais puzzles com propósito para objetos e personagens;
+  mistérios melhores; detetive "mais de detetive"; Faro com VFX melhor, fôlego e liga/desliga; o Sr. Luiz (porteiro,
+  corpo inteiro com rosto, decisão dele); a torre com puzzle mais difícil e coisa para fazer depois da porta; gráficos
+  do mapa melhores. O usuário foi dormir e pediu (pelo orquestrador) para fechar a rodada até a prévia, sem integrar.
+- **Feito (commit desta rodada; conferir o CI e o E2E pelo commit no GitHub):**
+  - Varal: o poste do leste com o empurrão em pé da Rhaenyra (`L.POLE_SHOVE`, `createShoveTarget`); com o cesto
+    embaixo, no 3º empurrão o pregador solta; sem o cesto, a Radhija avisa. A arrancada saiu.
+  - Interfone com 4 botões (osso, nota, peixe, sino); a Reconstrução mostra só 2 (o espirro do Soneca esconde o 3º),
+    que vem do depoimento da Dona Gansa.
+  - Testemunhas com pedidos: a Dona Gansa quer o broche (na ilha do lago) e o Bichano (no capô da caminhonete) quer a
+    bolinha presa no depósito; cada uma dá um depoimento (`dep-gansa`, `dep-bichano`). O Sr. Luiz dá `dep-luiz`, que
+    contradiz a `grelha` (pergunta nova "O Sr. Luiz viu os pombos saindo?", gancho aberto).
+  - Árvore de pistas v2 (`deduction.js`, `board.js`): as pistas caem em "Achados" e o jogador liga cada uma à
+    pergunta; depoimentos e confronto (contradição → pergunta nova). `tampa` (do telhado) é extra de "borracha".
+  - Balões presos à cabeça (`director.head`); os dois planos (close do Capitão de fora, Rhaenyra na janela).
+  - Faro liga/desliga com fôlego por dog (`faroMode.js`, `faroMeter.js`, sons `faro-liga/desliga/cansado`), VFX
+    novo na nuvem de cheiro.
+  - Sr. Luiz (`scene/srLuiz.js`, corpo inteiro com rosto), Bichano (`scene/bichano.js`), pena nova (`scene/feather.js`);
+    vozes e cores das testemunhas em `subtitles.js` e `comic.js`.
+  - Telhado da torre jogável, fora do mapa (`rooftop.js`, `scenesTelhado.js`, `world/telhado.js`, x 63,5–76,5):
+    poleiros → encurralar os pombos (uma dog no Fica) → caixote embaixo da escada → pulo na parede no trinco → a
+    Radhija sobe → cena da fuga → pista `tampa` → de volta à porta da torre (etapa `portaria`).
+  - Gráficos: decalques de contato (`kit.js`: balde `contact` e `decalLot`, só acréscimo; o mapa não usa), vida nos
+    cantos (bicicleta, caixotes, com colisores), polimento em base/casa/comum/leste, luz da manhã retocada.
+  - E: falar com a testemunha ficou por último em `interact` (o Bichano no capô roubava o E da corda debaixo da
+    caminhonete).
+  - Testes: `historia-deducao`, `historia-faro`, `historia-personagens`, `historia-telhado`, `historia-ui`,
+    `historia-comic`, `dogGestures`; missão e cenas com o empurrão, o Faro novo e o telhado; os roteiros de E2E
+    (`test-historia.mjs`, `capture-historia.mjs`) ligam as pistas no quadro e passam pelo telhado.
+  - Depois das capturas: o close do Capitão virou perfil na altura da cabeça, da ponta oeste do parapeito; a cena do
+    Sr. Luiz com o 1º quadro por baixo do toldo (a cabeça vem do osso do modelo), o 2º do pátio (a fala é da
+    Rhaenyra, quem latiu), o balão saindo da cabeça dele e o aceno virado para a câmera.
+  - Validado antes disso: `67613b2` com CI, E2E `historia` (230/230) e primeira passagem `historia` verdes. O último
+    commit desta rodada leva estes ajustes e este registro: conferir o CI e o E2E dele no GitHub.
+- **Pendências para olhar com o usuário:**
+  - Nas capturas 1280×720 do E2E (`test-historia.mjs`), o quadro congelado das páginas de HQ sai escuro; nas
+    capturas de revisão (`capture-historia.mjs`) ele aparece. Investigar `snapshot()` em `src/story/ui/comic.js` no
+    laço real do jogo (o usuário viu a HQ no aparelho e aprovou o estilo, então pode ser só do E2E).
+  - Se a Rhaenyra latir logo depois da cena do cheiro, o cartão "Pista anotada" (grelha) aparece por cima da página de
+    HQ do Sr. Luiz.
+- **Próximo passo:** o usuário testa a prévia. **Não integrar sem o "pode integrar" dele.**
+
+### 2ª reprovação (2026-11-10, prévia `1ae2d97`, verde no CI): cinema, HQ e árvore de pistas
+
+- **O que o usuário disse:** o sistema de pistas e o tipo de diálogo (balões só de ícone) deixam tudo confuso; refazer
+  a animação e a abertura, que "precisa se parecer com cinema", com enquadramento, luz, gráficos, roteiro e animação
+  das dogs "nível jogos AAA". Ele decidiu: **falas escritas** (curtas, pt-BR) e, logo depois, **diálogo em HQ dentro do
+  jogo** (mangá / Scott Pilgrim: quadros, balões com texto, onomatopeias, efeitos) e uma **árvore de pistas** que abre
+  com um botão, no estilo dos jogos do Sherlock Holmes. A regra "sem palavras" do roteiro caiu (docs/HISTORIA.md).
+- **Feito (no branch; conferir o CI do commit):**
+  - `src/story/deduction.js`: o quadro de dedução (pergunta-raiz, perguntas, pistas ligadas, conclusões). No cap. 1,
+    "Quem entrou no quarto de noite?" fica pronta com a trilha, o pote e a pena; a conclusão certa traz a cena dos
+    pombos na janela. `CLUES[id].text` é a anotação de cada pista.
+  - `src/story/scene/storyteller.js`: `dir.say` (balão de HQ nas cenas, legenda no jogo, a boca de quem fala mexe),
+    `dir.comic/panel/onomato/caption/fx` (a página de HQ) e `dir.lens` (a lente de cada plano).
+  - `scenes.js`: abertura nova (~55 s): grua lá fora na garoa, a noite no quarto, página de HQ dos pombos (o Capitão
+    mede a cenoura: "é exatamente o que precisamos"), o trovão, a manhã e a página do susto, a Rhaenyra acordando
+    molhada, as apresentações estilo Scott Pilgrim e a cartela. Todas as cenas falam com texto; varal, terraço e
+    janela viram páginas de HQ.
+  - Gestos das dogs (`gesture`: alongar, bocejar, inclinar a cabeça, farejar o chão, triste, alerta, abanar, tremer)
+    e a fala (`talk`) em `src/dogs/dogAnimation.js`, por acréscimo (sem os campos, a pose é a mesma).
+  - Interface: o quadro de dedução (`src/story/ui/board.js`, Tab / Select / o botão do HUD), as legendas do jogo e as
+    vozes sintetizadas (`subtitles.js`, `soundsHistoria.js`), a camada de HQ (`src/story/ui/comic.js`).
+  - Luz de cinema no quarto (`world/cinemaLight.js`): feixe da lua e do sol pelo basculante, mancha da janela no
+    chão, poeira, abajur e o relâmpago.
+
+### Revisão da fatia (2026-11-09): a prévia em 3ª pessoa foi reprovada
+
+- **O que o usuário disse, testando a prévia `1baeb48` (verde em tudo):**
+  - a câmera é empurrada para uma visão de cima em lugar apertado, porque a casa é pequena;
+  - os puzzles estão muito simples;
+  - a cena de início está péssima;
+  - os gráficos do cenário e os balões precisam melhorar; o tamanho do mapa também;
+  - os pombos não parecem pombos e não agarram a cenoura (ela flutua);
+  - não fica claro que a missão é descobrir o que aconteceu com a cenoura e onde ela está;
+  - as duas devem farejar, com uma nuvenzinha de cheiro até o objetivo ou até o mistério.
+- **Feito em 2026-11-09 e 2026-11-10 (no branch; o resultado do CI e do E2E deste commit precisa ser conferido no
+  GitHub):**
+  - **Mapa 1,7× maior** (`layout.js` reescrito: cômodos de ~6 m, condomínio de 48 × 30 m; objetos no tamanho real).
+  - **Câmera** (`thirdPerson.js`): só paredes encurtam o braço; dentro de casa ela chega mais perto; com o braço
+    curto, olha por cima do ombro, para a frente, nunca de cima; sem travelling do título para o jogo.
+  - **Faro das duas**, com a nuvem de cheiro pelo caminho até a próxima pista (`src/story/faro/scentCloud.js`),
+    pistas reveladas que continuam brilhando e se examinam com E.
+  - **Puzzles com mais passos** (`puzzle.js` reescrito): a grade do quarto (portinha de gato e pedal), o saco de
+    ração na frente da maçaneta, o ferrolho da porta de serviço pelo outro lado do muro, o cesto embaixo da cenoura
+    no varal, a senha do interfone da torre (o Faro mostra o Farelo apertando) e o Superbafo pela grelha da guarita
+    antes do latido grosso.
+  - **Nove cenas** (`scenes.js` reescrito), filmadas de dentro dos lugares; o recorte "ver através" fica desligado
+    nelas (`seeThrough.js` e `main.js`, um parâmetro a mais, com o padrão de sempre para as fases).
+  - **Cenário:** as seis peças de `world/` refeitas para o mapa maior, com mais acabamento e as peças dos puzzles;
+    pombos com cara de pombo, que agarram a cenoura (`holdBy`); balões novos, com "frases" de até três ícones.
+    Feitas por subagentes, uma peça cada.
+  - **Testes:** `test/historia-{layout,cenas,missao,camera,cenario,regras}.test.mjs` refeitos; a suíte
+    `tools/scripts/test-historia.mjs` e as capturas `capture-historia.mjs` refeitas para a missão nova.
+  - **Quintal (2026-11-10):** a porta do muro tem o ferrolho por fora, com a argola pendurada ao lado do batente (fora
+    do vão). O galho caiu na frente da passagem baixa do muro e cabe inteiro no colisor (tora e folhas): a Rhaenyra
+    empurra para o oeste, a Radhija passa e puxa a argola. A ordem na tela: porta (trancada), galho, passagem.
+  - **Móveis novos com colisor** no layout (`HOUSE_EXTRAS`, `GARAGE_STUFF`, `POOL_TABLE`, `POOL_TOYBOX`,
+    `SERVICE_WASHER`, `SERVICE_RACK`, `TOWER_GAS`); no barquinho encaixado, o pescoço do patinho e a roda de pá colidem.
+  - **Depois das primeiras capturas da revisão (2026-11-10):**
+    - a cenoura fica na frente das duas na caminha; os pombos passam rente ao vidro na cena da janela; os balões não
+      passam do alto da parte visível da tela; a nuvem de cheiro usa mistura normal (lê no piso claro);
+    - as silhuetas das duas Reconstruções estavam invisíveis no jogo: o "zzz" do modelo do pombo dividia o material
+      delas e zerava a opacidade a cada quadro (`ghostify` agora deixa os sprites de fora; teste em `historia-cenas`);
+    - a porta de mola da torre: a irmã segura de onde estiver no vão;
+    - malha com textura não projeta sombra na área (as meias): a variante com textura do programa de sombra era
+      compilada com a câmera andando (a primeira passagem acusava 1 programa depois da carga);
+    - o E2E segurava mal duas teclas (o R do Superbafo era um toque instantâneo; na troca da torre, as teclas levavam a
+      Radhija para dentro do saguão): eram do roteiro, não do jogo.
+  - **Validação local:** só `node --check` e os arquivos de teste da história rodados um a um no Node (sem
+    navegador, sem build): layout, regras, missão, cenas, câmera e cenário passaram com as seis peças novas.
+  - **No CI, commit `225942f`:** `testes-e-build` verde; E2E `historia` 223/223 e `recursos-historia` verde (528
+    desenhos e 873 mil triângulos, contra 2529 e 1,14 milhão da fase 10); `mapa` e `controle` verdes no `8e2e96d`. A
+    primeira passagem ainda falhava pelo programa de sombra (corrigido no commit seguinte: conferir no GitHub).
+- **Próximo passo:** CI verde; E2E `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`,
+  `mapa` e `controle`; revisar as capturas (abertura, pombos, balões, câmera dentro de casa, cenário) e corrigir o que
+  aparecer; atualizar a descrição do #75; entregar a prévia nova. Integrar só com o "pode integrar" do usuário.
+
+### Histórico da etapa (até a prévia reprovada)
+
+- **Pedido (2026-10-31, pelo orquestrador, com o roteiro do #74):** a abertura "A noite da garoa" e o cap. 1 "Cadê a
+  Cenoura?" jogáveis, só pela entrada das prévias. A etapa é um portão: se não divertir ou não se entender, a história
+  volta para revisão.
+- **Decisões do usuário nesta sessão (2026-11-01):**
+  - o Faro fica no V, no L3 e num botão de focinho no toque;
+  - as seis decisões padrão do roteiro valem.
+  - O conceito (abertura, planta da área, puzzles, Faro, Reconstrução, HUD, mural e trilha) foi mostrado numa página
+    privada, fora do repositório.
+- **Feito (sem commit até este registro):**
+  - `src/story/`: kit de cenas, Faro e Reconstrução, lupa, regras do mural, HUD, entrada (`gate.js`) e a área
+    `areas/recanto/`.
+    - O cenário foi feito em seis zonas; três delas (`comum`, `leste` e `garagem`) por subagentes.
+    - São seis cenas, a missão de 7 passos, 3 puzzles paralelos, 3 meias, 4 petiscos e 2 pistas escondidas.
+  - Sons da história em `src/fx/audio/soundsHistoria.js` e dois temas novos em `themes.js`: `recanto` (clarinete) e
+    `misterio`.
+  - Núcleo, só acréscimos, avisados ao orquestrador:
+    - `game.js`: índice `STORY`, `cinematic()`, `onFaro` e `lie`/`look` na trava;
+    - `main.js`: `?historia` só em prévia ou desenvolvimento;
+    - `input.js`: L3 e o toque viram `Faro`;
+    - `touchControls`, `ui.js`, `ui.css`, `feedback.js` e `types.d.ts`;
+    - `test/helpers/headless.mjs`: opção `story`;
+    - `run-e2e.mjs` e `e2e.yml`: suíte `historia`.
+  - Testes: `test/historia-{regras,layout,cenas,missao,cenario}.test.mjs`, a suíte `tools/scripts/test-historia.mjs`
+    (com os 11 tamanhos de tela) e as capturas de revisão `capture-historia.mjs`.
+- **Mudança de escopo (2026-11-01, depois da prévia `1b02690`, que passou em CI, E2E historia e mapa):** o usuário
+  pediu o Modo História em **3ª pessoa**, com a câmera atrás da dog girando livre, só na história, e **segurou o #75**:
+  a 3ª pessoa entra no mesmo PR, com prévia nova antes do "pode integrar". Levar o jogo para C++ ou uma engine
+  ficou para depois, sem decisão.
+  - Feito no `bb819a4`: `src/story/camera/thirdPerson.js` e a escolha da câmera pelo layout no `game.js`
+    (`cameraRigs`; o `cameraRig.js` das fases não mudou).
+    - No cenário: a casa inteira (paredes, vergas, telhado e forro), o muro sul na altura e a laje do depósito.
+    - Testes em `test/historia-camera.test.mjs`.
+  - Feito em 2026-11-02 (condições do orquestrador):
+    - o clique do analógico direito logo depois de girar não vale como botão;
+    - arraste do mouse e do dedo só na parte livre da tela, com captura do ponteiro (só passar o mouse não gira);
+    - teto também na garagem;
+    - corte de desenho em 72 m, depois da névoa;
+    - a câmera volta suave para trás da dog no fim das cenas;
+    - o Faro em contas de luz acima do chão;
+    - a medição confere o pior quadro em 3ª pessoa (quatro rumos e o horizonte) contra o teto da fase 10;
+    - o E2E arrasta com o dedo e com o mouse;
+    - a decisão foi registrada em HISTORIA e MODO-HISTORIA.
+- **PR #75** (branch `claude/historia-fatia`). Rodadas do CI:
+  - `41277097555`: 17 erros de tipo, corrigidos;
+  - `41277384381`: 10 testes falhando, corrigidos;
+  - `41321935257`: 3 testes falhando (o z-fighting das janelas da torre, a conta da porta da casinha e o
+    portãozinho, que só abria a colisão 1,4 s depois do porteiro), corrigidos no commit seguinte.
+  - O resultado do CI desse último commit deve ser conferido no GitHub.
+- **Revisão do orquestrador (sobre o `a16c1a8`, conferida no `b47c4e3`):** as condições dos arquivos compartilhados
+  estão cumpridas. Ajustes feitos:
+  - a medição da história só com `MEASURE_STORY=1`, no job próprio `recursos-historia`;
+  - a decisão inteira da entrada em `storyEnabled` (`src/story/gate.js`), com teste da produção;
+  - o Faro na tabela de entrada da ARQUITETURA;
+  - o cabeçalho das regras do mural.
+- **Validação local:** só `node --check` e uma verificação curta da área no Node (carrega, pula a abertura e passa
+  pelas etapas sem ninguém atravessar nada).
+- **Próximo passo:**
+  1. CI verde no commit novo da 3ª pessoa.
+  2. E2E no mesmo commit: `historia` (com `recursos-historia`), `primeira-passagem` com `fases=["historia"]`, e
+     também `mapa` e `controle`, porque a ligação da câmera e da entrada no `game.js` mudou.
+  3. Revisar as capturas da 3ª pessoa.
+  4. Entregar a prévia nova ao usuário, com o que testar: PC, iPhone 13 e Android pequeno, de pé e deitado, e
+     Pandorópolis igual. Avisar o orquestrador.
+  - Integrar só com o "pode integrar" do próprio usuário nesta sessão.
+
+## Entregue: Modo História, etapa 1, o roteiro (Claude, PR #74, squash `00d393d`, deploy `41268345237`, v0.10.24 · build 116)
+
+- Integrado com o "pode integrar" do usuário (no chat do orquestrador): squash `00d393d`, CI do `main` `41268192608`,
+  deploy `41268345237`. O `version.json` no ar mostra v0.10.24 · build 116, commit `00d393d` (conferido pelo
+  orquestrador).
+- O usuário confirmou as seis decisões padrão ("pode manter as decisões padrão"). O registro está em
+  [HISTORIA.md](HISTORIA.md) e [MODO-HISTORIA.md](MODO-HISTORIA.md).
+- O histórico abaixo é o da entrega.
+
 
 - **Pedido do usuário (2026-10-29):** "Vamos escrever a história do Game".
 - **Como o roteiro foi decidido:**
@@ -52,12 +319,8 @@ Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/
   - nenhum nome com duplo sentido. O usuário reprovou um nome por isso; a mãe dos pombos é a Dona Pluma e o filhote,
     o Fiapo.
 - **Validação:** só documentação, sem teste local nem E2E. Os checks `testes-e-build` e `publicar-site` rodam no PR.
-- **Para o usuário confirmar no storyboard:**
-  - as 6 decisões padrão do roteiro;
-  - a voz "uá-uá";
-  - a duração dos capítulos;
-  - o botão do Faro.
-- **Próximo passo:** PR, checks e o "pode integrar" do usuário. Depois, a etapa 2 (fatia jogável) numa sessão própria.
+- **Confirmado em 2026-11-01:** as 6 decisões padrão do roteiro e o botão do Faro (V, L3 e o focinho no toque).
+- **Ainda em aberto:** a voz "uá-uá", a duração dos capítulos e o ângulo de câmera do mapa-múndi.
 
 ## Entregue: privacidade, os docs sem dizer de quem são as cachorras (Claude, PR #73, squash `c379e0f`, deploy `40994221500`, v0.10.23 · build 115)
 

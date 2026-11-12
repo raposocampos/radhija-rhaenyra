@@ -184,6 +184,22 @@ export interface CameraConfig {
    * desliga a zona com cam.setZone(id, on).
    */
   zones?: { id?: string; minX: number; maxX: number; minZ: number; maxZ: number; lookY?: number; dx?: number; dz?: number }[];
+  /**
+   * Qual câmera a área usa, pelo nome registrado em createGame({ cameraRigs }) (o Modo História usa 'third'). Sem ele,
+   * ou com um nome não registrado, a câmera de cima das fases.
+   */
+  rig?: string;
+  /** A câmera em 3ª pessoa do Modo História (src/story/camera/thirdPerson.js). */
+  third?: {
+    distance?: number; pitch?: number; minPitch?: number; maxPitch?: number; fov?: number; pivotY?: number; lookY?: number;
+    heading?: number; occluders?: string[]; probe?: number; minDist?: number; far?: number;
+    /** Dentro de um cômodo (embaixo de um teto): a distância e a inclinação. */
+    indoor?: { distance: number; pitch: number };
+    /** Braço curto: de closeFrom a closeTo m, a câmera sobe closeLift m e olha closeAhead m à frente, closeLook m acima. */
+    closeFrom?: number; closeTo?: number; closeLift?: number; closeAhead?: number; closeLook?: number;
+    /** Tetos (retângulos e altura): com a dog embaixo, a câmera não sobe além deles. */
+    ceilings?: { minX: number; maxX: number; minZ: number; maxZ: number; y: number }[];
+  };
 }
 
 /**
@@ -291,6 +307,8 @@ export interface LevelDef<P extends LevelProps = LevelProps> {
   createPuzzle(ctx: PuzzleContext<P>): Puzzle;
   /** Pontos das animações do cenário (extras escondidos; docs/ARQUITETURA.md, "Extras"). */
   extras?: ExtraSpot[];
+  /** Área do Modo História (src/story/; índice STORY no núcleo): o capítulo e o tema da trilha. */
+  story?: { chapter: number; music?: string };
 }
 
 // Eventos da fronteira de carregamento. Eventos específicos de mecânicas continuam abertos;
@@ -306,6 +324,8 @@ export interface LevelLoadingInfo {
   initial: boolean;
   /** O mapa das fases (índice −1, fora da lista). */
   hub?: boolean;
+  /** A área do Modo História (índice −2, fora da lista; só nas prévias por enquanto). */
+  story?: boolean;
 }
 export interface LevelInfo extends Omit<LevelLoadingInfo, 'initial'> {
   intro?: string;
@@ -637,6 +657,27 @@ export interface InputLock {
   bite?: boolean;
   /** Indo de propósito até a coisa (a corda, o botão): a cabeça não desvia dela (v2/head.js). */
   reach?: boolean;
+  /** Deitada numa cena (Modo História): a pose de deitar da parada longa (idle.js); t > 9 s apoia a cabeça. */
+  lie?: { kind: 'lie'; t: number; k: number; side: number } | null;
+  /** Para onde a dog olha numa cena roteirizada (Modo História). */
+  look?: XYZ | null;
+  /** Gesto de cena (Modo História): o tipo e os segundos desde que começou; null = nenhum. */
+  gesture?: DogGesture | null;
+  /** Falando numa cena (0..1, o "volume"): a boca abre e fecha em sílabas; 0 = boca normal. */
+  talk?: number;
+}
+
+/** Gestos de cena das dogs (dogAnimation.js; durações naturais em GESTURE_TIME). */
+export type DogGestureKind = 'stretch' | 'yawn' | 'tilt' | 'sniffGround' | 'sad' | 'alert' | 'wag' | 'shiver' | 'chaseTail' | 'stumble' | 'bonk';
+export interface DogGesture {
+  kind: DogGestureKind;
+  /** Segundos desde que o gesto começou (a cena avança). */
+  t: number;
+  /**
+   * 'tilt': para que lado a cabeça inclina (+1 / −1); sem, alterna a cada inclinada. 'chaseTail': para que lado a
+   * voltinha atrás do rabo vira (+1 esquerda / −1 direita).
+   */
+  side?: number;
 }
 
 /** Uma lambida do Lambe-Lambe que chegou à irmã (puzzle.onLick; quem lambeu é o ctrl recebido). */
@@ -728,7 +769,7 @@ export interface PropBase { object: THREE.Object3D }
 export interface HighlightProp { setHighlight(on: boolean): void }
 /** Item carregável: Object3D centrado e posição de origem (reset volta para lá). */
 export interface ItemProp extends PropBase, HighlightProp { home: THREE.Vector3 }
-export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void }
+export interface CollectibleProp { id: string; object: THREE.Object3D; collect(): void; reset(): void; setHidden?(on: boolean): void }
 export interface GateProp extends PropBase { setOpen(t: number): void }
 export interface PressProp extends PropBase { setPress(t: number): void }
 /** Botão ou alavanca no alto da parede (src/world/wallButton.js), acionado pelo impulso na parede. */
@@ -1108,6 +1149,13 @@ export interface DogAnim {
   airK?: number;
   /** Agachadinho de preparo antes de um pulinho roteirizado (0..1). */
   crouch?: number;
+  /**
+   * Gesto de cena (InputLock.gesture): alongar, bocejar, inclinar a cabeça, farejar o chão, triste, alerta, abanar,
+   * tremer, correr atrás do rabo, tropeçar e bater o focinho.
+   */
+  gesture?: DogGesture | null;
+  /** Falando (0..1; InputLock.talk): a boca abre e fecha em sílabas e a cabeça acompanha de leve. */
+  talk?: number;
   /** Apertando um botão com a pata: o alto dele no referencial do objeto da dog (x de lado, + = esquerda; z à frente). */
   pressAt?: XYZ | null;
   /** Progresso do gesto de apertar (0 = começa, 1 = a pata de volta); −1 = sem. */

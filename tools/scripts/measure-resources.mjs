@@ -12,6 +12,8 @@ const DIST = fileURLToPath(new URL('../../dist/', import.meta.url));
 const OUT = fileURLToPath(new URL('../../shots/resources/', import.meta.url));
 const MOUNT = '/previews/pr-resources/1-1/';
 const DEV_LEVEL = process.env.MEASURE_DEV_LEVEL || '';
+// MEASURE_STORY=1: só a fase 10 (o teto) e a área do Modo História (job próprio no E2E manual: recursos-historia)
+const STORY_MODE = process.env.MEASURE_STORY === '1';
 if (DEV_LEVEL && !/^[a-z][a-z0-9_-]*$/i.test(DEV_LEVEL)) throw new Error('MEASURE_DEV_LEVEL inválido');
 const WARMUP = 2;
 const MEASURED = 3;
@@ -49,10 +51,11 @@ const server = createServer(async (request, response) => {
 
 let browser;
 const watchdog = setTimeout(() => {
-  report.errors.push('measurement exceeded 20 minutes');
+  report.errors.push('measurement exceeded 35 minutes');
   void browser?.close();
   server.closeAllConnections();
-}, 20 * 60 * 1000);
+  // 35 min: a área do Modo História maior (2026-11-12) passou dos 20 de antes (o pior quadro percorre os nós dela)
+}, 35 * 60 * 1000);
 watchdog.unref();
 try {
   await mkdir(OUT, { recursive: true });
@@ -110,12 +113,14 @@ try {
   await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.state === 'title', null, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
   // As capturas do cenário ocultam overlays só durante screenshot (abaixo).
-  const levels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
+  const allLevels = await page.evaluate(() => window.__game.levels.map((level) => level.id));
+  const levels = STORY_MODE ? allLevels.filter((id) => id === 'fase10') : allLevels;
   report.levels = levels;
   if (!levels.length) throw new Error('empty level catalog');
   if (DEV_LEVEL && !levels.includes(DEV_LEVEL)) throw new Error(`missing development level: ${DEV_LEVEL}`);
   for (let cycle = 1; cycle <= WARMUP + MEASURED; cycle++) {
     for (let index = 0; index < levels.length; index++) {
+      const catalogIndex = allLevels.indexOf(levels[index]);
       const sample = await page.evaluate(async ({ index, cycle, warmup }) => {
         const { engine, game, dogs, THREE } = window.__game;
         const measurement = window.__resourceMeasurement;
@@ -172,7 +177,7 @@ try {
             renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) },
           camera: { position: engine.camera.position.toArray(), fov: engine.camera.fov },
         };
-      }, { index, cycle, warmup: WARMUP });
+      }, { index: catalogIndex, cycle, warmup: WARMUP });
       report.samples.push(sample);
       const label = `cycle ${cycle} ${levels[index]}`;
       check(sample.level === levels[index] && sample.state === 'title', `${label}: wrong level/state`);
@@ -226,6 +231,7 @@ try {
       check(stable, `${level} ${metric} did not plateau: ${values.join(' -> ')}`);
     }
   }
+  if (STORY_MODE) await measureStory(page, base);
 } catch (error) {
   report.errors.push(error.stack || String(error));
 } finally {
@@ -237,4 +243,125 @@ try {
   await save();
   console.log(JSON.stringify({ passed: report.passed, samples: report.samples.length, comparisons: report.comparisons, errors: report.errors, failures: report.failures }, null, 2));
   if (!report.passed) process.exitCode = 1;
+}
+
+/**
+ * Modo História (docs/MODO-HISTORIA.md): a área do capítulo 1 (o Recanto) entra pela entrada das prévias
+ * (?historia). Mede com a mesma câmera de visão geral e a mesma qualidade das fases, alternando a área com a fase 1
+ * na mesma aba (os recursos voltam ao mesmo platô a cada visita: o descarte da área não vaza) e confere o teto da
+ * fase 10 (chamadas de desenho e triângulos). Também o pior quadro da câmera do jogo pelos nós de navegação.
+ */
+async function measureStory(page, base) {
+  await page.goto(`${base}?debug&historia&stage=casa`, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__resourceMeasurement && window.__game.game.isStory && window.__game.game.state === 'playing', null, { timeout: 120000 });
+  const samples = [];
+  for (let cycle = 1; cycle <= WARMUP + MEASURED; cycle++) {
+    const sample = await page.evaluate(async ({ cycle, warmup, last }) => {
+      const { engine, game, THREE } = window.__game;
+      const measurement = window.__resourceMeasurement;
+      // uma fase de verdade no meio: a área sai e volta (o descarte precisa liberar tudo)
+      if (cycle > 1) {
+        if (await game.loadLevel(0, { mode: 'title' }) !== true) throw new Error('load failed: fase 1');
+        if (await game.loadLevel(-2, { mode: 'play' }) !== true) throw new Error('load failed: historia');
+      }
+      game.debug.setStage('casa');
+      for (let step = 1; step <= 60; step++) {
+        measurement.originals.game(1 / 60, step / 60);
+        measurement.originals.feedback(1 / 60, step / 60);
+        measurement.originals.particles(1 / 60);
+      }
+      const b = game.levelDef.layout.WORLD.bounds;
+      const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
+      const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+      // a visão geral com o alcance de desenho das fases (o corte de distância da 3ª pessoa não entra nesta comparação)
+      const farRig = engine.camera.far;
+      engine.camera.far = 220;
+      engine.camera.updateProjectionMatrix();
+      engine.camera.position.set(cx + span * 0.65, span * 0.8, cz + span * 1.1);
+      engine.camera.lookAt(cx, 0, cz);
+      engine.camera.updateMatrixWorld();
+      const { renderer, scene } = engine;
+      renderer.info.autoReset = false;
+      const draws = [];
+      for (let frame = 0; frame < 2; frame++) {
+        renderer.info.reset();
+        measurement.originals.render(1 / 60, 1);
+        renderer.getContext().finish();
+        draws.push({ ...renderer.info.render });
+      }
+      // o pior quadro da câmera em 3ª pessoa pelos nós de navegação: atrás da dog olhando para os quatro lados e uma
+      // pose quase rente ao chão, olhando o horizonte (a 3ª pessoa enxerga mais longe que a câmera de cima)
+      let worst = { calls: 0, triangles: 0, at: null };
+      const L = game.levelDef.layout;
+      const T = { distance: 3.1, pitch: 0.34, pivotY: 0.5, lookY: 0.42, fov: 54, ...L.CAMERA.third };
+      engine.camera.far = farRig;
+      engine.camera.fov = T.fov;
+      engine.camera.updateProjectionMatrix();
+      const poses = [[0, T.pitch], [Math.PI / 2, T.pitch], [Math.PI, T.pitch], [-Math.PI / 2, T.pitch], [Math.PI, 0.06]];
+      const nodes = Object.entries(L.NAV_NODES).filter((_, i) => i % 2 === 0);
+      for (const [id, p] of last ? nodes : []) {
+        for (const [h, pitch] of poses) {
+          const fx = Math.sin(h), fz = Math.cos(h), d = T.distance;
+          engine.camera.position.set(p.x - fx * Math.cos(pitch) * d, T.pivotY + Math.sin(pitch) * d, p.z - fz * Math.cos(pitch) * d);
+          engine.camera.lookAt(p.x, T.lookY, p.z);
+          engine.camera.updateMatrixWorld();
+          renderer.info.reset();
+          measurement.originals.render(1 / 60, 1);
+          renderer.getContext().finish();
+          const r = renderer.info.render;
+          if (r.calls > worst.calls) worst = { calls: r.calls, triangles: r.triangles, at: `${id}@${h.toFixed(2)}/${pitch}` };
+        }
+      }
+      let objects = 0;
+      scene.traverse(() => objects++);
+      const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+      return {
+        cycle, measured: cycle > warmup, level: game.levelDef.id, state: game.state, story: game.isStory,
+        geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures,
+        programs: renderer.info.programs.length, draws, worst, objects, rootCount: scene.children.length,
+        phaseRoots: scene.children.filter((o) => o.name.startsWith('fase:')).map((o) => o.name),
+        quality: { pixelRatio: renderer.getPixelRatio(), buffer: [size.x, size.y], shadows: renderer.shadowMap.enabled, bloom: engine.bloom.enabled },
+      };
+    }, { cycle, warmup: WARMUP, last: cycle === WARMUP + MEASURED });
+    samples.push(sample);
+    report.samples.push({ ...sample, kind: 'historia' });
+    const label = `historia cycle ${cycle}`;
+    check(sample.story && sample.level === 'recanto' && sample.state === 'playing', `${label}: wrong area/state`);
+    check(sample.phaseRoots.length === 1 && sample.phaseRoots[0] === 'fase:recanto', `${label}: wrong roots ${sample.phaseRoots}`);
+    check(sample.quality.pixelRatio === 1 && sample.quality.shadows && sample.quality.bloom, `${label}: reduced rendering quality`);
+    check(sample.draws.every((d) => d.calls > 20 && d.triangles > 1000), `${label}: area was not actually rendered`);
+    console.log(`[resources] ${label}: geometry=${sample.geometries} texture=${sample.textures} programs=${sample.programs} calls=${sample.draws[1].calls} triangles=${sample.draws[1].triangles} worst=${sample.worst.calls}@${sample.worst.at}`);
+    await save();
+    if (cycle === WARMUP + MEASURED) {
+      // captura de revisão (a tela inteira: o canvas ocupa tudo); não reprova a medição se demorar
+      try {
+        await page.screenshot({ path: resolve(OUT, 'historia-recanto.png'), timeout: 60000, style: '#ui, #loading { display: none !important; }' });
+      } catch (error) {
+        report.warnings.push(`historia: captura não saiu (${String(error.message || error).split(/\r?\n/)[0]})`);
+      }
+    }
+  }
+  const measured = samples.filter((s) => s.measured);
+  for (const metric of ['geometries', 'textures', 'programs', 'objects', 'rootCount']) {
+    const values = measured.map((s) => s[metric]);
+    const stable = values.length === MEASURED && values.every((v) => v === values[0]);
+    report.comparisons.push({ level: 'historia:recanto', metric, values, stable });
+    check(stable, `historia ${metric} did not plateau: ${values.join(' -> ')}`);
+  }
+  // o teto da fase 10, na mesma câmera de visão geral
+  const ref = report.samples.filter((s) => s.measured && s.level === 'fase10' && !s.kind).at(-1);
+  const area = measured.at(-1);
+  if (ref && area) {
+    const ceiling = { calls: ref.draws[1].calls, triangles: ref.draws[1].triangles };
+    report.story = { area: { calls: area.draws[1].calls, triangles: area.draws[1].triangles, worst: area.worst }, ceiling };
+    console.log(`[resources] historia vs fase10: calls ${area.draws[1].calls}/${ceiling.calls} triangles ${area.draws[1].triangles}/${ceiling.triangles}`);
+    check(area.draws[1].calls <= ceiling.calls, `historia: ${area.draws[1].calls} draw calls above the fase10 ceiling (${ceiling.calls})`);
+    check(area.draws[1].triangles <= ceiling.triangles, `historia: ${area.draws[1].triangles} triangles above the fase10 ceiling (${ceiling.triangles})`);
+    // e o pior quadro da 3ª pessoa (de vários pontos, inclusive olhando o horizonte)
+    console.log(`[resources] historia, pior quadro em 3ª pessoa: calls ${area.worst.calls}/${ceiling.calls} triangles ${area.worst.triangles}/${ceiling.triangles} (${area.worst.at})`);
+    check(area.worst.calls <= ceiling.calls, `historia: worst third-person frame ${area.worst.calls} draw calls above the fase10 ceiling (${ceiling.calls})`);
+    check(area.worst.triangles <= ceiling.triangles, `historia: worst third-person frame ${area.worst.triangles} triangles above the fase10 ceiling (${ceiling.triangles})`);
+  } else {
+    report.warnings.push('historia: no fase10 sample to compare with');
+  }
 }

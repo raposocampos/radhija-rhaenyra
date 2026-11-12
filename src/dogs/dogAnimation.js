@@ -195,6 +195,51 @@ function bodyContacts(design, fur, BI, rest) {
   if (design.face?.nose) add('head', design.face.nose, [design.face.noseR, design.face.noseR, design.face.noseR]);
   return out;
 }
+/**
+ * Gestos de cena (Modo História: anim.gesture = { kind, t }, t = s desde que começou; a cena manda o t). Os com duração
+ * (alongar e bocejar) seguem quadros-chave por t e voltam sozinhos à pose normal; os outros ficam enquanto o gesto
+ * durar. Todos entram e saem suaves (GESTURE_RATE: o peso de cada um vai a 1 e volta a 0 com mola) e somam por cima da
+ * pose de sempre: a cabeça continua olhando para o lookAt e os de humor (triste, alerta, abanar, farejar) andam.
+ *   · stretch: o alongamento — peito no chão, garupa alta, patas da frente esticadas; depois o contrário (o peito à
+ *     frente, a garupa baixa e as traseiras esticadas para trás);
+ *   · yawn: bocejo — a boca abre bem, a cabeça sobe e treme de leve, os olhos fecham, as orelhas vão para trás;
+ *   · tilt: a cabeça inclinada de curiosidade (~25°; gesture.side ±1, sem: alterna), as orelhas mexendo;
+ *   · sniffGround: o focinho rente ao chão, farejando em pulsinhos, a cabeça varrendo de um lado para o outro;
+ *   · sad: orelhas caídas e para trás, rabo baixo e quieto, cabeça baixa, corpo um pouco encolhido;
+ *   · alert: orelhas em pé, corpo firme e um pouco mais alto, rabo alto e parado, cabeça erguida e parada;
+ *   · wag: o rabo abanando forte, o quadril acompanhando, carinha feliz;
+ *   · shiver: tremidinha de frio ou medo, encolhida, o rabo entre as pernas;
+ *   · chaseTail: correndo atrás do rabo (a Rhaenyra distraída, src/story/scene/lesada.js): o corpo curvado em "C" para
+ *     dentro da voltinha (gesture.side ±1, + = esquerda), a cabeça virada para o rabo, o rabo curvado para a cabeça e
+ *     abanando, a boca aberta de alegria. A voltinha em si é andada de verdade (quem chama move a dog num círculo): o
+ *     gesto só curva o corpo;
+ *   · stumble: o tropeço — as patas da frente falham, o peito mergulha e a cabeça cai; ela se recompõe e sacode a
+ *     cabeça (GESTURE_TIME.stumble);
+ *   · bonk: o focinho bateu numa porta fechada — a cabeça vai para trás com o tranco, os olhos apertam e a cabeça fica
+ *     zonza um instante, as orelhas moles (GESTURE_TIME.bonk).
+ * Fala (anim.talk 0..1): a boca abre e fecha em sílabas de duração e altura irregulares (com pausas), a cabeça acompanha
+ * com acenos pequenos; nada do tranco do latido.
+ */
+const STRETCH_BOW = [[0, 0], [0.5, 1], [1.05, 1], [1.4, 0]];
+const STRETCH_HIND = [[0, 0], [1.15, 0], [1.5, 1], [1.95, 1], [2.3, 0]];
+const YAWN_OPEN = [[0, 0], [0.3, 0.2], [0.62, 1], [1.05, 1], [1.35, 0.15], [1.65, 0]];
+const YAWN_UP = [[0, 0], [0.35, 0.45], [0.68, 1], [1.1, 1], [1.55, 0]];
+const YAWN_EYES = [[0, 0], [0.4, 0.5], [0.62, 1], [1.15, 1], [1.45, 0]];
+/** Tropeço (s): o peito mergulha e volta; depois, a sacudidinha da cabeça. */
+const STUMBLE_DIP = [[0, 0], [0.07, 0.55], [0.16, 1], [0.3, 0.8], [0.46, 0.25], [0.58, 0], [0.8, 0]];
+const STUMBLE_SHAKE = [[0, 0], [0.46, 0], [0.52, 1], [0.68, 1], [0.78, 0]];
+/** Focinho na porta (s): o tranco para trás, os olhos apertados e a cabeça zonza. */
+const BONK_RECOIL = [[0, 0], [0.05, 1], [0.2, 0.75], [0.42, 0.2], [0.65, 0], [1.1, 0]];
+const BONK_SQUINT = [[0, 0], [0.04, 1], [0.38, 1], [0.6, 0.3], [0.9, 0], [1.1, 0]];
+const BONK_DIZZY = [[0, 0], [0.12, 0], [0.28, 1], [0.8, 0.75], [1.1, 0]];
+/** Duração natural (s) dos gestos que terminam sozinhos; os outros ficam enquanto a cena mandar. */
+export const GESTURE_TIME = Object.freeze({ stretch: 2.3, yawn: 1.65, stumble: 0.8, bonk: 1.1 });
+/** Mola de entrada e de saída de cada gesto (1/s). */
+const GESTURE_RATE = {
+  stretch: [6, 3.5], yawn: [8, 4], tilt: [5, 4], sniffGround: [4, 3.5], sad: [2.6, 2.6], alert: [9, 3.5], wag: [5, 3], shiver: [6, 3],
+  chaseTail: [6, 4], stumble: [16, 6], bonk: [18, 5],
+};
+
 /** Cavando com as patas da frente: patadas por segundo. */
 export const DIG_RATE = 3.2;
 
@@ -283,6 +328,19 @@ function createAnimState() {
     pressP: new THREE.Vector3(),
     pressLeg: 0,
     pushLat: 0,
+    // gestos de cena: o peso de cada um (0..1, com mola), o t dos que têm duração, o lado da cabeça inclinada
+    gw: { stretch: 0, yawn: 0, tilt: 0, sniffGround: 0, sad: 0, alert: 0, wag: 0, shiver: 0, chaseTail: 0, stumble: 0, bonk: 0 },
+    gT: { stretch: 0, yawn: 0, stumble: 0, bonk: 0 },
+    gPrev: '',
+    tiltSide: -1,
+    chaseSide: 1, // correndo atrás do rabo: para que lado a voltinha vira (+1 esquerda)
+    // fala: o quanto (0..1, com mola), a sílaba atual (s nela, duração, altura) e quantas já foram
+    talk: 0,
+    sylT: 0,
+    sylDur: 0,
+    sylPeak: 0,
+    sylN: 0,
+    jawO: 0,
   };
 }
 
@@ -321,6 +379,9 @@ export function createDogAnimation(ctx) {
   const LEGS = rig.legs;
   const { eyes, lip, tongue, mouthW, lickTongue } = face;
   const st = createAnimState();
+  // sorteio das sílabas da fala sem Math.random (as irmãs falam diferente; o resto da animação não muda de sequência)
+  const talkSeed = fract(st.t * 7.31) * 100;
+  const hash = (n) => fract(Math.sin(n * 12.9898 + talkSeed * 78.233) * 43758.5453);
 
   // temporários
   const v3 = () => new THREE.Vector3();
@@ -729,6 +790,66 @@ export function createDogAnimation(ctx) {
     const lDn = lk - lUp;
     const lUpN = lk > 1e-3 ? lUp / lk : 0;
     st.slope = damp(st.slope, A.slope || 0, 14);
+    // gestos de cena (GESTURE_TIME): o peso de cada um com mola; sem gesto, todos ficam em zero exato (nada muda)
+    const GS = A.gesture || null;
+    const gKind = GS ? GS.kind : '';
+    const gw = st.gw;
+    for (const k in gw) {
+      const on = gKind === k;
+      const R = GESTURE_RATE[k];
+      if (on || gw[k] > 0) gw[k] = damp(gw[k], on ? 1 : 0, on ? R[0] : R[1]);
+      if (!on && gw[k] < 1e-4) gw[k] = 0;
+    }
+    if (gKind !== st.gPrev) {
+      if (gKind === 'tilt') st.tiltSide = GS.side ? (GS.side < 0 ? -1 : 1) : -st.tiltSide;
+      if (gKind === 'chaseTail') st.chaseSide = GS.side < 0 ? -1 : 1;
+      st.gPrev = gKind;
+    }
+    if (gKind in st.gT) st.gT[gKind] = Math.max(0, GS.t || 0);
+    const gStB = gw.stretch > 0 ? gw.stretch * keyed(STRETCH_BOW, st.gT.stretch) : 0; // peito no chão, garupa alta
+    const gStH = gw.stretch > 0 ? gw.stretch * keyed(STRETCH_HIND, st.gT.stretch) : 0; // traseiras esticadas para trás
+    const gYo = gw.yawn > 0 ? gw.yawn * keyed(YAWN_OPEN, st.gT.yawn) : 0; // boca do bocejo
+    const gYu = gw.yawn > 0 ? gw.yawn * keyed(YAWN_UP, st.gT.yawn) : 0; // cabeça subindo
+    const gYe = gw.yawn > 0 ? gw.yawn * keyed(YAWN_EYES, st.gT.yawn) : 0; // olhos fechando
+    const gTi = gw.tilt, gSn = gw.sniffGround, gSa = gw.sad, gAl = gw.alert, gWa = gw.wag, gSh = gw.shiver;
+    // correndo atrás do rabo (gCt; gCs com o lado da voltinha), o tropeço (gTr: o peito mergulha; gTs: a sacudidinha) e
+    // o focinho na porta (gBk: o tranco; gBs: os olhos apertados; gBd: a cabeça zonza)
+    const gCt = gw.chaseTail, gCs = gCt > 0 ? gCt * st.chaseSide : 0;
+    const gTr = gw.stumble > 0 ? gw.stumble * keyed(STUMBLE_DIP, st.gT.stumble) : 0;
+    const gTs = gw.stumble > 0 ? gw.stumble * keyed(STUMBLE_SHAKE, st.gT.stumble) : 0;
+    const gBk = gw.bonk > 0 ? gw.bonk * keyed(BONK_RECOIL, st.gT.bonk) : 0;
+    const gBs = gw.bonk > 0 ? gw.bonk * keyed(BONK_SQUINT, st.gT.bonk) : 0;
+    const gBd = gw.bonk > 0 ? gw.bonk * keyed(BONK_DIZZY, st.gT.bonk) : 0;
+    const gWob = gBd > 0 ? gBd * Math.sin(t * 7.4) : 0; // zonza: a cabeça rodando devagar
+    const gNo = gTs > 0 ? gTs * Math.sin(t * 29) : 0; // a sacudidinha depois do tropeço
+    // tremidinha (frio ou medo): duas frequências fora de compasso, para não parecer motorzinho
+    const shiv = gSh > 0 ? gSh * (Math.sin(t * TAU * 13.1) * 0.7 + Math.sin(t * TAU * 9.3 + 1.3) * 0.3) : 0;
+    // farejando o chão: a cabeça varre devagar de um lado para o outro; os pulsinhos de cheirar vêm em rajadas
+    const snSweep = gSn > 0 ? gSn * (Math.sin(t * 0.95) * 0.3 + Math.sin(t * 2.3 + 0.7) * 0.06) : 0;
+    const snBurst = gSn > 0 ? Math.max(0, Math.sin(t * TAU * 0.5)) ** 2 : 0;
+    const snPulse = gSn > 0 ? gSn * snBurst * Math.sin(t * TAU * 7.5) : 0;
+    // fala: sílabas de duração e altura irregulares, com pausas; a boca abre rápido e fecha um tiquinho mais devagar
+    const talkIn = clamp(A.talk || 0, 0, 1);
+    if (talkIn > 0 || st.talk > 0) st.talk = damp(st.talk, talkIn, talkIn > st.talk ? 14 : 6);
+    if (talkIn === 0 && st.talk < 1e-3) st.talk = 0;
+    let talkOpen = 0;
+    if (st.talk > 0) {
+      st.sylT += dt;
+      if (st.sylT >= st.sylDur) {
+        st.sylT = 0;
+        st.sylN++;
+        const h1 = hash(st.sylN), h2 = hash(st.sylN + 0.37), h3 = hash(st.sylN + 0.71);
+        const pause = h3 < 0.13 && st.sylPeak > 0; // nunca duas pausas seguidas
+        st.sylDur = pause ? 0.14 + 0.16 * h1 : 0.09 + 0.14 * h1;
+        st.sylPeak = pause ? 0 : 0.35 + 0.65 * h2;
+      }
+      const u = clamp(st.sylT / Math.max(st.sylDur, 1e-3), 0, 1);
+      const sh = u < 0.35 ? sstep(0, 0.35, u) : 1 - sstep(0.35, 1, u);
+      talkOpen = st.talk * st.sylPeak * sh;
+    } else {
+      st.sylT = st.sylDur = 0;
+    }
+    const talkNod = st.talk > 0 ? st.talk * (Math.sin(t * 2.4 + talkSeed) * 0.6 + Math.sin(t * 3.7) * 0.4) : 0;
     // extras: cocô (pp) e animações do cenário (X); x* = peso de cada uma (0 fora dela)
     const pkIn = A.poopK ?? -1;
     const pp = pkIn >= 0 ? clamp(pkIn, 0, 1) : -1;
@@ -910,15 +1031,20 @@ export function createDogAnimation(ctx) {
     const tremble = w.strain * Math.sin(t * 57) * 0.0018 * s + w.aim * Math.sin(t * 41) * 0.0012 * s + effort * Math.sin(t * 52) * 0.0024 * s;
 
     let pitch = boundPitch + wPush4 * 0.11 + wStrain4 * 0.16 + w.sniff * 0.1 - w.tug * 0.13 - barkEnv * 0.04 - ws * 0.07 - jolt * 0.1 + w.turn * 0.06 + land * 0.08 + st.accP - w.aim * 0.1 + w.blow * 0.12 - w.proud * 0.08 - w.yuck * 0.06 + lDn * (0.05 + 0.04 * lExt) - lUp * (0.07 + 0.03 * lIn)
-      - squat * 0.04 + scratchK * 0.1 + (xDrink + xEat) * 0.2 + xDig * 0.16 + xNudge * 0.08 - pBrace * 0.12 - wow * 0.05;
+      - squat * 0.04 + scratchK * 0.1 + (xDrink + xEat) * 0.2 + xDig * 0.16 + xNudge * 0.08 - pBrace * 0.12 - wow * 0.05
+      + gSn * 0.1 + gSa * 0.035 - gAl * 0.045 + gSh * 0.03 - gYu * 0.02;
     let rootY = bob + boundY + breathe - 0.012 * s * Math.min(1, v / 2) * (1 - w.dash) - wPush4 * 0.012 * s - wStrain4 * 0.016 * s - w.tug * 0.02 * s - w.sniff * 0.012 * s - ws * 0.03 * s - shkEnv * 0.006 * s - w.turn * 0.014 * s - land * 0.028 * s + w.aim * 0.006 * s - lr * 0.009 * s - w.slide * 0.045 * s - st.mud * 0.004 * s - (wallOn ? keyed(WALL_CROUCH, wp) * 0.03 * s : 0) - pressGo * 0.02 * s
       - squat * 0.006 * s + effort * Math.sin(t * 61) * 0.001 * s - (xDrink + xEat) * 0.01 * s - xDig * 0.012 * s - pBrace * 0.016 * s - PEE.drop * s * iPee
-      + lUp * (0.01 + 0.006 * lIn) * s;
+      + lUp * (0.01 + 0.006 * lIn) * s
+      - gSn * 0.012 * s - gSa * 0.016 * s + gAl * 0.007 * s - gSh * 0.014 * s + gYu * 0.003 * s + shiv * 0.0008 * s
+      - gTr * 0.02 * s - gBk * 0.006 * s;
     let rootZ = -w.tug * 0.025 * s - barkEnv * 0.008 * s + wStrain4 * 0.01 * s - ws * 0.022 * s - jolt * 0.03 * s - w.turn * 0.012 * s - w.aim * 0.012 * s + w.blow * 0.015 * s - w.yuck * 0.02 * s + lk * (0.008 + 0.016 * lIn) * s
       + scratchK * 0.012 * s + xNudge * 0.07 * s + (xDrink + xEat) * 0.02 * s - pBrace * 0.012 * s - wow * 0.014 * s
-      + pressGo * (0.05 * s + pressFar);
-    const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s - lr * lSide * 0.004 * s;
-    qE(_q, pitch, st.dev * (1 - sk) * (1 - wEnv), st.lean + Math.sin(sp1) * 0.025 * trotK + shk(2) * 0.16);
+      + pressGo * (0.05 * s + pressFar)
+      + gStH * 0.05 * s - gSa * 0.006 * s - gSh * 0.008 * s
+      - gBk * 0.024 * s + gTr * 0.012 * s;
+    const rootX = sway + tremble + shk(2) * 0.006 * s + ws * Math.sin(t * 47) * 0.0012 * s - lr * lSide * 0.004 * s + shiv * 0.0022 * s;
+    qE(_q, pitch, st.dev * (1 - sk) * (1 - wEnv), st.lean + Math.sin(sp1) * 0.025 * trotK + shk(2) * 0.16 + shiv * 0.012);
     _rootPos.set(rest[0].x + rootX, rest[0].y + rootY, rest[0].z + rootZ);
     _m.compose(_rootPos, _q, _v.set(1, 1, 1));
     // sentar: gira em torno do peito; play bow: gira em torno do quadril
@@ -952,6 +1078,24 @@ export function createDogAnimation(ctx) {
       _m2.makeTranslation(Hh.x, Hh.y + 0.01 * s * w.bow, Hh.z).multiply(_m3.makeRotationX(0.42 * w.bow)).multiply(_m3.makeTranslation(-Hh.x, -Hh.y, -Hh.z));
       _m.premultiply(_m2);
     }
+    if (gStB > 0.001) {
+      // alongando (a frente): como a reverência, mais funda — gira sobre o quadril e o peito desce quase ao chão
+      const Hh = rest[BI.hips];
+      _m2.makeTranslation(Hh.x, Hh.y + 0.012 * s * gStB, Hh.z).multiply(_m3.makeRotationX(0.58 * gStB)).multiply(_m3.makeTranslation(-Hh.x, -Hh.y, -Hh.z));
+      _m.premultiply(_m2);
+    }
+    if (gStH > 0.001) {
+      // alongando (o contrário): gira sobre os ombros, a garupa desce e o corpo vai à frente das patas da frente
+      const C = rest[BI.FLu];
+      _m2.makeTranslation(0, C.y, C.z).multiply(_m3.makeRotationX(-0.16 * gStH)).multiply(_m3.makeTranslation(0, -C.y, -C.z));
+      _m.premultiply(_m2);
+    }
+    if (gTr > 0.001) {
+      // tropeço: gira sobre o quadril, o peito mergulha (as patas da frente dobram embaixo dele, no chão)
+      const Hh = rest[BI.hips];
+      _m2.makeTranslation(Hh.x, Hh.y, Hh.z).multiply(_m3.makeRotationX(0.36 * gTr)).multiply(_m3.makeTranslation(-Hh.x, -Hh.y, -Hh.z));
+      _m.premultiply(_m2);
+    }
     if (squat > 0.001) {
       const C = rest[BI.FLu];
       // inclina pouco (a garupa fica a meia altura); a corcunda vem do peito e da pelve dobrando (abaixo)
@@ -982,15 +1126,17 @@ export function createDogAnimation(ctx) {
     st.followV += (140 * (followT - st.follow) - 13 * st.followV) * dt; // ω ≈ 11,8 rad/s, ζ = 0,55
     st.follow += st.followV * dt;
     // o peito fica entre a cabeça (no rumo) e o corpo (atrasado pela inércia); a garupa, mais atrás
-    const spineYaw = st.follow - 0.5 * st.dev * (1 - sk) * (1 - wEnv) + w.pre * clamp(st.turnS * 0.045, -0.14, 0.14) + iSide * 0.42 * iScr;
+    const spineYaw = st.follow - 0.5 * st.dev * (1 - sk) * (1 - wEnv) + w.pre * clamp(st.turnS * 0.045, -0.14, 0.14) + iSide * 0.42 * iScr
+      + gCs * 0.34; // atrás do rabo: o "C" bem curvado para dentro
     const wiggle = w.bow * Math.sin(t * 14) * 0.18 + xRub * Math.sin(xt * 6.4) * 0.2; // de costas, serpenteia
     // no pulo, as costas arredondam encolhida (como na corcunda: peito + e quadril −) e esticam no empurrão
     const flex = w.dash * Math.sin(sp2 - 0.4) * 0.12 - w.jump * (0.15 * jTuck * (1 - 0.6 * jReachF) - 0.06 * jPushH);
     // empurrão em pé: os ombros dão o tranco (o peito vai para a frente e desce um tiquinho rumo à coisa)
     const shoveJolt = sk * st.sb.jolt;
-    qE(Lq[BI.chest], -flex + squat * 0.56 + shoveJolt * 0.07, spineYaw + shk(1.5) * 0.12 - xRub * Math.sin(xt * 6.4) * 0.12, shk(1.5) * 0.3);
+    const wagHip = gWa > 0 ? gWa * Math.sin(st.wagPhase) : 0; // abanando forte, o quadril vai junto com o rabo
+    qE(Lq[BI.chest], -flex + squat * 0.56 + shoveJolt * 0.07 + gSa * 0.06 + gSh * 0.08, spineYaw + shk(1.5) * 0.12 - xRub * Math.sin(xt * 6.4) * 0.12 + wagHip * 0.03, shk(1.5) * 0.3 + shiv * 0.02);
     const wallFlex = wallOn ? sstep(0.34, 0.42, wp) * (1 - sstep(0.5, 0.6, wp)) * 0.22 : 0; // garupa encolhe no impulso
-    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex + sk * 0.12 - squat * 0.8 - scratchK * 0.05, -spineYaw * 0.6 + wiggle - shk(3) * 0.14, -wiggle * 0.3 + shk(3) * 0.42);
+    qE(Lq[BI.hips], flex - w.sit * SIT_HIPS + ws * 0.12 + wallFlex + sk * 0.12 - squat * 0.8 - scratchK * 0.05 + gSa * 0.07 + gSh * 0.1 + gStH * 0.06, -spineYaw * 0.6 + wiggle - shk(3) * 0.14 - wagHip * 0.13, -wiggle * 0.3 + shk(3) * 0.42 + wagHip * 0.05 + shiv * 0.02);
     // (o tranco vai para a frente no mundo, não ao longo da coluna inclinada)
     posOff[BI.chest].set(0, -Math.sin(st.shoveTheta) * shoveJolt * 0.026 * s, w.dash * Math.cos(sp2 - 0.4) * 0.018 * s + Math.cos(st.shoveTheta) * shoveJolt * 0.026 * s);
     posOff[BI.hips].set(0, 0, -w.dash * Math.cos(sp2 - 0.4) * 0.018 * s);
@@ -1061,6 +1207,9 @@ export function createDogAnimation(ctx) {
         // extras: firmes um pouco à frente (agachada, cavando atrás; freando os zoomies); cavando com as da frente,
         // uma de cada vez
         T.z += scratchK * 0.02 * s + squat * 0.012 * s + pBrace * 0.05 * s;
+        // alongando: as patas da frente esticadas lá na frente (o peito desce entre elas); depois, debaixo dos ombros
+        T.z += gStB * 0.24 * s - gStH * 0.02 * s;
+        T.x += leg.side * gStB * 0.004 * s;
         if (xDig > 0) {
           const f = xt * DIG_RATE;
           const mine = Math.floor(f) % 2 === li;
@@ -1087,6 +1236,10 @@ export function createDogAnimation(ctx) {
         // agachada: patas para a frente, debaixo da barriga, um pouco abertas (freando: traseiras debaixo do corpo);
         // xixi agachada: um pouco para a frente e abertas
         T.z += squat * 0.13 * s + pBrace * 0.035 * s - 0.01 * s * iPee;
+        // alongando as traseiras: esticadas para trás, uma um tiquinho mais que a outra
+        T.z -= gStH * (li === 2 ? 0.19 : 0.15) * s;
+        // encolhida (triste, tremendo): as traseiras um pouco mais para a frente, debaixo da barriga
+        T.z += (gSa * 0.012 + gSh * 0.018) * s;
         T.x += leg.side * (squat * 0.025 + 0.02 * iPee) * s;
         // cavando com as traseiras: patada para trás, uma de cada vez
         if (scratchK > 0 && kickLeg === li - 2) {
@@ -1191,7 +1344,7 @@ export function createDogAnimation(ctx) {
         // metatarso: vertical em pé, deitado para a frente sentado, flexiona no balanço
         const kickCurl = scratchK > 0 && kickLeg === li - 2 ? kickShape(kickU) * scratchK * 0.35 : 0;
         // de pé no empurrão: metatarso quase em pé no mundo (o corpo inclinou theta), pata um pouco à frente do jarrete
-        const ang = curl * 0.45 - sstep(0, 1, w.sit) * 1.38 - squat * 0.85 + kickCurl - xRoll * 0.9 + st.shoveTheta - 0.3 * sk;
+        const ang = curl * 0.45 - sstep(0, 1, w.sit) * 1.38 - squat * 0.85 + kickCurl - xRoll * 0.9 + st.shoveTheta - 0.3 * sk + gStH * 0.55;
         _v.copy(leg.m0).applyAxisAngle(_X, ang);
         _H.copy(T).sub(_v); // jarrete = pata - metatarso
         const Mdir = _d.copy(_v); // cópia temporária
@@ -1232,6 +1385,7 @@ export function createDogAnimation(ctx) {
       tYaw = st.glanceYaw * (1 - st.move) + st.turnS * 0.12 * st.circW; // na curva, quem vira a cabeça é o leadYaw
       tPitch = st.glancePitch * (1 - st.move);
     }
+    if (!A.lookAt) tYaw *= 1 - Math.max(gAl, gSn, gStB, gYu, gCt, gTr, gBk) * 0.9; // alerta, farejando, alongando, bocejando: sem olhadinhas
     tPitch *= 1 - wEnv; // de pé na parede a cabeça segue o corpo (compensada abaixo)
     tYaw *= 1 - Math.max(squat, xEnv) * 0.75;
     if (scratchK > 0) tYaw = lerp(tYaw, 1.05, scratchK * 0.85);
@@ -1257,21 +1411,28 @@ export function createDogAnimation(ctx) {
     const neckPitch = 0.05 + wPush4 * 0.42 + wStrain4 * 0.5 + w.sniff * 0.95 + w.tug * 0.25 + w.bow * 0.25 - w.carry * 0.08 - w.sit * 0.12 - barkEnv * 0.16 + st.lookPitch * 0.4 - ws * 0.3 + w.turn * 0.32 - w.jump * (0.22 * jUp - 0.16 * jDown) - w.aim * 0.3 + w.blow * 0.2 - w.proud * 0.28 + w.yuck * 0.05
       + lDn * (0.14 + 0.3 * lIn - 0.1 * lSweep * lExt) - lUp * (0.3 + 0.12 * lIn) - ls * 0.1 - lr * 0.09 - w.slide * 0.2 + wEnv * st.wallTheta * 0.22 + sk * st.shoveTheta * 0.42 + shoveJolt * 0.1
       + squat * 0.14 + (xDrink + xEat) * 1.3 + xDig * 0.55 + sniffX * 0.95 + xNudge * 0.9 + xRoll * 0.3 * (1 - xBack) + xBack * 1.2 - wow * 0.18
-      + iScr * 0.45 - iLie * 0.08 + iRest * 1.5 + iPee * 0.1;
-    const bodyPitchW = pitch - SIT_PITCH * w.sit * (1 - iLie) + 0.42 * w.bow - jTake * 0.6 + jFall * 0.6 - PEE.pitch * iPee;
+      + iScr * 0.45 - iLie * 0.08 + iRest * 1.5 + iPee * 0.1
+      + gSn * 1.0 + gSa * 0.45 - gAl * 0.3 - gYu * 0.24 - gStB * 0.22 - gStH * 0.32 + gSh * 0.12 - talkNod * 0.02
+      + gCt * 0.14 + gTr * 0.38 - gBk * 0.36;
+    const bodyPitchW = pitch - SIT_PITCH * w.sit * (1 - iLie) + 0.42 * w.bow - jTake * 0.6 + jFall * 0.6 - PEE.pitch * iPee + 0.58 * gStB - 0.16 * gStH;
     const lickYaw = lk * lSide * 0.08 * lSweep - lr * lSide * 0.1;
     // impulso: no alto, a cabeça vira para a direita, olhando a pata no botão
     const wallYaw = wallOn ? -0.34 * sstep(0.36, 0.48, wp) * (1 - sstep(0.62, 0.76, wp)) : 0;
-    qE(_q, bodyPitchW * 0.35 + neckPitch, (st.lookYaw + leadYaw) * 0.45 + shake * 0.3 + shk(0.5) * 0.25 + lickYaw * 0.4 + wallYaw * 0.45, shk(0.5) * 0.3 + turnRoll * 0.3);
+    qE(_q, bodyPitchW * 0.35 + neckPitch, (st.lookYaw + leadYaw) * 0.45 + shake * 0.3 + shk(0.5) * 0.25 + lickYaw * 0.4 + wallYaw * 0.45 + snSweep * 0.7 + gCs * 0.62 + gNo * 0.1, shk(0.5) * 0.3 + turnRoll * 0.3 + st.tiltSide * gTi * 0.08 + gWob * 0.06);
     setWorld(BI.neck, _q);
     const headPitch = -0.05 - wPush4 * 0.3 - wStrain4 * 0.35 + w.sniff * 0.35 + w.tug * 0.1 - w.carry * 0.08 - barkEnv * 0.32 + st.lookPitch * 0.6 + sniffTw + bob * 4 - ws * 0.12 + w.turn * 0.12 - w.aim * 0.2 + w.blow * 0.18 - w.proud * 0.12
       + lDn * (0.28 * lIn - 0.32 * lSweep * lExt) + lUp * (0.1 * lIn - 0.3 * lSweep * lExt) - ls * (0.18 + 0.25 * lSweep * lExt) - lr * 0.34 - w.slide * 0.12 + wEnv * st.wallTheta * 0.18 + sk * st.shoveTheta * 0.3 + shoveJolt * 0.06
       + squat * 0.02 + (xDrink + xEat) * 0.85 + xEat * chew * 0.07 + xDig * 0.45 + sniffX * 0.35 + sneezeP + xNudge * 0.5 - xRoll * 0.15 * (1 - xBack) + xBack * 0.5 - wow * 0.1
-      - iScr * 0.6 - iRest * 0.15;
-    const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 + w.proud * 0.12
+      - iScr * 0.6 - iRest * 0.15
+      + gSn * 0.4 + snPulse * 0.035 + gSa * 0.12 - gAl * 0.06 - gYu * 0.42 + gYo * Math.sin(t * 29) * 0.016 - gStB * 0.42 - gStH * 0.1 + gSh * 0.06
+      - talkOpen * 0.07 + talkNod * 0.03
+      + gCt * 0.1 + gTr * 0.28 - gBk * 0.3;
+    const headTilt = celHappy * Math.sin(t * 3.1) * 0.18 + (1 - st.move) * Math.sin(t * 0.7) * 0.04 * (1 - gAl) + w.proud * 0.12
       + lk * lSide * 0.2 * (0.35 + 0.65 * lExt) + ls * lSide * 0.08 - lr * lSide * 0.3 + wTouch * 0.24 + reliefK * 0.16 + xRoll * 0.15 + xRub * Math.sin(xt * 6.4 + 0.8) * 0.25
-      + glee * Math.sin(t * 3.4) * 0.1 + glad * Math.sin(t * 2.6) * 0.14 + iSide * iScr * (0.55 + 0.05 * iStroke);
-    qE(_q, headPitch, st.lookYaw + leadYaw + shake + shk(0) * 0.35 + lickYaw + wallYaw * 0.6, headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
+      + glee * Math.sin(t * 3.4) * 0.1 + glad * Math.sin(t * 2.6) * 0.14 + iSide * iScr * (0.55 + 0.05 * iStroke)
+      + st.tiltSide * gTi * (0.36 + 0.03 * Math.sin(t * 1.3)) + gYo * Math.sin(t * 23) * 0.02 + shiv * 0.02 + (st.talk > 0 ? st.talk * Math.sin(t * 1.15 + talkSeed) * 0.04 : 0)
+      + gCs * 0.22 + gWob * 0.24 + gNo * 0.22;
+    qE(_q, headPitch, st.lookYaw + leadYaw + shake + shk(0) * 0.35 + lickYaw + wallYaw * 0.6 + snSweep + gCs * 0.78 + gNo * 0.3 + (gBd > 0 ? gBd * Math.sin(t * 5.1 + 1) * 0.12 : 0), headTilt + st.lean * 0.4 + shk(0) * 0.6 + turnRoll);
     setWorld(BI.head, _q);
     fk(BI.jaw);
 
@@ -1280,11 +1441,20 @@ export function createDogAnimation(ctx) {
     const openT = Math.max(barkEnv, pant * (0.55 + 0.45 * Math.sin(t * 9)) * (1 - ws), w.carry * carry.open, w.turn * 0.4, w.blow, w.proud * 0.35,
       w.lick * (0.28 + 0.6 * lExt), w.licked * 0.12, w.slide * 0.45 * (1 - w.carry), (wEnv * 0.3 + wTouch * 0.3) * (1 - w.carry),
       reliefK * 0.38 * (1 - w.carry), xDrink * (0.22 + 0.22 * lap), xEat * (0.08 + 0.42 * chew), sneezeO, wow * 0.32 * (1 - w.carry),
-      growl * 0.12 * (1 - w.carry)) * (1 - sk * 0.85 * (1 - st.sb.growl));
+      growl * 0.12 * (1 - w.carry), (gYo * 1.35 + talkOpen * 0.95 + gStB * 0.18 + gWa * 0.4 * (0.6 + 0.4 * Math.sin(t * 9)) + gCt * 0.42 * (0.6 + 0.4 * Math.sin(t * 9)) + gBk * 0.3) * (1 - w.carry)) * (1 - sk * 0.85 * (1 - st.sb.growl));
     st.mouthOpen = damp(st.mouthOpen, openT, 20);
+    // a mandíbula desce de verdade no bocejo e na fala (só neles: no resto, ela fica como sempre)
+    const jawT = (gYo * 0.3 + talkOpen * 0.09) * (1 - w.carry);
+    if (jawT > 0 || st.jawO > 0) {
+      st.jawO = damp(st.jawO, jawT, 22);
+      if (jawT === 0 && st.jawO < 1e-4) st.jawO = 0;
+      qE(Lq[BI.jaw], st.jawO, 0, 0);
+    }
     const mo = st.mouthOpen;
     // rosnadinha: a boca fica mais curta e franzida (os cantos recolhem) e um tiquinho aberta
-    lip.scale.set(mouthW * (1 - 0.3 * growl), 0.0022 * s + mo * 0.011 * s + growl * 0.0012 * s, 0.009 * s + mo * 0.004 * s);
+    // bocejo: a boca abre mais larga (os cantos esticam); falando, um tiquinho
+    const mWide = 1 + 0.5 * gYo + 0.12 * talkOpen;
+    lip.scale.set(mouthW * (1 - 0.3 * growl) * mWide, 0.0022 * s + mo * 0.011 * s + growl * 0.0012 * s, 0.009 * s + mo * 0.004 * s);
     lip.position.set(0, -mo * 0.006 * s + growl * 0.0008 * s, -growl * 0.0015 * s);
     // língua comprida do Lambe-Lambe: estica em dois gomos, desce até a irmã e enrola para cima na varrida. Lambendo
     // para cima (lUpN), ela sai mais curta e para a frente: lambidinhas no queixo, sem subir até a testa da irmã.
@@ -1305,8 +1475,8 @@ export function createDogAnimation(ctx) {
       }
     }
     tongue.visible = (mo > 0.15 || xDrink > 0.05) && lt < 0.1;
-    tongue.scale.set(mouthW * 0.6, 0.004 * s, (0.012 + 0.022 * lap * xDrink) * s);
-    tongue.position.set(0, -mo * 0.011 * s - 0.005 * s * lap * xDrink, 0.002 * s + 0.014 * s * lap * xDrink);
+    tongue.scale.set(mouthW * 0.6 * (1 + 0.6 * gYo), 0.004 * s, (0.012 + 0.022 * lap * xDrink + 0.008 * gYo) * s);
+    tongue.position.set(0, -mo * 0.011 * s - 0.005 * s * lap * xDrink + 0.002 * s * gYo, 0.002 * s + 0.014 * s * lap * xDrink + 0.003 * s * gYo);
 
     // ---------------- orelhas (mola amortecida guiada pela aceleração da cabeça)
     {
@@ -1325,17 +1495,29 @@ export function createDogAnimation(ctx) {
       _q.copy(object.quaternion).multiply(inner.quaternion).multiply(Wq[BI.head]).invert();
       const aL = _v3.copy(st.headAcc).applyQuaternion(_q);
       const pitchT = w.dash * 1.15 + Math.min(v, 2.5) * 0.08 + w.push * 0.2 + w.strain * 0.3 + barkEnv * 0.2 + ws * 1.05 + w.blow * 0.9 + w.yuck * 0.7
-        + w.lick * 0.22 + w.licked * (0.3 + 0.55 * lTouch) + w.slide * 1.25 + st.mud * 0.18 + wEnv * 0.45 + strainK * 0.35 + xRoll * 0.6 + sneezeO * 0.5 - wow * 0.25 + sk * 0.3 + growl * 0.25;
+        + w.lick * 0.22 + w.licked * (0.3 + 0.55 * lTouch) + w.slide * 1.25 + st.mud * 0.18 + wEnv * 0.45 + strainK * 0.35 + xRoll * 0.6 + sneezeO * 0.5 - wow * 0.25 + sk * 0.3 + growl * 0.25
+        + gSa * 0.62 - gAl * 0.32 + gYu * 0.42 + gSh * 0.5 + gStB * 0.3 + gStH * 0.35 + gWa * 0.14 - gTi * 0.1 + gSn * 0.08 - talkOpen * 0.06
+        + gCt * 0.12 + gTr * 0.6 + gBk * 0.55 + gBd * 0.2;
       const outT = 0.06 + w.dash * 0.35 + celHappy * 0.12 + barkEnv * 0.25 - w.sit * 0.03 - ws * 0.12 + shkEnv * (0.45 + 0.4 * Math.sin(shakePh - 0.4)) + w.aim * 0.2 - w.yuck * 0.05
-        + w.lick * 0.06 + w.licked * 0.2 * lTouch + w.slide * 0.15 + squat * 0.08 + xRoll * 0.3 + glee * 0.12 + wow * 0.15 + glad * 0.08;
+        + w.lick * 0.06 + w.licked * 0.2 * lTouch + w.slide * 0.15 + squat * 0.08 + xRoll * 0.3 + glee * 0.12 + wow * 0.15 + glad * 0.08
+        + gSa * 0.12 - gAl * 0.05 + gYu * 0.06 + gWa * 0.05
+        + gCt * 0.16 + gBd * 0.22 * (0.5 + 0.5 * Math.sin(t * 6.3));
       const sub = dt > 0.02 ? 2 : 1;
       const h = dt / sub;
       for (let ei = 0; ei < 2; ei++) {
         const E = st.ears[ei];
         const se = ei === 0 ? 1 : -1;
+        // cabeça inclinada: a orelha de cima se ergue e a de baixo cai; de vez em quando uma delas mexe (uma por vez)
+        let eP = 0, eO = 0;
+        if (gTi > 0) {
+          const up = se === st.tiltSide ? 1 : 0;
+          const tw = fract(t * 0.42 + ei * 0.5);
+          eP = gTi * ((up ? -0.22 : 0.16) - 0.3 * sstep(0, 0.04, tw) * (1 - sstep(0.08, 0.2, tw)));
+          eO = gTi * (up ? -0.04 : 0.1);
+        }
         for (let k = 0; k < sub; k++) {
-          const ap = 160 * (pitchT - E.p) - 9 * E.pv + aL.z * 0.12;
-          const ao = 140 * (outT - E.o) - 8 * E.ov - aL.y * 0.1 - se * aL.x * 0.1;
+          const ap = 160 * (pitchT + eP - E.p) - 9 * E.pv + aL.z * 0.12;
+          const ao = 140 * (outT + eO - E.o) - 8 * E.ov - aL.y * 0.1 - se * aL.x * 0.1;
           E.pv += ap * h; E.p += E.pv * h;
           E.ov += ao * h; E.o += E.ov * h;
         }
@@ -1347,20 +1529,25 @@ export function createDogAnimation(ctx) {
     }
 
     // ---------------- cauda
-    const happy = Math.max(celHappy, w.carry * 0.7, barkEnv, w.proud * 0.9, w.lick * 0.95, w.licked * 0.75, wEnv * 0.5, wTouch, happyX, sk * 0.15);
-    const wagFreqT = lerp(lerp(2.0, 3.2, st.move), 7, happy) * (1 - w.sit * 0.5) * (1 - actionsBusy * 0.5 * (1 - w.pre));
-    const wagAmpT = lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) * (1 - squat * 0.95) * (1 - xRoll * 0.6) + w.bow * 0.2;
+    const happy = Math.max(celHappy, w.carry * 0.7, barkEnv, w.proud * 0.9, w.lick * 0.95, w.licked * 0.75, wEnv * 0.5, wTouch, happyX, sk * 0.15, gWa, gCt);
+    const wagFreqT = lerp(lerp(2.0, 3.2, st.move), 7, happy) * (1 - w.sit * 0.5) * (1 - actionsBusy * 0.5 * (1 - w.pre)) + gWa * 1.4 + gSn * 1.2;
+    const wagAmpT = (lerp(lerp(0.22, 0.16, st.move), 0.55, happy) * (1 - w.sit * 0.6) * (1 - (w.push + w.strain) * 0.7) * (1 - ws * 0.8) * (1 - squat * 0.95) * (1 - xRoll * 0.6) + w.bow * 0.2)
+      * (1 - 0.9 * gAl) * (1 - 0.8 * gSa) * (1 - 0.9 * gSh) * (1 - 0.6 * gStB) + gWa * 0.12;
     st.wagFreq = damp(st.wagFreq, wagFreqT, 3);
     st.wagAmp = damp(st.wagAmp, wagAmpT, 3);
     st.wagPhase += st.wagFreq * dt * TAU;
     const raiseT = w.sit * -0.55 * (1 - iLie) - iLie * 0.9 + iPee * 0.55 + (w.push + w.strain + w.sniff) * 0.15 + happy * 0.12 - w.dash * 0.35 + w.bow * 0.2 - ws * 0.95 + w.jump * 0.3 + w.proud * 0.35 + w.aim * 0.15 - w.yuck * 0.2
       + w.slide * 0.25 - st.mud * 0.35 + wEnv * 0.35 + squat * 0.42 + scratchK * 0.3 + xDig * 0.3 + w.pre * 0.12 + glee * 0.15 + wow * 0.25 + glad * 0.12
       - xRoll * 0.75 // rolando: o rabo vai para o lado da barriga (de costas, fica para o ar)
-      - sk * st.shoveTheta * 0.9; // de pé: o rabo fica para fora, equilibrando
+      - sk * st.shoveTheta * 0.9 // de pé: o rabo fica para fora, equilibrando
+      - gWa * 0.3 + gAl * 0.7 - gSa * 1.0 - gSh * 1.0 + gStB * 0.4 + gSn * 0.08
+      + gCt * 0.2 - gTr * 0.35 - gBk * 0.45;
     st.tailRaise = damp(st.tailRaise, raiseT, 4);
     for (let k = 0; k < 4; k++) {
       const wag = Math.sin(st.wagPhase - k * 0.7) * st.wagAmp * (k === 0 ? 1 : 0.3) + shk(4 + k * 0.6) * (k === 0 ? 0.5 : 0.25);
-      qE(Lq[BI.tail0 + k], k === 0 ? -st.tailRaise * 0.8 : -st.tailRaise * 0.12 + w.dash * 0.1, wag, k === 0 ? 0 : wag * 0.2);
+      // atrás do rabo: o rabo curva para o lado da cabeça (o "C" fecha)
+      const curl = gCs * (k === 0 ? 0.42 : 0.16);
+      qE(Lq[BI.tail0 + k], k === 0 ? -st.tailRaise * 0.8 : -st.tailRaise * 0.12 + w.dash * 0.1, wag + curl, k === 0 ? 0 : wag * 0.2);
     }
 
     // ---------------- piscadas
@@ -1380,8 +1567,10 @@ export function createDogAnimation(ctx) {
     const squint = celHappy * 0.25 + w.strain * 0.3 + w.proud * 0.45 + w.yuck * 0.55 + w.blow * 0.4 + growl * 0.35
       + w.lick * (0.3 + 0.35 * lTouch * (1 - ls)) + w.licked * (0.55 + 0.45 * lTouch) + w.slide * 0.2 + wTouch * 0.35
       + effort * 0.55 + strainK * 0.15 + reliefK * 0.8 + scratchK * 0.15 + xEat * 0.25 + xRoll * 0.4 + sneezeO * 0.9
-      + glee * 0.35 + glad * 0.4 + iScr * 0.95 + iRest * 0.92;
-    const wide = 1 + ws * 0.22 + wow * 0.28;
+      + glee * 0.35 + glad * 0.4 + iScr * 0.95 + iRest * 0.92
+      + gYe * 1.0 + gStB * 0.6 + gStH * 0.8 + gSa * 0.32 + gWa * 0.28 + gSh * 0.2 + gSn * 0.2
+      + gCt * 0.3 + gTr * 0.55 + gBs * 1.0;
+    const wide = 1 + ws * 0.22 + wow * 0.28 + gAl * 0.12;
     const lidK = lid * (1 - ws);
     for (const e of eyes) e.scale.set(wide, wide * Math.max(0.08, 1 - Math.max(lidK, squint * (1 - ws) * (1 - wow))), wide);
 

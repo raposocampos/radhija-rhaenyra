@@ -1,7 +1,8 @@
 # As Aventuras de Radhija & Rhaenyra: o roteiro do Modo História
 
-Situação: **enredo aprovado no plano em 2026-10-29. O storyboard e as seis decisões padrão aguardam confirmação, e
-nada foi construído no jogo.**
+Situação: **enredo aprovado no plano em 2026-10-29 e roteiro integrado (PR #74). Em 2026-11-01 o usuário confirmou as
+seis decisões padrão e escolheu o botão do Faro e, no mesmo dia, a câmera em 3ª pessoa. A fatia jogável (abertura e
+cap. 1) está sendo construída na etapa 2 ([MODO-HISTORIA.md](MODO-HISTORIA.md)).**
 - Esta é a versão 2. Ela foi reescrita depois de cinco críticas (mistério, personagens, jogabilidade, narrativa sem
   palavras e escopo) e de uma avaliação final.
 - A estrutura técnica e as etapas de entrega estão em [MODO-HISTORIA.md](MODO-HISTORIA.md).
@@ -13,8 +14,10 @@ nada foi construído no jogo.**
 - **Título:** "As Aventuras de Radhija & Rhaenyra", com o nome do capítulo como subtítulo.
 - **Tom:** aventura divertida, com cara de desenho animado, e com **investigação**. O porquê do sumiço não aparece
   de primeira, e a história guarda uma virada: "a culpada estava em casa".
-- **Sem palavras.** As cenas são contadas só com desenhos e gestos: balões de ícone, latidos, linguagem corporal,
-  câmera e música. Ficam em texto apenas os títulos de capítulo, os nomes dos casos e os objetivos curtos no HUD.
+- **Falas em HQ (mudança do usuário em 2026-11-10, no lugar do "sem palavras").** As cenas viram páginas de HQ dentro
+  do jogo, no estilo mangá / Scott Pilgrim: quadros, balões com falas curtas em pt-BR, caixas de narração,
+  onomatopeias e efeitos, com a "voz" em sílabas sintetizadas por personagem. No jogo, as falas curtas aparecem como
+  legenda. Os balões só de ícone saíram: confundiam.
 - **Humanos:** só de relance (pés, mãos, pantufas, galochas), nunca o rosto.
 - **Independência:** o enredo não tem ligação com as 10 fases. Personagens e peças podem ser reaproveitados, e a
   história traz mecânicas novas.
@@ -27,9 +30,9 @@ nada foi construído no jogo.**
   - a cenoura fica com o filhote dos pombos, e as irmãs ganham uma nova;
   - nenhum nome, nem frase, pode ter duplo sentido.
 
-### Decisões padrão, a confirmar pelo usuário
+### Decisões padrão (confirmadas pelo usuário em 2026-11-01)
 
-Cada uma pode ser trocada sem refazer o resto do roteiro.
+As seis valem para a fatia jogável e para o resto da história. Cada uma ainda pode ser trocada sem refazer o roteiro.
 
 1. **Mistério de verdade.** A jogadora não vê a autora até o cap. 8. As pistas são justas, mas ambíguas.
    Alternativa: ironia assumida, mostrando o sonambulismo e tirando a dedução final.
@@ -37,15 +40,41 @@ Cada uma pode ser trocada sem refazer o resto do roteiro.
    a um minuto da uma. Alternativa: o prazo ser só o ovo e a chuva, sem regra de eleição.
 3. **Fatia jogável primeiro.** A abertura e o cap. 1 ficam jogáveis antes de construir os caps. 2 a 8.
 4. **Núcleo de 4 capítulos** (1, 2, 6 e 8), com os 8 como meta.
-5. **Faro em pulso.** Um toque solta uma onda que mostra trilhas e pistas por cerca de 6 s. Alternativa: segurar o
+5. **Faro em pulso.** Um toque solta uma onda que mostra trilhas e pistas por cerca de 8 s. Alternativa: segurar o
    botão.
 6. **Erro no mural tem reação e custo.** O cartão volta, e só o caso fechado sem erro ganha o carimbo dourado.
+
+**O botão do Faro (escolhido em 2026-11-01):** V no teclado, L3 no controle (apertar o analógico esquerdo) e um botão
+de focinho nos controles de toque, que só aparece no Modo História.
+
+**Revisão da fatia (pedida pelo usuário em 2026-11-09, depois de testar a primeira prévia em 3ª pessoa):**
+- **As duas farejam.** O Faro deixou de ser só da Radhija.
+- **A nuvem de cheiro.** Enquanto o pulso dura, uma trilha de nuvenzinhas sai do focinho de quem fareja e segue o
+  caminho até a próxima pista. Ela passa por baixo de porta fechada e pela portinha de gato: mostra para onde é, e
+  abrir o caminho é com as duas.
+- **Pistas se examinam.** O pulso revela a pista (ela fica brilhando), e o E, de perto, a guarda na lupa.
+- **O mistério fica claro desde o começo.** A abertura termina com a cenoura sumida e a jogadora no quarto, para
+  farejar. Os objetivos falam do mistério ("A cenoura sumiu! Farejem o quarto", "Atrás dos pombos!").
+- **Puzzles com mais passos,** em cadeias de causa e efeito para as duas (veja o cap. 1).
+- **Mapa maior:** o Recanto ficou 1,7× maior, com cômodos de ~6 m, para a câmera em 3ª pessoa caber.
+- **Câmera:** em lugar apertado ela olha por cima do ombro da dog, para a frente, nunca de cima.
+- **Pombos:** com cara de pombo (cinza-claro, pescoço furta-cor, barras nas asas), e quem leva a cenoura agarra com as
+  patas.
+- **Balões e cenário** refeitos; as cenas são filmadas de dentro dos lugares.
+
+**A câmera em 3ª pessoa (decidida em 2026-11-01, depois da primeira prévia da fatia):** o Modo História é um jogo em
+3ª pessoa. A câmera fica atrás da cachorrinha ativa e gira livre em volta dela (analógico direito, arrastar com o
+mouse ou com o dedo na parte livre da tela). Ela desvia das paredes, não passa do teto e volta devagar para trás da dog
+quando ela anda.
+- **Por quê:** na câmera de cima, havia pontos do mapa ruins de enxergar, e a 3ª pessoa deixa o jogo mais atual.
+- **Só na história:** as 10 fases e Pandorópolis continuam com a câmera de cima.
+- **As cenas** continuam com os planos do diretor. No fim de cada uma, a câmera volta suave para trás da dog.
+- **Para depois, sem decisão:** levar o jogo para C++ ou uma engine de games, com build jogável.
 
 **Ainda em aberto:**
 - a voz "uá-uá" dos humanos;
 - a duração de cada capítulo (proposta: 12 a 20 minutos);
-- o botão do Faro;
-- o ângulo de câmera do mapa-múndi.
+- o ângulo de câmera do mapa-múndi (a 3ª pessoa vale dentro das áreas).
 
 ---
 
@@ -205,10 +234,13 @@ cena antes do flashback.**
 
 ## Mecânicas de investigação, que valem a história toda
 
-### Faro (Radhija), em pulso
+### Faro (as duas), em pulso
 
-- **O pulso.** Um toque solta uma onda a partir da Radhija. Por cerca de 6 s, as trilhas de cheiro acendem com cor
-  própria, e as pistas e as coisas fora do lugar brilham.
+- **O pulso.** Um toque solta uma onda a partir de quem fareja. Por cerca de 8 s, as trilhas de cheiro acendem com
+  cor própria, e as pistas e as coisas fora do lugar brilham. Dá para repetir logo depois (recarga de 1,2 s).
+- **A nuvem de cheiro.** Durante o pulso, nuvenzinhas saem do focinho e seguem o caminho de andar até a próxima
+  pista, com um brilho correndo para o lado de lá. A cor é a do cheiro que se segue.
+- **Examinar.** A pista revelada continua brilhando fraco depois do pulso. De perto, o E a examina e a guarda na lupa.
   - **Cores das trilhas:** cenoura laranja, pombos cinza, gansa branca, gato laranja-escuro.
 - **No perfil `minima`,** que não tem pós-processamento:
   - trilhas e pistas usam material emissivo;
@@ -436,32 +468,50 @@ A luneta e a roda-gigante são cenário com enigma, não mecânicas novas.
 tempestade da véspera estão pelo chão.
 
 **Missão:**
-1. **O quarto (abertura).** O primeiro pulso de Faro mostra a trilha laranja da cama até a janela, o pote virado e a
-   pena molhada no parapeito.
-2. **Sair de casa.** A Radhija aponta, e a Rhaenyra abre a porta da cozinha com impulso na maçaneta de alavanca.
-3. **O galho.** Um galho da tempestade bloqueia a porta da área de serviço, e a Rhaenyra o empurra para o lado.
-4. **A piscina.** No caminho, o Faro mostra a primeira Reconstrução: um pombo levando a boia de patinho murcha da
-   piscina.
+1. **O quarto.** A abertura termina com a cenoura sumida. A jogadora fareja: o pulso revela a trilha laranja da
+   cama até a janela, o pote virado e a pena molhada no parapeito, e cada uma se examina de perto.
+   - Com as três na lupa, os pombos passam pela janela, baixo e torto, com a cenoura nas patas. Entra a cartela.
+2. **Sair de casa.**
+   - Uma grade de proteção fecha a passagem do quarto. Só a Radhija passa pela portinha de gato. Do lado da cozinha,
+     ela pisa no pedal que solta a grade, e a Rhaenyra passa.
+   - Na porta do quintal, o saco de ração está bem na frente da maçaneta. A Rhaenyra o empurra para o lado e abre a
+     porta com o impulso na maçaneta de alavanca.
+3. **O quintal.**
+   - A porta da área de serviço não abre: o ferrolho fica do lado de fora. Um galho da tempestade caiu na frente de
+     uma passagem baixa no muro, e a Rhaenyra o empurra para o lado. Embaixo dele, as telhas.
+   - A Radhija passa pela passagem e puxa a argola do ferrolho com a boca.
+4. **A piscina.** O Faro mostra a primeira Reconstrução: um pombo levando a boia de patinho murcha da piscina.
 5. **Área de serviço.** Os pombos pousaram no varal para descansar, e a cenoura enroscou num pregador.
-   - A arrancada da Radhija solta o pregador.
-   - A cenoura cai, mas o Farelo a pega no ar.
+   - Sacudir o varal não basta: se a cenoura cair no chão, os pombos pegam. A Rhaenyra empurra o cesto de roupa até
+     embaixo dela.
+   - A arrancada da Radhija no poste solta o pregador. A cenoura cai, mas o Farelo a pega no ar, um palmo acima do
+     cesto.
    - Os pombos sobem para a torre do condomínio.
-6. **A torre do condomínio.** A Rhaenyra empurra a porta de mola e segura com o Fica, e a Radhija passa.
+6. **A torre do condomínio.**
+   - A porta só destrava com a senha do interfone: três botões com desenho, no alto. O Faro mostra a Reconstrução do
+     Farelo, que é gordinho e sobe de escada, apertando os três na ordem. A Rhaenyra repete com o impulso.
+   - Ela empurra a porta de mola e segura com o Fica, e a Radhija passa.
    - No terraço, as irmãs quase pegam a cenoura, mas o vento sul leva os pombos por cima do muro, rumo à Praça.
    - Do terraço se vê, ao longe, o relógio da Prefeitura parado.
-7. **A portaria.** O porteiro cochila dentro da guarita, fora de vista: só se ouvem o ronco e o radinho.
-   - O latido fino da Radhija não adianta. Ela manda a Rhaenyra latir, e o latido grosso acorda o porteiro.
+7. **A portaria.** O porteiro cochila dentro da guarita, fora de vista, de janela fechada: só se ouvem o ronco e o
+   radinho, abafados.
+   - De janela fechada, nenhum latido entra. O Superbafo da Radhija entra pela grelha de ventilação, lá dentro
+     alguém espirra e a janela abre.
+   - O latido fino da Radhija ainda não adianta. O latido grosso da Rhaenyra acorda o porteiro.
    - Num plano baixo de cena, a botina e a mão dele abrem o portãozinho.
 
 **Quem faz o quê:**
-- **Radhija:** Faro e arrancada no pregador.
-- **Rhaenyra:** impulso na maçaneta, empurra o galho e a porta de mola, segura com o Fica e dá o latido grosso.
+- **Radhija:** a portinha de gato e o pedal, a passagem do muro e a argola do ferrolho, a arrancada no pregador e o
+  Superbafo na grelha.
+- **Rhaenyra:** empurra o saco de ração, o galho e o cesto, dá o impulso na maçaneta e nos botões do interfone,
+  empurra a porta de mola, segura com o Fica e dá o latido grosso.
+- **As duas:** o Faro.
 
 **Pistas:**
 - **Obrigatórias:**
-  - **C3:** a trilha laranja, o pote virado e a pena molhada, no primeiro pulso.
+  - **C3:** a trilha laranja, o pote virado e a pena molhada, farejadas e examinadas no quarto.
   - **C2:** os galhos e as telhas da tempestade.
-  - **C1:** a Reconstrução do pombo levando a boia de patinho murcha.
+  - **C1:** a Reconstrução do pombo levando a boia de patinho murcha, e a do Farelo apertando a senha do interfone.
 - **Por cena (C3):** os pombos encharcados no parapeito e o abraço da manhã, ambos na abertura.
 - **Escondidas:**
   - **C3:** a baba no parapeito, do lado de dentro (Faro, perto da janela).
@@ -975,8 +1025,13 @@ de eleitores (cachorros, gatos, patos) e o relógio parado a um minuto da uma.
 
 ## Regras para quem for construir
 
-- **Sem palavras nas cenas.** O texto fica só nos títulos de capítulo, nos nomes dos casos e nos objetivos curtos do
-  HUD. Os recados em Pombês e os cartões do mural são desenhos, sem letras.
+- **Falas curtas, em HQ.** Nas cenas, balões de quadrinho com frases curtas (até ~60 letras), caixas de narração e
+  onomatopeias; no jogo, legendas curtas. Nada escrito no CENÁRIO 3D (placas, cartazes): lá, só pictogramas. Os
+  cartões do mural continuam desenhos.
+- **A árvore de pistas (2026-11-10).** Um botão abre o quadro de dedução, no estilo dos jogos do Sherlock Holmes: a
+  pergunta-raiz do capítulo, as perguntas que a história faz e as pistas ligadas a cada uma (desenho + frase). Com as
+  pistas necessárias, o jogador escolhe a conclusão; a certa segue a história (no cap. 1, "Quem entrou no quarto?"
+  traz os pombos à janela). Estado em `src/story/deduction.js`.
 - **Modo sem dicas:**
   - esconde o objetivo do HUD, o marcador e os balões de dica;
   - mantém os títulos de capítulo, as cenas e o mural, onde a pergunta aberta continua como pictograma.

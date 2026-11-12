@@ -1,4 +1,4 @@
-// Trilha do jogo: um tema para o menu, um para o mapa das fases (Pandorópolis) e um para cada fase, combinando com o
+// Trilha do jogo: um tema para o menu, um para o mapa das fases (Pandorópolis), um para cada fase, combinando com o
 // lugar e a hora do dia dela. Cada tema são 8 compassos em loop: a melodia escrita nota a nota (16 semicolcheias por
 // compasso, "." é pausa ou sustentação), os acordes e o estilo do baixo, do acompanhamento e da percussão. O motor
 // (music.js) transforma isso em notas e toca tudo sintetizado, sem arquivos.
@@ -191,6 +191,37 @@ export const THEMES = {
       'D6 . . . B5 . G5 . D5 . . . G5 . . .',
       'A5 . . . C6 . A5 . F5 . A5 . G5 . F5 .',
       'F5 . . . D5 . . . B4 . . . D5 . . .',
+    ],
+  },
+  // Modo História, capítulo 1 (o Recanto das Patinhas ao amanhecer): "Pegadas no Orvalho" — clarinete na melodia,
+  // baixo em pizzicato na ponta dos pés e a marimba nos respiros, como gotas de orvalho
+  recanto: {
+    id: 'recanto', name: 'Pegadas no Orvalho', bpm: 100, swing: 0.12, gain: 0.74, lead: 'clarinet', arp: 'marimba', arpStyle: 'gaps', bass: 'pizz', perc: 'soft', pad: 0.03,
+    chords: ['F', 'C', 'Dm', 'Bb', 'F', 'Am', 'Gm7', 'C7'],
+    melody: [
+      'C5 . F5 . A5 . . . G5 . F5 . C5 . . .',
+      'E5 . G5 . . . E5 . D5 . . . C5 . . .',
+      'D5 . F5 . A5 . . . C6 . A5 . F5 . . .',
+      'G5 . . . F5 . D5 . C#5 . D5 . F5 . . .',
+      'A5 . C6 . A5 . F5 . G5 . A5 . F5 . C5 .',
+      'E5 . . . A5 . . . G5 . E5 . C5 . . .',
+      'D5 . F5 . Bb5 . . . A5 . G5 . F5 . D5 .',
+      'E5 . . . G5 . . . C5 . . . . . . .',
+    ],
+  },
+  // o tema do mistério (as Reconstruções e o mural): caixinha de música, pizzicato e o tique-taque do relógio parado
+  misterio: {
+    id: 'misterio', name: 'O Caso da Cenoura', bpm: 84, gain: 0.7, lead: 'bell', arp: null, bass: 'pizz', perc: 'clock', pad: 0.025,
+    chords: ['Am', 'F', 'Dm', 'E', 'Am', 'F', 'Dm', 'E7'],
+    melody: [
+      'E5 . . . A5 . . . C6 . . . B5 . . .',
+      'A5 . . . . . . . F5 . . . E5 . . .',
+      'D5 . . . F5 . . . A5 . . . G5 . . .',
+      'G#5 . . . . . . . B4 . . . . . . .',
+      'C6 . . . B5 . . . A5 . . . E5 . . .',
+      'F5 . . . A5 . . . C6 . . . A5 . . .',
+      'F5 . . . E5 . . . D5 . . . F5 . . .',
+      'E5 . . . . . . . G#4 . . . . . . .',
     ],
   },
 };

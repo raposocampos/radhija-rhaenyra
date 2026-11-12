@@ -1,5 +1,7 @@
 // Ossinhos dourados (petiscos escondidos) de todas as fases: visual e animação de coleta num módulo só;
 // cada fase só ajusta brilho e material. buildTreats(root, COLLECTIBLES, opts) → { list: CollectibleProp[], update(dt, t) }.
+// Cada item tem também setHidden(on): escondido (o ossinho, a sombra, o brilho e a estrelinha) até a fase mostrar (o
+// petisco que sai da lata de biscoito, no Modo História); o reset mantém o que foi pedido.
 import * as THREE from 'three';
 import { rng, canvasTexture, radialTexture, contactShadow } from './util.js';
 import { boneGeometry } from './toys.js';
@@ -55,17 +57,27 @@ export function buildTreats(root, list, {
     halo.scale.setScalar(0.32);
     halo.visible = glow > 0;
     root.add(halo);
-    const st = { anim: -1, collected: false, phase: r() * 10 };
+    const st = { anim: -1, collected: false, phase: r() * 10, hidden: false };
     return {
       id: c.id,
       object: grp,
       collect() { if (st.collected) return; st.collected = true; st.anim = 0; },
+      /** Escondido (até a fase mostrar): sem o ossinho, a sombra, o brilho e a estrelinha. */
+      setHidden(on) {
+        st.hidden = !!on;
+        if (st.collected) return;
+        grp.visible = !st.hidden;
+        sh.visible = !st.hidden;
+        halo.visible = !st.hidden && glow > 0;
+        star.visible = !st.hidden;
+      },
       reset() {
         st.collected = false;
         st.anim = -1;
-        grp.visible = true;
-        sh.visible = true;
-        halo.visible = glow > 0;
+        grp.visible = !st.hidden;
+        sh.visible = !st.hidden;
+        halo.visible = !st.hidden && glow > 0;
+        star.visible = !st.hidden;
         grp.position.set(c.x, y0, c.z);
         grp.rotation.set(0, baseRot, 0.06);
         grp.scale.setScalar(1);
@@ -105,7 +117,7 @@ export function buildTreats(root, list, {
   });
   for (const o of items) o.reset();
   return {
-    list: items.map(({ id, object, collect, reset }) => ({ id, object, collect, reset })),
+    list: items.map(({ id, object, collect, reset, setHidden }) => ({ id, object, collect, reset, setHidden })),
     /** @param {number} dt @param {number} t */
     update(dt, t) { for (const o of items) o._update(dt, t); },
   };
