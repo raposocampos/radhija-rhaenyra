@@ -30,6 +30,8 @@ export const SPEAKERS = {
   // as testemunhas: a gansa no trombone abafado lá no agudo (um "quém"), o gato num arrulho fino
   gansa: { name: 'Dona Gansa', sound: 'voz-porteiro', every: 3, pitch: 1.55 },
   bichano: { name: 'Bichano', sound: 'voz-pombo', every: 4, pitch: 1.4 },
+  // o jabuti do quintal: o trombone abafado lá embaixo, uma sílaba a cada cinco letras (devagar)
+  bento: { name: 'Seu Bento', sound: 'voz-porteiro', every: 5, pitch: 0.62 },
 };
 /** @typedef {'normal' | 'grito' | 'sussurro' | 'sono' | 'pensa'} Mood */
 

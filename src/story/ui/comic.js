@@ -42,6 +42,7 @@ const CAST = {
   porteiro: { name: 'Sr. Luiz', color: '#4E8F6A' },
   gansa: { name: 'Dona Gansa', color: '#C9822F' },
   bichano: { name: 'Bichano', color: '#8A6F5A' },
+  bento: { name: 'Seu Bento', color: '#7A8E3E' },
   migalha: { name: 'Capitão Migalha', color: '#5E79B5' },
   capitao: { name: 'Capitão Migalha', color: '#5E79B5' },
   farelo: { name: 'Farelo', color: '#7C8FBF' },

@@ -39,6 +39,8 @@ import {
 } from './scenes.js';
 import { createRooftop } from './rooftop.js';
 import { createRooftopScenes } from './scenesTelhado.js';
+import { createQuintal } from './quintalPuzzles.js';
+import { createQuintalScenes } from './scenesQuintal.js';
 
 export const STAGES = ['abertura', 'quarto', 'casa', 'quintal', 'piscina', 'varal', 'torre', 'portaria', 'fechamento', 'mural', 'fim'];
 const stageIndex = (s) => STAGES.indexOf(s);
@@ -151,6 +153,7 @@ export function createPuzzle(ctx) {
         return w ? { x: w.x, y: w.y + 0.2, z: w.z } : null;
       }
       if (who === 'gansa') return { x: goose.x, y: 0.62, z: goose.z };
+      if (who === 'bento') return yard.anchorOf(); // o jabuti do quintal (quintalPuzzles.js)
       if (who === 'bichano') { const o = props.bichano?.object; return o ? { x: o.position.x, y: o.position.y + 0.32, z: o.position.z } : null; }
       return null;
     },
@@ -407,6 +410,8 @@ export function createPuzzle(ctx) {
   };
   // o terraço da torre, jogável (um cenário à parte, fora do mapa: world/telhado.js; pedido de 2026-11-11)
   const roof = createRooftop(K, { world, root, emit, effects, ctx, props, dir, hints });
+  // o quintal maior (4ª rodada): o jabuti, a irrigação, a pipa e a mangueira (quintalPuzzles.js, scenesQuintal.js)
+  const yard = createQuintal(K, { world, root, emit, effects, ctx, props, dir, hints, tug, dogs });
   let scenes = null;
   function makeScenes() {
     return {
@@ -417,6 +422,7 @@ export function createPuzzle(ctx) {
       varal: createVaralScene(K),
       terraco: createTerraceScene(K),
       ...createRooftopScenes(K, roof),
+      ...createQuintalScenes(K, yard),
       cheiro: createSmellScene(K),
       porteiro: createPorteiroScene(K),
       fechamento: createClosingScene(K),
@@ -586,6 +592,7 @@ export function createPuzzle(ctx) {
   /** A próxima pista do mistério: { x, z, color } (o Faro solta a nuvem até lá). */
   function lead() {
     const c = R(ctx.activeDog);
+    if (S.stage === 'quintal') { const yl = yard.lead(); if (yl) return yl; }
     switch (S.stage) {
       case 'quarto': {
         let best = null;
@@ -844,6 +851,7 @@ export function createPuzzle(ctx) {
       kitchenDoor.setTarget(1); kitchenDoor.set?.(1); kitchenDoor.lock();
     },
     piscina() {
+      yard.skipAll(); // o quintal maior: o jabuti fora da passagem, a irrigação desligada
       branch.setPos(L.BRANCH.minX, L.BRANCH.start.z);
       S.branchFree = true;
       book.add('telhas', { silent: true });
@@ -888,7 +896,8 @@ export function createPuzzle(ctx) {
   const STAGE_SPOTS = {
     quarto: null,
     casa: null,
-    quintal: [{ x: L.HOUSE.x1 + 1.6, z: 5.6, yaw: 0 }, { x: L.HOUSE.x1 + 1.1, z: 6.5, yaw: 0 }],
+    // do lado de fora da porta dos fundos (HOUSE_EXIT), fora do arco da folha dela
+    quintal: [{ x: L.HOUSE_EXIT.x + 1.36, z: L.HOUSE_EXIT.z0 + 0.15, yaw: Math.PI / 2 }, { x: L.HOUSE_EXIT.x + 1.31, z: L.HOUSE_EXIT.z1 + 0.05, yaw: Math.PI / 2 }],
     piscina: [{ x: doorMid(sd).x, z: sd.hinge.z - 1.7, yaw: Math.PI }, { x: doorMid(sd).x + 0.9, z: sd.hinge.z - 1.3, yaw: Math.PI }],
     varal: [{ x: L.LINE.b.x - 0.4, z: L.LINE.b.z + 2.0, yaw: Math.PI }, { x: L.LINE.b.x - 1.5, z: L.LINE.b.z + 2.2, yaw: Math.PI }],
     torre: [{ x: td.hinge.x - 1.5, z: doorMid(td).z + 0.9, yaw: Math.PI / 2 }, { x: td.hinge.x - 1.6, z: doorMid(td).z - 0.3, yaw: Math.PI / 2 }],
@@ -920,11 +929,15 @@ export function createPuzzle(ctx) {
           return T(OBJECTIVES.quarto, l && S.revealed.size ? l : null, 0.7);
         }
         case 'casa': return T(OBJECTIVES.casa, { x: L.KITCHEN_HANDLE.x - 0.25, z: L.KITCHEN_HANDLE.z }, 1.3);
-        case 'quintal':
+        case 'quintal': {
+          // do fundo do quintal até o jardim: o jabuti e a irrigação (quintalPuzzles.js)
+          const yo = yard.objective();
+          if (yo) return { ...yo, stage: st };
           // primeiro a porta (trancada por fora); depois o galho na frente da passagem; por fim, a passagem
           if (!S.gapShown) return T(OBJECTIVES.quintal, doorMid(sd), 1.2);
           if (!S.branchFree) return T(OBJECTIVES.galho, branch, 0.9);
           return T(OBJECTIVES.ferrolho, { x: (YG.x0 + YG.x1) / 2, z: YG.z + 0.5 }, 0.6);
+        }
         case 'piscina': return T(OBJECTIVES.piscina, L.RECON, 0.6);
         case 'varal': return T(OBJECTIVES.varal, L.CARROT_PIN, L.CARROT_PIN.y + 0.4);
         case 'torre':
@@ -966,6 +979,7 @@ export function createPuzzle(ctx) {
       if (wantPrompt !== S.promptOn) { S.promptOn = wantPrompt; emit('story:prompt', { kind: 'faro', on: wantPrompt }); }
       stepClimb(dt);
       roof.update(dt, { active, comp, playing: !S.scene?.active });
+      yard.update(dt, { active, playing: !S.scene?.active && !S.pending });
       stepExam(dt);
       dir.update(dt);
       // nas cenas, as faixas de cinema cobrem 11% do alto da tela: os balões ficam abaixo delas
@@ -1107,6 +1121,7 @@ export function createPuzzle(ctx) {
         if (ex) hints.setPrompt('examinar');
         else if (active.name === 'radhija' && !S.boltOpen && S.branchFree && active.z < L.YARD.z0 && near(active, SB.ring, SB.grabR + 0.3) && !tug.busy?.()) hints.setPrompt('argola');
         else if (active.name === 'radhija' && S.bucketT === -1 && near(active, L.ROPE.end, L.ROPE.grabR + 0.25) && !tug.busy?.()) hints.setPrompt('corda');
+        else if (yard.prompt) hints.setPrompt(yard.prompt);
         else if (roof.prompt) hints.setPrompt(roof.prompt);
         else hints.setPrompt(null);
       }
@@ -1140,6 +1155,8 @@ export function createPuzzle(ctx) {
       if (ex) { startExam(c, ex); return true; }
       // soltar a corda ou a argola (com ela na boca, o E chega aqui)
       if (tug.busy?.() && tug.who === c.name) { tug.release?.(); return true; }
+      // o quintal maior: a alface, o jabuti, a mangueira, o registro, a pipa e a bolinha (quintalPuzzles.js)
+      if (yard.interact(c)) return true;
       // a Radhija manda: aponta a maçaneta (a irmã é quem alcança), ou o saco na frente dela
       if (st === 'casa' && near(c, doorMid(L.KITCHEN_DOOR), 1.9) && c.x < L.HOUSE.x1) {
         if (S.mandaCd <= 0) {
@@ -1197,9 +1214,13 @@ export function createPuzzle(ctx) {
     },
 
     /** O poste do varal, para o empurrão em pé da Rhaenyra (Shift / R1 de frente para ele). */
-    shoveSpots() { return S && after('piscina') && !S.varalDone && !S.scene?.active ? [poleShove.spot] : []; },
+    shoveSpots() {
+      const yardSpots = S && !S.scene?.active ? yard.shoveSpots() : []; // a goiabeira do quintal (a pipa)
+      return S && after('piscina') && !S.varalDone && !S.scene?.active ? [poleShove.spot, ...yardSpots] : yardSpots;
+    },
     /** Cada empurrão no poste: os pombos se assustam; com o cesto embaixo, no terceiro o pregador solta. */
     onShove(c, spot, C) {
+      if (yard.onShove(c, spot, C)) return;
       if (spot.id !== poleShove.spot.id || S.varalDone) return;
       poleShove.shove(c, C);
       for (const p of Object.values(props.squad || {})) p.peck?.();
@@ -1226,6 +1247,8 @@ export function createPuzzle(ctx) {
       if (held) return held.look || null;
       if (S.exam?.who === c.name) return K.clueAt(S.exam.id);
       if (roof.active) return roof.lookTarget(c);
+      const yt = yard.lookTarget(c);
+      if (yt) return yt;
       // farejando: o focinho vai ao chão por um instante
       if (S.sniffT > 0 && S.sniffWho === c.name) return { x: c.x + Math.sin(c.yaw) * 0.42, y: 0.02, z: c.z + Math.cos(c.yaw) * 0.42 };
       if (S.stage === 'varal' && near(c, L.CARROT_PIN, 3.6)) return { x: L.CARROT_PIN.x, y: L.CARROT_PIN.y, z: L.CARROT_PIN.z };
@@ -1235,6 +1258,8 @@ export function createPuzzle(ctx) {
     modifyIntent(dt, c, intent, { shift }) {
       if (S.scene?.active || climbing()) return null;
       if (roof.active) return roof.modifyIntent(dt, c, intent, { shift });
+      const ym = yard.modifyIntent(dt, c, intent, { shift });
+      if (ym) return ym;
       for (const cr of [...(S.kitchenOpen ? [] : [sack]), branch, ...(S.varalDone ? [] : [laundry]), bin, ...(S.boatDocked || S.dockT >= 0 ? [] : [boat])]) {
         const r = cr.modifyIntent(dt, c, intent, { shift });
         if (r?.contact) {
@@ -1275,6 +1300,7 @@ export function createPuzzle(ctx) {
       return {
         petGateOpen: S.petGateOpen, kitchenOpen: S.kitchenOpen, gapOpen: S.branchFree, serviceOpen: S.serviceOpen,
         towerOpen: towerDoor.t > 0.6, boatDocked: S.boatDocked, storageOpen: S.storageOpen,
+        ...yard.navFlags(),
       };
     },
     wallSpots() {
@@ -1304,6 +1330,7 @@ export function createPuzzle(ctx) {
       if (S.scene?.active) return;
       if (roof.active) { roof.onBark(c); return; }
       goose.onBark?.(c);
+      yard.onBark(c);
       if (S.stage === 'portaria' && !S.porterDone && near(c, boothCenter, 4.2)) {
         if (!S.windowOpen) {
           // de janela fechada, nenhum latido entra
@@ -1351,6 +1378,7 @@ export function createPuzzle(ctx) {
       if (!scenes) scenes = makeScenes();
       props.reset?.();
       roof.reset();
+      yard.reset();
       handle.reset?.();
       for (const b of buttons) b.btn.reset?.();
       pedal.reset?.();
@@ -1437,6 +1465,7 @@ export function createPuzzle(ctx) {
         story: {
           stage: S.stage, scene: S.scene?.active ? S.scene.id : null, beat: S.scene?.beat ?? null,
           clues: book.found, socks: [...S.socks], faro: faro.info(), faroMode: faroMode.info(), cloud: cloud.info(), roof: roof.info(), board: deduction.snapshot(), lines: teller.lines,
+          yard: yard.info(),
           recon: { active: recon.active || reconCode.active, plays: recon.plays, codePlays: reconCode.plays },
           revealed: [...S.revealed], exam: S.exam?.id ?? null, code: S.code.slice(),
           flags: {
@@ -1467,6 +1496,7 @@ export function createPuzzle(ctx) {
         window: props.windowLeaf ? 'ok' : null, music: S.music,
         flags: { windowOpen: S.windowOpen, codeSeen: S.codeSeen, towerUnlocked: S.towerUnlocked, gateOpen: S.gateOpen },
         locks: { radhija: !!puzzle.lockFor('radhija'), rhaenyra: !!puzzle.lockFor('rhaenyra') },
+        yard: yard.snapshot(),
       };
     },
   };
@@ -1508,10 +1538,12 @@ export function createPuzzle(ctx) {
   K.windowSeen = () => { S.windowSeen = true; };
   K.codeSeen = () => { S.codeSeen = true; };
   K.windowOpened = () => { S.windowOpen = true; props.booth?.setWindow?.(1); };
+  K.refreshObjective = () => emit('objective', puzzle.objective(ctx.activeDog));
 
   S = fresh();
   scenes = makeScenes();
   puzzle.rooftop = roof;
+  puzzle.quintal = yard;
   return puzzle;
 }
 

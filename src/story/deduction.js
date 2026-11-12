@@ -42,7 +42,7 @@ export const CHAPTER1_BOARD = {
       conclusion: 'Para o varal… e de lá, para a torre!',
     },
     {
-      id: 'borracha', text: 'Por que os pombos pegam coisas de borracha?', clues: ['boia', 'dep-bichano'], extra: ['ralo', 'tampa'],
+      id: 'borracha', text: 'Por que os pombos pegam coisas de borracha?', clues: ['boia', 'dep-bichano'], extra: ['ralo', 'tampa', 'rabiola'],
       options: ['Para tapar uma goteira!', 'Pombos comem borracha.', 'Querem brincar na piscina.'], answer: 0,
       conclusion: 'Para tapar uma goteira… mas onde?',
     },

@@ -45,8 +45,9 @@ function freeNear(w, p, r, who) {
 }
 const R = { radhija: L.DOGS.radhija.radius, rhaenyra: L.DOGS.rhaenyra.radius };
 const SIZE = { radhija: L.DOGS.radhija.size, rhaenyra: L.DOGS.rhaenyra.size };
-/** Todas as etapas feitas: portas abertas, o galho fora da passagem, barquinho encaixado. */
-const ALL_OPEN = { petGateOpen: true, kitchenOpen: true, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true };
+/** Todas as etapas feitas: portas abertas, o galho fora da passagem, barquinho encaixado, o jabuti fora da passagem da
+ * horta e a irrigação do quintal desligada. */
+const ALL_OPEN = { petGateOpen: true, kitchenOpen: true, gapOpen: true, serviceOpen: true, towerOpen: true, storageOpen: true, boatDocked: true, jabutiMoved: true, irrigationOff: true };
 const small = (flags) => ({ r: R.radhija, size: SIZE.radhija, flags: { ...flags, small: true } });
 const big = (flags) => ({ r: R.rhaenyra, size: SIZE.rhaenyra, flags });
 
@@ -107,8 +108,9 @@ test('recanto: petiscos e meias ficam onde a dog certa alcança, por um caminho 
     const p = n.findPath(from, c, ctx);
     assert.ok(p.reachable, `petisco ${c.id}: a Radhija chega lá`);
   }
-  // a do depósito fica em cima da caixa de brinquedos: um lugar livre ao alcance da pegada basta
-  for (const s of L.SOCKS.filter((x) => x.id !== 'antena')) {
+  // a do depósito fica em cima da caixa de brinquedos: um lugar livre ao alcance da pegada basta (a do baldão boia até
+  // a borda e se pega pelo quintalPuzzles.js: test/historia-quintal.test.mjs)
+  for (const s of L.SOCKS.filter((x) => x.id !== 'antena' && x.id !== 'balde')) {
     const spot = freeNear(w, s, L.SOCK_PICKUP_R - 0.05, 'radhija');
     assert.ok(spot, `meia ${s.id}: um lugar livre a menos de ${L.SOCK_PICKUP_R} m`);
     assert.ok(n.findPath(from, spot, ctx).reachable, `meia ${s.id}: a Radhija chega lá`);
@@ -330,5 +332,5 @@ test('recanto: câmera, pistas e meias dentro do condomínio', () => {
   for (const s of L.SOCKS) assert.ok(inside(s), `meia ${s.id}`);
   for (const c of L.COLLECTIBLES) assert.ok(inside(c), `petisco ${c.id}`);
   assert.equal(L.COLLECTIBLES.length, 5, 'cinco petiscos');
-  assert.equal(L.SOCKS.length, 3, 'três meias');
+  assert.equal(L.SOCKS.length, 4, 'quatro meias (a do baldão do quintal é a quarta)');
 });
