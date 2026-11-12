@@ -119,7 +119,7 @@ export function createRoofArrival(K, roof) {
       },
       {
         // as duas combinam o plano (a dica da mecânica: uma de guarda, a outra espanta)
-        id: 'plano', dur: 3.4,
+        id: 'plano', dur: 4.0,
         enter() {
           dir.panel('full', 0, { enter: 'pop' });
           dir.lens(32);
@@ -131,7 +131,7 @@ export function createRoofArrival(K, roof) {
           const a = dir.actor('radhija'), h = dir.actor('rhaenyra');
           a.look = P3(h.x, 0.4, h.z);
           h.look = P3(a.x, 0.35, a.z);
-          once('rha', t > 1.6, () => { dir.say('rhaenyra', 'Então eu fico de guarda e você espanta!', { mode: 'cena', dur: 1.8 }); dir.gesture?.('rhaenyra', 'wag'); });
+          once('rha', t > 1.6, () => { dir.say('rhaenyra', 'Eu fico de guarda e você espanta! Sou ótima em ficar parada!', { mode: 'cena', dur: 2.4 }); dir.gesture?.('rhaenyra', 'wag'); });
         },
       },
     ],
@@ -312,7 +312,7 @@ export function createRoofLook(K, roof) {
       },
       {
         // de frente para as duas (do lado de fora da mureta): a Radhija brava, a Rhaenyra já sabe o caminho
-        id: 'olham', dur: 3.8,
+        id: 'olham', dur: 4.6,
         enter() {
           roof.hideSquad();
           dir.panel('full', 0, { enter: 'pop' });
@@ -325,7 +325,9 @@ export function createRoofLook(K, roof) {
         tick(_, t) {
           const a = dir.actor('radhija'), h = dir.actor('rhaenyra');
           if (t > 1.5) { a.look = P3(h.x, sy + 0.4, h.z); h.look = P3(a.x, sy + 0.35, a.z); }
-          once('rha', t > 1.7, () => { dir.say('rhaenyra', 'Foram para a rua! A gente tem que sair pelo portão!', { mode: 'cena', dur: 2.0 }); dir.gesture?.('rhaenyra', 'tilt'); });
+          once('rha', t > 1.7, () => { dir.say('rhaenyra', 'Foram pra rua! Bora pelo portão… e passar na padaria!', { mode: 'cena', dur: 1.9 }); dir.gesture?.('rhaenyra', 'wag'); });
+          // a Radhija corrige (a padaria fica para depois)
+          once('rad', t > 3.4, () => { dir.say('radhija', 'Sem padaria, Rhaenyra.', { mode: 'cena', dur: 1.2 }); dir.gesture?.('rhaenyra', 'tilt'); });
         },
       },
       {

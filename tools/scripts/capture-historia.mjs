@@ -417,6 +417,10 @@ async function captureDevice(dev, url) {
   await shot('76b-sr-luiz-as-duas-latem');
   await step(140);
   await shot('76c-sr-luiz-o-depoimento');
+  // ele sai pela porta da guarita e anda até o portãozinho
+  await until((i) => i.story.beat === 'sai', 600);
+  await step(80);
+  await shot('76d-sr-luiz-vai-ao-portaozinho');
   await until((i) => i.story.beat === 'abre', 600);
   await step(80);
   await shot('77-sr-luiz-abre-o-portaozinho');
@@ -441,6 +445,37 @@ async function captureDevice(dev, url) {
   await page.evaluate(() => window.__game.events.emit('ui:muralDone', { errors: 0, settled: true }));
   await step(30);
   await shot('82-fim-do-capitulo');
+
+  // a Rhaenyra distraída (src/story/scene/lesada.js): a voltinha atrás do rabo e a borboleta, com a câmera atrás da
+  // Radhija olhando para a irmã
+  if (dev.full) {
+    await open('piscina');
+    await step(240);
+    const aim = () => page.evaluate(() => {
+      const g = window.__game.game;
+      const a = g.debug.ctrls.radhija, b = g.debug.ctrls.rhaenyra;
+      g.debug.cam.autoRecenter = false;
+      g.debug.cam.heading = Math.atan2(b.x - a.x, b.z - a.z);
+      g.debug.cam.snapFollow(a.x, a.z);
+    });
+    await aim();
+    if (await page.evaluate(() => !!window.__game.game.puzzle.lesada?.start('rabo'))) {
+      await until((i) => i.story.lesada?.run?.ph === 'volta', 120);
+      await step(45);
+      await shot('97-rhaenyra-atras-do-rabo');
+    }
+    await until((i) => !i.story.lesada?.run, 400);
+    await step(30);
+    if (await page.evaluate(() => !!window.__game.game.puzzle.lesada?.start('borboleta'))) {
+      await until((i) => i.story.lesada?.run?.ph === 'nota', 400);
+      await aim();
+      await step(10);
+      await shot('98-borboleta-no-focinho');
+      await until((i) => i.story.lesada?.run?.ph === 'corre', 200);
+      await step(20);
+      await shot('98b-rhaenyra-atras-da-borboleta');
+    }
+  }
 
   if (dev.full) {
     await open('casa');
