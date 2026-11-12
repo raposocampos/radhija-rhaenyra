@@ -272,7 +272,8 @@ export const SMALL_LINE = { a: { x: -22.6, z: 21.2 }, b: { x: -18.8, z: 21.2 }, 
  * A GOIABEIRA do norte do quintal, com a PIPA presa no alto da copa. A Rhaenyra empurra o tronco em pé (Shift / R1: de
  * qualquer lado, `pushes` empurrões) e a pipa cai, bailando, num dos `land`. O tronco é fino (`r`).
  */
-export const GUAVA = { x: -6.15, z: 6.1, r: 0.16, pushes: 3, crown: { y: 2.25, r: 1.45 }, kite: { x: -6.62, y: 2.62, z: 5.62 } };
+// a pipa enroscada na beirada oeste da copa, por baixo das folhas (à vista do gramado, alta demais para as duas)
+export const GUAVA = { x: -6.15, z: 6.1, r: 0.16, pushes: 3, crown: { y: 2.25, r: 1.45 }, kite: { x: -7.42, y: 2.12, z: 6.62 } };
 export const KITE = { land: [{ x: -7.18, z: 6.78 }, { x: -7.32, z: 5.36 }, { x: -6.92, z: 7.45 }], examR: 0.95 };
 
 // ---------------------------------------------------------------- piscina (meio)

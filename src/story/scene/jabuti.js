@@ -154,23 +154,26 @@ export function createJabuti() {
       return COL.skin.clone().lerp(COL.yellow, top * (k > 0.45 ? 0.85 : 0.35)).lerp(COL.scale, (1 - top) * (k > 0.8 ? 0.6 : 0));
     });
     const beak = paintBy(ellipsoid(0.03, 0.016, 0.018).translate(0, -0.006, 0.048), () => COL.skin.clone().multiplyScalar(0.8));
-    head.add(mesh(merge([skull, beak]), 'jabuti:cranio'));
+    // os olhos (pretos, com o brilhinho) vão na mesma malha do crânio (não se mexem nele; as pálpebras sim)
+    const eyes = [];
+    for (const s of [-1, 1]) {
+      eyes.push(paintBy(new THREE.SphereGeometry(0.0095, 10, 8).translate(s * 0.03, 0.016, 0.034), () => COL.eye));
+      eyes.push(paintBy(new THREE.SphereGeometry(0.003, 6, 4).translate(s * 0.032, 0.02, 0.042), () => COL.glint));
+    }
+    head.add(mesh(merge([skull, beak, ...eyes]), 'jabuti:cranio'));
   }
   // a mandíbula (mastiga e fala)
   const jaw = new THREE.Group();
   jaw.position.set(0, -0.012, 0.004);
   head.add(jaw);
   jaw.add(mesh(paintBy(ellipsoid(0.03, 0.012, 0.04).translate(0, -0.006, 0.026), () => COL.skin.clone().lerp(COL.plastron, 0.25)), 'jabuti:boca'));
-  // os olhos (pretos, com o brilhinho) e as pálpebras pesadas
+  // as pálpebras pesadas, em cima de cada olho
   /** @type {THREE.Group[]} */
   const lids = [];
   for (const s of [-1, 1]) {
     const eye = new THREE.Group();
     eye.position.set(s * 0.03, 0.016, 0.034);
     head.add(eye);
-    const ball = paintBy(new THREE.SphereGeometry(0.0095, 10, 8), () => COL.eye);
-    const glint = paintBy(new THREE.SphereGeometry(0.003, 6, 4).translate(s * 0.002, 0.004, 0.008), () => COL.glint);
-    eye.add(mesh(merge([ball, glint]), `jabuti:olho-${s < 0 ? 'e' : 'd'}`));
     const lid = new THREE.Group();
     eye.add(lid);
     // meia casca de pele que desce sobre o olho (giro em x: 0 aberto, ~1,5 fechado)

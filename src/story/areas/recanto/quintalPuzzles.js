@@ -42,7 +42,7 @@ const HINTS = {
   alface: 'A alface escapa! A Rhaenyra segura o pé (Fica: F, perto dele) e a Radhija morde e puxa a folha (E).',
   entregar: 'Com a folha na boca, a Radhija entrega para o Seu Bento (E).',
   morder: 'A Rhaenyra é desajeitada com a boca: a Radhija morde e puxa.',
-  irrigacao: 'A Radhija não passa por aspersor ligado. A Rhaenyra pode sentar em cima de um (Fica: F) e tampar!',
+  irrigacao: 'A Radhija não passa por aspersor ligado. A Rhaenyra pode ficar em cima de um (Fica: F) e tampar o jato!',
   meio: 'Tampe o aspersor do MEIO com a Rhaenyra: a Radhija espera ao lado dela e passa pelos outros quando desligam.',
   registro: 'O registro fica na caixinha do chão: só o focinho da Radhija cabe lá (E).',
   pipa: 'Tem uma pipa presa na goiabeira: a Rhaenyra empurra o tronco em pé (segure Shift / R1).',
@@ -186,7 +186,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       if (plug) {
         emit('story:sfx', { name: 'waterOff', x: rha.x, z: rha.z, volume: 0.7 });
         dir?.onomato?.('TAMPEI!', { at: { x: rha.x, y: 0.75, z: rha.z }, size: 0.75, color: '#ffd23f', rot: 6 });
-        say('rhaenyra', plug === 'meio' ? 'Sentei no do meio! Hihi, faz cócegas!' : 'Sentei nele! Tá tampado!', true);
+        say('rhaenyra', plug === 'meio' ? 'Tampei o do meio! Hihi, faz cócegas!' : 'Tampei esse aqui!', true);
         emit('story:plug', { id: plug });
       } else if (was) emit('story:plug', { id: null });
       refresh();
@@ -592,6 +592,7 @@ export function createQuintal(K, { world, emit, effects, ctx, props, dir, hints,
       // a mangueira enroscada na alavanca da torneira
       if (!Y.full && Y.tapT < 0 && near(c, HS.bite, HS.grabR + 0.3)) {
         if (!rad) { say('rhaenyra', 'Eu? Com esses dentes eu furo a mangueira! Puxa você, Radhija.', true); hints.now(HINTS.mangueira, 4.5, 8); return true; }
+        if (Y.leaf === 'boca') { say('radhija', 'Com a folha na boca, não dá pra morder a mangueira!', true); return true; }
         const lever = P()?.hose?.leverPoint?.() ?? { x: L.TAP.lever.x, y: L.TAP.lever.y, z: L.TAP.lever.z };
         const bite = P()?.hose?.bitePoint?.() ?? { x: HS.bite.x, y: 0.03, z: HS.bite.z };
         tug.start(c, { bite, anchor: lever, len: Math.hypot(bite.x - lever.x, bite.z - lever.z, bite.y - lever.y) + HS.pull + 0.2 });

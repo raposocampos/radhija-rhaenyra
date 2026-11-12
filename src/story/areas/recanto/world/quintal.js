@@ -157,6 +157,17 @@ function hydrangeaGeo(r, seed, tone) {
   }));
 }
 
+/**
+ * As plantas que se repetem saem de poucas variantes (o kit copia a geometria a cada peça: a mesma serve várias vezes),
+ * para a montagem do quintal não pesar no celular (make(i) faz a variante i).
+ * @param {number} n @param {(i: number) => THREE.BufferGeometry} make
+ */
+function variants(n, make) {
+  /** @type {THREE.BufferGeometry[]} */
+  const list = [];
+  return (k) => { const i = ((k % n) + n) % n; return (list[i] ||= make(i)); };
+}
+
 /** Junta peças pintadas numa geometria só, como o kit, para os objetos que se mexem (uma malha cada). */
 function createBaker() {
   const list = [];
@@ -556,18 +567,17 @@ export function buildQuintal(kit, root, L) {
   stonePath([[-8.6, 7.6], [-8.3, 4.2], [(SD.hinge.x + SD.latchPost.x) / 2 + 0.2, Y.z0 + 1.45]], 0.6, 0.21, 5);
   {
     const STONE = ['#cfc6b6', '#c4baa8', '#d8cfbf', '#bfb5a2'];
-    for (let k = 0; k < stones.length; k++) {
-      const s = stones[k], Rs = rng(400 + k), rot = Rs() * TAU, sq = 0.76 + Rs() * 0.2;
+    // seis contornos de pedra de raio 1 (cada pedra gira e escala o dela: a beirada chanfrada fica proporcional)
+    const STONES = variants(6, (v) => {
+      const Rs = rng(400 + v), sq = 0.76 + Rs() * 0.2;
       const pts = [];
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 9) * TAU, rr = s.r * (0.84 + Rs() * 0.3);
-        const lx = Math.cos(a) * rr, lz = Math.sin(a) * rr * sq;
-        pts.push([lx * Math.cos(rot) - lz * Math.sin(rot), lx * Math.sin(rot) + lz * Math.cos(rot)]);
-      }
-      const sh = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)));
-      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.012, bevelSegments: 1, curveSegments: 1 });
-      g.rotateX(-Math.PI / 2);
-      addAt(g, { color: C(STONE[k % 4]).multiplyScalar(0.92 + Rs() * 0.14), slot: 'ground', x: s.x, y: 0.003, z: s.z, ao: false });
+      for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU, rr = 0.84 + Rs() * 0.3; pts.push(new THREE.Vector2(Math.cos(a) * rr, -Math.sin(a) * rr * sq)); }
+      const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 0.057, bevelEnabled: true, bevelThickness: 0.028, bevelSize: 0.057, bevelSegments: 1, curveSegments: 1 });
+      return g.rotateX(-Math.PI / 2);
+    });
+    for (let k = 0; k < stones.length; k++) {
+      const s = stones[k], Rs = rng(500 + k);
+      addAt(STONES(k), { color: C(STONE[k % 4]).multiplyScalar(0.92 + Rs() * 0.14), slot: 'ground', x: s.x, y: 0.003, z: s.z, ry: Rs() * TAU, sx: s.r, sy: 0.21, sz: s.r, ao: false });
       shade(s.z).blob(s.x, s.z, s.r * 1.25, { a: 0.12, color: '#2a2a1c', seed: k });
     }
   }
@@ -674,6 +684,14 @@ export function buildQuintal(kit, root, L) {
   // ================================================================ o jardim de flores e a irrigação automática
   const SP = L.SPRINKLERS;
   // os dois canteiros compridos: mureta de tijolo, terra e as flores (tudo dentro do colisor)
+  /** As plantas da frente dos canteiros: lavanda, margaridas (brancas e amarelas) e gerânios, duas de cada. */
+  const FRONT = variants(6, (v) => {
+    const kind = Math.floor(v / 2), alt = v % 2;
+    return kind === 0 ? lavender({ stems: 16, height: 0.36, seed: 700 + v })
+      : kind === 1 ? smallFlowers({ count: 22, radius: 0.15, height: 0.18, color: alt ? '#fff6ee' : '#f2c230', seed: 720 + v })
+        : geranium({ radius: 0.15, height: 0.2, seed: 740 + v, flower: alt ? '#e8708a' : '#ff6a55' });
+  });
+  const HYDRANGEA = variants(4, (i) => hydrangeaGeo(0.31 + (i % 2) * 0.03, 600 + i * 7, i < 2 ? '#8ea6e8' : '#e7a3c6'));
   L.YARD_BEDS.forEach((bd, i) => {
     const o = new THREE.Color(), ba = C('#c98a6a'), bb = C('#b9785a');
     const x0 = bd.x - bd.hx + (i === 0 ? ht : 0), x1 = bd.x + bd.hx - (i === 1 ? ht : 0), z0 = bd.z - bd.hz, z1 = bd.z + bd.hz;
@@ -690,14 +708,12 @@ export function buildQuintal(kit, root, L) {
     const nb = Math.round(d / 0.95), nf = Math.round(d / 0.62);
     for (let k = 0; k < nb; k++) {
       const z = z0 + 0.5 + k * ((d - 1.0) / Math.max(1, nb - 1));
-      addJ(hydrangeaGeo(0.3 + Rb() * 0.05, 600 + i * 20 + k, k % 2 ? '#8ea6e8' : '#e7a3c6'), { color: null, slot: 'foliage', x: back + (Rb() - 0.5) * 0.08, y: 0.27, z, ry: Rb() * 6 });
+      addJ(HYDRANGEA((k % 2) * 2 + ((k + i) % 2)), { color: null, slot: 'foliage', x: back + (Rb() - 0.5) * 0.08, y: 0.27, z, ry: Rb() * 6 });
     }
     for (let k = 0; k < nf; k++) {
       const z = z0 + 0.3 + k * ((d - 0.6) / Math.max(1, nf - 1));
       const kind = (k + i) % 3;
-      const plant = kind === 0 ? lavender({ stems: 16, height: 0.36, seed: 700 + k })
-        : kind === 1 ? smallFlowers({ count: 22, radius: 0.15, height: 0.18, color: k % 2 ? '#fff6ee' : '#f2c230', seed: 720 + k })
-          : geranium({ radius: 0.15, height: 0.2, seed: 740 + k, flower: ['#ff6a55', '#e8708a', '#b9a3e3'][k % 3] });
+      const plant = FRONT(kind * 2 + (k % 2));
       addJ(plant, { color: null, slot: 'plant', x: front + (Rb() - 0.5) * 0.12, y: 0.28, z, ry: Rb() * 6 });
     }
   });
@@ -735,7 +751,14 @@ export function buildQuintal(kit, root, L) {
   wetDiscs.frustumCulled = false;
   keep(wetDiscs);
   const _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _s4 = new THREE.Vector3(), _p4 = new THREE.Vector3();
+  let sprayIdle = false;
   function layoutSpray(time) {
+    // tudo parado e seco (a irrigação desligada): nada a desenhar nem a atualizar
+    const idle = heads.every((hd) => hd.spray <= 0.01 && hd.wet <= 0.001 && hd.up <= 0.001);
+    drops.visible = !idle;
+    wetDiscs.visible = heads.some((hd) => hd.wet > 0.001);
+    if (idle && sprayIdle) { for (const hd of heads) hd.grp.position.y = 0; return; }
+    sprayIdle = idle;
     let k = 0;
     heads.forEach((hd, hi) => {
       hd.grp.position.y = hd.up * 0.07;
@@ -800,20 +823,23 @@ export function buildQuintal(kit, root, L) {
   {
     const top = 0.27;
     const Rh = rng(91);
+    const LETTUCES = variants(3, (i) => lettuce({ r: 0.115 + i * 0.012, seed: 200 + i * 3 }));
+    const CARROTS = variants(3, (i) => carrotTops({ seed: 230 + i, height: 0.22 }));
+    const TOMATOES = variants(3, (i) => foliageCluster([{ x: 0, y: 0.32, z: 0, r: 0.17, sy: 1.4 }, { x: 0.04, y: 0.62, z: 0.02, r: 0.14, sy: 1.2 }], { detail: 1, amp: 0.35, freq: 10, seed: 260 + i, dark: '#25421a', mid: '#3f6a28', light: '#76a143' }));
     // o canteiro da alface: duas fileiras de pés (o grande, na beirada norte, é o prop)
     const A = HT.beds[0], LT = L.LETTUCE;
     for (let i = 0; i < 6; i++) {
       for (let j = 0; j < 2; j++) {
         const x = lerp(A.x0 + 0.32, A.x1 - 0.32, i / 5), z = A.z0 + 0.3 + j * 0.34;
         if (Math.hypot(x - LT.x, z - LT.z) < 0.4) continue;
-        addF(lettuce({ r: 0.11 + Rh() * 0.03, seed: 200 + i * 3 + j }), { color: null, slot: 'plant', x, y: top, z, ry: Rh() * 6 });
+        addF(LETTUCES(i * 2 + j), { color: null, slot: 'plant', x, y: top, z, ry: Rh() * 6 });
       }
     }
     // os legumes: cenouras (as ramas), couves e cebolinha
     const B2 = HT.beds[1];
     for (let i = 0; i < 9; i++) {
       const x = lerp(B2.x0 + 0.25, B2.x1 - 0.25, i / 8);
-      addF(carrotTops({ seed: 230 + i, height: 0.22 }), { color: null, slot: 'plant', x, y: top, z: B2.z0 + 0.28, ry: Rh() * 6 });
+      addF(CARROTS(i), { color: null, slot: 'plant', x, y: top, z: B2.z0 + 0.28, ry: Rh() * 6 });
       if (i % 2 === 0) addF(foliageCluster([{ x: 0, y: 0.14, z: 0, r: 0.15, sy: 0.7 }], { detail: 1, amp: 0.4, freq: 9, seed: 240 + i, dark: '#2b4a35', mid: '#3f6b4a', light: '#6d9a74' }), { color: null, slot: 'foliage', x, y: top, z: B2.z1 - 0.3 });
       else addF(lavender({ stems: 10, height: 0.26, seed: 250 + i }), { color: null, slot: 'plant', x, y: top, z: B2.z1 - 0.3, ry: Rh() * 6 });
     }
@@ -823,7 +849,7 @@ export function buildQuintal(kit, root, L) {
     for (let i = 0; i < nt; i++) {
       const x = lerp(T3.x0 + 0.3, T3.x1 - 0.3, i / Math.max(1, nt - 1)), z = (T3.z0 + T3.z1) / 2;
       addF(rod(0.012, 1.05, 5), { color: '#c9b27a', x, y: top + 0.5, z, ao: false });
-      addF(foliageCluster([{ x: 0, y: 0.32, z: 0, r: 0.17, sy: 1.4 }, { x: 0.04, y: 0.62, z: 0.02, r: 0.14, sy: 1.2 }], { detail: 1, amp: 0.35, freq: 10, seed: 260 + i, dark: '#25421a', mid: '#3f6a28', light: '#76a143' }), { color: null, slot: 'foliage', x, y: top, z });
+      addF(TOMATOES(i), { color: null, slot: 'foliage', x, y: top, z, ry: i * 1.9 });
       for (let k = 0; k < 4; k++) {
         const a = Rh() * TAU;
         addF(sphere(0.032 + Rh() * 0.01, 8, 6), { color: k % 3 ? '#d93a2a' : '#7fae3a', x: x + Math.cos(a) * 0.12, y: top + 0.25 + Rh() * 0.5, z: z + Math.sin(a) * 0.12 - 0.04, ao: false });
@@ -1050,7 +1076,7 @@ export function buildQuintal(kit, root, L) {
       const [sx2, sz2] = at(0, 0);
       b(rb(0.42, 0.04, 0.42, 0.03, 2), { x: sx2, y: 0.4, z: sz2, ry: ch.yaw });
       const [bx2, bz2] = at(0, -0.2);
-      b(rb(0.42, 0.42, 0.04, 0.03, 2), { x: bx2, y: 0.44, z: bz2, ry: ch.yaw, rx: -0.12 });
+      b(rb(0.42, 0.42, 0.04, 0.03, 2), { x: bx2, y: 0.44, z: bz2, ry: ch.yaw });
       for (const [lx, lz] of [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]]) {
         const [qx, qz] = at(lx, lz);
         b(cyl(0.018, 0.022, 0.4, 6), { x: qx, z: qz });
@@ -1264,9 +1290,51 @@ export function buildQuintal(kit, root, L) {
   keep(spark);
   const guavaSt = { a: 0, dx: 1, dz: 0 };
 
+  // ================================================================ borboletas (a vida do jardim)
+  // Três borboletas voando em laços por cima dos canteiros (acima das plantas mais altas e longe da copa, do varalzinho e
+  // do guarda-sol): uma malha instanciada de asas (duas por borboleta), batendo; nada é alocado por quadro.
+  const BUTTERFLIES = [
+    { cx: -8.3, cz: 11.8, rx: 2.0, rz: 2.6, y: 1.12, fy: 0.13, sp: 0.42, ph: 0.0, col: '#f2c230' },
+    { cx: -17.0, cz: 23.35, rx: 3.6, rz: 0.75, y: 1.08, fy: 0.12, sp: 0.33, ph: 2.1, col: '#ff8a5c' },
+    { cx: -9.5, cz: 23.0, rx: 0.9, rz: 1.3, y: 1.02, fy: 0.1, sp: 0.5, ph: 4.0, col: '#ffffff' },
+  ];
+  const wingGeo = (() => { const g = shapeXY([[0, 0], [0.045, 0.03], [0.05, -0.005], [0.028, -0.032], [0.006, -0.012]]); g.rotateX(-Math.PI / 2); return g; })();
+  const wings = new THREE.InstancedMesh(wingGeo, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6, side: THREE.DoubleSide }), BUTTERFLIES.length * 2);
+  wings.name = 'quintal:borboletas';
+  wings.frustumCulled = false;
+  wings.castShadow = false;
+  BUTTERFLIES.forEach((b, i) => { wings.setColorAt(i * 2, C(b.col)); wings.setColorAt(i * 2 + 1, C(b.col)); });
+  keep(wings);
+  const _bq = new THREE.Quaternion(), _bw = new THREE.Quaternion(), _be = new THREE.Euler();
+  function flyButterflies(time) {
+    BUTTERFLIES.forEach((b, i) => {
+      const a = time * b.sp + b.ph;
+      const x = b.cx + Math.sin(a) * b.rx, z = b.cz + Math.sin(a * 2) * b.rz;
+      const y = b.y + Math.sin(time * 1.7 + b.ph) * b.fy;
+      // o rumo segue o laço (a derivada do caminho) e as asas batem rápido
+      const yaw = Math.atan2(Math.cos(a) * b.rx, Math.cos(a * 2) * 2 * b.rz);
+      const flap = Math.sin(time * 22 + b.ph * 3) * 0.9;
+      _bq.setFromAxisAngle(_up, yaw);
+      for (const side of [1, -1]) {
+        _be.set(0, 0, side * (0.25 + flap));
+        _bw.setFromEuler(_be);
+        _q4.copy(_bq).multiply(_bw);
+        _m4.compose(_p4.set(x, y, z), _q4, _s4.set(side, 1, 1));
+        wings.setMatrixAt(i * 2 + (side > 0 ? 0 : 1), _m4);
+      }
+    });
+    wings.instanceMatrix.needsUpdate = true;
+  }
+  flyButterflies(0);
+
   // ================================================================ capim, florzinhas, folhas, gravetos e poças
   /** Onde não nasce capim: nas pedras e no pátio, nos canteiros, na frente das portas, nas peças dos puzzles. */
-  const COLS = L.STATIC_COLLIDERS;
+  // só os colisores do lote e da beirada dele (o capim e as folhas do quintal nunca saem dele)
+  const COLS = L.STATIC_COLLIDERS.filter((c) => {
+    const x0 = c.shape === 'segment' ? Math.min(c.ax, c.bx) - c.t : c.x - (c.r ?? c.hx), x1 = c.shape === 'segment' ? Math.max(c.ax, c.bx) + c.t : c.x + (c.r ?? c.hx);
+    const z0 = c.shape === 'segment' ? Math.min(c.az, c.bz) - c.t : c.z - (c.r ?? c.hz), z1 = c.shape === 'segment' ? Math.max(c.az, c.bz) + c.t : c.z + (c.r ?? c.hz);
+    return x1 > L.LOT.x0 - 0.5 && x0 < L.LOT.x1 + 0.5 && z1 > L.LOT.z0 - 0.5 && z0 < L.LOT.z1 + 0.5;
+  });
   const hitsCollider = (x, z, pad) => COLS.some((c) => {
     if (c.shape === 'circle') return Math.hypot(x - c.x, z - c.z) < c.r + pad;
     if (c.shape === 'box') return Math.abs(x - c.x) < c.hx + pad && Math.abs(z - c.z) < c.hz + pad;
@@ -1359,12 +1427,13 @@ export function buildQuintal(kit, root, L) {
       addAt(flatBlob(pr, Math.round(px * 10)), { color: '#8fb6c9', slot: 'glass', x: px, y: 0.008, z: pz, sz: ps, ry: Rl() * 3 });
     }
     const tones = ['#7c9a3a', '#a2b84a', '#c9a23a', '#8a6a2e', '#5f8a34'];
+    const LEAVES = variants(5, (v) => leafGeo(0.1 + v * 0.012, 0.032 + (v % 2) * 0.008));
     for (let i = 0; i < 140; i++) {
       const near = i < 34;
       const x = near ? BR.start.x - 1.6 + (Rl() - 0.5) * 4.2 : lerp(XO + 0.4, XE - 0.4, Rl());
       const z = near ? Y.z0 + 0.4 + Rl() * 2.6 : lerp(Y.z0 + 0.5, ZS - 0.4, Rl());
       if (blocked(x, z, 0.02)) continue;
-      addAt(leafGeo(0.09 + Rl() * 0.06, 0.03 + Rl() * 0.015), { color: tones[i % tones.length], slot: 'plant', x, y: 0.008, z, ry: Rl() * TAU });
+      addAt(LEAVES(i), { color: tones[i % tones.length], slot: 'plant', x, y: 0.008, z, ry: Rl() * TAU, sx: 0.85 + Rl() * 0.3, sz: 0.85 + Rl() * 0.3 });
     }
     for (let i = 0; i < 9; i++) {
       const x = BR.start.x - 1.2 + (Rl() - 0.5) * 3.6, z = Y.z0 + 0.5 + Rl() * 2.4, a = Rl() * TAU, len = 0.14 + Rl() * 0.16;
@@ -1550,6 +1619,7 @@ export function buildQuintal(kit, root, L) {
       // a goiabeira balança com o empurrão (a copa gira em volta do pé) e a pipa, se ainda está lá, vai junto
       guavaTop.rotation.set(guavaSt.dz * guavaSt.a * 0.6, 0, -guavaSt.dx * guavaSt.a * 0.6);
       stepKite(dt, time);
+      flyButterflies(time);
       if (jabuti.object.visible) jabuti.update(dt, time);
     },
     reset() {
