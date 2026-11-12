@@ -9,6 +9,7 @@
 // até a meia da antena, a corda, o balde e a bola até a meia do depósito. As cenas são puladas aqui (o teste das cenas
 // confere que pular dá no mesmo).
 import { test } from 'node:test';
+import * as THREE from 'three';
 import assert from 'node:assert/strict';
 import { createStoryGame, storyInfo, skipScene, intrusions, become, holdWorld, push, sniff, examine, deduce } from './helpers/historia.mjs';
 
@@ -458,7 +459,20 @@ test('paralelo C: a corda debaixo da caminhonete derruba o balde na bola; a port
   assert.ok(h.run(3, { until: () => !!h.puzzle.lockFor('radhija')?.pull }), `a corda na boca (fase ${storyInfo(h).tug})`);
   assert.equal(S().tugWhat, 'corda');
   const lock = h.puzzle.lockFor('radhija');
-  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => S().flags.ballClear), 'puxando, o balde cai e a bola rola para longe da porta');
+  // a ponta da corda desenhada fica na boca dela enquanto puxa (o reset do jogo, no começo, soltava essa ligação:
+  // retorno do usuário em 2026-11-11, "Radhija não está com as cordas na boca quando ela está puxando")
+  const mouth = new THREE.Vector3();
+  const tipGap = () => {
+    h.dogs.radhija.mouthSocket.getWorldPosition(mouth);
+    const t = h.props.rope.tip();
+    return Math.hypot(t.x - mouth.x, t.y - mouth.y, t.z - mouth.z);
+  };
+  let worstTip = 0;
+  assert.ok(holdWorld(h, [lock.pull.ax, lock.pull.az], 6, () => {
+    if (h.puzzle.lockFor('radhija')?.pull) worstTip = Math.max(worstTip, tipGap());
+    return S().flags.ballClear;
+  }), 'puxando, o balde cai e a bola rola para longe da porta');
+  assert.ok(worstTip < 0.05, `a corda na boca o puxão inteiro (pior distância ${(worstTip * 100).toFixed(1)} cm)`);
   h.run(0.3);
   assert.equal(h.puzzle.lockFor('radhija'), null, 'a corda solta sozinha');
   // agora a porta abre

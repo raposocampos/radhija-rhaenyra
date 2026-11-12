@@ -329,8 +329,14 @@ export function createPuzzle(ctx) {
     // só o balanço: o poste não tem objeto próprio para inclinar (o varal sacode)
     prop: /** @type {any} */ ({ setSway: (a) => props.line?.shake?.(Math.min(1, Math.abs(a) * 3.2)) }),
   });
-  props.rope?.setGrip?.(() => (S.tugWhat === 'corda' ? tug.grip() : null));
-  props.serviceBolt?.setGrip?.(() => (S.tugWhat === 'ferrolho' ? tug.grip() : null));
+  // a ponta da corda da caminhonete e a argola do ferrolho seguem a boca de quem morde. O reset do cenário
+  // (props.reset) solta essa ligação, então ela é refeita depois de cada reset (puzzle.reset): sem isso, no jogo de
+  // verdade (que reseta ao começar), a Radhija puxava sem a corda na boca (retorno do usuário em 2026-11-11)
+  const wireGrips = () => {
+    props.rope?.setGrip?.(() => (S?.tugWhat === 'corda' ? tug.grip() : null));
+    props.serviceBolt?.setGrip?.(() => (S?.tugWhat === 'ferrolho' ? tug.grip() : null));
+  };
+  wireGrips();
   const collect = createCollectibles({ list: L.COLLECTIBLES, props, emit, pickupR: L.COLLECTIBLE_PICKUP_R });
   // o canal fechado até o barquinho encaixar; depois, a ponte que só a Radhija atravessa
   const CH = L.CHANNEL;
@@ -1350,6 +1356,7 @@ export function createPuzzle(ctx) {
       S = fresh();
       if (!scenes) scenes = makeScenes();
       props.reset?.();
+      wireGrips();
       roof.reset();
       handle.reset?.();
       for (const b of buttons) b.btn.reset?.();

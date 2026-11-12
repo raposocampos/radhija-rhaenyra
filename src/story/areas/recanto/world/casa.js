@@ -1597,6 +1597,8 @@ export function buildCasa(kit, root, L) {
     setGrip(src) { gripSrc = src || null; boltSt.dirty = true; },
     /** Onde está a argola parada (sem ninguém mordendo), com o puxão de agora. */
     bitePoint() { const e = restEnd(); return { x: e.x, y: e.y, z: e.z }; },
+    /** Onde a argola está desenhada agora (na boca de quem morde; os testes conferem). */
+    tip() { return { x: ring.position.x, y: ring.position.y, z: ring.position.z }; },
     /** O ferrolho corre (0: trancado; 1: aberto). */
     setSlid(k) { boltSt.slid = clamp01(k); boltSt.dirty = true; },
   };

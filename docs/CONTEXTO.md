@@ -2,8 +2,8 @@
 
 Última atualização: **2026-11-11, Claude**.
 - **Modo História, etapa 2:** a fatia jogável (abertura e cap. 1), em 3ª pessoa, branch `claude/historia-fatia`
-  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada como estilo, pedidos de
-  2026-11-11) está integrada no branch, aguardando CI, E2E e a aprovação do usuário (veja "3ª rodada" abaixo).
+  (PR #75). Duas prévias reprovadas (2026-11-09 e 2026-11-10); a 3ª rodada (HQ aprovada) foi entregue em `685cc14` e
+  a 4ª rodada (casa e quintal maiores, puzzles novos, personagens) está em andamento (veja "4ª rodada" abaixo).
 - **#74, Modo História, etapa 1 (o roteiro):** em v0.10.24 · build 116.
 - **#73, privacidade:** em v0.10.23 · build 115.
 - **#72, ponte levadiça do mapa:** em v0.10.22 · build 114.
@@ -17,6 +17,27 @@
 Ler primeiro [AGENTS.md](../AGENTS.md) e [ENTREGA.md](ENTREGA.md); conferir Git/GitHub antes de editar.
 
 ## Em andamento: Modo História, etapa 2, a fatia jogável (Claude, branch `claude/historia-fatia`)
+
+### 4ª rodada (2026-11-11, depois da prévia `685cc14`): em andamento
+
+- **Retorno do usuário:** "Ficou muito bom". Pediu: o diálogo com o Bichano com a caminhonete na frente da câmera; a
+  Radhija puxando sem a corda na boca; **casa maior, mais detalhada, com puzzles que se encaixem nela**; **quintal maior
+  depois de sair de casa, com mais puzzles lá fora**; sinais de que a Rhaenyra é "mais lesada"; borboleta melhor;
+  animações do Sr. Luiz melhores. Avisou que, em breve, os modelos das dogs (as patas) serão melhorados (outra etapa).
+- **Escolhas dele:** casa com aspirador robô, despensa no escuro (interruptor), toalha e lata de biscoito, pufe → sofá →
+  janela; quintal com irrigação automática, jabuti na horta, pipa presa na árvore, mangueira e balde; Rhaenyra
+  distraída no jogo, trapalhadas e falas mais bobas (sem "cara de boba" nas páginas de HQ).
+- **Feito no branch (commits locais `2028af7`, `378c298` e seguintes):**
+  - o contrato do terreno em `layout.js`: `LOT` (o lote da casa cresce 11 m para o sul, além da linha do muro sul;
+    o resto do condomínio não muda), `HOUSE.z1` = 20,46, `YARD.z1` = `LOT.z1`, `HOUSE_EXIT` (porta dos fundos na
+    parede leste, z 18,3–19,3), os muros do lote nos colisores;
+  - o plano do Bichano por cima do ombro das dogs (`createWitnessScene`, quem fala no alto);
+  - a corda na boca: o reset do cenário soltava a ligação da corda e da argola com a boca, e o puzzle não refazia
+    (`wireGrips` depois de `props.reset`); `rope.tip()` e `serviceBolt.tip()` para o teste.
+- **Em andamento (agentes em worktrees próprias, a juntar no branch):** a casa (ala sul, 4 puzzles), o quintal (muros
+  do lote, quintal em L, 4 puzzles, jabuti) e os personagens (Rhaenyra lesada, borboleta, Sr. Luiz).
+- **Próximo passo:** juntar os três branches, rodar os testes da história, CI, E2E `historia` e primeira passagem,
+  revisar as capturas e entregar a prévia. Não integrar sem o "pode integrar" do usuário.
 
 ### 3ª rodada (2026-11-11, depois da prévia `2a9a4a6`): pedidos do usuário, integrada no branch
 

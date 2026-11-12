@@ -109,7 +109,7 @@ export function buildWorld({ engine, root, layout }) {
  *   boat: { object: import('three').Object3D, setPos(x: number, z: number, y?: number, tilt?: number): void },
  *   booth: { radio: { setOn(on: boolean): void }, windowAnchor: { x: number, y: number, z: number } },
  *   bucket: { object: import('three').Object3D, setTip(t: number): void }, ball: { object: import('three').Object3D, setPos(x: number, z: number, y?: number, spin?: number): void },
- *   rope: { object: import('three').Object3D, setPull(k: number): void, setGrip(src: (() => any) | null): void, bitePoint(): { x: number, y: number, z: number } },
+ *   rope: { object: import('three').Object3D, setPull(k: number): void, setGrip(src: (() => any) | null): void, bitePoint(): { x: number, y: number, z: number }, tip(): { x: number, y: number, z: number } },
  *   storageDoor: import('../../../../types').GateProp,
  *   socks: { id: string, object: import('three').Object3D, collect(): void, reset(): void }[],
  *   squad: any, carrot: any, humans: any, ghosts: any, rain: any, city: any, cinemaLight?: any,
