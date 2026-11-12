@@ -144,6 +144,11 @@ export const FOOD_SACK = { start: { x: HOUSE.x1 - 0.5, z: 5.1 }, half: 0.34, hei
 
 // ---------------------------------------------------------------- quintal (a leste da casa)
 export const YARD = { x0: HOUSE.x1, x1: LOT.x1, z0: HOUSE.z0, z1: LOT.z1, wallH: 1.2 };
+/**
+ * A porta dos fundos (4ª rodada): a saída da casa para o quintal, na parede leste da ala sul (x = HOUSE.x1). O puzzle que
+ * a abre é da casa; o quintal começa aqui e as duas atravessam o quintal até a porta da área de serviço, ao norte.
+ */
+export const HOUSE_EXIT = { x: HOUSE.x1, z0: 18.3, z1: 19.3 };
 /** A porta da área de serviço, no muro norte do quintal: abre para dentro do quintal (para o sul). */
 export const SERVICE_DOOR = {
   hinge: { x: -8.7, z: YARD.z0 }, latchPost: { x: -7.7, z: YARD.z0 }, length: 1.0,
@@ -802,7 +807,7 @@ const LAYOUT = {
   BOAT, CHANNEL, GOOSE, CARPORT, CAR, WHEELS, STORAGE, STORAGE_DOOR, BALL, SHELF, ROPE, STORAGE_STUFF, GARAGE_STUFF, COLLECTIBLES,
   COLLECTIBLE_PICKUP_R, WITNESSES, SOCKS, SOCK_PICKUP_R, CLUE_SPOTS, CARROT_TRAIL, TREES, TREE_TRUNK_R, BENCHES, LAMPS,
   ELECTION_POSTER, BEDS,
-  ROOFTOP, CONDO_BOUNDS, LOT, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
+  ROOFTOP, CONDO_BOUNDS, LOT, HOUSE_EXIT, ROOF_HUT, ROOF_ARRIVE, ROOF_TANK, ROOF_LADDER, ROOF_CRATE, ROOF_LATCH, ROOF_PERCHES, ROOF_ANTENNA, ROOF_LINE,
   ROOF_AC, ROOF_BARROW, ROOF_BOXES, ROOF_POTS, ROOF_STEP, ROOF_LOOKOUT, ROOF_FEATHERS,
   DOGS: {
     radhija: withStart('radhija', { x: BED.x + 1.0, z: BED.z + 1.4, yaw: 1.9 }),
