@@ -52,7 +52,9 @@ export function createYardArrival(K, yard) {
         id: 'fundos', dur: 2.6,
         enter() {
           dir.lens(40);
-          dir.shot(P3(S.a.x - 0.4, 1.9, S.a.z + 1.8), P3(JB.x, 0.4, JB.z - 3.5), { inT: 0.8 });
+          // longe da folha da porta dos fundos (ela abre para fora, para o leste): a 2,6 m da parede da casa e no alto
+          const EX = L.HOUSE_EXIT;
+          dir.shot(P3(EX.x + 2.6, 2.1, (EX.z0 + EX.z1) / 2 + 2.4), P3(JB.x, 0.4, JB.z - 3.5), { inT: 0.8 });
           dir.caption('O quintal dos fundos', { sub: 'depois da garoa', pos: 'bl', dur: 2.4 });
           for (const n of NAMES) dir.actor(n).look = P3(JB.x, 0.3, JB.z);
         },

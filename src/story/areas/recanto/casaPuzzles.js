@@ -48,7 +48,7 @@ const TEXTS = {
 };
 /** As dicas (somem no modo sem dicas). */
 const HINTS = {
-  aspirador: 'A Radhija tem medo do aspirador. Com a Rhaenyra, lata perto dele (E) ou fique no caminho dele (Fica: F).',
+  aspirador: 'A Radhija tem medo do aspirador. Com a Rhaenyra, late perto dele (E) ou fique no caminho dele (Fica: F).',
   escuro: 'A Radhija não entra no escuro. O interruptor é alto: a Rhaenyra pula na parede (Espaço).',
   pufe: 'O trinco é alto. A Rhaenyra empurra o pufe (segure Shift) até encostar no sofá, embaixo da janela.',
   subir: 'Com o pufe encostado no sofá, a Radhija sobe (E) até o trinco.',

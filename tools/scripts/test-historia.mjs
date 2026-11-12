@@ -570,6 +570,8 @@ try {
   check((await noOverlap()).length === 0, 'ninguém atravessa nada no quintal', await noOverlap());
 
   console.log('\n== O quintal: o galho, a passagem do muro e a argola do ferrolho ==');
+  // o quintal maior termina com a Radhija (a bolinha do baldão): a porta e o galho são com a Rhaenyra
+  await become('rhaenyra');
   const sdx = (LY.sdoor.hinge.x + LY.sdoor.latchPost.x) / 2;
   await tp('rhaenyra', sdx - 0.2, LY.sdoor.hinge.z + 0.8, Math.PI);
   await press('KeyE', 900);
